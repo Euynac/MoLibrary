@@ -1,0 +1,66 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Content\httpjob.js" />
+    <None Remove="Content\job.css" />
+    <None Remove="Content\job.js" />
+    <None Remove="Content\jsoneditor.css" />
+    <None Remove="Content\jsoneditor.js" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Content\httpjob.js" />
+    <EmbeddedResource Include="Content\job.css" />
+    <EmbeddedResource Include="Content\job.js" />
+    <EmbeddedResource Include="Content\jsoneditor.css" />
+    <EmbeddedResource Include="Content\jsoneditor.js" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Cronos" Version="0.7.1" />
+    <PackageReference Include="Hangfire.Console" Version="1.4.3" />
+    <PackageReference Include="Hangfire.Heartbeat" Version="0.6.0" />
+    <PackageReference Include="JetBrains.Annotations" Version="2024.2.0" />
+    <PackageReference Include="MailKit" Version="4.7.1.1" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
+    <PackageReference Include="System.ComponentModel.Primitives" Version="4.3.0" />
+    <PackageReference Include="TimeZoneConverter" Version="6.1.0" />
+  </ItemGroup>
+
+
+	<!--<ItemGroup>
+		<PackageReference Include="JetBrains.Annotations" Version="2024.2.0" />
+		<PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
+		<PackageReference Include="System.ComponentModel.Primitives" Version="4.3.0" />
+	</ItemGroup>-->
+
+
+	<ItemGroup>
+    <ProjectReference Include="..\Hangfire.Redis.StackExchange\Hangfire.Redis.StackExchange.csproj" />
+  </ItemGroup>
+
+  <!--<ItemGroup>
+    <Reference Include="Hangfire.Console">
+      <HintPath>..\..\..\..\lib\Hangfire.Console.dll</HintPath>
+    </Reference>
+    <Reference Include="Hangfire.Heartbeat">
+      <HintPath>..\..\..\..\lib\Hangfire.Heartbeat.dll</HintPath>
+    </Reference>
+    <Reference Include="MailKit">
+      <HintPath>..\..\..\..\lib\MailKit.dll</HintPath>
+    </Reference>
+    <Reference Include="MimeKit">
+      <HintPath>..\..\..\..\lib\MimeKit.dll</HintPath>
+    </Reference>
+    <Reference Include="TimeZoneConverter">
+      <HintPath>..\..\..\..\lib\TimeZoneConverter.dll</HintPath>
+    </Reference>
+  </ItemGroup>-->
+
+</Project>
