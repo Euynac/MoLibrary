@@ -1,0 +1,41 @@
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
+using System.Reflection;
+
+namespace BuildingBlocksPlatform.Extensions;
+
+public static class AssemblyExtensions
+{
+
+    /// <summary>
+    /// Retrieves the related assemblies for the specified entry assembly, optionally filtered by related names. including the entry assembly and any related assemblies that match the specified filter criteria.
+    /// </summary>
+    /// <param name="entryAssembly">
+    /// The entry assembly for which related assemblies are to be retrieved.
+    /// </param>
+    /// <param name="relatedNames">
+    /// An optional array of strings used to filter related assemblies by their names.
+    /// </param>
+    /// <returns>
+    /// An enumerable collection of assemblies, including the entry assembly and any related assemblies
+    /// that match the specified filter criteria.
+    /// </returns>
+    public static IEnumerable<Assembly> GetRelatedAssemblies(this Assembly entryAssembly, params string[]? relatedNames)
+    {
+        yield return entryAssembly;
+        if (relatedNames is null) yield break;
+
+        var hash = entryAssembly.GetReferencedAssemblies()
+            .Where(p => relatedNames.Any(s => p.FullName.Contains(s))).Select(p=>p.Name).ToHashSet();
+
+
+        //该方案依赖MVC
+        //var hash = entryAssembly.CustomAttributes.Where(p => p.AttributeType == typeof(ApplicationPartAttribute))
+        //    .Where(p => p.ConstructorArguments.FirstOrDefault() is {Value: string { } value} &&
+        //                relatedNames.Any(s => value.Contains(s)))
+        //    .Select(p => (string) p.ConstructorArguments.First().Value!).ToHashSet();
+
+        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies()
+                     .Where(p => p.GetName().Name is { } name && hash.Contains(name)))
+            yield return assembly;
+    }
+}
