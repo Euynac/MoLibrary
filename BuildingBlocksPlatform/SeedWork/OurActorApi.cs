@@ -6,6 +6,10 @@ namespace BuildingBlocksPlatform.SeedWork;
 
 public abstract class OurActorApi : OurRpcApi
 {
+    protected OurActorApi(IMoServiceProvider provider) : base(provider)
+    {
+    }
+
     public abstract string GetActorName();
 
     /// <summary>

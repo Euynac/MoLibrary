@@ -12,14 +12,14 @@ public interface IOurRpcApi
 
 }
 
-public abstract class OurRpcApi : IMoServiceProviderInjector
+public abstract class OurRpcApi(IMoServiceProvider provider)
 {
 
-    public IMoServiceProvider MoProvider { get; set; } = null!;
+    public IMoServiceProvider MoProvider { get; set; } = provider;
 
-    public IServiceProvider ServiceProvider => MoProvider?.ServiceProvider!;
-    protected IMoSystemUserManager _system => ServiceProvider?.GetRequiredService<IMoSystemUserManager>()!;
-    protected IHttpContextAccessor _accessor => ServiceProvider?.GetRequiredService<IHttpContextAccessor>()!;
+    public IServiceProvider ServiceProvider => MoProvider.ServiceProvider;
+    protected IMoSystemUserManager _system => ServiceProvider.GetRequiredService<IMoSystemUserManager>()!;
+    protected IHttpContextAccessor _accessor => ServiceProvider.GetRequiredService<IHttpContextAccessor>()!;
 
 }
 
@@ -27,7 +27,7 @@ public class OurHttpApi : OurRpcApi
 {
     protected readonly HttpClient _httpClient;
   
-    public OurHttpApi(HttpClient httpClient)
+    public OurHttpApi(IMoServiceProvider provider, HttpClient httpClient) : base(provider)
     {
         _httpClient = httpClient;
         //传递Header

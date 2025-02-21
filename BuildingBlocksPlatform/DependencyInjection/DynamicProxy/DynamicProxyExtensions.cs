@@ -255,6 +255,7 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
 
             var shouldInjectServiceProvider = implementType.IsImplementInterface<IMoServiceProviderInjector>();
             var context = new RegisterContext(option, shouldInjectServiceProvider, oldDescriptor, implementType, interceptorTypes, way);
+            var tmp = implementType.GetGenericTypeName();
             switch (way)
             {
                 case ERegisterWays.Factory:
@@ -323,6 +324,7 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
                         .ToArray();
                     var targetFromFactory = factory.Invoke(provider);
                     object? proxiedObject;
+                    //TODO 无法实现属性注入，因为工厂方法实例化只能执行一次。
                     switch (context.Kind)
                     {
                         case EDynamicProxyKind.ClassProxy:

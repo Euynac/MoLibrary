@@ -40,6 +40,8 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
     public MoRepositoryOptions MoOptions =>
         ServiceProvider.GetRequiredService<IOptions<MoRepositoryOptions>>().Value;
 
+    public bool HasInit { get; protected set; }
+
 
     private static readonly MethodInfo ConfigureBasePropertiesMethodInfo
         = typeof(MoDbContext<TDbContext>)
@@ -303,6 +305,9 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
 
     public virtual void Initialize(IMoUnitOfWork unitOfWork)
     {
+        if (HasInit) throw new InvalidOperationException("重复触发相同DbContext初始化设置，代码结构异常，请上报");
+        HasInit = true;
+
         if (unitOfWork.Options.Timeout.HasValue &&
             Database.IsRelational() &&
             !Database.GetCommandTimeout().HasValue)
