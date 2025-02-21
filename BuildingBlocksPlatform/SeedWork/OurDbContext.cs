@@ -1,16 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using ShardingCore.Sharding.Abstractions;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.ValueGeneration;
 using ShardingCore.Extensions;
-using BuildingBlocksPlatform.DependencyInjection.AppInterfaces;
-using BuildingBlocksPlatform.Features.MoSnowflake;
 using BuildingBlocksPlatform.Repository;
-using BuildingBlocksPlatform.Transaction;
 using Microsoft.Extensions.DependencyInjection;
 using BuildingBlocksPlatform.Repository.EntityInterfaces;
-using Microsoft.EntityFrameworkCore.Metadata;
 using BuildingBlocksPlatform.DataSync.Interfaces;
 
 namespace BuildingBlocksPlatform.SeedWork;
@@ -68,14 +62,16 @@ public abstract class OurDbContext<TDbContext>(DbContextOptions<TDbContext> opti
             //};
             shardingDbContextExecutor.CreateDbContextAfter += (_, args) =>
             {
+                //不是分表操作应该可以不生成新的连接？ 但测试发现必须创建，否则Track的事件无法触发。似乎这才是真正执行的DbContext？
+                //if(!args.RouteTail.IsShardingTableQuery()) return;
+
                 var dbContext = args.DbContext;
-                if (dbContext is MoDbContext<TDbContext> moDbContext)
+                if (dbContext is not MoDbContext<TDbContext> moDbContext) return;
+
+                var manager = ServiceProvider.GetRequiredService<IMoUnitOfWorkManager>();
+                if (dbContext is IMoDbContext coreDbContext && manager.Current != null && !moDbContext.HasInit) //对于同一个分表RouteTail操作，会进入两次该创建DbContext事件，ShardingCore的实现问题。
                 {
-                    var manager = ServiceProvider.GetRequiredService<IMoUnitOfWorkManager>();
-                    if (dbContext is IMoDbContext coreDbContext && manager.Current != null)
-                    {
-                        coreDbContext.Initialize(manager.Current);
-                    }
+                    coreDbContext.Initialize(manager.Current);
                 }
             };
         }

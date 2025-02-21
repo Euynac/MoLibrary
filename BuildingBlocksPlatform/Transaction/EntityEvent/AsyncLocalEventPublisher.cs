@@ -200,7 +200,7 @@ public class AsyncLocalEventPublisher(
         var eventRecord = new TransactionEventRecord(eventType, eventData, originalEntity);
 
         var buffer = bufferStore.GetOrNewBuffer();
-        buffer.Records.Add(eventRecord);
+        //buffer.Records.Add(eventRecord); //暂时用于测试
         if (eventPublisher == DistributedEventBus)
         {
             AddOrReplaceEvent(buffer.DistributedEvents, buffer.DistributedEventsHash, eventRecord);

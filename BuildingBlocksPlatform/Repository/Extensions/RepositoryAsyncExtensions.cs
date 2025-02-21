@@ -266,6 +266,16 @@ public static class RepositoryAsyncExtensions
         return await queryable.MaxAsync(selector, cancellationToken);
     }
 
+    //Todo 待.NET 支持MaxBy后优化
+    public static async Task<T?> MaxByAsync<T, TKey>(
+        this IMoBasicRepository<T> repository,
+        Expression<Func<T, TKey>> selector,
+        CancellationToken cancellationToken = default)
+        where T : class, IMoEntity
+    {
+        var queryable = await repository.GetQueryableAsync();
+        return await queryable.OrderByDescending(selector).FirstOrDefaultAsync(cancellationToken);
+    }
     #endregion
 
     #region Sum
