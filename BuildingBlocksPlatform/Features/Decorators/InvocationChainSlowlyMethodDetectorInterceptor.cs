@@ -11,7 +11,7 @@ public class InvocationChainSlowlyMethodDetectorInterceptor(ILogger<InvocationCh
    
     public override async Task InterceptAsync(IMoMethodInvocation invocation)
     {   
-        var context = accessor.HttpContext?.GetOrNew<OurRequestContext>();
+        var context = accessor.HttpContext?.GetOrNew<MoRequestContext>();
         if (context is null)
         {
             await invocation.ProceedAsync();

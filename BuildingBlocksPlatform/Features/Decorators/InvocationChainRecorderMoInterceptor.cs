@@ -37,7 +37,7 @@ public class InvocationChainRecorderMoInterceptor(IHttpContextAccessor accessor,
     public override async Task InterceptAsync(IMoMethodInvocation invocation)
     {
         var shouldRecordChain = ShouldRecordChain(invocation, out var declaringType, out var request);
-        var context = accessor.HttpContext?.GetOrNew<OurRequestContext>();
+        var context = accessor.HttpContext?.GetOrNew<MoRequestContext>();
         if (context is null)
         {
             await invocation.ProceedAsync();

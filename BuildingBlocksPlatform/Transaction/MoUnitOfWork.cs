@@ -86,7 +86,7 @@ public class MoUnitOfWork(
         catch (Exception ex)
         {
             _exception = ex;
-            throw;
+            ex.ReThrow();
         }
     }
 

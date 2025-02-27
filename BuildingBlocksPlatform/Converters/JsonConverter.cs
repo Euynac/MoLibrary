@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using System.Globalization;
 using System;
 using System.Text.Encodings.Web;
+using BuildingBlocksPlatform.DataSync.Interfaces;
 using BuildingBlocksPlatform.SeedWork;
 using TimeExtensions = BuildingBlocksPlatform.Extensions.TimeExtensions;
 
@@ -375,7 +376,7 @@ public static class JsonConverterExtensions
         JsonShared.Options.WhenWritingNull = whenWritingNull;
         JsonShared.Options.ReferenceHandlerPreserve = referenceHandlerPreserve;
         var options = new JsonSerializerOptions();
-        options.ConfigGlobalJsonSerializeOptions([typeof(ResponseCode)]);
+        options.ConfigGlobalJsonSerializeOptions([typeof(ResponseCode), typeof(ESystemDataSpecialFlags)]);
         JsonShared.GlobalJsonSerializerOptions = options;
 
         //依赖于AsyncLocal技术，异步static单例，不同的请求线程会有不同的HttpContext

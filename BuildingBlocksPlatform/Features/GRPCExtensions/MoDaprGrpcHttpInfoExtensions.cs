@@ -1,12 +1,14 @@
-using BuildingBlocksPlatform.Middleware;
+using System.Dynamic;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using System.Text;
+using System.Text.Json.Nodes;
 using BuildingBlocksPlatform.Converters;
+using BuildingBlocksPlatform.DomainDrivenDesign.ExceptionHandler;
 using BuildingBlocksPlatform.SeedWork;
-using Dapr.Actors.Runtime;
-using Koubot.Tool.Extensions;
+using BuildingBlocksPlatform.Features.Decorators;
+using System.Net.Http;
 
 namespace BuildingBlocksPlatform.Features.GRPCExtensions;
 
@@ -16,11 +18,7 @@ public static class MoDaprGrpcHttpInfoExtensions
     {
         services.AddTransient<MoGrpcApiHttpInfoMiddleware>();
     }
-    /// <summary>
-    ///  注册请求响应日志中间件
-    ///  </summary>
-    ///  <param name="builder"></param>
-    /// <returns></returns>
+
     public static void UseMoDaprGrpcApiHttpInfo(this IApplicationBuilder builder)
     {
         builder.UseMiddleware<MoGrpcApiHttpInfoMiddleware>();
@@ -29,9 +27,9 @@ public static class MoDaprGrpcHttpInfoExtensions
 
 
 /// <summary>
-/// Middleware for logging request body and query string
+/// 用于扩展Dapr调用相关功能，如自定义Header、链路追踪
 /// </summary>
-internal sealed class MoGrpcApiHttpInfoMiddleware(IGlobalJsonOption jsonOption) : IMiddleware
+internal sealed class MoGrpcApiHttpInfoMiddleware(IGlobalJsonOption jsonOption, IMoExceptionHandler handler) : IMiddleware
 {
     public async Task InvokeAsync(HttpContext context, RequestDelegate next)
     {
@@ -79,7 +77,48 @@ internal sealed class MoGrpcApiHttpInfoMiddleware(IGlobalJsonOption jsonOption) 
             context.Request.Body.Position = 0;
         }
 
-        // Call next middleware in the pipeline
-        await next(context);
+
+        var originalBodyStream = context.Response.Body;
+
+        // Swap out stream with one that is buffered and supports seeking
+        using var memoryStream = new MemoryStream();
+        context.Response.Body = memoryStream;
+        try
+        {
+            // Hand over to the next middleware and wait for the call to return
+            await next(context);
+
+            memoryStream.Position = 0;
+            var originResponse =
+                await JsonSerializer.DeserializeAsync<JsonNode>(memoryStream, jsonOption.GlobalOptions);
+
+            using var newResStream = new MemoryStream();
+            context.Response.Body = newResStream;
+
+            originResponse![nameof(Res.ExtraInfo)] =
+                JsonSerializer.SerializeToNode(context.GetOrDefault<MoRequestContext>(), jsonOption.GlobalOptions);
+
+            await context.Response.WriteAsJsonAsync(originResponse, jsonOption.GlobalOptions);
+
+            // Copy body back to so its available to the user agent
+            newResStream.Position = 0;
+            await newResStream.CopyToAsync(originalBodyStream);
+        }
+        catch (Exception e)
+        {
+            var exRes = await handler.TryHandleAsync(context, e, CancellationToken.None);
+            handler.LogException(context, e);
+            using var exceptionStream = new MemoryStream();
+            context.Response.Body = exceptionStream;
+            await context.Response.WriteAsJsonAsync(exRes);
+            exceptionStream.Position = 0;
+            await exceptionStream.CopyToAsync(originalBodyStream);
+            //巨坑：必须使用原有HTTPContext的Stream，猜想：因为独自开的Stream被using自动Dispose掉了，返回后无法读取。
+
+        }
+        finally
+        {
+            context.Response.Body = originalBodyStream;
+        }
     }
 }

@@ -23,7 +23,7 @@ public enum ESystemDataSpecialFlags
     ///// <summary>
     ///// 自管数据由人工标记为待上传，需要上传一级进行管理
     ///// </summary>
-    //Uploading = 1 << 1,
+    Uploading = 1 << 1,
     /// <summary>
     /// 这部分数据已经成功上传一级，系统将状态由待上传改为已上传（二级将收到来自一级数据标记返回）
     /// </summary>
@@ -84,14 +84,15 @@ public interface ISystemEntityDataSync
 
     public void SetState(ESystemDataSpecialFlags state)
     {
-        if (state == ESystemDataSpecialFlags.Uploaded ||
+        if (state == ESystemDataSpecialFlags.Uploading ||
+            state == ESystemDataSpecialFlags.Uploaded ||
             state == ESystemDataSpecialFlags.Cancel ||
             state == ESystemDataSpecialFlags.Rejected ||
             state == ESystemDataSpecialFlags.Reviewed || 
             state == ESystemDataSpecialFlags.UnderReview)
         {
             // 重置状态
-            DataSyncFlags = DataSyncFlags.Remove(ESystemDataSpecialFlags.Uploaded, ESystemDataSpecialFlags.Cancel,
+            DataSyncFlags = DataSyncFlags.Remove(ESystemDataSpecialFlags.Uploading, ESystemDataSpecialFlags.Uploaded, ESystemDataSpecialFlags.Cancel,
                 ESystemDataSpecialFlags.Rejected, ESystemDataSpecialFlags.Reviewed, ESystemDataSpecialFlags.UnderReview);
         }
 

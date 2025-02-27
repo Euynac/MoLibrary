@@ -1,15 +1,10 @@
-using Google.Api;
-using Koubot.Tool.Extensions;
-using Koubot.Tool.General;
-using Microsoft.Extensions.Logging;
 using System.Dynamic;
 using System.Text.Json.Serialization;
-using BuildingBlocksPlatform.Extensions;
 using BuildingBlocksPlatform.SeedWork;
 
 namespace BuildingBlocksPlatform.Features.Decorators;
 
-public class OurRequestContext
+public class MoRequestContext
 {
     //public string RequestId { get; set; } = Guid.NewGuid().ToString("N");
     public InvokeChainInfo? ChainBridge { get; set; }
@@ -37,25 +32,45 @@ public class OurRequestContext
             Invoking("chainBridge doesn't existed", "<failed get HttpContext>");
         }
 
-        ChainBridge = ChainBridge!.Invoked($"{res.Message}({res.Code})", duration, true,
-            res.ExtraInfo?.GetOrDefault<string, object?>("invocationChain") ?? res.ExtraInfo?.GetOrDefault<string, object?>("InvocationChain"));
+        ChainBridge = ChainBridge!.Invoked($"{res.Message}({res.Code})", duration, true, CreateResExtraInfo(res));
         RefreshServiceResponse(res);
     }
-
+    /// <summary>
+    /// 更换为最新的ExtraInfo传递下去
+    /// </summary>
+    /// <param name="res"></param>
     private void RefreshServiceResponse(IServiceResponse? res)
     {
         if (res is { } obj)
         {
             obj.ExtraInfo ??= new ExpandoObject();
             obj.ExtraInfo.Remove("invocationChain", out _);
-            ((dynamic) obj.ExtraInfo).InvocationChain = ChainBridge!;
+            ((dynamic)obj.ExtraInfo).InvocationChain = ChainBridge!;
             if (OtherInfo is { } otherInfo)
             {
-                ((dynamic) obj.ExtraInfo).OtherInfo = otherInfo;
+                ((dynamic)obj.ExtraInfo).OtherInfo = otherInfo;
             }
         }
     }
 
+    private object? CreateResExtraInfo(IServiceResponse? res)
+    {
+        if (res == null) return null;
+        var node = JsonSerializer.SerializeToNode(res.ExtraInfo);
+        if (res.IsOk()) return node;
+
+        if (node != null)
+        {
+            node["msg"] = res.Message;
+        }
+        else
+        {
+            return res.Message;
+
+        }
+        return node;
+    }
+ 
     /// <summary>
     /// 指示该次调用已完成
     /// </summary>
@@ -69,7 +84,9 @@ public class OurRequestContext
             Invoking("chainBridge doesn't existed", "<failed get HttpContext>");
         }
 
-        ChainBridge = ChainBridge!.Invoked(response, duration);
+
+
+        ChainBridge = ChainBridge!.Invoked(response, duration, extraInfo: CreateResExtraInfo(res));
         RefreshServiceResponse(res);
     }
 
@@ -77,8 +94,10 @@ public class OurRequestContext
 
 public class InvokeChainInfo
 {
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public bool? IsRemoteInvoke { get; set; }
+    /// <summary>
+    /// 是远程调用
+    /// </summary>
+    public bool IsRemoteInvoke { get; set; }
     /// <summary>
     /// 方法名
     /// </summary>
@@ -130,7 +149,7 @@ public class InvokeChainInfo
     {
         Response = response;
         Duration = duration?.TotalMilliseconds.Be("{0}ms", true) ?? $"{(DateTime.Now - _startTime).TotalMilliseconds}ms";
-        IsRemoteInvoke = isRemote;
+        IsRemoteInvoke = isRemote ?? false;
         InvokedExtraInfo = extraInfo;
         return PreviousChain ?? this;
     }

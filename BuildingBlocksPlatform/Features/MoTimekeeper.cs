@@ -42,7 +42,7 @@ public class MoTimekeeperManager(IHttpContextAccessor accessor, ILogger<MoTimeke
 {
     public IDisposable CreateResAutoTimer(string key)
     {
-        if (accessor.HttpContext?.GetOrNew<OurRequestContext>() is { } context)
+        if (accessor.HttpContext?.GetOrNew<MoRequestContext>() is { } context)
         {
             return new ResAutoTimekeeper(context, key, logger);
         }
@@ -161,9 +161,9 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
 
 public class ResAutoTimekeeper : MoTimekeeperBase
 {
-    private readonly OurRequestContext? _context;
+    private readonly MoRequestContext? _context;
 
-    public ResAutoTimekeeper(OurRequestContext context, string key, ILogger logger) : base(key, logger)
+    public ResAutoTimekeeper(MoRequestContext context, string key, ILogger logger) : base(key, logger)
     {
         _context = context;
         Start();

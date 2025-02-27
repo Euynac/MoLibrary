@@ -69,6 +69,18 @@ public class MoCurrentUser : MoCurrentUserBase, IMoCurrentUser
 }
 
 
+public static class MoCurrentUserExtensions
+{
+    /// <summary>
+    /// 转换为当前用户对象
+    /// </summary>
+    public static IMoCurrentUser AsMoCurrentUser(this ClaimsPrincipal user)
+    {
+        var currentUser = new MoCurrentUser(user);
+        return currentUser;
+    }
+}
+
 public abstract class MoCurrentUserBase(ClaimsPrincipal principal) : IMoCurrentUserBase
 {
     private static readonly Claim[] _emptyClaimsArray = [];
