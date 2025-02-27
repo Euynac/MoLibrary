@@ -4,12 +4,8 @@ using Dapr.Actors;
 
 namespace BuildingBlocksPlatform.SeedWork;
 
-public abstract class OurActorApi : OurRpcApi
+public abstract class OurActorApi(IMoServiceProvider provider) : OurRpcApi(provider)
 {
-    protected OurActorApi(IMoServiceProvider provider) : base(provider)
-    {
-    }
-
     public abstract string GetActorName();
 
     /// <summary>
@@ -40,8 +36,9 @@ public abstract class OurActorApi : OurRpcApi
             }
         }
 
-        return await dynamicProxy.InvokeMethodAsync<TRequest, TResponse>(method,
+        var test = await dynamicProxy.InvokeMethodAsync<TRequest, TResponse>(method,
             data, cancellationToken);
+        return test;
     }
 
 }

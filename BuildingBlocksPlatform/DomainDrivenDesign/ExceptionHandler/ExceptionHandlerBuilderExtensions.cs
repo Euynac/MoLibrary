@@ -46,16 +46,13 @@ public static class ExceptionHandlerBuilderExtensions
         //}));
     }
 
-    /// <summary>
-    /// Adds global exception handling services to the service collection.
-    /// </summary>
-    /// <param name="services">The service collection.</param>
-    public static void AddMoExceptionHandler(this IServiceCollection services)
+    public static void AddMoExceptionHandler<THandler>(this IServiceCollection services)
+        where THandler : class,IExceptionHandler
     {
         services.AddSingleton<IMoExceptionHandler, MoExceptionHandler>();
-        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ExceptionHandlerBehavior<,>));
+        //services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ExceptionHandlerBehavior<,>));
         services.AddExceptionHandler<AutoModelExceptionHandlerForRes>();
-        services.AddExceptionHandler<GlobalExceptionHandler>();
+        services.AddExceptionHandler<THandler>();
         //services.AddProblemDetails();
         //services.Configure<MvcOptions>(options =>
         //{
@@ -91,6 +88,16 @@ public static class ExceptionHandlerBuilderExtensions
             GlobalLog.LogError("进程退出：{sender} {eventArgs}", sender?.ToJsonStringForce(), eventArgs?.ToJsonStringForce());
         };
     }
+
+
+    /// <summary>
+    /// Adds global exception handling services to the service collection.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    public static void AddMoExceptionHandler(this IServiceCollection services)
+    {
+        AddMoExceptionHandler<DefaultGlobalExceptionHandler>(services);
+    }
 }
 
 /// <summary>
@@ -98,7 +105,7 @@ public static class ExceptionHandlerBuilderExtensions
 /// </summary>
 /// <typeparam name="TRequest">The type of the request.</typeparam>
 /// <typeparam name="TResponse">The type of the response.</typeparam>
-internal class ExceptionHandlerBehavior<TRequest, TResponse>(IMoExceptionHandler handler, IHttpContextAccessor accessor)
+public class ExceptionHandlerBehavior<TRequest, TResponse>(IMoExceptionHandler handler, IHttpContextAccessor accessor)
     : IPipelineBehavior<TRequest, TResponse> where TRequest : IRequest<TResponse> where TResponse : IServiceResponse, new()
 {
     /// <summary>
@@ -126,21 +133,15 @@ internal class ExceptionHandlerBehavior<TRequest, TResponse>(IMoExceptionHandler
 /// <summary>
 /// Global exception handler for handling exceptions in the application.
 /// </summary>
-internal class GlobalExceptionHandler(IMoExceptionHandler handler) : IExceptionHandler
+public class DefaultGlobalExceptionHandler(IMoExceptionHandler handler) : IExceptionHandler
 {
-    /// <summary>
-    /// Tries to handle the exception and writes the response to the HTTP context.
-    /// </summary>
-    /// <param name="httpContext">The HTTP context.</param>
-    /// <param name="exception">The exception.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>A value task representing the asynchronous operation.</returns>
-    public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
+    public virtual async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
         var res = await handler.TryHandleAsync(httpContext, exception, cancellationToken);
         handler.LogException(httpContext, exception);
         httpContext.Response.StatusCode =
             (int)(((IServiceResponse?)res)?.GetHttpStatusCode() ?? HttpStatusCode.InternalServerError);
+
         await httpContext.Response.WriteAsJsonAsync(res, cancellationToken);
         return true;
     }

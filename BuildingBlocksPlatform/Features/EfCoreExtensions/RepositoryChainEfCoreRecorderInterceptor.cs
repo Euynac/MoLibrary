@@ -11,7 +11,7 @@ public class RepositoryChainEfCoreRecorderInterceptor(IHttpContextAccessor acces
 {
     private void Record(DbCommand command, CommandEventData eventData)
     {
-        var context = accessor.HttpContext?.GetOrNew<OurRequestContext>();
+        var context = accessor.HttpContext?.GetOrNew<MoRequestContext>();
         if (context == null) return;
         if (eventData is CommandEndEventData endEvent)
         {

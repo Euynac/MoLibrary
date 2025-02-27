@@ -135,9 +135,9 @@ internal sealed class ResponseLoggingMiddleware : IMiddleware
             {
                 var buffer = new char[limit];
                 await reader.ReadAsync(buffer, 0, limit);
-                var requestBody = new string(buffer);
+                var responseBody = new string(buffer);
                 context.Request.Body.Position = 0;
-                sb.AppendLine($"[Too large to display, only read part of it: {limit}/{context.Request.ContentLength}]\n{requestBody}");
+                sb.AppendLine($"[Too large to display, only read part of it: {limit}/{context.Request.ContentLength}]\n{responseBody}");
                 
             }
             else

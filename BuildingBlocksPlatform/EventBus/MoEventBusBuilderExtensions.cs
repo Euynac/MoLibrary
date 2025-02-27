@@ -97,13 +97,15 @@ public static class MoEventBusBuilderExtensions
                     var distributedEventBus = context.RequestServices.GetRequiredService<DaprDistributedEventBus>();
 
                     object? eventData = null;
+                    Type? eventType = null;
                     try
                     {
-                        eventData = JsonSerializer.Deserialize(data, distributedEventBus.GetEventType(topic!), jsonOption.GlobalOptions);
+                        eventType = distributedEventBus.GetEventType(topic!);
+                        eventData = JsonSerializer.Deserialize(data, eventType, jsonOption.GlobalOptions);
                     }
                     catch (JsonException e)
                     {
-                        logger.LogError(e, $"反序列化失败, data: {data}");
+                        logger.LogError(e, $"反序列化失败, type: {eventType?.Name}, data: {data}");
                         return Results.Ok();
                     }
 

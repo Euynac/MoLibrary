@@ -140,7 +140,7 @@ public static class ServiceResponseHelper
     }
 
     /// <summary>
-    /// 批量调用结果转为单次调用结果。当有一次失败，则Code显示为失败，不再继续
+    /// 批量调用结果转为单次调用结果。
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="responses"></param>
@@ -166,10 +166,9 @@ public static class ServiceResponseHelper
                 result.ExtraInfo ??= new ExpandoObject();
                 result.ExtraInfo.Append("bulk", extraInfo);
             }
-            if (!res.IsOk(out var data))
+            if (!res.IsOk(out var data) && result.Code == ResponseCode.Ok)
             {
                 result.Code = res.Code;
-                break;
             }
             list.Add(data);
         }

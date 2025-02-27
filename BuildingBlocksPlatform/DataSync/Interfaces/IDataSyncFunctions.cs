@@ -8,7 +8,12 @@ namespace BuildingBlocksPlatform.DataSync.Interfaces
 {
     public interface IDataSyncFunctions
     {
+        public void SetAsSelfHost();
         public bool IsSelfHostOperation();
+
+        public bool IsUploading();
+
+        public string GetSelfHostHeaderKey();
 
         public string GetLocalAddress();
     }

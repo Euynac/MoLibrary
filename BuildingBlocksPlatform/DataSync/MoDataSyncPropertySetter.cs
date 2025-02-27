@@ -16,8 +16,18 @@ public class MoDataSyncPropertySetter(IDataSyncFunctions dataSyncFunc) : IMoData
         {
             //ObjectHelper.TrySetProperty(dataSyncObject, x => x.DataSyncFlags, () => CurrentUser.Username);
             // TODO
+            var flags = target.DataSyncFlags;
+            if (dataSyncFunc.IsSelfHostOperation())
+            {
+                flags = flags | ESystemDataSpecialFlags.SelfHosted;
+            }
 
-            ObjectHelper.TrySetProperty(target, x => x.DataSyncFlags, (x) => x.DataSyncFlags | ESystemDataSpecialFlags.SelfHosted);
+            if (dataSyncFunc.IsUploading())
+            {
+                flags = flags | ESystemDataSpecialFlags.Uploading;
+            }
+
+            ObjectHelper.TrySetProperty(target, x => x.DataSyncFlags, (x) => flags);
             ObjectHelper.TrySetProperty(target, x => x.DataSyncSource, dataSyncFunc.GetLocalAddress);
         }
     }

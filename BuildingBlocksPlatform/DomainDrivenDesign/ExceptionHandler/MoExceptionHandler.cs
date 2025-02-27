@@ -63,7 +63,7 @@ internal class MoExceptionHandler(ILogger<MoExceptionHandler> logger) : IMoExcep
                         ["response"] = httpContext?.Response.CloneAs<DtoHttpContextResponse>(),
                         ["request"] = httpContext?.Request.CloneAs<DtoHttpContextRequest>(),
                         ["connection"] = httpContext?.Connection.ToJsonStringForce(),
-                        ["chainInfo"] = httpContext?.GetOrDefault<OurRequestContext>(),
+                        ["chainInfo"] = httpContext?.GetOrDefault<MoRequestContext>(),
                         ["time"] = DateTime.Now,
                         ["utcTime"] = DateTime.UtcNow,
                     }

@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using BuildingBlocksPlatform.Authority.Security;
+using BuildingBlocksPlatform.DataSync.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -14,12 +15,10 @@ public interface IOurRpcApi
 
 public abstract class OurRpcApi(IMoServiceProvider provider)
 {
-
-    public IMoServiceProvider MoProvider { get; set; } = provider;
-
-    public IServiceProvider ServiceProvider => MoProvider.ServiceProvider;
+    public IServiceProvider ServiceProvider => provider.ServiceProvider;
     protected IMoSystemUserManager _system => ServiceProvider.GetRequiredService<IMoSystemUserManager>()!;
     protected IHttpContextAccessor _accessor => ServiceProvider.GetRequiredService<IHttpContextAccessor>()!;
+    protected IDataSyncFunctions _dataSyncFunctions => ServiceProvider.GetRequiredService<IDataSyncFunctions>()!;
 
 }
 
@@ -32,7 +31,7 @@ public class OurHttpApi : OurRpcApi
         _httpClient = httpClient;
         //传递Header
         // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
-        if (ServiceProvider != null && _httpClient.DefaultRequestHeaders.Authorization is null)
+        if (_httpClient.DefaultRequestHeaders.Authorization is null)
         {
             //请求从后端发起
             if (_accessor.HttpContext is null)
@@ -49,6 +48,10 @@ public class OurHttpApi : OurRpcApi
                 _httpClient.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse(authorization!);
             }
         }
-        
+
+        if (_dataSyncFunctions.IsSelfHostOperation() && !_httpClient.DefaultRequestHeaders.Contains(_dataSyncFunctions.GetSelfHostHeaderKey()))
+        {
+            _httpClient.DefaultRequestHeaders.Add(_dataSyncFunctions.GetSelfHostHeaderKey(), ((int)ESystemDataSpecialFlags.SelfHosted).ToString());
+        }
     }
 }

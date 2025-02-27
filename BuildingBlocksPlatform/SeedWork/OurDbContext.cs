@@ -143,12 +143,13 @@ public abstract class OurDbContext<TDbContext>(DbContextOptions<TDbContext> opti
 
     protected override void PublishEventsForTrackedEntity(EntityEntry entry)
     {
-        base.PublishEventsForTrackedEntity(entry);
-
         if (entry.State != EntityState.Unchanged && entry.Entity is ISystemEntityDataSync)
         {
             DataSyncPropertySetter.SetDataSyncProperties(entry.Entity);
         }
+
+        base.PublishEventsForTrackedEntity(entry);
+
     }
 }
 

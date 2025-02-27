@@ -254,16 +254,16 @@ public abstract class OurRepository<TDbContext, TEntity, TKey>(IDbContextProvide
         {
             using (var l = await _lock.ReaderLockAsync())
             {
-                RefreshCache();
+                await RefreshCacheAsync();
                 version =  airwayVersion;
             }
         }
     }
 
     //制空缓存dict
-    public virtual  void RefreshCache()
+    public virtual  Task RefreshCacheAsync()
     {
-
+        return Task.CompletedTask;
     }
     #endregion
 }
@@ -286,7 +286,7 @@ public interface IOurRepositoryCache
     /// <summary>
     /// 刷新缓存
     /// </summary>
-    void RefreshCache();
+    Task RefreshCacheAsync();
 }
 /// <summary>
 /// 仓库方法接口标记
