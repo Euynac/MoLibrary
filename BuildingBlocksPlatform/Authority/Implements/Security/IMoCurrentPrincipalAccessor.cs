@@ -14,5 +14,5 @@ public class MoCurrentPrincipalAccessor(IHttpContextAccessor httpContextAccessor
     }
 
     // ReSharper disable once NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract
-    public ClaimsPrincipal Principal => _currentPrincipal.Value ?? GetClaimsPrincipal() ?? systemUser.GetSystemUserPrinciple();
+    public ClaimsPrincipal Principal => _currentPrincipal.Value ?? GetClaimsPrincipal() ?? systemUser.GetCurSystemUserPrinciple();
 }

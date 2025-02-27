@@ -6,7 +6,7 @@ public abstract class MoTaskSchedulerBackgroundWorker : IMoTaskSchedulerBackgrou
     public string CronExpression { get; set; } 
 
     public abstract Task DoWorkAsync(CancellationToken cancellationToken = default);
-    internal MoTaskSchedulerBackgroundWorker(string cronExpression)
+    public MoTaskSchedulerBackgroundWorker(string cronExpression)
     {
         CronExpression = cronExpression;
     }

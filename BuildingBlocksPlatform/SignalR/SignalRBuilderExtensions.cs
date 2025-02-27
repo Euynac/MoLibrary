@@ -18,22 +18,23 @@ public static class SignalRBuilderExtensions
 {
     private static bool _hasAdd;
 
-    /// <summary>
-    ///     注册SignalR
-    /// </summary>
-    /// <param name="services"></param>
-    public static void AddDefaultMoSignalR<TIContract, THubServer>(this IServiceCollection services)
-        where TIContract : class, IMoHubContract where THubServer : MoHubServer<TIContract>
-    {
-        AddMoSignalR<MoUserHubOperator<TIContract, THubServer>, TIContract, IMoCurrentUser>(services);
-    }
+    ///// <summary>
+    /////     注册SignalR
+    ///// </summary>
+    ///// <param name="services"></param>
+    //public static void AddDefaultMoSignalR<TIContract, THubServer>(this IServiceCollection services)
+    //    where TIContract : class, IMoHubContract where THubServer : MoHubServer<TIContract>
+    //{
+    //    AddMoSignalR<MoUserHubOperator<TIContract, THubServer>, TIContract, IMoCurrentUser>(services);
+    //}
 
     /// <summary>
     ///     注册SignalR
     /// </summary>
     /// <param name="services"></param>
-    public static void AddMoSignalR<THubOperator, TIContract, TIUser>(this IServiceCollection services)
-        where THubOperator : class, IMoHubOperator<TIContract, TIUser>
+    public static void AddMoSignalR<TIHubOperator, THubOperator, TIContract, TIUser>(this IServiceCollection services)
+        where THubOperator : class, IMoHubOperator<TIContract, TIUser>, TIHubOperator
+        where TIHubOperator : class, IMoHubOperator<TIContract, TIUser>
         where TIContract : IMoHubContract
         where TIUser : IMoCurrentUser
     {
@@ -41,6 +42,7 @@ public static class SignalRBuilderExtensions
         services.AddSingleton<IUserIdProvider, MoUserIdProvider>();
         services.AddSingleton<IMoSignalRConnectionManager, MoSignalRConnectionManager>();
         services.AddTransient<IMoHubOperator<TIContract, TIUser>, THubOperator>();
+        services.AddTransient<TIHubOperator, THubOperator>();
         services.AddSignalR(options => { options.EnableDetailedErrors = true; }).AddJsonProtocol(options =>
         {
             options.PayloadSerializerOptions.CloneSerializerOptions(JsonShared.GlobalJsonSerializerOptions);
@@ -53,7 +55,7 @@ public static class SignalRBuilderExtensions
     public static void ConfigSignalRSwagger(this SwaggerGenOptions options,
         Action<SignalRSwaggerGenOptions> signalROption)
     {
-        if (_hasAdd is false) throw new Exception($"未执行{nameof(AddMoSignalR)}");
+        if (_hasAdd is false) return;
         options.AddSignalRSwaggerGen(signalROption);
     }
 

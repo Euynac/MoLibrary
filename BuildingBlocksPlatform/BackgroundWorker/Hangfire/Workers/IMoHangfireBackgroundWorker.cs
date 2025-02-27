@@ -11,5 +11,5 @@ public interface IMoHangfireBackgroundWorker : IMoDashboardBackgroundWorker
 
     TimeZoneInfo? TimeZone { get; set; }
 
-    Task DoWorkAsync(CancellationToken cancellationToken = default);
+    Task InternalDoWorkAsync(CancellationToken cancellationToken = default);
 }

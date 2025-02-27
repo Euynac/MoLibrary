@@ -1,4 +1,3 @@
-using System.Text;
 using BuildingBlocksPlatform.Authority.Authentication;
 using BuildingBlocksPlatform.Authority.Implements.Security;
 using BuildingBlocksPlatform.Authority.Security;
@@ -13,6 +12,17 @@ namespace BuildingBlocksPlatform.Authority;
 
 public static class MoJwtBuilderExtensions
 {
+
+    public static void AddMoSystemUser<T>(this IServiceCollection services, T curSystemEnum, Action<MoSystemUserOptions>? action = null) where T : struct, Enum
+    {
+        services.Configure((MoSystemUserOptions o) =>
+        {
+            o.SetCurSystemUser(curSystemEnum);
+            action?.Invoke(o);
+        });
+        services.AddSingleton<IMoSystemUserManager, MoSystemUserManager>();
+    }
+
     /// <summary>
     /// 注册JWT服务
     /// </summary>
@@ -37,8 +47,9 @@ public static class MoJwtBuilderExtensions
         services.AddHttpContextAccessor();
         services.AddTransient<IMoCurrentUser, MoCurrentUser>();
         services.AddSingleton<IMoJwtAuthManager, MoJwtAuthManager>();
+        services.AddSingleton<IMoAuthManager, MoJwtAuthManager>();
         services.AddSingleton<IMoCurrentPrincipalAccessor, MoCurrentPrincipalAccessor>(); //为何用单例就行？
-        services.AddSingleton<IMoSystemUserManager, MoJwtAuthManager>();
+        
         services.AddSingleton<IPasswordCrypto, PasswordCrypto>();
         services.AddAuthentication(x =>
         {

@@ -1,10 +1,18 @@
-using BuildingBlocksPlatform.Authority.Implements.Security;
 using Microsoft.Extensions.DependencyInjection;
 using System.Security.Claims;
 
 namespace BuildingBlocksPlatform.Authority.Security;
 
-public interface IMoCurrentUser : IMoCurrentUserBase
+public class MoUser : IMoUser
+{
+    public string? Id { get; set; }
+    public string? RoleId { get; set; }
+    public string? Nickname { get; set; }
+    public string? Username { get; set; }
+}
+
+
+public interface IMoUser
 {
     /// <summary>
     /// 用户Id
@@ -19,9 +27,14 @@ public interface IMoCurrentUser : IMoCurrentUserBase
     /// </summary>
     string? Nickname { get; }
     /// <summary>
-    /// 当前用户登录名
+    /// 用户登录名
     /// </summary>
     string? Username { get; }
+}
+
+public interface IMoCurrentUser : IMoCurrentUserBase, IMoUser
+{
+ 
 }
 
 public interface IMoCurrentUserBase

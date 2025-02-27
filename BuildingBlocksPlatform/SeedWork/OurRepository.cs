@@ -312,6 +312,7 @@ public interface IOurRepository : IOurRepositoryCache
     Task DynamicUpdateAsync(dynamic entity);
     Task DynamicDeleteAsync(dynamic entity);
     Task<dynamic?> DynamicFindAsync(dynamic entity);
+    Task<dynamic?> DynamicFindAsync(long entityId);
     Task<bool> DynamicExistAsync(dynamic entity);
     Task DynamicInsertManyAsync(IEnumerable<dynamic> entities);
     Task DynamicUpdateManyAsync(IEnumerable<dynamic> entities);
@@ -330,6 +331,16 @@ public interface IOurRepository<TEntity, TKey> : IMoRepository<TEntity, TKey>, I
         if (entity is IOurEntity<TKey> entityWithId)
         {
             return await FindAsync(entityWithId.Id);
+        }
+
+        return null;
+    }
+
+    async Task<dynamic?> IOurRepository.DynamicFindAsync(long entityId)
+    {
+        if (entityId is TKey key)
+        {
+            return await FindAsync(key);
         }
 
         return null;

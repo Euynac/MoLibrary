@@ -13,8 +13,8 @@ public interface IOurBackgroundWorker
 }
 
 
-public abstract class OurBackgroundWorker(string cronExpression)
-    : MoHangfireBackgroundWorker(cronExpression), IOurBackgroundWorker
+public abstract class OurBackgroundWorker(string cronExpression, IMoServiceProvider provider)
+    : MoHangfireBackgroundWorker(cronExpression, provider), IOurBackgroundWorker
 {
     public void SetQueue(string queue)
     {
@@ -26,9 +26,11 @@ public abstract class OurBackgroundWorker(string cronExpression)
 /// 后台工作者基类，继承此类并实现DoWorkAsync方法，必须给CronExpression作业执行周期。
 /// </summary>
 /// <typeparam name="TWorker"></typeparam>
-public abstract class OurBackgroundWorker<TWorker> : OurBackgroundWorker where TWorker : OurBackgroundWorker<TWorker>
+public abstract class OurBackgroundWorker<TWorker>(string cronExpression, IMoServiceProvider provider)
+    : OurBackgroundWorker(cronExpression, provider)
+    where TWorker : OurBackgroundWorker<TWorker>
 {
-    private IServiceProvider ServiceProvider { get; init; }
+   
     /// <summary>
     /// 日志记录器
     /// </summary>
@@ -62,14 +64,7 @@ public abstract class OurBackgroundWorker<TWorker> : OurBackgroundWorker where T
 
     protected IMoTimekeeper _timekeeper => ServiceProvider.GetRequiredService<IMoTimekeeper>()!;
 
-    protected OurBackgroundWorker(string cronExpression, IMoServiceProvider provider) : base(cronExpression)
-    {
-        RecurringJobId = typeof(TWorker).FullName;
-        CronExpression = cronExpression;
-        ServiceProvider = provider.ServiceProvider;
-    }
 
-    
     public sealed override async Task DoWorkAsync(CancellationToken cancellationToken = default)
     {
         //https://www.cnblogs.com/wucy/p/16791563.html
