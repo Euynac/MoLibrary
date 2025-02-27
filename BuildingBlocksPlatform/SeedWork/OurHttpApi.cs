@@ -36,7 +36,7 @@ public class OurHttpApi : OurRpcApi
             //请求从后端发起
             if (_accessor.HttpContext is null)
             {
-                var token = _system.GetTokenOfSystemUser();
+                var token = _system.GetTokenOfCurSystemUser();
                 _httpClient.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse(token);
             }
 

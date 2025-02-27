@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<Import Project="..\common.xml"></Import>
 
 	<PropertyGroup>
@@ -44,6 +44,8 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+
+    <PackageReference Include="Hangfire.InMemory" Version="0.8.1" />
     <PackageReference Include="protobuf-net.Core" Version="3.2.30" />
     <PackageReference Include="protobuf-net.Grpc.Reflection" Version="1.1.1" />
     <PackageReference Include="ShardingCore" Version="7.8.1.20" />

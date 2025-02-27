@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using BuildingBlocksPlatform.Authority.Implements.Authorization;
 using BuildingBlocksPlatform.Authority.Security;
 
 namespace BuildingBlocksPlatform.Authority.Implements.Security;

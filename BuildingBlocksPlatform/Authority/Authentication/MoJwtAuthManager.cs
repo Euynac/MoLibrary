@@ -3,17 +3,15 @@ using System.Collections.Immutable;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json.Serialization;
 using BuildingBlocksPlatform.Authority.Implements.Authorization;
-using BuildingBlocksPlatform.Authority.Implements.Security;
 using BuildingBlocksPlatform.Authority.Security;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace BuildingBlocksPlatform.Authority.Authentication;
 
-public class MoJwtAuthManager(IOptions<MoJwtTokenOptions> jwtTokenConfig) : IMoJwtAuthManager, IMoSystemUserManager
+public class MoJwtAuthManager(IOptions<MoJwtTokenOptions> jwtTokenConfig) : IMoJwtAuthManager, IMoAuthManager
 {
     protected MoJwtTokenOptions JwtTokenConfig => jwtTokenConfig.Value;
     public IImmutableDictionary<string, RefreshToken> UsersRefreshTokensReadOnlyDictionary => _usersRefreshTokens.ToImmutableDictionary();
@@ -39,11 +37,12 @@ public class MoJwtAuthManager(IOptions<MoJwtTokenOptions> jwtTokenConfig) : IMoJ
         }
     }
 
-    public JwtAuthResult GenerateTokens(string username, Claim[] claims, DateTime now)
+    public JwtAuthResult GenerateTokens(string username, Claim[] claims, DateTime? now = null)
     {
+        now ??= DateTime.Now;
         var shouldAddAudienceClaim = string.IsNullOrWhiteSpace(claims.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Aud)?.Value);
-        var accessExpiresAt = now.AddMinutes(JwtTokenConfig.AccessTokenExpiration);
-        var refreshExpiresAt = now.AddMinutes(JwtTokenConfig.RefreshTokenExpiration);
+        var accessExpiresAt = now.Value.AddMinutes(JwtTokenConfig.AccessTokenExpiration);
+        var refreshExpiresAt = now.Value.AddMinutes(JwtTokenConfig.RefreshTokenExpiration);
         var jwtToken = new JwtSecurityToken(
             JwtTokenConfig.Issuer,
             shouldAddAudienceClaim ? JwtTokenConfig.Audience : string.Empty,
@@ -68,15 +67,16 @@ public class MoJwtAuthManager(IOptions<MoJwtTokenOptions> jwtTokenConfig) : IMoJ
         };
     }
 
-    public JwtAuthResult Refresh(string refreshToken, string accessToken, DateTime now)
+    public JwtAuthResult Refresh(string refreshToken, string accessToken, DateTime? now = null)
     {
+        now ??= DateTime.Now;
         var (principal, jwtToken) = DecodeJwtToken(accessToken);
         if (jwtToken == null || !jwtToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256Signature))
         {
             throw new SecurityTokenException("Invalid token");
         }
 
-        var username = principal.AsCurrentUser().Username;
+        var username = principal.AsMoCurrentUser().Username;
         if (!_usersRefreshTokens.TryGetValue(refreshToken, out var existingRefreshToken))
         {
             throw new MoAuthorizationException(MoAuthorizationException.ExceptionType.RefreshTokenExpired);
@@ -126,26 +126,9 @@ public class MoJwtAuthManager(IOptions<MoJwtTokenOptions> jwtTokenConfig) : IMoJ
         return Convert.ToBase64String(randomNumber);
     }
 
-    public string GetTokenOfSystemUser()
+    string IMoAuthManager.GenerateTokens(string username, Claim[] claims, DateTime? now)
     {
-        var list = GetSystemUserClaims();
-        return GenerateTokens("system", [.. list], DateTime.Now).AccessToken;
-    }
-
-    public List<Claim> GetSystemUserClaims()
-    {
-        var list = new List<Claim>
-        {
-            new(MoClaimTypes.Username, "system"),
-            new(MoClaimTypes.UserId,Guid.Empty.ToString()[..^1]+"1"),
-            new(MoClaimTypes.Nickname, "系统"),
-        };
-        return list;
-    }
-
-    public ClaimsPrincipal GetSystemUserPrinciple()
-    {
-        return new ClaimsPrincipal(new ClaimsIdentity(GetSystemUserClaims(), "auto"));
+        return GenerateTokens(username, claims, now).AccessToken;
     }
 }
 

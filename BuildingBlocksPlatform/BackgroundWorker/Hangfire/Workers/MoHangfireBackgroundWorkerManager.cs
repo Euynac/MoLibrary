@@ -28,7 +28,7 @@ public class MoHangfireBackgroundWorkerManager(
                 : hangfireBackgroundWorker.RecurringJobId;
 
             RecurringJob.AddOrUpdate(jobName,
-                () => ((IMoHangfireBackgroundWorker) ServiceProvider.GetRequiredService(workerType)).DoWorkAsync(
+                () => ((IMoHangfireBackgroundWorker) ServiceProvider.GetRequiredService(workerType)).InternalDoWorkAsync(
                     cancellationToken),
                 hangfireBackgroundWorker.CronExpression, hangfireBackgroundWorker.TimeZone,
                 queue ?? hangfireBackgroundWorker.Queue);
