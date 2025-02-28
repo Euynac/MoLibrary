@@ -31,6 +31,11 @@ public interface IMoSystemUserManager
     IEnumerable<MoSystemUserOptions.SystemUserInfo> GetAllSystemUserInfos();
 }
 
+public enum EMoDefaultSystemUser
+{
+    System = 0
+}
+
 public class MoSystemUserOptions
 {
     public Type? SystemUserEnums { get; private set; } 
