@@ -12,7 +12,6 @@ namespace BuildingBlocksPlatform.Authority;
 
 public static class MoJwtBuilderExtensions
 {
-
     public static void AddMoSystemUser<T>(this IServiceCollection services, T curSystemEnum, Action<MoSystemUserOptions>? action = null) where T : struct, Enum
     {
         services.Configure((MoSystemUserOptions o) =>
@@ -20,7 +19,6 @@ public static class MoJwtBuilderExtensions
             o.SetCurSystemUser(curSystemEnum);
             action?.Invoke(o);
         });
-        services.AddSingleton<IMoSystemUserManager, MoSystemUserManager>();
     }
 
     /// <summary>
@@ -49,6 +47,14 @@ public static class MoJwtBuilderExtensions
         services.AddSingleton<IMoJwtAuthManager, MoJwtAuthManager>();
         services.AddSingleton<IMoAuthManager, MoJwtAuthManager>();
         services.AddSingleton<IMoCurrentPrincipalAccessor, MoCurrentPrincipalAccessor>(); //为何用单例就行？
+
+        #region SystemUser
+        
+        services.AddSingleton<IMoSystemUserManager, MoSystemUserManager>();
+        services.AddMoSystemUser(EMoDefaultSystemUser.System);
+        
+
+        #endregion
         
         services.AddSingleton<IPasswordCrypto, PasswordCrypto>();
         services.AddAuthentication(x =>
