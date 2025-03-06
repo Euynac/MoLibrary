@@ -2,7 +2,62 @@ using BuildingBlocksPlatform.Features;
 using Koubot.Tool.Extensions;
 
 namespace BuildingBlocksPlatform.Extensions;
+#region DateTime Interval
 
+public class DateTimeInterval(DateTime left, DateTime right)
+{
+    /// <summary>
+    /// 是否处于区间内
+    /// </summary>
+    /// <param name="time"></param>
+    /// <returns></returns>
+    public bool IsWithin(DateTime time)
+    {
+        return time >= left && time <= right;
+    }
+
+    /// <summary>
+    /// 不在区间时，输出最近边界差异值。区间内差异为0。
+    /// </summary>
+    /// <param name="value"></param>
+    /// <returns></returns>
+    public TimeSpan GetIntervalError(DateTime value)
+    {
+        if (IsWithin(value)) return default;
+        var leftError = Math.Abs((value - left).TotalSeconds);
+        var rightError = Math.Abs((value - right).TotalSeconds);
+
+        return leftError < rightError ? value - left : value - right;
+    }
+}
+public class BaseTimeInterval(TimeSpan thresholdLeft, TimeSpan thresholdRight, DateTime baseTime)
+{
+    public DateTime BaseTime { get; } = baseTime;
+
+    public DateTimeInterval Interval { get; } = new(baseTime.Subtract(thresholdLeft), baseTime.Add(thresholdRight));
+
+    public bool IsWithin(DateTime time)
+    {
+        return Interval.IsWithin(time);
+    }
+
+    /// <summary>
+    /// 距离的基准时间的差异值
+    /// </summary>
+    /// <param name="value"></param>
+    /// <returns></returns>
+    public TimeSpan GetAbsoluteError(DateTime value)
+    {
+        return BaseTime - value;
+    }
+
+    public override string ToString()
+    {
+        return $"-{thresholdLeft.TotalHours:0.#}h {BaseTime} +{thresholdRight.TotalHours:0.#}";
+    }
+}
+
+#endregion
 public static class TimeExtensions
 {
 

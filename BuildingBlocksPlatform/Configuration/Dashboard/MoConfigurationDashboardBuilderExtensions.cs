@@ -74,8 +74,9 @@ public static class MoConfigurationDashboardBuilderExtensions
             });
 
 
-            endpoints.MapPost(MoConfigurationConventions.DashboardCentreConfigRollback, async ([FromBody] RollbackRequest req, [FromServices] IMoConfigurationCentre centre) =>
+            endpoints.MapPost(MoConfigurationConventions.DashboardCentreConfigRollback, async ([FromBody] RollbackRequest req, [FromServices] IMoConfigurationCentre centre, [FromServices] IMoUnitOfWorkManager manager) =>
             {
+                using var uow = manager.Begin();
                 return (await centre.RollbackConfig(req.Key, req.AppId, req.Version)).GetResponse();
 
             }).WithName("回滚配置类").WithOpenApi(operation =>
@@ -86,8 +87,9 @@ public static class MoConfigurationDashboardBuilderExtensions
                 return operation;
             });
 
-            endpoints.MapPost(MoConfigurationConventions.DashboardCentreConfigUpdate, async (DtoUpdateConfig req, [FromServices] IMoConfigurationCentre modifier) =>
+            endpoints.MapPost(MoConfigurationConventions.DashboardCentreConfigUpdate, async (DtoUpdateConfig req, [FromServices] IMoConfigurationCentre modifier, [FromServices] IMoUnitOfWorkManager manager) =>
             {
+                using var uow = manager.Begin();
                 var value = req.Value;
                 return (await modifier.UpdateConfig(req)).GetResponse();
             }).WithName("更新指定配置").WithOpenApi(operation =>

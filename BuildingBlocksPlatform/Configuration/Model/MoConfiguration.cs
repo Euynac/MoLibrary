@@ -20,6 +20,10 @@ public class MoConfiguration
     public string Name { get; set; }
 
     /// <summary>
+    /// 配置类Key，用于修改
+    /// </summary>
+    public string Key => Info.Section ?? Name;
+    /// <summary>
     /// 配置项信息
     /// </summary>
     public List<OptionItem> OptionItems { get; protected set; }

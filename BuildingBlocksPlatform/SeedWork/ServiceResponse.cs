@@ -516,6 +516,22 @@ public class Res : IServiceResponse
     {
         return new ResError<T>(error, errorMsg ?? "Error occured. see extra info for detail.", code, errorDataKey);
     }
+    /// <summary>
+    /// 基于当前信息增加Data数据
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="data"></param>
+    /// <returns></returns>
+    public Res<T> WithData<T>(T data)
+    {
+        var res = new Res<T>(data)
+        {
+            Code = Code,
+            ExtraInfo = ExtraInfo,
+            Message = Message
+        };
+        return res;
+    }
 
     public override string ToString()
     {
@@ -683,10 +699,21 @@ public enum ResponseCode
     /// 访问Token失效
     /// </summary>
     AccessTokenExpired = 453,
+
+    /// <summary>
+    /// 警告错误，一般需用户确认
+    /// </summary>
+    ErrorWarning = 460,
     /// <summary>
     /// 权限不足
     /// </summary>
     Forbidden = 403,
+    /// <summary>
+    /// 输入验证错误
+    /// </summary>
     ValidateError = 451,
+    /// <summary>
+    /// 系统异常
+    /// </summary>
     InternalError = 500,
 }
