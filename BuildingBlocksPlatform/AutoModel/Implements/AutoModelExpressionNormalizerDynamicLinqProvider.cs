@@ -67,7 +67,7 @@ public class AutoModelExpressionNormalizerDynamicLinqProvider<TModel>(
         var selectColumnExp = "";
         if (isReverseSelect)
         {
-            var excepted = NormalizeLiteralSelect(selectColumns).Select(p=>p.ReflectionName).ToHashSet();
+            var excepted = NormalizeLiteralSelect(selectColumns).Select(GetSelectExpression).ToHashSet();
             var all = snapshot.GetFields().Select(GetSelectExpression).ToHashSet();
             selectColumnExp = all.Except(excepted).StringJoin(",");
         }

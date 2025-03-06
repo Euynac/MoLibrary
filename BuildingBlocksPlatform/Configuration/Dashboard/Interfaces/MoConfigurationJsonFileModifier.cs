@@ -87,7 +87,7 @@ public class MoConfigurationJsonFileModifier(ILogger<MoConfigurationJsonFileModi
 
     public async Task<Res<DtoUpdateConfigRes>> UpdateConfig(MoConfiguration config, JsonNode? value)
     {
-        var key = config.Name;
+        var key = config.Key;
         var option = config.OptionItems.FirstOrDefault();
         if (option == null)
         {

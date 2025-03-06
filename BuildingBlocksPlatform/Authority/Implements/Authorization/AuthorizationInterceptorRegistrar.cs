@@ -1,5 +1,6 @@
 using System.Reflection;
 using BuildingBlocksPlatform.DependencyInjection.DynamicProxy;
+using BuildingBlocksPlatform.DomainDrivenDesign.Interfaces;
 using BuildingBlocksPlatform.SeedWork;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,6 +31,7 @@ public static class AuthorizationInterceptorRegistrar
     private static bool ShouldIntercept(Type type)
     {
         return type.IsDefined(typeof(AuthorizeAttribute), true) || AnyMethodHasAuthorizeAttribute(type);
+        //return type.IsAssignableTo<IMoApplicationService>(); //type.IsDefined(typeof(AuthorizeAttribute), true) || AnyMethodHasAuthorizeAttribute(type) || 
     }
 
     private static bool AnyMethodHasAuthorizeAttribute(Type implementationType)

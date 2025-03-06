@@ -1,3 +1,5 @@
+using System.Net.Http.Json;
+using BuildingBlocksPlatform.Converters;
 using BuildingBlocksPlatform.Extensions;
 using BuildingBlocksPlatform.SeedWork;
 
@@ -33,18 +35,26 @@ public interface IRegisterCentreClientConnector
 
 
 
-public class DaprHttpForConnectClient(DaprClient client, ILogger<DaprHttpForConnectClient> logger) : IRegisterCentreClientConnector
+public class DaprHttpForConnectClient(DaprClient client, ILogger<DaprHttpForConnectClient> logger, IGlobalJsonOption jsonOption) : IRegisterCentreClientConnector
 {
     public async Task<Res<TResponse>> GetAsync<TResponse>(string appid, string callbackUrl)
     {
+        var response = await client.InvokeMethodWithResponseAsync(
+            client.CreateInvokeMethodRequest(HttpMethod.Get, appid,
+                callbackUrl, []));
+
         try
         {
-            return await client.InvokeMethodAsync<TResponse>(HttpMethod.Get, appid, callbackUrl);
+            var res = await response.Content.ReadFromJsonAsync<TResponse>(jsonOption.GlobalOptions);
+            if (res == null)
+                throw new InvocationException(appid, callbackUrl,
+                    new Exception("Json序列化为空"), response);
+            return res;
         }
         catch (Exception e)
         {
             var message = e.GetMessageRecursively();
-            return Res.Fail(ResponseCode.BadRequest, "执行{0}服务{1}失败:{2}", appid, callbackUrl,message);
+            return Res.Fail(ResponseCode.BadRequest, "执行{0}服务{1}失败:{2}", appid, callbackUrl, message);
         }
     }
 
@@ -62,9 +72,18 @@ public class DaprHttpForConnectClient(DaprClient client, ILogger<DaprHttpForConn
 
     public async Task<Res<TResponse>> PostAsync<TRequest, TResponse>(string appid, string callbackUrl, TRequest req)
     {
+
+        var response = await client.InvokeMethodWithResponseAsync(
+            client.CreateInvokeMethodRequest(HttpMethod.Post, appid,
+                callbackUrl, [], req));
+
         try
         {
-            return await client.InvokeMethodAsync<TRequest, TResponse>(HttpMethod.Post, appid, callbackUrl, req);
+            var res = await response.Content.ReadFromJsonAsync<TResponse>(jsonOption.GlobalOptions);
+            if (res == null)
+                throw new InvocationException(appid, callbackUrl,
+                    new Exception("Json序列化为空"), response);
+            return res;
         }
         catch (Exception e)
         {
