@@ -1,12 +1,18 @@
-﻿namespace BuildingBlocksPlatform.SeedWork;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+
+namespace BuildingBlocksPlatform.SeedWork;
 
 /// <summary>
 /// 全局Logger，一般用于Platform中的日志记录，日志配置在每个服务的Startup中
 /// </summary>
 public static class GlobalLog
 {
-    private static ILogger _logger = null!;
+    private static ILogger? _logger;
 
+    /// <summary>
+    /// Whether to throw an exception if the global logger is not configured.
+    /// </summary>
+    public static bool StrictMode = false;
     /// <summary>
     /// Globally shared logger instance.
     /// </summary>
@@ -16,9 +22,13 @@ public static class GlobalLog
         {
             if (_logger == null)
             {
-                throw new InvalidOperationException("Global logger has not been configured.");
+                if (StrictMode)
+                {
+                    throw new InvalidOperationException("Global logger has not been configured.");
+                }
+                return NullLogger.Instance;
             }
-
+            
             return _logger;
         }
         set
@@ -38,7 +48,7 @@ public static class GlobalLog
     /// <param name="args">An object array that contains zero or more objects to format.</param>
     public static void Log(LogLevel logLevel, string? message, params object?[] args)
     {
-        _logger.Log(logLevel, message, args);
+        Logger.Log(logLevel, message, args);
     }
 
     /// <summary>
@@ -50,7 +60,7 @@ public static class GlobalLog
     /// <param name="args">An object array that contains zero or more objects to format.</param>
     public static void Log(LogLevel logLevel, EventId eventId, string? message, params object?[] args)
     {
-        _logger.Log(logLevel, eventId, null, message, args);
+        Logger.Log(logLevel, eventId, null, message, args);
     }
 
     /// <summary>
@@ -62,7 +72,7 @@ public static class GlobalLog
     /// <param name="args">An object array that contains zero or more objects to format.</param>
     public static void Log(LogLevel logLevel, Exception? exception, string? message, params object?[] args)
     {
-        _logger.Log(logLevel, 0, exception, message, args);
+        Logger.Log(logLevel, 0, exception, message, args);
     }
 
     /// <summary>Formats and writes a debug log message.</summary>
@@ -77,7 +87,7 @@ public static class GlobalLog
         string? message,
         params object?[] args)
     {
-        _logger.Log(LogLevel.Debug, eventId, exception, message, args);
+        Logger.Log(LogLevel.Debug, eventId, exception, message, args);
     }
 
     /// <summary>Formats and writes a debug log message.</summary>
@@ -90,7 +100,7 @@ public static class GlobalLog
         string? message,
         params object?[] args)
     {
-        _logger.Log(LogLevel.Debug, eventId, message, args);
+        Logger.Log(LogLevel.Debug, eventId, message, args);
     }
 
     /// <summary>Formats and writes a debug log message.</summary>
@@ -103,14 +113,14 @@ public static class GlobalLog
         string? message,
         params object?[] args)
     {
-        _logger.Log(LogLevel.Debug, exception, message, args);
+        Logger.Log(LogLevel.Debug, exception, message, args);
     }
 
     /// <summary>Formats and writes a debug log message.</summary>
     /// <param name="message">Format string of the log message in message template format. Example: <c>"User {User} logged in from {Address}"</c></param>
     /// <param name="args">An object array that contains zero or more objects to format.</param>
     /// <example>logger.LogDebug("Processing request from {Address}", address)</example>
-    public static void LogDebug(string? message, params object?[] args) => _logger.Log(LogLevel.Debug, message, args);
+    public static void LogDebug(string? message, params object?[] args) => Logger.Log(LogLevel.Debug, message, args);
 
     /// <summary>Formats and writes a trace log message.</summary>
     /// <param name="eventId">The event id associated with the log.</param>
@@ -124,7 +134,7 @@ public static class GlobalLog
         string? message,
         params object?[] args)
     {
-        _logger.Log(LogLevel.Trace, eventId, exception, message, args);
+        Logger.Log(LogLevel.Trace, eventId, exception, message, args);
     }
 
     /// <summary>Formats and writes a trace log message.</summary>
@@ -137,7 +147,7 @@ public static class GlobalLog
         string? message,
         params object?[] args)
     {
-        _logger.Log(LogLevel.Trace, eventId, message, args);
+            Logger.Log(LogLevel.Trace, eventId, message, args);
     }
 
     /// <summary>Formats and writes a trace log message.</summary>
@@ -150,14 +160,14 @@ public static class GlobalLog
         string? message,
         params object?[] args)
     {
-        _logger.Log(LogLevel.Trace, exception, message, args);
+            Logger.Log(LogLevel.Trace, exception, message, args);
     }
 
     /// <summary>Formats and writes a trace log message.</summary>
     /// <param name="message">Format string of the log message in message template format. Example: <c>"User {User} logged in from {Address}"</c></param>
     /// <param name="args">An object array that contains zero or more objects to format.</param>
     /// <example>logger.LogTrace("Processing request from {Address}", address)</example>
-    public static void LogTrace(string? message, params object?[] args) => _logger.Log(LogLevel.Trace, message, args);
+    public static void LogTrace(string? message, params object?[] args) => Logger.Log(LogLevel.Trace, message, args);
 
     /// <summary>Formats and writes an informational log message.</summary>
     /// <param name="eventId">The event id associated with the log.</param>
@@ -171,7 +181,7 @@ public static class GlobalLog
         string? message,
         params object?[] args)
     {
-        _logger.Log(LogLevel.Information, eventId, exception, message, args);
+        Logger.Log(LogLevel.Information, eventId, exception, message, args);
     }
 
     /// <summary>Formats and writes an informational log message.</summary>
@@ -184,7 +194,7 @@ public static class GlobalLog
         string? message,
         params object?[] args)
     {
-        _logger.Log(LogLevel.Information, eventId, message, args);
+        Logger.Log(LogLevel.Information, eventId, message, args);
     }
 
     /// <summary>Formats and writes an informational log message.</summary>
@@ -197,7 +207,7 @@ public static class GlobalLog
         string? message,
         params object?[] args)
     {
-        _logger.Log(LogLevel.Information, exception, message, args);
+        Logger.Log(LogLevel.Information, exception, message, args);
     }
 
     /// <summary>Formats and writes an informational log message.</summary>
@@ -205,7 +215,7 @@ public static class GlobalLog
     /// <param name="args">An object array that contains zero or more objects to format.</param>
     /// <example>logger.LogInformation("Processing request from {Address}", address)</example>
     public static void LogInformation(string? message, params object?[] args) =>
-        _logger.Log(LogLevel.Information, message, args);
+        Logger.Log(LogLevel.Information, message, args);
 
     /// <summary>Formats and writes a warning log message.</summary>
     /// <param name="eventId">The event id associated with the log.</param>
@@ -219,7 +229,7 @@ public static class GlobalLog
         string? message,
         params object?[] args)
     {
-        _logger.Log(LogLevel.Warning, eventId, exception, message, args);
+        Logger.Log(LogLevel.Warning, eventId, exception, message, args);
     }
 
     /// <summary>Formats and writes a warning log message.</summary>
@@ -232,7 +242,7 @@ public static class GlobalLog
         string? message,
         params object?[] args)
     {
-        _logger.Log(LogLevel.Warning, eventId, message, args);
+        Logger.Log(LogLevel.Warning, eventId, message, args);
     }
 
     /// <summary>Formats and writes a warning log message.</summary>
@@ -245,7 +255,7 @@ public static class GlobalLog
         string? message,
         params object?[] args)
     {
-        _logger.Log(LogLevel.Warning, exception, message, args);
+        Logger.Log(LogLevel.Warning, exception, message, args);
     }
 
     /// <summary>Formats and writes a warning log message.</summary>
@@ -253,7 +263,7 @@ public static class GlobalLog
     /// <param name="args">An object array that contains zero or more objects to format.</param>
     /// <example>logger.LogWarning("Processing request from {Address}", address)</example>
     public static void LogWarning(string? message, params object?[] args) =>
-        _logger.Log(LogLevel.Warning, message, args);
+        Logger.Log(LogLevel.Warning, message, args);
 
     /// <summary>Formats and writes an error log message.</summary>
     /// <param name="eventId">The event id associated with the log.</param>
@@ -267,7 +277,7 @@ public static class GlobalLog
         string? message,
         params object?[] args)
     {
-        _logger.Log(LogLevel.Error, eventId, exception, message, args);
+        Logger.Log(LogLevel.Error, eventId, exception, message, args);
     }
 
     /// <summary>Formats and writes an error log message.</summary>
@@ -280,7 +290,7 @@ public static class GlobalLog
         string? message,
         params object?[] args)
     {
-        _logger.Log(LogLevel.Error, eventId, message, args);
+        Logger.Log(LogLevel.Error, eventId, message, args);
     }
 
     /// <summary>Formats and writes an error log message.</summary>
@@ -293,14 +303,14 @@ public static class GlobalLog
         string? message,
         params object?[] args)
     {
-        _logger.Log(LogLevel.Error, exception, message, args);
+        Logger.Log(LogLevel.Error, exception, message, args);
     }
 
     /// <summary>Formats and writes an error log message.</summary>
     /// <param name="message">Format string of the log message in message template format. Example: <c>"User {User} logged in from {Address}"</c></param>
     /// <param name="args">An object array that contains zero or more objects to format.</param>
     /// <example>logger.LogError("Processing request from {Address}", address)</example>
-    public static void LogError(string? message, params object?[] args) => _logger.Log(LogLevel.Error, message, args);
+    public static void LogError(string? message, params object?[] args) => Logger.Log(LogLevel.Error, message, args);
 
     /// <summary>Formats and writes a critical log message.</summary>
     /// <param name="eventId">The event id associated with the log.</param>
@@ -314,7 +324,7 @@ public static class GlobalLog
         string? message,
         params object?[] args)
     {
-        _logger.Log(LogLevel.Critical, eventId, exception, message, args);
+        Logger.Log(LogLevel.Critical, eventId, exception, message, args);
     }
 
     /// <summary>Formats and writes a critical log message.</summary>
@@ -327,7 +337,7 @@ public static class GlobalLog
         string? message,
         params object?[] args)
     {
-        _logger.Log(LogLevel.Critical, eventId, message, args);
+        Logger.Log(LogLevel.Critical, eventId, message, args);
     }
 
     /// <summary>Formats and writes a critical log message.</summary>
@@ -340,7 +350,7 @@ public static class GlobalLog
         string? message,
         params object?[] args)
     {
-        _logger.Log(LogLevel.Critical, exception, message, args);
+        Logger.Log(LogLevel.Critical, exception, message, args);
     }
 
     /// <summary>Formats and writes a critical log message.</summary>
@@ -348,5 +358,5 @@ public static class GlobalLog
     /// <param name="args">An object array that contains zero or more objects to format.</param>
     /// <example>logger.LogCritical("Processing request from {Address}", address)</example>
     public static void LogCritical(string? message, params object?[] args) =>
-        _logger.Log(LogLevel.Critical, message, args);
+        Logger.Log(LogLevel.Critical, message, args);
 }

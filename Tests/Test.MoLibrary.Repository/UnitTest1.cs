@@ -5,12 +5,15 @@ namespace Test.MoLibrary.Repository
         [SetUp]
         public void Setup()
         {
+            // Initialization is now in the MoRepositoryTests class
         }
 
         [Test]
-        public void Test1()
+        public void DefaultTest()
         {
-            Assert.Pass();
+            // This is just a placeholder test
+            // For actual repository tests, see MoRepositoryTests.cs
+            Assert.Pass("See MoRepositoryTests.cs for comprehensive repository testing");
         }
     }
 }
