@@ -1,14 +1,9 @@
 using System.Data;
 using System.Linq.Expressions;
-using BuildingBlocksPlatform.Repository.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using BuildingBlocksPlatform.Repository.EntityInterfaces;
-using BuildingBlocksPlatform.DependencyInjection.AppInterfaces;
 using BuildingBlocksPlatform.Repository.Exceptions;
-using Microsoft.Extensions.DependencyInjection;
-using static Google.Rpc.Context.AttributeContext.Types;
-using IServiceScopeFactory = Microsoft.Extensions.DependencyInjection.IServiceScopeFactory;
 
 
 namespace BuildingBlocksPlatform.Repository;
@@ -43,7 +38,11 @@ public class MoRepository<TDbContext, TEntity>(
     {
         return dbContextProvider.GetDbContextAsync();
     }
-    
+    protected override async Task SaveChangesAsync(CancellationToken cancellationToken)
+    {
+        await (await GetDbContextAsync()).SaveChangesAsync(cancellationToken);
+    }
+
     public async Task<int> SaveChanges(CancellationToken cancellationToken = default)
     {
         var dbContext = await GetDbContextAsync();
@@ -118,7 +117,7 @@ public class MoRepository<TDbContext, TEntity>(
     public override async Task<TEntity> UpdateAsync(TEntity entity, bool autoSave = false, CancellationToken cancellationToken = default)
     {
         var dbContext = await GetDbContextAsync();
-        dbContext.Set<TEntity>().Attach(entity);
+        //dbContext.Set<TEntity>().Attach(entity);
         dbContext.Update(entity);
         //if (dbContext.Set<TEntity>().Local.All(e => e != entity))
         //{
@@ -233,11 +232,7 @@ public class MoRepository<TDbContext, TEntity>(
         return (await GetDbSetAsync()).AsQueryable();
     }
 
-    protected override async Task SaveChangesAsync(CancellationToken cancellationToken)
-    {
-        await (await GetDbContextAsync()).SaveChangesAsync(cancellationToken);
-    }
-
+  
     public override async Task<TEntity?> FindAsync(
         Expression<Func<TEntity, bool>> predicate,
         bool includeDetails = true,
