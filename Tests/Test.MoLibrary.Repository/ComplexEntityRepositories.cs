@@ -1,7 +1,6 @@
 using BuildingBlocksPlatform.Repository;
 using BuildingBlocksPlatform.Repository.Interfaces;
 using Microsoft.EntityFrameworkCore;
-using Task = Test.MoLibrary.Repository.Task;
 
 namespace Test.MoLibrary.Repository
 {
@@ -56,14 +55,14 @@ namespace Test.MoLibrary.Repository
         }
     }
     
-    public class TaskRepository : MoRepository<ComplexEntityDbContext, Task, Guid>
+    public class TaskRepository : MoRepository<ComplexEntityDbContext, TaskEntity, Guid>
     {
         public TaskRepository(IDbContextProvider<ComplexEntityDbContext> dbContextProvider)
             : base(dbContextProvider)
         {
         }
         
-        public override async Task<IQueryable<Task>> WithDetailsAsync()
+        public override async Task<IQueryable<TaskEntity>> WithDetailsAsync()
         {
             var dbContext = await GetDbContextAsync();
             return dbContext.Tasks

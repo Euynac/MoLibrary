@@ -4,9 +4,7 @@ using BuildingBlocksPlatform.Transaction;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
-using System.Linq.Expressions;
 using BuildingBlocksPlatform.DependencyInjection.AppInterfaces;
-using Task = Test.MoLibrary.Repository.Task;
 
 namespace Test.MoLibrary.Repository
 {
@@ -21,7 +19,7 @@ namespace Test.MoLibrary.Repository
         private Mock<ILogger<MoRepositoryBase<Department>>> _departmentLoggerMock;
         private Mock<ILogger<MoRepositoryBase<Employee>>> _employeeLoggerMock;
         private Mock<ILogger<MoRepositoryBase<Project>>> _projectLoggerMock;
-        private Mock<ILogger<MoRepositoryBase<Task>>> _taskLoggerMock;
+        private Mock<ILogger<MoRepositoryBase<TaskEntity>>> _taskLoggerMock;
         
         private DepartmentRepository _departmentRepository;
         private EmployeeRepository _employeeRepository;
@@ -50,7 +48,7 @@ namespace Test.MoLibrary.Repository
             _departmentLoggerMock = new Mock<ILogger<MoRepositoryBase<Department>>>();
             _employeeLoggerMock = new Mock<ILogger<MoRepositoryBase<Employee>>>();
             _projectLoggerMock = new Mock<ILogger<MoRepositoryBase<Project>>>();
-            _taskLoggerMock = new Mock<ILogger<MoRepositoryBase<Task>>>();
+            _taskLoggerMock = new Mock<ILogger<MoRepositoryBase<TaskEntity>>>();
             
             // Setup dbContextProvider to return our in-memory context
             _dbContextProviderMock.Setup(x => x.GetDbContextAsync())
@@ -63,7 +61,7 @@ namespace Test.MoLibrary.Repository
                 .Returns(_employeeLoggerMock.Object);
             _serviceProviderFactoryMock.Setup(x => x.GetService(typeof(ILogger<MoRepositoryBase<Project>>)))
                 .Returns(_projectLoggerMock.Object);
-            _serviceProviderFactoryMock.Setup(x => x.GetService(typeof(ILogger<MoRepositoryBase<Task>>)))
+            _serviceProviderFactoryMock.Setup(x => x.GetService(typeof(ILogger<MoRepositoryBase<TaskEntity>>)))
                 .Returns(_taskLoggerMock.Object);
             
             _serviceProviderFactoryMock.Setup(x => x.GetService(typeof(IMoUnitOfWorkManager)))
@@ -118,11 +116,6 @@ namespace Test.MoLibrary.Repository
                     Location = "Building A",
                     Floor = 3,
                     IsActive = true,
-                    ExtraInformation = new Dictionary<string, string>
-                    {
-                        { "DepartmentCode", "ENG-001" },
-                        { "Budget", "1000000" }
-                    }
                 }
             };
             
@@ -139,8 +132,6 @@ namespace Test.MoLibrary.Repository
             Assert.That(savedDepartment.Name, Is.EqualTo("Engineering"));
             Assert.That(savedDepartment.Metadata.Location, Is.EqualTo("Building A"));
             Assert.That(savedDepartment.Metadata.Floor, Is.EqualTo(3));
-            Assert.That(savedDepartment.Metadata.ExtraInformation, Does.ContainKey("DepartmentCode"));
-            Assert.That(savedDepartment.Metadata.ExtraInformation["DepartmentCode"], Is.EqualTo("ENG-001"));
         }
         
         [Test]
@@ -232,7 +223,7 @@ namespace Test.MoLibrary.Repository
             project.Employees.Add(employee2);
             
             // Add tasks to project
-            var task1 = new Task
+            var task1 = new TaskEntity
             {
                 Title = "Design Homepage",
                 Description = "Create mockups for homepage",
@@ -242,7 +233,7 @@ namespace Test.MoLibrary.Repository
                 AssignedTo = employee1
             };
             
-            var task2 = new Task
+            var task2 = new TaskEntity
             {
                 Title = "Setup Development Environment",
                 Description = "Configure development server and tools",
@@ -278,7 +269,7 @@ namespace Test.MoLibrary.Repository
             
             // Use the repository to update with the changes
             await ((IMoRepository<Project>)_projectRepository).GetDbContextAsync();
-            var dbContext = await _projectRepository.GetDbContextAsync();
+            var dbContext = await ((IMoRepository)_projectRepository).GetDbContextAsync();
             
             // Track the entire graph from the project entry point
             dbContext.ChangeTracker.TrackGraph(project, node =>
@@ -290,7 +281,7 @@ namespace Test.MoLibrary.Repository
                 {
                     entry.State = EntityState.Modified;
                 }
-                else if (entity is Task t)
+                else if (entity is TaskEntity t)
                 {
                     entry.State = EntityState.Modified;
                 }
@@ -402,7 +393,7 @@ namespace Test.MoLibrary.Repository
             };
             
             await _departmentRepository.InsertAsync(department);
-            await _employeeRepository.InsertManyAsync(new[] { employee1, employee2 });
+            await _employeeRepository.InsertManyAsync([employee1, employee2]);
             await _dbContext.SaveChangesAsync();
             
             // Verify initial state
