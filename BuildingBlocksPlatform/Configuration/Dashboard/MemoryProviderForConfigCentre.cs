@@ -4,7 +4,9 @@ using BuildingBlocksPlatform.Configuration.Interfaces;
 using BuildingBlocksPlatform.Configuration.Model;
 using BuildingBlocksPlatform.Core.RegisterCentre;
 using BuildingBlocksPlatform.SeedWork;
+using CommunityToolkit.HighPerformance;
 using Microsoft.AspNetCore.Http;
+using Org.BouncyCastle.Ocsp;
 
 namespace BuildingBlocksPlatform.Configuration.Dashboard;
 
@@ -50,6 +52,28 @@ public class MemoryProviderForConfigCentre(
         return configs;
     }
 
+    public async Task<Res<DtoOptionItem>> GetSpecificOptionItemAsync(string key, string? appid = null)
+    {
+        if ((await GetRegisteredServicesConfigsAsync()).IsFailed(out var error, out var data)) return error;
+
+        var dtoConfig = data.SelectMany(p => p.Children).SelectMany(p => p.Children).Where(p=>appid == null || appid == p.AppId).SelectMany(p=>p.Items)
+            .FirstOrDefault(p => p.Key == key);
+        if (dtoConfig != null) return dtoConfig;
+
+        return "找不到相应的配置项";
+    }
+
+    public async Task<Res<DtoConfig>> GetSpecificConfigStatusAsync(string key, string? appid = null)
+    {
+        if ((await GetRegisteredServicesConfigsAsync()).IsFailed(out var error, out var data)) return error;
+
+        var dtoConfig = data.SelectMany(p => p.Children).SelectMany(p => p.Children)
+            .FirstOrDefault(p => (appid == null || p.AppId == appid) && p.Name == key);
+        if (dtoConfig != null) return dtoConfig;
+
+        return "找不到相应的配置类";
+    }
+
     public async Task<Res> RollbackConfig(string key, string appid, string version)
     {
         if ((await stores.GetHistory(key, appid, version)).IsFailed(out var error, out var data)) return error;
@@ -69,6 +93,7 @@ public class MemoryProviderForConfigCentre(
         data.AppId = projectName;
         return await stores.SaveUpdate(data);
     }
+
 
 
     public async Task<Res> UpdateConfig(DtoUpdateConfig req)

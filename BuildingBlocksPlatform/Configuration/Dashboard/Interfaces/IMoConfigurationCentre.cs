@@ -14,7 +14,20 @@ public interface IMoConfigurationCentre
     /// </summary>
     /// <returns></returns>
     Task<Res<List<DtoDomainConfigs>>> GetRegisteredServicesConfigsAsync();
-
+    /// <summary>
+    /// 获取指定配置项状态信息
+    /// </summary>
+    /// <param name="key"></param>
+    /// <param name="appid"></param>
+    /// <returns></returns>
+    Task<Res<DtoOptionItem>> GetSpecificOptionItemAsync(string key, string? appid = null);
+    /// <summary>
+    /// 获取指定配置类状态信息
+    /// </summary>
+    /// <param name="key"></param>
+    /// <param name="appid"></param>
+    /// <returns></returns>
+    Task<Res<DtoConfig>> GetSpecificConfigStatusAsync(string key, string? appid = null);
     /// <summary>
     /// 回滚配置类配置
     /// </summary>

@@ -19,8 +19,16 @@ public static class MoJwtBuilderExtensions
             o.SetCurSystemUser(curSystemEnum);
             action?.Invoke(o);
         });
+        services.AddSingleton<IMoSystemUserManager, MoSystemUserManager>();
     }
 
+    private static bool _hasAddMoSystemUser;
+    private static void TryAddMoSystemUser<T>(this IServiceCollection services, T curSystemEnum, Action<MoSystemUserOptions>? action = null) where T : struct, Enum
+    {
+        if(_hasAddMoSystemUser) return;
+        services.AddMoSystemUser(curSystemEnum, action);
+        _hasAddMoSystemUser = true;
+    }
     /// <summary>
     /// 注册JWT服务
     /// </summary>
@@ -50,9 +58,7 @@ public static class MoJwtBuilderExtensions
 
         #region SystemUser
         
-        services.AddSingleton<IMoSystemUserManager, MoSystemUserManager>();
-        services.AddMoSystemUser(EMoDefaultSystemUser.System);
-        
+        services.TryAddMoSystemUser(EMoDefaultSystemUser.System);
 
         #endregion
         

@@ -21,7 +21,16 @@ public static class MoConfigurationConventions
     /// <summary>
     /// 获取所有微服务配置状态
     /// </summary>
-    public static string DashboardCentreConfigStatus = "/configuration/status";
+    public static string DashboardCentreAllConfigStatus = "/configuration/status";
+
+    /// <summary>
+    /// 获取指定配置类状态
+    /// </summary>
+    public static string DashboardCentreConfigStatus = "/configuration/config/status";
+    /// <summary>
+    /// 获取指定配置状态
+    /// </summary>
+    public static string DashboardCentreOptionItemStatus = "/configuration/option/status";
     /// <summary>
     /// 获取配置类历史
     /// </summary>

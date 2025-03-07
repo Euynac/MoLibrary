@@ -10,6 +10,12 @@ namespace BuildingBlocksPlatform.Authority.Security;
 public interface IMoSystemUserManager
 {
     /// <summary>
+    /// 判断当前用户信息是否是系统用户
+    /// </summary>
+    /// <param name="userInfo"></param>
+    /// <returns></returns>
+    public bool IsSystemUser(IMoUser userInfo);
+    /// <summary>
     /// 获取当前系统用户Token
     /// </summary>
     /// <returns></returns>
@@ -100,6 +106,16 @@ public class MoSystemUserManager(IMoAuthManager manager, IOptions<MoSystemUserOp
     public IEnumerable<MoSystemUserOptions.SystemUserInfo> GetAllSystemUserInfos()
     {
         return _options.InfoDict.Values;
+    }
+
+    public bool IsSystemUser(IMoUser userInfo)
+    {
+        if (userInfo.Id is { } id && id.StartsWith("00000000-0000-0000-0000-"))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     public string GetTokenOfCurSystemUser()

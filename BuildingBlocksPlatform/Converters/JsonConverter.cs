@@ -385,12 +385,12 @@ public static class JsonConverterExtensions
         //巨坑：minimal api 等全局注册
         services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(o =>
         {
-            o.SerializerOptions.CloneSerializerOptions(JsonShared.GlobalJsonSerializerOptions);
+            o.SerializerOptions.CloneFrom(JsonShared.GlobalJsonSerializerOptions);
         });
         //MVC框架HTTP请求与响应的JsonConverter全局注册
         services.Configure<JsonOptions>(o =>
         {
-            o.JsonSerializerOptions.CloneSerializerOptions(JsonShared.GlobalJsonSerializerOptions);
+            o.JsonSerializerOptions.CloneFrom(JsonShared.GlobalJsonSerializerOptions);
         });
 
         services.AddSingleton<IGlobalJsonOption, JsonShared>();
@@ -435,15 +435,21 @@ public static class JsonConverterExtensions
         //允许注释
         //options.ReadCommentHandling = JsonCommentHandling.Skip;
     }
-
-    internal static void CloneSerializerOptions(this JsonSerializerOptions target, JsonSerializerOptions cloneFromOptions)
+    public static JsonSerializerOptions Clone(this JsonSerializerOptions target)
+    {
+        var cloned = new JsonSerializerOptions();
+        cloned.CloneFrom(target);
+        return cloned;
+    }
+    internal static void CloneFrom(this JsonSerializerOptions target, JsonSerializerOptions cloneFromOptions)
     {
         target.Converters.Clear();
         foreach (var converter in cloneFromOptions.Converters)
         {
             target.Converters.Add(converter);
         }
-        
+
+
         target.PropertyNamingPolicy = cloneFromOptions.PropertyNamingPolicy;
         target.PropertyNameCaseInsensitive = cloneFromOptions.PropertyNameCaseInsensitive;
         target.DefaultIgnoreCondition = cloneFromOptions.DefaultIgnoreCondition;

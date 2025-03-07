@@ -56,7 +56,7 @@ public class MoConfigurationCardManager(IServiceProvider serviceProvider, IMoCon
                     Desc = c.Description,
                     Title = c.Title,
                     Version = c.Version,
-                    Items = c.Configuration.OptionItems.Select(i => ToDtoOptionItem(i, c.Configuration)).ToList(),
+                    Items = c.Configuration.OptionItems.Select(i => i.ToDtoOptionItem(c.Configuration)).ToList(),
                 }).ToList()
             };
             config.Children.Add(serviceConfig);
@@ -64,26 +64,14 @@ public class MoConfigurationCardManager(IServiceProvider serviceProvider, IMoCon
 
         return [.. result.Values];
     }
+   
+}
 
-    private DtoConfig? ToDtoConfig(MoConfiguration? c)
+public static class MoConfigurationExtensions
+{
+    public static DtoOptionItem ToDtoOptionItem(this OptionItem i, MoConfiguration c)
     {
-        if (c == null) return null;
-        var dto = new DtoConfig()
-        {
-            Name = c.Name,
-            Type = c.Info.Type,
-            Desc = c.Info.Description,
-            Title = c.Info.Title ?? c.Name,
-            Version = c.Version,
-            Items = c.OptionItems.Select(i=>ToDtoOptionItem(i, c)).ToList()
-        };
-        return dto;
-    }
 
-
-    private DtoOptionItem ToDtoOptionItem(OptionItem i, MoConfiguration c)
-    {
-       
         var dto = new DtoOptionItem
         {
             Desc = i.Info?.Description,
@@ -103,6 +91,18 @@ public class MoConfigurationCardManager(IServiceProvider serviceProvider, IMoCon
 
         return dto;
     }
-
-   
+    public static DtoConfig? ToDtoConfig(this MoConfiguration? c)
+    {
+        if (c == null) return null;
+        var dto = new DtoConfig()
+        {
+            Name = c.Name,
+            Type = c.Info.Type,
+            Desc = c.Info.Description,
+            Title = c.Info.Title ?? c.Name,
+            Version = c.Version,
+            Items = c.OptionItems.Select(i => ToDtoOptionItem(i, c)).ToList()
+        };
+        return dto;
+    }
 }
