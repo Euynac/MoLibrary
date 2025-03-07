@@ -79,5 +79,4 @@ public class MoConfiguration
                 .Select(p => $"[{Name}] {p}").StringJoin("\n")
                 .BeNullIfWhiteSpace() ?? $"[{Name}] Can not get any options info";
     }
-
 }

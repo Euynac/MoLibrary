@@ -87,11 +87,11 @@ public static class MoConfigurationDashboardBuilderExtensions
                 return operation;
             });
 
-            endpoints.MapPost(MoConfigurationConventions.DashboardCentreConfigUpdate, async (DtoUpdateConfig req, [FromServices] IMoConfigurationCentre modifier, [FromServices] IMoUnitOfWorkManager manager) =>
+            endpoints.MapPost(MoConfigurationConventions.DashboardCentreConfigUpdate, async (DtoUpdateConfig req, [FromServices] IMoConfigurationCentre centre, [FromServices] IMoUnitOfWorkManager manager) =>
             {
                 using var uow = manager.Begin();
                 var value = req.Value;
-                return (await modifier.UpdateConfig(req)).GetResponse();
+                return (await centre.UpdateConfig(req)).GetResponse();
             }).WithName("更新指定配置").WithOpenApi(operation =>
             {
                 operation.Summary = "更新指定配置";
@@ -100,8 +100,18 @@ public static class MoConfigurationDashboardBuilderExtensions
                 return operation;
             });
 
-
-            endpoints.MapGet(MoConfigurationConventions.DashboardCentreConfigStatus, async ([FromQuery] string? mode, [FromServices] IMoConfigurationCentre centre, [FromServices] IMoConfigurationDashboard dashboard) =>
+            endpoints.MapGet(MoConfigurationConventions.DashboardCentreOptionItemStatus, async ([FromQuery]string? appid, [FromQuery]string key, [FromServices] IMoConfigurationCentre centre) =>
+            {
+                 if ((await centre.GetSpecificOptionItemAsync(key, appid)).IsFailed(out var error, out var data)) return error.GetResponse();
+                return ((IServiceResponse)Res.Ok(data)).GetResponse();
+            }).WithName("获取指定配置状态").WithOpenApi(operation =>
+            {
+                operation.Summary = "获取指定配置状态";
+                operation.Description = "获取指定配置状态";
+                operation.Tags = tagGroup;
+                return operation;
+            });
+            endpoints.MapGet(MoConfigurationConventions.DashboardCentreAllConfigStatus, async ([FromQuery] string? mode, [FromServices] IMoConfigurationCentre centre, [FromServices] IMoConfigurationDashboard dashboard) =>
             {
                 if ((await centre.GetRegisteredServicesConfigsAsync()).IsFailed(out var error, out var data))
                     return error.GetResponse();

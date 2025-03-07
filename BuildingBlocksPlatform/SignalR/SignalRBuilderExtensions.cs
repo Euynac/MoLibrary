@@ -45,7 +45,7 @@ public static class SignalRBuilderExtensions
         services.AddTransient<TIHubOperator, THubOperator>();
         services.AddSignalR(options => { options.EnableDetailedErrors = true; }).AddJsonProtocol(options =>
         {
-            options.PayloadSerializerOptions.CloneSerializerOptions(JsonShared.GlobalJsonSerializerOptions);
+            options.PayloadSerializerOptions.CloneFrom(JsonShared.GlobalJsonSerializerOptions);
         });
     }
 

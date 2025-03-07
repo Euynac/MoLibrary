@@ -597,6 +597,7 @@ public interface IServiceResponse
 
 
             case ResponseCode.ValidateError:
+            case ResponseCode.ErrorWarning:
             case ResponseCode.BadRequest:
                 return HttpStatusCode.BadRequest;
 
@@ -609,7 +610,7 @@ public interface IServiceResponse
             case ResponseCode.Unknown:
                 return null;
             default:
-                throw new ArgumentOutOfRangeException();
+                throw new ArgumentOutOfRangeException(Code.ToString(), $"未填写当前状态码{Code}对应HTTP状态码的值！");
         }
     }
 }
