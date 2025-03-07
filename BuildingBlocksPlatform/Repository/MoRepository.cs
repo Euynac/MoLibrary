@@ -34,9 +34,7 @@ public class MoRepository<TDbContext, TEntity>(
     where TDbContext : MoDbContext<TDbContext>
     where TEntity : class, IMoEntity
 {
-  
-
-    async Task<DbContext> IMoRepository<TEntity>.GetDbContextAsync()
+    async Task<DbContext> IMoRepository.GetDbContextAsync()
     {
         return await GetDbContextAsync();
     }
@@ -49,7 +47,7 @@ public class MoRepository<TDbContext, TEntity>(
     public async Task<int> SaveChanges(CancellationToken cancellationToken = default)
     {
         var dbContext = await GetDbContextAsync();
-        return await dbContext.SaveChangesAsync();
+        return await dbContext.SaveChangesAsync(cancellationToken);
     }
     Task<DbSet<TEntity>> IMoRepository<TEntity>.GetDbSetAsync()
     {

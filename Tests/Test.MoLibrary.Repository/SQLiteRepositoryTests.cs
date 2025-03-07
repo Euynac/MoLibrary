@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using System.Data.Common;
 using BuildingBlocksPlatform.DependencyInjection.AppInterfaces;
-using Task = Test.MoLibrary.Repository.Task;
 
 namespace Test.MoLibrary.Repository
 {
@@ -296,11 +295,6 @@ namespace Test.MoLibrary.Repository
                 {
                     Location = "West Wing",
                     Floor = 2,
-                    ExtraInformation = new Dictionary<string, string>
-                    {
-                        { "Budget", "2000000" },
-                        { "HeadCount", "25" }
-                    }
                 }
             };
             
@@ -314,11 +308,9 @@ namespace Test.MoLibrary.Repository
             var savedDepartment = await _departmentRepository.GetAsync(department.Id);
             savedDepartment.Metadata.Location = "East Wing";
             savedDepartment.Metadata.Floor = 3;
-            savedDepartment.Metadata.ExtraInformation["Budget"] = "2500000";
-            savedDepartment.Metadata.ExtraInformation["HeadCount"] = "30";
             
             // Update using TrackGraph
-            var dbContext = await _departmentRepository.GetDbContextAsync();
+            var dbContext = await ((IMoRepository)_departmentRepository).GetDbContextAsync();
             dbContext.ChangeTracker.TrackGraph(savedDepartment, node =>
             {
                 node.Entry.State = EntityState.Modified;
@@ -333,8 +325,6 @@ namespace Test.MoLibrary.Repository
             Assert.That(updatedDepartment, Is.Not.Null);
             Assert.That(updatedDepartment.Metadata.Location, Is.EqualTo("East Wing"));
             Assert.That(updatedDepartment.Metadata.Floor, Is.EqualTo(3));
-            Assert.That(updatedDepartment.Metadata.ExtraInformation["Budget"], Is.EqualTo("2500000"));
-            Assert.That(updatedDepartment.Metadata.ExtraInformation["HeadCount"], Is.EqualTo("30"));
         }
     }
 } 

@@ -17,19 +17,6 @@ public interface IMoRepository<TEntity> : IMoBasicRepository<TEntity>, IMoReposi
     where TEntity : class, IMoEntity
 {
     /// <summary>
-    /// Asynchronously retrieves the <see cref="DbContext"/> instance associated with the repository.
-    /// </summary>
-    /// <returns>
-    /// A <see cref="Task{TResult}"/> representing the asynchronous operation, 
-    /// with a result of type <see cref="DbContext"/>.
-    /// </returns>
-    /// <remarks>
-    /// This method is useful for scenarios where direct access to the underlying database context
-    /// is required, such as executing raw SQL queries or leveraging advanced Entity Framework features.
-    /// </remarks>
-    Task<DbContext> GetDbContextAsync();
-
-    /// <summary>
     /// Asynchronously retrieves the <see cref="DbSet{TEntity}"/> instance associated with the repository.
     /// </summary>
     /// <returns>
@@ -72,7 +59,18 @@ public interface IMoRepository<TEntity, TKey> : IMoRepository<TEntity>, IMoBasic
 /// </summary>
 public interface IMoRepository : IMoRepositoryFeatures
 {
-
+    /// <summary>
+    /// Asynchronously retrieves the <see cref="DbContext"/> instance associated with the repository.
+    /// </summary>
+    /// <returns>
+    /// A <see cref="Task{TResult}"/> representing the asynchronous operation, 
+    /// with a result of type <see cref="DbContext"/>.
+    /// </returns>
+    /// <remarks>
+    /// This method is useful for scenarios where direct access to the underlying database context
+    /// is required, such as executing raw SQL queries or leveraging advanced Entity Framework features.
+    /// </remarks>
+    Task<DbContext> GetDbContextAsync();
 }
 
 

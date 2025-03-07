@@ -504,7 +504,7 @@ namespace Test.MoLibrary.Repository
         
         public object[] GetKeys()
         {
-            return new object[] { Id };
+            return [Id];
         }
         
         public void AutoSetNewId(bool notSetWhenNotDefault = false)
@@ -534,11 +534,6 @@ namespace Test.MoLibrary.Repository
         }
     }
     
-    public class TestRepository : MoRepository<TestDbContext, TestEntity, Guid>
-    {
-        public TestRepository(IDbContextProvider<TestDbContext> dbContextProvider) 
-            : base(dbContextProvider)
-        {
-        }
-    }
+    public class TestRepository(IDbContextProvider<TestDbContext> dbContextProvider)
+        : MoRepository<TestDbContext, TestEntity, Guid>(dbContextProvider);
 } 

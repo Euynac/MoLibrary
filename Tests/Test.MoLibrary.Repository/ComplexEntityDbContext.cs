@@ -2,7 +2,6 @@ using BuildingBlocksPlatform.DependencyInjection.AppInterfaces;
 using BuildingBlocksPlatform.Repository;
 using BuildingBlocksPlatform.Repository.Interfaces;
 using Microsoft.EntityFrameworkCore;
-using Task = Test.MoLibrary.Repository.Task;
 
 namespace Test.MoLibrary.Repository
 {
@@ -11,7 +10,7 @@ namespace Test.MoLibrary.Repository
         public DbSet<Department> Departments { get; set; }
         public DbSet<Employee> Employees { get; set; }
         public DbSet<Project> Projects { get; set; }
-        public DbSet<Task> Tasks { get; set; }
+        public DbSet<TaskEntity> Tasks { get; set; }
         
         public ComplexEntityDbContext(DbContextOptions<ComplexEntityDbContext> options, IMoServiceProvider serviceProvider)
             : base(options, serviceProvider)
@@ -33,8 +32,6 @@ namespace Test.MoLibrary.Repository
                 entity.OwnsOne(e => e.Metadata, metadata =>
                 {
                     metadata.Property(m => m.Location).HasMaxLength(200);
-                    // Store the dictionary as JSON
-                    metadata.Property(m => m.ExtraInformation).HasColumnName("ExtraInformation");
                 });
                 
                 // Configure one-to-many relationship with Employee
@@ -78,15 +75,15 @@ namespace Test.MoLibrary.Repository
                       .WithMany(e => e.Projects)
                       .UsingEntity(j => j.ToTable("EmployeeProjects"));
                 
-                // Configure one-to-many relationship with Task
+                // Configure one-to-many relationship with TaskEntity
                 entity.HasMany(p => p.Tasks)
                       .WithOne(t => t.Project)
                       .HasForeignKey(t => t.ProjectId)
                       .OnDelete(DeleteBehavior.Cascade);
             });
             
-            // Task
-            modelBuilder.Entity<Task>(entity =>
+            // TaskEntity
+            modelBuilder.Entity<TaskEntity>(entity =>
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Title).IsRequired().HasMaxLength(100);

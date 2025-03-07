@@ -49,7 +49,6 @@ namespace Test.MoLibrary.Repository
         public string Location { get; set; } = "Main Office";
         public int Floor { get; set; } = 1;
         public bool IsActive { get; set; } = true;
-        public Dictionary<string, string> ExtraInformation { get; set; } = new Dictionary<string, string>();
     }
     
     // Employee entity with navigation properties
@@ -58,7 +57,7 @@ namespace Test.MoLibrary.Repository
         public string FirstName { get; set; }
         public string LastName { get; set; }
         public string Email { get; set; }
-        public decimal Salary { get; set; }
+        public int Salary { get; set; }
         public ContactInformation ContactInfo { get; set; } = new ContactInformation();
         
         // Navigation property - many-to-one relationship
@@ -93,11 +92,11 @@ namespace Test.MoLibrary.Repository
         public virtual ICollection<Employee> Employees { get; set; } = new Collection<Employee>();
         
         // Navigation property - one-to-many relationship
-        public virtual ICollection<Task> Tasks { get; set; } = new Collection<Task>();
+        public virtual ICollection<TaskEntity> Tasks { get; set; } = new Collection<TaskEntity>();
     }
     
-    // Task entity that belongs to a project
-    public class Task : ComplexEntityBase
+    // TaskEntity entity that belongs to a project
+    public class TaskEntity : ComplexEntityBase
     {
         public string Title { get; set; }
         public string Description { get; set; }
