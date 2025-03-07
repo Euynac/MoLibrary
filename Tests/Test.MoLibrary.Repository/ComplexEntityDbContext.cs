@@ -5,18 +5,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Test.MoLibrary.Repository
 {
-    public class ComplexEntityDbContext : MoDbContext<ComplexEntityDbContext>
+    public class ComplexEntityDbContext(
+        DbContextOptions<ComplexEntityDbContext> options,
+        IMoServiceProvider serviceProvider)
+        : MoDbContext<ComplexEntityDbContext>(options, serviceProvider)
     {
         public DbSet<Department> Departments { get; set; }
         public DbSet<Employee> Employees { get; set; }
         public DbSet<Project> Projects { get; set; }
         public DbSet<TaskEntity> Tasks { get; set; }
-        
-        public ComplexEntityDbContext(DbContextOptions<ComplexEntityDbContext> options, IMoServiceProvider serviceProvider)
-            : base(options, serviceProvider)
-        {
-        }
-        
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
