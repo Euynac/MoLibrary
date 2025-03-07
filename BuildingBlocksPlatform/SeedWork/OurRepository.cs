@@ -243,21 +243,27 @@ public abstract class OurRepository<TDbContext, TEntity, TKey>(IDbContextProvide
     {
 
         var v = typeof(TEntity).Name;
-        var airwayVersion = await _stateStore.GetStateAsync<DateTime?>(typeof(TEntity).Name);
+        var remoteVersion = await _stateStore.GetStateAsync<DateTime?>(typeof(TEntity).Name);
 
-        if (airwayVersion == null)
+        if (remoteVersion == null)
         {
-            version =  DateTime.Now;
-            await _stateStore.SaveStateAsync(typeof(TEntity).Name, version!);
+            await UpdateCacheVersion();
         }
-        else if (!airwayVersion.EqualBySecond(version))
+        else if (!remoteVersion.EqualBySecond(version))
         {
             using (var l = await _lock.ReaderLockAsync())
             {
                 await RefreshCacheAsync();
-                version =  airwayVersion;
+                version =  remoteVersion;
             }
         }
+    }
+
+    public virtual async Task UpdateCacheVersion()
+    {
+        version =  DateTime.Now;
+        await _stateStore.SaveStateAsync(typeof(TEntity).Name, version!);
+        await RefreshCacheAsync();
     }
 
     //制空缓存dict
@@ -287,6 +293,8 @@ public interface IOurRepositoryCache
     /// 刷新缓存
     /// </summary>
     Task RefreshCacheAsync();
+
+    Task UpdateCacheVersion();
 }
 /// <summary>
 /// 仓库方法接口标记
