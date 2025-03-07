@@ -4,13 +4,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Test.MoLibrary.Repository
 {
-    public class DepartmentRepository : MoRepository<ComplexEntityDbContext, Department, Guid>
+    public class DepartmentRepository(IDbContextProvider<ComplexEntityDbContext> dbContextProvider)
+        : MoRepository<ComplexEntityDbContext, Department, Guid>(dbContextProvider)
     {
-        public DepartmentRepository(IDbContextProvider<ComplexEntityDbContext> dbContextProvider)
-            : base(dbContextProvider)
-        {
-        }
-        
         public override async Task<IQueryable<Department>> WithDetailsAsync()
         {
             var dbContext = await GetDbContextAsync();
@@ -20,13 +16,9 @@ namespace Test.MoLibrary.Repository
         }
     }
     
-    public class EmployeeRepository : MoRepository<ComplexEntityDbContext, Employee, Guid>
+    public class EmployeeRepository(IDbContextProvider<ComplexEntityDbContext> dbContextProvider)
+        : MoRepository<ComplexEntityDbContext, Employee, Guid>(dbContextProvider)
     {
-        public EmployeeRepository(IDbContextProvider<ComplexEntityDbContext> dbContextProvider)
-            : base(dbContextProvider)
-        {
-        }
-        
         public override async Task<IQueryable<Employee>> WithDetailsAsync()
         {
             var dbContext = await GetDbContextAsync();
@@ -37,13 +29,9 @@ namespace Test.MoLibrary.Repository
         }
     }
     
-    public class ProjectRepository : MoRepository<ComplexEntityDbContext, Project, Guid>
+    public class ProjectRepository(IDbContextProvider<ComplexEntityDbContext> dbContextProvider)
+        : MoRepository<ComplexEntityDbContext, Project, Guid>(dbContextProvider)
     {
-        public ProjectRepository(IDbContextProvider<ComplexEntityDbContext> dbContextProvider)
-            : base(dbContextProvider)
-        {
-        }
-        
         public override async Task<IQueryable<Project>> WithDetailsAsync()
         {
             var dbContext = await GetDbContextAsync();
@@ -55,13 +43,9 @@ namespace Test.MoLibrary.Repository
         }
     }
     
-    public class TaskRepository : MoRepository<ComplexEntityDbContext, TaskEntity, Guid>
+    public class TaskRepository(IDbContextProvider<ComplexEntityDbContext> dbContextProvider)
+        : MoRepository<ComplexEntityDbContext, TaskEntity, Guid>(dbContextProvider)
     {
-        public TaskRepository(IDbContextProvider<ComplexEntityDbContext> dbContextProvider)
-            : base(dbContextProvider)
-        {
-        }
-        
         public override async Task<IQueryable<TaskEntity>> WithDetailsAsync()
         {
             var dbContext = await GetDbContextAsync();
