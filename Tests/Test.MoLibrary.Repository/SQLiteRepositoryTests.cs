@@ -282,7 +282,46 @@ namespace Test.MoLibrary.Repository
             Assert.That(remainingDepartments.Count, Is.EqualTo(1));
             Assert.That(remainingDepartments[0].Name, Is.EqualTo("Dept to Keep"));
         }
-        
+        [Test]
+        public async Task SQLite_TrackGraph_TestNestedUpdate()
+        {
+            // Arrange - Create a complex entity with nested objects
+            var department = new Department
+            {
+                Name = "R&D",
+                Description = "Research and Development",
+                Metadata = new DepartmentMetadata
+                {
+                    Location = "West Wing",
+                    Floor = 2,
+                }
+            };
+
+            await _departmentRepository.InsertAsync(department);
+            await _dbContext.SaveChangesAsync();
+
+            // Detach entities to simulate retrieval in a different context
+            _dbContext.ChangeTracker.Clear();
+            var tracker1 = _dbContext.ChangeTracker;
+            department.Name = "DDD";
+
+            await _departmentRepository.UpdateAsync(department);
+            var tracker2 = _dbContext.ChangeTracker;
+            department.Metadata.Location = "East Wing";
+            var tracker3 = _dbContext.ChangeTracker;
+            department.Metadata.Floor = 3;
+            await _departmentRepository.UpdateAsync(department);
+            var tracker4 = _dbContext.ChangeTracker;
+            await _departmentRepository.SaveChanges();
+            // Assert - Verify nested objects were updated
+            _dbContext.ChangeTracker.Clear();
+            var updatedDepartment = await _dbContext.Departments.FindAsync(department.Id);
+
+            Assert.That(updatedDepartment, Is.Not.Null);
+            Assert.That(updatedDepartment.Name, Is.EqualTo("DDD"));
+            Assert.That(updatedDepartment.Metadata.Location, Is.EqualTo("East Wing"));
+            Assert.That(updatedDepartment.Metadata.Floor, Is.EqualTo(3));
+        }
         [Test]
         public async Task SQLite_TrackGraph_ShouldUpdateNestedEntities()
         {

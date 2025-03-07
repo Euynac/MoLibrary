@@ -29,21 +29,6 @@ public interface IMoRepository<TEntity> : IMoBasicRepository<TEntity>, IMoReposi
     /// such as querying or manipulating entities using Entity Framework.
     /// </remarks>
     Task<DbSet<TEntity>> GetDbSetAsync();
-
-    /// <summary>
-    /// Asynchronously saves all changes made in the repository to the underlying database.
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns>
-    /// A <see cref="Task{TResult}"/> representing the asynchronous operation, 
-    /// with a result of type <see cref="int"/> that indicates the number of state entries written to the database.
-    /// </returns>
-    /// <remarks>
-    /// This method commits all tracked changes in the repository to the database. 
-    /// It is typically used to persist changes after performing operations such as adding, updating, or deleting entities.
-    /// </remarks>
-    Task<int> SaveChanges(CancellationToken cancellationToken = default);
-
 }
 
 // ReSharper disable once TypeParameterCanBeVariant
@@ -71,6 +56,19 @@ public interface IMoRepository : IMoRepositoryFeatures
     /// is required, such as executing raw SQL queries or leveraging advanced Entity Framework features.
     /// </remarks>
     Task<DbContext> GetDbContextAsync();
+    /// <summary>
+    /// Asynchronously saves all changes made in the repository to the underlying database.
+    /// </summary>
+    /// <param name="cancellationToken"></param>
+    /// <returns>
+    /// A <see cref="Task{TResult}"/> representing the asynchronous operation, 
+    /// with a result of type <see cref="int"/> that indicates the number of state entries written to the database.
+    /// </returns>
+    /// <remarks>
+    /// This method commits all tracked changes in the repository to the database. 
+    /// It is typically used to persist changes after performing operations such as adding, updating, or deleting entities.
+    /// </remarks>
+    Task<int> SaveChanges(CancellationToken cancellationToken = default);
 }
 
 
