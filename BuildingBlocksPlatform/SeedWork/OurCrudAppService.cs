@@ -1,22 +1,11 @@
-using System.Linq.Dynamic.Core;
 using BuildingBlocksPlatform.Authority.Security;
 using BuildingBlocksPlatform.AutoModel.Interfaces;
 using BuildingBlocksPlatform.BackgroundWorker.Abstract.Jobs;
 using BuildingBlocksPlatform.BlobContainer;
 using BuildingBlocksPlatform.DomainDrivenDesign.AutoCrud;
-using BuildingBlocksPlatform.Extensions;
-using BuildingBlocksPlatform.Features;
 using BuildingBlocksPlatform.StateStore;
 using MapsterMapper;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.DynamicLinq;
-
-
-
 using BuildingBlocksPlatform.EventBus.Abstractions;
-using BuildingBlocksPlatform.EventBus.Abstractions;
-
 using BuildingBlocksPlatform.DomainDrivenDesign.AutoCrud.Interfaces;
 using BuildingBlocksPlatform.Features.MoGuid;
 using BuildingBlocksPlatform.Features.MoSnowflake;
@@ -25,19 +14,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace BuildingBlocksPlatform.SeedWork;
 
-/// <summary>
-/// CRUD禁用删除接口标志
-/// </summary>
-public interface IOurCrudDisableDelete
-{
-
-}
-public interface IOurCrudAppService
-{
-}
 
 /// <summary>
-/// <inheritdoc/> <para>该基类禁用修改与增加功能，需进一步禁用删除使用<see cref="IOurCrudDisableDelete"/> </para>
+/// <inheritdoc/> <para>该基类禁用修改与增加功能，需进一步禁用删除使用<see cref="IMoCrudDisableDelete"/> </para>
 /// </summary>
 public abstract class OurCrudAppService<TEntity, TEntityDto, TKey, TGetListInput, TRepository>(
     TRepository repository)
@@ -82,7 +61,7 @@ public abstract class OurCrudAppService<TEntity, TGetOutputDto, TGetListOutputDt
     TUpdateInput, TBulkDeleteInput, TRepository>(TRepository repository)
     : MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto, TKey, TGetListInput, TCreateInput,
         TUpdateInput, TBulkDeleteInput, TRepository>(
-        repository),IOurCrudAppService 
+        repository) 
     where TEntity : class, IMoEntity<TKey>
     where TGetOutputDto : IHasEntityId<TKey>
     where TGetListOutputDto : IHasEntityId<TKey>
