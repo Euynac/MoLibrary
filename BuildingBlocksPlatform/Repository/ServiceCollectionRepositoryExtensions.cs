@@ -9,9 +9,14 @@ namespace BuildingBlocksPlatform.Repository;
 
 public static class MoEfCoreServiceCollectionExtensions
 {
-
+    private static bool _isProviderRegistered;
     public static IServiceCollection AddMoUnitOfWorkDbContextProvider(this IServiceCollection services, bool addEventSupport = false)
     {
+        if (_isProviderRegistered)
+        {
+            return services;
+        }
+        _isProviderRegistered = true;
         if (addEventSupport)
         {
             services.AddMoUnitOfWorkWithEvent();
@@ -32,6 +37,11 @@ public static class MoEfCoreServiceCollectionExtensions
     /// <returns>The <see cref="IServiceCollection"/> so that additional calls can be chained.</returns>
     public static IServiceCollection AddMoDefaultDbContextProvider(this IServiceCollection services)
     {
+        if (_isProviderRegistered)
+        {
+            return services;
+        }
+        _isProviderRegistered = true;
         services.AddScoped(typeof(IDbContextProvider<>), typeof(DefaultDbContextProvider<>));
         return services;
     }
