@@ -1,7 +1,9 @@
+using BuildingBlocksPlatform.DomainDrivenDesign.AutoController.Components;
 using BuildingBlocksPlatform.DomainDrivenDesign.AutoController.Features;
-using Google.Api;
+using BuildingBlocksPlatform.DomainDrivenDesign.AutoController.Interfaces;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
 
 
@@ -18,6 +20,8 @@ public static class ServicesCollectionExtensions
     public static IMvcBuilder AddAutoControllers(this IServiceCollection services,
         Action<MvcOptions>? setupAction = null)
     {
+        services.AddTransient<IMoServiceConvention, MoServiceConvention>();
+        services.AddSingleton<MoResultFilterMvc>();
 
         return services.AddControllers(options =>
            {

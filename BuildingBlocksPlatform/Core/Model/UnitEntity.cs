@@ -14,6 +14,10 @@ public class UnitEntity(Type type) : ProjectUnit(type, EProjectUnitType.Entity),
     }
 
     public bool IsAggregate { get; set; }
+
+    /// <summary>
+    ///  需要在Program.cs 添加 config.AddDbContext
+    /// </summary>
     public UnitRepository? RepoUnit { get; set; }
 
     protected override bool VerifyTypeConstrain()

@@ -9,6 +9,7 @@ public class MoBackgroundWorkerManager(
     {
     }
 
+    
     public async Task AddToDashboardAsync(Type workerType, string? queue = null,
         CancellationToken cancellationToken = default)
     {
@@ -18,5 +19,10 @@ public class MoBackgroundWorkerManager(
     public async Task AddAsync(Type workerType, CancellationToken cancellationToken = default)
     {
         await simpleManager.AddAsync(workerType, cancellationToken);
+    }
+
+    public async Task TriggerDashboardJobOnce(Type workerType)
+    {
+        await dashboardManager.TriggerDashboardJobOnce(workerType);
     }
 }

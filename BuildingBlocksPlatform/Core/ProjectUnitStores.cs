@@ -57,7 +57,7 @@ public static class ProjectUnitStores
         return [.. ProjectUnitsByFullName.Values];
     }
     /// <summary>
-    /// 获取指定类型的项目单元
+    /// 获取指定类型的项目单元（实体需继承IMoEntity）
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>

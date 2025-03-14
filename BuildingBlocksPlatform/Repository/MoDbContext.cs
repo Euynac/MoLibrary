@@ -250,7 +250,7 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
             HandlePropertiesBeforeSave();
 
             //var eventReport = CreateEventReport();
-
+            var tracker = ChangeTracker;
             var result = await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
             //var method = typeof(DbContext).GetMethod(nameof(DbContext.SaveChangesAsync), [typeof(bool), typeof(CancellationToken)])!.MethodHandle.GetFunctionPointer();
             //var baseMethod = (Func<int>) Activator.CreateInstance(typeof(Func<int>), this, method)!;

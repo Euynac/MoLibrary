@@ -121,6 +121,7 @@ public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto
     }
 
     //TODO 移除此功能或移至Our
+    //TODO 此方法重写不同签名的需要增加POST标签，不会继承该标签
     [HttpPost]
     public virtual async Task<ResPaged<dynamic>> ListAsync(TGetListInput input)
     {

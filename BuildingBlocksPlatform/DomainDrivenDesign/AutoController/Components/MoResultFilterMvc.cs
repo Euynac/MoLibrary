@@ -8,7 +8,7 @@ namespace BuildingBlocksPlatform.DomainDrivenDesign.AutoController.Components;
 /// <summary>
 /// 使得Res的Status code与Http响应的Code一致。
 /// </summary>
-public class MoResultFilterMvc: IResultFilter, ISingletonDependency
+public class MoResultFilterMvc: IResultFilter
 {
     public void OnResultExecuting(ResultExecutingContext context)
     {

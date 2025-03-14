@@ -397,7 +397,7 @@ public static class JsonConverterExtensions
 
     }
 
-    private static void ConfigGlobalJsonSerializeOptions(this JsonSerializerOptions options, List<Type>? enumTypeToIgnore = null)
+    public static void ConfigGlobalJsonSerializeOptions(this JsonSerializerOptions options, List<Type>? enumTypeToIgnore = null)
     {
         options.Converters.Add(new NullableDateTimeJsonConverter ());
         options.Converters.Add(new DateTimeJsonConverter ());
