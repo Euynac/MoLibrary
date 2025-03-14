@@ -10,7 +10,7 @@ public static class HttpMethodHelper
 
     public static Dictionary<string, string[]> ConventionalPrefixes { get; set; } = new()
     {
-            {"GET", new[] {"GetList", "GetAll", "Get"}},
+            {"GET", new[] {"GetList", "GetAll", "Get", "List"}},
             {"PUT", new[] {"Put", "Update"}},
             {"DELETE", new[] {"Delete", "Remove"}},
             {"POST", new[] {"Create", "Add", "Insert", "Post"}},

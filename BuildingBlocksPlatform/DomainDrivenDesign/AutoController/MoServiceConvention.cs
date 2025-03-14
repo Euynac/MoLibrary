@@ -16,7 +16,7 @@ namespace BuildingBlocksPlatform.DomainDrivenDesign.AutoController;
 
 public class MoServiceConvention(
     IMoConventionalRouteBuilder conventionalRouteBuilder, ILogger<MoServiceConvention> logger, IOptions<MoAutoControllerOption> options)
-    : IMoServiceConvention, ITransientDependency
+    : IMoServiceConvention
 {
     public ILogger<MoServiceConvention> Logger => logger;
 
@@ -58,6 +58,8 @@ public class MoServiceConvention(
         {
             controller.ApiExplorer.GroupName = controller.ControllerName;
         }
+
+        var name = controller.DisplayName;
 
         if (controller.ApiExplorer.IsVisible is not false)
         {

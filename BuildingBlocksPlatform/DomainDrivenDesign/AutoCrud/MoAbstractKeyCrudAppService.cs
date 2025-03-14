@@ -98,7 +98,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
         //var entityDtos = await query.ProjectToType<TGetListOutputDto>(_mapper.Config).ToListAsync();
 
         var entityDtos = ObjectMapper.Map<List<TEntity>, List<TGetListOutputDto>>(entities);
-        if ((await ValidateResponseListAsync(entityDtos)).IsFailed(out var error, out var data)) return error;
+        if ((await ApplyCustomActionToResponseListAsync(entityDtos)).IsFailed(out var error, out var data)) return error;
         var list = (IReadOnlyList<dynamic>) data;
         return new ResPaged<dynamic>(totalCount ?? list.Count, list);
     }
@@ -256,7 +256,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
     /// </summary>
     /// <param name="entities"></param>
     /// <returns></returns>
-    protected virtual async Task<Res<List<TGetListOutputDto>>> ValidateResponseListAsync(List<TGetListOutputDto> entities)
+    protected virtual async Task<Res<List<TGetListOutputDto>>> ApplyCustomActionToResponseListAsync(List<TGetListOutputDto> entities)
     {
         return entities;
     }

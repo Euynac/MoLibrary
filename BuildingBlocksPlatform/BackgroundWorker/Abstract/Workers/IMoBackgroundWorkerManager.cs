@@ -5,6 +5,7 @@ namespace BuildingBlocksPlatform.BackgroundWorker.Abstract.Workers;
 /// </summary>
 public interface IMoDashboardBackgroundWorkerManager
 {
+    public Task TriggerDashboardJobOnce(Type workerType);
     public Task AddToDashboardAsync(Type workerType, string? queue = null,
         CancellationToken cancellationToken = default);
 }
