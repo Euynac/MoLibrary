@@ -175,14 +175,16 @@ public class MoAlterItemChain<TTargetEntity, TAlterItem, TAlterItemData, TEnumAl
 
 
     /// <summary>
-    /// 创建将指定来源ID的所有变更项回滚操作
+    /// 创建将指定来源ID的所有变更项回滚操作，如果没有找到相关需要回滚项，返回null
     /// </summary>
-    public TAlterItem CreateRollbackAlterItemBySourceId(string id, TEnumAlterSource source, string sourceId, string? sourceInfo, string targetSourceId)
+    public TAlterItem? CreateRollbackAlterItemBySourceId(string id, TEnumAlterSource source, string sourceId, string? sourceInfo, string targetSourceId)
     {
         var targetIds = new List<string>();
         var rollbackTime = DateTime.Now;
         ChangingList.Where(p => (p.SourceId == targetSourceId || p.RelatedSourceId?.Contains(targetSourceId) is true)  && p.AlterTime < rollbackTime)
             .Do(p => targetIds.Add(p.Id));
+
+        if (targetIds.Count == 0) return null;
         var rollbackItem = new TAlterItem()
         {
             Id = id,

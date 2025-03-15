@@ -1,3 +1,5 @@
+using BuildingBlocksPlatform.Repository.EntityInterfaces;
+
 namespace BuildingBlocksPlatform.Transaction.EntityEvent;
 
 public class DistributedEntityEventOptions
@@ -19,7 +21,7 @@ public class DistributedEntityEventOptions
     /// </summary>
     /// <typeparam name="TEntity"></typeparam>
     /// <typeparam name="TEntityEto"></typeparam>
-    public void AddDistributedEntityEvent<TEntity, TEntityEto>() where TEntity : class where TEntityEto : class
+    public void AddDistributedEntityEvent<TEntity, TEntityEto>() where TEntity : class , IMoEntity where TEntityEto : class
     {
         EtoMappings.Add(typeof(TEntity), typeof(TEntityEto));
         AutoEventSelectors.Add(typeof(TEntity));
