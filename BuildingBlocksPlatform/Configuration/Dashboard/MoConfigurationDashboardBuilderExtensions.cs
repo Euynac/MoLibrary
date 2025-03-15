@@ -52,8 +52,9 @@ public static class MoConfigurationDashboardBuilderExtensions
             var tagGroup = new List<OpenApiTag> { new() { Name = groupName, Description = "配置中心" } };
             endpoints.MapGet(MoConfigurationConventions.DashboardCentreConfigHistory, 
                 async ([FromQuery] string? key, [FromQuery] string? appid, [FromQuery] DateTime? start,
-                [FromQuery] DateTime? end, [FromServices] IMoConfigurationStores stores) =>
+                [FromQuery] DateTime? end, [FromServices] IMoConfigurationStores stores, [FromServices] IMoUnitOfWorkManager manager) =>
             {
+                using var uow = manager.Begin();
                 if (appid != null && key != null)
                 {
                     return (await stores.GetHistory(key, appid)).GetResponse();

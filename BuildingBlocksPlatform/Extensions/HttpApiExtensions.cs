@@ -26,6 +26,7 @@ public static class HttpApiExtensions
             httpResponse = await response;
             resContent = await httpResponse.Content.ReadAsStringAsync();
             res = JsonSerializer.Deserialize<TResponse>(resContent, JsonShared.GlobalJsonSerializerOptions);
+            res?.AutoParseResponseFromOrigin(resContent);
             if (res?.IsServiceNormal() is true)
             {
                 return res;

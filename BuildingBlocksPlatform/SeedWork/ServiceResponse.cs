@@ -3,11 +3,8 @@ using System.Diagnostics.CodeAnalysis;
 using System.Dynamic;
 using System.Net;
 using System.Runtime.CompilerServices;
-using BuildingBlocksPlatform.Interfaces;
 using System.Text.Json.Serialization;
-using BuildingBlocksPlatform.Extensions;
 using System.Text;
-using Google.Rpc;
 using Koubot.Tool.General;
 
 [assembly: InternalsVisibleTo("InfrastructurePlatform")]
@@ -24,6 +21,27 @@ public static class ServiceResponseHelper
     /// </summary>
     public static bool IsOk(this IServiceResponse res) => res.Code == ResponseCode.Ok;
 
+    /// <summary>
+    /// 从远程调用请求结果 自动验证并附加信息
+    /// </summary>
+    /// <param name="res"></param>
+    /// <param name="originInfo">HTTP等原始Response</param>
+    /// <returns></returns>
+    public static void AutoParseResponseFromOrigin(this IServiceResponse res, string originInfo)
+    {
+        if (IsNotValidResponse(res))
+        {
+            res.AppendExtraInfo("originRes", originInfo);
+        }
+    }
+
+    /// <summary>
+    ///  不是一个有效的请求，代表可能返回值并不符合此规范，应注意此情况进行特殊处理。
+    /// </summary>
+    public static bool IsNotValidResponse(this IServiceResponse res)
+    {
+        return res.Code == null;
+    }
     /// <summary>
     /// 接口设置额外信息(重复会覆盖)
     /// </summary>

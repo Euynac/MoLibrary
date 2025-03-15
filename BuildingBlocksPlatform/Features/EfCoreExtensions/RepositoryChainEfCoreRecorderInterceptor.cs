@@ -9,11 +9,31 @@ namespace BuildingBlocksPlatform.Features.EfCoreExtensions;
 
 public class RepositoryChainEfCoreRecorderInterceptor(IHttpContextAccessor accessor, ILogger<RepositoryChainEfCoreRecorderInterceptor> logger) : DbCommandInterceptor
 {
-    private void Record(DbCommand command, CommandEventData eventData)
+    private void Record(DbCommand command, CommandEventData eventData, bool isCanceled = false)
     {
         var context = accessor.HttpContext?.GetOrNew<MoRequestContext>();
         if (context == null) return;
+
         if (eventData is CommandEndEventData endEvent)
+        {
+            var res = $"db duration:{endEvent.Duration.TotalMilliseconds:0.##}ms";
+
+            if (eventData is CommandErrorEventData errorEvent)
+            {
+                res = $"[Error]{res};{errorEvent.Exception}";
+            }
+            else if (isCanceled)
+            {
+                res = $"[Canceled]{res}";
+            }
+            else
+            {
+                res = $"[Success]{res}";
+            }
+
+            context.Invoked(res);
+        }
+        else
         {
             var info = new
             {
@@ -28,9 +48,23 @@ public class RepositoryChainEfCoreRecorderInterceptor(IHttpContextAccessor acces
                 info = null;
             }
             context.Invoking($"Db operation", command.CommandText.LimitMaxLength(3333, "..."), info);
-            context.Invoked(duration: TimeSpan.FromMilliseconds(endEvent.Duration.TotalMilliseconds));
         }
     }
+
+    public override Task CommandFailedAsync(DbCommand command, CommandErrorEventData eventData,
+        CancellationToken cancellationToken = new())
+    {
+        Record(command, eventData);
+        return base.CommandFailedAsync(command, eventData, cancellationToken);
+    }
+
+    public override Task CommandCanceledAsync(DbCommand command, CommandEndEventData eventData,
+        CancellationToken cancellationToken = new())
+    {
+        Record(command, eventData, true);
+        return base.CommandCanceledAsync(command, eventData, cancellationToken);
+    }
+
 
     #region 写操作日志记录
     public override int NonQueryExecuted(DbCommand command, CommandExecutedEventData eventData, int result)
@@ -58,7 +92,6 @@ public class RepositoryChainEfCoreRecorderInterceptor(IHttpContextAccessor acces
         Record(command, eventData);
         return base.NonQueryExecutingAsync(command, eventData, result, cancellationToken);
     }
-
 
     #endregion
 

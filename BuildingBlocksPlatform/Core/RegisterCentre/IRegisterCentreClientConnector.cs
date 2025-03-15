@@ -1,6 +1,4 @@
-using System.Net.Http.Json;
 using BuildingBlocksPlatform.Converters;
-using BuildingBlocksPlatform.Extensions;
 using BuildingBlocksPlatform.SeedWork;
 
 namespace BuildingBlocksPlatform.Core.RegisterCentre;
@@ -45,10 +43,20 @@ public class DaprHttpForConnectClient(DaprClient client, ILogger<DaprHttpForConn
 
         try
         {
-            var res = await response.Content.ReadFromJsonAsync<TResponse>(jsonOption.GlobalOptions);
+            var content = await response.Content.ReadAsStringAsync();
+            var res = JsonSerializer.Deserialize<TResponse>(content, jsonOption.GlobalOptions);
             if (res == null)
                 throw new InvocationException(appid, callbackUrl,
                     new Exception("Json序列化为空"), response);
+
+            if (res is IServiceResponse serviceResponse)
+            {
+                serviceResponse.AutoParseResponseFromOrigin(content);
+            }
+
+            //var res = await response.Content.ReadFromJsonAsync<TResponse>(jsonOption.GlobalOptions);
+            
+
             return res;
         }
         catch (Exception e)
@@ -79,10 +87,16 @@ public class DaprHttpForConnectClient(DaprClient client, ILogger<DaprHttpForConn
 
         try
         {
-            var res = await response.Content.ReadFromJsonAsync<TResponse>(jsonOption.GlobalOptions);
+            var content = await response.Content.ReadAsStringAsync();
+            var res = JsonSerializer.Deserialize<TResponse>(content, jsonOption.GlobalOptions);
             if (res == null)
                 throw new InvocationException(appid, callbackUrl,
                     new Exception("Json序列化为空"), response);
+
+            if (res is IServiceResponse serviceResponse)
+            {
+                serviceResponse.AutoParseResponseFromOrigin(content);
+            }
             return res;
         }
         catch (Exception e)

@@ -101,12 +101,15 @@ public class MemoryProviderForConfigCentre(
         //如果中心节点有配置项，直接通过本地修改
         if ((await modifier.IsOptionExist(req.Key)).IsOk(out var option))
         {
-            return await SaveHistory(await modifier.UpdateOption(option, req.Value), req.AppId);
+             if ((await SaveHistory(await modifier.UpdateOption(option, req.Value), req.AppId)).IsFailed(out var error)) return error;
+             return Res.Ok("路由到中心节点保存成功");
         }
 
         if ((await modifier.IsConfigExist(req.Key)).IsOk(out var config))
         {
-            return await SaveHistory(await modifier.UpdateConfig(config, req.Value), req.AppId);
+            if ((await SaveHistory(await modifier.UpdateConfig(config, req.Value), req.AppId)).IsFailed(out var error)) return error;
+            return Res.Ok("路由到中心节点保存成功");
+
         }
 
 
@@ -115,7 +118,8 @@ public class MemoryProviderForConfigCentre(
         {
             if ((await _connector.PostAsync<DtoUpdateConfig, Res<DtoUpdateConfigRes>>(service.AppId, $"{MoConfigurationConventions.DashboardClientConfigUpdate}", req)).IsFailed(out var error, out var data)) return error;
 
-            return await SaveHistory(data, req.AppId);
+            if ((await SaveHistory(data, req.AppId)).IsFailed(out error)) return error;
+            return Res.Ok($"路由到{service.AppId}节点保存成功");
         }
 
         return $"找不到{req.AppId}所对应的微服务";
