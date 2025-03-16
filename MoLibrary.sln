@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.MoLibrary.Repository",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.MoLibrary", "Tests\Test.MoLibrary\Test.MoLibrary.csproj", "{5E4D5CE7-912D-4743-BD03-F0238697F69D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.Locker", "MoLibrary.Locker\MoLibrary.Locker.csproj", "{1AC66024-5469-4305-A96B-9CA50E1447FA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -55,6 +57,10 @@ Global
 		{5E4D5CE7-912D-4743-BD03-F0238697F69D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5E4D5CE7-912D-4743-BD03-F0238697F69D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5E4D5CE7-912D-4743-BD03-F0238697F69D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1AC66024-5469-4305-A96B-9CA50E1447FA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1AC66024-5469-4305-A96B-9CA50E1447FA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1AC66024-5469-4305-A96B-9CA50E1447FA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1AC66024-5469-4305-A96B-9CA50E1447FA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
