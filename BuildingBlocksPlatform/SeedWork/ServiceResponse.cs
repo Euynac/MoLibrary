@@ -1,11 +1,11 @@
+using Koubot.Tool.General;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Dynamic;
 using System.Net;
 using System.Runtime.CompilerServices;
-using System.Text.Json.Serialization;
 using System.Text;
-using Koubot.Tool.General;
+using System.Text.Json.Serialization;
 
 [assembly: InternalsVisibleTo("InfrastructurePlatform")]
 namespace BuildingBlocksPlatform.SeedWork;
@@ -661,17 +661,7 @@ public class ResPaged<TDto> : IServiceResponse
     {
         Data = new PageData(sum, items);
     }
-    #region ABP支持
-    //public static ResPaged<TDto> Convert(PagedResultDto<TDto> dto)
-    //{
-    //    return new ResPaged<TDto>((int) dto.TotalCount, dto.Items)
-    //    {
-    //        Code = ResponseCode.Ok
-    //    };
-    //}
 
-    //public static implicit operator ResPaged<TDto>(PagedResultDto<TDto> dto) => Convert(dto);
-    #endregion
     /// <summary>
     /// 获取可继承的错误信息
     /// </summary>
@@ -690,11 +680,15 @@ public class ResPaged<TDto> : IServiceResponse
 
     public static implicit operator ResPaged<TDto>(Res res) => new(0, [])
     {
-        Message = res.Message, Code = res.Code, ExtraInfo = res.ExtraInfo
+        Message = res.Message,
+        Code = res.Code,
+        ExtraInfo = res.ExtraInfo
     };
 
     public static implicit operator ResPaged<TDto>(string res) => new(0, [])
-    { Message = res, Code = ResponseCode.BadRequest };
+    {
+        Message = res, Code = ResponseCode.BadRequest
+    };
 }
 
 
@@ -704,7 +698,13 @@ public class ResPaged<TDto> : IServiceResponse
 public enum ResponseCode
 {
     Unknown = 0,
+    /// <summary>
+    /// 请求正常
+    /// </summary>
     Ok = 200,
+    /// <summary>
+    /// 请求错误
+    /// </summary>
     BadRequest = 400,
     /// <summary>
     /// 未登录
