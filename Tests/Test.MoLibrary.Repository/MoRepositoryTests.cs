@@ -404,6 +404,10 @@ namespace Test.MoLibrary.Repository
             await _dbContext.TestEntities.AddRangeAsync(entitiesToDelete);
             await _dbContext.SaveChangesAsync();
             
+            // Detach entities from context to simulate a fresh retrieval
+            _dbContext.ChangeTracker.Clear();
+
+
             // Act
             await _repository.DeleteManyAsync(entitiesToDelete);
             await _dbContext.SaveChangesAsync();
