@@ -27,7 +27,7 @@ public class DaprMoDistributedLock(
             (int)DistributedLockDaprOptions.DefaultExpirationTimeout.TotalSeconds,
             cancellationToken);
 
-        if (lockResponse == null || !lockResponse.Success)
+        if (lockResponse is not { Success: true })
         {
             return null;
         }
