@@ -29,7 +29,18 @@ namespace BuildingBlocksPlatform.Extensions
             return type.FullName + ", " + type.Assembly.GetName().Name;
         }
 
-   
+
+        /// <summary>
+        /// 判断是否能够使用无参构造函数创建该类型的实例
+        /// </summary>
+        /// <param name="type"></param>
+        /// <returns></returns>
+        public static bool CanCreateInstanceUsingParameterlessConstructor(this Type type)
+        {
+            return type.IsValueType || !type.IsAbstract &&
+                type.GetConstructor(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance, null,
+                    Type.EmptyTypes, null) != null;//包括private classes
+        }
 
 
         /// <summary>

@@ -59,10 +59,11 @@ public class MoConfigurationCard
     public string GetDefaultFileContents()
     {
         var obj = Activator.CreateInstance(Configuration.ConfigType);
-        if (obj == null) return "";
+        if (obj == null)
+            throw new InvalidOperationException($"配置类{Configuration.ConfigType.FullName}无法生成默认配置值，请检查是否有无参构造函数");
         //目前仅支持json格式
         var jsonFile = new Dictionary<string, object> { { SectionName ?? Configuration.Name, obj } };
-        return JsonSerializer.Serialize(jsonFile, new JsonSerializerOptions() {WriteIndented = true});
+        return JsonSerializer.Serialize(jsonFile, new JsonSerializerOptions {WriteIndented = true});
     }
 
 

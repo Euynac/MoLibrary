@@ -55,6 +55,7 @@ public class MoRequestContext
 
     private object? CreateResExtraInfo(IServiceResponse? res)
     {
+        //TODO 优化异常链路处理，合并到chain
         if (res == null) return null;
         var node = JsonSerializer.SerializeToNode(res.ExtraInfo);
         if (res.IsOk()) return node;
@@ -118,6 +119,7 @@ public class InvokeChainInfo
     public dynamic? InvokingExtraInfo { get; set; }  
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public dynamic? InvokedExtraInfo { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<dynamic>? Chains { get; set; }
     [JsonIgnore]
     public InvokeChainInfo? PreviousChain { get; set; }

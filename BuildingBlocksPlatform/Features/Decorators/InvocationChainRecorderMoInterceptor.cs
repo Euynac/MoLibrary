@@ -55,32 +55,61 @@ public class InvocationChainRecorderMoInterceptor(IHttpContextAccessor accessor,
             }
         }
 
+        Exception? exception = null;
+        try
+        {
+            await invocation.ProceedAsync();
+        }
+        catch (Exception e)
+        {
+            exception = e;
+        }
 
-        await invocation.ProceedAsync();
 
         if (shouldRecordChain)
         {
             keeper?.Finish();
+            var responseName = GetResponseName(invocation.Method.ReturnType) ?? invocation
+                .Method.ReturnType.FullName;
             //https://learn.microsoft.com/en-us/dotnet/fundamentals/runtime-libraries/system-dynamic-expandoobject
             if (invocation.ReturnValue is IServiceResponse res)
             {
-                var responseName = GetResponseName(invocation.Method.ReturnType) ?? invocation
-                    .Method.ReturnType.FullName;
-                //暂不支持记录远程调用，因为无法对Factory的依赖注入进行拦截。
-                //if (invocation.Method.DeclaringType?.FullName?.Contains(RpcApiNamespace, StringComparison.Ordinal) is true)
-                //{
-                //    context.RecordRemoteCall(res);
-                //}
-
                 context.Invoked($"{responseName}({res.Code})", res: res);
+            }
+            else if(exception != null && CreateRes(invocation.Method.ReturnType) is IServiceResponse errorRes)
+            {
+                errorRes.Code = ResponseCode.InternalError;
+                errorRes.Message = $"执行方法{invocation.Method.DeclaringType?.Name} {invocation.Method.Name} 异常";
+                errorRes.AppendExtraInfo("exception", exception.ToString());
+                invocation.ReturnValue = errorRes;
+                context.Invoked($"{responseName}({errorRes.Code})", res: errorRes);
             }
             else
             {
-                context.ChainBridge!.Remarks = "返回值不是IServiceResponse";
+                //TODO 未考虑的情况
             }
+        }
+        else if(exception != null)
+        {
+            throw new Exception($"执行方法{invocation.Method.DeclaringType?.Name} {invocation.Method.Name} 异常", exception);
         }
 
         return;
+
+        static object? CreateRes(Type type)
+        {
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Task<>))
+            {
+                return CreateRes(type.GetGenericArguments()[0]);
+            }
+
+            if (type.IsImplementInterface(typeof(IServiceResponse)) && type.CanCreateInstanceUsingParameterlessConstructor())
+            {
+                return Activator.CreateInstance(type);
+            }
+
+            return null;
+        }
 
         static string? GetResponseName(Type type)
         {

@@ -165,13 +165,6 @@ public static class ServiceCollectionExtension
         if (_hasError) return;
 
 
-
-
-
-
-
-
-
         services.AddHangfireServer((provider, op) =>
         {
             op.ServerTimeout = TimeSpan.FromMinutes(4);

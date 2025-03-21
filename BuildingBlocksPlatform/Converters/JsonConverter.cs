@@ -1,12 +1,8 @@
-using System.Collections;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json.Serialization;
-using BuildingBlocksPlatform.Extensions;
 using Microsoft.AspNetCore.Http;
 using System.Globalization;
-using System;
-using System.Text.Encodings.Web;
 using BuildingBlocksPlatform.DataSync.Interfaces;
 using BuildingBlocksPlatform.SeedWork;
 using TimeExtensions = BuildingBlocksPlatform.Extensions.TimeExtensions;
@@ -20,21 +16,36 @@ public interface IGlobalJsonOption
     /// </summary>
     public JsonSerializerOptions GlobalOptions { get; }
 }
-
+public class MoGlobalJsonOptions
+{
+    /// <summary>Gets or sets a value that determines when properties with default values are ignored during serialization or deserialization.
+    /// The default value is <see cref="F:System.Text.Json.Serialization.JsonIgnoreCondition.Never" />.</summary>
+    /// <exception cref="T:System.ArgumentException">This property is set to <see cref="F:System.Text.Json.Serialization.JsonIgnoreCondition.Always" />.</exception>
+    /// <exception cref="T:System.InvalidOperationException">This property is set after serialization or deserialization has occurred.
+    /// 
+    /// -or-
+    /// 
+    /// <see cref="P:System.Text.Json.JsonSerializerOptions.IgnoreNullValues" /> has been set to <see langword="true" />. These properties cannot be used together.</exception>
+    public JsonIgnoreCondition DefaultIgnoreCondition { get; set; }
+    /// <summary>
+    /// Gets an object that indicates whether metadata properties are honored when JSON objects and arrays are deserialized into reference types, and written when reference types are serialized. This is necessary to create round-trippable JSON from objects that contain cycles or duplicate references.
+    /// </summary>
+    public bool ReferenceHandlerPreserve { get; set; }
+    /// <summary>
+    /// 当启用全局枚举转String输出时，忽略转换的枚举类型
+    /// </summary>
+    public List<Type>? EnumTypeToIgnore { get; set; }
+    /// <summary>
+    /// 启用全局枚举转String输出
+    /// </summary>
+    public bool EnableGlobalEnumToString { get; set; }
+}
 public class JsonShared : IGlobalJsonOption
 {
     /// <summary>
     /// 全局的Json设置。用于Mvc等
     /// </summary>
     internal static JsonSerializerOptions GlobalJsonSerializerOptions { get; set; } = new();
-
-    internal class Options
-    {
-        public static bool WhenWritingNull { get; set; }
-        public static bool ReferenceHandlerPreserve { get; set; }
-    }
-
-
     ///// <summary>
     ///// 全局的后端Json设置。用于领域事件推送等。
     ///// </summary>
@@ -371,12 +382,17 @@ public class AbpCamelCaseNamingPolicy : JsonNamingPolicy
 public static class JsonConverterExtensions
 {
    
-    public static void AddSharedJsonConverter(this IServiceCollection services, bool whenWritingNull = false, bool referenceHandlerPreserve =false)
+    public static void AddSharedJsonConverter(this IServiceCollection services, Action<MoGlobalJsonOptions>? optionAction = null)
     {
-        JsonShared.Options.WhenWritingNull = whenWritingNull;
-        JsonShared.Options.ReferenceHandlerPreserve = referenceHandlerPreserve;
+        var extraOptions = new MoGlobalJsonOptions();
+        if (optionAction is not null)
+        {
+            optionAction.Invoke(extraOptions);
+            services.Configure(optionAction);
+        }
+
         var options = new JsonSerializerOptions();
-        options.ConfigGlobalJsonSerializeOptions([typeof(ResponseCode), typeof(ESystemDataSpecialFlags)]);
+        options.ConfigGlobalJsonSerializeOptions(extraOptions);
         JsonShared.GlobalJsonSerializerOptions = options;
 
         //依赖于AsyncLocal技术，异步static单例，不同的请求线程会有不同的HttpContext
@@ -397,7 +413,7 @@ public static class JsonConverterExtensions
 
     }
 
-    public static void ConfigGlobalJsonSerializeOptions(this JsonSerializerOptions options, List<Type>? enumTypeToIgnore = null)
+    public static void ConfigGlobalJsonSerializeOptions(this JsonSerializerOptions options, MoGlobalJsonOptions extraOptions)
     {
         options.Converters.Add(new NullableDateTimeJsonConverter ());
         options.Converters.Add(new DateTimeJsonConverter ());
@@ -406,17 +422,18 @@ public static class JsonConverterExtensions
         options.Converters.Add(new NullableGuidJsonConverter());
         //options.Converters.Add(new JsonConverterFactoryForDtoObjectClass { HttpContextAccessor = httpContextAccessor });
         options.Converters.Add(new NullableLongToStringJsonConverter());
-        options.Converters.Add(new OutJsonConverterFactory(new JsonStringEnumConverter(),
-            [.. enumTypeToIgnore ?? []])); //全局枚举对String、int转换支持
-        //options.Converters.Add(new JsonStringEnumConverter()); //全局枚举对String、int转换支持
 
-
-        if (JsonShared.Options.WhenWritingNull)
+        if (extraOptions.EnableGlobalEnumToString)
         {
-            options.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+            options.Converters.Add(new OutJsonConverterFactory(new JsonStringEnumConverter(),
+                [.. extraOptions.EnumTypeToIgnore ?? []])); //全局枚举对String、int转换支持
+            //options.Converters.Add(new JsonStringEnumConverter()); //全局枚举对String、int转换支持
+
         }
 
-        if (JsonShared.Options.ReferenceHandlerPreserve)
+        options.DefaultIgnoreCondition = extraOptions.DefaultIgnoreCondition;
+
+        if (extraOptions.ReferenceHandlerPreserve)
         {
             options.ReferenceHandler = ReferenceHandler.Preserve;
         }
