@@ -1,0 +1,27 @@
+---
+description: introduction of primary constructors
+globs: *.cs
+---
+In C# 12 and above, classes and structs can have **primary constructors** that simplify the declaration of parameters for initialization. The parameters from the primary constructor are available throughout the class or struct and can be used for state initialization or directly in method definitions. This feature reduces the need for repetitive constructor definitions.
+
+## General Syntax for Primary Constructors
+
+- A primary constructor allows you to declare parameters that will be in scope for the entire class or struct.
+- If the class has a base class, the primary constructor parameters can be passed to the base class constructor.
+- The parameters are treated as if they were **private fields** and can be used directly in the class methods.
+
+### Basic Example:
+
+```cs
+public class C(bool b, int i, string s) // Primary constructor with three parameters
+{
+    public int I { get; set; } = i; // Initialization of state
+    public string S // Property directly using constructor parameter
+    {
+        get => s;
+        set => s = value ?? throw new ArgumentNullException(nameof(S));
+    }
+    public C(string s) : this(true, 0, s) { } // Constructor must call primary constructor
+}
+```
+
