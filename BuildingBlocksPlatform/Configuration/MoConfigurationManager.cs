@@ -147,6 +147,8 @@ public static class MoConfigurationManager
             filename = Path.Combine(parent, filename);
         }
 
+
+        //TODO 未处理文件内容不合法的情况
         var path = GeneralExtensions.GetRelativePathInRunningPath(filename);
         if (!File.Exists(path))
         {

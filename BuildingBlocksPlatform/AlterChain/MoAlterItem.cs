@@ -80,7 +80,7 @@ public class MoAlterItem<TTargetEntity, TAlterItemData, TEnumAlterSource> : IMoA
     /// </summary>
     [NotMapped]
     [JsonIgnore]
-    public DateTime _OrderTime => (ActualEffectTime ?? AlterTime).AddMicroseconds(OffsetAdjust);
+    public DateTime OrderTime => (ActualEffectTime ?? AlterTime).AddMicroseconds(OffsetAdjust);
 
     /// <summary>
     /// 微调修改时间，用于解决变更操作时间重复等极端情况

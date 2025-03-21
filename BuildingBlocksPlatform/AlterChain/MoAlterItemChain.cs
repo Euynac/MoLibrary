@@ -58,8 +58,8 @@ public class MoAlterItemChain<TTargetEntity, TAlterItem, TAlterItemData, TEnumAl
     {
         _changingList.AddRange(
             items.Select(p =>
-                new KeyValuePair<DateTime, TAlterItem>(p._OrderTime, p)), true);
-        LastModifiedTime = _changingList.LastOrDefault().Value?._OrderTime;
+                new KeyValuePair<DateTime, TAlterItem>(p.OrderTime, p)), true);
+        LastModifiedTime = _changingList.LastOrDefault().Value?.OrderTime;
     }
 
 
@@ -69,18 +69,18 @@ public class MoAlterItemChain<TTargetEntity, TAlterItem, TAlterItemData, TEnumAl
     /// <param name="item"></param>
     public void Add(TAlterItem item)
     {
-        while (_changingList.ContainsKey(item._OrderTime))
+        while (_changingList.ContainsKey(item.OrderTime.RoundToSecond()))
         {
             item.OffsetAdjust++;
         }
 
-        _changingList.Add(item._OrderTime, item);
+        _changingList.Add(item.OrderTime, item);
 
 
         // 应用回滚项
         if (item.TargetRollbackIds is null)
         {
-            LastModifiedTime = _changingList.LastOrDefault().Value?._OrderTime;
+            LastModifiedTime = _changingList.LastOrDefault().Value?.OrderTime;
             return;
         }
         var dict = new Dictionary<string, TAlterItem>();
@@ -101,7 +101,7 @@ public class MoAlterItemChain<TTargetEntity, TAlterItem, TAlterItemData, TEnumAl
             }
         }
 
-        LastModifiedTime = _changingList.LastOrDefault().Value?._OrderTime;
+        LastModifiedTime = _changingList.LastOrDefault().Value?.OrderTime;
     }
 
     /// <summary>
@@ -146,7 +146,7 @@ public class MoAlterItemChain<TTargetEntity, TAlterItem, TAlterItemData, TEnumAl
     /// <returns></returns>
     public bool ShouldReconstruct(TAlterItem item)
     {
-        return (LastModifiedTime != null && LastModifiedTime > item._OrderTime) || item.TargetRollbackIds != null;
+        return (LastModifiedTime != null && LastModifiedTime > item.OrderTime) || item.TargetRollbackIds != null;
     }
 
     /// <summary>

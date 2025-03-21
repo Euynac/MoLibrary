@@ -134,6 +134,7 @@ public class MoUnitOfWork(
 
     public virtual void Dispose()
     {
+        // TODO 是否应该自动提交事务？
         if (IsDisposed)
         {
             return;

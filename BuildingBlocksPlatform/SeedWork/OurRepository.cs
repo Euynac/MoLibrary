@@ -325,6 +325,7 @@ public interface IOurRepository : IOurRepositoryCache
     Task DynamicInsertManyAsync(IEnumerable<dynamic> entities);
     Task DynamicUpdateManyAsync(IEnumerable<dynamic> entities);
     Task DynamicDeleteManyAsync(IEnumerable<dynamic> entities);
+    Task DynamicDeleteManyByIdAsync(IEnumerable<long> ids);
 }
 
 /// <summary>
@@ -388,9 +389,15 @@ public interface IOurRepository<TEntity, TKey> : IMoRepository<TEntity, TKey>, I
     }
     async Task IOurRepository.DynamicDeleteManyAsync(IEnumerable<dynamic> entity)
     {
-        await DeleteManyAsync((dynamic) entity, true);
+        await ((IMoBasicRepository<TEntity>)this).DeleteManyAsync((dynamic)entity, true);
     }
-
+    async Task IOurRepository.DynamicDeleteManyByIdAsync(IEnumerable<long> ids)
+    {
+        if (typeof(TKey) == typeof(long))
+        {
+            await DeleteManyAsync(ids.Cast<TKey>(), true);
+        }
+    }
 
     /// <summary>
     /// 更新实体。原方法需要GetAsync后开启追踪特性再进行Update，这里通过Attach进行追踪，传入Action进行Update
