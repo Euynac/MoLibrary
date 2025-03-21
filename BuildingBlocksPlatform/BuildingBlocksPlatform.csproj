@@ -57,6 +57,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Configuration\Providers\" />
     <Folder Include="Core\Dashboard\" />
     <Folder Include="Core\Interfaces\" />
   </ItemGroup>
