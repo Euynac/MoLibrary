@@ -2,7 +2,6 @@
 using Koubot.Tool.General;
 using System.Text;
 using Microsoft.Extensions.Configuration;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace BuildingBlocksPlatform.Configuration.Providers;
@@ -38,12 +37,21 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
     /// <returns></returns>
     public string GetDefaultFileContents()
     {
-        var obj = Activator.CreateInstance(card.Configuration.ConfigType);
-        if (obj == null)
+        // 确定配置节点名称
+        var sectionName = card.Key;
+        // 获取当前配置类的默认实例
+        var defaultObj = Activator.CreateInstance(card.Configuration.ConfigType);
+        if (defaultObj == null)
+        {
+            MoConfigurationManager.Logger.LogError("无法为配置类创建默认实例: {ConfigType}", card.Configuration.ConfigType.FullName);
             throw new InvalidOperationException($"配置类{card.Configuration.ConfigType.FullName}无法生成默认配置值，请检查是否有无参构造函数");
-        //目前仅支持json格式
-        var jsonFile = new Dictionary<string, object> { { card.SectionName ?? card.Configuration.Name, obj } };
-        return JsonSerializer.Serialize(jsonFile, JsonSerializerOptions);
+        }
+
+        // 创建默认配置的JSON节点
+        var defaultJson = JsonSerializer.Serialize(
+            new Dictionary<string, object> { { sectionName, defaultObj } },
+            JsonSerializerOptions);
+        return defaultJson;
     }
 
     #region 生成配置文件
@@ -79,6 +87,27 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
     }
     
     /// <summary>
+    /// 记录删除属性的信息
+    /// </summary>
+    private class RemovedPropertyInfo
+    {
+        /// <summary>
+        /// 完整属性路径
+        /// </summary>
+        public string Path { get; init; } = string.Empty;
+        
+        /// <summary>
+        /// 属性值（JSON格式）
+        /// </summary>
+        public JsonNode? Value { get; init; }
+        
+        /// <summary>
+        /// 删除时间
+        /// </summary>
+        public DateTime RemovedTime { get; init; } = DateTime.Now;
+    }
+    
+    /// <summary>
     /// 检查并更新配置文件以匹配当前配置类结构
     /// </summary>
     /// <param name="filePath">配置文件路径</param>
@@ -99,24 +128,9 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
                 File.WriteAllText(filePath, GetDefaultFileContents(), Encoding.UTF8);
                 return;
             }
-            
-            // 获取当前配置类的默认实例
-            var defaultObj = Activator.CreateInstance(card.Configuration.ConfigType);
-            if (defaultObj == null)
-            {
-                MoConfigurationManager.Logger.LogError("无法为配置类创建默认实例: {ConfigType}", card.Configuration.ConfigType.FullName);
-                return;
-            }
-
             // 确定配置节点名称
             var sectionName = card.Key;
-
-            // 创建默认配置的JSON节点
-            var defaultJson = JsonSerializer.Serialize(
-                new Dictionary<string, object> { { sectionName, defaultObj } }, 
-                JsonSerializerOptions);
-
-            var defaultJsonDocument = JsonDocument.Parse(defaultJson);
+            var defaultJson = GetDefaultFileContents();
             var defaultJsonNode = JsonNode.Parse(defaultJson)?.AsObject();
             
             if (defaultJsonNode == null)
@@ -124,8 +138,6 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
                 MoConfigurationManager.Logger.LogWarning("无法解析默认配置: {ConfigType}", card.Configuration.ConfigType.FullName);
                 return;
             }
-            
-          
             
             // 检查节点是否存在
             if (!jsonObject.TryGetPropertyValue(sectionName, out var sectionNode))
@@ -145,102 +157,228 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
             var existingSection = sectionNode?.AsObject();
             if (existingSection == null) return;
             
-            bool fileChanged = false;
+            // 用来收集需要添加到文件末尾的所有删除属性的历史记录
+            var removedProperties = new List<RemovedPropertyInfo>();
             
-            // 检查是否有新属性需要添加
-            foreach (var property in defaultSection)
+            // 提取现有文件中的历史记录注释（如果有）
+            var existingRemovedProperties = ExtractRemovedPropertiesHistory(existingJson);
+            if (existingRemovedProperties.Count > 0)
             {
-                if (!existingSection.ContainsKey(property.Key))
-                {
-                    // 添加新属性
-                    existingSection[property.Key] = property.Value?.DeepClone();
-                    fileChanged = true;
-                    MoConfigurationManager.Logger.LogInformation("配置文件添加了新属性: {PropertyName}", property.Key);
-                }
+                removedProperties.AddRange(existingRemovedProperties);
             }
             
-            // 检查是否有需要移除的属性
-            if (removedPropertyHandling != RemovedPropertyHandling.Remove)
+            // 递归比较默认对象和现有对象的结构差异
+            var fileChanged = RecursivelyUpdateProperties(defaultSection, existingSection, sectionName, removedProperties);
+            
+            // 保存更新后的文件
+            if (fileChanged || removedProperties.Count > existingRemovedProperties.Count)
             {
-                var propertiesToRemove = new List<string>();
+                // 序列化更新后的JSON对象
+                var updatedJson = jsonObject.ToJsonString(JsonSerializerOptions);
                 
-                foreach (var property in existingSection)
+                // 处理被移除的属性注释（如果有）
+                if (removedPropertyHandling == RemovedPropertyHandling.Comment && removedProperties.Count > 0)
                 {
-                    if (!defaultSection.ContainsKey(property.Key))
-                    {
-                        if (removedPropertyHandling == RemovedPropertyHandling.Comment)
-                        {
-                            // 注释掉被移除的属性 - 由于JSON不支持注释，我们将在序列化后的文本中手动添加注释
-                            propertiesToRemove.Add(property.Key);
-                        }
-                        fileChanged = true;
-                        MoConfigurationManager.Logger.LogInformation("发现已移除属性: {PropertyName}", property.Key);
-                    }
+                    updatedJson = AddRemovedPropertiesAsComments(updatedJson, removedProperties);
                 }
                 
-                // 移除需要注释的属性（为后续添加注释）
-                foreach (var key in propertiesToRemove)
-                {
-                    existingSection.Remove(key);
-                }
-                
-                if (fileChanged)
-                {
-                    // 保存更新
-                    var updatedJson = jsonObject.ToJsonString(JsonSerializerOptions);
-                    
-                    // 如果有需要注释的属性，手动添加注释
-                    if (removedPropertyHandling == RemovedPropertyHandling.Comment && propertiesToRemove.Count > 0)
-                    {
-                        // 序列化移除的属性以便添加为注释
-                        var commentedProperties = new JsonObject();
-                        foreach (var key in propertiesToRemove)
-                        {
-                            var originalValue = existingJsonDocument.RootElement
-                                .GetProperty(sectionName)
-                                .TryGetProperty(key, out var value) ? JsonNode.Parse(value.GetRawText()) : null;
-                            
-                            if (originalValue != null)
-                            {
-                                commentedProperties[key] = originalValue;
-                            }
-                        }
-                        
-                        // 将对象转换为注释文本
-                        var commentJson = commentedProperties.ToJsonString(JsonSerializerOptions);
-                        var commentLines = commentJson.Split('\n')
-                            .Select(line => "// " + line)
-                            .ToArray();
-                        
-                        // 在每个节的末尾添加注释
-                        var lines = updatedJson.Split('\n').ToList();
-                        var insertIndex = lines.FindLastIndex(line => line.Contains($"\"{sectionName}\"")) + 1;
-                        
-                        // 添加注释标题
-                        lines.Insert(insertIndex, "  // 以下是已移除的配置项（仅供参考）:");
-                        
-                        // 插入注释的属性
-                        foreach (var line in commentLines)
-                        {
-                            lines.Insert(++insertIndex, line);
-                        }
-                        
-                        updatedJson = string.Join('\n', lines);
-                    }
-                    
-                    File.WriteAllText(filePath, updatedJson, Encoding.UTF8);
-                }
-            }
-            else if (fileChanged)
-            {
-                // 保存更新（移除模式）
-                File.WriteAllText(filePath, jsonObject.ToJsonString(JsonSerializerOptions), Encoding.UTF8);
+                File.WriteAllText(filePath, updatedJson, Encoding.UTF8);
             }
         }
         catch (Exception ex)
         {
             MoConfigurationManager.Logger.LogError(ex, "更新配置文件失败: {FilePath}", filePath);
         }
+    }
+    
+    /// <summary>
+    /// 递归比较和更新JSON对象的属性结构
+    /// </summary>
+    /// <param name="defaultObj">默认配置对象</param>
+    /// <param name="existingObj">现有配置对象</param>
+    /// <param name="currentPath">当前属性路径</param>
+    /// <param name="removedProperties">收集被移除的属性信息</param>
+    /// <returns>如果文件有变化则返回true</returns>
+    private bool RecursivelyUpdateProperties(JsonObject defaultObj, JsonObject existingObj, string currentPath, List<RemovedPropertyInfo> removedProperties)
+    {
+        var hasChanges = false;
+        
+        // 检查是否有新属性需要添加
+        foreach (var property in defaultObj)
+        {
+            var propertyPath = $"{currentPath}.{property.Key}";
+            
+            if (!existingObj.ContainsKey(property.Key))
+            {
+                // 添加新属性
+                existingObj[property.Key] = property.Value?.DeepClone();
+                hasChanges = true;
+                MoConfigurationManager.Logger.LogInformation("配置文件添加了新属性: {PropertyPath}", propertyPath);
+            }
+            else if (property.Value is JsonObject defaultChildObj &&
+                     existingObj[property.Key] is JsonObject existingChildObj)
+            {
+                // 递归处理嵌套对象
+                var childChanged = RecursivelyUpdateProperties(
+                    defaultChildObj, 
+                    existingChildObj, 
+                    propertyPath,
+                    removedProperties);
+                
+                hasChanges = hasChanges || childChanged;
+            }
+        }
+        
+        // 检查是否有需要移除的属性
+        var propertiesToRemove = new List<string>();
+        
+        foreach (var property in existingObj)
+        {
+            var propertyPath = $"{currentPath}.{property.Key}";
+            
+            if (!defaultObj.ContainsKey(property.Key))
+            {
+                // 记录被移除的属性信息
+                removedProperties.Add(new RemovedPropertyInfo
+                {
+                    Path = propertyPath,
+                    Value = property.Value?.DeepClone(),
+                    RemovedTime = DateTime.Now
+                });
+                
+                // 如果设置为移除属性，则添加到待移除列表
+                if (MoConfigurationManager.Setting.RemovedPropertyHandling.EqualsAny(RemovedPropertyHandling.Comment, RemovedPropertyHandling.Remove))
+                {
+                    propertiesToRemove.Add(property.Key);
+                }
+                
+                hasChanges = true;
+                MoConfigurationManager.Logger.LogInformation("发现已移除属性: {PropertyPath}", propertyPath);
+            }
+            // 递归检查嵌套对象，但不处理已标记为移除的属性
+            else if (property.Value is JsonObject existingChildObj && 
+                     defaultObj[property.Key] is JsonObject defaultChildObj &&
+                     !propertiesToRemove.Contains(property.Key))
+            {
+                var childChanged = RecursivelyUpdateProperties(
+                    defaultChildObj,
+                    existingChildObj,
+                    propertyPath,
+                    removedProperties);
+                
+                hasChanges = hasChanges || childChanged;
+            }
+        }
+        
+        // 移除标记为删除的属性
+        foreach (var key in propertiesToRemove)
+        {
+            existingObj.Remove(key);
+        }
+        
+        return hasChanges;
+    }
+    
+    /// <summary>
+    /// 从现有JSON文件中提取已删除属性的历史记录
+    /// </summary>
+    /// <param name="jsonContent">JSON文件内容</param>
+    /// <returns>已删除属性的历史记录</returns>
+    private List<RemovedPropertyInfo> ExtractRemovedPropertiesHistory(string jsonContent)
+    {
+        var result = new List<RemovedPropertyInfo>();
+        
+        // 查找删除历史记录部分
+        var historyStart = jsonContent.IndexOf("// __REMOVED_PROPERTIES_HISTORY__", StringComparison.Ordinal);
+        if (historyStart == -1) return result;
+        
+        try
+        {
+            // 逐行读取历史记录
+            var historySection = jsonContent.Substring(historyStart);
+            var lines = historySection.Split('\n');
+            
+            for (var i = 1; i < lines.Length; i++)
+            {
+                var line = lines[i].Trim();
+                if (!line.StartsWith("//")) continue;
+                
+                // 提取属性路径、删除时间和属性值
+                line = line.Substring(2).Trim(); // 移除注释标记
+                
+                // 解析特定格式: [2023-01-01 12:00:00] path.to.property: {"value": 123}
+                var timestampEnd = line.IndexOf(']');
+                if (timestampEnd == -1) continue;
+                
+                var timestampStr = line.Substring(1, timestampEnd - 1);
+                var remaining = line.Substring(timestampEnd + 1).Trim();
+                
+                var pathEnd = remaining.IndexOf(':');
+                if (pathEnd == -1) continue;
+                
+                var path = remaining.Substring(0, pathEnd).Trim();
+                var valueJson = remaining.Substring(pathEnd + 1).Trim();
+                
+                if (DateTime.TryParse(timestampStr, out var timestamp) && 
+                    !string.IsNullOrEmpty(valueJson))
+                {
+                    try
+                    {
+                        var value = JsonNode.Parse(valueJson);
+                        result.Add(new RemovedPropertyInfo
+                        {
+                            Path = path,
+                            Value = value,
+                            RemovedTime = timestamp
+                        });
+                    }
+                    catch
+                    {
+                        // 忽略无法解析的值
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // 如果解析失败，返回空列表
+        }
+        
+        return result;
+    }
+    
+    /// <summary>
+    /// 将被移除的属性作为注释添加到JSON文件末尾
+    /// </summary>
+    /// <param name="jsonContent">序列化后的JSON内容</param>
+    /// <param name="removedProperties">被移除的属性列表</param>
+    /// <returns>添加了注释的JSON内容</returns>
+    private string AddRemovedPropertiesAsComments(string jsonContent, List<RemovedPropertyInfo> removedProperties)
+    {
+        if (removedProperties.Count == 0) return jsonContent;
+        
+        var sb = new StringBuilder(jsonContent);
+        
+        // 移除现有的历史记录部分（如果有）
+        var historyStart = jsonContent.IndexOf("// __REMOVED_PROPERTIES_HISTORY__", StringComparison.Ordinal);
+        if (historyStart != -1)
+        {
+            sb.Length = historyStart;
+        }
+        
+        // 添加空行作为分隔
+        sb.AppendLine();
+        sb.AppendLine("// __REMOVED_PROPERTIES_HISTORY__");
+        sb.AppendLine("// 以下是被移除的配置项记录（仅供参考）:");
+        
+        // 按照删除时间逆序排序，保证最新删除的显示在前面
+        foreach (var property in removedProperties.OrderByDescending(p => p.RemovedTime))
+        {
+            var valueJson = property.Value?.ToJsonString() ?? "null";
+            sb.AppendLine($"// [{property.RemovedTime:yyyy-MM-dd HH:mm:ss}] {property.Path}: {valueJson}");
+        }
+        
+        return sb.ToString();
     }
 
     #endregion
