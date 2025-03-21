@@ -1,0 +1,102 @@
+---
+description: Rules and guidelines for building Repository using MoFramework
+globs: *.cs
+---
+
+
+# Variable Definition
+
+> Variables represent context-specific parameters and are enclosed in `$`.
+
+- `$EntityName$`: The name of the entity.
+- `$PrimaryKeyType$`: The type of the entity's primary key.
+- `$DbContextName$`: The name of the DbContext for the specific business domain.
+
+# MoRepository Rule
+
+- Repositories are responsible for data access and should follow the standard repository pattern.
+- A business entity repository should consist of:
+  - **Entity class**
+  - **Repository interface**
+  - **Repository class**
+
+
+
+## Entity Class
+
+- Must inherit from `MoEntity<$EntityKeyType$>` (for a single key) or `MoEntity` (for multiple keys).
+
+## Repository Interface
+
+- Named `IRepository$EntityName$`.
+- Extends `IMoRepository<$EntityName$, $EntityKeyType$>` (for a single key) or `IMoRepository<$EntityName$>` (for multiple keys).
+- Define custom methods for complex queries (not part of the base repository) and document them in **Chinese**.
+- For simple CRUD operations, use the base repository methods.
+
+Example:
+
+```cs
+public interface IRepositoryUser : IMoRepository<User, Guid>
+{
+    Task<User?> GetUserWithPermissions(string username, string passwordEncrypted);
+}
+```
+
+## Repository Implementation
+
+- Named `Repository$EntityName$`.
+- Inherits from the repository interface and `MoRepository<$EntityName$, $EntityKeyType$>` (or `MoRepository<$EntityName$>` for multiple keys).
+- Use [primary-constructor.mdc](mdc:.cursor/rules/primary-constructor.mdc) for dependency injection. Inject `IDbContextProvider<$DbContextName$> dbContextProvider`.
+- Implement methods **asynchronously**.
+
+```cs
+public class RepositoryUser(IDbContextProvider<UserDbContext> dbContextProvider)
+    : MoRepository<UserDbContext, User, Guid>(dbContextProvider), IRepositoryUser
+{
+    public override IQueryable<User> DefaultDetailFunc(IQueryable<User> entities)
+    {
+        return entities.Include(p => p.OrganUnit).ThenInclude(d => d.Role).ThenInclude(r => r.Permissions);
+    }
+
+    public async Task<User?> GetUserWithPermissions(string username, string passwordEncrypted)
+    {
+        return await GetAsync(true, p => p.Password == passwordEncrypted && p.Username == username);
+    }
+}
+
+```
+
+# Built-in Repository Methods
+
+For simple CRUD operations, use the following built-in methods from the base repository. No need to define them in the interface.
+
+```cs
+// Delete operations
+Task DeleteAsync(TKey id, bool autoSave = false, CancellationToken cancellationToken = default);
+Task DeleteManyAsync(IEnumerable<TKey> ids, bool autoSave = false, CancellationToken cancellationToken = default);
+Task DeleteAsync(Expression<Func<TEntity, bool>> predicate, bool autoSave = false, CancellationToken cancellationToken = default);
+Task DeleteDirectAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
+Task DeleteAsync(TEntity entity, bool autoSave = false, CancellationToken cancellationToken = default);
+Task DeleteManyAsync(IEnumerable<TEntity> entities, bool autoSave = false, CancellationToken cancellationToken = default);
+
+// Get operations
+Task<TEntity> GetAsync(TKey id, bool includeDetails = true, CancellationToken cancellationToken = default);
+Task<TEntity?> FindAsync(TKey id, bool includeDetails = true, CancellationToken cancellationToken = default);
+Task<TEntity> GetAsync(Expression<Func<TEntity, bool>> predicate, bool includeDetails = true, CancellationToken cancellationToken = default);
+Task<TEntity?> FindAsync(Expression<Func<TEntity, bool>> predicate, bool includeDetails = true, CancellationToken cancellationToken = default);
+Task<IQueryable<TEntity>> WithDetailsAsync();
+Task<IQueryable<TEntity>> WithDetailsAsync(params Expression<Func<TEntity, object>>[] propertySelectors);
+Task<IQueryable<TEntity>> GetQueryableAsync();
+Task<List<TEntity>> GetListAsync(Expression<Func<TEntity, bool>> predicate, bool includeDetails = false, CancellationToken cancellationToken = default);
+Task<List<TEntity>> GetListAsync(bool includeDetails = false, CancellationToken cancellationToken = default);
+Task<long> GetCountAsync(CancellationToken cancellationToken = default);
+
+// Insert/Update operations
+Task<TEntity> InsertAsync(TEntity entity, bool autoSave = false, CancellationToken cancellationToken = default);
+Task InsertManyAsync(IEnumerable<TEntity> entities, bool autoSave = false, CancellationToken cancellationToken = default);
+Task<TEntity> UpdateAsync(TEntity entity, bool autoSave = false, CancellationToken cancellationToken = default);
+Task UpdateManyAsync(IEnumerable<TEntity> entities, bool autoSave = false, CancellationToken cancellationToken = default);
+```
+
+
+

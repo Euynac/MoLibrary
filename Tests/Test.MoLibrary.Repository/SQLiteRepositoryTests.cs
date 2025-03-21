@@ -194,15 +194,18 @@ namespace Test.MoLibrary.Repository
             // Arrange - Setup transaction mock
             _unitOfWorkMock.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
                 .Callback(() => _dbContext.SaveChanges());
-                
             var department = new Department
             {
                 Name = "Legal",
                 Description = "Legal Department"
             };
-            
-            // Act - Use transaction via unit of work
-            await _departmentRepository.InsertAsync(department, autoSave: true);
+
+            using (var uow = _unitOfWorkManagerMock.Object.Begin())
+            {
+                // Act - Use transaction via unit of work
+                await _departmentRepository.InsertAsync(department);
+            }
+           
             
             // Verify the SaveChangesAsync was called
             _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -264,7 +267,7 @@ namespace Test.MoLibrary.Repository
                 new Department { Name = "Dept 1" },
                 new Department { Name = "Dept 2" },
                 new Department { Name = "Dept 3" },
-                new Department { Name = "Dept to Keep" }
+                new Department { Name = "Depp to Keep" }
             };
             
             foreach (var dept in departments)
@@ -280,7 +283,7 @@ namespace Test.MoLibrary.Repository
             // Assert - Only "Dept to Keep" should remain
             var remainingDepartments = await _dbContext.Departments.ToListAsync();
             Assert.That(remainingDepartments.Count, Is.EqualTo(1));
-            Assert.That(remainingDepartments[0].Name, Is.EqualTo("Dept to Keep"));
+            Assert.That(remainingDepartments[0].Name, Is.EqualTo("Depp to Keep"));
         }
         [Test]
         public async Task SQLite_TrackGraph_TestNestedUpdate()

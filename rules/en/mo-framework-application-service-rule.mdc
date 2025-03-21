@@ -1,0 +1,80 @@
+---
+description: Rules and guidelines for building ApplicationService using MoFramework
+globs: *.cs
+---
+
+
+# Variable Definition
+
+> Variables represent context-specific parameters and are enclosed in `$`.
+
+- `$BusinessFunctionName$` - Represents the name of the business function.
+- `$DomainName$` - The business domain name. Must use PascalCase.
+- `$APIRoute$` - Must use kebab-case.
+- `$HandlerClassName$` - Represents the name of the handler class.
+- `$ResponseClassName$` - Represents the name of the response class.
+
+# MoApplicationService Rule
+
+- The application service is an API within a business domain. The corresponding file should be named `CommandHandler$BusinessFunctionName$.cs`.
+- An application service handler should consist of a **Request class**, a **Response class**, and a **Handler class**.
+- The Handler class and its overridden methods must be well documented in Chinese.
+
+## Request Class
+
+- The Request class must implement `IMoRequest<TResponse>` and should be named in the format `Command$BusinessFunctionName$` or `Query$BusinessFunctionName$`.
+- Documentation should follow the format `<inheritdoc cref="$HandlerClassName$"/>`.
+
+## Response Class
+
+- The Response class should be named in the format `Response$BusinessFunctionName$`.
+- Documentation should follow the format `<inheritdoc cref="$HandlerClassName$"/>` 接口响应。
+
+## Handler Class
+
+- The Handler class must inherit from `MoApplicationService<THandler, TRequest, TResponse>`.
+- The Handler class name must start with `CommandHandler` or `QueryHandler`.
+- The Handler class should include a `Route` attribute like `[Route("api/v1/$DomainName$")]`
+- The Handler class must override the `Handle` method and include an `[HttpPost("$APIRoute$")]` attribute.
+- The Handler class should use [primary-constructor.mdc](mdc:.cursor/rules/primary-constructor.mdc) when dependency injection is required.
+- Ensure consistent naming and structure to maintain clarity and standardization across the project.
+
+### Handler Class Response Type
+
+- The response type must be `Task<Res<$ResponseClassName$>>`, which can be refer to [mo-framework-res-type.mdc](mdc:.cursor/rules/mo-framework-res-type.mdc)
+
+## Example
+
+```cs
+/// <summary>
+/// <inheritdoc cref="CommandHandler$BusinessFunctionName$"/>
+/// </summary>
+public record Command$BusinessFunctionName$  : IMoRequest<Response$BusinessFunctionName$>
+{
+    
+}
+
+/// <summary>
+/// <inheritdoc cref="CommandHandler$BusinessFunctionName$"/> 接口响应
+/// </summary>
+public record Response$BusinessFunctionName$
+{
+
+}
+/// <summary>
+/// 
+/// </summary>
+[Route("api/v1/$DomainName$")]
+public class CommandHandler$BusinessFunctionName$ : MoApplicationService<CommandHandler$BusinessFunctionName$, Command$BusinessFunctionName$, Res<Response$BusinessFunctionName$>> 
+{
+	[HttpPost("$APIRoute$")]
+	public override Task<Res<Response$BusinessFunctionName$>> Handle(Command$BusinessFunctionName$ request, CancellationToken cancellationToken)
+    {
+		...
+    }
+}
+
+```
+
+
+
