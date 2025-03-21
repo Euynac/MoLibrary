@@ -83,7 +83,7 @@ public class MoConfigurationSetting
     /// <summary>
     /// 指定如何处理配置类中删除的属性
     /// </summary>
-    public LocalJsonFileProvider.RemovedPropertyHandling RemovedPropertyHandling { get; set; } = LocalJsonFileProvider.RemovedPropertyHandling.Comment;
+    public LocalJsonFileProvider.RemovedPropertyHandling RemovedPropertyHandling { get; set; } = LocalJsonFileProvider.RemovedPropertyHandling.Remove;
     #endregion
 
 
