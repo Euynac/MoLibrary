@@ -49,7 +49,7 @@ public class MoConfigurationCard
     /// <summary>
     /// <inheritdoc cref="ConfigurationAttribute.Section"/>
     /// </summary>
-    public string? SectionName => Configuration.Info?.Section;
+    public string? SectionName => Configuration.Info.Section;
 
   
 
