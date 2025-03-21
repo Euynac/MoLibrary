@@ -13,7 +13,8 @@ namespace BuildingBlocksPlatform.Configuration.Providers;
 /// <param name="card"></param>
 public class LocalJsonFileProvider(MoConfigurationCard card)
 {
-    public static JsonSerializerOptions JsonSerializerOptions { get; } = new() { WriteIndented = true };
+    public static JsonSerializerOptions JsonSerializerOptions { get; } =
+        new() { WriteIndented = true, ReadCommentHandling = JsonCommentHandling.Skip};
     
     /// <summary>
     /// 配置如何处理删除的属性
@@ -86,10 +87,11 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
     {
         try
         {
+            var documentOptions = new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip };
             // 读取现有的JSON文件
             var existingJson = File.ReadAllText(filePath);
-            var existingJsonDocument = JsonDocument.Parse(existingJson);
-            var jsonObject = JsonNode.Parse(existingJson)?.AsObject();
+            var existingJsonDocument = JsonDocument.Parse(existingJson, documentOptions);
+            var jsonObject = JsonNode.Parse(existingJson, documentOptions: documentOptions)?.AsObject();
             
             if (jsonObject == null)
             {
