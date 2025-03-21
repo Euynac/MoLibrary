@@ -12,6 +12,7 @@ using BuildingBlocksPlatform.SeedWork;
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using BuildingBlocksPlatform.Configuration.Providers;
 
 namespace BuildingBlocksPlatform.Configuration.Extensions;
 
@@ -115,7 +116,8 @@ public static class MoConfigurationBuilderExtensions
                 {
                     FromProjectName = assemblyName ?? "Unknown",
                 };
-                MoConfigurationManager.GenConfigurationFiles(card);
+                var provider = new LocalJsonFileProvider(card);
+                provider.GenAndRegisterConfigurationFiles();
                 MoConfigurationCard.Register(card);
 
                 var configAttr = card.Configuration.Info;

@@ -1,6 +1,4 @@
 using System.Text;
-using BuildingBlocksPlatform.Configuration.Model;
-using Koubot.Tool.General;
 using Microsoft.Extensions.Configuration;
 
 namespace BuildingBlocksPlatform.Configuration;
@@ -132,34 +130,5 @@ public static class MoConfigurationManager
 
     #endregion
 
-    #region 生成配置文件
-
-    /// <summary>
-    /// Generates configuration files for the specified configuration card.
-    /// </summary>
-    /// <param name="card">The configuration card.</param>
-    internal static void GenConfigurationFiles(MoConfigurationCard card)
-    {
-        if (!Setting.GenerateFileForEachOption) return;
-        var filename = $"{card.FromProjectName}.{card.Configuration.Name}.json";
-        if (Setting.GenerateOptionFileParentDirectory is { } parent && !string.IsNullOrWhiteSpace(parent))
-        {
-            filename = Path.Combine(parent, filename);
-        }
-
-
-        //TODO 未处理文件内容不合法的情况
-        var path = GeneralExtensions.GetRelativePathInRunningPath(filename);
-        if (!File.Exists(path))
-        {
-            var directory = FileTool.GetDirectoryPath(path)!;
-            Directory.CreateDirectory(directory);
-            var contents = card.GetDefaultFileContents();
-            File.WriteAllText(path, contents, Encoding.UTF8);
-        }
-
-        ((ConfigurationManager)AppConfiguration).AddJsonFile(path, false, true);
-    }
-
-    #endregion
+   
 }

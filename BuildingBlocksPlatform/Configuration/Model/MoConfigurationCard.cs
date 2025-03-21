@@ -51,21 +51,7 @@ public class MoConfigurationCard
     /// </summary>
     public string? SectionName => Configuration.Info?.Section;
 
-
-    /// <summary>
-    /// 拟将配置卡片存储到文件后的内容，取配置类实际默认值
-    /// </summary>
-    /// <returns></returns>
-    public string GetDefaultFileContents()
-    {
-        var obj = Activator.CreateInstance(Configuration.ConfigType);
-        if (obj == null)
-            throw new InvalidOperationException($"配置类{Configuration.ConfigType.FullName}无法生成默认配置值，请检查是否有无参构造函数");
-        //目前仅支持json格式
-        var jsonFile = new Dictionary<string, object> { { SectionName ?? Configuration.Name, obj } };
-        return JsonSerializer.Serialize(jsonFile, new JsonSerializerOptions {WriteIndented = true});
-    }
-
+  
 
     /// <summary>
     /// 配置卡片池

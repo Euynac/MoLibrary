@@ -70,6 +70,12 @@ public class CollectionReplacedNamedConfigureFromConfigurationOptions<[Dynamical
         ArgumentNullException.ThrowIfNull(config);
     }
 
+    /// <summary>
+    /// 解决Configuration的对于ICollection的行为存在多来源时默认是Append的情况，将其改写为覆盖
+    /// </summary>
+    /// <param name="options"></param>
+    /// <param name="configurations"></param>
+    /// <returns></returns>
     public static TOptions DoNotUseDefaultIfConfigurationContains(ref TOptions options, IConfiguration configurations)
     {
         foreach (var collectionProperty in GetAllCollectionProperties(options.GetType()))
@@ -85,6 +91,12 @@ public class CollectionReplacedNamedConfigureFromConfigurationOptions<[Dynamical
 
         return options;
     }
+
+    /// <summary>
+    /// 获取所有的集合属性
+    /// </summary>
+    /// <param name="type"></param>
+    /// <returns></returns>
     private static IEnumerable<PropertyInfo> GetAllCollectionProperties([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type)
     {
         for (var t = type; t != typeof(object); t = t.BaseType)
@@ -100,6 +112,11 @@ public class CollectionReplacedNamedConfigureFromConfigurationOptions<[Dynamical
         }
     }
 
+    /// <summary>
+    /// 获取属性在Configuration中的名称
+    /// </summary>
+    /// <param name="property"></param>
+    /// <returns></returns>
     private static string GetPropertyName(PropertyInfo property)
     {
         foreach (var customAttributeData in property.GetCustomAttributesData())
