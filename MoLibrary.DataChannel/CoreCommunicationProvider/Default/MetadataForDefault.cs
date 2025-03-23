@@ -1,6 +1,6 @@
-using BuildingBlocksPlatform.DataChannel.CoreCommunication;
+using MoLibrary.DataChannel.CoreCommunication;
 
-namespace BuildingBlocksPlatform.DataChannel.CoreCommunicationProvider.Default;
+namespace MoLibrary.DataChannel.CoreCommunicationProvider.Default;
 
 /// <summary>
 /// 默认配置

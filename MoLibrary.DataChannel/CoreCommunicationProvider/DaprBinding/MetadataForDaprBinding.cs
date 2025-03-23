@@ -1,7 +1,7 @@
-using BuildingBlocksPlatform.DataChannel.CoreCommunication;
+using MoLibrary.DataChannel.CoreCommunication;
 using MoLibrary.Tool.Extensions;
 
-namespace BuildingBlocksPlatform.DataChannel.CoreCommunicationProvider.DaprBinding;
+namespace MoLibrary.DataChannel.CoreCommunicationProvider.DaprBinding;
 
 public class MetadataForDaprBinding : CommunicationMetadata<DaprBindingCore>
 {

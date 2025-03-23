@@ -1,4 +1,4 @@
-namespace BuildingBlocksPlatform.DataChannel.CoreCommunicationProvider.TCP
+namespace MoLibrary.DataChannel.CoreCommunicationProvider.TCP
 {
     public delegate void TcpReceiveEventHander(MsgReceivedEventArgs args);
     public class MsgReceivedEventArgs

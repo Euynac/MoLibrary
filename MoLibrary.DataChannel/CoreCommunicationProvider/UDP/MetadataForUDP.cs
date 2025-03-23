@@ -1,6 +1,6 @@
-using BuildingBlocksPlatform.DataChannel.CoreCommunication;
+using MoLibrary.DataChannel.CoreCommunication;
 
-namespace BuildingBlocksPlatform.DataChannel.CoreCommunicationProvider.UDP;
+namespace MoLibrary.DataChannel.CoreCommunicationProvider.UDP;
 
 public class MetadataForUDP : CommunicationMetadata<UDPCore>
 {

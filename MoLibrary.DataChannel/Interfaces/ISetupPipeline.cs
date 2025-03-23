@@ -1,4 +1,4 @@
-namespace BuildingBlocksPlatform.DataChannel.Interfaces;
+namespace MoLibrary.DataChannel.Interfaces;
 
 public interface ISetupPipeline
 {

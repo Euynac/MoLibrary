@@ -1,6 +1,6 @@
-using BuildingBlocksPlatform.DataChannel.Pipeline;
+using MoLibrary.DataChannel.Pipeline;
 
-namespace BuildingBlocksPlatform.DataChannel.BuildInMiddlewares.DataTransformer;
+namespace MoLibrary.DataChannel.BuildInMiddlewares.DataTransformer;
 
 /// <summary>
 /// 数据协议转换中间件基类

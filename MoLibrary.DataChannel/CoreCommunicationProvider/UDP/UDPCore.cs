@@ -1,10 +1,10 @@
 using System.Net;
 using System.Net.Sockets;
-using BuildingBlocksPlatform.DataChannel.CoreCommunication;
-using BuildingBlocksPlatform.DataChannel.Pipeline;
 using Microsoft.Extensions.Logging;
+using MoLibrary.DataChannel.CoreCommunication;
+using MoLibrary.DataChannel.Pipeline;
 
-namespace BuildingBlocksPlatform.DataChannel.CoreCommunicationProvider.UDP;
+namespace MoLibrary.DataChannel.CoreCommunicationProvider.UDP;
 
 public class UDPCore(MetadataForUDP metadata, ILogger<UDPCore> logger) : CommunicationCore<MetadataForUDP>(metadata)
 {

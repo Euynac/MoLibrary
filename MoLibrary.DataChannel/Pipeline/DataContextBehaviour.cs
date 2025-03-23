@@ -1,6 +1,6 @@
 using MoLibrary.Tool.Extensions;
 
-namespace BuildingBlocksPlatform.DataChannel.Pipeline;
+namespace MoLibrary.DataChannel.Pipeline;
 
 public partial class DataContext
 {

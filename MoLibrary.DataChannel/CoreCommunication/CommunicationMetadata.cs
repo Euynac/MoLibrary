@@ -1,4 +1,4 @@
-namespace BuildingBlocksPlatform.DataChannel.CoreCommunication;
+namespace MoLibrary.DataChannel.CoreCommunication;
 
 public abstract class CommunicationMetadata
 {

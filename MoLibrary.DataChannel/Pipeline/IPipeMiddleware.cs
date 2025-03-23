@@ -1,6 +1,6 @@
-using BuildingBlocksPlatform.DataChannel.Interfaces;
+using MoLibrary.DataChannel.Interfaces;
 
-namespace BuildingBlocksPlatform.DataChannel.Pipeline;
+namespace MoLibrary.DataChannel.Pipeline;
 
 /// <summary>
 /// 管道中间件接口

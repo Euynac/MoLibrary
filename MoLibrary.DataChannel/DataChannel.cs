@@ -1,8 +1,7 @@
-using BuildingBlocksPlatform.DataChannel.Pipeline;
-
+using MoLibrary.DataChannel.Pipeline;
 using MoLibrary.Tool.MoResponse;
 
-namespace BuildingBlocksPlatform.DataChannel;
+namespace MoLibrary.DataChannel;
 
 public class DataChannel(DataPipeline pipeline)
 {

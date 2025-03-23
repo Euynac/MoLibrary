@@ -1,6 +1,6 @@
-using BuildingBlocksPlatform.DataChannel.Pipeline;
+using MoLibrary.DataChannel.Pipeline;
 
-namespace BuildingBlocksPlatform.DataChannel.BuildInMiddlewares;
+namespace MoLibrary.DataChannel.BuildInMiddlewares;
 
 public class PipeLoggingMiddleware : PipeMonitorMiddlewareBase
 {

@@ -1,10 +1,10 @@
 using Apache.NMS;
 using Apache.NMS.ActiveMQ.Commands;
-using BuildingBlocksPlatform.DataChannel.CoreCommunication;
-using BuildingBlocksPlatform.DataChannel.Pipeline;
 using Microsoft.Extensions.Logging;
+using MoLibrary.DataChannel.CoreCommunication;
+using MoLibrary.DataChannel.Pipeline;
 
-namespace BuildingBlocksPlatform.DataChannel.CoreCommunicationProvider.ActiveMQ;
+namespace MoLibrary.DataChannel.CoreCommunicationProvider.ActiveMQ;
 
 public class ActiveMQCore(MetadataForActiveMQ metadata, ILogger<ActiveMQCore> logger) : CommunicationCore<MetadataForActiveMQ>(metadata)
 {

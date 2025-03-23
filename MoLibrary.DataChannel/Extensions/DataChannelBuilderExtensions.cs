@@ -1,9 +1,9 @@
-using BuildingBlocksPlatform.DataChannel.Interfaces;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using MoLibrary.DataChannel.Interfaces;
 using MoLibrary.Tool.Extensions;
 
-namespace BuildingBlocksPlatform.DataChannel.Extensions;
+namespace MoLibrary.DataChannel.Extensions;
 
 public static class DataChannelBuilderExtensions
 {

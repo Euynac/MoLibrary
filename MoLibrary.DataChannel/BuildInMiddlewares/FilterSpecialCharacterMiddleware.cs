@@ -1,8 +1,8 @@
 using System.Text.RegularExpressions;
-using BuildingBlocksPlatform.DataChannel.Pipeline;
 using Microsoft.Extensions.Options;
+using MoLibrary.DataChannel.Pipeline;
 
-namespace BuildingBlocksPlatform.DataChannel.BuildInMiddlewares;
+namespace MoLibrary.DataChannel.BuildInMiddlewares;
 
 public class FilterSpecialCharacterConfig
 {

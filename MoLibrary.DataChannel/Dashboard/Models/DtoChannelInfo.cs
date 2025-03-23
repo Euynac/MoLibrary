@@ -1,4 +1,4 @@
-namespace BuildingBlocksPlatform.DataChannel.Dashboard.Models;
+namespace MoLibrary.DataChannel.Dashboard.Models;
 
 public class DtoChannelInfo
 {

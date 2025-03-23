@@ -1,7 +1,7 @@
-using BuildingBlocksPlatform.DataChannel.CoreCommunication;
-using BuildingBlocksPlatform.DataChannel.CoreCommunicationProvider.TCP.Utils;
+using MoLibrary.DataChannel.CoreCommunication;
+using MoLibrary.DataChannel.CoreCommunicationProvider.TCP.Utils;
 
-namespace BuildingBlocksPlatform.DataChannel.CoreCommunicationProvider.TCP
+namespace MoLibrary.DataChannel.CoreCommunicationProvider.TCP
 {
     public class MetadataForTcpClient : CommunicationMetadata<TcpCoreForClient>
     {

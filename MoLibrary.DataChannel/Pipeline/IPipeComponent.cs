@@ -1,4 +1,4 @@
-namespace BuildingBlocksPlatform.DataChannel.Pipeline;
+namespace MoLibrary.DataChannel.Pipeline;
 
 public interface IPipeComponent
 {

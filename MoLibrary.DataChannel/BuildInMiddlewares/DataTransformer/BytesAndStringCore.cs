@@ -1,7 +1,7 @@
 using System.Text;
 using MoLibrary.Tool.Extensions;
 
-namespace BuildingBlocksPlatform.DataChannel.BuildInMiddlewares.DataTransformer;
+namespace MoLibrary.DataChannel.BuildInMiddlewares.DataTransformer;
 
 /// <summary>
 /// 默认采用UTF8进行转换

@@ -1,10 +1,8 @@
 using BuildingBlocksPlatform.Extensions;
-
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using MoLibrary.Tool.MoResponse;
 
-namespace BuildingBlocksPlatform.DataChannel.Dashboard.Controllers;
+namespace MoLibrary.DataChannel.Dashboard.Controllers;
 
 [Route("data-channel")]
 [ApiController]

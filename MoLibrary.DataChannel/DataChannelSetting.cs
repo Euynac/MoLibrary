@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 
-namespace BuildingBlocksPlatform.DataChannel;
+namespace MoLibrary.DataChannel;
 
 public class DataChannelSetting
 {
