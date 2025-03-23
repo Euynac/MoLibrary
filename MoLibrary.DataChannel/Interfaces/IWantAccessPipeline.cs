@@ -1,6 +1,6 @@
-using BuildingBlocksPlatform.DataChannel.Pipeline;
+using MoLibrary.DataChannel.Pipeline;
 
-namespace BuildingBlocksPlatform.DataChannel.Interfaces;
+namespace MoLibrary.DataChannel.Interfaces;
 
 /// <summary>
 /// 注入管道实例。Middleware与Endpoint均适用

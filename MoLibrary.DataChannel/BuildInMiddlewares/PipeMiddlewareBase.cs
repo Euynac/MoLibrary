@@ -1,6 +1,6 @@
-using BuildingBlocksPlatform.DataChannel.Pipeline;
+using MoLibrary.DataChannel.Pipeline;
 
-namespace BuildingBlocksPlatform.DataChannel.BuildInMiddlewares;
+namespace MoLibrary.DataChannel.BuildInMiddlewares;
 
 /// <summary>
 /// 转换中间件基类

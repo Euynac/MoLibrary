@@ -1,6 +1,6 @@
 using System.Dynamic;
 
-namespace BuildingBlocksPlatform.DataChannel.Pipeline;
+namespace MoLibrary.DataChannel.Pipeline;
 
 public partial class DataContext
 {

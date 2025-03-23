@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 
-namespace BuildingBlocksPlatform.DataChannel.Interfaces;
+namespace MoLibrary.DataChannel.Interfaces;
 
 /// <summary>
 /// ASP.NET Core注册阶段自动执行（Middleware与Endpoints均支持）

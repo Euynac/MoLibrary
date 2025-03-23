@@ -1,6 +1,6 @@
 using System.Net.Sockets;
 
-namespace BuildingBlocksPlatform.DataChannel.CoreCommunicationProvider.TCP;
+namespace MoLibrary.DataChannel.CoreCommunicationProvider.TCP;
 
 public partial class TcpServerExtends : IDisposable
 {

@@ -1,6 +1,6 @@
-using BuildingBlocksPlatform.DataChannel.CoreCommunication;
+using MoLibrary.DataChannel.CoreCommunication;
 
-namespace BuildingBlocksPlatform.DataChannel.CoreCommunicationProvider.ActiveMQ;
+namespace MoLibrary.DataChannel.CoreCommunicationProvider.ActiveMQ;
 
 public class MetadataForActiveMQ : CommunicationMetadata<ActiveMQCore>
 {

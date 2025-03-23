@@ -1,4 +1,4 @@
-namespace BuildingBlocksPlatform.DataChannel;
+namespace MoLibrary.DataChannel;
 
 public interface IDataChannelManager
 {

@@ -1,4 +1,4 @@
-namespace BuildingBlocksPlatform.DataChannel.BuildInMiddlewares.DataTransformer;
+namespace MoLibrary.DataChannel.BuildInMiddlewares.DataTransformer;
 
 /// <summary>
 /// 数据协议双向(Bidirectional)转换核心接口

@@ -1,9 +1,9 @@
 using System.Net;
 using System.Net.Sockets;
-using BuildingBlocksPlatform.DataChannel.CoreCommunicationProvider.TCP.Utils;
 using Microsoft.Extensions.Logging;
+using MoLibrary.DataChannel.CoreCommunicationProvider.TCP.Utils;
 
-namespace BuildingBlocksPlatform.DataChannel.CoreCommunicationProvider.TCP
+namespace MoLibrary.DataChannel.CoreCommunicationProvider.TCP
 {
     public partial class TcpServerExtends()
     {

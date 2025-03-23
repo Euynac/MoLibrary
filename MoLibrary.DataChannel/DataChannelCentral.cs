@@ -1,9 +1,9 @@
-using BuildingBlocksPlatform.DataChannel.Interfaces;
-using BuildingBlocksPlatform.DataChannel.Pipeline;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Logging;
+using MoLibrary.DataChannel.Interfaces;
+using MoLibrary.DataChannel.Pipeline;
 
-namespace BuildingBlocksPlatform.DataChannel;
+namespace MoLibrary.DataChannel;
 
 /// <summary>
 /// 消息通路中控

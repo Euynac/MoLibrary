@@ -1,8 +1,8 @@
-using BuildingBlocksPlatform.DataChannel.CoreCommunication;
-using BuildingBlocksPlatform.DataChannel.CoreCommunicationProvider.Default;
 using Microsoft.Extensions.DependencyInjection;
+using MoLibrary.DataChannel.CoreCommunication;
+using MoLibrary.DataChannel.CoreCommunicationProvider.Default;
 
-namespace BuildingBlocksPlatform.DataChannel.Pipeline;
+namespace MoLibrary.DataChannel.Pipeline;
 
 /// <summary>
 /// 管道构建器

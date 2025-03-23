@@ -1,8 +1,8 @@
-using BuildingBlocksPlatform.DataChannel.CoreCommunication;
-using BuildingBlocksPlatform.DataChannel.Pipeline;
 using Microsoft.Extensions.Logging;
+using MoLibrary.DataChannel.CoreCommunication;
+using MoLibrary.DataChannel.Pipeline;
 
-namespace BuildingBlocksPlatform.DataChannel.CoreCommunicationProvider.TCP
+namespace MoLibrary.DataChannel.CoreCommunicationProvider.TCP
 {
     public class TcpCoreForClient(MetadataForTcpClient metadata , ILogger<TcpCoreForClient> logger, IDataChannelManager manager) : CommunicationCore<MetadataForTcpClient>(metadata)
     {

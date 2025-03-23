@@ -1,11 +1,10 @@
-using BuildingBlocksPlatform.DataChannel.CoreCommunication;
-using BuildingBlocksPlatform.DataChannel.Interfaces;
-
 using Microsoft.Extensions.Logging;
+using MoLibrary.DataChannel.CoreCommunication;
+using MoLibrary.DataChannel.Interfaces;
 using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.MoResponse;
 
-namespace BuildingBlocksPlatform.DataChannel.Pipeline;
+namespace MoLibrary.DataChannel.Pipeline;
 
 public class DataPipeline
 {

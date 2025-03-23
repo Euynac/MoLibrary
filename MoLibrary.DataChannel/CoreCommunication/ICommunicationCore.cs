@@ -1,6 +1,6 @@
-using BuildingBlocksPlatform.DataChannel.Pipeline;
+using MoLibrary.DataChannel.Pipeline;
 
-namespace BuildingBlocksPlatform.DataChannel.CoreCommunication;
+namespace MoLibrary.DataChannel.CoreCommunication;
 
 public interface ICommunicationCore : IPipeEndpoint
 {

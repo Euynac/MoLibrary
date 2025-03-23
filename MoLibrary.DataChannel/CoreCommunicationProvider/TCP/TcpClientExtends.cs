@@ -1,11 +1,11 @@
 using System.Net.Sockets;
 using System.Text;
-using BuildingBlocksPlatform.DataChannel.CoreCommunicationProvider.TCP.Utils;
-using BuildingBlocksPlatform.DataChannel.Pipeline;
 using Microsoft.Extensions.Logging;
+using MoLibrary.DataChannel.CoreCommunicationProvider.TCP.Utils;
+using MoLibrary.DataChannel.Pipeline;
 using MoLibrary.Tool.Extensions;
 
-namespace BuildingBlocksPlatform.DataChannel.CoreCommunicationProvider.TCP;
+namespace MoLibrary.DataChannel.CoreCommunicationProvider.TCP;
 
 public partial class TcpClientExtends : IDisposable
 {

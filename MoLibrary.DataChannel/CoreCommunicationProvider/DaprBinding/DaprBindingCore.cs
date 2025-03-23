@@ -1,14 +1,14 @@
 using System.Text.Json;
-using BuildingBlocksPlatform.DataChannel.CoreCommunication;
-using BuildingBlocksPlatform.DataChannel.Interfaces;
-using BuildingBlocksPlatform.DataChannel.Pipeline;
 using Dapr.Client;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi.Models;
+using MoLibrary.DataChannel.CoreCommunication;
+using MoLibrary.DataChannel.Interfaces;
+using MoLibrary.DataChannel.Pipeline;
 
-namespace BuildingBlocksPlatform.DataChannel.CoreCommunicationProvider.DaprBinding;
+namespace MoLibrary.DataChannel.CoreCommunicationProvider.DaprBinding;
 
 public class DaprBindingCore(MetadataForDaprBinding metadata, DaprClient client) : CommunicationCore<MetadataForDaprBinding>(metadata), IDynamicConfigApplicationBuilder
 {

@@ -1,6 +1,6 @@
-using BuildingBlocksPlatform.DataChannel.Interfaces;
+using MoLibrary.DataChannel.Interfaces;
 
-namespace BuildingBlocksPlatform.DataChannel.Pipeline;
+namespace MoLibrary.DataChannel.Pipeline;
 
 public interface IPipeEndpoint : IWantAccessPipeline, IPipeComponent
 {

@@ -6,7 +6,7 @@ using Apache.NMS.ActiveMQ.Util.Synchronization;
 using Microsoft.Extensions.Logging;
 using MoLibrary.Tool.Extensions;
 
-namespace BuildingBlocksPlatform.DataChannel.CoreCommunicationProvider.TCP.Utils
+namespace MoLibrary.DataChannel.CoreCommunicationProvider.TCP.Utils
 {
     public class TcpUtils
     {
