@@ -29,12 +29,11 @@ public abstract class DataTransformerMiddlewareBase : PipeTransformMiddlewareBas
 
     public virtual EDataType SetDataContextType(Type outType)
     {
-        var simpleType = outType.StripNullable();
-        if (simpleType == typeof(string))
+        if (outType == typeof(string))
         {
             return EDataType.String;
         }
-        if (simpleType == typeof(byte[]))
+        if (outType == typeof(byte[]))
         {
             return EDataType.Bytes;
         }
