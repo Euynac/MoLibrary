@@ -176,8 +176,7 @@ namespace BuildingBlocksPlatform.DataChannel.CoreCommunicationProvider.TCP.Utils
             for (int i = 0; i<channels.Count; i++)
             {
                 var connectedExtend = new ConnectedExtend();
-                var values = channels.ElementAtOrDefault(i).Trim().Split(",");
-                values.RemoveAll(p => string.IsNullOrWhiteSpace(p));
+                var values = channels.ElementAtOrDefault(i).Trim().Split(",", StringSplitOptions.RemoveEmptyEntries);
                 var addressValue = validaddress[i].Split(":");
                 IPAddress[] address = null;
                 if (addressValue.ElementAtOrDefault(0)  == "0.0.0.0")
