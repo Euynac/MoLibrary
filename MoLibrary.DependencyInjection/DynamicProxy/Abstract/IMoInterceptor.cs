@@ -1,4 +1,4 @@
-namespace BuildingBlocksPlatform.DependencyInjection.DynamicProxy.Abstract;
+namespace MoLibrary.DependencyInjection.DynamicProxy.Abstract;
 
 public interface IMoInterceptor
 {

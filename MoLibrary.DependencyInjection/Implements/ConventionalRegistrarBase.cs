@@ -1,10 +1,14 @@
 using System.Reflection;
-using BuildingBlocksPlatform.DependencyInjection.AppInterfaces;
-using BuildingBlocksPlatform.DependencyInjection.Attributes;
-using BuildingBlocksPlatform.DependencyInjection.CoreInterfaces;
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-namespace BuildingBlocksPlatform.DependencyInjection.Implements;
+using Microsoft.Extensions.Logging;
+using MoLibrary.DependencyInjection.AppInterfaces;
+using MoLibrary.DependencyInjection.Attributes;
+using MoLibrary.DependencyInjection.CoreInterfaces;
+using MoLibrary.Tool.Extensions;
+
+namespace MoLibrary.DependencyInjection.Implements;
 /// <summary>
 /// Provides default implementation for registering dependencies in an assembly or specific types.
 /// Implements the <see cref="IConventionalRegistrar"/> interface.
@@ -190,7 +194,7 @@ public class DefaultConventionalRegistrar(MoDependencyOption option) : IConventi
         //}
 
         //TODO 研究这段是否有必要
-        if (lifeTime.IsIn(ServiceLifetime.Singleton, ServiceLifetime.Scoped))
+        if (lifeTime.EqualsAny(ServiceLifetime.Singleton, ServiceLifetime.Scoped))
         {
             var redirectedType = GetRedirectedTypeOrNull(
                 implementationType,

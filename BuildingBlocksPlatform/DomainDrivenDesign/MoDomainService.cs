@@ -1,6 +1,6 @@
-using BuildingBlocksPlatform.DependencyInjection.AppInterfaces;
 using BuildingBlocksPlatform.DomainDrivenDesign.Interfaces;
 using BuildingBlocksPlatform.SeedWork;
+using MoLibrary.DependencyInjection.AppInterfaces;
 
 namespace BuildingBlocksPlatform.DomainDrivenDesign;
 

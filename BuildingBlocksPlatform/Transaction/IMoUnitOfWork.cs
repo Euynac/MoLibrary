@@ -1,5 +1,5 @@
-using BuildingBlocksPlatform.DependencyInjection.AppInterfaces;
 using Microsoft.EntityFrameworkCore;
+using MoLibrary.DependencyInjection.AppInterfaces;
 
 namespace BuildingBlocksPlatform.Transaction;
 

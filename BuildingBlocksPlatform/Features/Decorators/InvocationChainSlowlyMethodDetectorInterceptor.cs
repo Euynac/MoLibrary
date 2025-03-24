@@ -1,8 +1,8 @@
 using System.Dynamic;
-using BuildingBlocksPlatform.DependencyInjection.DynamicProxy;
-using BuildingBlocksPlatform.DependencyInjection.DynamicProxy.Abstract;
 using BuildingBlocksPlatform.Extensions;
 using Microsoft.AspNetCore.Http;
+using MoLibrary.DependencyInjection.DynamicProxy;
+using MoLibrary.DependencyInjection.DynamicProxy.Abstract;
 
 namespace BuildingBlocksPlatform.Features.Decorators;
 

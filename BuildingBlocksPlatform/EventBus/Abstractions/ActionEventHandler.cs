@@ -1,5 +1,7 @@
 
 
+using MoLibrary.DependencyInjection.AppInterfaces;
+
 namespace BuildingBlocksPlatform.EventBus.Abstractions;
 
 /// <summary>

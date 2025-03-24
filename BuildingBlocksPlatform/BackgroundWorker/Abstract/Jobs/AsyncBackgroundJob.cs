@@ -1,5 +1,5 @@
-using BuildingBlocksPlatform.DependencyInjection.AppInterfaces;
 using Microsoft.Extensions.DependencyInjection;
+using MoLibrary.DependencyInjection.AppInterfaces;
 
 namespace BuildingBlocksPlatform.BackgroundWorker.Abstract.Jobs;
 

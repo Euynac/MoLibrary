@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace BuildingBlocksPlatform.DependencyInjection.DynamicProxy;
+namespace MoLibrary.DependencyInjection.DynamicProxy;
 
 public static class ProxyHelper
 {

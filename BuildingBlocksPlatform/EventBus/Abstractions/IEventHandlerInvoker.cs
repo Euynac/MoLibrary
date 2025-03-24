@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
-
-
+using MoLibrary.DependencyInjection.AppInterfaces;
 
 namespace BuildingBlocksPlatform.EventBus.Abstractions;
 

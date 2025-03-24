@@ -1,5 +1,3 @@
-using BuildingBlocksPlatform.DependencyInjection;
-using BuildingBlocksPlatform.DependencyInjection.AppInterfaces;
 using BuildingBlocksPlatform.EventBus.Abstractions;
 using BuildingBlocksPlatform.ObjectMapper;
 using BuildingBlocksPlatform.Repository.EntityInterfaces;

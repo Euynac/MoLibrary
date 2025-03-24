@@ -1,7 +1,7 @@
 
 
 
-using BuildingBlocksPlatform.DependencyInjection.AppInterfaces;
+using MoLibrary.DependencyInjection.AppInterfaces;
 
 namespace BuildingBlocksPlatform.BlobContainer.Abstract;
 

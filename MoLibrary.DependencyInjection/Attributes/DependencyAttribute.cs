@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
-namespace BuildingBlocksPlatform.DependencyInjection.Attributes;
+
+namespace MoLibrary.DependencyInjection.Attributes;
 /// <summary>
 /// Represents an attribute used to define dependency injection settings for a service.
 /// </summary>

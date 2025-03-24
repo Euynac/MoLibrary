@@ -1,6 +1,6 @@
 using Castle.DynamicProxy;
 
-namespace BuildingBlocksPlatform.DependencyInjection.DynamicProxy.Abstract;
+namespace MoLibrary.DependencyInjection.DynamicProxy.Abstract;
 
 public class CastleMoMethodInvocationAdapterWithReturnValue<TResult>(
     IInvocation invocation,

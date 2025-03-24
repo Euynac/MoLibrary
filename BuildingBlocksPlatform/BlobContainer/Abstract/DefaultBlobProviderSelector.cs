@@ -1,6 +1,6 @@
-using BuildingBlocksPlatform.DependencyInjection.AppInterfaces;
-using BuildingBlocksPlatform.DependencyInjection.DynamicProxy;
 using JetBrains.Annotations;
+using MoLibrary.DependencyInjection.AppInterfaces;
+using MoLibrary.DependencyInjection.DynamicProxy;
 using MoLibrary.Tool.Utils;
 
 namespace BuildingBlocksPlatform.BlobContainer.Abstract;

@@ -1,5 +1,5 @@
 using MapsterMapper;
-
+using MoLibrary.DependencyInjection.AppInterfaces;
 
 namespace BuildingBlocksPlatform.ObjectMapper;
 

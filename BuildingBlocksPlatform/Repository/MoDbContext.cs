@@ -2,8 +2,6 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Text;
-using BuildingBlocksPlatform.DependencyInjection;
-using BuildingBlocksPlatform.DependencyInjection.AppInterfaces;
 using BuildingBlocksPlatform.Features;
 using BuildingBlocksPlatform.Features.MoSnowflake;
 using BuildingBlocksPlatform.Repository.EntityInterfaces;
@@ -22,6 +20,7 @@ using Microsoft.EntityFrameworkCore.ValueGeneration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using MoLibrary.Tool.Utils;
+using MoLibrary.DependencyInjection.AppInterfaces;
 
 
 namespace BuildingBlocksPlatform.Repository;

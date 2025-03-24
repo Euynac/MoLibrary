@@ -1,17 +1,19 @@
 using System.Diagnostics;
 using System.Reflection;
-using BuildingBlocksPlatform.DependencyInjection.CoreInterfaces;
-using BuildingBlocksPlatform.DependencyInjection.Implements;
-using BuildingBlocksPlatform.Extensions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using MoLibrary.DependencyInjection.AppInterfaces;
+using MoLibrary.DependencyInjection.CoreInterfaces;
+using MoLibrary.DependencyInjection.Implements;
+using MoLibrary.Tool.Extensions;
 
-namespace BuildingBlocksPlatform.DependencyInjection;
+namespace MoLibrary.DependencyInjection;
 
 public static class MoDependencyInjectionExtensions
 {
     public static IServiceCollection AddMoDependencyInjectionDefaultProvider(this IServiceCollection services, Action<MoDependencyOption>? action = null)
     {
-        return AddMoDependencyInjection<DefaultConventionalRegistrar>(services, action);
+        return services.AddMoDependencyInjection<DefaultConventionalRegistrar>(action);
     }
 
     public static IServiceCollection AddMoDependencyInjection<T>(this IServiceCollection services,

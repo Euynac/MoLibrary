@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 using BuildingBlocksPlatform.BlobContainer.Abstract;
-using BuildingBlocksPlatform.DependencyInjection.AppInterfaces;
+using MoLibrary.DependencyInjection.AppInterfaces;
 
 namespace BuildingBlocksPlatform.BlobContainer.Minio;
 

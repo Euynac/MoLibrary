@@ -1,9 +1,9 @@
 using System.Reflection;
-using BuildingBlocksPlatform.DependencyInjection.Implements;
+using MoLibrary.DependencyInjection.Implements;
+using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.Utils;
 
-
-namespace BuildingBlocksPlatform.DependencyInjection.Attributes;
+namespace MoLibrary.DependencyInjection.Attributes;
 
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 public class ExposeServicesAttribute(params Type[] serviceTypes) : Attribute, IExposedServiceTypesProvider

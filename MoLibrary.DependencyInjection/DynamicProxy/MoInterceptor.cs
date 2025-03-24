@@ -1,7 +1,6 @@
-using BuildingBlocksPlatform.DependencyInjection.AppInterfaces;
-using BuildingBlocksPlatform.DependencyInjection.DynamicProxy.Abstract;
+using MoLibrary.DependencyInjection.DynamicProxy.Abstract;
 
-namespace BuildingBlocksPlatform.DependencyInjection.DynamicProxy;
+namespace MoLibrary.DependencyInjection.DynamicProxy;
 
 public abstract class MoInterceptor : IMoInterceptor
 {

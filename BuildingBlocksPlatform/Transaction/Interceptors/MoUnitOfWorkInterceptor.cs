@@ -1,6 +1,6 @@
-using BuildingBlocksPlatform.DependencyInjection.DynamicProxy;
-using BuildingBlocksPlatform.DependencyInjection.DynamicProxy.Abstract;
 using Microsoft.Extensions.DependencyInjection;
+using MoLibrary.DependencyInjection.DynamicProxy;
+using MoLibrary.DependencyInjection.DynamicProxy.Abstract;
 
 namespace BuildingBlocksPlatform.Transaction.Interceptors;
 

@@ -1,7 +1,8 @@
 using System.Text;
 using Castle.DynamicProxy;
 using Microsoft.Extensions.DependencyInjection;
-namespace BuildingBlocksPlatform.DependencyInjection.DynamicProxy;
+
+namespace MoLibrary.DependencyInjection.DynamicProxy;
 /// <summary>
 /// A proxy generator that integrates with Dependency Injection (DI) to create class proxies.
 /// </summary>
