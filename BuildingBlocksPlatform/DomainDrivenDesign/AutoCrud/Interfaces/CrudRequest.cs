@@ -1,4 +1,4 @@
-using BuildingBlocksPlatform.AutoModel.Interfaces;
+using MoLibrary.AutoModel.Interfaces;
 
 namespace BuildingBlocksPlatform.DomainDrivenDesign.AutoCrud.Interfaces;
 

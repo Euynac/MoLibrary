@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
-using Check = BuildingBlocksPlatform.Utils.Check;
+using Check = MoLibrary.Tool.Utils.Check;
 
 namespace BuildingBlocksPlatform.Authority.Implements.Authorization;
 

@@ -1,9 +1,9 @@
 using System.Reflection;
-using BuildingBlocksPlatform.Utils;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using MoLibrary.Tool.Utils;
 
 
 namespace BuildingBlocksPlatform.DomainDrivenDesign.AutoController.Extensions;

@@ -1,10 +1,10 @@
 using System;
 using System.Reflection;
 using BuildingBlocksPlatform.Repository.EntityInterfaces;
-using BuildingBlocksPlatform.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using MoLibrary.Tool.Utils;
 
 namespace BuildingBlocksPlatform.Repository.Registrar;
 public class MoEfCoreRegistrationOptions(Type dbContextType, IServiceCollection services)

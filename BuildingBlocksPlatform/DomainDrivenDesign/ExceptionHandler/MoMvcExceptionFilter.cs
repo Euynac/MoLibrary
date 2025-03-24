@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace BuildingBlocksPlatform.DomainDrivenDesign.ExceptionHandler;
 
 //TODO 和GlobalExceptionHandler关系？是否多余？
-public class MoMvcExceptionFilter : IAsyncExceptionFilter, ITransientDependency
+public class MoMvcExceptionFilter : IAsyncExceptionFilter
 {
     public virtual async Task OnExceptionAsync(ExceptionContext context)
     {

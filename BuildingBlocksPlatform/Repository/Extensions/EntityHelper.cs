@@ -2,7 +2,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using BuildingBlocksPlatform.Repository.EntityInterfaces;
 using BuildingBlocksPlatform.SeedWork;
-using BuildingBlocksPlatform.Utils;
+using MoLibrary.Tool.Utils;
 
 namespace BuildingBlocksPlatform.Repository.Extensions;
 

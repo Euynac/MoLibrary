@@ -1,5 +1,4 @@
 using System.Net;
-using BuildingBlocksPlatform.AutoModel.Exceptions;
 using BuildingBlocksPlatform.SeedWork;
 using MoLibrary.Tool.General;
 using MediatR;
@@ -9,6 +8,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Tool.MoResponse;
+using Microsoft.AspNetCore.Mvc.Filters;
+using MoLibrary.AutoModel.Exceptions;
 
 namespace BuildingBlocksPlatform.DomainDrivenDesign.ExceptionHandler;
 
@@ -51,6 +52,7 @@ public static class ExceptionHandlerBuilderExtensions
         where THandler : class,IExceptionHandler
     {
         services.AddSingleton<IMoExceptionHandler, MoExceptionHandler>();
+        services.AddSingleton<IAsyncExceptionFilter, MoMvcExceptionFilter>();
         //services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ExceptionHandlerBehavior<,>));
         services.AddExceptionHandler<AutoModelExceptionHandlerForRes>();
         services.AddExceptionHandler<THandler>();
