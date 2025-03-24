@@ -10,6 +10,7 @@ using Microsoft.IdentityModel.Tokens;
 using MoLibrary.Tool.MoResponse;
 using MoLibrary.Authority.Implements.Authorization;
 using MoLibrary.Core.Extensions;
+using MoLibrary.Core.Features;
 
 namespace BuildingBlocksPlatform.DomainDrivenDesign.ExceptionHandler;
 

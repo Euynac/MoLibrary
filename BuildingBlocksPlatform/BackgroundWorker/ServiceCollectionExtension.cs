@@ -16,6 +16,7 @@ using Hangfire.HttpJob;
 using Hangfire.Redis;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using MoLibrary.Core.Features;
 using StackExchange.Redis;
 
 namespace BuildingBlocksPlatform.BackgroundWorker;

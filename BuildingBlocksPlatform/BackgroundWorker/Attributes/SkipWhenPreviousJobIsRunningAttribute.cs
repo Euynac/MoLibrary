@@ -5,6 +5,7 @@ using Hangfire.Client;
 using Hangfire.Common;
 using Hangfire.States;
 using Hangfire.Storage;
+using MoLibrary.Core.Features;
 using MoLibrary.Tool.Web;
 
 namespace BuildingBlocksPlatform.BackgroundWorker.Attributes;

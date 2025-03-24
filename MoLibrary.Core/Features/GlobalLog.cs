@@ -1,6 +1,7 @@
-﻿using Microsoft.Extensions.Logging.Abstractions;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
-namespace BuildingBlocksPlatform.SeedWork;
+namespace MoLibrary.Core.Features;
 
 /// <summary>
 /// 全局Logger，一般用于Platform中的日志记录，日志配置在每个服务的Startup中

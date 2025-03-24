@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Tool.MoResponse;
 using Microsoft.AspNetCore.Mvc.Filters;
 using MoLibrary.AutoModel.Exceptions;
+using MoLibrary.Core.Features;
 
 namespace BuildingBlocksPlatform.DomainDrivenDesign.ExceptionHandler;
 

@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.DynamicLinq;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.AutoModel.Interfaces;
+using MoLibrary.Repository;
 using MoLibrary.Repository.EntityInterfaces;
 using MoLibrary.Repository.EntityInterfaces.Auditing;
 using MoLibrary.Repository.Interfaces;
