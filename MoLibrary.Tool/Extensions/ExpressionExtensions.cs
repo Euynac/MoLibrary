@@ -1,7 +1,8 @@
+using System;
 using System.Linq.Expressions;
 using System.Reflection;
 
-namespace BuildingBlocksPlatform.Extensions;
+namespace MoLibrary.Tool.Extensions;
 
 public static class ExpressionExtensions
 {

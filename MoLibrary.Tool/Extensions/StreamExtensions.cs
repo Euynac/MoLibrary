@@ -1,11 +1,97 @@
-ï»¿using System.IO;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace MoLibrary.Tool.Extensions;
 
 public static class StreamExtensions
 {
+    public static byte[] GetAllBytes(this Stream stream)
+    {
+        if (stream is MemoryStream memoryStream)
+        {
+            return memoryStream.ToArray();
+        }
+
+        using (var ms = stream.CreateMemoryStream())
+        {
+            return ms.ToArray();
+        }
+    }
+
+    public static async Task<byte[]> GetAllBytesAsync(this Stream stream, CancellationToken cancellationToken = default)
+    {
+        if (stream is MemoryStream memoryStream)
+        {
+            return memoryStream.ToArray();
+        }
+
+        using (var ms = await stream.CreateMemoryStreamAsync(cancellationToken))
+        {
+            return ms.ToArray();
+        }
+    }
+
+    public static Task CopyToAsync(this Stream stream, Stream destination, CancellationToken cancellationToken)
+    {
+        if (stream.CanSeek)
+        {
+            stream.Position = 0;
+        }
+
+        return stream.CopyToAsync(
+            destination,
+            81920, //this is already the default value, but needed to set to be able to pass the cancellationToken
+            cancellationToken
+        );
+    }
+
+    public async static Task<MemoryStream> CreateMemoryStreamAsync(this Stream stream, CancellationToken cancellationToken = default)
+    {
+        if (stream.CanSeek)
+        {
+            stream.Position = 0;
+        }
+
+        var memoryStream = new MemoryStream();
+        await stream.CopyToAsync(memoryStream, cancellationToken);
+
+        if (stream.CanSeek)
+        {
+            stream.Position = 0;
+        }
+
+        memoryStream.Position = 0;
+        return memoryStream;
+    }
+
+    public static MemoryStream CreateMemoryStream(this Stream stream)
+    {
+        if (stream.CanSeek)
+        {
+            stream.Position = 0;
+        }
+
+        var memoryStream = new MemoryStream();
+        stream.CopyTo(memoryStream);
+
+        if (stream.CanSeek)
+        {
+            stream.Position = 0;
+        }
+
+        memoryStream.Position = 0;
+        return memoryStream;
+    }
+    public static async Task<string> ReadAsAsStringWithoutChangePosAsync(this Stream stream)
+    {
+        var reader = new StreamReader(stream);
+        reader.BaseStream.Seek(0, SeekOrigin.Begin);
+        var content = await reader.ReadToEndAsync();
+        return content;
+    }
     /// <summary>
-    /// è¯»å–æµä¸­çš„æ‰€æœ‰å­—èŠ‚ã€‚å¦‚æœæµæ˜¯MemoryStreamï¼Œåˆ™ç›´æ¥è¿”å›ToArray()ï¼Œå¦åˆ™å°†æµå¤åˆ¶åˆ°å†…å­˜æµä¸­å¹¶è¿”å›ToArray()ã€‚
+    /// ¶ÁÈ¡Á÷ÖĞµÄËùÓĞ×Ö½Ú¡£Èç¹ûÁ÷ÊÇMemoryStream£¬ÔòÖ±½Ó·µ»ØToArray()£¬·ñÔò½«Á÷¸´ÖÆµ½ÄÚ´æÁ÷ÖĞ²¢·µ»ØToArray()¡£
     /// Read all bytes in the stream. If the stream is MemoryStream, return ToArray() directly, otherwise copy the stream to the memory stream and return ToArray().
     /// </summary>
     /// <param name="stream"></param>

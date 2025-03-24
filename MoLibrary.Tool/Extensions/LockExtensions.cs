@@ -1,6 +1,6 @@
 using System;
 
-namespace BuildingBlocksPlatform.Extensions;
+namespace MoLibrary.Tool.Extensions;
 
 /// <summary>
 /// Extension methods to make locking easier.

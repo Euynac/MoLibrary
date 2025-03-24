@@ -1,4 +1,6 @@
-namespace BuildingBlocksPlatform.Extensions;
+using System;
+
+namespace MoLibrary.Tool.Extensions;
 
 public static class ActionExtensions
 {

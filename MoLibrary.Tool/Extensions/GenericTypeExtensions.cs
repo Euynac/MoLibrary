@@ -1,6 +1,9 @@
+using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 
-namespace BuildingBlocksPlatform.Extensions;
+namespace MoLibrary.Tool.Extensions;
 
 
 public static class GenericTypeExtensions

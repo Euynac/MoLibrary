@@ -1,233 +1,409 @@
-ï»¿using System;
+using System;
 
-namespace MoLibrary.Tool.Extensions
+namespace MoLibrary.Tool.Extensions;
+#region DateTime Interval
+
+public class DateTimeInterval(DateTime left, DateTime right)
 {
     /// <summary>
-    /// Extension methods of Time related type
+    /// ÊÇ·ñ´¦ÓÚÇø¼äÄÚ
     /// </summary>
-    public static class TimeExtensions
+    /// <param name="time"></param>
+    /// <returns></returns>
+    public bool IsWithin(DateTime time)
     {
-        #region æ ¼å¼åŒ–
+        return time >= left && time <= right;
+    }
 
-        /// <summary>
-        /// Time interval conversion to Chinese format <paramref name="duration"/>.Days å¤© <paramref name="duration"/>.Hours å°æ—¶ <paramref name="duration"/>.Minutes åˆ† <paramref name="duration"/>.Seconds ç§’
-        /// </summary>
-        /// <param name="duration"></param>
-        /// <returns></returns>
-        public static string ToZhFormatString(this TimeSpan duration)
-        {
-            var days = duration.Days;
-            var hours = duration.Hours;
-            var minutes = duration.Minutes;
-            var seconds = duration.Seconds;
-            var milliseconds = duration.Milliseconds;
-            return days.BeIfNotDefault($"{days}å¤©")
-                   + hours.BeIfNotDefault($"{hours}å°æ—¶")
-                   + minutes.BeIfNotDefault($"{minutes}åˆ†é’Ÿ")
-                   + (milliseconds.BeIfNotDefault($"{seconds + milliseconds / 1000.0}ç§’") ?? seconds.BeIfNotDefault($"{seconds}ç§’"));
-        }
+    /// <summary>
+    /// ²»ÔÚÇø¼äÊ±£¬Êä³ö×î½ü±ß½ç²îÒìÖµ¡£Çø¼äÄÚ²îÒìÎª0¡£
+    /// </summary>
+    /// <param name="value"></param>
+    /// <returns></returns>
+    public TimeSpan GetIntervalError(DateTime value)
+    {
+        if (IsWithin(value)) return default;
+        var leftError = Math.Abs((value - left).TotalSeconds);
+        var rightError = Math.Abs((value - right).TotalSeconds);
 
-        #endregion
+        return leftError < rightError ? value - left : value - right;
+    }
+}
+public class BaseTimeInterval(TimeSpan thresholdLeft, TimeSpan thresholdRight, DateTime baseTime)
+{
+    public DateTime BaseTime { get; } = baseTime;
 
-        /// <summary>
-        /// æ—¶é—´æˆ³ï¼ˆæ ¼æ—å¨æ²»æ—¶é—´1970å¹´01æœˆ01æ—¥00æ—¶00åˆ†00ç§’ï¼‰ç±»å‹
-        /// </summary>
-        public enum TimeStampType
-        {
-            /// <summary>
-            /// æ€»ç§’æ•°ï¼ˆ10ä½ï¼‰
-            /// </summary>
-            Unix,
-            /// <summary>
-            /// æ€»æ¯«ç§’æ•°ï¼ˆ13ä½ï¼‰
-            /// </summary>
-            Javascript
-        }
-        #region æ—¶é—´ç±»æ‹“å±•
-        /// <summary>
-        /// Get the time span of given date time to that next minute.
-        /// </summary>
-        /// <param name="dateTime"></param>
-        /// <returns></returns>
-        public static TimeSpan NextMinuteSpan(this DateTime dateTime) =>
-            dateTime - NextMinute(dateTime);
-        /// <summary>
-        /// Get the time span of given date time to that next hour.
-        /// </summary>
-        /// <param name="dateTime"></param>
-        /// <returns></returns>
-        public static TimeSpan NextHourSpan(this DateTime dateTime) =>
-            dateTime - NextMinute(dateTime);
-        /// <summary>
-        /// Get the time span of given date time to that next day 00:00.
-        /// </summary>
-        /// <param name="dateTime"></param>
-        /// <returns></returns>
-        public static TimeSpan NextDaySpan(this DateTime dateTime) =>
-            dateTime - NextDay(dateTime);
-        /// <summary>
-        /// Get the date time of given date time to that next minute.
-        /// </summary>
-        /// <param name="dateTime"></param>
-        /// <returns></returns>
-        public static DateTime NextMinute(this DateTime dateTime)
-        {
-            var timeBase = dateTime.AddMinutes(1);
-            return new DateTime(timeBase.Year, timeBase.Month, timeBase.Day, timeBase.Hour, timeBase.Minute, 0);
-        }
-        /// <summary>
-        /// Get the date time of given date time to that next hour.
-        /// </summary>
-        /// <param name="dateTime"></param>
-        /// <returns></returns>
-        public static DateTime NextHour(this DateTime dateTime)
-        {
-            var timeBase = dateTime.AddHours(1);
-            return new DateTime(timeBase.Year, timeBase.Month, timeBase.Day, timeBase.Hour, 0, 0);
-        }
-        /// <summary>
-        /// Get the date time of given date time to that next day 00:00.
-        /// </summary>
-        /// <param name="dateTime"></param>
-        /// <returns></returns>
-        public static DateTime NextDay(this DateTime dateTime)
-        {
-            var timeBase = dateTime.AddDays(1);
-            return new DateTime(timeBase.Year, timeBase.Month, timeBase.Day, 0, 0, 0);
-        }
+    public DateTimeInterval Interval { get; } = new(baseTime.Subtract(thresholdLeft), baseTime.Add(thresholdRight));
 
-        /// <summary>
-        /// è·å–æŒ‡å®šç±»å‹çš„æ—¶é—´æˆ³çš„ <see cref="DateTime"/> è¡¨ç¤ºå½¢å¼
-        /// </summary>
-        /// <param name="timestamp">æ—¶é—´æˆ³</param>
-        /// <param name="timeStampType">æŒ‡å®šç±»å‹ï¼Œé»˜è®¤Unixï¼ˆç§’ä¸ºå•ä½ï¼‰</param>
-        /// <returns>æ³¨æ„æ˜¯ä»¥æœ¬åœ°æ—¶åŒºä¸ºå‡†çš„</returns>
-        public static DateTime ToDateTime(this long timestamp, TimeStampType timeStampType = TimeStampType.Unix)
-        {
-            var startTime = TimeZoneInfo.ConvertTime(new DateTime(1970, 1, 1), TimeZoneInfo.Local);
-            var daTime = new DateTime();
-            switch (timeStampType)
-            {
-                case TimeStampType.Unix:
-                    daTime = startTime.AddSeconds(timestamp);
-                    break;
-                case TimeStampType.Javascript:
-                    daTime = startTime.AddMilliseconds(timestamp);
-                    break;
-            }
-            return daTime;
-        }
-        /// <summary>
-        /// DateTimeè½¬æ—¶é—´æˆ³
-        /// </summary>
-        /// <param name="dateTime"></param>
-        /// <param name="timeStampType"></param>
-        /// <returns>æ³¨æ„æ˜¯ä»¥æœ¬åœ°æ—¶åŒºä¸ºå‡†çš„</returns>
-        public static long ToTimeStamp(this DateTime dateTime, TimeStampType timeStampType = TimeStampType.Unix)
-        {
-            var startTime = TimeZoneInfo.ConvertTime(new DateTime(1970, 1, 1), TimeZoneInfo.Local);
-            long timestamp = 0;
-            switch (timeStampType)
-            {
-                case TimeStampType.Unix:
-                    timestamp = (long)(dateTime - startTime).TotalSeconds;
-                    break;
-                case TimeStampType.Javascript:
-                    timestamp = (long)(dateTime - startTime).TotalMilliseconds;
-                    break;
-            }
-            return timestamp;
-        }
-        /// <summary>
-        /// è½¬æ¢ä¸ºä¸­å›½å¼æ˜ŸæœŸå‡ çš„è¡¨è¿°ï¼ˆæ˜ŸæœŸå¤©ä¸ºç¬¬ä¸ƒå¤©ï¼‰
-        /// </summary>
-        /// <param name="week"></param>
-        /// <returns>1-7å¯¹åº”æ˜ŸæœŸä¸€åˆ°æ˜ŸæœŸå¤©</returns>
-        public static ChineseWeeks ToChineseWeek(this DayOfWeek week) => week == DayOfWeek.Sunday ? ChineseWeeks.æ˜ŸæœŸæ—¥ : (ChineseWeeks)week;
+    public bool IsWithin(DateTime time)
+    {
+        return Interval.IsWithin(time);
+    }
 
-        #endregion
-        /// <summary>
-        /// Chinese week.
-        /// </summary>
-        public enum ChineseWeeks
-        {
-            æ˜ŸæœŸä¸€ = 1,
-            æ˜ŸæœŸäºŒ = 2,
-            æ˜ŸæœŸä¸‰ = 3,
-            æ˜ŸæœŸå›› = 4,
-            æ˜ŸæœŸäº” = 5,
-            æ˜ŸæœŸå…­ = 6,
-            æ˜ŸæœŸæ—¥ = 7,
-        }
+    /// <summary>
+    /// ¾àÀëµÄ»ù×¼Ê±¼äµÄ²îÒìÖµ
+    /// </summary>
+    /// <param name="value"></param>
+    /// <returns></returns>
+    public TimeSpan GetAbsoluteError(DateTime value)
+    {
+        return BaseTime - value;
+    }
 
-        /// <summary>
-        /// Round given time to second. (discard millisecond)
-        /// </summary>
-        /// <param name="time"></param>
-        /// <returns></returns>
-        public static DateTime RoundToSecond(this DateTime time) =>
-            new(time.Year, time.Month, time.Day, time.Hour, time.Minute, time.Second);
+    public override string ToString()
+    {
+        return $"-{thresholdLeft.TotalHours:0.#}h {BaseTime} +{thresholdRight.TotalHours:0.#}";
+    }
+}
 
-        /// <summary>
-        /// Combine given and time from given DateTime.
-        /// </summary>
-        /// <param name="date"></param>
-        /// <param name="time"></param>
-        /// <returns></returns>
-        public static DateTime CombineDateAndTime(this DateTime date, DateTime time) =>
-            new(date.Year, date.Month, date.Day, time.Hour, time.Minute, time.Second, time.Millisecond);
+#endregion
+public static class TimeExtensions
+{
 
-        public enum DateTimePart
+    public static readonly TimeZoneInfo LocalTimeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById("China Standard Time");
+
+    /// <summary>
+    /// Combine given date and time to datetime.
+    /// </summary>
+    /// <param name="timeOnly"></param>
+    /// <param name="dateOnly"></param>
+    /// <returns></returns>
+    public static DateTime? ToDateTime(this TimeOnly? timeOnly, DateOnly? dateOnly = null)
+    {
+        return timeOnly == null ? null : dateOnly?.ToDateTime(timeOnly.Value);
+    }
+    /// <summary>
+    /// Combine given date and time to datetime.
+    /// </summary>
+    /// <param name="timeOnly"></param>
+    /// <param name="dateOnly"></param>
+    /// <returns></returns>
+    public static DateTime? ToDateTime(this TimeOnly timeOnly, DateOnly? dateOnly = null)
+    {
+        return dateOnly?.ToDateTime(timeOnly);
+    }
+    /// <summary>
+    /// Convert given local date  to UTC  datetime.
+    /// </summary>
+    /// <param name="localDateOnly"></param>
+    /// <returns></returns>
+    public static DateTime FromLocalToUtc(this DateOnly localDateOnly) => localDateOnly.ToDateTime(TimeOnly.MinValue).FromLocalToUtc();
+
+    /// <summary>
+    /// Convert given UTC date  to local datetime.
+    /// </summary>
+    /// <param name="utcDateOnly"></param>
+    /// <returns></returns>
+    public static DateTime FromUtcToLocal(this DateOnly utcDateOnly) => utcDateOnly.ToDateTime(TimeOnly.MinValue).FromUtcToLocal();
+
+    public static DateTime FromUtcToLocal(this DateOnly utcDateOnly, TimeOnly localTimeOnly) => utcDateOnly.ToDateTime(localTimeOnly).FromUtcToLocal();
+
+    public static TimeOnly FromLocalToUtc(this TimeOnly localTimeOnly)
+    {
+        var currentOffset = LocalTimeZoneInfo.BaseUtcOffset;
+        var utcTimeOnly = localTimeOnly.AddHours(-currentOffset.Hours);
+        return utcTimeOnly;
+    }
+
+    public static TimeOnly FromUtcToLocal(this TimeOnly utcTimeOnly)
+    {
+        var currentOffset = LocalTimeZoneInfo.BaseUtcOffset;
+        var localTimeOnly = utcTimeOnly.AddHours(currentOffset.Hours);
+        return localTimeOnly;
+    }
+
+    /// <summary>
+    /// Convert given UTC time to local time. (Disregard the kind of given datetime)
+    /// </summary>
+    /// <param name="utcDateTime"></param>
+    /// <returns></returns>
+    public static DateTime FromUtcToLocal(this DateTime utcDateTime)
+    {
+        var currentOffset = LocalTimeZoneInfo.BaseUtcOffset;
+        var localTime = utcDateTime.AddHours(currentOffset.Hours);
+        return DateTime.SpecifyKind(localTime, DateTimeKind.Unspecified);
+    }
+
+
+    /// <summary>
+    /// Convert given UTC time to local time. (Disregard the kind of given datetime)
+    /// </summary>
+    /// <param name="utcDateTime"></param>
+    /// <returns></returns>
+    public static DateTime? FromUtcToLocal(this DateTime? utcDateTime) =>
+        utcDateTime == null ? null : FromUtcToLocal(utcDateTime.Value);
+
+    /// <summary>
+    /// Convert utc datetime to local DateOnly. (Disregard the kind of given datetime)
+    /// </summary>
+    /// <param name="dateTime"></param>
+    /// <returns></returns>
+    public static DateTime FromUtcToLocalDateOnly(this DateTime dateTime) => dateTime.FromUtcToLocal().ToDateOnly().FromLocalToUtc();
+
+    /// <summary>
+    /// Convert given local time to UTC time. (Disregard the kind of given datetime)
+    /// </summary>
+    /// <param name="localDateTime"></param>
+    /// <returns></returns>
+    public static DateTime? FromLocalToUtc(this DateTime? localDateTime) =>
+        localDateTime == null ? null : FromLocalToUtc(localDateTime.Value);
+
+    /// <summary>
+    /// Convert given local time to UTC time. (Disregard the kind of given datetime)
+    /// </summary>
+    /// <param name="localDateTime"></param>
+    /// <returns></returns>
+    public static DateTime FromLocalToUtc(this DateTime localDateTime)
+    {
+        var currentOffset = LocalTimeZoneInfo.BaseUtcOffset;
+        var localTime = localDateTime.AddHours(-currentOffset.Hours);
+        return DateTime.SpecifyKind(localTime, DateTimeKind.Unspecified);
+    }
+
+
+    public static bool EqualBySecond(this DateTime left, DateTime right)
+    {
+        return left.Year == right.Year && left.Month == right.Month 
+                                       && left.Day == right.Day&& left.Hour ==right.Hour 
+                                       && left.Minute == right.Minute&& left.Second == right.Second;
+    }
+
+    public static bool EqualBySecond(this DateTime? left, DateTime? right)
+    {
+        if (left == null && right == null) return true;
+        if (left == null || right == null) return false;
+        return EqualBySecond(left.Value, right.Value);
+    }
+
+
+    /// <summary>
+    /// Replace time part of given datetime with given time only.
+    /// </summary>
+    /// <param name="dateTime"></param>
+    /// <param name="timeOnly"></param>
+    /// <returns></returns>
+    public static DateTime ReplaceTime(this DateTime dateTime, TimeOnly timeOnly) =>
+    new(dateTime.Year, dateTime.Month, dateTime.Day, timeOnly.Hour, timeOnly.Minute, timeOnly.Second);
+    #region ¸ñÊ½»¯
+
+    /// <summary>
+    /// Time interval conversion to Chinese format <paramref name="duration"/>.Days Ìì <paramref name="duration"/>.Hours Ğ¡Ê± <paramref name="duration"/>.Minutes ·Ö <paramref name="duration"/>.Seconds Ãë
+    /// </summary>
+    /// <param name="duration"></param>
+    /// <returns></returns>
+    public static string ToZhFormatString(this TimeSpan duration)
+    {
+        var days = duration.Days;
+        var hours = duration.Hours;
+        var minutes = duration.Minutes;
+        var seconds = duration.Seconds;
+        var milliseconds = duration.Milliseconds;
+        return days.BeIfNotDefault($"{days}Ìì")
+               + hours.BeIfNotDefault($"{hours}Ğ¡Ê±")
+               + minutes.BeIfNotDefault($"{minutes}·ÖÖÓ")
+               + (milliseconds.BeIfNotDefault($"{seconds + milliseconds / 1000.0}Ãë") ?? seconds.BeIfNotDefault($"{seconds}Ãë"));
+    }
+
+    #endregion
+
+    /// <summary>
+    /// Ê±¼ä´Á£¨¸ñÁÖÍşÖÎÊ±¼ä1970Äê01ÔÂ01ÈÕ00Ê±00·Ö00Ãë£©ÀàĞÍ
+    /// </summary>
+    public enum TimeStampType
+    {
+        /// <summary>
+        /// ×ÜÃëÊı£¨10Î»£©
+        /// </summary>
+        Unix,
+        /// <summary>
+        /// ×ÜºÁÃëÊı£¨13Î»£©
+        /// </summary>
+        Javascript
+    }
+    #region Ê±¼äÀàÍØÕ¹
+    /// <summary>
+    /// Get the time span of given date time to that next minute.
+    /// </summary>
+    /// <param name="dateTime"></param>
+    /// <returns></returns>
+    public static TimeSpan NextMinuteSpan(this DateTime dateTime) =>
+        dateTime - NextMinute(dateTime);
+    /// <summary>
+    /// Get the time span of given date time to that next hour.
+    /// </summary>
+    /// <param name="dateTime"></param>
+    /// <returns></returns>
+    public static TimeSpan NextHourSpan(this DateTime dateTime) =>
+        dateTime - NextMinute(dateTime);
+    /// <summary>
+    /// Get the time span of given date time to that next day 00:00.
+    /// </summary>
+    /// <param name="dateTime"></param>
+    /// <returns></returns>
+    public static TimeSpan NextDaySpan(this DateTime dateTime) =>
+        dateTime - NextDay(dateTime);
+    /// <summary>
+    /// Get the date time of given date time to that next minute.
+    /// </summary>
+    /// <param name="dateTime"></param>
+    /// <returns></returns>
+    public static DateTime NextMinute(this DateTime dateTime)
+    {
+        var timeBase = dateTime.AddMinutes(1);
+        return new DateTime(timeBase.Year, timeBase.Month, timeBase.Day, timeBase.Hour, timeBase.Minute, 0);
+    }
+    /// <summary>
+    /// Get the date time of given date time to that next hour.
+    /// </summary>
+    /// <param name="dateTime"></param>
+    /// <returns></returns>
+    public static DateTime NextHour(this DateTime dateTime)
+    {
+        var timeBase = dateTime.AddHours(1);
+        return new DateTime(timeBase.Year, timeBase.Month, timeBase.Day, timeBase.Hour, 0, 0);
+    }
+    /// <summary>
+    /// Get the date time of given date time to that next day 00:00.
+    /// </summary>
+    /// <param name="dateTime"></param>
+    /// <returns></returns>
+    public static DateTime NextDay(this DateTime dateTime)
+    {
+        var timeBase = dateTime.AddDays(1);
+        return new DateTime(timeBase.Year, timeBase.Month, timeBase.Day, 0, 0, 0);
+    }
+
+    /// <summary>
+    /// »ñÈ¡Ö¸¶¨ÀàĞÍµÄÊ±¼ä´ÁµÄ <see cref="DateTime"/> ±íÊ¾ĞÎÊ½
+    /// </summary>
+    /// <param name="timestamp">Ê±¼ä´Á</param>
+    /// <param name="timeStampType">Ö¸¶¨ÀàĞÍ£¬Ä¬ÈÏUnix£¨ÃëÎªµ¥Î»£©</param>
+    /// <returns>×¢ÒâÊÇÒÔ±¾µØÊ±ÇøÎª×¼µÄ</returns>
+    public static DateTime ToDateTime(this long timestamp, TimeStampType timeStampType = TimeStampType.Unix)
+    {
+        var startTime = TimeZoneInfo.ConvertTime(new DateTime(1970, 1, 1), TimeZoneInfo.Local);
+        var daTime = new DateTime();
+        switch (timeStampType)
         {
-            Year,
-            Month,
-            Day,
-            Hour,
-            Minute,
-            Second,
-            Millisecond
+            case TimeStampType.Unix:
+                daTime = startTime.AddSeconds(timestamp);
+                break;
+            case TimeStampType.Javascript:
+                daTime = startTime.AddMilliseconds(timestamp);
+                break;
         }
-        /// <summary>
-        /// Returns a <see cref="T:System.DateOnly" /> instance that is set to the date part of the specified <paramref name="dateTime" />.
-        /// </summary>
-        /// <param name="dateTime">The <see cref="T:System.DateTime" /> instance.</param>
-        /// <returns>The <see cref="T:System.DateOnly" /> instance composed of the date part of the specified input time <paramref name="dateTime" /> instance.</returns>
-        public static DateOnly ToDateOnly(this DateTime dateTime) => DateOnly.FromDateTime(dateTime);
-        /// <summary>
-        /// Constructs a <see cref="T:System.TimeOnly" /> object from a <see cref="T:System.DateTime" /> representing the time of the day in this <see cref="T:System.DateTime" /> object.
-        /// </summary>
-        /// <param name="dateTime">The <see cref="T:System.DateTime" /> object to extract the time of the day from.</param>
-        /// <returns>A <see cref="T:System.TimeOnly" /> object representing time of the day specified in the <see cref="T:System.DateTime" /> object.</returns>
-        public static TimeOnly ToTimeOnly(this DateTime dateTime) => TimeOnly.FromDateTime(dateTime);
-        /// <summary>
-        /// Converts a <see cref="T:System.DateOnly" /> object to a <see cref="T:System.DateTime" /> object using TimeOnly.Minvalue as the time.
-        /// </summary>
-        /// <param name="dateOnly"></param>
-        /// <returns></returns>
-        public static DateTime ToDateTime(this DateOnly dateOnly) => dateOnly.ToDateTime(TimeOnly.MinValue);
-        /// <summary>
-        /// Truncate given date time to given part.
-        /// </summary>
-        /// <param name="dateTime"></param>
-        /// <param name="part"></param>
-        /// <returns></returns>
-        /// <exception cref="ArgumentOutOfRangeException"></exception>
-        public static DateTime Truncate(DateTime dateTime, DateTimePart part)
+        return daTime;
+    }
+    /// <summary>
+    /// DateTime×ªÊ±¼ä´Á
+    /// </summary>
+    /// <param name="dateTime"></param>
+    /// <param name="timeStampType"></param>
+    /// <returns>×¢ÒâÊÇÒÔ±¾µØÊ±ÇøÎª×¼µÄ</returns>
+    public static long ToTimeStamp(this DateTime dateTime, TimeStampType timeStampType = TimeStampType.Unix)
+    {
+        var startTime = TimeZoneInfo.ConvertTime(new DateTime(1970, 1, 1), TimeZoneInfo.Local);
+        long timestamp = 0;
+        switch (timeStampType)
         {
-            return part switch
-            {
-                DateTimePart.Year => new DateTime(dateTime.Year, 0, 0),
-                DateTimePart.Month => new DateTime(dateTime.Year, dateTime.Month, 0),
-                DateTimePart.Day => new DateTime(dateTime.Year, dateTime.Month, dateTime.Day),
-                DateTimePart.Hour => new DateTime(dateTime.Year, dateTime.Month, dateTime.Day, dateTime.Hour, 0, 0),
-                DateTimePart.Minute => new DateTime(dateTime.Year, dateTime.Month, dateTime.Day, dateTime.Hour,
-                    dateTime.Minute, 0),
-                DateTimePart.Second => new DateTime(dateTime.Year, dateTime.Month, dateTime.Day, dateTime.Hour,
-                    dateTime.Minute, dateTime.Second),
-                DateTimePart.Millisecond => new DateTime(dateTime.Year, dateTime.Month, dateTime.Day, dateTime.Hour,
-                    dateTime.Minute, dateTime.Second, dateTime.Millisecond),
-                _ => throw new ArgumentOutOfRangeException(nameof(part), part, null)
-            };
+            case TimeStampType.Unix:
+                timestamp = (long)(dateTime - startTime).TotalSeconds;
+                break;
+            case TimeStampType.Javascript:
+                timestamp = (long)(dateTime - startTime).TotalMilliseconds;
+                break;
         }
+        return timestamp;
+    }
+    /// <summary>
+    /// ×ª»»ÎªÖĞ¹úÊ½ĞÇÆÚ¼¸µÄ±íÊö£¨ĞÇÆÚÌìÎªµÚÆßÌì£©
+    /// </summary>
+    /// <param name="week"></param>
+    /// <returns>1-7¶ÔÓ¦ĞÇÆÚÒ»µ½ĞÇÆÚÌì</returns>
+    public static ChineseWeeks ToChineseWeek(this DayOfWeek week) => week == DayOfWeek.Sunday ? ChineseWeeks.ĞÇÆÚÈÕ : (ChineseWeeks)week;
+
+    #endregion
+    /// <summary>
+    /// Chinese week.
+    /// </summary>
+    public enum ChineseWeeks
+    {
+        ĞÇÆÚÒ» = 1,
+        ĞÇÆÚ¶ş = 2,
+        ĞÇÆÚÈı = 3,
+        ĞÇÆÚËÄ = 4,
+        ĞÇÆÚÎå = 5,
+        ĞÇÆÚÁù = 6,
+        ĞÇÆÚÈÕ = 7,
+    }
+
+    /// <summary>
+    /// Round given time to second. (discard millisecond)
+    /// </summary>
+    /// <param name="time"></param>
+    /// <returns></returns>
+    public static DateTime RoundToSecond(this DateTime time) =>
+        new(time.Year, time.Month, time.Day, time.Hour, time.Minute, time.Second);
+
+    /// <summary>
+    /// Combine given and time from given DateTime.
+    /// </summary>
+    /// <param name="date"></param>
+    /// <param name="time"></param>
+    /// <returns></returns>
+    public static DateTime CombineDateAndTime(this DateTime date, DateTime time) =>
+        new(date.Year, date.Month, date.Day, time.Hour, time.Minute, time.Second, time.Millisecond);
+
+    public enum DateTimePart
+    {
+        Year,
+        Month,
+        Day,
+        Hour,
+        Minute,
+        Second,
+        Millisecond
+    }
+    /// <summary>
+    /// Returns a <see cref="T:System.DateOnly" /> instance that is set to the date part of the specified <paramref name="dateTime" />.
+    /// </summary>
+    /// <param name="dateTime">The <see cref="T:System.DateTime" /> instance.</param>
+    /// <returns>The <see cref="T:System.DateOnly" /> instance composed of the date part of the specified input time <paramref name="dateTime" /> instance.</returns>
+    public static DateOnly ToDateOnly(this DateTime dateTime) => DateOnly.FromDateTime(dateTime);
+    /// <summary>
+    /// Constructs a <see cref="T:System.TimeOnly" /> object from a <see cref="T:System.DateTime" /> representing the time of the day in this <see cref="T:System.DateTime" /> object.
+    /// </summary>
+    /// <param name="dateTime">The <see cref="T:System.DateTime" /> object to extract the time of the day from.</param>
+    /// <returns>A <see cref="T:System.TimeOnly" /> object representing time of the day specified in the <see cref="T:System.DateTime" /> object.</returns>
+    public static TimeOnly ToTimeOnly(this DateTime dateTime) => TimeOnly.FromDateTime(dateTime);
+    /// <summary>
+    /// Converts a <see cref="T:System.DateOnly" /> object to a <see cref="T:System.DateTime" /> object using TimeOnly.Minvalue as the time.
+    /// </summary>
+    /// <param name="dateOnly"></param>
+    /// <returns></returns>
+    public static DateTime ToDateTime(this DateOnly dateOnly) => dateOnly.ToDateTime(TimeOnly.MinValue);
+    /// <summary>
+    /// Truncate given date time to given part.
+    /// </summary>
+    /// <param name="dateTime"></param>
+    /// <param name="part"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentOutOfRangeException"></exception>
+    public static DateTime Truncate(DateTime dateTime, DateTimePart part)
+    {
+        return part switch
+        {
+            DateTimePart.Year => new DateTime(dateTime.Year, 0, 0),
+            DateTimePart.Month => new DateTime(dateTime.Year, dateTime.Month, 0),
+            DateTimePart.Day => new DateTime(dateTime.Year, dateTime.Month, dateTime.Day),
+            DateTimePart.Hour => new DateTime(dateTime.Year, dateTime.Month, dateTime.Day, dateTime.Hour, 0, 0),
+            DateTimePart.Minute => new DateTime(dateTime.Year, dateTime.Month, dateTime.Day, dateTime.Hour,
+                dateTime.Minute, 0),
+            DateTimePart.Second => new DateTime(dateTime.Year, dateTime.Month, dateTime.Day, dateTime.Hour,
+                dateTime.Minute, dateTime.Second),
+            DateTimePart.Millisecond => new DateTime(dateTime.Year, dateTime.Month, dateTime.Day, dateTime.Hour,
+                dateTime.Minute, dateTime.Second, dateTime.Millisecond),
+            _ => throw new ArgumentOutOfRangeException(nameof(part), part, null)
+        };
     }
 }
