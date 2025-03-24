@@ -6,8 +6,8 @@ using Microsoft.Extensions.DependencyInjection;
 using BuildingBlocksPlatform.EventBus.Abstractions;
 
 using BuildingBlocksPlatform.Features.MoSnowflake;
-using BuildingBlocksPlatform.DependencyInjection.AppInterfaces;
 using BuildingBlocksPlatform.Transaction;
+using MoLibrary.DependencyInjection.AppInterfaces;
 
 namespace BuildingBlocksPlatform.SeedWork;
 

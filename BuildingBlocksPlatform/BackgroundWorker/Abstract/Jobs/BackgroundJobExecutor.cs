@@ -1,5 +1,3 @@
-using BuildingBlocksPlatform.DependencyInjection.AppInterfaces;
-
 namespace BuildingBlocksPlatform.BackgroundWorker.Abstract.Jobs;
 
 public class BackgroundJobExecutor(ILogger<BackgroundJobExecutor> logger) : IBackgroundJobExecutor

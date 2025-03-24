@@ -1,4 +1,4 @@
-namespace BuildingBlocksPlatform.DependencyInjection.AppInterfaces;
+namespace MoLibrary.DependencyInjection.AppInterfaces;
 
 /// <summary>
 /// Provides access to an <see cref="IServiceProvider"/> instance.

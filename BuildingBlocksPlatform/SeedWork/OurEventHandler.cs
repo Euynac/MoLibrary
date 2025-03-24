@@ -2,7 +2,7 @@ using BuildingBlocksPlatform.EventBus.Abstractions;
 using BuildingBlocksPlatform.StateStore;
 using MapsterMapper;
 using Microsoft.Extensions.DependencyInjection;
-
+using MoLibrary.DependencyInjection.AppInterfaces;
 
 namespace BuildingBlocksPlatform.SeedWork;
 

@@ -1,6 +1,7 @@
 using BuildingBlocksPlatform.BackgroundWorker.Abstract.Workers;
 using Hangfire;
 using Microsoft.Extensions.DependencyInjection;
+using MoLibrary.DependencyInjection.AppInterfaces;
 
 namespace BuildingBlocksPlatform.BackgroundWorker.Hangfire.Workers;
 

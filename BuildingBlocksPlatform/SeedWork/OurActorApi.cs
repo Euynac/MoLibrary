@@ -1,6 +1,7 @@
 using BuildingBlocksPlatform.Features.GRPCExtensions;
 using Dapr.Actors.Client;
 using Dapr.Actors;
+using MoLibrary.DependencyInjection.AppInterfaces;
 
 namespace BuildingBlocksPlatform.SeedWork;
 

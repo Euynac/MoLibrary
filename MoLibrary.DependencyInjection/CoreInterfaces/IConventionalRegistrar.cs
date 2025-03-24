@@ -1,7 +1,7 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace BuildingBlocksPlatform.DependencyInjection.CoreInterfaces;
+namespace MoLibrary.DependencyInjection.CoreInterfaces;
 
 public interface IConventionalRegistrar
 {

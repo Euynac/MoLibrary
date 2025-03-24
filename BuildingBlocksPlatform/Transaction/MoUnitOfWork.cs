@@ -1,7 +1,6 @@
-using BuildingBlocksPlatform.DependencyInjection.AppInterfaces;
 using BuildingBlocksPlatform.Transaction.EntityEvent;
 using Microsoft.EntityFrameworkCore;
-
+using MoLibrary.DependencyInjection.AppInterfaces;
 
 namespace BuildingBlocksPlatform.Transaction;
 

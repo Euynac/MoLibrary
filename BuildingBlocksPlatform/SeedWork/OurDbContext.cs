@@ -6,6 +6,7 @@ using BuildingBlocksPlatform.Repository;
 using Microsoft.Extensions.DependencyInjection;
 using BuildingBlocksPlatform.Repository.EntityInterfaces;
 using BuildingBlocksPlatform.DataSync.Interfaces;
+using MoLibrary.DependencyInjection.AppInterfaces;
 
 namespace BuildingBlocksPlatform.SeedWork;
 

@@ -1,7 +1,7 @@
 using BuildingBlocksPlatform.DomainDrivenDesign.Interfaces;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
-
+using MoLibrary.DependencyInjection.AppInterfaces;
 
 namespace BuildingBlocksPlatform.DomainDrivenDesign;
 

@@ -1,5 +1,5 @@
-using BuildingBlocksPlatform.DependencyInjection.AppInterfaces;
 using Microsoft.Extensions.Options;
+using MoLibrary.DependencyInjection.AppInterfaces;
 
 namespace BuildingBlocksPlatform.BlobContainer.Abstract;
 

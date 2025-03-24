@@ -2,6 +2,8 @@ using BuildingBlocksPlatform.EventBus.Abstractions;
 using BuildingBlocksPlatform.EventBus.Attributes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using MoLibrary.DependencyInjection.AppInterfaces;
+using MoLibrary.DependencyInjection.Attributes;
 using MoLibrary.Tool.Utils;
 
 

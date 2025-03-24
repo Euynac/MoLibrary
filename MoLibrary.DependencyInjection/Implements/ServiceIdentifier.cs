@@ -1,4 +1,4 @@
-namespace BuildingBlocksPlatform.DependencyInjection.Implements;
+namespace MoLibrary.DependencyInjection.Implements;
 
 /// <summary>
 /// https://github.com/dotnet/runtime/blob/release/8.0/src/libraries/Microsoft.Extensions.DependencyInjection/src/ServiceLookup/ServiceIdentifier.cs#L9
@@ -39,7 +39,7 @@ public readonly struct ServiceIdentifier(object? serviceKey, Type serviceType) :
         }
         unchecked
         {
-            return (ServiceType.GetHashCode() * 397) ^ ServiceKey.GetHashCode();
+            return ServiceType.GetHashCode() * 397 ^ ServiceKey.GetHashCode();
         }
     }
 

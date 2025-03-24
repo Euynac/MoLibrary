@@ -2,7 +2,7 @@ using System.Reflection;
 using Castle.DynamicProxy;
 using MoLibrary.Tool.Extensions;
 
-namespace BuildingBlocksPlatform.DependencyInjection.DynamicProxy.Abstract;
+namespace MoLibrary.DependencyInjection.DynamicProxy.Abstract;
 
 public abstract class CastleMoMethodInvocationAdapterBase : IMoMethodInvocation
 {

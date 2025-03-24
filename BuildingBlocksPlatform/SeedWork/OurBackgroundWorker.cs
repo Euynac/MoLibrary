@@ -5,6 +5,7 @@ using MapsterMapper;
 using Microsoft.Extensions.DependencyInjection;
 using BuildingBlocksPlatform.EventBus.Abstractions;
 using BuildingBlocksPlatform.Features.MoSnowflake;
+using MoLibrary.DependencyInjection.AppInterfaces;
 
 namespace BuildingBlocksPlatform.SeedWork;
 

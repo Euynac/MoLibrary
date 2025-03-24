@@ -1,5 +1,6 @@
 using BuildingBlocksPlatform.BackgroundWorker.Abstract.Workers;
 using Microsoft.Extensions.DependencyInjection;
+using MoLibrary.DependencyInjection.AppInterfaces;
 
 namespace BuildingBlocksPlatform.BackgroundWorker.MoTaskScheduler;
 

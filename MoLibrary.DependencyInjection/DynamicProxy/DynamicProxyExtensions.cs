@@ -1,10 +1,13 @@
-using BuildingBlocksPlatform.DependencyInjection.DynamicProxy.Abstract;
 using Castle.DynamicProxy;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using static BuildingBlocksPlatform.DependencyInjection.DynamicProxy.MicrosoftDependencyInjectionDynamicProxyExtensions;
+using MoLibrary.DependencyInjection.AppInterfaces;
+using MoLibrary.DependencyInjection.DynamicProxy.Abstract;
+using MoLibrary.Tool.Extensions;
+using static MoLibrary.DependencyInjection.DynamicProxy.MicrosoftDependencyInjectionDynamicProxyExtensions;
 
-namespace BuildingBlocksPlatform.DependencyInjection.DynamicProxy;
+namespace MoLibrary.DependencyInjection.DynamicProxy;
 
 public class MoDynamicProxyOption
 {

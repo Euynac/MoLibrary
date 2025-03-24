@@ -1,6 +1,6 @@
-using BuildingBlocksPlatform.DependencyInjection.AppInterfaces;
 using BuildingBlocksPlatform.Repository.EntityInterfaces;
 using Microsoft.EntityFrameworkCore;
+using MoLibrary.DependencyInjection.AppInterfaces;
 
 namespace BuildingBlocksPlatform.Repository.Interfaces;
 

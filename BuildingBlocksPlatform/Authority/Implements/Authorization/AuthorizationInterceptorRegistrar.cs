@@ -1,9 +1,9 @@
 using System.Reflection;
-using BuildingBlocksPlatform.DependencyInjection.DynamicProxy;
 using BuildingBlocksPlatform.DomainDrivenDesign.Interfaces;
 using BuildingBlocksPlatform.SeedWork;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
+using MoLibrary.DependencyInjection.DynamicProxy;
 
 namespace BuildingBlocksPlatform.Authority.Implements.Authorization;
 

@@ -1,5 +1,6 @@
 using BuildingBlocksPlatform.Interfaces;
 using Microsoft.AspNetCore.Http;
+using MoLibrary.DependencyInjection.AppInterfaces;
 
 namespace BuildingBlocksPlatform.DataSync;
 

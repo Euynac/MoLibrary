@@ -3,7 +3,7 @@ using BuildingBlocksPlatform.Authority.Security;
 using BuildingBlocksPlatform.DataSync.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-
+using MoLibrary.DependencyInjection.AppInterfaces;
 
 namespace BuildingBlocksPlatform.SeedWork;
 

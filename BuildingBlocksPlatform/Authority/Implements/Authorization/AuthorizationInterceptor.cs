@@ -1,7 +1,7 @@
 using BuildingBlocksPlatform.Authority.Authorization;
 using BuildingBlocksPlatform.Authority.Security;
-using BuildingBlocksPlatform.DependencyInjection.DynamicProxy;
-using BuildingBlocksPlatform.DependencyInjection.DynamicProxy.Abstract;
+using MoLibrary.DependencyInjection.DynamicProxy;
+using MoLibrary.DependencyInjection.DynamicProxy.Abstract;
 
 namespace BuildingBlocksPlatform.Authority.Implements.Authorization;
 

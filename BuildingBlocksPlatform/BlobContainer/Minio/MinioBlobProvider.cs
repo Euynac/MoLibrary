@@ -1,8 +1,8 @@
 using BuildingBlocksPlatform.BlobContainer.Abstract;
-using BuildingBlocksPlatform.DependencyInjection.AppInterfaces;
 using Minio;
 using Minio.DataModel.Args;
 using Minio.Exceptions;
+using MoLibrary.DependencyInjection.AppInterfaces;
 
 namespace BuildingBlocksPlatform.BlobContainer.Minio;
 

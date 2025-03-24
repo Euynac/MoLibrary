@@ -1,3 +1,5 @@
+using MoLibrary.DependencyInjection.AppInterfaces;
+
 namespace BuildingBlocksPlatform.BackgroundWorker.Hangfire.Workers;
 
 public abstract class MoHangfireBackgroundWorker : IMoHangfireBackgroundWorker

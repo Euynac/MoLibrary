@@ -1,8 +1,8 @@
-using BuildingBlocksPlatform.DependencyInjection.AppInterfaces;
 using BuildingBlocksPlatform.Transaction;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using MoLibrary.DependencyInjection.AppInterfaces;
 
 namespace BuildingBlocksPlatform.Repository.Interfaces;
 
