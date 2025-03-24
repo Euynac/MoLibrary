@@ -1,12 +1,12 @@
 using BuildingBlocksPlatform.DomainDrivenDesign.Attributes;
 using BuildingBlocksPlatform.DomainDrivenDesign.AutoCrud.Interfaces;
 using BuildingBlocksPlatform.Features;
-using BuildingBlocksPlatform.Repository.DtoInterfaces;
-using BuildingBlocksPlatform.Repository.EntityInterfaces;
-using BuildingBlocksPlatform.Repository.Exceptions;
-using BuildingBlocksPlatform.Repository.Interfaces;
 using BuildingBlocksPlatform.SeedWork;
 using Microsoft.AspNetCore.Mvc;
+using MoLibrary.Repository.DtoInterfaces;
+using MoLibrary.Repository.EntityInterfaces;
+using MoLibrary.Repository.Exceptions;
+using MoLibrary.Repository.Interfaces;
 using MoLibrary.Tool.MoResponse;
 
 namespace BuildingBlocksPlatform.DomainDrivenDesign.AutoCrud;

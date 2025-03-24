@@ -1,4 +1,4 @@
-using BuildingBlocksPlatform.Repository.EntityInterfaces;
+using MoLibrary.Repository.EntityInterfaces;
 
 namespace BuildingBlocksPlatform.Core.Model;
 

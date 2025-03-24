@@ -14,7 +14,8 @@
     <Folder Include="Configuration\Providers\" />
     <Folder Include="Core\Dashboard\" />
     <Folder Include="Core\Interfaces\" />
-    <Folder Include="Utils\" />
+    <Folder Include="Features\MoSnowflake\" />
+    <Folder Include="ObjectMapper\" />
   </ItemGroup>
 
   <ItemGroup>

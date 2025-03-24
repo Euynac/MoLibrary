@@ -1,5 +1,6 @@
-using BuildingBlocksPlatform.Repository.EntityInterfaces;
 using BuildingBlocksPlatform.SeedWork;
+using MoLibrary.Repository.EntityInterfaces;
+using MoLibrary.Repository.Interfaces;
 
 namespace BuildingBlocksPlatform.Core.Model;
 

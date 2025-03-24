@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Query.Internal;
 using System.Diagnostics.CodeAnalysis;
-using BuildingBlocksPlatform.Repository.EntityInterfaces;
+using MoLibrary.Repository.EntityInterfaces;
 
 
 namespace BuildingBlocksPlatform.Extensions;

@@ -1,5 +1,4 @@
 using BuildingBlocksPlatform.DomainDrivenDesign.AutoController.Components;
-using BuildingBlocksPlatform.Transaction.Interceptors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 
