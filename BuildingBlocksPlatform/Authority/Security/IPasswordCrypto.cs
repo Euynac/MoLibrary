@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
-using Koubot.Tool.Web;
+using MoLibrary.Tool.Web;
 
 namespace BuildingBlocksPlatform.Authority.Security;
 

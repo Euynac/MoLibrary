@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using BuildingBlocksPlatform.EventBus.Abstractions;
 using BuildingBlocksPlatform.EventBus.Abstractions;
 using BuildingBlocksPlatform.Features.MoGuid;
-using Koubot.Tool.General;
+using MoLibrary.Tool.General;
 using BuildingBlocksPlatform.Features.MoSnowflake;
 using Microsoft.Extensions.DependencyInjection;
 

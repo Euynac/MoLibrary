@@ -338,7 +338,7 @@ public static class TypeHelper
             .ConvertFrom(value)!;
     }
 
-    public static Type StripNullable(Type type)
+    public static Type StripNullable(this Type type)
     {
         return IsNullable(type)
             ? type.GenericTypeArguments[0]

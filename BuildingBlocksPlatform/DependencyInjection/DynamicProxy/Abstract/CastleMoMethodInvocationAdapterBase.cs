@@ -1,6 +1,6 @@
 using System.Reflection;
 using Castle.DynamicProxy;
-using Koubot.Tool.Extensions;
+using MoLibrary.Tool.Extensions;
 
 namespace BuildingBlocksPlatform.DependencyInjection.DynamicProxy.Abstract;
 

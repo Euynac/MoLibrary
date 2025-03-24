@@ -8,7 +8,7 @@ global using BuildingBlocksPlatform.DependencyInjection.AppInterfaces;
 global using BuildingBlocksPlatform.DependencyInjection.Attributes;
 global using BuildingBlocksPlatform.Transaction;
 global using BuildingBlocksPlatform.DomainDrivenDesign;
-global using Koubot.Tool.Extensions;
+global using MoLibrary.Tool.Extensions;
 global using BuildingBlocksPlatform.Extensions;
 global using BuildingBlocksPlatform.DependencyInjection.AppInterfaces;
 global using BuildingBlocksPlatform.Repository.Interfaces;

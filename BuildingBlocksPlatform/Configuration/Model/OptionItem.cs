@@ -1,7 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using BuildingBlocksPlatform.Configuration.Annotations;
-using Koubot.Tool.Extensions;
+using BuildingBlocksPlatform.Utils;
+using MoLibrary.Tool.Extensions;
 using Microsoft.Extensions.Configuration;
 
 namespace BuildingBlocksPlatform.Configuration.Model;

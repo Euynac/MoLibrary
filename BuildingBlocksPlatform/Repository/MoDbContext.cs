@@ -13,7 +13,7 @@ using BuildingBlocksPlatform.SeedWork;
 using BuildingBlocksPlatform.Transaction;
 using BuildingBlocksPlatform.Transaction.EntityEvent;
 using BuildingBlocksPlatform.Utils;
-using Koubot.Tool.Extensions;
+using MoLibrary.Tool.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;

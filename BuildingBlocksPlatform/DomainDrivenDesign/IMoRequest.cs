@@ -1,5 +1,6 @@
 ﻿using BuildingBlocksPlatform.SeedWork;
 using MediatR;
+using MoLibrary.Tool.MoResponse;
 
 namespace BuildingBlocksPlatform.DomainDrivenDesign;
 

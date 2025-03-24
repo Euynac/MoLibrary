@@ -13,6 +13,7 @@ using BuildingBlocksPlatform.SeedWork;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using BuildingBlocksPlatform.Configuration.Providers;
+using MoLibrary.Tool.MoResponse;
 
 namespace BuildingBlocksPlatform.Configuration.Extensions;
 

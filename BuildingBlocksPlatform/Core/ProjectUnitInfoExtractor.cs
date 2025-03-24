@@ -1,6 +1,6 @@
 using BuildingBlocksPlatform.Core.Model;
 using BuildingBlocksPlatform.SeedWork;
-using Koubot.Tool.Extensions;
+using MoLibrary.Tool.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BuildingBlocksPlatform.Core;

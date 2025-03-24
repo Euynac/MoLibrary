@@ -2,12 +2,13 @@ using BuildingBlocksPlatform.DependencyInjection.AppInterfaces;
 using BuildingBlocksPlatform.DomainDrivenDesign.AutoController.Extensions;
 using BuildingBlocksPlatform.DomainDrivenDesign.AutoCrud;
 using BuildingBlocksPlatform.SeedWork;
-using Koubot.Tool.Extensions;
+using MoLibrary.Tool.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.Options;
+using MoLibrary.Tool.MoResponse;
 
 namespace BuildingBlocksPlatform.DomainDrivenDesign.AutoController.Features;
 

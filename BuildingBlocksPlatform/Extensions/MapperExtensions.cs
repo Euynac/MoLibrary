@@ -37,14 +37,14 @@ public static class MapperExtensions
         //});
     }
 
-    internal class MapperInfoCard
+    public class MapperInfoCard
     {
         public string? SourceType { get; set; }
         public string? DestinationType { get; set; }
         public string? MapExpression { get; set; }
     }
 
-    internal static IReadOnlyList<MapperInfoCard> GetInfos()
+    public static IReadOnlyList<MapperInfoCard> GetInfos()
     {
         var list = new List<MapperInfoCard>();
         TypeAdapterConfig.GlobalSettings.SelfContainedCodeGeneration = true;

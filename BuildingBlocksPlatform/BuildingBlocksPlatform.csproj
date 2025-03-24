@@ -14,7 +14,6 @@
     <PackageReference Include="Dapr.Extensions.Configuration" Version="1.14.0" />
     <PackageReference Include="DotNetCore.EntityFrameworkCore.GaussDB" Version="8.0.1" />
     <PackageReference Include="ExpressionDebugger" Version="2.2.1" />
-    <PackageReference Include="Koubot.Tool" Version="2.0.5-alpha" />
     <PackageReference Include="Mapster" Version="7.4.0" />
     <PackageReference Include="MediatR" Version="12.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.0" />

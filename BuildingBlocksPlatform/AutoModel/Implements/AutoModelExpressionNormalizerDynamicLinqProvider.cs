@@ -4,8 +4,8 @@ using BuildingBlocksPlatform.AutoModel.Exceptions;
 using BuildingBlocksPlatform.AutoModel.Interfaces;
 using BuildingBlocksPlatform.AutoModel.Model;
 using BuildingBlocksPlatform.Extensions;
-using Koubot.Tool.Extensions;
-using Koubot.Tool.General;
+using MoLibrary.Tool.Extensions;
+using MoLibrary.Tool.General;
 using Microsoft.Extensions.Options;
 
 namespace BuildingBlocksPlatform.AutoModel.Implements;

@@ -45,7 +45,7 @@ public class JsonShared : IGlobalJsonOption
     /// <summary>
     /// 全局的Json设置。用于Mvc等
     /// </summary>
-    internal static JsonSerializerOptions GlobalJsonSerializerOptions { get; set; } = new();
+    public static JsonSerializerOptions GlobalJsonSerializerOptions { get; set; } = new();
     ///// <summary>
     ///// 全局的后端Json设置。用于领域事件推送等。
     ///// </summary>
@@ -500,19 +500,19 @@ public static class JsonConverterExtensions
 
 
 
-internal interface IHasHttpContextAccessor
+public interface IHasHttpContextAccessor
 {
     internal IHttpContextAccessor? HttpContextAccessor { get; set; }
 }
 
-internal interface IJudgeBackendInvoke : IHasHttpContextAccessor
+public interface IJudgeBackendInvoke : IHasHttpContextAccessor
 {
-    internal const string X_BACKEND_INVOKE = "X-Backend-Invoke";
+    public const string X_BACKEND_INVOKE = "X-Backend-Invoke";
     /// <summary>
     /// 用于区分前后端调用。
     /// </summary>
     /// <returns></returns>
-    internal bool IsBackendInvoke()
+    public bool IsBackendInvoke()
     {
         if (HttpContextAccessor?.HttpContext is {} context)
         {

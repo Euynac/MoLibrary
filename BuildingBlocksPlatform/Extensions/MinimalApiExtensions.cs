@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using BuildingBlocksPlatform.SeedWork;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using MoLibrary.Tool.MoResponse;
 
 namespace BuildingBlocksPlatform.Extensions;
 

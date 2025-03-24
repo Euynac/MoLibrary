@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 using BuildingBlocksPlatform.Converters;
-using Koubot.Tool.General;
+using MoLibrary.Tool.General;
 
 namespace BuildingBlocksPlatform.Configuration.Model;
 

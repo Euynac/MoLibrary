@@ -2,6 +2,7 @@ using System.Net;
 using BuildingBlocksPlatform.SeedWork;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using MoLibrary.Tool.MoResponse;
 
 namespace BuildingBlocksPlatform.DomainDrivenDesign.AutoController.Components;
 

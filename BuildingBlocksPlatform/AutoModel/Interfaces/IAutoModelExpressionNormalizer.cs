@@ -1,4 +1,4 @@
-using Koubot.Tool.General;
+using MoLibrary.Tool.General;
 
 namespace BuildingBlocksPlatform.AutoModel.Interfaces;
 

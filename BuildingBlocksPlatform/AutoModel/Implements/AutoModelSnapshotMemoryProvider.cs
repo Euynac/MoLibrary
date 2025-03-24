@@ -9,7 +9,7 @@ using BuildingBlocksPlatform.AutoModel.Exceptions;
 using BuildingBlocksPlatform.AutoModel.Interfaces;
 using BuildingBlocksPlatform.AutoModel.Model;
 using BuildingBlocksPlatform.Extensions;
-using Koubot.Tool.Extensions;
+using MoLibrary.Tool.Extensions;
 using Microsoft.Extensions.Options;
 
 // ReSharper disable StaticMemberInGenericType

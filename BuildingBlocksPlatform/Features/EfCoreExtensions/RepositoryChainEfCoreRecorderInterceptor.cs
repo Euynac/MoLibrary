@@ -1,7 +1,7 @@
 using System.Data.Common;
 using BuildingBlocksPlatform.Extensions;
 using BuildingBlocksPlatform.Features.Decorators;
-using Koubot.Tool.Extensions;
+using MoLibrary.Tool.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
