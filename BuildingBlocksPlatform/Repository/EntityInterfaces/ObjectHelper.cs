@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using System.Reflection;
+using MoLibrary.Core.Extensions;
 
 namespace BuildingBlocksPlatform.Repository.EntityInterfaces;
 

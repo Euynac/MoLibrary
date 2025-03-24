@@ -1,7 +1,7 @@
 using System.Reflection;
-using BuildingBlocksPlatform.EventBus.Events;
 using BuildingBlocksPlatform.Extensions;
 using BuildingBlocksPlatform.SeedWork;
+using MoLibrary.EventBus.Events;
 
 namespace BuildingBlocksPlatform.Core.Model;
 

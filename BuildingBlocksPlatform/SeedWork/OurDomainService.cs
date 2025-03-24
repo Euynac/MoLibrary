@@ -1,11 +1,11 @@
-using BuildingBlocksPlatform.Authority.Security;
 using BuildingBlocksPlatform.StateStore;
 using MapsterMapper;
-using BuildingBlocksPlatform.EventBus.Abstractions;
 using BuildingBlocksPlatform.Features.MoGuid;
 using BuildingBlocksPlatform.Features.MoSnowflake;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.DependencyInjection.AppInterfaces;
+using MoLibrary.Authority.Security;
+using MoLibrary.EventBus.Abstractions;
 
 
 namespace BuildingBlocksPlatform.SeedWork;

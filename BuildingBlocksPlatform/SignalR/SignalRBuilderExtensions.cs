@@ -1,6 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
-using BuildingBlocksPlatform.Authority.Security;
 using BuildingBlocksPlatform.Converters;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -8,6 +7,8 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
+using MoLibrary.Authority.Security;
+using MoLibrary.Core.UtilsAbstract;
 using SignalRSwaggerGen;
 using SignalRSwaggerGen.Attributes;
 using Swashbuckle.AspNetCore.SwaggerGen;

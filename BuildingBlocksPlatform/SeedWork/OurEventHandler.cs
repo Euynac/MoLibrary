@@ -1,8 +1,8 @@
-using BuildingBlocksPlatform.EventBus.Abstractions;
 using BuildingBlocksPlatform.StateStore;
 using MapsterMapper;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.DependencyInjection.AppInterfaces;
+using MoLibrary.EventBus.Abstractions;
 
 namespace BuildingBlocksPlatform.SeedWork;
 

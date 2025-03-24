@@ -9,6 +9,7 @@ using BuildingBlocksPlatform.DomainDrivenDesign.ExceptionHandler;
 using BuildingBlocksPlatform.SeedWork;
 using BuildingBlocksPlatform.Features.Decorators;
 using System.Net.Http;
+using MoLibrary.Core.UtilsAbstract;
 using MoLibrary.Tool.MoResponse;
 
 namespace BuildingBlocksPlatform.Features.GRPCExtensions;

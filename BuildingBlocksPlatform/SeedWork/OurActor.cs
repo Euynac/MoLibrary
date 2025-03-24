@@ -1,4 +1,3 @@
-using BuildingBlocksPlatform.EventBus.Abstractions;
 using BuildingBlocksPlatform.Features.MoGuid;
 using BuildingBlocksPlatform.Features.MoSnowflake;
 using BuildingBlocksPlatform.StateStore;
@@ -7,6 +6,7 @@ using Dapr.Actors;
 using Dapr.Actors.Runtime;
 using MapsterMapper;
 using Microsoft.Extensions.DependencyInjection;
+using MoLibrary.EventBus.Abstractions;
 
 namespace BuildingBlocksPlatform.SeedWork;
 

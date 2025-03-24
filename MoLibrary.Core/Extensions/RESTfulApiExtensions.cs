@@ -1,10 +1,8 @@
-
 using MediatR;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using MoLibrary.Tool.MoResponse;
 
-namespace BuildingBlocksPlatform.Extensions;
+namespace MoLibrary.Core.Extensions;
 
 public static class RESTfulApiExtensions
 {

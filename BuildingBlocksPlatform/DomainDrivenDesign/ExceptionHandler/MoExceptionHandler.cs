@@ -1,5 +1,4 @@
 using System.Net;
-using BuildingBlocksPlatform.Authority.Implements.Authorization;
 using BuildingBlocksPlatform.DomainDrivenDesign.Validation;
 using BuildingBlocksPlatform.Features.Decorators;
 using BuildingBlocksPlatform.SeedWork;
@@ -9,6 +8,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.IdentityModel.Tokens;
 using MoLibrary.Tool.MoResponse;
+using MoLibrary.Authority.Implements.Authorization;
+using MoLibrary.Core.Extensions;
 
 namespace BuildingBlocksPlatform.DomainDrivenDesign.ExceptionHandler;
 

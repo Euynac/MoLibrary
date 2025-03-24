@@ -51,6 +51,8 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\MoLibrary.Authority\MoLibrary.Authority.csproj" />
     <ProjectReference Include="..\MoLibrary.Core\MoLibrary.Core.csproj" />
+    <ProjectReference Include="..\MoLibrary.DependencyInjection\MoLibrary.DependencyInjection.csproj" />
   </ItemGroup>
 </Project>

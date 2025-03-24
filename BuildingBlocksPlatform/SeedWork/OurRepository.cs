@@ -1,5 +1,4 @@
 using System.Linq.Expressions;
-using BuildingBlocksPlatform.Authority.Security;
 using BuildingBlocksPlatform.Extensions;
 using BuildingBlocksPlatform.Features.MoGuid;
 using BuildingBlocksPlatform.Features.MoSnowflake;
@@ -12,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.Extensions.DependencyInjection;
+using MoLibrary.Authority.Security;
 using Nito.AsyncEx;
 using ShardingCore.Sharding.Abstractions;
 
