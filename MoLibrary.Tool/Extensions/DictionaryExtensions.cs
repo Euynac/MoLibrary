@@ -1,7 +1,9 @@
+using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Dynamic;
 
-namespace BuildingBlocksPlatform.Extensions;
+namespace MoLibrary.Tool.Extensions;
 
 /// <summary>
 /// Extension methods for Dictionary.

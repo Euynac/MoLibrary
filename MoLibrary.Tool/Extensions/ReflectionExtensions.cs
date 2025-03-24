@@ -1,6 +1,7 @@
-using System.Reflection;
+using System;
+using System.Linq;
 
-namespace BuildingBlocksPlatform.Extensions;
+namespace MoLibrary.Tool.Extensions;
 
 public static class ReflectionExtensions
 {

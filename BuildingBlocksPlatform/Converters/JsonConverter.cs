@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Http;
 using System.Globalization;
 using BuildingBlocksPlatform.DataSync.Interfaces;
 using BuildingBlocksPlatform.SeedWork;
-using TimeExtensions = BuildingBlocksPlatform.Extensions.TimeExtensions;
+using TimeExtensions = MoLibrary.Tool.Extensions.TimeExtensions;
 
 namespace BuildingBlocksPlatform.Converters;
 
