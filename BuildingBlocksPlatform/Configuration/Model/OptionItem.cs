@@ -1,9 +1,9 @@
 using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using BuildingBlocksPlatform.Configuration.Annotations;
-using BuildingBlocksPlatform.Utils;
 using MoLibrary.Tool.Extensions;
 using Microsoft.Extensions.Configuration;
+using MoLibrary.Tool.Utils;
 
 namespace BuildingBlocksPlatform.Configuration.Model;
 

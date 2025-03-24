@@ -1,5 +1,4 @@
 using BuildingBlocksPlatform.Authority.Security;
-using BuildingBlocksPlatform.AutoModel.Interfaces;
 using BuildingBlocksPlatform.BackgroundWorker.Abstract.Jobs;
 using BuildingBlocksPlatform.BlobContainer;
 using BuildingBlocksPlatform.DomainDrivenDesign.AutoCrud;
@@ -11,6 +10,7 @@ using BuildingBlocksPlatform.Features.MoGuid;
 using BuildingBlocksPlatform.Features.MoSnowflake;
 using BuildingBlocksPlatform.Repository.EntityInterfaces;
 using Microsoft.Extensions.DependencyInjection;
+using MoLibrary.AutoModel.Interfaces;
 
 namespace BuildingBlocksPlatform.SeedWork;
 

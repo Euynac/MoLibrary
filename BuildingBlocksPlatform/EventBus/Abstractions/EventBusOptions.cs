@@ -1,4 +1,4 @@
-using BuildingBlocksPlatform.Utils;
+using MoLibrary.Tool.Utils;
 
 namespace BuildingBlocksPlatform.EventBus.Abstractions;
 

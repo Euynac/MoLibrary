@@ -1,12 +1,12 @@
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using BuildingBlocksPlatform.Utils;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using BuildingBlocksPlatform.EventBus.Attributes;
 using BuildingBlocksPlatform.Extensions;
 using Minio.DataModel.Notification;
+using MoLibrary.Tool.Utils;
 
 namespace BuildingBlocksPlatform.EventBus.Abstractions;
 

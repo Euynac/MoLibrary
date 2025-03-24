@@ -1,3 +1,4 @@
+using BuildingBlocksPlatform.DomainDrivenDesign.Attributes;
 using BuildingBlocksPlatform.DomainDrivenDesign.AutoCrud.Interfaces;
 using BuildingBlocksPlatform.Features;
 using BuildingBlocksPlatform.Repository.DtoInterfaces;

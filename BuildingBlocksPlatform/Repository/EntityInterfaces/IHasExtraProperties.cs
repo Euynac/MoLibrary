@@ -1,7 +1,7 @@
-using BuildingBlocksPlatform.Utils;
 using System.ComponentModel;
 using System.Globalization;
 using JetBrains.Annotations;
+using MoLibrary.Tool.Utils;
 
 namespace BuildingBlocksPlatform.Repository.EntityInterfaces;
 

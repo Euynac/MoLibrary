@@ -1,10 +1,6 @@
-using BuildingBlocksPlatform.DependencyInjection.AppInterfaces;
 using BuildingBlocksPlatform.DomainDrivenDesign.AutoController.Extensions;
 using BuildingBlocksPlatform.DomainDrivenDesign.AutoCrud;
-using BuildingBlocksPlatform.SeedWork;
-using MoLibrary.Tool.Extensions;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.Options;
@@ -15,7 +11,7 @@ namespace BuildingBlocksPlatform.DomainDrivenDesign.AutoController.Features;
 //仅需注册，ASP.NET Core会自动发现所有已注册的Provider进行处理。
 public class MoApiDescriptionProvider(IModelMetadataProvider modelMetadataProvider,
         IOptions<MvcOptions> mvcOptionsAccessor)
-    : IApiDescriptionProvider, ITransientDependency
+    : IApiDescriptionProvider
 {
     private readonly MvcOptions _mvcOptions = mvcOptionsAccessor.Value;
     public void OnProvidersExecuted(ApiDescriptionProviderContext context)

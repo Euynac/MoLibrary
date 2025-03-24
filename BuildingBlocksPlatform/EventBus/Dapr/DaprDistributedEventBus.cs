@@ -1,8 +1,8 @@
 using BuildingBlocksPlatform.EventBus.Abstractions;
 using BuildingBlocksPlatform.EventBus.Attributes;
-using BuildingBlocksPlatform.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using MoLibrary.Tool.Utils;
 
 
 namespace BuildingBlocksPlatform.EventBus.Dapr;

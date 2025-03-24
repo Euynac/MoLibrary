@@ -1,16 +1,14 @@
 using System.Reflection;
-using BuildingBlocksPlatform.DependencyInjection.AppInterfaces;
 using BuildingBlocksPlatform.DomainDrivenDesign.AutoController.Interfaces;
 using BuildingBlocksPlatform.DomainDrivenDesign.AutoController.Settings;
-using BuildingBlocksPlatform.Extensions;
-using BuildingBlocksPlatform.Utils;
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
+using MoLibrary.Tool.Utils;
 
 
 namespace BuildingBlocksPlatform.DomainDrivenDesign.AutoController.Features;
 
 public class MoConventionalRouteBuilder
-    : IMoConventionalRouteBuilder, ITransientDependency
+    : IMoConventionalRouteBuilder
 {
     public virtual string Build(
         string rootPath,

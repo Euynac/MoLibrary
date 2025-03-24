@@ -1,7 +1,6 @@
 using System.Reflection;
 using BuildingBlocksPlatform.DependencyInjection.Implements;
-using BuildingBlocksPlatform.Utils;
-
+using MoLibrary.Tool.Utils;
 
 
 namespace BuildingBlocksPlatform.DependencyInjection.Attributes;

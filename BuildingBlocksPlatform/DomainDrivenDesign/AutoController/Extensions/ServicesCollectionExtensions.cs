@@ -3,6 +3,7 @@ using BuildingBlocksPlatform.DomainDrivenDesign.AutoController.Features;
 using BuildingBlocksPlatform.DomainDrivenDesign.AutoController.Interfaces;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -21,6 +22,8 @@ public static class ServicesCollectionExtensions
         Action<MvcOptions>? setupAction = null)
     {
         services.AddTransient<IMoServiceConvention, MoServiceConvention>();
+        services.AddTransient<IApiDescriptionProvider, MoApiDescriptionProvider>();
+        services.AddTransient<IMoConventionalRouteBuilder, MoConventionalRouteBuilder>();
         services.AddSingleton<MoResultFilterMvc>();
 
         return services.AddControllers(options =>
