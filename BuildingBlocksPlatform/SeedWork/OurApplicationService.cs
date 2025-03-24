@@ -1,5 +1,3 @@
-using BuildingBlocksPlatform.Authority.Authorization;
-using BuildingBlocksPlatform.Authority.Security;
 using BuildingBlocksPlatform.BackgroundWorker.Abstract.Jobs;
 using BuildingBlocksPlatform.BlobContainer;
 using BuildingBlocksPlatform.DomainDrivenDesign;
@@ -7,13 +5,12 @@ using BuildingBlocksPlatform.StateStore;
 using MapsterMapper;
 using MediatR;
 using Microsoft.Extensions.Logging.Abstractions;
-
-using BuildingBlocksPlatform.EventBus.Abstractions;
-using BuildingBlocksPlatform.EventBus.Abstractions;
 using BuildingBlocksPlatform.Features.MoGuid;
 using MoLibrary.Tool.General;
 using BuildingBlocksPlatform.Features.MoSnowflake;
 using Microsoft.Extensions.DependencyInjection;
+using MoLibrary.Authority.Security;
+using MoLibrary.EventBus.Abstractions;
 
 namespace BuildingBlocksPlatform.SeedWork;
 

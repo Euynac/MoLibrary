@@ -1,4 +1,4 @@
-using BuildingBlocksPlatform.EventBus.Attributes;
+using MoLibrary.EventBus.Attributes;
 
 namespace BuildingBlocksPlatform.Transaction.EntityEvent;
 

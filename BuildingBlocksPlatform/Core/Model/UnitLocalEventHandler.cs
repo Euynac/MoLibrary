@@ -1,7 +1,6 @@
-using BuildingBlocksPlatform.EventBus.Abstractions;
-using BuildingBlocksPlatform.EventBus.Events;
 using BuildingBlocksPlatform.Extensions;
 using Microsoft.Extensions.DependencyInjection;
+using MoLibrary.EventBus.Abstractions;
 
 namespace BuildingBlocksPlatform.Core.Model;
 

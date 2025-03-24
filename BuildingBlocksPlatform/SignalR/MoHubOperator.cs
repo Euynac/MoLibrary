@@ -1,6 +1,6 @@
 using System.Security.Claims;
-using BuildingBlocksPlatform.Authority.Security;
 using Microsoft.AspNetCore.SignalR;
+using MoLibrary.Authority.Security;
 
 namespace BuildingBlocksPlatform.SignalR;
 

@@ -1,11 +1,8 @@
-using BuildingBlocksPlatform.EventBus.Abstractions;
 using BuildingBlocksPlatform.ObjectMapper;
 using BuildingBlocksPlatform.Repository.EntityInterfaces;
 using BuildingBlocksPlatform.Repository.Extensions;
 using Microsoft.Extensions.Options;
-
-
-
+using MoLibrary.EventBus.Abstractions;
 
 namespace BuildingBlocksPlatform.Transaction.EntityEvent;
 

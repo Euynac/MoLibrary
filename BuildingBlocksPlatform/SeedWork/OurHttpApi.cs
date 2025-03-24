@@ -1,8 +1,8 @@
 using System.Net.Http.Headers;
-using BuildingBlocksPlatform.Authority.Security;
 using BuildingBlocksPlatform.DataSync.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using MoLibrary.Authority.Security;
 using MoLibrary.DependencyInjection.AppInterfaces;
 
 namespace BuildingBlocksPlatform.SeedWork;

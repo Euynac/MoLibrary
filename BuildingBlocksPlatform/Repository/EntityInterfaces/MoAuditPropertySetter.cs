@@ -1,5 +1,5 @@
-using BuildingBlocksPlatform.Authority.Security;
 using BuildingBlocksPlatform.Repository.EntityInterfaces.Auditing;
+using MoLibrary.Authority.Security;
 
 namespace BuildingBlocksPlatform.Repository.EntityInterfaces;
 public class MoAuditPropertySetter(IMoCurrentUser currentUser) : IMoAuditPropertySetter
