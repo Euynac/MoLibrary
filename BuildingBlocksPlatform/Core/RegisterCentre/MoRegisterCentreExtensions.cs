@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.OpenApi.Models;
+using MoLibrary.Tool.MoResponse;
 
 namespace BuildingBlocksPlatform.Core.RegisterCentre;
 

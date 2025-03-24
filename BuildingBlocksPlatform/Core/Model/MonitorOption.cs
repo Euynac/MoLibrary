@@ -1,4 +1,4 @@
-using Koubot.Tool.Extensions;
+using MoLibrary.Tool.Extensions;
 
 namespace BuildingBlocksPlatform.Core.Model;
 

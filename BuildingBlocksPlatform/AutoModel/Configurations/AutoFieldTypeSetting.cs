@@ -1,6 +1,6 @@
 using System.Collections;
 using System.Text.Json.Serialization;
-using Koubot.Tool.Extensions;
+using MoLibrary.Tool.Extensions;
 
 namespace BuildingBlocksPlatform.AutoModel.Configurations;
 

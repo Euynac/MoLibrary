@@ -1,5 +1,5 @@
 using BuildingBlocksPlatform.SeedWork;
-using Koubot.Tool.General;
+using MoLibrary.Tool.General;
 using Microsoft.AspNetCore.SignalR;
 
 namespace BuildingBlocksPlatform.SignalR;

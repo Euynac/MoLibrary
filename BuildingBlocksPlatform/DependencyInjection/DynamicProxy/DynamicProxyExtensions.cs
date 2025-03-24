@@ -139,7 +139,7 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
     /// </remarks>
     private static Type AutoFindImplementationType(Func<IServiceProvider, object> func)
     {
-        if (func.Method.ReturnType.StripNullable() != typeof(object)) return func.Method.ReturnType;
+        if (func.Method.ReturnType != typeof(object)) return func.Method.ReturnType;
         if (func is { Target: { } closureFuncObj })
         {
             var typeField = closureFuncObj.GetType().GetFields().FirstOrDefault(p => p.FieldType == typeof(Type));

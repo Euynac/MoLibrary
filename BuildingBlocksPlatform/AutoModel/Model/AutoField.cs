@@ -1,7 +1,7 @@
 using System.Text;
 using System.Text.Json.Serialization;
 using BuildingBlocksPlatform.AutoModel.Configurations;
-using Koubot.Tool.Extensions;
+using MoLibrary.Tool.Extensions;
 
 namespace BuildingBlocksPlatform.AutoModel.Model;
 

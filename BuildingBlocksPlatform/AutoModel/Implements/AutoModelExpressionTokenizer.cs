@@ -5,7 +5,7 @@ using BuildingBlocksPlatform.AutoModel.Configurations;
 using BuildingBlocksPlatform.AutoModel.Exceptions;
 using BuildingBlocksPlatform.AutoModel.Interfaces;
 using BuildingBlocksPlatform.AutoModel.Model;
-using Koubot.Tool.Extensions;
+using MoLibrary.Tool.Extensions;
 using Koubot.Tool.String;
 using Microsoft.Extensions.Options;
 

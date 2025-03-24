@@ -1,5 +1,5 @@
 using BuildingBlocksPlatform.Configuration.Annotations;
-using Koubot.Tool.Extensions;
+using MoLibrary.Tool.Extensions;
 using Microsoft.Extensions.Configuration;
 
 namespace BuildingBlocksPlatform.Configuration.Model;

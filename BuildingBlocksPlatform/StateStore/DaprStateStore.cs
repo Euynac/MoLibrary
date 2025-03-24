@@ -1,6 +1,6 @@
 using BuildingBlocksPlatform.StateStore.QueryBuilder;
 using BuildingBlocksPlatform.StateStore.QueryBuilder.Interfaces;
-using Koubot.Tool.Extensions;
+using MoLibrary.Tool.Extensions;
 
 namespace BuildingBlocksPlatform.StateStore;
 

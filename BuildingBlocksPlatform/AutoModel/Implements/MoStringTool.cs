@@ -1,6 +1,6 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
-using Koubot.Tool.Extensions;
+using MoLibrary.Tool.Extensions;
 
 namespace BuildingBlocksPlatform.AutoModel.Implements;
 

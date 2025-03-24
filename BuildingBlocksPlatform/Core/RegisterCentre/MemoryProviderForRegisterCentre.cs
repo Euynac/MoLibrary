@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using BuildingBlocksPlatform.SeedWork;
 using Microsoft.AspNetCore.Http;
+using MoLibrary.Tool.MoResponse;
 
 namespace BuildingBlocksPlatform.Core.RegisterCentre;
 

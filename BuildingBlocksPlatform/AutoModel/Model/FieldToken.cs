@@ -1,4 +1,4 @@
-using Koubot.Tool.Extensions;
+using System.ComponentModel;
 using Koubot.Tool.String;
 
 namespace BuildingBlocksPlatform.AutoModel.Model;
