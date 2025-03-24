@@ -2,6 +2,7 @@ using BuildingBlocksPlatform.Core.Model;
 using BuildingBlocksPlatform.SeedWork;
 using MoLibrary.Tool.Extensions;
 using Microsoft.Extensions.DependencyInjection;
+using MoLibrary.Core.Features;
 
 namespace BuildingBlocksPlatform.Core;
 
