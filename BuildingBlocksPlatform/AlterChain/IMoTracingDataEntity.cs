@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
-using BuildingBlocksPlatform.Repository.EntityInterfaces;
+using MoLibrary.Repository.EntityInterfaces;
 
 namespace BuildingBlocksPlatform.AlterChain;
 

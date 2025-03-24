@@ -1,5 +1,4 @@
-using BuildingBlocksPlatform.Repository.DtoInterfaces;
-
+using MoLibrary.Repository.DtoInterfaces;
 
 namespace BuildingBlocksPlatform.SeedWork;
 public abstract class OurAuditedEntityDto : OurAuditedEntityDto<long>

@@ -1,12 +1,12 @@
 using BuildingBlocksPlatform.Features.MoGuid;
-using BuildingBlocksPlatform.Features.MoSnowflake;
 using BuildingBlocksPlatform.StateStore;
-using BuildingBlocksPlatform.Transaction;
 using Dapr.Actors;
 using Dapr.Actors.Runtime;
 using MapsterMapper;
 using Microsoft.Extensions.DependencyInjection;
+using MoLibrary.Core.Features.MoSnowflake;
 using MoLibrary.EventBus.Abstractions;
+using MoLibrary.Repository.Transaction;
 
 namespace BuildingBlocksPlatform.SeedWork;
 

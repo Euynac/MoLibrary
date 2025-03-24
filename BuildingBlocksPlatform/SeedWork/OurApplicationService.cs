@@ -7,9 +7,9 @@ using MediatR;
 using Microsoft.Extensions.Logging.Abstractions;
 using BuildingBlocksPlatform.Features.MoGuid;
 using MoLibrary.Tool.General;
-using BuildingBlocksPlatform.Features.MoSnowflake;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Authority.Security;
+using MoLibrary.Core.Features.MoSnowflake;
 using MoLibrary.EventBus.Abstractions;
 
 namespace BuildingBlocksPlatform.SeedWork;

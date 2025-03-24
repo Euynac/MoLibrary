@@ -4,8 +4,6 @@ global using Microsoft.Extensions.Logging;
 global using System.Text.Json;
 global using System.Threading;
 global using System.Threading.Tasks;
-global using BuildingBlocksPlatform.Transaction;
 global using BuildingBlocksPlatform.DomainDrivenDesign;
 global using MoLibrary.Tool.Extensions;
 global using BuildingBlocksPlatform.Extensions;
-global using BuildingBlocksPlatform.Repository.Interfaces;

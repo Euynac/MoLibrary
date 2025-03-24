@@ -5,12 +5,12 @@ using BuildingBlocksPlatform.StateStore;
 using MapsterMapper;
 using BuildingBlocksPlatform.DomainDrivenDesign.AutoCrud.Interfaces;
 using BuildingBlocksPlatform.Features.MoGuid;
-using BuildingBlocksPlatform.Features.MoSnowflake;
-using BuildingBlocksPlatform.Repository.EntityInterfaces;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.AutoModel.Interfaces;
 using MoLibrary.Authority.Security;
+using MoLibrary.Core.Features.MoSnowflake;
 using MoLibrary.EventBus.Abstractions;
+using MoLibrary.Repository.EntityInterfaces;
 
 namespace BuildingBlocksPlatform.SeedWork;
 

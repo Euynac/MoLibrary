@@ -1,7 +1,7 @@
 using BuildingBlocksPlatform.DataSync.Interfaces;
-using BuildingBlocksPlatform.Repository.EntityInterfaces;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using MoLibrary.DependencyInjection.AppInterfaces;
+using MoLibrary.Repository.EntityInterfaces;
 
 namespace BuildingBlocksPlatform.DataSync;
 

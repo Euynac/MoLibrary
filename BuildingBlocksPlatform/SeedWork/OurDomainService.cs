@@ -1,10 +1,10 @@
 using BuildingBlocksPlatform.StateStore;
 using MapsterMapper;
 using BuildingBlocksPlatform.Features.MoGuid;
-using BuildingBlocksPlatform.Features.MoSnowflake;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.DependencyInjection.AppInterfaces;
 using MoLibrary.Authority.Security;
+using MoLibrary.Core.Features.MoSnowflake;
 using MoLibrary.EventBus.Abstractions;
 
 

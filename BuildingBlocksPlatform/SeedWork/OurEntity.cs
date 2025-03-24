@@ -1,6 +1,5 @@
-using BuildingBlocksPlatform.Features.MoSnowflake;
-using BuildingBlocksPlatform.Repository.EntityInterfaces;
-
+using MoLibrary.Core.Features.MoSnowflake;
+using MoLibrary.Repository.EntityInterfaces;
 
 namespace BuildingBlocksPlatform.SeedWork;
 

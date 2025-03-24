@@ -3,6 +3,7 @@ using MapsterMapper;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.DependencyInjection.AppInterfaces;
 using MoLibrary.EventBus.Abstractions;
+using MoLibrary.Repository.Transaction;
 
 namespace BuildingBlocksPlatform.SeedWork;
 
