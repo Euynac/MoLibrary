@@ -1,6 +1,5 @@
 using BuildingBlocksPlatform.BackgroundWorker.Abstract.Jobs;
 using BuildingBlocksPlatform.BlobContainer;
-using BuildingBlocksPlatform.DomainDrivenDesign;
 using BuildingBlocksPlatform.StateStore;
 using MapsterMapper;
 using MediatR;
@@ -11,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Authority.Security;
 using MoLibrary.Core.Features.MoSnowflake;
 using MoLibrary.EventBus.Abstractions;
+using MoLibrary.DomainDrivenDesign;
 
 namespace BuildingBlocksPlatform.SeedWork;
 

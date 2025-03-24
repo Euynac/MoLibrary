@@ -1,4 +1,5 @@
 using BuildingBlocksPlatform.SeedWork;
+using MoLibrary.DomainDrivenDesign;
 
 namespace BuildingBlocksPlatform.Core.Model;
 

@@ -1,3 +1,5 @@
+using MoLibrary.DomainDrivenDesign;
+
 namespace BuildingBlocksPlatform.Core.Model;
 
 /// <summary>
