@@ -6,6 +6,7 @@ using MoLibrary.DependencyInjection.AppInterfaces;
 using MoLibrary.Authority.Security;
 using MoLibrary.Core.Features.MoSnowflake;
 using MoLibrary.EventBus.Abstractions;
+using MoLibrary.DomainDrivenDesign;
 
 
 namespace BuildingBlocksPlatform.SeedWork;

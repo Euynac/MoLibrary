@@ -5,7 +5,6 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Text;
 using System.Text.Json.Nodes;
 using BuildingBlocksPlatform.Converters;
-using BuildingBlocksPlatform.DomainDrivenDesign.ExceptionHandler;
 using BuildingBlocksPlatform.SeedWork;
 using BuildingBlocksPlatform.Features.Decorators;
 using System.Net.Http;
@@ -13,6 +12,7 @@ using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Features;
 using MoLibrary.Core.UtilsAbstract;
 using MoLibrary.Tool.MoResponse;
+using MoLibrary.DomainDrivenDesign.ExceptionHandler;
 
 namespace BuildingBlocksPlatform.Features.GRPCExtensions;
 
