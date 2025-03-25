@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Http;
 
-namespace BuildingBlocksPlatform.Extensions;
+namespace MoLibrary.Core.Extensions;
 
 public static class HttpContextExtensions
 {

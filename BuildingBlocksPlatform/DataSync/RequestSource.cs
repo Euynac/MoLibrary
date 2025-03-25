@@ -1,4 +1,4 @@
-using BuildingBlocksPlatform.Interfaces;
+using BuildingBlocksPlatform.DataSync.Interfaces;
 using Microsoft.AspNetCore.Http;
 using MoLibrary.DependencyInjection.AppInterfaces;
 

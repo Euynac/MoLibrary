@@ -1,7 +1,5 @@
 using BuildingBlocksPlatform.BlobContainer;
-using BuildingBlocksPlatform.StateStore;
 using MapsterMapper;
-using BuildingBlocksPlatform.Features.MoGuid;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.AutoModel.Interfaces;
 using MoLibrary.Authority.Security;
@@ -11,6 +9,8 @@ using MoLibrary.EventBus.Abstractions;
 using MoLibrary.Repository.EntityInterfaces;
 using MoLibrary.DomainDrivenDesign.AutoCrud;
 using MoLibrary.DomainDrivenDesign.AutoCrud.Interfaces;
+using MoLibrary.Framework.Features.MoGuid;
+using MoLibrary.StateStore;
 
 namespace BuildingBlocksPlatform.SeedWork;
 
@@ -88,12 +88,12 @@ public abstract class OurCrudAppService<TEntity, TGetOutputDto, TGetListOutputDt
     /// <summary>
     /// 分布式事件总线
     /// </summary>
-    protected IDistributedEventBus _domainEventBus => ServiceProvider.GetRequiredService<IDistributedEventBus>()!;
+    protected IMoDistributedEventBus _domainEventBus => ServiceProvider.GetRequiredService<IMoDistributedEventBus>()!;
 
     /// <summary>
     /// 本地事件总线
     /// </summary>
-    protected ILocalEventBus _localEventBus => ServiceProvider.GetRequiredService<ILocalEventBus>()!;
+    protected IMoLocalEventBus _localEventBus => ServiceProvider.GetRequiredService<IMoLocalEventBus>()!;
 
     /// <summary>
     /// Guid生成器

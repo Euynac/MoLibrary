@@ -10,13 +10,13 @@ namespace MoLibrary.EventBus.Abstractions;
 /// <summary>
 /// Implements EventBus as Singleton pattern.
 /// </summary>
-[ExposeServices(typeof(ILocalEventBus), typeof(LocalEventBus))]
+[ExposeServices(typeof(IMoLocalEventBus), typeof(LocalEventBus))]
 public class LocalEventBus(
     IOptions<LocalEventBusOptions> options,
     IServiceScopeFactory serviceScopeFactory,
     IEventHandlerInvoker eventHandlerInvoker,
     ILogger<LocalEventBus> logger)
-    : EventBusBase(serviceScopeFactory, eventHandlerInvoker), ILocalEventBus, ISingletonDependency
+    : EventBusBase(serviceScopeFactory, eventHandlerInvoker), IMoLocalEventBus, ISingletonDependency
 {
     /// <summary>
     /// Reference to the Logger.
@@ -25,13 +25,13 @@ public class LocalEventBus(
 
     protected LocalEventBusOptions Options { get; } = options.Value;
 
-    public override ITypeList<IEventHandler> GetDefaultHandlers()
+    public override ITypeList<IMoEventHandler> GetDefaultHandlers()
     {
         return Options.Handlers;
     }
 
     /// <inheritdoc/>
-    public virtual IDisposable Subscribe<TEvent>(ILocalEventHandler<TEvent> handler) where TEvent : class
+    public virtual IDisposable Subscribe<TEvent>(IMoLocalEventHandler<TEvent> handler) where TEvent : class
     {
         return Subscribe(typeof(TEvent), handler);
     }

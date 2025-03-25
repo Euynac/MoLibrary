@@ -1,9 +1,9 @@
-using BuildingBlocksPlatform.StateStore;
 using MapsterMapper;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.DependencyInjection.AppInterfaces;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.Repository.Transaction;
+using MoLibrary.StateStore;
 
 namespace BuildingBlocksPlatform.SeedWork;
 
@@ -11,7 +11,7 @@ namespace BuildingBlocksPlatform.SeedWork;
 /// <summary>
 /// 事件处理抽象基类。不要继承该类，而选择继承<see cref="OurDomainEventHandler{THandler,TEvent}"/>或<see cref="OurLocalEventHandler{THandler,TEvent}"/>。
 /// </summary>
-public abstract class OurEventHandlerBase<THandler,TEvent> : IEventHandler<TEvent>, IMoServiceProviderInjector
+public abstract class OurEventHandlerBase<THandler,TEvent> : IMoEventHandler<TEvent>, IMoServiceProviderInjector
 {
     internal OurEventHandlerBase()
     {
@@ -24,7 +24,7 @@ public abstract class OurEventHandlerBase<THandler,TEvent> : IEventHandler<TEven
         ServiceProvider.GetRequiredService<ILogger<THandler>>();
 
     protected IMapper _mapper => ServiceProvider.GetRequiredService<IMapper>()!;
-    protected IDistributedEventBus _domainEventBus => ServiceProvider.GetRequiredService<IDistributedEventBus>()!;
+    protected IMoDistributedEventBus _domainEventBus => ServiceProvider.GetRequiredService<IMoDistributedEventBus>()!;
 
     /// <summary>
     /// 状态存储
@@ -38,7 +38,7 @@ public abstract class OurEventHandlerBase<THandler,TEvent> : IEventHandler<TEven
 /// </summary>
 /// <typeparam name="THandler"></typeparam>
 /// <typeparam name="TEvent"></typeparam>
-public abstract class OurDomainEventHandler<THandler, TEvent> : OurEventHandlerBase<THandler, TEvent>, IDistributedEventHandler<TEvent>,
+public abstract class OurDomainEventHandler<THandler, TEvent> : OurEventHandlerBase<THandler, TEvent>, IMoDistributedEventHandler<TEvent>,
     ITransientDependency where THandler : OurDomainEventHandler<THandler, TEvent>
 {
     /// <summary>
@@ -63,7 +63,7 @@ public abstract class OurDomainEventHandler<THandler, TEvent> : OurEventHandlerB
 /// </summary>
 /// <typeparam name="THandler"></typeparam>
 /// <typeparam name="TEvent"></typeparam>
-public abstract class OurLocalEventHandler<THandler, TEvent> : OurEventHandlerBase<THandler, TEvent>, ILocalEventHandler<TEvent>,
+public abstract class OurLocalEventHandler<THandler, TEvent> : OurEventHandlerBase<THandler, TEvent>, IMoLocalEventHandler<TEvent>,
     ITransientDependency where THandler : OurLocalEventHandler<THandler, TEvent>
 {
     /// <summary>

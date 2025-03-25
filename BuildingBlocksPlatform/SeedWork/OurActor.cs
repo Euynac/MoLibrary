@@ -1,12 +1,12 @@
-using BuildingBlocksPlatform.Features.MoGuid;
-using BuildingBlocksPlatform.StateStore;
 using Dapr.Actors;
 using Dapr.Actors.Runtime;
 using MapsterMapper;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Features.MoSnowflake;
 using MoLibrary.EventBus.Abstractions;
+using MoLibrary.Framework.Features.MoGuid;
 using MoLibrary.Repository.Transaction;
+using MoLibrary.StateStore;
 
 namespace BuildingBlocksPlatform.SeedWork;
 
@@ -62,12 +62,12 @@ public abstract class OurActor<T>(
     /// <summary>
     ///     分布式事件总线
     /// </summary>
-    protected IDistributedEventBus _domainEventBus => _lazyServiceProvider.GetRequiredService<IDistributedEventBus>()!;
+    protected IMoDistributedEventBus _domainEventBus => _lazyServiceProvider.GetRequiredService<IMoDistributedEventBus>()!;
 
     /// <summary>
     ///     本地事件总线
     /// </summary>
-    protected ILocalEventBus _localEventBus => _lazyServiceProvider.GetRequiredService<ILocalEventBus>()!;
+    protected IMoLocalEventBus _localEventBus => _lazyServiceProvider.GetRequiredService<IMoLocalEventBus>()!;
 
     /// <summary>
     ///     Guid生成器

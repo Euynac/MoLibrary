@@ -1,4 +1,3 @@
-using BuildingBlocksPlatform.StateStore;
 using MapsterMapper;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.BackgroundJob.Abstract.Jobs;
@@ -7,6 +6,7 @@ using MoLibrary.Core.Features.MoSnowflake;
 using MoLibrary.DependencyInjection.AppInterfaces;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.Repository.Transaction;
+using MoLibrary.StateStore;
 
 namespace BuildingBlocksPlatform.SeedWork;
 
@@ -39,12 +39,12 @@ public abstract class OurBackgroundJob<TArgs>(IMoServiceProvider serviceProvider
     /// <summary>
     /// 分布式事件总线
     /// </summary>
-    protected IDistributedEventBus _domainEventBus => Provider.GetRequiredService<IDistributedEventBus>()!;
+    protected IMoDistributedEventBus _domainEventBus => Provider.GetRequiredService<IMoDistributedEventBus>()!;
 
     /// <summary>
     /// 本地事件总线
     /// </summary>
-    protected ILocalEventBus _localEventBus => Provider.GetRequiredService<ILocalEventBus>()!;
+    protected IMoLocalEventBus _localEventBus => Provider.GetRequiredService<IMoLocalEventBus>()!;
 
 
     /// <summary>

@@ -9,9 +9,9 @@ namespace MoLibrary.EventBus.Abstractions;
 /// </remarks>
 public class TransientEventHandlerFactory<THandler>()
     : TransientEventHandlerFactory(typeof(THandler)), IEventHandlerFactory
-    where THandler : IEventHandler, new()
+    where THandler : IMoEventHandler, new()
 {
-    protected override IEventHandler CreateHandler()
+    protected override IMoEventHandler CreateHandler()
     {
         return new THandler();
     }
@@ -48,8 +48,8 @@ public class TransientEventHandlerFactory(Type handlerType) : IEventHandlerFacto
             .Any(f => f.HandlerType == HandlerType);
     }
 
-    protected virtual IEventHandler CreateHandler()
+    protected virtual IMoEventHandler CreateHandler()
     {
-        return (IEventHandler)Activator.CreateInstance(HandlerType)!;
+        return (IMoEventHandler)Activator.CreateInstance(HandlerType)!;
     }
 }

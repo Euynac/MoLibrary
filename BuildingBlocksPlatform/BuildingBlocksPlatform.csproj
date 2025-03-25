@@ -11,12 +11,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Configuration\Providers\" />
-    <Folder Include="Core\Dashboard\" />
-    <Folder Include="Core\Interfaces\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\BackgroundJob\Hangfire.HttpJob\Hangfire.HttpJob.csproj" />
     <ProjectReference Include="..\MoLibrary.Core\MoLibrary.Core.csproj" />
     <ProjectReference Include="..\MoLibrary.Framework\MoLibrary.Framework.csproj" />

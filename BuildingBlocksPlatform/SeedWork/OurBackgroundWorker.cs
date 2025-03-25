@@ -1,5 +1,3 @@
-using BuildingBlocksPlatform.Features;
-using BuildingBlocksPlatform.StateStore;
 using MapsterMapper;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.BackgroundJob.Hangfire.Workers;
@@ -7,7 +5,9 @@ using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Features.MoSnowflake;
 using MoLibrary.DependencyInjection.AppInterfaces;
 using MoLibrary.EventBus.Abstractions;
+using MoLibrary.Framework.Features;
 using MoLibrary.Repository.Transaction;
+using MoLibrary.StateStore;
 
 namespace BuildingBlocksPlatform.SeedWork;
 
@@ -53,12 +53,12 @@ public abstract class OurBackgroundWorker<TWorker>(string cronExpression, IMoSer
     /// <summary>
     /// 分布式事件总线
     /// </summary>
-    protected IDistributedEventBus _domainEventBus => ServiceProvider.GetRequiredService<IDistributedEventBus>()!;
+    protected IMoDistributedEventBus _domainEventBus => ServiceProvider.GetRequiredService<IMoDistributedEventBus>()!;
 
     /// <summary>
     /// 本地事件总线
     /// </summary>
-    protected ILocalEventBus _localEventBus => ServiceProvider.GetRequiredService<ILocalEventBus>()!;
+    protected IMoLocalEventBus _localEventBus => ServiceProvider.GetRequiredService<IMoLocalEventBus>()!;
 
     /// <summary>
     /// 状态存储

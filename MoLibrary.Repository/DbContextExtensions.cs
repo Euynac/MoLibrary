@@ -1,10 +1,9 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Query.Internal;
-using System.Diagnostics.CodeAnalysis;
 using MoLibrary.Repository.EntityInterfaces;
 
-
-namespace BuildingBlocksPlatform.Extensions;
+namespace MoLibrary.Repository;
 
 public static class DbContextExtensions
 {

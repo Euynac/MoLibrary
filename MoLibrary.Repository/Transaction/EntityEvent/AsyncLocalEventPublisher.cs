@@ -18,7 +18,7 @@ public class AsyncEventBuffer
     public HashSet<int> DistributedEventsHash { get; } = [];
     public HashSet<int> LocalEventsHash { get; } = [];
 
-    public async Task Flush(ILocalEventBus eventBus, IDistributedEventBus distributedEventBus)
+    public async Task Flush(IMoLocalEventBus eventBus, IMoDistributedEventBus distributedEventBus)
     {
         while (LocalEvents.Count != 0 || DistributedEvents.Count != 0)
         {
@@ -86,12 +86,12 @@ public interface IAsyncLocalEventStore
 public class AsyncLocalEventPublisher(
     IObjectMapper entityToEtoMapper,
     IOptions<DistributedEntityEventOptions> distributedEntityEventOptions,
-    ILocalEventBus localEventBus,
-    IDistributedEventBus distributedEventBus,
+    IMoLocalEventBus localEventBus,
+    IMoDistributedEventBus distributedEventBus,
     ILogger<AsyncLocalEventPublisher> logger, IAsyncLocalEventStore bufferStore) : IAsyncLocalEventPublisher
 {
-    public ILocalEventBus LocalEventBus { get; set; } = localEventBus;
-    public IDistributedEventBus DistributedEventBus { get; set; } = distributedEventBus;
+    public IMoLocalEventBus LocalEventBus { get; set; } = localEventBus;
+    public IMoDistributedEventBus DistributedEventBus { get; set; } = distributedEventBus;
     protected IObjectMapper EntityToEtoMapper { get; } = entityToEtoMapper;
     protected DistributedEntityEventOptions DistributedEntityEventOptions { get; } = distributedEntityEventOptions.Value;
 
@@ -184,7 +184,7 @@ public class AsyncLocalEventPublisher(
 
 
     protected virtual void TriggerEventWithEntity(
-        IEventBus eventPublisher,
+        IMoEventBus eventPublisher,
         Type genericEventType,
         object entityOrEto,
         object originalEntity)

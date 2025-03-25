@@ -5,6 +5,7 @@ using Hangfire.Common;
 using Hangfire.States;
 using Hangfire.Storage;
 using MoLibrary.Core.Features;
+using MoLibrary.Logging;
 using MoLibrary.Tool.Web;
 
 namespace MoLibrary.BackgroundJob.Attributes;
