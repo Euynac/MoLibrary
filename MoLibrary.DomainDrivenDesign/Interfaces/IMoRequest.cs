@@ -11,3 +11,11 @@ public interface IMoRequest<TRequest> : IRequest<Res<TRequest>>
 {
     
 }
+
+/// <summary>
+/// 简单请求类接口
+/// </summary>
+public interface IMoSimpleRequest : IRequest<Res>
+{
+
+}

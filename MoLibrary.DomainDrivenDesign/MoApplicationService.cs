@@ -61,3 +61,13 @@ public abstract class MoApplicationService<THandler, TRequest, TResponse> :
     where THandler : MoApplicationService where TRequest : IMoRequest<TResponse>
 {
 }
+/// <summary>
+/// Base class for application services with a specific handler, request, and response wrapped in a <see cref="Res"/>.
+/// </summary>
+/// <typeparam name="THandler">The type of the handler.</typeparam>
+/// <typeparam name="TRequest">The type of the request.</typeparam>
+public abstract class MoSimpleApplicationService<THandler, TRequest> :
+    MoCustomApplicationService<THandler, TRequest, Res>
+    where THandler : MoApplicationService where TRequest : IMoSimpleRequest
+{
+}
