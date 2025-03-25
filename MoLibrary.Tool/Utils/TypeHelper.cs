@@ -69,7 +69,7 @@ public static class TypeHelper
             return true;
         }
 
-        if (includeNullables && IsNullable(type) && type.GenericTypeArguments.Any())
+        if (includeNullables && type.IsNullableValueType() && type.GenericTypeArguments.Any())
         {
             return IsPrimitiveExtendedInternal(type.GenericTypeArguments[0], includeEnums);
         }
@@ -320,7 +320,7 @@ public static class TypeHelper
         }
 
         if (includeNullable &&
-            IsNullable(type) &&
+            type.IsNullableValueType() &&
             FloatingTypes.Contains(type.GenericTypeArguments[0]))
         {
             return true;
@@ -341,12 +341,6 @@ public static class TypeHelper
             .ConvertFrom(value)!;
     }
 
-    public static Type StripNullable(this Type type)
-    {
-        return IsNullable(type)
-            ? type.GenericTypeArguments[0]
-            : type;
-    }
 
     public static bool IsDefaultValue(object? obj)
     {

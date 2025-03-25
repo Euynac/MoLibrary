@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 
 namespace MoLibrary.Tool.Extensions;
 
@@ -62,6 +63,78 @@ public static class LockExtensions
         lock (source)
         {
             return func(source);
+        }
+    }
+    /// <summary>
+    /// Doing read action in a read lock.
+    /// </summary>
+    /// <param name="rwLock"></param>
+    /// <param name="action"></param>
+    public static T DoReadAction<T>(this ReaderWriterLockSlim rwLock, Func<T> action)
+    {
+        rwLock.EnterReadLock();
+        try
+        {
+            return action();
+        }
+        finally
+        {
+            rwLock.ExitReadLock();
+        }
+    }
+    /// <summary>
+    /// Doing read action in a read lock.
+    /// </summary>
+    /// <param name="rwLock"></param>
+    /// <param name="action"></param>
+    public static void DoReadAction(this ReaderWriterLockSlim rwLock, Action action)
+    {
+        rwLock.EnterReadLock();
+        try
+        {
+            action();
+        }
+        finally
+        {
+            rwLock.ExitReadLock();
+        }
+    }
+
+    /// <summary>
+    /// Doing write action in a write lock.
+    /// </summary>
+    /// <param name="rwLock"></param>
+    /// <param name="action"></param>
+    public static void DoWriteAction(this ReaderWriterLockSlim rwLock, Action action)
+    {
+        rwLock.EnterWriteLock();
+        try
+        {
+            action();
+        }
+        finally
+        {
+            rwLock.ExitWriteLock();
+        }
+    }
+
+    /// <summary>
+    /// Doing write action in a write lock.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="rwLock"></param>
+    /// <param name="action"></param>
+    /// <returns></returns>
+    public static T DoWriteAction<T>(this ReaderWriterLockSlim rwLock, Func<T> action)
+    {
+        rwLock.EnterWriteLock();
+        try
+        {
+            return action();
+        }
+        finally
+        {
+            rwLock.ExitWriteLock();
         }
     }
 }

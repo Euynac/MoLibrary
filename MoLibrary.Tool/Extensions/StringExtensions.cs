@@ -473,8 +473,7 @@ namespace MoLibrary.Tool.Extensions
         }
 
         #endregion
-
-        /// <summary>
+    /// <summary>
         /// Convert string to byte array use specific encoding.
         /// </summary>
         /// <param name="str"></param>
@@ -525,7 +524,7 @@ namespace MoLibrary.Tool.Extensions
         {
             var regex = supportOtherIdentifier ? "([A-Z]+(?![a-z])|[A-Z][a-z]+|[0-9]+|[a-z]+)" : @"(^[a-z]+|[A-Z]+(?![a-z])|[A-Z][a-z]+)";
             return Regex.Matches(str, regex).Select(m => m.Value).ToArray();
-        }
+        } 
 
         /// <summary>
         /// Initializes a new instance of the <see cref="T:System.String" /> class to the value indicated by a specified Unicode character repeated a specified number of times.
@@ -556,7 +555,7 @@ namespace MoLibrary.Tool.Extensions
         /// <returns>true if the <paramref name="value">value</paramref> parameter is null or <see cref="F:System.String.Empty"></see>, or if <paramref name="value">value</paramref> consists exclusively of white-space characters.</returns>
         [ContractAnnotation("null => false")]
         public static bool IsNotNullOrWhiteSpace([NotNullWhen(false)] this string? value) => !string.IsNullOrWhiteSpace(value);
-
+        
         /// <summary>
         /// Indicates whether the specified string is null or an <see cref="F:System.String.Empty"></see> string.
         /// </summary>
@@ -692,7 +691,7 @@ namespace MoLibrary.Tool.Extensions
         /// <param name="culprit">the string contained in source string</param>
         /// <param name="ignoreCase"></param>
         /// <returns></returns>
-        public static bool ContainsAny(this string source, bool ignoreCase, out string? culprit, params string[] testStrings) => InnerWithAny(2, source, ignoreCase, out culprit, testStrings);
+        public static bool ContainsAny(this string source, bool ignoreCase, out string? culprit, params string[] testStrings) => InnerWithAny(CompareStringKind.Contains, source, ignoreCase, out culprit, testStrings);
 
         /// <summary>
         /// Determine whether source string starts with any of the specified strings.
@@ -709,7 +708,7 @@ namespace MoLibrary.Tool.Extensions
         /// <param name="culprit">the string which the source string starts with.</param>
         /// <param name="testStrings"></param>
         /// <returns></returns>
-        public static bool StartsWithAny(this string source, bool ignoreCase, out string? culprit, params string[] testStrings) => InnerWithAny(1, source, ignoreCase, out culprit, testStrings);
+        public static bool StartsWithAny(this string source, bool ignoreCase, out string? culprit, params string[] testStrings) => InnerWithAny(CompareStringKind.StartsWith, source, ignoreCase, out culprit, testStrings);
         /// <summary>
         /// Determine whether source string ends with any of the specified strings.
         /// </summary>
@@ -725,46 +724,54 @@ namespace MoLibrary.Tool.Extensions
         /// <param name="culprit">the string which the source string ends with.</param>
         /// <param name="testStrings"></param>
         /// <returns></returns>
-        public static bool EndsWithAny(this string source, bool ignoreCase, out string? culprit, params string[] testStrings) => InnerWithAny(3, source, ignoreCase, out culprit, testStrings);
-        private static bool InnerWithAny(int kind, string source, bool ignoreCase, out string? culprit, params string[] testStrings)
+        public static bool EndsWithAny(this string source, bool ignoreCase, out string? culprit, params string[] testStrings) => InnerWithAny(CompareStringKind.EndsWith, source, ignoreCase, out culprit, testStrings);
+
+        private enum CompareStringKind
+        {
+            StartsWith = 1,
+            Contains = 2,
+            EndsWith = 3
+        }
+        private static bool InnerWithAny(CompareStringKind kind, string source, bool ignoreCase, out string? culprit,
+            params string[] testStrings)
         {
             var type = ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
             foreach (var s in testStrings)
             {
                 switch (kind)
                 {
-                    case 1:
+                    case CompareStringKind.StartsWith:
+                    {
+                        if (source.StartsWith(s, type))
                         {
-                            if (source.StartsWith(s, type))
-                            {
-                                culprit = s;
-                                return true;
-                            }
+                            culprit = s;
+                            return true;
+                        }
 
-                            continue;
-                        }
-                    case 2:
+                        continue;
+                    }
+                    case CompareStringKind.Contains:
+                    {
+                        if (source.Contains(s, type))
                         {
-                            if (source.Contains(s, type))
-                            {
-                                culprit = s;
-                                return true;
-                            }
-                            continue;
+                            culprit = s;
+                            return true;
                         }
-                    case 3:
+                        continue;
+                    }
+                    case CompareStringKind.EndsWith:
+                    {
+                        if (source.EndsWith(s, type))
                         {
-                            if (source.EndsWith(s, type))
-                            {
-                                culprit = s;
-                                return true;
-                            }
-                            continue;
+                            culprit = s;
+                            return true;
                         }
+                        continue;
+                    }
                     default:
                         throw new Exception("not supported.");
                 }
-
+                
             }
 
             culprit = null;
@@ -786,14 +793,14 @@ namespace MoLibrary.Tool.Extensions
         /// Filter '\', '/', ':', '*', '?', '"', '&lt;', '&gt;', '|','.' chars from given string.
         /// </summary>
         /// <param name="source"></param>
-        public static string FilterForFileName(this string source) =>
-            source.FilterChars('\\', '/', ':', '*', '?', '"', '<', '>', '|', '.');
+        public static string FilterForFileName(this string source) => 
+            source.FilterChars('\\', '/', ':', '*', '?', '"', '<', '>', '|','.');
 
         /// <summary>
         /// Limit string max length to given length.
         /// </summary>
         /// <param name="str"></param>
-        /// <param name="maxLength">length big than 0</param>
+        /// <param name="maxLength">length bigger than 0</param>
         /// <param name="appendEnd">if exceed max length, this part will append to trimmed string end.</param>
         /// <exception cref="InvalidOperationException"></exception>
         /// <returns>if exceed max length will cut of to match max length.</returns>
@@ -806,7 +813,7 @@ namespace MoLibrary.Tool.Extensions
         /// Limit string max length to given length.
         /// </summary>
         /// <param name="str"></param>
-        /// <param name="maxLength">length big than 0</param>
+        /// <param name="maxLength">length bigger than 0</param>
         /// <exception cref="InvalidOperationException"></exception>
         /// <returns>if exceed max length will cut of to match max length.</returns>
         public static string LimitMaxLength(this string str, int maxLength)
@@ -819,7 +826,7 @@ namespace MoLibrary.Tool.Extensions
         /// Limit string min length to given length.
         /// </summary>
         /// <param name="str"></param>
-        /// <param name="minLength">length big than 0</param>
+        /// <param name="minLength">length bigger than 0</param>
         /// <param name="paddingChar">default append blank space.</param>
         /// <param name="padStart">default is append to end.</param>
         /// <exception cref="InvalidOperationException"></exception>
@@ -878,10 +885,10 @@ namespace MoLibrary.Tool.Extensions
             return info.ToTitleCase(input);
         }
 
-
+   
 
         /// <summary>
-        /// Get stable string hash code that will not effect by new runtime.
+        /// Get stable string hash code that will not affect by new runtime.
         /// </summary>
         /// <param name="str"></param>
         /// <returns></returns>

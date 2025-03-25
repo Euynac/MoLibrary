@@ -207,8 +207,17 @@ public static class TypeExtensions
     /// </summary>
     /// <param name="type"></param>
     /// <returns></returns>
-    public static bool IsNullableValueType(this Type type) => type.GetTypeInfo().IsGenericType &&
+    public static bool IsNullableValueType(this Type type) => type.IsGenericType &&
                                                               type.GetGenericTypeDefinition() == typeof(Nullable<>);
+    /// <summary>
+    /// Judge whether the specific type's instance can be null or not.
+    /// </summary>
+    /// <param name="type"></param>
+    /// <returns></returns>
+    public static bool CanBeNull(this Type type)
+    {
+        return !type.GetTypeInfo().IsValueType || IsNullableValueType(type);
+    }
     /// <summary>
     /// Judge whether the specific type is derived from giving generic type or not.
     /// </summary>
@@ -217,6 +226,17 @@ public static class TypeExtensions
     /// <returns></returns>
     public static bool IsDerivedFromGenericType(this Type type, Type genericType) =>
         type.GetTypeInfo().IsGenericType && type.GetGenericTypeDefinition() == genericType;
+
+    /// <summary>
+    /// Get the underlying type of nullable type.
+    /// </summary>
+    /// <param name="type"></param>
+    /// <returns></returns>
+    public static Type StripNullable(this Type type)
+    {
+        return !IsNullableValueType(type) ? type : type.GenericTypeArguments[0];
+    }
+
     /// <summary>
     /// Get the underlying type T in such as type of IEnumerable&lt;T&gt; and T?
     /// </summary>

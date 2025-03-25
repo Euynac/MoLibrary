@@ -98,7 +98,7 @@ public static class HasExtraPropertiesExtensions
         if (TypeHelper.IsPrimitiveExtended(typeof(TProperty), includeEnums: true))
         {
             var conversionType = typeof(TProperty);
-            if (TypeHelper.IsNullable(conversionType))
+            if (conversionType.IsNullableValueType())
             {
                 conversionType = conversionType.GetFirstGenericArgumentIfNullable();
             }
