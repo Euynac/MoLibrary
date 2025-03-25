@@ -1,13 +1,10 @@
-using MoLibrary.DependencyInjection.AppInterfaces;
-
 namespace MoLibrary.EventBus.Abstractions;
 
 /// <summary>
 /// This event handler is an adapter to be able to use an action as <see cref="IMoLocalEventHandler{TEvent}"/> implementation.
 /// </summary>
 /// <typeparam name="TEvent">Event type</typeparam>
-public class ActionEventHandler<TEvent> : IMoLocalEventHandler<TEvent>,
-    ITransientDependency
+public class ActionEventHandler<TEvent> : IMoLocalEventHandler<TEvent>
 {
     /// <summary>
     /// Function to handle the event.

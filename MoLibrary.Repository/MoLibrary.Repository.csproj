@@ -16,7 +16,6 @@
   <ItemGroup>
     <ProjectReference Include="..\MoLibrary.Authority\MoLibrary.Authority.csproj" />
     <ProjectReference Include="..\MoLibrary.Core\MoLibrary.Core.csproj" />
-    <ProjectReference Include="..\MoLibrary.DependencyInjection\MoLibrary.DependencyInjection.csproj" />
     <ProjectReference Include="..\MoLibrary.EventBus\MoLibrary.EventBus.csproj" />
   </ItemGroup>
 </Project>

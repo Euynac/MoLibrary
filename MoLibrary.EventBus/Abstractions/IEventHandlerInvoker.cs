@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using MoLibrary.DependencyInjection.AppInterfaces;
 
 namespace MoLibrary.EventBus.Abstractions;
 
@@ -14,7 +13,7 @@ public class EventHandlerInvokerCacheItem
     public IEventHandlerMethodExecutor? Distributed { get; set; }
 }
 
-public class EventHandlerInvoker : IEventHandlerInvoker, ISingletonDependency
+public class EventHandlerInvoker : IEventHandlerInvoker
 {
     private readonly ConcurrentDictionary<string, EventHandlerInvokerCacheItem> _cache = new();
 
