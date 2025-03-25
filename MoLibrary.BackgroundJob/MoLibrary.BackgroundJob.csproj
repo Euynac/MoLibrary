@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="NCrontab.Signed" Version="3.3.3" />
+
+    <PackageReference Include="Hangfire.InMemory" Version="0.8.1" />
+    <PackageReference Include="System.Runtime.Caching" Version="7.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BackgroundJob\Hangfire.HttpJob\Hangfire.HttpJob.csproj" />
+    <ProjectReference Include="..\BackgroundJob\Hangfire.Redis.StackExchange\Hangfire.Redis.StackExchange.csproj" />
+    <ProjectReference Include="..\MoLibrary.Core\MoLibrary.Core.csproj" />
+    <ProjectReference Include="..\MoLibrary.DependencyInjection\MoLibrary.DependencyInjection.csproj" />
+  </ItemGroup>
+</Project>

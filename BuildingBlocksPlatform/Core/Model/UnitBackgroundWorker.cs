@@ -1,4 +1,4 @@
-using BuildingBlocksPlatform.BackgroundWorker.Hangfire.Workers;
+using MoLibrary.BackgroundJob.Hangfire.Workers;
 
 namespace BuildingBlocksPlatform.Core.Model;
 

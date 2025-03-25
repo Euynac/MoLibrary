@@ -45,6 +45,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.Logging", "MoLibr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.EventBus", "MoLibrary.EventBus\MoLibrary.EventBus.csproj", "{31C07986-EC9D-4731-A4FA-423FED5D8205}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.Configuration", "MoLibrary.Configuration\MoLibrary.Configuration.csproj", "{24780ED6-16D2-4E44-A0CD-398CF9EF9001}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.BackgroundJob", "MoLibrary.BackgroundJob\MoLibrary.BackgroundJob.csproj", "{CA0D9059-7EEC-4DAE-84DE-68641292CD44}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -127,6 +131,14 @@ Global
 		{31C07986-EC9D-4731-A4FA-423FED5D8205}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{31C07986-EC9D-4731-A4FA-423FED5D8205}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{31C07986-EC9D-4731-A4FA-423FED5D8205}.Release|Any CPU.Build.0 = Release|Any CPU
+		{24780ED6-16D2-4E44-A0CD-398CF9EF9001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{24780ED6-16D2-4E44-A0CD-398CF9EF9001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{24780ED6-16D2-4E44-A0CD-398CF9EF9001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{24780ED6-16D2-4E44-A0CD-398CF9EF9001}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CA0D9059-7EEC-4DAE-84DE-68641292CD44}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CA0D9059-7EEC-4DAE-84DE-68641292CD44}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CA0D9059-7EEC-4DAE-84DE-68641292CD44}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CA0D9059-7EEC-4DAE-84DE-68641292CD44}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,4 +1,3 @@
-using BuildingBlocksPlatform.BackgroundWorker.Abstract.Jobs;
 using BuildingBlocksPlatform.BlobContainer;
 using BuildingBlocksPlatform.StateStore;
 using MapsterMapper;
@@ -8,6 +7,7 @@ using BuildingBlocksPlatform.Features.MoGuid;
 using MoLibrary.Tool.General;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Authority.Security;
+using MoLibrary.BackgroundJob.Abstract.Jobs;
 using MoLibrary.Core.Features.MoSnowflake;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.DomainDrivenDesign;
@@ -73,7 +73,7 @@ public abstract partial class
     /// <summary>
     /// 后台任务管理
     /// </summary>
-    protected IBackgroundJobManager _backgroundJobManager => ServiceProvider.GetRequiredService<IBackgroundJobManager>()!;
+    protected IMoBackgroundJobManager _backgroundJobManager => ServiceProvider.GetRequiredService<IMoBackgroundJobManager>()!;
 
     /// <summary>
     /// 文件存储
