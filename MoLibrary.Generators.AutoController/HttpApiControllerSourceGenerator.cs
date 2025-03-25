@@ -21,7 +21,7 @@ public class HttpApiControllerSourceGenerator : IIncrementalGenerator
         var classDeclarations = context.SyntaxProvider
             .CreateSyntaxProvider(
                 predicate: static (s, _) => s is ClassDeclarationSyntax { BaseList: { } },
-                transform: static (ctx, _) => (ClassDeclarationSyntax) ctx.Node)
+                transform: static (ctx, _) => (ClassDeclarationSyntax)ctx.Node)
             .Where(static c => c.BaseList!.Types.Any(t => t.ToString().Contains("ApplicationService")));
 
         // Transform each candidate class into a HandlerCandidate.
@@ -101,7 +101,7 @@ public class HttpApiControllerSourceGenerator : IIncrementalGenerator
         var docComment = GetDocumentationComment(cls);
 
         // Collect original using directives from the candidate's file.
-        var root = (CompilationUnitSyntax) cls.SyntaxTree.GetRoot();
+        var root = (CompilationUnitSyntax)cls.SyntaxTree.GetRoot();
         var originalUsings = root.Usings.Select(u => u.Name.ToString());
 
         // Also, capture the candidate's own namespace.
@@ -227,7 +227,7 @@ public class HttpApiControllerSourceGenerator : IIncrementalGenerator
                     [ProducesResponseType((int) HttpStatusCode.BadRequest)]
                     [ProducesResponseType(typeof({{candidate.ResponseType}}), (int) HttpStatusCode.OK)]
                     public async Task<ActionResult> {{candidate.MethodName}}(
-                        [{{(group.Key.HandlerType == "Query" ? "FromQuery" : "FromBody")}}] {{candidate.RequestType}} dto)
+                        [{{(candidate.HttpMethodAttribute == "HttpGet" ? "FromQuery" : "FromBody")}}] {{candidate.RequestType}} dto)
                     {
                         return await mediator.Send(dto).GetResponse(this);
                     }
