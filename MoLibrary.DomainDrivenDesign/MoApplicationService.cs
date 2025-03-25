@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
+using MoLibrary.Core.Features.MoMapper;
 using MoLibrary.DependencyInjection.AppInterfaces;
 using MoLibrary.DomainDrivenDesign.Interfaces;
 
@@ -10,7 +11,7 @@ public abstract class MoApplicationService :
     ITransientDependency
 {
 
-    public IMoObjectMapper ObjectMapper => MoProvider.ServiceProvider.GetRequiredService<IMoObjectMapper>();
+    public IMoMapper ObjectMapper => MoProvider.ServiceProvider.GetRequiredService<IMoMapper>();
 
     public IMoServiceProvider MoProvider { get; set; }
 

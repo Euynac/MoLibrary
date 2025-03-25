@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using MoLibrary.Core.Features.MoObjectMapper;
+using MoLibrary.Core.Features.MoMapper;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.Repository.EntityInterfaces;
 using MoLibrary.Repository.Extensions;
@@ -84,7 +84,7 @@ public interface IAsyncLocalEventStore
 /// Used to trigger entity change events.
 /// </summary>
 public class AsyncLocalEventPublisher(
-    IObjectMapper entityToEtoMapper,
+    IMoMapper entityToEtoMapper,
     IOptions<DistributedEntityEventOptions> distributedEntityEventOptions,
     IMoLocalEventBus localEventBus,
     IMoDistributedEventBus distributedEventBus,
@@ -92,7 +92,7 @@ public class AsyncLocalEventPublisher(
 {
     public IMoLocalEventBus LocalEventBus { get; set; } = localEventBus;
     public IMoDistributedEventBus DistributedEventBus { get; set; } = distributedEventBus;
-    protected IObjectMapper EntityToEtoMapper { get; } = entityToEtoMapper;
+    protected IMoMapper EntityToEtoMapper { get; } = entityToEtoMapper;
     protected DistributedEntityEventOptions DistributedEntityEventOptions { get; } = distributedEntityEventOptions.Value;
 
     public virtual void AddEntityCreatedEvent(object entity)
