@@ -1,5 +1,3 @@
-using BuildingBlocksPlatform.BackgroundWorker.Abstract.Jobs;
-using BuildingBlocksPlatform.Extensions;
 using BuildingBlocksPlatform.SeedWork;
 
 namespace BuildingBlocksPlatform.Core.Model;
@@ -11,9 +9,6 @@ namespace BuildingBlocksPlatform.Core.Model;
 public class UnitBackgroundJob(Type type) : ProjectUnit(type, EProjectUnitType.BackgroundJob), IHasProjectUnitFactory
 {
     public Type? JobArgsType { get; set; }
-
-    //TODO 后续模块化后解除依赖
-    public static Dictionary<Type, UnitBackgroundJob> ArgsToJobDict { get; set; } = [];
 
     static UnitBackgroundJob()
     {
@@ -40,7 +35,6 @@ public class UnitBackgroundJob(Type type) : ProjectUnit(type, EProjectUnitType.B
         if (!type.IsClass || !type.IsSubclassOfRawGeneric(typeof(OurBackgroundJob<>), out var genericType) || genericType?.FullName is null) return null;
         unit.CheckNameConventionMode();
         unit.JobArgsType = genericType.GetGenericArguments().First();
-        ArgsToJobDict.Add(unit.JobArgsType, unit);
         return unit;
     }
 }

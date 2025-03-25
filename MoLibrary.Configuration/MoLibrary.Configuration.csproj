@@ -1,11 +1,11 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
-	<Import Project="..\common.xml"></Import>
-
-	<PropertyGroup>
-		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-	</PropertyGroup>
-	<ItemGroup>
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
     <PackageReference Include="Castle.Core" Version="5.1.1" />
     <PackageReference Include="Castle.Core.AsyncInterceptor" Version="2.1.0" />
     <PackageReference Include="Dapr.Actors" Version="1.14.0" />
@@ -19,7 +19,6 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.4" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Abstractions" Version="8.0.4" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Analyzers" Version="8.0.4" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.DynamicLinq" Version="8.3.13" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.4" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.0" />
@@ -35,11 +34,6 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.2" />
     <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="8.0.2" />
 
-    <PackageReference Include="protobuf-net.BuildTools" Version="3.2.33">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-
     <PackageReference Include="Hangfire.InMemory" Version="0.8.1" />
     <PackageReference Include="protobuf-net.Core" Version="3.2.30" />
     <PackageReference Include="protobuf-net.Grpc.Reflection" Version="1.1.1" />
@@ -49,16 +43,8 @@
     <PackageReference Include="System.Runtime.Caching" Version="7.0.0" />
     <PackageReference Include="SignalRSwaggerGen" Version="4.5.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
-	</ItemGroup>
-	<ItemGroup>
-	  <ProjectReference Include="..\MoLibrary.Authority\MoLibrary.Authority.csproj" />
-	  <ProjectReference Include="..\MoLibrary.AutoModel\MoLibrary.AutoModel.csproj" />
-	  <ProjectReference Include="..\MoLibrary.BackgroundJob\MoLibrary.BackgroundJob.csproj" />
-	  <ProjectReference Include="..\MoLibrary.Configuration\MoLibrary.Configuration.csproj" />
-	  <ProjectReference Include="..\MoLibrary.Core\MoLibrary.Core.csproj" />
-	  <ProjectReference Include="..\MoLibrary.DependencyInjection\MoLibrary.DependencyInjection.csproj" />
-	  <ProjectReference Include="..\MoLibrary.DomainDrivenDesign\MoLibrary.DomainDrivenDesign.csproj" />
-	  <ProjectReference Include="..\MoLibrary.EventBus\MoLibrary.EventBus.csproj" />
-	  <ProjectReference Include="..\MoLibrary.Repository\MoLibrary.Repository.csproj" />
-	</ItemGroup>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MoLibrary.Core\MoLibrary.Core.csproj" />
+  </ItemGroup>
 </Project>

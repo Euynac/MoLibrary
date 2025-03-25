@@ -1,7 +1,7 @@
-using BuildingBlocksPlatform.BackgroundWorker.Abstract.Jobs;
 using BuildingBlocksPlatform.StateStore;
 using MapsterMapper;
 using Microsoft.Extensions.DependencyInjection;
+using MoLibrary.BackgroundJob.Abstract.Jobs;
 using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Features.MoSnowflake;
 using MoLibrary.DependencyInjection.AppInterfaces;
@@ -16,7 +16,7 @@ namespace BuildingBlocksPlatform.SeedWork;
 /// 后台任务基类，异步执行某些工作。
 /// </summary>
 /// <typeparam name="TArgs"></typeparam>
-public abstract class OurBackgroundJob<TArgs>(IMoServiceProvider serviceProvider) : AsyncBackgroundJob<TArgs>(serviceProvider), ITransientDependency
+public abstract class OurBackgroundJob<TArgs>(IMoServiceProvider serviceProvider) : MoBackgroundJob<TArgs>(serviceProvider), ITransientDependency
 {
     public IServiceProvider Provider { get; set; } = serviceProvider.ServiceProvider; 
     
