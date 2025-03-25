@@ -1,7 +1,7 @@
 ﻿using MediatR;
 using MoLibrary.Tool.MoResponse;
 
-namespace MoLibrary.DomainDrivenDesign;
+namespace MoLibrary.DomainDrivenDesign.Interfaces;
 
 /// <summary>
 /// 请求类接口

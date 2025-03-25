@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using MoLibrary.DomainDrivenDesign;
+using MoLibrary.DomainDrivenDesign.Interfaces;
 
 namespace MoLibrary.Framework.Features.MoRpc;
 
