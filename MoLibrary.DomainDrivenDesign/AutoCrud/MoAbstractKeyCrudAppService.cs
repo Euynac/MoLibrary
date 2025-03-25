@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.DynamicLinq;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.AutoModel.Interfaces;
+using MoLibrary.Core.Features.MoMapper;
 using MoLibrary.DomainDrivenDesign.AutoCrud.Interfaces;
 using MoLibrary.DomainDrivenDesign.Interfaces;
 using MoLibrary.Repository;
@@ -351,7 +352,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
 
     /// <summary>
     /// Maps <typeparamref name="TEntity"/> to <typeparamref name="TGetOutputDto"/>.
-    /// It uses <see cref="IMoObjectMapper"/> by default.
+    /// It uses <see cref="IMoMapper"/> by default.
     /// It can be overriden for custom mapping.
     /// </summary>
     protected virtual TGetOutputDto MapToGetOutputDto(TEntity entity)
@@ -361,7 +362,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
 
     /// <summary>
     /// Maps <typeparamref name="TCreateInput"/> to <typeparamref name="TEntity"/> to create a new entity.
-    /// It uses <see cref="IMoObjectMapper"/> by default.
+    /// It uses <see cref="IMoMapper"/> by default.
     /// It can be overriden for custom mapping.
     /// </summary>
     protected virtual TEntity MapToEntity(TCreateInput createInput)
@@ -373,7 +374,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
 
     /// <summary>
     /// Maps <typeparamref name="TUpdateInput"/> to <typeparamref name="TEntity"/> to update the entity.
-    /// It uses <see cref="IMoObjectMapper"/> by default.
+    /// It uses <see cref="IMoMapper"/> by default.
     /// It can be overriden for custom mapping.
     /// </summary>
     protected virtual void MapToEntity(TUpdateInput updateInput, TEntity entity)
@@ -397,7 +398,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
 
     /// <summary>
     /// Maps <typeparamref name="TEntity"/> to <typeparamref name="TGetListOutputDto"/>.
-    /// It uses <see cref="IMoObjectMapper"/> by default.
+    /// It uses <see cref="IMoMapper"/> by default.
     /// It can be overriden for custom mapping.
     /// </summary>
     protected virtual TGetListOutputDto MapToGetListOutputDto(TEntity entity)

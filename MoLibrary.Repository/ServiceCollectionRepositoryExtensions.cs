@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
-using MoLibrary.Core.Features.MoObjectMapper;
+using MoLibrary.Core.Features.MoMapper;
 using MoLibrary.Repository.EntityInterfaces;
 using MoLibrary.Repository.Extensions;
 using MoLibrary.Repository.Interfaces;
@@ -55,7 +55,7 @@ public static class MoEfCoreServiceCollectionExtensions
         this IServiceCollection services, Action<IServiceProvider, DbContextOptionsBuilder> optionsAction, Action<MoRepositoryOptions>? moOptionsAction = null)
         where TDbContext : MoDbContext<TDbContext>
     {
-        services.AddMoObjectMapper();
+        services.AddMoMapper();
 
         var moOptions = new MoRepositoryOptions();
 

@@ -7,7 +7,6 @@
 	</PropertyGroup>
 	<ItemGroup>
     <PackageReference Include="Dapr.Actors" Version="1.14.0" />
-    <PackageReference Include="ExpressionDebugger" Version="2.2.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.0" />
     <PackageReference Include="Minio" Version="6.0.3" />
     <PackageReference Include="Nito.AsyncEx.Coordination" Version="5.1.2" />
