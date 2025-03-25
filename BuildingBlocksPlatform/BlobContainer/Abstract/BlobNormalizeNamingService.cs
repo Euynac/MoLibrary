@@ -1,4 +1,3 @@
-using BuildingBlocksPlatform.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Extensions;
 using MoLibrary.DependencyInjection.AppInterfaces;

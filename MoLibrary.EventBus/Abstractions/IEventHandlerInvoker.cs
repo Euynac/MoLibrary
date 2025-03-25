@@ -5,7 +5,7 @@ namespace MoLibrary.EventBus.Abstractions;
 
 public interface IEventHandlerInvoker
 {
-    Task InvokeAsync(IEventHandler eventHandler, object eventData, Type eventType);
+    Task InvokeAsync(IMoEventHandler eventHandler, object eventData, Type eventType);
 }
 public class EventHandlerInvokerCacheItem
 {
@@ -18,18 +18,18 @@ public class EventHandlerInvoker : IEventHandlerInvoker, ISingletonDependency
 {
     private readonly ConcurrentDictionary<string, EventHandlerInvokerCacheItem> _cache = new();
 
-    public async Task InvokeAsync(IEventHandler eventHandler, object eventData, Type eventType)
+    public async Task InvokeAsync(IMoEventHandler eventHandler, object eventData, Type eventType)
     {
         var cacheItem = _cache.GetOrAdd($"{eventHandler.GetType().FullName}-{eventType.FullName}", _ =>
         {
             var item = new EventHandlerInvokerCacheItem();
 
-            if (typeof(ILocalEventHandler<>).MakeGenericType(eventType).IsInstanceOfType(eventHandler))
+            if (typeof(IMoLocalEventHandler<>).MakeGenericType(eventType).IsInstanceOfType(eventHandler))
             {
                 item.Local = (IEventHandlerMethodExecutor?) Activator.CreateInstance(typeof(LocalEventHandlerMethodExecutor<>).MakeGenericType(eventType));
             }
 
-            if (typeof(IDistributedEventHandler<>).MakeGenericType(eventType).IsInstanceOfType(eventHandler))
+            if (typeof(IMoDistributedEventHandler<>).MakeGenericType(eventType).IsInstanceOfType(eventHandler))
             {
                 item.Distributed = (IEventHandlerMethodExecutor?) Activator.CreateInstance(typeof(DistributedEventHandlerMethodExecutor<>).MakeGenericType(eventType));
             }

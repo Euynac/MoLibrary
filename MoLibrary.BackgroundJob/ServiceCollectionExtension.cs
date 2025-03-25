@@ -16,6 +16,7 @@ using MoLibrary.BackgroundJob.Hangfire.Jobs;
 using MoLibrary.BackgroundJob.Hangfire.Workers;
 using MoLibrary.BackgroundJob.MoTaskScheduler;
 using MoLibrary.Core.Features;
+using MoLibrary.Logging;
 using MoLibrary.Tool.Extensions;
 using StackExchange.Redis;
 

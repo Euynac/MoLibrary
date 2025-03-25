@@ -20,7 +20,7 @@ public class IocEventHandlerFactory(IServiceScopeFactory scopeFactory, Type hand
     {
         var scope = ScopeFactory.CreateScope();
         return new EventHandlerDisposeWrapper(
-            (IEventHandler)scope.ServiceProvider.GetRequiredService(HandlerType),
+            (IMoEventHandler)scope.ServiceProvider.GetRequiredService(HandlerType),
             () => scope.Dispose()
         );
     }

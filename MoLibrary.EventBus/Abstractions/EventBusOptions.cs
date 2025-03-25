@@ -4,10 +4,10 @@ namespace MoLibrary.EventBus.Abstractions;
 
 public class DistributedEventBusOptions
 {
-    public ITypeList<IEventHandler> Handlers { get; } = new TypeList<IEventHandler>();
+    public ITypeList<IMoEventHandler> Handlers { get; } = new TypeList<IMoEventHandler>();
 }
 
 public class LocalEventBusOptions
 {
-    public ITypeList<IEventHandler> Handlers { get; } = new TypeList<IEventHandler>();
+    public ITypeList<IMoEventHandler> Handlers { get; } = new TypeList<IMoEventHandler>();
 }

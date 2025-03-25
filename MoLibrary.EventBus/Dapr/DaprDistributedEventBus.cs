@@ -10,14 +10,14 @@ using MoLibrary.Tool.Utils;
 namespace MoLibrary.EventBus.Dapr;
 
 [Dependency(ReplaceServices = true)]
-[ExposeServices(typeof(IDistributedEventBus), typeof(DaprDistributedEventBus))]
+[ExposeServices(typeof(IMoDistributedEventBus), typeof(DaprDistributedEventBus))]
 public class DaprDistributedEventBus(
     IServiceScopeFactory serviceScopeFactory,
     IOptions<DistributedEventBusOptions> distributedEventBusOptions,
     IEventHandlerInvoker eventHandlerInvoker,
     IOptions<DaprEventBusOptions> daprEventBusOptions,
     DaprClient client,
-    ILocalEventBus localEventBus) : DistributedEventBusBase(serviceScopeFactory,
+    IMoLocalEventBus localEventBus) : DistributedEventBusBase(serviceScopeFactory,
         distributedEventBusOptions,
         eventHandlerInvoker,
         localEventBus), ISingletonDependency
@@ -25,7 +25,7 @@ public class DaprDistributedEventBus(
     private readonly DistributedEventBusOptions _distributedEventBusOptions = distributedEventBusOptions.Value;
     public DaprClient Client { get; } = client;
     protected DaprEventBusOptions DaprEventBusOptions { get; } = daprEventBusOptions.Value;
-    public override ITypeList<IEventHandler> GetDefaultHandlers()
+    public override ITypeList<IMoEventHandler> GetDefaultHandlers()
     {
         return _distributedEventBusOptions.Handlers;
     }

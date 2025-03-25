@@ -12,7 +12,7 @@ using MoLibrary.Tool.Utils;
 namespace MoLibrary.EventBus.Abstractions;
 
 
-public abstract class EventBusBase : IEventBus
+public abstract class EventBusBase : IMoEventBus
 {
     [SuppressMessage("ReSharper", "VirtualMemberCallInConstructor")]
     protected EventBusBase(IServiceScopeFactory serviceScopeFactory,
@@ -33,9 +33,9 @@ public abstract class EventBusBase : IEventBus
     /// for those automatically registered handlers
     /// </summary>
     /// <returns></returns>
-    public virtual ITypeList<IEventHandler> GetDefaultHandlers()
+    public virtual ITypeList<IMoEventHandler> GetDefaultHandlers()
     {
-        return new TypeList<IEventHandler>();
+        return new TypeList<IMoEventHandler>();
     }
 
     public virtual Type GetEventType(string eventName)
@@ -53,13 +53,13 @@ public abstract class EventBusBase : IEventBus
     /// <inheritdoc/>
     public virtual IDisposable Subscribe<TEvent, THandler>()
         where TEvent : class
-        where THandler : IEventHandler, new()
+        where THandler : IMoEventHandler, new()
     {
         return Subscribe(typeof(TEvent), new TransientEventHandlerFactory<THandler>());
     }
 
     /// <inheritdoc/>
-    public virtual IDisposable Subscribe(Type eventType, IEventHandler handler)
+    public virtual IDisposable Subscribe(Type eventType, IMoEventHandler handler)
     {
         return Subscribe(eventType, new SingleInstanceHandlerFactory(handler));
     }
@@ -114,7 +114,7 @@ public abstract class EventBusBase : IEventBus
             });
     }
 
-    public virtual void Unsubscribe(Type eventType, IEventHandler handler)
+    public virtual void Unsubscribe(Type eventType, IMoEventHandler handler)
     {
         GetOrCreateHandlerFactories(eventType)
             .Locking(factories =>
@@ -128,7 +128,7 @@ public abstract class EventBusBase : IEventBus
     }
 
     /// <inheritdoc/>
-    public virtual void Unsubscribe<TEvent>(ILocalEventHandler<TEvent> handler) where TEvent : class
+    public virtual void Unsubscribe<TEvent>(IMoLocalEventHandler<TEvent> handler) where TEvent : class
     {
         Unsubscribe(typeof(TEvent), handler);
     }
@@ -236,14 +236,14 @@ public abstract class EventBusBase : IEventBus
         );
     }
 
-    protected virtual void SubscribeHandlers(ITypeList<IEventHandler> handlers)
+    protected virtual void SubscribeHandlers(ITypeList<IMoEventHandler> handlers)
     {
         foreach (var handler in handlers)
         {
             var interfaces = handler.GetInterfaces();
             foreach (var @interface in interfaces)
             {
-                if (!typeof(IEventHandler).GetTypeInfo().IsAssignableFrom(@interface))
+                if (!typeof(IMoEventHandler).GetTypeInfo().IsAssignableFrom(@interface))
                 {
                     continue;
                 }
@@ -306,7 +306,7 @@ public abstract class EventBusBase : IEventBus
         }
     }
 
-    protected virtual Task InvokeEventHandlerAsync(IEventHandler eventHandler, object eventData, Type eventType)
+    protected virtual Task InvokeEventHandlerAsync(IMoEventHandler eventHandler, object eventData, Type eventType)
     {
         return EventHandlerInvoker.InvokeAsync(eventHandler, eventData, eventType);
     }

@@ -11,12 +11,12 @@ namespace MoLibrary.EventBus.Abstractions;
 /// 
 /// </remarks>
 /// <param name="handler"></param>
-public class SingleInstanceHandlerFactory(IEventHandler handler) : IEventHandlerFactory
+public class SingleInstanceHandlerFactory(IMoEventHandler handler) : IEventHandlerFactory
 {
     /// <summary>
     /// The event handler instance.
     /// </summary>
-    public IEventHandler HandlerInstance { get; } = handler;
+    public IMoEventHandler HandlerInstance { get; } = handler;
 
     public IEventHandlerDisposeWrapper GetHandler()
     {

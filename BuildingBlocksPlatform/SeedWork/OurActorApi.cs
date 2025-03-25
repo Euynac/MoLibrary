@@ -1,7 +1,7 @@
-using BuildingBlocksPlatform.Features.GRPCExtensions;
 using Dapr.Actors.Client;
 using Dapr.Actors;
 using MoLibrary.DependencyInjection.AppInterfaces;
+using MoLibrary.Framework.Features.MoRpc;
 
 namespace BuildingBlocksPlatform.SeedWork;
 
@@ -26,7 +26,7 @@ public abstract class OurActorApi(IMoServiceProvider provider) : OurRpcApi(provi
     {
         var actor = new ActorId(actorId);
         var dynamicProxy = ActorProxy.Create(actor, GetActorName());
-        if (data is IHasGrpcHttpInfo httpInfo)
+        if (data is IHasRpcHttpInfo httpInfo)
         {
             if (_accessor.HttpContext is {Request.Headers.Count: > 0} context)
             {

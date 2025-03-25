@@ -152,7 +152,7 @@ file class MoSubscription
         {
             foreach (var @interface in handler.GetInterfaces().Where(x =>
                          x.IsGenericType && x.GetGenericTypeDefinition() ==
-                         typeof(IDistributedEventHandler<>)))
+                         typeof(IMoDistributedEventHandler<>)))
             {
                 var eventType = @interface.GetGenericArguments()[0];
                 var eventName = EventNameAttribute.GetNameOrDefault(eventType);

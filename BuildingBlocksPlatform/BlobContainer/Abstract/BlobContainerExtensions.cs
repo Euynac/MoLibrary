@@ -1,7 +1,6 @@
 
 using System.IO;
 using System.Threading.Tasks;
-using BuildingBlocksPlatform.Extensions;
 using Microsoft.AspNetCore.Http;
 
 namespace BuildingBlocksPlatform.BlobContainer.Abstract;

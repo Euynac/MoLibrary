@@ -1,9 +1,7 @@
 using BuildingBlocksPlatform.BlobContainer;
-using BuildingBlocksPlatform.StateStore;
 using MapsterMapper;
 using MediatR;
 using Microsoft.Extensions.Logging.Abstractions;
-using BuildingBlocksPlatform.Features.MoGuid;
 using MoLibrary.Tool.General;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Authority.Security;
@@ -11,6 +9,8 @@ using MoLibrary.BackgroundJob.Abstract.Jobs;
 using MoLibrary.Core.Features.MoSnowflake;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.DomainDrivenDesign;
+using MoLibrary.Framework.Features.MoGuid;
+using MoLibrary.StateStore;
 
 namespace BuildingBlocksPlatform.SeedWork;
 
@@ -53,12 +53,12 @@ public abstract partial class
     /// <summary>
     /// 分布式事件总线
     /// </summary>
-    protected IDistributedEventBus _domainEventBus => ServiceProvider.GetRequiredService<IDistributedEventBus>()!;
+    protected IMoDistributedEventBus _domainEventBus => ServiceProvider.GetRequiredService<IMoDistributedEventBus>()!;
 
     /// <summary>
     /// 本地事件总线
     /// </summary>
-    protected ILocalEventBus _localEventBus => ServiceProvider.GetRequiredService<ILocalEventBus>()!;
+    protected IMoLocalEventBus _localEventBus => ServiceProvider.GetRequiredService<IMoLocalEventBus>()!;
 
     /// <summary>
     /// Guid生成器

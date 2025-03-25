@@ -2,12 +2,12 @@ namespace MoLibrary.EventBus.Abstractions;
 
 public interface IEventHandlerDisposeWrapper : IDisposable
 {
-    IEventHandler EventHandler { get; }
+    IMoEventHandler EventHandler { get; }
 }
-public class EventHandlerDisposeWrapper(IEventHandler eventHandler, Action? disposeAction = null)
+public class EventHandlerDisposeWrapper(IMoEventHandler eventHandler, Action? disposeAction = null)
     : IEventHandlerDisposeWrapper
 {
-    public IEventHandler EventHandler { get; } = eventHandler;
+    public IMoEventHandler EventHandler { get; } = eventHandler;
 
     public void Dispose()
     {

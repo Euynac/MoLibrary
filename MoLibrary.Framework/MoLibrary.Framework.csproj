@@ -54,11 +54,15 @@
 	  <ProjectReference Include="..\MoLibrary.Authority\MoLibrary.Authority.csproj" />
 	  <ProjectReference Include="..\MoLibrary.AutoModel\MoLibrary.AutoModel.csproj" />
 	  <ProjectReference Include="..\MoLibrary.BackgroundJob\MoLibrary.BackgroundJob.csproj" />
+	  <ProjectReference Include="..\MoLibrary.Configuration.Dashboard\MoLibrary.Configuration.Dashboard.csproj" />
 	  <ProjectReference Include="..\MoLibrary.Configuration\MoLibrary.Configuration.csproj" />
 	  <ProjectReference Include="..\MoLibrary.Core\MoLibrary.Core.csproj" />
 	  <ProjectReference Include="..\MoLibrary.DependencyInjection\MoLibrary.DependencyInjection.csproj" />
 	  <ProjectReference Include="..\MoLibrary.DomainDrivenDesign\MoLibrary.DomainDrivenDesign.csproj" />
 	  <ProjectReference Include="..\MoLibrary.EventBus\MoLibrary.EventBus.csproj" />
 	  <ProjectReference Include="..\MoLibrary.Repository\MoLibrary.Repository.csproj" />
+	  <ProjectReference Include="..\MoLibrary.SignalR\MoLibrary.SignalR.csproj" />
+	  <ProjectReference Include="..\MoLibrary.StateStore\MoLibrary.StateStore.csproj" />
+	  <ProjectReference Include="..\MoLibrary.Validation\MoLibrary.Validation.csproj" />
 	</ItemGroup>
 </Project>

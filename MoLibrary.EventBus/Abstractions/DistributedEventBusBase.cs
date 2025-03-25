@@ -7,14 +7,14 @@ public abstract class DistributedEventBusBase(
     IServiceScopeFactory serviceScopeFactory,
     IOptions<DistributedEventBusOptions> options,
     IEventHandlerInvoker eventHandlerInvoker,
-    ILocalEventBus localEventBus) : EventBusBase(
+    IMoLocalEventBus localEventBus) : EventBusBase(
     serviceScopeFactory,
-    eventHandlerInvoker), IDistributedEventBus
+    eventHandlerInvoker), IMoDistributedEventBus
 {
     protected DistributedEventBusOptions EventBusOptions { get; } = options.Value;
-    protected ILocalEventBus LocalEventBus { get; } = localEventBus;
+    protected IMoLocalEventBus LocalEventBus { get; } = localEventBus;
 
-    public IDisposable Subscribe<TEvent>(IDistributedEventHandler<TEvent> handler) where TEvent : class
+    public IDisposable Subscribe<TEvent>(IMoDistributedEventHandler<TEvent> handler) where TEvent : class
     {
         return Subscribe(typeof(TEvent), handler);
     }
@@ -34,7 +34,7 @@ public abstract class DistributedEventBusBase(
 }
 
 
-public sealed class NullDistributedEventBus(IServiceScopeFactory serviceScopeFactory, IOptions<DistributedEventBusOptions> options, IEventHandlerInvoker eventHandlerInvoker, ILocalEventBus localEventBus) : DistributedEventBusBase(serviceScopeFactory, options, eventHandlerInvoker, localEventBus)
+public sealed class NullDistributedEventBus(IServiceScopeFactory serviceScopeFactory, IOptions<DistributedEventBusOptions> options, IEventHandlerInvoker eventHandlerInvoker, IMoLocalEventBus localEventBus) : DistributedEventBusBase(serviceScopeFactory, options, eventHandlerInvoker, localEventBus)
 {
     protected override async Task PublishToEventBusAsync(Type eventType, object eventData)
     {
