@@ -13,8 +13,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.Framework", "MoLi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.Generators.AutoController", "MoLibrary.Generators.AutoController\MoLibrary.Generators.AutoController.csproj", "{58948CB7-D569-A6B7-A410-79571D0A7D19}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BuildingBlocksPlatform", "BuildingBlocksPlatform\BuildingBlocksPlatform.csproj", "{9A6AD7BC-E901-889A-814B-F3793BE6E7F6}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{241C163A-658A-4DEA-ABDC-77726E95E33D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.MoLibrary.Repository", "Tests\Test.MoLibrary.Repository\Test.MoLibrary.Repository.csproj", "{D54FA944-A307-409C-AA41-1BD98B9F9E1B}"
@@ -81,10 +79,6 @@ Global
 		{58948CB7-D569-A6B7-A410-79571D0A7D19}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{58948CB7-D569-A6B7-A410-79571D0A7D19}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{58948CB7-D569-A6B7-A410-79571D0A7D19}.Release|Any CPU.Build.0 = Release|Any CPU
-		{9A6AD7BC-E901-889A-814B-F3793BE6E7F6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{9A6AD7BC-E901-889A-814B-F3793BE6E7F6}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{9A6AD7BC-E901-889A-814B-F3793BE6E7F6}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{9A6AD7BC-E901-889A-814B-F3793BE6E7F6}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D54FA944-A307-409C-AA41-1BD98B9F9E1B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{D54FA944-A307-409C-AA41-1BD98B9F9E1B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D54FA944-A307-409C-AA41-1BD98B9F9E1B}.Release|Any CPU.ActiveCfg = Release|Any CPU
