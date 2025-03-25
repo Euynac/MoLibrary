@@ -725,7 +725,7 @@ namespace MoLibrary.Tool.Extensions
         /// <param name="culprit">the string which the source string ends with.</param>
         /// <param name="testStrings"></param>
         /// <returns></returns>
-        public static bool EndsWithAny(this string source, bool ignoreCase, out string? culprit, params string[] testStrings) => InnerWithAny(1, source, ignoreCase, out culprit, testStrings);
+        public static bool EndsWithAny(this string source, bool ignoreCase, out string? culprit, params string[] testStrings) => InnerWithAny(3, source, ignoreCase, out culprit, testStrings);
         private static bool InnerWithAny(int kind, string source, bool ignoreCase, out string? culprit, params string[] testStrings)
         {
             var type = ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;

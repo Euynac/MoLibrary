@@ -17,12 +17,13 @@ public class InvocationChainRecorderMoInterceptor(IHttpContextAccessor accessor,
 {
     private bool ShouldRecordChain(IMoMethodInvocation invocation, out string? declaringType, out string? request)
     {
-        if (invocation.Method.ReturnType.FullName?.Contains("BuildingBlocksPlatform.SeedWork.Res", StringComparison.Ordinal) is true)
+        if (invocation.Method.ReturnType.FullName?.Contains(nameof(MoLibrary.Tool.MoResponse), StringComparison.Ordinal) is true)
         {
             var requestType = invocation.Arguments.FirstOrDefault()?.GetType();
             declaringType = invocation.Method.ReflectedType?.Name;
             declaringType ??= invocation.Method.DeclaringType?.Name;
             request = requestType?.Name;
+            //TODO 这里可配置
             if (!requestType?.FullName?.Contains("ProtocolPlatform.PublishedLanguages", StringComparison.Ordinal) is true)
             {
                 request = invocation.Method.Name;

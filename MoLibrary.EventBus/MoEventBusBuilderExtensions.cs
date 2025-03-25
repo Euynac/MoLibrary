@@ -22,6 +22,9 @@ public static class MoEventBusBuilderExtensions
     public static void AddMoEventBusServices(this IServiceCollection services, Action<DaprEventBusOptions> configAction)
     {
         services.Configure<DaprEventBusOptions>(configAction.Invoke);
+        services.AddSingleton<IMoLocalEventBus, LocalEventBus>();
+        services.AddSingleton<IMoDistributedEventBus, DaprDistributedEventBus>();
+        services.AddSingleton<IEventHandlerInvoker, EventHandlerInvoker>();
     }
 
     private static readonly JsonSerializerOptions _jsonSerializerOptions = new()

@@ -1,16 +1,12 @@
 using Dapr.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using MoLibrary.DependencyInjection.AppInterfaces;
-using MoLibrary.DependencyInjection.Attributes;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.EventBus.Attributes;
 using MoLibrary.Tool.Utils;
 
 namespace MoLibrary.EventBus.Dapr;
 
-[Dependency(ReplaceServices = true)]
-[ExposeServices(typeof(IMoDistributedEventBus), typeof(DaprDistributedEventBus))]
 public class DaprDistributedEventBus(
     IServiceScopeFactory serviceScopeFactory,
     IOptions<DistributedEventBusOptions> distributedEventBusOptions,
@@ -20,7 +16,7 @@ public class DaprDistributedEventBus(
     IMoLocalEventBus localEventBus) : DistributedEventBusBase(serviceScopeFactory,
         distributedEventBusOptions,
         eventHandlerInvoker,
-        localEventBus), ISingletonDependency
+        localEventBus)
 {
     private readonly DistributedEventBusOptions _distributedEventBusOptions = distributedEventBusOptions.Value;
     public DaprClient Client { get; } = client;

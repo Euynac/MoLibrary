@@ -1,8 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using MoLibrary.DependencyInjection.AppInterfaces;
-using MoLibrary.DependencyInjection.Attributes;
 using MoLibrary.Tool.Utils;
 
 namespace MoLibrary.EventBus.Abstractions;
@@ -10,13 +8,12 @@ namespace MoLibrary.EventBus.Abstractions;
 /// <summary>
 /// Implements EventBus as Singleton pattern.
 /// </summary>
-[ExposeServices(typeof(IMoLocalEventBus), typeof(LocalEventBus))]
 public class LocalEventBus(
     IOptions<LocalEventBusOptions> options,
     IServiceScopeFactory serviceScopeFactory,
     IEventHandlerInvoker eventHandlerInvoker,
     ILogger<LocalEventBus> logger)
-    : EventBusBase(serviceScopeFactory, eventHandlerInvoker), IMoLocalEventBus, ISingletonDependency
+    : EventBusBase(serviceScopeFactory, eventHandlerInvoker), IMoLocalEventBus
 {
     /// <summary>
     /// Reference to the Logger.
