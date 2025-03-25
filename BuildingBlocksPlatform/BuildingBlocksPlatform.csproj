@@ -12,7 +12,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\BackgroundJob\Hangfire.HttpJob\Hangfire.HttpJob.csproj" />
-    <ProjectReference Include="..\MoLibrary.Core\MoLibrary.Core.csproj" />
     <ProjectReference Include="..\MoLibrary.Framework\MoLibrary.Framework.csproj" />
   </ItemGroup>
 
