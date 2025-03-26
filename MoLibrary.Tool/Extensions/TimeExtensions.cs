@@ -320,7 +320,7 @@ public static class TimeExtensions
     /// </summary>
     /// <param name="week"></param>
     /// <returns>1-7对应星期一到星期天</returns>
-    public static ChineseWeeks ToChineseWeek(this DayOfWeek week) => week == DayOfWeek.Sunday ? ChineseWeeks.星期日 : (ChineseWeeks)week;
+    public static ChineseWeeks ToChineseWeek(this DayOfWeek week) => week == DayOfWeek.Sunday ? ChineseWeeks.Sunday : (ChineseWeeks)week;
 
     #endregion
     /// <summary>

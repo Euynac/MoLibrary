@@ -1,7 +1,6 @@
-using BuildingBlocksPlatform.DependencyInjection.AppInterfaces;
-using BuildingBlocksPlatform.Repository;
-using BuildingBlocksPlatform.Repository.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using MoLibrary.DependencyInjection.AppInterfaces;
+using MoLibrary.Repository;
 
 namespace Test.MoLibrary.Repository
 {
@@ -18,27 +17,27 @@ namespace Test.MoLibrary.Repository
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-            
+
             // Department
             modelBuilder.Entity<Department>(entity =>
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
                 entity.Property(e => e.Description).HasMaxLength(500);
-                
+
                 // Configure DepartmentMetadata as owned type
                 entity.OwnsOne(e => e.Metadata, metadata =>
                 {
                     metadata.Property(m => m.Location).HasMaxLength(200);
                 });
-                
+
                 // Configure one-to-many relationship with Employee
                 entity.HasMany(d => d.Employees)
                       .WithOne(e => e.Department)
                       .HasForeignKey(e => e.DepartmentId)
                       .OnDelete(DeleteBehavior.Cascade);
             });
-            
+
             // Employee
             modelBuilder.Entity<Employee>(entity =>
             {
@@ -48,7 +47,7 @@ namespace Test.MoLibrary.Repository
                 entity.Property(e => e.Email).IsRequired().HasMaxLength(255);
                 entity.HasIndex(e => e.Email).IsUnique();
                 entity.Property(e => e.Salary).HasColumnType("decimal(18,2)");
-                
+
                 // Configure ContactInformation as owned type
                 entity.OwnsOne(e => e.ContactInfo, contact =>
                 {
@@ -59,7 +58,7 @@ namespace Test.MoLibrary.Repository
                     contact.Property(c => c.PostalCode).HasMaxLength(20);
                 });
             });
-            
+
             // Project
             modelBuilder.Entity<Project>(entity =>
             {
@@ -67,26 +66,26 @@ namespace Test.MoLibrary.Repository
                 entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
                 entity.Property(e => e.Description).HasMaxLength(500);
                 entity.Property(e => e.Budget).HasColumnType("decimal(18,2)");
-                
+
                 // Configure many-to-many relationship with Employee
                 entity.HasMany(p => p.Employees)
                       .WithMany(e => e.Projects)
                       .UsingEntity(j => j.ToTable("EmployeeProjects"));
-                
+
                 // Configure one-to-many relationship with TaskEntity
                 entity.HasMany(p => p.Tasks)
                       .WithOne(t => t.Project)
                       .HasForeignKey(t => t.ProjectId)
                       .OnDelete(DeleteBehavior.Cascade);
             });
-            
+
             // TaskEntity
             modelBuilder.Entity<TaskEntity>(entity =>
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Title).IsRequired().HasMaxLength(100);
                 entity.Property(e => e.Description).HasMaxLength(500);
-                
+
                 // Configure optional relationship with Employee (AssignedTo)
                 entity.HasOne(t => t.AssignedTo)
                       .WithMany()
@@ -95,4 +94,4 @@ namespace Test.MoLibrary.Repository
             });
         }
     }
-} 
+}

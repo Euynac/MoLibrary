@@ -1,7 +1,6 @@
 using FluentAssertions;
 using Microsoft.Extensions.Options;
 using MoLibrary.Locker.DistributedLocking;
-using NSubstitute;
 using NUnit.Framework;
 
 namespace Test.MoLibrary.Locker.Base;

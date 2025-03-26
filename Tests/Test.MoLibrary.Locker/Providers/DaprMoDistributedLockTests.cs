@@ -112,4 +112,4 @@ public class DaprMoDistributedLockTests : MoDistributedLockTestsBase
         handle.Should().NotBeNull();
         await handle!.DisposeAsync();
     }
-} 
+}

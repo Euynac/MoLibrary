@@ -69,4 +69,4 @@ public class MedallionMoDistributedLockTests : MoDistributedLockTestsBase
         // Assert
         handle.Should().BeNull();
     }
-} 
+}
