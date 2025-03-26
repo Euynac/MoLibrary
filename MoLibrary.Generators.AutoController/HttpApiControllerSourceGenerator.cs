@@ -198,7 +198,8 @@ public class HttpApiControllerSourceGenerator : IIncrementalGenerator
                 "System.Net",
                 "System.Threading.Tasks",
                 "MediatR",
-                "BuildingBlocksPlatform.Extensions"
+                "MoLibrary.Core.Extensions",
+                "MoLibrary.Tool.Extensions"
             };
 
             // Include the candidate's own namespaces from where the request/response classes may live.
@@ -225,7 +226,7 @@ public class HttpApiControllerSourceGenerator : IIncrementalGenerator
                     [{{candidate.HttpMethodAttribute}}("{{candidate.HttpMethodRoute}}")]
                     [ProducesResponseType((int) HttpStatusCode.Accepted)]
                     [ProducesResponseType((int) HttpStatusCode.BadRequest)]
-                    [ProducesResponseType(typeof({{candidate.ResponseType}}), (int) HttpStatusCode.OK)]
+                    [ProducesResponseType(typeof(Res<{{candidate.ResponseType}}>), (int) HttpStatusCode.OK)]
                     public async Task<ActionResult> {{candidate.MethodName}}(
                         [{{(candidate.HttpMethodAttribute == "HttpGet" ? "FromQuery" : "FromBody")}}] {{candidate.RequestType}} dto)
                     {
