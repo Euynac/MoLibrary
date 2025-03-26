@@ -16,11 +16,12 @@ public static class ServicesCollectionExtensions
     /// <summary>
     /// 注册 Swagger 文档服务
     /// </summary>
-    public static void AddMoSwagger(this IServiceCollection services, Action<MoSwaggerConfig>? configAction = null)
+    public static void AddMoSwagger(this IServiceCollection services, Action<MoSwaggerConfig>? configAction = null, Action<SwaggerGenOptions>? extendSwaggerGenOptions = null)
     {
         services.ConfigActionWrapper(configAction, out var swaggerConfig);
         services.AddSwaggerGen(options =>
         {
+            extendSwaggerGenOptions?.Invoke(options);
             options.DocumentFilter<CustomDocumentFilter>();
             options.SchemaFilter<CustomSchemaFilter>();
             options.SwaggerDoc(swaggerConfig.Version, new OpenApiInfo
@@ -31,7 +32,7 @@ public static class ServicesCollectionExtensions
             });
             options.AddEnumsWithValuesFixFilters();//扩展支持Enum
 
-            //巨坑： 这个方法其实是swagger右上角分组时判断是否显示的。但是如果不调用，会导致ABP生成的所有的接口都不显示。
+            //巨坑： 这个方法其实是swagger右上角分组时判断是否显示的。但是如果不调用，会导致ABP(以及自己定义的CrudAutoController约定生成的)生成的所有的接口都不显示。
             options.DocInclusionPredicate((docName, description) => true);
 
             //https://github.com/swagger-api/swagger-ui/issues/7911

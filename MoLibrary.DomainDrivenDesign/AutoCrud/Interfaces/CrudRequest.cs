@@ -5,7 +5,7 @@ namespace MoLibrary.DomainDrivenDesign.AutoCrud.Interfaces;
 /// <summary>
 /// Crud自动接口功能禁用占位Dto，指示包含该参数的功能无需生成接口
 /// </summary>
-public class OurCrudDisableDto
+public class MoCrudDisableDto
 {
 
 }
@@ -13,7 +13,7 @@ public class OurCrudDisableDto
 /// <summary>
 /// 批量删除请求Dto
 /// </summary>
-public class OurCrudBulkDeleteRequestDto<TKey> : IHasRequestIds<TKey>
+public class MoCrudBulkDeleteRequestDto<TKey> : IHasRequestIds<TKey>
 {
     public List<TKey> Ids { get; set; }
 }
@@ -22,7 +22,7 @@ public class OurCrudBulkDeleteRequestDto<TKey> : IHasRequestIds<TKey>
 /// <summary>
 /// 分页请求Dto
 /// </summary>
-public class OurCrudPageRequestDto : LimitedResultRequestDto, IHasRequestFilter, IHasRequestSelect, IHasRequestPage, IHasRequestFeature, IHasRequestSorting
+public class MoCrudPageRequestDto : LimitedResultRequestDto, IHasRequestFilter, IHasRequestSelect, IHasRequestPage, IHasRequestFeature, IHasRequestSorting
 {
     /// <inheritdoc />
     public int? Page { get; set; }
@@ -47,7 +47,7 @@ public class OurCrudPageRequestDto : LimitedResultRequestDto, IHasRequestFilter,
     /// <inheritdoc />
     public string? Sorting { get; set; }
 
-    static OurCrudPageRequestDto()
+    static MoCrudPageRequestDto()
     {
         MaxMaxResultCount = 100000;
     }
