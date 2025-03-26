@@ -100,7 +100,7 @@ public class MoCrudControllerServiceConvention(
         var removeList = new List<ActionModel>();
         foreach (var actionModel in actionModels)
         {
-            if (actionModel.Parameters.Any(a => a.ParameterInfo.ParameterType == typeof(OurCrudDisableDto)))
+            if (actionModel.Parameters.Any(a => a.ParameterInfo.ParameterType == typeof(MoCrudDisableDto)))
             {
                 removeList.Add(actionModel);
             }

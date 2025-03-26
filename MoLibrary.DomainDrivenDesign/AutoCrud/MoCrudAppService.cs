@@ -25,8 +25,8 @@ public interface IMoCrudAppService
 /// <inheritdoc/> <para>该基类禁用修改与增加功能，需进一步禁用删除使用<see cref="IMoCrudDisableDelete"/> </para>
 /// </summary>
 public abstract class MoCrudAppService<TEntity, TEntityDto, TKey, TGetListInput, TRepository>(TRepository repository)
-    : MoCrudAppService<TEntity, TEntityDto, TEntityDto, TKey, TGetListInput, OurCrudDisableDto, OurCrudDisableDto,
-        OurCrudDisableDto, TRepository>(repository) 
+    : MoCrudAppService<TEntity, TEntityDto, TEntityDto, TKey, TGetListInput, MoCrudDisableDto, MoCrudDisableDto,
+        MoCrudDisableDto, TRepository>(repository) 
     where TEntity : class, IMoEntity<TKey>
     where TEntityDto : IMoEntityDto<TKey>
     where TRepository : IMoRepository<TEntity, TKey>
@@ -37,8 +37,8 @@ public abstract class MoCrudAppService<TEntity, TEntityDto, TKey, TGetListInput,
 /// <inheritdoc/>
 /// </summary>
 public abstract class MoCrudAppService<TEntity, TEntityDto, TKey, TCreateInput, TUpdateInput, TRepository>(TRepository repository)
-    : MoCrudAppService<TEntity, TEntityDto, TEntityDto, TKey, OurCrudPageRequestDto, TCreateInput, TUpdateInput,
-        OurCrudDisableDto, TRepository>(repository) 
+    : MoCrudAppService<TEntity, TEntityDto, TEntityDto, TKey, MoCrudPageRequestDto, TCreateInput, TUpdateInput,
+        MoCrudDisableDto, TRepository>(repository) 
     where TEntity : class, IMoEntity<TKey>
     where TEntityDto : IMoEntityDto<TKey>
     where TRepository : IMoRepository<TEntity, TKey>
@@ -50,7 +50,7 @@ public abstract class MoCrudAppService<TEntity, TEntityDto, TKey, TCreateInput, 
 /// </summary>
 public abstract class MoCrudAppService<TEntity, TEntityDto, TKey, TGetListInput, TCreateInput, TUpdateInput,
     TRepository>(TRepository repository)
-    : MoCrudAppService<TEntity, TEntityDto, TEntityDto, TKey, TGetListInput, TCreateInput, TUpdateInput, OurCrudDisableDto, TRepository>(repository) 
+    : MoCrudAppService<TEntity, TEntityDto, TEntityDto, TKey, TGetListInput, TCreateInput, TUpdateInput, MoCrudDisableDto, TRepository>(repository) 
     where TEntity : class, IMoEntity<TKey>
     where TEntityDto : IMoEntityDto<TKey>
     where TRepository : IMoRepository<TEntity, TKey>
