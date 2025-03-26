@@ -128,7 +128,7 @@ public static class ServiceCollectionRepositoryExtensions
             {
                 RegisterService(services, basicRepositoryInterfaceWithPk, repositoryImplementationType, replaceExisting);
 
-                //IRepository<TEntity, TKe>
+                //IRepository<TEntity, TKey>
                 var repositoryInterfaceWithPk = typeof(IMoRepository<,>).MakeGenericType(entityType, primaryKeyType);
                 if (repositoryInterfaceWithPk.IsAssignableFrom(repositoryImplementationType))
                 {
