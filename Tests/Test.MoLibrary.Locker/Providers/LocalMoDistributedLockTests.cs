@@ -32,4 +32,4 @@ public class LocalMoDistributedLockTests : MoDistributedLockTestsBase
             await handle!.DisposeAsync();
         }
     }
-} 
+}

@@ -1,6 +1,6 @@
-using BuildingBlocksPlatform.Repository;
-using BuildingBlocksPlatform.Repository.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using MoLibrary.Repository;
+using MoLibrary.Repository.Interfaces;
 
 namespace Test.MoLibrary.Repository
 {
@@ -15,7 +15,7 @@ namespace Test.MoLibrary.Repository
                 .AsQueryable();
         }
     }
-    
+
     public class EmployeeRepository(IDbContextProvider<ComplexEntityDbContext> dbContextProvider)
         : MoRepository<ComplexEntityDbContext, Employee, Guid>(dbContextProvider)
     {
@@ -28,7 +28,7 @@ namespace Test.MoLibrary.Repository
                 .AsQueryable();
         }
     }
-    
+
     public class ProjectRepository(IDbContextProvider<ComplexEntityDbContext> dbContextProvider)
         : MoRepository<ComplexEntityDbContext, Project, Guid>(dbContextProvider)
     {
@@ -42,7 +42,7 @@ namespace Test.MoLibrary.Repository
                 .AsQueryable();
         }
     }
-    
+
     public class TaskRepository(IDbContextProvider<ComplexEntityDbContext> dbContextProvider)
         : MoRepository<ComplexEntityDbContext, TaskEntity, Guid>(dbContextProvider)
     {
@@ -56,4 +56,4 @@ namespace Test.MoLibrary.Repository
                 .AsQueryable();
         }
     }
-} 
+}

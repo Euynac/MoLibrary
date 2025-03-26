@@ -1,8 +1,5 @@
-using BuildingBlocksPlatform.Repository.EntityInterfaces;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 using System.Collections.ObjectModel;
-using System.Text.Json.Serialization;
+using MoLibrary.Repository.EntityInterfaces;
 
 namespace Test.MoLibrary.Repository
 {
@@ -12,37 +9,37 @@ namespace Test.MoLibrary.Repository
         public Guid Id { get; private set; } = Guid.NewGuid();
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
         public string CreatedBy { get; set; } = "TestUser";
-        
+
         public virtual object[] GetKeys()
         {
             return new object[] { Id };
         }
-        
+
         public virtual void AutoSetNewId(bool notSetWhenNotDefault = false)
         {
             if (notSetWhenNotDefault && Id != default)
                 return;
-                
+
             Id = Guid.NewGuid();
         }
-        
+
         public virtual void SetNewId(Guid key)
         {
             Id = key;
         }
     }
-    
+
     // Department with a collection of employees (one-to-many)
     public class Department : ComplexEntityBase
     {
         public string Name { get; set; }
         public string Description { get; set; }
         public DepartmentMetadata Metadata { get; set; } = new DepartmentMetadata();
-        
+
         // Navigation property - one-to-many relationship
         public virtual ICollection<Employee> Employees { get; set; } = new Collection<Employee>();
     }
-    
+
     // Nested class for department metadata
     public class DepartmentMetadata
     {
@@ -50,7 +47,7 @@ namespace Test.MoLibrary.Repository
         public int Floor { get; set; } = 1;
         public bool IsActive { get; set; } = true;
     }
-    
+
     // Employee entity with navigation properties
     public class Employee : ComplexEntityBase
     {
@@ -59,15 +56,15 @@ namespace Test.MoLibrary.Repository
         public string Email { get; set; }
         public int Salary { get; set; }
         public ContactInformation ContactInfo { get; set; } = new ContactInformation();
-        
+
         // Navigation property - many-to-one relationship
         public Guid DepartmentId { get; set; }
         public virtual Department Department { get; set; }
-        
+
         // Navigation property - many-to-many relationship
         public virtual ICollection<Project> Projects { get; set; } = new Collection<Project>();
     }
-    
+
     // Nested class for employee contact information
     public class ContactInformation
     {
@@ -77,7 +74,7 @@ namespace Test.MoLibrary.Repository
         public string Country { get; set; }
         public string PostalCode { get; set; }
     }
-    
+
     // Project entity for many-to-many relationship with employees
     public class Project : ComplexEntityBase
     {
@@ -87,14 +84,14 @@ namespace Test.MoLibrary.Repository
         public DateTime? EndDate { get; set; }
         public decimal Budget { get; set; }
         public ProjectStatus Status { get; set; } = ProjectStatus.Planning;
-        
+
         // Navigation property - many-to-many relationship
         public virtual ICollection<Employee> Employees { get; set; } = new Collection<Employee>();
-        
+
         // Navigation property - one-to-many relationship
         public virtual ICollection<TaskEntity> Tasks { get; set; } = new Collection<TaskEntity>();
     }
-    
+
     // TaskEntity entity that belongs to a project
     public class TaskEntity : ComplexEntityBase
     {
@@ -103,16 +100,16 @@ namespace Test.MoLibrary.Repository
         public DateTime? DueDate { get; set; }
         public TaskPriority Priority { get; set; } = TaskPriority.Medium;
         public TaskStatus Status { get; set; } = TaskStatus.NotStarted;
-        
+
         // Navigation property - many-to-one relationship
         public Guid ProjectId { get; set; }
         public virtual Project Project { get; set; }
-        
+
         // Navigation property - many-to-one relationship (optional)
         public Guid? AssignedToId { get; set; }
         public virtual Employee AssignedTo { get; set; }
     }
-    
+
     // Enums for complex entities
     public enum ProjectStatus
     {
@@ -122,7 +119,7 @@ namespace Test.MoLibrary.Repository
         Completed,
         Cancelled
     }
-    
+
     public enum TaskPriority
     {
         Low,
@@ -130,7 +127,7 @@ namespace Test.MoLibrary.Repository
         High,
         Critical
     }
-    
+
     public enum TaskStatus
     {
         NotStarted,
@@ -138,4 +135,4 @@ namespace Test.MoLibrary.Repository
         InReview,
         Completed
     }
-} 
+}
