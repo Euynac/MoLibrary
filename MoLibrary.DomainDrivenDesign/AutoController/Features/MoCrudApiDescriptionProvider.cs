@@ -10,7 +10,7 @@ using MoLibrary.Tool.MoResponse;
 namespace MoLibrary.DomainDrivenDesign.AutoController.Features;
 
 //仅需注册，ASP.NET Core会自动发现所有已注册的Provider进行处理。
-public class MoApiDescriptionProvider(IModelMetadataProvider modelMetadataProvider,
+public class MoCrudApiDescriptionProvider(IModelMetadataProvider modelMetadataProvider,
         IOptions<MvcOptions> mvcOptionsAccessor)
     : IApiDescriptionProvider
 {

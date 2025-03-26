@@ -16,11 +16,19 @@ using MoLibrary.Tool.Utils;
 
 namespace MoLibrary.DomainDrivenDesign.AutoController;
 
-public class MoServiceConvention(
-    IMoConventionalRouteBuilder conventionalRouteBuilder, ILogger<MoServiceConvention> logger, IOptions<MoAutoControllerOption> options)
+/// <summary>
+/// 仅针对自动CRUD Controller的约定
+/// </summary>
+/// <param name="conventionalRouteBuilder"></param>
+/// <param name="logger"></param>
+/// <param name="options"></param>
+public class MoCrudControllerServiceConvention(
+    IMoConventionalRouteBuilder conventionalRouteBuilder, ILogger<MoCrudControllerServiceConvention> logger, IOptions<MoCrudControllerOption> options)
     : IMoServiceConvention
 {
-    public ILogger<MoServiceConvention> Logger => logger;
+
+    public MoCrudControllerOption CrudControllerOption => options.Value;
+    public ILogger<MoCrudControllerServiceConvention> Logger => logger;
 
     protected IMoConventionalRouteBuilder ConventionalRouteBuilder { get; } = conventionalRouteBuilder;
 
@@ -34,9 +42,13 @@ public class MoServiceConvention(
         {
             var controllerType = controller.ControllerType.AsType();
 
-            controller.ControllerName = controller.ControllerName.RemovePostFix(MoAutoControllerOption.AutoControllerPostfix);
+            if (!controller.ControllerType.Name.EndsWith(CrudControllerOption.CrudControllerPostfix))
+            {
+                continue;
+            }
+            controller.ControllerName = controller.ControllerName.RemovePostFix(CrudControllerOption.CrudControllerPostfix);
 
-            ConfigureRemoteService(controller, new ConventionalControllerSetting());
+            ConfigureCrudController(controller, new ConventionalControllerSetting());
         }
     }
 
@@ -46,7 +58,7 @@ public class MoServiceConvention(
         return application.Controllers;
     }
 
-    protected virtual void ConfigureRemoteService(ControllerModel controller, ConventionalControllerSetting? configuration)
+    protected virtual void ConfigureCrudController(ControllerModel controller, ConventionalControllerSetting? configuration)
     {
         ConfigureApiExplorer(controller);
         ConfigureSelector(controller, configuration);
@@ -157,7 +169,7 @@ public class MoServiceConvention(
                 {
                     if (CanUseFormBodyBinding(action, prm))
                     {
-                        prm.BindingInfo = BindingInfo.GetBindingInfo(new[] { new FromBodyAttribute() });
+                        prm.BindingInfo = BindingInfo.GetBindingInfo([new FromBodyAttribute()]);
                     }
                 }
             }
