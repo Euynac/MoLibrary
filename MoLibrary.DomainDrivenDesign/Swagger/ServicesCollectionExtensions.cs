@@ -4,7 +4,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
+using MoLibrary.AutoModel.Interfaces;
 using MoLibrary.Core.Extensions;
+using MoLibrary.DomainDrivenDesign.AutoCrud.Interfaces;
 using MoLibrary.Logging;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using Unchase.Swashbuckle.AspNetCore.Extensions.Extensions;
@@ -40,19 +42,20 @@ public static class ServicesCollectionExtensions
             options.CustomSchemaIds(type => type.FullName?.Replace('+', '.'));
 
             //巨坑：要显示swagger文档，需要设置项目<GenerateDocumentationFile>True</GenerateDocumentationFile> XML文档用于生成swagger api注释。另外还要在设置中指定xml文档地址
-            if (swaggerConfig.DocumentAssemblies is { } names)
+
+            var documentAssemblies = (swaggerConfig.DocumentAssemblies ?? []).ToList();
+            documentAssemblies.Add(typeof(MoCrudPageRequestDto).Assembly.GetName().Name!);
+            documentAssemblies.Add(typeof(IHasRequestFilter).Assembly.GetName().Name!);
+            foreach (var name in documentAssemblies)
             {
-                foreach (var name in names)
+                var filePath = Path.Combine(AppContext.BaseDirectory, $"{name}.xml");
+                if (File.Exists(filePath))
                 {
-                    var filePath = Path.Combine(AppContext.BaseDirectory, $"{name}.xml");
-                    if (File.Exists(filePath))
-                    {
-                        options.IncludeXmlComments(filePath);
-                    }
-                    else
-                    {
-                        GlobalLog.LogWarning($"Swagger XML file not found: {filePath}");
-                    }
+                    options.IncludeXmlComments(filePath);
+                }
+                else
+                {
+                    GlobalLog.LogWarning($"Swagger XML file not found: {filePath}");
                 }
             }
             //似乎必须写在IncludeXmlComments下面，而且只支持/// <inheritdoc /> 一行
