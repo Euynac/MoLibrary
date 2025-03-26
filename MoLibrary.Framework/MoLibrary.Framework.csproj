@@ -17,7 +17,6 @@
     <PackageReference Include="protobuf-net.Core" Version="3.2.30" />
     <PackageReference Include="protobuf-net.Grpc.Reflection" Version="1.1.1" />
     <PackageReference Include="ShardingCore" Version="7.8.1.20" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
 	</ItemGroup>
 	<ItemGroup>
 	  <ProjectReference Include="..\MoLibrary.Authority\MoLibrary.Authority.csproj" />

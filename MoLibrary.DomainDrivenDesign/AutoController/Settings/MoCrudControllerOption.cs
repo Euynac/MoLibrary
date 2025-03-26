@@ -1,8 +1,7 @@
 namespace MoLibrary.DomainDrivenDesign.AutoController.Settings;
 
-public class MoAutoControllerOption
+public class MoCrudControllerOption
 {
-
     /// <summary>
     /// 自动CRUD路径前缀
     /// </summary>
@@ -10,5 +9,5 @@ public class MoAutoControllerOption
     /// <summary>
     /// Controller自动注册后缀
     /// </summary>
-    public static string AutoControllerPostfix { get; set; } = "AppService";
+    public string CrudControllerPostfix { get; set; } = "AppService";
 }

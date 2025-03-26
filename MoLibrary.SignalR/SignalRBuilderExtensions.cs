@@ -54,15 +54,18 @@ public static class SignalRBuilderExtensions
     /// <summary>
     ///     配置SignalR Swagger显示
     /// </summary>
-    public static void ConfigSignalRSwagger(this SwaggerGenOptions options,
+    public static void AddMoSignalRSwagger(this IServiceCollection services,
         Action<SignalRSwaggerGenOptions> signalROption)
     {
         if (_hasAdd is false) return;
-        options.AddSignalRSwaggerGen(signalROption);
+
+        services.ConfigureSwaggerGen(o =>
+        {
+            o.AddSignalRSwaggerGen(signalROption);
+        });
     }
 
     /// <summary>
-    ///     s
     ///     增加SignalR Hub以及相关接口
     /// </summary>
     public static void MapMoHub<THubServer>(this IEndpointRouteBuilder endpoints,
