@@ -13,5 +13,10 @@ public class MoRepositoryOptions
     /// </summary>
     public bool UseDbContextFactory { get; set; }
 
+    /// <summary>
+    /// 是否启用敏感数据日志。默认为null，表示当环境为Development时启用。
+    /// </summary>
+    public bool? EnableSensitiveDataLogging { get; set; }
+
     public const int ConcurrencyStampMaxLength = 40;
 }

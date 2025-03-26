@@ -59,7 +59,7 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         //check if is in development
-        if (UtilsEnvironment.IsDevelopment())
+        if ((MoOptions.EnableSensitiveDataLogging is null && UtilsEnvironment.IsDevelopment()) || MoOptions.EnableSensitiveDataLogging is true)
         {
             optionsBuilder.EnableSensitiveDataLogging();//巨坑:这个可以显示具体参数值的设置必须写在OnConfiguring里面才会生效。
         }
