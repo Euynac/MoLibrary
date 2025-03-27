@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
 using MoLibrary.Core.Extensions;
-using MoLibrary.Core.UtilsAbstract;
+using MoLibrary.Core.GlobalJson.Interfaces;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.Framework.Core.Model;
 using MoLibrary.Logging;

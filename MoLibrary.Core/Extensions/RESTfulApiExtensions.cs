@@ -16,11 +16,11 @@ public static class RESTfulApiExtensions
     public static async Task<object> GetResponse(this Task<object> response, ControllerBase controller)
     {
         var res = await response;
-        if(res is IServiceResponse serviceResponse)
+        if (res is IServiceResponse serviceResponse)
         {
             return new ObjectResult(serviceResponse)
             {
-                StatusCode = (int?) serviceResponse.GetHttpStatusCode()
+                StatusCode = (int?)serviceResponse.GetHttpStatusCode()
             };
         }
         return res;
@@ -62,7 +62,7 @@ public static class RESTfulApiExtensions
     /// <returns>A task that represents the send operation. The task result contains the handler response</returns>
     public static async Task<List<TResponse>> SendBulk<TResponse>(
         this ISender sender, IRequest<TResponse>[] requests,
-        CancellationToken cancellationToken = default) 
+        CancellationToken cancellationToken = default)
     {
         var list = new List<TResponse>();
         foreach (var request in requests)

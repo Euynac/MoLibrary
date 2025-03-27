@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Binders;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using MoLibrary.Core.UtilsAbstract;
+using MoLibrary.Core.GlobalJson;
 
 namespace MoLibrary.Framework.Features;
 
@@ -21,7 +21,7 @@ public class AutoUtcDateTimeModelBinder : IModelBinder
         await _dateTimeModelBinder.BindModelAsync(bindingContext);
         if (bindingContext.Result is {IsModelSet: true, Model: DateTime dateTime})
         {
-            bindingContext.Result = ModelBindingResult.Success(JsonShared.NormalizeInTime(dateTime));
+            bindingContext.Result = ModelBindingResult.Success(DefaultMoGlobalJsonOptions.NormalizeInTime(dateTime));
         }
     }
 }

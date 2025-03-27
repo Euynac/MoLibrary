@@ -1,8 +1,8 @@
+using MoLibrary.Tool.Extensions;
+using MoLibrary.Tool.MoResponse;
 using System.Dynamic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using MoLibrary.Tool.Extensions;
-using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Core.Features;
 
@@ -73,7 +73,7 @@ public class MoRequestContext
         }
         return node;
     }
- 
+
     /// <summary>
     /// 指示该次调用已完成
     /// </summary>
@@ -118,7 +118,7 @@ public class InvokeChainInfo
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Remarks { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public dynamic? InvokingExtraInfo { get; set; }  
+    public dynamic? InvokingExtraInfo { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public dynamic? InvokedExtraInfo { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

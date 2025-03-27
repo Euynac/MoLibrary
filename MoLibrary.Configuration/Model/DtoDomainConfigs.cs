@@ -1,5 +1,5 @@
 using System.Text.Json.Serialization;
-using MoLibrary.Core.UtilsAbstract.Converters;
+using MoLibrary.Core.GlobalJson.Converters;
 using MoLibrary.Tool.General;
 
 namespace MoLibrary.Configuration.Model;
