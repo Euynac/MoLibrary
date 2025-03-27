@@ -1,8 +1,8 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.MoResponse;
+using System.Diagnostics.CodeAnalysis;
 
 namespace MoLibrary.Core.Extensions;
 
@@ -22,7 +22,7 @@ public static class MinimalApiExtensions
     {
         ActionExtensions.WrapAction(ref _sharedFilterAction, handlerBuilder => handlerBuilder.AddEndpointFilter<RouteHandlerBuilder, TFilterType>());
     }
-    
+
     /// <summary>
     /// Registers shared filter of type onto the route handler.
     /// </summary>
@@ -43,7 +43,7 @@ public static class MinimalApiExtensions
     /// <returns></returns>
     public static IResult GetResponse<T>(this T response) where T : IServiceResponse
     {
-        return Results.Json(response, statusCode: (int?) response.GetHttpStatusCode());
+        return Results.Json(response, statusCode: (int?)response.GetHttpStatusCode());
     }
 
 }
