@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
-using MoLibrary.Core.UtilsAbstract;
+using MoLibrary.Core.GlobalJson.Interfaces;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.EventBus.Attributes;
 using MoLibrary.EventBus.Dapr;

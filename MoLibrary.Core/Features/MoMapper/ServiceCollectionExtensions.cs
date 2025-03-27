@@ -1,8 +1,8 @@
 using Mapster;
 using MapsterMapper;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using MoLibrary.Framework.Extensions;
 
 namespace MoLibrary.Core.Features.MoMapper;
@@ -11,7 +11,7 @@ public static class ServiceCollectionExtensions
 {
     public static void AddMoMapper(this IServiceCollection services, Action<MoMapperOption>? action = null)
     {
-     
+
         var option = new MoMapperOption();
         action?.Invoke(option);
         if (option.DebugMapper)

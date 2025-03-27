@@ -2,7 +2,7 @@ using System.Text.Json;
 using Dapr.Client;
 using Microsoft.Extensions.Logging;
 using MoLibrary.Core.Extensions;
-using MoLibrary.Core.UtilsAbstract;
+using MoLibrary.Core.GlobalJson.Interfaces;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.RegisterCentre;

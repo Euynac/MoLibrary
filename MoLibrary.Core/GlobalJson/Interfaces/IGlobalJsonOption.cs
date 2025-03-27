@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace MoLibrary.Core.UtilsAbstract;
+namespace MoLibrary.Core.GlobalJson.Interfaces;
 
 public interface IGlobalJsonOption
 {

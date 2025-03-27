@@ -17,7 +17,7 @@ namespace MoLibrary.Core.Extensions
         public static T As<T>(this object obj)
             where T : class
         {
-            return (T) obj;
+            return (T)obj;
         }
 
         /// <summary>
@@ -97,10 +97,10 @@ namespace MoLibrary.Core.Extensions
         {
             if (typeof(T) == typeof(Guid))
             {
-                return (T) TypeDescriptor.GetConverter(typeof(T)).ConvertFromInvariantString(obj.ToString()!)!;
+                return (T)TypeDescriptor.GetConverter(typeof(T)).ConvertFromInvariantString(obj.ToString()!)!;
             }
 
-            return (T) Convert.ChangeType(obj, typeof(T), CultureInfo.InvariantCulture);
+            return (T)Convert.ChangeType(obj, typeof(T), CultureInfo.InvariantCulture);
         }
 
 

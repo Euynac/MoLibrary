@@ -3,11 +3,15 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using MoLibrary.Core.Features.MoMapper;
+using MoLibrary.DependencyInjection.DynamicProxy;
+using MoLibrary.DependencyInjection.DynamicProxy.DefaultInterceptors;
+using MoLibrary.Logging;
 using MoLibrary.Repository.EntityInterfaces;
 using MoLibrary.Repository.Extensions;
 using MoLibrary.Repository.Interfaces;
 using MoLibrary.Repository.Registrar;
 using MoLibrary.Repository.Transaction;
+using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.Repository;
 
@@ -93,6 +97,20 @@ public static class MoEfCoreServiceCollectionExtensions
         new EfCoreRepositoryRegistrar(options).AddRepositories();
 
         services.AddTransient<IMoDbContextDatabaseManager<TDbContext>, MoDbContextDatabaseManager<TDbContext>>();
+
+        //TODO 优化无需AOP
+        services.AddMoInterceptor<PropertyInjectServiceProviderEmptyInterceptor>().CreateProxyWhenSatisfy(context =>
+        {
+            var type = context.ImplementationType;
+            if (type.IsAssignableTo<IMoRepository>())
+            {
+                GlobalLog.LogInformation("property injection: {service}", type.GetGenericTypeName());
+                return true;
+            }
+
+            return false;
+        });
+
         return services;
     }
 }
