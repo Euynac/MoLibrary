@@ -7,8 +7,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
 using MoLibrary.Authority.Security;
-using MoLibrary.Core.UtilsAbstract;
-using MoLibrary.Core.UtilsAbstract.Converters;
+using MoLibrary.Core.GlobalJson;
 using MoLibrary.SignalR.Interfaces;
 using SignalRSwaggerGen;
 using SignalRSwaggerGen.Attributes;
@@ -47,7 +46,7 @@ public static class SignalRBuilderExtensions
         services.AddTransient<TIHubOperator, THubOperator>();
         services.AddSignalR(options => { options.EnableDetailedErrors = true; }).AddJsonProtocol(options =>
         {
-            options.PayloadSerializerOptions.CloneFrom(JsonShared.GlobalJsonSerializerOptions);
+            options.PayloadSerializerOptions.CloneFrom(DefaultMoGlobalJsonOptions.GlobalJsonSerializerOptions);
         });
     }
 

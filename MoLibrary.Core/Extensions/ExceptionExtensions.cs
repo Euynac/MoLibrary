@@ -1,6 +1,6 @@
+using Microsoft.Extensions.Logging;
 using System.Runtime.ExceptionServices;
 using System.Text;
-using Microsoft.Extensions.Logging;
 
 namespace MoLibrary.Core.Extensions;
 

@@ -1,7 +1,7 @@
 using System.Text.Json;
 using MediatR;
 using Microsoft.AspNetCore.Http.Extensions;
-using MoLibrary.Core.UtilsAbstract;
+using MoLibrary.Core.GlobalJson;
 using MoLibrary.Logging;
 using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.General;
@@ -28,7 +28,7 @@ public static class HttpApiExtensions
         {
             httpResponse = await response;
             resContent = await httpResponse.Content.ReadAsStringAsync();
-            res = JsonSerializer.Deserialize<TResponse>(resContent, JsonShared.GlobalJsonSerializerOptions);
+            res = JsonSerializer.Deserialize<TResponse>(resContent, DefaultMoGlobalJsonOptions.GlobalJsonSerializerOptions);
             res?.AutoParseResponseFromOrigin(resContent);
             if (res?.IsServiceNormal() is true)
             {
@@ -139,7 +139,7 @@ public static class HttpApiExtensions
         {
             httpResponse = await response;
             resContent = await httpResponse.Content.ReadAsStringAsync();
-            res = (IServiceResponse?)JsonSerializer.Deserialize(resContent, responseType, JsonShared.GlobalJsonSerializerOptions);
+            res = (IServiceResponse?)JsonSerializer.Deserialize(resContent, responseType, DefaultMoGlobalJsonOptions.GlobalJsonSerializerOptions);
             if (res?.IsServiceNormal() is true)
             {
                 return res;

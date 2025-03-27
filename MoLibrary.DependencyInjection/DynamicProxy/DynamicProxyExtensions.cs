@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using MoLibrary.DependencyInjection.AppInterfaces;
 using MoLibrary.DependencyInjection.DynamicProxy.Abstract;
+using MoLibrary.DependencyInjection.DynamicProxy.DefaultInterceptors;
 using MoLibrary.Tool.Extensions;
 using static MoLibrary.DependencyInjection.DynamicProxy.MicrosoftDependencyInjectionDynamicProxyExtensions;
 
@@ -283,6 +284,18 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
             }
         }
 
+        IInterceptor[] GetInterceptors(IServiceProvider provider, RegisterContext context)
+        {
+            var types = context.InterceptorTypes;
+            if (types.Count > 1)
+            {
+                types.RemoveAll(p=> p == typeof(PropertyInjectServiceProviderEmptyInterceptor));
+            }
+            return context.InterceptorTypes
+                .Select(p => (IInterceptor)ActivatorUtilities.CreateInstance(provider, p))
+                .ToArray();
+        }
+
         void AddInstanceRegister(RegisterContext context)
         {
             collection.Add(new ServiceDescriptor(context.OldDescriptor.ServiceType, context.OldDescriptor.ServiceKey,
@@ -290,9 +303,7 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
                 {
                     var instance = context.OldDescriptor.ImplementationInstance!;
                     var proxyGenerator = provider.GetRequiredService<ProxyGeneratorWithDI>();
-                    var interceptors = context.InterceptorTypes
-                        .Select(p => (IInterceptor) ActivatorUtilities.CreateInstance(provider, p))
-                        .ToArray();
+                    var interceptors = GetInterceptors(provider, context);
                     object proxiedObject;
                     switch (context.Kind)
                     {
@@ -322,9 +333,7 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
                 (provider, o) =>
                 {
                     var proxyGenerator = provider.GetRequiredService<ProxyGeneratorWithDI>();
-                    var interceptors = context.InterceptorTypes
-                        .Select(p => (IInterceptor) ActivatorUtilities.CreateInstance(provider, p))
-                        .ToArray();
+                    var interceptors = GetInterceptors(provider, context);
                     var targetFromFactory = factory.Invoke(provider);
                     object? proxiedObject;
                     //TODO 无法实现属性注入，因为工厂方法实例化只能执行一次。
@@ -357,9 +366,7 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
                 (provider, o) =>
                 {
                     var proxyGenerator = provider.GetRequiredService<ProxyGeneratorWithDI>();
-                    var interceptors = context.InterceptorTypes
-                        .Select(p => (IInterceptor) ActivatorUtilities.CreateInstance(provider, p))
-                        .ToArray();
+                    var interceptors = GetInterceptors(provider, context);
                     object? proxiedObject;
                     switch (context.Kind)
                     {

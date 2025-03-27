@@ -1,16 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Microsoft.EntityFrameworkCore.ValueGeneration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MoLibrary.Core.Extensions;
-using MoLibrary.Core.Features.MoSnowflake;
 using MoLibrary.DependencyInjection.AppInterfaces;
-using MoLibrary.Repository.EFCoreExtensions.EFCoreExtensions;
 using MoLibrary.Repository.EntityInterfaces;
 using MoLibrary.Repository.Extensions;
 using MoLibrary.Repository.Interfaces;
@@ -21,9 +17,9 @@ using MoLibrary.Tool.Utils;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
+using MoLibrary.Repository.EFCoreExtensions;
 
 namespace MoLibrary.Repository;
-
 
 public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> options, IMoServiceProvider serviceProvider) : DbContext(options), IMoDbContext, ITransientDependency, IMoServiceProviderAccessor
     where TDbContext : DbContext
@@ -66,16 +62,7 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
     }
 
     #region 待优化
-    public class OurLongValueGenerator : ValueGenerator<long>
-    {
-        public override long Next(EntityEntry entry)
-        {
-            var snowflake = entry.Context.GetService<ISnowflakeGenerator>();
-            return snowflake.GenerateSnowflakeId();
-        }
-
-        public override bool GeneratesTemporaryValues => false;
-    }
+    
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         configurationBuilder.Properties<DateTime>().HavePrecision(0);
@@ -97,13 +84,11 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
         {
             foreach (var property in entityType.GetProperties())
             {
-
-
                 //设置自动生成雪花ID
                 if (property.Name.Equals("Id") && property.ValueGenerated != ValueGenerated.Never &&
                     property.ClrType == typeof(long))
                 {
-                    property.SetValueGeneratorFactory((_, _) => new OurLongValueGenerator());
+                    property.SetValueGeneratorFactory((_, _) => new SnowflakeLongValueGenerator());
                     builder.Entity(entityType.ClrType).Property(property.Name).ValueGeneratedNever();
                 }
 

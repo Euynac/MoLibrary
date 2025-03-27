@@ -1,9 +1,10 @@
+using MoLibrary.Core.GlobalJson.Interfaces;
 using MoLibrary.Tool.Extensions;
 using System.Text.Json;
 
-namespace MoLibrary.Core.UtilsAbstract;
+namespace MoLibrary.Core.GlobalJson;
 
-public class JsonShared : IGlobalJsonOption
+public class DefaultMoGlobalJsonOptions : IGlobalJsonOption
 {
     /// <summary>
     /// 全局的Json设置。用于Mvc等
