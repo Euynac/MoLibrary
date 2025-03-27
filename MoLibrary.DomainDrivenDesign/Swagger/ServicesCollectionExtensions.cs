@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -46,7 +47,12 @@ public static class ServicesCollectionExtensions
             var documentAssemblies = (swaggerConfig.DocumentAssemblies ?? []).ToList();
             documentAssemblies.Add(typeof(MoCrudPageRequestDto).Assembly.GetName().Name!);
             documentAssemblies.Add(typeof(IHasRequestFilter).Assembly.GetName().Name!);
-            foreach (var name in documentAssemblies)
+            if (!swaggerConfig.DisableAutoIncludeEntryAsDocumentAssembly)
+            {
+                documentAssemblies.Add(Assembly.GetEntryAssembly()!.GetName().Name!);
+            }
+
+            foreach (var name in documentAssemblies.Distinct())
             {
                 var filePath = Path.Combine(AppContext.BaseDirectory, $"{name}.xml");
                 if (File.Exists(filePath))
