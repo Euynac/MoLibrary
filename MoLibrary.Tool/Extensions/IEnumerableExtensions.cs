@@ -16,23 +16,6 @@ public class NoDisplayAttribute : Attribute
 public static class IEnumerableExtensions
 {
     /// <summary>
-    /// Removes all item that match the condition from given list.
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="list"></param>
-    /// <param name="func"></param>
-    /// <returns></returns>
-    public static void RemoveAll<T>(this IList<T> list, Func<T, bool> func)
-    {
-        for (int index = list.Count - 1; index >= 0; --index)
-        {
-            if (func(list[index]))
-                list.RemoveAt(index);
-        }
-    }
-
-
-    /// <summary>
     /// Removes all items from the collection.
     /// </summary>
     /// <typeparam name="T">Type of the items in the collection</typeparam>
@@ -526,7 +509,7 @@ public static class IEnumerableExtensions
     /// <param name="list"></param>
     /// <param name="func"></param>
     /// <returns></returns>
-    public static IEnumerable<T> Remove<T>(this IEnumerable<T> list, Func<T, bool> func) => list.Where(p => !func(p));
+    public static IEnumerable<T> WhereNot<T>(this IEnumerable<T> list, Func<T, bool> func) => list.Where(p => !func(p));
     /// <summary>
     /// Take specific item at given index to create a tuple.
     /// </summary>

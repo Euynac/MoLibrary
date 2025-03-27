@@ -1,7 +1,6 @@
-using MoLibrary.DependencyInjection.DynamicProxy;
 using MoLibrary.DependencyInjection.DynamicProxy.Abstract;
 
-namespace MoLibrary.Framework.Features.Decorators;
+namespace MoLibrary.DependencyInjection.DynamicProxy.DefaultInterceptors;
 
 public class PropertyInjectServiceProviderEmptyInterceptor : MoInterceptor
 {
