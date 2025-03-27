@@ -15,6 +15,7 @@ public static class ServicesCollectionExtensions
     /// <summary>
     ///  Adds auto generated controllers for all aggregates in the application to the service collection.
     /// </summary>
+    /// TODO 包含MediaR注册
     public static IMvcBuilder AddMoControllers(this IServiceCollection services,
         Action<MvcOptions>? setupAction = null, Action<MoCrudControllerOption>? crudOptionAction = null)
     {
@@ -34,7 +35,7 @@ public static class ServicesCollectionExtensions
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 
         // if you use v6's "minimal APIs" https://stackoverflow.com/questions/71932980/what-is-addendpointsapiexplorer-in-asp-net-core-6
-        services.AddEndpointsApiExplorer();//使得Minimal api 支持Swagger? 似乎也不影响
+        services.AddEndpointsApiExplorer();
 
 
         return services.AddControllers(options =>
