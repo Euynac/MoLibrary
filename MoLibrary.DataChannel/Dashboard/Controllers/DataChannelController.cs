@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using MoLibrary.Core.Extensions;
+using MoLibrary.Core.ModuleController;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.DataChannel.Dashboard.Controllers;
@@ -7,7 +8,7 @@ namespace MoLibrary.DataChannel.Dashboard.Controllers;
 [Route("data-channel")]
 [ApiController]
 //[Tags("DataChannel")]
-public class DataChannelController(IDataChannelManager manager) : ControllerBase
+public class DataChannelController(IDataChannelManager manager) : MoModuleControllerBase
 {
     /// <summary>
     /// 对给定ID的DataChannel进行重新初始化操作
