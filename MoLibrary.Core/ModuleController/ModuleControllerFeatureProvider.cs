@@ -10,7 +10,7 @@ namespace MoLibrary.Core.ModuleController;
 /// </summary>
 /// <typeparam name="TModuleController"></typeparam>
 /// <param name="options"></param>
-public class ModuleControllerFeatureProvider<TModuleController>(IMoModuleOptions options) : IApplicationFeatureProvider<ControllerFeature> where TModuleController : ControllerBase
+public class ModuleControllerFeatureProvider<TModuleController>(IMoModuleOptions options) : IApplicationFeatureProvider<ControllerFeature> where TModuleController : MoModuleControllerBase
 {
     public virtual void PopulateFeature(IEnumerable<ApplicationPart> parts, ControllerFeature feature)
     {
