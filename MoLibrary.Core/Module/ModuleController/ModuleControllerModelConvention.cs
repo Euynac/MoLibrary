@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc.ApplicationModels;
 
-namespace MoLibrary.Core.ModuleController;
+namespace MoLibrary.Core.Module.ModuleController;
 
 public class ModuleControllerModelConvention<TModuleController>(IMoModuleOptions options) : IApplicationModelConvention where TModuleController : MoModuleControllerBase
 {

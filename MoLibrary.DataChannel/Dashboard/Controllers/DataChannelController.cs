@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using MoLibrary.Core.Extensions;
-using MoLibrary.Core.ModuleController;
+using MoLibrary.Core.Module.ModuleController;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.DataChannel.Dashboard.Controllers;
