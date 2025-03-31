@@ -104,7 +104,7 @@ public static class MoEfCoreServiceCollectionExtensions
             var type = context.ImplementationType;
             if (type.IsAssignableTo<IMoRepository>())
             {
-                GlobalLog.LogInformation("property injection: {service}", type.GetGenericTypeName());
+                //GlobalLog.LogInformation("property injection: {service}", type.GetGenericTypeName());
                 return true;
             }
 

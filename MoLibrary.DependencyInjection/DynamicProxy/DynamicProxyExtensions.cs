@@ -259,7 +259,7 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
 
             var shouldInjectServiceProvider = implementType.IsImplementInterface<IMoServiceProviderInjector>();
             var context = new RegisterContext(option, shouldInjectServiceProvider, oldDescriptor, implementType, interceptorTypes, way);
-            var tmp = implementType.GetGenericTypeName();
+           
             switch (way)
             {
                 case ERegisterWays.Factory:
@@ -284,14 +284,15 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
             }
         }
 
+        //同种类Interceptor不应该注册多次？
         IInterceptor[] GetInterceptors(IServiceProvider provider, RegisterContext context)
         {
             var types = context.InterceptorTypes;
             if (types.Count > 1)
             {
-                types.RemoveAll(p=> p == typeof(PropertyInjectServiceProviderEmptyInterceptor));
+                types = types.DistinctBy(p => p.FullName).ToList();
             }
-            return context.InterceptorTypes
+            return types
                 .Select(p => (IInterceptor)ActivatorUtilities.CreateInstance(provider, p))
                 .ToArray();
         }
