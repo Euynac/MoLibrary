@@ -1,4 +1,4 @@
-﻿namespace MoLibrary.Core.ModuleController;
+﻿namespace MoLibrary.Core.Module.ModuleController;
 
 /// <summary>
 /// Defines the options for a module in the MoLibrary.

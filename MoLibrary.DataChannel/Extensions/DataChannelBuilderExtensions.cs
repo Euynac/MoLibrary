@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using MoLibrary.Core.Extensions;
-using MoLibrary.Core.ModuleController;
 using MoLibrary.DataChannel.Dashboard.Controllers;
 using MoLibrary.DataChannel.Interfaces;
 using MoLibrary.Tool.Extensions;

@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using MoLibrary.Core.ModuleController;
+using MoLibrary.Core.Module.ModuleController;
 
 namespace MoLibrary.DataChannel;
 
