@@ -7,6 +7,7 @@ using MoLibrary.DomainDrivenDesign.AutoController.Extensions;
 using MoLibrary.DomainDrivenDesign.AutoController.Features;
 using MoLibrary.DomainDrivenDesign.AutoController.Interfaces;
 using MoLibrary.DomainDrivenDesign.AutoController.Settings;
+using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.DomainDrivenDesign.AutoController;
 
@@ -45,6 +46,7 @@ public static class ServicesCollectionExtensions
                setupAction?.Invoke(options);
            }).ConfigureApplicationPartManager(manager =>
         {
+            //manager.ApplicationParts.RemoveAll();
             //用于在ApplicationParts检测需要自定义添加的Controller
             manager.FeatureProviders.Add(
                 ActivatorUtilities
