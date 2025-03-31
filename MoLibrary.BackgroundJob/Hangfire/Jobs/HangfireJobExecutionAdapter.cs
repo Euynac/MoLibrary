@@ -14,7 +14,7 @@ public class HangfireJobExecutionAdapter<TArgs>(
     public async Task ExecuteAsync(string queue, TArgs args, CancellationToken cancellationToken = default)
     {
         using var scope = serviceScopeFactory.CreateScope();
-        if (HangfireBackgroundJobManager.JobTypeMap.TryGetValue(typeof(TArgs), out var job))
+        if (IMoBackgroundJobManager.JobTypeMap.TryGetValue(typeof(TArgs), out var job))
         {
             var context = new JobExecutionContext(scope.ServiceProvider, job, args!,
                 cancellationToken: cancellationToken);

@@ -78,7 +78,7 @@ public static class HttpApiExtensions
         {
             Content = res,
             contentJson,
-            ResponseType = typeof(TResponse).GetGenericTypeName(),
+            ResponseType = typeof(TResponse).GetCleanFullName(),
             Header = httpResponse?.Headers.ToString(),
             StatusCode = httpResponse?.StatusCode.ToString(),
             httpResponse?.ReasonPhrase,
@@ -186,7 +186,7 @@ public static class HttpApiExtensions
         {
             Content = res,
             contentJson,
-            ResponseType = responseType.GetGenericTypeName(),
+            ResponseType = responseType.GetCleanFullName(),
             Header = httpResponse?.Headers.ToString(),
             StatusCode = httpResponse?.StatusCode.ToString(),
             httpResponse?.ReasonPhrase,
