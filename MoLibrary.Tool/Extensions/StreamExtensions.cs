@@ -1,4 +1,4 @@
-using System.IO;
+ï»¿using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -91,7 +91,7 @@ public static class StreamExtensions
         return content;
     }
     /// <summary>
-    /// ¶ÁÈ¡Á÷ÖĞµÄËùÓĞ×Ö½Ú¡£Èç¹ûÁ÷ÊÇMemoryStream£¬ÔòÖ±½Ó·µ»ØToArray()£¬·ñÔò½«Á÷¸´ÖÆµ½ÄÚ´æÁ÷ÖĞ²¢·µ»ØToArray()¡£
+    /// è¯»å–æµä¸­çš„æ‰€æœ‰å­—èŠ‚ã€‚å¦‚æœæµæ˜¯MemoryStreamï¼Œåˆ™ç›´æ¥è¿”å›ToArray()ï¼Œå¦åˆ™å°†æµå¤åˆ¶åˆ°å†…å­˜æµä¸­å¹¶è¿”å›ToArray()ã€‚
     /// Read all bytes in the stream. If the stream is MemoryStream, return ToArray() directly, otherwise copy the stream to the memory stream and return ToArray().
     /// </summary>
     /// <param name="stream"></param>

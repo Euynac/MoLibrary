@@ -1,4 +1,4 @@
-using Castle.DynamicProxy;
+ï»¿using Castle.DynamicProxy;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -336,7 +336,7 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
                     var interceptors = GetInterceptors(provider, context);
                     var targetFromFactory = factory.Invoke(provider);
                     object? proxiedObject;
-                    //TODO ÎŞ·¨ÊµÏÖÊôĞÔ×¢Èë£¬ÒòÎª¹¤³§·½·¨ÊµÀı»¯Ö»ÄÜÖ´ĞĞÒ»´Î¡£
+                    //TODO æ— æ³•å®ç°å±æ€§æ³¨å…¥ï¼Œå› ä¸ºå·¥å‚æ–¹æ³•å®ä¾‹åŒ–åªèƒ½æ‰§è¡Œä¸€æ¬¡ã€‚
                     switch (context.Kind)
                     {
                         case EDynamicProxyKind.ClassProxy:
