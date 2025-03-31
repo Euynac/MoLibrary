@@ -24,6 +24,8 @@ public static class MoEventBusBuilderExtensions
         services.Configure<DaprEventBusOptions>(configAction.Invoke);
         services.AddSingleton<IMoLocalEventBus, LocalEventBus>();
         services.AddSingleton<IMoDistributedEventBus, DaprDistributedEventBus>();
+        services.AddSingleton<DaprDistributedEventBus>();
+        services.AddSingleton<LocalEventBus>();
         services.AddSingleton<IEventHandlerInvoker, EventHandlerInvoker>();
     }
 

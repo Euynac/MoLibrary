@@ -37,6 +37,17 @@ namespace MoLibrary.Tool.General
         /// <param name="bytes">The bytes value.</param>
         /// <from>CSharpLib</from>
         /// <returns>The equivalent formatted string of given bytes</returns>
+        public static string FormatBytes(this int bytes)
+        {
+            return FormatBytes((long)bytes);
+        }
+
+        /// <summary>
+        /// Returns a formatted string representing the size, up to PB, especially of the file length defined in the FileInfo instance (i.e. 10 KB).
+        /// </summary>
+        /// <param name="bytes">The bytes value.</param>
+        /// <from>CSharpLib</from>
+        /// <returns>The equivalent formatted string of given bytes</returns>
         public static string FormatBytes(this long bytes)
         {
             double num = bytes;

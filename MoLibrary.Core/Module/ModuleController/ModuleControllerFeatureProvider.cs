@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using System.Reflection;
 
-namespace MoLibrary.Core.ModuleController;
+namespace MoLibrary.Core.Module.ModuleController;
 
 /// <summary>
 /// Feature provider for controllers in a module.

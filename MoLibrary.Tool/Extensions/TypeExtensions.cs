@@ -207,7 +207,7 @@ public static class TypeExtensions
     /// </summary>
     /// <param name="type"></param>
     /// <returns></returns>
-    public static bool IsNullableValueType(this Type type) => type.IsGenericType &&
+    public static bool IsNullableValueType(this Type type) => type is { IsGenericType: true, IsGenericTypeDefinition: false } &&
                                                               type.GetGenericTypeDefinition() == typeof(Nullable<>);
     /// <summary>
     /// Judge whether the specific type's instance can be null or not.
@@ -234,6 +234,7 @@ public static class TypeExtensions
     /// <returns></returns>
     public static Type StripNullable(this Type type)
     {
+        //similar official method: Nullable.GetUnderlyingType()
         return !IsNullableValueType(type) ? type : type.GenericTypeArguments[0];
     }
 
