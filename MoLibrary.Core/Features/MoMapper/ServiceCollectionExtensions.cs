@@ -1,4 +1,4 @@
-using ExpressionDebugger;
+ï»¿using ExpressionDebugger;
 using Mapster;
 using MapsterMapper;
 using Microsoft.AspNetCore.Builder;
@@ -15,7 +15,7 @@ namespace MoLibrary.Core.Features.MoMapper;
 
 public static class ServiceCollectionExtensions
 {
-    private static bool _hasInit;//TODO ºóĞø×ªÎªModule×Ô¶¯ÅĞ¶Ï¡£×¢ÒâĞèÒªÇø·Ö¿ª·¢Õßµ÷ÓÃºÍÄÚ²¿moduleµ÷ÓÃ×¢²áµÄÓÅÏÈ¼¶¡£ÁíÍâ»¹ĞèÒªÖ§³ÖÄÚ²¿moduleµ÷ÓÃÉèÖÃOptionµÄÇé¿ö£¬Óë¿ª·¢ÕßÉè¶¨ÒªºÏ²¢´¦Àí
+    private static bool _hasInit;//TODO åç»­è½¬ä¸ºModuleè‡ªåŠ¨åˆ¤æ–­ã€‚æ³¨æ„éœ€è¦åŒºåˆ†å¼€å‘è€…è°ƒç”¨å’Œå†…éƒ¨moduleè°ƒç”¨æ³¨å†Œçš„ä¼˜å…ˆçº§ã€‚å¦å¤–è¿˜éœ€è¦æ”¯æŒå†…éƒ¨moduleè°ƒç”¨è®¾ç½®Optionçš„æƒ…å†µï¼Œä¸å¼€å‘è€…è®¾å®šè¦åˆå¹¶å¤„ç†
 
     public static void AddMoMapper(this IServiceCollection services, Action<MoMapperOption>? action = null)
     {
@@ -41,7 +41,7 @@ public static class ServiceCollectionExtensions
             TypeAdapterConfig.GlobalSettings.Compile();
         }).ContinueWith((t) =>
         {
-            Environment.FailFast($"Mapper±àÒëÊ§°Ü£¬¶¨ÒåÓĞÎó£¬Çë¼ì²é¡£{t.Exception}");
+            Environment.FailFast($"Mapperç¼–è¯‘å¤±è´¥ï¼Œå®šä¹‰æœ‰è¯¯ï¼Œè¯·æ£€æŸ¥ã€‚{t.Exception}");
         }, TaskContinuationOptions.OnlyOnFaulted);
 
         services.AddSingleton(TypeAdapterConfig.GlobalSettings);
@@ -50,7 +50,7 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Mapper×´Ì¬ÖĞ¼ä¼ş
+    /// MapperçŠ¶æ€ä¸­é—´ä»¶
     /// </summary>
     /// <param name="app"></param>
     /// <param name="groupName"></param>
@@ -60,7 +60,7 @@ public static class ServiceCollectionExtensions
         {
             var tagGroup = new List<OpenApiTag>
             {
-                new() { Name = groupName, Description = "MapperÏà¹Ø½Ó¿Ú" }
+                new() { Name = groupName, Description = "Mapperç›¸å…³æ¥å£" }
             };
             endpoints.MapGet("/mapper/status", async (HttpResponse response, HttpContext context) =>
             {
@@ -76,10 +76,10 @@ public static class ServiceCollectionExtensions
                     })
                 };
                 await context.Response.WriteAsJsonAsync(res);
-            }).WithName("»ñÈ¡Mapper×´Ì¬ĞÅÏ¢").WithOpenApi(operation =>
+            }).WithName("è·å–MapperçŠ¶æ€ä¿¡æ¯").WithOpenApi(operation =>
             {
-                operation.Summary = "»ñÈ¡Mapper×´Ì¬ĞÅÏ¢";
-                operation.Description = "»ñÈ¡Mapper×´Ì¬ĞÅÏ¢";
+                operation.Summary = "è·å–MapperçŠ¶æ€ä¿¡æ¯";
+                operation.Description = "è·å–MapperçŠ¶æ€ä¿¡æ¯";
                 operation.Tags = tagGroup;
                 return operation;
             });
@@ -92,12 +92,12 @@ public class MoMapperOption
 {
     public ILogger Logger { get; set; } = NullLogger.Instance;
     /// <summary>
-    /// ÆôÓÃ¶ÔMapper½øĞĞµ÷ÊÔ£¨ÔİÊ±½öÖ§³ÖÊÖ¶¯µ÷ÊÔ£©
+    /// å¯ç”¨å¯¹Mapperè¿›è¡Œè°ƒè¯•ï¼ˆæš‚æ—¶ä»…æ”¯æŒæ‰‹åŠ¨è°ƒè¯•ï¼‰
     /// </summary>
     public bool DebugMapper { get; set; } = false;
 
     /// <summary>
-    /// µ÷ÊÔĞèÒª´«ÈëMapper¶¨ÒåÊ±Éæ¼°µÄ»ùÀà»òÀ©Õ¹·½·¨Ïà¹Ø¶¨ÒåµÄ³ÌĞò¼¯
+    /// è°ƒè¯•éœ€è¦ä¼ å…¥Mapperå®šä¹‰æ—¶æ¶‰åŠçš„åŸºç±»æˆ–æ‰©å±•æ–¹æ³•ç›¸å…³å®šä¹‰çš„ç¨‹åºé›†
     /// </summary>
     public Assembly[]? DebuggerRelatedAssemblies { get; set; }
 }

@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 
 namespace MoLibrary.Tool.Extensions;
 #region DateTime Interval
@@ -6,7 +6,7 @@ namespace MoLibrary.Tool.Extensions;
 public class DateTimeInterval(DateTime left, DateTime right)
 {
     /// <summary>
-    /// ÊÇ·ñ´¦ÓÚÇø¼äÄÚ
+    /// æ˜¯å¦å¤„äºåŒºé—´å†…
     /// </summary>
     /// <param name="time"></param>
     /// <returns></returns>
@@ -16,7 +16,7 @@ public class DateTimeInterval(DateTime left, DateTime right)
     }
 
     /// <summary>
-    /// ²»ÔÚÇø¼äÊ±£¬Êä³ö×î½ü±ß½ç²îÒìÖµ¡£Çø¼äÄÚ²îÒìÎª0¡£
+    /// ä¸åœ¨åŒºé—´æ—¶ï¼Œè¾“å‡ºæœ€è¿‘è¾¹ç•Œå·®å¼‚å€¼ã€‚åŒºé—´å†…å·®å¼‚ä¸º0ã€‚
     /// </summary>
     /// <param name="value"></param>
     /// <returns></returns>
@@ -41,7 +41,7 @@ public class BaseTimeInterval(TimeSpan thresholdLeft, TimeSpan thresholdRight, D
     }
 
     /// <summary>
-    /// ¾àÀëµÄ»ù×¼Ê±¼äµÄ²îÒìÖµ
+    /// è·ç¦»çš„åŸºå‡†æ—¶é—´çš„å·®å¼‚å€¼
     /// </summary>
     /// <param name="value"></param>
     /// <returns></returns>
@@ -184,10 +184,10 @@ public static class TimeExtensions
     /// <returns></returns>
     public static DateTime ReplaceTime(this DateTime dateTime, TimeOnly timeOnly) =>
     new(dateTime.Year, dateTime.Month, dateTime.Day, timeOnly.Hour, timeOnly.Minute, timeOnly.Second);
-    #region ¸ñÊ½»¯
+    #region æ ¼å¼åŒ–
 
     /// <summary>
-    /// Time interval conversion to Chinese format <paramref name="duration"/>.Days Ìì <paramref name="duration"/>.Hours Ğ¡Ê± <paramref name="duration"/>.Minutes ·Ö <paramref name="duration"/>.Seconds Ãë
+    /// Time interval conversion to Chinese format <paramref name="duration"/>.Days å¤© <paramref name="duration"/>.Hours å°æ—¶ <paramref name="duration"/>.Minutes åˆ† <paramref name="duration"/>.Seconds ç§’
     /// </summary>
     /// <param name="duration"></param>
     /// <returns></returns>
@@ -198,29 +198,29 @@ public static class TimeExtensions
         var minutes = duration.Minutes;
         var seconds = duration.Seconds;
         var milliseconds = duration.Milliseconds;
-        return days.BeIfNotDefault($"{days}Ìì")
-               + hours.BeIfNotDefault($"{hours}Ğ¡Ê±")
-               + minutes.BeIfNotDefault($"{minutes}·ÖÖÓ")
-               + (milliseconds.BeIfNotDefault($"{seconds + milliseconds / 1000.0}Ãë") ?? seconds.BeIfNotDefault($"{seconds}Ãë"));
+        return days.BeIfNotDefault($"{days}å¤©")
+               + hours.BeIfNotDefault($"{hours}å°æ—¶")
+               + minutes.BeIfNotDefault($"{minutes}åˆ†é’Ÿ")
+               + (milliseconds.BeIfNotDefault($"{seconds + milliseconds / 1000.0}ç§’") ?? seconds.BeIfNotDefault($"{seconds}ç§’"));
     }
 
     #endregion
 
     /// <summary>
-    /// Ê±¼ä´Á£¨¸ñÁÖÍşÖÎÊ±¼ä1970Äê01ÔÂ01ÈÕ00Ê±00·Ö00Ãë£©ÀàĞÍ
+    /// æ—¶é—´æˆ³ï¼ˆæ ¼æ—å¨æ²»æ—¶é—´1970å¹´01æœˆ01æ—¥00æ—¶00åˆ†00ç§’ï¼‰ç±»å‹
     /// </summary>
     public enum TimeStampType
     {
         /// <summary>
-        /// ×ÜÃëÊı£¨10Î»£©
+        /// æ€»ç§’æ•°ï¼ˆ10ä½ï¼‰
         /// </summary>
         Unix,
         /// <summary>
-        /// ×ÜºÁÃëÊı£¨13Î»£©
+        /// æ€»æ¯«ç§’æ•°ï¼ˆ13ä½ï¼‰
         /// </summary>
         Javascript
     }
-    #region Ê±¼äÀàÍØÕ¹
+    #region æ—¶é—´ç±»æ‹“å±•
     /// <summary>
     /// Get the time span of given date time to that next minute.
     /// </summary>
@@ -274,11 +274,11 @@ public static class TimeExtensions
     }
 
     /// <summary>
-    /// »ñÈ¡Ö¸¶¨ÀàĞÍµÄÊ±¼ä´ÁµÄ <see cref="DateTime"/> ±íÊ¾ĞÎÊ½
+    /// è·å–æŒ‡å®šç±»å‹çš„æ—¶é—´æˆ³çš„ <see cref="DateTime"/> è¡¨ç¤ºå½¢å¼
     /// </summary>
-    /// <param name="timestamp">Ê±¼ä´Á</param>
-    /// <param name="timeStampType">Ö¸¶¨ÀàĞÍ£¬Ä¬ÈÏUnix£¨ÃëÎªµ¥Î»£©</param>
-    /// <returns>×¢ÒâÊÇÒÔ±¾µØÊ±ÇøÎª×¼µÄ</returns>
+    /// <param name="timestamp">æ—¶é—´æˆ³</param>
+    /// <param name="timeStampType">æŒ‡å®šç±»å‹ï¼Œé»˜è®¤Unixï¼ˆç§’ä¸ºå•ä½ï¼‰</param>
+    /// <returns>æ³¨æ„æ˜¯ä»¥æœ¬åœ°æ—¶åŒºä¸ºå‡†çš„</returns>
     public static DateTime ToDateTime(this long timestamp, TimeStampType timeStampType = TimeStampType.Unix)
     {
         var startTime = TimeZoneInfo.ConvertTime(new DateTime(1970, 1, 1), TimeZoneInfo.Local);
@@ -295,11 +295,11 @@ public static class TimeExtensions
         return daTime;
     }
     /// <summary>
-    /// DateTime×ªÊ±¼ä´Á
+    /// DateTimeè½¬æ—¶é—´æˆ³
     /// </summary>
     /// <param name="dateTime"></param>
     /// <param name="timeStampType"></param>
-    /// <returns>×¢ÒâÊÇÒÔ±¾µØÊ±ÇøÎª×¼µÄ</returns>
+    /// <returns>æ³¨æ„æ˜¯ä»¥æœ¬åœ°æ—¶åŒºä¸ºå‡†çš„</returns>
     public static long ToTimeStamp(this DateTime dateTime, TimeStampType timeStampType = TimeStampType.Unix)
     {
         var startTime = TimeZoneInfo.ConvertTime(new DateTime(1970, 1, 1), TimeZoneInfo.Local);
@@ -316,10 +316,10 @@ public static class TimeExtensions
         return timestamp;
     }
     /// <summary>
-    /// ×ª»»ÎªÖĞ¹úÊ½ĞÇÆÚ¼¸µÄ±íÊö£¨ĞÇÆÚÌìÎªµÚÆßÌì£©
+    /// è½¬æ¢ä¸ºä¸­å›½å¼æ˜ŸæœŸå‡ çš„è¡¨è¿°ï¼ˆæ˜ŸæœŸå¤©ä¸ºç¬¬ä¸ƒå¤©ï¼‰
     /// </summary>
     /// <param name="week"></param>
-    /// <returns>1-7¶ÔÓ¦ĞÇÆÚÒ»µ½ĞÇÆÚÌì</returns>
+    /// <returns>1-7å¯¹åº”æ˜ŸæœŸä¸€åˆ°æ˜ŸæœŸå¤©</returns>
     public static ChineseWeeks ToChineseWeek(this DayOfWeek week) => week == DayOfWeek.Sunday ? ChineseWeeks.Sunday : (ChineseWeeks)week;
 
     #endregion
