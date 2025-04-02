@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyModel;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using MoLibrary.Framework.Core.Attributes;
@@ -210,6 +211,16 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     public virtual void AddDependency(ProjectUnit unit)
     {
         DependencyUnits.Add(unit);
+    }
+
+    /// <summary>
+    /// 获取所依赖的项目单元
+    /// </summary>
+    /// <typeparam name="TProjectUnit"></typeparam>
+    /// <returns></returns>
+    public virtual IReadOnlyList<TProjectUnit> FetchDependency<TProjectUnit>() where TProjectUnit : ProjectUnit
+    {
+        return DependencyUnits.OfType<TProjectUnit>().ToList();
     }
 
     public override string ToString()
