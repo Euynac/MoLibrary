@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Dynamic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using MoLibrary.Tool.Extensions;
@@ -206,6 +207,22 @@ public static class MoResponseHelper
         self.Message += $"\n继承错误：[{response.GetType().Name}] {response.Message}";
         self.Message = self.Message.TrimStart();
         self.Code = response.Code;
+        return self;
+    }
+    /// <summary>
+    /// 合并返回值信息，保全两个Res的信息，一般用于两个Res类型不一致的情况
+    /// </summary>
+    /// <param name="self"></param>
+    /// <param name="response"></param>
+    public static T MergeRes<T>(this T self, IServiceResponse response) where T : IServiceResponse
+    {
+        self.AppendExtraInfo("oriMsg", self.Message);
+        self.AppendExtraInfo("oriCode", self.Code);
+        response.ExtraInfo ??= new ExpandoObject();
+        self.ExtraInfo!.Merge(response.ExtraInfo);
+        self.Message = response.Message;
+        self.Code = response.Code;
+        //self.ExtraInfo = response.ExtraInfo;
         return self;
     }
     /// <summary>

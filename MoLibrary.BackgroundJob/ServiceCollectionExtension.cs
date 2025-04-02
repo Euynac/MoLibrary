@@ -27,7 +27,7 @@ public static class ServiceCollectionExtension
     private static List<Type> _backgroundWorkerTypes = [];
     private static List<Type> _backgroundJobTypes = [];
     private static bool _hasError = false;
-    private static readonly MoBackgroundWorkerOptions _options = new ();
+    private static readonly MoBackgroundWorkerOptions _options = new();
     private static void SetHangfire(IServiceCollection services)
     {
         if (_options.UseInMemoryStorage)
@@ -38,42 +38,86 @@ public static class ServiceCollectionExtension
                 configuration.UseFilter(new AutomaticRetryAttribute() { Attempts = 0 });
             });
         }
-        else if(_options.RedisOptions is {} redisConfig)
+        else if (_options.RedisOptions is { } redisConfig)
         {
             try
             {
+                IConnectionMultiplexer redisConnection;
 
-                var redisOptions = new ConfigurationOptions();
+                switch (redisConfig.ConnectionType)
+                {
+                    case ERedisConnectionType.Sentinel:
+                        {
+                            //配置sentinel
+                            var sentinelOptions = new ConfigurationOptions();
+                            sentinelOptions.EndPoints.Add(redisConfig.RedisHost, redisConfig.RedisPort);
+                            sentinelOptions.TieBreaker = "";
+                            sentinelOptions.Password = redisConfig.RedisPassword;
+                            sentinelOptions.CommandMap = CommandMap.Sentinel;
+                            sentinelOptions.AbortOnConnectFail = false;
+                            var sentinelConnection = ConnectionMultiplexer.Connect(sentinelOptions);
+                            redisConnection = sentinelConnection.GetSentinelMasterConnection(new ConfigurationOptions
+                            {
+                                ServiceName = redisConfig.ServiceName,
+                                Password = redisConfig.RedisPassword,
+                                AbortOnConnectFail = true
+                            });
+                            break;
+                        }
+                    case ERedisConnectionType.Cluster:
+                        {
+                            var redisOptions = new ConfigurationOptions();
 
-                //配置sentinel
-                var sentinelOptions = new ConfigurationOptions();
-                sentinelOptions.EndPoints.Add(redisConfig.RedisHost, redisConfig.RedisPort);
-                sentinelOptions.TieBreaker = "";
-                sentinelOptions.Password = redisConfig.RedisPassword;
-                sentinelOptions.CommandMap = CommandMap.Sentinel;
-                sentinelOptions.AbortOnConnectFail = false;
-                var sentinelConnection = ConnectionMultiplexer.Connect(sentinelOptions);
+                            // 添加集群节点（至少一个节点即可，客户端会自动发现其他节点）
+                            redisOptions.EndPoints.Add(redisConfig.RedisHost, redisConfig.RedisPort);  // 主节点或从节点
+                                                                                                       //redisOptions.EndPoints.Add("redis-cluster-node2", 6379);  // 可选，增加容错性
+                                                                                                       //redisOptions.EndPoints.Add("redis-cluster-node3", 6379);  // 可选
 
-                redisOptions.ServiceName = "mymaster";
-                redisOptions.Password = redisConfig.RedisPassword;
-                redisOptions.AbortOnConnectFail = true;
-                var myMasterConnection = sentinelConnection.GetSentinelMasterConnection(redisOptions);
+                            // 集群模式关键配置
+                            redisOptions.Password = redisOptions.Password;  // 如果集群有密码
+                            redisOptions.AbortOnConnectFail = false;        // 集群节点可能动态变化，建议不立即失败
+                            redisOptions.ConnectRetry = 3;                  // 连接失败时重试次数
+                            redisOptions.ConnectTimeout = 5000;             // 连接超时（毫秒）
+                            redisOptions.SyncTimeout = 5000;                // 同步操作超时时间（毫秒）
+                            redisOptions.AllowAdmin = true; //允许执行管理员命令
+
+                            // 显式启用集群模式（StackExchange.Redis 会自动检测，但可以显式声明）
+                            redisOptions.CommandMap = CommandMap.Default;    // 使用默认命令映射（支持集群）
+
+                            // 创建集群连接
+                            redisConnection = ConnectionMultiplexer.Connect(redisOptions);
+                            break;
+                        }
+                    case ERedisConnectionType.Normal:
+                    default:
+                        {
+                            var redisOptions = new ConfigurationOptions();
+                            redisOptions.EndPoints.Add(redisConfig.RedisHost, redisConfig.RedisPort);
+                            redisOptions.Password = redisConfig.RedisPassword;
+                            redisOptions.AbortOnConnectFail = true;
+                            redisConnection = ConnectionMultiplexer.Connect(redisOptions);
+                            break;
+                        }
+                }
 
 
-                //var redisOptions = new ConfigurationOptions();
-                //redisOptions.EndPoints.Add("dev-redis-cluster-headless.fips-dev",6379);
-                //redisOptions.AllowAdmin = true; //允许执行管理员命令
-                //redisOptions.Password = "P@ssw0rd123";
-                //redisOptions.AbortOnConnectFail = true; //如果连接失败则抛出异常
-                //redisOptions.ConnectTimeout = 5000; //(毫秒) 连接超时时间
-                //redisOptions.SyncTimeout = 5000; //同步操作超时时间
-                //var myMasterConnection = ConnectionMultiplexer.Connect(redisOptions);
-                // redisOptions.EndPoints.Add(config.AppOptions.RedisOptions.RedisHost,
-                //     config.AppOptions.RedisOptions.RedisPort);
-                //// redisOptions.ServiceName = "mymaster";
-                // redisOptions.AbortOnConnectFail = true;
-                // redisOptions.Password = config.AppOptions.RedisOptions.RedisPassword;
-                // myMasterConnection = ConnectionMultiplexer.Connect(redisOptions);
+
+
+                JobStorage.Current = new RedisStorage(redisConnection, new RedisStorageOptions()
+                {
+                    Db = 10,
+                    FetchTimeout = TimeSpan.FromSeconds(5),
+                    Prefix = "{IMFHangfire}:",
+                    InvisibilityTimeout = TimeSpan.MaxValue, //活动超时时间
+                                                             //巨坑：该时间超时后会导致Hangfire认为该作业因各种原因挂掉，然后重新使用新线程去跑这个Job（旧线程它没去管，测了发现其实还在跑），默认值是30分钟，因此一些超过30分钟的Job可能会被执行多次。
+                                                             //旧线程先跑也会在Dashboard面板上置为job完成，但实际上可能新线程还在跑。这也是Dashboard上为什么有些任务会有多个Process面板。
+
+
+                    ExpiryCheckInterval = TimeSpan.MaxValue, //任务过期检查频率
+                    DeletedListSize = 10000,
+                    SucceededListSize = 10000
+                });
+
                 services.AddHangfire(configuration =>
                 {
                     configuration.UseHeartbeatPage(checkInterval: TimeSpan.FromSeconds(1));
@@ -107,16 +151,7 @@ public static class ServiceCollectionExtension
                     ]);
                 });
 
-                JobStorage.Current = new RedisStorage(myMasterConnection, new RedisStorageOptions()
-                {
-                    Db = 10,
-                    FetchTimeout = TimeSpan.FromSeconds(5),
-                    Prefix = "{IMFHangfire}:",
-                    InvisibilityTimeout = TimeSpan.FromHours(1), //活动超时时间
-                    ExpiryCheckInterval = TimeSpan.FromHours(1), //任务过期检查频率
-                    DeletedListSize = 10000,
-                    SucceededListSize = 10000
-                });
+
             }
             catch (Exception ex)
             {

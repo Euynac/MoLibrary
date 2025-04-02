@@ -29,7 +29,6 @@ public static class TypeExtensions
         return type.FullName + ", " + type.Assembly.GetName().Name;
     }
 
-
     /// <summary>
     /// 判断是否能够使用无参构造函数创建该类型的实例
     /// </summary>

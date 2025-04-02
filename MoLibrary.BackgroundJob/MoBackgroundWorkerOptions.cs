@@ -35,4 +35,21 @@ public class MoBackgroundWorkerRedisOptions
     public string RedisHost { get; set; } = "";
     public int RedisPort { get; set; }
     public string RedisPassword { get; set; } = "";
+
+    /// <summary>
+    /// 连接类型
+    /// </summary>
+    public ERedisConnectionType ConnectionType { get; set; }
+
+    /// <summary>
+    /// The service name used to resolve a service via sentinel.
+    /// </summary>
+    public string ServiceName { get; set; } = "mymaster";
+}
+
+public enum ERedisConnectionType
+{
+    Normal,
+    Sentinel,
+    Cluster
 }

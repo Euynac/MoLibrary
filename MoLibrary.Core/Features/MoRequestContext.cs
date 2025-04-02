@@ -88,7 +88,7 @@ public class MoRequestContext
         }
 
 
-
+        //TODO 用更好的方式合并
         ChainBridge = ChainBridge!.Invoked(response, duration, extraInfo: CreateResExtraInfo(res));
         RefreshServiceResponse(res);
     }
