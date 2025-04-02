@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -8,6 +9,7 @@ using MoLibrary.AutoModel.Interfaces;
 using MoLibrary.Core.Extensions;
 using MoLibrary.DomainDrivenDesign.AutoCrud.Interfaces;
 using MoLibrary.Logging;
+using MoLibrary.Tool.Extensions;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using Unchase.Swashbuckle.AspNetCore.Extensions.Extensions;
 
@@ -39,14 +41,23 @@ public static class ServicesCollectionExtensions
 
             //https://github.com/swagger-api/swagger-ui/issues/7911
             //https://github.com/microsoftgraph/msgraph-beta-sdk-dotnet/issues/285
-            options.CustomSchemaIds(type => type.FullName?.Replace('+', '.'));
+
+            //巨坑：默认情况下，Swagger使用类型的全名来生成schemaId，但如果遇到匿名类型，可能会因为类型名称不稳定或者重复而产生冲突。特别是在返回匿名类型的多个方法中，如果结构相同但Swagger认为它们不同，可能会生成相同的schemaId，从而导致冲突
+            //巨坑：对于非法字符生成也会出现问题，所以需要过滤非法字符。.Replace('+', '.') 似乎不需要.Replace("`", "_")
+            //最佳的方案当然是返回值均采用显式DTO类型
+            options.CustomSchemaIds(type => type.GetCleanFullName());
 
             //巨坑：要显示swagger文档，需要设置项目<GenerateDocumentationFile>True</GenerateDocumentationFile> XML文档用于生成swagger api注释。另外还要在设置中指定xml文档地址
 
             var documentAssemblies = (swaggerConfig.DocumentAssemblies ?? []).ToList();
             documentAssemblies.Add(typeof(MoCrudPageRequestDto).Assembly.GetName().Name!);
             documentAssemblies.Add(typeof(IHasRequestFilter).Assembly.GetName().Name!);
-            foreach (var name in documentAssemblies)
+            if (!swaggerConfig.DisableAutoIncludeEntryAsDocumentAssembly)
+            {
+                documentAssemblies.Add(Assembly.GetEntryAssembly()!.GetName().Name!);
+            }
+
+            foreach (var name in documentAssemblies.Distinct())
             {
                 var filePath = Path.Combine(AppContext.BaseDirectory, $"{name}.xml");
                 if (File.Exists(filePath))

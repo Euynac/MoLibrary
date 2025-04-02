@@ -1,4 +1,4 @@
-using Castle.DynamicProxy;
+ï»¿using Castle.DynamicProxy;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -259,7 +259,7 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
 
             var shouldInjectServiceProvider = implementType.IsImplementInterface<IMoServiceProviderInjector>();
             var context = new RegisterContext(option, shouldInjectServiceProvider, oldDescriptor, implementType, interceptorTypes, way);
-            var tmp = implementType.GetGenericTypeName();
+           
             switch (way)
             {
                 case ERegisterWays.Factory:
@@ -284,14 +284,15 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
             }
         }
 
+        //åŒç§ç±»Interceptorä¸åº”è¯¥æ³¨å†Œå¤šæ¬¡ï¼Ÿ
         IInterceptor[] GetInterceptors(IServiceProvider provider, RegisterContext context)
         {
             var types = context.InterceptorTypes;
             if (types.Count > 1)
             {
-                types.RemoveAll(p=> p == typeof(PropertyInjectServiceProviderEmptyInterceptor));
+                types = types.DistinctBy(p => p.FullName).ToList();
             }
-            return context.InterceptorTypes
+            return types
                 .Select(p => (IInterceptor)ActivatorUtilities.CreateInstance(provider, p))
                 .ToArray();
         }
@@ -336,7 +337,7 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
                     var interceptors = GetInterceptors(provider, context);
                     var targetFromFactory = factory.Invoke(provider);
                     object? proxiedObject;
-                    //TODO ÎŞ·¨ÊµÏÖÊôĞÔ×¢Èë£¬ÒòÎª¹¤³§·½·¨ÊµÀı»¯Ö»ÄÜÖ´ĞĞÒ»´Î¡£
+                    //TODO æ— æ³•å®ç°å±æ€§æ³¨å…¥ï¼Œå› ä¸ºå·¥å‚æ–¹æ³•å®ä¾‹åŒ–åªèƒ½æ‰§è¡Œä¸€æ¬¡ã€‚
                     switch (context.Kind)
                     {
                         case EDynamicProxyKind.ClassProxy:

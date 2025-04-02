@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+ï»¿using Microsoft.EntityFrameworkCore;
 using MoLibrary.Repository.EntityInterfaces;
 using MoLibrary.Repository.Extensions;
 using MoLibrary.Repository.Interfaces;
@@ -267,7 +267,7 @@ public static class RepositoryAsyncExtensions
         return await queryable.MaxAsync(selector, cancellationToken);
     }
 
-    //Todo ´ı.NET Ö§³ÖMaxByºóÓÅ»¯
+    //Todo å¾….NET æ”¯æŒMaxByåä¼˜åŒ–
     public static async Task<T?> MaxByAsync<T, TKey>(
         this IMoBasicRepository<T> repository,
         Expression<Func<T, TKey>> selector,

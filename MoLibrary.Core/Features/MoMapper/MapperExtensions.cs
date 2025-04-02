@@ -1,11 +1,13 @@
-﻿using ExpressionDebugger;
+﻿using System.Linq.Expressions;
+using System.Reflection;
+using ExpressionDebugger;
 using Mapster;
 using MapsterMapper;
 using Microsoft.Extensions.Logging;
 using MoLibrary.Logging;
-using System.Reflection;
+using MoLibrary.Tool.MoResponse;
 
-namespace MoLibrary.Framework.Extensions;
+namespace MoLibrary.Core.Features.MoMapper;
 
 public static class MapperExtensions
 {
@@ -22,20 +24,6 @@ public static class MapperExtensions
     {
         var script = src.BuildAdapter(mapper.Config).CreateMapExpression<TDst>().ToScript();
         (logger ?? GlobalLog.Logger).LogWarning(script);
-    }
-
-    /// <summary>
-    /// 开启Mapper调试
-    /// </summary>
-    /// <exception cref="InvalidOperationException"></exception>
-    public static void EnableMapperDebugging()
-    {
-        //动态调试有问题
-        //TypeAdapterConfig.GlobalSettings.Compiler = exp => exp.CompileWithDebugInfo(new ExpressionCompilationOptions()
-        //{
-        //    ThrowOnFailedCompilation = true,
-        //    EmitFile = true
-        //});
     }
 
     public class MapperInfoCard

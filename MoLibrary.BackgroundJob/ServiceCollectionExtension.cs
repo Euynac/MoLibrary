@@ -1,4 +1,4 @@
-using System.Reflection;
+ï»¿using System.Reflection;
 using BuildingBlocksPlatform.Interfaces;
 using Hangfire;
 using Hangfire.Common;
@@ -45,7 +45,7 @@ public static class ServiceCollectionExtension
 
                 var redisOptions = new ConfigurationOptions();
 
-                //ÅäÖÃsentinel
+                //é…ç½®sentinel
                 var sentinelOptions = new ConfigurationOptions();
                 sentinelOptions.EndPoints.Add(redisConfig.RedisHost, redisConfig.RedisPort);
                 sentinelOptions.TieBreaker = "";
@@ -62,11 +62,11 @@ public static class ServiceCollectionExtension
 
                 //var redisOptions = new ConfigurationOptions();
                 //redisOptions.EndPoints.Add("dev-redis-cluster-headless.fips-dev",6379);
-                //redisOptions.AllowAdmin = true; //ÔÊĞíÖ´ĞĞ¹ÜÀíÔ±ÃüÁî
+                //redisOptions.AllowAdmin = true; //å…è®¸æ‰§è¡Œç®¡ç†å‘˜å‘½ä»¤
                 //redisOptions.Password = "P@ssw0rd123";
-                //redisOptions.AbortOnConnectFail = true; //Èç¹ûÁ¬½ÓÊ§°ÜÔòÅ×³öÒì³£
-                //redisOptions.ConnectTimeout = 5000; //(ºÁÃë) Á¬½Ó³¬Ê±Ê±¼ä
-                //redisOptions.SyncTimeout = 5000; //Í¬²½²Ù×÷³¬Ê±Ê±¼ä
+                //redisOptions.AbortOnConnectFail = true; //å¦‚æœè¿æ¥å¤±è´¥åˆ™æŠ›å‡ºå¼‚å¸¸
+                //redisOptions.ConnectTimeout = 5000; //(æ¯«ç§’) è¿æ¥è¶…æ—¶æ—¶é—´
+                //redisOptions.SyncTimeout = 5000; //åŒæ­¥æ“ä½œè¶…æ—¶æ—¶é—´
                 //var myMasterConnection = ConnectionMultiplexer.Connect(redisOptions);
                 // redisOptions.EndPoints.Add(config.AppOptions.RedisOptions.RedisHost,
                 //     config.AppOptions.RedisOptions.RedisPort);
@@ -77,22 +77,22 @@ public static class ServiceCollectionExtension
                 services.AddHangfire(configuration =>
                 {
                     configuration.UseHeartbeatPage(checkInterval: TimeSpan.FromSeconds(1));
-                    //×Ô¶¨ÒåÑùÊ½¼°½Å±¾µ¼Èë£¬±ØĞëÉèÎªÎªÇ¶ÈëÊ½×ÊÔ´
+                    //è‡ªå®šä¹‰æ ·å¼åŠè„šæœ¬å¯¼å…¥ï¼Œå¿…é¡»è®¾ä¸ºä¸ºåµŒå…¥å¼èµ„æº
                     configuration.UseDashboardStylesheetDarkMode(typeof(GlobalConfigurationExtension).Assembly, "Hangfire.HttpJob.Content.job.css");
                     configuration.UseDashboardJavaScript(typeof(GlobalConfigurationExtension).Assembly, "Hangfire.HttpJob.Content.job.js");
 
                     configuration.UseFilter(new AutomaticRetryAttribute() { Attempts = 0 });
                     configuration.UseHangfireHttpJob(new HangfireHttpJobOptions()
                     {
-                        UseEmail = false, //ÊÇ·ñÊ¹ÓÃÓÊÏä
-                        AutomaticDelete = 2, //ÉèÖÃ×÷ÒµÖ´ĞĞ¶à¾Ã¹ıÆÚ£¬µ¥Î»Ìì£¬Ä¬ÈÏ2Ìì
+                        UseEmail = false, //æ˜¯å¦ä½¿ç”¨é‚®ç®±
+                        AutomaticDelete = 2, //è®¾ç½®ä½œä¸šæ‰§è¡Œå¤šä¹…è¿‡æœŸï¼Œå•ä½å¤©ï¼Œé»˜è®¤2å¤©
                         DeleteOnFail = true,
-                        AttemptsCountArray = [5],// ÖØÊÔÅäÖÃ ÖØÊÔÊ±¼ä¼ä¸ô£¬Êı×é³¤¶ÈÊÇÖØÊÔ´ÎÊı
+                        AttemptsCountArray = [5],// é‡è¯•é…ç½® é‡è¯•æ—¶é—´é—´éš”ï¼Œæ•°ç»„é•¿åº¦æ˜¯é‡è¯•æ¬¡æ•°
                                                  //AddHttpJobButtonName = "add plan job",
                                                  //AddRecurringJobHttpJobButtonName = "add httpjob",
                                                  //EditRecurringJobButtonName = "edit httpjob",
-                        PauseJobButtonName = "ÔİÍ£»ò¼ÌĞø",
-                        UpdateCronButtonName = "ĞŞ¸ÄÖÜÆÚ",
+                        PauseJobButtonName = "æš‚åœæˆ–ç»§ç»­",
+                        UpdateCronButtonName = "ä¿®æ”¹å‘¨æœŸ",
                         DashboardName = _options.DashboardTitle,
                         DashboardFooter = _options.DashboardTitle
                     })
@@ -112,21 +112,21 @@ public static class ServiceCollectionExtension
                     Db = 10,
                     FetchTimeout = TimeSpan.FromSeconds(5),
                     Prefix = "{IMFHangfire}:",
-                    InvisibilityTimeout = TimeSpan.FromHours(1), //»î¶¯³¬Ê±Ê±¼ä
-                    ExpiryCheckInterval = TimeSpan.FromHours(1), //ÈÎÎñ¹ıÆÚ¼ì²éÆµÂÊ
+                    InvisibilityTimeout = TimeSpan.FromHours(1), //æ´»åŠ¨è¶…æ—¶æ—¶é—´
+                    ExpiryCheckInterval = TimeSpan.FromHours(1), //ä»»åŠ¡è¿‡æœŸæ£€æŸ¥é¢‘ç‡
                     DeletedListSize = 10000,
                     SucceededListSize = 10000
                 });
             }
             catch (Exception ex)
             {
-                GlobalLog.LogError(ex, "SetHangfire±¨´í");
+                GlobalLog.LogError(ex, "SetHangfireæŠ¥é”™");
                 _hasError = true;
             }
         }
         else
         {
-            throw new InvalidOperationException("HangfireÎ´Ñ¡ÔñÊ¹ÓÃRedis»òInMemoryÁ¬½ÓÄ£Ê½");
+            throw new InvalidOperationException("Hangfireæœªé€‰æ‹©ä½¿ç”¨Redisæˆ–InMemoryè¿æ¥æ¨¡å¼");
         }
     }
 
@@ -174,10 +174,10 @@ public static class ServiceCollectionExtension
         services.AddHangfireServer((provider, op) =>
         {
             op.ServerTimeout = TimeSpan.FromMinutes(4);
-            op.SchedulePollingInterval = TimeSpan.FromSeconds(1); //Ãë¼¶ÈÎÎñĞèÒªÅäÖÃ¶Ìµã£¬Ò»°ãÈÎÎñ¿ÉÒÔÅäÖÃÄ¬ÈÏÊ±¼ä£¬Ä¬ÈÏ15Ãë
-            op.ShutdownTimeout = TimeSpan.FromMinutes(30); //³¬Ê±Ê±¼ä
+            op.SchedulePollingInterval = TimeSpan.FromSeconds(1); //ç§’çº§ä»»åŠ¡éœ€è¦é…ç½®çŸ­ç‚¹ï¼Œä¸€èˆ¬ä»»åŠ¡å¯ä»¥é…ç½®é»˜è®¤æ—¶é—´ï¼Œé»˜è®¤15ç§’
+            op.ShutdownTimeout = TimeSpan.FromMinutes(30); //è¶…æ—¶æ—¶é—´
             op.Queues = _options.Queues.ToArray();
-            op.WorkerCount = Math.Max(Environment.ProcessorCount, 40); //¹¤×÷Ïß³ÌÊı£¬µ±Ç°ÔÊĞíµÄ×î´óÏß³Ì£¬Ä¬ÈÏ20
+            op.WorkerCount = Math.Max(Environment.ProcessorCount, 40); //å·¥ä½œçº¿ç¨‹æ•°ï¼Œå½“å‰å…è®¸çš„æœ€å¤§çº¿ç¨‹ï¼Œé»˜è®¤20
             op.StopTimeout = TimeSpan.FromSeconds(20);
         });
         //, JobStorage.Current, new[] { new ProcessMonitor(checkInterval: TimeSpan.FromSeconds(1)) }
@@ -187,7 +187,7 @@ public static class ServiceCollectionExtension
     public static void UseMoBackgroundWorker(this IApplicationBuilder app)
     {
         if (_backgroundWorkerTypes.Count <= 0 || _hasError) return;
-        GlobalLog.LogInformation("·¢ÏÖ¼Ì³Ğ×ÔOurBackgroundWorker»òJobµÄÀà£¬½«ÆôÓÃHangfireºóÌ¨ÈÎÎñµ÷¶È");
+        GlobalLog.LogInformation("å‘ç°ç»§æ‰¿è‡ªOurBackgroundWorkeræˆ–Jobçš„ç±»ï¼Œå°†å¯ç”¨Hangfireåå°ä»»åŠ¡è°ƒåº¦");
 
         //var supportCulturs = new[]
         // {
@@ -200,11 +200,11 @@ public static class ServiceCollectionExtension
         //    SupportedUICultures = supportCulturs
         //});
 
-        //µÇÂ¼Ãæ°åÉèÖÃ
+        //ç™»å½•é¢æ¿è®¾ç½®
         app.UseHangfireDashboard("/worker", new DashboardOptions()
         {
             AppPath = "#",
-            DisplayStorageConnectionString = _options.DisplayStorageConnectionString,  //ÊÇ·ñÏÔÊ¾Êı¾İ¿âÁ¬½ÓĞÅÏ¢
+            DisplayStorageConnectionString = _options.DisplayStorageConnectionString,  //æ˜¯å¦æ˜¾ç¤ºæ•°æ®åº“è¿æ¥ä¿¡æ¯
             DashboardTitle = _options.DashboardTitle,
             IsReadOnlyFunc = context =>
             {
@@ -214,7 +214,7 @@ public static class ServiceCollectionExtension
             Authorization = new[] { new MoHangfireAuthorizationFilter() }
         });
 
-        //×Ô¶¯×¢²áºóÌ¨Worker
+        //è‡ªåŠ¨æ³¨å†Œåå°Worker
         var backgroundWorkerManager = app.ApplicationServices.GetRequiredService<IMoBackgroundWorkerManager>();
 
         foreach (var workerType in _backgroundWorkerTypes)
@@ -228,16 +228,16 @@ public static class ServiceCollectionExtension
             if (workerType.IsAssignableTo<IMoSimpleBackgroundWorker>())
             {
                 backgroundWorkerManager.AddAsync(workerType);
-                GlobalLog.LogInformation("ÒÑ×¢²á¼òµ¥ºóÌ¨ÈÎÎñ£º{workerType}", workerType);
+                GlobalLog.LogInformation("å·²æ³¨å†Œç®€å•åå°ä»»åŠ¡ï¼š{workerType}", workerType);
             }
             else
             {
-                backgroundWorkerManager.AddToDashboardAsync(workerType, _options.Queues.First());//TODO ºÏÀí¶ÁÈ¡
-                GlobalLog.LogInformation("ÒÑ×¢²áÃæ°åºóÌ¨ÈÎÎñ£º{workerType}", workerType);
+                backgroundWorkerManager.AddToDashboardAsync(workerType, _options.Queues.First());//TODO åˆç†è¯»å–
+                GlobalLog.LogInformation("å·²æ³¨å†Œé¢æ¿åå°ä»»åŠ¡ï¼š{workerType}", workerType);
             }
         }
 
-        //×Ô¶¯×¢²áºóÌ¨Job
+        //è‡ªåŠ¨æ³¨å†Œåå°Job
         var backgroundJobManager = app.ApplicationServices.GetRequiredService<IMoBackgroundJobManager>();
         foreach (var jobType in _backgroundJobTypes)
         {
@@ -247,7 +247,7 @@ public static class ServiceCollectionExtension
                 throw new Exception($"Given type ({jobType.AssemblyQualifiedName}) must implement the {typeof(IMoBackgroundJob<>).AssemblyQualifiedName} interface, but it doesn't!");
             }
             backgroundJobManager.EnqueueAsync(jobType);
-            GlobalLog.LogInformation("ÒÑ×¢²áºóÌ¨ÈÎÎñ£º{jobType}", jobType);
+            GlobalLog.LogInformation("å·²æ³¨å†Œåå°ä»»åŠ¡ï¼š{jobType}", jobType);
         }
     }
 }
