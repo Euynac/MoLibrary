@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ActionConstraints;
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
@@ -122,6 +123,9 @@ public class MoCrudControllerServiceConvention(
         var removeList = new List<ActionModel>();
         foreach (var grouping in actionModels.GroupBy(p => p.ActionName).Where(p => p.Count() > 1))
         {
+            //var methods = grouping.ToList();
+            //methods.RemoveAll(p => p.ActionMethod.IsOverride());
+
             removeList.AddRange(grouping.OrderByDescending(p =>
                 ((OverrideServiceAttribute?) p.Attributes.FirstOrDefault(a =>
                     a.GetType() == typeof(OverrideServiceAttribute)))?.Order ?? int.MinValue).Skip(1));
@@ -324,3 +328,12 @@ public class MoCrudControllerServiceConvention(
 
 
 }
+
+
+
+//public static string GetMethodSignature(MethodInfo method)
+//{
+//    var parameters = method.GetParameters();
+//    return
+//        $"{method.Name}:{method.IsGenericMethod}:{parameters.Length}:{parameters.Select(p => p.ParameterType.Name).StringJoin(',')}";
+//}

@@ -1,8 +1,10 @@
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Features;
 using MoLibrary.DependencyInjection.DynamicProxy;
 using MoLibrary.DependencyInjection.DynamicProxy.Abstract;
+using MoLibrary.DomainDrivenDesign.ExceptionHandler;
 using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.MoResponse;
 
@@ -13,7 +15,7 @@ namespace MoLibrary.Framework.Features.Decorators;
 /// https://github.com/moframework/mo/issues/14378
 /// https://docs.mo.io/en/mo/7.4/Dependency-Injection#advanced-features
 /// </summary>
-public class InvocationChainRecorderMoInterceptor(IHttpContextAccessor accessor, IMoTimekeeper timekeeper) : MoInterceptor
+public class InvocationChainRecorderMoInterceptor(IHttpContextAccessor accessor, IMoTimekeeper timekeeper, IMoExceptionHandler exceptionHandler) : MoInterceptor
 {
     private bool ShouldRecordChain(IMoMethodInvocation invocation, out string? declaringType, out string? request)
     {
@@ -81,9 +83,9 @@ public class InvocationChainRecorderMoInterceptor(IHttpContextAccessor accessor,
             }
             else if(exception != null && CreateRes(invocation.Method.ReturnType) is IServiceResponse errorRes)
             {
-                errorRes.Code = ResponseCode.InternalError;
-                errorRes.Message = $"执行方法{invocation.Method.DeclaringType?.Name} {invocation.Method.Name} 异常";
-                errorRes.AppendExtraInfo("exception", exception.ToString());
+                var handledRes = await exceptionHandler.TryHandleAsync(accessor.HttpContext, exception, CancellationToken.None);
+                handledRes.AppendExtraInfo("exception", $"执行方法{invocation.Method.DeclaringType?.Name} {invocation.Method.Name} 异常");
+                errorRes.MergeRes(handledRes);
                 invocation.ReturnValue = errorRes;
                 context.Invoked($"{responseName}({errorRes.Code})", res: errorRes);
             }

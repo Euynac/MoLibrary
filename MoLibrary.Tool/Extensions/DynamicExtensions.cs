@@ -30,6 +30,14 @@ public static class DynamicExtensions
             dict[o.Key] = o.Value;
         }
     }
+    public static void Merge(this ExpandoObject obj, ExpandoObject copyFrom)
+    {
+        var from = (IDictionary<string, object>)copyFrom!;
+        foreach (var o in from)
+        {
+            obj.Append(o.Key, o.Value);
+        }
+    }
     public static void Append(this ExpandoObject obj, string name, object? info)
     {
         var dict = (IDictionary<string, object>) obj!;
