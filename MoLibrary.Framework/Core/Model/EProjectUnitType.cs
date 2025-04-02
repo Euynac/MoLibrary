@@ -63,4 +63,8 @@ public enum EProjectUnitType
     /// 实体、聚合
     /// </summary>
     Entity,
+    /// <summary>
+    /// 请求类
+    /// </summary>
+    RequestDto,
 }

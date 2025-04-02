@@ -1,4 +1,11 @@
+using Azure.Core;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Microsoft.Extensions.Logging;
 using MoLibrary.DomainDrivenDesign;
+using MoLibrary.DomainDrivenDesign.Interfaces;
+using MoLibrary.Repository.EntityInterfaces;
+using MoLibrary.Repository.Interfaces;
+using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.Framework.Core.Model;
 
@@ -6,7 +13,7 @@ namespace MoLibrary.Framework.Core.Model;
 /// 应用服务
 /// </summary>
 /// <param name="type"></param>
-public class UnitApplicationService(Type type): ProjectUnit(type, EProjectUnitType.ApplicationService) , IHasProjectUnitFactory
+public class UnitApplicationService(Type type) : ProjectUnit(type, EProjectUnitType.ApplicationService), IHasProjectUnitFactory
 {
     static UnitApplicationService()
     {
@@ -29,6 +36,9 @@ public class UnitApplicationService(Type type): ProjectUnit(type, EProjectUnitTy
     /// </summary>
     public bool IsQuery => IsCommand == false;
 
+    public Type? RequestType { get; set; }
+    public Type? ResponseType { get; set; }
+
     protected override bool VerifyTypeConstrain()
     {
         return Type.IsClass && Type.IsSubclassOf(typeof(MoApplicationService));
@@ -48,6 +58,32 @@ public class UnitApplicationService(Type type): ProjectUnit(type, EProjectUnitTy
         {
             IsCommand = context.Type.Name.StartsWith("Command")
         };
-        return unit.VerifyType() ? unit : null;
+
+        unit = unit.VerifyType() ? unit : null;
+        if (unit != null)
+        {
+            if (context.Type.IsSubclassOfRawGeneric(typeof(MoApplicationService<,,>), out var exactGenericType))
+            {
+                var args = exactGenericType.GetGenericArguments();
+                unit.RequestType = args[1];
+                unit.ResponseType = args[2];
+            }
+        }
+
+
+        return unit;
+    }
+
+    public override void DoingConnect()
+    {
+        if (RequestType is null) return;
+        if (!ProjectUnitStores.ProjectUnitsByFullName.TryGetValue(RequestType.FullName!, out var unit))
+        {
+            Logger.LogWarning($"{this}无法关联其请求{RequestType.FullName},可能未继承{nameof(IMoRequest)}相关接口");
+            return;
+        }
+
+        AddDependency(unit);
+        unit.AddDependency(this);
     }
 }
