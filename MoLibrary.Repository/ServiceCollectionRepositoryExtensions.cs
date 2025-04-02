@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+锘縰sing Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -98,13 +98,13 @@ public static class MoEfCoreServiceCollectionExtensions
 
         services.AddTransient<IMoDbContextDatabaseManager<TDbContext>, MoDbContextDatabaseManager<TDbContext>>();
 
-        //TODO 优化无需AOP
+        //TODO 浼樺寲鏃犻渶AOP
         services.AddMoInterceptor<PropertyInjectServiceProviderEmptyInterceptor>().CreateProxyWhenSatisfy(context =>
         {
             var type = context.ImplementationType;
             if (type.IsAssignableTo<IMoRepository>())
             {
-                GlobalLog.LogInformation("property injection: {service}", type.GetGenericTypeName());
+                //GlobalLog.LogInformation("property injection: {service}", type.GetGenericTypeName());
                 return true;
             }
 

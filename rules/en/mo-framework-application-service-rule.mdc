@@ -65,7 +65,7 @@ public record Response$BusinessFunctionName$
 /// 
 /// </summary>
 [Route("api/v1/$DomainName$")]
-public class CommandHandler$BusinessFunctionName$ : MoApplicationService<CommandHandler$BusinessFunctionName$, Command$BusinessFunctionName$, Res<Response$BusinessFunctionName$>> 
+public class CommandHandler$BusinessFunctionName$ : MoApplicationService<CommandHandler$BusinessFunctionName$, Command$BusinessFunctionName$, Response$BusinessFunctionName$> 
 {
 	[HttpPost("$APIRoute$")]
 	public override Task<Res<Response$BusinessFunctionName$>> Handle(Command$BusinessFunctionName$ request, CancellationToken cancellationToken)

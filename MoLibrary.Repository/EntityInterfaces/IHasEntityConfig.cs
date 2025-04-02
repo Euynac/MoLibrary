@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore.Metadata.Builders;
+ï»¿using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace MoLibrary.Repository.EntityInterfaces;
 
@@ -6,7 +6,7 @@ namespace MoLibrary.Repository.EntityInterfaces;
 ///    A standard interface for configuring entities.
 /// </summary>
 /// <typeparam name="TEntity"></typeparam>
-[Obsolete("ÔÝÎ´ÊµÏÖ")]
+[Obsolete("æš‚æœªå®žçŽ°")]
 public interface IHasEntityConfig<TEntity> where TEntity : MoEntity
 {
     /// <summary>

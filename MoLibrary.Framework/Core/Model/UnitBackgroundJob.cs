@@ -36,6 +36,7 @@ public class UnitBackgroundJob(Type type) : ProjectUnit(type, EProjectUnitType.B
         if (!type.IsClass || !type.IsSubclassOfRawGeneric(typeof(MoBackgroundJob<>), out var genericType) || genericType?.FullName is null) return null;
         unit.CheckNameConventionMode();
         unit.JobArgsType = genericType.GetGenericArguments().First();
+        IMoBackgroundJobManager.RegisterJob(type, unit.JobArgsType);
         return unit;
     }
 }

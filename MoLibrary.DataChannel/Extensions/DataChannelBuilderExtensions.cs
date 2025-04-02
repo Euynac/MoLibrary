@@ -1,5 +1,9 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using MoLibrary.Core.Extensions;
+using MoLibrary.Core.Module.ModuleController;
+using MoLibrary.DataChannel.Dashboard.Controllers;
 using MoLibrary.DataChannel.Interfaces;
 using MoLibrary.Tool.Extensions;
 
@@ -16,12 +20,27 @@ public static class DataChannelBuilderExtensions
     /// <exception cref="InvalidOperationException"></exception>
     public static IServiceCollection AddDataChannel<TBuilderEntrance>(this IServiceCollection services, Action<DataChannelSetting>? action = null) where TBuilderEntrance : class, ISetupPipeline
     {
-        var setting = new DataChannelSetting();
-        action?.Invoke(setting);
+        services.ConfigActionWrapper(action, out var setting);
+
         DataChannelCentral.Setting = setting;
 
         services.AddSingleton<IDataChannelManager, DataChannelManager>();
         services.AddSingleton(typeof(ISetupPipeline), typeof(TBuilderEntrance));
+
+        //services.AddControllers()
+        //    .AddApplicationPart(typeof(DataChannelController).Assembly)
+        //    .ConfigureApplicationPartManager(manager =>
+        //    {
+        //        // 动态控制Controller的启用
+        //        manager.FeatureProviders.Add(new ModuleControllerFeatureProvider<DataChannelController>(setting));
+        //    });
+        // 添加自定义Convention
+        services.Configure<MvcOptions>(mvcOptions =>
+        {
+            mvcOptions.Conventions.Add(new ModuleControllerModelConvention<DataChannelController>(setting));
+        });
+
+
         return services;
     }
 

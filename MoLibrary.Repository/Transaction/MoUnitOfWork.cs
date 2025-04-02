@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+ï»¿using Microsoft.EntityFrameworkCore;
 using MoLibrary.Core.Extensions;
 using MoLibrary.DependencyInjection.AppInterfaces;
 using MoLibrary.Repository.Transaction.EntityEvent;
@@ -134,7 +134,7 @@ public class MoUnitOfWork(
 
     public virtual void Dispose()
     {
-        // TODO ÊÇ·ñÓ¦¸Ã×Ô¶¯Ìá½»ÊÂÎñ£¿
+        // TODO æ˜¯å¦åº”è¯¥è‡ªåŠ¨æäº¤äº‹åŠ¡ï¼Ÿ
         if (IsDisposed)
         {
             return;

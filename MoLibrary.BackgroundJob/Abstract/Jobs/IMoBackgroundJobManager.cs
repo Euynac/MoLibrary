@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+
 namespace MoLibrary.BackgroundJob.Abstract.Jobs;
 
 /// <summary>
@@ -5,6 +7,8 @@ namespace MoLibrary.BackgroundJob.Abstract.Jobs;
 /// </summary>
 public interface IMoBackgroundJobManager
 {
+    public static readonly ConcurrentDictionary<Type, Type> JobTypeMap = new();
+
     /// <summary>
     ///     Enqueues a job to be executed.
     /// </summary>
@@ -25,5 +29,16 @@ public interface IMoBackgroundJobManager
     /// <typeparam name="TJobType"></typeparam>
     /// <typeparam name="TArgs"></typeparam>
     /// <returns></returns>
-    Task RegisterJob<TJobType, TArgs>() where TJobType : IMoBackgroundJob<TArgs>;
+    static Task RegisterJob<TJobType, TArgs>() where TJobType : IMoBackgroundJob<TArgs>
+    {
+        return RegisterJob(typeof(TJobType), typeof(TArgs));
+    }
+    /// <summary>
+    ///    Registers a job type to be executed
+    /// </summary>
+    static Task RegisterJob(Type jobType, Type argsType) 
+    {
+        JobTypeMap.AddOrUpdate(argsType, jobType, (_, _) => jobType);
+        return Task.CompletedTask;
+    }
 }
