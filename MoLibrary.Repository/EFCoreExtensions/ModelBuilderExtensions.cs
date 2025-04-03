@@ -1,7 +1,7 @@
+using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MoLibrary.Repository.EntityInterfaces;
-using System.Reflection;
 
 namespace MoLibrary.Repository.EFCoreExtensions;
 
@@ -10,18 +10,42 @@ namespace MoLibrary.Repository.EFCoreExtensions;
 /// </summary>
 public static class ModelBuilderExtensions
 {
+    public static ModelBuilder ApplyConfiguration<TEntity>(ModelBuilder builder,
+        IHasEntitySelfConfig<TEntity> configuration) where TEntity : MoEntity, IHasEntitySelfConfig<TEntity>
+    {
+        configuration.Configure(builder.Entity<TEntity>());
+        return builder;
+    }
+    public static ModelBuilder ApplyEntitySeparateConfigurations(this ModelBuilder modelBuilder, MoRepositoryOptions moOptions,
+        ILogger? logger = null)
+    {
+        if (moOptions.DisableEntitySeparateConfiguration) return modelBuilder;
+        foreach (var assembly in modelBuilder.Model.GetEntityTypes().Select(p => Assembly.GetAssembly(p.ClrType))
+                     .DistinctBy(a => a!.FullName).ToList())
+        {
+            modelBuilder.ApplyConfigurationsFromAssembly(assembly!);
+        }
+
+        return modelBuilder;
+    }
+
     /// <summary>
-    /// Applies configurations from entities that implement IHasEntityConfig.
+    /// Applies configurations from entities that implement IHasEntitySelfConfig.
     /// This enables entities to configure themselves rather than requiring separate
     /// configuration classes or configuration within DbContext.
     /// </summary>
     /// <param name="modelBuilder">The model builder instance</param>
     /// <param name="logger">Optional logger to log information or errors</param>
+    /// <param name="moOptions"></param>
     /// <returns>The same model builder instance</returns>
-    public static ModelBuilder ApplyEntityConfigurations(this ModelBuilder modelBuilder, ILogger? logger = null)
+    public static ModelBuilder ApplyEntitySelfConfigurations(this ModelBuilder modelBuilder, MoRepositoryOptions moOptions,
+        ILogger? logger = null)
     {
+        if (moOptions.DisableEntitySelfConfiguration) return modelBuilder;
         // Get all entity types from the model
         var entityTypes = modelBuilder.Model.GetEntityTypes();
+
+        var methodInfo = typeof(ModelBuilderExtensions).GetMethods().Single(e => e is { Name: nameof(ApplyConfiguration), ContainsGenericParameters: true });
 
         foreach (var entityType in entityTypes)
         {
@@ -35,10 +59,10 @@ public static class ModelBuilderExtensions
                     continue;
                 }
                 
-                // Find the IHasEntityConfig<TEntity> interface on the entity
+                // Find the IHasEntitySelfConfig<TEntity> interface on the entity
                 var entityConfigInterface = clrType.GetInterfaces()
                     .FirstOrDefault(i => i.IsGenericType && 
-                                        i.GetGenericTypeDefinition() == typeof(IHasEntityConfig<>) &&
+                                        i.GetGenericTypeDefinition() == typeof(IHasEntitySelfConfig<>) &&
                                         i.GetGenericArguments()[0] == clrType);
                 
                 if (entityConfigInterface == null)
@@ -46,19 +70,8 @@ public static class ModelBuilderExtensions
                     continue;
                 }
                 
-                // Entity implements IHasEntityConfig<TEntity>
+                // Entity implements IHasEntitySelfConfig<TEntity>
                 logger?.LogDebug("Applying configuration from entity class: {EntityType}", clrType.FullName);
-                
-                // Get the Configure method from the interface
-                var configureMethod = entityConfigInterface.GetMethod("Configure");
-                if (configureMethod == null)
-                {
-                    logger?.LogWarning("Configure method not found on entity class: {EntityType}", clrType.FullName);
-                    continue;
-                }
-                
-                // Get the EntityTypeBuilder for this entity
-                var entityTypeBuilder = modelBuilder.Entity(clrType);
                 
                 // Try to create an instance unless the class is abstract
                 if (clrType.IsAbstract)
@@ -108,7 +121,7 @@ public static class ModelBuilderExtensions
                 // Call the Configure method on the entity instance
                 try
                 {
-                    configureMethod.Invoke(entity, new object[] { entityTypeBuilder });
+                    methodInfo.MakeGenericMethod(clrType).Invoke(null, [modelBuilder, entity]);
                     logger?.LogDebug("Successfully applied configuration from entity: {EntityType}", clrType.FullName);
                 }
                 catch (Exception ex)

@@ -6,7 +6,7 @@ using System.Linq;
 using System.Reflection;
 using MoLibrary.Tool.Extensions;
 
-namespace Koubot.Tool.String
+namespace MoLibrary.Tool.General
 {
     /// <summary>
     /// 指定某枚举是KouEnum的Name，可以设定该Enum的转换名

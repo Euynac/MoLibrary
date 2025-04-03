@@ -1,11 +1,8 @@
-﻿using MoLibrary.Tool.Extensions;
-using MoLibrary.Tool.Maths;
-using System;
-using System.Globalization;
+﻿using System;
 using System.Text.RegularExpressions;
-using Koubot.Tool.KouData;
+using MoLibrary.Tool.Extensions;
 
-namespace Koubot.Tool.String
+namespace MoLibrary.Tool.General
 {
     /// <summary>
     /// Kou开发常用字符串工具类
