@@ -156,7 +156,7 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
         var entityTypes = builder.Model.GetEntityTypes().Select(p => p.Name).ToHashSet();
 
         // Apply configurations from entities implementing IHasEntityConfig
-        builder.ApplyEntityConfigurations(Logger);
+        //builder.ApplyEntityConfigurations(Logger);
 
         //var entityTypeNameList = builder.Model.GetEntityTypes().Select(p => p.ClrType.FullName).ToHashSet();
         foreach (var assembly in builder.Model.GetEntityTypes().Select(p => Assembly.GetAssembly(p.ClrType))
