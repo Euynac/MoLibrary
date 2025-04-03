@@ -1,27 +1,30 @@
-﻿
-Microsoft Visual Studio Solution File, Format Version 12.00
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.13.35806.99
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hangfire.HttpJob", "BackgroundJob\Hangfire.HttpJob\Hangfire.HttpJob.csproj", "{0A4D2E8F-5152-0584-8C3E-555ABDE53DA6}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hangfire.HttpJob", "lib\Hangfire.HttpJob\Hangfire.HttpJob.csproj", "{0A4D2E8F-5152-0584-8C3E-555ABDE53DA6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hangfire.Redis.StackExchange", "BackgroundJob\Hangfire.Redis.StackExchange\Hangfire.Redis.StackExchange.csproj", "{BDFA526C-FEC5-7A2B-36F9-DA8CCD10EBB4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hangfire.Redis.StackExchange", "lib\Hangfire.Redis.StackExchange\Hangfire.Redis.StackExchange.csproj", "{BDFA526C-FEC5-7A2B-36F9-DA8CCD10EBB4}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "BackgroundJob", "BackgroundJob", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "lib", "lib", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.Framework", "MoLibrary.Framework\MoLibrary.Framework.csproj", "{4F36108F-9E25-7893-B605-DEAE1A7D14A2}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.Generators.AutoController", "MoLibrary.Generators.AutoController\MoLibrary.Generators.AutoController.csproj", "{58948CB7-D569-A6B7-A410-79571D0A7D19}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{241C163A-658A-4DEA-ABDC-77726E95E33D}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{241C163A-658A-4DEA-ABDC-77726E95E33D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.MoLibrary.Repository", "Tests\Test.MoLibrary.Repository\Test.MoLibrary.Repository.csproj", "{D54FA944-A307-409C-AA41-1BD98B9F9E1B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.MoLibrary.Repository", "tests\Test.MoLibrary.Repository\Test.MoLibrary.Repository.csproj", "{D54FA944-A307-409C-AA41-1BD98B9F9E1B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.MoLibrary", "Tests\Test.MoLibrary\Test.MoLibrary.csproj", "{5E4D5CE7-912D-4743-BD03-F0238697F69D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.MoLibrary", "tests\Test.MoLibrary\Test.MoLibrary.csproj", "{5E4D5CE7-912D-4743-BD03-F0238697F69D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.Locker", "MoLibrary.Locker\MoLibrary.Locker.csproj", "{1AC66024-5469-4305-A96B-9CA50E1447FA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.MoLibrary.Locker", "Tests\Test.MoLibrary.Locker\Test.MoLibrary.Locker.csproj", "{E56407AD-6C29-8DEC-8505-C77D0E5A20CD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.MoLibrary.Locker", "tests\Test.MoLibrary.Locker\Test.MoLibrary.Locker.csproj", "{E56407AD-6C29-8DEC-8505-C77D0E5A20CD}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "examples", "examples", "{F9A67D81-AB54-4E56-A5E1-2C7AA87A4E4E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Examples.MoLibrary", "examples\Examples.MoLibrary\Examples.MoLibrary.csproj", "{B2C3A927-5DDB-4FFD-BD84-8AFF2A5561D7}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.Core", "MoLibrary.Core\MoLibrary.Core.csproj", "{9E9FFBBA-5C85-42EB-A7CF-7ADB09F5E757}"
 EndProject
@@ -163,6 +166,10 @@ Global
 		{31725EF9-1CBE-187D-AFD1-34B44FD5C89B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{31725EF9-1CBE-187D-AFD1-34B44FD5C89B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{31725EF9-1CBE-187D-AFD1-34B44FD5C89B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B2C3A927-5DDB-4FFD-BD84-8AFF2A5561D7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B2C3A927-5DDB-4FFD-BD84-8AFF2A5561D7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B2C3A927-5DDB-4FFD-BD84-8AFF2A5561D7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B2C3A927-5DDB-4FFD-BD84-8AFF2A5561D7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -173,6 +180,7 @@ Global
 		{D54FA944-A307-409C-AA41-1BD98B9F9E1B} = {241C163A-658A-4DEA-ABDC-77726E95E33D}
 		{5E4D5CE7-912D-4743-BD03-F0238697F69D} = {241C163A-658A-4DEA-ABDC-77726E95E33D}
 		{E56407AD-6C29-8DEC-8505-C77D0E5A20CD} = {241C163A-658A-4DEA-ABDC-77726E95E33D}
+		{B2C3A927-5DDB-4FFD-BD84-8AFF2A5561D7} = {F9A67D81-AB54-4E56-A5E1-2C7AA87A4E4E}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {45A49162-EF10-4D36-81F7-8AE77803D557}
