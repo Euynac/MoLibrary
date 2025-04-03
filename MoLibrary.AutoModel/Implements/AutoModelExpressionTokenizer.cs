@@ -1,4 +1,3 @@
-using Koubot.Tool.String;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MoLibrary.AutoModel.Configurations;
@@ -9,6 +8,7 @@ using MoLibrary.Tool.Extensions;
 using System.Collections;
 using System.Text;
 using System.Text.RegularExpressions;
+using MoLibrary.Tool.General;
 
 namespace MoLibrary.AutoModel.AutoModel.Implements;
 

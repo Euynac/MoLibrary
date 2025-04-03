@@ -1,4 +1,3 @@
-using Koubot.Tool.String;
 using Microsoft.EntityFrameworkCore;
 using MoLibrary.AutoModel.Interfaces;
 using MoLibrary.AutoModel.Model;
@@ -7,6 +6,7 @@ using System.Linq.Dynamic.Core;
 using System.Linq.Dynamic.Core.CustomTypeProviders;
 using System.Linq.Expressions;
 using MoLibrary.AutoModel.Exceptions;
+using MoLibrary.Tool.General;
 
 namespace MoLibrary.AutoModel.Implements;
 

@@ -4,13 +4,13 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace MoLibrary.Repository.EntityInterfaces;
 
 /// <summary>
-/// Example entity demonstrating the implementation of IHasEntityConfig interface for self-configuration.
+/// Example entity demonstrating the implementation of IHasEntitySelfConfig interface for self-configuration.
 /// </summary>
 /// <remarks>
 /// This is an example for documentation purposes only. This file doesn't need to be included in
-/// your project. Instead, implement IHasEntityConfig directly in your entity classes.
+/// your project. Instead, implement IHasEntitySelfConfig directly in your entity classes.
 /// </remarks>
-public class ExampleEntity : MoEntity<long>, IHasEntityConfig<ExampleEntity>
+public class ExampleEntity : MoEntity<long>, IHasEntitySelfConfig<ExampleEntity>
 {
     /// <summary>
     /// The entity's name

@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Koubot.Tool.KouData
+namespace MoLibrary.Tool.General
 {
     /// <summary>
     /// Kou静态数据库

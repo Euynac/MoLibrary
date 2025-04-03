@@ -148,40 +148,10 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
 
         //Tidb与mysql8.0.0以上版本使用。
         //builder.UseCollation("utf8mb4_bin"); 
-        //TODO 完善日志
 
-        //GlobalLog.LogDebug("On model creating...");
-        //GlobalLog.LogDebug($"Auto load all configurations of DbContext: {typeof(TDbContext).FullName}");
+        builder.ApplyEntitySelfConfigurations(MoOptions, Logger);
 
-        var entityTypes = builder.Model.GetEntityTypes().Select(p => p.Name).ToHashSet();
-
-        // Apply configurations from entities implementing IHasEntityConfig
-        //builder.ApplyEntityConfigurations(Logger);
-
-        //var entityTypeNameList = builder.Model.GetEntityTypes().Select(p => p.ClrType.FullName).ToHashSet();
-        foreach (var assembly in builder.Model.GetEntityTypes().Select(p => Assembly.GetAssembly(p.ClrType))
-                     .DistinctBy(a => a!.FullName).ToList())
-        {
-            //GlobalLog.LogDebug($"loading from assembly:{assembly?.FullName}");
-            //规范：只有加入DbContext的Entity才会自动读取配置。且配置名必须以TypeConfiguration结尾
-            builder.ApplyConfigurationsFromAssembly(assembly!, t =>
-            {
-                if (t.FullName is not null && t.FullName.EndsWith("TypeConfiguration"))
-                {
-                    foreach (var type in t.GetInterfaces())
-                    {
-                        if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IEntityTypeConfiguration<>)
-                                               && type.GenericTypeArguments.FirstOrDefault() is { FullName: not null } entity
-                                               && entityTypes.Contains(entity.FullName))
-                        {
-                            return true;
-                        }
-                    }
-                }
-
-                return false;
-            });
-        }
+        builder.ApplyEntitySeparateConfigurations(MoOptions, Logger);
 
         OnModelCreatingExtend(builder);
     }

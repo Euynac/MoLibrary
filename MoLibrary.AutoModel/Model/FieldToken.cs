@@ -1,5 +1,5 @@
-using Koubot.Tool.String;
 using MoLibrary.Tool.Extensions;
+using MoLibrary.Tool.General;
 
 namespace MoLibrary.AutoModel.Model;
 

@@ -1,3 +1,6 @@
+using Microsoft.EntityFrameworkCore;
+using MoLibrary.Repository.EntityInterfaces;
+
 namespace MoLibrary.Repository;
 
 public class MoRepositoryOptions
@@ -18,5 +21,18 @@ public class MoRepositoryOptions
     /// </summary>
     public bool? EnableSensitiveDataLogging { get; set; }
 
-    public const int ConcurrencyStampMaxLength = 40;
+    /// <summary>
+    /// 禁用实体 <see cref="IHasEntitySelfConfig{TEntity}"/> 功能，当不使用此功能时可关闭
+    /// </summary>
+    public bool DisableEntitySelfConfiguration { get; set; }
+
+    /// <summary>
+    /// 禁用实体原生配置 <see cref="IEntityTypeConfiguration{TEntity}"/> 功能，当不使用<see cref="MoDbContext{TDbContext}"/>提供的此接口自动注册功能可关闭
+    /// </summary>
+    public bool DisableEntitySeparateConfiguration { get; set; }
+
+    /// <summary>
+    /// 并发令牌最大长度
+    /// </summary>
+    public static int ConcurrencyStampMaxLength = 40;
 }
