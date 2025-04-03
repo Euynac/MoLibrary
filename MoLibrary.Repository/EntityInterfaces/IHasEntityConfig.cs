@@ -3,10 +3,11 @@
 namespace MoLibrary.Repository.EntityInterfaces;
 
 /// <summary>
-///    A standard interface for configuring entities.
+///    A standard interface for configuring entities. Implementing this interface
+///    allows an entity to configure itself within the same class file rather than
+///    using separate IEntityTypeConfiguration implementations or DbContext configuration.
 /// </summary>
-/// <typeparam name="TEntity"></typeparam>
-[Obsolete("暂未实现")]
+/// <typeparam name="TEntity">The entity type being configured</typeparam>
 public interface IHasEntityConfig<TEntity> where TEntity : MoEntity
 {
     /// <summary>
