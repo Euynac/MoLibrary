@@ -19,7 +19,7 @@ public class InvocationChainRecorderMoInterceptor(IHttpContextAccessor accessor,
 {
     private bool ShouldRecordChain(IMoMethodInvocation invocation, out string? declaringType, out string? request)
     {
-        if (invocation.Method.ReturnType.FullName?.Contains(nameof(MoLibrary.Tool.MoResponse), StringComparison.Ordinal) is true)
+        if (invocation.Method.ReturnType.FullName?.Contains(nameof(Tool.MoResponse), StringComparison.Ordinal) is true)
         {
             var requestType = invocation.Arguments.FirstOrDefault()?.GetType();
             declaringType = invocation.Method.ReflectedType?.Name;
