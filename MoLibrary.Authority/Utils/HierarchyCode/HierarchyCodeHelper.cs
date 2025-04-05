@@ -34,6 +34,38 @@ public static class HierarchyCodeHelper
     }
 
     /// <summary>
+    /// Extracts the numbers from a hierarchical code.
+    /// Example: if code is "00004.00002" then returns [4, 2]
+    /// </summary>
+    /// <param name="code">The hierarchical code to extract numbers from</param>
+    /// <returns>List of integers representing each level in the hierarchy</returns>
+    /// <exception cref="ArgumentNullException">Thrown when code is null or empty</exception>
+    public static List<int> ExtractNumbers(string code)
+    {
+        if (code.IsNullOrEmptySet())
+        {
+            throw new ArgumentNullException(nameof(code), "code can not be null or empty.");
+        }
+
+        var segments = code.Split('.');
+        var numbers = new List<int>(segments.Length);
+
+        foreach (var segment in segments)
+        {
+            if (int.TryParse(segment, out int number))
+            {
+                numbers.Add(number);
+            }
+            else
+            {
+                throw new FormatException($"Invalid code segment format: {segment}. Expected a numeric value.");
+            }
+        }
+
+        return numbers;
+    }
+
+    /// <summary>
     /// Appends a child code to a parent code.
     /// Example: if parentCode = "00001", childCode = "00042" then returns "00001.00042".
     /// </summary>
