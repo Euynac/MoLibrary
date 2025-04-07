@@ -80,8 +80,23 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
     public string? Content { get; set; }
 
     #region Statistic
-    private static readonly ConcurrentQueue<(string Name, long Duration)> _queue = [];
-    private static readonly Dictionary<string, (int Times, double Average, DateTime StartTime)> _recordDict = [];
+    /// <summary>
+    /// Record for storing timekeeper measurement data
+    /// </summary>
+    /// <param name="Name">The name/key of the timekeeper</param>
+    /// <param name="Duration">The measured duration in milliseconds</param>
+    public record TimekeeperMeasurement(string Name, long Duration);
+
+    /// <summary>
+    /// Record for storing timekeeper statistics
+    /// </summary>
+    /// <param name="Times">Number of times the timekeeper has been used</param>
+    /// <param name="Average">Average duration in milliseconds</param>
+    /// <param name="StartTime">Time when the first measurement was recorded</param>
+    public record TimekeeperStatistics(int Times, double Average, DateTime StartTime);
+
+    private static readonly ConcurrentQueue<TimekeeperMeasurement> _queue = [];
+    private static readonly Dictionary<string, TimekeeperStatistics> _recordDict = [];
 
 
     static MoTimekeeperBase()
@@ -95,13 +110,12 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
                 {
                     if (_recordDict.TryGetValue(info.Name, out var cur))
                     {
-                        var (times, averageTime, startTime) = cur;
-                        var average = (averageTime * times + info.Duration) / (times + 1);
-                        _recordDict[info.Name] = (times + 1, average, startTime);
+                        var average = (cur.Average * cur.Times + info.Duration) / (cur.Times + 1);
+                        _recordDict[info.Name] = cur with { Times = cur.Times + 1, Average = average };
                     }
                     else
                     {
-                        _recordDict[info.Name] = (1, info.Duration, DateTime.Now);
+                        _recordDict[info.Name] = new TimekeeperStatistics(1, info.Duration, DateTime.Now);
                     }
                 }
             }
@@ -109,9 +123,9 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
         }, TaskCreationOptions.LongRunning);
     }
 
-    public static IReadOnlyDictionary<string, (int Times, double Average, DateTime StartTime)> GetStatistics() => _recordDict;
+    public static IReadOnlyDictionary<string, TimekeeperStatistics> GetStatistics() => _recordDict;
 
-    public (int Times, double Average, DateTime StartTime)? GetRecords(string key)
+    public TimekeeperStatistics? GetRecords(string key)
     {
         if (_recordDict.TryGetValue(key, out var value)) return value;
         return null;
@@ -123,7 +137,7 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
     private void DoRecord()
     {
         Check.NotNull(Key, nameof(Key));
-        _queue.Enqueue((Key, Timer.ElapsedMilliseconds));
+        _queue.Enqueue(new TimekeeperMeasurement(Key, Timer.ElapsedMilliseconds));
         
     }
     #endregion
