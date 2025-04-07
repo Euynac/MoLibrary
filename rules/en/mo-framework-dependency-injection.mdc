@@ -1,0 +1,45 @@
+---
+description: MoFramework Dependency Injection Rule
+globs: *.cs
+alwaysApply: false
+---
+# MoFramework Dependency Injection Rule
+
+MoFramework uses an automatic dependency injection mechanism, eliminating the need to manually register application services, domain services, and repositories.
+
+## Automatic Registration Principle
+
+- Automatic registration is based on the `IMoDependency` interface, located in the `MoLibrary.DependencyInjection.AppInterfaces` namespace
+- The following types are automatically registered:
+  - Repository classes implementing the `IMoRepository<TEntity, TKey>` interface
+  - Domain services inheriting from `MoDomainService<TService>`
+  - Application services inheriting from `MoApplicationService<THandler, TRequest, TResponse>`
+  - Other types implementing the `IMoDependency` interface
+
+## Registration Rules
+
+1. **Repositories**:
+   - Repository interfaces are registered as their own interface type
+   - Repository implementation classes are registered as their interface (e.g., `IUserRepository`) and their base repository interface (e.g., `IMoRepository<User, Guid>`)
+
+2. **Domain Services**:
+   - Domain services are registered as their own type (e.g., `DomainUser`)
+
+3. **Application Services**:
+   - Application services are registered as their own type (e.g., `CommandHandlerLogin`)
+
+## Configuration
+
+In `Program.cs`, only one configuration is needed to enable automatic dependency injection:
+
+```csharp
+builder.Services.AddMoDependencyInjectionDefaultProvider();
+```
+
+The `RelatedAssemblies` parameter specifies the assemblies to scan, typically including all domain models, repositories, and services.
+
+## Notes
+
+- Do not manually register application services, domain services, and repositories, as this may cause duplicate registrations
+- Special types (such as IdGenerator, custom services, etc.) still need to be registered manually
+- Ensure implementation classes follow naming conventions, such as repository interface `IUserRepository` corresponding to implementation class `UserRepository`

@@ -9,5 +9,5 @@ public class MoCrudControllerOption
     /// <summary>
     /// Controller自动注册后缀
     /// </summary>
-    public string CrudControllerPostfix { get; set; } = "AppService";
+    public string CrudControllerPostfix { get; set; } = "CrudService";
 }
