@@ -11,6 +11,7 @@ using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Features;
 using MoLibrary.RegisterCentre;
 using MoLibrary.Tool.Extensions;
+using MoLibrary.Tool.General;
 using MoLibrary.Tool.Utils;
 
 namespace MoLibrary.Framework.Features;
@@ -77,15 +78,30 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
     protected bool Disposed;
     public bool EnableLogging { get; set; }
 
+    /// <summary>
+    /// Whether to monitor memory usage
+    /// </summary>
+    [Obsolete("暂时无法实现，目前无法确保异步方法线程ID不变")]
+    public bool EnableMemoryMonitor { get; set; } = false;
+    /// <summary>
+    /// number of memory usage bytes of current measurement scope.
+    /// </summary>
+    public long? MemoryUsage { get; set; }
+
     public string? Content { get; set; }
 
     #region Statistic
+
     /// <summary>
     /// Record for storing timekeeper measurement data
     /// </summary>
     /// <param name="Name">The name/key of the timekeeper</param>
     /// <param name="Duration">The measured duration in milliseconds</param>
-    public record TimekeeperMeasurement(string Name, long Duration);
+    public record TimekeeperMeasurement(string Name, long Duration)
+    {
+        public long? MemoryBytes { get; set; }
+    }
+
 
     /// <summary>
     /// Record for storing timekeeper statistics
@@ -93,7 +109,12 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
     /// <param name="Times">Number of times the timekeeper has been used</param>
     /// <param name="Average">Average duration in milliseconds</param>
     /// <param name="StartTime">Time when the first measurement was recorded</param>
-    public record TimekeeperStatistics(int Times, double Average, DateTime StartTime);
+    public record TimekeeperStatistics(int Times, double Average, DateTime StartTime)
+    {
+        public long? AverageMemoryBytes { get; set; }
+        public long? LastMemoryBytes { get; set; }
+        public long? LastDuration { get; set; }
+    }
 
     private static readonly ConcurrentQueue<TimekeeperMeasurement> _queue = [];
     private static readonly Dictionary<string, TimekeeperStatistics> _recordDict = [];
@@ -111,11 +132,23 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
                     if (_recordDict.TryGetValue(info.Name, out var cur))
                     {
                         var average = (cur.Average * cur.Times + info.Duration) / (cur.Times + 1);
-                        _recordDict[info.Name] = cur with { Times = cur.Times + 1, Average = average };
+                        var averageMemory = info.MemoryBytes is { } memory
+                            ? ((cur.AverageMemoryBytes * cur.Times ?? 0) + info.MemoryBytes) / (cur.Times + 1)
+                            : cur.AverageMemoryBytes;
+                        
+                        _recordDict[info.Name] = cur with
+                        {
+                            Times = cur.Times + 1, Average = average, AverageMemoryBytes = averageMemory,
+                            LastMemoryBytes = info.MemoryBytes,
+                            LastDuration = info.Duration
+                        };
                     }
                     else
                     {
-                        _recordDict[info.Name] = new TimekeeperStatistics(1, info.Duration, DateTime.Now);
+                        _recordDict[info.Name] = new TimekeeperStatistics(1, info.Duration, DateTime.Now)
+                        {
+                            AverageMemoryBytes = info.MemoryBytes
+                        };
                     }
                 }
             }
@@ -137,18 +170,36 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
     private void DoRecord()
     {
         Check.NotNull(Key, nameof(Key));
-        _queue.Enqueue(new TimekeeperMeasurement(Key, Timer.ElapsedMilliseconds));
-        
+        _queue.Enqueue(new TimekeeperMeasurement(Key, Timer.ElapsedMilliseconds)
+        {
+            MemoryBytes = MemoryUsage
+        });
+        if (EnableMemoryMonitor)
+        {
+            MemoryUsage = null;
+        }
     }
     #endregion
     public virtual void Start()
     {
         Timer.Start();
+        if (EnableMemoryMonitor)
+        {
+            MemoryUsage = GC.GetAllocatedBytesForCurrentThread();
+        }
     }
 
     public virtual void Finish()
     {
         Timer.Stop();
+        if (EnableMemoryMonitor)
+        {
+            MemoryUsage -= GC.GetAllocatedBytesForCurrentThread();
+            if (MemoryUsage < 0)
+            {
+                MemoryUsage = null;
+            }
+        }
         DoRecord();
         Timer.Reset();
     }
@@ -274,7 +325,11 @@ public static class MoTimekeeperBuilderExtensions
                     times = p.Value.Times,
                     average = $"{p.Value.Average:0.##}ms",
                     createAt = $"{p.Value.StartTime}",
-                    timesEveryMinutes = $"{p.Value.Times / (DateTime.Now - p.Value.StartTime).TotalMinutes:0.##}"
+                    timesEveryMinutes = $"{p.Value.Times / (DateTime.Now - p.Value.StartTime).TotalMinutes:0.##}",
+                    averageMemory = $"{p.Value.AverageMemoryBytes?.FormatBytes()}",
+                    lastMemory = $"{p.Value.LastMemoryBytes?.FormatBytes()}",
+                    lastDuration = $"{p.Value.LastDuration:0.##}ms",
+                    
                 });
                 await response.WriteAsJsonAsync(list);
             }).WithName("获取Timekeeper统计状态").WithOpenApi(operation =>
