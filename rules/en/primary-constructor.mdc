@@ -1,7 +1,9 @@
 ---
 description: introduction of primary constructors
 globs: *.cs
+alwaysApply: false
 ---
+
 In C# 12 and above, classes and structs can have **primary constructors** that simplify the declaration of parameters for initialization. The parameters from the primary constructor are available throughout the class or struct and can be used for state initialization or directly in method definitions. This feature reduces the need for repetitive constructor definitions.
 
 ## General Syntax for Primary Constructors
