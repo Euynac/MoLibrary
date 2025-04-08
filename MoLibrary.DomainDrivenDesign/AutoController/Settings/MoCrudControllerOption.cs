@@ -5,7 +5,7 @@ public class MoCrudControllerOption
     /// <summary>
     /// 自动CRUD路径前缀
     /// </summary>
-    public string RoutePath { get; set; } = "api";
+    public string RoutePath { get; set; } = "api/v1/[controller]";
     /// <summary>
     /// Controller自动注册后缀
     /// </summary>
