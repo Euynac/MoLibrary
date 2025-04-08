@@ -41,7 +41,7 @@ public class ResPaged<TDto> : IServiceResponse
         /// <summary>
         /// 总页数
         /// </summary>
-        public int? TotalPage => ((double?)Sum / PageSize)?.Ceiling();
+        public int? TotalPages => ((double?)Sum / PageSize)?.Ceiling();
 
         /// <summary>
         /// 是否可以向前翻页
@@ -50,7 +50,7 @@ public class ResPaged<TDto> : IServiceResponse
         /// <summary>
         /// 是否可以向后翻页
         /// </summary>
-        public bool? HasNext => CurrentPage == null ? null : CurrentPage < TotalPage;
+        public bool? HasNext => CurrentPage == null ? null : CurrentPage < TotalPages;
 
     }
     public ResPaged()
