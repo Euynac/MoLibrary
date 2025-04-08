@@ -18,6 +18,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using MoLibrary.Repository.EFCoreExtensions;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace MoLibrary.Repository;
 
@@ -29,7 +30,7 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
 
     public IMoAuditPropertySetter AuditPropertySetter => ServiceProvider.GetRequiredService<IMoAuditPropertySetter>();
 
-    public ILogger<MoDbContext<TDbContext>> Logger => ServiceProvider.GetRequiredService<ILogger<MoDbContext<TDbContext>>>();
+    public ILogger<MoDbContext<TDbContext>> Logger => ServiceProvider.GetService<ILogger<MoDbContext<TDbContext>>>() ?? NullLogger<MoDbContext<TDbContext>>.Instance;
 
     public MoRepositoryOptions MoOptions =>
         ServiceProvider.GetRequiredService<IOptions<MoRepositoryOptions>>().Value;
