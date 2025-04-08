@@ -79,13 +79,14 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
             }
         }
 
-        dynamicQuery = ApplyPaging(dynamicQuery, input);
+        var (pagedQueryable, curPage, pageSize) = ApplyPaging(dynamicQuery, input);
+        dynamicQuery = pagedQueryable;
 
         //如果已经应用了动态选择
         if (dynamicQuery is not IQueryable<TEntity> finalEntityQuery)
         {
             var selectedList = await dynamicQuery.ToDynamicListAsync();
-            return new ResPaged<dynamic>(totalCount ?? selectedList.Count, selectedList);
+            return new ResPaged<dynamic>(totalCount ?? selectedList.Count, selectedList, curPage, pageSize);
         }
 
         var entities = await finalEntityQuery.ToListAsync();
@@ -99,7 +100,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
         var entityDtos = ObjectMapper.Map<List<TEntity>, List<TGetListOutputDto>>(entities);
         if ((await ApplyCustomActionToResponseListAsync(entityDtos)).IsFailed(out var error, out var data)) return error;
         var list = (IReadOnlyList<dynamic>) data;
-        return new ResPaged<dynamic>(totalCount ?? list.Count, list);
+        return new ResPaged<dynamic>(totalCount ?? list.Count, list, curPage, pageSize);
     }
 
 
@@ -215,36 +216,42 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
     /// <param name="query"></param>
     /// <param name="input"></param>
     /// <returns></returns>
-    protected IQueryable ApplyPaging(IQueryable query, TGetListInput input)
+    protected (IQueryable, int? curPage, int? pageSize) ApplyPaging(IQueryable query, TGetListInput input)
     {
+        int? curPage = null;
+        int? pageSize = null;
         if (input is IHasRequestPage pageRequest && input is IHasRequestSkipCount paged)
 
         {
-            if (pageRequest is { DisablePage: true }) return query;
+            if (pageRequest is { DisablePage: true }) return (query, curPage, pageSize);
             if (paged.SkipCount == default || pageRequest.Page is not null)
             {
                 pageRequest.Page ??= 1;
                 paged.SkipCount = (pageRequest.Page.Value - 1) * paged.MaxResultCount;
             }
+
+
+            curPage = pageRequest.Page;
+            pageSize = paged.MaxResultCount;
         }
 
         if (query is IQueryable<TEntity> entityQuery)
         {
 
-            return input switch
+            return (input switch
             {
                 IHasRequestSkipCount pagedResultRequest => entityQuery.Skip(pagedResultRequest.SkipCount ?? 0).Take(pagedResultRequest.MaxResultCount),
                 IHasRequestLimitedResult limitedResultRequest => entityQuery.Take(limitedResultRequest.MaxResultCount),
                 _ => entityQuery
-            };
+            }, curPage, pageSize);
         }
 
-        return input switch
+        return (input switch
         {
             IHasRequestSkipCount pagedResultRequest => query.Skip(pagedResultRequest.SkipCount ?? 0).Take(pagedResultRequest.MaxResultCount),
             IHasRequestLimitedResult limitedResultRequest => query.Take(limitedResultRequest.MaxResultCount),
             _ => query
-        };
+        }, curPage, pageSize);
     }
 
     #endregion
