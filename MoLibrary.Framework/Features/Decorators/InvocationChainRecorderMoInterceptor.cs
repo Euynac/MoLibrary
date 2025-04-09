@@ -84,6 +84,7 @@ public class InvocationChainRecorderMoInterceptor(IHttpContextAccessor accessor,
             else if(exception != null && CreateRes(invocation.Method.ReturnType) is IServiceResponse errorRes)
             {
                 var handledRes = await exceptionHandler.TryHandleAsync(accessor.HttpContext, exception, CancellationToken.None);
+                exceptionHandler.LogException(accessor.HttpContext, exception);
                 handledRes.AppendExtraInfo("exception", $"执行方法{invocation.Method.DeclaringType?.Name} {invocation.Method.Name} 异常");
                 errorRes.MergeRes(handledRes);
                 invocation.ReturnValue = errorRes;

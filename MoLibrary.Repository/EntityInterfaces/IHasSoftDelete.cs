@@ -11,5 +11,5 @@ public interface IHasSoftDelete
     /// <summary>
     /// Used to mark an Entity as 'Deleted'.
     /// </summary>
-    bool IsDeleted { get; }
+    bool IsDeleted { get; set; }
 }

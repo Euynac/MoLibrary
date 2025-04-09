@@ -2,6 +2,7 @@ using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MoLibrary.Repository.EntityInterfaces;
+using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.Repository.EFCoreExtensions;
 
@@ -16,14 +17,32 @@ public static class ModelBuilderExtensions
         configuration.Configure(builder.Entity<TEntity>());
         return builder;
     }
+
     public static ModelBuilder ApplyEntitySeparateConfigurations(this ModelBuilder modelBuilder, MoRepositoryOptions moOptions,
         ILogger? logger = null)
     {
         if (moOptions.DisableEntitySeparateConfiguration) return modelBuilder;
+      
+        var entityTypes = modelBuilder.Model.GetEntityTypes().Select(p => p.Name).ToHashSet();
+
         foreach (var assembly in modelBuilder.Model.GetEntityTypes().Select(p => Assembly.GetAssembly(p.ClrType))
                      .DistinctBy(a => a!.FullName).ToList())
         {
-            modelBuilder.ApplyConfigurationsFromAssembly(assembly!);
+            modelBuilder.ApplyConfigurationsFromAssembly(assembly!, t =>
+            {
+                if (t.FullName is null) return false;
+                foreach (var type in t.GetInterfaces())
+                {
+                    if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IEntityTypeConfiguration<>)
+                                           && type.GenericTypeArguments.FirstOrDefault() is { FullName: not null } entity
+                                           && entityTypes.Contains(entity.FullName))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            });
         }
 
         return modelBuilder;
