@@ -94,6 +94,7 @@ public partial class AutoModelTokenExpressionGenDynamicLinqProvider(IOptions<Aut
             EBasicType.IsString => GenForString(),
             EBasicType.IsInt => GenForInt(),
             EBasicType.IsLong => GenForLong(),
+            EBasicType.IsDecimal => GenForDecimal(),    
             EBasicType.IsDouble => GenForDouble(),
             EBasicType.IsBoolean => GenForBoolean(),
             EBasicType.IsDateTime => GenForDateTime(),
@@ -193,6 +194,12 @@ public partial class AutoModelTokenExpressionGenDynamicLinqProvider(IOptions<Aut
     }
 
     private dynamic GenForLong()
+    {
+        if (_isFuzzy) return GenByFuzzyGeneral();
+        return GetGeneralRelationExpression();
+    }
+
+    private dynamic GenForDecimal()
     {
         if (_isFuzzy) return GenByFuzzyGeneral();
         return GetGeneralRelationExpression();

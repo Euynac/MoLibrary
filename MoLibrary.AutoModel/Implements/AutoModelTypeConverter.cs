@@ -47,6 +47,8 @@ public class AutoModelTypeConverter(IOptions<AutoModelExpressionOptions> options
                 return ConvertInt(value, typeSetting, features);
             case EBasicType.IsLong:
                 return ConvertLong(value, typeSetting, features);
+            case EBasicType.IsDecimal:
+                return ConvertDecimal(value, typeSetting, features);
             case EBasicType.IsEnum:
                 return ConvertEnum(value, typeSetting, features);
             case EBasicType.IsString:
@@ -194,6 +196,18 @@ public class AutoModelTypeConverter(IOptions<AutoModelExpressionOptions> options
         throw new AutoModelValueConvertException($"无法转换{value}为数字int类型");
     }
 
+    public dynamic ConvertDecimal(string value, AutoFieldTypeSetting typeSetting, EFieldConditionFeatures features)
+    {
+        if ((features & EFieldConditionFeatures.Fuzzy) != 0)
+        {
+            return value;
+        }
+        if (decimal.TryParse(value, out var result))
+        {
+            return result;
+        }
+        throw new AutoModelValueConvertException($"无法转换{value}为数字decimal类型");
+    }
     #endregion
 
 
