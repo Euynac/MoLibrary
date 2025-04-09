@@ -282,7 +282,6 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
 
     protected virtual void ChangeTracker_Tracked(object? sender, EntityTrackedEventArgs e)
     {
-        ;
         PublishEventsForTrackedEntity(e.Entry);
     }
 
@@ -396,15 +395,17 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
 
     protected virtual void ApplyConceptsForDeletedEntity(EntityEntry entry)
     {
-        if (entry.Entity is not IHasSoftDelete)
+        if (entry.Entity is not IHasSoftDelete entity)
         {
             return;
         }
 
-        //TODO 这里需要测试是否可以仅通过把Entry改回Unchanged触发Modified即可，而不用Deleted
+        //TODO 按理来说Reload也可以计算出Modified，待调试为何无法成功。
         //entry.Reload();
-        entry.State = EntityState.Unchanged;
-        ObjectHelper.TrySetProperty(entry.Entity.As<IHasSoftDelete>(), x => x.IsDeleted, () => true);
+        entry.State = EntityState.Modified;
+        entity.IsDeleted = true;
+
+        //ObjectHelper.TrySetProperty(entry.Entity.As<IHasSoftDelete>(), x => x.IsDeleted, () => true);
         SetDeletionAuditProperties(entry);
     }
 

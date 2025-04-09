@@ -16,7 +16,7 @@ public static class ServicesCollectionExtensions
     /// <summary>
     ///  Adds auto generated controllers for all aggregates in the application to the service collection.
     /// </summary>
-    /// TODO 包含MediaR注册
+    /// TODO 包含依赖项MediaR、AutoModel的注册
     public static IMvcBuilder AddMoControllers(this IServiceCollection services,
         Action<MvcOptions>? setupAction = null, Action<MoCrudControllerOption>? crudOptionAction = null)
     {
