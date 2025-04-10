@@ -140,6 +140,12 @@ public class AutoFieldTypeSetting
             return EBasicType.IsLong;
         }
 
+        if (underlyingType == typeof(decimal))
+        {
+            features |= ETypeFeatures.IsNumeric;
+            return EBasicType.IsDecimal;
+        }
+
 
         if (underlyingType == typeof(char)) return EBasicType.IsChar;
         if (underlyingType.IsClass) return EBasicType.IsClass;//string is also class.
@@ -180,4 +186,5 @@ public enum EBasicType
     IsFloat,
     IsTimeOnly,
     IsDateOnly,
+    IsDecimal,
 }
