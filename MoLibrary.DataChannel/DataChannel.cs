@@ -32,4 +32,22 @@ public class DataChannel(DataPipeline pipeline)
     {
         return await Pipe.InitAsync();
     }
+
+    /// <summary>
+    /// 从内部端点发送数据，经过转换中间件（若有）处理后由内部端点接收
+    /// </summary>
+    /// <param name="data">要发送的数据</param>
+    public async Task SendDataFromInnerAsync(object data)
+    {
+        await Pipe.SendDataAsync(new DataContext(EDataSource.Inner, data));
+    }
+
+    /// <summary>
+    /// 从外部端点发送数据，经过转换中间件（若有）处理后由外部端点接收
+    /// </summary>
+    /// <param name="data">要发送的数据</param>
+    public async Task SendDataFromOuterAsync(object data)
+    {
+        await Pipe.SendDataAsync(new DataContext(EDataSource.Outer, data));
+    }
 }
