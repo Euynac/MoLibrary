@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module.ModuleController;
 using MoLibrary.DataChannel.Dashboard.Controllers;
 using MoLibrary.DataChannel.Interfaces;
+using MoLibrary.DataChannel.Services;
 using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.DataChannel.Extensions;
@@ -26,7 +28,10 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IDataChannelManager, DataChannelManager>();
         services.AddSingleton(typeof(ISetupPipeline), typeof(TBuilderEntrance));
-
+        
+        // Add the hosted service for channel initialization
+        services.AddHostedService<DataChannelInitializerService>();
+        
         //services.AddControllers()
         //    .AddApplicationPart(typeof(DataChannelController).Assembly)
         //    .ConfigureApplicationPartManager(manager =>
@@ -57,20 +62,7 @@ public static class ServiceCollectionExtensions
         }
 
         DataChannelCentral.StartBuild(app);
-
-        //异步初始化管道，避免某些管道需要等微服务构建完毕后才能初始化。TODO 是否有更好的方案
-        Task.Factory.StartNew(async () =>
-        {
-            await Task.Delay(1000);
-            InitAllChannel();
-        });
+        
+        // Channel initialization is now handled by the hosted service
     }
-
-    internal static void InitAllChannel()
-    {
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-        DataChannelCentral.Channels.Do(p=> p.Value.Pipe.InitAsync());
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-    }
-
 }
