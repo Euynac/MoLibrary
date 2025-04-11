@@ -122,9 +122,10 @@ internal abstract class TransientComponentProxyBase(
     /// <returns>组件实例</returns>
     protected object CreateInstance()
     {
+        using var scope = ServiceProvider.GetRequiredService<IServiceScopeFactory>().CreateScope();
         return Metadata != null
-            ? ActivatorUtilities.CreateInstance(ServiceProvider, ComponentType, Metadata)
-            : ActivatorUtilities.CreateInstance(ServiceProvider, ComponentType);
+            ? ActivatorUtilities.CreateInstance(scope.ServiceProvider, ComponentType, Metadata)
+            : ActivatorUtilities.CreateInstance(scope.ServiceProvider, ComponentType);
     }
 
     /// <summary>
