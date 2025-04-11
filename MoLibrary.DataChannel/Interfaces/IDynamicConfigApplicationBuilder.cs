@@ -3,33 +3,17 @@ using Microsoft.AspNetCore.Builder;
 namespace MoLibrary.DataChannel.Interfaces;
 
 /// <summary>
-/// ASP.NET Core注册阶段自动执行（Middleware与Endpoints均支持）
+/// 动态应用配置接口
+/// 允许组件在ASP.NET Core注册阶段自动配置应用程序
+/// 适用于需要动态配置ASP.NET Core管道的中间件和端点
 /// </summary>
 public interface IDynamicConfigApplicationBuilder
 {
     /// <summary>
-    /// 进行应用配置。通过单例实例配置，同种Middleware或Endpoints会配置多次。
+    /// 执行应用程序配置
+    /// 通过组件实例配置应用程序构建器
+    /// 注意：同种类型的组件可能会被多次调用此方法
     /// </summary>
-    /// <param name="app"></param>
-    public void DoConfigApplication(IApplicationBuilder app)
-    {
-
-    }
+    /// <param name="app">应用程序构建器实例</param>
+    public void DoConfigApplication(IApplicationBuilder app);
 }
-///// <summary>
-///// ASP.NET Core注册阶段自动执行（Middleware与Endpoints均支持）
-///// </summary>
-//public interface INeedConfigAspNetCore
-//{
-//    /// <summary>
-//    /// 进行服务注册
-//    /// </summary>
-//    /// <param name="services"></param>
-//    public static abstract void DoRegister(IServiceCollection services);
-
-//    /// <summary>
-//    /// 进行应用配置
-//    /// </summary>
-//    /// <param name="app"></param>
-//    public static abstract void DoConfigApplication(IApplicationBuilder app);
-//}

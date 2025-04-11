@@ -5,38 +5,55 @@ using MoLibrary.DataChannel.CoreCommunicationProvider.Default;
 namespace MoLibrary.DataChannel.Pipeline;
 
 /// <summary>
-/// 管道构建器
+/// 数据管道构建器
+/// 提供流式API用于创建和配置数据管道
+/// 负责组装端点、中间件和其他组件形成完整的管道
 /// </summary>
 public class DataPipelineBuilder
 {
     private CommunicationMetadata? _innerEndpointMetadata;
     private CommunicationMetadata? _outerEndpointMetadata;
 
+    /// <summary>
+    /// 内部通信核心类型
+    /// </summary>
     public Type? InnerCoreType { get; private set; }
+    
+    /// <summary>
+    /// 外部通信核心类型
+    /// </summary>
     public Type? OuterCoreType { get; private set; }
 
     private readonly List<IPipeMiddleware> _middlewares = [];
+    
+    /// <summary>
+    /// 已添加的中间件实例集合
+    /// </summary>
     public IReadOnlyList<IPipeMiddleware> Middlewares => _middlewares;
 
     /// <summary>
-    /// 依赖注入的中间件类型
+    /// 依赖注入的中间件类型集合
+    /// 这些中间件将在构建时从服务容器中解析
     /// </summary>
     private readonly List<Type> _diMiddlewares = [];
+    
     /// <summary>
     /// 管道注册ID
+    /// 用于唯一标识此管道
     /// </summary>
     public string Id { get; set; } = null!;
 
     /// <summary>
     /// 管道组ID
+    /// 用于将相关管道组织在一起
     /// </summary>
     public string? GroupId { get; set; }
 
     /// <summary>
     /// 设置外部通信端点为默认端点
     /// </summary>
-    /// <typeparam name="TCore"></typeparam>
-    /// <returns></returns>
+    /// <typeparam name="TCore">外部通信端点类型，必须继承自DefaultCore</typeparam>
+    /// <returns>构建器实例，用于链式调用</returns>
     public DataPipelineBuilder SetOuterEndpoint<TCore>() where TCore : DefaultCore
     {
         OuterCoreType = typeof(TCore);
@@ -46,8 +63,8 @@ public class DataPipelineBuilder
     /// <summary>
     /// 设置内部通信端点为默认端点
     /// </summary>
-    /// <typeparam name="TCore"></typeparam>
-    /// <returns></returns>
+    /// <typeparam name="TCore">内部通信端点类型，必须继承自DefaultCore</typeparam>
+    /// <returns>构建器实例，用于链式调用</returns>
     public DataPipelineBuilder SetInnerEndpoint<TCore>() where TCore : DefaultCore
     {
         InnerCoreType = typeof(TCore);
@@ -55,10 +72,11 @@ public class DataPipelineBuilder
     }
 
     /// <summary>
-    /// 设置内部通信端点。不设置使用默认内部端点实现，忽略处理外部来的消息。
+    /// 设置内部通信端点
+    /// 不设置时将使用默认内部端点实现，忽略处理外部来的消息
     /// </summary>
-    /// <param name="metadata"></param>
-    /// <returns></returns>
+    /// <param name="metadata">通信元数据，包含端点配置信息</param>
+    /// <returns>构建器实例，用于链式调用</returns>
     public DataPipelineBuilder SetInnerEndpoint(CommunicationMetadata metadata)
     {
         metadata.EnrichOrValidate();
@@ -68,10 +86,11 @@ public class DataPipelineBuilder
     }
 
     /// <summary>
-    /// 设置外部通信端点。必须设置。
+    /// 设置外部通信端点
+    /// 必须设置，否则无法构建管道
     /// </summary>
-    /// <param name="metadata"></param>
-    /// <returns></returns>
+    /// <param name="metadata">通信元数据，包含端点配置信息</param>
+    /// <returns>构建器实例，用于链式调用</returns>
     public DataPipelineBuilder SetOuterEndpoint(CommunicationMetadata metadata)
     {
         metadata.EnrichOrValidate();
@@ -81,10 +100,11 @@ public class DataPipelineBuilder
     }
 
     /// <summary>
-    /// 增加支持依赖注入的中间件
+    /// 添加支持依赖注入的中间件
+    /// 中间件实例将在构建时从服务容器中解析
     /// </summary>
-    /// <typeparam name="TMiddleware"></typeparam>
-    /// <returns></returns>
+    /// <typeparam name="TMiddleware">中间件类型，必须实现IPipeMiddleware接口</typeparam>
+    /// <returns>构建器实例，用于链式调用</returns>
     public DataPipelineBuilder AddPipeMiddleware<TMiddleware>() where TMiddleware : class, IPipeMiddleware
     {
         _diMiddlewares.Add(typeof(TMiddleware));
@@ -92,10 +112,11 @@ public class DataPipelineBuilder
     }
 
     /// <summary>
-    /// 增加中间件实例
+    /// 添加中间件实例
+    /// 直接添加已创建的中间件实例到管道
     /// </summary>
-    /// <param name="middlewares"></param>
-    /// <returns></returns>
+    /// <param name="middlewares">要添加的中间件实例数组</param>
+    /// <returns>构建器实例，用于链式调用</returns>
     public DataPipelineBuilder AddPipeMiddleware(params IPipeMiddleware[] middlewares)
     {
         _middlewares.AddRange(middlewares);
@@ -103,10 +124,12 @@ public class DataPipelineBuilder
     }
 
     /// <summary>
-    /// 注册管道
+    /// 注册管道到中央管理器
+    /// 完成管道配置并将其添加到DataChannelCentral
     /// </summary>
-    /// <param name="id"></param>
-    /// <param name="groupId"></param>
+    /// <param name="id">管道唯一标识符</param>
+    /// <param name="groupId">可选的管道组标识符</param>
+    /// <exception cref="Exception">外部端点未设置时抛出异常</exception>
     public void Register(string id, string? groupId = null)
     {
         if (OuterCoreType == null) throw new Exception("You must set outer endpoint for data pipeline");
@@ -120,10 +143,11 @@ public class DataPipelineBuilder
     }
 
     /// <summary>
-    /// 构建双向通信管道
+    /// 构建数据管道
+    /// 创建并连接所有端点和中间件，形成完整的数据管道
     /// </summary>
-    /// <param name="provider"></param>
-    /// <returns></returns>
+    /// <param name="provider">服务提供者，用于解析依赖</param>
+    /// <returns>构建完成的数据管道实例</returns>
     internal DataPipeline Build(IServiceProvider provider)
     {
         //出入Endpoint是单例注册。
