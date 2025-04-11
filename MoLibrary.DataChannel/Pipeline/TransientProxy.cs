@@ -1,8 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.DataChannel.CoreCommunication;
 using MoLibrary.DataChannel.Interfaces;
-using MoLibrary.Tool.MoResponse;
-using System.Diagnostics.CodeAnalysis;
 
 namespace MoLibrary.DataChannel.Pipeline;
 
@@ -115,36 +113,24 @@ internal abstract class TransientComponentProxyBase(
     protected readonly IServiceProvider ServiceProvider = serviceProvider;
     protected readonly Type ComponentType = componentType;
     protected readonly object? Metadata = metadata;
-
     /// <summary>
-    /// 创建组件的新实例
-    /// </summary>
-    /// <returns>组件实例</returns>
-    protected object CreateInstance()
-    {
-        using var scope = ServiceProvider.GetRequiredService<IServiceScopeFactory>().CreateScope();
-        return Metadata != null
-            ? ActivatorUtilities.CreateInstance(scope.ServiceProvider, ComponentType, Metadata)
-            : ActivatorUtilities.CreateInstance(scope.ServiceProvider, ComponentType);
-    }
-
-    /// <summary>
-    /// 尝试创建特定类型的组件实例
+    /// 创建特定类型的组件实例
     /// </summary>
     /// <typeparam name="T">目标类型</typeparam>
-    /// <param name="instance">创建的实例</param>
-    /// <returns>是否成功创建</returns>
-    protected bool TryCreateInstance<T>([NotNullWhen(true)] out T? instance) where T : class
+    /// <returns>创建的实例</returns>
+    protected T CreateInstance<T>() where T : class
     {
-        var obj = CreateInstance();
+        using var scope = ServiceProvider.GetRequiredService<IServiceScopeFactory>().CreateScope();
+        var obj = Metadata != null
+            ? ActivatorUtilities.CreateInstance(scope.ServiceProvider, ComponentType, Metadata)
+            : ActivatorUtilities.CreateInstance(scope.ServiceProvider, ComponentType);
+       
         if (obj is T typedInstance)
         {
-            instance = typedInstance;
-            return true;
+            return typedInstance;
         }
-
-        instance = null;
-        return false;
+        
+        throw new Exception($"无法创建类型为 {ComponentType.FullName} 的实例");
     }
 }
 
@@ -153,9 +139,11 @@ internal abstract class TransientComponentProxyBase(
 /// 实现对Transient端点的代理
 /// </summary>
 internal class TransientPipeEndpointProxy(IServiceProvider serviceProvider, Type componentType, EDataSource entranceType, object? metadata)
-    : TransientComponentProxyBase(serviceProvider, componentType, metadata), IPipeEndpoint, ICommunicationCore
+    : TransientComponentProxyBase(serviceProvider, componentType, metadata), ICommunicationCore
 {
-    private IPipeEndpoint? _cachedInstance;
+    private readonly SemaphoreSlim _initLock = new(1, 1);
+    private readonly SemaphoreSlim _disposeLock = new(1, 1);
+    private bool _isInit;
     private bool _isDisposed;
 
     public DataPipeline Pipe { get; set; } = null!;
@@ -164,36 +152,43 @@ internal class TransientPipeEndpointProxy(IServiceProvider serviceProvider, Type
 
     public async Task ReceiveDataAsync(DataContext data)
     {
-        if (TryCreateInstance<IPipeEndpoint>(out var instance))
-        {
-            instance.Pipe = Pipe;
-            instance.EntranceType = EntranceType;
-            await instance.ReceiveDataAsync(data);
-        }
+        var instance = CreateInstance<IPipeEndpoint>();
+        instance.Pipe = Pipe;
+        instance.EntranceType = EntranceType;
+        await instance.ReceiveDataAsync(data);
     }
 
     public dynamic GetMetadata()
     {
-        if (TryCreateInstance<IPipeEndpoint>(out var instance))
-        {
-            return instance.GetMetadata();
-        }
-
-        return new System.Dynamic.ExpandoObject();
+        var instance = CreateInstance<IPipeEndpoint>();
+        return instance.GetMetadata();
     }
 
     public async Task InitAsync()
     {
-        if (TryCreateInstance<IPipeEndpoint>(out var endpoint))
-        {
-            endpoint.Pipe = Pipe;
-            endpoint.EntranceType = EntranceType;
+        if (_isInit)
+            return;
 
-            if (endpoint is ICommunicationCore communicationCore)
+        await _initLock.WaitAsync();
+        try
+        {
+            if (_isInit)
+                return;
+            
+            _isInit = true;
+
+            var instance = CreateInstance<IPipeEndpoint>();
+            instance.Pipe = Pipe;
+            instance.EntranceType = EntranceType;
+
+            if (instance is ICommunicationCore communicationCore)
             {
                 await communicationCore.InitAsync();
-                _cachedInstance = endpoint;
             }
+        }
+        finally
+        {
+            _initLock.Release();
         }
     }
 
@@ -202,13 +197,22 @@ internal class TransientPipeEndpointProxy(IServiceProvider serviceProvider, Type
         if (_isDisposed)
             return;
 
-        if (_cachedInstance is ICommunicationCore communicationCore)
+        await _disposeLock.WaitAsync();
+        try
         {
-            await communicationCore.DisposeAsync();
-            _cachedInstance = null;
-        }
+            if (_isDisposed)
+                return;
+            
+            _isDisposed = true;
+            _isInit = false;
 
-        _isDisposed = true;
+            var instance = CreateInstance<ICommunicationCore>();
+            await instance.DisposeAsync();
+        }
+        finally
+        {
+            _disposeLock.Release();
+        }
     }
 
     /// <summary>
@@ -217,12 +221,8 @@ internal class TransientPipeEndpointProxy(IServiceProvider serviceProvider, Type
     /// <returns>连接方向</returns>
     public EConnectionDirection SupportedConnectionDirection()
     {
-        if (TryCreateInstance<ICommunicationCore>(out var communicationCore))
-        {
-            return communicationCore.SupportedConnectionDirection();
-        }
-
-        return EConnectionDirection.InputAndOutput;
+        var instance = CreateInstance<ICommunicationCore>();
+        return instance.SupportedConnectionDirection();
     }
 
     /// <summary>
@@ -232,12 +232,15 @@ internal class TransientPipeEndpointProxy(IServiceProvider serviceProvider, Type
     /// <returns>异步任务</returns>
     public async Task SendDataAsync(DataContext data)
     {
-        if (TryCreateInstance<ICommunicationCore>(out var communicationCore))
+        if (!_isInit)
         {
-            communicationCore.Pipe = Pipe;
-            communicationCore.EntranceType = EntranceType;
-            await communicationCore.SendDataAsync(data);
+            await InitAsync();
         }
+
+        var instance = CreateInstance<ICommunicationCore>();
+        instance.Pipe = Pipe;
+        instance.EntranceType = EntranceType;
+        await instance.SendDataAsync(data);
     }
 }
 
@@ -252,28 +255,20 @@ internal class TransientPipeTransformMiddlewareProxy(
 {
     public async Task<DataContext> PassAsync(DataContext context)
     {
-        if (TryCreateInstance<IPipeTransformMiddleware>(out var middleware))
+        var instance = CreateInstance<IPipeTransformMiddleware>();
+        // 如果中间件需要访问管道，则设置管道引用
+        if (instance is IWantAccessPipeline wantAccess && Pipeline != null)
         {
-            // 如果中间件需要访问管道，则设置管道引用
-            if (middleware is IWantAccessPipeline wantAccess && Pipeline != null)
-            {
                 wantAccess.Pipe = Pipeline;
-            }
-
-            return await middleware.PassAsync(context);
         }
 
-        return context;
+        return await instance.PassAsync(context);
     }
 
     public dynamic GetMetadata()
     {
-        if (TryCreateInstance<IPipeTransformMiddleware>(out var middleware))
-        {
-            return middleware.GetMetadata();
-        }
-
-        return new System.Dynamic.ExpandoObject();
+        var instance = CreateInstance<IPipeTransformMiddleware>();
+        return instance.GetMetadata();
     }
 
     public DataPipeline? Pipeline { get; set; }
@@ -290,12 +285,8 @@ internal class TransientPipeEndpointMiddlewareProxy(
 {
     public dynamic GetMetadata()
     {
-        if (TryCreateInstance<IPipeEndpointMiddleware>(out var middleware))
-        {
-            return middleware.GetMetadata();
-        }
-
-        return new System.Dynamic.ExpandoObject();
+        var instance = CreateInstance<IPipeEndpointMiddleware>();
+        return instance.GetMetadata();
     }
 
     public DataPipeline Pipe { get; set; } = null!;
