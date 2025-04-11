@@ -145,11 +145,11 @@ public class DataPipeline
     public async Task SendDataAsync(DataContext data)
     {
         await TransformMiddlewares.DoAsync(async p => data = await p.PassAsync(data));
-        if (data.Entrance == EDataSource.Outer)
+        if (data.Source == EDataSource.Outer)
         {
             await InnerEndpoint.ReceiveDataAsync(data);
         }
-        else if(data.Entrance == EDataSource.Inner)
+        else if(data.Source == EDataSource.Inner)
         {
             await OuterEndpoint.ReceiveDataAsync(data);
         }

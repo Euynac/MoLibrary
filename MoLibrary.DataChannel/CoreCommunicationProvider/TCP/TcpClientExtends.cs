@@ -104,7 +104,7 @@ public partial class TcpClientExtends : IDisposable
         if (c != null)
         {
             await Task.Delay(TimeSpan.FromSeconds(2));
-            await c.Pipe.SendDataAsync(new DataContext(EDataSource.Inner, EDataSource.Inner, EDataOperation.Publish, msg));
+            await c.Pipe.SendDataAsync(new DataContext(EDataSource.Inner, msg));
         }
 
 
