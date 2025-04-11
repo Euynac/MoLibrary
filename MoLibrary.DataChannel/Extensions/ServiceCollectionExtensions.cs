@@ -9,7 +9,7 @@ using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.DataChannel.Extensions;
 
-public static class DataChannelBuilderExtensions
+public static class ServiceCollectionExtensions
 {
     /// <summary>
     /// 注册DataChannel
