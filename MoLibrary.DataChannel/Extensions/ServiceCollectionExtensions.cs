@@ -1,23 +1,30 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module.ModuleController;
 using MoLibrary.DataChannel.Dashboard.Controllers;
 using MoLibrary.DataChannel.Interfaces;
+using MoLibrary.DataChannel.Services;
 using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.DataChannel.Extensions;
 
-public static class DataChannelBuilderExtensions
+/// <summary>
+/// 服务集合扩展类
+/// 提供用于注册和配置数据通道服务的扩展方法
+/// </summary>
+public static class ServiceCollectionExtensions
 {
     /// <summary>
-    /// 注册DataChannel
+    /// 注册DataChannel服务到依赖注入容器
     /// </summary>
-    /// <param name="services"></param>
-    /// <param name="action"></param>
-    /// <returns></returns>
-    /// <exception cref="InvalidOperationException"></exception>
+    /// <typeparam name="TBuilderEntrance">数据管道设置类型，必须实现ISetupPipeline接口</typeparam>
+    /// <param name="services">服务集合</param>
+    /// <param name="action">可选的配置委托，用于自定义DataChannel设置</param>
+    /// <returns>配置后的服务集合</returns>
+    /// <exception cref="InvalidOperationException">当配置无效时抛出</exception>
     public static IServiceCollection AddDataChannel<TBuilderEntrance>(this IServiceCollection services, Action<DataChannelSetting>? action = null) where TBuilderEntrance : class, ISetupPipeline
     {
         services.ConfigActionWrapper(action, out var setting);
@@ -26,7 +33,10 @@ public static class DataChannelBuilderExtensions
 
         services.AddSingleton<IDataChannelManager, DataChannelManager>();
         services.AddSingleton(typeof(ISetupPipeline), typeof(TBuilderEntrance));
-
+        
+        // Add the hosted service for channel initialization
+        services.AddHostedService<DataChannelInitializerService>();
+        
         //services.AddControllers()
         //    .AddApplicationPart(typeof(DataChannelController).Assembly)
         //    .ConfigureApplicationPartManager(manager =>
@@ -45,9 +55,10 @@ public static class DataChannelBuilderExtensions
     }
 
     /// <summary>
-    /// 使用DataChannel中间件
+    /// 在应用程序中启用并配置DataChannel中间件
+    /// 初始化管道设置并启动管道构建
     /// </summary>
-    /// <param name="app"></param>
+    /// <param name="app">应用程序构建器实例</param>
     public static void UseDataChannel(this IApplicationBuilder app)
     {
         //use ISetupPipeline
@@ -57,20 +68,7 @@ public static class DataChannelBuilderExtensions
         }
 
         DataChannelCentral.StartBuild(app);
-
-        //异步初始化管道，避免某些管道需要等微服务构建完毕后才能初始化。TODO 是否有更好的方案
-        Task.Factory.StartNew(async () =>
-        {
-            await Task.Delay(1000);
-            InitAllChannel();
-        });
+        
+        // Channel initialization is now handled by the hosted service
     }
-
-    internal static void InitAllChannel()
-    {
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-        DataChannelCentral.Channels.Do(p=> p.Value.Pipe.InitAsync());
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-    }
-
 }
