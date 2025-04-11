@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.DataChannel.CoreCommunication;
 using MoLibrary.DataChannel.CoreCommunicationProvider.Default;
+using MoLibrary.DataChannel.Interfaces;
 
 namespace MoLibrary.DataChannel.Pipeline;
 
@@ -145,32 +146,32 @@ public class DataPipelineBuilder
     /// <summary>
     /// 构建数据管道
     /// 创建并连接所有端点和中间件，形成完整的数据管道
+    /// 对于标记为Transient的组件，将创建代理
     /// </summary>
     /// <param name="provider">服务提供者，用于解析依赖</param>
     /// <returns>构建完成的数据管道实例</returns>
     internal DataPipeline Build(IServiceProvider provider)
     {
-        //出入Endpoint是单例注册。
+        // 创建内部端点
+        var innerEndpoint = TransientProxy.CreateEndpointProxy(provider, InnerCoreType!, EDataSource.Inner, _innerEndpointMetadata);
 
-        var innerEndpoint = _innerEndpointMetadata != null ?
-            (IPipeEndpoint) ActivatorUtilities.CreateInstance(provider, InnerCoreType!, _innerEndpointMetadata)
-            : (IPipeEndpoint) ActivatorUtilities.CreateInstance(provider, InnerCoreType!);
-        innerEndpoint.EntranceType = EDataSource.Inner;
+        // 创建外部端点
+        var outerEndpoint = TransientProxy.CreateEndpointProxy(provider, OuterCoreType!, EDataSource.Outer, _outerEndpointMetadata);
 
-        var outerEndpoint = _outerEndpointMetadata != null ?
-            (IPipeEndpoint) ActivatorUtilities.CreateInstance(provider, OuterCoreType!, _outerEndpointMetadata)
-            : (IPipeEndpoint) ActivatorUtilities.CreateInstance(provider, OuterCoreType!);
-
-        outerEndpoint.EntranceType = EDataSource.Outer;
-
+        // 创建管道
         var pipe = new DataPipeline(innerEndpoint, outerEndpoint, Id, GroupId);
 
+        // 创建中间件
+        var middlewaresList = new List<IPipeMiddleware>(_middlewares);
+        
+        // 添加依赖注入的中间件
         foreach (var type in _diMiddlewares)
         {
-            _middlewares.Add((IPipeMiddleware) ActivatorUtilities.CreateInstance(provider, type));
+            var middleware = TransientProxy.CreateMiddlewareProxy(provider, type);
+            middlewaresList.Add(middleware);
         }
 
-        pipe.SetMiddlewares(_middlewares);
+        pipe.SetMiddlewares(middlewaresList);
         DataChannelCentral.RegisterPipeline(pipe);
         return pipe;
     }
