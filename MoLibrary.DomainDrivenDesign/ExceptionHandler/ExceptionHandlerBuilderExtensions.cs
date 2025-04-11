@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.AutoModel.Exceptions;
-using MoLibrary.Core.Features;
 using MoLibrary.Logging;
 using MoLibrary.Tool.General;
 using MoLibrary.Tool.MoResponse;
@@ -79,6 +78,13 @@ public static class ExceptionHandlerBuilderExtensions
         {
             var ex = (Exception)eventArgs.ExceptionObject;
             GlobalLog.LogError("程序异常捕获：{sender} {eventArgs}", sender?.ToJsonStringForce(), eventArgs?.ToJsonStringForce());
+            
+            // 设置 IsTerminating 为 false 以防止程序终止
+            if (eventArgs is { IsTerminating: true })
+            {
+                GlobalLog.LogWarning("尝试阻止程序因未处理异常而终止");
+                // 在这里可以执行一些清理操作或恢复措施
+            }
         };
 
         //巨坑：仅会在失败的Task GC后才会触发该异常。
