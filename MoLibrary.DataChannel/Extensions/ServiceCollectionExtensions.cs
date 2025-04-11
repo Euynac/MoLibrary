@@ -11,15 +11,20 @@ using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.DataChannel.Extensions;
 
+/// <summary>
+/// 服务集合扩展类
+/// 提供用于注册和配置数据通道服务的扩展方法
+/// </summary>
 public static class ServiceCollectionExtensions
 {
     /// <summary>
-    /// 注册DataChannel
+    /// 注册DataChannel服务到依赖注入容器
     /// </summary>
-    /// <param name="services"></param>
-    /// <param name="action"></param>
-    /// <returns></returns>
-    /// <exception cref="InvalidOperationException"></exception>
+    /// <typeparam name="TBuilderEntrance">数据管道设置类型，必须实现ISetupPipeline接口</typeparam>
+    /// <param name="services">服务集合</param>
+    /// <param name="action">可选的配置委托，用于自定义DataChannel设置</param>
+    /// <returns>配置后的服务集合</returns>
+    /// <exception cref="InvalidOperationException">当配置无效时抛出</exception>
     public static IServiceCollection AddDataChannel<TBuilderEntrance>(this IServiceCollection services, Action<DataChannelSetting>? action = null) where TBuilderEntrance : class, ISetupPipeline
     {
         services.ConfigActionWrapper(action, out var setting);
@@ -50,9 +55,10 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// 使用DataChannel中间件
+    /// 在应用程序中启用并配置DataChannel中间件
+    /// 初始化管道设置并启动管道构建
     /// </summary>
-    /// <param name="app"></param>
+    /// <param name="app">应用程序构建器实例</param>
     public static void UseDataChannel(this IApplicationBuilder app)
     {
         //use ISetupPipeline
