@@ -17,7 +17,8 @@ public class AutoModelDbOperatorDynamicLinqProvider<TModel>
 {
     private readonly ParsingConfig _config = new()
     {
-        CustomTypeProvider = new LinqToSqlCustomProvider()
+        CustomTypeProvider = new LinqToSqlCustomProvider(),
+        AllowEqualsAndToStringMethodsOnObject = true //v1.6.0修复安全问题后需要设置该配置
     };
     public virtual IQueryable<TModel> ApplyFilter(IQueryable<TModel> queryable, Expression<Func<TModel, object>> selector, EFieldConditions condition, string value)
     {
