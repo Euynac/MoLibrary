@@ -7,7 +7,7 @@ namespace MoLibrary.Tool.General
     /// <summary>
     /// KouWatch for test action invoke efficiency.
     /// </summary>
-    public class KouWatch
+    public static class KouWatch
     {
         /// <summary>
         /// Use stopwatch to test the given action's elapsed milliseconds.
@@ -29,6 +29,26 @@ namespace MoLibrary.Tool.General
         /// <returns></returns>
         public static TimeSpan GetElapsedDuration(Action action) => 
             TimeSpan.FromMilliseconds(GetElapsedMilliseconds(action));
+        /// <summary>
+        /// Quick test invoke time.
+        /// </summary>
+        public static Stopwatch Start()
+        {
+            var watch = new Stopwatch();
+            watch.Start();
+            return watch;
+        }
+
+        /// <summary>
+        /// Quick stop and get Stopwatch duration.
+        /// </summary>
+        /// <param name="watch"></param>
+        /// <returns></returns>
+        public static TimeSpan GetDuration(this Stopwatch watch)
+        {
+            watch.Stop();
+            return watch.Elapsed;
+        }
 
         /// <summary>
         /// Test and print the invoke-time of specific action.

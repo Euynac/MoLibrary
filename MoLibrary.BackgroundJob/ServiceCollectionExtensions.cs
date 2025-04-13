@@ -22,7 +22,7 @@ using StackExchange.Redis;
 
 namespace MoLibrary.BackgroundJob;
 
-public static class ServiceCollectionExtension
+public static class ServiceCollectionExtensions
 {
     private static List<Type> _backgroundWorkerTypes = [];
     private static List<Type> _backgroundJobTypes = [];
