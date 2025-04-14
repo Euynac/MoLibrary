@@ -7,7 +7,10 @@ public class MoBackgroundWorkerOptions
     /// </summary>
     public string[]? RelatedAssemblies { get; set; }
 
-
+    /// <summary>
+    /// 禁用作业自动注册
+    /// </summary>
+    public bool DisableAutoRegister { get; set; }
 
 
     #region Hangfire

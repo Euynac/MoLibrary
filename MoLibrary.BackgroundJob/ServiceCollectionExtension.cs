@@ -222,7 +222,7 @@ public static class ServiceCollectionExtension
     public static void UseMoBackgroundWorker(this IApplicationBuilder app)
     {
         if (_backgroundWorkerTypes.Count <= 0 || _hasError) return;
-        GlobalLog.LogInformation("发现继承自OurBackgroundWorker或Job的类，将启用Hangfire后台任务调度");
+        GlobalLog.LogInformation("发现继承自BackgroundWorker或Job的类，将启用Hangfire后台任务调度");
 
         //var supportCulturs = new[]
         // {
@@ -248,6 +248,12 @@ public static class ServiceCollectionExtension
             },
             Authorization = new[] { new MoHangfireAuthorizationFilter() }
         });
+
+        if(_options.DisableAutoRegister)
+        {
+            GlobalLog.LogInformation("已禁用Worker自动注册");
+            return;
+        }
 
         //自动注册后台Worker
         var backgroundWorkerManager = app.ApplicationServices.GetRequiredService<IMoBackgroundWorkerManager>();
