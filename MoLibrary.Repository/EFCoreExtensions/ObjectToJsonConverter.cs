@@ -1,4 +1,4 @@
-using System.Linq.Expressions;
+锘縰sing System.Linq.Expressions;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -9,7 +9,7 @@ namespace MoLibrary.Repository.EFCoreExtensions;
 public static class PropertyBuilderExtensions
 {
     /// <summary>
-    /// EFCore扩展方法，使用JsonConverter将对象转换为Json字符串存储到数据库中
+    /// EFCore鎵╁睍鏂规硶锛屼娇鐢↗sonConverter灏嗗璞¤浆鎹负Json瀛楃涓插瓨鍌ㄥ埌鏁版嵁搴撲腑
     /// </summary>
     /// <typeparam name="TTargetObj"></typeparam>
     /// <param name="propertyBuilder"></param>
