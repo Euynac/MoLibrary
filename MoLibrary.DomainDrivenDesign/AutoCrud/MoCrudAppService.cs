@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using MoLibrary.DomainDrivenDesign.Attributes;
+using MoLibrary.DomainDrivenDesign.AutoController.Settings;
 using MoLibrary.DomainDrivenDesign.AutoCrud.Interfaces;
 using MoLibrary.Repository.DtoInterfaces;
 using MoLibrary.Repository.EntityInterfaces;
@@ -59,7 +60,7 @@ public abstract class MoCrudAppService<TEntity, TEntityDto, TKey, TGetListInput,
 
 
 /// <summary>
-/// 自动CRUD接口基类。子类必须以AppService结尾，否则无法自动注册。其余开头名字会自动生成为路由名，以小写单词短横线隔开。如UserListAppService：user-list
+/// 自动CRUD接口基类。子类必须以设定的 <see cref="MoCrudControllerOption.CrudControllerPostfix"/> 结尾，否则无法自动注册。其余开头名字会自动生成为路由名，以小写单词短横线隔开。如UserListAppService：user-list
 /// </summary>
 public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto, TKey, TGetListInput, TCreateInput,
     TUpdateInput, TBulkDeleteInput, TRepository>(TRepository repository) : 

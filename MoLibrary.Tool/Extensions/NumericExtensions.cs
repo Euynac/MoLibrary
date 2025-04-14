@@ -134,13 +134,13 @@ namespace MoLibrary.Tool.Extensions
         /// </summary>
         /// <param name="num"></param>
         /// <returns></returns>
-        public static int Ceiling(this double num) => (int)System.Math.Ceiling(num);
+        public static int Ceiling(this double num) => (int)Math.Ceiling(num);
         /// <summary>
         /// Returns the smallest integer value greater than or equal to the specified float.
         /// </summary>
         /// <param name="num"></param>
         /// <returns></returns>
-        public static int Ceiling(this float num) => (int)System.Math.Ceiling(num);
+        public static int Ceiling(this float num) => (int)Math.Ceiling(num);
         /// <summary>
         /// Not same as P in string format which always retains 2 decimal places. It only retain decimal max to given <paramref name="maxRetain"/>. 
         /// </summary>

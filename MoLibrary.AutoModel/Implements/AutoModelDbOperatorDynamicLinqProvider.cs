@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+
 using MoLibrary.AutoModel.Interfaces;
 using MoLibrary.AutoModel.Model;
 using MoLibrary.Tool.Extensions;
@@ -7,6 +7,7 @@ using System.Linq.Dynamic.Core.CustomTypeProviders;
 using System.Linq.Expressions;
 using MoLibrary.AutoModel.Exceptions;
 using MoLibrary.Tool.General;
+using Microsoft.EntityFrameworkCore;
 
 namespace MoLibrary.AutoModel.Implements;
 
@@ -16,7 +17,8 @@ public class AutoModelDbOperatorDynamicLinqProvider<TModel>
 {
     private readonly ParsingConfig _config = new()
     {
-        CustomTypeProvider = new LinqToSqlCustomProvider()
+        CustomTypeProvider = new LinqToSqlCustomProvider(),
+        AllowEqualsAndToStringMethodsOnObject = true //v1.6.0修复安全问题后需要设置该配置
     };
     public virtual IQueryable<TModel> ApplyFilter(IQueryable<TModel> queryable, Expression<Func<TModel, object>> selector, EFieldConditions condition, string value)
     {

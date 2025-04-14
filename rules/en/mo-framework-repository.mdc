@@ -1,6 +1,7 @@
 ---
 description: Rules and guidelines for building Repository using MoFramework
-globs: *.cs
+globs: *.cs 
+alwaysApply: false
 ---
 
 
@@ -26,6 +27,20 @@ globs: *.cs
 
 - Must inherit from `MoEntity<$EntityKeyType$>` (for a single key) or `MoEntity` (for multiple keys).
 
+- When you need to config entity, you can use `IHasEntitySelfConfig<$EntityKeyType$>` 
+
+Example:
+```cs
+public class User : MoEntity<Guid>, IHasEntitySelfConfig<User>
+{
+    public void Configure(EntityTypeBuilder<User> builder)
+    {
+        builder.HasKey(x => x.Id);
+    }
+}
+```
+
+
 ## Repository Interface
 
 - Named `IRepository$EntityName$`.
@@ -46,7 +61,7 @@ public interface IRepositoryUser : IMoRepository<User, Guid>
 
 - Named `Repository$EntityName$`.
 - Inherits from the repository interface and `MoRepository<$EntityName$, $EntityKeyType$>` (or `MoRepository<$EntityName$>` for multiple keys).
-- Use [primary-constructor.mdc](mdc:.cursor/rules/primary-constructor.mdc) for dependency injection. Inject `IDbContextProvider<$DbContextName$> dbContextProvider`.
+- Use [primary-constructor.mdc](mdc:Affilion/Affilion/Affilion/Affilion/Affilion/.cursor/rules/primary-constructor.mdc) for dependency injection. Inject `IDbContextProvider<$DbContextName$> dbContextProvider`.
 - Implement methods **asynchronously**.
 
 ```cs

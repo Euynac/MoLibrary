@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MoLibrary.DependencyInjection.AppInterfaces;
 using MoLibrary.Repository;
 using MoLibrary.Repository.EntityInterfaces;
@@ -38,15 +39,13 @@ namespace Test.MoLibrary.Repository
             _serviceProviderFactoryMock = new Mock<IServiceProvider>();
             _loggerMock = new Mock<ILogger<MoRepositoryBase<TestEntity>>>();
 
-            _dbContext = new TestDbContext(_dbContextOptions, _serviceProviderMock.Object);
-            // Setup dbContextProvider to return our in-memory context
-            _dbContextProviderMock.Setup(x => x.GetDbContextAsync())
-                .ReturnsAsync(_dbContext);
+          
 
             // Setup service provider to return logger and unit of work manager
             _serviceProviderFactoryMock.Setup(x => x.GetService(typeof(ILogger<MoRepositoryBase<TestEntity>>)))
                 .Returns(_loggerMock.Object);
-
+            _serviceProviderFactoryMock.Setup(x => x.GetService(typeof(IOptions<MoRepositoryOptions>)))
+                .Returns(new OptionsWrapper<MoRepositoryOptions>(new MoRepositoryOptions()));
             _serviceProviderFactoryMock.Setup(x => x.GetService(typeof(IMoUnitOfWorkManager)))
                 .Returns(_unitOfWorkManagerMock.Object);
 
@@ -62,6 +61,10 @@ namespace Test.MoLibrary.Repository
             {
                 MoProvider = _serviceProviderMock.Object
             };
+              _dbContext = new TestDbContext(_dbContextOptions, _serviceProviderMock.Object);
+            // Setup dbContextProvider to return our in-memory context
+            _dbContextProviderMock.Setup(x => x.GetDbContextAsync())
+                .ReturnsAsync(_dbContext);
         }
 
         [TearDown]

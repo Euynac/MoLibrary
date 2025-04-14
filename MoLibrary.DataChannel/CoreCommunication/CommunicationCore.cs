@@ -21,7 +21,7 @@ public abstract class CommunicationCore : ICommunicationCore
     /// <returns></returns>
     public virtual DataContext CreateData(object? data)
     {
-        return new DataContext(EntranceType, EntranceType, EDataOperation.Publish, data);
+        return new DataContext(EntranceType, data);
     }
     
     /// <summary>

@@ -218,6 +218,8 @@ public class MoCrudControllerServiceConvention(
     {
         RemoveEmptySelectors(controller.Selectors);
 
+
+        //TODO 支持原生Route设置进行拼接
         //这部分是过滤掉不需要自动生成的Controller基类的，ASP.NET Core会添加AttributeRouteModel 即打上了[Route]标签的
         if (controller.Selectors.Any(selector => selector.AttributeRouteModel != null))
         {

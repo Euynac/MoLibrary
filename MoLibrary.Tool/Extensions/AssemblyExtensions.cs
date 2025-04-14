@@ -7,7 +7,14 @@ namespace MoLibrary.Tool.Extensions;
 
 public static class AssemblyExtensions
 {
-
+    public static IEnumerable<Assembly> WithDomainAssemblies(this Assembly assembly, params string[]? relatedNames)
+    {
+        yield return assembly;
+        if (relatedNames is null) yield break;
+        foreach (var domainAssembly in AppDomain.CurrentDomain.GetAssemblies()
+                     .Where(p => p.GetName().FullName is { } name && relatedNames.Any(s => name.Contains(s))))
+            yield return domainAssembly;
+    }
     /// <summary>
     /// Retrieves the related assemblies for the specified entry assembly, optionally filtered by related names. including the entry assembly and any related assemblies that match the specified filter criteria.
     /// </summary>

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using MoLibrary.Core.Extensions;
 using MoLibrary.DependencyInjection.DynamicProxy;
 using MoLibrary.DependencyInjection.DynamicProxy.DefaultInterceptors;
 using MoLibrary.DomainDrivenDesign.Interfaces;
@@ -13,8 +14,12 @@ public static class ServicesCollectionExtensions
     /// 注册领域驱动设计服务
     /// </summary>
     /// <param name="services"></param>
-    public static void AddMoDomainDrivenDesign(this IServiceCollection services)
+    /// <param name="action"></param>
+    public static void AddMoDomainDrivenDesign(this IServiceCollection services, Action<MoDomainDrivenDesignOptions>? action = null)
     {
+        services.ConfigActionWrapper(action, out var config);
+
+
         //TODO 优化无需AOP
         services.AddMoInterceptor<PropertyInjectServiceProviderEmptyInterceptor>().CreateProxyWhenSatisfy(
             c =>
@@ -29,4 +34,8 @@ public static class ServicesCollectionExtensions
                 return false;
             });
     }
+}
+
+public class MoDomainDrivenDesignOptions
+{
 }

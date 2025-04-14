@@ -157,7 +157,7 @@ namespace Hangfire.HttpJob.Server
                     ms.Seek(0, SeekOrigin.Begin);
                     var sr = new StreamReader(ms);
                     var requestBody = sr.ReadToEnd();
-                    return Newtonsoft.Json.JsonConvert.DeserializeObject<HttpJobItem>(requestBody);
+                    return JsonConvert.DeserializeObject<HttpJobItem>(requestBody);
                 }
             }
             catch (Exception ex)

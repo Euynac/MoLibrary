@@ -1,9 +1,23 @@
-using System.Linq.Expressions;
+﻿using System.Linq.Expressions;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace MoLibrary.Repository.EFCoreExtensions;
+
+public static class PropertyBuilderExtensions
+{
+    /// <summary>
+    /// EFCore扩展方法，使用JsonConverter将对象转换为Json字符串存储到数据库中
+    /// </summary>
+    /// <typeparam name="TTargetObj"></typeparam>
+    /// <param name="propertyBuilder"></param>
+    public static void HasJsonConversion<TTargetObj>(this PropertyBuilder<TTargetObj> propertyBuilder)
+    {
+        propertyBuilder.HasConversion(new ObjectToJsonConverter<TTargetObj>());
+    }
+}
 
 public class ObjectToJsonConverter<TTargetObj>(ConverterMappingHints? mappingHints = null) : ValueConverter<TTargetObj, string>(ObjectToJson(), JsonToObject(), mappingHints)
 {

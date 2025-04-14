@@ -16,7 +16,7 @@ public class ActiveMQCore(MetadataForActiveMQ metadata, ILogger<ActiveMQCore> lo
         if (session != null && producer != null)
         {
             ITextMessage msg = await session.CreateTextMessageAsync(data.Data?.ToString());
-            msg.Properties.SetString("Type", data.DataType.ToString()); //设置消息种类
+            msg.Properties.SetString("Type", data.DataType?.Name); //设置消息种类
             await producer.SendAsync(msg);
         }
     }

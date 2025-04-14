@@ -125,7 +125,7 @@ public class AutoModelExpressionNormalizerDynamicLinqProvider<TModel>(
         }
 
         //TODO improve performance
-        var context = tokenizer.Tokenize(fuzzyColumnsList.Select(p => $"({p.ReflectionName} like \"{fuzzy}\")").StringJoin(" or "));
+        var context = tokenizer.Tokenize(fuzzyColumnsList.Select(p => $"({p.DefaultActiveName} like \"{fuzzy}\")").StringJoin(" or "));
         var result = tokenizer.GenFinalExpression(context);
         if (Options.EnableDebugging)
         {
