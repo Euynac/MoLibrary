@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+ï»¿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using MoLibrary.Repository.EntityInterfaces;
 using MoLibrary.Repository.Interfaces;
@@ -177,7 +177,7 @@ public class MoRepository<TDbContext, TEntity>(
         }
     }
 
-    //¾Ş¿Ó£ºChangeTrackerÊÇÔÚµ÷ÓÃChangeTracker.Entries()£¨ÄÚ²¿µ÷ÓÃÁËChangeTracker.DetectChanges£©Ê±²Å»áË¢ĞÂ×´Ì¬ÊÇModified£¬Èç¹û·¢ÏÖÖµÃ»ÓĞ±ä»¯£¬½«»¹ÊÇUnChanged£¬ËùÒÔÔÚÊı¾İÍ¬²½³¡¾°ÖĞ½øĞĞDelete²Ù×÷£¬²¢²»»á´¥·¢¸üĞÂ¡£
+    //å·¨å‘ï¼šChangeTrackeræ˜¯åœ¨è°ƒç”¨ChangeTracker.Entries()ï¼ˆå†…éƒ¨è°ƒç”¨äº†ChangeTracker.DetectChangesï¼‰æ—¶æ‰ä¼šåˆ·æ–°çŠ¶æ€æ˜¯Modifiedï¼Œå¦‚æœå‘ç°å€¼æ²¡æœ‰å˜åŒ–ï¼Œå°†è¿˜æ˜¯UnChangedï¼Œæ‰€ä»¥åœ¨æ•°æ®åŒæ­¥åœºæ™¯ä¸­è¿›è¡ŒDeleteæ“ä½œï¼Œå¹¶ä¸ä¼šè§¦å‘æ›´æ–°ã€‚
     public override async Task DeleteManyAsync(IEnumerable<TEntity> entities, bool autoSave = false, CancellationToken cancellationToken = default)
     {
         var entityArray = entities.ToArray();
