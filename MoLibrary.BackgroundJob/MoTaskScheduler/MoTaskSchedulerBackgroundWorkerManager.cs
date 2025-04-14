@@ -24,10 +24,13 @@ public class MoTaskSchedulerBackgroundWorkerManager(
     {
         if (workerType.IsImplementInterface(typeof(IMoTaskSchedulerBackgroundWorker)))
         {
-            var worker = (IMoTaskSchedulerBackgroundWorker) ServiceProvider.GetRequiredService(workerType);
+            var worker = (IMoTaskSchedulerBackgroundWorker)ServiceProvider.GetRequiredService(workerType);
             scheduler.AddTask(worker.CronExpression, () =>
             {
-                ((IMoTaskSchedulerBackgroundWorker) ServiceProvider.GetRequiredService(workerType)).DoWorkAsync(
+                var factory = ServiceProvider.GetRequiredService<IServiceScopeFactory>();
+                using var scope = factory.CreateScope();
+                var scopedProvider = scope.ServiceProvider;
+                ((IMoTaskSchedulerBackgroundWorker)scopedProvider.GetRequiredService(workerType)).DoWorkAsync(
                     cancellationToken);
             });
         }

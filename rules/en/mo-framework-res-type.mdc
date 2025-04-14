@@ -1,6 +1,7 @@
 ---
 description: Rules and guidelines for using Res type in MoFramework
 globs: *.cs
+alwaysApply: false
 ---
 
 # `Res<T>` Generic Type Introduction

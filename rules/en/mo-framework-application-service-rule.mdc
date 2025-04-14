@@ -1,6 +1,7 @@
 ---
 description: Rules and guidelines for building ApplicationService using MoFramework
 globs: *.cs
+alwaysApply: false
 ---
 
 
@@ -36,12 +37,12 @@ globs: *.cs
 - The Handler class name must start with `CommandHandler` or `QueryHandler`.
 - The Handler class should include a `Route` attribute like `[Route("api/v1/$DomainName$")]`
 - The Handler class must override the `Handle` method and include an `[HttpPost("$APIRoute$")]` attribute.
-- The Handler class should use [primary-constructor.mdc](mdc:.cursor/rules/primary-constructor.mdc) when dependency injection is required.
+- The Handler class should use [primary-constructor.mdc](mdc:Affilion/.cursor/rules/primary-constructor.mdc) when dependency injection is required.
 - Ensure consistent naming and structure to maintain clarity and standardization across the project.
 
 ### Handler Class Response Type
 
-- The response type must be `Task<Res<$ResponseClassName$>>`, which can be refer to [mo-framework-res-type.mdc](mdc:.cursor/rules/mo-framework-res-type.mdc)
+- The response type must be `Task<Res<$ResponseClassName$>>`, which can be refer to [mo-framework-res-type.mdc](mdc:Affilion/.cursor/rules/mo-framework-res-type.mdc)
 
 ## Example
 

@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using MoLibrary.Repository.EntityInterfaces;
 using MoLibrary.Repository.Interfaces;
@@ -177,6 +177,7 @@ public class MoRepository<TDbContext, TEntity>(
         }
     }
 
+    //巨坑：ChangeTracker是在调用ChangeTracker.Entries()（内部调用了ChangeTracker.DetectChanges）时才会刷新状态是Modified，如果发现值没有变化，将还是UnChanged，所以在数据同步场景中进行Delete操作，并不会触发更新。
     public override async Task DeleteManyAsync(IEnumerable<TEntity> entities, bool autoSave = false, CancellationToken cancellationToken = default)
     {
         var entityArray = entities.ToArray();

@@ -16,7 +16,7 @@ public class FilterSpecialCharacterMiddleware(IOptions<FilterSpecialCharacterCon
 {
     public override DataContext Pass(DataContext context)
     {
-        if (context.DataType == EDataType.String && context.Data?.ToString() is { } dataStr)
+        if (context.Data is string dataStr)
         {
             //过滤HTML标签
             dataStr = Regex.Replace(dataStr, "<.*?>", string.Empty);

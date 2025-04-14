@@ -1,0 +1,134 @@
+---
+description: Rules and guidelines for building CrudApplicationService using MoFramework
+globs: *.cs
+alwaysApply: false
+---
+
+
+# Variable Definition
+
+> Variables represent context-specific parameters and are enclosed in `$`.
+
+- `$EntityName$`: The name of the entity.
+- `$EntityDtoName$`: The name of the entity DTO.
+- `$PrimaryKeyType$`: The type of the entity's primary key (e.g., Guid, int, string). 
+- `$GetListInputName$`: The name of the input class for retrieving lists (typically includes paging parameters).
+- `$CreateInputName$`: The name of the input class for creating entities.
+- `$UpdateInputName$`: The name of the input class for updating entities.
+- `$RepositoryInterfaceName$`: The name of the repository interface.
+
+# MoCrudService Rule
+
+- CRUD services provide standard Create, Read, Update, Delete operations for entities.
+- CRUD services must be named with the suffix `CrudService` (e.g., `UserCrudService`).
+- A CRUD service should inherit from one of the `MoCrudAppService` base classes depending on the required functionality.
+- New public method will auto generate corresponding API according to name convention. Always use `Res` or `Res<T>` as return type.
+
+## Base Class Selection
+
+### Basic CRUD with Custom Create and Update Inputs
+```cs
+public class $EntityName$CrudService(
+    $RepositoryInterfaceName$ repository, 
+    /* other dependencies */) : 
+    MoCrudAppService<$EntityName$, $EntityDtoName$, $PrimaryKeyType$, $CreateInputName$, $UpdateInputName$, $RepositoryInterfaceName$>(
+        repository)
+{
+    // Implementation 
+}
+```
+
+### Basic CRUD with Custom List Input
+```cs
+public class $EntityName$CrudService(
+    $RepositoryInterfaceName$ repository, 
+    /* other dependencies */) : 
+    MoCrudAppService<$EntityName$, $EntityDtoName$, $PrimaryKeyType$, $GetListInputName$, $CreateInputName$, $UpdateInputName$, $RepositoryInterfaceName$>(
+        repository)
+{
+    // Implementation
+}
+```
+
+## Common Overridable Methods
+
+- `CreateAsync(TCreateInput input)`: Override to customize entity creation logic.
+- `UpdateAsync(TKey id, TUpdateInput input)`: Override to customize entity update logic.
+- `DeleteAsync(TKey id)`: Override to customize entity deletion logic.
+- `GetAsync(TKey id)`: Override to customize entity retrieval logic.
+- `ListAsync(TGetListInput input)`: Override to customize entity list retrieval.
+- `ApplyListInclude(IQueryable<TEntity> queryable)`: Override to include related entities in list queries.
+- `EntityName`: Override to provide a custom entity name for response messages.
+
+## Response Type
+
+CRUD service methods use the `Res` and `Res<T>` types as defined in [mo-framework-res-type.mdc](mdc:MoLibrary/rules/en/mo-framework-res-type.mdc):
+
+- `CreateAsync`: Returns `Task<Res>`
+- `UpdateAsync`: Returns `Task<Res>`
+- `DeleteAsync`: Returns `Task<Res>`
+- `GetAsync`: Returns `Task<Res<TGetOutputDto>>`
+- `ListAsync`: Returns `Task<ResPaged<dynamic>>`
+
+## Attributes
+
+- Use the `[Tags("entity-description")]` attribute to categorize the CRUD service.
+
+## Example
+
+```cs
+
+[Tags("组织单位(OrganUnit)")]
+public class OrganUnitAppService(IRepositoryOrganUnit repository, DomainOrganUnitManager manager, IRepositoryUser userRepo) :
+    MoCrudAppService<OrganUnit, DtoOrganUnit, long, CommandCreateOrganUnit, CommandUpdateOrganUnit,
+        IRepositoryOrganUnit>(repository)
+{
+    protected override string? EntityName => "组织单位";
+
+    public class UpdateMembersRequest
+    {
+        /// <summary>
+        /// 用户Id列表
+        /// </summary>
+        public required List<Guid> Users { get; set; }
+        /// <summary>
+        /// 组织单位Id，为空代表移除用户组织单位
+        /// </summary>
+        public long? Id { get; set; }
+    }
+
+    /// <summary>
+    /// 批量修改给定用户组织单位
+    /// </summary>
+    public async Task<Res> UpdateMembersAsync(UpdateMembersRequest request)
+    {
+        var id = request.Id;
+        var members = request.Users;
+        if (id != null)
+        {
+            var unit = await repository.GetAsync(true, id.Value);
+            if (unit == null) return ResEntityNotFound(id.Value.ToString());
+            var users = await (await userRepo.WithDetailsAsync(p=>p.OrganUnit!)).Where(p => members.Contains(p.Id)).ToListAsync();
+            foreach (var user in users)
+            {
+                user.OrganUnit = unit;
+            }
+
+            await userRepo.UpdateManyAsync(users);
+            return Res.Ok($"已将{users.Count}个用户加入组织单位");
+        }
+        else
+        {
+            var users = await (await userRepo.WithDetailsAsync(p => p.OrganUnit!)).Where(p => members.Contains(p.Id) && p.OrganUnit != null).ToListAsync(); 
+            foreach (var user in users)
+            {
+                user.OrganUnit = null;
+            }
+
+            await userRepo.UpdateManyAsync(users);
+            return Res.Ok($"已将{users.Count}个用户移除组织单位");
+        }
+      
+    }
+}
+```

@@ -27,7 +27,7 @@ public static class MoDependencyInjectionExtensions
         var registrar = ActivatorUtilities.CreateInstance<T>(services.BuildServiceProvider(), setting);
 
         // candidates assemblies
-        var candidates = Assembly.GetEntryAssembly()!.GetRelatedAssemblies(setting.RelatedAssemblies);
+        var candidates = Assembly.GetEntryAssembly()!.WithDomainAssemblies(setting.RelatedAssemblies);
         foreach (var candidate in candidates)
         {
             setting.Logger.LogInformation("项目自动注册Assembly：{name}", candidate.FullName);

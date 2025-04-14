@@ -19,7 +19,7 @@ public class InvocationChainRecorderMoInterceptor(IHttpContextAccessor accessor,
 {
     private bool ShouldRecordChain(IMoMethodInvocation invocation, out string? declaringType, out string? request)
     {
-        if (invocation.Method.ReturnType.FullName?.Contains(nameof(MoLibrary.Tool.MoResponse), StringComparison.Ordinal) is true)
+        if (invocation.Method.ReturnType.FullName?.Contains(nameof(Tool.MoResponse), StringComparison.Ordinal) is true)
         {
             var requestType = invocation.Arguments.FirstOrDefault()?.GetType();
             declaringType = invocation.Method.ReflectedType?.Name;
@@ -84,6 +84,7 @@ public class InvocationChainRecorderMoInterceptor(IHttpContextAccessor accessor,
             else if(exception != null && CreateRes(invocation.Method.ReturnType) is IServiceResponse errorRes)
             {
                 var handledRes = await exceptionHandler.TryHandleAsync(accessor.HttpContext, exception, CancellationToken.None);
+                exceptionHandler.LogException(accessor.HttpContext, exception);
                 handledRes.AppendExtraInfo("exception", $"执行方法{invocation.Method.DeclaringType?.Name} {invocation.Method.Name} 异常");
                 errorRes.MergeRes(handledRes);
                 invocation.ReturnValue = errorRes;

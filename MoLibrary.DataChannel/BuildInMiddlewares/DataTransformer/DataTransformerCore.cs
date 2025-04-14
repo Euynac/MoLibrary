@@ -10,35 +10,18 @@ public abstract class DataTransformerMiddlewareBase : PipeTransformMiddlewareBas
     public override DataContext Pass(DataContext context)
     {
         if (context.Data == null) return context;
-        if (context.SpecifiedType is { } type && CanConvert(type) && context.Data is { } data)
+        if (context.DataType is { } type && CanConvert(type) && context.Data is { } data)
         {
             var convertedData = Convert(data);
             if (convertedData == null)
             {
                 //TODO 应需要返回转换失败原因？
-                context.SpecifiedType = null;
                 return context;
             }
             context.Data = convertedData;
-            context.SpecifiedType = convertedData.GetType();
-            context.DataType = SetDataContextType(convertedData.GetType());
         }
 
         return context;
-    }
-
-    public virtual EDataType SetDataContextType(Type outType)
-    {
-        if (outType == typeof(string))
-        {
-            return EDataType.String;
-        }
-        if (outType == typeof(byte[]))
-        {
-            return EDataType.Bytes;
-        }
-
-        return EDataType.Custom;
     }
 
     public abstract bool CanConvert(Type source);

@@ -33,7 +33,7 @@ public class DaprBindingCore(MetadataForDaprBinding metadata, DaprClient client)
                 var tagGroup = new List<OpenApiTag> { new() { Name = "基础功能", Description = "DaprBinding路由" } };
                 endpoints.MapPost($"{metadata.InputListenerRoute}", async ([FromBody] JsonElement body, HttpResponse response, HttpContext context) =>
                 {
-                    await SendDataAsync(new DataContext(EDataSource.Outer, EDataSource.Outer, EDataOperation.Publish, body));
+                    await SendDataAsync(new DataContext(EDataSource.Outer, body));
                 }).WithName("DaprBinding路由").WithOpenApi(operation =>
                 {
                     operation.Summary = "DaprBinding路由";

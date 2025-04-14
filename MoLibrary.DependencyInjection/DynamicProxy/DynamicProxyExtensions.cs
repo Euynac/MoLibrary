@@ -42,6 +42,7 @@ public static class DynamicProxyExtensions
     /// <remarks>Default behavior is to use InterfaceProxy if the service type is an interface; otherwise, uses ClassProxy.</remarks>
     /// <param name="services">The service collection to add the services to.</param>
     /// <param name="action"></param>
+    //TODO 需要放在最后服务注册
     public static void AddMoDependencyInjectionDynamicProxy(this IServiceCollection services, Action<MoDynamicProxyOption>? action = null)
     {
         var option = new MoDynamicProxyOption();

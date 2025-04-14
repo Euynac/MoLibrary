@@ -1,98 +1,75 @@
 using System.Dynamic;
+using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.DataChannel.Pipeline;
 
-public partial class DataContext
+/// <summary>
+/// 数据上下文类
+/// 用于在数据传输和处理过程中包装和携带数据及其元数据
+/// 作为数据管道中的主要传输单元
+/// </summary>
+public class DataContext
 {
-    public DataContext(EDataSource entrance, EDataSource source, EDataOperation operation, object? data)
-    {
-        Entrance = entrance;
-        Operation = operation;
-        Data = data;
-        Source = source;
-        AutoParseDataType();
-    }
     /// <summary>
-    /// 消息数据进入入口。仅Inner或Outer。
+    /// 初始化DataContext的新实例
     /// </summary>
-    public EDataSource Entrance { get; set; }
+    /// <param name="source">数据来源</param>
+    /// <param name="data">数据内容</param>
+    public DataContext(EDataSource source, object? data)
+    {
+        Source = source;
+        Data = data;
+    }
+    
     /// <summary>
-    /// DataContext 诞生来源
+    /// 消息数据进入入口
+    /// 表示数据从哪个端点进入管道，仅Inner或Outer
     /// </summary>
     public EDataSource Source { get; set; }
+   
     /// <summary>
-    /// 数据操作类型
-    /// </summary>
-    public string OperationStr { get; private set; } = null!;
-    public EDataOperation Operation
-    {
-        get => Enum.TryParse<EDataOperation>(OperationStr, true, out var operation)
-            ? operation
-            : EDataOperation.Custom;
-        set => OperationStr = value.ToString().ToLower();
-    }
-
-    /// <summary>
-    /// 元数据，Endpoint或中间件解析使用。
+    /// 元数据
+    /// 用于存储额外的上下文信息，可由Endpoint或中间件进行解析和使用
     /// </summary>
     public ExpandoObject Metadata { get; set; } = new();
+    
     /// <summary>
     /// 数据对象
+    /// 实际传输的数据内容
     /// </summary>
     public object? Data { get; set; }
+
     /// <summary>
-    /// 数据类型
+    /// 数据CLR类型
     /// </summary>
-    public EDataType DataType { get; set; }
-    /// <summary>
-    /// 当<see cref="EDataType"/>为<see cref="EDataType.Poco"/>时指定具体类型
-    /// </summary>
-    public Type? SpecifiedType { get; set; }
+    public Type? DataType => Data?.GetType();
     //TODO 处理ERROR
+
+    /// <summary>
+    /// 复制数据上下文元数据
+    /// 将指定数据上下文的元数据复制到当前实例
+    /// </summary>
+    /// <param name="data">源数据上下文</param>
+    /// <returns>当前数据上下文实例</returns>
+    public DataContext CopyMetadata(DataContext data)
+    {
+        Metadata.Copy(data.Metadata);
+        return this;
+    }
 }
 
 /// <summary>
-/// 数据诞生来源或数据入口
+/// 数据来源枚举，决定数据在消息通路中的流向。如数据来源于内部端点则由Outer端点接收。
 /// </summary>
 public enum EDataSource
 {
+    /// <summary>
+    /// 数据来源于内部端点
+    /// </summary>
     Inner,
-    Outer,
-    Middleware,
-}
-
-/// <summary>
-/// 数据类型
-/// </summary>
-public enum EDataType
-{
-    Custom,
-    Bytes,
-    String,
-    Poco
-}
-
-/// <summary>
-/// 数据操作类型
-/// </summary>
-public enum EDataOperation
-{
-    Custom,
-    #region Positive
+    
     /// <summary>
-    /// 主动获取
+    /// 数据来源于外部端点
     /// </summary>
-    Get,
-    /// <summary>
-    /// 主动推送
-    /// </summary>
-    Publish,
-    #endregion
-
-    #region Passive
-    /// <summary>
-    /// 被动响应
-    /// </summary>
-    Response,
-    #endregion
+    Outer
 }
