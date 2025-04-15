@@ -43,7 +43,7 @@ public class EnumFormatValueJsonConverter<TEnum> : JsonConverter<TEnum> where TE
                 : default;
         }
 
-        throw new JsonException($"Unexpected token {reader.TokenType} when parsing enum.");
+        throw new JsonException($"Unexpected token {reader.TokenType} when parsing enum {typeof(TEnum).FullName}.");
     }
 
     /// <summary>
