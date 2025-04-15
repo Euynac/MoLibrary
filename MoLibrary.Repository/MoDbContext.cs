@@ -38,19 +38,6 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
     public bool HasInit { get; protected set; }
 
 
-    private static readonly MethodInfo ConfigureBasePropertiesMethodInfo
-        = typeof(MoDbContext<TDbContext>)
-            .GetMethod(
-                nameof(ConfigureBaseProperties),
-                BindingFlags.Instance | BindingFlags.NonPublic
-            )!;
-
-    private static readonly MethodInfo ConfigureValueConverterMethodInfo
-        = typeof(MoDbContext<TDbContext>)
-            .GetMethod(
-                nameof(ConfigureValueConverter),
-                BindingFlags.Instance | BindingFlags.NonPublic
-            )!;
 
     protected readonly DbContextOptions DbContextOptions = options;
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -138,11 +125,11 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
 
         foreach (var entityType in builder.Model.GetEntityTypes())
         {
-            ConfigureBasePropertiesMethodInfo
+            _configureBasePropertiesMethodInfo
                 .MakeGenericMethod(entityType.ClrType)
                 .Invoke(this, [builder, entityType]);
 
-            ConfigureValueConverterMethodInfo
+            _configureValueConverterMethodInfo
                 .MakeGenericMethod(entityType.ClrType)
                 .Invoke(this, [builder, entityType]);
         }
@@ -292,6 +279,8 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
 
     protected IAsyncLocalEventPublisher? Publisher => ServiceProvider.GetRequiredService<IAsyncLocalEventPublisher>();
 
+
+    #region 触发跟踪增删改时，审计等自动属性设置
     protected virtual void PublishEventsForTrackedEntity(EntityEntry entry)
     {
         switch (entry.State)
@@ -337,8 +326,7 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
 
     protected virtual void UpdateConcurrencyStamp(EntityEntry entry)
     {
-        var entity = entry.Entity as IHasConcurrencyStamp;
-        if (entity == null)
+        if (entry.Entity is not IHasConcurrencyStamp entity)
         {
             return;
         }
@@ -400,12 +388,9 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
             return;
         }
 
-        //TODO 按理来说Reload也可以计算出Modified，待调试为何无法成功。
-        //entry.Reload();
         entry.State = EntityState.Unchanged;
         entity.IsDeleted = true;
 
-        //ObjectHelper.TrySetProperty(entry.Entity.As<IHasSoftDelete>(), x => x.IsDeleted, () => true);
         SetDeletionAuditProperties(entry);
     }
 
@@ -428,9 +413,25 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
     {
         AuditPropertySetter?.IncrementEntityVersionProperty(entry.Entity);
     }
+    #endregion
+
+    #region 实体额外配置
+    private static readonly MethodInfo _configureBasePropertiesMethodInfo
+        = typeof(MoDbContext<TDbContext>)
+            .GetMethod(
+                nameof(ConfigureBaseProperties),
+                BindingFlags.Instance | BindingFlags.NonPublic
+            )!;
+
+    private static readonly MethodInfo _configureValueConverterMethodInfo
+        = typeof(MoDbContext<TDbContext>)
+            .GetMethod(
+                nameof(ConfigureValueConverter),
+                BindingFlags.Instance | BindingFlags.NonPublic
+            )!;
 
     protected virtual void ConfigureBaseProperties<TEntity>(ModelBuilder modelBuilder, IMutableEntityType mutableEntityType)
-        where TEntity : class
+       where TEntity : class
     {
         if (mutableEntityType.IsOwned())
         {
@@ -545,5 +546,9 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
 
         return expression;
     }
+
+
+    #endregion
+
 
 }
