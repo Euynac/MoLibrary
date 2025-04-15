@@ -402,7 +402,7 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
 
         //TODO 按理来说Reload也可以计算出Modified，待调试为何无法成功。
         //entry.Reload();
-        entry.State = EntityState.Modified;
+        entry.State = EntityState.Unchanged;
         entity.IsDeleted = true;
 
         //ObjectHelper.TrySetProperty(entry.Entity.As<IHasSoftDelete>(), x => x.IsDeleted, () => true);
