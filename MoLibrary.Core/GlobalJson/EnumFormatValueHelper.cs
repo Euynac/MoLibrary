@@ -11,8 +11,8 @@ namespace MoLibrary.Core.GlobalJson;
 public static class EnumFormatValueHelper
 {
     // Caches for better performance
-    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<string, object>> _formattedStringToEnumCache = new();
-    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<object, string>> _enumToFormattedStringCache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<string, object>> FormattedStringToEnumCache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<object, string>> EnumToFormattedStringCache = new();
 
     /// <summary>
     /// Gets the formatted value for an enum value.
@@ -28,7 +28,7 @@ public static class EnumFormatValueHelper
         var enumValueObj = (object)enumValue;
 
         // Check cache first
-        if (_enumToFormattedStringCache.TryGetValue(enumType, out var valueCache) &&
+        if (EnumToFormattedStringCache.TryGetValue(enumType, out var valueCache) &&
             valueCache.TryGetValue(enumValueObj, out var cachedFormattedValue))
         {
             return cachedFormattedValue;
@@ -43,7 +43,7 @@ public static class EnumFormatValueHelper
         var formattedValue = attribute?.FormattedValue ?? enumValue.ToString();
 
         // Add to cache
-        valueCache = _enumToFormattedStringCache.GetOrAdd(enumType, _ => new ConcurrentDictionary<object, string>());
+        valueCache = EnumToFormattedStringCache.GetOrAdd(enumType, _ => new ConcurrentDictionary<object, string>());
         valueCache[enumValueObj] = formattedValue;
 
         return formattedValue;
@@ -86,7 +86,7 @@ public static class EnumFormatValueHelper
             return true;
 
         // Check cache
-        if (_formattedStringToEnumCache.TryGetValue(enumType, out var valueCache) &&
+        if (FormattedStringToEnumCache.TryGetValue(enumType, out var valueCache) &&
             valueCache.TryGetValue(formattedValue, out var cachedEnum))
         {
             result = (TEnum)cachedEnum;
@@ -102,7 +102,7 @@ public static class EnumFormatValueHelper
                 var enumValue = (TEnum)field.GetValue(null)!;
                 
                 // Add to cache
-                valueCache = _formattedStringToEnumCache.GetOrAdd(enumType, _ => new ConcurrentDictionary<string, object>());
+                valueCache = FormattedStringToEnumCache.GetOrAdd(enumType, _ => new ConcurrentDictionary<string, object>());
                 valueCache[formattedValue] = enumValue;
                 
                 result = enumValue;
