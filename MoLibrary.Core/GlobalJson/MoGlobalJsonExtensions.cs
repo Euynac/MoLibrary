@@ -52,12 +52,17 @@ public static class MoGlobalJsonExtensions
         //options.Converters.Add(new JsonConverterFactoryForDtoObjectClass { HttpContextAccessor = httpContextAccessor });
         options.Converters.Add(new NullableLongToStringJsonConverter());
 
+        // Add our EnumFormatValue converter if enabled
+        if (extraOptions.EnableEnumFormatValue)
+        {
+            options.Converters.Add(new EnumFormatValueJsonConverterFactory());
+        }
+
         if (extraOptions.EnableGlobalEnumToString)
         {
             options.Converters.Add(new OutJsonConverterFactory(new JsonStringEnumConverter(),
                 [.. extraOptions.EnumTypeToIgnore ?? []])); //全局枚举对String、int转换支持
             //options.Converters.Add(new JsonStringEnumConverter()); //全局枚举对String、int转换支持
-
         }
 
         options.DefaultIgnoreCondition = extraOptions.DefaultIgnoreCondition;
