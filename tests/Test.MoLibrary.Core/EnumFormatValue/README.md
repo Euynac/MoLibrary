@@ -100,6 +100,22 @@ services.AddMoGlobalJsonSerialization(options =>
 });
 ```
 
+## Testing
+
+The EnumFormatValue system is thoroughly tested with unit tests located in the `MoLibrary/tests/Test.MoLibrary.Core/EnumFormatValue` directory. These tests use NUnit and FluentAssertions to provide comprehensive coverage of the feature:
+
+1. **EnumFormatValueAttributeTests** - Tests for the attribute itself
+2. **EnumFormatValueHelperTests** - Tests for the conversion helper methods
+3. **EnumFormatValueJsonConverterTests** - Tests for JSON serialization/deserialization
+4. **EnumFormatValueConverterTests** - Tests for EF Core database conversion
+5. **MoGlobalJsonOptionsTests** - Tests for configuration options
+
+You can run the tests using:
+
+```
+dotnet test MoLibrary/tests/Test.MoLibrary.Core/Test.MoLibrary.Core.csproj
+```
+
 ## Advantages
 
 1. **Readable Database Values**
