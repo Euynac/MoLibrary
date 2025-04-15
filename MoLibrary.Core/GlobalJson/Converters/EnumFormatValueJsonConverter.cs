@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Concurrent;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using MoLibrary.Core.GlobalJson.Attributes;
@@ -58,24 +60,42 @@ public class EnumFormatValueJsonConverter<TEnum> : JsonConverter<TEnum> where TE
 
 /// <summary>
 /// A factory for creating <see cref="EnumFormatValueJsonConverter{TEnum}"/> instances for enum types.
+/// Only creates converters for enum types that have at least one member with <see cref="EnumFormatValueAttribute"/>.
 /// </summary>
 public class EnumFormatValueJsonConverterFactory : JsonConverterFactory
 {
+    // Cache to store whether an enum type has any EnumFormatValueAttribute
+    private static readonly ConcurrentDictionary<Type, bool> _hasAttributeCache = new();
+
     /// <summary>
     /// Determines whether the converter can convert the specified type.
+    /// Only returns true if the type is an enum (or nullable enum) and contains at least one member with EnumFormatValueAttribute.
     /// </summary>
     /// <param name="typeToConvert">The type to check.</param>
     /// <returns>true if the type can be converted; otherwise, false.</returns>
     public override bool CanConvert(Type typeToConvert)
     {
+        Type enumType;
+        
+        // Check if it's a nullable enum type
         if (!typeToConvert.IsEnum)
         {
-            return typeToConvert.IsGenericType && 
-                   typeToConvert.GetGenericTypeDefinition() == typeof(Nullable<>) &&
-                   Nullable.GetUnderlyingType(typeToConvert)?.IsEnum == true;
+            if (!(typeToConvert.IsGenericType && 
+                typeToConvert.GetGenericTypeDefinition() == typeof(Nullable<>) &&
+                Nullable.GetUnderlyingType(typeToConvert)?.IsEnum == true))
+            {
+                return false;
+            }
+            
+            enumType = Nullable.GetUnderlyingType(typeToConvert)!;
+        }
+        else
+        {
+            enumType = typeToConvert;
         }
         
-        return true;
+        // Check if the enum type has any members with EnumFormatValueAttribute
+        return HasEnumFormatValueAttribute(enumType);
     }
 
     /// <summary>
@@ -100,6 +120,27 @@ public class EnumFormatValueJsonConverterFactory : JsonConverterFactory
         }
         
         return (JsonConverter)Activator.CreateInstance(converterType)!;
+    }
+    
+    /// <summary>
+    /// Determines whether the specified enum type has any members with EnumFormatValueAttribute.
+    /// Uses caching to improve performance for repeated checks on the same type.
+    /// </summary>
+    /// <param name="enumType">The enum type to check.</param>
+    /// <returns>true if the enum type has any members with EnumFormatValueAttribute; otherwise, false.</returns>
+    private static bool HasEnumFormatValueAttribute(Type enumType)
+    {
+        return _hasAttributeCache.GetOrAdd(enumType, type =>
+        {
+            foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.Static))
+            {
+                if (field.GetCustomAttribute<EnumFormatValueAttribute>() != null)
+                {
+                    return true;
+                }
+            }
+            return false;
+        });
     }
 }
 
