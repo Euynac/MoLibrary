@@ -25,6 +25,13 @@ public class MoGlobalJsonOptions
     /// 启用全局枚举转String输出
     /// </summary>
     public bool EnableGlobalEnumToString { get; set; }
+
+    /// <summary>
+    /// 启用全局枚举格式化值（通过EnumFormatValue特性）
+    /// <para>启用后会自动使用枚举上标记的EnumFormatValueAttribute进行序列化和反序列化</para>
+    /// <para>When enabled, enums with the EnumFormatValueAttribute will be serialized to their formatted value</para>
+    /// </summary>
+    public bool EnableEnumFormatValue { get; set; } = true;
 }
 
 ///// <summary>
