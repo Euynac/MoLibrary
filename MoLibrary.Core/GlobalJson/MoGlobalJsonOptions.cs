@@ -31,7 +31,7 @@ public class MoGlobalJsonOptions
     /// <para>启用后会自动使用枚举上标记的EnumFormatValueAttribute进行序列化和反序列化</para>
     /// <para>When enabled, enums with the EnumFormatValueAttribute will be serialized to their formatted value</para>
     /// </summary>
-    public bool EnableEnumFormatValue { get; set; } = true;
+    public bool EnableEnumFormatValue { get; set; } 
 }
 
 ///// <summary>
