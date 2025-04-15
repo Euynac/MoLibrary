@@ -121,7 +121,7 @@ public class MoGlobalJsonOptionsTests
         var json = JsonSerializer.Serialize(testObj, jsonOptions);
 
         // Assert
-        json.Should().Contain("\"Status\":\"V\"");
+        json.Should().Contain("\"status\":\"V\"");
     }
 
     /// <summary>

@@ -44,7 +44,7 @@ public static class EnumFormatValueHelper
 
         // Add to cache
         valueCache = EnumToFormattedStringCache.GetOrAdd(enumType, _ => new ConcurrentDictionary<object, string>());
-        valueCache[enumValueObj] = formattedValue;
+        valueCache.AddOrUpdate(enumValueObj, formattedValue, (_, __) => formattedValue);
 
         return formattedValue;
     }
@@ -82,7 +82,7 @@ public static class EnumFormatValueHelper
         var enumType = typeof(TEnum);
 
         // Try standard enum parsing first
-        if (Enum.TryParse<TEnum>(formattedValue, true, out result))
+        if (Enum.TryParse(formattedValue, true, out result))
             return true;
 
         // Check cache
@@ -97,17 +97,16 @@ public static class EnumFormatValueHelper
         foreach (var field in enumType.GetFields(BindingFlags.Public | BindingFlags.Static))
         {
             var attribute = field.GetCustomAttribute<EnumFormatValueAttribute>();
-            if (attribute != null && string.Equals(attribute.FormattedValue, formattedValue, StringComparison.OrdinalIgnoreCase))
-            {
-                var enumValue = (TEnum)field.GetValue(null)!;
+            if (attribute == null ||
+                !string.Equals(attribute.FormattedValue, formattedValue, StringComparison.Ordinal)) continue;
+            var enumValue = (TEnum)field.GetValue(null)!;
                 
-                // Add to cache
-                valueCache = FormattedStringToEnumCache.GetOrAdd(enumType, _ => new ConcurrentDictionary<string, object>());
-                valueCache[formattedValue] = enumValue;
+            // Add to cache
+            valueCache = FormattedStringToEnumCache.GetOrAdd(enumType, _ => new ConcurrentDictionary<string, object>());
+            valueCache.AddOrUpdate(formattedValue, enumValue, (_, __) => enumValue);
                 
-                result = enumValue;
-                return true;
-            }
+            result = enumValue;
+            return true;
         }
 
         result = default;
