@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace MoLibrary.Core.Module;
@@ -7,7 +7,7 @@ namespace MoLibrary.Core.Module;
 /// MoLibrary模块接口
 /// 定义模块的配置和初始化方法
 /// </summary>
-public interface IMoLibraryModule
+public interface IMoModule
 {
     /// <summary>
     /// 配置WebApplicationBuilder
@@ -26,4 +26,7 @@ public interface IMoLibraryModule
     /// </summary>
     /// <param name="application">应用程序构建器</param>
     void UseMiddlewares(IApplicationBuilder application);
+
+
+    EMoModules GetMoModuleEnum();
 }
