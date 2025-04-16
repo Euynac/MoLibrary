@@ -18,6 +18,11 @@ public class MonitorOption
     /// 惯例命名设置
     /// </summary>
     public UnitNameConventionOptions ConventionOptions { get; set; } = new();
+
+    /// <summary>
+    /// 开启请求过滤器
+    /// </summary>
+    public bool EnableRequestFilter { get; set; }
 }
 
 

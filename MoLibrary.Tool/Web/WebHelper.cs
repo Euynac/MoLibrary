@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -29,7 +29,6 @@ namespace MoLibrary.Tool.Web
             request.ContentType = contentType.GetDescription() + ";charset=UTF-8";
             request.Timeout = timeout;
             var response = ((HttpWebResponse)request.GetResponse()).GetResponseStream();
-            if (response == null) return null;
             using var reader = new StreamReader(response, encoding);
             return reader.ReadToEnd();
         }
@@ -52,7 +51,6 @@ namespace MoLibrary.Tool.Web
             request.ContentLength = buffer.Length;
             request.GetRequestStream().Write(buffer, 0, buffer.Length);
             var response = ((HttpWebResponse)request.GetResponse()).GetResponseStream();
-            if (response == null) return null;
             using var reader = new StreamReader(response, encoding);
             return reader.ReadToEnd();
         }
@@ -104,7 +102,7 @@ namespace MoLibrary.Tool.Web
             a.ConnectAsync(new Uri(serverLocation), new CancellationToken()).Wait();
             Console.WriteLine("成功");
             exception = new Exception();
-            return null;
+            return [];
             //var allSockets = new List<IWebSocketConnection>();
             //var server = new WebSocketServer(serverLocation);
             //server.Certificate = new System.Security.Cryptography.X509Certificates.X509Certificate2();

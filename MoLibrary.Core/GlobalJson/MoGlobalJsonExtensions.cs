@@ -60,7 +60,7 @@ public static class MoGlobalJsonExtensions
 
         if (extraOptions.EnableGlobalEnumToString)
         {
-            options.Converters.Add(new OutJsonConverterFactory(new JsonStringEnumConverter(),
+            options.Converters.Add(new ExcludeTypesJsonConverterFactory(new JsonStringEnumConverter(),
                 [.. extraOptions.EnumTypeToIgnore ?? []])); //全局枚举对String、int转换支持
             //options.Converters.Add(new JsonStringEnumConverter()); //全局枚举对String、int转换支持
         }
