@@ -51,7 +51,6 @@ public class ResPaged<TDto> : IServiceResponse
         /// 是否可以向后翻页
         /// </summary>
         public bool? HasNext => CurrentPage == null ? null : CurrentPage < TotalPages;
-
     }
     public ResPaged()
     {
