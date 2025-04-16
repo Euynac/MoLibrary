@@ -1,4 +1,4 @@
-﻿namespace MoLibrary.Tool.Algorithm.Tree
+namespace MoLibrary.Tool.Algorithm.Tree
 {
     /// <summary>
     /// BinaryTree Factory for getting specific Binary Tree
@@ -25,7 +25,7 @@
         /// </summary>
         /// <param name="type"></param>
         /// <returns></returns>
-        public static BinaryTree<T> Construct(StructureType type)
+        public static BinaryTree<T>? Construct(StructureType type)
         {
             return null;
         }

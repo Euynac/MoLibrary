@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Text.RegularExpressions;
 using MoLibrary.Tool.Extensions;
 
@@ -82,7 +82,7 @@ namespace MoLibrary.Tool.General
         /// 转换为英文标点符号
         /// </summary>
         /// <returns></returns>
-        public static string ToEnPunctuation(this string? str)
+        public static string ToEnPunctuation(this string str)
         {
             if (str.IsNullOrWhiteSpace()) return str;
             return str.ContainsAny(KouStaticData.ZhToEnPunctuationDict.Keys)
@@ -94,7 +94,7 @@ namespace MoLibrary.Tool.General
         /// 转换为中文标点符号
         /// </summary>
         /// <returns></returns>
-        public static string ToZhPunctuation(this string? str)
+        public static string ToZhPunctuation(this string str)
         {
             if (str.IsNullOrWhiteSpace()) return str;
             return str.ContainsAny(KouStaticData.ZhToEnPunctuationDict.Values)

@@ -473,20 +473,6 @@ public static class IEnumerableExtensions
     }
 
     /// <summary>
-    /// Cast current IEnumerable item to specific type IList. (Usually used in converting List&lt;object&gt; to List&lt;T&gt;)
-    /// </summary>
-    /// <param name="source"></param>
-    /// <returns></returns>
-    [Obsolete("Use official Cast<T> instead.")]
-    public static IList<T> CastToList<T>(this IEnumerable source)
-    {
-        var listType = typeof(List<>).MakeGenericType(typeof(T));
-        var list = (IList<T>)Activator.CreateInstance(listType);
-        foreach (var item in source) list.Add((T)item);
-        return list;
-    }
-
-    /// <summary>
     /// Usually use in foreach, when enumerable is null, this method will return count = 0 list.
     /// </summary>
     /// <typeparam name="T"></typeparam>

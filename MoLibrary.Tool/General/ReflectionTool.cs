@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -19,7 +19,7 @@ namespace MoLibrary.Tool.General
         public static T ShallowCopy<T>(this T obj) where T : class
         {
             var method = obj.GetType().GetMethod("MemberwiseClone", BindingFlags.NonPublic | BindingFlags.Instance)!;
-            return (T) method.Invoke(obj, null);
+            return (T) method.Invoke(obj, null)!;
         }
 
         /// <summary>
@@ -51,7 +51,7 @@ namespace MoLibrary.Tool.General
         /// <typeparam name="T"></typeparam>
         /// <param name="instance"></param>
         /// <returns></returns>
-        public static IEnumerable<object> GetPublicPropertyValues<T>(this T instance) where T : class
+        public static IEnumerable<object?> GetPublicPropertyValues<T>(this T instance) where T : class
         {
             var type = typeof(T);
             foreach (var propertyInfo in type.GetProperties())
@@ -71,8 +71,6 @@ namespace MoLibrary.Tool.General
         /// <returns></returns>
         public static Dictionary<string, KeyValuePair<Type, object>> GetAllPropertyInfo<T>(T instance, bool toLowerCase = false) where T : class
         {
-            if (instance == null)
-                return null;
             var propertyInfoDict = new Dictionary<string, KeyValuePair<Type, object>>();
             var type = typeof(T);
             foreach (var propertyInfo in type.GetProperties())

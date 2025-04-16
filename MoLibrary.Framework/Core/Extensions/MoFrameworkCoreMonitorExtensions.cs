@@ -56,7 +56,11 @@ public static class MoFrameworkCoreMonitorExtensions
 
         stopwatch.Stop();
         GlobalLog.LogInformation($"项目分析耗时：{stopwatch.ElapsedMilliseconds}ms");
-        services.AddRequestFilter();
+
+        if (setting.EnableRequestFilter)
+        {
+            services.AddRequestFilter();
+        }
 
         return services;
     }
@@ -67,7 +71,10 @@ public static class MoFrameworkCoreMonitorExtensions
     /// <param name="app"></param>
     public static void UseMoFrameworkCoreMonitor(this IApplicationBuilder app)
     {
-        app.UseRequestFilter();
+        if (ProjectUnit.Option.EnableRequestFilter)
+        {
+            app.UseRequestFilter();
+        }
     }
 
     class RequestFilterDto
@@ -107,31 +114,34 @@ public static class MoFrameworkCoreMonitorExtensions
                 operation.Tags = tagGroup;
                 return operation;
             });
-            endpoints.MapPost("/framework/request-filter", async ([FromBody] RequestFilterDto dto, IRequestFilter filter, HttpResponse response, HttpContext context) =>
+
+            if (ProjectUnit.Option.EnableRequestFilter)
             {
-                if (dto is { Urls: { } urls, Disable: { } disable})
+                endpoints.MapPost("/framework/request-filter", async ([FromBody] RequestFilterDto dto, IRequestFilter filter, HttpResponse response, HttpContext context) =>
                 {
-                    foreach (var url in urls)
+                    if (dto is { Urls: { } urls, Disable: { } disable })
                     {
-                        if (disable)
+                        foreach (var url in urls)
                         {
-                            filter.Disable(url);
-                        }
-                        else
-                        {
-                            filter.Enable(url);
+                            if (disable)
+                            {
+                                filter.Disable(url);
+                            }
+                            else
+                            {
+                                filter.Enable(url);
+                            }
                         }
                     }
-                }
-                return filter.GetDisabledUrls();
-            }).WithName("请求过滤中间件").WithOpenApi(operation =>
-            {
-                operation.Summary = "请求过滤中间件";
-                operation.Description = "请求过滤中间件";
-                operation.Tags = tagGroup;
-                return operation;
-            });
-
+                    return filter.GetDisabledUrls();
+                }).WithName("请求过滤中间件").WithOpenApi(operation =>
+                {
+                    operation.Summary = "请求过滤中间件";
+                    operation.Description = "请求过滤中间件";
+                    operation.Tags = tagGroup;
+                    return operation;
+                });
+            }
       
 
             endpoints.MapGet("/framework/units", async (IMapper mapper, HttpResponse response, HttpContext context) =>

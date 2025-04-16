@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -15,14 +15,14 @@ namespace MoLibrary.Tool.Extensions
         /// <summary>
         /// Cache Data [TypeName + AttributeName组成的Key, Attribute对象]
         /// </summary>
-        private static readonly ConcurrentDictionary<string, object> _cache = new();
+        private static readonly ConcurrentDictionary<string, object?> _cache = new();
 
         /// <summary>
         /// 获取指定类型的CustomAttribute
         /// </summary>
         /// <typeparam name="TAttribute">要获取的Attribute</typeparam>
         /// <returns>返回Attribute的值，没有则返回null</returns>
-        public static TAttribute GetCustomAttributeCached<TAttribute>(this Type classType)
+        public static TAttribute? GetCustomAttributeCached<TAttribute>(this Type classType)
             where TAttribute : Attribute
         {
             return GetCustomAttributeCached<TAttribute>(classType, null);
@@ -35,7 +35,7 @@ namespace MoLibrary.Tool.Extensions
         /// <typeparam name="TClass"></typeparam>
         /// <typeparam name="TProperty"></typeparam>
         /// <returns>返回Attribute的值，没有则返回null</returns>
-        public static TAttribute GetCustomAttributeCached<TAttribute, TClass, TProperty>(this Type classType,
+        public static TAttribute? GetCustomAttributeCached<TAttribute, TClass, TProperty>(this Type classType,
             Expression<Func<TClass, TProperty>> property)
             where TAttribute : Attribute
         {
@@ -50,7 +50,7 @@ namespace MoLibrary.Tool.Extensions
         /// <typeparam name="TProperty"></typeparam>
         /// <typeparam name="TAttribute"></typeparam>
         /// <returns>返回Attribute的值，没有则返回null</returns>
-        public static TAttribute GetCustomAttributeCached<TAttribute, TClass, TProperty>(this TClass classType,
+        public static TAttribute? GetCustomAttributeCached<TAttribute, TClass, TProperty>(this TClass classType,
             TAttribute attributeType, Expression<Func<TClass, TProperty>> property) where TAttribute : Attribute where TClass : class, new()
         {
             var name = ((MemberExpression)property.Body).Member.Name;
@@ -70,7 +70,7 @@ namespace MoLibrary.Tool.Extensions
         {
             var cacheKey = sourceType.FullName + "." + name + "." + typeof(TAttribute).FullName;
             var value = _cache.GetOrAdd(cacheKey, key => GetValue<TAttribute>(sourceType, name));
-            if (value is TAttribute) return (TAttribute)_cache[cacheKey];
+            if (value is TAttribute attribute) return attribute;
             return default;
         }
         /// <summary>
@@ -80,7 +80,7 @@ namespace MoLibrary.Tool.Extensions
         /// <param name="type"></param>
         /// <param name="name">nameof</param>
         /// <returns>返回Attribute的值，没有则返回null</returns>
-        private static TAttribute GetValue<TAttribute>(Type type, string name)
+        private static TAttribute? GetValue<TAttribute>(Type type, string name)
             where TAttribute : Attribute
         {
             if (string.IsNullOrEmpty(name))

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using MoLibrary.Core.Extensions;
 using MoLibrary.Tool.Utils;
 
 namespace MoLibrary.Repository.Transaction;
@@ -70,9 +71,10 @@ public class MoUnitOfWorkManager(IServiceScopeFactory serviceScopeFactory)
 
             return unitOfWork;
         }
-        catch
+        catch(Exception ex) 
         {
             scope.Dispose();
+            ex.ReThrow();
             throw;
         }
     }

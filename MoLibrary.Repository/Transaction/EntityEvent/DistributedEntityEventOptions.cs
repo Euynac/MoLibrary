@@ -43,7 +43,7 @@ public class DistributedEntityEventOptions
     /// <typeparam name="TEntityEto">The Event Transfer Object type</typeparam>
     /// <param name="enableLocalEvent">Indicates whether to enable local events as well</param>
     /// <param name="disabledAutoEntityEventType">Optional parameter to specify which auto entity event types should be disabled</param>
-    public void AddDistributedEntityEvent<TEntity, TEntityEto>(bool enableLocalEvent = false, EDisabledAutoEntityEventType? disabledAutoEntityEventType = null) 
+    public void AddDistributedEntityEvent<TEntity, TEntityEto>(bool enableLocalEvent = true, EDisabledAutoEntityEventType? disabledAutoEntityEventType = null) 
         where TEntity : class, IMoEntity 
         where TEntityEto : class
     {
@@ -80,7 +80,7 @@ public class DistributedEntityEventOptions
     /// <typeparam name="TEntity">The entity type</typeparam>
     /// <param name="enableLocalEvent">Indicates whether to enable local events as well</param>
     /// <param name="disabledAutoEntityEventType">Optional parameter to specify which auto entity event types should be disabled</param>
-    public void AddDistributedEntityEvent<TEntity>(bool enableLocalEvent = false, EDisabledAutoEntityEventType? disabledAutoEntityEventType = null) 
+    public void AddDistributedEntityEvent<TEntity>(bool enableLocalEvent = true, EDisabledAutoEntityEventType? disabledAutoEntityEventType = null) 
         where TEntity : class, IMoEntity
     {
         AddDistributedEntityEvent<TEntity, TEntity>(enableLocalEvent, disabledAutoEntityEventType);

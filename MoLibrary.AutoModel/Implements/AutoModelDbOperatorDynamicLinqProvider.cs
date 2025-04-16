@@ -68,6 +68,7 @@ public class AutoModelDbOperatorDynamicLinqProvider<TModel>
     }
 }
 
+
 file class LinqToSqlCustomProvider : DefaultDynamicLinqCustomTypeProvider
 {
     public override HashSet<Type> GetCustomTypes()

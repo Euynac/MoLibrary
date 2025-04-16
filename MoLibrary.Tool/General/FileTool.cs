@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Reflection;
 using System.Text;
@@ -244,7 +244,7 @@ namespace MoLibrary.Tool.General
             }
             catch (FileNotFoundException)
             {
-                return null;
+                return new StringBuilder();
             }
         }
         /// <summary>

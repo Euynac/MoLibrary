@@ -915,7 +915,7 @@ namespace MoLibrary.Tool.Extensions
         /// </summary>
         /// <param name="s"></param>
         /// <returns></returns>
-        public static string ToUpperFirst(this string? s)
+        public static string ToUpperFirst(this string s)
         {
             if (string.IsNullOrWhiteSpace(s)) return s;
             return string.Create(s.Length, s, (chars, state) =>
