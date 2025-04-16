@@ -98,7 +98,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
 
         var entityDtos = ObjectMapper.Map<List<TEntity>, List<TGetListOutputDto>>(entities);
 
-        if (curPage != null && pageSize != null && entityDtos.Any(e => e is IHasDtoSequenceNumber))
+        if (curPage != null && pageSize != null && entityDtos.FirstOrDefault() is IHasDtoSequenceNumber)
         {
             // Calculate the starting index for the current page
             var startIndex = (curPage - 1) * pageSize + 1;
