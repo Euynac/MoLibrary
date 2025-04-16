@@ -8,6 +8,15 @@ public class DistributedEntityEventOptions
 
     public Dictionary<Type, Type> EtoMappings { get; } = [];
 
+    public class EntityEventOption
+    {
+        public bool EnableLocalEvent { get; set; }
+        public bool EnableDistributedEvent { get; set; }
+        public Type? EtoMappingType { get; set; }
+    }
+
+
+
     /// <summary>
     /// 添加本地事件映射
     /// </summary>
