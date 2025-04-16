@@ -29,6 +29,7 @@ public static class MoAuthorizationBuilderExtensions
         PermissionBitCheckerManager.Singleton = checker;
         services.AddSingleton(_ => manager);
         services.AddSingleton<IPermissionBitChecker, PermissionBitChecker>(_ => checker);
+
         return services;
     }
     public static IServiceCollection AddMoAuthorizationPermissionBit<TEnum>(this IServiceCollection services, string claimTypeDefinition) where TEnum : struct, Enum
