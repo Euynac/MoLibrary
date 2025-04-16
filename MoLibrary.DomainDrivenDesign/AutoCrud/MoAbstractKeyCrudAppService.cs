@@ -5,7 +5,6 @@ using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.AutoModel.Interfaces;
 using MoLibrary.Core.Features.MoMapper;
 using MoLibrary.DomainDrivenDesign.AutoCrud.Interfaces;
-using MoLibrary.DomainDrivenDesign.Interfaces;
 using MoLibrary.Repository;
 using MoLibrary.Repository.EntityInterfaces;
 using MoLibrary.Repository.EntityInterfaces.Auditing;
@@ -98,6 +97,22 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
         //var entityDtos = await query.ProjectToType<TGetListOutputDto>(_mapper.Config).ToListAsync();
 
         var entityDtos = ObjectMapper.Map<List<TEntity>, List<TGetListOutputDto>>(entities);
+
+        if (curPage != null && pageSize != null && entityDtos.Any(e => e is IHasDtoSequenceNumber))
+        {
+            // Calculate the starting index for the current page
+            var startIndex = (curPage - 1) * pageSize + 1;
+            
+            for (var i = 0; i < entityDtos.Count; i++)
+            {
+                if (entityDtos[i] is IHasDtoSequenceNumber sequenceDto)
+                {
+                    sequenceDto.Num = startIndex + i;
+                }
+            }
+        }
+
+
         if ((await ApplyCustomActionToResponseListAsync(entityDtos)).IsFailed(out var error, out var data)) return error;
         var list = (IReadOnlyList<dynamic>) data;
         return new ResPaged<dynamic>(totalCount ?? list.Count, list, curPage, pageSize);
