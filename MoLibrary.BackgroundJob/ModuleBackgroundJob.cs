@@ -2,7 +2,7 @@
 
 namespace MoLibrary.BackgroundJob;
 
-public class ModuleBackgroundJob : MoLibraryModule
+public class ModuleBackgroundJob : MoModule
 {
     
 }
