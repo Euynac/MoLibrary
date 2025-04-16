@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MoLibrary.Core.Features.MoMapper;
@@ -83,6 +84,9 @@ public interface IAsyncLocalEventStore
 /// <summary>
 /// Used to trigger entity change events.
 /// </summary>
+/// <summary>
+/// Used to trigger entity change events.
+/// </summary>
 public class AsyncLocalEventPublisher(
     IMoMapper entityToEtoMapper,
     IOptions<DistributedEntityEventOptions> distributedEntityEventOptions,
@@ -90,25 +94,52 @@ public class AsyncLocalEventPublisher(
     IMoDistributedEventBus distributedEventBus,
     ILogger<AsyncLocalEventPublisher> logger, IAsyncLocalEventStore bufferStore) : IAsyncLocalEventPublisher
 {
+    /// <summary>
+    /// Gets or sets the local event bus
+    /// </summary>
     public IMoLocalEventBus LocalEventBus { get; set; } = localEventBus;
+    
+    /// <summary>
+    /// Gets or sets the distributed event bus
+    /// </summary>
     public IMoDistributedEventBus DistributedEventBus { get; set; } = distributedEventBus;
+    
+    /// <summary>
+    /// Gets the entity to ETO mapper
+    /// </summary>
     protected IMoMapper EntityToEtoMapper { get; } = entityToEtoMapper;
+    
+    /// <summary>
+    /// Gets the distributed entity event options
+    /// </summary>
     protected DistributedEntityEventOptions DistributedEntityEventOptions { get; } = distributedEntityEventOptions.Value;
 
+    /// <summary>
+    /// Adds an entity created event to the event buffer
+    /// </summary>
+    /// <param name="entity">The entity that was created</param>
     public virtual void AddEntityCreatedEvent(object entity)
     {
-        if (!ShouldPublishEventForEntity(entity)) return;
+        if (!ShouldPublishEventForEntity(entity, out var eventOption)) return;
+        
+        // Check if create events are disabled for this entity
+        if (eventOption.DisabledAutoEntityEventType.HasFlag(EDisabledAutoEntityEventType.Create))
+            return;
 
-        TriggerEventWithEntity(
-            LocalEventBus,
-            typeof(EntityCreatedEventData<>),
-            entity,
-            entity
-        );
-
-        if (DistributedEntityEventOptions.EtoMappings.TryGetValue(entity.GetType(), out var type))
+        if (eventOption.EnableLocalEvent)
         {
-            var eto = EntityToEtoMapper.Map(entity, entity.GetType(), type);
+            TriggerEventWithEntity(
+                LocalEventBus,
+                typeof(EntityCreatedEventData<>),
+                entity,
+                entity
+            );
+        }
+
+        if (eventOption.EnableDistributedEvent)
+        {
+            var eto = eventOption.EtoMappingType != null ? EntityToEtoMapper.Map(entity, entity.GetType(), eventOption.EtoMappingType) : entity;
+
             TriggerEventWithEntity(
                 DistributedEventBus,
                 typeof(EntityCreatedEto<>),
@@ -118,26 +149,45 @@ public class AsyncLocalEventPublisher(
         }
     }
 
-    private bool ShouldPublishEventForEntity(object entity)
+    /// <summary>
+    /// Determines if events should be published for the given entity
+    /// </summary>
+    /// <param name="entity">The entity to check</param>
+    /// <param name="eventOption">The event options for the entity if found</param>
+    /// <returns>True if events should be published, false otherwise</returns>
+    private bool ShouldPublishEventForEntity(object entity,[NotNullWhen(true)] out EntityEventOption? eventOption)
     {
         return DistributedEntityEventOptions
-            .AutoEventSelectors
-            .Contains(entity.GetType());
+            .AutoEventOptionDict
+            .TryGetValue(entity.GetType(), out eventOption);
     }
 
+    /// <summary>
+    /// Adds an entity updated event to the event buffer
+    /// </summary>
+    /// <param name="entity">The entity that was updated</param>
     public virtual void AddEntityUpdatedEvent(object entity)
     {
-        if (!ShouldPublishEventForEntity(entity)) return;
+        if (!ShouldPublishEventForEntity(entity, out var eventOption)) return;
+        
+        // Check if update events are disabled for this entity
+        if (eventOption.DisabledAutoEntityEventType.HasFlag(EDisabledAutoEntityEventType.Update))
+            return;
 
-        TriggerEventWithEntity(
-            LocalEventBus,
-            typeof(EntityUpdatedEventData<>),
-            entity,
-            entity
-        );
-        if (DistributedEntityEventOptions.EtoMappings.TryGetValue(entity.GetType(), out var type))
+        if (eventOption.EnableLocalEvent)
         {
-            var eto = EntityToEtoMapper.Map(entity, entity.GetType(), type);
+            TriggerEventWithEntity(
+                LocalEventBus,
+                typeof(EntityUpdatedEventData<>),
+                entity,
+                entity
+            );
+        }
+
+        if (eventOption.EnableDistributedEvent)
+        {
+            var eto = eventOption.EtoMappingType != null ? EntityToEtoMapper.Map(entity, entity.GetType(), eventOption.EtoMappingType) : entity;
+
             TriggerEventWithEntity(
                 DistributedEventBus,
                 typeof(EntityUpdatedEto<>),
@@ -147,19 +197,32 @@ public class AsyncLocalEventPublisher(
         }
     }
 
+    /// <summary>
+    /// Adds an entity deleted event to the event buffer
+    /// </summary>
+    /// <param name="entity">The entity that was deleted</param>
     public virtual void AddEntityDeletedEvent(object entity)
     {
-        if (!ShouldPublishEventForEntity(entity)) return;
+        if (!ShouldPublishEventForEntity(entity, out var eventOption)) return;
+        
+        // Check if delete events are disabled for this entity
+        if (eventOption.DisabledAutoEntityEventType.HasFlag(EDisabledAutoEntityEventType.Delete))
+            return;
 
-        TriggerEventWithEntity(
-            LocalEventBus,
-            typeof(EntityDeletedEventData<>),
-            entity,
-            entity
-        );
-        if (DistributedEntityEventOptions.EtoMappings.TryGetValue(entity.GetType(), out var type))
+        if (eventOption.EnableLocalEvent)
         {
-            var eto = EntityToEtoMapper.Map(entity, entity.GetType(), type);
+            TriggerEventWithEntity(
+                LocalEventBus,
+                typeof(EntityDeletedEventData<>),
+                entity,
+                entity
+            );
+        }
+
+        if (eventOption.EnableDistributedEvent)
+        {
+            var eto = eventOption.EtoMappingType != null ? EntityToEtoMapper.Map(entity, entity.GetType(), eventOption.EtoMappingType) : entity;
+
             TriggerEventWithEntity(
                 DistributedEventBus,
                 typeof(EntityDeletedEto<>),
@@ -169,6 +232,10 @@ public class AsyncLocalEventPublisher(
         }
     }
 
+    /// <summary>
+    /// Flushes the event buffer, publishing all pending events
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation</returns>
     public async Task FlushEventBuffer()
     {
         var buffer = bufferStore.GetBuffer();
@@ -181,8 +248,13 @@ public class AsyncLocalEventPublisher(
 
     #region Store
 
-
-
+    /// <summary>
+    /// Triggers an event with the specified entity
+    /// </summary>
+    /// <param name="eventPublisher">The event publisher to use</param>
+    /// <param name="genericEventType">The generic event type</param>
+    /// <param name="entityOrEto">The entity or ETO object</param>
+    /// <param name="originalEntity">The original entity</param>
     protected virtual void TriggerEventWithEntity(
         IMoEventBus eventPublisher,
         Type genericEventType,
@@ -207,6 +279,13 @@ public class AsyncLocalEventPublisher(
             AddOrReplaceEvent(buffer.LocalEvents, buffer.LocalEventsHash, eventRecord);
         }
     }
+    
+    /// <summary>
+    /// Adds or replaces an event in the event list
+    /// </summary>
+    /// <param name="events">The list of events</param>
+    /// <param name="eventHashSet">The hash set of event hashes</param>
+    /// <param name="eventRecord">The event record to add or replace</param>
     public virtual void AddOrReplaceEvent(List<TransactionEventRecord> events, HashSet<int> eventHashSet, TransactionEventRecord eventRecord)
     {
         var hash = eventRecord.GetEventHashCode();
@@ -229,6 +308,13 @@ public class AsyncLocalEventPublisher(
             }
         }
     }
+    
+    /// <summary>
+    /// Determines if two event records refer to the same entity event
+    /// </summary>
+    /// <param name="record1">The first event record</param>
+    /// <param name="record2">The second event record</param>
+    /// <returns>True if the records refer to the same entity event, false otherwise</returns>
     public bool IsSameEntityEventRecord(TransactionEventRecord record1, TransactionEventRecord record2)
     {
         if (record1.EventType != record2.EventType)
