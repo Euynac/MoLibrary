@@ -1,10 +1,11 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using MoLibrary.Repository.EntityInterfaces;
 using MoLibrary.Repository.Interfaces;
 using MoLibrary.Tool.Extensions;
 using System.Data;
 using System.Linq.Expressions;
+using Microsoft.EntityFrameworkCore.Query;
 using MoLibrary.Repository.Exceptions;
 
 namespace MoLibrary.Repository;
@@ -53,7 +54,17 @@ public class MoRepository<TDbContext, TEntity>(
     {
         return GetDbSetAsync();
     }
-
+    public virtual async Task<int> ExecuteUpdateAsync(Expression<Func<TEntity, bool>> predicate, Expression<Func<SetPropertyCalls<TEntity>, SetPropertyCalls<TEntity>>> setPropertyCalls,
+        CancellationToken cancellationToken = default)
+    {
+        return await (await GetDbSetAsync()).AsQueryable().Where(predicate)
+            .ExecuteUpdateAsync(setPropertyCalls, cancellationToken);
+    }
+    public virtual async Task<int> ExecuteDeleteAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
+    {
+        return await (await GetDbSetAsync()).AsQueryable().Where(predicate)
+            .ExecuteDeleteAsync(cancellationToken);
+    }
 
     protected async Task<DbSet<TEntity>> GetDbSetAsync()
     {
@@ -234,7 +245,7 @@ public class MoRepository<TDbContext, TEntity>(
         return (await GetDbSetAsync()).AsQueryable();
     }
 
-
+    //TODO 优化为FirstOrDefault？
     public override async Task<TEntity?> FindAsync(
         Expression<Func<TEntity, bool>> predicate,
         bool includeDetails = true,

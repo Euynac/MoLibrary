@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query;
 using MoLibrary.DependencyInjection.AppInterfaces;
 using MoLibrary.Repository.EntityInterfaces;
+using System.Linq.Expressions;
 
 namespace MoLibrary.Repository.Interfaces;
 
@@ -29,6 +31,25 @@ public interface IMoRepository<TEntity> : IMoBasicRepository<TEntity>, IMoReposi
     /// such as querying or manipulating entities using Entity Framework.
     /// </remarks>
     Task<DbSet<TEntity>> GetDbSetAsync();
+    /// <summary>
+    /// 条件批量更新
+    /// </summary>
+    /// <param name="predicate"></param>
+    /// <param name="setPropertyCalls"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    Task<int> ExecuteUpdateAsync(Expression<Func<TEntity, bool>> predicate,
+        Expression<Func<SetPropertyCalls<TEntity>, SetPropertyCalls<TEntity>>> setPropertyCalls,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 条件批量删除
+    /// </summary>
+    /// <param name="predicate"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    Task<int> ExecuteDeleteAsync(Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default);
 }
 
 // ReSharper disable once TypeParameterCanBeVariant

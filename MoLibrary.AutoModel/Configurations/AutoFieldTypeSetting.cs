@@ -155,7 +155,7 @@ public class AutoFieldTypeSetting
     public override string ToString()
     {
         return
-            $"{BasicType}{TypeFeatures.GetFlagsString(ignoreEnums: ETypeFeatures.None).BeIfNotEmpty(" and {0}", true)}{DeclaringType?.FullName?.Be("(from {0})", true)}";
+            $"{BasicType}{TypeFeatures.GetFlagsString(ignoreEnums: ETypeFeatures.None).BeIfNotEmpty(" and {0}", true)}{DeclaringType?.GetCleanFullName().Be("(from {0})", true)}";
     }
 }
 
