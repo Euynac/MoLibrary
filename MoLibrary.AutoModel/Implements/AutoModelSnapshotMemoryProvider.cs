@@ -49,7 +49,7 @@ public class AutoModelSnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel
             Table = table,
             Fields = []
         };
-        var isActiveMode = options.ActiveMode;
+        var isActiveMode = options.EnableActiveMode;
         var tableAttribute = typeof(TModel).GetCustomAttribute<AutoTableAttribute>();
         if (tableAttribute != null)
         {
@@ -85,8 +85,8 @@ public class AutoModelSnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel
                 //如果未使用AutoField标签，且使用NotMapped, JsonIgnore的也自动忽略
                 if (fieldAttribute is null)
                 {
-                    if (p.GetCustomAttribute<NotMappedAttribute>() != null) continue;
-                    if (p.GetCustomAttribute<JsonIgnoreAttribute>() != null) continue;
+                    if (!options.DisableAutoIgnorePropertyWithNotMappedAttribute && p.GetCustomAttribute<NotMappedAttribute>() != null) continue;
+                    if (!options.DisableAutoIgnorePropertyWithJsonIgnoreAttribute && p.GetCustomAttribute<JsonIgnoreAttribute>() != null) continue;
                 }
 
 

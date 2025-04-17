@@ -11,6 +11,7 @@ using MoLibrary.Core.GlobalJson.Interfaces;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.EventBus.Attributes;
 using MoLibrary.EventBus.Dapr;
+using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.EventBus;
 
@@ -111,7 +112,7 @@ public static class MoEventBusBuilderExtensions
                     }
                     catch (JsonException e)
                     {
-                        logger.LogError(e, $"反序列化失败, type: {eventType?.Name}, data: {data}");
+                        logger.LogError(e, $"领域事件主题{topic}，反序列化失败, type: {eventType?.GetCleanFullName()}, data: {data}");
                         return Results.Ok();
                     }
 

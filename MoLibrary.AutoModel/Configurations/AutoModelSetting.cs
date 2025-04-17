@@ -5,7 +5,7 @@ public class AutoModelOptions
     /// <summary>
     /// 全局主动模式（仅使用了AutoField标签的字段才会启用自动模型功能）
     /// </summary>
-    public bool ActiveMode { get; set; }
+    public bool EnableActiveMode { get; set; }
 
     /// <summary>
     /// 默认激活名开启前缀忽略
@@ -26,4 +26,7 @@ public class AutoModelOptions
     /// </summary>
     [Obsolete("暂未实现")]
     public bool EnableTitleAsActivateName { get; set; }
+
+    public bool DisableAutoIgnorePropertyWithJsonIgnoreAttribute { get; set; }
+    public bool DisableAutoIgnorePropertyWithNotMappedAttribute { get; set; }
 }
