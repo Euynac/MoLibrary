@@ -1,9 +1,9 @@
-﻿namespace MoLibrary.Core.Module;
+namespace MoLibrary.Core.Module;
 
 /// <summary>
 /// MoLibraryModule列表
 /// </summary>
-public enum EMoLibraries
+public enum EMoModules
 {
     Authority,
     EventBus
