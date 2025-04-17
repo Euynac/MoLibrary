@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Core.Module;
 
 /// <summary>
 /// MoLibrary模块接口
 /// 定义模块的配置和初始化方法
+/// 当任何一个模块的配置阶段返回错误时，该模块及其依赖项的配置将被中止
 /// </summary>
 public interface IMoModule
 {
@@ -13,20 +15,25 @@ public interface IMoModule
     /// 配置WebApplicationBuilder
     /// </summary>
     /// <param name="builder">WebApplicationBuilder实例</param>
-    void ConfigureBuilder(WebApplicationBuilder builder);
+    Res ConfigureBuilder(WebApplicationBuilder builder);
 
     /// <summary>
     /// 配置服务依赖注入
     /// </summary>
     /// <param name="services">服务集合</param>
-    void ConfigureServices(IServiceCollection services);
-    
+    Res ConfigureServices(IServiceCollection services);
+
+    /// <summary>
+    /// 在执行遍历业务程序集类<see cref="IWantIterateBusinessTypes"/>后配置服务依赖注入
+    /// </summary>
+    /// <param name="services">服务集合</param>
+    Res PostConfigureServices(IServiceCollection services);
+
     /// <summary>
     /// 使用中间件
     /// </summary>
-    /// <param name="application">应用程序构建器</param>
-    void UseMiddlewares(IApplicationBuilder application);
-
+    /// <param name="app"></param>
+    Res UseMiddlewares(IApplicationBuilder app);
 
     EMoModules GetMoModuleEnum();
 }

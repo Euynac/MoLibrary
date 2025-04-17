@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using BuildingBlocksPlatform.Interfaces;
 using Hangfire;
 using Hangfire.Common;
@@ -28,7 +28,7 @@ public static class ServiceCollectionExtensions
     private static List<Type> _backgroundJobTypes = [];
     private static bool _hasError = false;
     private static readonly MoBackgroundWorkerOptions _options = new();
-    private static void SetHangfire(IServiceCollection services)
+    internal static bool SetHangfire(IServiceCollection services)
     {
         if (_options.UseInMemoryStorage)
         {
@@ -156,13 +156,16 @@ public static class ServiceCollectionExtensions
             catch (Exception ex)
             {
                 GlobalLog.LogError(ex, "SetHangfire报错");
-                _hasError = true;
+                return false;
             }
+
+            return true;
         }
         else
         {
             throw new InvalidOperationException("Hangfire未选择使用Redis或InMemory连接模式");
         }
+        return true;
     }
 
     public static void AddMoBackgroundWorker(this IServiceCollection services, Action<MoBackgroundWorkerOptions>? action = null)
@@ -202,7 +205,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IMoBackgroundJobManager, HangfireBackgroundJobManager>();
         services.AddTransient<IBackgroundJobExecutor, DefaultBackgroundJobExecutor>();
 
-        SetHangfire(services);
+        _hasError = SetHangfire(services);
         if (_hasError) return;
 
 
@@ -293,7 +296,7 @@ public static class ServiceCollectionExtensions
     }
 }
 
-file class MoHangfireAuthorizationFilter : IDashboardAuthorizationFilter
+internal class MoHangfireAuthorizationFilter : IDashboardAuthorizationFilter
 {
     public bool Authorize(DashboardContext context)
     {

@@ -1,5 +1,8 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Core.Module;
 
@@ -21,34 +24,25 @@ public class MoModuleRegisterCentre
     public static Dictionary<Type, List<ModuleRegisterRequest>> ModuleRegisterContextDict { get; set; } = new();
 }
 
-
 public abstract class MoModule : IMoModule
 {
-    /// <summary>
-    /// 配置WebApplicationBuilder
-    /// 默认实现为空，子类可根据需要重写
-    /// </summary>
-    /// <param name="builder">WebApplicationBuilder实例</param>
-    public virtual void ConfigureBuilder(WebApplicationBuilder builder)
+    public virtual Res ConfigureBuilder(WebApplicationBuilder builder)
     {
+        return Res.Ok();
     }
 
-    /// <summary>
-    /// 配置服务依赖注入
-    /// 默认实现为空，子类可根据需要重写
-    /// </summary>
-    /// <param name="services">服务集合</param>
-    public virtual void ConfigureServices(IServiceCollection services)
+    public virtual Res ConfigureServices(IServiceCollection services)
     {
+        return Res.Ok();
     }
-
-    /// <summary>
-    /// 使用中间件
-    /// 默认实现为空，子类可根据需要重写
-    /// </summary>
-    /// <param name="application">应用程序构建器</param>
-    public virtual void UseMiddlewares(IApplicationBuilder application)
+  
+    public virtual Res PostConfigureServices(IServiceCollection services)
     {
+        return Res.Ok();
+    }
+    public virtual Res UseMiddlewares(IApplicationBuilder app)
+    {
+        return Res.Ok();
     }
 
     public abstract EMoModules GetMoModuleEnum();
@@ -65,12 +59,13 @@ public abstract class MoModule : IMoModule
 /// MoLibrary模块抽象基类
 /// 提供IMoLibraryModule接口的默认实现
 /// </summary>
-public abstract class MoModule<TModuleSelf, TModuleOption, TModuleGuide> : MoModule 
-    where TModuleOption : IMoModuleOption<TModuleSelf> 
+public abstract class MoModule<TModuleSelf, TModuleOption, TModuleGuide>(TModuleOption option) : MoModule 
+    where TModuleOption : IMoModuleOption<TModuleSelf>, new() 
     where TModuleGuide : MoModuleGuide<TModuleSelf>, new()
     where TModuleSelf : MoModule<TModuleSelf, TModuleOption, TModuleGuide>
 {
-
+    public ILogger<TModuleSelf> Logger { get; set; } = NullLogger<TModuleSelf>.Instance;
+    public TModuleOption Option { get; } = option;
     public void DependsOnModule(params EMoModules[] modules)
     {
 
