@@ -1,6 +1,8 @@
+using MoLibrary.Core.Module;
+
 namespace MoLibrary.BackgroundJob;
 
-public class MoBackgroundWorkerOptions
+public class MoBackgroundWorkerOptions : IMoModuleOption<ModuleBackgroundJob>
 {
     /// <summary>
     /// 除Entry程序集之外，额外自动注册涉及的程序集

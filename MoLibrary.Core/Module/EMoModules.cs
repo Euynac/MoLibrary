@@ -6,5 +6,8 @@ namespace MoLibrary.Core.Module;
 public enum EMoModules
 {
     Authority,
-    EventBus
+    EventBus,
+    BackgroundJob,
+    Repository,
+    Logging,
 }

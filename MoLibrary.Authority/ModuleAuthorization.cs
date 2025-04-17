@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using MoLibrary.Authority.Authorization;
 using MoLibrary.Authority.Implements.Authorization;
 using MoLibrary.Core.Module;
+using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Authority;
 
@@ -16,14 +17,14 @@ public static class ModuleBuilderExtensionsAuthorization
     }
 }
 
-public class ModuleAuthorization : MoModule<ModuleAuthorization, ModuleOptionAuthorization, ModuleGuideAuthorization>
+public class ModuleAuthorization(ModuleOptionAuthorization option) : MoModule<ModuleAuthorization, ModuleOptionAuthorization, ModuleGuideAuthorization>(option)
 {
     public override EMoModules GetMoModuleEnum()
     {
         return EMoModules.Authority;
     }
 
-    public override void ConfigureServices(IServiceCollection services)
+    public override Res ConfigureServices(IServiceCollection services)
     {
         services.AddAuthorizationCore();
         services.AddSingleton<IAuthorizationHandler, EnumPermissionRequirementHandler>();
@@ -40,6 +41,7 @@ public class ModuleAuthorization : MoModule<ModuleAuthorization, ModuleOptionAut
         PermissionBitCheckerManager.Singleton = checker;
         services.AddSingleton(_ => manager);
         services.AddSingleton<IPermissionBitChecker, PermissionBitChecker>(_ => checker);
+        return Res.Ok();
     }
 }
 
