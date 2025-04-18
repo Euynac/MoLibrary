@@ -24,6 +24,15 @@ public class MoModuleRegisterCentre
     public static Dictionary<Type, List<ModuleRegisterRequest>> ModuleRegisterContextDict { get; set; } = new();
 }
 
+public interface IWantRegisterModule<TModuleSelf, out TModuleOption, out TModuleGuide> 
+    where TModuleOption : IMoModuleOption<TModuleSelf>, new()
+    where TModuleGuide : MoModuleGuide<TModuleSelf>, new()
+    where TModuleSelf : MoModule<TModuleSelf, TModuleOption, TModuleGuide>
+{
+    public static abstract TModuleGuide Register(EMoModules requestFromModules, Action<TModuleOption>? config = null,
+        Action<TModuleOption>? preConfig = null,
+        Action<TModuleOption>? postConfig = null);
+}
 public abstract class MoModule : IMoModule
 {
     public virtual Res ConfigureBuilder(WebApplicationBuilder builder)
@@ -47,11 +56,21 @@ public abstract class MoModule : IMoModule
 
     public abstract EMoModules GetMoModuleEnum();
 
-    public static TModuleGuide Register<TModule, TModuleOption, TModuleGuide>() where TModule : MoModule
+    public static TModuleGuide Register<TModule, TModuleOption, TModuleGuide>(Action<TModuleOption>? config = null) where TModule : MoModule
         where TModuleOption : IMoModuleOption<TModule>
         where TModuleGuide : MoModuleGuide<TModule>, new()
     {
-        return new TModuleGuide();
+        return Register<TModule, TModuleOption, TModuleGuide>(EMoModules.Developer, config);
+    }
+    public static TModuleGuide Register<TModule, TModuleOption, TModuleGuide>(EMoModules requestFromModules, Action<TModuleOption>? config = null, Action<TModuleOption>? preConfig = null,
+        Action<TModuleOption>? postConfig = null) where TModule : MoModule
+        where TModuleOption : IMoModuleOption<TModule>
+        where TModuleGuide : MoModuleGuide<TModule>, new()
+    {
+        return new TModuleGuide()
+        {
+            GuideFrom = requestFromModules,
+        };
     }
 }
 
@@ -66,18 +85,43 @@ public abstract class MoModule<TModuleSelf, TModuleOption, TModuleGuide>(TModule
 {
     public ILogger<TModuleSelf> Logger { get; set; } = NullLogger<TModuleSelf>.Instance;
     public TModuleOption Option { get; } = option;
-    public void DependsOnModule(params EMoModules[] modules)
-    {
+}
 
-    }
-    public TModuleGuide DependsOnModule<TOtherModuleOption>(Action<TOtherModuleOption>? preConfig = null,
-        Action<TOtherModuleOption>? postConfig = null) 
-        where TOtherModuleOption : IMoModuleOption
+public abstract class MoModuleWithDependencies<TModuleSelf, TModuleOption, TModuleGuide>(TModuleOption option) : MoModule<TModuleSelf, TModuleOption, TModuleGuide>(option), IWantDependsOnOtherModules
+    where TModuleOption : IMoModuleOption<TModuleSelf>, new()
+    where TModuleGuide : MoModuleGuide<TModuleSelf>, new()
+    where TModuleSelf : MoModuleWithDependencies<TModuleSelf, TModuleOption, TModuleGuide>
+{
+    public List<EMoModules> DependedModules { get; set; } = [];
+
+    /// <summary>
+    /// 声明依赖的模块，并进行配置等
+    /// </summary>
+    public abstract void ClaimDependencies();
+    //public void DependsOnModule(params EMoModules[] modules)
+    //{
+
+    //}
+
+    public TOtherModuleGuide DependsOnModule<TOtherModuleGuide, TOtherModuleOption>(Func<EMoModules, Action<TOtherModuleOption>?, Action<TOtherModuleOption>?, Action<TOtherModuleOption>?, TOtherModuleGuide> register) where TOtherModuleOption : IMoModuleOption
     {
-        return new TModuleGuide()
-        {
-            GuideFrom = GetMoModuleEnum()
-        };
+        throw new NotImplementedException();
     }
-    
+    //public TModuleGuide DependsOnModule<TOtherModuleOption>(Action<TOtherModuleOption>? preConfig = null,
+    //    Action<TOtherModuleOption>? postConfig = null)
+    //    where TOtherModuleOption : IMoModuleOption
+    //{
+        
+    //    return new TModuleGuide()
+    //    {
+    //        GuideFrom = GetMoModuleEnum()
+    //    };
+    //}
+}
+
+
+
+public interface IWantDependsOnOtherModules
+{
+    public List<EMoModules> DependedModules { get; set; } 
 }
