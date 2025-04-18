@@ -28,19 +28,15 @@ public static class ModuleBuilderExtensionsAuthorization
 {
     public static ModuleGuideBackgroundJob AddMoModuleBackgroundJob(this IServiceCollection services, Action<MoBackgroundWorkerOptions>? action = null)
     {
-        return MoModule.Register<ModuleBackgroundJob, MoBackgroundWorkerOptions, ModuleGuideBackgroundJob>(action);
+        return new ModuleGuideBackgroundJob().Register(action);
     }
 }
 
-public class ModuleBackgroundJob(MoBackgroundWorkerOptions option) : MoModuleWithDependencies<ModuleBackgroundJob, MoBackgroundWorkerOptions, ModuleGuideBackgroundJob>(option), IWantIterateBusinessTypes
+public class ModuleBackgroundJob(MoBackgroundWorkerOptions option) : MoModule<ModuleBackgroundJob, MoBackgroundWorkerOptions>(option), IWantIterateBusinessTypes
 {
     private readonly List<Type> _backgroundWorkerTypes = [];
     private readonly List<Type> _backgroundJobTypes = [];
 
-    public override void ClaimDependencies()
-    {
-        DependsOnModule();
-    }
     public override EMoModules CurModuleEnum()
     {
         return EMoModules.BackgroundJob;
@@ -313,7 +309,7 @@ public class ModuleBackgroundJob(MoBackgroundWorkerOptions option) : MoModuleWit
    
 }
 
-public class ModuleGuideBackgroundJob : MoModuleGuide<ModuleBackgroundJob>
+public class ModuleGuideBackgroundJob : MoModuleGuide<ModuleBackgroundJob, MoBackgroundWorkerOptions, ModuleGuideBackgroundJob>
 {
 
 

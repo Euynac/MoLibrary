@@ -46,45 +46,26 @@ public abstract class MoModule : IMoModule
     }
 
     public abstract EMoModules CurModuleEnum();
-
-    public static TModuleGuide Register<TModule, TModuleOption, TModuleGuide>(Action<TModuleOption>? config = null) where TModule : MoModule
-        where TModuleOption : IMoModuleOption<TModule>
-        where TModuleGuide : MoModuleGuide<TModule>, new()
-    {
-        return Register<TModule, TModuleOption, TModuleGuide>(EMoModules.Developer, config);
-    }
-    internal static TModuleGuide Register<TModule, TModuleOption, TModuleGuide>(EMoModules requestFromModules, Action<TModuleOption>? config = null, Action<TModuleOption>? preConfig = null,
-        Action<TModuleOption>? postConfig = null) where TModule : MoModule
-        where TModuleOption : IMoModuleOption<TModule>
-        where TModuleGuide : MoModuleGuide<TModule>, new()
-    {
-        return new TModuleGuide()
-        {
-            GuideFrom = requestFromModules,
-        };
-    }
 }
 
 /// <summary>
 /// MoLibrary模块抽象基类
 /// 提供IMoLibraryModule接口的默认实现
 /// </summary>
-public abstract class MoModule<TModuleSelf, TModuleOption, TModuleGuide>(TModuleOption option) : MoModule 
+public abstract class MoModule<TModuleSelf, TModuleOption>(TModuleOption option) : MoModule 
     where TModuleOption : IMoModuleOption<TModuleSelf>, new() 
-    where TModuleGuide : MoModuleGuide<TModuleSelf>, new()
-    where TModuleSelf : MoModule<TModuleSelf, TModuleOption, TModuleGuide>
+    where TModuleSelf : MoModule<TModuleSelf, TModuleOption>
 {
     public ILogger<TModuleSelf> Logger { get; set; } = NullLogger<TModuleSelf>.Instance;
     public TModuleOption Option { get; } = option;
 }
 
-public abstract class MoModuleWithDependencies<TModuleSelf, TModuleOption, TModuleGuide>(TModuleOption option) : MoModule<TModuleSelf, TModuleOption, TModuleGuide>(option), IWantDependsOnOtherModules
+public abstract class MoModuleWithDependencies<TModuleSelf, TModuleOption>(TModuleOption option) : MoModule<TModuleSelf, TModuleOption>(option), IWantDependsOnOtherModules
     where TModuleOption : IMoModuleOption<TModuleSelf>, new()
-    where TModuleGuide : MoModuleGuide<TModuleSelf>, new()
-    where TModuleSelf : MoModuleWithDependencies<TModuleSelf, TModuleOption, TModuleGuide>
+    where TModuleSelf : MoModuleWithDependencies<TModuleSelf, TModuleOption>
 {
     public List<EMoModules> DependedModules { get; set; } = [];
-
+  
     /// <summary>
     /// 声明依赖的模块，并进行配置等
     /// </summary>
@@ -93,13 +74,14 @@ public abstract class MoModuleWithDependencies<TModuleSelf, TModuleOption, TModu
     {
 
     }
-
-    protected TOtherModuleGuide DependsOnModule<TOtherModule, TOtherModuleOption, TOtherModuleGuide>(Action<TOtherModuleOption>? config = null, Action<TOtherModuleOption>? preConfig = null,
-        Action<TOtherModuleOption>? postConfig = null) where TOtherModule : MoModule
-        where TOtherModuleOption : IMoModuleOption<TOtherModule>
-        where TOtherModuleGuide : MoModuleGuide<TOtherModule>, new()
+   
+    protected TOtherModuleGuide DependsOnModule<TOtherModuleGuide>()  
+        where TOtherModuleGuide : MoModuleGuide, new()
     {
-        return Register<TOtherModule, TOtherModuleOption, TOtherModuleGuide>(CurModuleEnum(), config, preConfig, postConfig);
+        return new TOtherModuleGuide()
+        {
+            GuideFrom = CurModuleEnum()
+        };
     }
     
 }
