@@ -1,4 +1,3 @@
-using System.Linq.Expressions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace MoLibrary.Core.Module;
@@ -10,7 +9,7 @@ public enum EMoModuleOrder
     PreConfig = -100
 }
 
-public interface IMoModuleGuide<TModule> where TModule : IMoModule
+public interface IMoModuleGuide
 {
 
 }
@@ -21,17 +20,23 @@ public class MoModuleGuide
     /// 指示模块配置来源
     /// </summary>
     public EMoModules? GuideFrom { get; set; }
-    
 }
 
-public class MoModuleGuide<TModule> : MoModuleGuide, IMoModuleGuide<TModule> where TModule : IMoModule
+public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleGuide, IMoModuleGuide
+    where TModuleOption : IMoModuleOption<TModule>, new()
+    where TModuleGuideSelf : MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf>, new()
+    where TModule : MoModule<TModule, TModuleOption> 
 {
-    public virtual string[] GetRequestedConfigMethodKeys()
+    protected virtual string[] GetRequestedConfigMethodKeys()
     {
         return Array.Empty<string>();
     }
-
-    public void ConfigureExtraServices(string key, Action<IServiceCollection> configureServices, int order) 
+    public TModuleGuideSelf Register(Action<TModuleOption>? config = null)
+    {
+        return new TModuleGuideSelf();
+    }
+    
+    protected void ConfigureExtraServices(string key, Action<IServiceCollection> configureServices, int order) 
     {
         var moduleType = typeof(TModule);
         if (!MoModuleRegisterCentre.ModuleRegisterContextDict.TryGetValue(moduleType, out var extraActions))
@@ -41,17 +46,17 @@ public class MoModuleGuide<TModule> : MoModuleGuide, IMoModuleGuide<TModule> whe
         }
         extraActions.Add(new ModuleRegisterRequest(key) { ConfigureServices = configureServices, Order = order });
     }
-    public void ConfigureExtraServices(string key, Action<IServiceCollection> configureServices, EMoModuleOrder order = EMoModuleOrder.Normal) 
+    protected void ConfigureExtraServices(string key, Action<IServiceCollection> configureServices, EMoModuleOrder order = EMoModuleOrder.Normal) 
     {
         ConfigureExtraServices(key, configureServices, (int)order);
     }
 
-    public void ConfigureExtraServicesOnce(string key, Action<IServiceCollection> configureServices, EMoModuleOrder order = EMoModuleOrder.Normal)
+    protected void ConfigureExtraServicesOnce(string key, Action<IServiceCollection> configureServices, EMoModuleOrder order = EMoModuleOrder.Normal)
     {
         ConfigureExtraServicesOnce(key, configureServices, (int)order);
     }
 
-    public void ConfigureExtraServicesOnce(string key, Action<IServiceCollection> configureServices, int order)
+    protected void ConfigureExtraServicesOnce(string key, Action<IServiceCollection> configureServices, int order)
     {
         var moduleType = typeof(TModule);
         if (!MoModuleRegisterCentre.ModuleRegisterContextDict.TryGetValue(moduleType, out var extraActions))

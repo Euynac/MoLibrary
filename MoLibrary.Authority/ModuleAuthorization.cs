@@ -12,12 +12,12 @@ public static class ModuleBuilderExtensionsAuthorization
 {
      public static ModuleGuideAuthorization AddMoModuleAuthorization<TEnum>(this IServiceCollection services, string claimTypeDefinition) where TEnum : struct, Enum
     {
-        return MoModule.Register<ModuleAuthorization, ModuleOptionAuthorization, ModuleGuideAuthorization>()
+        return new ModuleGuideAuthorization()
             .AddDefaultPermissionBit<TEnum>(claimTypeDefinition);
     }
 }
 
-public class ModuleAuthorization(ModuleOptionAuthorization option) : MoModule<ModuleAuthorization, ModuleOptionAuthorization, ModuleGuideAuthorization>(option)
+public class ModuleAuthorization(ModuleOptionAuthorization option) : MoModule<ModuleAuthorization, ModuleOptionAuthorization>(option)
 {
     public override EMoModules CurModuleEnum()
     {
@@ -49,9 +49,9 @@ public class ModuleOptionAuthorization : IMoModuleOption<ModuleAuthorization>
 {
 }
 
-public class ModuleGuideAuthorization : MoModuleGuide<ModuleAuthorization>
+public class ModuleGuideAuthorization : MoModuleGuide<ModuleAuthorization, ModuleOptionAuthorization, ModuleGuideAuthorization>
 {
-    public override string[] GetRequestedConfigMethodKeys()
+    protected override string[] GetRequestedConfigMethodKeys()
     {
         return [nameof(AddDefaultPermissionBit)];
     }
