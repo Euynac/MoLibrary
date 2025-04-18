@@ -19,7 +19,7 @@ public static class ModuleBuilderExtensionsAuthorization
 
 public class ModuleAuthorization(ModuleOptionAuthorization option) : MoModule<ModuleAuthorization, ModuleOptionAuthorization, ModuleGuideAuthorization>(option)
 {
-    public override EMoModules GetMoModuleEnum()
+    public override EMoModules CurModuleEnum()
     {
         return EMoModules.Authority;
     }

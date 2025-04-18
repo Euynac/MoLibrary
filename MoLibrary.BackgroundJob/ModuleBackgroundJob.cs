@@ -28,25 +28,20 @@ public static class ModuleBuilderExtensionsAuthorization
 {
     public static ModuleGuideBackgroundJob AddMoModuleBackgroundJob(this IServiceCollection services, Action<MoBackgroundWorkerOptions>? action = null)
     {
-        return new ModuleGuideBackgroundJob();
+        return MoModule.Register<ModuleBackgroundJob, MoBackgroundWorkerOptions, ModuleGuideBackgroundJob>(action);
     }
 }
 
-public class ModuleBackgroundJob(MoBackgroundWorkerOptions option) : MoModuleWithDependencies<ModuleBackgroundJob, MoBackgroundWorkerOptions, ModuleGuideBackgroundJob>(option), IWantIterateBusinessTypes, IWantRegisterModule<ModuleBackgroundJob, MoBackgroundWorkerOptions, ModuleGuideBackgroundJob>
+public class ModuleBackgroundJob(MoBackgroundWorkerOptions option) : MoModuleWithDependencies<ModuleBackgroundJob, MoBackgroundWorkerOptions, ModuleGuideBackgroundJob>(option), IWantIterateBusinessTypes
 {
     private readonly List<Type> _backgroundWorkerTypes = [];
     private readonly List<Type> _backgroundJobTypes = [];
 
-    public static ModuleGuideBackgroundJob Register(EMoModules requestFromModules, Action<MoBackgroundWorkerOptions>? config = null, Action<MoBackgroundWorkerOptions>? preConfig = null,
-        Action<MoBackgroundWorkerOptions>? postConfig = null)
-    {
-        return Register<ModuleBackgroundJob, MoBackgroundWorkerOptions, ModuleGuideBackgroundJob>(requestFromModules, config, preConfig, postConfig);
-    }
     public override void ClaimDependencies()
     {
-        DependsOnModule<ModuleGuideBackgroundJob, MoBackgroundWorkerOptions>(ModuleBackgroundJob.Register);
+        DependsOnModule();
     }
-    public override EMoModules GetMoModuleEnum()
+    public override EMoModules CurModuleEnum()
     {
         return EMoModules.BackgroundJob;
     }
