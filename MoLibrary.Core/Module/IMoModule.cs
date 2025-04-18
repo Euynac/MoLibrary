@@ -35,5 +35,5 @@ public interface IMoModule
     /// <param name="app"></param>
     Res UseMiddlewares(IApplicationBuilder app);
 
-    EMoModules GetMoModuleEnum();
+    EMoModules CurModuleEnum();
 }

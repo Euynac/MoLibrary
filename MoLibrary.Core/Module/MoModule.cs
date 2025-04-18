@@ -24,15 +24,6 @@ public class MoModuleRegisterCentre
     public static Dictionary<Type, List<ModuleRegisterRequest>> ModuleRegisterContextDict { get; set; } = new();
 }
 
-public interface IWantRegisterModule<TModuleSelf, out TModuleOption, out TModuleGuide> 
-    where TModuleOption : IMoModuleOption<TModuleSelf>, new()
-    where TModuleGuide : MoModuleGuide<TModuleSelf>, new()
-    where TModuleSelf : MoModule<TModuleSelf, TModuleOption, TModuleGuide>
-{
-    public static abstract TModuleGuide Register(EMoModules requestFromModules, Action<TModuleOption>? config = null,
-        Action<TModuleOption>? preConfig = null,
-        Action<TModuleOption>? postConfig = null);
-}
 public abstract class MoModule : IMoModule
 {
     public virtual Res ConfigureBuilder(WebApplicationBuilder builder)
@@ -54,7 +45,7 @@ public abstract class MoModule : IMoModule
         return Res.Ok();
     }
 
-    public abstract EMoModules GetMoModuleEnum();
+    public abstract EMoModules CurModuleEnum();
 
     public static TModuleGuide Register<TModule, TModuleOption, TModuleGuide>(Action<TModuleOption>? config = null) where TModule : MoModule
         where TModuleOption : IMoModuleOption<TModule>
@@ -62,7 +53,7 @@ public abstract class MoModule : IMoModule
     {
         return Register<TModule, TModuleOption, TModuleGuide>(EMoModules.Developer, config);
     }
-    public static TModuleGuide Register<TModule, TModuleOption, TModuleGuide>(EMoModules requestFromModules, Action<TModuleOption>? config = null, Action<TModuleOption>? preConfig = null,
+    internal static TModuleGuide Register<TModule, TModuleOption, TModuleGuide>(EMoModules requestFromModules, Action<TModuleOption>? config = null, Action<TModuleOption>? preConfig = null,
         Action<TModuleOption>? postConfig = null) where TModule : MoModule
         where TModuleOption : IMoModuleOption<TModule>
         where TModuleGuide : MoModuleGuide<TModule>, new()
@@ -98,25 +89,19 @@ public abstract class MoModuleWithDependencies<TModuleSelf, TModuleOption, TModu
     /// 声明依赖的模块，并进行配置等
     /// </summary>
     public abstract void ClaimDependencies();
-    //public void DependsOnModule(params EMoModules[] modules)
-    //{
-
-    //}
-
-    public TOtherModuleGuide DependsOnModule<TOtherModuleGuide, TOtherModuleOption>(Func<EMoModules, Action<TOtherModuleOption>?, Action<TOtherModuleOption>?, Action<TOtherModuleOption>?, TOtherModuleGuide> register) where TOtherModuleOption : IMoModuleOption
+    protected void DependsOnModule(params EMoModules[] modules)
     {
-        throw new NotImplementedException();
+
     }
-    //public TModuleGuide DependsOnModule<TOtherModuleOption>(Action<TOtherModuleOption>? preConfig = null,
-    //    Action<TOtherModuleOption>? postConfig = null)
-    //    where TOtherModuleOption : IMoModuleOption
-    //{
-        
-    //    return new TModuleGuide()
-    //    {
-    //        GuideFrom = GetMoModuleEnum()
-    //    };
-    //}
+
+    protected TOtherModuleGuide DependsOnModule<TOtherModule, TOtherModuleOption, TOtherModuleGuide>(Action<TOtherModuleOption>? config = null, Action<TOtherModuleOption>? preConfig = null,
+        Action<TOtherModuleOption>? postConfig = null) where TOtherModule : MoModule
+        where TOtherModuleOption : IMoModuleOption<TOtherModule>
+        where TOtherModuleGuide : MoModuleGuide<TOtherModule>, new()
+    {
+        return Register<TOtherModule, TOtherModuleOption, TOtherModuleGuide>(CurModuleEnum(), config, preConfig, postConfig);
+    }
+    
 }
 
 
