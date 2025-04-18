@@ -205,7 +205,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IMoBackgroundJobManager, HangfireBackgroundJobManager>();
         services.AddTransient<IBackgroundJobExecutor, DefaultBackgroundJobExecutor>();
 
-        _hasError = SetHangfire(services);
+        _hasError = SetHangfire(services) is false;
         if (_hasError) return;
 
 
