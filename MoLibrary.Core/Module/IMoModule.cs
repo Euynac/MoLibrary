@@ -30,10 +30,10 @@ public interface IMoModule
     Res PostConfigureServices(IServiceCollection services);
 
     /// <summary>
-    /// 使用中间件
+    /// 配置应用程序管道
     /// </summary>
     /// <param name="app"></param>
-    Res UseMiddlewares(IApplicationBuilder app);
+    Res ConfigureApplicationBuilder(IApplicationBuilder app);
 
     EMoModules CurModuleEnum();
 }

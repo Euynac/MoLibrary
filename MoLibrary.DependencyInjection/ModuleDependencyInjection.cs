@@ -44,7 +44,7 @@ public class ModuleGuideDependencyInjection : MoModuleGuide<ModuleDependencyInje
             var stopwatch = new Stopwatch();
             stopwatch.Start();
 
-            var setting = context.OptionInstance;
+            var setting = context.ModuleOption;
             var registrar = ActivatorUtilities.CreateInstance<T>(context.Services.BuildServiceProvider(), setting);
 
             // candidates assemblies
