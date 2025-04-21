@@ -160,7 +160,7 @@ public class AutoField
     /// </summary>
     public required AutoFieldTypeSetting TypeSetting { get; set; }
     /// <summary>
-    /// <inheritdoc cref="AutoModelOptions.EnableIgnorePrefix"/>
+    /// <inheritdoc cref="ModuleOptionAutoModel.EnableIgnorePrefix"/>
     /// </summary>
     public bool EnableIgnorePrefix { get; set; }
 

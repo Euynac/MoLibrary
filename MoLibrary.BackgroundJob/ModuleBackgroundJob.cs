@@ -26,13 +26,13 @@ namespace MoLibrary.BackgroundJob;
 
 public static class ModuleBuilderExtensionsAuthorization
 {
-    public static ModuleGuideBackgroundJob AddMoModuleBackgroundJob(this IServiceCollection services, Action<MoBackgroundWorkerOptions>? action = null)
+    public static ModuleGuideBackgroundJob AddMoModuleBackgroundJob(this IServiceCollection services, Action<ModuleOptionBackgroundJob>? action = null)
     {
         return new ModuleGuideBackgroundJob().Register(action);
     }
 }
 
-public class ModuleBackgroundJob(MoBackgroundWorkerOptions option) : MoModule<ModuleBackgroundJob, MoBackgroundWorkerOptions>(option), IWantIterateBusinessTypes
+public class ModuleBackgroundJob(ModuleOptionBackgroundJob option) : MoModule<ModuleBackgroundJob, ModuleOptionBackgroundJob>(option), IWantIterateBusinessTypes
 {
     private readonly List<Type> _backgroundWorkerTypes = [];
     private readonly List<Type> _backgroundJobTypes = [];
@@ -309,7 +309,7 @@ public class ModuleBackgroundJob(MoBackgroundWorkerOptions option) : MoModule<Mo
    
 }
 
-public class ModuleGuideBackgroundJob : MoModuleGuide<ModuleBackgroundJob, MoBackgroundWorkerOptions, ModuleGuideBackgroundJob>
+public class ModuleGuideBackgroundJob : MoModuleGuide<ModuleBackgroundJob, ModuleOptionBackgroundJob, ModuleGuideBackgroundJob>
 {
 
 

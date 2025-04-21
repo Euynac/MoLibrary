@@ -15,7 +15,7 @@ public static class ServicesCollectionExtensions
     /// </summary>
     /// <param name="services"></param>
     /// <param name="action"></param>
-    public static void AddMoDomainDrivenDesign(this IServiceCollection services, Action<MoDomainDrivenDesignOptions>? action = null)
+    public static void AddMoDomainDrivenDesign(this IServiceCollection services, Action<ModuleOptionDomainDrivenDesign>? action = null)
     {
         services.ConfigActionWrapper(action, out var config);
 
@@ -34,8 +34,4 @@ public static class ServicesCollectionExtensions
                 return false;
             });
     }
-}
-
-public class MoDomainDrivenDesignOptions
-{
 }

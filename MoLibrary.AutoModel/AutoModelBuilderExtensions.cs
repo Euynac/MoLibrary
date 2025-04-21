@@ -23,7 +23,7 @@ public static class AutoModelBuilderExtensions
     /// <param name="modelSetting"></param>
     /// <param name="normalizerSetting"></param>
     /// <returns></returns>
-    public static IServiceCollection AddAutoModel(this IServiceCollection services, Action<AutoModelOptions>? modelSetting = null, Action<AutoModelExpressionOptions>? normalizerSetting = null)
+    public static IServiceCollection AddAutoModel(this IServiceCollection services, Action<ModuleOptionAutoModel>? modelSetting = null, Action<AutoModelExpressionOptions>? normalizerSetting = null)
     {
         //add options using IOption pattern.
         if (modelSetting != null)
