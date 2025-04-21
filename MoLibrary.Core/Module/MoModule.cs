@@ -5,10 +5,20 @@ using Microsoft.Extensions.Logging.Abstractions;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Core.Module;
+public class ModuleRegisterContext(IServiceCollection services, object option)
+{
+    public IServiceCollection Services { get; init; } = services;
+    public object Option { get; init; } = option;
+
+}
+public class ModuleRegisterContext<TModuleOption>(IServiceCollection services, TModuleOption option) : ModuleRegisterContext(services, option)
+{
+    public TModuleOption OptionInstance => (TModuleOption)Option;
+}
 
 public class ModuleRegisterRequest(string key)
 {
-    public Action<IServiceCollection>? ConfigureServices { get; set; }
+    public Action<ModuleRegisterContext>? ConfigureContext { get; set; }
     public string Key { get; set; } = key;
 
     /// <summary>
@@ -17,6 +27,14 @@ public class ModuleRegisterRequest(string key)
     public bool OnlyConfigOnce { get; set; }
     public EMoModules? RequestFrom { get; set; }
     public int Order { get; set; }
+
+    public void SetConfigureContext<TModuleOption>(Action<ModuleRegisterContext<TModuleOption>> context)
+    {
+        ConfigureContext = registerContext =>
+        {
+            context.Invoke((ModuleRegisterContext<TModuleOption>) registerContext);
+        };
+    }
 }
 
 public class MoModuleRegisterCentre
@@ -70,10 +88,6 @@ public abstract class MoModuleWithDependencies<TModuleSelf, TModuleOption>(TModu
     /// 声明依赖的模块，并进行配置等
     /// </summary>
     public abstract void ClaimDependencies();
-    protected void DependsOnModule(params EMoModules[] modules)
-    {
-
-    }
    
     protected TOtherModuleGuide DependsOnModule<TOtherModuleGuide>()  
         where TOtherModuleGuide : MoModuleGuide, new()

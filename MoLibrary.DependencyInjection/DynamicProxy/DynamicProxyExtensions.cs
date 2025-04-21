@@ -1,10 +1,9 @@
-﻿using Castle.DynamicProxy;
+using Castle.DynamicProxy;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using MoLibrary.DependencyInjection.AppInterfaces;
 using MoLibrary.DependencyInjection.DynamicProxy.Abstract;
-using MoLibrary.DependencyInjection.DynamicProxy.DefaultInterceptors;
 using MoLibrary.Tool.Extensions;
 using static MoLibrary.DependencyInjection.DynamicProxy.MicrosoftDependencyInjectionDynamicProxyExtensions;
 

@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using MoLibrary.Authority.Authorization;
 using MoLibrary.Authority.Implements.Authorization;
 using MoLibrary.Core.Module;
+using MoLibrary.DependencyInjection.DynamicProxy;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Authority;
@@ -17,7 +18,7 @@ public static class ModuleBuilderExtensionsAuthorization
     }
 }
 
-public class ModuleAuthorization(ModuleOptionAuthorization option) : MoModule<ModuleAuthorization, ModuleOptionAuthorization>(option)
+public class ModuleAuthorization(ModuleOptionAuthorization option) : MoModuleWithDependencies<ModuleAuthorization, ModuleOptionAuthorization>(option)
 {
     public override EMoModules CurModuleEnum()
     {
@@ -43,6 +44,10 @@ public class ModuleAuthorization(ModuleOptionAuthorization option) : MoModule<Mo
         services.AddSingleton<IPermissionBitChecker, PermissionBitChecker>(_ => checker);
         return Res.Ok();
     }
+
+    public override void ClaimDependencies()
+    {
+    }
 }
 
 public class ModuleOptionAuthorization : IMoModuleOption<ModuleAuthorization>
@@ -58,34 +63,54 @@ public class ModuleGuideAuthorization : MoModuleGuide<ModuleAuthorization, Modul
 
     public ModuleGuideAuthorization AddDefaultPermissionBit<TEnum>(string claimTypeDefinition) where TEnum : struct, Enum
     {
-        ConfigureExtraServicesOnce(nameof(AddDefaultPermissionBit), services =>
+        ConfigureExtraServicesOnce(nameof(AddDefaultPermissionBit), context =>
         {
-            services.AddMoAuthorizationPermissionBit<TEnum>(claimTypeDefinition);
-            services.AddSingleton<IMoPermissionChecker, MoPermissionChecker<TEnum>>();
+            context.Services.AddMoAuthorizationPermissionBit<TEnum>(claimTypeDefinition);
+            context.Services.AddSingleton<IMoPermissionChecker, MoPermissionChecker<TEnum>>();
         });
         return this;
     }
     public ModuleGuideAuthorization AddPermissionBit<TEnum>(string claimTypeDefinition) where TEnum : struct, Enum
     {
-        ConfigureExtraServices(nameof(AddPermissionBit), services =>
+        ConfigureExtraServices(nameof(AddPermissionBit), context =>
         {
             var checker = new PermissionBitChecker<TEnum>(claimTypeDefinition);
             PermissionBitCheckerManager.AddChecker(checker);
-            services.AddSingleton<IPermissionBitChecker<TEnum>, PermissionBitChecker<TEnum>>(_ => checker);
+            context.Services.AddSingleton<IPermissionBitChecker<TEnum>, PermissionBitChecker<TEnum>>(_ => checker);
         });
         return this;
     }
     
     public ModuleGuideAuthorization ConfigAsAlwaysAllow()
     {
-        ConfigureExtraServicesOnce(nameof(ConfigAsAlwaysAllow), services =>
+        ConfigureExtraServicesOnce(nameof(ConfigAsAlwaysAllow), context =>
         {
-            services.Replace(ServiceDescriptor.Singleton<IAuthorizationService, AlwaysAllowAuthorizationService>());
-            services.Replace(ServiceDescriptor.Singleton<IMoAuthorizationService, AlwaysAllowAuthorizationService>());
-            services.Replace(ServiceDescriptor
+            context.Services.Replace(ServiceDescriptor.Singleton<IAuthorizationService, AlwaysAllowAuthorizationService>());
+            context.Services.Replace(ServiceDescriptor.Singleton<IMoAuthorizationService, AlwaysAllowAuthorizationService>());
+            context.Services.Replace(ServiceDescriptor
                 .Singleton<IMethodInvocationAuthorizationService, AlwaysAllowMethodInvocationAuthorizationService>());
-            services.Replace(ServiceDescriptor.Singleton<IMoPermissionChecker, AlwaysAllowPermissionChecker>());
+            context.Services.Replace(ServiceDescriptor.Singleton<IMoPermissionChecker, AlwaysAllowPermissionChecker>());
         }, EMoModuleOrder.PostConfig);
+        return this;
+    }
+
+    public ModuleGuideAuthorization AddAuthorizationInterceptor()
+    {
+        ConfigureExtraServices(nameof(AddAuthorizationInterceptor), context =>
+        {
+            context.Services.AddMoInterceptor<AuthorizationInterceptor>().CreateProxyWhenSatisfy((descriptor) =>
+            {
+                if (AuthorizationInterceptorRegistrar.ShouldIntercept(descriptor.ImplementationType))
+                {
+                    //TODO 支持对Controller、OurCRUD进行权限验证
+                    //TODO 输出日志
+                    //GlobalLog.LogInformation("注入权限验证：{name}", descriptor.ImplementationType.Name);
+                    return true;
+                }
+
+                return false;
+            });
+        });
         return this;
     }
 }

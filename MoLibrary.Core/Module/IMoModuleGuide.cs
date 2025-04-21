@@ -35,42 +35,37 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     {
         return new TModuleGuideSelf();
     }
+    private static void ConfigureExtraServices(string key, Action<ModuleRegisterContext<TModuleOption>> context, int order, bool onlyOnce)
+    {
+        var moduleType = typeof(TModule);
+        if (!MoModuleRegisterCentre.ModuleRegisterContextDict.TryGetValue(moduleType, out var extraActions))
+        {
+            extraActions = new List<ModuleRegisterRequest>();
+            MoModuleRegisterCentre.ModuleRegisterContextDict[moduleType] = extraActions;
+        }
+        
+        var request = new ModuleRegisterRequest(key) { Order = order, OnlyConfigOnce = onlyOnce};
+        request.SetConfigureContext(context);
+        extraActions.Add(request);
+    }
     
-    protected void ConfigureExtraServices(string key, Action<IServiceCollection> configureServices, int order) 
+    protected void ConfigureExtraServices(string key, Action<ModuleRegisterContext<TModuleOption>> context, int order)
     {
-        var moduleType = typeof(TModule);
-        if (!MoModuleRegisterCentre.ModuleRegisterContextDict.TryGetValue(moduleType, out var extraActions))
-        {
-            extraActions = new List<ModuleRegisterRequest>();
-            MoModuleRegisterCentre.ModuleRegisterContextDict[moduleType] = extraActions;
-        }
-        extraActions.Add(new ModuleRegisterRequest(key) { ConfigureServices = configureServices, Order = order });
-    }
-    protected void ConfigureExtraServices(string key, Action<IServiceCollection> configureServices, EMoModuleOrder order = EMoModuleOrder.Normal) 
-    {
-        ConfigureExtraServices(key, configureServices, (int)order);
+        ConfigureExtraServices(key, context, order, false);
     }
 
-    protected void ConfigureExtraServicesOnce(string key, Action<IServiceCollection> configureServices, EMoModuleOrder order = EMoModuleOrder.Normal)
+    protected void ConfigureExtraServices(string key, Action<ModuleRegisterContext<TModuleOption>> context, EMoModuleOrder order = EMoModuleOrder.Normal) 
     {
-        ConfigureExtraServicesOnce(key, configureServices, (int)order);
+        ConfigureExtraServices(key, (Action<ModuleRegisterContext>)context, (int)order);
     }
 
-    protected void ConfigureExtraServicesOnce(string key, Action<IServiceCollection> configureServices, int order)
+    protected void ConfigureExtraServicesOnce(string key, Action<ModuleRegisterContext<TModuleOption>> context, EMoModuleOrder order = EMoModuleOrder.Normal)
     {
-        var moduleType = typeof(TModule);
-        if (!MoModuleRegisterCentre.ModuleRegisterContextDict.TryGetValue(moduleType, out var extraActions))
-        {
-            extraActions = new List<ModuleRegisterRequest>();
-            MoModuleRegisterCentre.ModuleRegisterContextDict[moduleType] = extraActions;
-        }
+        ConfigureExtraServicesOnce(key, (Action<ModuleRegisterContext>)context, (int)order);
+    }
 
-        //TODO 后续集中处理重复键
-        if (extraActions.Any(x => x.Key == key))
-        {
-            return;
-            //throw new InvalidOperationException($"ConfigureExtraServicesOnce for {moduleType} with key {key} already exists");
-        }
-        extraActions.Add(new ModuleRegisterRequest(key) { ConfigureServices = configureServices, RequestFrom = GuideFrom, Order = order });
+    protected void ConfigureExtraServicesOnce(string key, Action<ModuleRegisterContext<TModuleOption>> context, int order)
+    {
+        ConfigureExtraServices(key, (Action<ModuleRegisterContext>)context, order, true);
     }
 }

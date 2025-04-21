@@ -16,10 +16,10 @@ public partial class AutoModelExpressionTokenizer<TModel>(
     IAutoModelSnapshot<TModel> snapshot,
     IAutoModelTypeConverter converter,
     IAutoModelTokenExpressionGen gen,
-    IOptions<AutoModelOptions> options,
+    IOptions<ModuleOptionAutoModel> options,
     ILogger<AutoModelExpressionTokenizer<TModel>> logger) : IAutoModelExpressionTokenizer<TModel>
 {
-    public AutoModelOptions Options { get; } = options.Value;
+    public ModuleOptionAutoModel Options { get; } = options.Value;
 
     public void ExtractComponent(TokenizerContext context)
     {

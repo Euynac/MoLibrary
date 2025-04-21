@@ -27,7 +27,7 @@ public static class ServiceCollectionExtensions
     private static List<Type> _backgroundWorkerTypes = [];
     private static List<Type> _backgroundJobTypes = [];
     private static bool _hasError = false;
-    private static readonly MoBackgroundWorkerOptions _options = new();
+    private static readonly ModuleOptionBackgroundJob _options = new();
     internal static bool SetHangfire(IServiceCollection services)
     {
         if (_options.UseInMemoryStorage)
@@ -168,7 +168,7 @@ public static class ServiceCollectionExtensions
         return true;
     }
 
-    public static void AddMoBackgroundWorker(this IServiceCollection services, Action<MoBackgroundWorkerOptions>? action = null)
+    public static void AddMoBackgroundWorker(this IServiceCollection services, Action<ModuleOptionBackgroundJob>? action = null)
     {
         action?.Invoke(_options);
 

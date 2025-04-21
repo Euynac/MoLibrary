@@ -13,5 +13,8 @@ public enum EMoModules
     EventBus,
     BackgroundJob,
     Repository,
-    Logging,
+    Logging, 
+    DependencyInjection,
+    AutoModel,
+    DomainDrivenDesign
 }
