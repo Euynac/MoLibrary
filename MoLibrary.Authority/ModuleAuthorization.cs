@@ -11,9 +11,9 @@ namespace MoLibrary.Authority;
 
 public static class ModuleBuilderExtensionsAuthorization
 {
-     public static ModuleGuideAuthorization AddMoModuleAuthorization<TEnum>(this IServiceCollection services, string claimTypeDefinition) where TEnum : struct, Enum
+    public static ModuleGuideAuthorization AddMoModuleAuthorization<TEnum>(this IServiceCollection services, string claimTypeDefinition) where TEnum : struct, Enum
     {
-        return new ModuleGuideAuthorization()
+        return new ModuleGuideAuthorization().Register()
             .AddDefaultPermissionBit<TEnum>(claimTypeDefinition);
     }
 }
@@ -36,7 +36,7 @@ public class ModuleAuthorization(ModuleOptionAuthorization option) : MoModuleWit
         services.AddSingleton<IMethodInvocationAuthorizationService, MoMethodInvocationAuthorizationService>();
 
         services.AddTransient<IMoAuthorizationPolicyProvider, MoEnumAuthorizationPolicyProvider>();
-        
+
         var manager = new PermissionBitCheckerManager();
         var checker = new PermissionBitChecker(manager);
         PermissionBitCheckerManager.Singleton = checker;
@@ -80,7 +80,7 @@ public class ModuleGuideAuthorization : MoModuleGuide<ModuleAuthorization, Modul
         });
         return this;
     }
-    
+
     public ModuleGuideAuthorization ConfigAsAlwaysAllow()
     {
         ConfigureExtraServicesOnce(nameof(ConfigAsAlwaysAllow), context =>

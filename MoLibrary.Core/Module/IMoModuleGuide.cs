@@ -68,4 +68,19 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     {
         ConfigureExtraServices(key, (Action<ModuleRegisterContext>)context, order, true);
     }
+
+    private static TModuleGuideSelf ConfigureOption<TOption>(Action<TOption> extraOptionAction, int order, bool isExtraOption) where TOption : IMoModuleOption
+    {
+        throw new NotImplementedException();
+    }
+
+    public TModuleGuideSelf ConfigureExtraOption<TOption>(Action<TOption> extraOptionAction, EMoModuleOrder order = EMoModuleOrder.Normal) where TOption : IMoModuleExtraOption<TModule>
+    {
+        return ConfigureOption(extraOptionAction, (int)order, true);
+    }
+
+    public TModuleGuideSelf ConfigureOption<TOption>(Action<TOption> extraOptionAction, EMoModuleOrder order = EMoModuleOrder.Normal) where TOption : IMoModuleOption<TModule>
+    {
+        return ConfigureOption(extraOptionAction, (int)order, false);
+    }
 }

@@ -5,15 +5,31 @@ using Microsoft.Extensions.Logging.Abstractions;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Core.Module;
-public class ModuleRegisterContext(IServiceCollection services, object option)
+public class ModuleRegisterContext(IServiceCollection services, Dictionary<Type, object> optionDict)
 {
     public IServiceCollection Services { get; init; } = services;
-    public object Option { get; init; } = option;
+    internal Dictionary<Type, object> Option { get; init; } = optionDict;
 
 }
-public class ModuleRegisterContext<TModuleOption>(IServiceCollection services, TModuleOption option) : ModuleRegisterContext(services, option)
+public class ModuleRegisterContext<TModuleOption>(IServiceCollection services, Dictionary<Type, object> option) : ModuleRegisterContext(services, option)
 {
-    public TModuleOption OptionInstance => (TModuleOption)Option;
+    /// <summary>
+    /// 获取当前模块的设置
+    /// </summary>
+    public TModuleOption ModuleOption => (TModuleOption) Option[typeof(TModuleOption)];
+    public TModuleExtraOption GetModuleExtraOption<TModuleExtraOption>() where TModuleExtraOption : new()
+    {
+        return GetModuleExtraOptionOrDefault<TModuleExtraOption>() ?? new TModuleExtraOption();
+    }
+    public TModuleExtraOption? GetModuleExtraOptionOrDefault<TModuleExtraOption>() where TModuleExtraOption : new()
+    {
+        if (Option.TryGetValue(typeof(TModuleExtraOption), out var option))
+        {
+            return (TModuleExtraOption) option;
+        }
+
+        return default;
+    }
 }
 
 public class ModuleRegisterRequest(string key)
@@ -36,10 +52,16 @@ public class ModuleRegisterRequest(string key)
         };
     }
 }
-
-public class MoModuleRegisterCentre
+/// <summary>
+/// 模块注册中心
+/// </summary>
+public static class MoModuleRegisterCentre
 {
+    /// <summary>
+    /// 模块注册请求上下文字典
+    /// </summary>
     public static Dictionary<Type, List<ModuleRegisterRequest>> ModuleRegisterContextDict { get; set; } = new();
+
 }
 
 public abstract class MoModule : IMoModule
@@ -58,7 +80,7 @@ public abstract class MoModule : IMoModule
     {
         return Res.Ok();
     }
-    public virtual Res UseMiddlewares(IApplicationBuilder app)
+    public virtual Res ConfigureApplicationBuilder(IApplicationBuilder app)
     {
         return Res.Ok();
     }
@@ -97,7 +119,6 @@ public abstract class MoModuleWithDependencies<TModuleSelf, TModuleOption>(TModu
             GuideFrom = CurModuleEnum()
         };
     }
-    
 }
 
 

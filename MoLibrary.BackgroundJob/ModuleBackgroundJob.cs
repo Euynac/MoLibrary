@@ -233,7 +233,7 @@ public class ModuleBackgroundJob(ModuleOptionBackgroundJob option) : MoModule<Mo
         }
     }
 
-    public override Res UseMiddlewares(IApplicationBuilder app)
+    public override Res ConfigureApplicationBuilder(IApplicationBuilder app)
     {
         Logger.LogInformation("发现继承自BackgroundWorker或Job的类，将启用Hangfire后台任务调度");
 
