@@ -81,6 +81,12 @@ public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto
     where TGetListOutputDto : IMoEntityDto<TKey>
     where TRepository : IMoRepository<TEntity, TKey>
 {
+    /// <summary>
+    /// 创建实体
+    /// </summary>
+    /// <param name="input">创建实体的输入参数</param>
+    /// <returns>返回创建成功的响应结果</returns>
+    /// <remarks>重写基类方法，使用标准响应格式返回结果</remarks>
     [OverrideService(-999)]
     public new virtual async Task<Res> CreateAsync(TCreateInput input)
     {
@@ -88,6 +94,12 @@ public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto
         return ResEntityCreateSuccess(dto);
     }
 
+    /// <summary>
+    /// 删除指定ID的实体
+    /// </summary>
+    /// <param name="id">要删除的实体ID</param>
+    /// <returns>返回删除成功的响应结果</returns>
+    /// <remarks>重写基类方法，使用标准响应格式返回结果</remarks>
     [OverrideService(-999)]
     public new virtual async Task<Res> DeleteAsync(TKey id)
     {
@@ -95,10 +107,17 @@ public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto
         return ResEntityDeleteSuccess(id?.ToString() ?? "");
     }
 
+    /// <summary>
+    /// 批量删除实体
+    /// </summary>
+    /// <param name="input">包含要删除的实体ID集合的输入参数</param>
+    /// <returns>返回批量删除的响应结果</returns>
+    /// <remarks>如果输入参数实现了IHasRequestIds接口，则执行批量删除操作</remarks>
     public virtual async Task<Res> BulkDeleteAsync(TBulkDeleteInput input)
     {
         if (input is IHasRequestIds<TKey> keys)
         {
+            //TODO 应支持软删除
             await repository.DeleteDirectAsync(p => keys.Ids.Contains(p.Id));
             return ResEntityDeleteSuccess(string.Join(",", keys.Ids));
         }
@@ -106,6 +125,16 @@ public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto
         return ResEntityDeleteFailed();
     }
 
+    /// <summary>
+    /// 更新指定ID的实体
+    /// </summary>
+    /// <param name="id">要更新的实体ID</param>
+    /// <param name="input">更新实体的输入参数</param>
+    /// <returns>返回更新成功的响应结果</returns>
+    /// <remarks>
+    /// 重写基类方法，使用标准响应格式返回结果
+    /// 规范：TUpdateInput和TCreateInput不要继承Entity等基类
+    /// </remarks>
     [OverrideService(-999)]
     public new virtual async Task<Res> UpdateAsync(TKey id, TUpdateInput input)
     {
@@ -132,7 +161,7 @@ public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto
         }
     }
 
-    //TODO 移除此功能或移至Our
+    //TODO 移除此功能或迁移
     //TODO 此方法重写不同签名的需要增加POST标签，不会继承该标签
     [HttpPost]
     public virtual async Task<ResPaged<dynamic>> ListAsync(TGetListInput input)
