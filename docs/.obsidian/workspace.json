@@ -13,16 +13,77 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "mo-framework-repository.md",
+                "file": "DomainDrivenDesign/应用服务MoApplicationService.md",
                 "mode": "source",
                 "source": false,
                 "backlinks": false
               },
               "icon": "lucide-file",
-              "title": "mo-framework-repository"
+              "title": "应用服务MoApplicationService"
+            }
+          },
+          {
+            "id": "af52d8bf29af44ef",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "DomainDrivenDesign/领域服务MoDomainService.md",
+                "mode": "source",
+                "source": false,
+                "backlinks": false
+              },
+              "icon": "lucide-file",
+              "title": "领域服务MoDomainService"
+            }
+          },
+          {
+            "id": "37b058a009e1f224",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "DomainDrivenDesign/应用服务MoApplicationService.md",
+                "mode": "source",
+                "source": false,
+                "backlinks": false
+              },
+              "icon": "lucide-file",
+              "title": "应用服务MoApplicationService"
+            }
+          },
+          {
+            "id": "76588050d5b4f356",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "DomainDrivenDesign/应用服务MoApplicationService.md",
+                "mode": "source",
+                "source": false,
+                "backlinks": false
+              },
+              "icon": "lucide-file",
+              "title": "应用服务MoApplicationService"
+            }
+          },
+          {
+            "id": "de4f2fd6f1aea667",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "DomainDrivenDesign/应用服务MoApplicationService.md",
+                "mode": "source",
+                "source": false,
+                "backlinks": false
+              },
+              "icon": "lucide-file",
+              "title": "应用服务MoApplicationService"
             }
           }
-        ]
+        ],
+        "currentTab": 4
       }
     ],
     "direction": "vertical"
@@ -205,12 +266,39 @@
       "table-editor-obsidian:Advanced Tables Toolbar": false
     }
   },
-  "active": "3bee8030507f7625",
+  "active": "95641d9f2e99738f",
   "lastOpenFiles": [
-    "mo-framework-domain-service-rule.md",
-    "mo-framework-crud-service-rule.md",
-    "mo-framework-application-service-rule.md",
-    "mo-framework-dependency-injection.md",
+    "DomainDrivenDesign/增删改接口服务MoCrudService.md",
+    "DomainDrivenDesign/应用服务MoApplicationService.md",
+    "DomainDrivenDesign/领域驱动设计简介.md",
+    "DomainDrivenDesign/领域服务MoDomainService.md",
+    "DataChannel/消息通路DataChannel.md",
+    "attachments/Pasted image 20250422111135.png",
+    "attachments/Pasted image 20250422110718.png",
+    "attachments/Pasted image 20250422110119.png",
+    "attachments/Pasted image 20250422104306.png",
+    "attachments/Pasted image 20250422104130.png",
+    "DependencyInjection/自动依赖注入MoDependency.md",
+    "Configuration/配置类MoConfiguration.md",
+    "AI-based编程.md",
+    "模块MoModule.md",
+    "服务间调用MoRpcInvocation.md",
+    "AutoModel/自动模型AutoModel.md",
+    "AutoModel",
+    "DependencyInjection",
+    "Tool/统一返回模型Res.md",
+    "DataChannel",
+    "Tool",
+    "Repository/仓储层MoRepository.md",
+    "Configuration",
+    "Repository",
+    "DomainDrivenDesign",
+    "仓储MoRepository.md",
+    "待办事项.md",
+    "attachments/Pasted image 20250408100610.png",
+    "attachments/Pasted image 20250408100554.png",
+    "attachments",
+    "primary-constructor.md",
     "ComputerScience/MyLibrary/MoModule.md",
     "ComputerScience/MyLibrary/MoHotConfiguration.md",
     "SoftwareManual/CMD.md",
@@ -221,38 +309,10 @@
     "attachments/d5c19e6587b245290ad303ae6af8e09.png",
     "Programming/NET/ASP.NET Core.md",
     "ComputerScience/Architecture/ABP.md",
-    "Programming/NET/性能优化.md",
-    "Programming/NET/错误排查.md",
-    "CTF/Hacker/软件破解.md",
-    "ComputerScience/MyLibrary/MoModuleLibrary.md",
-    "Programming/NET/ASP.NET Core接口.md",
-    "CloudNative/消息中间件.md",
-    "ComputerScience/MyLibrary/MoDataChannel.md",
-    "ComputerScience/MyLibrary/待办事项.md",
-    "attachments/Pasted image 20250408100610.png",
-    "attachments/Pasted image 20250408100554.png",
-    "SoftwareManual/VisualStudio.md",
-    "SoftwareManual/Typora.md",
-    "CloudNative/K8S故障恢复.md",
-    "Programming/NET/C#.md",
-    "Programming/NET/Authentication.md",
     "attachments/Pasted image 20250325173137.png",
     "attachments/Pasted image 20241113151503.png",
-    "attachments/Pasted image 20240901184252.png",
-    "attachments/Pasted image 20240825234859.png",
-    "attachments/Pasted image 20240816154602.png",
-    "attachments/Pasted image 20240707180418.png",
-    "attachments/Pasted image 20240707180409.png",
     "Programming/NET",
     "ComputerScience/MyLibrary",
-    "ComputerScience/Algorithm",
-    "Math",
-    "Fontend/FrontendConcept.docx",
-    "CTF/AWD",
-    "CTF/WEB",
-    "CTF/PWN",
-    "CTF/Reverse",
-    "CTF/Hacker",
     "未命dd名.canvas"
   ]
 }
