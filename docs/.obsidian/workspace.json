@@ -1,0 +1,279 @@
+{
+  "main": {
+    "id": "4da9e1b3f606c6d0",
+    "type": "split",
+    "children": [
+      {
+        "id": "03ba861b59326d80",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "3bee8030507f7625",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "mo-framework-repository.md",
+                "mode": "source",
+                "source": false,
+                "backlinks": false
+              },
+              "icon": "lucide-file",
+              "title": "mo-framework-repository"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "bba9f44576af7889",
+    "type": "split",
+    "children": [
+      {
+        "id": "b3a90a503b87f246",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "95641d9f2e99738f",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "06bae426a52ef2d9",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": true,
+                "explainSearch": true,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "41feecff5bebb24a",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 414.5
+  },
+  "right": {
+    "id": "135816766e82b8ec",
+    "type": "split",
+    "children": [
+      {
+        "id": "a36754a62dd01ef4",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "8ef2f3d5356e308d",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "SoftwareManual/VisualStudio.md",
+                "collapseAll": true,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for VisualStudio"
+            }
+          },
+          {
+            "id": "0b98812902b5262d",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "SoftwareManual/VisualStudio.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from VisualStudio"
+            }
+          },
+          {
+            "id": "05fbbc6fa450d716",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "2b6b6120ae063589",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "SoftwareManual/VisualStudio.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of VisualStudio"
+            }
+          },
+          {
+            "id": "7c80e3ee39f1e2d4",
+            "type": "leaf",
+            "state": {
+              "type": "advanced-tables-toolbar",
+              "state": {},
+              "icon": "lucide-file",
+              "title": "Plugin no longer active"
+            }
+          },
+          {
+            "id": "636ffba54c9a1600",
+            "type": "leaf",
+            "state": {
+              "type": "git-history-view",
+              "state": {},
+              "icon": "lucide-file",
+              "title": "Plugin no longer active"
+            }
+          },
+          {
+            "id": "bcaaad220d822f98",
+            "type": "leaf",
+            "state": {
+              "type": "git-view",
+              "state": {},
+              "icon": "lucide-file",
+              "title": "Plugin no longer active"
+            }
+          },
+          {
+            "id": "c455a32f745a50cd",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "131c7c4690e127cd",
+            "type": "leaf",
+            "state": {
+              "type": "quiet-outline",
+              "state": {},
+              "icon": "lines-of-text",
+              "title": "Quiet Outline"
+            }
+          }
+        ],
+        "currentTab": 8
+      }
+    ],
+    "direction": "horizontal",
+    "width": 203.5
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "markdown-table-editor:Open Markdown Table Editor": false,
+      "obsidian-git:Open Git source control": false,
+      "table-editor-obsidian:Advanced Tables Toolbar": false
+    }
+  },
+  "active": "3bee8030507f7625",
+  "lastOpenFiles": [
+    "mo-framework-domain-service-rule.md",
+    "mo-framework-crud-service-rule.md",
+    "mo-framework-application-service-rule.md",
+    "mo-framework-dependency-injection.md",
+    "ComputerScience/MyLibrary/MoModule.md",
+    "ComputerScience/MyLibrary/MoHotConfiguration.md",
+    "SoftwareManual/CMD.md",
+    "SoftwareManual/Clash.md",
+    "Programming/NET/EntityFrameworkCore.md",
+    "ComputerScience/MyLibrary/MoAutoModel.md",
+    "ComputerScience/MyLibrary/MoRpcInvocation.md",
+    "attachments/d5c19e6587b245290ad303ae6af8e09.png",
+    "Programming/NET/ASP.NET Core.md",
+    "ComputerScience/Architecture/ABP.md",
+    "Programming/NET/性能优化.md",
+    "Programming/NET/错误排查.md",
+    "CTF/Hacker/软件破解.md",
+    "ComputerScience/MyLibrary/MoModuleLibrary.md",
+    "Programming/NET/ASP.NET Core接口.md",
+    "CloudNative/消息中间件.md",
+    "ComputerScience/MyLibrary/MoDataChannel.md",
+    "ComputerScience/MyLibrary/待办事项.md",
+    "attachments/Pasted image 20250408100610.png",
+    "attachments/Pasted image 20250408100554.png",
+    "SoftwareManual/VisualStudio.md",
+    "SoftwareManual/Typora.md",
+    "CloudNative/K8S故障恢复.md",
+    "Programming/NET/C#.md",
+    "Programming/NET/Authentication.md",
+    "attachments/Pasted image 20250325173137.png",
+    "attachments/Pasted image 20241113151503.png",
+    "attachments/Pasted image 20240901184252.png",
+    "attachments/Pasted image 20240825234859.png",
+    "attachments/Pasted image 20240816154602.png",
+    "attachments/Pasted image 20240707180418.png",
+    "attachments/Pasted image 20240707180409.png",
+    "Programming/NET",
+    "ComputerScience/MyLibrary",
+    "ComputerScience/Algorithm",
+    "Math",
+    "Fontend/FrontendConcept.docx",
+    "CTF/AWD",
+    "CTF/WEB",
+    "CTF/PWN",
+    "CTF/Reverse",
+    "CTF/Hacker",
+    "未命dd名.canvas"
+  ]
+}
