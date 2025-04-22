@@ -1,0 +1,31 @@
+{
+  "menuCommands": [
+    {
+      "id": "editor:toggle-strikethrough",
+      "name": "添加删除线",
+      "icon": "lucide-strikethrough"
+    },
+    {
+      "id": "editor:fold-all",
+      "name": "折叠所有标题和列表",
+      "icon": "lucide-minimize-2",
+      "allowPreview": true
+    },
+    {
+      "id": "editor:toggle-code",
+      "name": "代码块",
+      "icon": "lucide-code-2"
+    },
+    {
+      "id": "outline:open",
+      "name": "大纲: 显示大纲标签页",
+      "icon": "lucide-list"
+    },
+    {
+      "name": "折叠/展开右侧边栏",
+      "id": "app:toggle-right-sidebar",
+      "icon": "align-right"
+    }
+  ],
+  "hideTitles": []
+}

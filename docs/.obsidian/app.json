@@ -1,0 +1,15 @@
+{
+  "spellcheckLanguages": null,
+  "newLinkFormat": "relative",
+  "useMarkdownLinks": true,
+  "newFileLocation": "root",
+  "attachmentFolderPath": "attachments",
+  "spellcheck": false,
+  "userIgnoreFilters": [
+    "src-gen/",
+    "attachments/"
+  ],
+  "promptDelete": false,
+  "alwaysUpdateLinks": true,
+  "readableLineLength": false
+}
