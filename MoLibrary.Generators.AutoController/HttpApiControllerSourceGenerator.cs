@@ -219,6 +219,7 @@ public class HttpApiControllerSourceGenerator : IIncrementalGenerator
 
             // Generate all the methods for this controller.
             var methodsCode = "";
+            //TODO 返回值是否影响ActionResult？
             foreach (var candidate in group)
             {
                 methodsCode += $$"""
@@ -227,7 +228,7 @@ public class HttpApiControllerSourceGenerator : IIncrementalGenerator
                     [ProducesResponseType((int) HttpStatusCode.Accepted)]
                     [ProducesResponseType((int) HttpStatusCode.BadRequest)]
                     [ProducesResponseType(typeof(Res<{{candidate.ResponseType}}>), (int) HttpStatusCode.OK)]
-                    public async Task<ActionResult> {{candidate.MethodName}}(
+                    public async Task<object> {{candidate.MethodName}}(
                         [{{(candidate.HttpMethodAttribute == "HttpGet" ? "FromQuery" : "FromBody")}}] {{candidate.RequestType}} dto)
                     {
                         return await mediator.Send(dto).GetResponse(this);
