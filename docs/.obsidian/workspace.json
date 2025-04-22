@@ -163,26 +163,6 @@
             }
           },
           {
-            "id": "636ffba54c9a1600",
-            "type": "leaf",
-            "state": {
-              "type": "git-history-view",
-              "state": {},
-              "icon": "lucide-file",
-              "title": "Plugin no longer active"
-            }
-          },
-          {
-            "id": "bcaaad220d822f98",
-            "type": "leaf",
-            "state": {
-              "type": "git-view",
-              "state": {},
-              "icon": "lucide-file",
-              "title": "Plugin no longer active"
-            }
-          },
-          {
             "id": "c455a32f745a50cd",
             "type": "leaf",
             "state": {
@@ -207,7 +187,7 @@
             }
           }
         ],
-        "currentTab": 8
+        "currentTab": 6
       }
     ],
     "direction": "horizontal",
@@ -222,7 +202,6 @@
       "templates:Insert template": false,
       "command-palette:Open command palette": false,
       "markdown-table-editor:Open Markdown Table Editor": false,
-      "obsidian-git:Open Git source control": false,
       "table-editor-obsidian:Advanced Tables Toolbar": false
     }
   },
