@@ -34,12 +34,12 @@ public abstract class MoApplicationService :
 /// <summary>
 /// Base class for custom application services with a specific handler, request, and response.
 /// </summary>
-/// <typeparam name="THandler">The type of the handler.</typeparam>
+/// <typeparam name="TSelfHandler">The type of the handler.</typeparam>
 /// <typeparam name="TRequest">The type of the request.</typeparam>
 /// <typeparam name="TResponse">The type of the response.</typeparam>
-public abstract class MoCustomApplicationService<THandler, TRequest, TResponse> :
+public abstract class MoCustomApplicationService<TSelfHandler, TRequest, TResponse> :
     MoApplicationService, IRequestHandler<TRequest, TResponse>
-    where THandler : MoApplicationService where TRequest : IRequest<TResponse>
+    where TSelfHandler : MoCustomApplicationService<TSelfHandler, TRequest, TResponse> where TRequest : IRequest<TResponse>
 {
     /// <summary>
     /// Handles the specified request.
@@ -53,22 +53,22 @@ public abstract class MoCustomApplicationService<THandler, TRequest, TResponse> 
 /// <summary>
 /// Base class for application services with a specific handler, request, and response wrapped in a <see cref="Res{T}"/>.
 /// </summary>
-/// <typeparam name="THandler">The type of the handler.</typeparam>
+/// <typeparam name="TSelfHandler">The type of the handler.</typeparam>
 /// <typeparam name="TRequest">The type of the request.</typeparam>
 /// <typeparam name="TResponse">The type of the response.</typeparam>
-public abstract class MoApplicationService<THandler, TRequest, TResponse> :
-    MoCustomApplicationService<THandler, TRequest, Res<TResponse>>
-    where THandler : MoApplicationService where TRequest : IMoRequest<TResponse>
+public abstract class MoApplicationService<TSelfHandler, TRequest, TResponse> :
+    MoCustomApplicationService<TSelfHandler, TRequest, Res<TResponse>>
+    where TSelfHandler : MoApplicationService<TSelfHandler, TRequest, TResponse> where TRequest : IMoRequest<TResponse>
 {
 }
 
 /// <summary>
 /// Base class for application services with a specific handler, request, and response wrapped in a <see cref="Res"/>.
 /// </summary>
-/// <typeparam name="THandler">The type of the handler.</typeparam>
+/// <typeparam name="TSelfHandler">The type of the handler.</typeparam>
 /// <typeparam name="TRequest">The type of the request.</typeparam>
-public abstract class MoApplicationService<THandler, TRequest> :
-    MoCustomApplicationService<THandler, TRequest, Res>
-    where THandler : MoApplicationService where TRequest : IMoRequest
+public abstract class MoApplicationService<TSelfHandler, TRequest> :
+    MoCustomApplicationService<TSelfHandler, TRequest, Res>
+    where TSelfHandler : MoApplicationService<TSelfHandler, TRequest> where TRequest : IMoRequest
 {
 }

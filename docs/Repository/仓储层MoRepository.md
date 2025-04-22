@@ -105,3 +105,11 @@ Task InsertManyAsync(IEnumerable<TEntity> entities, bool autoSave = false, Cance
 Task<TEntity> UpdateAsync(TEntity entity, bool autoSave = false, CancellationToken cancellationToken = default);
 Task UpdateManyAsync(IEnumerable<TEntity> entities, bool autoSave = false, CancellationToken cancellationToken = default);
 ``` 
+
+
+
+
+# 待完善
+
+- [ ] 仅需定义仓储即可获得默认实现，如`IRepositoryUser`, 定义后其默认实现同`IMoRepository<TEntity, TKey>` （暂未实现）
+- [ ] 直接使用`IMoRepository<TEntity, TKey>`也有其默认实现

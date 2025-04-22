@@ -11,7 +11,7 @@ public abstract class MoDomainService : IMoDomainService
 
 }
 
-public abstract class MoDomainService<TService> : MoDomainService, IMoServiceProviderInjector where TService : MoDomainService<TService>
+public abstract class MoDomainService<TSelf> : MoDomainService, IMoServiceProviderInjector where TSelf : MoDomainService<TSelf>
 {
    
 }
