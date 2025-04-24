@@ -39,6 +39,7 @@ public class MoTaskSchedulerBackgroundWorkerManager(
                 try
                 {
                     var keeper = timekeeper?.CreateNormalTimer(workerType.GetCleanFullName());
+                    keeper?.Start();
                     // 使用Task.Run创建新线程运行任务，避免阻塞调度器线程
                     await Task.Run(async () =>
                     {
