@@ -29,6 +29,14 @@ public class ModuleOptionBackgroundJob : IMoModuleOption<ModuleBackgroundJob>
 
     public bool UseInMemoryStorage { get; set; }
     #endregion
+
+    #region TaskSchedule
+    /// <summary>
+    /// 开启作业执行时间监控 TODO 需自动解决依赖模块
+    /// </summary>
+    public bool EnableWorkerDurationMonitor { get; set; }
+
+    #endregion
 }
 
 
