@@ -31,4 +31,9 @@ public class ModuleOptionAutoModel : IMoModuleOption<ModuleAutoModel>
 
     public bool DisableAutoIgnorePropertyWithJsonIgnoreAttribute { get; set; }
     public bool DisableAutoIgnorePropertyWithNotMappedAttribute { get; set; }
+
+    /// <summary>
+    /// 开启对于不支持的字段类型进行异常报错
+    /// </summary>
+    public bool EnableErrorForUnsupportedFieldTypes { get; set; }
 }

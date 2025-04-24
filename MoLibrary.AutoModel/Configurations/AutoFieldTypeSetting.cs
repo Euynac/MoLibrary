@@ -1,3 +1,4 @@
+using MoLibrary.AutoModel.Exceptions;
 using MoLibrary.Tool.Extensions;
 using System.Collections;
 using System.Text.Json.Serialization;
@@ -63,8 +64,9 @@ public class AutoFieldTypeSetting
     /// <returns></returns>
     public static EBasicType GetTypeClass(Type? parameterType, out Type underlyingType, out ETypeFeatures features)
     {
-        if (parameterType == null) throw new Exception("传入的parameterType为null，无法判断SpecialKind");
-        var originParameterTypeName = parameterType.FullName;
+        var origin = parameterType;
+        if (origin == null) throw new Exception("传入的parameterType为null，无法判断SpecialKind");
+        var originParameterTypeName = parameterType!.FullName;
         features = ETypeFeatures.None;
         if (typeof(IEnumerable).IsAssignableFrom(parameterType) && parameterType != typeof(string))
         {
@@ -78,14 +80,18 @@ public class AutoFieldTypeSetting
                 parameterType = parameterType.GetElementType();
             }
 
-            if (parameterType == null) throw new Exception($"不支持该功能参数类型{originParameterTypeName}");
+            if (parameterType == null)
+                throw new AutoModelSnapshotNotSupportTypeException($"不支持该功能参数类型{originParameterTypeName}",
+                    origin);
         }
 
         if (parameterType.IsDerivedFromGenericType(typeof(ThreadLocal<>)))
         {
             features |= ETypeFeatures.IsThreadLocal;
             parameterType = parameterType.GetGenericArguments().FirstOrDefault();
-            if (parameterType == null) throw new Exception($"不支持该功能参数类型{originParameterTypeName}");
+            if (parameterType == null)
+                throw new AutoModelSnapshotNotSupportTypeException($"不支持该功能参数类型{originParameterTypeName}",
+                    origin);
         }
         if (parameterType.IsNullableValueType())
         {
@@ -149,7 +155,7 @@ public class AutoFieldTypeSetting
 
         if (underlyingType == typeof(char)) return EBasicType.IsChar;
         if (underlyingType.IsClass) return EBasicType.IsClass;//string is also class.
-        throw new Exception($"AutoModel不支持的类型{underlyingType.FullName}");
+        throw new AutoModelSnapshotNotSupportTypeException($"暂不支持的类型{underlyingType.GetCleanFullName()}", origin);
     }
 
     public override string ToString()
