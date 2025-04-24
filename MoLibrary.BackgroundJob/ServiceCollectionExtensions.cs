@@ -15,6 +15,7 @@ using MoLibrary.BackgroundJob.Attributes;
 using MoLibrary.BackgroundJob.Hangfire.Jobs;
 using MoLibrary.BackgroundJob.Hangfire.Workers;
 using MoLibrary.BackgroundJob.MoTaskScheduler;
+using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Features;
 using MoLibrary.Logging;
 using MoLibrary.Tool.Extensions;
@@ -170,6 +171,7 @@ public static class ServiceCollectionExtensions
 
     public static void AddMoBackgroundWorker(this IServiceCollection services, Action<ModuleOptionBackgroundJob>? action = null)
     {
+        services.ConfigActionWrapper(action);
         action?.Invoke(_options);
 
         var candidates = Assembly.GetEntryAssembly()!.GetRelatedAssemblies(_options.RelatedAssemblies).ToList();
