@@ -79,11 +79,9 @@ public static class ExceptionHandlerBuilderExtensions
             var ex = (Exception)eventArgs.ExceptionObject;
             GlobalLog.LogError("程序异常捕获：{sender} {eventArgs}", sender?.ToJsonStringForce(), eventArgs?.ToJsonStringForce());
             
-            // 设置 IsTerminating 为 false 以防止程序终止
             if (eventArgs is { IsTerminating: true })
             {
-                GlobalLog.LogWarning("尝试阻止程序因未处理异常而终止");
-                // 在这里可以执行一些清理操作或恢复措施
+                GlobalLog.LogWarning("程序因未处理异常而终止。可能是由于使用了async void方法，此方法引发的异常无法被上层catch，请检查代码。");
             }
         };
 

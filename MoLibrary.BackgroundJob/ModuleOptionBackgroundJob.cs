@@ -2,7 +2,7 @@ using MoLibrary.Core.Module;
 
 namespace MoLibrary.BackgroundJob;
 
-public class MoBackgroundWorkerOptions : IMoModuleOption<ModuleBackgroundJob>
+public class ModuleOptionBackgroundJob : IMoModuleOption<ModuleBackgroundJob>
 {
     /// <summary>
     /// 除Entry程序集之外，额外自动注册涉及的程序集
@@ -28,6 +28,14 @@ public class MoBackgroundWorkerOptions : IMoModuleOption<ModuleBackgroundJob>
     public MoBackgroundWorkerRedisOptions? RedisOptions { get; set; }
 
     public bool UseInMemoryStorage { get; set; }
+    #endregion
+
+    #region TaskSchedule
+    /// <summary>
+    /// 开启作业执行时间监控 TODO 需自动解决依赖模块
+    /// </summary>
+    public bool EnableWorkerDurationMonitor { get; set; }
+
     #endregion
 }
 

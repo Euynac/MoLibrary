@@ -1,6 +1,8 @@
+using MoLibrary.Core.Module;
+
 namespace MoLibrary.AutoModel.Configurations;
 
-public class AutoModelOptions
+public class ModuleOptionAutoModel : IMoModuleOption<ModuleAutoModel>
 {
     /// <summary>
     /// 全局主动模式（仅使用了AutoField标签的字段才会启用自动模型功能）
@@ -29,4 +31,9 @@ public class AutoModelOptions
 
     public bool DisableAutoIgnorePropertyWithJsonIgnoreAttribute { get; set; }
     public bool DisableAutoIgnorePropertyWithNotMappedAttribute { get; set; }
+
+    /// <summary>
+    /// 开启对于不支持的字段类型进行异常报错
+    /// </summary>
+    public bool EnableErrorForUnsupportedFieldTypes { get; set; }
 }

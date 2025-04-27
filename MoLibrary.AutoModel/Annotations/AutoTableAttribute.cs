@@ -13,7 +13,7 @@ public class AutoTableAttribute : Attribute
     /// </summary>
     public string? Name { get; set; }
     /// <summary>
-    /// <inheritdoc cref="AutoModelOptions.EnableIgnorePrefix"/>，若为null运用上层设置
+    /// <inheritdoc cref="ModuleOptionAutoModel.EnableIgnorePrefix"/>，若为null运用上层设置
     /// </summary>
     public bool? EnableIgnorePrefix { get; set; }
 }

@@ -14,13 +14,13 @@ namespace MoLibrary.AutoModel.Implements;
 public class AutoModelExpressionNormalizerDynamicLinqProvider<TModel>(
     IAutoModelSnapshot<TModel> snapshot,
     IOptions<AutoModelExpressionOptions> expressionOptions,
-    IOptions<AutoModelOptions> options,
+    IOptions<ModuleOptionAutoModel> options,
     IAutoModelExpressionTokenizer<TModel> tokenizer,
     ILogger<AutoModelExpressionTokenizer<TModel>> logger)
     : IAutoModelExpressionNormalizer<TModel>
 {
     protected AutoModelExpressionOptions ExpressionOptions = expressionOptions.Value;
-    protected AutoModelOptions Options = options.Value;
+    protected ModuleOptionAutoModel Options = options.Value;
     protected bool LinqToObject = false;
 
     private List<AutoField> NormalizeLiteralSelect(string columns)

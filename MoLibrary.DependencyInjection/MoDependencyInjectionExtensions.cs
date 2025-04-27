@@ -11,18 +11,18 @@ namespace MoLibrary.DependencyInjection;
 
 public static class MoDependencyInjectionExtensions
 {
-    public static IServiceCollection AddMoDependencyInjectionDefaultProvider(this IServiceCollection services, Action<MoDependencyOption>? action = null)
+    public static IServiceCollection AddMoDependencyInjectionDefaultProvider(this IServiceCollection services, Action<ModuleOptionDependencyInjection>? action = null)
     {
         return services.AddMoDependencyInjection<DefaultConventionalRegistrar>(action);
     }
 
     public static IServiceCollection AddMoDependencyInjection<T>(this IServiceCollection services,
-        Action<MoDependencyOption>? action = null) where T : IConventionalRegistrar
+        Action<ModuleOptionDependencyInjection>? action = null) where T : IConventionalRegistrar
     {
         var stopwatch = new Stopwatch();
         stopwatch.Start();
 
-        var setting = new MoDependencyOption();
+        var setting = new ModuleOptionDependencyInjection();
         action?.Invoke(setting);
         var registrar = ActivatorUtilities.CreateInstance<T>(services.BuildServiceProvider(), setting);
 
