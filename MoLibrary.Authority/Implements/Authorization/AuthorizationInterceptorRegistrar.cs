@@ -10,6 +10,7 @@ namespace MoLibrary.Authority.Implements.Authorization;
 /// </summary>
 public static class AuthorizationInterceptorRegistrar
 {
+    [Obsolete("使用模块")]
     public static void AddAuthorizationInterceptor(this IServiceCollection services)
     {
         services.AddMoInterceptor<AuthorizationInterceptor>().CreateProxyWhenSatisfy((descriptor) =>
@@ -27,7 +28,7 @@ public static class AuthorizationInterceptorRegistrar
 
     }
 
-    private static bool ShouldIntercept(Type type)
+    public static bool ShouldIntercept(Type type)
     {
         return type.IsDefined(typeof(AuthorizeAttribute), true) || AnyMethodHasAuthorizeAttribute(type);
         //return type.IsAssignableTo<IMoApplicationService>(); //type.IsDefined(typeof(AuthorizeAttribute), true) || AnyMethodHasAuthorizeAttribute(type) || 

@@ -15,16 +15,37 @@ using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.DomainDrivenDesign.AutoCrud;
 
-
+/// <summary>
+/// Base abstract class that implements common CRUD operations for entities with a key.
+/// </summary>
+/// <typeparam name="TEntity">The entity type</typeparam>
+/// <typeparam name="TGetOutputDto">The DTO type for Get operation results</typeparam>
+/// <typeparam name="TGetListOutputDto">The DTO type for GetList operation results</typeparam>
+/// <typeparam name="TKey">The entity key type</typeparam>
+/// <typeparam name="TGetListInput">The input type for GetList operations</typeparam>
+/// <typeparam name="TCreateInput">The input type for Create operations</typeparam>
+/// <typeparam name="TUpdateInput">The input type for Update operations</typeparam>
 public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto, TKey, TGetListInput, TCreateInput, TUpdateInput>(IMoRepository<TEntity, TKey> repository) : MoApplicationService
     where TEntity : class, IMoEntity<TKey>
 {
+    /// <summary>
+    /// Gets the auto model database operator for entity operations.
+    /// </summary>
     protected IAutoModelDbOperator<TEntity> AutoModel =>
         ServiceProvider.GetRequiredService<IAutoModelDbOperator<TEntity>>();
+    
+    /// <summary>
+    /// Gets the repository for entity operations.
+    /// </summary>
     protected IMoRepository<TEntity, TKey> Repository { get; } = repository;
 
     #region 查
 
+    /// <summary>
+    /// Retrieves an entity by its ID and maps it to a DTO.
+    /// </summary>
+    /// <param name="id">The ID of the entity to retrieve</param>
+    /// <returns>The mapped entity DTO</returns>
     public virtual async Task<TGetOutputDto> GetAsync(TKey id)
     {
         var entity = await GetEntityByIdAsync(id);
@@ -32,6 +53,12 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
         return await MapToGetOutputDtoAsync(entity);
     }
 
+    /// <summary>
+    /// Retrieves a paged list of entities based on the provided input.
+    /// Supports dynamic filtering, sorting, paging, and selecting specific properties.
+    /// </summary>
+    /// <param name="input">The input parameters for the list operation</param>
+    /// <returns>A paged response containing the mapped entity DTOs</returns>
     public virtual async Task<ResPaged<dynamic>> GetListAsync(TGetListInput input)
     {
         var query = await CreateFilteredQueryAsync(input);
@@ -118,7 +145,13 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
         return new ResPaged<dynamic>(totalCount ?? list.Count, list, curPage, pageSize);
     }
 
-
+    /// <summary>
+    /// Retrieves an entity by its ID with optional includes.
+    /// Throws EntityNotFoundException if the entity doesn't exist.
+    /// </summary>
+    /// <param name="id">The ID of the entity to retrieve</param>
+    /// <returns>The entity with the specified ID</returns>
+    /// <exception cref="EntityNotFoundException">Thrown when an entity with the specified ID is not found</exception>
     protected virtual async Task<TEntity> GetEntityByIdAsync(TKey id)
     {
         var entity = await ApplyInclude(await Repository.GetQueryableAsync()).OrderBy(e => e.Id).FirstOrDefaultAsync(e => e.Id!.Equals(id));
@@ -133,6 +166,11 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
 
     #region 增
 
+    /// <summary>
+    /// Creates a new entity from the input, saves it to the database, and returns the result as a DTO.
+    /// </summary>
+    /// <param name="input">The input used to create the entity</param>
+    /// <returns>The newly created entity as a DTO</returns>
     public virtual async Task<TGetOutputDto> CreateAsync(TCreateInput input)
     {
         var entity = MapToEntity(input);
@@ -147,13 +185,21 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
 
     #region 删
 
-
-
-
+    /// <summary>
+    /// Deletes an entity by its ID.
+    /// </summary>
+    /// <param name="id">The ID of the entity to delete</param>
+    /// <returns>A task representing the asynchronous delete operation</returns>
     public virtual async Task DeleteAsync(TKey id)
     {
         await DeleteByIdAsync(id);
     }
+    
+    /// <summary>
+    /// Deletes an entity by its ID using the repository.
+    /// </summary>
+    /// <param name="id">The ID of the entity to delete</param>
+    /// <returns>A task representing the asynchronous delete operation</returns>
     protected virtual async Task DeleteByIdAsync(TKey id)
     {
         await Repository.DeleteAsync(id);
@@ -162,6 +208,13 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
     #endregion
 
     #region 改
+    
+    /// <summary>
+    /// Updates an existing entity with the provided input and returns the updated entity as a DTO.
+    /// </summary>
+    /// <param name="id">The ID of the entity to update</param>
+    /// <param name="input">The input containing the update data</param>
+    /// <returns>The updated entity as a DTO</returns>
     public virtual async Task<TGetOutputDto> UpdateAsync(TKey id, TUpdateInput input)
     {
         var entity = await GetEntityByIdAsync(id);
@@ -176,8 +229,13 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
 
     #region 排序
 
-
-
+    /// <summary>
+    /// Applies sorting to the query based on the input.
+    /// Handles special sorting requirements for EF Core split queries.
+    /// </summary>
+    /// <param name="query">The entity query to apply sorting to</param>
+    /// <param name="input">The input containing sorting parameters</param>
+    /// <returns>The sorted query</returns>
     protected virtual IQueryable<TEntity> ApplySorting(IQueryable<TEntity> query, TGetListInput input)
     {
         //巨坑：如果使用了Include，目前EFCore8会自动使用AsSpiltQuery功能。
@@ -205,6 +263,12 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
         return input is IHasRequestLimitedResult ? ApplyDefaultSorting(query) : query;
     }
 
+    /// <summary>
+    /// Applies default sorting to the query if no specific sorting is provided.
+    /// Orders by creation time (if entity implements IHasCreationTime) and then by ID.
+    /// </summary>
+    /// <param name="query">The entity query to apply default sorting to</param>
+    /// <returns>The sorted query</returns>
     protected virtual IQueryable<TEntity> ApplyDefaultSorting(IQueryable<TEntity> query)
     {
         if (query.HasBeenOrdered(out var ordered))
@@ -224,13 +288,12 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
 
     #region 分页
 
-
     /// <summary>
-    /// 应用分页。已扩展禁用分页功能。
+    /// Applies paging to the query based on the input.
     /// </summary>
-    /// <param name="query"></param>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="query">The query to apply paging to</param>
+    /// <param name="input">The input containing paging parameters</param>
+    /// <returns>A tuple containing the paged query, current page number, and page size</returns>
     protected (IQueryable, int? curPage, int? pageSize) ApplyPaging(IQueryable query, TGetListInput input)
     {
         int? curPage = null;
@@ -275,8 +338,8 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
     /// <summary>
     /// 对响应的实体Dto内容进行验证或进一步处理
     /// </summary>
-    /// <param name="entities"></param>
-    /// <returns></returns>
+    /// <param name="entities">要处理的实体DTO列表</param>
+    /// <returns>处理后的实体DTO列表，包装在Res结果中</returns>
     protected virtual async Task<Res<List<TGetListOutputDto>>> ApplyCustomActionToResponseListAsync(List<TGetListOutputDto> entities)
     {
         return entities;
@@ -284,9 +347,9 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
     /// <summary>
     /// 设置自定义过滤条件
     /// </summary>
-    /// <param name="input"></param>
-    /// <param name="query"></param>
-    /// <returns></returns>
+    /// <param name="input">获取列表的输入参数</param>
+    /// <param name="query">要应用过滤的查询</param>
+    /// <returns>应用过滤后的查询</returns>
     protected virtual async Task<IQueryable<TEntity>> ApplyCustomFilterQueryAsync(TGetListInput input, IQueryable<TEntity> query)
     {
         return query;
@@ -294,8 +357,8 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
     /// <summary>
     /// 应用过滤器。已扩展统一查询模型及自定义过滤、客户端侧过滤功能。
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">获取列表的输入参数</param>
+    /// <returns>应用过滤后的查询</returns>
     protected virtual async Task<IQueryable<TEntity>> CreateFilteredQueryAsync(TGetListInput input)
     {
         var queryable = WithDetail() ? await Repository.WithDetailsAsync() : await Repository.GetQueryableAsync();
@@ -325,8 +388,8 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
     /// <summary>
     /// 设置仅能客户端侧评估的自定义过滤条件。注意：Client Side评估会导致分页等功能无法在数据库执行，大幅降低效率
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">获取列表的输入参数</param>
+    /// <returns>客户端侧过滤函数，如果为null则不应用客户端过滤</returns>
     protected virtual Func<TEntity, bool>? ApplyCustomFilterQueryClientSideAsync(TGetListInput input)
     {
         return null;
@@ -335,7 +398,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
     /// <summary>
     /// 是否需要使用仓储层WithDetail方法
     /// </summary>
-    /// <returns></returns>
+    /// <returns>如果需要使用WithDetail方法则返回true，否则返回false</returns>
     protected virtual bool WithDetail()
     {
         return false;
@@ -343,8 +406,8 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
     /// <summary>
     /// 在GetList方法时应用Include
     /// </summary>
-    /// <param name="queryable"></param>
-    /// <returns></returns>
+    /// <param name="queryable">要应用Include的查询</param>
+    /// <returns>应用Include后的查询</returns>
     protected virtual IQueryable<TEntity> ApplyListInclude(IQueryable<TEntity> queryable)
     {
         return queryable;
@@ -352,8 +415,8 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
     /// <summary>
     /// 在GetList方法时应用Include
     /// </summary>
-    /// <param name="queryable"></param>
-    /// <returns></returns>
+    /// <param name="queryable">要应用Include的查询</param>
+    /// <returns>应用Include后的查询</returns>
     protected virtual IQueryable<TEntity> ApplyInclude(IQueryable<TEntity> queryable)
     {
         return queryable;

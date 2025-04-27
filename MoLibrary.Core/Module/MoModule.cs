@@ -5,10 +5,36 @@ using Microsoft.Extensions.Logging.Abstractions;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Core.Module;
+public class ModuleRegisterContext(IServiceCollection services, Dictionary<Type, object> optionDict)
+{
+    public IServiceCollection Services { get; init; } = services;
+    internal Dictionary<Type, object> Option { get; init; } = optionDict;
+
+}
+public class ModuleRegisterContext<TModuleOption>(IServiceCollection services, Dictionary<Type, object> option) : ModuleRegisterContext(services, option)
+{
+    /// <summary>
+    /// 获取当前模块的设置
+    /// </summary>
+    public TModuleOption ModuleOption => (TModuleOption) Option[typeof(TModuleOption)];
+    public TModuleExtraOption GetModuleExtraOption<TModuleExtraOption>() where TModuleExtraOption : new()
+    {
+        return GetModuleExtraOptionOrDefault<TModuleExtraOption>() ?? new TModuleExtraOption();
+    }
+    public TModuleExtraOption? GetModuleExtraOptionOrDefault<TModuleExtraOption>() where TModuleExtraOption : new()
+    {
+        if (Option.TryGetValue(typeof(TModuleExtraOption), out var option))
+        {
+            return (TModuleExtraOption) option;
+        }
+
+        return default;
+    }
+}
 
 public class ModuleRegisterRequest(string key)
 {
-    public Action<IServiceCollection>? ConfigureServices { get; set; }
+    public Action<ModuleRegisterContext>? ConfigureContext { get; set; }
     public string Key { get; set; } = key;
 
     /// <summary>
@@ -17,11 +43,25 @@ public class ModuleRegisterRequest(string key)
     public bool OnlyConfigOnce { get; set; }
     public EMoModules? RequestFrom { get; set; }
     public int Order { get; set; }
-}
 
-public class MoModuleRegisterCentre
+    public void SetConfigureContext<TModuleOption>(Action<ModuleRegisterContext<TModuleOption>> context)
+    {
+        ConfigureContext = registerContext =>
+        {
+            context.Invoke((ModuleRegisterContext<TModuleOption>) registerContext);
+        };
+    }
+}
+/// <summary>
+/// 模块注册中心
+/// </summary>
+public static class MoModuleRegisterCentre
 {
+    /// <summary>
+    /// 模块注册请求上下文字典
+    /// </summary>
     public static Dictionary<Type, List<ModuleRegisterRequest>> ModuleRegisterContextDict { get; set; } = new();
+
 }
 
 public abstract class MoModule : IMoModule
@@ -40,44 +80,50 @@ public abstract class MoModule : IMoModule
     {
         return Res.Ok();
     }
-    public virtual Res UseMiddlewares(IApplicationBuilder app)
+    public virtual Res ConfigureApplicationBuilder(IApplicationBuilder app)
     {
         return Res.Ok();
     }
 
-    public abstract EMoModules GetMoModuleEnum();
-
-    public static TModuleGuide Register<TModule, TModuleOption, TModuleGuide>() where TModule : MoModule
-        where TModuleOption : IMoModuleOption<TModule>
-        where TModuleGuide : MoModuleGuide<TModule>, new()
-    {
-        return new TModuleGuide();
-    }
+    public abstract EMoModules CurModuleEnum();
 }
 
 /// <summary>
 /// MoLibrary模块抽象基类
 /// 提供IMoLibraryModule接口的默认实现
 /// </summary>
-public abstract class MoModule<TModuleSelf, TModuleOption, TModuleGuide>(TModuleOption option) : MoModule 
+public abstract class MoModule<TModuleSelf, TModuleOption>(TModuleOption option) : MoModule 
     where TModuleOption : IMoModuleOption<TModuleSelf>, new() 
-    where TModuleGuide : MoModuleGuide<TModuleSelf>, new()
-    where TModuleSelf : MoModule<TModuleSelf, TModuleOption, TModuleGuide>
+    where TModuleSelf : MoModule<TModuleSelf, TModuleOption>
 {
     public ILogger<TModuleSelf> Logger { get; set; } = NullLogger<TModuleSelf>.Instance;
     public TModuleOption Option { get; } = option;
-    public void DependsOnModule(params EMoModules[] modules)
-    {
+}
 
-    }
-    public TModuleGuide DependsOnModule<TOtherModuleOption>(Action<TOtherModuleOption>? preConfig = null,
-        Action<TOtherModuleOption>? postConfig = null) 
-        where TOtherModuleOption : IMoModuleOption
+public abstract class MoModuleWithDependencies<TModuleSelf, TModuleOption>(TModuleOption option) : MoModule<TModuleSelf, TModuleOption>(option), IWantDependsOnOtherModules
+    where TModuleOption : IMoModuleOption<TModuleSelf>, new()
+    where TModuleSelf : MoModuleWithDependencies<TModuleSelf, TModuleOption>
+{
+    public List<EMoModules> DependedModules { get; set; } = [];
+  
+    /// <summary>
+    /// 声明依赖的模块，并进行配置等
+    /// </summary>
+    public abstract void ClaimDependencies();
+   
+    protected TOtherModuleGuide DependsOnModule<TOtherModuleGuide>()  
+        where TOtherModuleGuide : MoModuleGuide, new()
     {
-        return new TModuleGuide()
+        return new TOtherModuleGuide()
         {
-            GuideFrom = GetMoModuleEnum()
+            GuideFrom = CurModuleEnum()
         };
     }
-    
+}
+
+
+
+public interface IWantDependsOnOtherModules
+{
+    public List<EMoModules> DependedModules { get; set; } 
 }

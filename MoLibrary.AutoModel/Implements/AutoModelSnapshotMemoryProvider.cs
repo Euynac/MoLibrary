@@ -25,7 +25,7 @@ public class AutoModelSnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel
     private static FrozenDictionary<string, AutoField>? _fieldDictionary;
     private static IReadOnlyList<string> _allActivateNames = null!;
 
-    public AutoModelSnapshotMemoryProvider(IOptions<AutoModelOptions> options)
+    public AutoModelSnapshotMemoryProvider(IOptions<ModuleOptionAutoModel> options)
     {
         Init(options.Value);
     }
@@ -36,7 +36,7 @@ public class AutoModelSnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel
         return type.GetProperties().OrderByDescending(p => p.PropertyType == typeof(string)).ThenBy(p => p.PropertyType.IsClass);
     }
 
-    private static void Init(AutoModelOptions options)
+    private static void Init(ModuleOptionAutoModel options)
     {
         Dictionary<string, AutoField> fieldDictionary = [];
         var table = new AutoTable()
@@ -102,61 +102,74 @@ public class AutoModelSnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel
                 }
 
                 var activateNames = new List<string>();
-
-                var field = new AutoField
+                try
                 {
-                    EnableIgnorePrefix = fieldAttribute?.EnableIgnorePrefix ?? tableAttribute?.EnableIgnorePrefix ?? options.EnableIgnorePrefix,
-                    ReflectionName = p.Name,
-                    Title = fieldAttribute?.Title ?? p.Name,
-                    TypeSetting = new AutoFieldTypeSetting(p.PropertyType, p.DeclaringType),
-                    FuzzSetting = new AutoModelFuzzSetting(),
-                    NavigationProperties = previousNavigateTuples
-                };
-
-
-                if (fromNavigateProperty != null)
-                {
-                    //对于ID字段特殊处理，即使开启了忽略前缀，也需要保留ID前缀
-                    if (p.Name.Equals("id", StringComparison.OrdinalIgnoreCase))
+                    var field = new AutoField
                     {
-                        field.EnableIgnorePrefix = false;
-                    }
-                    else if (options.EnableIgnorePrefixAutoAdjust && allOriginActivateNames.Contains(p.Name))
+                        EnableIgnorePrefix = fieldAttribute?.EnableIgnorePrefix ?? tableAttribute?.EnableIgnorePrefix ?? options.EnableIgnorePrefix,
+                        ReflectionName = p.Name,
+                        Title = fieldAttribute?.Title ?? p.Name,
+                        TypeSetting = new AutoFieldTypeSetting(p.PropertyType, p.DeclaringType),
+                        FuzzSetting = new AutoModelFuzzSetting(),
+                        NavigationProperties = previousNavigateTuples
+                    };
+                    if (fromNavigateProperty != null)
                     {
-                        field.EnableIgnorePrefix = false;
-                    }
-                }
-
-
-                CheckFuzzSetting(p, field);
-
-                if (fieldAttribute != null)
-                {
-                    if (fieldAttribute.ActivateNames != null)
-                    {
-                        activateNames.AddRange(fieldAttribute.ActivateNames);
+                        //对于ID字段特殊处理，即使开启了忽略前缀，也需要保留ID前缀
+                        if (p.Name.Equals("id", StringComparison.OrdinalIgnoreCase))
+                        {
+                            field.EnableIgnorePrefix = false;
+                        }
+                        else if (options.EnableIgnorePrefixAutoAdjust && allOriginActivateNames.Contains(p.Name))
+                        {
+                            field.EnableIgnorePrefix = false;
+                        }
                     }
 
-                    field.FuzzSetting.IsIgnored = fieldAttribute.IgnoreFuzzColumn;
+
+                    CheckFuzzSetting(p, field);
+
+                    if (fieldAttribute != null)
+                    {
+                        if (fieldAttribute.ActivateNames != null)
+                        {
+                            activateNames.AddRange(fieldAttribute.ActivateNames);
+                        }
+
+                        field.FuzzSetting.IsIgnored = fieldAttribute.IgnoreFuzzColumn;
+                    }
+
+
+                    allOriginActivateNames.AddRange(activateNames);
+
+                    if (activateNames.Count == 0)
+                    {
+                        var propertyName = field.DefaultActiveName;
+                        activateNames.Add(propertyName.ToLowerInvariant());//正规化后的激活名，用以忽略大小写匹配
+                        allOriginActivateNames.Add(propertyName);
+                    }
+
+
+                    field.ActivateNames = [.. activateNames];
+                    _snapshot.Fields.Add(field);
+                    foreach (var name in activateNames)
+                    {
+                        if (!fieldDictionary.TryAdd(name, field))
+                            throw new AutoModelSnapshotException(
+                                $"{table.FullTypeName}中{field}激活名{name}已存在，存在的是{fieldDictionary[name]}。请使用[{nameof(AutoField)}]进行忽略或修改其激活名使其不重复。");
+                    }
                 }
-
-
-                allOriginActivateNames.AddRange(activateNames);
-
-                if (activateNames.Count == 0)
+                catch (AutoModelSnapshotNotSupportTypeException ex)
                 {
-                    var propertyName = field.DefaultActiveName;
-                    activateNames.Add(propertyName.ToLowerInvariant());//正规化后的激活名，用以忽略大小写匹配
-                    allOriginActivateNames.Add(propertyName);
-                }
+                    var declaringTypeName = p.DeclaringType?.GetCleanFullName() ?? "Unknown";
+                    var propertyTypeName = p.PropertyType.GetCleanFullName();
+                    var msg = $"AutoModel构建Snapshot时发现了不支持该字段类型：{propertyTypeName} in {declaringTypeName}";
+                    if (options.EnableErrorForUnsupportedFieldTypes)
+                    {
+                        throw new AutoModelSnapshotException(msg);
+                    }
 
-
-                field.ActivateNames = [.. activateNames];
-                _snapshot.Fields.Add(field);
-                foreach (var name in activateNames)
-                {
-                    if (!fieldDictionary.TryAdd(name, field))
-                        throw new AutoModelSnapshotException($"{table.FullTypeName}中{field}激活名{name}已存在，存在的是{fieldDictionary[name]}");
+                    Console.WriteLine(msg); //TODO 后续换为统一模块日志
                 }
             }
 

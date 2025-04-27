@@ -13,7 +13,7 @@ namespace MoLibrary.DependencyInjection.Implements;
 /// Provides default implementation for registering dependencies in an assembly or specific types.
 /// Implements the <see cref="IConventionalRegistrar"/> interface.
 /// </summary>
-public class DefaultConventionalRegistrar(MoDependencyOption option) : IConventionalRegistrar
+public class DefaultConventionalRegistrar(ModuleOptionDependencyInjection option) : IConventionalRegistrar
 {
     private ILogger logger => option.Logger;
     

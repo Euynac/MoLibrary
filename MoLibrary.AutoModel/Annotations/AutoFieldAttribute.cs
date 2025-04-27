@@ -15,7 +15,7 @@ public class AutoFieldAttribute : Attribute
     public string? Title { get; set; }
 
     /// <summary>
-    /// <inheritdoc cref="AutoModelOptions.EnableTitleAsActivateName"/>，若为null运用上层设置
+    /// <inheritdoc cref="ModuleOptionAutoModel.EnableTitleAsActivateName"/>，若为null运用上层设置
     /// </summary>
     [Obsolete("暂未实现")]
     public bool? TitleAsActivateName { get; set; }
@@ -37,7 +37,7 @@ public class AutoFieldAttribute : Attribute
     public bool Ignore { get; set; }
 
     /// <summary>
-    /// <inheritdoc cref="AutoModelOptions.EnableIgnorePrefix"/>，若为null运用上层设置
+    /// <inheritdoc cref="ModuleOptionAutoModel.EnableIgnorePrefix"/>，若为null运用上层设置
     /// </summary>
     public bool? EnableIgnorePrefix { get; set; }
 }

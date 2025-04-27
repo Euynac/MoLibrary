@@ -23,7 +23,7 @@ public interface IMoCrudAppService
 }
 
 /// <summary>
-/// <inheritdoc/> <para>该基类禁用修改与增加功能，需进一步禁用删除使用<see cref="IMoCrudDisableDelete"/> </para>
+/// <inheritdoc/> <para>简化形式，1.该基类禁用修改与增加功能。2.需进一步禁用删除使用<see cref="IMoCrudDisableDelete"/> </para>
 /// </summary>
 public abstract class MoCrudAppService<TEntity, TEntityDto, TKey, TGetListInput, TRepository>(TRepository repository)
     : MoCrudAppService<TEntity, TEntityDto, TEntityDto, TKey, TGetListInput, MoCrudDisableDto, MoCrudDisableDto,
@@ -35,7 +35,7 @@ public abstract class MoCrudAppService<TEntity, TEntityDto, TKey, TGetListInput,
 }
 
 /// <summary>
-/// <inheritdoc/>
+/// <inheritdoc/> <para>简化形式，1.无需生成批量删除接口。2.单个输出与列表输出相同。3. 使用默认分页请求</para>
 /// </summary>
 public abstract class MoCrudAppService<TEntity, TEntityDto, TKey, TCreateInput, TUpdateInput, TRepository>(TRepository repository)
     : MoCrudAppService<TEntity, TEntityDto, TEntityDto, TKey, MoCrudPageRequestDto, TCreateInput, TUpdateInput,
@@ -47,7 +47,7 @@ public abstract class MoCrudAppService<TEntity, TEntityDto, TKey, TCreateInput, 
 }
 
 /// <summary>
-/// <inheritdoc/>
+/// <inheritdoc/> <para>简化形式，1.无需生成批量删除接口。2.单个输出与列表输出相同。</para>
 /// </summary>
 public abstract class MoCrudAppService<TEntity, TEntityDto, TKey, TGetListInput, TCreateInput, TUpdateInput,
     TRepository>(TRepository repository)
@@ -59,9 +59,20 @@ public abstract class MoCrudAppService<TEntity, TEntityDto, TKey, TGetListInput,
 }
 
 
+
 /// <summary>
 /// 自动CRUD接口基类。子类必须以设定的 <see cref="MoCrudControllerOption.CrudControllerPostfix"/> 结尾，否则无法自动注册。其余开头名字会自动生成为路由名，以小写单词短横线隔开。如UserListAppService：user-list
 /// </summary>
+/// <typeparam name="TEntity">实体类型，必须实现 <see cref="IMoEntity{TKey}"/> 接口</typeparam>
+/// <typeparam name="TGetOutputDto">获取单个实体时的输出DTO类型，必须实现 <see cref="IMoEntityDto{TKey}"/> 接口</typeparam>
+/// <typeparam name="TGetListOutputDto">获取实体列表时的输出DTO类型，必须实现 <see cref="IMoEntityDto{TKey}"/> 接口</typeparam>
+/// <typeparam name="TKey">实体主键类型</typeparam>
+/// <typeparam name="TGetListInput">获取实体列表时的输入参数类型</typeparam>
+/// <typeparam name="TCreateInput">创建实体时的输入参数类型</typeparam>
+/// <typeparam name="TUpdateInput">更新实体时的输入参数类型</typeparam>
+/// <typeparam name="TBulkDeleteInput">批量删除实体时的输入参数类型</typeparam>
+/// <typeparam name="TRepository">实体仓储类型，必须实现 <see cref="IMoRepository{TEntity, TKey}"/> 接口</typeparam>
+/// <param name="repository">实体仓储实例</param>
 public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto, TKey, TGetListInput, TCreateInput,
     TUpdateInput, TBulkDeleteInput, TRepository>(TRepository repository) : 
     MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto, TKey, TGetListInput, TCreateInput, TUpdateInput>(repository), IMoCrudAppService
@@ -70,6 +81,12 @@ public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto
     where TGetListOutputDto : IMoEntityDto<TKey>
     where TRepository : IMoRepository<TEntity, TKey>
 {
+    /// <summary>
+    /// 创建实体
+    /// </summary>
+    /// <param name="input">创建实体的输入参数</param>
+    /// <returns>返回创建成功的响应结果</returns>
+    /// <remarks>重写基类方法，使用标准响应格式返回结果</remarks>
     [OverrideService(-999)]
     public new virtual async Task<Res> CreateAsync(TCreateInput input)
     {
@@ -77,6 +94,12 @@ public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto
         return ResEntityCreateSuccess(dto);
     }
 
+    /// <summary>
+    /// 删除指定ID的实体
+    /// </summary>
+    /// <param name="id">要删除的实体ID</param>
+    /// <returns>返回删除成功的响应结果</returns>
+    /// <remarks>重写基类方法，使用标准响应格式返回结果</remarks>
     [OverrideService(-999)]
     public new virtual async Task<Res> DeleteAsync(TKey id)
     {
@@ -84,10 +107,17 @@ public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto
         return ResEntityDeleteSuccess(id?.ToString() ?? "");
     }
 
+    /// <summary>
+    /// 批量删除实体
+    /// </summary>
+    /// <param name="input">包含要删除的实体ID集合的输入参数</param>
+    /// <returns>返回批量删除的响应结果</returns>
+    /// <remarks>如果输入参数实现了IHasRequestIds接口，则执行批量删除操作</remarks>
     public virtual async Task<Res> BulkDeleteAsync(TBulkDeleteInput input)
     {
         if (input is IHasRequestIds<TKey> keys)
         {
+            //TODO 应支持软删除
             await repository.DeleteDirectAsync(p => keys.Ids.Contains(p.Id));
             return ResEntityDeleteSuccess(string.Join(",", keys.Ids));
         }
@@ -95,6 +125,16 @@ public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto
         return ResEntityDeleteFailed();
     }
 
+    /// <summary>
+    /// 更新指定ID的实体
+    /// </summary>
+    /// <param name="id">要更新的实体ID</param>
+    /// <param name="input">更新实体的输入参数</param>
+    /// <returns>返回更新成功的响应结果</returns>
+    /// <remarks>
+    /// 重写基类方法，使用标准响应格式返回结果
+    /// 规范：TUpdateInput和TCreateInput不要继承Entity等基类
+    /// </remarks>
     [OverrideService(-999)]
     public new virtual async Task<Res> UpdateAsync(TKey id, TUpdateInput input)
     {
@@ -121,7 +161,7 @@ public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto
         }
     }
 
-    //TODO 移除此功能或移至Our
+    //TODO 移除此功能或迁移
     //TODO 此方法重写不同签名的需要增加POST标签，不会继承该标签
     [HttpPost]
     public virtual async Task<ResPaged<dynamic>> ListAsync(TGetListInput input)
