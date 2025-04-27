@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Euynac/MoLibrary/actions"><img src="https://github.com/Euynac/MoLibrary/actions/workflows/build.yml/badge.svg" alt="Build Status"></a>
+  <a href="https://github.com/Euynac/MoLibrary.Docs/actions"><img src="https://github.com/Euynac/MoLibrary.Docs/actions/workflows/static.yml/badge.svg" alt="Build Status"></a>
   <a href="https://www.nuget.org/packages?q=MoLibrary"><img src="https://img.shields.io/nuget/v/MoLibrary.Core.svg" alt="NuGet"></a>
   <a href="https://github.com/Euynac/MoLibrary/blob/main/LICENSE"><img src="https://img.shields.io/github/license/Euynac/MoLibrary" alt="License"></a>
   <a href="https://molibrary.dpdns.org/"><img src="https://img.shields.io/badge/docs-online-brightgreen.svg" alt="Documentation"></a>
