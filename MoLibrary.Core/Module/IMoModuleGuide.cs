@@ -2,13 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace MoLibrary.Core.Module;
 
-public enum EMoModuleOrder
-{
-    Normal = 0,
-    PostConfig = 100,
-    PreConfig = -100
-}
-
 public interface IMoModuleGuide
 {
 
@@ -23,64 +16,59 @@ public class MoModuleGuide
 }
 
 public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleGuide, IMoModuleGuide
-    where TModuleOption : IMoModuleOption<TModule>, new()
+    where TModuleOption : class, IMoModuleOption<TModule>, new()
     where TModuleGuideSelf : MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf>, new()
     where TModule : MoModule<TModule, TModuleOption> 
 {
+    /// <summary>
+    /// 指示模块必须进行的手动配置，若不配置，则会抛出异常提醒用户进行配置。
+    /// </summary>
+    /// <returns></returns>
     protected virtual string[] GetRequestedConfigMethodKeys()
     {
         return Array.Empty<string>();
     }
+
+    /// <summary>
+    /// 发出模块注册请求
+    /// </summary>
+    /// <param name="config"></param>
+    /// <returns></returns>
     public TModuleGuideSelf Register(Action<TModuleOption>? config = null)
     {
-        return new TModuleGuideSelf();
-    }
-    private static void ConfigureExtraServices(string key, Action<ModuleRegisterContext<TModuleOption>> context, int order, bool onlyOnce)
-    {
-        var moduleType = typeof(TModule);
-        if (!MoModuleRegisterCentre.ModuleRegisterContextDict.TryGetValue(moduleType, out var extraActions))
+        if (config != null)
         {
-            extraActions = new List<ModuleRegisterRequest>();
-            MoModuleRegisterCentre.ModuleRegisterContextDict[moduleType] = extraActions;
+            ConfigureOption(config);
         }
-        
-        var request = new ModuleRegisterRequest(key) { Order = order, OnlyConfigOnce = onlyOnce};
-        request.SetConfigureContext(context);
-        extraActions.Add(request);
+
+        MoModuleRegisterCentre.BindModuleOption<TModule, TModuleOption>();
+        return new TModuleGuideSelf();
     }
     
     protected void ConfigureExtraServices(string key, Action<ModuleRegisterContext<TModuleOption>> context, int order)
     {
-        ConfigureExtraServices(key, context, order, false);
+        var request = new ModuleRegisterRequest(key) { Order = order };
+        request.SetConfigureContext(context);
+
+        MoModuleRegisterCentre.BindModuleOption<TModule, TModuleOption>();
+        MoModuleRegisterCentre.CreateRegisterRequest<TModule>(request);
     }
 
     protected void ConfigureExtraServices(string key, Action<ModuleRegisterContext<TModuleOption>> context, EMoModuleOrder order = EMoModuleOrder.Normal) 
     {
-        ConfigureExtraServices(key, (Action<ModuleRegisterContext>)context, (int)order);
+        ConfigureExtraServices(key, context, (int)order);
     }
 
-    protected void ConfigureExtraServicesOnce(string key, Action<ModuleRegisterContext<TModuleOption>> context, EMoModuleOrder order = EMoModuleOrder.Normal)
+    public TModuleGuideSelf ConfigureOption<TOption>(Action<TOption> optionAction, int order) where TOption : class, IMoModuleOption, new()
     {
-        ConfigureExtraServicesOnce(key, (Action<ModuleRegisterContext>)context, (int)order);
+
+        MoModuleRegisterCentre.BindModuleOption<TModule, TModuleOption>();
+        MoModuleRegisterCentre.AddConfigureAction<TModule, TOption>(order, optionAction, GuideFrom);
+        return (TModuleGuideSelf) this;
     }
 
-    protected void ConfigureExtraServicesOnce(string key, Action<ModuleRegisterContext<TModuleOption>> context, int order)
+    public TModuleGuideSelf ConfigureOption<TOption>(Action<TOption> optionAction, EMoModuleOrder order = EMoModuleOrder.Normal) where TOption : class, IMoModuleOption<TModule>, new()
     {
-        ConfigureExtraServices(key, (Action<ModuleRegisterContext>)context, order, true);
-    }
-
-    private static TModuleGuideSelf ConfigureOption<TOption>(Action<TOption> extraOptionAction, int order, bool isExtraOption) where TOption : IMoModuleOption
-    {
-        throw new NotImplementedException();
-    }
-
-    public TModuleGuideSelf ConfigureExtraOption<TOption>(Action<TOption> extraOptionAction, EMoModuleOrder order = EMoModuleOrder.Normal) where TOption : IMoModuleExtraOption<TModule>
-    {
-        return ConfigureOption(extraOptionAction, (int)order, true);
-    }
-
-    public TModuleGuideSelf ConfigureOption<TOption>(Action<TOption> extraOptionAction, EMoModuleOrder order = EMoModuleOrder.Normal) where TOption : IMoModuleOption<TModule>
-    {
-        return ConfigureOption(extraOptionAction, (int)order, false);
+        return ConfigureOption(optionAction, (int)order);
     }
 }

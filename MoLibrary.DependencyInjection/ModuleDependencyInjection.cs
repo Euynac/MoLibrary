@@ -30,7 +30,7 @@ public class ModuleGuideDependencyInjection : MoModuleGuide<ModuleDependencyInje
 {
     public ModuleGuideDependencyInjection AddMoDependencyInjectionDefaultProvider()
     {
-        ConfigureExtraServicesOnce(nameof(AddMoDependencyInjectionDefaultProvider), context =>
+        ConfigureExtraServices(nameof(AddMoDependencyInjectionDefaultProvider), context =>
         {
             context.Services.AddMoDependencyInjection<DefaultConventionalRegistrar>();
         });
@@ -39,7 +39,7 @@ public class ModuleGuideDependencyInjection : MoModuleGuide<ModuleDependencyInje
 
     public ModuleGuideDependencyInjection AddMoDependencyInjection<T>() where T : IConventionalRegistrar
     {
-        ConfigureExtraServicesOnce(nameof(AddMoDependencyInjectionDefaultProvider), context =>
+        ConfigureExtraServices(nameof(AddMoDependencyInjectionDefaultProvider), context =>
         {
             var stopwatch = new Stopwatch();
             stopwatch.Start();
