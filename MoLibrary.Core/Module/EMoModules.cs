@@ -18,3 +18,11 @@ public enum EMoModules
     AutoModel,
     DomainDrivenDesign
 }
+
+
+public enum EMoModuleOrder
+{
+    Normal = 0,
+    PostConfig = 100,
+    PreConfig = -100
+}
