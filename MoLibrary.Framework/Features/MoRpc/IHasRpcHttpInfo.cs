@@ -4,10 +4,10 @@ public interface IHasRpcHttpInfo
 {
     public Dictionary<string, string?>? Headers { get; set; }
 
-    public void AddHeader(string name, string? value = null)
+    public bool TryAddHeader(string name, string? value = null)
     {
         Headers ??= new Dictionary<string, string?>();
-        Headers.Add(name, value);
+        return Headers.TryAdd(name, value);
     }
 
     public bool IsHeaderExist(string name)
