@@ -63,7 +63,7 @@ public class ModuleGuideAuthorization : MoModuleGuide<ModuleAuthorization, Modul
 
     public ModuleGuideAuthorization AddDefaultPermissionBit<TEnum>(string claimTypeDefinition) where TEnum : struct, Enum
     {
-        ConfigureExtraServicesOnce(nameof(AddDefaultPermissionBit), context =>
+        ConfigureExtraServices(nameof(AddDefaultPermissionBit), context =>
         {
             context.Services.AddMoAuthorizationPermissionBit<TEnum>(claimTypeDefinition);
             context.Services.AddSingleton<IMoPermissionChecker, MoPermissionChecker<TEnum>>();
@@ -72,7 +72,7 @@ public class ModuleGuideAuthorization : MoModuleGuide<ModuleAuthorization, Modul
     }
     public ModuleGuideAuthorization AddPermissionBit<TEnum>(string claimTypeDefinition) where TEnum : struct, Enum
     {
-        ConfigureExtraServices(nameof(AddPermissionBit), context =>
+        ConfigureExtraServices($"{nameof(AddPermissionBit)}<{typeof(TEnum).Name}>", context =>
         {
             var checker = new PermissionBitChecker<TEnum>(claimTypeDefinition);
             PermissionBitCheckerManager.AddChecker(checker);
@@ -83,7 +83,7 @@ public class ModuleGuideAuthorization : MoModuleGuide<ModuleAuthorization, Modul
 
     public ModuleGuideAuthorization ConfigAsAlwaysAllow()
     {
-        ConfigureExtraServicesOnce(nameof(ConfigAsAlwaysAllow), context =>
+        ConfigureExtraServices(nameof(ConfigAsAlwaysAllow), context =>
         {
             context.Services.Replace(ServiceDescriptor.Singleton<IAuthorizationService, AlwaysAllowAuthorizationService>());
             context.Services.Replace(ServiceDescriptor.Singleton<IMoAuthorizationService, AlwaysAllowAuthorizationService>());
