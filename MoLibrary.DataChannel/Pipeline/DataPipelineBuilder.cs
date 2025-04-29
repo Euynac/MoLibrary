@@ -157,6 +157,7 @@ public class DataPipelineBuilder
 
         // 创建外部端点
         var outerEndpoint = TransientProxy.CreateEndpointProxy(provider, OuterCoreType!, EDataSource.Outer, _outerEndpointMetadata);
+        outerEndpoint.EntranceType = EDataSource.Outer;
 
         // 创建管道
         var pipe = new DataPipeline(innerEndpoint, outerEndpoint, Id, GroupId);

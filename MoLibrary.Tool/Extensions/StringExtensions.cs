@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
@@ -12,6 +13,7 @@ using MoLibrary.Tool.General;
 
 namespace MoLibrary.Tool.Extensions
 {
+    //TODO 以下很多方法可以通过Span优化
     public static class StringExtensions
     {
         public static readonly string[] DATE_FORMATS = ["yyyy-MM-dd", "yyyyMMdd", "MMdd"];
@@ -369,34 +371,35 @@ namespace MoLibrary.Tool.Extensions
 
             return str.Substring(str.Length - len, len);
         }
+
         /// <summary>
         /// Converts PascalCase string to camelCase string.
         /// </summary>
         /// <param name="str">String to convert</param>
-        /// <param name="useCurrentCulture">set true to use current culture. Otherwise, invariant culture will be used.</param>
-        /// <param name="handleAbbreviations">set true to if you want to convert 'XYZ' to 'xyz'.</param>
         /// <returns>camelCase of the string</returns>
         [ContractAnnotation("null <= str:null")]
-        public static string ToCamelCase(this string str, bool useCurrentCulture = false, bool handleAbbreviations = false)
+        public static string ToCamelCase(this string str)
         {
-            if (string.IsNullOrWhiteSpace(str))
-            {
-                return str;
-            }
-
-            if (str.Length == 1)
-            {
-                return useCurrentCulture ? str.ToLower() : str.ToLowerInvariant();
-            }
-
-            if (handleAbbreviations && IsAllUpperCase(str))
-            {
-                return useCurrentCulture ? str.ToLower() : str.ToLowerInvariant();
-            }
-
-            return (useCurrentCulture ? char.ToLower(str[0]) : char.ToLowerInvariant(str[0])) + str[1..];
+            return string.IsNullOrEmpty(str) || !char.IsUpper(str[0])
+                ? str
+                : string.Create(str.Length, str, (SpanAction<char, string>) ((chars, fromStr) =>
+                {
+                    fromStr.CopyTo(chars);
+                    for (var index = 0; index < chars.Length && (index != 1 || char.IsUpper(chars[index])); ++index)
+                    {
+                        var flag = index + 1 < chars.Length;
+                        if (index > 0 & flag && !char.IsUpper(chars[index + 1]))
+                        {
+                            if (chars[index + 1] != ' ' && chars[index + 1] != '_')
+                                break;
+                            chars[index] = char.ToLowerInvariant(chars[index]);
+                            break;
+                        }
+                        chars[index] = char.ToLowerInvariant(chars[index]);
+                    };
+                }));
         }
-        private static bool IsAllUpperCase(string input)
+        public static bool IsAllUpperCase(string input)
         {
             return input.All(t => !char.IsLetter(t) || char.IsUpper(t));
         }

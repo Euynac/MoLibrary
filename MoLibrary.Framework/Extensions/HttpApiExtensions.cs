@@ -116,7 +116,7 @@ public static class HttpApiExtensions
             var value = property.GetValue(request);
             if (value != null)
             {
-                builder.Add(property.Name.ToCamelCase(handleAbbreviations: true), value.ToString() ?? "");
+                builder.Add(property.Name.ToCamelCase(), value.ToString() ?? "");
             }
         }
 
