@@ -5,64 +5,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Core.Module;
-public class ModuleRegisterContext(IServiceCollection services, Dictionary<Type, object> optionDict)
-{
-    public IServiceCollection Services { get; init; } = services;
-    internal Dictionary<Type, object> Option { get; init; } = optionDict;
-
-}
-public class ModuleRegisterContext<TModuleOption>(IServiceCollection services, Dictionary<Type, object> option) : ModuleRegisterContext(services, option)
-{
-    /// <summary>
-    /// 获取当前模块的设置
-    /// </summary>
-    public TModuleOption ModuleOption => (TModuleOption) Option[typeof(TModuleOption)];
-    public TModuleExtraOption GetModuleExtraOption<TModuleExtraOption>() where TModuleExtraOption : new()
-    {
-        return GetModuleExtraOptionOrDefault<TModuleExtraOption>() ?? new TModuleExtraOption();
-    }
-    public TModuleExtraOption? GetModuleExtraOptionOrDefault<TModuleExtraOption>() where TModuleExtraOption : new()
-    {
-        if (Option.TryGetValue(typeof(TModuleExtraOption), out var option))
-        {
-            return (TModuleExtraOption) option;
-        }
-
-        return default;
-    }
-}
-
-public class ModuleRegisterRequest(string key)
-{
-    public Action<ModuleRegisterContext>? ConfigureContext { get; set; }
-    public string Key { get; set; } = key;
-
-    /// <summary>
-    /// 指示当前Key的请求只能配置一次
-    /// </summary>
-    public bool OnlyConfigOnce { get; set; }
-    public EMoModules? RequestFrom { get; set; }
-    public int Order { get; set; }
-
-    public void SetConfigureContext<TModuleOption>(Action<ModuleRegisterContext<TModuleOption>> context)
-    {
-        ConfigureContext = registerContext =>
-        {
-            context.Invoke((ModuleRegisterContext<TModuleOption>) registerContext);
-        };
-    }
-}
-/// <summary>
-/// 模块注册中心
-/// </summary>
-public static class MoModuleRegisterCentre
-{
-    /// <summary>
-    /// 模块注册请求上下文字典
-    /// </summary>
-    public static Dictionary<Type, List<ModuleRegisterRequest>> ModuleRegisterContextDict { get; set; } = new();
-
-}
 
 public abstract class MoModule : IMoModule
 {
