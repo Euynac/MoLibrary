@@ -22,7 +22,7 @@ using Hangfire.HttpJob;
 using MoLibrary.Core.Extensions;
 using StackExchange.Redis;
 
-namespace MoLibrary.BackgroundJob;
+namespace MoLibrary.BackgroundJob.Modules;
 
 public static class ModuleBuilderExtensionsAuthorization
 {

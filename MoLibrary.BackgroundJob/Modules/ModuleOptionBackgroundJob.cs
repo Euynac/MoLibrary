@@ -1,6 +1,6 @@
 using MoLibrary.Core.Module;
 
-namespace MoLibrary.BackgroundJob;
+namespace MoLibrary.BackgroundJob.Modules;
 
 public class ModuleOptionBackgroundJob : IMoModuleOption<ModuleBackgroundJob>
 {

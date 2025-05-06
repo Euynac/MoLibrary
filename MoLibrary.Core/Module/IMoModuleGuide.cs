@@ -41,7 +41,7 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
             ConfigureOption(config);
         }
 
-        MoModuleRegisterCentre.BindModuleOption<TModule, TModuleOption>();
+        MoModuleRegisterCentre.RegisterModule<TModule, TModuleOption>();
         return new TModuleGuideSelf();
     }
     
@@ -49,9 +49,7 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     {
         var request = new ModuleRegisterRequest(key) { Order = order };
         request.SetConfigureContext(context);
-
-        MoModuleRegisterCentre.BindModuleOption<TModule, TModuleOption>();
-        MoModuleRegisterCentre.CreateRegisterRequest<TModule>(request);
+        MoModuleRegisterCentre.RegisterModule<TModule, TModuleOption>(request);
     }
 
     protected void ConfigureExtraServices(string key, Action<ModuleRegisterContext<TModuleOption>> context, EMoModuleOrder order = EMoModuleOrder.Normal) 
@@ -62,7 +60,7 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     public TModuleGuideSelf ConfigureOption<TOption>(Action<TOption> optionAction, int order) where TOption : class, IMoModuleOption, new()
     {
 
-        MoModuleRegisterCentre.BindModuleOption<TModule, TModuleOption>();
+        MoModuleRegisterCentre.RegisterModule<TModule, TModuleOption>();
         MoModuleRegisterCentre.AddConfigureAction<TModule, TOption>(order, optionAction, GuideFrom);
         return (TModuleGuideSelf) this;
     }
