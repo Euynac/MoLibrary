@@ -16,7 +16,8 @@ public enum EMoModules
     Logging, 
     DependencyInjection,
     AutoModel,
-    DomainDrivenDesign
+    DomainDrivenDesign,
+    Configuration
 }
 
 

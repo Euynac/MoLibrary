@@ -2,16 +2,17 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MoLibrary.Configuration.Annotations;
 using MoLibrary.Configuration.Providers;
+using MoLibrary.Core.Module;
 
-namespace MoLibrary.Configuration;
+namespace MoLibrary.Configuration.Modules;
 
-public class MoConfigurationSetting
+public class ModuleOptionConfiguration : IMoModuleOption<ModuleConfiguration>
 {
 
     /// <summary>
     /// When false (the default), no exceptions are thrown when a configuration key is found for which the
     /// provided model object does not have an appropriate property which matches the key's name.
-    /// When true, an <see cref="System.InvalidOperationException"/> is thrown with a description
+    /// When true, an <see cref="InvalidOperationException"/> is thrown with a description
     /// of the missing properties.
     /// </summary>
     /// <remarks>
@@ -53,6 +54,10 @@ public class MoConfigurationSetting
     /// </summary>
     public ILogger? Logger { get; set; }
 
+    /// <summary>
+    /// 应用程序相关配置字典实例
+    /// </summary>
+    public IConfiguration AppConfiguration { get; set; } = null!;
     /// <summary>
     /// 配置类所在程序集名，使用名称包含查找。如若不配置，则默认仅扫描Entry程序集。
     /// </summary>

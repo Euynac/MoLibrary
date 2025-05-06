@@ -38,8 +38,8 @@ public abstract class MoModule<TModuleSelf, TModuleOption>(TModuleOption option)
     where TModuleOption : IMoModuleOption<TModuleSelf>, new() 
     where TModuleSelf : MoModule<TModuleSelf, TModuleOption>
 {
-    public ILogger<TModuleSelf> Logger { get; set; } = NullLogger<TModuleSelf>.Instance;
     public TModuleOption Option { get; } = option;
+    public ILogger<TModuleSelf> Logger { get; set; } = NullLogger<TModuleSelf>.Instance;
 }
 
 public abstract class MoModuleWithDependencies<TModuleSelf, TModuleOption>(TModuleOption option) : MoModule<TModuleSelf, TModuleOption>(option), IWantDependsOnOtherModules
@@ -67,5 +67,9 @@ public abstract class MoModuleWithDependencies<TModuleSelf, TModuleOption>(TModu
 
 public interface IWantDependsOnOtherModules
 {
-    public List<EMoModules> DependedModules { get; set; } 
+    public List<EMoModules> DependedModules { get; set; }
+    /// <summary>
+    /// 声明依赖的模块，并进行配置等
+    /// </summary>
+    public void ClaimDependencies();
 }

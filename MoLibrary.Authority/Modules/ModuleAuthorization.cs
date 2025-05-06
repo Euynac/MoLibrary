@@ -7,7 +7,7 @@ using MoLibrary.Core.Module;
 using MoLibrary.DependencyInjection.DynamicProxy;
 using MoLibrary.Tool.MoResponse;
 
-namespace MoLibrary.Authority;
+namespace MoLibrary.Authority.Modules;
 
 public static class ModuleBuilderExtensionsAuthorization
 {

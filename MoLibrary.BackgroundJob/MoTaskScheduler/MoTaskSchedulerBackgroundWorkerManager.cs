@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MoLibrary.BackgroundJob.Abstract.Workers;
+using MoLibrary.BackgroundJob.Modules;
 using MoLibrary.Core.Features.MoTimekeeper;
 using MoLibrary.DependencyInjection.AppInterfaces;
 using MoLibrary.Tool.Extensions;

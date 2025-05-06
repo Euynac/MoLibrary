@@ -12,6 +12,7 @@ using Microsoft.OpenApi.Models;
 using MoLibrary.Configuration.Annotations;
 using MoLibrary.Configuration.Interfaces;
 using MoLibrary.Configuration.Model;
+using MoLibrary.Configuration.Modules;
 using MoLibrary.Configuration.Providers;
 using MoLibrary.Core.Extensions;
 using MoLibrary.Tool.Extensions;
@@ -39,9 +40,9 @@ public static class MoConfigurationBuilderExtensions
     /// <returns></returns>
     /// <exception cref="InvalidOperationException"></exception>
     public static IServiceCollection AddMoConfiguration(this IServiceCollection services,
-        IConfiguration appConfiguration, Action<MoConfigurationSetting>? action = null)
+        IConfiguration appConfiguration, Action<ModuleOptionConfiguration>? action = null)
     {
-        var setting = new MoConfigurationSetting();
+        var setting = new ModuleOptionConfiguration();
         action?.Invoke(setting);
         MoConfigurationManager.Setting = setting;
         MoConfigurationManager.AppConfiguration = appConfiguration;

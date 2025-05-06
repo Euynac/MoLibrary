@@ -14,6 +14,7 @@ using MoLibrary.BackgroundJob.Abstract.Workers;
 using MoLibrary.BackgroundJob.Attributes;
 using MoLibrary.BackgroundJob.Hangfire.Jobs;
 using MoLibrary.BackgroundJob.Hangfire.Workers;
+using MoLibrary.BackgroundJob.Modules;
 using MoLibrary.BackgroundJob.MoTaskScheduler;
 using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Features;
