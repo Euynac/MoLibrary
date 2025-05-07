@@ -1,8 +1,9 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using MoLibrary.Core.Module.Models;
 using MoLibrary.Tool.MoResponse;
 
-namespace MoLibrary.Core.Module;
+namespace MoLibrary.Core.Module.Interfaces;
 
 /// <summary>
 /// MoLibrary模块接口

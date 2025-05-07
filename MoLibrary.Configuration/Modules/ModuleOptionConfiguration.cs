@@ -2,7 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MoLibrary.Configuration.Annotations;
 using MoLibrary.Configuration.Providers;
-using MoLibrary.Core.Module;
+using MoLibrary.Core.Module.Interfaces;
 
 namespace MoLibrary.Configuration.Modules;
 

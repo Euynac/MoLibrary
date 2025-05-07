@@ -8,6 +8,8 @@ using MoLibrary.DependencyInjection.DynamicProxy;
 using MoLibrary.DomainDrivenDesign.Interfaces;
 using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.MoResponse;
+using MoLibrary.Core.Module.Interfaces;
+using MoLibrary.Core.Module.Models;
 
 namespace MoLibrary.DomainDrivenDesign;
 

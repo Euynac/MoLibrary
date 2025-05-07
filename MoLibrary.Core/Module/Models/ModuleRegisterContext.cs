@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
+using MoLibrary.Core.Module.Interfaces;
 
-namespace MoLibrary.Core.Module;
+namespace MoLibrary.Core.Module.Models;
 
 /// <summary>
 /// 模块注册上下文，用于处理模块注册过程中的服务配置
