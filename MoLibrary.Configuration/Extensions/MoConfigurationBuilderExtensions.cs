@@ -40,9 +40,9 @@ public static class MoConfigurationBuilderExtensions
     /// <returns></returns>
     /// <exception cref="InvalidOperationException"></exception>
     public static IServiceCollection AddMoConfiguration(this IServiceCollection services,
-        IConfiguration appConfiguration, Action<ModuleOptionConfiguration>? action = null)
+        IConfiguration appConfiguration, Action<ModuleConfigurationOption>? action = null)
     {
-        var setting = new ModuleOptionConfiguration();
+        var setting = new ModuleConfigurationOption();
         action?.Invoke(setting);
         MoConfigurationManager.Setting = setting;
         MoConfigurationManager.AppConfiguration = appConfiguration;

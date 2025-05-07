@@ -11,21 +11,12 @@ using MoLibrary.Tool.MoResponse;
 using System.Reflection;
 using Dapr.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 
 namespace MoLibrary.Configuration.Modules;
 
-public static class ModuleBuilderExtensionsAuthorization
-{
-    public static ModuleGuideConfiguration AddMoModuleConfiguration(this IServiceCollection services, Action<ModuleOptionConfiguration>? action = null)
-    {
-        return new ModuleGuideConfiguration().Register(action);
-    }
-}
-
-public class ModuleConfiguration(ModuleOptionConfiguration option) : MoModule<ModuleConfiguration, ModuleOptionConfiguration>(option), IWantIterateBusinessTypes
+public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<ModuleConfiguration, ModuleConfigurationOption>(option), IWantIterateBusinessTypes
 {
     private IServiceCollection _services = null!;
     private MethodInfo _method = null!;
@@ -132,21 +123,4 @@ public class ModuleConfiguration(ModuleOptionConfiguration option) : MoModule<Mo
     }
 
    
-}
-
-public class ModuleGuideConfiguration : MoModuleGuide<ModuleConfiguration, ModuleOptionConfiguration, ModuleGuideConfiguration>
-{
-
-    /// <summary>
-    /// 根据项目获取领域信息，用于完善微服务配置状态接口信息返回
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    public ModuleGuideConfiguration AddMoConfigurationDomainInfo<T>() where T : class, IMoConfigurationServiceInfo
-    {
-        ConfigureExtraServices(nameof(AddMoConfigurationDomainInfo), context =>
-        {
-            context.Services.Replace(ServiceDescriptor.Singleton<IMoConfigurationServiceInfo, T>());
-        });
-        return this;
-    }
 }

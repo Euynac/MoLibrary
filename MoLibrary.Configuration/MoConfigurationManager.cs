@@ -16,7 +16,7 @@ namespace MoLibrary.Configuration;
 public static class MoConfigurationManager
 {
     private static IConfiguration? _appConfiguration;
-    private static ModuleOptionConfiguration? _setting;
+    private static ModuleConfigurationOption? _setting;
 
     /// <summary>
     /// Gets or sets the application configuration.
@@ -53,7 +53,7 @@ public static class MoConfigurationManager
     /// Gets or sets the configuration settings.
     /// </summary>
     /// <exception cref="InvalidOperationException">Thrown when the settings are not initialized.</exception>
-    public static ModuleOptionConfiguration Setting
+    public static ModuleConfigurationOption Setting
     {
         get => _setting ?? throw new InvalidOperationException(
             $"Setting is not initialized in {typeof(MoConfigurationManager)}. Please register MoConfiguration first");

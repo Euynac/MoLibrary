@@ -93,7 +93,7 @@ public static class MoModuleRegisterCentre
     public static void MoModuleRegisterServices(this IServiceCollection services, Action<ModuleCoreOptionTypeFinder>? typeFinderConfigure = null)
     {
 
-        var typeFinder = services.AddDomainTypeFinder<MoDomainTypeFinder>(typeFinderConfigure);
+        var typeFinder = services.GetOrCreateDomainTypeFinder<MoDomainTypeFinder>(typeFinderConfigure);
 
         // 1. 初次遍历所有注册的模块，判断若模块有依赖项，处理依赖关系
         foreach (var (moduleType, info) in ModuleRegisterContextDict)
