@@ -1,4 +1,4 @@
-using MoLibrary.Core.Module;
+using MoLibrary.Core.Module.Interfaces;
 
 namespace MoLibrary.AutoModel.Configurations;
 

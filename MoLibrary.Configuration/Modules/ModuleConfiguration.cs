@@ -12,6 +12,8 @@ using System.Reflection;
 using Dapr.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using MoLibrary.Core.Module.Interfaces;
+using MoLibrary.Core.Module.Models;
 
 namespace MoLibrary.Configuration.Modules;
 

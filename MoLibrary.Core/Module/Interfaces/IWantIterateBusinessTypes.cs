@@ -1,4 +1,4 @@
-namespace MoLibrary.Core.Module;
+namespace MoLibrary.Core.Module.Interfaces;
 
 public interface IWantIterateBusinessTypes
 {

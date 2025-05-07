@@ -6,6 +6,8 @@ using MoLibrary.Tool.MoResponse;
 using MoLibrary.AutoModel.AutoModel.Implements;
 using MoLibrary.AutoModel.Implements;
 using MoLibrary.AutoModel.Interfaces;
+using MoLibrary.Core.Module.Interfaces;
+using MoLibrary.Core.Module.Models;
 
 namespace MoLibrary.AutoModel;
 

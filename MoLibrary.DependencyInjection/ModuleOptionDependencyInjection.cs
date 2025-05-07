@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using MoLibrary.Core.Module;
+using MoLibrary.Core.Module.Interfaces;
 
 namespace MoLibrary.DependencyInjection;
 

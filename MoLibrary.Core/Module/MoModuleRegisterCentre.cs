@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Tool.Extensions;
+using MoLibrary.Core.Module.TypeFinder;
+using MoLibrary.Core.Module.Models;
+using MoLibrary.Core.Module.Interfaces;
 
 namespace MoLibrary.Core.Module;
 
@@ -12,7 +15,9 @@ public static class MoModuleRegisterCentre
     /// <summary>
     /// 模块注册请求信息字典，用于存储所有注册过的模块类型及其注册信息。
     /// </summary>
-    private static Dictionary<Type, ModuleRequestInfo> ModuleRegisterContextDict { get; set; } = new();
+    private static Dictionary<Type, ModuleRequestInfo> ModuleRegisterContextDict { get; } = new();
+
+    private static List<ModuleSnapshot> ModuleSnapshots { get; } = [];
 
     /// <summary>
     /// 注册模块类型并获取其注册请求信息。
@@ -84,8 +89,12 @@ public static class MoModuleRegisterCentre
     /// 注册所有模块的服务。此方法应在builder.Build()之前调用。
     /// </summary>
     /// <param name="services">服务集合。</param>
-    public static void MoModuleRegisterServices(this IServiceCollection services)
+    /// <param name="typeFinderConfigure"></param>
+    public static void MoModuleRegisterServices(this IServiceCollection services, Action<ModuleCoreOptionTypeFinder>? typeFinderConfigure = null)
     {
+
+        var typeFinder = services.AddDomainTypeFinder<MoDomainTypeFinder>(typeFinderConfigure);
+
         // 1. 初次遍历所有注册的模块，判断若模块有依赖项，处理依赖关系
         foreach (var (moduleType, info) in ModuleRegisterContextDict)
         {
@@ -111,22 +120,34 @@ public static class MoModuleRegisterCentre
             // 调用模块注册方法
             module.ConfigureServices(services);
 
-            // 为需要遍历业务类型的模块提供支持
-            if (module is IWantIterateBusinessTypes iterateModule)
-            {
-                // 此处应该有遍历业务类型的代码
-                // ...
-            }
+            ModuleSnapshots.Add(new ModuleSnapshot(module, info));
+        }
 
-            module.PostConfigureServices(services);
-
-            // 执行额外的配置请求
-            foreach (var request in info.RegisterRequests.OrderBy(r => r.Order))
+        var businessTypes = typeFinder.GetTypes();
+        
+        // 3. 为需要遍历业务类型的模块提供支持
+        foreach (var module in ModuleSnapshots)
+        {
+            if (module.ModuleInstance is IWantIterateBusinessTypes iterateModule)
             {
-                request.ConfigureContext?.Invoke(new ModuleRegisterContext(services, info));
+                businessTypes = iterateModule.IterateBusinessTypes(businessTypes);
             }
         }
 
+        _ = businessTypes.ToList();
+
+
+        // 4. 执行模块的PostConfigureServices方法
+        foreach (var module in ModuleSnapshots)
+        {
+            module.ModuleInstance.PostConfigureServices(services);
+
+            // 执行额外的配置请求
+            foreach (var request in module.RequestInfo.RegisterRequests.OrderBy(r => r.Order))
+            {
+                request.ConfigureContext?.Invoke(new ModuleRegisterContext(services, module.RequestInfo));
+            }
+        }
         // 清理临时资源
         ModuleRegisterContextDict.Clear();
     }
@@ -137,109 +158,10 @@ public static class MoModuleRegisterCentre
     /// <param name="app">应用程序构建器。</param>
     public static void MoModuleUseMiddlewares(this IApplicationBuilder app)
     {
-        // 获取注册的所有模块实例
-        var moduleServices = app.ApplicationServices.GetServices<MoModule>().ToList();
-
         // 按优先级排序并配置应用程序构建器
-        foreach (var module in moduleServices)
+        foreach (var module in ModuleSnapshots)
         {
-            module.ConfigureApplicationBuilder(app);
+            module.ModuleInstance.ConfigureApplicationBuilder(app);
         }
-    }
-}
-
-/// <summary>
-/// 模块注册上下文，用于传递给模块注册请求。
-/// </summary>
-public class MoModuleContext
-{
-    /// <summary>
-    /// 服务集合。
-    /// </summary>
-    public IServiceCollection Services { get; set; } = null!;
-}
-
-/// <summary>
-/// 模块请求信息，用于存储模块的注册请求和配置信息。
-/// </summary>
-public class ModuleRequestInfo
-{
-    /// <summary>
-    /// 模块的注册请求列表。
-    /// </summary>
-    public List<ModuleRegisterRequest> RegisterRequests { get; set; } = [];
-
-    /// <summary>
-    /// 待处理的配置操作字典，按配置类型和执行顺序排序。
-    /// </summary>
-    private Dictionary<Type, SortedList<int, Action<object>>> PendingConfigActions { get; } = [];
-
-    /// <summary>
-    /// 最终配置对象字典，按配置类型索引。
-    /// </summary>
-    public Dictionary<Type, object> FinalConfigures { get; set; } = [];
-
-    /// <summary>
-    /// 模块相关设置类型。
-    /// </summary>
-    public Type ModuleOptionType { get; set; } = null!;
-    
-    /// <summary>
-    /// 初始化最终配置，根据排序后的配置项获得最终配置对象，最后清空配置操作。
-    /// </summary>
-    public void InitFinalConfigures()
-    {
-        foreach (var configType in PendingConfigActions.Keys)
-        {
-            // 创建配置类型的实例
-            var configInstance = Activator.CreateInstance(configType);
-            
-            if (configInstance == null)
-                continue;
-            
-            // 获取该类型的所有配置操作（已按优先级排序）
-            var sortedActions = PendingConfigActions[configType];
-            
-            // 按顺序应用所有配置操作到实例上
-            foreach (var action in sortedActions.Values)
-            {
-                action.Invoke(configInstance);
-            }
-            
-            // 将最终配置保存到字典中
-            FinalConfigures[configType] = configInstance;
-        }
-        
-        // 清空待处理的配置操作
-        PendingConfigActions.Clear();
-    }
-
-    /// <summary>
-    /// 绑定模块选项类型。
-    /// </summary>
-    /// <typeparam name="TOption">模块选项类型。</typeparam>
-    public void BindModuleOption<TOption>() where TOption : class, IMoModuleOption, new()
-    {
-        ModuleOptionType = typeof(TOption);
-    }
-
-    /// <summary>
-    /// 添加配置操作到待处理队列。
-    /// </summary>
-    /// <typeparam name="TOption">模块选项类型。</typeparam>
-    /// <param name="order">配置操作执行顺序。</param>
-    /// <param name="optionAction">配置操作委托。</param>
-    public void AddConfigureAction<TOption>(int order, Action<TOption> optionAction) where TOption : class, IMoModuleOption, new()
-    {
-        var type = typeof(TOption);
-        if (!PendingConfigActions.TryGetValue(type, out var actions))
-        {
-            actions = new SortedList<int, Action<object>>();
-            PendingConfigActions[type] = actions;
-        }
-        actions.Add(order, p =>
-        {
-            optionAction.Invoke((TOption) p);
-        });
     }
 }
