@@ -1,25 +1,15 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
-using MoLibrary.Core.Module;
-using MoLibrary.AutoModel.Configurations;
-using MoLibrary.Tool.MoResponse;
 using MoLibrary.AutoModel.AutoModel.Implements;
 using MoLibrary.AutoModel.Implements;
 using MoLibrary.AutoModel.Interfaces;
-using MoLibrary.Core.Module.Interfaces;
+using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Models;
+using MoLibrary.Tool.MoResponse;
 
-namespace MoLibrary.AutoModel;
+namespace MoLibrary.AutoModel.Modules;
 
-public static class ModuleBuilderExtensionsAuthorization
-{
-    public static ModuleGuideAutoModel AddMoModuleAutoModel(this IServiceCollection services, Action<ModuleOptionAutoModel>? action = null)
-    {
-        return new ModuleGuideAutoModel().Register(action);
-    }
-}
-
-public class ModuleAutoModel(ModuleOptionAutoModel option) : MoModule<ModuleAutoModel, ModuleOptionAutoModel>(option)
+public class ModuleAutoModel(ModuleAutoModelOption option) : MoModule<ModuleAutoModel, ModuleAutoModelOption>(option)
 {
     public override Res ConfigureServices(IServiceCollection services)
     {
@@ -74,10 +64,4 @@ public class ModuleAutoModel(ModuleOptionAutoModel option) : MoModule<ModuleAuto
         //    });
         //});
     }
-}
-
-public class ModuleGuideAutoModel : MoModuleGuide<ModuleAutoModel, ModuleOptionAutoModel, ModuleGuideAutoModel>
-{
-
-
 }

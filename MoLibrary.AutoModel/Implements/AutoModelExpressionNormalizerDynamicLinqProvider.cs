@@ -8,19 +8,20 @@ using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.General;
 using System.Text;
 using MoLibrary.AutoModel.Exceptions;
+using MoLibrary.AutoModel.Modules;
 
 namespace MoLibrary.AutoModel.Implements;
 
 public class AutoModelExpressionNormalizerDynamicLinqProvider<TModel>(
     IAutoModelSnapshot<TModel> snapshot,
     IOptions<AutoModelExpressionOptions> expressionOptions,
-    IOptions<ModuleOptionAutoModel> options,
+    IOptions<ModuleAutoModelOption> options,
     IAutoModelExpressionTokenizer<TModel> tokenizer,
     ILogger<AutoModelExpressionTokenizer<TModel>> logger)
     : IAutoModelExpressionNormalizer<TModel>
 {
     protected AutoModelExpressionOptions ExpressionOptions = expressionOptions.Value;
-    protected ModuleOptionAutoModel Options = options.Value;
+    protected ModuleAutoModelOption Options = options.Value;
     protected bool LinqToObject = false;
 
     private List<AutoField> NormalizeLiteralSelect(string columns)

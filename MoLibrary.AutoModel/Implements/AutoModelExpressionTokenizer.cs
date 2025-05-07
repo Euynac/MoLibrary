@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using MoLibrary.AutoModel.Configurations;
 using MoLibrary.AutoModel.Exceptions;
 using MoLibrary.AutoModel.Interfaces;
 using MoLibrary.AutoModel.Model;
@@ -9,6 +8,7 @@ using System.Collections;
 using System.Text;
 using System.Text.RegularExpressions;
 using MoLibrary.Tool.General;
+using MoLibrary.AutoModel.Modules;
 
 namespace MoLibrary.AutoModel.AutoModel.Implements;
 
@@ -16,10 +16,10 @@ public partial class AutoModelExpressionTokenizer<TModel>(
     IAutoModelSnapshot<TModel> snapshot,
     IAutoModelTypeConverter converter,
     IAutoModelTokenExpressionGen gen,
-    IOptions<ModuleOptionAutoModel> options,
+    IOptions<ModuleAutoModelOption> options,
     ILogger<AutoModelExpressionTokenizer<TModel>> logger) : IAutoModelExpressionTokenizer<TModel>
 {
-    public ModuleOptionAutoModel Options { get; } = options.Value;
+    public ModuleAutoModelOption Options { get; } = options.Value;
 
     public void ExtractComponent(TokenizerContext context)
     {

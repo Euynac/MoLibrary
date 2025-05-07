@@ -1,4 +1,5 @@
 using MoLibrary.AutoModel.Configurations;
+using MoLibrary.AutoModel.Modules;
 using MoLibrary.Tool.Extensions;
 using System.Text;
 using System.Text.Json.Serialization;
@@ -160,7 +161,7 @@ public class AutoField
     /// </summary>
     public required AutoFieldTypeSetting TypeSetting { get; set; }
     /// <summary>
-    /// <inheritdoc cref="ModuleOptionAutoModel.EnableIgnorePrefix"/>
+    /// <inheritdoc cref="ModuleAutoModelOption.EnableIgnorePrefix"/>
     /// </summary>
     public bool EnableIgnorePrefix { get; set; }
 

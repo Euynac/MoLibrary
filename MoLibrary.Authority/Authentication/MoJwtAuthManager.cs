@@ -7,13 +7,14 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using MoLibrary.Authority.Implements.Authorization;
+using MoLibrary.Authority.Modules;
 using MoLibrary.Authority.Security;
 
 namespace MoLibrary.Authority.Authentication;
 
-public class MoJwtAuthManager(IOptions<MoJwtTokenOptions> jwtTokenConfig) : IMoJwtAuthManager, IMoAuthManager
+public class MoJwtAuthManager(IOptions<ModuleAuthenticationOption> jwtTokenConfig) : IMoJwtAuthManager, IMoAuthManager
 {
-    protected MoJwtTokenOptions JwtTokenConfig => jwtTokenConfig.Value;
+    protected ModuleAuthenticationOption JwtTokenConfig => jwtTokenConfig.Value;
     public IImmutableDictionary<string, RefreshToken> UsersRefreshTokensReadOnlyDictionary => _usersRefreshTokens.ToImmutableDictionary();
     private readonly ConcurrentDictionary<string, RefreshToken> _usersRefreshTokens = new();  // can store in a database or a distributed cache
 

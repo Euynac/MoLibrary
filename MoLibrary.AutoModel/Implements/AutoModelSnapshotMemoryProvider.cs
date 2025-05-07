@@ -10,6 +10,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Reflection;
 using System.Text.Json.Serialization;
 using MoLibrary.AutoModel.Exceptions;
+using MoLibrary.AutoModel.Modules;
 
 // ReSharper disable StaticMemberInGenericType
 
@@ -25,7 +26,7 @@ public class AutoModelSnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel
     private static FrozenDictionary<string, AutoField>? _fieldDictionary;
     private static IReadOnlyList<string> _allActivateNames = null!;
 
-    public AutoModelSnapshotMemoryProvider(IOptions<ModuleOptionAutoModel> options)
+    public AutoModelSnapshotMemoryProvider(IOptions<ModuleAutoModelOption> options)
     {
         Init(options.Value);
     }
@@ -36,7 +37,7 @@ public class AutoModelSnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel
         return type.GetProperties().OrderByDescending(p => p.PropertyType == typeof(string)).ThenBy(p => p.PropertyType.IsClass);
     }
 
-    private static void Init(ModuleOptionAutoModel options)
+    private static void Init(ModuleAutoModelOption options)
     {
         Dictionary<string, AutoField> fieldDictionary = [];
         var table = new AutoTable()

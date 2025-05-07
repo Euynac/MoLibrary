@@ -17,7 +17,8 @@ public enum EMoModules
     DependencyInjection,
     AutoModel,
     DomainDrivenDesign,
-    Configuration
+    Configuration,
+    Authentication
 }
 
 
