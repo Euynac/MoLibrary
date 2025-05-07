@@ -6,12 +6,15 @@ namespace MoLibrary.Core.Module.TypeFinder
 {
     public static class DomainTypeFinderExtensions
     {
-        internal static T AddDomainTypeFinder<T>(this IServiceCollection services, Action<ModuleCoreOptionTypeFinder>? configure = null) where T : MoDomainTypeFinder
+        internal static IDomainTypeFinder? AppDomainTypeFinder;
+        internal static IDomainTypeFinder GetOrCreateDomainTypeFinder<T>(this IServiceCollection services, Action<ModuleCoreOptionTypeFinder>? configure = null) where T : IDomainTypeFinder
         {
+            if (AppDomainTypeFinder is not null) return AppDomainTypeFinder;
             services.ConfigActionWrapper(configure, out var config);
             var typeFinder = Activator.CreateInstance(typeof(T), config)!;
             services.TryAddSingleton(typeFinder);
-            return (T)typeFinder;
+            AppDomainTypeFinder = (IDomainTypeFinder) typeFinder;
+            return AppDomainTypeFinder;
         }
     }
 }
