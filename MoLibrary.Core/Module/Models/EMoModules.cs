@@ -18,7 +18,8 @@ public enum EMoModules
     AutoModel,
     DomainDrivenDesign,
     Configuration,
-    Authentication
+    Authentication,
+    ConfigurationDashboard
 }
 
 
