@@ -26,6 +26,13 @@ using MoLibrary.Core.Module.Models;
 
 namespace MoLibrary.BackgroundJob.Modules;
 
+internal class MoHangfireAuthorizationFilter : IDashboardAuthorizationFilter
+{
+    public bool Authorize(DashboardContext context)
+    {
+        return true;
+    }
+}
 public class ModuleBackgroundJob(ModuleBackgroundJobOption option) : MoModule<ModuleBackgroundJob, ModuleBackgroundJobOption>(option), IWantIterateBusinessTypes
 {
     private readonly List<Type> _backgroundWorkerTypes = [];
