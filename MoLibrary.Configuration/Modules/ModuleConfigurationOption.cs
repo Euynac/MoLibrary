@@ -6,7 +6,7 @@ using MoLibrary.Core.Module.Interfaces;
 
 namespace MoLibrary.Configuration.Modules;
 
-public class ModuleConfigurationOption : IMoModuleOption<ModuleConfiguration>
+public class ModuleConfigurationOption : IMoModuleOption<ModuleConfiguration>, IMoModuleControllerOption<ModuleConfiguration>
 {
 
     /// <summary>
@@ -104,4 +104,5 @@ public class ModuleConfigurationOption : IMoModuleOption<ModuleConfiguration>
     /// </summary>
     public Action<ConfigurationManager>? SetOtherSourceAction { get; set; }
 
+    public string? SwaggerGroupName { get; set; }
 }
