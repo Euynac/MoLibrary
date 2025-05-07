@@ -6,45 +6,38 @@ using Microsoft.IdentityModel.Logging;
 using Microsoft.IdentityModel.Tokens;
 using MoLibrary.Authority.Authentication;
 using MoLibrary.Authority.Implements.Security;
-using MoLibrary.Authority.Modules;
 using MoLibrary.Authority.Security;
+using MoLibrary.Core.Module;
+using MoLibrary.Core.Module.Models;
+using MoLibrary.Tool.MoResponse;
 
-namespace MoLibrary.Authority;
+namespace MoLibrary.Authority.Modules;
 
-public static class MoJwtBuilderExtensions
+public class CustomAuthorizeFilter : IAuthorizationFilter
 {
-    public static void AddMoSystemUser<T>(this IServiceCollection services, T curSystemEnum, Action<MoSystemUserOptions>? action = null) where T : struct, Enum
+    public void OnAuthorization(AuthorizationFilterContext context)
     {
-        services.Configure((MoSystemUserOptions o) =>
+        if (context.HttpContext.User.Identity == null)
         {
-            o.SetCurSystemUser(curSystemEnum);
-            action?.Invoke(o);
-        });
-        services.AddSingleton<IMoSystemUserManager, MoSystemUserManager>();
-    }
-
-    private static bool _hasAddMoSystemUser;
-    private static void TryAddMoSystemUser<T>(this IServiceCollection services, T curSystemEnum, Action<MoSystemUserOptions>? action = null) where T : struct, Enum
-    {
-        if(_hasAddMoSystemUser) return;
-        services.AddMoSystemUser(curSystemEnum, action);
-        _hasAddMoSystemUser = true;
-    }
-    /// <summary>
-    /// 注册JWT服务
-    /// </summary>
-    /// <param name="services"></param>
-    /// <param name="configAction"></param>
-    public static void AddMoAuthenticationJwt(this IServiceCollection services, Action<ModuleAuthenticationOption>? configAction = null)
-    {
-        var config = new ModuleAuthenticationOption();
-        if (configAction != null)
-        {
-            services.Configure(configAction);
-            configAction.Invoke(config);
+            return;
         }
 
-        if (config.IsDebugging)
+        if (!context.HttpContext.User.Identity.IsAuthenticated)
+        {
+            return;
+        }
+    }
+}
+public class ModuleAuthentication(ModuleAuthenticationOption option) : MoModule<ModuleAuthentication, ModuleAuthenticationOption>(option)
+{
+    public override EMoModules CurModuleEnum()
+    {
+        return EMoModules.Authentication;
+    }
+
+    public override Res ConfigureServices(IServiceCollection services)
+    {
+        if (option.IsDebugging)
         {
             //https://aka.ms/IdentityModel/PII
             IdentityModelEventSource.ShowPII = true;
@@ -57,12 +50,7 @@ public static class MoJwtBuilderExtensions
         services.AddSingleton<IMoAuthManager, MoJwtAuthManager>();
         services.AddSingleton<IMoCurrentPrincipalAccessor, MoCurrentPrincipalAccessor>(); //为何用单例就行？
 
-        #region SystemUser
-        
-        services.TryAddMoSystemUser(EMoDefaultSystemUser.System);
 
-        #endregion
-        
         services.AddSingleton<IPasswordCrypto, PasswordCrypto>();
         services.AddAuthentication(x =>
         {
@@ -75,10 +63,10 @@ public static class MoJwtBuilderExtensions
             x.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuer = true,
-                ValidIssuer = config.Issuer,
+                ValidIssuer = option.Issuer,
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey = config.SecurityKey,
-                ValidAudience = config.Audience,
+                IssuerSigningKey = option.SecurityKey,
+                ValidAudience = option.Audience,
                 ValidateAudience = true,
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.FromMinutes(1)
@@ -113,31 +101,14 @@ public static class MoJwtBuilderExtensions
 
         #endregion
 
+        return Res.Ok();
     }
-  
-    /// <summary>
-    /// 使用JWT中间件，必须在CORS中间件之后，不然会使得CORS失效
-    /// </summary>
-    /// <param name="app"></param>
-    public static void UseMoAuthenticationJwt(this IApplicationBuilder app)
+
+
+    public override Res ConfigureApplicationBuilder(IApplicationBuilder app)
     {
         app.UseAuthentication();
         app.UseAuthorization();
-    }
-}
-
-public class CustomAuthorizeFilter : IAuthorizationFilter
-{
-    public void OnAuthorization(AuthorizationFilterContext context)
-    {
-        if (context.HttpContext.User.Identity == null)
-        {
-            return;
-        }
-
-        if (!context.HttpContext.User.Identity.IsAuthenticated)
-        {
-            return;
-        }
+        return Res.Ok();
     }
 }

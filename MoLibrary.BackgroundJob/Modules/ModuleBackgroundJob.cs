@@ -26,15 +26,7 @@ using MoLibrary.Core.Module.Models;
 
 namespace MoLibrary.BackgroundJob.Modules;
 
-public static class ModuleBuilderExtensionsAuthorization
-{
-    public static ModuleGuideBackgroundJob AddMoModuleBackgroundJob(this IServiceCollection services, Action<ModuleOptionBackgroundJob>? action = null)
-    {
-        return new ModuleGuideBackgroundJob().Register(action);
-    }
-}
-
-public class ModuleBackgroundJob(ModuleOptionBackgroundJob option) : MoModule<ModuleBackgroundJob, ModuleOptionBackgroundJob>(option), IWantIterateBusinessTypes
+public class ModuleBackgroundJob(ModuleBackgroundJobOption option) : MoModule<ModuleBackgroundJob, ModuleBackgroundJobOption>(option), IWantIterateBusinessTypes
 {
     private readonly List<Type> _backgroundWorkerTypes = [];
     private readonly List<Type> _backgroundJobTypes = [];
@@ -309,10 +301,4 @@ public class ModuleBackgroundJob(ModuleOptionBackgroundJob option) : MoModule<Mo
     }
 
    
-}
-
-public class ModuleGuideBackgroundJob : MoModuleGuide<ModuleBackgroundJob, ModuleOptionBackgroundJob, ModuleGuideBackgroundJob>
-{
-
-
 }

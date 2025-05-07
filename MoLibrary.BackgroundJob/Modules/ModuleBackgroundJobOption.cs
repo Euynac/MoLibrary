@@ -2,7 +2,7 @@ using MoLibrary.Core.Module.Interfaces;
 
 namespace MoLibrary.BackgroundJob.Modules;
 
-public class ModuleOptionBackgroundJob : IMoModuleOption<ModuleBackgroundJob>
+public class ModuleBackgroundJobOption : IMoModuleOption<ModuleBackgroundJob>
 {
     /// <summary>
     /// 除Entry程序集之外，额外自动注册涉及的程序集

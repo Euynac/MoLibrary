@@ -15,7 +15,7 @@ namespace MoLibrary.BackgroundJob.MoTaskScheduler;
 public class MoTaskSchedulerBackgroundWorkerManager(
     IMoServiceProvider serviceProvider,
     ILogger<MoTaskSchedulerBackgroundWorkerManager> logger,
-    IMoTaskScheduler scheduler, IOptions<ModuleOptionBackgroundJob> options)
+    IMoTaskScheduler scheduler, IOptions<ModuleBackgroundJobOption> options)
     : IMoSimpleBackgroundWorkerManager, IDisposable
 {
     protected IServiceProvider ServiceProvider { get; } = serviceProvider.ServiceProvider;

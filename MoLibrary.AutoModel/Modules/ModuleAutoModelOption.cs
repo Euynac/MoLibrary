@@ -1,8 +1,8 @@
 using MoLibrary.Core.Module.Interfaces;
 
-namespace MoLibrary.AutoModel.Configurations;
+namespace MoLibrary.AutoModel.Modules;
 
-public class ModuleOptionAutoModel : IMoModuleOption<ModuleAutoModel>
+public class ModuleAutoModelOption : IMoModuleOption<ModuleAutoModel>
 {
     /// <summary>
     /// 全局主动模式（仅使用了AutoField标签的字段才会启用自动模型功能）

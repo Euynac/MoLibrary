@@ -8,6 +8,7 @@ using MoLibrary.AutoModel.Implements;
 using MoLibrary.AutoModel.Configurations;
 using MoLibrary.AutoModel.Interfaces;
 using MoLibrary.Tool.Extensions;
+using MoLibrary.AutoModel.Modules;
 
 namespace MoLibrary.AutoModel;
 
@@ -23,7 +24,7 @@ public static class AutoModelBuilderExtensions
     /// <param name="modelSetting"></param>
     /// <param name="normalizerSetting"></param>
     /// <returns></returns>
-    public static IServiceCollection AddAutoModel(this IServiceCollection services, Action<ModuleOptionAutoModel>? modelSetting = null, Action<AutoModelExpressionOptions>? normalizerSetting = null)
+    public static IServiceCollection AddAutoModel(this IServiceCollection services, Action<ModuleAutoModelOption>? modelSetting = null, Action<AutoModelExpressionOptions>? normalizerSetting = null)
     {
         //add options using IOption pattern.
         if (modelSetting != null)

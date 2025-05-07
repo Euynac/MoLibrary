@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MoLibrary.AutoModel;
+using MoLibrary.AutoModel.Modules;
 using MoLibrary.Core.Module;
 using MoLibrary.DependencyInjection;
 using MoLibrary.DependencyInjection.DynamicProxy.DefaultInterceptors;
@@ -50,7 +51,7 @@ public class ModuleDomainDrivenDesign(ModuleOptionDomainDrivenDesign option) : M
 
     public override void ClaimDependencies()
     {
-        DependsOnModule<ModuleGuideAutoModel>().Register();
+        DependsOnModule<ModuleAutoModelGuide>().Register();
         DependsOnModule<ModuleGuideDependencyInjection>().Register();
     }
 }
