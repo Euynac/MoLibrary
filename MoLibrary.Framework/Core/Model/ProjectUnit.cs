@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using MoLibrary.Framework.Core.Attributes;
 using MoLibrary.Framework.Core.Interfaces;
+using MoLibrary.Framework.Modules;
 
 namespace MoLibrary.Framework.Core.Model;
 
@@ -38,7 +39,7 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
 {
     private static Func<FactoryContext, ProjectUnit?>? _factories;
     internal static ILogger Logger => Option.Logger ?? NullLogger.Instance;
-    internal static MonitorOption Option { get; set; } = null!;
+    internal static ModuleFrameworkMonitorOption Option { get; set; } = null!;
 
     /// <summary>
     /// 默认命名惯例规则

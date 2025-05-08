@@ -9,9 +9,9 @@ using Microsoft.OpenApi.Models;
 using MoLibrary.Authority.Security;
 using MoLibrary.Core.GlobalJson;
 using MoLibrary.SignalR.Interfaces;
+using MoLibrary.SignalR.Modules;
 using SignalRSwaggerGen;
 using SignalRSwaggerGen.Attributes;
-using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace MoLibrary.SignalR;
 
@@ -68,10 +68,10 @@ public static class SignalRBuilderExtensions
     ///     增加SignalR Hub以及相关接口
     /// </summary>
     public static void MapMoHub<THubServer>(this IEndpointRouteBuilder endpoints,
-        [StringSyntax("Route")] string pattern, Action<MoHubOptions>? optionAction = null) where THubServer : Hub
+        [StringSyntax("Route")] string pattern, Action<ModuleSignalROption>? optionAction = null) where THubServer : Hub
     {
         if (_hasAdd is false) throw new Exception($"未执行{nameof(AddMoSignalR)}");
-        var option = new MoHubOptions();
+        var option = new ModuleSignalROption();
         optionAction?.Invoke(option);
 
         endpoints.MapHub<THubServer>(pattern);
@@ -103,12 +103,6 @@ public static class SignalRBuilderExtensions
             return operation;
         });
     }
-}
-
-public class MoHubOptions
-{
-    public string ServerMethodsRoute { get; set; } = "/signalr/hubs";
-    public string SwaggerGroupName { get; set; } = "SignalR功能";
 }
 
 public class MoUserIdProvider : IUserIdProvider

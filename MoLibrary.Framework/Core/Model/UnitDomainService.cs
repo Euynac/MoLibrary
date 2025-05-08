@@ -1,4 +1,5 @@
 using MoLibrary.DomainDrivenDesign;
+using MoLibrary.Framework.Modules;
 
 namespace MoLibrary.Framework.Core.Model;
 

@@ -1,6 +1,7 @@
 using Medallion.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Locker.DistributedLocking;
+using MoLibrary.Locker.Modules;
 using MoLibrary.Locker.Providers.Dapr;
 using MoLibrary.Locker.Providers.Local;
 using MoLibrary.Locker.Providers.Medallion;
@@ -17,9 +18,9 @@ public static class ServicesCollectionExtensions
     /// <returns>The service collection for chaining.</returns>
     public static IServiceCollection AddMoDistributedLocking(
         this IServiceCollection services,
-        Action<MoDistributedLockOptions>? configure = null)
+        Action<ModuleLockerOption>? configure = null)
     {
-        services.Configure<MoDistributedLockOptions>(options =>
+        services.Configure<ModuleLockerOption>(options =>
         {
             configure?.Invoke(options);
         });

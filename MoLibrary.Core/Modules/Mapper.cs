@@ -1,28 +1,40 @@
+using System.Linq.Expressions;
+using System.Reflection;
 using ExpressionDebugger;
 using Mapster;
 using MapsterMapper;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
-using MoLibrary.Tool.MoResponse;
-using System.Linq.Expressions;
-using System.Reflection;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
-using MoLibrary.Core.Modules;
+using MoLibrary.Core.Features.MoMapper;
+using MoLibrary.Core.Module;
+using MoLibrary.Core.Module.Interfaces;
+using MoLibrary.Core.Module.Models;
+using MoLibrary.Tool.MoResponse;
 
-namespace MoLibrary.Core.Features.MoMapper;
+namespace MoLibrary.Core.Modules;
 
-public static class ServiceCollectionExtensions
+
+
+public static class ModuleMapperBuilderExtensions
 {
-    private static bool _hasInit;//TODO 后续转为Module自动判断。注意需要区分开发者调用和内部module调用注册的优先级。另外还需要支持内部module调用设置Option的情况，与开发者设定要合并处理
-
-    public static void AddMoMapper(this IServiceCollection services, Action<ModuleMapperOption>? action = null)
+    public static ModuleMapperGuide AddMoModuleMapper(this IServiceCollection services,
+        Action<ModuleMapperOption>? action = null)
     {
-        if(_hasInit)return;
-        _hasInit = true;
-        var option = new ModuleMapperOption();
-        action?.Invoke(option);
-        
+        return new ModuleMapperGuide().Register(action);
+    }
+}
+
+public class ModuleMapper(ModuleMapperOption option) : MoModule<ModuleMapper, ModuleMapperOption>(option)
+{
+    public override EMoModules CurModuleEnum()
+    {
+        return EMoModules.Mapper;
+    }
+
+    public override Res ConfigureServices(IServiceCollection services)
+    {
         if (option.DebugMapper)
         {
             //https://github.com/MapsterMapper/Mapster/wiki/Debugging
@@ -46,20 +58,16 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(TypeAdapterConfig.GlobalSettings);
         services.AddScoped<IMapper, ServiceMapper>();
         services.AddTransient<IMoMapper, MapsterProviderMoObjectMapper>();
+        return Res.Ok();
     }
 
-    /// <summary>
-    /// Mapper状态中间件
-    /// </summary>
-    /// <param name="app"></param>
-    /// <param name="groupName"></param>
-    public static void UseEndpointsMoMapper(this IApplicationBuilder app, string? groupName = "Mapper")
+    public override Res ConfigureApplicationBuilder(IApplicationBuilder app)
     {
         app.UseEndpoints(endpoints =>
         {
             var tagGroup = new List<OpenApiTag>
             {
-                new() { Name = groupName, Description = "Mapper相关接口" }
+                new() { Name = option.GetSwaggerGroupName(), Description = "Mapper相关接口" }
             };
             endpoints.MapGet("/mapper/status", async (HttpResponse response, HttpContext context) =>
             {
@@ -83,5 +91,13 @@ public static class ServiceCollectionExtensions
                 return operation;
             });
         });
+        return base.ConfigureApplicationBuilder(app);
     }
 }
+
+public class ModuleMapperGuide : MoModuleGuide<ModuleMapper, ModuleMapperOption, ModuleMapperGuide>
+{
+
+
+}
+

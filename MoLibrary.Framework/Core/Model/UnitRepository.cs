@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using MoLibrary.Framework.Modules;
 using MoLibrary.Repository.EntityInterfaces;
 using MoLibrary.Repository.Interfaces;
 using MoLibrary.Tool.Extensions;
