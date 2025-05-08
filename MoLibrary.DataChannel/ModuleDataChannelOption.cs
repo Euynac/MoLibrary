@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
-using MoLibrary.Core.Module.ModuleController;
+using MoLibrary.Core.Module.Interfaces;
+using MoLibrary.DataChannel.Modules;
 
 namespace MoLibrary.DataChannel;
 
@@ -8,7 +9,7 @@ namespace MoLibrary.DataChannel;
 /// 用于配置数据通道的全局设置和选项
 /// 实现了IMoModuleOptions接口，支持模块化配置
 /// </summary>
-public class DataChannelSetting : IMoModuleOptions
+public class ModuleDataChannelOption : MoModuleControllerOption<ModuleDataChannel>
 {
     /// <summary>
     /// 日志记录器实例

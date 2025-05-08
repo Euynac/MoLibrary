@@ -3,7 +3,7 @@ using MoLibrary.Core.Module.Interfaces;
 
 namespace MoLibrary.RegisterCentre.Modules;
 
-public class ModuleRegisterCentreOption : IMoModuleControllerOption<ModuleRegisterCentre>
+public class ModuleRegisterCentreOption : MoModuleControllerOption<ModuleRegisterCentre>
 {
     /// <summary>
     /// 日志记录器，不配置默认使用ConsoleLogger
@@ -36,6 +36,4 @@ public class ModuleRegisterCentreOption : IMoModuleControllerOption<ModuleRegist
     /// 客户端重试频率
     /// </summary>
     public int RetryDuration { get; set; } = 5;
-
-    public string? SwaggerGroupName { get; set; }
 }

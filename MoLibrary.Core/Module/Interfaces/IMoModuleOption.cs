@@ -13,10 +13,3 @@ public interface IMoModuleOption<TModule> : IMoModuleOption where TModule : IMoM
 public interface IMoModuleExtraOption<TModule> : IMoModuleOption<TModule> where TModule : IMoModule
 {
 }
-
-public interface IMoModuleControllerOption<TModule> : IMoModuleOption<TModule> where TModule : IMoModule
-{
-    public string? SwaggerGroupName { get; set; }
-
-    public string GetSwaggerGroupName() => SwaggerGroupName ?? nameof(TModule);
-}

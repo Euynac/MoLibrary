@@ -1,13 +1,11 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module.ModuleController;
 using MoLibrary.DataChannel.Dashboard.Controllers;
 using MoLibrary.DataChannel.Interfaces;
 using MoLibrary.DataChannel.Services;
-using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.DataChannel.Extensions;
 
@@ -25,7 +23,7 @@ public static class ServiceCollectionExtensions
     /// <param name="action">可选的配置委托，用于自定义DataChannel设置</param>
     /// <returns>配置后的服务集合</returns>
     /// <exception cref="InvalidOperationException">当配置无效时抛出</exception>
-    public static IServiceCollection AddDataChannel<TBuilderEntrance>(this IServiceCollection services, Action<DataChannelSetting>? action = null) where TBuilderEntrance : class, ISetupPipeline
+    public static IServiceCollection AddDataChannel<TBuilderEntrance>(this IServiceCollection services, Action<ModuleDataChannelOption>? action = null) where TBuilderEntrance : class, ISetupPipeline
     {
         services.ConfigActionWrapper(action, out var setting);
 
