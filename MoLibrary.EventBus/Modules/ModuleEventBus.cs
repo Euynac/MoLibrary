@@ -8,39 +8,40 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using MoLibrary.Core.GlobalJson.Interfaces;
+using MoLibrary.Core.Module;
+using MoLibrary.Core.Module.Models;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.EventBus.Attributes;
 using MoLibrary.EventBus.Dapr;
-using MoLibrary.EventBus.Modules;
 using MoLibrary.Tool.Extensions;
+using MoLibrary.Tool.MoResponse;
 
-namespace MoLibrary.EventBus;
+namespace MoLibrary.EventBus.Modules;
 
-public static class MoEventBusBuilderExtensions
+public class ModuleEventBus(ModuleEventBusOption option) : MoModule<ModuleEventBus, ModuleEventBusOption>(option)
 {
-    /// <summary>
-    /// 注册MoEventBus服务
-    /// </summary>
-    public static void AddMoEventBusServices(this IServiceCollection services, Action<ModuleEventBusOption> configAction)
+    public override EMoModules CurModuleEnum()
     {
-        services.Configure<ModuleEventBusOption>(configAction.Invoke);
+        return EMoModules.EventBus;
+    }
+
+    public override Res ConfigureServices(IServiceCollection services)
+    {
         services.AddSingleton<IMoLocalEventBus, LocalEventBus>();
         services.AddSingleton<IMoDistributedEventBus, DaprDistributedEventBus>();
         services.AddSingleton<DaprDistributedEventBus>();
         services.AddSingleton<LocalEventBus>();
         services.AddSingleton<IEventHandlerInvoker, EventHandlerInvoker>();
+        return Res.Ok();
     }
-
     private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-    /// <summary>
-    /// 使用MoEventBus中间件
-    /// </summary>
-    public static void UseMoEventBus(this IApplicationBuilder app)
+
+    public override Res ConfigureApplicationBuilder(IApplicationBuilder app)
     {
         app.Use(async (context, next) =>
         {
@@ -59,31 +60,27 @@ public static class MoEventBusBuilderExtensions
             var originalResponse = await new StreamReader(responseBody).ReadToEndAsync();
             responseBody.Seek(0, SeekOrigin.Begin);
 
-            if(string.IsNullOrWhiteSpace(originalResponse)) return;
+            if (string.IsNullOrWhiteSpace(originalResponse)) return;
 
             var originJson = JsonSerializer.Deserialize<List<MoSubscription>>(originalResponse, _jsonSerializerOptions);
 
             var option = context.RequestServices.GetRequiredService<IOptions<DistributedEventBusOptions>>().Value;
             var busOption = context.RequestServices.GetRequiredService<IOptions<ModuleEventBusOption>>().Value;
-            
+
 
             originJson ??= [];
             originJson.AddRange(MoSubscription.GetMoSubscriptions(option, busOption));
-            
+
             context.Response.Body = originalBodyStream;
             await context.Response.WriteAsJsonAsync(originJson, _jsonSerializerOptions);
 
 
         });
-    }
-
-    public static void UseEndpointsMoEventBus(this IApplicationBuilder app, string? groupName = "Dapr")
-    {
         app.UseEndpoints(endpoints =>
         {
             var tagGroup = new List<OpenApiTag>
             {
-                new() { Name = groupName, Description = "Dapr相关接口" }
+                new() { Name = option.GetSwaggerGroupName(), Description = "Dapr相关接口" }
             };
             var options = app.ApplicationServices.GetRequiredService<IOptions<ModuleEventBusOption>>().Value;
 
@@ -143,8 +140,9 @@ public static class MoEventBusBuilderExtensions
                 return operation;
             });
         });
+
+        return base.ConfigureApplicationBuilder(app);
     }
-  
 }
 /// <summary>
 /// This class defines subscribe endpoint response
