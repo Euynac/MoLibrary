@@ -7,6 +7,7 @@ using MoLibrary.Configuration.Dashboard.Interfaces;
 using MoLibrary.Configuration.Dashboard.Model;
 using MoLibrary.Core.Extensions;
 using MoLibrary.RegisterCentre;
+using MoLibrary.RegisterCentre.Modules;
 using MoLibrary.Repository.Transaction;
 using MoLibrary.Tool.MoResponse;
 
@@ -142,7 +143,7 @@ public static class MoConfigurationDashboardBuilderExtensions
     }
 
     public static void AddMoConfigurationDashboardClient<TServer, TClient>(
-        this IServiceCollection services, Action<MoRegisterCentreSetting>? action = null)
+        this IServiceCollection services, Action<ModuleRegisterCentreOption>? action = null)
         where TServer : class, IRegisterCentreServerConnector
         where TClient : class, IRegisterCentreClient
     {

@@ -19,7 +19,8 @@ public enum EMoModules
     DomainDrivenDesign,
     Configuration,
     Authentication,
-    ConfigurationDashboard
+    ConfigurationDashboard,
+    RegisterCentre
 }
 
 

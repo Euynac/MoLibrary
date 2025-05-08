@@ -1,9 +1,11 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using MoLibrary.RegisterCentre.Modules;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.RegisterCentre;
 
-public abstract class MoRegisterCentreServerConnectorBase(IRegisterCentreClient client, ILogger<MoRegisterCentreServerConnectorBase> logger) : IRegisterCentreServerConnector
+public abstract class MoRegisterCentreServerConnectorBase(IRegisterCentreClient client, ILogger<MoRegisterCentreServerConnectorBase> logger, IOptions<ModuleRegisterCentreOption> option) : IRegisterCentreServerConnector
 {
     public abstract Task<Res> Register(RegisterServiceStatus req);
 
@@ -14,7 +16,7 @@ public abstract class MoRegisterCentreServerConnectorBase(IRegisterCentreClient 
     public virtual async Task DoingRegister()
     {
         await Task.Delay(3000);
-        var retryTimes = MoRegisterCentreManager.Setting.ClientRetryTimes;
+        var retryTimes = option.Value.ClientRetryTimes;
         while (retryTimes > 0)
         {
             try
@@ -36,7 +38,7 @@ public abstract class MoRegisterCentreServerConnectorBase(IRegisterCentreClient 
             }
             finally
             {
-                await Task.Delay(MoRegisterCentreManager.Setting.RetryDuration*1000);
+                await Task.Delay(option.Value.RetryDuration*1000);
                 retryTimes--;
             }
         }
@@ -61,7 +63,7 @@ public abstract class MoRegisterCentreServerConnectorBase(IRegisterCentreClient 
             }
             finally
             {
-                await Task.Delay(MoRegisterCentreManager.Setting.HeartbeatDuration*1000);
+                await Task.Delay(option.Value.HeartbeatDuration*1000);
             }
         }
     }

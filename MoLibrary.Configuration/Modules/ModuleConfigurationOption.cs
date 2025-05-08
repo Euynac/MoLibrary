@@ -6,7 +6,7 @@ using MoLibrary.Core.Module.Interfaces;
 
 namespace MoLibrary.Configuration.Modules;
 
-public class ModuleConfigurationOption : IMoModuleOption<ModuleConfiguration>, IMoModuleControllerOption<ModuleConfiguration>
+public class ModuleConfigurationOption : IMoModuleControllerOption<ModuleConfiguration>
 {
 
     /// <summary>
