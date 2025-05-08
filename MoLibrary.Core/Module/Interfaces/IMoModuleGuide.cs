@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Module.Models;
 
 namespace MoLibrary.Core.Module.Interfaces;
@@ -29,7 +28,14 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     {
         return Array.Empty<string>();
     }
-
+    protected TOtherModuleGuide DependsOnModule<TOtherModuleGuide>()
+        where TOtherModuleGuide : MoModuleGuide, new()
+    {
+        return new TOtherModuleGuide()
+        {
+            GuideFrom = GuideFrom
+        };
+    }
     /// <summary>
     /// 发出模块注册请求
     /// </summary>
@@ -39,7 +45,7 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     {
         if (config != null)
         {
-            ConfigureOption(config);
+            ConfigureModuleOption(config);
         }
 
         MoModuleRegisterCentre.RegisterModule<TModule, TModuleOption>();
@@ -48,7 +54,7 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     
     protected void ConfigureExtraServices(string key, Action<ModuleRegisterContext<TModuleOption>> context, int order)
     {
-        var request = new ModuleRegisterRequest(key) { Order = order };
+        var request = new ModuleRegisterRequest(key) {Order = order, RequestFrom = GuideFrom};
         request.SetConfigureContext(context);
         MoModuleRegisterCentre.RegisterModule<TModule, TModuleOption>(request);
     }
@@ -57,16 +63,17 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     {
         ConfigureExtraServices(key, context, (int)order);
     }
-
+    public TModuleGuideSelf ConfigureModuleOption(Action<TModuleOption> optionAction, EMoModuleOrder order = EMoModuleOrder.Normal)
+    {
+        return ConfigureOption(optionAction, (int)order);
+    }
     public TModuleGuideSelf ConfigureOption<TOption>(Action<TOption> optionAction, int order) where TOption : class, IMoModuleOption, new()
     {
-
         MoModuleRegisterCentre.RegisterModule<TModule, TModuleOption>();
         MoModuleRegisterCentre.AddConfigureAction<TModule, TOption>(order, optionAction, GuideFrom);
         return (TModuleGuideSelf) this;
     }
-
-    public TModuleGuideSelf ConfigureOption<TOption>(Action<TOption> optionAction, EMoModuleOrder order = EMoModuleOrder.Normal) where TOption : class, IMoModuleOption<TModule>, new()
+    public TModuleGuideSelf ConfigureExtraOption<TOption>(Action<TOption> optionAction, EMoModuleOrder order = EMoModuleOrder.Normal) where TOption : class, IMoModuleOption<TModule>, new()
     {
         return ConfigureOption(optionAction, (int)order);
     }

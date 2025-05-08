@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.OpenApi.Models;
 using MoLibrary.Core.Extensions;
+using MoLibrary.RegisterCentre.Modules;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.RegisterCentre;
@@ -20,11 +21,11 @@ public static class MoRegisterCentreExtensions
     public static void AddMoRegisterCentre(this IServiceCollection services)
     {
         if (MoRegisterCentreManager.HasSetServerOrClient) return;
-        var setting = new MoRegisterCentreSetting
+        var setting = new ModuleRegisterCentreOption
         {
             ThisIsCentreServer = true
         };
-        MoRegisterCentreManager.Setting = setting;
+        MoRegisterCentreManager.Option = setting;
 
         services.TryAddSingleton<IRegisterCentreServer, MemoryProviderForRegisterCentre>();
         services.TryAddSingleton<IRegisterCentreClientConnector, DaprHttpForConnectClient>();
@@ -36,7 +37,7 @@ public static class MoRegisterCentreExtensions
     /// <param name="app"></param>
     public static void UseMoRegisterCentre(this IApplicationBuilder app)
     {
-        if (MoRegisterCentreManager.Setting.ThisIsCentreClient) return;
+        if (MoRegisterCentreManager.Option.ThisIsCentreClient) return;
     }
 
 
@@ -47,7 +48,7 @@ public static class MoRegisterCentreExtensions
     /// <param name="groupName"></param>
     public static void UseEndpointsMoRegisterCentre(this IApplicationBuilder app, string? groupName = "注册中心")
     {
-        if (MoRegisterCentreManager.Setting.ThisIsCentreClient) return;
+        if (MoRegisterCentreManager.Option.ThisIsCentreClient) return;
         app.UseEndpoints(endpoints =>
         {
             var tagGroup = new List<OpenApiTag> { new() { Name = groupName, Description = "注册中心" } };
@@ -97,16 +98,16 @@ public static class MoRegisterCentreExtensions
     /// </summary>
     /// <returns></returns>
     public static void AddMoRegisterCentreClient<TServer, TClient>(this IServiceCollection services,
-        Action<MoRegisterCentreSetting>? action = null)
+        Action<ModuleRegisterCentreOption>? action = null)
         where TServer : class, IRegisterCentreServerConnector where TClient : class, IRegisterCentreClient
     {
         if (MoRegisterCentreManager.HasSetServerOrClient) return;
-        var setting = new MoRegisterCentreSetting
+        var setting = new ModuleRegisterCentreOption
         {
             ThisIsCentreClient = true
         };
         action?.Invoke(setting);
-        MoRegisterCentreManager.Setting = setting;
+        MoRegisterCentreManager.Option = setting;
         
         services.TryAddSingleton<IRegisterCentreServerConnector, TServer>();
         services.TryAddSingleton<IRegisterCentreClient, TClient>();
@@ -118,7 +119,7 @@ public static class MoRegisterCentreExtensions
     /// <param name="app"></param>
     public static void UseMoRegisterCentreClient(this IApplicationBuilder app)
     {
-        if (MoRegisterCentreManager.Setting.ThisIsCentreServer) return;
+        if (MoRegisterCentreManager.Option.ThisIsCentreServer) return;
 
     }
 
@@ -130,7 +131,7 @@ public static class MoRegisterCentreExtensions
     /// <param name="groupName"></param>
     public static void UseEndpointsMoRegisterCentreClient(this IApplicationBuilder app, string? groupName = "注册中心")
     {
-        if (MoRegisterCentreManager.Setting.ThisIsCentreServer) return;
+        if (MoRegisterCentreManager.Option.ThisIsCentreServer) return;
         app.UseEndpoints(endpoints =>
         {
             var tagGroup = new List<OpenApiTag> { new() { Name = groupName, Description = "注册中心客户端相关内置接口" } };

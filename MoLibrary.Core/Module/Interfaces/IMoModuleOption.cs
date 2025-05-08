@@ -14,7 +14,7 @@ public interface IMoModuleExtraOption<TModule> : IMoModuleOption<TModule> where 
 {
 }
 
-public interface IMoModuleControllerOption<TModule> : IMoModuleOption where TModule : IMoModule
+public interface IMoModuleControllerOption<TModule> : IMoModuleOption<TModule> where TModule : IMoModule
 {
     public string? SwaggerGroupName { get; set; }
 

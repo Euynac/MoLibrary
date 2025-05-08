@@ -1,74 +1,89 @@
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using MoLibrary.Configuration.Dashboard.Interfaces;
-using MoLibrary.Configuration.Modules;
+using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.RegisterCentre;
+using MoLibrary.RegisterCentre.Modules;
 
 namespace MoLibrary.Configuration.Dashboard.Modules;
 
-/// <summary>
-/// Guide for configuring the MoConfiguration Dashboard module
-/// </summary>
-public class ModuleConfigurationDashboardGuide : ModuleConfigurationGuide<ModuleConfigurationDashboard, ModuleConfigurationDashboardOption>
+public class ModuleConfigurationDashboardGuide : MoModuleGuide<ModuleConfigurationDashboard,
+    ModuleConfigurationDashboardOption, ModuleConfigurationDashboardGuide>
 {
+    private bool _isDashboard;
+
+    protected override string[] GetRequestedConfigMethodKeys()
+    {
+        return [nameof(AddMoConfigurationDashboard)];
+    }
+
+
     /// <summary>
-    /// Sets the dashboard implementation type
+    /// 注册默认MoConfigurationDashboard
     /// </summary>
-    /// <typeparam name="TDashboard">Type of dashboard implementation</typeparam>
-    /// <returns>The configuration guide for fluent chaining</returns>
-    public ModuleConfigurationDashboardGuide UseDashboard<TDashboard>()
+    /// <returns></returns>
+    /// <exception cref="InvalidOperationException"></exception>
+    public ModuleConfigurationDashboardGuide AddMoConfigurationDashboard()
+    {
+        _isDashboard = true;
+        ConfigureModuleOption(o => { o.ThisIsDashboard = true; });
+        ConfigureExtraServices(nameof(AddMoConfigurationDashboard),
+            context => { context.Services.AddMoConfigurationDashboard<DefaultArrangeDashboard>(); });
+        return this;
+    }
+
+    /// <summary>
+    /// 注册MoConfigurationDashboard
+    /// </summary>
+    /// <returns></returns>
+    /// <exception cref="InvalidOperationException"></exception>
+    public ModuleConfigurationDashboardGuide AddMoConfigurationDashboard<TDashboard>()
         where TDashboard : class, IMoConfigurationDashboard
     {
-        ConfigureExtraServices(nameof(UseDashboard), ctx =>
+        _isDashboard = true;
+        ConfigureModuleOption(o => { o.ThisIsDashboard = true; });
+        ConfigureExtraServices(nameof(AddMoConfigurationDashboard), context =>
         {
-            Option.DashboardImplementationType = typeof(TDashboard);
+            context.Services.AddSingleton<IMoConfigurationDashboard, TDashboard>();
+            context.Services.AddSingleton<MemoryProviderForConfigCentre>();
+            context.Services.AddSingleton(p =>
+                ((IRegisterCentreServer?) p.GetService(typeof(MemoryProviderForConfigCentre)))!);
+
+            context.Services.AddSingleton(p =>
+                ((IMoConfigurationCentre?) p.GetService(typeof(MemoryProviderForConfigCentre)))!);
+            MoConfigurationManager.Setting.ThisIsDashboard = true;
+            context.Services.AddSingleton<IMoConfigurationStores, MoConfigurationDefaultStore>();
+            context.Services.AddSingleton<IMoConfigurationModifier, MoConfigurationJsonFileModifier>();
         });
         return this;
     }
 
-    /// <summary>
-    /// Sets the configuration store type
-    /// </summary>
-    /// <typeparam name="TStore">Type of configuration store</typeparam>
-    /// <returns>The configuration guide for fluent chaining</returns>
-    public ModuleConfigurationDashboardGuide UseStore<TStore>()
+    public ModuleConfigurationDashboardGuide AddMoConfigurationDashboardStore<TStore>()
         where TStore : class, IMoConfigurationStores
     {
-        ConfigureExtraServices(nameof(UseStore), ctx =>
+        if (!_isDashboard)
         {
-            Option.ConfigurationStoreType = typeof(TStore);
-        });
+            throw new InvalidOperationException("非面板服务无需注册面板仓储接口");
+        }
+
+        ConfigureExtraServices(nameof(AddMoConfigurationDashboardStore),
+            context => { context.Services.Replace(ServiceDescriptor.Transient<IMoConfigurationStores, TStore>()); });
         return this;
     }
 
-    /// <summary>
-    /// Configures the module as a client for connecting to a dashboard
-    /// </summary>
-    /// <typeparam name="TServer">Type of register centre server connector</typeparam>
-    /// <typeparam name="TClient">Type of register centre client</typeparam>
-    /// <returns>The configuration guide for fluent chaining</returns>
-    public ModuleConfigurationDashboardGuide AsClient<TServer, TClient>()
+    public ModuleConfigurationDashboardGuide AddMoConfigurationDashboardClient<TServer, TClient>(
+        Action<ModuleRegisterCentreOption>? action = null)
         where TServer : class, IRegisterCentreServerConnector
         where TClient : class, IRegisterCentreClient
     {
-        ConfigureExtraServices(nameof(AsClient), ctx =>
+        if (_isDashboard) throw new InvalidOperationException("面板服务无需注册面板客户端");
+        DependsOnModule<ModuleRegisterCentreGuide>().Register().SetAsCentreClient<TServer, TClient>();
+        ConfigureExtraServices(nameof(AddMoConfigurationDashboardClient), context =>
         {
-            Option.IsClient = true;
-            Option.RegisterCentreServerConnectorType = typeof(TServer);
-            Option.RegisterCentreClientType = typeof(TClient);
+            context.Services.AddSingleton<IMoConfigurationModifier, MoConfigurationJsonFileModifier>();
         });
         return this;
     }
 
-    /// <summary>
-    /// Sets the group name for OpenAPI documentation
-    /// </summary>
-    /// <param name="groupName">The group name to use</param>
-    /// <returns>The configuration guide for fluent chaining</returns>
-    public ModuleConfigurationDashboardGuide SetOpenApiGroupName(string groupName)
-    {
-        ConfigureExtraServices(nameof(SetOpenApiGroupName), ctx =>
-        {
-            Option.OpenApiGroupName = groupName;
-        });
-        return this;
-    }
-} 
+
+}
