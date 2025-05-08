@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Logging;
 using MoLibrary.DataChannel.Interfaces;
+using MoLibrary.DataChannel.Modules;
 using MoLibrary.DataChannel.Pipeline;
 
 namespace MoLibrary.DataChannel;
@@ -11,13 +12,13 @@ namespace MoLibrary.DataChannel;
 /// </summary>
 public static class DataChannelCentral
 {
-    private static DataChannelSetting? _setting;
+    private static ModuleDataChannelOption? _setting;
     
     /// <summary>
     /// 获取或设置数据通道的全局配置设置
     /// </summary>
     /// <exception cref="InvalidOperationException">当未初始化设置时抛出</exception>
-    internal static DataChannelSetting Setting
+    internal static ModuleDataChannelOption Setting
     {
         get => _setting ?? throw new InvalidOperationException(
             $"Setting is not initialized in {typeof(DataChannelCentral)}. Please register DataExchange first");
