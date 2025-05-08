@@ -78,7 +78,7 @@ public static class SignalRBuilderExtensions
 
         var tagGroup = new List<OpenApiTag>
         {
-            new() { Name = option.SwaggerGroupName, Description = "SignalR相关功能扩展" }
+            new() { Name = option.GetSwaggerGroupName(), Description = "SignalR相关功能扩展" }
         };
         endpoints.MapGet(option.ServerMethodsRoute, async (HttpResponse response, HttpContext context) =>
         {

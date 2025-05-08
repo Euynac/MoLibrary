@@ -40,7 +40,7 @@ public class ModuleAutoModel(ModuleAutoModelOption option) : MoModule<ModuleAuto
         {
             var tagGroup = new List<OpenApiTag>
             {
-                new() { Name = option.SwaggerGroupName, Description = "AutoModel相关接口" }
+                new() { Name = option.GetSwaggerGroupName(), Description = "AutoModel相关接口" }
             };
             endpoints.MapGet("/auto-model/status", async (HttpResponse response, HttpContext context, [FromQuery] string? specificEntity = null) =>
             {

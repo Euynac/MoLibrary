@@ -5,6 +5,7 @@ using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module.ModuleController;
 using MoLibrary.DataChannel.Dashboard.Controllers;
 using MoLibrary.DataChannel.Interfaces;
+using MoLibrary.DataChannel.Modules;
 using MoLibrary.DataChannel.Services;
 
 namespace MoLibrary.DataChannel.Extensions;
