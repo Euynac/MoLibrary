@@ -2,9 +2,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using MoLibrary.Core.Module.Interfaces;
 
-namespace MoLibrary.DependencyInjection;
+namespace MoLibrary.DependencyInjection.Modules;
 
-public class ModuleOptionDependencyInjection : IMoModuleOption<ModuleDependencyInjection>
+public class ModuleDependencyInjectionOption : IMoModuleOption<ModuleDependencyInjection>
 {
     /// <summary>
     /// 相关项目单元所在程序集名，使用名称包含查找。如若不配置，则默认仅扫描Entry程序集。
