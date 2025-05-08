@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.EventBus.Attributes;
+using MoLibrary.EventBus.Modules;
 using MoLibrary.Tool.Utils;
 
 namespace MoLibrary.EventBus.Dapr;
@@ -11,7 +12,7 @@ public class DaprDistributedEventBus(
     IServiceScopeFactory serviceScopeFactory,
     IOptions<DistributedEventBusOptions> distributedEventBusOptions,
     IEventHandlerInvoker eventHandlerInvoker,
-    IOptions<DaprEventBusOptions> daprEventBusOptions,
+    IOptions<ModuleEventBusOption> daprEventBusOptions,
     DaprClient client,
     IMoLocalEventBus localEventBus) : DistributedEventBusBase(serviceScopeFactory,
         distributedEventBusOptions,
@@ -20,7 +21,7 @@ public class DaprDistributedEventBus(
 {
     private readonly DistributedEventBusOptions _distributedEventBusOptions = distributedEventBusOptions.Value;
     public DaprClient Client { get; } = client;
-    protected DaprEventBusOptions DaprEventBusOptions { get; } = daprEventBusOptions.Value;
+    protected ModuleEventBusOption DaprEventBusOptions { get; } = daprEventBusOptions.Value;
     public override ITypeList<IMoEventHandler> GetDefaultHandlers()
     {
         return _distributedEventBusOptions.Handlers;

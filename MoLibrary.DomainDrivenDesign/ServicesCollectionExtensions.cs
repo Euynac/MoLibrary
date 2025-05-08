@@ -3,6 +3,7 @@ using MoLibrary.Core.Extensions;
 using MoLibrary.DependencyInjection.DynamicProxy;
 using MoLibrary.DependencyInjection.DynamicProxy.DefaultInterceptors;
 using MoLibrary.DomainDrivenDesign.Interfaces;
+using MoLibrary.DomainDrivenDesign.Modules;
 using MoLibrary.Logging;
 using MoLibrary.Tool.Extensions;
 
@@ -15,7 +16,7 @@ public static class ServicesCollectionExtensions
     /// </summary>
     /// <param name="services"></param>
     /// <param name="action"></param>
-    public static void AddMoDomainDrivenDesign(this IServiceCollection services, Action<ModuleOptionDomainDrivenDesign>? action = null)
+    public static void AddMoDomainDrivenDesign(this IServiceCollection services, Action<ModuleDomainDrivenDesignOption>? action = null)
     {
         services.ConfigActionWrapper(action, out var config);
 

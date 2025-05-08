@@ -1,28 +1,18 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using MoLibrary.AutoModel;
 using MoLibrary.AutoModel.Modules;
 using MoLibrary.Core.Module;
-using MoLibrary.DependencyInjection;
 using MoLibrary.DependencyInjection.DynamicProxy.DefaultInterceptors;
 using MoLibrary.DependencyInjection.DynamicProxy;
 using MoLibrary.DomainDrivenDesign.Interfaces;
 using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.MoResponse;
-using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
+using MoLibrary.DependencyInjection.Modules;
 
-namespace MoLibrary.DomainDrivenDesign;
+namespace MoLibrary.DomainDrivenDesign.Modules;
 
-public static class ModuleBuilderExtensionsAuthorization
-{
-    public static ModuleGuideDomainDrivenDesign AddMoModuleDomainDrivenDesign(this IServiceCollection services, Action<ModuleOptionDomainDrivenDesign>? action = null)
-    {
-        return new ModuleGuideDomainDrivenDesign().Register(action);
-    }
-}
-
-public class ModuleDomainDrivenDesign(ModuleOptionDomainDrivenDesign option) : MoModuleWithDependencies<ModuleDomainDrivenDesign, ModuleOptionDomainDrivenDesign>(option)
+public class ModuleDomainDrivenDesign(ModuleDomainDrivenDesignOption option) : MoModuleWithDependencies<ModuleDomainDrivenDesign, ModuleDomainDrivenDesignOption>(option)
 {
     public override EMoModules CurModuleEnum()
     {
@@ -52,12 +42,6 @@ public class ModuleDomainDrivenDesign(ModuleOptionDomainDrivenDesign option) : M
     public override void ClaimDependencies()
     {
         DependsOnModule<ModuleAutoModelGuide>().Register();
-        DependsOnModule<ModuleGuideDependencyInjection>().Register();
+        DependsOnModule<ModuleDependencyInjectionGuide>().Register();
     }
-}
-
-public class ModuleGuideDomainDrivenDesign : MoModuleGuide<ModuleDomainDrivenDesign, ModuleOptionDomainDrivenDesign, ModuleGuideDomainDrivenDesign>
-{
-
-
 }
