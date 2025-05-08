@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using MoLibrary.DependencyInjection.AppInterfaces;
 using MoLibrary.DependencyInjection.Attributes;
 using MoLibrary.DependencyInjection.CoreInterfaces;
+using MoLibrary.DependencyInjection.Modules;
 using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.DependencyInjection.Implements;
@@ -13,7 +14,7 @@ namespace MoLibrary.DependencyInjection.Implements;
 /// Provides default implementation for registering dependencies in an assembly or specific types.
 /// Implements the <see cref="IConventionalRegistrar"/> interface.
 /// </summary>
-public class DefaultConventionalRegistrar(ModuleOptionDependencyInjection option) : IConventionalRegistrar
+public class DefaultConventionalRegistrar(ModuleDependencyInjectionOption option) : IConventionalRegistrar
 {
     private ILogger logger => option.Logger;
     

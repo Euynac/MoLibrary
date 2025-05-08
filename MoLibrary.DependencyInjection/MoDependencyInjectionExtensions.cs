@@ -5,24 +5,25 @@ using Microsoft.Extensions.Logging;
 using MoLibrary.DependencyInjection.AppInterfaces;
 using MoLibrary.DependencyInjection.CoreInterfaces;
 using MoLibrary.DependencyInjection.Implements;
+using MoLibrary.DependencyInjection.Modules;
 using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.DependencyInjection;
 
 public static class MoDependencyInjectionExtensions
 {
-    public static IServiceCollection AddMoDependencyInjectionDefaultProvider(this IServiceCollection services, Action<ModuleOptionDependencyInjection>? action = null)
+    public static IServiceCollection AddMoDependencyInjectionDefaultProvider(this IServiceCollection services, Action<ModuleDependencyInjectionOption>? action = null)
     {
         return services.AddMoDependencyInjection<DefaultConventionalRegistrar>(action);
     }
 
     public static IServiceCollection AddMoDependencyInjection<T>(this IServiceCollection services,
-        Action<ModuleOptionDependencyInjection>? action = null) where T : IConventionalRegistrar
+        Action<ModuleDependencyInjectionOption>? action = null) where T : IConventionalRegistrar
     {
         var stopwatch = new Stopwatch();
         stopwatch.Start();
 
-        var setting = new ModuleOptionDependencyInjection();
+        var setting = new ModuleDependencyInjectionOption();
         action?.Invoke(setting);
         var registrar = ActivatorUtilities.CreateInstance<T>(services.BuildServiceProvider(), setting);
 
