@@ -1,8 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc.ApplicationModels;
+using Microsoft.AspNetCore.Mvc.ApplicationModels;
+using MoLibrary.Core.Module.Interfaces;
 
 namespace MoLibrary.Core.Module.ModuleController;
 
-public class ModuleControllerModelConvention<TModuleController>(IMoModuleOptions options) : IApplicationModelConvention where TModuleController : MoModuleControllerBase
+public class ModuleControllerModelConvention<TModuleController>(IMoModuleControllerOption options) : IApplicationModelConvention where TModuleController : MoModuleControllerBase
 {
     public void Apply(ApplicationModel application)
     {

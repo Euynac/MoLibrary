@@ -20,7 +20,8 @@ public enum EMoModules
     Configuration,
     Authentication,
     ConfigurationDashboard,
-    RegisterCentre
+    RegisterCentre,
+    DataChannel
 }
 
 

@@ -2,7 +2,7 @@ using MoLibrary.Core.Module.Interfaces;
 
 namespace MoLibrary.AutoModel.Modules;
 
-public class ModuleAutoModelOption : IMoModuleOption<ModuleAutoModel>, IMoModuleControllerOption<ModuleAutoModel>
+public class ModuleAutoModelOption : MoModuleControllerOption<ModuleAutoModel>
 {
     /// <summary>
     /// 全局主动模式（仅使用了AutoField标签的字段才会启用自动模型功能）
@@ -36,6 +36,4 @@ public class ModuleAutoModelOption : IMoModuleOption<ModuleAutoModel>, IMoModule
     /// 开启对于不支持的字段类型进行异常报错
     /// </summary>
     public bool EnableErrorForUnsupportedFieldTypes { get; set; }
-
-    public string? SwaggerGroupName { get; set; }
 }
