@@ -2,6 +2,7 @@ using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MoLibrary.Repository.EntityInterfaces;
+using MoLibrary.Repository.Modules;
 using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.Repository.EFCoreExtensions;
@@ -18,7 +19,7 @@ public static class ModelBuilderExtensions
         return builder;
     }
 
-    public static ModelBuilder ApplyEntitySeparateConfigurations(this ModelBuilder modelBuilder, MoRepositoryOptions moOptions,
+    public static ModelBuilder ApplyEntitySeparateConfigurations(this ModelBuilder modelBuilder, ModuleRepositoryOption moOptions,
         ILogger? logger = null)
     {
         if (moOptions.DisableEntitySeparateConfiguration) return modelBuilder;
@@ -57,7 +58,7 @@ public static class ModelBuilderExtensions
     /// <param name="logger">Optional logger to log information or errors</param>
     /// <param name="moOptions"></param>
     /// <returns>The same model builder instance</returns>
-    public static ModelBuilder ApplyEntitySelfConfigurations(this ModelBuilder modelBuilder, MoRepositoryOptions moOptions,
+    public static ModelBuilder ApplyEntitySelfConfigurations(this ModelBuilder modelBuilder, ModuleRepositoryOption moOptions,
         ILogger? logger = null)
     {
         if (moOptions.DisableEntitySelfConfiguration) return modelBuilder;

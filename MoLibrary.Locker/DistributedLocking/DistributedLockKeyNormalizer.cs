@@ -1,10 +1,11 @@
-﻿using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Options;
+using MoLibrary.Locker.Modules;
 
 namespace MoLibrary.Locker.DistributedLocking;
 
-public class DistributedLockKeyNormalizer(IOptions<MoDistributedLockOptions> options) : IDistributedLockKeyNormalizer
+public class DistributedLockKeyNormalizer(IOptions<ModuleLockerOption> options) : IDistributedLockKeyNormalizer
 {
-    protected MoDistributedLockOptions Options { get; } = options.Value;
+    protected ModuleLockerOption Options { get; } = options.Value;
 
     public virtual string NormalizeKey(string name)
     {

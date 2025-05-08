@@ -21,7 +21,12 @@ public enum EMoModules
     Authentication,
     ConfigurationDashboard,
     RegisterCentre,
-    DataChannel
+    DataChannel,
+    FrameworkMonitor,
+    Locker,
+    UnitOfWork,
+    Mapper,
+    SignalR
 }
 
 

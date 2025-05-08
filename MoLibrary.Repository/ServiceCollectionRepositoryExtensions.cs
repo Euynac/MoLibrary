@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -9,6 +9,7 @@ using MoLibrary.Logging;
 using MoLibrary.Repository.EntityInterfaces;
 using MoLibrary.Repository.Extensions;
 using MoLibrary.Repository.Interfaces;
+using MoLibrary.Repository.Modules;
 using MoLibrary.Repository.Registrar;
 using MoLibrary.Repository.Transaction;
 using MoLibrary.Tool.Extensions;
@@ -56,12 +57,12 @@ public static class MoEfCoreServiceCollectionExtensions
 
 
     public static IServiceCollection AddMoDbContext<TDbContext>(
-        this IServiceCollection services, Action<IServiceProvider, DbContextOptionsBuilder> optionsAction, Action<MoRepositoryOptions>? moOptionsAction = null)
+        this IServiceCollection services, Action<IServiceProvider, DbContextOptionsBuilder> optionsAction, Action<ModuleRepositoryOption>? moOptionsAction = null)
         where TDbContext : MoDbContext<TDbContext>
     {
         services.AddMoMapper();
 
-        var moOptions = new MoRepositoryOptions();
+        var moOptions = new ModuleRepositoryOption();
 
         if (moOptionsAction != null)
         {

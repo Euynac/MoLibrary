@@ -1,4 +1,5 @@
 using MoLibrary.EventBus.Events;
+using MoLibrary.Framework.Modules;
 using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.Framework.Core.Model;

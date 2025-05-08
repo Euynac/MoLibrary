@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using MoLibrary.Repository.EFCoreExtensions;
+using MoLibrary.Repository.Modules;
 using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.Repository.EntityInterfaces;
@@ -25,7 +26,7 @@ public static class EntityTypeBuilderExtensions
         {
             b.Property(nameof(IHasConcurrencyStamp.ConcurrencyStamp))
                 .IsConcurrencyToken()
-                .HasMaxLength(MoRepositoryOptions.ConcurrencyStampMaxLength)
+                .HasMaxLength(ModuleRepositoryOption.ConcurrencyStampMaxLength)
                 .HasColumnName(nameof(IHasConcurrencyStamp.ConcurrencyStamp));
         }
     }

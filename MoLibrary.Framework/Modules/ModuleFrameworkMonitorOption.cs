@@ -1,9 +1,11 @@
 using Microsoft.Extensions.Logging;
+using MoLibrary.Core.Module.Interfaces;
+using MoLibrary.Framework.Core.Model;
 using MoLibrary.Tool.Extensions;
 
-namespace MoLibrary.Framework.Core.Model;
+namespace MoLibrary.Framework.Modules;
 
-public class MonitorOption
+public class ModuleFrameworkMonitorOption : MoModuleControllerOption<ModuleFrameworkMonitor>
 {
     /// <summary>
     /// 相关项目单元所在程序集名，使用名称包含查找。如若不配置，则默认仅扫描Entry程序集。

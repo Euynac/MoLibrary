@@ -1,4 +1,5 @@
 using MoLibrary.BackgroundJob.Hangfire.Workers;
+using MoLibrary.Framework.Modules;
 
 namespace MoLibrary.Framework.Core.Model;
 

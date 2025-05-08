@@ -10,7 +10,10 @@
     <PackageReference Include="AsyncKeyedLock" Version="7.1.4" />
     <PackageReference Include="Dapr.Client" Version="1.14.0" />
     <PackageReference Include="DistributedLock.Core" Version="1.0.8" />
-    <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MoLibrary.Core\MoLibrary.Core.csproj" />
   </ItemGroup>
 
 </Project>

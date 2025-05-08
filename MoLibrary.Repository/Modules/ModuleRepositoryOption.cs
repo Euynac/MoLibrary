@@ -1,9 +1,10 @@
 using Microsoft.EntityFrameworkCore;
+using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Repository.EntityInterfaces;
 
-namespace MoLibrary.Repository;
+namespace MoLibrary.Repository.Modules;
 
-public class MoRepositoryOptions
+public class ModuleRepositoryOption : IMoModuleOption<ModuleRepository>
 {
     /// <summary>
     /// Use User-defined function mapping to filter data.

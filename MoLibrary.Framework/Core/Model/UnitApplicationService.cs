@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.Extensions.Logging;
 using MoLibrary.DomainDrivenDesign;
 using MoLibrary.DomainDrivenDesign.Interfaces;
+using MoLibrary.Framework.Modules;
 using MoLibrary.Repository.EntityInterfaces;
 using MoLibrary.Repository.Interfaces;
 using MoLibrary.Tool.Extensions;

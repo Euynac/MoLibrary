@@ -19,6 +19,7 @@ using System.Reflection;
 using System.Text;
 using MoLibrary.Repository.EFCoreExtensions;
 using Microsoft.Extensions.Logging.Abstractions;
+using MoLibrary.Repository.Modules;
 
 namespace MoLibrary.Repository;
 
@@ -32,8 +33,8 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
 
     public ILogger<MoDbContext<TDbContext>> Logger => ServiceProvider.GetService<ILogger<MoDbContext<TDbContext>>>() ?? NullLogger<MoDbContext<TDbContext>>.Instance;
 
-    public MoRepositoryOptions MoOptions =>
-        ServiceProvider.GetRequiredService<IOptions<MoRepositoryOptions>>().Value;
+    public ModuleRepositoryOption MoOptions =>
+        ServiceProvider.GetRequiredService<IOptions<ModuleRepositoryOption>>().Value;
 
     public bool HasInit { get; protected set; }
 

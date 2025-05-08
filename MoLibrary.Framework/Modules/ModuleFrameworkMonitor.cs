@@ -1,6 +1,4 @@
-using System.Diagnostics;
-using System.Reflection;
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using MapsterMapper;
 using Microsoft.AspNetCore.Builder;
@@ -10,16 +8,20 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
 using MoLibrary.Core.Extensions;
 using MoLibrary.Core.GlobalJson.Interfaces;
+using MoLibrary.Core.Module;
+using MoLibrary.Core.Module.Interfaces;
+using MoLibrary.Core.Module.Models;
 using MoLibrary.EventBus.Abstractions;
+using MoLibrary.Framework.Core;
+using MoLibrary.Framework.Core.Extensions;
 using MoLibrary.Framework.Core.Model;
-using MoLibrary.Framework.Modules;
-using MoLibrary.Logging;
 using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.MoResponse;
 
-namespace MoLibrary.Framework.Core.Extensions;
+namespace MoLibrary.Framework.Modules;
 
-public static class MoFrameworkCoreMonitorExtensions
+public class ModuleFrameworkMonitor(ModuleFrameworkMonitorOption option)
+    : MoModule<ModuleFrameworkMonitor, ModuleFrameworkMonitorOption>(option), IWantIterateBusinessTypes
 {
     private static void InitProjectUnitFactories()
     {
@@ -31,74 +33,56 @@ public static class MoFrameworkCoreMonitorExtensions
                         p.HasExplicitDefinedStaticConstructor()).Do(p => p.RunStaticConstructor());
     }
 
-    /// <summary>
-    /// 注册OurFrameworkCore
-    /// </summary>
-    /// <returns></returns>
-    /// <exception cref="InvalidOperationException"></exception>
-    public static IServiceCollection AddMoFrameworkCoreMonitor(this IServiceCollection services, Action<ModuleFrameworkMonitorOption>? action = null)
+    public override EMoModules CurModuleEnum()
     {
-        var stopwatch = new Stopwatch();
-        stopwatch.Start();
+        return EMoModules.FrameworkMonitor;
+    }
+
+    private IServiceCollection _services = null!;
+
+    public override Res ConfigureServices(IServiceCollection services)
+    {
+        _services = services;
         InitProjectUnitFactories();
-        var setting = new ModuleFrameworkMonitorOption();
-        action?.Invoke(setting);
-        ProjectUnit.Option = setting;
-        // candidates assemblies
-        var candidates = Assembly.GetEntryAssembly()!.GetRelatedAssemblies(setting.RelatedAssemblies);
-        
-        foreach (var assembly in candidates)
-        {
-            _ = assembly.GetTypes().ExtractUnitInfo(services).ExtractEnumInfo().ToList();
-        }
+     
+        ProjectUnit.Option = option;
+        return Res.Ok();
+    }
 
+    public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
+    {
+        return types.ExtractUnitInfo(_services).ExtractEnumInfo();
+    }
 
+    public override Res PostConfigureServices(IServiceCollection services)
+    {
         ProjectUnitStores.ProjectUnitsByFullName.Values.Do(p => p.DoingConnect());
-
-        stopwatch.Stop();
-        GlobalLog.LogInformation($"项目分析耗时：{stopwatch.ElapsedMilliseconds}ms");
-
-        if (setting.EnableRequestFilter)
+        if (option.EnableRequestFilter)
         {
             services.AddRequestFilter();
         }
 
-        return services;
+        return base.PostConfigureServices(services);
     }
-
-    /// <summary>
-    /// 配置OurFrameworkCore Endpoints中间件
-    /// </summary>
-    /// <param name="app"></param>
-    public static void UseMoFrameworkCoreMonitor(this IApplicationBuilder app)
-    {
-        if (ProjectUnit.Option.EnableRequestFilter)
-        {
-            app.UseRequestFilter();
-        }
-    }
-
     class RequestFilterDto
     {
         public List<string>? Urls { get; set; }
         public bool? Disable { get; set; }
     }
-
-
-    /// <summary>
-    /// 配置OurFrameworkCore Endpoints中间件
-    /// </summary>
-    /// <param name="app"></param>
-    /// <param name="groupName"></param>
-    public static void UseEndpointsMoFrameworkCoreMonitor(this IApplicationBuilder app, string? groupName = "Core")
+    public override Res ConfigureApplicationBuilder(IApplicationBuilder app)
     {
+        if (option.EnableRequestFilter)
+        {
+            app.UseRequestFilter();
+        }
+
         app.UseEndpoints(endpoints =>
         {
-            var tagGroup = new List<OpenApiTag> { new() { Name = groupName, Description = "系统框架内置接口" } };
+            var tagGroup = new List<OpenApiTag> { new() { Name = option.GetSwaggerGroupName(), Description = "系统框架内置接口" } };
 
-            endpoints.MapPost("/framework/units/domain-event/{eventKey}/publish", async ([FromRoute] string eventKey, [FromServices] IMoDistributedEventBus eventBus,[FromServices] IGlobalJsonOption jsonOption, [FromBody]JsonNode eventContent, HttpResponse response, HttpContext context) =>
+            endpoints.MapPost("/framework/units/domain-event/{eventKey}/publish", async ([FromRoute] string eventKey, [FromServices] IMoDistributedEventBus eventBus, [FromServices] IGlobalJsonOption jsonOption, [FromBody] JsonNode eventContent, HttpResponse response, HttpContext context) =>
             {
-                if (ProjectUnitStores.GetUnit<UnitDomainEvent>(eventKey) is {} e)
+                if (ProjectUnitStores.GetUnit<UnitDomainEvent>(eventKey) is { } e)
                 {
                     var json = eventContent.ToString();
                     var eventToPublish = JsonSerializer.Deserialize(json, e.Type, jsonOption.GlobalOptions)!;
@@ -143,7 +127,7 @@ public static class MoFrameworkCoreMonitorExtensions
                     return operation;
                 });
             }
-      
+
 
             endpoints.MapGet("/framework/units", async (IMapper mapper, HttpResponse response, HttpContext context) =>
             {
@@ -159,7 +143,7 @@ public static class MoFrameworkCoreMonitorExtensions
             endpoints.MapGet("/framework/units/domain-event", async (IMapper mapper, HttpResponse response, HttpContext context) =>
             {
                 var events = ProjectUnitStores.GetUnits<UnitDomainEvent>();
-                return events.Select(p => new {info = mapper.Map<DtoProjectUnit>(p), structure = p.GetStructure()})
+                return events.Select(p => new { info = mapper.Map<DtoProjectUnit>(p), structure = p.GetStructure() })
                     .ToList();
             }).WithName("获取项目领域事件信息").WithOpenApi(operation =>
             {
@@ -172,10 +156,10 @@ public static class MoFrameworkCoreMonitorExtensions
             {
                 if (name == null)
                 {
-                    var list = ProjectUnitStores.EnumTypes.GroupBy(g=>g.Value.Assembly.FullName).Select(p => new
+                    var list = ProjectUnitStores.EnumTypes.GroupBy(g => g.Value.Assembly.FullName).Select(p => new
                     {
                         from = p.Key,
-                        enums = p.ToList().Select(e=>new
+                        enums = p.ToList().Select(e => new
                         {
                             name = e.Key,
                             values = e.Value.GetEnumValues().OfType<Enum>().Select((p, i) => new
@@ -216,5 +200,7 @@ public static class MoFrameworkCoreMonitorExtensions
                 return operation;
             });
         });
+
+        return base.ConfigureApplicationBuilder(app);
     }
 }
