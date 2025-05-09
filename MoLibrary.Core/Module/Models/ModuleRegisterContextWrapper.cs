@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Module.Interfaces;
 
@@ -8,12 +9,19 @@ namespace MoLibrary.Core.Module.Models;
 /// </summary>
 /// <param name="services">服务集合</param>
 /// <param name="moduleRequestInfo">模块请求信息</param>
-public class ModuleRegisterContext(IServiceCollection services, ModuleRequestInfo moduleRequestInfo)
+public class ModuleRegisterContext(IServiceCollection? services, IApplicationBuilder? applicationBuilder, WebApplicationBuilder? webApplicationBuilder, ModuleRequestInfo moduleRequestInfo)
 {
     /// <summary>
     /// 服务集合
     /// </summary>
-    public IServiceCollection Services { get; init; } = services;
+    public IServiceCollection? Services { get; init; } = services;
+
+    /// <summary>
+    /// 应用构建器
+    /// </summary>
+    public IApplicationBuilder? ApplicationBuilder { get; init; } = applicationBuilder;
+    
+    public WebApplicationBuilder? WebApplicationBuilder { get; init; } = webApplicationBuilder;
     
     /// <summary>
     /// 模块请求信息
@@ -30,15 +38,13 @@ public class ModuleRegisterContext(IServiceCollection services, ModuleRequestInf
 /// 泛型模块注册上下文，提供特定模块选项的访问
 /// </summary>
 /// <typeparam name="TModuleOption">模块选项类型</typeparam>
-/// <param name="services">服务集合</param>
-/// <param name="moduleRequestInfo">模块请求信息</param>
-public class ModuleRegisterContext<TModuleOption>(IServiceCollection services, ModuleRequestInfo moduleRequestInfo) 
-    : ModuleRegisterContext(services, moduleRequestInfo) where TModuleOption : IMoModuleOption
+public class ModuleRegisterContextWrapper<TModuleOption>(ModuleRegisterContext context)  where TModuleOption : IMoModuleOption
 {
+    protected ModuleRegisterContext Context { get; init; } = context;
     /// <summary>
     /// 获取当前模块的设置
     /// </summary>
-    public TModuleOption ModuleOption => (TModuleOption) Option[typeof(TModuleOption)];
+    public TModuleOption ModuleOption => (TModuleOption) Context.Option[typeof(TModuleOption)];
     
     /// <summary>
     /// 获取模块额外选项，如果不存在则创建新实例
@@ -57,7 +63,7 @@ public class ModuleRegisterContext<TModuleOption>(IServiceCollection services, M
     /// <returns>模块额外选项实例或默认值</returns>
     public TModuleExtraOption? GetModuleExtraOptionOrDefault<TModuleExtraOption>() where TModuleExtraOption : IMoModuleOption, new()
     {
-        if (Option.TryGetValue(typeof(TModuleExtraOption), out var option))
+        if (Context.Option.TryGetValue(typeof(TModuleExtraOption), out var option))
         {
             return (TModuleExtraOption) option;
         }
@@ -65,6 +71,23 @@ public class ModuleRegisterContext<TModuleOption>(IServiceCollection services, M
         return default;
     }
 }
+
+public class ModuleRegisterContextWrapperForServices<TModuleOption>(ModuleRegisterContext context) : ModuleRegisterContextWrapper<TModuleOption>(context) where TModuleOption : IMoModuleOption
+{
+    public IServiceCollection Services => Context.Services!;
+}
+
+public class ModuleRegisterContextWrapperForApplicationBuilder<TModuleOption>(ModuleRegisterContext context) : ModuleRegisterContextWrapper<TModuleOption>(context) where TModuleOption : IMoModuleOption
+{
+    public IApplicationBuilder ApplicationBuilder => Context.ApplicationBuilder!;
+}
+
+public class ModuleRegisterContextWrapperForBuilder<TModuleOption>(ModuleRegisterContext context) : ModuleRegisterContextWrapper<TModuleOption>(context) where TModuleOption : IMoModuleOption
+{
+    public WebApplicationBuilder WebApplicationBuilder => Context.WebApplicationBuilder!;
+}
+
+
 
 public class ModuleRegisterRequest(string key)
 {
@@ -74,13 +97,6 @@ public class ModuleRegisterRequest(string key)
     /// </summary>
     public string Key { get; set; } = key;
     public EMoModules? RequestFrom { get; set; }
+    public EMoModuleConfigMethods? RequestMethod { get; set; }
     public int Order { get; set; }
-
-    public void SetConfigureContext<TModuleOption>(Action<ModuleRegisterContext<TModuleOption>> context) where TModuleOption : IMoModuleOption
-    {
-        ConfigureContext = registerContext =>
-        {
-            context.Invoke((ModuleRegisterContext<TModuleOption>) registerContext);
-        };
-    }
 }

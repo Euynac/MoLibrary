@@ -21,7 +21,7 @@ public class ModuleRepositoryGuide : MoModuleGuide<ModuleRepository, ModuleRepos
     protected const string ADD_DB_CONTEXT_PROVIDER = nameof(ADD_DB_CONTEXT_PROVIDER);
     public ModuleRepositoryGuide AddMoUnitOfWorkDbContextProvider(bool addEventSupport = false)
     {
-        ConfigureExtraServices(ADD_DB_CONTEXT_PROVIDER, context =>
+        ConfigureServices(ADD_DB_CONTEXT_PROVIDER, context =>
         {
             if (addEventSupport)
             {
@@ -42,7 +42,7 @@ public class ModuleRepositoryGuide : MoModuleGuide<ModuleRepository, ModuleRepos
     /// <returns>The <see cref="IServiceCollection"/> so that additional calls can be chained.</returns>
     public ModuleRepositoryGuide AddMoDefaultDbContextProvider()
     {
-        ConfigureExtraServices(ADD_DB_CONTEXT_PROVIDER, context =>
+        ConfigureServices(ADD_DB_CONTEXT_PROVIDER, context =>
         {
             context.Services.AddScoped(typeof(IDbContextProvider<>), typeof(DefaultDbContextProvider<>));
         });
@@ -52,7 +52,7 @@ public class ModuleRepositoryGuide : MoModuleGuide<ModuleRepository, ModuleRepos
     public ModuleRepositoryGuide AddMoDbContext<TDbContext>(Action<IServiceProvider, DbContextOptionsBuilder> optionsAction, Action<ModuleRepositoryOption>? moOptionsAction = null)
         where TDbContext : MoDbContext<TDbContext>
     {
-        ConfigureExtraServices(nameof(AddMoDbContext), context =>
+        ConfigureServices(nameof(AddMoDbContext), context =>
         {
             context.Services.AddMemoryCache();
 

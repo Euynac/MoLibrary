@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.OpenApi.Models;
 using MoLibrary.Authority.Security;
 using MoLibrary.Core.GlobalJson;
 using MoLibrary.Core.Module;
@@ -8,6 +10,10 @@ using MoLibrary.Core.Module.Models;
 using MoLibrary.SignalR.Interfaces;
 using MoLibrary.Tool.MoResponse;
 using SignalRSwaggerGen;
+using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
+using Microsoft.AspNetCore.Builder;
+using SignalRSwaggerGen.Attributes;
 
 namespace MoLibrary.SignalR.Modules;
 
@@ -52,7 +58,7 @@ public class ModuleSignalRGuide : MoModuleGuide<ModuleSignalR, ModuleSignalROpti
         where TIContract : IMoHubContract
         where TIUser : IMoCurrentUser
     {
-        ConfigureExtraServices(nameof(AddMoSignalR), context =>
+        ConfigureServices(nameof(AddMoSignalR), context =>
         {
             context.Services.AddSingleton<IUserIdProvider, MoUserIdProvider>();
             context.Services.AddSingleton<IMoSignalRConnectionManager, MoSignalRConnectionManager>();
@@ -71,7 +77,7 @@ public class ModuleSignalRGuide : MoModuleGuide<ModuleSignalR, ModuleSignalROpti
     /// </summary>
     public ModuleSignalRGuide AddMoSignalRSwagger(Action<SignalRSwaggerGenOptions> signalROption)
     {
-        ConfigureExtraServices(nameof(AddMoSignalRSwagger), context =>
+        ConfigureServices(nameof(AddMoSignalRSwagger), context =>
         {
             context.Services.ConfigureSwaggerGen(o =>
             {
@@ -79,6 +85,49 @@ public class ModuleSignalRGuide : MoModuleGuide<ModuleSignalR, ModuleSignalROpti
             });
         });
         return this;
+    }
+
+    /// <summary>
+    ///     增加SignalR Hub以及相关接口
+    /// </summary>
+    public ModuleSignalRGuide MapMoHub<THubServer>([StringSyntax("Route")] string pattern) where THubServer : Hub
+    {
+     
+        ConfigureApplicationBuilder(nameof(MapMoHub), context =>
+        {
+            context.ApplicationBuilder.UseEndpoints(endpoints =>
+            {
+                endpoints.MapHub<THubServer>(pattern);
+                var tagGroup = new List<OpenApiTag>
+                {
+                    new() {Name = context.ModuleOption.GetSwaggerGroupName(), Description = "SignalR相关功能扩展"}
+                };
+                endpoints.MapGet(context.ModuleOption.ServerMethodsRoute, async (HttpResponse response, HttpContext _) =>
+                {
+                    var methods = typeof(THubServer).GetMethods().Where(p => p.DeclaringType == typeof(THubServer))
+                        .Select(p =>
+                            new
+                            {
+                                desc = p.GetCustomAttribute<SignalRMethodAttribute>()?.Description ?? p.Name,
+                                p.Name,
+                                args = p.GetParameters().Select(a => new
+                                {
+                                    type = a.ParameterType.Name,
+                                    a.Name
+                                }).ToList()
+                            }).ToList();
+
+                    await response.WriteAsJsonAsync(methods);
+                }).WithName("获取SignalR所有Server端事件定义").WithOpenApi(operation =>
+                {
+                    operation.Summary = "获取SignalR所有Server端事件定义";
+                    operation.Description = "获取SignalR所有Server端事件定义";
+                    operation.Tags = tagGroup;
+                    return operation;
+                });
+            });
+        });
+       
     }
 
 }

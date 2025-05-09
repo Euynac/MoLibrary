@@ -17,7 +17,7 @@ public class ModuleLockerGuide : MoModuleGuide<ModuleLocker, ModuleLockerOption,
 
     protected ModuleLockerGuide SetDistributedLockProvider<TProvider>() where TProvider : class, IMoDistributedLock
     {
-        ConfigureExtraServices(nameof(SetDistributedLockProvider), context =>
+        ConfigureServices(nameof(SetDistributedLockProvider), context =>
         {
             context.Services.AddSingleton<IMoDistributedLock, TProvider>();
         });
@@ -31,7 +31,7 @@ public class ModuleLockerGuide : MoModuleGuide<ModuleLocker, ModuleLockerOption,
     public ModuleLockerGuide AddDaprDistributedLock(
         Action<MoDistributedLockDaprOptions> configure)
     {
-        ConfigureExtraServices(nameof(SetDistributedLockProvider), context =>
+        ConfigureServices(nameof(SetDistributedLockProvider), context =>
         {
             context.Services.AddSingleton<IMoDistributedLock, DaprMoDistributedLock>();
             context.Services.Configure(configure);
@@ -47,7 +47,7 @@ public class ModuleLockerGuide : MoModuleGuide<ModuleLocker, ModuleLockerOption,
     public ModuleLockerGuide AddMedallionDistributedLock(
         IDistributedLockProvider distributedLockProvider)
     {
-        ConfigureExtraServices(nameof(SetDistributedLockProvider), context =>
+        ConfigureServices(nameof(SetDistributedLockProvider), context =>
         {
             context.Services.AddSingleton(distributedLockProvider);
             context.Services.AddSingleton<IMoDistributedLock, MedallionMoDistributedLock>();
@@ -61,7 +61,7 @@ public class ModuleLockerGuide : MoModuleGuide<ModuleLocker, ModuleLockerOption,
     /// <returns>The service collection for chaining.</returns>
     public ModuleLockerGuide AddLocalDistributedLock()
     {
-        ConfigureExtraServices(nameof(SetDistributedLockProvider), context =>
+        ConfigureServices(nameof(SetDistributedLockProvider), context =>
         {
             context.Services.AddSingleton<IMoDistributedLock, LocalMoDistributedLock>();
         });

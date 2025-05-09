@@ -51,21 +51,81 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
         MoModuleRegisterCentre.RegisterModule<TModule, TModuleOption>();
         return new TModuleGuideSelf();
     }
-    
-    protected void ConfigureExtraServices(string key, Action<ModuleRegisterContext<TModuleOption>> context, int order)
+
+
+    #region 额外配置Module
+    protected void ConfigureModule(string key, Action<ModuleRegisterContext> context, int order, EMoModuleConfigMethods requestMethod)
     {
-        var request = new ModuleRegisterRequest(key) {Order = order, RequestFrom = GuideFrom};
-        request.SetConfigureContext(context);
+        var request = new ModuleRegisterRequest(key) { Order = order, RequestFrom = GuideFrom, RequestMethod = requestMethod };
         MoModuleRegisterCentre.RegisterModule<TModule, TModuleOption>(request);
     }
 
-    protected void ConfigureExtraServices(string key, Action<ModuleRegisterContext<TModuleOption>> context, EMoModuleOrder order = EMoModuleOrder.Normal) 
+    protected void ConfigureServices(string key, Action<ModuleRegisterContextWrapperForServices<TModuleOption>> context, EMoModuleOrder order = EMoModuleOrder.Normal)
     {
-        ConfigureExtraServices(key, context, (int)order);
+        ConfigureModule(key, registerContext =>
+        {
+            context.Invoke(new ModuleRegisterContextWrapperForServices<TModuleOption>(registerContext));
+        }, (int) order, EMoModuleConfigMethods.ConfigureServices);
     }
+
+    /// <summary>
+    /// Configures the application builder for the module
+    /// </summary>
+    /// <param name="key">Unique key for this configuration</param>
+    /// <param name="context">Action to configure the application builder</param>
+    /// <param name="order">Order in which this configuration should be applied</param>
+    protected void ConfigureApplicationBuilder(string key, Action<ModuleRegisterContextWrapperForApplicationBuilder<TModuleOption>> context, EMoModuleOrder order = EMoModuleOrder.Normal)
+    {
+        ConfigureModule(key, registerContext =>
+        {
+            context.Invoke(new ModuleRegisterContextWrapperForApplicationBuilder<TModuleOption>(registerContext));
+        }, (int) order, EMoModuleConfigMethods.ConfigureApplicationBuilder);
+    }   
+
+    /// <summary>
+    /// Configures post-services setup for the module
+    /// </summary>
+    /// <param name="key">Unique key for this configuration</param>
+    /// <param name="context">Action to configure post-services</param>
+    /// <param name="order">Order in which this configuration should be applied</param>
+    protected void PostConfigureServices(string key, Action<ModuleRegisterContextWrapperForServices<TModuleOption>> context, EMoModuleOrder order = EMoModuleOrder.Normal)
+    {
+        ConfigureModule(key, registerContext =>
+        {
+            context.Invoke(new ModuleRegisterContextWrapperForServices<TModuleOption>(registerContext));
+        }, (int) order, EMoModuleConfigMethods.PostConfigureServices);
+    }
+    
+    /// <summary>
+    /// Configures the web application builder for the module
+    /// </summary>
+    /// <param name="key">Unique key for this configuration</param>
+    /// <param name="context">Action to configure the web application builder</param>
+    /// <param name="order">Order in which this configuration should be applied</param>
+    protected void ConfigureBuilder(string key, Action<ModuleRegisterContextWrapperForBuilder<TModuleOption>> context, EMoModuleOrder order = EMoModuleOrder.Normal)
+    {
+        ConfigureModule(key, registerContext =>
+        {
+            context.Invoke(new ModuleRegisterContextWrapperForBuilder<TModuleOption>(registerContext));
+        }, (int) order, EMoModuleConfigMethods.ConfigureBuilder);
+    }
+
+    protected void ConfigureEndpoints(string key, Action<ModuleRegisterContextWrapperForBuilder<TModuleOption>> context, EMoModuleOrder order = EMoModuleOrder.Normal)
+    {
+        ConfigureModule(key, registerContext =>
+        {
+            context.Invoke(new ModuleRegisterContextWrapperForBuilder<TModuleOption>(registerContext));
+        }, (int) order, EMoModuleConfigMethods.ConfigureEndpoints);
+    }
+
+
+    #endregion
+
+    #region 额外设置
+
     public TModuleGuideSelf ConfigureModuleOption(Action<TModuleOption> optionAction, EMoModuleOrder order = EMoModuleOrder.Normal)
     {
-        return ConfigureOption(optionAction, (int)order);
+        return ConfigureOption(optionAction, (int) order);
     }
     public TModuleGuideSelf ConfigureOption<TOption>(Action<TOption> optionAction, int order) where TOption : class, IMoModuleOption, new()
     {
@@ -75,6 +135,9 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     }
     public TModuleGuideSelf ConfigureExtraOption<TOption>(Action<TOption> optionAction, EMoModuleOrder order = EMoModuleOrder.Normal) where TOption : class, IMoModuleOption<TModule>, new()
     {
-        return ConfigureOption(optionAction, (int)order);
+        return ConfigureOption(optionAction, (int) order);
     }
+
+    #endregion
+
 }

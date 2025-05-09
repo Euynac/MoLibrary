@@ -29,6 +29,11 @@ public abstract class MoModule : IMoModule
         return Res.Ok();
     }
 
+    public virtual Res ConfigureEndpoints(IApplicationBuilder app)
+    {
+        return Res.Ok();
+    }
+
     public abstract EMoModules CurModuleEnum();
 }
 

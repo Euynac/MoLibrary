@@ -25,7 +25,7 @@ public class ModuleDependencyInjectionGuide : MoModuleGuide<ModuleDependencyInje
 
     public ModuleDependencyInjectionGuide AddMoDependencyInjection<T>() where T : IConventionalRegistrar
     {
-        ConfigureExtraServices(nameof(AddMoDependencyInjection), context =>
+        ConfigureServices(nameof(AddMoDependencyInjection), context =>
         {
             var stopwatch = new Stopwatch();
             stopwatch.Start();

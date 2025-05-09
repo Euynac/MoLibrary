@@ -90,8 +90,10 @@ public static class MoModuleRegisterCentre
     /// </summary>
     /// <param name="services">服务集合。</param>
     /// <param name="typeFinderConfigure"></param>
-    public static void MoModuleRegisterServices(this IServiceCollection services, Action<ModuleCoreOptionTypeFinder>? typeFinderConfigure = null)
+    public static void MoModuleRegisterServices(this WebApplicationBuilder builder, Action<ModuleCoreOptionTypeFinder>? typeFinderConfigure = null)
     {
+        var services = builder.Services;
+
 
         var typeFinder = services.GetOrCreateDomainTypeFinder<MoDomainTypeFinder>(typeFinderConfigure);
 
@@ -143,9 +145,9 @@ public static class MoModuleRegisterCentre
             module.ModuleInstance.PostConfigureServices(services);
 
             // 执行额外的配置请求
-            foreach (var request in module.RequestInfo.RegisterRequests.OrderBy(r => r.Order))
+            foreach (var request in module.RequestInfo.RegisterRequests.Where(p=>p.RequestMethod == EMoModuleConfigMethods.PostConfigureServices).OrderBy(r => r.Order))
             {
-                request.ConfigureContext?.Invoke(new ModuleRegisterContext(services, module.RequestInfo));
+                request.ConfigureContext?.Invoke(new ModuleRegisterContext(services, null, builder, module.RequestInfo));
             }
         }
         // 清理临时资源
@@ -153,15 +155,19 @@ public static class MoModuleRegisterCentre
     }
 
     /// <summary>
-    /// 配置所有模块的中间件。此方法应在app.Build()之后、任何中间件配置之前调用。
+    /// 配置应用程序管道。此方法应在app.Build()之后、任何中间件配置之前调用。
     /// </summary>
     /// <param name="app">应用程序构建器。</param>
-    public static void MoModuleUseMiddlewares(this IApplicationBuilder app)
+    public static void MoModuleConfigApplicationBuilder(this IApplicationBuilder app)
     {
         // 按优先级排序并配置应用程序构建器
         foreach (var module in ModuleSnapshots)
         {
             module.ModuleInstance.ConfigureApplicationBuilder(app);
+            foreach (var request in module.RequestInfo.RegisterRequests.Where(p=>p.RequestMethod == EMoModuleConfigMethods.ConfigureApplicationBuilder).OrderBy(r => r.Order))
+            {
+                request.ConfigureContext?.Invoke(new ModuleRegisterContext(null, app, null, module.RequestInfo));
+            }
         }
     }
 }

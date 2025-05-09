@@ -18,7 +18,7 @@ public class ModuleAuthorizationGuide : MoModuleGuide<ModuleAuthorization, Modul
 
     public ModuleAuthorizationGuide AddDefaultPermissionBit<TEnum>(string claimTypeDefinition) where TEnum : struct, Enum
     {
-        ConfigureExtraServices(nameof(AddDefaultPermissionBit), context =>
+        ConfigureServices(nameof(AddDefaultPermissionBit), context =>
         {
             context.Services.AddMoAuthorizationPermissionBit<TEnum>(claimTypeDefinition);
             context.Services.AddSingleton<IMoPermissionChecker, MoPermissionChecker<TEnum>>();
@@ -27,7 +27,7 @@ public class ModuleAuthorizationGuide : MoModuleGuide<ModuleAuthorization, Modul
     }
     public ModuleAuthorizationGuide AddPermissionBit<TEnum>(string claimTypeDefinition) where TEnum : struct, Enum
     {
-        ConfigureExtraServices($"{nameof(AddPermissionBit)}<{typeof(TEnum).Name}>", context =>
+        ConfigureServices($"{nameof(AddPermissionBit)}<{typeof(TEnum).Name}>", context =>
         {
             var checker = new PermissionBitChecker<TEnum>(claimTypeDefinition);
             PermissionBitCheckerManager.AddChecker(checker);
@@ -38,7 +38,7 @@ public class ModuleAuthorizationGuide : MoModuleGuide<ModuleAuthorization, Modul
 
     public ModuleAuthorizationGuide ConfigAsAlwaysAllow()
     {
-        ConfigureExtraServices(nameof(ConfigAsAlwaysAllow), context =>
+        ConfigureServices(nameof(ConfigAsAlwaysAllow), context =>
         {
             context.Services.Replace(ServiceDescriptor.Singleton<IAuthorizationService, AlwaysAllowAuthorizationService>());
             context.Services.Replace(ServiceDescriptor.Singleton<IMoAuthorizationService, AlwaysAllowAuthorizationService>());
@@ -51,7 +51,7 @@ public class ModuleAuthorizationGuide : MoModuleGuide<ModuleAuthorization, Modul
 
     public ModuleAuthorizationGuide AddAuthorizationInterceptor()
     {
-        ConfigureExtraServices(nameof(AddAuthorizationInterceptor), context =>
+        ConfigureServices(nameof(AddAuthorizationInterceptor), context =>
         {
             context.Services.AddMoInterceptor<AuthorizationInterceptor>().CreateProxyWhenSatisfy((descriptor) =>
             {
