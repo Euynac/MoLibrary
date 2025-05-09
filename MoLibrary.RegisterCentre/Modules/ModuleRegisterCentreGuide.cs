@@ -23,7 +23,7 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
             o.ThisIsCentreServer = true;
         });
 
-        ConfigureExtraServices(SET_CENTRE_TYPE, context =>
+        ConfigureServices(SET_CENTRE_TYPE, context =>
         {
             context.Services.AddSingleton<IRegisterCentreServer, MemoryProviderForRegisterCentre>();
             context.Services.AddSingleton<IRegisterCentreClientConnector, DaprHttpForConnectClient>();
@@ -42,7 +42,7 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
         {
             o.ThisIsCentreServer = true;
         });
-        ConfigureExtraServices(SET_CENTRE_TYPE, context =>
+        ConfigureServices(SET_CENTRE_TYPE, context =>
         {
             context.Services.AddSingleton<IRegisterCentreServerConnector, TServer>();
             context.Services.AddSingleton<IRegisterCentreClient, TClient>();

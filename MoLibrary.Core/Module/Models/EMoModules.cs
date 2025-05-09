@@ -29,6 +29,15 @@ public enum EMoModules
     SignalR
 }
 
+public enum EMoModuleConfigMethods
+{
+    ConfigureBuilder,
+    ConfigureServices,
+    PostConfigureServices,
+    ConfigureApplicationBuilder,
+    ConfigureEndpoints
+}
+
 
 public enum EMoModuleOrder
 {

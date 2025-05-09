@@ -27,7 +27,7 @@ public class ModuleConfigurationDashboardGuide : MoModuleGuide<ModuleConfigurati
     {
         _isDashboard = true;
         ConfigureModuleOption(o => { o.ThisIsDashboard = true; });
-        ConfigureExtraServices(nameof(AddMoConfigurationDashboard),
+        ConfigureServices(nameof(AddMoConfigurationDashboard),
             context => { context.Services.AddMoConfigurationDashboard<DefaultArrangeDashboard>(); });
         return this;
     }
@@ -42,7 +42,7 @@ public class ModuleConfigurationDashboardGuide : MoModuleGuide<ModuleConfigurati
     {
         _isDashboard = true;
         ConfigureModuleOption(o => { o.ThisIsDashboard = true; });
-        ConfigureExtraServices(nameof(AddMoConfigurationDashboard), context =>
+        ConfigureServices(nameof(AddMoConfigurationDashboard), context =>
         {
             context.Services.AddSingleton<IMoConfigurationDashboard, TDashboard>();
             context.Services.AddSingleton<MemoryProviderForConfigCentre>();
@@ -66,7 +66,7 @@ public class ModuleConfigurationDashboardGuide : MoModuleGuide<ModuleConfigurati
             throw new InvalidOperationException("非面板服务无需注册面板仓储接口");
         }
 
-        ConfigureExtraServices(nameof(AddMoConfigurationDashboardStore),
+        ConfigureServices(nameof(AddMoConfigurationDashboardStore),
             context => { context.Services.Replace(ServiceDescriptor.Transient<IMoConfigurationStores, TStore>()); });
         return this;
     }
@@ -78,7 +78,7 @@ public class ModuleConfigurationDashboardGuide : MoModuleGuide<ModuleConfigurati
     {
         if (_isDashboard) throw new InvalidOperationException("面板服务无需注册面板客户端");
         DependsOnModule<ModuleRegisterCentreGuide>().Register().SetAsCentreClient<TServer, TClient>();
-        ConfigureExtraServices(nameof(AddMoConfigurationDashboardClient), context =>
+        ConfigureServices(nameof(AddMoConfigurationDashboardClient), context =>
         {
             context.Services.AddSingleton<IMoConfigurationModifier, MoConfigurationJsonFileModifier>();
         });
