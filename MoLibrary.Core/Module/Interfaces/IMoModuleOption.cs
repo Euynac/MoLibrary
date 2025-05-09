@@ -10,6 +10,6 @@ public interface IMoModuleOption<TModule> : IMoModuleOption where TModule : IMoM
 {
 
 }
-public interface IMoModuleExtraOption<TModule> : IMoModuleOption<TModule> where TModule : IMoModule
+public interface IMoModuleExtraOption<TModule> : IMoModuleOption where TModule : IMoModule
 {
 }

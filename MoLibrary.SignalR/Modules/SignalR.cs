@@ -127,7 +127,7 @@ public class ModuleSignalRGuide : MoModuleGuide<ModuleSignalR, ModuleSignalROpti
                 });
             });
         });
-       
+        return this;
     }
 
 }
