@@ -26,7 +26,12 @@ public enum EMoModules
     Locker,
     UnitOfWork,
     Mapper,
-    SignalR
+    SignalR,
+    StateStore,
+    Dapr,
+    DaprClient,
+    DaprStateStore,
+    DaprEventBus
 }
 
 public enum EMoModuleConfigMethods

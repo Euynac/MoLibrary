@@ -1,14 +1,20 @@
 using System.Text.Json;
 using Dapr.Client;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using MoLibrary.Dapr.Modules;
+using MoLibrary.StateStore;
 using MoLibrary.StateStore.QueryBuilder;
 using MoLibrary.StateStore.QueryBuilder.Interfaces;
 using MoLibrary.Tool.Extensions;
 
-namespace MoLibrary.StateStore;
+namespace MoLibrary.Dapr.StateStore;
 
-public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, string stateStoreName) : IStateStore
+public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOptions<ModuleDaprStateStoreOption> options) : IStateStore
 {
+    protected ModuleDaprStateStoreOption Option { get; set; } = options.Value;
+    private string StateStoreName => Option.StateStoreName;
+
     public async Task<bool> ExistAsync<T>(string key, string? prefix = null, CancellationToken cancellationToken = default)
     {
         return await GetStateAsync<T>(key, prefix, cancellationToken) != null;
@@ -23,12 +29,12 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, str
             var finished = query.Invoke(queryBuilder);
             queryStr = finished.ToString();
             var response =
-                await dapr.QueryStateAsync<T>(stateStoreName, queryStr, cancellationToken: cancellationToken);
+                await dapr.QueryStateAsync<T>(StateStoreName, queryStr, cancellationToken: cancellationToken);
             return response.Results.ToDictionary(p => p.Key, item => item.Data);
         }
         catch (Exception e)
         {
-            logger.LogError(e, "ERROR query state from {StateStoreName} using exp: {exp}", stateStoreName,
+            logger.LogError(e, "ERROR query state from {StateStoreName} using exp: {exp}", StateStoreName,
                 queryStr);
             throw;
         }
@@ -44,7 +50,7 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, str
         var finalKeys = keys.Select(k => GetKey(k, prefix)).ToList();
         try
         {
-            return (await dapr.GetBulkStateAsync(stateStoreName, finalKeys, 0,
+            return (await dapr.GetBulkStateAsync(StateStoreName, finalKeys, 0,
                 cancellationToken: cancellationToken))
                 .WhereIf(removeEmptyValue, p => !string.IsNullOrEmpty(p.Value))
                 .ToDictionary(
@@ -63,7 +69,7 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, str
         }
         catch (Exception e)
         {
-            logger.LogError(e, "ERROR Getting bulk state from {StateStoreName}{Keys}", stateStoreName,
+            logger.LogError(e, "ERROR Getting bulk state from {StateStoreName}{Keys}", StateStoreName,
                                finalKeys);
             throw;
         }
@@ -77,14 +83,14 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, str
         var finalKeys = keys.Select(k => GetKey(k, prefix)).ToList();
         try
         {
-            return (await dapr.GetBulkStateAsync(stateStoreName, finalKeys, 0,
+            return (await dapr.GetBulkStateAsync(StateStoreName, finalKeys, 0,
                 cancellationToken: cancellationToken))
                 .WhereIf(removeEmptyValue, p => !string.IsNullOrEmpty(p.Value))
                 .ToDictionary(p => removePrefix ? RemovePrefix(p.Key, prefix) : p.Key, item => item.Value);
         }
         catch (Exception e)
         {
-            logger.LogError(e, "ERROR Getting bulk state from {StateStoreName}{Keys}", stateStoreName,
+            logger.LogError(e, "ERROR Getting bulk state from {StateStoreName}{Keys}", StateStoreName,
                 finalKeys);
             throw;
         }
@@ -96,11 +102,11 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, str
         var finalKey = GetKey(key, prefix);
         try
         {
-            return await dapr.GetStateAsync<string>(stateStoreName, finalKey, cancellationToken: cancellationToken);
+            return await dapr.GetStateAsync<string>(StateStoreName, finalKey, cancellationToken: cancellationToken);
         }
         catch (Exception e)
         {
-            logger.LogError(e, "ERROR Getting state from {StateStoreName}{Key}", stateStoreName,
+            logger.LogError(e, "ERROR Getting state from {StateStoreName}{Key}", StateStoreName,
                 finalKey);
             throw;
         }
@@ -112,11 +118,11 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, str
         var finalKey = GetKey(key, prefix);
         try
         {
-            return await dapr.GetStateAsync<T>(stateStoreName, finalKey, cancellationToken: cancellationToken);
+            return await dapr.GetStateAsync<T>(StateStoreName, finalKey, cancellationToken: cancellationToken);
         }
         catch (Exception e)
         {
-            logger.LogError(e, "ERROR Getting state from {StateStoreName}{Key}", stateStoreName,
+            logger.LogError(e, "ERROR Getting state from {StateStoreName}{Key}", StateStoreName,
                 finalKey);
             throw;
         }
@@ -138,21 +144,21 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, str
                 case < 0:
                     throw new InvalidOperationException("ttl can not smaller than zero");
                 case 0:
-                    await dapr.SaveStateAsync(stateStoreName, finalKey, value, cancellationToken: cancellationToken,
+                    await dapr.SaveStateAsync(StateStoreName, finalKey, value, cancellationToken: cancellationToken,
                         metadata: new Dictionary<string, string> { { "ttlInSeconds", "-1" } });
                     break;
                 case {} seconds:
-                    await dapr.SaveStateAsync(stateStoreName, finalKey, value, cancellationToken: cancellationToken,
+                    await dapr.SaveStateAsync(StateStoreName, finalKey, value, cancellationToken: cancellationToken,
                         metadata: new Dictionary<string, string> { { "ttlInSeconds", seconds.ToString() } });
                     break;
                 default:
-                    await dapr.SaveStateAsync(stateStoreName, finalKey, value, cancellationToken: cancellationToken);
+                    await dapr.SaveStateAsync(StateStoreName, finalKey, value, cancellationToken: cancellationToken);
                     break;
             }
         }
         catch (Exception e)
         {
-            logger.LogError(e, "ERROR Saving state to {StateStoreName}{Key}", stateStoreName,
+            logger.LogError(e, "ERROR Saving state to {StateStoreName}{Key}", StateStoreName,
                 finalKey);
             throw;
         }
@@ -164,11 +170,11 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, str
         var finalKey = GetKey(key, prefix);
         try
         {
-            await dapr.DeleteStateAsync(stateStoreName, finalKey, cancellationToken: cancellationToken);
+            await dapr.DeleteStateAsync(StateStoreName, finalKey, cancellationToken: cancellationToken);
         }
         catch (Exception e)
         {
-            logger.LogError(e, "ERROR Deleting state from {StateStoreName}{Key}", stateStoreName,
+            logger.LogError(e, "ERROR Deleting state from {StateStoreName}{Key}", StateStoreName,
                 finalKey);
             throw;
         }
@@ -180,12 +186,12 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, str
         var finalKeys = keys.Select(k => GetKey(k, prefix)).ToList();
         try
         {
-            await dapr.DeleteBulkStateAsync(stateStoreName,
+            await dapr.DeleteBulkStateAsync(StateStoreName,
                 finalKeys.Select(p => new BulkDeleteStateItem(p, null)).ToList(), cancellationToken);
         }
         catch (Exception e)
         {
-            logger.LogError(e, "ERROR Getting bulk state from {StateStoreName}{Keys}", stateStoreName,
+            logger.LogError(e, "ERROR Getting bulk state from {StateStoreName}{Keys}", StateStoreName,
                 finalKeys);
             throw;
         }
@@ -197,11 +203,11 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, str
         var finalKey = GetKey(key, prefix);
         try
         {
-            return await dapr.GetStateAndETagAsync<T>(stateStoreName, finalKey, cancellationToken: cancellationToken);
+            return await dapr.GetStateAndETagAsync<T>(StateStoreName, finalKey, cancellationToken: cancellationToken);
         }
         catch (Exception e)
         {
-            logger.LogError(e, "ERROR Getting state from {StateStoreName}{Key}", stateStoreName,
+            logger.LogError(e, "ERROR Getting state from {StateStoreName}{Key}", StateStoreName,
                 finalKey);
             throw;
         }
