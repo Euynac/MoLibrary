@@ -1,4 +1,4 @@
-﻿using MoLibrary.Core.Module.Interfaces;
+using MoLibrary.Core.Module.Interfaces;
 
 namespace MoLibrary.Dapr.Modules;
 
