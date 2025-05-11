@@ -3,8 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.EventBus.Abstractions;
-using MoLibrary.EventBus.Attributes;
-using MoLibrary.EventBus.Modules;
 using MoLibrary.Tool.MoResponse;
 using System.Text.Json.Serialization;
 using System.Text.Json;
@@ -14,13 +12,15 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using MoLibrary.Core.GlobalJson.Interfaces;
-using MoLibrary.EventBus.Dapr;
+using MoLibrary.Dapr.EventBus;
+using MoLibrary.Dapr.EventBus.Models;
+using MoLibrary.EventBus.Modules;
 using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.Dapr.Modules;
 
 public class ModuleDaprEventBus(ModuleDaprEventBusOption option)
-    : MoModule<ModuleDaprEventBus, ModuleDaprEventBusOption>(option)
+    : MoModuleWithDependencies<ModuleDaprEventBus, ModuleDaprEventBusOption>(option)
 {
     public override EMoModules CurModuleEnum()
     {
@@ -141,128 +141,9 @@ public class ModuleDaprEventBus(ModuleDaprEventBusOption option)
 
         return base.ConfigureApplicationBuilder(app);
     }
-}
 
-
-
-/// <summary>
-/// This class defines subscribe endpoint response
-/// </summary>
-file class MoSubscription
-{
-    public static IEnumerable<MoSubscription> GetMoSubscriptions(DistributedEventBusOptions option,
-        ModuleDaprEventBusOption busOption)
+    public override void ClaimDependencies()
     {
-        var result = new List<MoSubscription>();
-        foreach (var handler in option.Handlers)
-        {
-            foreach (var @interface in handler.GetInterfaces().Where(x =>
-                         x.IsGenericType && x.GetGenericTypeDefinition() ==
-                         typeof(IMoDistributedEventHandler<>)))
-            {
-                var eventType = @interface.GetGenericArguments()[0];
-                var eventName = EventNameAttribute.GetNameOrDefault(eventType);
-
-                var subscription = new MoSubscription
-                {
-                    PubsubName = busOption.PubSubName,
-                    Topic = eventName,
-                    Route = busOption.DaprEventBusCallback,
-                    Metadata = new MoMetadata
-                    {
-                        {
-                            "rawPayload", "true"
-                        }
-                    }
-                };
-                result.Add(subscription);
-            }
-        }
-
-        return result;
+        DependsOnModule<ModuleEventBusGuide>().Register().SetDistributedEventBusProvider<DaprDistributedEventBus>();
     }
-
-    /// <summary>
-    /// Gets or sets the topic name.
-    /// </summary>
-    public string Topic { get; set; } = default!;
-
-    /// <summary>
-    /// Gets or sets the pubsub name
-    /// </summary>
-    public string PubsubName { get; set; } = default!;
-
-    /// <summary>
-    /// Gets or sets the route
-    /// </summary>
-    public string? Route { get; set; }
-
-    /// <summary>
-    /// Gets or sets the routes
-    /// </summary>
-    public MoRoutes? Routes { get; set; }
-
-    /// <summary>
-    /// Gets or sets the metadata.
-    /// </summary>
-    public MoMetadata? Metadata { get; set; }
-
-    /// <summary>
-    /// Gets or sets the deadletter topic.
-    /// </summary>
-    public string? DeadLetterTopic { get; set; }
-}
-
-/// <summary>
-/// This class defines the metadata for subscribe endpoint.
-/// </summary>
-file class MoMetadata : Dictionary<string, string>
-{
-    /// <summary>
-    /// Initializes a new instance of the Metadata class.
-    /// </summary>
-    public MoMetadata() { }
-
-    /// <summary>
-    /// Initializes a new instance of the Metadata class.
-    /// </summary>
-    /// <param name="dictionary"></param>
-    public MoMetadata(IDictionary<string, string> dictionary) : base(dictionary) { }
-
-    /// <summary>
-    /// RawPayload key
-    /// </summary>
-    internal const string RawPayload = "rawPayload";
-}
-
-/// <summary>
-/// This class defines the routes for subscribe endpoint.
-/// </summary>
-file abstract class MoRoutes
-{
-    /// <summary>
-    /// Gets or sets the default route
-    /// </summary>
-    public string? Default { get; set; }
-
-    /// <summary>
-    /// Gets or sets the routing rules
-    /// </summary>
-    public List<MoRule>? Rules { get; set; }
-}
-
-/// <summary>
-/// This class defines the rule for subscribe endpoint.
-/// </summary>
-file abstract class MoRule
-{
-    /// <summary>
-    /// Gets or sets the CEL expression to match this route.
-    /// </summary>
-    public string Match { get; set; } = default!;
-
-    /// <summary>
-    /// Gets or sets the path of the route.
-    /// </summary>
-    public string Path { get; set; } = default!;
 }

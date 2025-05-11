@@ -6,10 +6,14 @@ namespace MoLibrary.EventBus.Modules;
 
 public class ModuleEventBusGuide : MoModuleGuide<ModuleEventBus, ModuleEventBusOption, ModuleEventBusGuide>
 {
-
-    public ModuleEventBusGuide SetEventBusProvider<TProvider>() where TProvider : class, IMoDistributedEventBus
+    protected override string[] GetRequestedConfigMethodKeys()
     {
-        ConfigureServices(nameof(SetEventBusProvider), services =>
+        return [nameof(SetDistributedEventBusProvider)];
+    }
+
+    public ModuleEventBusGuide SetDistributedEventBusProvider<TProvider>() where TProvider : class, IMoDistributedEventBus
+    {
+        ConfigureServices(nameof(SetDistributedEventBusProvider), services =>
         {
             services.Services.AddSingleton<IMoDistributedEventBus, TProvider>();
             services.Services.AddSingleton<TProvider>();
