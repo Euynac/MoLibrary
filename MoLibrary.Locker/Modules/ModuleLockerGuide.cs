@@ -1,8 +1,7 @@
-﻿using Medallion.Threading;
+using Medallion.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Locker.DistributedLocking;
-using MoLibrary.Locker.Providers.Dapr;
 using MoLibrary.Locker.Providers.Local;
 using MoLibrary.Locker.Providers.Medallion;
 
@@ -15,26 +14,11 @@ public class ModuleLockerGuide : MoModuleGuide<ModuleLocker, ModuleLockerOption,
         return [nameof(SetDistributedLockProvider)];
     }
 
-    protected ModuleLockerGuide SetDistributedLockProvider<TProvider>() where TProvider : class, IMoDistributedLock
+    public ModuleLockerGuide SetDistributedLockProvider<TProvider>() where TProvider : class, IMoDistributedLock
     {
         ConfigureServices(nameof(SetDistributedLockProvider), context =>
         {
             context.Services.AddSingleton<IMoDistributedLock, TProvider>();
-        });
-        return this;
-    }
-    /// <summary>
-    /// Adds the Dapr distributed locking provider to the service collection.
-    /// </summary>
-    /// <param name="configure">Action to configure the Dapr options.</param>
-    /// <returns>The service collection for chaining.</returns>
-    public ModuleLockerGuide AddDaprDistributedLock(
-        Action<MoDistributedLockDaprOptions> configure)
-    {
-        ConfigureServices(nameof(SetDistributedLockProvider), context =>
-        {
-            context.Services.AddSingleton<IMoDistributedLock, DaprMoDistributedLock>();
-            context.Services.Configure(configure);
         });
         return this;
     }

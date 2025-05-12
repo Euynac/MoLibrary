@@ -1,7 +1,7 @@
 ﻿using Dapr.Client;
 using MoLibrary.Locker.DistributedLocking;
 
-namespace MoLibrary.Locker.Providers.Dapr;
+namespace MoLibrary.Dapr.Locker;
 
 public class DaprMoDistributedLockHandle(TryLockResponse lockResponse) : IMoDistributedLockHandle
 {
