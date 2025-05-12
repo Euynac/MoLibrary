@@ -1,52 +1,26 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
 using MoLibrary.Authority.Security;
 using MoLibrary.Core.GlobalJson;
-using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
-using MoLibrary.Core.Module.Models;
+using MoLibrary.SignalR.Implements;
 using MoLibrary.SignalR.Interfaces;
-using MoLibrary.Tool.MoResponse;
 using SignalRSwaggerGen;
-using System.Diagnostics.CodeAnalysis;
-using System.Reflection;
-using Microsoft.AspNetCore.Builder;
 using SignalRSwaggerGen.Attributes;
 
 namespace MoLibrary.SignalR.Modules;
-
-
-public static class ModuleSignalRBuilderExtensions
-{
-    public static ModuleSignalRGuide AddMoModuleSignalR(this IServiceCollection services,
-        Action<ModuleSignalROption>? action = null)
-    {
-        return new ModuleSignalRGuide().Register(action);
-    }
-}
-
-public class ModuleSignalR(ModuleSignalROption option) : MoModule<ModuleSignalR, ModuleSignalROption>(option)
-{
-    public override EMoModules CurModuleEnum()
-    {
-        return EMoModules.SignalR;
-    }
-
-    public override Res ConfigureServices(IServiceCollection services)
-    {
-
-        return Res.Ok();
-    }
-}
 
 public class ModuleSignalRGuide : MoModuleGuide<ModuleSignalR, ModuleSignalROption, ModuleSignalRGuide>
 {
 
     protected override string[] GetRequestedConfigMethodKeys()
     {
-        return [nameof(AddMoSignalR)];
+        return [nameof(AddMoSignalR), nameof(MapMoHub)];
     }
 
     /// <summary>

@@ -1,11 +1,8 @@
-﻿using System.Linq.Expressions;
 using System.Reflection;
 using ExpressionDebugger;
 using Mapster;
 using MapsterMapper;
 using Microsoft.Extensions.Logging;
-using MoLibrary.Logging;
-using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Core.Features.MoMapper;
 
@@ -23,7 +20,14 @@ public static class MapperExtensions
     public static void MapDebug<TSrc, TDst>(this IMapper mapper, TSrc src, ILogger? logger = null)
     {
         var script = src.BuildAdapter(mapper.Config).CreateMapExpression<TDst>().ToScript();
-        (logger ?? GlobalLog.Logger).LogWarning(script);
+        if (logger == null)
+        {
+            Console.WriteLine(script);
+        }
+        else
+        {
+            logger.LogWarning(script);
+        }
     }
 
     public class MapperInfoCard
