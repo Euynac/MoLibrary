@@ -104,7 +104,7 @@ public class ModuleAuthentication(ModuleAuthenticationOption option) : MoModule<
         return Res.Ok();
     }
 
-
+    //必须在CORS中间件之后，不然会使得CORS失效
     public override Res ConfigureApplicationBuilder(IApplicationBuilder app)
     {
         app.UseAuthentication();

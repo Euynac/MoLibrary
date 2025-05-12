@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
 using MoLibrary.Authority.Security;
 using MoLibrary.Core.GlobalJson;
+using MoLibrary.SignalR.Implements;
 using MoLibrary.SignalR.Interfaces;
 using MoLibrary.SignalR.Modules;
 using SignalRSwaggerGen;
@@ -102,13 +103,5 @@ public static class SignalRBuilderExtensions
             operation.Tags = tagGroup;
             return operation;
         });
-    }
-}
-
-public class MoUserIdProvider : IUserIdProvider
-{
-    public string? GetUserId(HubConnectionContext connection)
-    {
-        return new MoCurrentUser(connection.User).Id;
     }
 }

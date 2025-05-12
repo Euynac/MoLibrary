@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Configuration;
 
-namespace MoLibrary.Configuration.Extensions;
+namespace MoLibrary.Core.Extensions;
 
 public static class MicrosoftConfigurationExtensions
 {

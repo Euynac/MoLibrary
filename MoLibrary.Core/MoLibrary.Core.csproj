@@ -17,7 +17,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MoLibrary.Logging\MoLibrary.Logging.csproj" />
     <ProjectReference Include="..\MoLibrary.Tool\MoLibrary.Tool.csproj" />
   </ItemGroup>
 
