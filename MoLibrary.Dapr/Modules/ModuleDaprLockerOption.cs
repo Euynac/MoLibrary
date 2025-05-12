@@ -1,6 +1,8 @@
-﻿namespace MoLibrary.Locker.Providers.Dapr;
+using MoLibrary.Core.Module.Interfaces;
 
-public class MoDistributedLockDaprOptions
+namespace MoLibrary.Dapr.Modules;
+
+public class ModuleDaprLockerOption : IMoModuleOption<ModuleDaprLocker>
 {
     public string StoreName { get; set; } = default!;
 

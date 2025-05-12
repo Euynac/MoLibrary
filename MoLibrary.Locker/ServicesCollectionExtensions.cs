@@ -2,7 +2,6 @@ using Medallion.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Locker.DistributedLocking;
 using MoLibrary.Locker.Modules;
-using MoLibrary.Locker.Providers.Dapr;
 using MoLibrary.Locker.Providers.Local;
 using MoLibrary.Locker.Providers.Medallion;
 
@@ -26,22 +25,6 @@ public static class ServicesCollectionExtensions
         });
 
         services.AddSingleton<IDistributedLockKeyNormalizer, DistributedLockKeyNormalizer>();
-
-        return services;
-    }
-
-    /// <summary>
-    /// Adds the Dapr distributed locking provider to the service collection.
-    /// </summary>
-    /// <param name="services">The service collection.</param>
-    /// <param name="configure">Action to configure the Dapr options.</param>
-    /// <returns>The service collection for chaining.</returns>
-    public static IServiceCollection AddDaprDistributedLock(
-        this IServiceCollection services,
-        Action<MoDistributedLockDaprOptions> configure)
-    {
-        services.Configure<MoDistributedLockDaprOptions>(configure);
-        services.AddSingleton<IMoDistributedLock, DaprMoDistributedLock>();
 
         return services;
     }

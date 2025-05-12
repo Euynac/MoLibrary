@@ -38,9 +38,14 @@ public class ModuleDaprEventBus(ModuleDaprEventBusOption option)
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-
     public override Res ConfigureApplicationBuilder(IApplicationBuilder app)
     {
+        //用于解析data_base64等application/cloudevents+json格式的请求
+        //必须位于abp的UseConfiguredEndpoints之前。
+        app.UseCloudEvents();
+        //app.UseCorrelationId(); //（ABP）使得dapr中推送的消息Correlation有值，否则当Json使用IgnoreWhenDefault时会拒绝解析
+        //                        //已使用ABP dapr的MapSubscribeHandler方法
+       
         app.Use(async (context, next) =>
         {
             if (context.Request.Path != "/dapr/subscribe")
@@ -62,18 +67,30 @@ public class ModuleDaprEventBus(ModuleDaprEventBusOption option)
 
             var originJson = JsonSerializer.Deserialize<List<MoSubscription>>(originalResponse, _jsonSerializerOptions);
 
-            var option = context.RequestServices.GetRequiredService<IOptions<DistributedEventBusOptions>>().Value;
-            var busOption = context.RequestServices.GetRequiredService<IOptions<ModuleDaprEventBusOption>>().Value;
+            var distributedEventBusOptions = context.RequestServices.GetRequiredService<IOptions<DistributedEventBusOptions>>().Value;
+            var daprEventBusOption = context.RequestServices.GetRequiredService<IOptions<ModuleDaprEventBusOption>>().Value;
 
 
             originJson ??= [];
-            originJson.AddRange(MoSubscription.GetMoSubscriptions(option, busOption));
+            originJson.AddRange(MoSubscription.GetMoSubscriptions(distributedEventBusOptions, daprEventBusOption));
 
             context.Response.Body = originalBodyStream;
             await context.Response.WriteAsJsonAsync(originJson, _jsonSerializerOptions);
 
 
         });
+
+        return base.ConfigureApplicationBuilder(app);
+    }
+    public override Res ConfigureEndpoints(IApplicationBuilder app)
+    {
+
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapSubscribeHandler(); //用于map使用了Topic特性标签的的RESTful handler
+        });
+
+       
         app.UseEndpoints(endpoints =>
         {
             var tagGroup = new List<OpenApiTag>
@@ -81,6 +98,19 @@ public class ModuleDaprEventBus(ModuleDaprEventBusOption option)
                 new() { Name = option.GetSwaggerGroupName(), Description = "Dapr相关接口" }
             };
             var options = app.ApplicationServices.GetRequiredService<IOptions<ModuleDaprEventBusOption>>().Value;
+
+            endpoints.MapGet("/dapr/subscribe-status", async (HttpResponse response, HttpContext context) =>
+            {
+                //redirect to /dapr/subscribe
+                context.Response.Redirect("/dapr/subscribe");
+            }).WithName("获取Dapr边车订阅发布组件状态信息 /dapr/subscribe").WithOpenApi(operation =>
+            {
+                operation.Summary = "获取Dapr边车订阅发布组件状态信息";
+                operation.Description = "获取Dapr边车订阅发布组件状态信息";
+                operation.Tags = tagGroup;
+                return operation;
+            });
+
 
             endpoints.MapPost(options.DaprEventBusCallback, async (HttpResponse response, HttpContext context, [FromServices] ILogger<DaprDistributedEventBus> logger, [FromServices] IGlobalJsonOption jsonOption) =>
             {

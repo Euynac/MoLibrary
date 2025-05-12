@@ -12,6 +12,7 @@
   <ItemGroup>
     <ProjectReference Include="..\MoLibrary.Core\MoLibrary.Core.csproj" />
     <ProjectReference Include="..\MoLibrary.EventBus\MoLibrary.EventBus.csproj" />
+    <ProjectReference Include="..\MoLibrary.Locker\MoLibrary.Locker.csproj" />
     <ProjectReference Include="..\MoLibrary.StateStore\MoLibrary.StateStore.csproj" />
   </ItemGroup>
 </Project>

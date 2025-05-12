@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using MoLibrary.Core.Module.Interfaces;
 
 namespace MoLibrary.RegisterCentre.Modules;

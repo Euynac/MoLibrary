@@ -1,17 +1,18 @@
 ﻿using Dapr.Client;
 using Microsoft.Extensions.Options;
+using MoLibrary.Dapr.Modules;
 using MoLibrary.Locker.DistributedLocking;
 
-namespace MoLibrary.Locker.Providers.Dapr;
+namespace MoLibrary.Dapr.Locker;
 
 public class DaprMoDistributedLock(
     DaprClient client,
-    IOptions<MoDistributedLockDaprOptions> distributedLockDaprOptions,
+    IOptions<ModuleDaprLockerOption> distributedLockDaprOptions,
     IDistributedLockKeyNormalizer distributedLockKeyNormalizer)
     : IMoDistributedLock
 {
     protected DaprClient Client { get; } = client;
-    protected MoDistributedLockDaprOptions DistributedLockDaprOptions { get; } = distributedLockDaprOptions.Value;
+    protected ModuleDaprLockerOption DistributedLockDaprOptions { get; } = distributedLockDaprOptions.Value;
     protected IDistributedLockKeyNormalizer DistributedLockKeyNormalizer { get; } = distributedLockKeyNormalizer;
 
     public async Task<IMoDistributedLockHandle?> TryAcquireAsync(

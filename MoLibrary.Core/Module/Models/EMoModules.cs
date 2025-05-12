@@ -31,7 +31,8 @@ public enum EMoModules
     Dapr,
     DaprClient,
     DaprStateStore,
-    DaprEventBus
+    DaprEventBus,
+    DaprLocker
 }
 
 public enum EMoModuleConfigMethods
