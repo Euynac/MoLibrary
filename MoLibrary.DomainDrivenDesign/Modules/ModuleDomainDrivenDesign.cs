@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using MoLibrary.Authority.Modules;
 using MoLibrary.AutoModel.Modules;
 using MoLibrary.Core.Module;
 using MoLibrary.DependencyInjection.DynamicProxy.DefaultInterceptors;
@@ -46,5 +47,8 @@ public class ModuleDomainDrivenDesign(ModuleDomainDrivenDesignOption option) : M
             .AddDefaultExceptionHandler()
             .AddCustomExceptionHandler<AutoModelExceptionHandlerForRes>();
         DependsOnModule<ModuleSwaggerGuide>().Register();
+        DependsOnModule<ModuleGlobalExceptionHandlerGuide>().Register();
+        DependsOnModule<ModuleAuthorizationGuide>().Register();
+        DependsOnModule<ModuleAuthenticationGuide>().Register();
     }
 }
