@@ -1,7 +1,5 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.GlobalJson.Converters;
-using MoLibrary.Core.GlobalJson.Interfaces;
+using MoLibrary.Core.Modules;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -9,40 +7,7 @@ namespace MoLibrary.Core.GlobalJson;
 
 public static class MoGlobalJsonExtensions
 {
-
-    public static void AddMoGlobalJsonSerialization(this IServiceCollection services, Action<MoGlobalJsonOptions>? optionAction = null, Action<JsonSerializerOptions>? extendAction = null)
-    {
-        var extraOptions = new MoGlobalJsonOptions();
-        if (optionAction is not null)
-        {
-            optionAction.Invoke(extraOptions);
-            services.Configure(optionAction);
-        }
-
-        var options = new JsonSerializerOptions();
-        extendAction?.Invoke(options);
-        options.ConfigGlobalJsonSerializeOptions(extraOptions);
-        DefaultMoGlobalJsonOptions.GlobalJsonSerializerOptions = options;
-
-        //依赖于AsyncLocal技术，异步static单例，不同的请求线程会有不同的HttpContext
-        services.AddHttpContextAccessor();
-
-        //巨坑：minimal api 等全局注册
-        services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(o =>
-        {
-            o.SerializerOptions.CloneFrom(DefaultMoGlobalJsonOptions.GlobalJsonSerializerOptions);
-        });
-        //MVC框架HTTP请求与响应的JsonConverter全局注册
-        services.Configure<JsonOptions>(o =>
-        {
-            o.JsonSerializerOptions.CloneFrom(DefaultMoGlobalJsonOptions.GlobalJsonSerializerOptions);
-        });
-
-        services.AddSingleton<IGlobalJsonOption, DefaultMoGlobalJsonOptions>();
-
-    }
-
-    public static void ConfigGlobalJsonSerializeOptions(this JsonSerializerOptions options, MoGlobalJsonOptions extraOptions)
+    public static void ConfigGlobalJsonSerializeOptions(this JsonSerializerOptions options, ModuleGlobalJsonOption extraOption)
     {
         options.Converters.Add(new NullableDateTimeJsonConverter());
         options.Converters.Add(new DateTimeJsonConverter());
@@ -53,21 +18,21 @@ public static class MoGlobalJsonExtensions
         options.Converters.Add(new NullableLongToStringJsonConverter());
 
         // Add our EnumFormatValue converter if enabled
-        if (extraOptions.EnableEnumFormatValue)
+        if (extraOption.EnableEnumFormatValue)
         {
             options.Converters.Add(new EnumFormatValueJsonConverterFactory());
         }
 
-        if (extraOptions.EnableGlobalEnumToString)
+        if (extraOption.EnableGlobalEnumToString)
         {
             options.Converters.Add(new ExcludeTypesJsonConverterFactory(new JsonStringEnumConverter(),
-                [.. extraOptions.EnumTypeToIgnore ?? []])); //全局枚举对String、int转换支持
+                [.. extraOption.EnumTypeToIgnore ?? []])); //全局枚举对String、int转换支持
             //options.Converters.Add(new JsonStringEnumConverter()); //全局枚举对String、int转换支持
         }
 
-        options.DefaultIgnoreCondition = extraOptions.DefaultIgnoreCondition;
+        options.DefaultIgnoreCondition = extraOption.DefaultIgnoreCondition;
 
-        if (extraOptions.ReferenceHandlerPreserve)
+        if (extraOption.ReferenceHandlerPreserve)
         {
             options.ReferenceHandler = ReferenceHandler.Preserve;
         }

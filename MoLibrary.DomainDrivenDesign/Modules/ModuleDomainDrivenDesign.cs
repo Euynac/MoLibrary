@@ -9,6 +9,7 @@ using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.MoResponse;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.DependencyInjection.Modules;
+using MoLibrary.AutoModel.Exceptions;
 
 namespace MoLibrary.DomainDrivenDesign.Modules;
 
@@ -21,8 +22,6 @@ public class ModuleDomainDrivenDesign(ModuleDomainDrivenDesignOption option) : M
 
     public override Res ConfigureServices(IServiceCollection services)
     {
-
-
         //TODO 优化无需AOP
         services.AddMoInterceptor<PropertyInjectServiceProviderEmptyInterceptor>().CreateProxyWhenSatisfy(
             c =>
@@ -43,5 +42,8 @@ public class ModuleDomainDrivenDesign(ModuleDomainDrivenDesignOption option) : M
     {
         DependsOnModule<ModuleAutoModelGuide>().Register();
         DependsOnModule<ModuleDependencyInjectionGuide>().Register();
+        DependsOnModule<ModuleGlobalExceptionHandlerGuide>().Register()
+            .AddDefaultExceptionHandler()
+            .AddCustomExceptionHandler<AutoModelExceptionHandlerForRes>();
     }
 }

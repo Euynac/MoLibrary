@@ -1,9 +1,14 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
+using MoLibrary.Core.Module.Interfaces;
 
-namespace MoLibrary.Core.GlobalJson;
+namespace MoLibrary.Core.Modules;
 
-public class MoGlobalJsonOptions
+public class ModuleGlobalJsonOption : IMoModuleOption<ModuleGlobalJson>
 {
+
+    public Action<JsonSerializerOptions>? ExtendAction { get; set; }
+
     /// <summary>Gets or sets a value that determines when properties with default values are ignored during serialization or deserialization.
     /// The default value is <see cref="F:System.Text.Json.Serialization.JsonIgnoreCondition.Never" />.</summary>
     /// <exception cref="T:System.ArgumentException">This property is set to <see cref="F:System.Text.Json.Serialization.JsonIgnoreCondition.Always" />.</exception>

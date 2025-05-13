@@ -33,7 +33,11 @@ public enum EMoModules
     DaprStateStore,
     DaprEventBus,
     DaprLocker,
-    FrameworkLogging
+    FrameworkLogging,
+    GlobalExceptionHandler,
+    AutoControllers,
+    GlobalJson,
+    Mediator
 }
 
 public enum EMoModuleConfigMethods
