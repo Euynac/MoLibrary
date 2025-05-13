@@ -37,7 +37,8 @@ public enum EMoModules
     GlobalExceptionHandler,
     AutoControllers,
     GlobalJson,
-    Mediator
+    Mediator,
+    Swagger
 }
 
 public enum EMoModuleConfigMethods

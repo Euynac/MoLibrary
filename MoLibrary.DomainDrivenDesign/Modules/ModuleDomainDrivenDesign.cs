@@ -45,5 +45,6 @@ public class ModuleDomainDrivenDesign(ModuleDomainDrivenDesignOption option) : M
         DependsOnModule<ModuleGlobalExceptionHandlerGuide>().Register()
             .AddDefaultExceptionHandler()
             .AddCustomExceptionHandler<AutoModelExceptionHandlerForRes>();
+        DependsOnModule<ModuleSwaggerGuide>().Register();
     }
 }

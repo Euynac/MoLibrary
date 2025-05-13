@@ -1,7 +1,12 @@
-namespace MoLibrary.DomainDrivenDesign.Swagger;
+using MoLibrary.Core.Module.Interfaces;
+using Swashbuckle.AspNetCore.SwaggerGen;
 
-public class MoSwaggerConfig
+namespace MoLibrary.DomainDrivenDesign.Modules;
+
+public class ModuleSwaggerOption : IMoModuleOption<ModuleSwagger>
 {
+    public Action<SwaggerGenOptions>? ExtendSwaggerGenAction { get; set; }
+
     /// <summary>
     /// 应用名
     /// </summary>

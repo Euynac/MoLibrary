@@ -1,38 +1,56 @@
-using System.Reflection;
+﻿using System.Reflection;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using MoLibrary.AutoModel.Interfaces;
-using MoLibrary.Core.Extensions;
+using MoLibrary.Core.Module;
+using MoLibrary.Core.Module.Models;
 using MoLibrary.DomainDrivenDesign.AutoCrud.Interfaces;
-using MoLibrary.Logging;
+using MoLibrary.DomainDrivenDesign.Swagger;
 using MoLibrary.Tool.Extensions;
-using Swashbuckle.AspNetCore.SwaggerGen;
+using MoLibrary.Tool.MoResponse;
 using Unchase.Swashbuckle.AspNetCore.Extensions.Extensions;
 
-namespace MoLibrary.DomainDrivenDesign.Swagger;
+namespace MoLibrary.DomainDrivenDesign.Modules;
 
-public static class ServicesCollectionExtensions
+public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger, ModuleSwaggerOption>(option)
 {
-    /// <summary>
-    /// 注册 Swagger 文档服务
-    /// </summary>
-    public static void AddMoSwagger(this IServiceCollection services, Action<MoSwaggerConfig>? configAction = null, Action<SwaggerGenOptions>? extendSwaggerGenOptions = null)
+    public override EMoModules CurModuleEnum()
     {
-        services.ConfigActionWrapper(configAction, out var swaggerConfig);
+        return EMoModules.Swagger;
+    }
+
+    public override Res ConfigureApplicationBuilder(IApplicationBuilder app)
+    {
+        app.UseSwagger();
+        app.UseSwaggerUI(c =>
+        {
+            c.SwaggerEndpoint($"/swagger/{option.Version}/swagger.json",
+                $"{option.AppName ?? "Unknown"} {option.Version}");
+        });
+        return base.ConfigureApplicationBuilder(app);
+    }
+
+    public override Res ConfigureEndpoints(IApplicationBuilder app)
+    {
+        app.UseEndpoints(endpoints => { endpoints.MapGet("/", () => Results.LocalRedirect("~/swagger")); });
+        return base.ConfigureEndpoints(app);
+    }
+
+    public override Res ConfigureServices(IServiceCollection services)
+    {
         services.AddSwaggerGen(options =>
         {
-            extendSwaggerGenOptions?.Invoke(options);
             options.DocumentFilter<CustomDocumentFilter>();
             options.SchemaFilter<CustomSchemaFilter>();
-            options.SwaggerDoc(swaggerConfig.Version, new OpenApiInfo
+            options.SwaggerDoc(option.Version, new OpenApiInfo
             {
-                Title = swaggerConfig.AppName,
-                Version = swaggerConfig.Version,
-                Description = swaggerConfig.Description ?? ""
+                Title = option.AppName,
+                Version = option.Version,
+                Description = option.Description ?? ""
             });
             options.AddEnumsWithValuesFixFilters();//扩展支持Enum
 
@@ -49,10 +67,10 @@ public static class ServicesCollectionExtensions
 
             //巨坑：要显示swagger文档，需要设置项目<GenerateDocumentationFile>True</GenerateDocumentationFile> XML文档用于生成swagger api注释。另外还要在设置中指定xml文档地址
 
-            var documentAssemblies = (swaggerConfig.DocumentAssemblies ?? []).ToList();
+            var documentAssemblies = (option.DocumentAssemblies ?? []).ToList();
             documentAssemblies.Add(typeof(MoCrudPageRequestDto).Assembly.GetName().Name!);
             documentAssemblies.Add(typeof(IHasRequestFilter).Assembly.GetName().Name!);
-            if (!swaggerConfig.DisableAutoIncludeEntryAsDocumentAssembly)
+            if (!option.DisableAutoIncludeEntryAsDocumentAssembly)
             {
                 documentAssemblies.Add(Assembly.GetEntryAssembly()!.GetName().Name!);
             }
@@ -66,13 +84,13 @@ public static class ServicesCollectionExtensions
                 }
                 else
                 {
-                    GlobalLog.LogWarning($"Swagger XML file not found: {filePath}");
+                    Logger.LogWarning($"Swagger XML file not found: {filePath}");
                 }
             }
             //似乎必须写在IncludeXmlComments下面，而且只支持/// <inheritdoc /> 一行
             options.IncludeXmlCommentsFromInheritDocs(includeRemarks: true, excludedTypes: typeof(string));//扩展支持inherit doc
 
-            if (swaggerConfig.UseAuth)
+            if (option.UseAuth)
             {
                 var securityScheme = new OpenApiSecurityScheme
                 {
@@ -95,79 +113,9 @@ public static class ServicesCollectionExtensions
                 });
             }
 
+            option.ExtendSwaggerGenAction?.Invoke(options);
 
         }); //https://github.com/domaindrivendev/Swashbuckle.AspNetCore#include-descriptions-from-xml-comments
-    }
-
-    /// <summary>
-    /// 使用 Swagger 中间件
-    /// </summary>
-    public static void UseMoEndpointsSwagger(this IApplicationBuilder app)
-    {
-        //获取MoSwaggerConfig
-        var config = app.ApplicationServices.GetService<IOptions<MoSwaggerConfig>>()?.Value;
-
-        if (config is null)
-        {
-            GlobalLog.LogError("SwaggerConfig is null, Swagger will not be registered.");
-            return;
-        }
-
-        app.UseSwagger();
-        app.UseSwaggerUI(c =>
-        {
-            c.SwaggerEndpoint($"/swagger/{config.Version}/swagger.json",
-                $"{config.AppName ?? "Unknown"} {config.Version}");
-        });
-        app.UseEndpoints(endpoints => { endpoints.MapGet("/", () => Results.LocalRedirect("~/swagger")); });
-    }
-}
-
-/// <summary>
-/// 用于去除Swagger中Response多余的code和message属性
-/// </summary>
-internal class CustomSchemaFilter : ISchemaFilter
-{
-    public void Apply(OpenApiSchema schema, SchemaFilterContext context)
-    {
-        //for each schema name start with "Response", fetch its properties, and remove all properties name "code" and "message"
-        if (context.Type.Name.StartsWith("Response"))
-        {
-            var properties = schema.Properties;
-            var code = properties.FirstOrDefault(x => x.Key == "code");
-            var message = properties.FirstOrDefault(x => x.Key == "message");
-            var innovation = properties.FirstOrDefault(x => x.Key == "invocationChain");
-            if (code.Key != null)
-            {
-                properties.Remove(code.Key);
-            }
-
-            if (message.Key != null)
-            {
-                properties.Remove(message.Key);
-            }
-
-            if (innovation.Key != null)
-            {
-                properties.Remove(innovation.Key);
-            }
-        }
-    }
-}
-
-//https://stackoverflow.com/questions/55051497/how-to-define-default-values-for-parameters-for-the-swagger-ui
-//TODO POST、GET参数默认值，加速测试
-
-internal class CustomDocumentFilter : IDocumentFilter
-{
-    public void Apply(OpenApiDocument swaggerDoc, DocumentFilterContext context)
-    {
-        //GlobalLog.LogDebug(swaggerDoc.Paths.Select(p => p.Key).StringJoin("\n"));
-        var filteredPaths = new List<string>()
-        {
-            "/", "/api/abp/api-definition", "/api/abp/application-configuration", "/api/abp/application-localization",
-            "/api/abp/dapr/event"
-        };
-        filteredPaths.ForEach(x => { swaggerDoc.Paths.Remove(x); });
+        return Res.Ok();
     }
 }
