@@ -5,7 +5,7 @@ namespace MoLibrary.Configuration.Dashboard.Modules;
 
 public static class ModuleConfigurationDashboardBuilderExtensions
 {
-    public static ModuleConfigurationDashboardGuide AddMoModuleConfigurationDashboard(this IServiceCollection services,
+    public static ModuleConfigurationDashboardGuide AddMoModuleConfigurationDashboard(this WebApplicationBuilder builder,
         Action<ModuleConfigurationDashboardOption>? action = null)
     {
         return new ModuleConfigurationDashboardGuide().Register(action);

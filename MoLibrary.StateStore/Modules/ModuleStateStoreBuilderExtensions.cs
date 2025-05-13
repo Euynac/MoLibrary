@@ -5,7 +5,7 @@ namespace MoLibrary.StateStore.Modules;
 
 public static class ModuleStateStoreBuilderExtensions
 {
-    public static ModuleStateStoreGuide AddMoModuleStateStore(this IServiceCollection services,
+    public static ModuleStateStoreGuide AddMoModuleStateStore(this WebApplicationBuilder builder,
         Action<ModuleStateStoreOption>? action = null)
     {
         return new ModuleStateStoreGuide().Register(action);

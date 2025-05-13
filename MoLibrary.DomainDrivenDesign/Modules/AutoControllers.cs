@@ -19,7 +19,7 @@ namespace MoLibrary.DomainDrivenDesign.Modules;
 
 public static class ModuleAutoControllersBuilderExtensions
 {
-    public static ModuleAutoControllersGuide AddMoModuleAutoControllers(this IServiceCollection services,
+    public static ModuleAutoControllersGuide AddMoModuleAutoControllers(this WebApplicationBuilder builder,
         Action<ModuleAutoControllersOption>? action = null, Action<MoCrudControllerOption>? crudOptionAction = null, Action<MvcOptions>? setupAction = null)
     {
         return new ModuleAutoControllersGuide().Register(action).ConfigureExtraOption(crudOptionAction)
