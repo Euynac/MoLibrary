@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.Core.Modules;

@@ -20,7 +20,9 @@ public class ModuleAuthorizationGuide : MoModuleGuide<ModuleAuthorization, Modul
     {
         ConfigureServices(nameof(AddDefaultPermissionBit), context =>
         {
-            context.Services.AddMoAuthorizationPermissionBit<TEnum>(claimTypeDefinition);
+            var checker = new PermissionBitChecker<TEnum>(claimTypeDefinition);
+            PermissionBitCheckerManager.AddChecker(checker);
+            context.Services.AddSingleton<IPermissionBitChecker<TEnum>, PermissionBitChecker<TEnum>>(_ => checker);
             context.Services.AddSingleton<IMoPermissionChecker, MoPermissionChecker<TEnum>>();
         });
         return this;
