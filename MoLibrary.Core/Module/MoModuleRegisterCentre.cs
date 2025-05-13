@@ -4,6 +4,7 @@ using MoLibrary.Tool.Extensions;
 using MoLibrary.Core.Module.TypeFinder;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.Core.Module.Interfaces;
+using MoLibrary.Core.Module.BuilderWrapper;
 
 namespace MoLibrary.Core.Module;
 
@@ -12,6 +13,18 @@ namespace MoLibrary.Core.Module;
 /// </summary>
 public static class MoModuleRegisterCentre
 {
+    /// <summary>
+    /// 静态构造函数，用于初始化事件监听。
+    /// </summary>
+    static MoModuleRegisterCentre()
+    {
+        // 注册BeforeBuild事件处理程序，用于在构建应用程序前注册服务
+        WebApplicationBuilderExtensions.BeforeBuild += MoModuleRegisterServices;
+        
+        // 注册AfterBuild事件处理程序，用于在构建应用程序后配置应用程序管道
+        WebApplicationBuilderExtensions.AfterBuild += MoModuleConfigApplicationBuilder;
+    }
+
     /// <summary>
     /// 模块注册请求信息字典，用于存储所有注册过的模块类型及其注册信息。
     /// </summary>
@@ -78,8 +91,9 @@ public static class MoModuleRegisterCentre
             {
                 ConfigureContext = context =>
                 {
-                    context.Services.Configure(optionAction);
+                    context.Services!.Configure(optionAction);
                 },
+                RequestMethod = EMoModuleConfigMethods.ConfigureServices,
                 Order = guideFrom != EMoModules.Developer ? order - 1 : order, //来自模块级联注册的Option的优先级始终比用户Order低1
                 RequestFrom = guideFrom
             });
@@ -88,9 +102,9 @@ public static class MoModuleRegisterCentre
     /// <summary>
     /// 注册所有模块的服务。此方法应在builder.Build()之前调用。
     /// </summary>
-    /// <param name="services">服务集合。</param>
+    /// <param name="builder"></param>
     /// <param name="typeFinderConfigure"></param>
-    public static void MoModuleRegisterServices(this WebApplicationBuilder builder, Action<ModuleCoreOptionTypeFinder>? typeFinderConfigure = null)
+    public static void MoModuleRegisterServices(WebApplicationBuilder builder, Action<ModuleCoreOptionTypeFinder>? typeFinderConfigure = null)
     {
         var services = builder.Services;
 
@@ -158,7 +172,7 @@ public static class MoModuleRegisterCentre
     /// 配置应用程序管道。此方法应在app.Build()之后、任何中间件配置之前调用。
     /// </summary>
     /// <param name="app">应用程序构建器。</param>
-    public static void MoModuleConfigApplicationBuilder(this IApplicationBuilder app)
+    public static void MoModuleConfigApplicationBuilder(IApplicationBuilder app)
     {
         // 按优先级排序并配置应用程序构建器
         foreach (var module in ModuleSnapshots)

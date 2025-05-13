@@ -1,6 +1,9 @@
+using MoLibrary.Core.Module.Interfaces;
+using MoLibrary.DomainDrivenDesign.Modules;
+
 namespace MoLibrary.DomainDrivenDesign.AutoController.Settings;
 
-public class MoCrudControllerOption
+public class MoCrudControllerOption : IMoModuleExtraOption<ModuleAutoControllers>
 {
     /// <summary>
     /// 自动CRUD路径前缀

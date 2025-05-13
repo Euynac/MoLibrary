@@ -20,4 +20,8 @@
     <ProjectReference Include="..\MoLibrary.Tool\MoLibrary.Tool.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Module\BuilderWrapper\" />
+  </ItemGroup>
+
 </Project>

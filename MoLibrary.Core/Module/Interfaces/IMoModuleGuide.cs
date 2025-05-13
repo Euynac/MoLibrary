@@ -123,17 +123,19 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
 
     #region 额外设置
 
-    public TModuleGuideSelf ConfigureModuleOption(Action<TModuleOption> optionAction, EMoModuleOrder order = EMoModuleOrder.Normal)
+    public TModuleGuideSelf ConfigureModuleOption(Action<TModuleOption>? optionAction, EMoModuleOrder order = EMoModuleOrder.Normal)
     {
         return ConfigureOption(optionAction, (int) order);
     }
-    public TModuleGuideSelf ConfigureOption<TOption>(Action<TOption> optionAction, int order) where TOption : class, IMoModuleOption, new()
+    public TModuleGuideSelf ConfigureOption<TOption>(Action<TOption>? optionAction, int order) where TOption : class, IMoModuleOption, new()
     {
+        if(optionAction == null) return (TModuleGuideSelf) this;
+
         MoModuleRegisterCentre.RegisterModule<TModule, TModuleOption>();
         MoModuleRegisterCentre.AddConfigureAction<TModule, TOption>(order, optionAction, GuideFrom);
         return (TModuleGuideSelf) this;
     }
-    public TModuleGuideSelf ConfigureExtraOption<TOption>(Action<TOption> optionAction, EMoModuleOrder order = EMoModuleOrder.Normal) where TOption : class, IMoModuleOption<TModule>, new()
+    public TModuleGuideSelf ConfigureExtraOption<TOption>(Action<TOption>? optionAction, EMoModuleOrder order = EMoModuleOrder.Normal) where TOption : class, IMoModuleExtraOption<TModule>, new()
     {
         return ConfigureOption(optionAction, (int) order);
     }
