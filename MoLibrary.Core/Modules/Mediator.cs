@@ -10,7 +10,7 @@ namespace MoLibrary.Core.Modules;
 
 public static class ModuleMediatorBuilderExtensions
 {
-    public static ModuleMediatorGuide AddMoModuleMediator(this IServiceCollection services,
+    public static ModuleMediatorGuide AddMoModuleMediator(this WebApplicationBuilder builder,
         Action<ModuleMediatorOption>? action = null)
     {
         return new ModuleMediatorGuide().Register(action);

@@ -9,7 +9,7 @@ namespace MoLibrary.Framework.Modules;
 
 public static class ModuleFrameworkLoggingBuilderExtensions
 {
-    public static ModuleFrameworkLoggingGuide AddMoModuleFrameworkLogging(this IServiceCollection services,
+    public static ModuleFrameworkLoggingGuide AddMoModuleFrameworkLogging(this WebApplicationBuilder builder,
         Action<ModuleFrameworkLoggingOption>? action = null)
     {
         return new ModuleFrameworkLoggingGuide().Register(action);
