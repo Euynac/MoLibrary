@@ -26,6 +26,9 @@ public static class MoModuleRegisterCentre
 
         // 注册AfterUseRouting事件处理程序，用于在路由中间件应用后执行操作
         WebApplicationBuilderExtensions.AfterUseRouting += app => ConfigApplicationPipeline(app, ModuleOrder.MiddlewareUseRouting, true);
+
+        // 注册BeforeUseEndpoints事件处理程序，用于在Endpoints配置前执行操作
+        WebApplicationBuilderExtensions.BeginUseEndpoints += ConfigEndpoints;
     }
 
     /// <summary>
@@ -185,6 +188,23 @@ public static class MoModuleRegisterCentre
         {
             module.ModuleInstance.ConfigureApplicationBuilder(app);
             foreach (var request in module.RequestInfo.RegisterRequests.Where(p=>p.RequestMethod == EMoModuleConfigMethods.ConfigureApplicationBuilder).Where(filter).OrderBy(r => r.Order))
+            {
+                request.ConfigureContext?.Invoke(new ModuleRegisterContext(null, app, null, module.RequestInfo));
+            }
+        }
+    }
+
+    /// <summary>
+    /// 配置端点路由构建器
+    /// </summary>
+    /// <param name="app">应用程序构建器。</param>
+    internal static void ConfigEndpoints(IApplicationBuilder app)
+    {
+        // 按优先级排序并配置端点路由构建器
+        foreach (var module in ModuleSnapshots)
+        {
+            module.ModuleInstance.ConfigureEndpoints(app);
+            foreach (var request in module.RequestInfo.RegisterRequests.Where(p=>p.RequestMethod == EMoModuleConfigMethods.ConfigureEndpoints).OrderBy(r => r.Order))
             {
                 request.ConfigureContext?.Invoke(new ModuleRegisterContext(null, app, null, module.RequestInfo));
             }

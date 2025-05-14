@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using MoLibrary.Core.Module.TypeFinder;
 
 namespace MoLibrary.Core.Module.BuilderWrapper;
@@ -27,6 +28,12 @@ public static class WebApplicationBuilderExtensions
     /// Event triggered after the UseRouting middleware is applied.
     /// </summary>
     public static event Action<IApplicationBuilder>? AfterUseRouting;
+
+    /// <summary>
+    /// Event triggered when start using MoModule related endpoints middleware.
+    /// </summary>
+    public static event Action<IApplicationBuilder>? BeginUseEndpoints;
+
 
     /// <summary>
     /// Builds the WebApplication with Mo module integration by triggering the BeforeBuild and AfterBuild events.
@@ -66,7 +73,7 @@ public static class WebApplicationBuilderExtensions
     /// <see cref="Microsoft.AspNetCore.Http.Endpoint"/> associated with the <see cref="Microsoft.AspNetCore.Http.HttpContext"/>.
     /// </para>
     /// </remarks>
-    public static IApplicationBuilder MoUseRouting(this IApplicationBuilder builder)
+    public static IApplicationBuilder UseMoRouting(this IApplicationBuilder builder)
     {
         // Trigger BeforeUseRouting event
         BeforeUseRouting?.Invoke(builder);
@@ -79,6 +86,11 @@ public static class WebApplicationBuilderExtensions
         return builder;
     }
 
-
-    
+  
+    public static IApplicationBuilder UseMoEndpoints(this IApplicationBuilder builder)
+    {
+        // Trigger BeginUseEndpoints event
+        BeginUseEndpoints?.Invoke(builder);
+        return builder;
+    }
 }
