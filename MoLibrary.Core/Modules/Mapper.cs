@@ -19,7 +19,7 @@ namespace MoLibrary.Core.Modules;
 
 public static class ModuleMapperBuilderExtensions
 {
-    public static ModuleMapperGuide AddMoModuleMapper(this WebApplicationBuilder builder,
+    public static ModuleMapperGuide ConfigModuleMapper(this WebApplicationBuilder builder,
         Action<ModuleMapperOption>? action = null)
     {
         return new ModuleMapperGuide().Register(action);

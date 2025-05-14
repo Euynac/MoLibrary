@@ -11,7 +11,7 @@ namespace MoLibrary.Dapr.Modules;
 
 public static class ModuleDaprLockerBuilderExtensions
 {
-    public static ModuleDaprLockerGuide AddMoModuleDaprLocker(this IServiceCollection services,
+    public static ModuleDaprLockerGuide ConfigModuleDaprLocker(this IServiceCollection services,
         Action<ModuleDaprLockerOption>? action = null)
     {
         return new ModuleDaprLockerGuide().Register(action);

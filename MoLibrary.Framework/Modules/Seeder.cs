@@ -15,7 +15,7 @@ namespace MoLibrary.Framework.Modules;
 
 public static class ModuleSeederBuilderExtensions
 {
-    public static ModuleSeederGuide AddMoModuleSeeder(this IServiceCollection services,
+    public static ModuleSeederGuide ConfigModuleSeeder(this IServiceCollection services,
         Action<ModuleSeederOption>? action = null)
     {
         return new ModuleSeederGuide().Register(action);

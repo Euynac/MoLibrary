@@ -6,7 +6,7 @@ namespace MoLibrary.Repository.Modules;
 
 public static class ModuleUnitOfWorkBuilderExtensions
 {
-    public static ModuleUnitOfWorkGuide AddMoModuleUnitOfWork(this WebApplicationBuilder builder,
+    public static ModuleUnitOfWorkGuide ConfigModuleUnitOfWork(this WebApplicationBuilder builder,
         Action<ModuleUnitOfWorkOption>? action = null)
     {
         return new ModuleUnitOfWorkGuide().Register(action);

@@ -20,7 +20,7 @@ namespace MoLibrary.Logging.Modules;
 
 public static class ModuleLoggingBuilderExtensions
 {
-    public static ModuleLoggingGuide AddMoModuleLogging(this WebApplicationBuilder builder,
+    public static ModuleLoggingGuide ConfigModuleLogging(this WebApplicationBuilder builder,
         Action<ModuleLoggingOption>? action = null)
     {
         return new ModuleLoggingGuide().Register(action);

@@ -14,7 +14,7 @@ namespace MoLibrary.Core.Modules;
 
 public static class ModuleGlobalJsonBuilderExtensions
 {
-    public static ModuleGlobalJsonGuide AddMoModuleGlobalJson(this WebApplicationBuilder builder,
+    public static ModuleGlobalJsonGuide ConfigModuleGlobalJson(this WebApplicationBuilder builder,
         Action<ModuleGlobalJsonOption>? action = null)
     {
         return new ModuleGlobalJsonGuide().Register(action);

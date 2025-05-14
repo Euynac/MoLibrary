@@ -16,7 +16,7 @@ namespace MoLibrary.DomainDrivenDesign.Modules;
 
 public static class ModuleGlobalExceptionHandlerBuilderExtensions
 {
-    public static ModuleGlobalExceptionHandlerGuide AddMoModuleGlobalExceptionHandler(this WebApplicationBuilder builder,
+    public static ModuleGlobalExceptionHandlerGuide ConfigModuleGlobalExceptionHandler(this WebApplicationBuilder builder,
         Action<ModuleGlobalExceptionHandlerOption>? action = null)
     {
         return new ModuleGlobalExceptionHandlerGuide().Register(action);

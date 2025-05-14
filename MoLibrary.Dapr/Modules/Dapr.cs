@@ -17,7 +17,7 @@ namespace MoLibrary.Dapr.Modules;
 
 public static class ModuleDaprBuilderExtensions
 {
-    public static ModuleDaprGuide AddMoModuleDapr(this IServiceCollection services,
+    public static ModuleDaprGuide ConfigModuleDapr(this IServiceCollection services,
         Action<ModuleDaprOption>? action = null)
     {
         return new ModuleDaprGuide().Register(action);

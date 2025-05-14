@@ -5,7 +5,7 @@ namespace MoLibrary.Dapr.Modules;
 
 public static class ModuleDaprEventBusBuilderExtensions
 {
-    public static ModuleDaprEventBusGuide AddMoModuleDaprEventBus(this IServiceCollection services,
+    public static ModuleDaprEventBusGuide ConfigModuleDaprEventBus(this IServiceCollection services,
         Action<ModuleDaprEventBusOption>? action = null)
     {
         return new ModuleDaprEventBusGuide().Register(action);
