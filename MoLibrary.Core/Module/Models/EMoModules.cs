@@ -38,7 +38,8 @@ public enum EMoModules
     AutoControllers,
     GlobalJson,
     Mediator,
-    Swagger
+    Swagger,
+    Seeder
 }
 
 public enum EMoModuleConfigMethods
