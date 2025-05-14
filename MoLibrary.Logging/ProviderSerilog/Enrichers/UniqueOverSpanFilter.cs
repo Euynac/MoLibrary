@@ -2,7 +2,7 @@ using System.Runtime.Caching;
 using Serilog.Core;
 using Serilog.Events;
 
-namespace MoLibrary.Logging.Enrichers;
+namespace MoLibrary.Logging.ProviderSerilog.Enrichers;
 
 public class UniqueOverSpanFilter(Func<LogEvent, bool> isEnabled, TimeSpan span) : ILogEventFilter
 {

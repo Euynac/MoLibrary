@@ -1,17 +1,17 @@
-using System.IO;
 using System.Reflection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Extensions;
+using MoLibrary.Core.Features.MoLogProvider;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
-using MoLibrary.Logging.Enrichers;
 using MoLibrary.Logging.Middlewares;
+using MoLibrary.Logging.ProviderSerilog;
+using MoLibrary.Logging.ProviderSerilog.Enrichers;
 using MoLibrary.Tool.General;
 using MoLibrary.Tool.MoResponse;
 using Serilog;
-using Serilog.Configuration;
 using Serilog.Core;
 using Serilog.Extensions.Logging;
 
@@ -45,6 +45,8 @@ public class ModuleLogging(ModuleLoggingOption option) : MoModule<ModuleLogging,
         Log.Logger = option.CustomLoggerCreator is { } customLoggerCreator
             ? customLoggerCreator.Invoke(logBuilder)
             : CreateLogger(logBuilder);
+
+        LogProvider.Provider = new SerilogProvider(Log.Logger);
 
         var level =
             builder.Configuration.GetSectionRecursively("Serilog:MinimumLevel").Select(p => new { p.Key, p.Value }).ToList().ToJsonString();

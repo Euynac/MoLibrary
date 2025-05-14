@@ -2,7 +2,7 @@ using Serilog;
 using Serilog.Configuration;
 using Serilog.Events;
 
-namespace MoLibrary.Logging.Enrichers;
+namespace MoLibrary.Logging.ProviderSerilog.Enrichers;
 
 public static class LoggerFilterConfigurationExtensions
 {
