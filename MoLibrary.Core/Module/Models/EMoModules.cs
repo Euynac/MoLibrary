@@ -39,7 +39,8 @@ public enum EMoModules
     GlobalJson,
     Mediator,
     Swagger,
-    Seeder
+    Seeder,
+    DynamicProxy
 }
 
 public enum EMoModuleConfigMethods

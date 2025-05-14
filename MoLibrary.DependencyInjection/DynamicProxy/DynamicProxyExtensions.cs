@@ -1,34 +1,13 @@
 using Castle.DynamicProxy;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using MoLibrary.DependencyInjection.AppInterfaces;
 using MoLibrary.DependencyInjection.DynamicProxy.Abstract;
+using MoLibrary.DependencyInjection.Modules;
 using MoLibrary.Tool.Extensions;
 using static MoLibrary.DependencyInjection.DynamicProxy.MicrosoftDependencyInjectionDynamicProxyExtensions;
 
 namespace MoLibrary.DependencyInjection.DynamicProxy;
-
-public class MoDynamicProxyOption
-{
-    public ILogger Logger { get; set; } = NullLogger.Instance;
-    /// <summary>
-    /// Configured proxy kinds for specific types.
-    /// </summary>
-    public Dictionary<Type, EDynamicProxyKind> ConfiguredProxyKinds { get; internal set; } = new();
-    /// <summary>
-    /// Sets the proxy kind for a specific service type.
-    /// </summary>
-    /// <typeparam name="TServiceType">The service type.</typeparam>
-    /// <param name="kind">The kind of dynamic proxy.</param>
-    public void SetProxyKindOfServiceType<TServiceType>(EDynamicProxyKind kind)
-    {
-        var serviceType = typeof(TServiceType);
-        ConfiguredProxyKinds.Add(serviceType, kind);
-    }
-}
-
-
 
 /// <summary>
 /// Extension methods for adding dynamic proxy services to the dependency injection container.
@@ -42,9 +21,9 @@ public static class DynamicProxyExtensions
     /// <param name="services">The service collection to add the services to.</param>
     /// <param name="action"></param>
     //TODO 需要放在最后服务注册
-    public static void AddMoDependencyInjectionDynamicProxy(this IServiceCollection services, Action<MoDynamicProxyOption>? action = null)
+    public static void AddMoDependencyInjectionDynamicProxy(this IServiceCollection services, Action<ModuleDynamicProxyOption>? action = null)
     {
-        var option = new MoDynamicProxyOption();
+        var option = new ModuleDynamicProxyOption();
         action?.Invoke(option);
         services.AddSingleton(new ProxyGeneratorWithDI());
         services.AddTransient(typeof(MoAsyncDeterminationInterceptor<>));
@@ -158,7 +137,7 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
 
     internal class RegisterContext
     {
-        public RegisterContext(MoDynamicProxyOption option, bool shouldInjectServiceProvider,
+        public RegisterContext(ModuleDynamicProxyOption option, bool shouldInjectServiceProvider,
             ServiceDescriptor oldDescriptor,
             Type implementType,
             List<Type> interceptorTypes, ERegisterWays way)
@@ -173,7 +152,7 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
             ValidateServiceInject();
         }
 
-        public MoDynamicProxyOption Option { get; }
+        public ModuleDynamicProxyOption Option { get; }
         public bool ShouldInjectServiceProvider { get; }
         public ServiceDescriptor OldDescriptor { get; }
         public Type ServiceType => OldDescriptor.ServiceType;
@@ -224,7 +203,7 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
     /// </summary>
     /// <param name="collection">The service collection.</param>
     /// <param name="option"></param>
-    internal static void ApplyInterceptors(IServiceCollection collection, MoDynamicProxyOption option)
+    internal static void ApplyInterceptors(IServiceCollection collection, ModuleDynamicProxyOption option)
     {
         for (var index = collection.Count - 1; index >= 0; index--)
         {

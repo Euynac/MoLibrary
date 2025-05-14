@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Builder;
 using MoLibrary.Core.Module.TypeFinder;
-using System;
 
 namespace MoLibrary.Core.Module.BuilderWrapper;
 
@@ -37,4 +36,35 @@ public static class WebApplicationBuilderExtensions
 
         return app;
     }
+
+
+
+
+
+    /// <summary>
+    /// Adds a <see cref="Microsoft.AspNetCore.Routing.EndpointRoutingMiddleware"/> middleware to the specified <see cref="IApplicationBuilder"/>.
+    /// </summary>
+    /// <param name="builder">The <see cref="Microsoft.AspNetCore.Builder.IApplicationBuilder"/> to add the middleware to.</param>
+    /// <returns>A reference to this instance after the operation has completed.</returns>
+    /// <remarks>
+    /// <para>
+    /// A call to <see cref="EndpointRoutingApplicationBuilderExtensions.UseRouting(IApplicationBuilder)"/> must be followed by a call to
+    /// <see cref="EndpointRoutingApplicationBuilderExtensions.UseEndpoints(IApplicationBuilder, Action{Microsoft.AspNetCore.Routing.IEndpointRouteBuilder})"/> for the same <see cref="IApplicationBuilder"/>
+    /// instance.
+    /// </para>
+    /// <para>
+    /// The <see cref="Microsoft.AspNetCore.Routing.EndpointRoutingMiddleware"/> defines a point in the middleware pipeline where routing decisions are
+    /// made, and an <see cref="Microsoft.AspNetCore.Http.Endpoint"/> is associated with the <see cref="Microsoft.AspNetCore.Http.HttpContext"/>. The <see cref="Microsoft.AspNetCore.Routing.EndpointMiddleware"/>
+    /// defines a point in the middleware pipeline where the current <see cref="Microsoft.AspNetCore.Http.Endpoint"/> is executed. Middleware between
+    /// the <see cref="Microsoft.AspNetCore.Routing.EndpointRoutingMiddleware"/> and <see cref="Microsoft.AspNetCore.Routing.EndpointMiddleware"/> may observe or change the
+    /// <see cref="Microsoft.AspNetCore.Http.Endpoint"/> associated with the <see cref="Microsoft.AspNetCore.Http.HttpContext"/>.
+    /// </para>
+    /// </remarks>
+    public static IApplicationBuilder MoUseRouting(this IApplicationBuilder builder)
+    {
+        builder.UseRouting();
+
+        return builder;
+    }
+
 }
