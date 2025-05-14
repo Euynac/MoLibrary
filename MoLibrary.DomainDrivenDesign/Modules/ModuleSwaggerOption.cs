@@ -3,7 +3,7 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace MoLibrary.DomainDrivenDesign.Modules;
 
-public class ModuleSwaggerOption : IMoModuleOption<ModuleSwagger>
+public class ModuleSwaggerOption : MoModuleOption<ModuleSwagger>
 {
     public Action<SwaggerGenOptions>? ExtendSwaggerGenAction { get; set; }
 

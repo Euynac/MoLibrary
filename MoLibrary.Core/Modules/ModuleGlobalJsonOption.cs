@@ -4,7 +4,7 @@ using MoLibrary.Core.Module.Interfaces;
 
 namespace MoLibrary.Core.Modules;
 
-public class ModuleGlobalJsonOption : IMoModuleOption<ModuleGlobalJson>
+public class ModuleGlobalJsonOption : MoModuleOption<ModuleGlobalJson>
 {
 
     public Action<JsonSerializerOptions>? ExtendAction { get; set; }

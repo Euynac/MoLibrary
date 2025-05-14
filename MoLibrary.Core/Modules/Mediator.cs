@@ -44,6 +44,6 @@ public class ModuleMediatorGuide : MoModuleGuide<ModuleMediator, ModuleMediatorO
 
 }
 
-public class ModuleMediatorOption : IMoModuleOption<ModuleMediator>
+public class ModuleMediatorOption : MoModuleOption<ModuleMediator>
 {
 }

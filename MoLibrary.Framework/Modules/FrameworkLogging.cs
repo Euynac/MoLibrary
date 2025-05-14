@@ -39,6 +39,6 @@ public class ModuleFrameworkLoggingGuide : MoModuleGuide<ModuleFrameworkLogging,
 
 }
 
-public class ModuleFrameworkLoggingOption : IMoModuleOption<ModuleFrameworkLogging>
+public class ModuleFrameworkLoggingOption : MoModuleOption<ModuleFrameworkLogging>
 {
 }

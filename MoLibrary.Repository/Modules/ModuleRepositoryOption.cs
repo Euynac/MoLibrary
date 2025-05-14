@@ -4,7 +4,7 @@ using MoLibrary.Repository.EntityInterfaces;
 
 namespace MoLibrary.Repository.Modules;
 
-public class ModuleRepositoryOption : IMoModuleOption<ModuleRepository>
+public class ModuleRepositoryOption : MoModuleOption<ModuleRepository>
 {
     /// <summary>
     /// Use User-defined function mapping to filter data.

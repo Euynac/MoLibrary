@@ -73,6 +73,6 @@ public class ModuleSeederGuide : MoModuleGuide<ModuleSeeder, ModuleSeederOption,
 
 }
 
-public class ModuleSeederOption : IMoModuleOption<ModuleSeeder>
+public class ModuleSeederOption : MoModuleOption<ModuleSeeder>
 {
 }

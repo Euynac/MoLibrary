@@ -4,7 +4,7 @@ using MoLibrary.Core.Module.Interfaces;
 
 namespace MoLibrary.Authority.Modules;
 
-public class ModuleAuthenticationOption : IMoModuleOption<ModuleAuthentication>
+public class ModuleAuthenticationOption : MoModuleOption<ModuleAuthentication>
 {
     //巨坑：Secret的长度必须大于128bit，否则需要补全到该长度。而且Secret必须一致，不可动态生成
     public SymmetricSecurityKey SecurityKey => new(Encoding.ASCII.GetBytes(Secret.PadRight(512 / 8, '\0')));

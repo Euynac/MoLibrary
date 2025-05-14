@@ -1,13 +1,5 @@
 namespace MoLibrary.Core.Module.Interfaces;
 
-public class MoModuleControllerOption<TModule> : IMoModuleControllerOption, IMoModuleOption<TModule> where TModule : IMoModule
-{
-    public string? SwaggerTag { get; set; }
-
-    public string RoutePrefix { get; set; } = nameof(TModule);
-    public bool EnableControllers { get; set; }
-    public string GetSwaggerGroupName() => SwaggerTag ?? nameof(TModule);
-}
 /// <summary>
 /// Defines the options for a module in the MoLibrary.
 /// </summary>

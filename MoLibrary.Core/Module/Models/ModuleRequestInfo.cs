@@ -52,6 +52,11 @@ public class ModuleRequestInfo
             // 将最终配置保存到字典中
             FinalConfigures[configType] = configInstance;
         }
+
+        if(!FinalConfigures.ContainsKey(ModuleOptionType))
+        {
+            FinalConfigures[ModuleOptionType] = Activator.CreateInstance(ModuleOptionType)!;
+        }
         
         // 清空待处理的配置操作
         PendingConfigActions.Clear();
