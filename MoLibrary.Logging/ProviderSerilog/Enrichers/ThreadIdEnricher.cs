@@ -1,7 +1,7 @@
 using Serilog.Core;
 using Serilog.Events;
 
-namespace MoLibrary.Logging.Enrichers;
+namespace MoLibrary.Logging.ProviderSerilog.Enrichers;
 
 /// <summary>
 /// Enriches log events with a ThreadId property containing the <see cref="Environment.CurrentManagedThreadId"/>.

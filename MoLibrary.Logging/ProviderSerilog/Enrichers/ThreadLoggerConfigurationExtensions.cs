@@ -1,7 +1,7 @@
 using Serilog;
 using Serilog.Configuration;
 
-namespace MoLibrary.Logging.Enrichers;
+namespace MoLibrary.Logging.ProviderSerilog.Enrichers;
 
 /// <summary>
 /// Extends <see cref="LoggerConfiguration"/> to add enrichers for <see cref="Environment.CurrentManagedThreadId"/>
