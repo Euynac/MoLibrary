@@ -19,10 +19,13 @@ public static class MoModuleRegisterCentre
     static MoModuleRegisterCentre()
     {
         // 注册BeforeBuild事件处理程序，用于在构建应用程序前注册服务
-        WebApplicationBuilderExtensions.BeforeBuild += MoModuleRegisterServices;
-        
-        // 注册AfterBuild事件处理程序，用于在构建应用程序后配置应用程序管道
-        WebApplicationBuilderExtensions.AfterBuild += MoModuleConfigApplicationBuilder;
+        WebApplicationBuilderExtensions.BeforeBuild += RegisterServices;
+
+        // 注册BeforeUseRouting事件处理程序，用于在路由中间件应用前执行操作
+        WebApplicationBuilderExtensions.BeforeUseRouting += app => ConfigApplicationPipeline(app, ModuleOrder.MiddlewareUseRouting, false);
+
+        // 注册AfterUseRouting事件处理程序，用于在路由中间件应用后执行操作
+        WebApplicationBuilderExtensions.AfterUseRouting += app => ConfigApplicationPipeline(app, ModuleOrder.MiddlewareUseRouting, true);
     }
 
     /// <summary>
@@ -102,9 +105,9 @@ public static class MoModuleRegisterCentre
     /// <summary>
     /// 注册所有模块的服务。此方法应在builder.Build()之前调用。
     /// </summary>
-    /// <param name="builder"></param>
-    /// <param name="typeFinderConfigure"></param>
-    public static void MoModuleRegisterServices(WebApplicationBuilder builder, Action<ModuleCoreOptionTypeFinder>? typeFinderConfigure = null)
+    /// <param name="builder">WebApplicationBuilder实例。</param>
+    /// <param name="typeFinderConfigure">类型查找器的配置操作。</param>
+    internal static void RegisterServices(WebApplicationBuilder builder, Action<ModuleCoreOptionTypeFinder>? typeFinderConfigure = null)
     {
         var services = builder.Services;
 
@@ -169,16 +172,19 @@ public static class MoModuleRegisterCentre
     }
 
     /// <summary>
-    /// 配置应用程序管道。此方法应在app.Build()之后、任何中间件配置之前调用。
+    /// 配置应用程序管道
     /// </summary>
     /// <param name="app">应用程序构建器。</param>
-    public static void MoModuleConfigApplicationBuilder(IApplicationBuilder app)
+    /// <param name="order">配置顺序。</param>
+    /// <param name="afterGivenOrder">是否在给定顺序之后配置。</param>
+    internal static void ConfigApplicationPipeline(IApplicationBuilder app, int order, bool afterGivenOrder)
     {
+        Func<ModuleRegisterRequest, bool> filter = afterGivenOrder ? request => request.Order > order : request => request.Order <= order;
         // 按优先级排序并配置应用程序构建器
         foreach (var module in ModuleSnapshots)
         {
             module.ModuleInstance.ConfigureApplicationBuilder(app);
-            foreach (var request in module.RequestInfo.RegisterRequests.Where(p=>p.RequestMethod == EMoModuleConfigMethods.ConfigureApplicationBuilder).OrderBy(r => r.Order))
+            foreach (var request in module.RequestInfo.RegisterRequests.Where(p=>p.RequestMethod == EMoModuleConfigMethods.ConfigureApplicationBuilder).Where(filter).OrderBy(r => r.Order))
             {
                 request.ConfigureContext?.Invoke(new ModuleRegisterContext(null, app, null, module.RequestInfo));
             }

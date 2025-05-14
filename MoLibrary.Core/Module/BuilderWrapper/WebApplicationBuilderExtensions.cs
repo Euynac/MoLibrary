@@ -19,6 +19,16 @@ public static class WebApplicationBuilderExtensions
     public static event Action<WebApplication>? AfterBuild;
 
     /// <summary>
+    /// Event triggered before the UseRouting middleware is applied.
+    /// </summary>
+    public static event Action<IApplicationBuilder>? BeforeUseRouting;
+
+    /// <summary>
+    /// Event triggered after the UseRouting middleware is applied.
+    /// </summary>
+    public static event Action<IApplicationBuilder>? AfterUseRouting;
+
+    /// <summary>
     /// Builds the WebApplication with Mo module integration by triggering the BeforeBuild and AfterBuild events.
     /// </summary>
     /// <param name="builder">The WebApplicationBuilder instance.</param>
@@ -36,10 +46,6 @@ public static class WebApplicationBuilderExtensions
 
         return app;
     }
-
-
-
-
 
     /// <summary>
     /// Adds a <see cref="Microsoft.AspNetCore.Routing.EndpointRoutingMiddleware"/> middleware to the specified <see cref="IApplicationBuilder"/>.
@@ -62,9 +68,17 @@ public static class WebApplicationBuilderExtensions
     /// </remarks>
     public static IApplicationBuilder MoUseRouting(this IApplicationBuilder builder)
     {
+        // Trigger BeforeUseRouting event
+        BeforeUseRouting?.Invoke(builder);
+
         builder.UseRouting();
+
+        // Trigger AfterUseRouting event
+        AfterUseRouting?.Invoke(builder);
 
         return builder;
     }
 
+
+    
 }
