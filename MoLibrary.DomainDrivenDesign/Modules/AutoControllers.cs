@@ -95,6 +95,6 @@ public class ModuleAutoControllersGuide : MoModuleGuide<ModuleAutoControllers, M
 
 }
 
-public class ModuleAutoControllersOption : IMoModuleOption<ModuleAutoControllers>
+public class ModuleAutoControllersOption : MoModuleOption<ModuleAutoControllers>
 {
 }

@@ -5,7 +5,7 @@ using MoLibrary.DependencyInjection.DynamicProxy;
 
 namespace MoLibrary.DependencyInjection.Modules;
 
-public class ModuleDynamicProxyOption : IMoModuleOption<ModuleDynamicProxy>
+public class ModuleDynamicProxyOption : MoModuleOption<ModuleDynamicProxy>
 {
     public ILogger Logger { get; set; } = NullLogger.Instance;
     /// <summary>

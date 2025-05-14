@@ -59,7 +59,7 @@ public static class MoModuleRegisterCentre
     /// <typeparam name="TModule">模块类型。</typeparam>
     /// <typeparam name="TOption">模块配置类型。</typeparam>
     /// <returns>模块的注册请求信息。</returns>
-    public static ModuleRequestInfo RegisterModule<TModule, TOption>() where TModule : MoModule where TOption : class, IMoModuleOption<TModule>, new()
+    public static ModuleRequestInfo RegisterModule<TModule, TOption>() where TModule : MoModule where TOption : class, MoModuleOption<TModule>, new()
     {
         var info = RegisterModule<TModule>();
         info.BindModuleOption<TOption>();
@@ -72,7 +72,7 @@ public static class MoModuleRegisterCentre
     /// <typeparam name="TModule">模块类型。</typeparam>
     /// <typeparam name="TOption">模块配置类型。</typeparam>
     /// <param name="request">注册请求。</param>
-    public static void RegisterModule<TModule, TOption>(ModuleRegisterRequest request) where TModule : MoModule<TModule, TOption> where TOption : class, IMoModuleOption<TModule>, new()
+    public static void RegisterModule<TModule, TOption>(ModuleRegisterRequest request) where TModule : MoModule<TModule, TOption> where TOption : class, MoModuleOption<TModule>, new()
     {
         var actions = RegisterModule<TModule, TOption>().RegisterRequests;
         actions.Add(request);
@@ -118,7 +118,7 @@ public static class MoModuleRegisterCentre
         var typeFinder = services.GetOrCreateDomainTypeFinder<MoDomainTypeFinder>(typeFinderConfigure);
 
         // 1. 初次遍历所有注册的模块，判断若模块有依赖项，处理依赖关系
-        foreach (var (moduleType, info) in ModuleRegisterContextDict)
+        foreach (var (moduleType, info) in ModuleRegisterContextDict.Select(p=>p).ToList())
         {
             if (!moduleType.IsImplementInterface(typeof(IWantDependsOnOtherModules))) continue;
 
@@ -139,8 +139,21 @@ public static class MoModuleRegisterCentre
             // 创建模块实例
             if (Activator.CreateInstance(moduleType, info.FinalConfigures[info.ModuleOptionType]) is not MoModule module) continue;
 
+            // 调用模块构建方法
+            module.ConfigureBuilder(builder);
+            // 执行额外的配置请求
+            foreach (var request in info.RegisterRequests.Where(p => p.RequestMethod == EMoModuleConfigMethods.ConfigureBuilder).OrderBy(r => r.Order))
+            {
+                request.ConfigureContext?.Invoke(new ModuleRegisterContext(services, null, builder, info));
+            }
+
             // 调用模块注册方法
             module.ConfigureServices(services);
+            // 执行额外的配置请求
+            foreach (var request in info.RegisterRequests.Where(p => p.RequestMethod == EMoModuleConfigMethods.ConfigureServices).OrderBy(r => r.Order))
+            {
+                request.ConfigureContext?.Invoke(new ModuleRegisterContext(services, null, builder, info));
+            }
 
             ModuleSnapshots.Add(new ModuleSnapshot(module, info));
         }

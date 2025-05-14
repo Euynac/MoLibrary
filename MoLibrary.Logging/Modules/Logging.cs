@@ -109,7 +109,7 @@ public class ModuleLoggingGuide : MoModuleGuide<ModuleLogging, ModuleLoggingOpti
     }
 }
 
-public class ModuleLoggingOption : IMoModuleOption<ModuleLogging>
+public class ModuleLoggingOption : MoModuleOption<ModuleLogging>
 {
     
 

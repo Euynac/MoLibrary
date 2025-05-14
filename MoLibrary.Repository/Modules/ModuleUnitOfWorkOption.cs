@@ -2,7 +2,7 @@ using MoLibrary.Core.Module.Interfaces;
 
 namespace MoLibrary.Repository.Modules;
 
-public class ModuleUnitOfWorkOption : IMoModuleOption<ModuleUnitOfWork>
+public class ModuleUnitOfWorkOption : MoModuleOption<ModuleUnitOfWork>
 {
 
     /// <summary>

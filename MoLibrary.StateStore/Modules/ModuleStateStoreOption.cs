@@ -2,6 +2,6 @@
 
 namespace MoLibrary.StateStore.Modules;
 
-public class ModuleStateStoreOption : IMoModuleOption<ModuleStateStore>
+public class ModuleStateStoreOption : MoModuleOption<ModuleStateStore>
 {
 }

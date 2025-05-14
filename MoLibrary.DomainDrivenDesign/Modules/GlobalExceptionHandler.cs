@@ -135,6 +135,6 @@ public class ModuleGlobalExceptionHandlerGuide : MoModuleGuide<ModuleGlobalExcep
     }
 }
 
-public class ModuleGlobalExceptionHandlerOption : IMoModuleOption<ModuleGlobalExceptionHandler>
+public class ModuleGlobalExceptionHandlerOption : MoModuleOption<ModuleGlobalExceptionHandler>
 {
 }

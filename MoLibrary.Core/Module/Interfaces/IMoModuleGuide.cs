@@ -16,7 +16,7 @@ public class MoModuleGuide
 }
 
 public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleGuide, IMoModuleGuide
-    where TModuleOption : class, IMoModuleOption<TModule>, new()
+    where TModuleOption : class, MoModuleOption<TModule>, new()
     where TModuleGuideSelf : MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf>, new()
     where TModule : MoModule<TModule, TModuleOption> 
 {
