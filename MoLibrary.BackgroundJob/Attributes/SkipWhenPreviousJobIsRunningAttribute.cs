@@ -1,11 +1,11 @@
 using System.Reflection;
 using System.Security.Cryptography;
+using Hangfire;
 using Hangfire.Client;
 using Hangfire.Common;
+using Hangfire.Logging;
 using Hangfire.States;
 using Hangfire.Storage;
-using MoLibrary.Core.Features;
-using MoLibrary.Logging;
 using MoLibrary.Tool.Web;
 
 namespace MoLibrary.BackgroundJob.Attributes;
@@ -15,6 +15,7 @@ namespace MoLibrary.BackgroundJob.Attributes;
 /// </summary>
 public class SkipWhenPreviousJobIsRunningAttribute : JobFilterAttribute, IClientFilter, IApplyStateFilter
 {
+    private readonly ILog _logger = LogProvider.For<AutomaticRetryAttribute>(); //TODO 学习此类的用法用于GlobalLog
     protected static string GetJobId(Type jobArgsType)
     {
         return $"single-job:{WebTool.StringHash(jobArgsType.FullName!, HashAlgorithmName.MD5)}";
@@ -38,7 +39,7 @@ public class SkipWhenPreviousJobIsRunningAttribute : JobFilterAttribute, IClient
         if ("yes".Equals(running, StringComparison.OrdinalIgnoreCase))
         {
             context.Canceled = true;
-            GlobalLog.LogWarning($"检测到已有相同Job {jobArgsType.FullName}正在执行，该次任务已被忽略");
+            _logger.Warn($"检测到已有相同Job {jobArgsType.FullName}正在执行，该次任务已被忽略");
         }
 
     }
