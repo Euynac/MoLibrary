@@ -12,7 +12,7 @@ namespace MoLibrary.Dapr.Modules;
 
 public static class ModuleDaprStateStoreBuilderExtensions
 {
-    public static ModuleDaprStateStoreGuide AddMoModuleDaprStateStore(this IServiceCollection services,
+    public static ModuleDaprStateStoreGuide ConfigModuleDaprStateStore(this IServiceCollection services,
         Action<ModuleDaprStateStoreOption>? action = null)
     {
         return new ModuleDaprStateStoreGuide().Register(action);

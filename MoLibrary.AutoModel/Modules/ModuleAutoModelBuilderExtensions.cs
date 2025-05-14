@@ -5,7 +5,7 @@ namespace MoLibrary.AutoModel.Modules;
 
 public static class ModuleAutoModelBuilderExtensions
 {
-    public static ModuleAutoModelGuide AddMoModuleAutoModel(this WebApplicationBuilder builder, Action<ModuleAutoModelOption>? action = null)
+    public static ModuleAutoModelGuide ConfigModuleAutoModel(this WebApplicationBuilder builder, Action<ModuleAutoModelOption>? action = null)
     {
         return new ModuleAutoModelGuide().Register(action);
     }
