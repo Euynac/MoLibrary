@@ -1,4 +1,4 @@
-namespace BuildingBlocksPlatform.Interfaces;
+namespace MoLibrary.BackgroundJob.Attributes;
 
 
 /// <summary>

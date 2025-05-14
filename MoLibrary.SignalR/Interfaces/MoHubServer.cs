@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
+using MoLibrary.Core.Features.MoLogProvider;
 using MoLibrary.Tool.General;
 
 namespace MoLibrary.SignalR.Interfaces;
@@ -6,9 +8,10 @@ namespace MoLibrary.SignalR.Interfaces;
 public abstract class MoHubServer<TIContract>(IMoSignalRConnectionManager connectionManager)
     : Hub<TIContract> where TIContract : class, IMoHubContract
 {
+    private static ILogger Logger => LogProvider.For<MoHubServer<TIContract>>();
     public override async Task OnConnectedAsync()
     {
-        GlobalLog.LogInformation("客户端：" + Context.ToJsonStringForce());
+        Logger.LogInformation("客户端：" + Context.ToJsonStringForce());
         if (Context.User?.Identity?.IsAuthenticated == true)
             connectionManager.AddConnection(Context.ConnectionId, Context.User);
 
