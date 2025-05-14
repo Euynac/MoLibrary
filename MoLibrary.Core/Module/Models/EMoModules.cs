@@ -42,20 +42,3 @@ public enum EMoModules
     Seeder,
     DynamicProxy
 }
-
-public enum EMoModuleConfigMethods
-{
-    ConfigureBuilder,
-    ConfigureServices,
-    PostConfigureServices,
-    ConfigureApplicationBuilder,
-    ConfigureEndpoints
-}
-
-
-public enum EMoModuleOrder
-{
-    Normal = 0,
-    PostConfig = 100,
-    PreConfig = -100
-}
