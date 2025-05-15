@@ -5,6 +5,7 @@ using MoLibrary.Core.Module.TypeFinder;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.BuilderWrapper;
+using System.Text;
 
 namespace MoLibrary.Core.Module;
 
@@ -13,6 +14,37 @@ namespace MoLibrary.Core.Module;
 /// </summary>
 public static class MoModuleRegisterCentre
 {
+    /// <summary>
+    /// 模块注册错误信息，用于记录模块注册过程中的错误
+    /// </summary>
+    private class ModuleRegisterError
+    {
+        /// <summary>
+        /// 模块类型
+        /// </summary>
+        public Type ModuleType { get; set; }
+        
+        /// <summary>
+        /// 错误信息
+        /// </summary>
+        public string ErrorMessage { get; set; }
+        
+        /// <summary>
+        /// 配置来源
+        /// </summary>
+        public EMoModules? GuideFrom { get; set; }
+        
+        /// <summary>
+        /// 未配置的方法键
+        /// </summary>
+        public List<string> MissingConfigKeys { get; set; } = new();
+    }
+    
+    /// <summary>
+    /// 模块注册错误列表
+    /// </summary>
+    private static List<ModuleRegisterError> ModuleRegisterErrors { get; } = new();
+
     /// <summary>
     /// 静态构造函数，用于初始化事件监听。
     /// </summary>
@@ -36,6 +68,9 @@ public static class MoModuleRegisterCentre
     /// </summary>
     private static Dictionary<Type, ModuleRequestInfo> ModuleRegisterContextDict { get; } = new();
 
+    /// <summary>
+    /// 模块快照列表，用于存储所有模块的快照信息。
+    /// </summary>
     private static List<ModuleSnapshot> ModuleSnapshots { get; } = [];
 
     /// <summary>
@@ -114,6 +149,8 @@ public static class MoModuleRegisterCentre
     {
         var services = builder.Services;
 
+        // 清空之前的错误记录
+        ModuleRegisterErrors.Clear();
 
         var typeFinder = services.GetOrCreateDomainTypeFinder<MoDomainTypeFinder>(typeFinderConfigure);
 
@@ -128,6 +165,58 @@ public static class MoModuleRegisterCentre
             {
                 moduleTmpInstance.ClaimDependencies();
             }
+        }
+        
+        // 1.1 检查模块是否满足必要配置要求
+        foreach (var (moduleType, info) in ModuleRegisterContextDict)
+        {
+            // 检查是否有必须配置的方法键
+            if (info.RequiredConfigMethodKeys.Count == 0) continue;
+            
+            // 检查每个必须配置的方法键是否已配置
+            var missingKeys = info.GetMissingRequiredConfigMethodKeys();
+            
+            if (missingKeys.Count > 0)
+            {
+                ModuleRegisterErrors.Add(new ModuleRegisterError
+                {
+                    ModuleType = moduleType,
+                    ErrorMessage = "缺少必要配置",
+                    //GuideFrom = info.GuideFrom,
+                    MissingConfigKeys = missingKeys
+                });
+            }
+        }
+        
+        // 如果有错误，抛出异常
+        if (ModuleRegisterErrors.Count > 0)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("模块注册错误：");
+            
+            // 按模块分组错误
+            var groupedErrors = ModuleRegisterErrors.GroupBy(e => e.ModuleType);
+            
+            foreach (var group in groupedErrors)
+            {
+                sb.AppendLine($"模块 {group.Key.Name}:");
+                
+                foreach (var error in group)
+                {
+                    sb.AppendLine($"  - 错误: {error.ErrorMessage}");
+                    sb.AppendLine($"  - 来源: {error.GuideFrom}");
+                    sb.AppendLine("  - 缺少的配置方法:");
+                    
+                    foreach (var key in error.MissingConfigKeys)
+                    {
+                        sb.AppendLine($"    * {key}");
+                    }
+                    
+                    sb.AppendLine();
+                }
+            }
+            
+            throw new InvalidOperationException(sb.ToString());
         }
 
         // 2. 初始化模块配置并注册服务
