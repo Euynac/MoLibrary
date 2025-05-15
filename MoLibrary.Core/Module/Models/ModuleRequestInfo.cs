@@ -105,8 +105,9 @@ public class ModuleRequestInfo
         if (RequiredConfigMethodKeys.Count == 0)
             return [];
         
+        var configuredKeys = RegisterRequests.Select(r => r.Key).ToHashSet();
         return RequiredConfigMethodKeys
-            .Where(key => !RegisterRequests.Any(r => r.Key == key))
+            .Where(key => !configuredKeys.Contains(key))
             .ToList();
     }
 }

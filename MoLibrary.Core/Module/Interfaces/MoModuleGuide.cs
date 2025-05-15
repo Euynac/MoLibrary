@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Module.Models;
 
 namespace MoLibrary.Core.Module.Interfaces;
@@ -30,7 +31,75 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
             GuideFrom = GuideFrom
         };
     }
-    
+
+
+
+
+    #region 注册到注册中心
+
+    /// <summary>
+    /// 注册模块类型并获取其注册请求信息。
+    /// </summary>
+    /// <typeparam name="TModule">模块类型。</typeparam>
+    /// <returns>模块的注册请求信息。</returns>
+    private ModuleRequestInfo RegisterModule()
+    {
+        var moduleType = typeof(TModule);
+        if (MoModuleRegisterCentre.ModuleRegisterContextDict.TryGetValue(moduleType, out var requestInfo)) return requestInfo;
+
+        requestInfo = new ModuleRequestInfo();
+        requestInfo.BindModuleOption<TModuleOption>();
+        MoModuleRegisterCentre.ModuleRegisterContextDict[moduleType] = requestInfo;
+        // 设置必须配置的方法键
+        requestInfo.RequiredConfigMethodKeys = GetRequestedConfigMethodKeys().ToList();
+
+        return requestInfo;
+    }
+
+    /// <summary>
+    /// 注册模块并添加注册请求。
+    /// </summary>
+    /// <typeparam name="TModule">模块类型。</typeparam>
+    /// <param name="request">注册请求。</param>
+    public void RegisterModule(ModuleRegisterRequest request)
+    {
+        var actions = RegisterModule().RegisterRequests;
+        actions.Add(request);
+    }
+
+    /// <summary>
+    /// 添加模块配置操作。
+    /// </summary>
+    /// <typeparam name="TModule">模块类型。</typeparam>
+    /// <typeparam name="TOption">模块配置类型。</typeparam>
+    /// <param name="order">配置操作执行顺序。</param>
+    /// <param name="optionAction">配置操作委托。</param>
+    /// <param name="guideFrom">配置操作来源模块。</param>
+    public void AddConfigureAction<TOption>(int order, Action<TOption> optionAction, EMoModules? guideFrom) where TOption : class, IMoModuleOption, new()
+    {
+        var requestInfo = RegisterModule();
+
+        requestInfo.AddConfigureAction(order, optionAction);
+
+        requestInfo.RegisterRequests.Add(
+            new ModuleRegisterRequest($"ConfigureOption_{typeof(TOption).Name}_{Guid.NewGuid()}")
+            {
+                ConfigureContext = context =>
+                {
+                    context.Services!.Configure(optionAction);
+                },
+                RequestMethod = EMoModuleConfigMethods.ConfigureServices,
+                Order = guideFrom != EMoModules.Developer ? order - 1 : order, //来自模块级联注册的Option的优先级始终比用户Order低1
+                RequestFrom = guideFrom
+            });
+    }
+
+
+    #endregion
+
+
+
+
     /// <summary>
     /// 发出模块注册请求
     /// </summary>
@@ -43,15 +112,7 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
             ConfigureModuleOption(config);
         }
 
-        // 注册模块并获取ModuleRequestInfo
-        var requestInfo = MoModuleRegisterCentre.RegisterModule<TModule, TModuleOption>();
-        
-        // 设置必须配置的方法键
-        var requiredKeys = GetRequestedConfigMethodKeys();
-        if (requiredKeys.Length > 0)
-        {
-            requestInfo.RequiredConfigMethodKeys.AddRange(requiredKeys);
-        }
+        RegisterModule();
         
         return new TModuleGuideSelf();
     }
@@ -65,7 +126,7 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
             Order = order, RequestFrom = GuideFrom, RequestMethod = requestMethod,
             ConfigureContext = context, Key = key
         };
-        MoModuleRegisterCentre.RegisterModule<TModule, TModuleOption>(request);
+        RegisterModule(request);
     }
 
     protected void ConfigureServices(string key, Action<ModuleRegisterContextWrapperForServices<TModuleOption>> context, EMoModuleOrder order = EMoModuleOrder.Normal)
@@ -139,8 +200,8 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     {
         if(optionAction == null) return (TModuleGuideSelf) this;
 
-        MoModuleRegisterCentre.RegisterModule<TModule, TModuleOption>();
-        MoModuleRegisterCentre.AddConfigureAction<TModule, TOption>(order, optionAction, GuideFrom);
+        RegisterModule();
+        AddConfigureAction(order, optionAction, GuideFrom);
         return (TModuleGuideSelf) this;
     }
     public TModuleGuideSelf ConfigureExtraOption<TOption>(Action<TOption>? optionAction, EMoModuleOrder order = EMoModuleOrder.Normal) where TOption : class, IMoModuleExtraOption<TModule>, new()

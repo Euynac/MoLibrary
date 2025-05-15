@@ -14,31 +14,7 @@ namespace MoLibrary.Core.Module;
 /// </summary>
 public static class MoModuleRegisterCentre
 {
-    /// <summary>
-    /// 模块注册错误信息，用于记录模块注册过程中的错误
-    /// </summary>
-    private class ModuleRegisterError
-    {
-        /// <summary>
-        /// 模块类型
-        /// </summary>
-        public Type ModuleType { get; set; }
-        
-        /// <summary>
-        /// 错误信息
-        /// </summary>
-        public string ErrorMessage { get; set; }
-        
-        /// <summary>
-        /// 配置来源
-        /// </summary>
-        public EMoModules? GuideFrom { get; set; }
-        
-        /// <summary>
-        /// 未配置的方法键
-        /// </summary>
-        public List<string> MissingConfigKeys { get; set; } = new();
-    }
+   
     
     /// <summary>
     /// 模块注册错误列表
@@ -66,80 +42,14 @@ public static class MoModuleRegisterCentre
     /// <summary>
     /// 模块注册请求信息字典，用于存储所有注册过的模块类型及其注册信息。
     /// </summary>
-    private static Dictionary<Type, ModuleRequestInfo> ModuleRegisterContextDict { get; } = new();
+    public static Dictionary<Type, ModuleRequestInfo> ModuleRegisterContextDict { get; } = new();
 
     /// <summary>
     /// 模块快照列表，用于存储所有模块的快照信息。
     /// </summary>
     private static List<ModuleSnapshot> ModuleSnapshots { get; } = [];
 
-    /// <summary>
-    /// 注册模块类型并获取其注册请求信息。
-    /// </summary>
-    /// <typeparam name="TModule">模块类型。</typeparam>
-    /// <returns>模块的注册请求信息。</returns>
-    private static ModuleRequestInfo RegisterModule<TModule>() where TModule : MoModule
-    {
-        var moduleType = typeof(TModule);
-        if (ModuleRegisterContextDict.TryGetValue(moduleType, out var requestInfo)) return requestInfo;
-
-        requestInfo = new ModuleRequestInfo();
-        ModuleRegisterContextDict[moduleType] = requestInfo;
-        return requestInfo;
-    }
-
-    /// <summary>
-    /// 注册模块并绑定其配置选项。
-    /// </summary>
-    /// <typeparam name="TModule">模块类型。</typeparam>
-    /// <typeparam name="TOption">模块配置类型。</typeparam>
-    /// <returns>模块的注册请求信息。</returns>
-    public static ModuleRequestInfo RegisterModule<TModule, TOption>() where TModule : MoModule where TOption : class, IMoModuleOption<TModule>, new()
-    {
-        var info = RegisterModule<TModule>();
-        info.BindModuleOption<TOption>();
-        return info;
-    }
-
-    /// <summary>
-    /// 注册模块并添加注册请求。
-    /// </summary>
-    /// <typeparam name="TModule">模块类型。</typeparam>
-    /// <typeparam name="TOption">模块配置类型。</typeparam>
-    /// <param name="request">注册请求。</param>
-    public static void RegisterModule<TModule, TOption>(ModuleRegisterRequest request) where TModule : MoModule<TModule, TOption> where TOption : class, IMoModuleOption<TModule>, new()
-    {
-        var actions = RegisterModule<TModule, TOption>().RegisterRequests;
-        actions.Add(request);
-    }
-
-    /// <summary>
-    /// 添加模块配置操作。
-    /// </summary>
-    /// <typeparam name="TModule">模块类型。</typeparam>
-    /// <typeparam name="TOption">模块配置类型。</typeparam>
-    /// <param name="order">配置操作执行顺序。</param>
-    /// <param name="optionAction">配置操作委托。</param>
-    /// <param name="guideFrom">配置操作来源模块。</param>
-    public static void AddConfigureAction<TModule, TOption>(int order, Action<TOption> optionAction, EMoModules? guideFrom) where TModule : MoModule where TOption : class, IMoModuleOption, new()
-    {
-        var requestInfo = RegisterModule<TModule>();
-
-        requestInfo.AddConfigureAction(order, optionAction);
-
-        requestInfo.RegisterRequests.Add(
-            new ModuleRegisterRequest($"ConfigureOption_{typeof(TOption).Name}_{Guid.NewGuid()}")
-            {
-                ConfigureContext = context =>
-                {
-                    context.Services!.Configure(optionAction);
-                },
-                RequestMethod = EMoModuleConfigMethods.ConfigureServices,
-                Order = guideFrom != EMoModules.Developer ? order - 1 : order, //来自模块级联注册的Option的优先级始终比用户Order低1
-                RequestFrom = guideFrom
-            });
-    }
-
+    
     /// <summary>
     /// 注册所有模块的服务。此方法应在builder.Build()之前调用。
     /// </summary>
