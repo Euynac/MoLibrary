@@ -11,6 +11,8 @@ using MoLibrary.Tool.MoResponse;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.DependencyInjection.Modules;
 using MoLibrary.AutoModel.Exceptions;
+using MoLibrary.Core.Modules;
+using MoLibrary.Repository.Modules;
 
 namespace MoLibrary.DomainDrivenDesign.Modules;
 
@@ -51,5 +53,8 @@ public class ModuleDomainDrivenDesign(ModuleDomainDrivenDesignOption option) : M
         DependsOnModule<ModuleGlobalExceptionHandlerGuide>().Register();
         DependsOnModule<ModuleAuthorizationGuide>().Register();
         DependsOnModule<ModuleAuthenticationGuide>().Register();
+        DependsOnModule<ModuleMediatorGuide>().Register();
+        DependsOnModule<ModuleMapperGuide>().Register();
+        DependsOnModule<ModuleRepositoryGuide>().Register();
     }
 }

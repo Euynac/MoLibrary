@@ -11,10 +11,6 @@ public class ModuleFrameworkMonitorOption : MoModuleControllerOption<ModuleFrame
     /// 相关项目单元所在程序集名，使用名称包含查找。如若不配置，则默认仅扫描Entry程序集。
     /// </summary>
     public string[]? RelatedAssemblies { get; set; }
-    /// <summary>
-    /// 日志实例
-    /// </summary>
-    public ILogger? Logger { get; set; }
 
     /// <summary>
     /// 惯例命名设置

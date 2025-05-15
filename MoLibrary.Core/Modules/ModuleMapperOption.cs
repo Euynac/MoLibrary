@@ -7,7 +7,6 @@ namespace MoLibrary.Core.Modules;
 
 public class ModuleMapperOption : MoModuleControllerOption<ModuleMapper>
 {
-    public ILogger Logger { get; set; } = NullLogger.Instance;
     /// <summary>
     /// 启用对Mapper进行调试（暂时仅支持手动调试）
     /// </summary>

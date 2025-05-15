@@ -59,7 +59,7 @@ public static class MoModuleRegisterCentre
     /// <typeparam name="TModule">模块类型。</typeparam>
     /// <typeparam name="TOption">模块配置类型。</typeparam>
     /// <returns>模块的注册请求信息。</returns>
-    public static ModuleRequestInfo RegisterModule<TModule, TOption>() where TModule : MoModule where TOption : class, MoModuleOption<TModule>, new()
+    public static ModuleRequestInfo RegisterModule<TModule, TOption>() where TModule : MoModule where TOption : class, IMoModuleOption<TModule>, new()
     {
         var info = RegisterModule<TModule>();
         info.BindModuleOption<TOption>();
@@ -72,7 +72,7 @@ public static class MoModuleRegisterCentre
     /// <typeparam name="TModule">模块类型。</typeparam>
     /// <typeparam name="TOption">模块配置类型。</typeparam>
     /// <param name="request">注册请求。</param>
-    public static void RegisterModule<TModule, TOption>(ModuleRegisterRequest request) where TModule : MoModule<TModule, TOption> where TOption : class, MoModuleOption<TModule>, new()
+    public static void RegisterModule<TModule, TOption>(ModuleRegisterRequest request) where TModule : MoModule<TModule, TOption> where TOption : class, IMoModuleOption<TModule>, new()
     {
         var actions = RegisterModule<TModule, TOption>().RegisterRequests;
         actions.Add(request);
