@@ -7,7 +7,6 @@ namespace MoLibrary.DependencyInjection.Modules;
 
 public class ModuleDynamicProxyOption : MoModuleOption<ModuleDynamicProxy>
 {
-    public ILogger Logger { get; set; } = NullLogger.Instance;
     /// <summary>
     /// Configured proxy kinds for specific types.
     /// </summary>

@@ -50,11 +50,6 @@ public class ModuleConfigurationOption : MoModuleControllerOption<ModuleConfigur
     public bool EnableConfigRegisterLogging { get; set; }
 
     /// <summary>
-    /// 日志记录器，不配置默认使用ConsoleLogger
-    /// </summary>
-    public ILogger? Logger { get; set; }
-
-    /// <summary>
     /// 应用程序相关配置字典实例
     /// </summary>
     public IConfiguration AppConfiguration { get; set; } = null!;

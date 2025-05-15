@@ -16,6 +16,12 @@ public class ModuleAuthorizationGuide : MoModuleGuide<ModuleAuthorization, Modul
         return [nameof(AddDefaultPermissionBit)];
     }
 
+    /// <summary>
+    /// 专用于判断权限的PermissionBit
+    /// </summary>
+    /// <typeparam name="TEnum"></typeparam>
+    /// <param name="claimTypeDefinition"></param>
+    /// <returns></returns>
     public ModuleAuthorizationGuide AddDefaultPermissionBit<TEnum>(string claimTypeDefinition) where TEnum : struct, Enum
     {
         ConfigureServices(nameof(AddDefaultPermissionBit), context =>
@@ -27,6 +33,12 @@ public class ModuleAuthorizationGuide : MoModuleGuide<ModuleAuthorization, Modul
         });
         return this;
     }
+    /// <summary>
+    /// 额外增加新的PermissionBit
+    /// </summary>
+    /// <typeparam name="TEnum"></typeparam>
+    /// <param name="claimTypeDefinition"></param>
+    /// <returns></returns>
     public ModuleAuthorizationGuide AddPermissionBit<TEnum>(string claimTypeDefinition) where TEnum : struct, Enum
     {
         ConfigureServices($"{nameof(AddPermissionBit)}<{typeof(TEnum).Name}>", context =>

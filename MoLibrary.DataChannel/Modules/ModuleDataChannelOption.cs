@@ -10,9 +10,5 @@ namespace MoLibrary.DataChannel.Modules;
 /// </summary>
 public class ModuleDataChannelOption : MoModuleControllerOption<ModuleDataChannel>
 {
-    /// <summary>
-    /// 日志记录器实例
-    /// 如果不配置，则默认使用ConsoleLogger
-    /// </summary>
-    public ILogger? Logger { get; set; }
+    // Logger property removed, using base class Logger
 }

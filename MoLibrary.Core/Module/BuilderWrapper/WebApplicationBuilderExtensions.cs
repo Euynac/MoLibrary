@@ -30,7 +30,7 @@ public static class WebApplicationBuilderExtensions
     public static event Action<IApplicationBuilder>? AfterUseRouting;
 
     /// <summary>
-    /// Event triggered when start using MoModule related endpoints middleware.
+    /// Event triggered when start using MoModule related endpoints' middleware.
     /// </summary>
     public static event Action<IApplicationBuilder>? BeginUseEndpoints;
 

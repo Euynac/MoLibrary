@@ -16,7 +16,7 @@ public class MoModuleGuide
 }
 
 public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleGuide, IMoModuleGuide
-    where TModuleOption : class, MoModuleOption<TModule>, new()
+    where TModuleOption : class, IMoModuleOption<TModule>, new()
     where TModuleGuideSelf : MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf>, new()
     where TModule : MoModule<TModule, TModuleOption> 
 {
@@ -56,7 +56,11 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     #region 额外配置Module
     protected void ConfigureModule(string key, Action<ModuleRegisterContext> context, int order, EMoModuleConfigMethods requestMethod)
     {
-        var request = new ModuleRegisterRequest(key) { Order = order, RequestFrom = GuideFrom, RequestMethod = requestMethod };
+        var request = new ModuleRegisterRequest(key)
+        {
+            Order = order, RequestFrom = GuideFrom, RequestMethod = requestMethod,
+            ConfigureContext = context, Key = key
+        };
         MoModuleRegisterCentre.RegisterModule<TModule, TModuleOption>(request);
     }
 

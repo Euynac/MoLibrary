@@ -42,7 +42,7 @@ public abstract class MoModule : IMoModule
 /// 提供IMoLibraryModule接口的默认实现
 /// </summary>
 public abstract class MoModule<TModuleSelf, TModuleOption>(TModuleOption option) : MoModule 
-    where TModuleOption : MoModuleOption<TModuleSelf>, new() 
+    where TModuleOption : IMoModuleOption<TModuleSelf>, new() 
     where TModuleSelf : MoModule<TModuleSelf, TModuleOption>
 {
     public TModuleOption Option { get; } = option;
@@ -50,7 +50,7 @@ public abstract class MoModule<TModuleSelf, TModuleOption>(TModuleOption option)
 }
 
 public abstract class MoModuleWithDependencies<TModuleSelf, TModuleOption>(TModuleOption option) : MoModule<TModuleSelf, TModuleOption>(option), IWantDependsOnOtherModules
-    where TModuleOption : MoModuleOption<TModuleSelf>, new()
+    where TModuleOption : IMoModuleOption<TModuleSelf>, new()
     where TModuleSelf : MoModuleWithDependencies<TModuleSelf, TModuleOption>
 {
     public List<EMoModules> DependedModules { get; set; } = [];

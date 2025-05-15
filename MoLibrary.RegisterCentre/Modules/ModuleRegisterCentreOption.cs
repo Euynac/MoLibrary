@@ -6,10 +6,6 @@ namespace MoLibrary.RegisterCentre.Modules;
 public class ModuleRegisterCentreOption : MoModuleControllerOption<ModuleRegisterCentre>
 {
     /// <summary>
-    /// 日志记录器，不配置默认使用ConsoleLogger
-    /// </summary>
-    public ILogger? Logger { get; set; }
-    /// <summary>
     /// 设定当前微服务是注册中心
     /// </summary>
     internal bool ThisIsCentreServer { get; set; } = false;
