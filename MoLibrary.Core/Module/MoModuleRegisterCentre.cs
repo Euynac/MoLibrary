@@ -6,6 +6,7 @@ using MoLibrary.Core.Module.Models;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.BuilderWrapper;
 using System.Text;
+using MoLibrary.Core.Module.Exceptions;
 
 namespace MoLibrary.Core.Module;
 
@@ -19,7 +20,7 @@ public static class MoModuleRegisterCentre
     /// <summary>
     /// 模块注册错误列表
     /// </summary>
-    private static List<ModuleRegisterError> ModuleRegisterErrors { get; } = new();
+    private static List<ModuleRegisterError> ModuleRegisterErrors { get; } = [];
 
     /// <summary>
     /// 静态构造函数，用于初始化事件监听。
@@ -78,56 +79,7 @@ public static class MoModuleRegisterCentre
         }
         
         // 1.1 检查模块是否满足必要配置要求
-        foreach (var (moduleType, info) in ModuleRegisterContextDict)
-        {
-            // 检查是否有必须配置的方法键
-            if (info.RequiredConfigMethodKeys.Count == 0) continue;
-            
-            // 检查每个必须配置的方法键是否已配置
-            var missingKeys = info.GetMissingRequiredConfigMethodKeys();
-            
-            if (missingKeys.Count > 0)
-            {
-                ModuleRegisterErrors.Add(new ModuleRegisterError
-                {
-                    ModuleType = moduleType,
-                    ErrorMessage = "缺少必要配置",
-                    //GuideFrom = info.GuideFrom,
-                    MissingConfigKeys = missingKeys
-                });
-            }
-        }
-        
-        // 如果有错误，抛出异常
-        if (ModuleRegisterErrors.Count > 0)
-        {
-            var sb = new StringBuilder();
-            sb.AppendLine("模块注册错误：");
-            
-            // 按模块分组错误
-            var groupedErrors = ModuleRegisterErrors.GroupBy(e => e.ModuleType);
-            
-            foreach (var group in groupedErrors)
-            {
-                sb.AppendLine($"模块 {group.Key.Name}:");
-                
-                foreach (var error in group)
-                {
-                    sb.AppendLine($"  - 错误: {error.ErrorMessage}");
-                    sb.AppendLine($"  - 来源: {error.GuideFrom}");
-                    sb.AppendLine("  - 缺少的配置方法:");
-                    
-                    foreach (var key in error.MissingConfigKeys)
-                    {
-                        sb.AppendLine($"    * {key}");
-                    }
-                    
-                    sb.AppendLine();
-                }
-            }
-            
-            throw new InvalidOperationException(sb.ToString());
-        }
+        ModuleErrorUtil.ValidateModuleRequirements(ModuleRegisterContextDict, ModuleRegisterErrors);
 
         // 2. 初始化模块配置并注册服务
         foreach (var (moduleType, info) in ModuleRegisterContextDict)
