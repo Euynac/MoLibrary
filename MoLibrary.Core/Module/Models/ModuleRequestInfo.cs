@@ -28,6 +28,11 @@ public class ModuleRequestInfo
     public Type ModuleOptionType { get; set; } = null!;
     
     /// <summary>
+    /// 必须配置的方法键列表，若未配置则会抛出异常。
+    /// </summary>
+    public List<string> RequiredConfigMethodKeys { get; set; } = [];
+    
+    /// <summary>
     /// 初始化最终配置，根据排序后的配置项获得最终配置对象，最后清空配置操作。
     /// </summary>
     public void InitFinalConfigures()
@@ -89,5 +94,19 @@ public class ModuleRequestInfo
         {
             optionAction.Invoke((TOption) p);
         });
+    }
+
+    /// <summary>
+    /// 检查是否所有必须配置的方法键都已配置
+    /// </summary>
+    /// <returns>未配置的方法键列表，如果全部已配置则返回空列表</returns>
+    public List<string> GetMissingRequiredConfigMethodKeys()
+    {
+        if (RequiredConfigMethodKeys.Count == 0)
+            return [];
+        
+        return RequiredConfigMethodKeys
+            .Where(key => !RegisterRequests.Any(r => r.Key == key))
+            .ToList();
     }
 }
