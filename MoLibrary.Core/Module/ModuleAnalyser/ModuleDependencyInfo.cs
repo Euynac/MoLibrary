@@ -1,8 +1,6 @@
-using System;
-using System.Collections.Generic;
 using MoLibrary.Core.Module.Models;
 
-namespace MoLibrary.Core.Module.Exceptions;
+namespace MoLibrary.Core.Module.ModuleAnalyser;
 
 /// <summary>
 /// Represents information about module dependencies.
