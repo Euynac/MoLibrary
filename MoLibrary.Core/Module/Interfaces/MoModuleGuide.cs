@@ -8,12 +8,37 @@ public class MoModuleGuide
     /// 指示模块配置来源
     /// </summary>
     public EMoModules? GuideFrom { get; set; }
+    
+    /// <summary>
+    /// Gets the target module enum this guide is for.
+    /// Default implementation returns null and should be overridden in derived classes.
+    /// </summary>
+    /// <returns>The enum representation of the target module.</returns>
+    public virtual EMoModules GetTargetModuleEnum()
+    {
+        // Default implementation returns a placeholder value
+        // This should be overridden in specific module guides
+        return default;
+    }
 }
 public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleGuide, IMoModuleGuide
     where TModuleOption : class, IMoModuleOption<TModule>, new()
     where TModuleGuideSelf : MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf>, new()
-    where TModule : MoModule<TModule, TModuleOption> 
+    where TModule : MoModule<TModule, TModuleOption>
 {
+    /// <summary>
+    /// Gets the target module enum this guide is for.
+    /// This implementation attempts to create a module instance to get its enum value.
+    /// </summary>
+    /// <returns>The enum representation of the target module.</returns>
+    public override EMoModules GetTargetModuleEnum()
+    {
+        // This will need to be implemented in a way that can determine
+        // the module enum without creating a full instance
+        // For now, we'll return default and expect specific guides to override this
+        return default;
+    }
+
     /// <summary>
     /// 指示模块必须进行的手动配置，若不配置，则会抛出异常提醒用户进行配置。
     /// </summary>

@@ -5,6 +5,11 @@ using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Core.Module.Interfaces;
 
+public interface IMoModuleStaticInfo
+{
+    static abstract EMoModules GetModuleEnum();
+}
+
 /// <summary>
 /// MoLibrary模块接口
 /// 定义模块的配置和初始化方法
