@@ -51,9 +51,17 @@ public abstract class MoModule<TModuleSelf, TModuleOption>(TModuleOption option)
 {
     public TModuleOption Option { get; } = option;
     public ILogger<TModuleSelf> Logger { get; set; } = NullLogger<TModuleSelf>.Instance;
+    
+    /// <summary>
+    /// Gets the enum value representing this module type.
+    /// This static method creates a temporary instance to access the CurModuleEnum method.
+    /// </summary>
+    /// <returns>The EMoModules value representing this module.</returns>
     public static EMoModules GetModuleEnum()
     {
-        
+        // Create a temporary instance with default options to get the module enum
+        var instance = Activator.CreateInstance(typeof(TModuleSelf), new TModuleOption()) as TModuleSelf;
+        return instance!.CurModuleEnum();
     }
 }
 

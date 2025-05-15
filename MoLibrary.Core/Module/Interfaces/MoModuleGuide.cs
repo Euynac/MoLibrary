@@ -11,7 +11,6 @@ public class MoModuleGuide
     
     /// <summary>
     /// Gets the target module enum this guide is for.
-    /// Default implementation returns null and should be overridden in derived classes.
     /// </summary>
     /// <returns>The enum representation of the target module.</returns>
     public virtual EMoModules GetTargetModuleEnum()
@@ -24,19 +23,11 @@ public class MoModuleGuide
 public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleGuide, IMoModuleGuide
     where TModuleOption : class, IMoModuleOption<TModule>, new()
     where TModuleGuideSelf : MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf>, new()
-    where TModule : MoModule<TModule, TModuleOption>
+    where TModule : MoModule<TModule, TModuleOption>, IMoModuleStaticInfo
 {
-    /// <summary>
-    /// Gets the target module enum this guide is for.
-    /// This implementation attempts to create a module instance to get its enum value.
-    /// </summary>
-    /// <returns>The enum representation of the target module.</returns>
     public override EMoModules GetTargetModuleEnum()
     {
-        // This will need to be implemented in a way that can determine
-        // the module enum without creating a full instance
-        // For now, we'll return default and expect specific guides to override this
-        return default;
+        return TModule.GetModuleEnum();
     }
 
     /// <summary>
