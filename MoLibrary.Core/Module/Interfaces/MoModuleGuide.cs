@@ -27,7 +27,13 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
 {
     public override EMoModules GetTargetModuleEnum()
     {
-        return TModule.GetModuleEnum();
+        if(MoModuleRegisterCentre.ModuleTypeToEnumMap.TryGetValue(typeof(TModule), out var moduleEnum))
+        {
+            return moduleEnum;
+        }
+        moduleEnum = TModule.GetModuleEnum();
+        MoModuleRegisterCentre.ModuleTypeToEnumMap[typeof(TModule)] = moduleEnum;
+        return moduleEnum;
     }
 
     /// <summary>
