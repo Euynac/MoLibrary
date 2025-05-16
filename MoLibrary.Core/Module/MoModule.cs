@@ -89,6 +89,9 @@ public abstract class MoModuleWithDependencies<TModuleSelf, TModuleOption>(TModu
         if (!DependedModules.Contains(targetModule))
         {
             DependedModules.Add(targetModule);
+            
+            // Register this dependency relationship in the ModuleAnalyser
+            MoModuleAnalyser.AddDependency(CurModuleEnum(), targetModule);
         }
         
         // Create and return the module guide
@@ -97,8 +100,6 @@ public abstract class MoModuleWithDependencies<TModuleSelf, TModuleOption>(TModu
             GuideFrom = CurModuleEnum()
         };
     }
-    
-    
 }
 
 public interface IWantDependsOnOtherModules
