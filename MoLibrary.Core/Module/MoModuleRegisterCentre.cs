@@ -16,10 +16,7 @@ namespace MoLibrary.Core.Module;
 public static class MoModuleRegisterCentre
 {
 
-    /// <summary>
-    /// Dictionary mapping module types to their enum representations.
-    /// </summary>
-    public static Dictionary<Type, EMoModules> ModuleTypeToEnumMap { get; set; } = new();
+   
     /// <summary>
     /// 模块注册错误列表
     /// </summary>

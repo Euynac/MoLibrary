@@ -2,9 +2,9 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using MoLibrary.Core.Module.Exceptions;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
+using MoLibrary.Core.Module.ModuleAnalyser;
 using MoLibrary.Tool.MoResponse;
 using System;
 using System.Collections.Generic;
@@ -98,25 +98,7 @@ public abstract class MoModuleWithDependencies<TModuleSelf, TModuleOption>(TModu
         };
     }
     
-    /// <summary>
-    /// Creates dependency information for the current module.
-    /// </summary>
-    /// <returns>Module dependency information object.</returns>
-    protected ModuleDependencyInfo CreateDependencyInfo()
-    {
-        var dependencyInfo = new ModuleDependencyInfo
-        {
-            SourceModuleType = GetType()
-        };
-        
-        // Add current module to dependency path
-        dependencyInfo.DependencyPath.Add(GetType());
-        
-        // Map module type to enum
-        dependencyInfo.ModuleTypeToEnumMap[GetType()] = CurModuleEnum();
-        
-        return dependencyInfo;
-    }
+    
 }
 
 public interface IWantDependsOnOtherModules

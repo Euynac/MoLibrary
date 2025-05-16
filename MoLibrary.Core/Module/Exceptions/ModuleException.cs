@@ -1,3 +1,4 @@
+using MoLibrary.Core.Module.ModuleAnalyser;
 using System;
 
 namespace MoLibrary.Core.Module.Exceptions;
