@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Module.Models;
+using MoLibrary.Core.Module.ModuleAnalyser;
 
 namespace MoLibrary.Core.Module.Interfaces;
 public class MoModuleGuide
@@ -27,12 +28,12 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
 {
     public override EMoModules GetTargetModuleEnum()
     {
-        if(MoModuleRegisterCentre.ModuleTypeToEnumMap.TryGetValue(typeof(TModule), out var moduleEnum))
+        if(MoModuleAnalyser.ModuleTypeToEnumMap.TryGetValue(typeof(TModule), out var moduleEnum))
         {
             return moduleEnum;
         }
         moduleEnum = TModule.GetModuleEnum();
-        MoModuleRegisterCentre.ModuleTypeToEnumMap[typeof(TModule)] = moduleEnum;
+        MoModuleAnalyser.ModuleTypeToEnumMap[typeof(TModule)] = moduleEnum;
         return moduleEnum;
     }
 
