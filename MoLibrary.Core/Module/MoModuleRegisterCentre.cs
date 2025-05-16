@@ -7,6 +7,7 @@ using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.BuilderWrapper;
 using System.Text;
 using MoLibrary.Core.Module.Exceptions;
+using MoLibrary.Core.Module.ModuleAnalyser;
 
 namespace MoLibrary.Core.Module;
 
@@ -78,7 +79,36 @@ public static class MoModuleRegisterCentre
             }
         }
         
-        // 1.1 检查模块是否满足必要配置要求
+        // 1.1 Check for circular dependencies in the dependency graph
+        if (MoModuleAnalyser.HasCircularDependencies())
+        {
+            var error = new ModuleRegisterError
+            {
+                ErrorMessage = "Circular dependency detected in module dependencies. Please check the dependency graph.",
+                ErrorType = ModuleRegisterErrorType.CircularDependency
+            };
+            ModuleRegisterErrors.Add(error);
+            
+            // Log the dependency graph for debugging
+            var graph = MoModuleAnalyser.CalculateCompleteModuleDependencyGraph();
+            builder.Logging.AddDebug(); // Ensure debug logging is enabled
+            builder.Logging.AddConsole();
+            var logger = builder.Services.BuildServiceProvider().GetRequiredService<ILogger<object>>();
+            logger.LogError("Module dependency graph contains circular dependencies:\n{Graph}", graph.ToString());
+            
+            // Continue with registration but warn about potential issues
+        }
+        
+        // 1.2 Log the dependency order for modules if there are no circular dependencies
+        if (!MoModuleAnalyser.HasCircularDependencies())
+        {
+            var modulesInOrder = MoModuleAnalyser.GetModulesInDependencyOrder();
+            var logger = builder.Services.BuildServiceProvider().GetRequiredService<ILogger<object>>();
+            logger.LogInformation("Modules will be initialized in the following dependency order: {Modules}", 
+                string.Join(", ", modulesInOrder));
+        }
+        
+        // 1.3 检查模块是否满足必要配置要求
         ModuleErrorUtil.ValidateModuleRequirements(ModuleRegisterContextDict, ModuleRegisterErrors);
 
         // 2. 初始化模块配置并注册服务
@@ -173,5 +203,15 @@ public static class MoModuleRegisterCentre
                 request.ConfigureContext?.Invoke(new ModuleRegisterContext(null, app, null, module.RequestInfo));
             }
         }
+    }
+    
+    /// <summary>
+    /// Gets the module dependency graph as a string for visualization or logging.
+    /// </summary>
+    /// <returns>A formatted string representation of the dependency graph.</returns>
+    public static string GetModuleDependencyGraphAsString()
+    {
+        var graph = MoModuleAnalyser.CalculateCompleteModuleDependencyGraph();
+        return graph.ToString();
     }
 }

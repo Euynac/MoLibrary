@@ -21,6 +21,11 @@ public class ModuleRegisterError
     public string ErrorMessage { get; set; } = string.Empty;
     
     /// <summary>
+    /// The type of error that occurred during module registration.
+    /// </summary>
+    public ModuleRegisterErrorType ErrorType { get; set; } = ModuleRegisterErrorType.General;
+    
+    /// <summary>
     /// The module enum that was being guided from when the error occurred.
     /// </summary>
     public EMoModules? GuideFrom { get; set; }
