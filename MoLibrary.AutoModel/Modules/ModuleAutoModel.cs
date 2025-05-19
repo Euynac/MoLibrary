@@ -34,7 +34,7 @@ public class ModuleAutoModel(ModuleAutoModelOption option) : MoModule<ModuleAuto
         return EMoModules.AutoModel;
     }
 
-    public override Res ConfigureApplicationBuilder(IApplicationBuilder app)
+    public override Res ConfigureEndpoints(IApplicationBuilder app)
     {
         app.UseEndpoints(endpoints =>
         {

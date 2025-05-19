@@ -51,8 +51,8 @@ public class ModuleDomainDrivenDesign(ModuleDomainDrivenDesignOption option) : M
             .AddCustomExceptionHandler<AutoModelExceptionHandlerForRes>();
         DependsOnModule<ModuleSwaggerGuide>().Register();
         DependsOnModule<ModuleGlobalExceptionHandlerGuide>().Register();
-        DependsOnModule<ModuleAuthorizationGuide>().Register();
-        DependsOnModule<ModuleAuthenticationGuide>().Register();
+        //DependsOnModule<ModuleAuthorizationGuide>().Register().AddDefaultPermissionBit<>();
+        DependsOnModule<ModuleAuthenticationGuide>().Register().ConfigDefaultMoSystemUser();
         DependsOnModule<ModuleMediatorGuide>().Register();
         DependsOnModule<ModuleMapperGuide>().Register();
         DependsOnModule<ModuleRepositoryGuide>().Register();

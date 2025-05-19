@@ -61,7 +61,7 @@ public class ModuleMapper(ModuleMapperOption option) : MoModule<ModuleMapper, Mo
         return Res.Ok();
     }
 
-    public override Res ConfigureApplicationBuilder(IApplicationBuilder app)
+    public override Res ConfigureEndpoints(IApplicationBuilder app)
     {
         app.UseEndpoints(endpoints =>
         {
