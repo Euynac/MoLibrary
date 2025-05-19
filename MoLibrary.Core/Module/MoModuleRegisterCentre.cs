@@ -5,7 +5,8 @@ using MoLibrary.Core.Module.TypeFinder;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.BuilderWrapper;
-using System.Text;
+using Microsoft.Extensions.Logging;
+using MoLibrary.Core.Features.MoLogProvider;
 using MoLibrary.Core.Module.Exceptions;
 using MoLibrary.Core.Module.ModuleAnalyser;
 
@@ -23,6 +24,7 @@ public static class MoModuleRegisterCentre
     /// </summary>
     private static List<ModuleRegisterError> ModuleRegisterErrors { get; } = [];
 
+    private static ILogger Logger { get; } = LogProvider.For(typeof(MoModuleRegisterCentre));
     /// <summary>
     /// 静态构造函数，用于初始化事件监听。
     /// </summary>
@@ -79,34 +81,31 @@ public static class MoModuleRegisterCentre
             }
         }
         
-        // 1.1 Check for circular dependencies in the dependency graph
-        if (MoModuleAnalyser.HasCircularDependencies())
-        {
-            var error = new ModuleRegisterError
-            {
-                ErrorMessage = "Circular dependency detected in module dependencies. Please check the dependency graph.",
-                ErrorType = ModuleRegisterErrorType.CircularDependency
-            };
-            ModuleRegisterErrors.Add(error);
+        //// 1.1 Check for circular dependencies in the dependency graph
+        //if (MoModuleAnalyser.HasCircularDependencies())
+        //{
+        //    var error = new ModuleRegisterError
+        //    {
+        //        ErrorMessage = "Circular dependency detected in module dependencies. Please check the dependency graph.",
+        //        ErrorType = ModuleRegisterErrorType.CircularDependency
+        //    };
+        //    ModuleRegisterErrors.Add(error);
             
-            // Log the dependency graph for debugging
-            var graph = MoModuleAnalyser.CalculateCompleteModuleDependencyGraph();
-            builder.Logging.AddDebug(); // Ensure debug logging is enabled
-            builder.Logging.AddConsole();
-            var logger = builder.Services.BuildServiceProvider().GetRequiredService<ILogger<object>>();
-            logger.LogError("Module dependency graph contains circular dependencies:\n{Graph}", graph.ToString());
+        //    // Log the dependency graph for debugging
+        //    var graph = MoModuleAnalyser.CalculateCompleteModuleDependencyGraph();
             
-            // Continue with registration but warn about potential issues
-        }
-        
-        // 1.2 Log the dependency order for modules if there are no circular dependencies
-        if (!MoModuleAnalyser.HasCircularDependencies())
-        {
-            var modulesInOrder = MoModuleAnalyser.GetModulesInDependencyOrder();
-            var logger = builder.Services.BuildServiceProvider().GetRequiredService<ILogger<object>>();
-            logger.LogInformation("Modules will be initialized in the following dependency order: {Modules}", 
-                string.Join(", ", modulesInOrder));
-        }
+        //   Logger.LogError("Module dependency graph contains circular dependencies:\n{Graph}", graph.ToString());
+             
+        //    // Continue with registration but warn about potential issues
+        //}
+        //else
+        //{
+        //    var modulesInOrder = MoModuleAnalyser.GetModulesInDependencyOrder();
+
+        //    var graph = MoModuleAnalyser.CalculateCompleteModuleDependencyGraph();
+        //    Logger.LogInformation("Modules will be initialized in the following dependency order: {Modules}\n{Graph}",
+        //        string.Join(", ", modulesInOrder), graph);
+        //}
         
         // 1.3 检查模块是否满足必要配置要求
         ModuleErrorUtil.ValidateModuleRequirements(ModuleRegisterContextDict, ModuleRegisterErrors);
