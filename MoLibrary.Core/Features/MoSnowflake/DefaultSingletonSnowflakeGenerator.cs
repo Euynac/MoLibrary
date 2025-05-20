@@ -1,6 +1,8 @@
+using MoLibrary.Core.Modules;
+
 namespace MoLibrary.Core.Features.MoSnowflake;
 
-public class DefaultSingletonSnowflakeGenerator(SnowflakeConfiguration configuration) : ISnowflakeGenerator
+public class DefaultSingletonSnowflakeGenerator(ModuleSnowflakeIdOption configuration) : ISnowflakeGenerator
 {
     private readonly Snowflake _snowflake = new(configuration);
 

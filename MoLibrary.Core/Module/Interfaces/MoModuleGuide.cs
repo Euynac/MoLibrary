@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using MoLibrary.Core.Module.BuilderWrapper;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.Core.Module.ModuleAnalyser;
 
@@ -22,7 +23,7 @@ public class MoModuleGuide
     }
 }
 public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleGuide, IMoModuleGuide
-    where TModuleOption : class, IMoModuleOption<TModule>, new()
+    where TModuleOption : MoModuleOption<TModule>, new()
     where TModuleGuideSelf : MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf>, new()
     where TModule : MoModule<TModule, TModuleOption>, IMoModuleStaticInfo
 {
@@ -136,7 +137,19 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
         }
 
         RegisterModule();
-        
+
+        if (config != null && WebApplicationBuilderExtensions.WebApplicationBuilderInstance != null)
+        {
+            var tmpOption = new TModuleOption();
+            config.Invoke(tmpOption);
+            if (tmpOption.RegisterInstantly)
+            {
+                MoModuleRegisterCentre.RegisterServices(WebApplicationBuilderExtensions.WebApplicationBuilderInstance);
+            }
+
+        }
+
+
         return new TModuleGuideSelf();
     }
 

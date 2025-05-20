@@ -1,3 +1,5 @@
+using MoLibrary.Core.Modules;
+
 namespace MoLibrary.Core.Features.MoSnowflake;
 
 /// <summary>
@@ -55,7 +57,7 @@ public class Snowflake
     private readonly object _sync = new();
 
     public Snowflake(
-        SnowflakeConfiguration configuration)
+        ModuleSnowflakeIdOption configuration)
     {
         _twepoch = configuration.Twepoch;
         _workerIdBits = configuration.WorkerIdBits;

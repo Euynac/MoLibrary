@@ -53,23 +53,24 @@ public static class MoModuleRegisterCentre
     /// </summary>
     private static List<ModuleSnapshot> ModuleSnapshots { get; } = [];
 
+   
+
     
     /// <summary>
-    /// 注册所有模块的服务。此方法应在builder.Build()之前调用。
+    /// 注册当前注册的所有模块的服务。此方法应在builder.Build()之前调用。
     /// </summary>
     /// <param name="builder">WebApplicationBuilder实例。</param>
-    /// <param name="typeFinderConfigure">类型查找器的配置操作。</param>
-    internal static void RegisterServices(WebApplicationBuilder builder, Action<ModuleCoreOptionTypeFinder>? typeFinderConfigure = null)
+    internal static void RegisterServices(WebApplicationBuilder builder)
     {
         var services = builder.Services;
 
         // 清空之前的错误记录
         ModuleRegisterErrors.Clear();
 
-        var typeFinder = services.GetOrCreateDomainTypeFinder<MoDomainTypeFinder>(typeFinderConfigure);
+        var typeFinder = services.GetOrCreateDomainTypeFinder<MoDomainTypeFinder>();
 
         // 1. 初次遍历所有注册的模块，判断若模块有依赖项，处理依赖关系
-        foreach (var (moduleType, info) in ModuleRegisterContextDict.Select(p=>p).ToList())
+        foreach (var (moduleType, info) in ModuleRegisterContextDict.Where(p=>!p.Value.HasBeenBuilt).Select(p=>p).ToList())
         {
             if (!moduleType.IsImplementInterface(typeof(IWantDependsOnOtherModules))) continue;
 
@@ -108,10 +109,10 @@ public static class MoModuleRegisterCentre
         //}
         
         // 1.3 检查模块是否满足必要配置要求
-        ModuleErrorUtil.ValidateModuleRequirements(ModuleRegisterContextDict, ModuleRegisterErrors);
+        ModuleErrorUtil.ValidateModuleRequirements(ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt).ToDictionary(), ModuleRegisterErrors);
 
         // 2. 初始化模块配置并注册服务
-        foreach (var (moduleType, info) in ModuleRegisterContextDict)
+        foreach (var (moduleType, info) in ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt))
         {
             // 初始化模块配置
             info.InitFinalConfigures();
@@ -136,6 +137,7 @@ public static class MoModuleRegisterCentre
             }
 
             ModuleSnapshots.Add(new ModuleSnapshot(module, info));
+            info.HasBeenBuilt = true;
         }
 
         var businessTypes = typeFinder.GetTypes();
@@ -163,8 +165,6 @@ public static class MoModuleRegisterCentre
                 request.ConfigureContext?.Invoke(new ModuleRegisterContext(services, null, builder, module.RequestInfo));
             }
         }
-        // 清理临时资源
-        ModuleRegisterContextDict.Clear();
     }
 
     /// <summary>

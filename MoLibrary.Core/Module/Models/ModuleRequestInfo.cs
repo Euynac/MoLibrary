@@ -8,6 +8,10 @@ namespace MoLibrary.Core.Module.Models;
 public class ModuleRequestInfo
 {
     /// <summary>
+    /// 模块是否已经被注册构建，如一些可提前注册的模块，在正式构建时需跳过。
+    /// </summary>
+    public bool HasBeenBuilt { get; set; }
+    /// <summary>
     /// 模块的注册请求列表。
     /// </summary>
     public List<ModuleRegisterRequest> RegisterRequests { get; set; } = [];

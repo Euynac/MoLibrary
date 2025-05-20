@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
+using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module.TypeFinder;
 
 namespace MoLibrary.Core.Module.BuilderWrapper;
@@ -12,7 +13,7 @@ public static class WebApplicationBuilderExtensions
     /// <summary>
     /// Event triggered before the WebApplicationBuilder builds the application.
     /// </summary>
-    public static event Action<WebApplicationBuilder, Action<ModuleCoreOptionTypeFinder>?>? BeforeBuild;
+    public static event Action<WebApplicationBuilder>? BeforeBuild;
 
     /// <summary>
     /// Event triggered after the WebApplicationBuilder builds the application.
@@ -34,17 +35,27 @@ public static class WebApplicationBuilderExtensions
     /// </summary>
     public static event Action<IApplicationBuilder>? BeginUseEndpoints;
 
+    public static WebApplicationBuilder? WebApplicationBuilderInstance;
+
+    public static void ConfigMoModule(this WebApplicationBuilder builder, Action<ModuleCoreOption>? moduleCoreOption = null, Action<ModuleCoreOptionTypeFinder>? typeFinderConfigure = null)
+    {
+        builder.Services.ConfigActionWrapper(moduleCoreOption, out var option);
+        if (option.EnableRegisterInstantly)
+        {
+            WebApplicationBuilderInstance = builder;
+        }
+        var typeFinder = builder.Services.GetOrCreateDomainTypeFinder<MoDomainTypeFinder>();
+    }
 
     /// <summary>
     /// Builds the WebApplication with Mo module integration by triggering the BeforeBuild and AfterBuild events.
     /// </summary>
     /// <param name="builder">The WebApplicationBuilder instance.</param>
-    /// <param name="typeFinderConfigure">Optional configuration for the module type finder.</param>
     /// <returns>The built WebApplication.</returns>
-    public static WebApplication MoBuild(this WebApplicationBuilder builder, Action<ModuleCoreOptionTypeFinder>? typeFinderConfigure = null)
+    public static WebApplication MoBuild(this WebApplicationBuilder builder)
     {
         // Trigger BeforeBuild event
-        BeforeBuild?.Invoke(builder, typeFinderConfigure);
+        BeforeBuild?.Invoke(builder);
 
         var app = builder.Build();
 
