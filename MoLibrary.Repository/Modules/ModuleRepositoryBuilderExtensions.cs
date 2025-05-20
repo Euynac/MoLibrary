@@ -11,4 +11,9 @@ public static class ModuleRepositoryBuilderExtensions
     {
         return new ModuleRepositoryGuide().Register(action);
     }
+    public static ModuleRepositoryGuide ConfigModuleRepository(this IServiceCollection services,
+        Action<ModuleRepositoryOption>? action = null)
+    {
+        return new ModuleRepositoryGuide().Register(action);
+    }
 }

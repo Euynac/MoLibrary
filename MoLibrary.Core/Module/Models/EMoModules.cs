@@ -40,5 +40,6 @@ public enum EMoModules
     Swagger,
     Seeder,
     DynamicProxy,
-    SnowflakeId
+    SnowflakeId,
+    Timekeeper
 }
