@@ -7,5 +7,5 @@ public class ModuleConfigurationDashboardOption : MoModuleControllerOption<Modul
     /// <summary>
     /// 设定当前微服务是配置中心
     /// </summary>
-    public bool ThisIsDashboard { get; set; }
+    internal bool ThisIsDashboard { get; set; }
 }

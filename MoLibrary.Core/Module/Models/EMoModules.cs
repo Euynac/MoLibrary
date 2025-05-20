@@ -33,12 +33,12 @@ public enum EMoModules
     DaprStateStore,
     DaprEventBus,
     DaprLocker,
-    FrameworkLogging,
     GlobalExceptionHandler,
     AutoControllers,
     GlobalJson,
     Mediator,
     Swagger,
     Seeder,
-    DynamicProxy
+    DynamicProxy,
+    SnowflakeId
 }
