@@ -2,7 +2,7 @@ using MoLibrary.Core.Module.Interfaces;
 
 namespace MoLibrary.Dapr.Modules;
 
-public class ModuleDaprLockerOption : IMoModuleOption<ModuleDaprLocker>
+public class ModuleDaprLockerOption : MoModuleOption<ModuleDaprLocker>
 {
     public string StoreName { get; set; } = default!;
 
