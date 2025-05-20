@@ -19,6 +19,14 @@ public static class LogProvider
     }
 
     /// <summary>
+    /// Disables all logging by replacing the current provider with a NullLogProvider.
+    /// </summary>
+    public static void DisableLog()
+    {
+        _provider = new NullLogProvider();
+    }
+
+    /// <summary>
     /// Gets a logger instance for the specified type.
     /// </summary>
     /// <typeparam name="T">The type requesting the logger.</typeparam>

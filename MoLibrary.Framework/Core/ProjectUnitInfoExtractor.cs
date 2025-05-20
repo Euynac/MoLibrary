@@ -11,7 +11,7 @@ public static class ProjectUnitInfoExtractor
     {
         foreach (var type in types)
         {
-            if(type is { IsClass: true, FullName: {  } full})
+            if (type is {IsClass: true, FullName: not null, IsGenericType: false})
             {
                 var unit = ProjectUnit.CreateUnit(new FactoryContext()
                 {
@@ -30,6 +30,7 @@ public static class ProjectUnitInfoExtractor
                 }
 
             }
+
             yield return type;
         }
     }
