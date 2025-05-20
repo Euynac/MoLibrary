@@ -8,6 +8,7 @@ using MoLibrary.Core.Module.ModuleAnalyser;
 using MoLibrary.Tool.MoResponse;
 using System;
 using System.Collections.Generic;
+using MoLibrary.Core.Features.MoLogProvider;
 
 namespace MoLibrary.Core.Module;
 
@@ -50,7 +51,7 @@ public abstract class MoModule<TModuleSelf, TModuleOption>(TModuleOption option)
     where TModuleSelf : MoModule<TModuleSelf, TModuleOption>
 {
     public TModuleOption Option { get; } = option;
-    public ILogger<TModuleSelf> Logger { get; set; } = NullLogger<TModuleSelf>.Instance;
+    public ILogger Logger { get; set; } = LogProvider.For<TModuleSelf>();
     
     /// <summary>
     /// Gets the enum value representing this module type.

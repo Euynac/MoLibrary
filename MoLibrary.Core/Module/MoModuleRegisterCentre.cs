@@ -111,6 +111,8 @@ public static class MoModuleRegisterCentre
         // 1.3 检查模块是否满足必要配置要求
         ModuleErrorUtil.ValidateModuleRequirements(ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt).ToDictionary(), ModuleRegisterErrors);
 
+        var snapshots = new List<ModuleSnapshot>();
+
         // 2. 初始化模块配置并注册服务
         foreach (var (moduleType, info) in ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt))
         {
@@ -136,14 +138,14 @@ public static class MoModuleRegisterCentre
                 request.ConfigureContext?.Invoke(new ModuleRegisterContext(services, null, builder, info));
             }
 
-            ModuleSnapshots.Add(new ModuleSnapshot(module, info));
+            snapshots.Add(new ModuleSnapshot(module, info));
             info.HasBeenBuilt = true;
         }
 
         var businessTypes = typeFinder.GetTypes();
         
         // 3. 为需要遍历业务类型的模块提供支持
-        foreach (var module in ModuleSnapshots)
+        foreach (var module in snapshots)
         {
             if (module.ModuleInstance is IWantIterateBusinessTypes iterateModule)
             {
@@ -155,7 +157,7 @@ public static class MoModuleRegisterCentre
 
 
         // 4. 执行模块的PostConfigureServices方法
-        foreach (var module in ModuleSnapshots)
+        foreach (var module in snapshots)
         {
             module.ModuleInstance.PostConfigureServices(services);
 
@@ -165,6 +167,7 @@ public static class MoModuleRegisterCentre
                 request.ConfigureContext?.Invoke(new ModuleRegisterContext(services, null, builder, module.RequestInfo));
             }
         }
+        ModuleSnapshots.AddRange(snapshots);
     }
 
     /// <summary>
