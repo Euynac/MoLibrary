@@ -1,5 +1,6 @@
 using Grpc.Net.Client;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Builder;
 using MoLibrary.Core.GlobalJson;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
@@ -11,7 +12,7 @@ namespace MoLibrary.Dapr.Modules;
 
 public static class ModuleDaprClientBuilderExtensions
 {
-    public static ModuleDaprClientGuide ConfigModuleDaprClient(this IServiceCollection services,
+    public static ModuleDaprClientGuide ConfigModuleDaprClient(this WebApplicationBuilder builder,
         Action<ModuleDaprClientOption>? action = null)
     {
         return new ModuleDaprClientGuide().Register(action);
@@ -45,7 +46,7 @@ public class ModuleDaprClientGuide : MoModuleGuide<ModuleDaprClient, ModuleDaprC
 
 }
 
-public class ModuleDaprClientOption : IMoModuleOption<ModuleDaprClient>
+public class ModuleDaprClientOption : MoModuleOption<ModuleDaprClient>
 {
 
     /// <summary>

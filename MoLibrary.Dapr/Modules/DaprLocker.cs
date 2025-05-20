@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Builder;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
@@ -11,7 +12,7 @@ namespace MoLibrary.Dapr.Modules;
 
 public static class ModuleDaprLockerBuilderExtensions
 {
-    public static ModuleDaprLockerGuide ConfigModuleDaprLocker(this IServiceCollection services,
+    public static ModuleDaprLockerGuide ConfigModuleDaprLocker(this WebApplicationBuilder builder,
         Action<ModuleDaprLockerOption>? action = null)
     {
         return new ModuleDaprLockerGuide().Register(action);

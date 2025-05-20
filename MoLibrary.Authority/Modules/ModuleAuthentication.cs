@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using MoLibrary.Authority.Authentication;
 using MoLibrary.Authority.Implements.Security;
 using MoLibrary.Authority.Security;
@@ -102,6 +104,39 @@ public class ModuleAuthentication(ModuleAuthenticationOption option) : MoModule<
         #endregion
 
         return Res.Ok();
+    }
+
+    public override Res ConfigureEndpoints(IApplicationBuilder app)
+    {
+        app.UseEndpoints(endpoints =>
+        {
+            var tagGroup = new List<OpenApiTag>
+            {
+                new() { Name = option.GetSwaggerGroupName(), Description = "JWT相关接口" }
+            };
+            endpoints.MapGet("/jwt/decode/{token}", async (HttpResponse response, HttpContext context, string token) =>
+            {
+                var jwt = context.RequestServices.GetRequiredService<IMoJwtAuthManager>();
+                var (claims, tokenInfo) = jwt.DecodeJwtToken(token);
+                await context.Response.WriteAsJsonAsync(new
+                {
+                    claims = claims.Claims.Select(p => new
+                    {
+                        p.Type,
+                        p.Value
+                    }),
+                    tokenInfo
+                });
+
+            }).WithName("JWT解码").WithOpenApi(operation =>
+            {
+                operation.Summary = "JWT解码";
+                operation.Description = "JWT解码";
+                operation.Tags = tagGroup;
+                return operation;
+            });
+        });
+        return base.ConfigureEndpoints(app);
     }
 
     //必须在CORS中间件之后，不然会使得CORS失效

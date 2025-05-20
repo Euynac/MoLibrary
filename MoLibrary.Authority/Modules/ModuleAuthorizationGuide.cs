@@ -22,7 +22,7 @@ public class ModuleAuthorizationGuide : MoModuleGuide<ModuleAuthorization, Modul
     /// <typeparam name="TEnum"></typeparam>
     /// <param name="claimTypeDefinition"></param>
     /// <returns></returns>
-    public ModuleAuthorizationGuide AddDefaultPermissionBit<TEnum>(string claimTypeDefinition) where TEnum : struct, Enum
+    internal ModuleAuthorizationGuide AddDefaultPermissionBit<TEnum>(string claimTypeDefinition) where TEnum : struct, Enum
     {
         ConfigureServices(nameof(AddDefaultPermissionBit), context =>
         {

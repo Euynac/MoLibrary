@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Builder;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
@@ -12,7 +13,7 @@ namespace MoLibrary.Dapr.Modules;
 
 public static class ModuleDaprStateStoreBuilderExtensions
 {
-    public static ModuleDaprStateStoreGuide ConfigModuleDaprStateStore(this IServiceCollection services,
+    public static ModuleDaprStateStoreGuide ConfigModuleDaprStateStore(this WebApplicationBuilder builder,
         Action<ModuleDaprStateStoreOption>? action = null)
     {
         return new ModuleDaprStateStoreGuide().Register(action);
@@ -48,7 +49,7 @@ public class
 }
 
 
-public class ModuleDaprStateStoreOption : IMoModuleOption<ModuleDaprStateStore>
+public class ModuleDaprStateStoreOption : MoModuleOption<ModuleDaprStateStore>
 {
     /// <summary>
     /// Dapr StateStore名称。需要与Dapr StateStore.yaml文件metadata中的name定义一致
