@@ -26,13 +26,14 @@ public class UDPCore(MetadataForUDP metadata, ILogger<UDPCore> logger) : Communi
         {
             var endPoint = new IPEndPoint(IPAddress.Parse(metadata.Address), metadata.Port);
             _udpClient = new UdpClient(endPoint);
-            await Task.Factory.StartNew(()=>
+            await Task.Factory.StartNew(async ()=>
             {
                 IPEndPoint? remote = null;
                 while (true)
                 {
-                    byte[] bytes = _udpClient.Receive(ref remote);
-                    SendData(bytes);
+                    var bytes = await _udpClient.ReceiveAsync();
+                   
+                    SendData(bytes.Buffer);
                 }
             });
         }

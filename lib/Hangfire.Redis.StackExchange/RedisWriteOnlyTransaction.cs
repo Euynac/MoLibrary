@@ -14,9 +14,6 @@
 // You should have received a copy of the GNU Lesser General Public 
 // License along with Hangfire.Redis.StackExchange. If not, see <http://www.gnu.org/licenses/>.
 
-using System;
-using System.Linq;
-using System.Collections.Generic;
 using Hangfire.Annotations;
 using Hangfire.Common;
 using Hangfire.States;

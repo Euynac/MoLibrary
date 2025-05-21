@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using MoLibrary.Core.Module.Models;
 
 namespace MoLibrary.Core.Module.ModuleAnalyser;

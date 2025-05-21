@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using Hangfire.Redis;
 using Hangfire.States;
 using MoLibrary.BackgroundJob.Abstract.Jobs;

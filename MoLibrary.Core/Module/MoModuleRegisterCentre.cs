@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Tool.Extensions;
 using MoLibrary.Core.Module.TypeFinder;
 using MoLibrary.Core.Module.Models;

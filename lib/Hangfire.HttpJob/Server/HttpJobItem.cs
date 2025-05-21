@@ -1,6 +1,5 @@
 
 using Newtonsoft.Json;
-using System.Collections.Generic;
 
 namespace Hangfire.HttpJob.Server
 {

@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging;
 using MoLibrary.Core.Module.Interfaces;
 
 namespace MoLibrary.RegisterCentre.Modules;
