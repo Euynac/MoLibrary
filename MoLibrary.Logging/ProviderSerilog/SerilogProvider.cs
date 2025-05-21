@@ -1,4 +1,5 @@
 using MoLibrary.Core.Features.MoLogProvider;
+using Microsoft.Extensions.Logging;
 using Serilog.Extensions.Logging;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
 
@@ -38,4 +39,18 @@ public class SerilogProvider : IMoLogProvider
     {
         return _provider.CreateLogger(type.FullName ?? type.Name);
     }
-} 
+    
+    /// <inheritdoc />
+    public ILogger CreateLogger<T>(LogLevel minLogLevel)
+    {
+        var logger = CreateLogger<T>();
+        return new MinimumLevelLogger(logger, minLogLevel);
+    }
+    
+    /// <inheritdoc />
+    public ILogger CreateLogger(Type type, LogLevel minLogLevel)
+    {
+        var logger = CreateLogger(type);
+        return new MinimumLevelLogger(logger, minLogLevel);
+    }
+}

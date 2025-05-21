@@ -1,14 +1,10 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.Core.Module.ModuleAnalyser;
 using MoLibrary.Tool.MoResponse;
-using System;
-using System.Collections.Generic;
-using MoLibrary.Core.Features.MoLogProvider;
 
 namespace MoLibrary.Core.Module;
 
@@ -47,11 +43,11 @@ public abstract class MoModule : IMoModule
 /// 提供IMoLibraryModule接口的默认实现
 /// </summary>
 public abstract class MoModule<TModuleSelf, TModuleOption>(TModuleOption option) : MoModule, IMoModuleStaticInfo
-    where TModuleOption : IMoModuleOption<TModuleSelf>, new() 
+    where TModuleOption : MoModuleOption<TModuleSelf>, new() 
     where TModuleSelf : MoModule<TModuleSelf, TModuleOption>
 {
     public TModuleOption Option { get; } = option;
-    public ILogger Logger { get; set; } = LogProvider.For<TModuleSelf>();
+    public ILogger Logger { get;  } = option.Logger;
     
     /// <summary>
     /// Gets the enum value representing this module type.
@@ -67,7 +63,7 @@ public abstract class MoModule<TModuleSelf, TModuleOption>(TModuleOption option)
 }
 
 public abstract class MoModuleWithDependencies<TModuleSelf, TModuleOption>(TModuleOption option) : MoModule<TModuleSelf, TModuleOption>(option), IWantDependsOnOtherModules
-    where TModuleOption : IMoModuleOption<TModuleSelf>, new()
+    where TModuleOption : MoModuleOption<TModuleSelf>, new()
     where TModuleSelf : MoModuleWithDependencies<TModuleSelf, TModuleOption>
 {
     public List<EMoModules> DependedModules { get; set; } = [];

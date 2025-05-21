@@ -28,4 +28,18 @@ public class NullLogProvider : IMoLogProvider
     {
         return _loggerFactory.CreateLogger(type);
     }
+    
+    /// <inheritdoc />
+    public ILogger CreateLogger<T>(LogLevel minLogLevel)
+    {
+        // For NullLogProvider, we ignore the minimum log level as it doesn't log anything anyway
+        return _loggerFactory.CreateLogger<T>();
+    }
+    
+    /// <inheritdoc />
+    public ILogger CreateLogger(Type type, LogLevel minLogLevel)
+    {
+        // For NullLogProvider, we ignore the minimum log level as it doesn't log anything anyway
+        return _loggerFactory.CreateLogger(type);
+    }
 } 
