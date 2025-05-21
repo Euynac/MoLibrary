@@ -27,7 +27,11 @@ public class ModuleConfigurationDashboard(ModuleConfigurationDashboardOption opt
 
     public override Res ConfigureApplicationBuilder(IApplicationBuilder app)
     {
-
+        return base.ConfigureApplicationBuilder(app);
+    }
+    
+    public override Res ConfigureEndpoints(IApplicationBuilder app)
+    {
         if (option.ThisIsDashboard)
         {
             app.UseEndpoints(endpoints =>
@@ -156,7 +160,7 @@ public class ModuleConfigurationDashboard(ModuleConfigurationDashboardOption opt
             });
         }
 
-        return base.ConfigureApplicationBuilder(app);
+        return Res.Ok();
     }
 }
 

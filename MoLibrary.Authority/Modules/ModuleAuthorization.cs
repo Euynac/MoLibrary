@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Authority.Authorization;
 using MoLibrary.Authority.Implements.Authorization;
@@ -17,7 +18,8 @@ public class ModuleAuthorization(ModuleAuthorizationOption option) : MoModuleWit
 
     public override Res ConfigureServices(IServiceCollection services)
     {
-        services.AddAuthorizationCore();
+        services.AddAuthorization();
+        //services.AddAuthorizationCore();
         services.AddSingleton<IAuthorizationHandler, EnumPermissionRequirementHandler>();
         services.AddTransient<DefaultAuthorizationPolicyProvider>();
 
@@ -37,5 +39,11 @@ public class ModuleAuthorization(ModuleAuthorizationOption option) : MoModuleWit
 
     public override void ClaimDependencies()
     {
+    }
+
+    public override Res ConfigureApplicationBuilder(IApplicationBuilder app)
+    {
+        app.UseAuthorization();
+        return base.ConfigureApplicationBuilder(app);
     }
 }

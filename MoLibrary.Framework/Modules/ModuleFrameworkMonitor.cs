@@ -76,6 +76,11 @@ public class ModuleFrameworkMonitor(ModuleFrameworkMonitorOption option)
             app.UseRequestFilter();
         }
 
+        return base.ConfigureApplicationBuilder(app);
+    }
+    
+    public override Res ConfigureEndpoints(IApplicationBuilder app)
+    {
         app.UseEndpoints(endpoints =>
         {
             var tagGroup = new List<OpenApiTag> { new() { Name = option.GetSwaggerGroupName(), Description = "系统框架内置接口" } };
@@ -201,6 +206,6 @@ public class ModuleFrameworkMonitor(ModuleFrameworkMonitorOption option)
             });
         });
 
-        return base.ConfigureApplicationBuilder(app);
+        return Res.Ok();
     }
 }

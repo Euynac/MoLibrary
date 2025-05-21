@@ -34,7 +34,6 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
         _services = services;
         MoConfigurationManager.Setting = Option;
         MoConfigurationManager.AppConfiguration = Option.AppConfiguration;
-        var log = MoConfigurationManager.Logger;
 
         services.AddOptions();
         services.AddSingleton<IMoConfigurationCardManager, MoConfigurationCardManager>();
@@ -121,6 +120,11 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
     }
 
     public override Res ConfigureApplicationBuilder(IApplicationBuilder app)
+    {
+        return Res.Ok();
+    }
+
+    public override Res ConfigureEndpoints(IApplicationBuilder app)
     {
         app.UseEndpoints(endpoints =>
         {
