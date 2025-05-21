@@ -10,13 +10,25 @@ public class MoModuleOption<TModule> : IMoModuleOption<TModule> where TModule : 
     /// <summary>
     /// 一般用于模块注册期间日志
     /// </summary>
-    public ILogger Logger { get; set; } = LogProvider.For<TModule>();
+    public ILogger Logger { get; set; } = LogProvider.For<TModule>(ModuleCoreOption.DefaultModuleLogLevel);
 
     /// <summary>
     /// 模块立即进行注册，如一些模块有需要在注册期间进行使用的，如Configuration、Logging模块等。需要使用 <see cref="WebApplicationBuilderExtensions.ConfigMoModule"/> 设定 <see cref="ModuleCoreOption.EnableRegisterInstantly"/> 以生效
     /// </summary>
     public bool RegisterInstantly { get; set; }
 
+    /// <summary>
+    /// Sets the minimum log level for the module logger.
+    /// </summary>
+    /// <param name="logLevel">The minimum log level to set for this module.</param>
+    public void SetModuleLogLevel(LogLevel logLevel)
+    {
+        Logger = LogProvider.For<TModule>(logLevel);
+    }
+
+    /// <summary>
+    /// Disables the module log.
+    /// </summary>
     public void DisableModuleLog()
     {
         Logger = NullLogger.Instance;

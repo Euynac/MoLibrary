@@ -41,7 +41,7 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
 
         if (Option is { UseDaprProvider: true, AppConfiguration: ConfigurationManager manager})
         {
-            Logger.LogWarning($"[MoConfiguration] Using Dapr Configuration Provider. StoreName: {Option.DaprStoreName}");
+            Logger.LogDebug($"[MoConfiguration] Using Dapr Configuration Provider. StoreName: {Option.DaprStoreName}");
             //TODO 1.考虑使用JsonSerializer进行配置序列化存储 2.使用单例DaprClient
             var client = new DaprClientBuilder().Build();
             manager.AddDaprConfigurationStore(Option.DaprStoreName!, [], client,
@@ -93,7 +93,7 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
             MoConfigurationCard.Register(card);
 
             var configAttr = card.Configuration.Info;
-            Logger.LogWarning($"AddOptions<{configType.Name}>");
+            Logger.LogDebug($"AddOptions<{configType.Name}>");
             var optionBuilder = (dynamic) _method.MakeGenericMethod(configType).Invoke(null, [_services])!;
 
             var configAction = new Action<BinderOptions>(o =>
@@ -104,13 +104,13 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
             });
             if (configAttr.Section is { } section)
             {
-                Logger.LogWarning($"Bind<{configType.Name}> to {section} (with section name)");
+                Logger.LogDebug($"Bind<{configType.Name}> to {section} (with section name)");
                 MoExtendedOptionsBuilderConfigurationExtensions.Bind(optionBuilder, Option.AppConfiguration.GetSection(section),
                     configAction);
             }
             else
             {
-                Logger.LogWarning($"Bind<{configType.Name}> (without section name)");
+                Logger.LogDebug($"Bind<{configType.Name}> (without section name)");
                 MoExtendedOptionsBuilderConfigurationExtensions.Bind(optionBuilder, Option.AppConfiguration, configAction);
             }
 

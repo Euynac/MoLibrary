@@ -45,4 +45,26 @@ public static class LogProvider
     {
         return _provider.CreateLogger(type);
     }
+    
+    /// <summary>
+    /// Gets a logger instance for the specified type with a minimum log level.
+    /// </summary>
+    /// <typeparam name="T">The type requesting the logger.</typeparam>
+    /// <param name="minLogLevel">The minimum log level to display.</param>
+    /// <returns>An ILogger instance for the specified type with the specified minimum log level.</returns>
+    public static ILogger For<T>(LogLevel minLogLevel)
+    {
+        return _provider.CreateLogger<T>(minLogLevel);
+    }
+    
+    /// <summary>
+    /// Gets a logger instance for the specified type with a minimum log level.
+    /// </summary>
+    /// <param name="type">The type requesting the logger.</param>
+    /// <param name="minLogLevel">The minimum log level to display.</param>
+    /// <returns>An ILogger instance for the specified type with the specified minimum log level.</returns>
+    public static ILogger For(Type type, LogLevel minLogLevel)
+    {
+        return _provider.CreateLogger(type, minLogLevel);
+    }
 } 
