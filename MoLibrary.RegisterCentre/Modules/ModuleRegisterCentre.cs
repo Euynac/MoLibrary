@@ -19,6 +19,21 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModule<
 
     public override Res ConfigureApplicationBuilder(IApplicationBuilder app)
     {
+        if (option.ThisIsCentreClient)
+        {
+            var connector = app.ApplicationServices.GetService<IRegisterCentreServerConnector>();
+            if (connector == null) throw new InvalidOperationException($"无法解析{nameof(IRegisterCentreServerConnector)}，可能未注册{nameof(IRegisterCentreServerConnector)}及{nameof(IRegisterCentreClient)}实现");
+            Task.Factory.StartNew(async () =>
+            {
+                await connector.DoingRegister();
+            }, TaskCreationOptions.LongRunning);
+        }
+        
+        return base.ConfigureApplicationBuilder(app);
+    }
+    
+    public override Res ConfigureEndpoints(IApplicationBuilder app)
+    {
         if (option.ThisIsCentreServer)
         {
             app.UseEndpoints(endpoints =>
@@ -80,17 +95,8 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModule<
                     return operation;
                 });
             });
-
-
-            var connector = app.ApplicationServices.GetService<IRegisterCentreServerConnector>();
-            if (connector == null) throw new InvalidOperationException($"无法解析{nameof(IRegisterCentreServerConnector)}，可能未注册{nameof(IRegisterCentreServerConnector)}及{nameof(IRegisterCentreClient)}实现");
-            Task.Factory.StartNew(async () =>
-            {
-                await connector.DoingRegister();
-            }, TaskCreationOptions.LongRunning);
         }
-
-
-        return base.ConfigureApplicationBuilder(app);
+        
+        return Res.Ok();
     }
 }

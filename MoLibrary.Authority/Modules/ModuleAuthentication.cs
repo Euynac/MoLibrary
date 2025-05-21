@@ -143,7 +143,6 @@ public class ModuleAuthentication(ModuleAuthenticationOption option) : MoModule<
     public override Res ConfigureApplicationBuilder(IApplicationBuilder app)
     {
         app.UseAuthentication();
-        app.UseAuthorization();
         return Res.Ok();
     }
 }

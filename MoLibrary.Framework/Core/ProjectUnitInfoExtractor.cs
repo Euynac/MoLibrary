@@ -11,7 +11,7 @@ public static class ProjectUnitInfoExtractor
     {
         foreach (var type in types)
         {
-            if (type is {IsClass: true, FullName: not null, IsGenericType: false})
+            if (type is {IsClass: true, FullName: not null, IsGenericType: false, IsAbstract: false})
             {
                 var unit = ProjectUnit.CreateUnit(new FactoryContext()
                 {
@@ -34,6 +34,7 @@ public static class ProjectUnitInfoExtractor
             yield return type;
         }
     }
+
     internal static IEnumerable<Type> ExtractEnumInfo(this IEnumerable<Type> types)
     {
         foreach (var type in types)
