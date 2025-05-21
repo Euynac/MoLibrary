@@ -44,7 +44,7 @@ public class ModuleDomainDrivenDesign(ModuleDomainDrivenDesignOption option) : M
     public override void ClaimDependencies()
     {
         DependsOnModule<ModuleAutoModelGuide>().Register();
-        DependsOnModule<ModuleDependencyInjectionGuide>().Register().AddMoDependencyInjectionDefaultProvider();
+        DependsOnModule<ModuleDependencyInjectionGuide>().Register();
         DependsOnModule<ModuleDynamicProxyGuide>().Register();
         DependsOnModule<ModuleGlobalExceptionHandlerGuide>().Register()
             .AddDefaultExceptionHandler()

@@ -221,14 +221,19 @@ public class ModuleBackgroundJob(ModuleBackgroundJobOption option) : MoModule<Mo
     {
         foreach (var type in types)
         {
-            if (type.IsAssignableTo(typeof(IMoBackgroundWorker)))
+            if (type is {IsClass: true, IsAbstract: false})
             {
-                _backgroundWorkerTypes.Add(type);
+                if (type.IsAssignableTo(typeof(IMoBackgroundWorker)))
+                {
+                    _backgroundWorkerTypes.Add(type);
+                }
+
+                if (type.IsAssignableTo(typeof(IMoBackgroundJob<>)))
+                {
+                    _backgroundJobTypes.Add(type);
+                }
             }
-            if (type.IsAssignableTo(typeof(IMoBackgroundJob<>)))
-            {
-                _backgroundJobTypes.Add(type);
-            }
+            
             yield return type;
         }
     }

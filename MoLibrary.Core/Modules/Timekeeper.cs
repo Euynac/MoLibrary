@@ -31,7 +31,7 @@ public class ModuleTimekeeper(ModuleTimekeeperOption option)
 
     public override Res ConfigureServices(IServiceCollection services)
     {
-
+        services.AddSingleton<IMoTimekeeper, MoTimekeeperManager>();
         return Res.Ok();
     }
 
