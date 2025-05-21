@@ -140,19 +140,28 @@ public static class MoModuleRegisterCentre
             snapshots.Add(new ModuleSnapshot(module, info));
             info.HasBeenBuilt = true;
         }
-
-        var businessTypes = typeFinder.GetTypes();
+        
         
         // 3. 为需要遍历业务类型的模块提供支持
+        var stopwatch = new System.Diagnostics.Stopwatch();
+        stopwatch.Start();
+        var businessTypes = typeFinder.GetTypes();
+        var needToIterate = false;
         foreach (var module in snapshots)
         {
             if (module.ModuleInstance is IWantIterateBusinessTypes iterateModule)
             {
+                needToIterate = true;
                 businessTypes = iterateModule.IterateBusinessTypes(businessTypes);
             }
         }
 
-        _ = businessTypes.ToList();
+        if (needToIterate)
+        {
+            _ = businessTypes.ToList();
+        }
+        stopwatch.Stop();
+        Logger.LogInformation("Business types iteration completed in {ElapsedMilliseconds}ms", stopwatch.ElapsedMilliseconds);
 
 
         // 4. 执行模块的PostConfigureServices方法
