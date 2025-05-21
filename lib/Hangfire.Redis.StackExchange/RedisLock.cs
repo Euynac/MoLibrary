@@ -17,10 +17,7 @@
 using Hangfire.Annotations;
 using Hangfire.Storage;
 using StackExchange.Redis;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Threading;
 
 namespace Hangfire.Redis
 {

@@ -6,7 +6,6 @@ using Hangfire.Storage;
 using Newtonsoft.Json;
 using System.Net;
 using Hangfire.HttpJob.Extension;
-using Microsoft.VisualBasic;
 
 namespace Hangfire.HttpJob.Server
 {

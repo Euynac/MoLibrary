@@ -2,8 +2,6 @@
 //  Copyright (c) 2023 Innovian Corporation. All rights reserved.
 //  -------------------------------------------------------------
 
-using MoLibrary.StateStore.QueryBuilder;
-
 namespace MoLibrary.StateStore.QueryBuilder.Interfaces;
 
 public interface IInitialQueryBuilder<T>

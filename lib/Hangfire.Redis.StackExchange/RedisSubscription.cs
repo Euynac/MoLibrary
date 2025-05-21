@@ -1,6 +1,4 @@
-﻿using System;
-using System.Threading;
-using Hangfire.Server;
+﻿using Hangfire.Server;
 using StackExchange.Redis;
 using Hangfire.Annotations;
 

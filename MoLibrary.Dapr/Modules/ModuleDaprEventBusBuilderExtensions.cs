@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
 
 namespace MoLibrary.Dapr.Modules;

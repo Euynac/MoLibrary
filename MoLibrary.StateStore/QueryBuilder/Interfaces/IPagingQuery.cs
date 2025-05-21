@@ -3,7 +3,6 @@
 //  -------------------------------------------------------------
 
 using System.Linq.Expressions;
-using MoLibrary.StateStore.QueryBuilder;
 using MoLibrary.StateStore.QueryBuilder.Models.Enums;
 
 namespace MoLibrary.StateStore.QueryBuilder.Interfaces;

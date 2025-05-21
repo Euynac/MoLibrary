@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using MoLibrary.Authority.Authorization;
 using Authorization_IMethodInvocationAuthorizationService = MoLibrary.Authority.Authorization.IMethodInvocationAuthorizationService;
-using IMethodInvocationAuthorizationService = MoLibrary.Authority.Authorization.IMethodInvocationAuthorizationService;
 using MethodInvocationAuthorizationContext = MoLibrary.Authority.Authorization.MethodInvocationAuthorizationContext;
 
 

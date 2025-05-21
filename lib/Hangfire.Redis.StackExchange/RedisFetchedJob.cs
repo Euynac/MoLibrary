@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU Lesser General Public
 // License along with Hangfire.Redis.StackExchange. If not, see <http://www.gnu.org/licenses/>.
 
-using System;
 using Hangfire.Storage;
 using StackExchange.Redis;
 using Hangfire.Annotations;

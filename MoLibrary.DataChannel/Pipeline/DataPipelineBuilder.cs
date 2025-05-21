@@ -1,7 +1,5 @@
-using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.DataChannel.CoreCommunication;
 using MoLibrary.DataChannel.CoreCommunicationProvider.Default;
-using MoLibrary.DataChannel.Interfaces;
 
 namespace MoLibrary.DataChannel.Pipeline;
 
