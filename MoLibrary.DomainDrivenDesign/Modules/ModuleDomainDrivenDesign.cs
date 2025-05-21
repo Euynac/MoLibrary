@@ -32,7 +32,7 @@ public class ModuleDomainDrivenDesign(ModuleDomainDrivenDesignOption option) : M
                 if (c.ImplementationType.IsAssignableTo<IMoDomainService>() ||
                     c.ImplementationType.IsAssignableTo<IMoApplicationService>())
                 {
-                    Logger.LogInformation($"service inject:{c.ImplementationType.FullName}");
+                    Logger.LogDebug($"service inject: {c.ImplementationType.FullName}");
                     return true;
                 }
 
