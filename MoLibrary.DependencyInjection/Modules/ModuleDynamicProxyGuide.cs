@@ -12,7 +12,7 @@ public class
 
     internal ModuleDynamicProxyGuide ConfigDynamicProxyServices()
     {
-        ConfigureServices(nameof(ConfigDynamicProxyServices), context =>
+        PostConfigureServices(nameof(ConfigDynamicProxyServices), context =>
         {
             context.Services.AddSingleton(new ProxyGeneratorWithDI());
             context.Services.AddTransient(typeof(MoAsyncDeterminationInterceptor<>));

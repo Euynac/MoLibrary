@@ -5,31 +5,8 @@ using MoLibrary.DependencyInjection.AppInterfaces;
 using MoLibrary.DependencyInjection.DynamicProxy.Abstract;
 using MoLibrary.DependencyInjection.Modules;
 using MoLibrary.Tool.Extensions;
-using static MoLibrary.DependencyInjection.DynamicProxy.MicrosoftDependencyInjectionDynamicProxyExtensions;
 
 namespace MoLibrary.DependencyInjection.DynamicProxy;
-
-/// <summary>
-/// Extension methods for adding dynamic proxy services to the dependency injection container.
-/// </summary>
-public static class DynamicProxyExtensions
-{
-    /// <summary>
-    /// Registers DynamicProxy services. This should be called at the end of service registration.
-    /// </summary>
-    /// <remarks>Default behavior is to use InterfaceProxy if the service type is an interface; otherwise, uses ClassProxy.</remarks>
-    /// <param name="services">The service collection to add the services to.</param>
-    /// <param name="action"></param>
-    //TODO 需要放在最后服务注册
-    public static void AddMoDependencyInjectionDynamicProxy(this IServiceCollection services, Action<ModuleDynamicProxyOption>? action = null)
-    {
-        var option = new ModuleDynamicProxyOption();
-        action?.Invoke(option);
-        services.AddSingleton(new ProxyGeneratorWithDI());
-        services.AddTransient(typeof(MoAsyncDeterminationInterceptor<>));
-        ApplyInterceptors(services, option);
-    }
-}
 
 /// <summary>
 /// Extension methods and classes for configuring and applying dynamic proxies in Microsoft Dependency Injection.

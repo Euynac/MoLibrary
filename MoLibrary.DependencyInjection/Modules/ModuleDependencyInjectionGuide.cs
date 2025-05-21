@@ -13,38 +13,5 @@ namespace MoLibrary.DependencyInjection.Modules;
 public class ModuleDependencyInjectionGuide : MoModuleGuide<ModuleDependencyInjection, ModuleDependencyInjectionOption,
     ModuleDependencyInjectionGuide>
 {
-    protected override string[] GetRequestedConfigMethodKeys()
-    {
-        return [nameof(AddMoDependencyInjection)];
-    }
-
-    public ModuleDependencyInjectionGuide AddMoDependencyInjectionDefaultProvider()
-    {
-        return AddMoDependencyInjection<DefaultConventionalRegistrar>();
-    }
-
-    public ModuleDependencyInjectionGuide AddMoDependencyInjection<T>() where T : IConventionalRegistrar
-    {
-        ConfigureServices(nameof(AddMoDependencyInjection), context =>
-        {
-            var stopwatch = new Stopwatch();
-            stopwatch.Start();
-
-            var setting = context.ModuleOption;
-            var registrar = ActivatorUtilities.CreateInstance<T>(context.Services.BuildServiceProvider(), setting);
-
-            // candidates assemblies
-            var candidates = Assembly.GetEntryAssembly()!.WithDomainAssemblies(setting.RelatedAssemblies);
-            foreach (var candidate in candidates)
-            {
-                setting.Logger.LogInformation("项目自动注册Assembly：{name}", candidate.FullName);
-                registrar.AddAssembly(context.Services, candidate);
-            }
-
-            context.Services.AddTransient<IMoServiceProvider, DefaultMoServiceProvider>();
-            stopwatch.Stop();
-            setting.Logger.LogInformation($"项目自动注册耗时：{stopwatch.ElapsedMilliseconds}ms");
-        });
-        return this;
-    }
+  
 }

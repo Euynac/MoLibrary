@@ -19,37 +19,15 @@ public class DefaultConventionalRegistrar(ModuleDependencyInjectionOption option
     private ILogger logger => option.Logger;
     
     /// <summary>
-    /// Registers all classes in the specified assembly into the service collection.
-    /// </summary>
-    /// <param name="services">The service collection to which the dependencies will be added.</param>
-    /// <param name="assembly">The assembly containing the types to be registered.</param>
-    public virtual void AddAssembly(IServiceCollection services, Assembly assembly)
-    {
-        //TODO 支持泛型自动注册，但需要进行配置实现
-        foreach (var type in assembly.GetTypes().Where(type => type is { IsClass: true, IsAbstract: false, IsGenericType: false }))
-        {
-            AddType(services, type);
-        }
-    }
-    /// <summary>
-    /// Registers the specified types into the service collection.
-    /// </summary>
-    /// <param name="services">The service collection to which the dependencies will be added.</param>
-    /// <param name="types">The types to be registered.</param>
-    public virtual void AddTypes(IServiceCollection services, params Type[] types)
-    {
-        foreach (var type in types)
-        {
-            AddType(services, type);
-        }
-    }
-    /// <summary>
     /// Registers a single type into the service collection based on its attributes and lifetime.
     /// </summary>
     /// <param name="services">The service collection to which the dependency will be added.</param>
     /// <param name="type">The type to be registered.</param>
     public virtual void AddType(IServiceCollection services, Type type)
     {
+        //TODO 支持泛型自动注册，但需要进行配置实现
+        if(type is not { IsClass: true, IsAbstract: false, IsGenericType: false }) return;
+
         var dependencyAttribute = GetDependencyAttributeOrNull(type);
         var lifeTime = GetLifeTimeOrNull(type, dependencyAttribute);
         if (lifeTime == null)
