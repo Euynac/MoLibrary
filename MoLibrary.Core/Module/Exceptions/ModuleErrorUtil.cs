@@ -1,6 +1,8 @@
 using System.Text;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.Core.Module.ModuleAnalyser;
+using MoLibrary.Tool.MoResponse;
+using Microsoft.Extensions.Logging;
 
 namespace MoLibrary.Core.Module.Exceptions;
 
@@ -93,6 +95,54 @@ public static class ModuleErrorUtil
     }
     
     /// <summary>
+    /// Records an error that occurred during module configuration.
+    /// </summary>
+    /// <param name="moduleRegisterErrors">List to store registration errors.</param>
+    /// <param name="moduleType">The type of the module where the error occurred.</param>
+    /// <param name="errorMessage">The error message.</param>
+    /// <param name="phase">The phase where the error occurred.</param>
+    /// <param name="errorType">The type of error.</param>
+    public static void RecordModuleError(
+        List<ModuleRegisterError> moduleRegisterErrors,
+        Type moduleType, 
+        string errorMessage, 
+        EMoModuleConfigMethods phase, 
+        ModuleRegisterErrorType errorType)
+    {
+        var error = new ModuleRegisterError
+        {
+            ModuleType = moduleType,
+            ErrorMessage = $"Error in {phase}: {errorMessage}",
+            ErrorType = errorType
+        };
+        moduleRegisterErrors.Add(error);
+    }
+    
+    /// <summary>
+    /// Records an error that occurred during a module request.
+    /// </summary>
+    /// <param name="moduleRegisterErrors">List to store registration errors.</param>
+    /// <param name="moduleType">The type of the module where the error occurred.</param>
+    /// <param name="request">The request that caused the error.</param>
+    /// <param name="exception">The exception that was thrown.</param>
+    public static void RecordRequestError(
+        List<ModuleRegisterError> moduleRegisterErrors,
+        Type moduleType, 
+        ModuleRegisterRequest request, 
+        Exception exception)
+    {
+        var error = new ModuleRegisterError
+        {
+            ModuleType = moduleType,
+            ErrorMessage = $"Error in request {request.Key} (from {request.RequestFrom}): {exception.Message}",
+            ErrorType = ModuleRegisterErrorType.ConfigurationError,
+            GuideFrom = request.RequestFrom
+        };
+        moduleRegisterErrors.Add(error);
+    }
+    
+    
+    /// <summary>
     /// Builds a detailed error message from a list of module registration errors.
     /// </summary>
     /// <param name="errors">List of module registration errors.</param>
@@ -137,6 +187,49 @@ public static class ModuleErrorUtil
                 
                 sb.AppendLine();
             }
+        }
+        
+        return sb.ToString();
+    }
+    
+    /// <summary>
+    /// Logs all module errors to the provided logger.
+    /// </summary>
+    /// <param name="logger">The logger to use.</param>
+    /// <param name="errors">List of module registration errors.</param>
+    public static void LogModuleErrors(ILogger logger, List<ModuleRegisterError> errors)
+    {
+        if (errors.Count == 0) return;
+        
+        logger.LogWarning("Module registration completed with {ErrorCount} errors:", errors.Count);
+        foreach (var error in errors)
+        {
+            logger.LogWarning("Module {ModuleType} error: {ErrorType} - {ErrorMessage}", 
+                error.ModuleType?.Name ?? "Unknown", error.ErrorType, error.ErrorMessage);
+        }
+    }
+    
+    /// <summary>
+    /// Gets a summary of module errors for display.
+    /// </summary>
+    /// <param name="errors">List of module registration errors.</param>
+    /// <returns>A concise summary of errors.</returns>
+    public static string GetErrorSummary(List<ModuleRegisterError> errors)
+    {
+        if (errors.Count == 0) return "No module registration errors.";
+        
+        var sb = new StringBuilder();
+        sb.AppendLine($"Module registration found {errors.Count} errors:");
+        
+        // Group by error type for a more concise summary
+        var errorsByType = errors.GroupBy(e => e.ErrorType);
+        foreach (var group in errorsByType)
+        {
+            sb.AppendLine($"  - {group.Key}: {group.Count()} error(s)");
+            
+            // List affected modules
+            var modules = group.Select(e => e.ModuleType?.Name ?? "Unknown").Distinct();
+            sb.AppendLine($"    Affected modules: {string.Join(", ", modules)}");
         }
         
         return sb.ToString();
