@@ -18,6 +18,11 @@ public class MoModuleOption<TModule> : IMoModuleOption<TModule> where TModule : 
     public bool RegisterInstantly { get; set; }
 
     /// <summary>
+    /// 如果模块注册出现异常则禁用Module，而不是抛出异常
+    /// </summary>
+    public static bool DisableModuleIfHasException { get; set; } 
+
+    /// <summary>
     /// Sets the minimum log level for the module logger.
     /// </summary>
     /// <param name="logLevel">The minimum log level to set for this module.</param>
