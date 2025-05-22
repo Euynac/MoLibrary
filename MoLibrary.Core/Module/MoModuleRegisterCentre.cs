@@ -273,15 +273,10 @@ public static class MoModuleRegisterCentre
         }
         ModuleSnapshots.AddRange(snapshots);
 
-        // Log errors if any
-        if (ModuleRegisterErrors.Count > 0)
-        {
-            ModuleErrorUtil.LogModuleErrors(Logger, ModuleRegisterErrors);
-        }
-
         var elapsedTime = ModuleProfiler.StopPhase(nameof(RegisterServices));
         Logger.LogInformation("Module services registration completed in {ElapsedMilliseconds}ms. Total module system time: {TotalElapsedMilliseconds}ms", 
             elapsedTime, ModuleProfiler.GetTotalElapsedMilliseconds());
+        ModuleErrorUtil.RaiseModuleErrors(ModuleRegisterErrors);
     }
 
     /// <summary>
@@ -389,11 +384,6 @@ public static class MoModuleRegisterCentre
         Logger.LogInformation("Module system performance summary:\n{PerformanceSummary}", 
             ModuleProfiler.GetPerformanceSummary());
         
-        // Log any module errors that occurred during the entire registration process
-        if (ModuleRegisterErrors.Count > 0)
-        {
-            ModuleErrorUtil.LogModuleErrors(Logger, ModuleRegisterErrors);
-            Logger.LogWarning("Error summary:\n{ErrorSummary}", ModuleErrorUtil.GetErrorSummary(ModuleRegisterErrors));
-        }
+        ModuleErrorUtil.RaiseModuleErrors(ModuleRegisterErrors);
     }
 }
