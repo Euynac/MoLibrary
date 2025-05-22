@@ -276,7 +276,7 @@ public static class MoModuleRegisterCentre
         var elapsedTime = ModuleProfiler.StopPhase(nameof(RegisterServices));
         Logger.LogInformation("Module services registration completed in {ElapsedMilliseconds}ms. Total module system time: {TotalElapsedMilliseconds}ms", 
             elapsedTime, ModuleProfiler.GetTotalElapsedMilliseconds());
-        ModuleErrorUtil.RaiseModuleErrors(ModuleRegisterErrors);
+        //ModuleErrorUtil.RaiseModuleErrors(ModuleRegisterErrors);
     }
 
     /// <summary>
