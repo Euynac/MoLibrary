@@ -73,7 +73,7 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
 
         requestInfo = new ModuleRequestInfo();
         requestInfo.BindModuleOption<TModuleOption>();
-        MoModuleRegisterCentre.ModuleRegisterContextDict[moduleType] = requestInfo;
+        MoModuleRegisterCentre.AddModuleRegisterContext(moduleType, requestInfo);
         // 设置必须配置的方法键
         requestInfo.RequiredConfigMethodKeys = GetRequestedConfigMethodKeys().ToList();
 

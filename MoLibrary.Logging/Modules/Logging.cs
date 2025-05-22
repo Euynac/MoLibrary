@@ -36,9 +36,6 @@ public class ModuleLogging(ModuleLoggingOption option) : MoModule<ModuleLogging,
 
     public override Res ConfigureBuilder(WebApplicationBuilder builder)
     {
-        builder.Host.UseSerilog(Log.Logger); // 这里只注册了ILogger<T>的泛型日志，所以在依赖注入中使用需要使用泛型。
-        GlobalLog.Logger = new SerilogLoggerFactory(Log.Logger).CreateLogger("Global");
-
         var logBuilder = new LoggerConfiguration()
             .ReadFrom.Configuration(builder.Configuration);
 
@@ -46,7 +43,11 @@ public class ModuleLogging(ModuleLoggingOption option) : MoModule<ModuleLogging,
             ? customLoggerCreator.Invoke(logBuilder)
             : CreateLogger(logBuilder);
 
+
+        builder.Host.UseSerilog(Log.Logger); // 这里只注册了ILogger<T>的泛型日志，所以在依赖注入中使用需要使用泛型。
+        GlobalLog.Logger = new SerilogLoggerFactory(Log.Logger).CreateLogger("Global");
         LogProvider.Provider = new SerilogProvider(Log.Logger);
+        MoModuleRegisterCentre.Logger = LogProvider.For(typeof(MoModuleRegisterCentre));
 
         var level =
             builder.Configuration.GetSectionRecursively("Serilog:MinimumLevel").Select(p => new { p.Key, p.Value }).ToList().ToJsonString();

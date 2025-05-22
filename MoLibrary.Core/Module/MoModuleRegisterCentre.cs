@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using MoLibrary.Core.Features.MoLogProvider;
 using MoLibrary.Core.Module.Exceptions;
 using MoLibrary.Core.Module.ModuleAnalyser;
+using System.Diagnostics;
 
 namespace MoLibrary.Core.Module;
 
@@ -16,14 +17,17 @@ namespace MoLibrary.Core.Module;
 /// </summary>
 public static class MoModuleRegisterCentre
 {
+    /// <summary>
+    /// 用于跟踪模块系统整体运行时间的计时器
+    /// </summary>
+    private static readonly Stopwatch ModuleSystemStopwatch = new();
 
-   
     /// <summary>
     /// 模块注册错误列表
     /// </summary>
     private static List<ModuleRegisterError> ModuleRegisterErrors { get; } = [];
 
-    private static ILogger Logger { get; } = LogProvider.For(typeof(MoModuleRegisterCentre));
+    public static ILogger Logger { get; set; } = LogProvider.For(typeof(MoModuleRegisterCentre));
     /// <summary>
     /// 静态构造函数，用于初始化事件监听。
     /// </summary>
@@ -48,13 +52,30 @@ public static class MoModuleRegisterCentre
     public static Dictionary<Type, ModuleRequestInfo> ModuleRegisterContextDict { get; } = new();
 
     /// <summary>
+    /// 添加模块注册上下文
+    /// </summary>
+    /// <param name="moduleType">模块类型</param>
+    /// <param name="requestInfo">模块请求信息</param>
+    public static void AddModuleRegisterContext(Type moduleType, ModuleRequestInfo requestInfo)
+    {
+        if (!ModuleRegisterContextDict.TryAdd(moduleType, requestInfo))
+        {
+            throw new ModuleRegisterException($"模块类型 {moduleType.FullName} 已存在");
+        }
+
+        // 如果是第一次添加模块，开始计时
+        if (ModuleRegisterContextDict.Count == 1)
+        {
+            ModuleSystemStopwatch.Start();
+            Logger.LogInformation("Module system initialization started");
+        }
+    }
+
+    /// <summary>
     /// 模块快照列表，用于存储所有模块的快照信息。
     /// </summary>
     private static List<ModuleSnapshot> ModuleSnapshots { get; } = [];
 
-   
-
-    
     /// <summary>
     /// 注册当前注册的所有模块的服务。此方法应在builder.Build()之前调用。
     /// </summary>
@@ -62,6 +83,7 @@ public static class MoModuleRegisterCentre
     internal static void RegisterServices(WebApplicationBuilder builder)
     {
         var services = builder.Services;
+        var registerServicesStopwatch = Stopwatch.StartNew();
 
         // 清空之前的错误记录
         ModuleRegisterErrors.Clear();
@@ -143,7 +165,7 @@ public static class MoModuleRegisterCentre
         
         
         // 3. 为需要遍历业务类型的模块提供支持
-        var stopwatch = new System.Diagnostics.Stopwatch();
+        var stopwatch = new Stopwatch();
         stopwatch.Start();
         var businessTypes = typeFinder.GetTypes();
         var needToIterate = false;
@@ -176,6 +198,10 @@ public static class MoModuleRegisterCentre
             }
         }
         ModuleSnapshots.AddRange(snapshots);
+
+        registerServicesStopwatch.Stop();
+        Logger.LogInformation("Module services registration completed in {ElapsedMilliseconds}ms. Total module system time: {TotalElapsedMilliseconds}ms", 
+            registerServicesStopwatch.ElapsedMilliseconds, ModuleSystemStopwatch.ElapsedMilliseconds);
     }
 
     /// <summary>
@@ -186,6 +212,7 @@ public static class MoModuleRegisterCentre
     /// <param name="afterGivenOrder">是否在给定顺序之后配置。</param>
     internal static void ConfigApplicationPipeline(IApplicationBuilder app, int order, bool afterGivenOrder)
     {
+        var pipelineStopwatch = Stopwatch.StartNew();
         Func<ModuleRegisterRequest, bool> filter = afterGivenOrder ? request => request.Order > order : request => request.Order <= order;
         // 按优先级排序并配置应用程序构建器
         foreach (var module in ModuleSnapshots)
@@ -196,6 +223,9 @@ public static class MoModuleRegisterCentre
                 request.ConfigureContext?.Invoke(new ModuleRegisterContext(null, app, null, module.RequestInfo));
             }
         }
+        pipelineStopwatch.Stop();
+        Logger.LogInformation("Application pipeline configuration completed in {ElapsedMilliseconds}ms. Total module system time: {TotalElapsedMilliseconds}ms", 
+            pipelineStopwatch.ElapsedMilliseconds, ModuleSystemStopwatch.ElapsedMilliseconds);
     }
 
     /// <summary>
@@ -204,6 +234,7 @@ public static class MoModuleRegisterCentre
     /// <param name="app">应用程序构建器。</param>
     internal static void ConfigEndpoints(IApplicationBuilder app)
     {
+        var endpointsStopwatch = Stopwatch.StartNew();
         // 按优先级排序并配置端点路由构建器
         foreach (var module in ModuleSnapshots)
         {
@@ -213,6 +244,10 @@ public static class MoModuleRegisterCentre
                 request.ConfigureContext?.Invoke(new ModuleRegisterContext(null, app, null, module.RequestInfo));
             }
         }
+        endpointsStopwatch.Stop();
+        ModuleSystemStopwatch.Stop();
+        Logger.LogInformation("Endpoints configuration completed in {ElapsedMilliseconds}ms. Total module system initialization time: {TotalElapsedMilliseconds}ms", 
+            endpointsStopwatch.ElapsedMilliseconds, ModuleSystemStopwatch.ElapsedMilliseconds);
     }
     
     /// <summary>
