@@ -29,6 +29,11 @@ public class ModuleRegisterError
     public EMoModules? GuideFrom { get; set; }
     
     /// <summary>
+    /// The configuration phase where the error occurred.
+    /// </summary>
+    public EMoModuleConfigMethods? Phase { get; set; }
+    
+    /// <summary>
     /// List of missing configuration method keys.
     /// </summary>
     public List<string> MissingConfigKeys { get; set; } = new();

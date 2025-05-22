@@ -113,7 +113,8 @@ public static class ModuleErrorUtil
         {
             ModuleType = moduleType,
             ErrorMessage = $"Error in {phase}: {errorMessage}",
-            ErrorType = errorType
+            ErrorType = errorType,
+            Phase = phase
         };
         moduleRegisterErrors.Add(error);
     }
@@ -136,7 +137,8 @@ public static class ModuleErrorUtil
             ModuleType = moduleType,
             ErrorMessage = $"Error in request {request.Key} (from {request.RequestFrom}): {exception.Message}",
             ErrorType = ModuleRegisterErrorType.ConfigurationError,
-            GuideFrom = request.RequestFrom
+            GuideFrom = request.RequestFrom,
+            Phase = request.RequestMethod
         };
         moduleRegisterErrors.Add(error);
     }
@@ -167,6 +169,11 @@ public static class ModuleErrorUtil
                 if (error.GuideFrom.HasValue)
                 {
                     sb.AppendLine($"  - Source: {error.GuideFrom}");
+                }
+                
+                if (error.Phase.HasValue)
+                {
+                    sb.AppendLine($"  - Phase: {error.Phase}");
                 }
                 
                 if (error.MissingConfigKeys.Count > 0)
