@@ -44,7 +44,10 @@ public class ModuleBackgroundJob(ModuleBackgroundJobOption option) : MoModule<Mo
 
     public override Res PostConfigureServices(IServiceCollection services)
     {
-        if (_backgroundWorkerTypes.Count <= 0 && _backgroundJobTypes.Count <= 0) return "不存在需要自动注册的Worker或Jobs";
+        if (_backgroundWorkerTypes.Count <= 0 && _backgroundJobTypes.Count <= 0)
+        {
+            Logger.LogWarning("未发现需要自动注册的Worker或Jobs");
+        }
         HangfireRedisGlobalOptions.Queues = Option.Queues;
         HangfireRedisGlobalOptions.SupportedProject = Option.SupportedProject;
         GlobalConfiguration.Configuration.UseTypeResolver(s =>
