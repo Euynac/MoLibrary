@@ -192,46 +192,17 @@ public static class ModuleErrorUtil
         return sb.ToString();
     }
     
+   
     /// <summary>
-    /// Logs all module errors to the provided logger.
-    /// </summary>
-    /// <param name="logger">The logger to use.</param>
-    /// <param name="errors">List of module registration errors.</param>
-    public static void LogModuleErrors(ILogger logger, List<ModuleRegisterError> errors)
-    {
-        if (errors.Count == 0) return;
-        
-        logger.LogWarning("Module registration completed with {ErrorCount} errors:", errors.Count);
-        foreach (var error in errors)
-        {
-            logger.LogWarning("Module {ModuleType} error: {ErrorType} - {ErrorMessage}", 
-                error.ModuleType?.Name ?? "Unknown", error.ErrorType, error.ErrorMessage);
-        }
-    }
-    
-    /// <summary>
-    /// Gets a summary of module errors for display.
+    /// Raises an exception if there are any module registration errors.
     /// </summary>
     /// <param name="errors">List of module registration errors.</param>
-    /// <returns>A concise summary of errors.</returns>
-    public static string GetErrorSummary(List<ModuleRegisterError> errors)
+    public static void RaiseModuleErrors(List<ModuleRegisterError> errors)
     {
-        if (errors.Count == 0) return "No module registration errors.";
-        
-        var sb = new StringBuilder();
-        sb.AppendLine($"Module registration found {errors.Count} errors:");
-        
-        // Group by error type for a more concise summary
-        var errorsByType = errors.GroupBy(e => e.ErrorType);
-        foreach (var group in errorsByType)
+        if (errors.Count > 0)
         {
-            sb.AppendLine($"  - {group.Key}: {group.Count()} error(s)");
-            
-            // List affected modules
-            var modules = group.Select(e => e.ModuleType?.Name ?? "Unknown").Distinct();
-            sb.AppendLine($"    Affected modules: {string.Join(", ", modules)}");
+            throw new ModuleRegisterException(BuildErrorMessage(errors));
         }
-        
-        return sb.ToString();
     }
+
 } 
