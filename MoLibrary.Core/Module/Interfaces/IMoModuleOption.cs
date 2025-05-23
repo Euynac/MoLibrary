@@ -21,6 +21,19 @@ public interface IMoModuleOption
     /// 被禁用的模块在应用程序的生命周期内将被完全跳过，不会调用其任何配置或初始化方法。
     /// </summary>
     bool DisableModuleIfHasException { get; set; }
+    
+    /// <summary>
+    /// 是否禁用当前模块。
+    /// 当为 true 时，该模块将不会被注册或初始化，在应用程序的整个生命周期中都会被跳过。
+    /// </summary>
+    bool IsDisabled { get; }
+    
+    /// <summary>
+    /// 手动禁用当前模块。
+    /// 被禁用的模块在应用程序的生命周期内将被完全跳过，不会调用其任何配置或初始化方法。
+    /// </summary>
+    /// <param name="reason">禁用模块的原因，将被记录到日志中</param>
+    void DisableModule(string reason = "Manual disable");
 
     /// <summary>
     /// Sets the minimum log level for the module logger.
