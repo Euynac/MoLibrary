@@ -1,4 +1,4 @@
-﻿using ExpressionDebugger;
+using ExpressionDebugger;
 using Mapster;
 using MapsterMapper;
 using Microsoft.AspNetCore.Builder;
@@ -45,8 +45,8 @@ public static class ServiceCollectionExtensions
         }, TaskContinuationOptions.OnlyOnFaulted);
 
         services.AddSingleton(TypeAdapterConfig.GlobalSettings);
-        services.AddScoped<IMapper, ServiceMapper>();
-        services.AddTransient<IMoMapper, MapsterProviderMoObjectMapper>();
+        services.AddSingleton<IMapper, ServiceMapper>();
+        services.AddSingleton<IMoMapper, MapsterProviderMoObjectMapper>();
     }
 
     /// <summary>
