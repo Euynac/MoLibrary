@@ -27,7 +27,12 @@ public class ModuleRequestInfo
     public Dictionary<Type, object> FinalConfigures { get; set; } = [];
 
     /// <summary>
-    /// 模块相关设置类型。
+    /// 模块设置实例
+    /// </summary>
+    public object ModuleOption => FinalConfigures[ModuleOptionType];
+
+    /// <summary>
+    /// 模块设置类类型。
     /// </summary>
     public Type ModuleOptionType { get; set; } = null!;
     
