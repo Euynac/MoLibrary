@@ -78,6 +78,15 @@ public static class MoModuleRegisterCentre
     private static HashSet<Type> DisabledModuleTypes { get; } = new();
 
     /// <summary>
+    /// Gets the list of disabled module types
+    /// </summary>
+    /// <returns>A list of disabled module types</returns>
+    internal static List<Type> GetDisabledModuleTypes()
+    {
+        return DisabledModuleTypes.ToList();
+    }
+
+    /// <summary>
     /// Disables a module due to an exception
     /// </summary>
     /// <param name="moduleType">The type of module to disable</param>
@@ -94,7 +103,70 @@ public static class MoModuleRegisterCentre
     /// <returns>True if the module is disabled, false otherwise</returns>
     internal static bool IsModuleDisabled(Type moduleType)
     {
-        return DisabledModuleTypes.Contains(moduleType);
+        // Check if the module is in the disabled list
+        if (DisabledModuleTypes.Contains(moduleType))
+        {
+            return true;
+        }
+        
+        // Check if the module is manually disabled via the IsDisabled property
+        if (ModuleRegisterContextDict.TryGetValue(moduleType, out var requestInfo))
+        {
+            var moduleOption = requestInfo.ModuleOption;
+            if (moduleOption?.IsDisabled == true)
+            {
+                // If it's manually disabled but not in our tracking list, add it
+                DisableModule(moduleType);
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    /// <summary>
+    /// Cascade disables modules that depend on the specified module
+    /// </summary>
+    /// <param name="moduleType">The module type that other modules might depend on</param>
+    internal static void CascadeDisableModulesThatDependOn(Type moduleType)
+    {
+        // Find the module enum for the disabled module
+        EMoModules? disabledModuleEnum = null;
+        if (MoModuleAnalyser.ModuleTypeToEnumMap.TryGetValue(moduleType, out var moduleEnum))
+        {
+            disabledModuleEnum = moduleEnum;
+        }
+        
+        if (disabledModuleEnum == null) return;
+        
+        // Get all modules that depend on this module from the dependency map
+        var dependentModuleEnums = new HashSet<EMoModules>();
+        foreach (var entry in MoModuleAnalyser.ModuleDependencyMap)
+        {
+            if (entry.Value.Contains(disabledModuleEnum.Value))
+            {
+                dependentModuleEnums.Add(entry.Key);
+            }
+        }
+        
+        // Disable all dependent modules
+        foreach (var dependentModuleEnum in dependentModuleEnums)
+        {
+            // Skip if not registered in the enum-to-type map
+            if (!MoModuleAnalyser.ModuleEnumToTypeDict.TryGetValue(dependentModuleEnum, out var dependentModuleType))
+                continue;
+            
+            if (DisableModule(dependentModuleType))
+            {
+                Logger.LogWarning(
+                    "Module {ModuleName} was disabled because it depends on disabled module {DisabledModuleName}",
+                    dependentModuleType.Name,
+                    moduleType.Name);
+                
+                // Recursively cascade disable
+                CascadeDisableModulesThatDependOn(dependentModuleType);
+            }
+        }
     }
 
     /// <summary>
@@ -301,7 +373,7 @@ public static class MoModuleRegisterCentre
         var elapsedTime = ModuleProfiler.StopPhase(nameof(RegisterServices));
         Logger.LogInformation("Module services registration completed in {ElapsedMilliseconds}ms. Total module system time: {TotalElapsedMilliseconds}ms", 
             elapsedTime, ModuleProfiler.GetTotalElapsedMilliseconds());
-        //ModuleErrorUtil.RaiseModuleErrors(ModuleRegisterErrors);
+        ModuleErrorUtil.RaiseModuleErrors(ModuleRegisterErrors);
     }
 
     /// <summary>

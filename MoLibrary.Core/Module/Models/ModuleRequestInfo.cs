@@ -27,14 +27,17 @@ public class ModuleRequestInfo
     public Dictionary<Type, object> FinalConfigures { get; set; } = [];
 
     /// <summary>
-    /// 模块设置实例
-    /// </summary>
-    public object ModuleOption => FinalConfigures[ModuleOptionType];
-
-    /// <summary>
-    /// 模块设置类类型。
+    /// 模块相关设置类型。
     /// </summary>
     public Type ModuleOptionType { get; set; } = null!;
+    
+    /// <summary>
+    /// 模块的选项实例，可以用于访问模块的配置信息。
+    /// 在初始化配置后可用。
+    /// </summary>
+    public IMoModuleOption ModuleOption => FinalConfigures.TryGetValue(ModuleOptionType, out var option) 
+        ? option as IMoModuleOption 
+        : null;
     
     /// <summary>
     /// 必须配置的方法键列表，若未配置则会抛出异常。
