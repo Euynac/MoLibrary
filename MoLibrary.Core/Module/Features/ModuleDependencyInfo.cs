@@ -1,6 +1,6 @@
 using MoLibrary.Core.Module.Models;
 
-namespace MoLibrary.Core.Module.ModuleAnalyser;
+namespace MoLibrary.Core.Module.Features;
 
 /// <summary>
 /// Contains information about module dependencies for analysis and error reporting.

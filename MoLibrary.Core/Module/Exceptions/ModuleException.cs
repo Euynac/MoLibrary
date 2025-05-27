@@ -1,4 +1,4 @@
-using MoLibrary.Core.Module.ModuleAnalyser;
+using MoLibrary.Core.Module.Features;
 
 namespace MoLibrary.Core.Module.Exceptions;
 
