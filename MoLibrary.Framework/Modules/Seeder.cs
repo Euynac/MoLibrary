@@ -3,10 +3,7 @@ using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.Framework.Features.MoSeeder;
-using MoLibrary.Framework.Features;
 using MoLibrary.Tool.MoResponse;
-using System.Reflection;
-using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Builder;
 
 namespace MoLibrary.Framework.Modules;
@@ -49,13 +46,13 @@ public class ModuleSeeder(ModuleSeederOption option) : MoModule<ModuleSeeder, Mo
     {
         foreach (var type in types)
         {
-            if (type.TypeInitializer is { } initializer && !type.Attributes.HasFlag(TypeAttributes.BeforeFieldInit) && initializer.GetCustomAttribute<RunAfterAppInitAttribute>() != null)
-            {
-                Task.Run(() =>
-                {
-                    RuntimeHelpers.RunClassConstructor(type.TypeHandle);
-                });
-            }
+            //if (type.TypeInitializer is { } initializer && !type.Attributes.HasFlag(TypeAttributes.BeforeFieldInit) && initializer.GetCustomAttribute<RunAfterAppInitAttribute>() != null)
+            //{
+            //    Task.Run(() =>
+            //    {
+            //        RuntimeHelpers.RunClassConstructor(type.TypeHandle);
+            //    });
+            //}
 
             if (type.IsSubclassOf(typeof(MoSeeder)))
             {
@@ -75,3 +72,15 @@ public class ModuleSeederGuide : MoModuleGuide<ModuleSeeder, ModuleSeederOption,
 public class ModuleSeederOption : MoModuleOption<ModuleSeeder>
 {
 }
+
+
+
+
+///// <summary>
+///// 指示该方法是用于在AppInit后执行的Static构造方法
+///// </summary>
+//[AttributeUsage(AttributeTargets.Constructor)]
+//public class RunAfterAppInitAttribute : Attribute
+//{
+
+//}
