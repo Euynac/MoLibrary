@@ -61,7 +61,7 @@ public abstract class MoModule<TModuleSelf, TModuleOption>(TModuleOption option)
         var moduleEnum = instance!.CurModuleEnum();
         
         // Register the mapping between module type and enum
-        MoModuleAnalyser.RegisterModuleMapping(typeof(TModuleSelf), moduleEnum);
+        ModuleAnalyser.RegisterModuleMapping(typeof(TModuleSelf), moduleEnum);
         
         return moduleEnum;
     }
@@ -93,7 +93,7 @@ public abstract class MoModuleWithDependencies<TModuleSelf, TModuleOption>(TModu
             DependedModules.Add(targetModule);
             
             // Register this dependency relationship in the ModuleAnalyser
-            MoModuleAnalyser.AddDependency(CurModuleEnum(), targetModule);
+            ModuleAnalyser.AddDependency(CurModuleEnum(), targetModule);
         }
         
         // Create and return the module guide

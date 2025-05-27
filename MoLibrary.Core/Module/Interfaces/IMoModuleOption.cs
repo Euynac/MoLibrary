@@ -3,7 +3,7 @@ using MoLibrary.Core.Module.BuilderWrapper;
 
 namespace MoLibrary.Core.Module.Interfaces;
 
-public interface IMoModuleOption
+public interface IMoModuleOption : IMoModuleOptionBase
 {
     /// <summary>
     /// 一般用于模块注册期间日志
@@ -47,12 +47,18 @@ public interface IMoModuleOption
     void DisableModuleLog();
 }
 
+
+public interface IMoModuleOptionBase
+{
+
+}
+
 public interface IMoModuleOption<TModule> : IMoModuleOption where TModule : IMoModule
 {
 
 }
 
-public interface IMoModuleExtraOption<TModule> : IMoModuleOption where TModule : IMoModule
+public interface IMoModuleExtraOption<TModule> : IMoModuleOptionBase where TModule : IMoModule
 {
 }
 

@@ -1,9 +1,7 @@
 using System.Text;
 using MoLibrary.Core.Module.Models;
-using MoLibrary.Core.Module.ModuleAnalyser;
-using MoLibrary.Tool.MoResponse;
 using Microsoft.Extensions.Logging;
-using MoLibrary.Core.Module.Interfaces;
+using MoLibrary.Core.Module.Features;
 
 namespace MoLibrary.Core.Module.Exceptions;
 
@@ -60,17 +58,17 @@ public static class ModuleErrorUtil
     private static void ValidateDependencies(List<ModuleRegisterError> moduleRegisterErrors)
     {
         // Check for circular dependencies
-        if (MoModuleAnalyser.HasCircularDependencies())
+        if (ModuleAnalyser.HasCircularDependencies())
         {
             // Find modules involved in cycles
             foreach (var module in Enum.GetValues(typeof(EMoModules)).Cast<EMoModules>())
             {
-                var dependencyInfo = MoModuleAnalyser.GetModuleDependencyInfo(module);
+                var dependencyInfo = ModuleAnalyser.GetModuleDependencyInfo(module);
                 
                 if (dependencyInfo.IsPartOfCycle)
                 {
                     // Get module type from enum using the direct mapping
-                    if (!MoModuleAnalyser.ModuleEnumToTypeDict.TryGetValue(module, out var moduleType) || moduleType == null)
+                    if (!ModuleAnalyser.ModuleEnumToTypeDict.TryGetValue(module, out var moduleType) || moduleType == null)
                         continue;
                     
                     moduleRegisterErrors.Add(new ModuleRegisterError
@@ -96,11 +94,11 @@ public static class ModuleErrorUtil
     public static void RecordModuleError(
         List<ModuleRegisterError> moduleRegisterErrors,
         Type moduleType, 
-        string errorMessage, 
+        string? errorMessage, 
         EMoModuleConfigMethods phase, 
         ModuleRegisterErrorType errorType)
     {
-        var error = new ModuleRegisterError
+        var error = new ModuleRegisterError 
         {
             ModuleType = moduleType,
             ErrorMessage = $"Error in {phase}: {errorMessage}",
@@ -160,7 +158,7 @@ public static class ModuleErrorUtil
             if (moduleOption.DisableModuleIfHasException)
             {
                 // Disable the module
-                if (MoModuleRegisterCentre.DisableModule(moduleType))
+                if (ModuleManager.DisableModule(moduleType))
                 {
                     // Log the error but don't throw an exception for this module
                     MoModuleRegisterCentre.Logger.LogWarning(
@@ -169,7 +167,7 @@ public static class ModuleErrorUtil
                         error.ErrorMessage);
                     
                     // Check for cascade disabling of dependent modules
-                    MoModuleRegisterCentre.CascadeDisableModulesThatDependOn(moduleType);
+                    ModuleManager.CascadeDisableModulesThatDependOn(moduleType);
                 }
             }
         }
@@ -243,10 +241,10 @@ public static class ModuleErrorUtil
         }
 
         // Filter out errors for modules that have already been disabled
-        var errorsToThrow = errors.Where(e => !MoModuleRegisterCentre.IsModuleDisabled(e.ModuleType)).ToList();
+        var errorsToThrow = errors.Where(e => !ModuleManager.IsModuleDisabled(e.ModuleType)).ToList();
         
         // Log summary of disabled modules
-        var disabledModules = MoModuleRegisterCentre.GetDisabledModuleTypes();
+        var disabledModules = ModuleManager.GetDisabledModuleTypes();
         if (disabledModules.Count > 0)
         {
             MoModuleRegisterCentre.Logger.LogWarning(

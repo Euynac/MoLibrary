@@ -92,7 +92,7 @@ public class ModuleRequestInfo
     /// <typeparam name="TOption">模块选项类型。</typeparam>
     /// <param name="order">配置操作执行顺序。</param>
     /// <param name="optionAction">配置操作委托。</param>
-    public void AddConfigureAction<TOption>(int order, Action<TOption> optionAction) where TOption : class, IMoModuleOption, new()
+    public void AddConfigureAction<TOption>(int order, Action<TOption> optionAction) where TOption : class, IMoModuleOptionBase, new()
     {
         var type = typeof(TOption);
         if (!PendingConfigActions.TryGetValue(type, out var actions))

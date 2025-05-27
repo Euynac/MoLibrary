@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Text;
 using MoLibrary.Core.Module.Models;
 
-namespace MoLibrary.Core.Module.ModuleAnalyser;
+namespace MoLibrary.Core.Module.Features;
 
 /// <summary>
 /// Provides performance profiling capabilities for the module system.

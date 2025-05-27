@@ -8,6 +8,7 @@ public enum EMoModuleConfigMethods
     ClaimDependencies,
     ConfigureBuilder,
     ConfigureServices,
+    IterateBusinessTypes,
     PostConfigureServices,
     ConfigureApplicationBuilder,
     ConfigureEndpoints
