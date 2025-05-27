@@ -14,9 +14,25 @@ public class MoModuleAnalyser
     public static Dictionary<Type, EMoModules> ModuleTypeToEnumMap { get; set; } = new();
 
     /// <summary>
+    /// Dictionary mapping module enums to their type representations.
+    /// </summary>
+    public static Dictionary<EMoModules, Type> ModuleEnumToTypeDict { get; set; } = new();
+
+    /// <summary>
     /// Dictionary mapping module enums to their dependencies.
     /// </summary>
     public static Dictionary<EMoModules, HashSet<EMoModules>> ModuleDependencyMap { get; set; } = new();
+
+    /// <summary>
+    /// Maps a module enum to its type.
+    /// </summary>
+    /// <param name="moduleType">The module type.</param>
+    /// <param name="moduleEnum">The module enum.</param>
+    public static void RegisterModuleMapping(Type moduleType, EMoModules moduleEnum)
+    {
+        ModuleTypeToEnumMap[moduleType] = moduleEnum;
+        ModuleEnumToTypeDict[moduleEnum] = moduleType;
+    }
 
     /// <summary>
     /// Adds a dependency relationship between modules.

@@ -34,7 +34,7 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
             return moduleEnum;
         }
         moduleEnum = TModule.GetModuleEnum();
-        MoModuleAnalyser.ModuleTypeToEnumMap[typeof(TModule)] = moduleEnum;
+        MoModuleAnalyser.RegisterModuleMapping(typeof(TModule), moduleEnum);
         return moduleEnum;
     }
 
