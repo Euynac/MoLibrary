@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using MoLibrary.Repository.Transaction;
 
 namespace MoLibrary.Framework.Features.MoSeeder;
@@ -12,9 +13,19 @@ public abstract class MoSeeder(IServiceProvider serviceProvider) : IMoSeeder
     {
         // TODO 优化不依赖UnitOfWork的种子方法
         var manager = serviceProvider.GetRequiredService<IMoUnitOfWorkManager>();
-        using var uow = manager.Begin();
-        await SeedingAsync();
-        await uow.CompleteAsync();
+        var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
+        var logger = loggerFactory.CreateLogger(GetType());
+        try
+        {
+            using var uow = manager.Begin();
+            await SeedingAsync();
+            await uow.CompleteAsync();
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Seeder出现异常");
+        }
+   
     }
 
     public abstract Task SeedingAsync();

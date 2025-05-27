@@ -33,18 +33,26 @@ public static class AssemblyExtensions
         yield return entryAssembly;
         if (relatedNames is null) yield break;
 
-        var hash = entryAssembly.GetReferencedAssemblies()
-            .Where(p => relatedNames.Any(s => p.FullName.Contains(s))).Select(p=>p.Name).ToHashSet();
 
-
-        //该方案依赖MVC
-        //var hash = entryAssembly.CustomAttributes.Where(p => p.AttributeType == typeof(ApplicationPartAttribute))
-        //    .Where(p => p.ConstructorArguments.FirstOrDefault() is {Value: string { } value} &&
-        //                relatedNames.Any(s => value.Contains(s)))
-        //    .Select(p => (string) p.ConstructorArguments.First().Value!).ToHashSet();
-
-        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies()
-                     .Where(p => p.GetName().Name is { } name && hash.Contains(name)))
+        foreach (var assembly in entryAssembly.GetReferencedAssemblies()
+                     .Where(p => relatedNames.Any(s => p.FullName.Contains(s))).Select(Assembly.Load))
+        {
             yield return assembly;
+        }
+
+
+        //var hash = entryAssembly.GetReferencedAssemblies()
+        //    .Where(p => relatedNames.Any(s => p.FullName.Contains(s))).Select(p=>p.Name).ToHashSet();
+
+
+        ////该方案依赖MVC
+        ////var hash = entryAssembly.CustomAttributes.Where(p => p.AttributeType == typeof(ApplicationPartAttribute))
+        ////    .Where(p => p.ConstructorArguments.FirstOrDefault() is {Value: string { } value} &&
+        ////                relatedNames.Any(s => value.Contains(s)))
+        ////    .Select(p => (string) p.ConstructorArguments.First().Value!).ToHashSet();
+
+        //foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies()
+        //             .Where(p => p.GetName().Name is { } name && hash.Contains(name)))
+        //    yield return assembly;
     }
 }
