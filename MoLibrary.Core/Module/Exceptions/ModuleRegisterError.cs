@@ -11,7 +11,7 @@ public class ModuleRegisterError
     /// <summary>
     /// The type of the module where the error occurred.
     /// </summary>
-    public Type ModuleType { get; set; } = null!;
+    public required Type ModuleType { get; set; }
     
     /// <summary>
     /// Description of the error that occurred.
