@@ -1,5 +1,5 @@
+using MoLibrary.Core.Module.Features;
 using MoLibrary.Core.Module.Models;
-using MoLibrary.Core.Module.ModuleAnalyser;
 
 namespace MoLibrary.Core.Module.Exceptions;
 

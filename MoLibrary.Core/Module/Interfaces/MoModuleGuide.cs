@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Module.BuilderWrapper;
+using MoLibrary.Core.Module.Features;
 using MoLibrary.Core.Module.Models;
-using MoLibrary.Core.Module.ModuleAnalyser;
 
 namespace MoLibrary.Core.Module.Interfaces;
 public class MoModuleGuide
@@ -29,12 +29,12 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
 {
     public override EMoModules GetTargetModuleEnum()
     {
-        if(MoModuleAnalyser.ModuleTypeToEnumMap.TryGetValue(typeof(TModule), out var moduleEnum))
+        if(ModuleAnalyser.ModuleTypeToEnumMap.TryGetValue(typeof(TModule), out var moduleEnum))
         {
             return moduleEnum;
         }
         moduleEnum = TModule.GetModuleEnum();
-        MoModuleAnalyser.RegisterModuleMapping(typeof(TModule), moduleEnum);
+        ModuleAnalyser.RegisterModuleMapping(typeof(TModule), moduleEnum);
         return moduleEnum;
     }
 
@@ -99,7 +99,7 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     /// <param name="order">配置操作执行顺序。</param>
     /// <param name="optionAction">配置操作委托。</param>
     /// <param name="guideFrom">配置操作来源模块。</param>
-    public void AddConfigureAction<TOption>(int order, Action<TOption> optionAction, EMoModules? guideFrom) where TOption : class, IMoModuleOption, new()
+    public void AddConfigureAction<TOption>(int order, Action<TOption> optionAction, EMoModules? guideFrom) where TOption : class, IMoModuleOptionBase, new()
     {
         var requestInfo = RegisterModule();
 
@@ -232,7 +232,7 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     {
         return ConfigureOption(optionAction, (int) order);
     }
-    public TModuleGuideSelf ConfigureOption<TOption>(Action<TOption>? optionAction, int order) where TOption : class, IMoModuleOption, new()
+    public TModuleGuideSelf ConfigureOption<TOption>(Action<TOption>? optionAction, int order) where TOption : class, IMoModuleOptionBase, new()
     {
         if(optionAction == null) return (TModuleGuideSelf) this;
 

@@ -8,8 +8,8 @@ using MoLibrary.Core.Module.BuilderWrapper;
 using Microsoft.Extensions.Logging;
 using MoLibrary.Core.Features.MoLogProvider;
 using MoLibrary.Core.Module.Exceptions;
-using MoLibrary.Core.Module.ModuleAnalyser;
 using MoLibrary.Tool.MoResponse;
+using MoLibrary.Core.Module.Features;
 
 namespace MoLibrary.Core.Module;
 
@@ -73,103 +73,6 @@ public static class MoModuleRegisterCentre
     private static List<ModuleSnapshot> ModuleSnapshots { get; } = [];
 
     /// <summary>
-    /// List of disabled module types
-    /// </summary>
-    private static HashSet<Type> DisabledModuleTypes { get; } = new();
-
-    /// <summary>
-    /// Gets the list of disabled module types
-    /// </summary>
-    /// <returns>A list of disabled module types</returns>
-    internal static List<Type> GetDisabledModuleTypes()
-    {
-        return DisabledModuleTypes.ToList();
-    }
-
-    /// <summary>
-    /// Disables a module due to an exception
-    /// </summary>
-    /// <param name="moduleType">The type of module to disable</param>
-    /// <returns>True if the module was successfully disabled, false if it was already disabled</returns>
-    internal static bool DisableModule(Type moduleType)
-    {
-        return DisabledModuleTypes.Add(moduleType);
-    }
-
-    /// <summary>
-    /// Checks if a module is disabled
-    /// </summary>
-    /// <param name="moduleType">The type of module to check</param>
-    /// <returns>True if the module is disabled, false otherwise</returns>
-    internal static bool IsModuleDisabled(Type moduleType)
-    {
-        // Check if the module is in the disabled list
-        if (DisabledModuleTypes.Contains(moduleType))
-        {
-            return true;
-        }
-        
-        // Check if the module is manually disabled via the IsDisabled property
-        if (ModuleRegisterContextDict.TryGetValue(moduleType, out var requestInfo))
-        {
-            var moduleOption = requestInfo.ModuleOption;
-            if (moduleOption?.IsDisabled == true)
-            {
-                // If it's manually disabled but not in our tracking list, add it
-                DisableModule(moduleType);
-                return true;
-            }
-        }
-        
-        return false;
-    }
-
-    /// <summary>
-    /// Cascade disables modules that depend on the specified module
-    /// </summary>
-    /// <param name="moduleType">The module type that other modules might depend on</param>
-    internal static void CascadeDisableModulesThatDependOn(Type moduleType)
-    {
-        // Find the module enum for the disabled module
-        EMoModules? disabledModuleEnum = null;
-        if (MoModuleAnalyser.ModuleTypeToEnumMap.TryGetValue(moduleType, out var moduleEnum))
-        {
-            disabledModuleEnum = moduleEnum;
-        }
-        
-        if (disabledModuleEnum == null) return;
-        
-        // Get all modules that depend on this module from the dependency map
-        var dependentModuleEnums = new HashSet<EMoModules>();
-        foreach (var entry in MoModuleAnalyser.ModuleDependencyMap)
-        {
-            if (entry.Value.Contains(disabledModuleEnum.Value))
-            {
-                dependentModuleEnums.Add(entry.Key);
-            }
-        }
-        
-        // Disable all dependent modules
-        foreach (var dependentModuleEnum in dependentModuleEnums)
-        {
-            // Skip if not registered in the enum-to-type map
-            if (!MoModuleAnalyser.ModuleEnumToTypeDict.TryGetValue(dependentModuleEnum, out var dependentModuleType))
-                continue;
-            
-            if (DisableModule(dependentModuleType))
-            {
-                Logger.LogWarning(
-                    "Module {ModuleName} was disabled because it depends on disabled module {DisabledModuleName}",
-                    dependentModuleType.Name,
-                    moduleType.Name);
-                
-                // Recursively cascade disable
-                CascadeDisableModulesThatDependOn(dependentModuleType);
-            }
-        }
-    }
-
-    /// <summary>
     /// 注册当前注册的所有模块的服务。此方法应在builder.Build()之前调用。
     /// </summary>
     /// <param name="builder">WebApplicationBuilder实例。</param>
@@ -185,7 +88,7 @@ public static class MoModuleRegisterCentre
         var typeFinder = services.GetOrCreateDomainTypeFinder<MoDomainTypeFinder>();
 
         // 1. 初次遍历所有注册的模块，判断若模块有依赖项，处理依赖关系
-        foreach (var (moduleType, info) in ModuleRegisterContextDict.Where(p=>!p.Value.HasBeenBuilt && !IsModuleDisabled(p.Key)).Select(p=>p).ToList())
+        foreach (var (moduleType, info) in ModuleRegisterContextDict.Where(p=>!p.Value.HasBeenBuilt && !ModuleManager.IsModuleDisabled(p.Key)).Select(p=>p).ToList())
         {
             if (!moduleType.IsImplementInterface(typeof(IWantDependsOnOtherModules))) continue;
 
@@ -200,7 +103,7 @@ public static class MoModuleRegisterCentre
             }
             catch (Exception ex)
             {
-                ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, moduleType, $"Error during dependency declaration: {ex.Message}", 
+                ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, moduleType, ex.Message, 
                     EMoModuleConfigMethods.ClaimDependencies, ModuleRegisterErrorType.InitializationError);
             }
         }
@@ -232,12 +135,12 @@ public static class MoModuleRegisterCentre
         //}
         
         // 1.3 检查模块是否满足必要配置要求
-        ModuleErrorUtil.ValidateModuleRequirements(ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt && !IsModuleDisabled(p.Key)).ToDictionary(), ModuleRegisterErrors);
+        ModuleErrorUtil.ValidateModuleRequirements(ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt && !ModuleManager.IsModuleDisabled(p.Key)).ToDictionary(), ModuleRegisterErrors);
 
         var snapshots = new List<ModuleSnapshot>();
 
         // 2. 初始化模块配置并注册服务
-        foreach (var (moduleType, info) in ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt && !IsModuleDisabled(p.Key)))
+        foreach (var (moduleType, info) in ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt && !ModuleManager.IsModuleDisabled(p.Key)))
         {
             try
             {
@@ -254,7 +157,7 @@ public static class MoModuleRegisterCentre
 
                 if (!builderResult.IsOk())
                 {
-                    ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, moduleType, builderResult.Message ?? "Error in ConfigureBuilder", 
+                    ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, moduleType, builderResult.Message, 
                         EMoModuleConfigMethods.ConfigureBuilder, ModuleRegisterErrorType.ConfigurationError);
                 }
 
@@ -278,7 +181,7 @@ public static class MoModuleRegisterCentre
 
                 if (!servicesResult.IsOk())
                 {
-                    ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, moduleType, servicesResult.Message ?? "Error in ConfigureServices", 
+                    ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, moduleType, servicesResult.Message, 
                         EMoModuleConfigMethods.ConfigureServices, ModuleRegisterErrorType.ConfigurationError);
                 }
 
@@ -300,7 +203,7 @@ public static class MoModuleRegisterCentre
             }
             catch (Exception ex)
             {
-                ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, moduleType, $"Error initializing module: {ex.Message}",
+                ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, moduleType, ex.Message,
                     EMoModuleConfigMethods.ConfigureBuilder, ModuleRegisterErrorType.InitializationError);
             }
         }
@@ -321,8 +224,8 @@ public static class MoModuleRegisterCentre
                 }
                 catch (Exception ex)
                 {
-                    ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleInstance.GetType(), $"Error iterating business types: {ex.Message}",
-                        EMoModuleConfigMethods.ConfigureServices, ModuleRegisterErrorType.ConfigurationError);
+                    ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleInstance.GetType(), ex.Message,
+                        EMoModuleConfigMethods.IterateBusinessTypes, ModuleRegisterErrorType.ConfigurationError);
                 }
             }
         }
@@ -345,7 +248,7 @@ public static class MoModuleRegisterCentre
 
                 if (!postConfigResult.IsOk())
                 {
-                    ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleType, postConfigResult.Message ?? "Error in PostConfigureServices", 
+                    ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleType, postConfigResult.Message, 
                         EMoModuleConfigMethods.PostConfigureServices, ModuleRegisterErrorType.ConfigurationError);
                 }
 
@@ -364,7 +267,7 @@ public static class MoModuleRegisterCentre
             }
             catch (Exception ex)
             {
-                ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleType, $"Error in PostConfigureServices: {ex.Message}",
+                ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleType, ex.Message,
                     EMoModuleConfigMethods.PostConfigureServices, ModuleRegisterErrorType.ConfigurationError);
             }
         }
@@ -392,7 +295,7 @@ public static class MoModuleRegisterCentre
         foreach (var module in ModuleSnapshots)
         {
             // Skip disabled modules
-            if (IsModuleDisabled(module.ModuleType))
+            if (ModuleManager.IsModuleDisabled(module.ModuleType))
             {
                 continue;
             }
@@ -405,13 +308,13 @@ public static class MoModuleRegisterCentre
 
                 if (!result.IsOk())
                 {
-                    ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleType, result.Message ?? "Error in ConfigureApplicationBuilder", 
+                    ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleType, result.Message, 
                         EMoModuleConfigMethods.ConfigureApplicationBuilder, ModuleRegisterErrorType.ConfigurationError);
                 }
             }
             catch (Exception ex)
             {
-                ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleType, $"Error in ConfigureApplicationBuilder: {ex.Message}",
+                ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleType, ex.Message,
                     EMoModuleConfigMethods.ConfigureApplicationBuilder, ModuleRegisterErrorType.ConfigurationError);
             }
 
@@ -446,7 +349,7 @@ public static class MoModuleRegisterCentre
         foreach (var module in ModuleSnapshots)
         {
             // Skip disabled modules
-            if (IsModuleDisabled(module.ModuleType))
+            if (ModuleManager.IsModuleDisabled(module.ModuleType))
             {
                 continue;
             }
@@ -459,13 +362,13 @@ public static class MoModuleRegisterCentre
 
                 if (!result.IsOk())
                 {
-                    ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleType, result.Message ?? "Error in ConfigureEndpoints", 
+                    ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleType, result.Message, 
                         EMoModuleConfigMethods.ConfigureEndpoints, ModuleRegisterErrorType.ConfigurationError);
                 }
             }
             catch (Exception ex)
             {
-                ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleType, $"Error in ConfigureEndpoints: {ex.Message}",
+                ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleType, ex.Message,
                     EMoModuleConfigMethods.ConfigureEndpoints, ModuleRegisterErrorType.ConfigurationError);
             }
 

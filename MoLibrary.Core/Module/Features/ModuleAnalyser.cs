@@ -1,12 +1,12 @@
 using System.Text;
 using MoLibrary.Core.Module.Models;
 
-namespace MoLibrary.Core.Module.ModuleAnalyser;
+namespace MoLibrary.Core.Module.Features;
 
 /// <summary>
 /// Provides analysis capabilities for MoModule dependencies and relationships.
 /// </summary>
-public class MoModuleAnalyser
+public class ModuleAnalyser
 {
     /// <summary>
     /// Dictionary mapping module types to their enum representations.
