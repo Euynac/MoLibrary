@@ -201,7 +201,7 @@ public static class MoModuleRegisterCentre
             catch (Exception ex)
             {
                 ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, moduleType, $"Error during dependency declaration: {ex.Message}", 
-                    EMoModuleConfigMethods.ConfigureBuilder, ModuleRegisterErrorType.InitializationError);
+                    EMoModuleConfigMethods.ClaimDependencies, ModuleRegisterErrorType.InitializationError);
             }
         }
         
@@ -339,13 +339,13 @@ public static class MoModuleRegisterCentre
         {
             try
             {
-                ModuleProfiler.StartModulePhase(module.ModuleInstance.GetType(), EMoModuleConfigMethods.PostConfigureServices);
+                ModuleProfiler.StartModulePhase(module.ModuleType, EMoModuleConfigMethods.PostConfigureServices);
                 var postConfigResult = module.ModuleInstance.PostConfigureServices(services);
-                ModuleProfiler.StopModulePhase(module.ModuleInstance.GetType(), EMoModuleConfigMethods.PostConfigureServices);
+                ModuleProfiler.StopModulePhase(module.ModuleType, EMoModuleConfigMethods.PostConfigureServices);
 
                 if (!postConfigResult.IsOk())
                 {
-                    ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleInstance.GetType(), postConfigResult.Message ?? "Error in PostConfigureServices", 
+                    ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleType, postConfigResult.Message ?? "Error in PostConfigureServices", 
                         EMoModuleConfigMethods.PostConfigureServices, ModuleRegisterErrorType.ConfigurationError);
                 }
 
@@ -358,13 +358,13 @@ public static class MoModuleRegisterCentre
                     }
                     catch (Exception ex)
                     {
-                        ModuleErrorUtil.RecordRequestError(ModuleRegisterErrors, module.ModuleInstance.GetType(), request, ex);
+                        ModuleErrorUtil.RecordRequestError(ModuleRegisterErrors, module.ModuleType, request, ex);
                     }
                 }
             }
             catch (Exception ex)
             {
-                ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleInstance.GetType(), $"Error in PostConfigureServices: {ex.Message}",
+                ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleType, $"Error in PostConfigureServices: {ex.Message}",
                     EMoModuleConfigMethods.PostConfigureServices, ModuleRegisterErrorType.ConfigurationError);
             }
         }
@@ -392,26 +392,26 @@ public static class MoModuleRegisterCentre
         foreach (var module in ModuleSnapshots)
         {
             // Skip disabled modules
-            if (IsModuleDisabled(module.ModuleInstance.GetType()))
+            if (IsModuleDisabled(module.ModuleType))
             {
                 continue;
             }
             
             try
             {
-                ModuleProfiler.StartModulePhase(module.ModuleInstance.GetType(), EMoModuleConfigMethods.ConfigureApplicationBuilder);
+                ModuleProfiler.StartModulePhase(module.ModuleType, EMoModuleConfigMethods.ConfigureApplicationBuilder);
                 var result = module.ModuleInstance.ConfigureApplicationBuilder(app);
-                ModuleProfiler.StopModulePhase(module.ModuleInstance.GetType(), EMoModuleConfigMethods.ConfigureApplicationBuilder);
+                ModuleProfiler.StopModulePhase(module.ModuleType, EMoModuleConfigMethods.ConfigureApplicationBuilder);
 
                 if (!result.IsOk())
                 {
-                    ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleInstance.GetType(), result.Message ?? "Error in ConfigureApplicationBuilder", 
+                    ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleType, result.Message ?? "Error in ConfigureApplicationBuilder", 
                         EMoModuleConfigMethods.ConfigureApplicationBuilder, ModuleRegisterErrorType.ConfigurationError);
                 }
             }
             catch (Exception ex)
             {
-                ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleInstance.GetType(), $"Error in ConfigureApplicationBuilder: {ex.Message}",
+                ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleType, $"Error in ConfigureApplicationBuilder: {ex.Message}",
                     EMoModuleConfigMethods.ConfigureApplicationBuilder, ModuleRegisterErrorType.ConfigurationError);
             }
 
@@ -423,7 +423,7 @@ public static class MoModuleRegisterCentre
                 }
                 catch (Exception ex)
                 {
-                    ModuleErrorUtil.RecordRequestError(ModuleRegisterErrors, module.ModuleInstance.GetType(), request, ex);
+                    ModuleErrorUtil.RecordRequestError(ModuleRegisterErrors, module.ModuleType, request, ex);
                 }
             }
         }
@@ -446,26 +446,26 @@ public static class MoModuleRegisterCentre
         foreach (var module in ModuleSnapshots)
         {
             // Skip disabled modules
-            if (IsModuleDisabled(module.ModuleInstance.GetType()))
+            if (IsModuleDisabled(module.ModuleType))
             {
                 continue;
             }
             
             try
             {
-                ModuleProfiler.StartModulePhase(module.ModuleInstance.GetType(), EMoModuleConfigMethods.ConfigureEndpoints);
+                ModuleProfiler.StartModulePhase(module.ModuleType, EMoModuleConfigMethods.ConfigureEndpoints);
                 var result = module.ModuleInstance.ConfigureEndpoints(app);
-                ModuleProfiler.StopModulePhase(module.ModuleInstance.GetType(), EMoModuleConfigMethods.ConfigureEndpoints);
+                ModuleProfiler.StopModulePhase(module.ModuleType, EMoModuleConfigMethods.ConfigureEndpoints);
 
                 if (!result.IsOk())
                 {
-                    ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleInstance.GetType(), result.Message ?? "Error in ConfigureEndpoints", 
+                    ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleType, result.Message ?? "Error in ConfigureEndpoints", 
                         EMoModuleConfigMethods.ConfigureEndpoints, ModuleRegisterErrorType.ConfigurationError);
                 }
             }
             catch (Exception ex)
             {
-                ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleInstance.GetType(), $"Error in ConfigureEndpoints: {ex.Message}",
+                ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleType, $"Error in ConfigureEndpoints: {ex.Message}",
                     EMoModuleConfigMethods.ConfigureEndpoints, ModuleRegisterErrorType.ConfigurationError);
             }
 
@@ -477,7 +477,7 @@ public static class MoModuleRegisterCentre
                 }
                 catch (Exception ex)
                 {
-                    ModuleErrorUtil.RecordRequestError(ModuleRegisterErrors, module.ModuleInstance.GetType(), request, ex);
+                    ModuleErrorUtil.RecordRequestError(ModuleRegisterErrors, module.ModuleType, request, ex);
                 }
             }
         }

@@ -109,8 +109,12 @@ public static class ModuleErrorUtil
         };
         moduleRegisterErrors.Add(error);
         
-        // Immediately check if the module should be disabled due to exception
-        CheckDisableModuleIfHasException(moduleType, error);
+        if(phase > EMoModuleConfigMethods.ClaimDependencies)
+        {
+            // Immediately check if the module should be disabled due to exception
+            CheckDisableModuleIfHasException(moduleType, error);
+        }
+
     }
     
     /// <summary>
@@ -147,15 +151,13 @@ public static class ModuleErrorUtil
     /// <param name="error">The error that occurred</param>
     private static void CheckDisableModuleIfHasException(Type moduleType, ModuleRegisterError error)
     {
-        if (moduleType == null) return;
-        
         // Try to find the module option through MoModuleRegisterCentre
         if (MoModuleRegisterCentre.ModuleRegisterContextDict.TryGetValue(moduleType, out var requestInfo))
         {
             // Check if the module has DisableModuleIfHasException set
-            var moduleOption = requestInfo.ModuleOption as IMoModuleOption;
+            var moduleOption = requestInfo.ModuleOption;
 
-            if (moduleOption?.DisableModuleIfHasException == true)
+            if (moduleOption.DisableModuleIfHasException)
             {
                 // Disable the module
                 if (MoModuleRegisterCentre.DisableModule(moduleType))
@@ -241,7 +243,7 @@ public static class ModuleErrorUtil
         }
 
         // Filter out errors for modules that have already been disabled
-        var errorsToThrow = errors.Where(e => e.ModuleType == null || !MoModuleRegisterCentre.IsModuleDisabled(e.ModuleType)).ToList();
+        var errorsToThrow = errors.Where(e => !MoModuleRegisterCentre.IsModuleDisabled(e.ModuleType)).ToList();
         
         // Log summary of disabled modules
         var disabledModules = MoModuleRegisterCentre.GetDisabledModuleTypes();

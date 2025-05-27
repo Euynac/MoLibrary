@@ -5,6 +5,7 @@ namespace MoLibrary.Core.Module.Models;
 /// </summary>
 public enum EMoModuleConfigMethods
 {
+    ClaimDependencies,
     ConfigureBuilder,
     ConfigureServices,
     PostConfigureServices,
