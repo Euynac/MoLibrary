@@ -73,6 +73,103 @@ public static class MoModuleRegisterCentre
     private static List<ModuleSnapshot> ModuleSnapshots { get; } = [];
 
     /// <summary>
+    /// List of disabled module types
+    /// </summary>
+    private static HashSet<Type> DisabledModuleTypes { get; } = new();
+
+    /// <summary>
+    /// Gets the list of disabled module types
+    /// </summary>
+    /// <returns>A list of disabled module types</returns>
+    internal static List<Type> GetDisabledModuleTypes()
+    {
+        return DisabledModuleTypes.ToList();
+    }
+
+    /// <summary>
+    /// Disables a module due to an exception
+    /// </summary>
+    /// <param name="moduleType">The type of module to disable</param>
+    /// <returns>True if the module was successfully disabled, false if it was already disabled</returns>
+    internal static bool DisableModule(Type moduleType)
+    {
+        return DisabledModuleTypes.Add(moduleType);
+    }
+
+    /// <summary>
+    /// Checks if a module is disabled
+    /// </summary>
+    /// <param name="moduleType">The type of module to check</param>
+    /// <returns>True if the module is disabled, false otherwise</returns>
+    internal static bool IsModuleDisabled(Type moduleType)
+    {
+        // Check if the module is in the disabled list
+        if (DisabledModuleTypes.Contains(moduleType))
+        {
+            return true;
+        }
+        
+        // Check if the module is manually disabled via the IsDisabled property
+        if (ModuleRegisterContextDict.TryGetValue(moduleType, out var requestInfo))
+        {
+            var moduleOption = requestInfo.ModuleOption;
+            if (moduleOption?.IsDisabled == true)
+            {
+                // If it's manually disabled but not in our tracking list, add it
+                DisableModule(moduleType);
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    /// <summary>
+    /// Cascade disables modules that depend on the specified module
+    /// </summary>
+    /// <param name="moduleType">The module type that other modules might depend on</param>
+    internal static void CascadeDisableModulesThatDependOn(Type moduleType)
+    {
+        // Find the module enum for the disabled module
+        EMoModules? disabledModuleEnum = null;
+        if (MoModuleAnalyser.ModuleTypeToEnumMap.TryGetValue(moduleType, out var moduleEnum))
+        {
+            disabledModuleEnum = moduleEnum;
+        }
+        
+        if (disabledModuleEnum == null) return;
+        
+        // Get all modules that depend on this module from the dependency map
+        var dependentModuleEnums = new HashSet<EMoModules>();
+        foreach (var entry in MoModuleAnalyser.ModuleDependencyMap)
+        {
+            if (entry.Value.Contains(disabledModuleEnum.Value))
+            {
+                dependentModuleEnums.Add(entry.Key);
+            }
+        }
+        
+        // Disable all dependent modules
+        foreach (var dependentModuleEnum in dependentModuleEnums)
+        {
+            // Skip if not registered in the enum-to-type map
+            if (!MoModuleAnalyser.ModuleEnumToTypeDict.TryGetValue(dependentModuleEnum, out var dependentModuleType))
+                continue;
+            
+            if (DisableModule(dependentModuleType))
+            {
+                Logger.LogWarning(
+                    "Module {ModuleName} was disabled because it depends on disabled module {DisabledModuleName}",
+                    dependentModuleType.Name,
+                    moduleType.Name);
+                
+                // Recursively cascade disable
+                CascadeDisableModulesThatDependOn(dependentModuleType);
+            }
+        }
+    }
+
+    /// <summary>
     /// 注册当前注册的所有模块的服务。此方法应在builder.Build()之前调用。
     /// </summary>
     /// <param name="builder">WebApplicationBuilder实例。</param>
@@ -88,7 +185,7 @@ public static class MoModuleRegisterCentre
         var typeFinder = services.GetOrCreateDomainTypeFinder<MoDomainTypeFinder>();
 
         // 1. 初次遍历所有注册的模块，判断若模块有依赖项，处理依赖关系
-        foreach (var (moduleType, info) in ModuleRegisterContextDict.Where(p=>!p.Value.HasBeenBuilt).Select(p=>p).ToList())
+        foreach (var (moduleType, info) in ModuleRegisterContextDict.Where(p=>!p.Value.HasBeenBuilt && !IsModuleDisabled(p.Key)).Select(p=>p).ToList())
         {
             if (!moduleType.IsImplementInterface(typeof(IWantDependsOnOtherModules))) continue;
 
@@ -135,12 +232,12 @@ public static class MoModuleRegisterCentre
         //}
         
         // 1.3 检查模块是否满足必要配置要求
-        ModuleErrorUtil.ValidateModuleRequirements(ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt).ToDictionary(), ModuleRegisterErrors);
+        ModuleErrorUtil.ValidateModuleRequirements(ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt && !IsModuleDisabled(p.Key)).ToDictionary(), ModuleRegisterErrors);
 
         var snapshots = new List<ModuleSnapshot>();
 
         // 2. 初始化模块配置并注册服务
-        foreach (var (moduleType, info) in ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt))
+        foreach (var (moduleType, info) in ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt && !IsModuleDisabled(p.Key)))
         {
             try
             {
@@ -148,7 +245,7 @@ public static class MoModuleRegisterCentre
                 info.InitFinalConfigures();
 
                 // 创建模块实例
-                if (Activator.CreateInstance(moduleType, info.FinalConfigures[info.ModuleOptionType]) is not MoModule module) continue;
+                if (Activator.CreateInstance(moduleType, info.ModuleOption) is not MoModule module) continue;
 
                 // 调用模块构建方法
                 ModuleProfiler.StartModulePhase(moduleType, EMoModuleConfigMethods.ConfigureBuilder);
@@ -276,7 +373,7 @@ public static class MoModuleRegisterCentre
         var elapsedTime = ModuleProfiler.StopPhase(nameof(RegisterServices));
         Logger.LogInformation("Module services registration completed in {ElapsedMilliseconds}ms. Total module system time: {TotalElapsedMilliseconds}ms", 
             elapsedTime, ModuleProfiler.GetTotalElapsedMilliseconds());
-        //ModuleErrorUtil.RaiseModuleErrors(ModuleRegisterErrors);
+        ModuleErrorUtil.RaiseModuleErrors(ModuleRegisterErrors);
     }
 
     /// <summary>
@@ -294,6 +391,12 @@ public static class MoModuleRegisterCentre
         // 按优先级排序并配置应用程序构建器
         foreach (var module in ModuleSnapshots)
         {
+            // Skip disabled modules
+            if (IsModuleDisabled(module.ModuleInstance.GetType()))
+            {
+                continue;
+            }
+            
             try
             {
                 ModuleProfiler.StartModulePhase(module.ModuleInstance.GetType(), EMoModuleConfigMethods.ConfigureApplicationBuilder);
@@ -342,6 +445,12 @@ public static class MoModuleRegisterCentre
         // 按优先级排序并配置端点路由构建器
         foreach (var module in ModuleSnapshots)
         {
+            // Skip disabled modules
+            if (IsModuleDisabled(module.ModuleInstance.GetType()))
+            {
+                continue;
+            }
+            
             try
             {
                 ModuleProfiler.StartModulePhase(module.ModuleInstance.GetType(), EMoModuleConfigMethods.ConfigureEndpoints);

@@ -32,6 +32,14 @@ public class ModuleRequestInfo
     public Type ModuleOptionType { get; set; } = null!;
     
     /// <summary>
+    /// 模块的选项实例，可以用于访问模块的配置信息。
+    /// 在初始化配置后可用。
+    /// </summary>
+    public IMoModuleOption ModuleOption => FinalConfigures.TryGetValue(ModuleOptionType, out var option) 
+        ? option as IMoModuleOption 
+        : null;
+    
+    /// <summary>
     /// 必须配置的方法键列表，若未配置则会抛出异常。
     /// </summary>
     public List<string> RequiredConfigMethodKeys { get; set; } = [];

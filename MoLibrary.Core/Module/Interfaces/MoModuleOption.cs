@@ -18,9 +18,32 @@ public class MoModuleOption<TModule> : IMoModuleOption<TModule> where TModule : 
     public bool RegisterInstantly { get; set; }
 
     /// <summary>
-    /// 如果模块注册出现异常则禁用Module，而不是抛出异常
+    /// 如果模块注册出现异常则禁用Module，而不是抛出异常。
+    /// 当设置为 true 时，如果模块在注册过程中出现异常，系统将记录错误并禁用该模块，而不是抛出异常中断整个应用程序的启动。
+    /// 被禁用的模块在应用程序的生命周期内将被完全跳过，不会调用其任何配置或初始化方法。
     /// </summary>
-    public static bool DisableModuleIfHasException { get; set; } 
+    public bool DisableModuleIfHasException { get; set; } 
+
+    /// <summary>
+    /// 是否禁用当前模块。
+    /// 当设置为 true 时，该模块将不会被注册或初始化，在应用程序的整个生命周期中都会被跳过。
+    /// </summary>
+    public bool IsDisabled { get; private set; }
+
+    /// <summary>
+    /// 手动禁用当前模块。
+    /// 被禁用的模块在应用程序的生命周期内将被完全跳过，不会调用其任何配置或初始化方法。
+    /// </summary>
+    /// <param name="reason">禁用模块的原因，将被记录到日志中</param>
+    public void DisableModule(string reason = "Manual disable")
+    {
+        if (!IsDisabled)
+        {
+            IsDisabled = true;
+            Logger.LogWarning("Module {ModuleType} has been manually disabled. Reason: {Reason}", 
+                typeof(TModule).Name, reason);
+        }
+    }
 
     /// <summary>
     /// Sets the minimum log level for the module logger.

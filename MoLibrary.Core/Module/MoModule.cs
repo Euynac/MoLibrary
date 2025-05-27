@@ -58,7 +58,12 @@ public abstract class MoModule<TModuleSelf, TModuleOption>(TModuleOption option)
     {
         // Create a temporary instance with default options to get the module enum
         var instance = Activator.CreateInstance(typeof(TModuleSelf), new TModuleOption()) as TModuleSelf;
-        return instance!.CurModuleEnum();
+        var moduleEnum = instance!.CurModuleEnum();
+        
+        // Register the mapping between module type and enum
+        MoModuleAnalyser.RegisterModuleMapping(typeof(TModuleSelf), moduleEnum);
+        
+        return moduleEnum;
     }
 }
 
