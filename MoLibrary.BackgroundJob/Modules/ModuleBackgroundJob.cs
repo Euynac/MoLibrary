@@ -143,18 +143,19 @@ public class ModuleBackgroundJob(ModuleBackgroundJobOption option) : MoModule<Mo
 
 
 
-
+               
                 JobStorage.Current = new RedisStorage(redisConnection, new RedisStorageOptions()
                 {
                     Db = 10,
                     FetchTimeout = TimeSpan.FromSeconds(5),
                     Prefix = "{IMFHangfire}:",
+                   
                     InvisibilityTimeout = TimeSpan.MaxValue, //活动超时时间
-                                                             //巨坑：该时间超时后会导致Hangfire认为该作业因各种原因挂掉，然后重新使用新线程去跑这个Job（旧线程它没去管，测了发现其实还在跑），默认值是30分钟，因此一些超过30分钟的Job可能会被执行多次。
-                                                             //旧线程先跑也会在Dashboard面板上置为job完成，但实际上可能新线程还在跑。这也是Dashboard上为什么有些任务会有多个Process面板。
+                                                                            //巨坑：该时间超时后会导致Hangfire认为该作业因各种原因挂掉，然后重新使用新线程去跑这个Job（旧线程它没去管，测了发现其实还在跑），默认值是30分钟，因此一些超过30分钟的Job可能会被执行多次。
+                                                                            //旧线程先跑也会在Dashboard面板上置为job完成，但实际上可能新线程还在跑。这也是Dashboard上为什么有些任务会有多个Process面板。
 
-
-                    ExpiryCheckInterval = TimeSpan.MaxValue, //任务过期检查频率
+                    //巨坑：hangfire中使用的cancellationToken.WaitHandle.WaitOne(_checkInterval);不支持TimeSpan.MaxValue设置即long.MaxValue
+                    ExpiryCheckInterval = TimeSpan.FromMilliseconds(int.MaxValue), //任务过期检查频率
                     DeletedListSize = 10000,
                     SucceededListSize = 10000
                 });
