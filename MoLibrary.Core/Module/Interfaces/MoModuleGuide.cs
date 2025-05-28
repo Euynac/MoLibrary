@@ -136,6 +136,8 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
             ConfigureModuleOption(config);
         }
 
+        var targetModule = new TModuleGuideSelf().GetTargetModuleEnum();
+
         RegisterModule();
 
         if (config != null && WebApplicationBuilderExtensions.WebApplicationBuilderInstance != null)
