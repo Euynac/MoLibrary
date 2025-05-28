@@ -20,11 +20,9 @@ public static class ModuleErrorUtil
     /// Validates module configuration requirements and throws an exception if requirements are not met.
     /// </summary>
     /// <param name="moduleRegisterContextDict">Dictionary of module registration contexts.</param>
-    /// <param name="moduleRegisterErrors">List to store any registration errors.</param>
     /// <exception cref="ModuleRegisterException">Thrown when module registration requirements are not met.</exception>
     public static void ValidateModuleRequirements(
-        Dictionary<Type, ModuleRequestInfo> moduleRegisterContextDict,
-        List<ModuleRegisterError> moduleRegisterErrors)
+        Dictionary<Type, ModuleRequestInfo> moduleRegisterContextDict)
     {
         // Check if modules meet necessary configuration requirements
         foreach (var (moduleType, info) in moduleRegisterContextDict)
@@ -37,7 +35,7 @@ public static class ModuleErrorUtil
             
             if (missingKeys.Count > 0)
             {
-                moduleRegisterErrors.Add(new ModuleRegisterError
+                ModuleRegisterErrors.Add(new ModuleRegisterError
                 {
                     ModuleType = moduleType,
                     ErrorMessage = "Missing required configuration",
@@ -48,12 +46,12 @@ public static class ModuleErrorUtil
         }
         
         //// Check for missing dependencies
-        //ValidateDependencies(moduleRegisterErrors);
+        //ValidateDependencies();
         
         // If there are errors, throw an exception
-        if (moduleRegisterErrors.Count > 0)
+        if (ModuleRegisterErrors.Count > 0)
         {
-            throw new ModuleRegisterException(BuildErrorMessage(moduleRegisterErrors));
+            throw new ModuleRegisterException(BuildErrorMessage(ModuleRegisterErrors));
         }
     }
     //// 1.1 Check for circular dependencies in the dependency graph
@@ -85,8 +83,7 @@ public static class ModuleErrorUtil
     /// <summary>
     /// Validates dependencies between modules using the ModuleAnalyser.
     /// </summary>
-    /// <param name="moduleRegisterErrors">List to store any dependency-related errors.</param>
-    private static void ValidateDependencies(List<ModuleRegisterError> moduleRegisterErrors)
+    private static void ValidateDependencies()
     {
         // Check for circular dependencies
         if (ModuleAnalyser.HasCircularDependencies())
@@ -102,7 +99,7 @@ public static class ModuleErrorUtil
                     if (!ModuleAnalyser.ModuleEnumToTypeDict.TryGetValue(module, out var moduleType) || moduleType == null)
                         continue;
                     
-                    moduleRegisterErrors.Add(new ModuleRegisterError
+                    ModuleRegisterErrors.Add(new ModuleRegisterError
                     {
                         ModuleType = moduleType,
                         ErrorMessage = $"Module is part of a circular dependency chain: {string.Join(" → ", dependencyInfo.CyclePath)} → {module}",
@@ -117,13 +114,11 @@ public static class ModuleErrorUtil
     /// <summary>
     /// Records an error that occurred during module configuration.
     /// </summary>
-    /// <param name="moduleRegisterErrors">List to store registration errors.</param>
     /// <param name="moduleType">The type of the module where the error occurred.</param>
     /// <param name="errorMessage">The error message.</param>
     /// <param name="phase">The phase where the error occurred.</param>
     /// <param name="errorType">The type of error.</param>
     public static void RecordModuleError(
-        List<ModuleRegisterError> moduleRegisterErrors,
         Type moduleType, 
         string? errorMessage, 
         EMoModuleConfigMethods phase, 
@@ -136,7 +131,7 @@ public static class ModuleErrorUtil
             ErrorType = errorType,
             Phase = phase
         };
-        moduleRegisterErrors.Add(error);
+        ModuleRegisterErrors.Add(error);
         
         if(phase > EMoModuleConfigMethods.ClaimDependencies)
         {
@@ -149,12 +144,10 @@ public static class ModuleErrorUtil
     /// <summary>
     /// Records an error that occurred during a module request.
     /// </summary>
-    /// <param name="moduleRegisterErrors">List to store registration errors.</param>
     /// <param name="moduleType">The type of the module where the error occurred.</param>
     /// <param name="request">The request that caused the error.</param>
     /// <param name="exception">The exception that was thrown.</param>
     public static void RecordRequestError(
-        List<ModuleRegisterError> moduleRegisterErrors,
         Type moduleType, 
         ModuleRegisterRequest request, 
         Exception exception)
@@ -167,7 +160,7 @@ public static class ModuleErrorUtil
             GuideFrom = request.RequestFrom,
             Phase = request.RequestMethod
         };
-        moduleRegisterErrors.Add(error);
+        ModuleRegisterErrors.Add(error);
         
         // Immediately check if the module should be disabled due to exception
         CheckDisableModuleIfHasException(moduleType, error);
@@ -260,16 +253,15 @@ public static class ModuleErrorUtil
     /// <summary>
     /// Raises an exception if there are any module registration errors.
     /// </summary>
-    /// <param name="errors">List of module registration errors.</param>
-    public static void RaiseModuleErrors(List<ModuleRegisterError> errors)
+    public static void RaiseModuleErrors()
     {
-        if (errors.Count == 0)
+        if (ModuleRegisterErrors.Count == 0)
         {
             return;
         }
 
         // Filter out errors for modules that have already been disabled
-        var errorsToThrow = errors.Where(e => !ModuleManager.IsModuleDisabled(e.ModuleType)).ToList();
+        var errorsToThrow = ModuleRegisterErrors.Where(e => !ModuleManager.IsModuleDisabled(e.ModuleType)).ToList();
         
         //// Log summary of disabled modules
         //var disabledModules = ModuleManager.GetDisabledModuleTypes();

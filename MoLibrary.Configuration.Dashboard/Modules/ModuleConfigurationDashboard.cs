@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi.Models;
 using MoLibrary.Configuration.Dashboard.Interfaces;
 using MoLibrary.Configuration.Dashboard.Model;
+using MoLibrary.Configuration.Modules;
 using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Models;
@@ -23,13 +24,9 @@ public class ModuleConfigurationDashboard(ModuleConfigurationDashboardOption opt
     public override void ClaimDependencies()
     {
         DependsOnModule<ModuleRegisterCentreGuide>().Register();
+        DependsOnModule<ModuleConfigurationGuide>().Register();
     }
 
-    public override Res ConfigureApplicationBuilder(IApplicationBuilder app)
-    {
-        return base.ConfigureApplicationBuilder(app);
-    }
-    
     public override Res ConfigureEndpoints(IApplicationBuilder app)
     {
         if (option.ThisIsDashboard)

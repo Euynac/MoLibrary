@@ -103,7 +103,7 @@ public static class MoModuleRegisterCentre
             }
             catch (Exception ex)
             {
-                ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, moduleType, ex.Message,
+                ModuleErrorUtil.RecordModuleError(moduleType, ex.Message,
                     EMoModuleConfigMethods.ClaimDependencies, ModuleRegisterErrorType.InitializationError);
             }
         }
@@ -123,13 +123,13 @@ public static class MoModuleRegisterCentre
             }
             catch(Exception ex)
             {
-                ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, moduleType, ex.Message,
+                ModuleErrorUtil.RecordModuleError(moduleType, ex.Message,
                     EMoModuleConfigMethods.InitFinalConfigures, ModuleRegisterErrorType.InitializationError);
             }
         }
         ModuleManager.Init();
         // 2.1 检查模块是否满足必要配置要求
-        ModuleErrorUtil.ValidateModuleRequirements(ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt).ToDictionary(), ModuleRegisterErrors);
+        ModuleErrorUtil.ValidateModuleRequirements(ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt).ToDictionary());
         ModuleProfiler.StopPhase(nameof(EMoModuleConfigMethods.InitFinalConfigures));
 
         // 2.2 注册模块服务
@@ -147,7 +147,7 @@ public static class MoModuleRegisterCentre
 
                 if (!builderResult.IsOk())
                 {
-                    ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, moduleType, builderResult.Message,
+                    ModuleErrorUtil.RecordModuleError(moduleType, builderResult.Message,
                         EMoModuleConfigMethods.ConfigureBuilder, ModuleRegisterErrorType.ConfigurationError);
                 }
 
@@ -160,7 +160,7 @@ public static class MoModuleRegisterCentre
                     }
                     catch (Exception ex)
                     {
-                        ModuleErrorUtil.RecordRequestError(ModuleRegisterErrors, moduleType, request, ex);
+                        ModuleErrorUtil.RecordRequestError(moduleType, request, ex);
                     }
                 }
 
@@ -173,7 +173,7 @@ public static class MoModuleRegisterCentre
 
                 if (!servicesResult.IsOk())
                 {
-                    ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, moduleType, servicesResult.Message,
+                    ModuleErrorUtil.RecordModuleError(moduleType, servicesResult.Message,
                         EMoModuleConfigMethods.ConfigureServices, ModuleRegisterErrorType.ConfigurationError);
                 }
 
@@ -186,7 +186,7 @@ public static class MoModuleRegisterCentre
                     }
                     catch (Exception ex)
                     {
-                        ModuleErrorUtil.RecordRequestError(ModuleRegisterErrors, moduleType, request, ex);
+                        ModuleErrorUtil.RecordRequestError(moduleType, request, ex);
                     }
                 }
 
@@ -196,7 +196,7 @@ public static class MoModuleRegisterCentre
             }
             catch (Exception ex)
             {
-                ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, moduleType, ex.Message,
+                ModuleErrorUtil.RecordModuleError(moduleType, ex.Message,
                     EMoModuleConfigMethods.ConfigureBuilder, ModuleRegisterErrorType.InitializationError);
             }
         }
@@ -218,7 +218,7 @@ public static class MoModuleRegisterCentre
                 }
                 catch (Exception ex)
                 {
-                    ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleInstance.GetType(), ex.Message,
+                    ModuleErrorUtil.RecordModuleError(module.ModuleInstance.GetType(), ex.Message,
                         EMoModuleConfigMethods.IterateBusinessTypes, ModuleRegisterErrorType.ConfigurationError);
                 }
             }
@@ -242,7 +242,7 @@ public static class MoModuleRegisterCentre
 
                 if (!postConfigResult.IsOk())
                 {
-                    ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleType, postConfigResult.Message,
+                    ModuleErrorUtil.RecordModuleError(module.ModuleType, postConfigResult.Message,
                         EMoModuleConfigMethods.PostConfigureServices, ModuleRegisterErrorType.ConfigurationError);
                 }
 
@@ -255,7 +255,7 @@ public static class MoModuleRegisterCentre
                     }
                     catch (Exception ex)
                     {
-                        ModuleErrorUtil.RecordRequestError(ModuleRegisterErrors, module.ModuleType, request, ex);
+                        ModuleErrorUtil.RecordRequestError(module.ModuleType, request, ex);
                     }
                 }
 
@@ -263,13 +263,13 @@ public static class MoModuleRegisterCentre
             }
             catch (Exception ex)
             {
-                ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleType, ex.Message,
+                ModuleErrorUtil.RecordModuleError(module.ModuleType, ex.Message,
                     EMoModuleConfigMethods.PostConfigureServices, ModuleRegisterErrorType.ConfigurationError);
             }
         }
         ModuleProfiler.StopPhase(nameof(EMoModuleConfigMethods.PostConfigureServices));
         ModuleSnapshots.AddRange(snapshots);
-        ModuleErrorUtil.RaiseModuleErrors(ModuleRegisterErrors);
+        ModuleErrorUtil.RaiseModuleErrors();
     }
 
     /// <summary>
@@ -300,7 +300,7 @@ public static class MoModuleRegisterCentre
 
                 if (!result.IsOk())
                 {
-                    ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleType, result.Message,
+                    ModuleErrorUtil.RecordModuleError(module.ModuleType, result.Message,
                         EMoModuleConfigMethods.ConfigureApplicationBuilder, ModuleRegisterErrorType.ConfigurationError);
                 }
 
@@ -312,7 +312,7 @@ public static class MoModuleRegisterCentre
                     }
                     catch (Exception ex)
                     {
-                        ModuleErrorUtil.RecordRequestError(ModuleRegisterErrors, module.ModuleType, request, ex);
+                        ModuleErrorUtil.RecordRequestError(module.ModuleType, request, ex);
                     }
                 }
 
@@ -320,7 +320,7 @@ public static class MoModuleRegisterCentre
             }
             catch (Exception ex)
             {
-                ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleType, ex.Message,
+                ModuleErrorUtil.RecordModuleError(module.ModuleType, ex.Message,
                     EMoModuleConfigMethods.ConfigureApplicationBuilder, ModuleRegisterErrorType.ConfigurationError);
             }
         }
@@ -352,7 +352,7 @@ public static class MoModuleRegisterCentre
                
                 if (!result.IsOk())
                 {
-                    ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleType, result.Message,
+                    ModuleErrorUtil.RecordModuleError(module.ModuleType, result.Message,
                         EMoModuleConfigMethods.ConfigureEndpoints, ModuleRegisterErrorType.ConfigurationError);
                 }
                 foreach (var request in module.RequestInfo.RegisterRequests.Where(p => p.RequestMethod == EMoModuleConfigMethods.ConfigureEndpoints).OrderBy(r => r.Order))
@@ -363,7 +363,7 @@ public static class MoModuleRegisterCentre
                     }
                     catch (Exception ex)
                     {
-                        ModuleErrorUtil.RecordRequestError(ModuleRegisterErrors, module.ModuleType, request, ex);
+                        ModuleErrorUtil.RecordRequestError(module.ModuleType, request, ex);
                     }
                 }
 
@@ -371,7 +371,7 @@ public static class MoModuleRegisterCentre
             }
             catch (Exception ex)
             {
-                ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleType, ex.Message,
+                ModuleErrorUtil.RecordModuleError(module.ModuleType, ex.Message,
                     EMoModuleConfigMethods.ConfigureEndpoints, ModuleRegisterErrorType.ConfigurationError);
             }
 
@@ -385,6 +385,6 @@ public static class MoModuleRegisterCentre
         Logger.LogInformation("Module system performance summary:\n{PerformanceSummary}",
             ModuleProfiler.GetPerformanceSummary());
 
-        ModuleErrorUtil.RaiseModuleErrors(ModuleRegisterErrors);
+        ModuleErrorUtil.RaiseModuleErrors();
     }
 }
