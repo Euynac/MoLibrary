@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using MoLibrary.Core.Module.BuilderWrapper;
 
 namespace MoLibrary.Core.Module.Interfaces;
 
@@ -9,11 +8,6 @@ public interface IMoModuleOption : IMoModuleOptionBase
     /// 一般用于模块注册期间日志
     /// </summary>
     ILogger Logger { get; set; }
-
-    /// <summary>
-    /// 模块立即进行注册，如一些模块有需要在注册期间进行使用的，如Configuration、Logging模块等。需要使用 <see cref="WebApplicationBuilderExtensions.ConfigMoModule"/> 设定 <see cref="ModuleCoreOption.EnableRegisterInstantly"/> 以生效
-    /// </summary>
-    bool RegisterInstantly { get; set; }
 
     /// <summary>
     /// 如果模块注册出现异常则禁用Module，而不是抛出异常。

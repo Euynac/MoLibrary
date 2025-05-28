@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Module;
@@ -21,6 +21,8 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
 
     public override Res ConfigureServices(IServiceCollection services)
     {
+
+        DataChannelCentral.Setting = Option;
         services.AddSingleton<IDataChannelManager, DataChannelManager>();
         // Add the hosted service for channel initialization
         services.AddHostedService<DataChannelInitializerService>();
@@ -35,7 +37,7 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
         // 添加自定义Convention
         services.Configure<MvcOptions>(mvcOptions =>
         {
-            mvcOptions.Conventions.Add(new ModuleControllerModelConvention<DataChannelController>(option));
+            mvcOptions.Conventions.Add(new ModuleControllerModelConvention<DataChannelController>(Option));
         });
         return Res.Ok();
     }
