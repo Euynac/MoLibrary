@@ -59,6 +59,7 @@ public class ModuleAnalyser
     {
         // 获取拓扑排序的模块顺序
         var orderedModules = GetModulesInDependencyOrder();
+        orderedModules.Reverse();
         
         // 为每个模块分配Order值，依赖的模块获得更小的Order值
         for (int i = 0; i < orderedModules.Count; i++)
@@ -119,12 +120,11 @@ public class ModuleAnalyser
         while (toVisit.Count > 0)
         {
             var current = toVisit.Dequeue();
-            if (visited.Contains(current))
+            if (!visited.Add(current))
             {
                 continue;
             }
-            
-            visited.Add(current);
+
             allDependencies.Add(current);
             
             // Add dependencies of the current module if any
@@ -149,7 +149,7 @@ public class ModuleAnalyser
         var graph = new DirectedGraph<EMoModules>();
         
         // Add all modules as nodes
-        foreach (var module in Enum.GetValues(typeof(EMoModules)).Cast<EMoModules>())
+        foreach (var module in ModuleEnumToTypeDict.Keys)
         {
             graph.AddNode(module);
         }
@@ -202,7 +202,7 @@ public class ModuleAnalyser
         // Get direct dependencies
         if (ModuleDependencyMap.TryGetValue(moduleEnum, out var directDeps))
         {
-            info.DirectDependencies = new HashSet<EMoModules>(directDeps);
+            info.DirectDependencies = [..directDeps];
         }
         
         // Get all dependencies
@@ -237,7 +237,7 @@ public class ModuleAnalyser
     {
         if (!ModuleDependencyMap.ContainsKey(moduleEnum))
         {
-            return new List<EMoModules>();
+            return [];
         }
         
         var visited = new HashSet<EMoModules>();
@@ -253,12 +253,11 @@ public class ModuleAnalyser
                 return true;
             }
             
-            if (visited.Contains(current))
+            if (!visited.Add(current))
             {
                 return false;
             }
-            
-            visited.Add(current);
+
             inPath.Add(current);
             path.Add(current);
             
@@ -389,7 +388,7 @@ public class DirectedGraph<T> where T : notnull
     {
         if (!_adjacencyList.ContainsKey(node))
         {
-            _adjacencyList[node] = new HashSet<T>();
+            _adjacencyList[node] = [];
         }
     }
     
@@ -432,12 +431,11 @@ public class DirectedGraph<T> where T : notnull
             return true;
         }
         
-        if (visited.Contains(node))
+        if (!visited.Add(node))
         {
             return false;
         }
-        
-        visited.Add(node);
+
         recursionStack.Add(node);
         
         if (_adjacencyList.TryGetValue(node, out var neighbors))
