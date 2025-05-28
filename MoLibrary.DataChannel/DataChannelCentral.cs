@@ -24,19 +24,11 @@ public static class DataChannelCentral
             $"Setting is not initialized in {typeof(DataChannelCentral)}. Please register DataExchange first");
         set => _setting = value;
     }
-    
+
     /// <summary>
     /// 获取全局日志记录器，如果未配置则创建默认控制台日志记录器
     /// </summary>
-    internal static ILogger Logger =>
-        //如果没有初始化Logger，那么就使用ConsoleLogger
-        Setting.Logger ??= LoggerFactory.Create(builder =>
-        {
-            builder.AddFilter("Microsoft", LogLevel.Warning)
-                .AddFilter("System", LogLevel.Warning)
-                .AddFilter("DataExchange", LogLevel.Debug)
-                .AddConsole();
-        }).CreateLogger("DataExchange");
+    internal static ILogger Logger => Setting.Logger;
 
     /// <summary>
     /// 所有已注册的数据通道的字典集合，键为通道ID
