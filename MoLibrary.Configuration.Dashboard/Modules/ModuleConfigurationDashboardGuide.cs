@@ -19,11 +19,7 @@ public class ModuleConfigurationDashboardGuide : MoModuleGuide<ModuleConfigurati
     /// <exception cref="InvalidOperationException"></exception>
     public ModuleConfigurationDashboardGuide AddMoConfigurationDashboard()
     {
-        if (_isDashboard is false) throw new InvalidOperationException("已设置为非面板服务，无法注册面板服务");
-        _isDashboard = true;
-        ConfigureModuleOption(o => { o.ThisIsDashboard = true; });
-        ConfigureServices(nameof(AddMoConfigurationDashboard),
-            context => { context.Services.AddMoConfigurationDashboard<DefaultArrangeDashboard>(); });
+        AddMoConfigurationDashboard<DefaultArrangeDashboard>();
         return this;
     }
 
@@ -38,6 +34,7 @@ public class ModuleConfigurationDashboardGuide : MoModuleGuide<ModuleConfigurati
         if (_isDashboard is false) throw new InvalidOperationException("已设置为非面板服务，无法注册面板服务");
         _isDashboard = true;
         ConfigureModuleOption(o => { o.ThisIsDashboard = true; });
+        DependsOnModule<ModuleRegisterCentreGuide>().Register().SetAsCentreServer();
         ConfigureServices(nameof(AddMoConfigurationDashboard), context =>
         {
             context.Services.AddSingleton<IMoConfigurationDashboard, TDashboard>();
@@ -66,7 +63,7 @@ public class ModuleConfigurationDashboardGuide : MoModuleGuide<ModuleConfigurati
         {
             throw new InvalidOperationException("非面板服务无需注册面板仓储接口");
         }
-
+        _isDashboard = true;
         ConfigureServices(nameof(AddMoConfigurationDashboardStore),
             context => { context.Services.Replace(ServiceDescriptor.Transient<IMoConfigurationStores, TStore>()); });
         return this;

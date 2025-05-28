@@ -39,7 +39,7 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
     {
         ConfigureModuleOption(o =>
         {
-            o.ThisIsCentreServer = true;
+            o.ThisIsCentreClient = true;
         });
         ConfigureServices(SET_CENTRE_TYPE, context =>
         {
