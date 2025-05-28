@@ -26,13 +26,16 @@ public static class ModuleManager
     }
 
     /// <summary>
-    /// Disables a module due to an exception
+    /// Disables a module due to an exception or configuration
     /// </summary>
     /// <param name="moduleType">The type of module to disable</param>
     /// <returns>True if the module was successfully disabled, false if it was already disabled</returns>
     internal static bool DisableModule(Type moduleType)
     {
-        return DisabledModuleTypes.Add(moduleType);
+        if (!DisabledModuleTypes.Add(moduleType)) return false;
+        CascadeDisableModulesThatDependOn(moduleType);
+        return true;
+
     }
 
     /// <summary>
@@ -47,19 +50,7 @@ public static class ModuleManager
         {
             return true;
         }
-        
-        // Check if the module is manually disabled via the IsDisabled property
-        if (MoModuleRegisterCentre.ModuleRegisterContextDict.TryGetValue(moduleType, out var requestInfo))
-        {
-            var moduleOption = requestInfo.ModuleOption;
-            if (moduleOption?.IsDisabled == true)
-            {
-                // If it's manually disabled but not in our tracking list, add it
-                DisableModule(moduleType);
-                return true;
-            }
-        }
-        
+
         return false;
     }
 
@@ -105,6 +96,19 @@ public static class ModuleManager
                 // Recursively cascade disable
                 CascadeDisableModulesThatDependOn(dependentModuleType);
             }
+        }
+    }
+    /// <summary>
+    /// Initializes the module system by checking for disabled modules and cascading the disable status to dependent modules.
+    /// </summary>
+    internal static void Init()
+    {
+        // Check each registered module to see if it's disabled
+        foreach (var (moduleType, info) in MoModuleRegisterCentre.ModuleRegisterContextDict)
+        {
+            if (!info.ModuleOption.IsDisabled) continue;
+            DisableModule(moduleType);
+            Logger.LogWarning("Module {ModuleName} is disabled by configuration", moduleType.Name);
         }
     }
 }

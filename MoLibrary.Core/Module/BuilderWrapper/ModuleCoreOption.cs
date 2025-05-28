@@ -14,6 +14,15 @@ public class ModuleCoreOption
     /// </summary>
     public static LogLevel DefaultModuleLogLevel { get; set; } = LogLevel.Information;
 
+
+
+    /// <summary>
+    /// 如果模块注册出现异常则禁用Module，而不是抛出异常。
+    /// 当设置为 true 时，如果模块在注册过程中出现异常，系统将记录错误并禁用该模块，而不是抛出异常中断整个应用程序的启动。
+    /// 被禁用的模块在应用程序的生命周期内将被完全跳过，不会调用其任何配置或初始化方法。
+    /// </summary>
+    public static bool DisableModuleIfHasException { get; set; }
+
     /// <summary>
     /// 设置模块默认日志级别
     /// </summary>

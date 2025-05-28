@@ -88,7 +88,7 @@ public static class MoModuleRegisterCentre
         var typeFinder = services.GetOrCreateDomainTypeFinder<MoDomainTypeFinder>();
 
         // 1. 初次遍历所有注册的模块，判断若模块有依赖项，处理依赖关系
-        foreach (var (moduleType, info) in ModuleRegisterContextDict.Where(p=>!p.Value.HasBeenBuilt && !ModuleManager.IsModuleDisabled(p.Key)).Select(p=>p).ToList())
+        foreach (var (moduleType, info) in ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt).Select(p => p).ToList())
         {
             if (!moduleType.IsImplementInterface(typeof(IWantDependsOnOtherModules))) continue;
 
@@ -103,50 +103,37 @@ public static class MoModuleRegisterCentre
             }
             catch (Exception ex)
             {
-                ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, moduleType, ex.Message, 
+                ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, moduleType, ex.Message,
                     EMoModuleConfigMethods.ClaimDependencies, ModuleRegisterErrorType.InitializationError);
             }
         }
-        
-        //// 1.1 Check for circular dependencies in the dependency graph
-        //if (MoModuleAnalyser.HasCircularDependencies())
-        //{
-        //    var error = new ModuleRegisterError
-        //    {
-        //        ErrorMessage = "Circular dependency detected in module dependencies. Please check the dependency graph.",
-        //        ErrorType = ModuleRegisterErrorType.CircularDependency
-        //    };
-        //    ModuleRegisterErrors.Add(error);
-            
-        //    // Log the dependency graph for debugging
-        //    var graph = MoModuleAnalyser.CalculateCompleteModuleDependencyGraph();
-            
-        //   Logger.LogError("Module dependency graph contains circular dependencies:\n{Graph}", graph.ToString());
-             
-        //    // Continue with registration but warn about potential issues
-        //}
-        //else
-        //{
-        //    var modulesInOrder = MoModuleAnalyser.GetModulesInDependencyOrder();
 
-        //    var graph = MoModuleAnalyser.CalculateCompleteModuleDependencyGraph();
-        //    Logger.LogInformation("Modules will be initialized in the following dependency order: {Modules}\n{Graph}",
-        //        string.Join(", ", modulesInOrder), graph);
-        //}
-        
         // 1.3 检查模块是否满足必要配置要求
-        ModuleErrorUtil.ValidateModuleRequirements(ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt && !ModuleManager.IsModuleDisabled(p.Key)).ToDictionary(), ModuleRegisterErrors);
+        ModuleErrorUtil.ValidateModuleRequirements(ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt).ToDictionary(), ModuleRegisterErrors);
 
         var snapshots = new List<ModuleSnapshot>();
 
-        // 2. 初始化模块配置并注册服务
-        foreach (var (moduleType, info) in ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt && !ModuleManager.IsModuleDisabled(p.Key)))
+        // 2. 初始化模块配置
+        foreach (var (moduleType, info) in ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt))
         {
             try
             {
                 // 初始化模块配置
                 info.InitFinalConfigures();
+            }
+            catch(Exception ex)
+            {
+                ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, moduleType, ex.Message,
+                    EMoModuleConfigMethods.InitFinalConfigures, ModuleRegisterErrorType.InitializationError);
+            }
+        }
+        ModuleManager.Init();  
 
+        // 2.1 注册模块服务
+        foreach (var (moduleType, info) in ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt && !ModuleManager.IsModuleDisabled(p.Key)))
+        {
+            try
+            {
                 // 创建模块实例
                 if (Activator.CreateInstance(moduleType, info.ModuleOption) is not MoModule module) continue;
 
@@ -157,7 +144,7 @@ public static class MoModuleRegisterCentre
 
                 if (!builderResult.IsOk())
                 {
-                    ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, moduleType, builderResult.Message, 
+                    ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, moduleType, builderResult.Message,
                         EMoModuleConfigMethods.ConfigureBuilder, ModuleRegisterErrorType.ConfigurationError);
                 }
 
@@ -181,7 +168,7 @@ public static class MoModuleRegisterCentre
 
                 if (!servicesResult.IsOk())
                 {
-                    ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, moduleType, servicesResult.Message, 
+                    ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, moduleType, servicesResult.Message,
                         EMoModuleConfigMethods.ConfigureServices, ModuleRegisterErrorType.ConfigurationError);
                 }
 
@@ -207,8 +194,8 @@ public static class MoModuleRegisterCentre
                     EMoModuleConfigMethods.ConfigureBuilder, ModuleRegisterErrorType.InitializationError);
             }
         }
-        
-        
+
+
         // 3. 为需要遍历业务类型的模块提供支持
         ModuleProfiler.StartPhase(nameof(IWantIterateBusinessTypes.IterateBusinessTypes));
         var businessTypes = typeFinder.GetTypes();
@@ -248,7 +235,7 @@ public static class MoModuleRegisterCentre
 
                 if (!postConfigResult.IsOk())
                 {
-                    ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleType, postConfigResult.Message, 
+                    ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleType, postConfigResult.Message,
                         EMoModuleConfigMethods.PostConfigureServices, ModuleRegisterErrorType.ConfigurationError);
                 }
 
@@ -274,7 +261,7 @@ public static class MoModuleRegisterCentre
         ModuleSnapshots.AddRange(snapshots);
 
         var elapsedTime = ModuleProfiler.StopPhase(nameof(RegisterServices));
-        Logger.LogInformation("Module services registration completed in {ElapsedMilliseconds}ms. Total module system time: {TotalElapsedMilliseconds}ms", 
+        Logger.LogInformation("Module services registration completed in {ElapsedMilliseconds}ms. Total module system time: {TotalElapsedMilliseconds}ms",
             elapsedTime, ModuleProfiler.GetTotalElapsedMilliseconds());
         ModuleErrorUtil.RaiseModuleErrors(ModuleRegisterErrors);
     }
@@ -289,7 +276,7 @@ public static class MoModuleRegisterCentre
     {
         var phaseName = afterGivenOrder ? $"{nameof(ConfigApplicationPipeline)}_After_{order}" : $"{nameof(ConfigApplicationPipeline)}_Before_{order}";
         ModuleProfiler.StartPhase(phaseName);
-        
+
         Func<ModuleRegisterRequest, bool> filter = afterGivenOrder ? request => request.Order > order : request => request.Order <= order;
         // 按优先级排序并配置应用程序构建器
         foreach (var module in ModuleSnapshots)
@@ -299,7 +286,7 @@ public static class MoModuleRegisterCentre
             {
                 continue;
             }
-            
+
             try
             {
                 ModuleProfiler.StartModulePhase(module.ModuleType, EMoModuleConfigMethods.ConfigureApplicationBuilder);
@@ -308,7 +295,7 @@ public static class MoModuleRegisterCentre
 
                 if (!result.IsOk())
                 {
-                    ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleType, result.Message, 
+                    ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleType, result.Message,
                         EMoModuleConfigMethods.ConfigureApplicationBuilder, ModuleRegisterErrorType.ConfigurationError);
                 }
             }
@@ -318,7 +305,7 @@ public static class MoModuleRegisterCentre
                     EMoModuleConfigMethods.ConfigureApplicationBuilder, ModuleRegisterErrorType.ConfigurationError);
             }
 
-            foreach (var request in module.RequestInfo.RegisterRequests.Where(p=>p.RequestMethod == EMoModuleConfigMethods.ConfigureApplicationBuilder).Where(filter).OrderBy(r => r.Order))
+            foreach (var request in module.RequestInfo.RegisterRequests.Where(p => p.RequestMethod == EMoModuleConfigMethods.ConfigureApplicationBuilder).Where(filter).OrderBy(r => r.Order))
             {
                 try
                 {
@@ -330,10 +317,10 @@ public static class MoModuleRegisterCentre
                 }
             }
         }
-        
+
         var elapsedTime = ModuleProfiler.StopPhase(phaseName);
-        Logger.LogInformation("Application pipeline configuration {PhaseType} completed in {ElapsedMilliseconds}ms. Total module system time: {TotalElapsedMilliseconds}ms", 
-            afterGivenOrder ? "after routing" : "before routing", 
+        Logger.LogInformation("Application pipeline configuration {PhaseType} completed in {ElapsedMilliseconds}ms. Total module system time: {TotalElapsedMilliseconds}ms",
+            afterGivenOrder ? "after routing" : "before routing",
             elapsedTime, ModuleProfiler.GetTotalElapsedMilliseconds());
     }
 
@@ -344,7 +331,7 @@ public static class MoModuleRegisterCentre
     internal static void ConfigEndpoints(IApplicationBuilder app)
     {
         ModuleProfiler.StartPhase(nameof(ConfigEndpoints));
-        
+
         // 按优先级排序并配置端点路由构建器
         foreach (var module in ModuleSnapshots)
         {
@@ -353,7 +340,7 @@ public static class MoModuleRegisterCentre
             {
                 continue;
             }
-            
+
             try
             {
                 ModuleProfiler.StartModulePhase(module.ModuleType, EMoModuleConfigMethods.ConfigureEndpoints);
@@ -362,7 +349,7 @@ public static class MoModuleRegisterCentre
 
                 if (!result.IsOk())
                 {
-                    ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleType, result.Message, 
+                    ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleType, result.Message,
                         EMoModuleConfigMethods.ConfigureEndpoints, ModuleRegisterErrorType.ConfigurationError);
                 }
             }
@@ -372,7 +359,7 @@ public static class MoModuleRegisterCentre
                     EMoModuleConfigMethods.ConfigureEndpoints, ModuleRegisterErrorType.ConfigurationError);
             }
 
-            foreach (var request in module.RequestInfo.RegisterRequests.Where(p=>p.RequestMethod == EMoModuleConfigMethods.ConfigureEndpoints).OrderBy(r => r.Order))
+            foreach (var request in module.RequestInfo.RegisterRequests.Where(p => p.RequestMethod == EMoModuleConfigMethods.ConfigureEndpoints).OrderBy(r => r.Order))
             {
                 try
                 {
@@ -384,18 +371,18 @@ public static class MoModuleRegisterCentre
                 }
             }
         }
-        
+
         var elapsedTime = ModuleProfiler.StopPhase(nameof(ConfigEndpoints));
         ModuleProfiler.StopModuleSystem();
-        
+
         // Log final performance summary
-        Logger.LogInformation("Endpoints configuration completed in {ElapsedMilliseconds}ms. Total module system initialization time: {TotalElapsedMilliseconds}ms", 
+        Logger.LogInformation("Endpoints configuration completed in {ElapsedMilliseconds}ms. Total module system initialization time: {TotalElapsedMilliseconds}ms",
             elapsedTime, ModuleProfiler.GetTotalElapsedMilliseconds());
-        
+
         // Log performance summary details
-        Logger.LogInformation("Module system performance summary:\n{PerformanceSummary}", 
+        Logger.LogInformation("Module system performance summary:\n{PerformanceSummary}",
             ModuleProfiler.GetPerformanceSummary());
-        
+
         ModuleErrorUtil.RaiseModuleErrors(ModuleRegisterErrors);
     }
 }
