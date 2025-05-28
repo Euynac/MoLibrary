@@ -11,6 +11,12 @@ public class ModuleRequestInfo
     /// 模块是否已经被注册构建，如一些可提前注册的模块，在正式构建时需跳过。
     /// </summary>
     public bool HasBeenBuilt { get; set; }
+    
+    /// <summary>
+    /// 模块注册顺序，数值越小越优先注册。用于控制模块按依赖关系的注册顺序。
+    /// </summary>
+    public int Order { get; set; } = 1000; // 默认值为1000，确保有依赖的模块可以设置更小的值
+    
     /// <summary>
     /// 模块的注册请求列表。
     /// </summary>

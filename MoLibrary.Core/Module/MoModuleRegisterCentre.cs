@@ -88,7 +88,7 @@ public static class MoModuleRegisterCentre
         var typeFinder = services.GetOrCreateDomainTypeFinder<MoDomainTypeFinder>();
         ModuleProfiler.StartPhase(nameof(EMoModuleConfigMethods.ClaimDependencies));
         // 1. 初次遍历所有注册的模块，判断若模块有依赖项，处理依赖关系
-        foreach (var (moduleType, info) in ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt).Select(p => p).ToList())
+        foreach (var (moduleType, info) in ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt).OrderBy(p => p.Value.Order).Select(p => p).ToList())
         {
             if (!moduleType.IsImplementInterface(typeof(IWantDependsOnOtherModules))) continue;
 
@@ -109,12 +109,15 @@ public static class MoModuleRegisterCentre
         }
 
         ModuleProfiler.StopPhase(nameof(EMoModuleConfigMethods.ClaimDependencies));
-       
+
+        // 1.1 在所有依赖关系建立完成后，刷新模块注册顺序
+        ModuleAnalyser.RefreshAllModuleOrders();
+
         var snapshots = new List<ModuleSnapshot>();
 
         // 2. 初始化模块配置
         ModuleProfiler.StartPhase(nameof(EMoModuleConfigMethods.InitFinalConfigures));
-        foreach (var (moduleType, info) in ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt))
+        foreach (var (moduleType, info) in ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt).OrderBy(p => p.Value.Order))
         {
             try
             {
@@ -134,7 +137,7 @@ public static class MoModuleRegisterCentre
 
         // 2.2 注册模块服务
         ModuleProfiler.StartPhase(nameof(EMoModuleConfigMethods.ConfigureBuilder)+nameof(EMoModuleConfigMethods.ConfigureServices));
-        foreach (var (moduleType, info) in ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt && !ModuleManager.IsModuleDisabled(p.Key)))
+        foreach (var (moduleType, info) in ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt && !ModuleManager.IsModuleDisabled(p.Key)).OrderBy(p => p.Value.Order))
         {
             try
             {
@@ -384,6 +387,8 @@ public static class MoModuleRegisterCentre
         // Log performance summary details
         Logger.LogInformation("Module system performance summary:\n{PerformanceSummary}",
             ModuleProfiler.GetPerformanceSummary());
+        Logger.LogInformation("Module system register order summary:\n{Order}",
+            ModuleAnalyser.GetModuleRegistrationOrderSummary());
 
         ModuleErrorUtil.RaiseModuleErrors();
     }
