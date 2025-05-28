@@ -1,6 +1,7 @@
 using System.Text;
 using MoLibrary.Core.Module.Models;
 using Microsoft.Extensions.Logging;
+using MoLibrary.Core.Module.BuilderWrapper;
 using MoLibrary.Core.Module.Features;
 
 namespace MoLibrary.Core.Module.Exceptions;
@@ -50,7 +51,32 @@ public static class ModuleErrorUtil
             throw new ModuleRegisterException(BuildErrorMessage(moduleRegisterErrors));
         }
     }
-    
+    //// 1.1 Check for circular dependencies in the dependency graph
+    //if (MoModuleAnalyser.HasCircularDependencies())
+    //{
+    //    var error = new ModuleRegisterError
+    //    {
+    //        ErrorMessage = "Circular dependency detected in module dependencies. Please check the dependency graph.",
+    //        ErrorType = ModuleRegisterErrorType.CircularDependency
+    //    };
+    //    ModuleRegisterErrors.Add(error);
+
+    //    // Log the dependency graph for debugging
+    //    var graph = MoModuleAnalyser.CalculateCompleteModuleDependencyGraph();
+
+    //   Logger.LogError("Module dependency graph contains circular dependencies:\n{Graph}", graph.ToString());
+
+    //    // Continue with registration but warn about potential issues
+    //}
+    //else
+    //{
+    //    var modulesInOrder = MoModuleAnalyser.GetModulesInDependencyOrder();
+
+    //    var graph = MoModuleAnalyser.CalculateCompleteModuleDependencyGraph();
+    //    Logger.LogInformation("Modules will be initialized in the following dependency order: {Modules}\n{Graph}",
+    //        string.Join(", ", modulesInOrder), graph);
+    //}
+
     /// <summary>
     /// Validates dependencies between modules using the ModuleAnalyser.
     /// </summary>
@@ -155,7 +181,7 @@ public static class ModuleErrorUtil
             // Check if the module has DisableModuleIfHasException set
             var moduleOption = requestInfo.ModuleOption;
 
-            if (moduleOption.DisableModuleIfHasException)
+            if (moduleOption.DisableModuleIfHasException ?? ModuleCoreOption.DisableModuleIfHasException)
             {
                 // Disable the module
                 if (ModuleManager.DisableModule(moduleType))
@@ -165,9 +191,6 @@ public static class ModuleErrorUtil
                         "Module {ModuleName} was disabled due to an exception: {ErrorMessage}",
                         moduleType.Name,
                         error.ErrorMessage);
-                    
-                    // Check for cascade disabling of dependent modules
-                    ModuleManager.CascadeDisableModulesThatDependOn(moduleType);
                 }
             }
         }
@@ -243,14 +266,14 @@ public static class ModuleErrorUtil
         // Filter out errors for modules that have already been disabled
         var errorsToThrow = errors.Where(e => !ModuleManager.IsModuleDisabled(e.ModuleType)).ToList();
         
-        // Log summary of disabled modules
-        var disabledModules = ModuleManager.GetDisabledModuleTypes();
-        if (disabledModules.Count > 0)
-        {
-            MoModuleRegisterCentre.Logger.LogWarning(
-                "The following modules were disabled due to exceptions: {DisabledModules}",
-                string.Join(", ", disabledModules.Select(m => m.Name)));
-        }
+        //// Log summary of disabled modules
+        //var disabledModules = ModuleManager.GetDisabledModuleTypes();
+        //if (disabledModules.Count > 0)
+        //{
+        //    MoModuleRegisterCentre.Logger.LogWarning(
+        //        "The following modules were disabled due to exceptions: {DisabledModules}",
+        //        string.Join(", ", disabledModules.Select(m => m.Name)));
+        //}
 
         // Throw exception if there are any remaining errors
         if (errorsToThrow.Count > 0)
