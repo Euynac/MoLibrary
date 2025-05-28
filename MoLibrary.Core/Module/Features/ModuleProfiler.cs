@@ -12,6 +12,7 @@ public static class ModuleProfiler
 {
     private static readonly Stopwatch SystemStopwatch = new();
     private static readonly Dictionary<string, Stopwatch> PhaseStopwatches = new();
+    private static readonly List<string> PhaseInitializationOrder = new();
     private static readonly Dictionary<Type, ModuleProfileInfo> ModuleProfiles = new();
     private static bool _isStarted;
 
@@ -47,6 +48,7 @@ public static class ModuleProfiler
         {
             stopwatch = new Stopwatch();
             PhaseStopwatches[phaseName] = stopwatch;
+            PhaseInitializationOrder.Add(phaseName);
         }
         
         stopwatch.Start();
@@ -166,10 +168,13 @@ public static class ModuleProfiler
         sb.AppendLine("Module System Performance Summary:");
         sb.AppendLine($"Total initialization time: {GetTotalElapsedMilliseconds()}ms");
         
-        sb.AppendLine("\nPhase Durations:");
-        foreach (var phase in PhaseStopwatches.OrderByDescending(p => p.Value.ElapsedMilliseconds))
+        sb.AppendLine("\nPhase Durations (in initialization order):");
+        foreach (var phaseName in PhaseInitializationOrder)
         {
-            sb.AppendLine($"  {phase.Key}: {phase.Value.ElapsedMilliseconds}ms");
+            if (PhaseStopwatches.TryGetValue(phaseName, out var stopwatch))
+            {
+                sb.AppendLine($"  {phaseName}: {stopwatch.ElapsedMilliseconds}ms");
+            }
         }
         
         sb.AppendLine("\nTop 5 Slowest Modules (by total duration):");

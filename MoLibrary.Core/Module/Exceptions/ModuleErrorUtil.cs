@@ -11,6 +11,11 @@ namespace MoLibrary.Core.Module.Exceptions;
 /// </summary>
 public static class ModuleErrorUtil
 {
+
+    /// <summary>
+    /// 模块注册错误列表
+    /// </summary>
+    public static List<ModuleRegisterError> ModuleRegisterErrors { get; } = [];
     /// <summary>
     /// Validates module configuration requirements and throws an exception if requirements are not met.
     /// </summary>
@@ -42,8 +47,8 @@ public static class ModuleErrorUtil
             }
         }
         
-        // Check for missing dependencies
-        ValidateDependencies(moduleRegisterErrors);
+        //// Check for missing dependencies
+        //ValidateDependencies(moduleRegisterErrors);
         
         // If there are errors, throw an exception
         if (moduleRegisterErrors.Count > 0)
