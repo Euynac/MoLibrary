@@ -33,40 +33,7 @@ public class ModuleConfigurationDashboard(ModuleConfigurationDashboardOption opt
         {
             app.UseEndpoints(endpoints =>
             {
-                var tagGroup = new List<OpenApiTag>
-                    {new() {Name = option.GetSwaggerGroupName(), Description = "热配置面板相关内置接口"}};
-                endpoints.MapPost(MoConfigurationConventions.DashboardClientConfigUpdate,
-                    async (DtoUpdateConfig req, [FromServices] IMoConfigurationModifier modifier) =>
-                    {
-                        var value = req.Value;
-
-                        if ((await modifier.IsOptionExist(req.Key)).IsOk(out var option))
-                        {
-                            var res = await modifier.UpdateOption(option, value);
-                            return res.GetResponse();
-                        }
-
-                        if ((await modifier.IsConfigExist(req.Key)).IsOk(out var config))
-                        {
-                            var res = await modifier.UpdateConfig(config, value);
-                            return res.GetResponse();
-                        }
-
-                        return Res.Fail($"更新失败，找不到Key为{req.Key}的配置").GetResponse();
-                    }).WithName("配置中心更新指定配置").WithOpenApi(operation =>
-                {
-                    operation.Summary = "更新指定配置";
-                    operation.Description = "更新指定配置";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
-            });
-        }
-        else
-        {
-            app.UseEndpoints(endpoints =>
-            {
-                var tagGroup = new List<OpenApiTag> {new() {Name = option.GetSwaggerGroupName(), Description = "配置中心"}};
+                var tagGroup = new List<OpenApiTag> { new() { Name = option.GetSwaggerGroupName(), Description = "配置中心" } };
                 endpoints.MapGet(MoConfigurationConventions.DashboardCentreConfigHistory,
                     async ([FromQuery] string? key, [FromQuery] string? appid, [FromQuery] DateTime? start,
                         [FromQuery] DateTime? end, [FromServices] IMoConfigurationStores stores,
@@ -151,6 +118,39 @@ public class ModuleConfigurationDashboard(ModuleConfigurationDashboardOption opt
                 {
                     operation.Summary = "获取所有微服务配置状态";
                     operation.Description = "获取所有微服务配置状态";
+                    operation.Tags = tagGroup;
+                    return operation;
+                });
+            });
+        }
+        else
+        {
+            app.UseEndpoints(endpoints =>
+            {
+                var tagGroup = new List<OpenApiTag>
+                    {new() {Name = option.GetSwaggerGroupName(), Description = "热配置面板相关内置接口"}};
+                endpoints.MapPost(MoConfigurationConventions.DashboardClientConfigUpdate,
+                    async (DtoUpdateConfig req, [FromServices] IMoConfigurationModifier modifier) =>
+                    {
+                        var value = req.Value;
+
+                        if ((await modifier.IsOptionExist(req.Key)).IsOk(out var option))
+                        {
+                            var res = await modifier.UpdateOption(option, value);
+                            return res.GetResponse();
+                        }
+
+                        if ((await modifier.IsConfigExist(req.Key)).IsOk(out var config))
+                        {
+                            var res = await modifier.UpdateConfig(config, value);
+                            return res.GetResponse();
+                        }
+
+                        return Res.Fail($"更新失败，找不到Key为{req.Key}的配置").GetResponse();
+                    }).WithName("配置中心更新指定配置").WithOpenApi(operation =>
+                {
+                    operation.Summary = "更新指定配置";
+                    operation.Description = "更新指定配置";
                     operation.Tags = tagGroup;
                     return operation;
                 });
