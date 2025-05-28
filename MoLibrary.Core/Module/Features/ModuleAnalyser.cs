@@ -43,13 +43,54 @@ public class ModuleAnalyser
     {
         if (!ModuleDependencyMap.ContainsKey(moduleEnum))
         {
-            ModuleDependencyMap[moduleEnum] = new HashSet<EMoModules>();
+            ModuleDependencyMap[moduleEnum] = [];
         }
         
         if (moduleEnum != dependsOnEnum) // Prevent self-dependency
         {
             ModuleDependencyMap[moduleEnum].Add(dependsOnEnum);
         }
+    }
+
+    /// <summary>
+    /// 刷新模块注册顺序，确保依赖的模块优先注册。
+    /// </summary>
+    public static void RefreshModuleOrders()
+    {
+        // 获取拓扑排序的模块顺序
+        var orderedModules = GetModulesInDependencyOrder();
+        
+        // 为每个模块分配Order值，依赖的模块获得更小的Order值
+        for (int i = 0; i < orderedModules.Count; i++)
+        {
+            var moduleEnum = orderedModules[i];
+            
+            // 查找对应的模块类型
+            if (ModuleEnumToTypeDict.TryGetValue(moduleEnum, out var moduleType))
+            {
+                // 查找模块注册上下文并更新Order
+                if (MoModuleRegisterCentre.ModuleRegisterContextDict.TryGetValue(moduleType, out var requestInfo))
+                {
+                    // Order值从100开始，每个模块递增10，确保有足够的间隔
+                    requestInfo.Order = 100 + (i * 10);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 手动刷新所有已注册模块的注册顺序。
+    /// 通常在所有模块依赖关系建立完成后调用，确保模块按正确的依赖顺序注册。
+    /// </summary>
+    public static void RefreshAllModuleOrders()
+    {
+        //// 检查是否有循环依赖
+        //if (HasCircularDependencies())
+        //{
+        //    throw new InvalidOperationException("检测到模块间存在循环依赖，无法确定正确的注册顺序。请检查模块依赖关系。");
+        //}
+        
+        RefreshModuleOrders();
     }
 
     /// <summary>
@@ -272,6 +313,63 @@ public class ModuleAnalyser
         }
         
         return result;
+    }
+
+    /// <summary>
+    /// 获取所有已注册模块的当前注册顺序信息。
+    /// </summary>
+    /// <returns>包含模块类型、枚举值和注册顺序的字典</returns>
+    public static Dictionary<Type, (EMoModules ModuleEnum, int Order)> GetModuleRegistrationOrder()
+    {
+        var result = new Dictionary<Type, (EMoModules, int)>();
+        
+        foreach (var kvp in MoModuleRegisterCentre.ModuleRegisterContextDict)
+        {
+            var moduleType = kvp.Key;
+            var requestInfo = kvp.Value;
+            
+            // 查找对应的模块枚举
+            if (ModuleTypeToEnumMap.TryGetValue(moduleType, out var moduleEnum))
+            {
+                result[moduleType] = (moduleEnum, requestInfo.Order);
+            }
+            else
+            {
+                // 如果没有找到对应的枚举，使用Developer作为默认值
+                result[moduleType] = (EMoModules.Developer, requestInfo.Order);
+            }
+        }
+        
+        return result;
+    }
+
+    /// <summary>
+    /// 获取模块注册顺序的格式化字符串，用于调试输出。
+    /// </summary>
+    /// <returns>格式化的模块注册顺序字符串</returns>
+    public static string GetModuleRegistrationOrderSummary()
+    {
+        var orderInfo = GetModuleRegistrationOrder();
+        var sb = new StringBuilder();
+        
+        sb.AppendLine("Module Registration Order Summary:");
+        sb.AppendLine("=====================================");
+        
+        foreach (var kvp in orderInfo.OrderBy(x => x.Value.Order))
+        {
+            var moduleType = kvp.Key;
+            var (moduleEnum, order) = kvp.Value;
+            
+            sb.AppendLine($"Order {order:D4}: {moduleEnum} ({moduleType.Name})");
+            
+            // 显示依赖关系
+            if (ModuleDependencyMap.TryGetValue(moduleEnum, out var dependencies) && dependencies.Count > 0)
+            {
+                sb.AppendLine($"           Dependencies: {string.Join(", ", dependencies)}");
+            }
+        }
+        
+        return sb.ToString();
     }
 }
 
