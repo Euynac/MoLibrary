@@ -21,7 +21,7 @@ public static class MoModuleRegisterCentre
     /// <summary>
     /// 模块注册错误列表
     /// </summary>
-    private static List<ModuleRegisterError> ModuleRegisterErrors { get; } = [];
+    public static List<ModuleRegisterError> ModuleRegisterErrors { get; } = [];
 
     public static ILogger Logger { get; set; } = LogProvider.For(typeof(MoModuleRegisterCentre));
     /// <summary>
@@ -80,13 +80,13 @@ public static class MoModuleRegisterCentre
     internal static void RegisterServices(WebApplicationBuilder builder)
     {
         var services = builder.Services;
-        ModuleProfiler.StartPhase(nameof(RegisterServices));
+        
 
         // 清空之前的错误记录
         ModuleRegisterErrors.Clear();
 
         var typeFinder = services.GetOrCreateDomainTypeFinder<MoDomainTypeFinder>();
-
+        ModuleProfiler.StartPhase(nameof(EMoModuleConfigMethods.ClaimDependencies));
         // 1. 初次遍历所有注册的模块，判断若模块有依赖项，处理依赖关系
         foreach (var (moduleType, info) in ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt).Select(p => p).ToList())
         {
@@ -108,12 +108,12 @@ public static class MoModuleRegisterCentre
             }
         }
 
-        // 1.3 检查模块是否满足必要配置要求
-        ModuleErrorUtil.ValidateModuleRequirements(ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt).ToDictionary(), ModuleRegisterErrors);
-
+        ModuleProfiler.StopPhase(nameof(EMoModuleConfigMethods.ClaimDependencies));
+       
         var snapshots = new List<ModuleSnapshot>();
 
         // 2. 初始化模块配置
+        ModuleProfiler.StartPhase(nameof(EMoModuleConfigMethods.InitFinalConfigures));
         foreach (var (moduleType, info) in ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt))
         {
             try
@@ -127,9 +127,13 @@ public static class MoModuleRegisterCentre
                     EMoModuleConfigMethods.InitFinalConfigures, ModuleRegisterErrorType.InitializationError);
             }
         }
-        ModuleManager.Init();  
+        ModuleManager.Init();
+        // 2.1 检查模块是否满足必要配置要求
+        ModuleErrorUtil.ValidateModuleRequirements(ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt).ToDictionary(), ModuleRegisterErrors);
+        ModuleProfiler.StopPhase(nameof(EMoModuleConfigMethods.InitFinalConfigures));
 
-        // 2.1 注册模块服务
+        // 2.2 注册模块服务
+        ModuleProfiler.StartPhase(nameof(EMoModuleConfigMethods.ConfigureBuilder)+nameof(EMoModuleConfigMethods.ConfigureServices));
         foreach (var (moduleType, info) in ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt && !ModuleManager.IsModuleDisabled(p.Key)))
         {
             try
@@ -140,7 +144,6 @@ public static class MoModuleRegisterCentre
                 // 调用模块构建方法
                 ModuleProfiler.StartModulePhase(moduleType, EMoModuleConfigMethods.ConfigureBuilder);
                 var builderResult = module.ConfigureBuilder(builder);
-                ModuleProfiler.StopModulePhase(moduleType, EMoModuleConfigMethods.ConfigureBuilder);
 
                 if (!builderResult.IsOk())
                 {
@@ -161,10 +164,12 @@ public static class MoModuleRegisterCentre
                     }
                 }
 
+                ModuleProfiler.StopModulePhase(moduleType, EMoModuleConfigMethods.ConfigureBuilder);
+
+
                 // 调用模块注册方法
                 ModuleProfiler.StartModulePhase(moduleType, EMoModuleConfigMethods.ConfigureServices);
                 var servicesResult = module.ConfigureServices(services);
-                ModuleProfiler.StopModulePhase(moduleType, EMoModuleConfigMethods.ConfigureServices);
 
                 if (!servicesResult.IsOk())
                 {
@@ -185,6 +190,7 @@ public static class MoModuleRegisterCentre
                     }
                 }
 
+                ModuleProfiler.StopModulePhase(moduleType, EMoModuleConfigMethods.ConfigureServices);
                 snapshots.Add(new ModuleSnapshot(module, info));
                 info.HasBeenBuilt = true;
             }
@@ -194,10 +200,11 @@ public static class MoModuleRegisterCentre
                     EMoModuleConfigMethods.ConfigureBuilder, ModuleRegisterErrorType.InitializationError);
             }
         }
+        ModuleProfiler.StopPhase(nameof(EMoModuleConfigMethods.ConfigureBuilder)+nameof(EMoModuleConfigMethods.ConfigureServices));
 
 
         // 3. 为需要遍历业务类型的模块提供支持
-        ModuleProfiler.StartPhase(nameof(IWantIterateBusinessTypes.IterateBusinessTypes));
+        ModuleProfiler.StartPhase(nameof(EMoModuleConfigMethods.IterateBusinessTypes));
         var businessTypes = typeFinder.GetTypes();
         var needToIterate = false;
         foreach (var module in snapshots)
@@ -221,17 +228,17 @@ public static class MoModuleRegisterCentre
         {
             _ = businessTypes.ToList();
         }
-        ModuleProfiler.StopPhase(nameof(IWantIterateBusinessTypes.IterateBusinessTypes));
+        ModuleProfiler.StopPhase(nameof(EMoModuleConfigMethods.IterateBusinessTypes));
 
 
         // 4. 执行模块的PostConfigureServices方法
+        ModuleProfiler.StartPhase(nameof(EMoModuleConfigMethods.PostConfigureServices));
         foreach (var module in snapshots)
         {
             try
             {
                 ModuleProfiler.StartModulePhase(module.ModuleType, EMoModuleConfigMethods.PostConfigureServices);
                 var postConfigResult = module.ModuleInstance.PostConfigureServices(services);
-                ModuleProfiler.StopModulePhase(module.ModuleType, EMoModuleConfigMethods.PostConfigureServices);
 
                 if (!postConfigResult.IsOk())
                 {
@@ -251,6 +258,8 @@ public static class MoModuleRegisterCentre
                         ModuleErrorUtil.RecordRequestError(ModuleRegisterErrors, module.ModuleType, request, ex);
                     }
                 }
+
+                ModuleProfiler.StopModulePhase(module.ModuleType, EMoModuleConfigMethods.PostConfigureServices);
             }
             catch (Exception ex)
             {
@@ -258,11 +267,8 @@ public static class MoModuleRegisterCentre
                     EMoModuleConfigMethods.PostConfigureServices, ModuleRegisterErrorType.ConfigurationError);
             }
         }
+        ModuleProfiler.StopPhase(nameof(EMoModuleConfigMethods.PostConfigureServices));
         ModuleSnapshots.AddRange(snapshots);
-
-        var elapsedTime = ModuleProfiler.StopPhase(nameof(RegisterServices));
-        Logger.LogInformation("Module services registration completed in {ElapsedMilliseconds}ms. Total module system time: {TotalElapsedMilliseconds}ms",
-            elapsedTime, ModuleProfiler.GetTotalElapsedMilliseconds());
         ModuleErrorUtil.RaiseModuleErrors(ModuleRegisterErrors);
     }
 
@@ -291,37 +297,35 @@ public static class MoModuleRegisterCentre
             {
                 ModuleProfiler.StartModulePhase(module.ModuleType, EMoModuleConfigMethods.ConfigureApplicationBuilder);
                 var result = module.ModuleInstance.ConfigureApplicationBuilder(app);
-                ModuleProfiler.StopModulePhase(module.ModuleType, EMoModuleConfigMethods.ConfigureApplicationBuilder);
 
                 if (!result.IsOk())
                 {
                     ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleType, result.Message,
                         EMoModuleConfigMethods.ConfigureApplicationBuilder, ModuleRegisterErrorType.ConfigurationError);
                 }
+
+                foreach (var request in module.RequestInfo.RegisterRequests.Where(p => p.RequestMethod == EMoModuleConfigMethods.ConfigureApplicationBuilder).Where(filter).OrderBy(r => r.Order))
+                {
+                    try
+                    {
+                        request.ConfigureContext?.Invoke(new ModuleRegisterContext(null, app, null, module.RequestInfo));
+                    }
+                    catch (Exception ex)
+                    {
+                        ModuleErrorUtil.RecordRequestError(ModuleRegisterErrors, module.ModuleType, request, ex);
+                    }
+                }
+
+                ModuleProfiler.StopModulePhase(module.ModuleType, EMoModuleConfigMethods.ConfigureApplicationBuilder);
             }
             catch (Exception ex)
             {
                 ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleType, ex.Message,
                     EMoModuleConfigMethods.ConfigureApplicationBuilder, ModuleRegisterErrorType.ConfigurationError);
             }
-
-            foreach (var request in module.RequestInfo.RegisterRequests.Where(p => p.RequestMethod == EMoModuleConfigMethods.ConfigureApplicationBuilder).Where(filter).OrderBy(r => r.Order))
-            {
-                try
-                {
-                    request.ConfigureContext?.Invoke(new ModuleRegisterContext(null, app, null, module.RequestInfo));
-                }
-                catch (Exception ex)
-                {
-                    ModuleErrorUtil.RecordRequestError(ModuleRegisterErrors, module.ModuleType, request, ex);
-                }
-            }
         }
 
-        var elapsedTime = ModuleProfiler.StopPhase(phaseName);
-        Logger.LogInformation("Application pipeline configuration {PhaseType} completed in {ElapsedMilliseconds}ms. Total module system time: {TotalElapsedMilliseconds}ms",
-            afterGivenOrder ? "after routing" : "before routing",
-            elapsedTime, ModuleProfiler.GetTotalElapsedMilliseconds());
+        ModuleProfiler.StopPhase(phaseName);
     }
 
     /// <summary>
@@ -330,7 +334,7 @@ public static class MoModuleRegisterCentre
     /// <param name="app">应用程序构建器。</param>
     internal static void ConfigEndpoints(IApplicationBuilder app)
     {
-        ModuleProfiler.StartPhase(nameof(ConfigEndpoints));
+        ModuleProfiler.StartPhase(nameof(EMoModuleConfigMethods.ConfigureEndpoints));
 
         // 按优先级排序并配置端点路由构建器
         foreach (var module in ModuleSnapshots)
@@ -345,13 +349,25 @@ public static class MoModuleRegisterCentre
             {
                 ModuleProfiler.StartModulePhase(module.ModuleType, EMoModuleConfigMethods.ConfigureEndpoints);
                 var result = module.ModuleInstance.ConfigureEndpoints(app);
-                ModuleProfiler.StopModulePhase(module.ModuleType, EMoModuleConfigMethods.ConfigureEndpoints);
-
+               
                 if (!result.IsOk())
                 {
                     ModuleErrorUtil.RecordModuleError(ModuleRegisterErrors, module.ModuleType, result.Message,
                         EMoModuleConfigMethods.ConfigureEndpoints, ModuleRegisterErrorType.ConfigurationError);
                 }
+                foreach (var request in module.RequestInfo.RegisterRequests.Where(p => p.RequestMethod == EMoModuleConfigMethods.ConfigureEndpoints).OrderBy(r => r.Order))
+                {
+                    try
+                    {
+                        request.ConfigureContext?.Invoke(new ModuleRegisterContext(null, app, null, module.RequestInfo));
+                    }
+                    catch (Exception ex)
+                    {
+                        ModuleErrorUtil.RecordRequestError(ModuleRegisterErrors, module.ModuleType, request, ex);
+                    }
+                }
+
+                ModuleProfiler.StopModulePhase(module.ModuleType, EMoModuleConfigMethods.ConfigureEndpoints);
             }
             catch (Exception ex)
             {
@@ -359,25 +375,11 @@ public static class MoModuleRegisterCentre
                     EMoModuleConfigMethods.ConfigureEndpoints, ModuleRegisterErrorType.ConfigurationError);
             }
 
-            foreach (var request in module.RequestInfo.RegisterRequests.Where(p => p.RequestMethod == EMoModuleConfigMethods.ConfigureEndpoints).OrderBy(r => r.Order))
-            {
-                try
-                {
-                    request.ConfigureContext?.Invoke(new ModuleRegisterContext(null, app, null, module.RequestInfo));
-                }
-                catch (Exception ex)
-                {
-                    ModuleErrorUtil.RecordRequestError(ModuleRegisterErrors, module.ModuleType, request, ex);
-                }
-            }
+           
         }
 
-        var elapsedTime = ModuleProfiler.StopPhase(nameof(ConfigEndpoints));
+        ModuleProfiler.StopPhase(nameof(EMoModuleConfigMethods.ConfigureEndpoints));
         ModuleProfiler.StopModuleSystem();
-
-        // Log final performance summary
-        Logger.LogInformation("Endpoints configuration completed in {ElapsedMilliseconds}ms. Total module system initialization time: {TotalElapsedMilliseconds}ms",
-            elapsedTime, ModuleProfiler.GetTotalElapsedMilliseconds());
 
         // Log performance summary details
         Logger.LogInformation("Module system performance summary:\n{PerformanceSummary}",
