@@ -76,7 +76,7 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     private ModuleRequestInfo RegisterModule()
     {
         var moduleType = typeof(TModule);
-        if (MoModuleRegisterCentre.ModuleRegisterContextDict.TryGetValue(moduleType, out var requestInfo)) return requestInfo;
+        if (MoModuleRegisterCentre.TryGetModuleRequestInfo(moduleType, out var requestInfo)) return requestInfo;
 
         requestInfo = new ModuleRequestInfo();
         requestInfo.BindModuleOption<TModuleOption>();

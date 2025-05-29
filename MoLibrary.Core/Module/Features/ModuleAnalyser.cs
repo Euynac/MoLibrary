@@ -70,7 +70,7 @@ public class ModuleAnalyser
             if (ModuleEnumToTypeDict.TryGetValue(moduleEnum, out var moduleType))
             {
                 // 查找模块注册上下文并更新Order
-                if (MoModuleRegisterCentre.ModuleRegisterContextDict.TryGetValue(moduleType, out var requestInfo))
+                if (MoModuleRegisterCentre.TryGetModuleRequestInfo(moduleType, out var requestInfo))
                 {
                     // Order值从100开始，每个模块递增10，确保有足够的间隔
                     requestInfo.Order = 100 + (i * 10);

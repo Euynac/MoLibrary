@@ -1,3 +1,4 @@
+using System.Text;
 using MoLibrary.Core.Module.Features;
 using MoLibrary.Core.Module.Models;
 
@@ -42,4 +43,44 @@ public class ModuleRegisterError
     /// Information about module dependencies when the error occurred.
     /// </summary>
     public ModuleDependencyInfo? DependencyInfo { get; set; }
+
+    /// <summary>
+    /// Returns a formatted string representation of the module registration error.
+    /// </summary>
+    /// <returns>A detailed formatted error message.</returns>
+    public override string ToString()
+    {
+        var sb = new StringBuilder();
+        
+        sb.AppendLine($"  - Error Type: {ErrorType}");
+        sb.AppendLine($"  - Details: {ErrorMessage}");
+        
+        if (GuideFrom.HasValue)
+        {
+            sb.AppendLine($"  - Source: {GuideFrom}");
+        }
+        
+        if (Phase.HasValue)
+        {
+            sb.AppendLine($"  - Phase: {Phase}");
+        }
+        
+        if (MissingConfigKeys.Count > 0)
+        {
+            sb.AppendLine("  - Missing configuration methods:");
+            
+            foreach (var key in MissingConfigKeys)
+            {
+                sb.AppendLine($"    * {key}");
+            }
+        }
+        
+        if (DependencyInfo != null)
+        {
+            sb.AppendLine("  - Dependency Information:");
+            sb.AppendLine($"    {DependencyInfo}");
+        }
+        
+        return sb.ToString();
+    }
 } 
