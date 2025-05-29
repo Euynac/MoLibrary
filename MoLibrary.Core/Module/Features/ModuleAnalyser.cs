@@ -353,60 +353,84 @@ public class ModuleAnalyser
         sb.AppendLine("Module Registration Summary:");
         sb.AppendLine("=====================================");
         
-        // 从 ModuleSnapshots 获取信息并按 Order 排序
+        // 从 ModuleSnapshots 获取信息并按 Order 排序（这些都是启用的模块）
         var moduleInfos = MoModuleRegisterCentre.ModuleSnapshots
             .OrderBy(snapshot => snapshot.RequestInfo.Order)
             .ToList();
         
-        if (moduleInfos.Count == 0)
-        {
-            sb.AppendLine("No modules registered.");
-            return sb.ToString();
-        }
+        // 从 ModuleManager 获取所有禁用的模块类型
+        var disabledModuleTypes = ModuleManager.GetDisabledModuleTypes();
         
-        foreach (var snapshot in moduleInfos)
+        // 显示启用的模块
+        if (moduleInfos.Count > 0)
         {
-            var moduleEnum = snapshot.ModuleEnum;
-            var order = snapshot.RequestInfo.Order;
-            var moduleTypeName = snapshot.ModuleType.Name;
-            var isDisabled = snapshot.IsDisabled;
-            var initDuration = snapshot.TotalInitializationDurationMs;
+            sb.AppendLine("Enabled Modules:");
+            sb.AppendLine("----------------");
             
-            // 显示模块基本信息，包括禁用状态
-            var statusText = isDisabled ? " [DISABLED]" : "";
-            sb.AppendLine($"Order {order:D4}: {moduleEnum} ({moduleTypeName}){statusText}");
-            
-            // 显示依赖关系
-            if (ModuleDependencyMap.TryGetValue(moduleEnum, out var dependencies) && dependencies.Count > 0)
+            foreach (var snapshot in moduleInfos)
             {
-                sb.AppendLine($"           Dependencies: {string.Join(", ", dependencies)}");
-            }
-            
-            // 显示初始化耗时
-            if (initDuration > 0)
-            {
+                var moduleEnum = snapshot.ModuleEnum;
+                var order = snapshot.RequestInfo.Order;
+                var moduleTypeName = snapshot.ModuleType.Name;
+                var initDuration = snapshot.TotalInitializationDurationMs;
+                
+                // 显示模块基本信息
+                sb.AppendLine($"Order {order:D4}: {moduleEnum} ({moduleTypeName})");
+                
+                // 显示依赖关系
+                if (ModuleDependencyMap.TryGetValue(moduleEnum, out var dependencies) && dependencies.Count > 0)
+                {
+                    sb.AppendLine($"           Dependencies: {string.Join(", ", dependencies)}");
+                }
+
+                // 显示初始化耗时
                 sb.AppendLine($"           Initialization Time: {initDuration}ms");
             }
-            else
+        }
+        else
+        {
+            sb.AppendLine("No enabled modules found.");
+        }
+        
+        // 显示禁用的模块
+        if (disabledModuleTypes.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("Disabled Modules:");
+            sb.AppendLine("-----------------");
+            
+            foreach (var disabledModuleType in disabledModuleTypes)
             {
-                sb.AppendLine("           Initialization Time: Not measured");
+                // 获取模块枚举值
+                var moduleEnum = ModuleTypeToEnumMap.TryGetValue(disabledModuleType, out var enumValue) 
+                    ? enumValue 
+                    : EMoModules.Developer;
+                
+                sb.AppendLine($"{moduleEnum} ({disabledModuleType.Name}) [DISABLED]");
+                
+                // 显示依赖关系（如果有的话）
+                if (ModuleDependencyMap.TryGetValue(moduleEnum, out var dependencies) && dependencies.Count > 0)
+                {
+                    sb.AppendLine($"           Dependencies: {string.Join(", ", dependencies)}");
+                }
             }
         }
         
         // 添加统计信息
-        var totalModules = moduleInfos.Count;
-        var disabledModules = moduleInfos.Count(s => s.IsDisabled);
-        var enabledModules = totalModules - disabledModules;
+        var totalEnabledModules = moduleInfos.Count;
+        var totalDisabledModules = disabledModuleTypes.Count;
+        var totalModules = totalEnabledModules + totalDisabledModules;
         var totalInitTime = moduleInfos.Sum(s => s.TotalInitializationDurationMs);
         
         sb.AppendLine();
         sb.AppendLine("Statistics:");
+        sb.AppendLine("===========");
         sb.AppendLine($"  Total modules: {totalModules}");
-        sb.AppendLine($"  Enabled modules: {enabledModules}");
-        sb.AppendLine($"  Disabled modules: {disabledModules}");
+        sb.AppendLine($"  Enabled modules: {totalEnabledModules}");
+        sb.AppendLine($"  Disabled modules: {totalDisabledModules}");
         sb.AppendLine($"  Total initialization time: {totalInitTime}ms");
         
-        // 显示耗时最多的前5个模块
+        // 显示耗时最多的前5个模块（只显示启用的模块）
         var slowestModules = moduleInfos
             .Where(s => s.TotalInitializationDurationMs > 0)
             .OrderByDescending(s => s.TotalInitializationDurationMs)

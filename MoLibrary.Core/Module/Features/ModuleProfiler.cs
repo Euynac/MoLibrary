@@ -169,12 +169,69 @@ public static class ModuleProfiler
         sb.AppendLine($"Total initialization time: {GetTotalElapsedMilliseconds()}ms");
         
         sb.AppendLine("\nPhase Durations (in initialization order):");
+        var totalSystemPhaseDuration = 0L;
+        var systemPhaseCount = 0;
+        
         foreach (var phaseName in PhaseInitializationOrder)
         {
             if (PhaseStopwatches.TryGetValue(phaseName, out var stopwatch))
             {
                 sb.AppendLine($"  {phaseName}: {stopwatch.ElapsedMilliseconds}ms");
+                totalSystemPhaseDuration += stopwatch.ElapsedMilliseconds;
+                systemPhaseCount++;
             }
+        }
+        
+        if (systemPhaseCount > 0)
+        {
+            sb.AppendLine($"\nAll System Phases Total Duration: {totalSystemPhaseDuration}ms (across {systemPhaseCount} phases)");
+        }
+        
+        // Add module phase statistics
+        sb.AppendLine("\nModule Phase Statistics:");
+        var allPhases = Enum.GetValues<EMoModuleConfigMethods>();
+        
+        // Calculate total duration across all module phases
+        var totalModulePhaseDuration = 0L;
+        var totalModulePhaseCount = 0;
+        
+        foreach (var phase in allPhases)
+        {
+            var moduleCount = 0;
+            var totalDuration = 0L;
+            var maxDuration = 0L;
+            string? slowestModule = null;
+            
+            foreach (var profile in ModuleProfiles.Values)
+            {
+                var duration = profile.GetPhaseDuration(phase);
+                if (duration > 0)
+                {
+                    moduleCount++;
+                    totalDuration += duration;
+                    totalModulePhaseDuration += duration;
+                    if (duration > maxDuration)
+                    {
+                        maxDuration = duration;
+                        slowestModule = profile.ModuleType.Name;
+                    }
+                }
+            }
+            
+            if (moduleCount > 0)
+            {
+                totalModulePhaseCount += moduleCount;
+                var averageDuration = totalDuration / moduleCount;
+                sb.AppendLine($"  {phase}:");
+                sb.AppendLine($"    Total: {totalDuration}ms | Average: {averageDuration}ms | Modules: {moduleCount}");
+                sb.AppendLine($"    Slowest: {slowestModule} ({maxDuration}ms)");
+            }
+        }
+        
+        // Add total summary at the end
+        if (totalModulePhaseCount > 0)
+        {
+            sb.AppendLine($"\nAll Module Phases Total Duration: {totalModulePhaseDuration}ms (across {totalModulePhaseCount} phase executions)");
         }
         
         sb.AppendLine("\nTop 5 Slowest Modules (by total duration):");
