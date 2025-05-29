@@ -32,22 +32,26 @@ public static class ModuleErrorUtil
             
             // Check if each required configuration method key is configured
             var missingKeys = info.GetMissingRequiredConfigMethodKeys();
-            
+           
             if (missingKeys.Count > 0)
             {
-                ModuleRegisterErrors.Add(new ModuleRegisterError
+                var error = new ModuleRegisterError
                 {
                     ModuleType = moduleType,
                     ErrorMessage = "Missing required configuration",
                     MissingConfigKeys = missingKeys,
                     ErrorType = ModuleRegisterErrorType.MissingRequiredConfig
-                });
+                };
+                if(!CheckDisableModuleIfHasException(moduleType, error)) ModuleRegisterErrors.Add(error);
             }
+
         }
         
         //// Check for missing dependencies
         //ValidateDependencies();
         
+        
+
         // If there are errors, throw an exception
         if (ModuleRegisterErrors.Count > 0)
         {
@@ -171,10 +175,11 @@ public static class ModuleErrorUtil
     /// </summary>
     /// <param name="moduleType">The module type to check</param>
     /// <param name="error">The error that occurred</param>
-    private static void CheckDisableModuleIfHasException(Type moduleType, ModuleRegisterError error)
+    /// <returns>If it should disable module, return true.</returns>
+    internal static bool CheckDisableModuleIfHasException(Type moduleType, ModuleRegisterError error)
     {
         // Try to find the module option through MoModuleRegisterCentre
-        if (MoModuleRegisterCentre.ModuleRegisterContextDict.TryGetValue(moduleType, out var requestInfo))
+        if (MoModuleRegisterCentre.TryGetModuleRequestInfo(moduleType, out var requestInfo))
         {
             // Check if the module has DisableModuleIfHasException set
             var moduleOption = requestInfo.ModuleOption;
@@ -186,12 +191,16 @@ public static class ModuleErrorUtil
                 {
                     // Log the error but don't throw an exception for this module
                     MoModuleRegisterCentre.Logger.LogWarning(
-                        "Module {ModuleName} was disabled due to an exception: {ErrorMessage}",
+                        "Module {ModuleName} was disabled due to an error: {ErrorMessage}",
                         moduleType.Name,
-                        error.ErrorMessage);
+                        error);
                 }
+
+                return true;
             }
         }
+
+        return false;
     }
     
     /// <summary>
@@ -213,35 +222,7 @@ public static class ModuleErrorUtil
             
             foreach (var error in group)
             {
-                sb.AppendLine($"  - Error Type: {error.ErrorType}");
-                sb.AppendLine($"  - Details: {error.ErrorMessage}");
-                
-                if (error.GuideFrom.HasValue)
-                {
-                    sb.AppendLine($"  - Source: {error.GuideFrom}");
-                }
-                
-                if (error.Phase.HasValue)
-                {
-                    sb.AppendLine($"  - Phase: {error.Phase}");
-                }
-                
-                if (error.MissingConfigKeys.Count > 0)
-                {
-                    sb.AppendLine("  - Missing configuration methods:");
-                    
-                    foreach (var key in error.MissingConfigKeys)
-                    {
-                        sb.AppendLine($"    * {key}");
-                    }
-                }
-                
-                if (error.DependencyInfo != null)
-                {
-                    sb.AppendLine("  - Dependency Information:");
-                    sb.AppendLine($"    {error.DependencyInfo}");
-                }
-                
+                sb.Append(error);
                 sb.AppendLine();
             }
         }

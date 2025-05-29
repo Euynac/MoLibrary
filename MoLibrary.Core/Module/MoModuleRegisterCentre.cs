@@ -45,7 +45,18 @@ public static class MoModuleRegisterCentre
     /// <summary>
     /// 模块注册请求信息字典，用于存储所有注册过的模块类型及其注册信息。
     /// </summary>
-    public static Dictionary<Type, ModuleRequestInfo> ModuleRegisterContextDict { get; } = new();
+    public static Dictionary<Type, ModuleRequestInfo> ModuleRegisterContextDict { get; } = [];
+
+    /// <summary>
+    /// Attempts to retrieve the ModuleRequestInfo for a specified module type.
+    /// </summary>
+    /// <param name="type">The type of the module to retrieve information for.</param>
+    /// <param name="requestInfo"></param>
+    /// <returns>The ModuleRequestInfo if found; otherwise, null.</returns>
+    public static bool TryGetModuleRequestInfo(Type type, [NotNullWhen(true)]out ModuleRequestInfo? requestInfo)
+    {
+        return ModuleRegisterContextDict.TryGetValue(type, out requestInfo);
+    }
 
     /// <summary>
     /// 添加模块注册上下文
