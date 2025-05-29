@@ -343,15 +343,15 @@ public class ModuleAnalyser
     }
 
     /// <summary>
-    /// 获取模块注册顺序的格式化字符串，用于调试输出。
+    /// 获取模块注册状况的格式化字符串，用于调试输出。
     /// </summary>
-    /// <returns>格式化的模块注册顺序字符串</returns>
-    public static string GetModuleRegistrationOrderSummary()
+    /// <returns></returns>
+    public static string GetModuleRegistrationSummary()
     {
         var orderInfo = GetModuleRegistrationOrder();
         var sb = new StringBuilder();
         
-        sb.AppendLine("Module Registration Order Summary:");
+        sb.AppendLine("Module Registration Summary:");
         sb.AppendLine("=====================================");
         
         foreach (var kvp in orderInfo.OrderBy(x => x.Value.Order))
