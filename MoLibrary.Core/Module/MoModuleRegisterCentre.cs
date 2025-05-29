@@ -43,6 +43,11 @@ public static class MoModuleRegisterCentre
     }
 
     /// <summary>
+    /// 模块快照列表，用于存储所有模块的快照信息。
+    /// </summary>
+    private static List<ModuleSnapshot> ModuleSnapshots { get; } = [];
+
+    /// <summary>
     /// 模块注册请求信息字典，用于存储所有注册过的模块类型及其注册信息。
     /// </summary>
     public static Dictionary<Type, ModuleRequestInfo> ModuleRegisterContextDict { get; } = [];
@@ -77,11 +82,6 @@ public static class MoModuleRegisterCentre
             Logger.LogInformation("Module system initialization started");
         }
     }
-
-    /// <summary>
-    /// 模块快照列表，用于存储所有模块的快照信息。
-    /// </summary>
-    private static List<ModuleSnapshot> ModuleSnapshots { get; } = [];
 
     /// <summary>
     /// 注册当前注册的所有模块的服务。此方法应在builder.Build()之前调用。
@@ -399,7 +399,7 @@ public static class MoModuleRegisterCentre
         Logger.LogInformation("Module system performance summary:\n{PerformanceSummary}",
             ModuleProfiler.GetPerformanceSummary());
         Logger.LogInformation("Module system register order summary:\n{Order}",
-            ModuleAnalyser.GetModuleRegistrationOrderSummary());
+            ModuleAnalyser.GetModuleRegistrationSummary());
 
         ModuleErrorUtil.RaiseModuleErrors();
     }
