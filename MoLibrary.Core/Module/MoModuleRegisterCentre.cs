@@ -45,7 +45,7 @@ public static class MoModuleRegisterCentre
     /// <summary>
     /// 模块快照列表，用于存储所有模块的快照信息。
     /// </summary>
-    private static List<ModuleSnapshot> ModuleSnapshots { get; } = [];
+    public static List<ModuleSnapshot> ModuleSnapshots { get; } = [];
 
     /// <summary>
     /// 模块注册请求信息字典，用于存储所有注册过的模块类型及其注册信息。
