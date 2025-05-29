@@ -309,13 +309,16 @@ public static class MoModuleRegisterCentre
 
             try
             {
-                ModuleProfiler.StartModulePhase(module.ModuleType, EMoModuleConfigMethods.ConfigureApplicationBuilder);
-                var result = module.ModuleInstance.ConfigureApplicationBuilder(app);
-
-                if (!result.IsOk())
+                if(!afterGivenOrder)
                 {
-                    ModuleErrorUtil.RecordModuleError(module.ModuleType, result.Message,
-                        EMoModuleConfigMethods.ConfigureApplicationBuilder, ModuleRegisterErrorType.ConfigurationError);
+                    ModuleProfiler.StartModulePhase(module.ModuleType, EMoModuleConfigMethods.ConfigureApplicationBuilder);
+                    var result = module.ModuleInstance.ConfigureApplicationBuilder(app);
+
+                    if (!result.IsOk())
+                    {
+                        ModuleErrorUtil.RecordModuleError(module.ModuleType, result.Message,
+                            EMoModuleConfigMethods.ConfigureApplicationBuilder, ModuleRegisterErrorType.ConfigurationError);
+                    }
                 }
 
                 foreach (var request in module.RequestInfo.RegisterRequests.Where(p => p.RequestMethod == EMoModuleConfigMethods.ConfigureApplicationBuilder).Where(filter).OrderBy(r => r.Order))

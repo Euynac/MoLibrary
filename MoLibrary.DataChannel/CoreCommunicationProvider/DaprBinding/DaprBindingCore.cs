@@ -23,7 +23,17 @@ public class DaprBindingCore(MetadataForDaprBinding metadata, DaprClient client)
    
     }
 
-    public void DoConfigApplication(IApplicationBuilder app)
+    public void ConfigApplicationBuilder(IApplicationBuilder app)
+    {
+        
+    }
+
+    public override EConnectionDirection SupportedConnectionDirection()
+    {
+        return EConnectionDirection.InputAndOutput;
+    }
+
+    public void ConfigEndpoints(IApplicationBuilder app)
     {
         if (metadata.Type == ECommunicationType.MQ)
         {
@@ -43,10 +53,5 @@ public class DaprBindingCore(MetadataForDaprBinding metadata, DaprClient client)
                 });
             });
         }
-    }
-
-    public override EConnectionDirection SupportedConnectionDirection()
-    {
-        return EConnectionDirection.InputAndOutput;
     }
 }

@@ -14,10 +14,10 @@ namespace MoLibrary.Repository.Modules;
 
 public class ModuleRepositoryGuide : MoModuleGuide<ModuleRepository, ModuleRepositoryOption, ModuleRepositoryGuide>
 {
-    protected override string[] GetRequestedConfigMethodKeys()
-    {
-        return [ADD_DB_CONTEXT_PROVIDER, nameof(AddMoDbContext)];
-    }
+    //protected override string[] GetRequestedConfigMethodKeys()
+    //{
+    //    return [ADD_DB_CONTEXT_PROVIDER, nameof(AddMoDbContext)];
+    //}
     protected const string ADD_DB_CONTEXT_PROVIDER = nameof(ADD_DB_CONTEXT_PROVIDER);
     public ModuleRepositoryGuide AddMoUnitOfWorkDbContextProvider(bool addEventSupport = false)
     {

@@ -55,4 +55,12 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
         // Channel initialization is now handled by the hosted service
         return base.ConfigureApplicationBuilder(app);
     }
+
+    public override Res ConfigureEndpoints(IApplicationBuilder app)
+    {
+
+        DataChannelCentral.ConfigEndpoints(app);
+
+        return base.ConfigureEndpoints(app);
+    }
 }
