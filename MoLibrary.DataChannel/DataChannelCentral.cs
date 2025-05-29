@@ -72,7 +72,23 @@ public static class DataChannelCentral
             foreach (var component in pipe.GetComponents())
             {
                 if (component is IDynamicConfigApplicationBuilder config)
-                    config.DoConfigApplication(app);
+                    config.ConfigApplicationBuilder(app);
+            }
+        }
+    }
+    /// <summary>
+    /// 使用已注册的构建器开始构建所有数据管道
+    /// 并对支持动态配置的组件执行应用程序配置
+    /// </summary>
+    /// <param name="app">应用程序构建器实例</param>
+    internal static void ConfigEndpoints(IApplicationBuilder app)
+    {
+        foreach (var builder in Builders)
+        {
+            foreach (var component in Channels.Values.Select(p=>p.Pipe.GetComponents()))
+            {
+                if (component is IDynamicConfigApplicationBuilder config)
+                    config.ConfigEndpoints(app);
             }
         }
     }

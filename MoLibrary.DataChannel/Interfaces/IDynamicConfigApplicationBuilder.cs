@@ -15,5 +15,7 @@ public interface IDynamicConfigApplicationBuilder
     /// 注意：同种类型的组件可能会被多次调用此方法
     /// </summary>
     /// <param name="app">应用程序构建器实例</param>
-    public void DoConfigApplication(IApplicationBuilder app);
+    public void ConfigApplicationBuilder(IApplicationBuilder app);
+
+    public void ConfigEndpoints(IApplicationBuilder app);
 }
