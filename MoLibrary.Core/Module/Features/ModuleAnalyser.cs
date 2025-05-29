@@ -345,7 +345,7 @@ public class ModuleAnalyser
     /// <summary>
     /// 获取模块注册状况的格式化字符串，用于调试输出。
     /// </summary>
-    /// <returns>包含模块注册状况、依赖关系和禁用状态的格式化字符串</returns>
+    /// <returns>包含模块注册状况、依赖关系、禁用状态和初始化耗时的格式化字符串</returns>
     public static string GetModuleRegistrationSummary()
     {
         var sb = new StringBuilder();
@@ -370,6 +370,7 @@ public class ModuleAnalyser
             var order = snapshot.RequestInfo.Order;
             var moduleTypeName = snapshot.ModuleType.Name;
             var isDisabled = snapshot.IsDisabled;
+            var initDuration = snapshot.TotalInitializationDurationMs;
             
             // 显示模块基本信息，包括禁用状态
             var statusText = isDisabled ? " [DISABLED]" : "";
@@ -380,9 +381,15 @@ public class ModuleAnalyser
             {
                 sb.AppendLine($"           Dependencies: {string.Join(", ", dependencies)}");
             }
+            
+            // 显示初始化耗时
+            if (initDuration > 0)
+            {
+                sb.AppendLine($"           Initialization Time: {initDuration}ms");
+            }
             else
             {
-                sb.AppendLine("           Dependencies: None");
+                sb.AppendLine("           Initialization Time: Not measured");
             }
         }
         
@@ -390,12 +397,30 @@ public class ModuleAnalyser
         var totalModules = moduleInfos.Count;
         var disabledModules = moduleInfos.Count(s => s.IsDisabled);
         var enabledModules = totalModules - disabledModules;
+        var totalInitTime = moduleInfos.Sum(s => s.TotalInitializationDurationMs);
         
         sb.AppendLine();
         sb.AppendLine("Statistics:");
         sb.AppendLine($"  Total modules: {totalModules}");
         sb.AppendLine($"  Enabled modules: {enabledModules}");
         sb.AppendLine($"  Disabled modules: {disabledModules}");
+        sb.AppendLine($"  Total initialization time: {totalInitTime}ms");
+        
+        // 显示耗时最多的前5个模块
+        var slowestModules = moduleInfos
+            .Where(s => s.TotalInitializationDurationMs > 0)
+            .OrderByDescending(s => s.TotalInitializationDurationMs)
+            .Take(5)
+            .ToList();
+            
+        if (slowestModules.Count > 0)
+        {
+            sb.AppendLine($"  Slowest modules:");
+            foreach (var module in slowestModules)
+            {
+                sb.AppendLine($"    {module.ModuleEnum}: {module.TotalInitializationDurationMs}ms");
+            }
+        }
         
         return sb.ToString();
     }

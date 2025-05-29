@@ -189,6 +189,26 @@ public static class ModuleProfiler
         
         return sb.ToString();
     }
+
+    /// <summary>
+    /// Gets profile information for a specific module type.
+    /// </summary>
+    /// <param name="moduleType">The type of the module to get profile information for.</param>
+    /// <returns>The ModuleProfileInfo for the specified module type, or null if not found.</returns>
+    public static ModuleProfileInfo? GetModuleProfile(Type moduleType)
+    {
+        return ModuleProfiles.TryGetValue(moduleType, out var profile) ? profile : null;
+    }
+
+    /// <summary>
+    /// Gets the total initialization duration for a specific module type.
+    /// </summary>
+    /// <param name="moduleType">The type of the module to get duration for.</param>
+    /// <returns>The total initialization duration in milliseconds, or 0 if not found.</returns>
+    public static long GetModuleTotalDuration(Type moduleType)
+    {
+        return ModuleProfiles.TryGetValue(moduleType, out var profile) ? profile.GetTotalDuration() : 0;
+    }
 }
 
 /// <summary>

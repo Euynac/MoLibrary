@@ -14,7 +14,7 @@ public static class ModuleManager
     /// <summary>
     /// List of disabled module types
     /// </summary>
-    internal static HashSet<Type> DisabledModuleTypes { get; } = new();
+    private static HashSet<Type> DisabledModuleTypes { get; } = new();
 
     /// <summary>
     /// Gets the list of disabled module types

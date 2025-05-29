@@ -25,23 +25,21 @@ public class ModuleSnapshot(MoModule moduleInstance, ModuleRequestInfo requestIn
     public Type ModuleType { get; set; } = moduleInstance.GetType();
     
     /// <summary>
-    /// 模块是否被禁用
-    /// </summary>
-    public bool IsDisabled => ModuleManager.IsModuleDisabled(ModuleType);
-    
-    /// <summary>
     /// 获取模块对应的枚举值
     /// </summary>
-    public EMoModules ModuleEnum
+    public EMoModules ModuleEnum =>
+        ModuleAnalyser.ModuleTypeToEnumMap.TryGetValue(ModuleType, out var moduleEnum) ? moduleEnum :
+            EMoModules.Developer;
+
+    /// <summary>
+    /// 获取模块的总初始化耗时（毫秒）
+    /// </summary>
+    public long TotalInitializationDurationMs =>
+        ModuleProfiler.GetModuleTotalDuration(ModuleType);
+
+
+    public override string ToString()
     {
-        get
-        {
-            if (ModuleAnalyser.ModuleTypeToEnumMap.TryGetValue(ModuleType, out var moduleEnum))
-            {
-                return moduleEnum;
-            }
-            // 如果没有找到对应的枚举，返回Developer作为默认值
-            return EMoModules.Developer;
-        }
+        return $"[{ModuleEnum}] {ModuleType.Name}";
     }
 }
