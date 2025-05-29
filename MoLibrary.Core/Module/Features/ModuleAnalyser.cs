@@ -345,28 +345,57 @@ public class ModuleAnalyser
     /// <summary>
     /// 获取模块注册状况的格式化字符串，用于调试输出。
     /// </summary>
-    /// <returns></returns>
+    /// <returns>包含模块注册状况、依赖关系和禁用状态的格式化字符串</returns>
     public static string GetModuleRegistrationSummary()
     {
-        var orderInfo = GetModuleRegistrationOrder();
         var sb = new StringBuilder();
         
         sb.AppendLine("Module Registration Summary:");
         sb.AppendLine("=====================================");
         
-        foreach (var kvp in orderInfo.OrderBy(x => x.Value.Order))
+        // 从 ModuleSnapshots 获取信息并按 Order 排序
+        var moduleInfos = MoModuleRegisterCentre.ModuleSnapshots
+            .OrderBy(snapshot => snapshot.RequestInfo.Order)
+            .ToList();
+        
+        if (moduleInfos.Count == 0)
         {
-            var moduleType = kvp.Key;
-            var (moduleEnum, order) = kvp.Value;
+            sb.AppendLine("No modules registered.");
+            return sb.ToString();
+        }
+        
+        foreach (var snapshot in moduleInfos)
+        {
+            var moduleEnum = snapshot.ModuleEnum;
+            var order = snapshot.RequestInfo.Order;
+            var moduleTypeName = snapshot.ModuleType.Name;
+            var isDisabled = snapshot.IsDisabled;
             
-            sb.AppendLine($"Order {order:D4}: {moduleEnum} ({moduleType.Name})");
+            // 显示模块基本信息，包括禁用状态
+            var statusText = isDisabled ? " [DISABLED]" : "";
+            sb.AppendLine($"Order {order:D4}: {moduleEnum} ({moduleTypeName}){statusText}");
             
             // 显示依赖关系
             if (ModuleDependencyMap.TryGetValue(moduleEnum, out var dependencies) && dependencies.Count > 0)
             {
                 sb.AppendLine($"           Dependencies: {string.Join(", ", dependencies)}");
             }
+            else
+            {
+                sb.AppendLine("           Dependencies: None");
+            }
         }
+        
+        // 添加统计信息
+        var totalModules = moduleInfos.Count;
+        var disabledModules = moduleInfos.Count(s => s.IsDisabled);
+        var enabledModules = totalModules - disabledModules;
+        
+        sb.AppendLine();
+        sb.AppendLine("Statistics:");
+        sb.AppendLine($"  Total modules: {totalModules}");
+        sb.AppendLine($"  Enabled modules: {enabledModules}");
+        sb.AppendLine($"  Disabled modules: {disabledModules}");
         
         return sb.ToString();
     }
