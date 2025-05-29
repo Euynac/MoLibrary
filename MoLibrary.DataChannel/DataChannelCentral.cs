@@ -83,13 +83,10 @@ public static class DataChannelCentral
     /// <param name="app">应用程序构建器实例</param>
     internal static void ConfigEndpoints(IApplicationBuilder app)
     {
-        foreach (var builder in Builders)
+        foreach (var component in Channels.Values.SelectMany(p => p.Pipe.GetComponents()))
         {
-            foreach (var component in Channels.Values.Select(p=>p.Pipe.GetComponents()))
-            {
-                if (component is IDynamicConfigApplicationBuilder config)
-                    config.ConfigEndpoints(app);
-            }
+            if (component is IDynamicConfigApplicationBuilder config)
+                config.ConfigEndpoints(app);
         }
     }
 }

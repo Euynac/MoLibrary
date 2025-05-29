@@ -12,6 +12,8 @@ namespace MoLibrary.DataChannel.CoreCommunicationProvider.DaprBinding;
 
 public class DaprBindingCore(MetadataForDaprBinding metadata, DaprClient client) : CommunicationCore<MetadataForDaprBinding>(metadata), IDynamicConfigApplicationBuilder
 {
+    private static readonly HashSet<string> _registeredRoutes = [];
+
     public override async Task ReceiveDataAsync(DataContext data)
     {
         if (metadata.Type == ECommunicationType.MQ)
@@ -38,20 +40,23 @@ public class DaprBindingCore(MetadataForDaprBinding metadata, DaprClient client)
         if (metadata.Type == ECommunicationType.MQ)
         {
             if (string.IsNullOrWhiteSpace(metadata.InputListenerRoute)) return;
-            app.UseEndpoints(endpoints =>
+            if (_registeredRoutes.Add(metadata.InputListenerRoute))
             {
-                var tagGroup = new List<OpenApiTag> { new() { Name = "基础功能", Description = "DaprBinding路由" } };
-                endpoints.MapPost($"{metadata.InputListenerRoute}", async ([FromBody] JsonElement body, HttpResponse response, HttpContext context) =>
+                app.UseEndpoints(endpoints =>
                 {
-                    await SendDataAsync(new DataContext(EDataSource.Outer, body));
-                }).WithName("DaprBinding路由").WithOpenApi(operation =>
-                {
-                    operation.Summary = "DaprBinding路由";
-                    operation.Description = "DaprBinding路由";
-                    operation.Tags = tagGroup;
-                    return operation;
+                    var tagGroup = new List<OpenApiTag> { new() { Name = "基础功能", Description = "DaprBinding路由" } };
+                    endpoints.MapPost($"{metadata.InputListenerRoute}", async ([FromBody] JsonElement body, HttpResponse response, HttpContext context) =>
+                    {
+                        await SendDataAsync(new DataContext(EDataSource.Outer, body));
+                    }).WithName("DaprBinding路由").WithOpenApi(operation =>
+                    {
+                        operation.Summary = "DaprBinding路由";
+                        operation.Description = "DaprBinding路由";
+                        operation.Tags = tagGroup;
+                        return operation;
+                    });
                 });
-            });
+            }
         }
     }
 }
