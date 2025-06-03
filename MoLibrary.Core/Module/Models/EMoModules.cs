@@ -41,5 +41,6 @@ public enum EMoModules
     Seeder,
     DynamicProxy,
     SnowflakeId,
-    Timekeeper
+    Timekeeper,
+    Excel
 }
