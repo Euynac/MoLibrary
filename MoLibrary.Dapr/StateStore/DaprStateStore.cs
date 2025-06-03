@@ -10,17 +10,32 @@ using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.Dapr.StateStore;
 
+/// <summary>
+/// Dapr状态存储实现类
+/// </summary>
 public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOptions<ModuleDaprStateStoreOption> options) : IStateStore
 {
+    /// <summary>
+    /// 配置选项
+    /// </summary>
     protected ModuleDaprStateStoreOption Option { get; set; } = options.Value;
+
+    /// <summary>
+    /// 状态存储名称
+    /// </summary>
     private string StateStoreName => Option.StateStoreName;
 
-    public async Task<bool> ExistAsync<T>(string key, string? prefix = null, CancellationToken cancellationToken = default)
+    public async Task<bool> ExistAsync<T>(string key, CancellationToken cancellationToken = default)
+    {
+        return await GetStateAsync<T>(key, null, cancellationToken) != null;
+    }
+
+    public async Task<bool> ExistAsync<T>(string key, string? prefix, CancellationToken cancellationToken = default)
     {
         return await GetStateAsync<T>(key, prefix, cancellationToken) != null;
     }
 
-    public async Task<Dictionary<string, T?>> QueryStateAsync<T>(Func<QueryBuilder<T>, IFinishedQueryBuilder<T>> query, CancellationToken cancellationToken = default) where T:class
+    public async Task<Dictionary<string, T?>> QueryStateAsync<T>(Func<QueryBuilder<T>, IFinishedQueryBuilder<T>> query, CancellationToken cancellationToken = default) where T : class
     {
         var queryStr = "";
         try
@@ -38,11 +53,17 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
                 queryStr);
             throw;
         }
-
     }
 
+    public async Task<Dictionary<string, T?>> GetBulkStateAsync<T>(IReadOnlyList<string> keys,
+        bool removePrefix = true,
+        bool removeEmptyValue = true,
+        CancellationToken cancellationToken = default)
+    {
+        return await GetBulkStateAsync<T>(keys, nameof(T), removePrefix, removeEmptyValue, cancellationToken);
+    }
 
-    public async Task<Dictionary<string, T?>> GetBulkStateAsync<T>(IReadOnlyList<string> keys, string? prefix = null,
+    public async Task<Dictionary<string, T?>> GetBulkStateAsync<T>(IReadOnlyList<string> keys, string? prefix,
         bool removePrefix = true,
         bool removeEmptyValue = true,
         CancellationToken cancellationToken = default)
@@ -75,7 +96,15 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         }
     }
 
-    public async Task<Dictionary<string, string>> GetBulkStateAsync(IReadOnlyList<string> keys, string? prefix = null,
+    public async Task<Dictionary<string, string>> GetBulkStateAsync(IReadOnlyList<string> keys,
+        bool removePrefix = true,
+        bool removeEmptyValue = true,
+        CancellationToken cancellationToken = default)
+    {
+        return await GetBulkStateAsync(keys, null, removePrefix, removeEmptyValue, cancellationToken);
+    }
+
+    public async Task<Dictionary<string, string>> GetBulkStateAsync(IReadOnlyList<string> keys, string? prefix,
         bool removePrefix = true,
         bool removeEmptyValue = true,
         CancellationToken cancellationToken = default)
@@ -96,24 +125,13 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         }
     }
 
-    public async Task<string?> GetStateAsync(string key, string? prefix = null,
+    public async Task<T?> GetStateAsync<T>(string key, 
         CancellationToken cancellationToken = default)
     {
-        var finalKey = GetKey(key, prefix);
-        try
-        {
-            return await dapr.GetStateAsync<string>(StateStoreName, finalKey, cancellationToken: cancellationToken);
-        }
-        catch (Exception e)
-        {
-            logger.LogError(e, "ERROR Getting state from {StateStoreName}{Key}", StateStoreName,
-                finalKey);
-            throw;
-        }
+        return await GetStateAsync<T>(key, nameof(T), cancellationToken);
     }
 
-    public async Task<T?> GetStateAsync<T>(string key, string? prefix = null,
-        CancellationToken cancellationToken = default)
+    public async Task<T?> GetStateAsync<T>(string key, string? prefix, CancellationToken cancellationToken = default)
     {
         var finalKey = GetKey(key, prefix);
         try
@@ -128,13 +146,39 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         }
     }
 
-  
-
-    public async Task SaveStateAsync(string key, object value, string? prefix = null,
-        CancellationToken cancellationToken = default,
-        TimeSpan? ttl = null)
+    public async Task<string?> GetStateAsync(string key, CancellationToken cancellationToken = default)
     {
-      
+        return await GetStateAsync(key, null, cancellationToken);
+    }
+
+    public async Task<string?> GetStateAsync(string key, string? prefix, CancellationToken cancellationToken = default)
+    {
+        var finalKey = GetKey(key, prefix);
+        try
+        {
+            return await dapr.GetStateAsync<string>(StateStoreName, finalKey, cancellationToken: cancellationToken);
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "ERROR Getting state from {StateStoreName}{Key}", StateStoreName,
+                finalKey);
+            throw;
+        }
+    }
+
+    public async Task<T?> GetSingleStateAsync<T>(CancellationToken cancellationToken = default) where T : class
+    {
+        return await GetStateAsync<T>(nameof(T), null, cancellationToken);
+    }
+
+    public async Task SaveStateAsync<T>(string key, T value, 
+        CancellationToken cancellationToken = default, TimeSpan? ttl = null)
+    {
+        await SaveStateAsync(key, value, null, cancellationToken, ttl);
+    }
+
+    public async Task SaveStateAsync<T>(string key, T value, string? prefix, CancellationToken cancellationToken = default, TimeSpan? ttl = null)
+    {
         var finalKey = GetKey(key, prefix);
         try
         {
@@ -147,7 +191,7 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
                     await dapr.SaveStateAsync(StateStoreName, finalKey, value, cancellationToken: cancellationToken,
                         metadata: new Dictionary<string, string> { { "ttlInSeconds", "-1" } });
                     break;
-                case {} seconds:
+                case { } seconds:
                     await dapr.SaveStateAsync(StateStoreName, finalKey, value, cancellationToken: cancellationToken,
                         metadata: new Dictionary<string, string> { { "ttlInSeconds", seconds.ToString() } });
                     break;
@@ -164,8 +208,17 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         }
     }
 
+    public async Task SaveSingleStateAsync<T>(T value, CancellationToken cancellationToken = default, TimeSpan? ttl = null) where T : class
+    {
+        await SaveStateAsync(nameof(T), value, null, cancellationToken, ttl);
+    }
 
-    public async Task DeleteStateAsync(string key, string? prefix = null, CancellationToken cancellationToken = default)
+    public async Task DeleteStateAsync(string key, CancellationToken cancellationToken = default)
+    {
+        await DeleteStateAsync(key, null, cancellationToken);
+    }
+
+    public async Task DeleteStateAsync(string key, string? prefix, CancellationToken cancellationToken = default)
     {
         var finalKey = GetKey(key, prefix);
         try
@@ -180,8 +233,17 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         }
     }
 
+    public async Task DeleteSingleStateAsync<T>(CancellationToken cancellationToken = default) where T : class
+    {
+        await DeleteStateAsync(nameof(T), null, cancellationToken);
+    }
 
-    public async Task DeleteBulkStateAsync(IReadOnlyList<string> keys, string? prefix = null, CancellationToken cancellationToken = default)
+    public async Task DeleteBulkStateAsync(IReadOnlyList<string> keys, CancellationToken cancellationToken = default)
+    {
+        await DeleteBulkStateAsync(keys, "Default", cancellationToken);
+    }
+
+    public async Task DeleteBulkStateAsync(IReadOnlyList<string> keys, string? prefix, CancellationToken cancellationToken = default)
     {
         var finalKeys = keys.Select(k => GetKey(k, prefix)).ToList();
         try
@@ -197,8 +259,12 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         }
     }
 
-    public async Task<(T value, string etag)> GetStateAndVersionAsync<T>(string key, string? prefix = null,
-        CancellationToken cancellationToken = default)
+    public async Task<(T value, string etag)> GetStateAndVersionAsync<T>(string key, CancellationToken cancellationToken = default)
+    {
+        return await GetStateAndVersionAsync<T>(key, nameof(T), cancellationToken);
+    }
+
+    public async Task<(T value, string etag)> GetStateAndVersionAsync<T>(string key, string? prefix, CancellationToken cancellationToken = default)
     {
         var finalKey = GetKey(key, prefix);
         try
@@ -213,12 +279,23 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         }
     }
 
-
+    /// <summary>
+    /// 生成带前缀的键
+    /// </summary>
+    /// <param name="key">原始键</param>
+    /// <param name="prefix">键前缀</param>
+    /// <returns>带前缀的键</returns>
     private static string GetKey(string key, string? prefix = null)
     {
         return (prefix?.BeIfNotEmpty(prefix + "&&") ?? "") + key;
     }
 
+    /// <summary>
+    /// 移除键前缀
+    /// </summary>
+    /// <param name="key">带前缀的键</param>
+    /// <param name="prefix">前缀</param>
+    /// <returns>移除前缀后的键</returns>
     private static string RemovePrefix(string key, string? prefix)
     {
         if (string.IsNullOrEmpty(prefix)) return key;
@@ -226,5 +303,8 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         return key.Remove(0, len);
     }
 
-   
+    private static string GetAutoPrefixFromType(Type type)
+    {
+        return type.FullName ?? type.Name;
+    }
 }
