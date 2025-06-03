@@ -93,7 +93,7 @@ public interface IStateStore
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 获取指定类型的单个状态数据
+    /// 获取指定类型的单个状态数据，使用泛型T的类型名作为键前缀
     /// </summary>
     /// <typeparam name="T">状态数据类型</typeparam>
     /// <param name="key">状态键</param>
