@@ -20,7 +20,7 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         return await GetStateAsync<T>(key, prefix, cancellationToken) != null;
     }
 
-    public async Task<Dictionary<string, T>> QueryStateAsync<T>(Func<QueryBuilder<T>, IFinishedQueryBuilder<T>> query, CancellationToken cancellationToken = default) where T:class
+    public async Task<Dictionary<string, T?>> QueryStateAsync<T>(Func<QueryBuilder<T>, IFinishedQueryBuilder<T>> query, CancellationToken cancellationToken = default) where T:class
     {
         var queryStr = "";
         try
@@ -197,7 +197,7 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         }
     }
 
-    public async Task<(T value, string etag)> GetVersionAsync<T>(string key, string? prefix = null,
+    public async Task<(T value, string etag)> GetStateAndVersionAsync<T>(string key, string? prefix = null,
         CancellationToken cancellationToken = default)
     {
         var finalKey = GetKey(key, prefix);
