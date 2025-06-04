@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.Tool.General
 {
@@ -120,23 +121,5 @@ namespace MoLibrary.Tool.General
     // }
 
 
-    /// <summary>
-    /// Comparer for comparing two keys, handling equality as being lower (first come first out) Note: this will break Remove(key) or IndexOfKey(key) since the comparer never returns 0 to signal key equality
-    /// Use this Comparer e.g. with SortedLists or SortedDictionaries, that don't allow duplicate keys
-    /// </summary>
-    /// <typeparam name="TKey"></typeparam>
-    internal class DuplicateKeyComparer<TKey>
-        :
-            IComparer<TKey> where TKey : IComparable
-    {
-        #region IComparer<TKey> Members
-
-        public int Compare(TKey x, TKey y)
-        {
-            var result = x.CompareTo(y);
-            return result == 0 ? -1 : result;
-        }
-
-        #endregion
-    }
+ 
 }

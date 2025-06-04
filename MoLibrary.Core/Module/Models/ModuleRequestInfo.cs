@@ -1,4 +1,6 @@
+using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Module.Interfaces;
+using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.Core.Module.Models;
 
@@ -98,12 +100,27 @@ public class ModuleRequestInfo
     /// <typeparam name="TOption">模块选项类型。</typeparam>
     /// <param name="order">配置操作执行顺序。</param>
     /// <param name="optionAction">配置操作委托。</param>
-    public void AddConfigureAction<TOption>(int order, Action<TOption> optionAction) where TOption : class, IMoModuleOptionBase, new()
+    /// <param name="guideFrom"></param>
+    /// <param name="caller"></param>
+    public void AddConfigureAction<TOption>(int order, Action<TOption> optionAction, EMoModules? guideFrom,
+        string caller) where TOption : class, IMoModuleOptionBase, new()
     {
+        RegisterRequests.Add(
+            new ModuleRegisterRequest($"{caller}:ConfigOption<{typeof(TOption).Name}>_{Guid.NewGuid()}")
+            {
+                ConfigureContext = context =>
+                {
+                    context.Services!.Configure(optionAction);
+                },
+                RequestMethod = EMoModuleConfigMethods.ConfigureServices,
+                Order = guideFrom != EMoModules.Developer ? order - 1 : order, //来自模块级联注册的Option的优先级始终比用户Order低1
+                RequestFrom = guideFrom
+            });
+
         var type = typeof(TOption);
         if (!PendingConfigActions.TryGetValue(type, out var actions))
         {
-            actions = new SortedList<int, Action<object>>();
+            actions = new SortedList<int, Action<object>>(new DuplicateKeyComparer<int>());
             PendingConfigActions[type] = actions;
         }
         actions.Add(order, p =>
