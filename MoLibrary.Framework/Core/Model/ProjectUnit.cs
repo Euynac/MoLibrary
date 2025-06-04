@@ -59,7 +59,6 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     /// <returns></returns>
     protected virtual bool VerifyType()
     {
-        if (Option.ConventionOptions.EnablePerformanceMode && !VerifyNameConvention()) return false;
         if (!VerifyTypeConstrain()) return false;
         CheckNameConventionMode();
         return true;

@@ -33,7 +33,6 @@ public class UnitLocalEventHandler(Type type) : ProjectUnit(type, EProjectUnitTy
     {
         var type = context.Type;
         var unit = new UnitLocalEventHandler(type);
-        if (Option.ConventionOptions.EnablePerformanceMode && !unit.VerifyNameConvention()) return null;
         if (!type.IsClass ||
             !type.IsImplementInterfaceGeneric(typeof(IMoLocalEventHandler<>), out var genericType) || genericType?.FullName is null) return null;
         unit.CheckNameConventionMode();

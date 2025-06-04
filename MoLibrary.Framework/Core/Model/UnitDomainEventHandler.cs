@@ -35,7 +35,6 @@ public class UnitDomainEventHandler(Type type) : ProjectUnit(type, EProjectUnitT
     {
         var type = context.Type;
         var unit = new UnitDomainEventHandler(type);
-        if (Option.ConventionOptions.EnablePerformanceMode && !unit.VerifyNameConvention()) return null;
         if (!type.IsClass ||
             !type.IsImplementInterfaceGeneric(typeof(IMoDistributedEventHandler<>), out var genericType) || genericType?.FullName is null) return null;
         unit.CheckNameConventionMode();

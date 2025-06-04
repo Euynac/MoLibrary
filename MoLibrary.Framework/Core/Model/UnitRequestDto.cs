@@ -18,7 +18,6 @@ public class UnitRequestDto(Type type) : ProjectUnit(type, EProjectUnitType.Requ
     {
         var type = context.Type;
         var unit = new UnitRequestDto(type);
-        if (Option.ConventionOptions.EnablePerformanceMode && !unit.VerifyNameConvention()) return null;
         if (!type.IsImplementInterface(typeof(IMoRequestBase))) return null;
         unit.CheckNameConventionMode();
         return unit;
