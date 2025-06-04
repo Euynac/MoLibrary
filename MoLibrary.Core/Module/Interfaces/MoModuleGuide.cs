@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Module.BuilderWrapper;
 using MoLibrary.Core.Module.Features;
 using MoLibrary.Core.Module.Models;
+using System.Runtime.CompilerServices;
 
 namespace MoLibrary.Core.Module.Interfaces;
 public class MoModuleGuide
@@ -122,34 +123,7 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
         actions.Add(request);
     }
 
-    /// <summary>
-    /// 添加模块配置操作。
-    /// </summary>
-    /// <typeparam name="TModule">模块类型。</typeparam>
-    /// <typeparam name="TOption">模块配置类型。</typeparam>
-    /// <param name="order">配置操作执行顺序。</param>
-    /// <param name="optionAction">配置操作委托。</param>
-    /// <param name="guideFrom">配置操作来源模块。</param>
-    public void AddConfigureAction<TOption>(int order, Action<TOption> optionAction, EMoModules? guideFrom) where TOption : class, IMoModuleOptionBase, new()
-    {
-        var requestInfo = RegisterModule();
-
-        requestInfo.AddConfigureAction(order, optionAction);
-
-        requestInfo.RegisterRequests.Add(
-            new ModuleRegisterRequest($"ConfigureOption_{typeof(TOption).Name}_{Guid.NewGuid()}")
-            {
-                ConfigureContext = context =>
-                {
-                    context.Services!.Configure(optionAction);
-                },
-                RequestMethod = EMoModuleConfigMethods.ConfigureServices,
-                Order = guideFrom != EMoModules.Developer ? order - 1 : order, //来自模块级联注册的Option的优先级始终比用户Order低1
-                RequestFrom = guideFrom
-            });
-    }
-
-
+    
     #endregion
 
 
@@ -249,21 +223,21 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
 
     #region 额外设置
 
-    public TModuleGuideSelf ConfigureModuleOption(Action<TModuleOption>? optionAction, EMoModuleOrder order = EMoModuleOrder.Normal)
+    public TModuleGuideSelf ConfigureModuleOption(Action<TModuleOption>? optionAction, EMoModuleOrder order = EMoModuleOrder.Normal, [CallerMemberName] string caller = "")
     {
-        return ConfigureOption(optionAction, (int) order);
+        return ConfigureOption(optionAction, (int) order, caller);
     }
-    public TModuleGuideSelf ConfigureOption<TOption>(Action<TOption>? optionAction, int order) where TOption : class, IMoModuleOptionBase, new()
+    private TModuleGuideSelf ConfigureOption<TOption>(Action<TOption>? optionAction, int order, string caller) where TOption : class, IMoModuleOptionBase, new()
     {
         if(optionAction == null) return (TModuleGuideSelf) this;
 
-        RegisterModule();
-        AddConfigureAction(order, optionAction, GuideFrom);
+        var requestInfo = RegisterModule();
+        requestInfo.AddConfigureAction(order, optionAction, GuideFrom, caller);
         return (TModuleGuideSelf) this;
     }
-    public TModuleGuideSelf ConfigureExtraOption<TOption>(Action<TOption>? optionAction, EMoModuleOrder order = EMoModuleOrder.Normal) where TOption : class, IMoModuleExtraOption<TModule>, new()
+    public TModuleGuideSelf ConfigureExtraOption<TOption>(Action<TOption>? optionAction, EMoModuleOrder order = EMoModuleOrder.Normal, [CallerMemberName] string caller = "") where TOption : class, IMoModuleExtraOption<TModule>, new()
     {
-        return ConfigureOption(optionAction, (int) order);
+        return ConfigureOption(optionAction, (int) order, caller);
     }
 
     #endregion

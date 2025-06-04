@@ -99,4 +99,9 @@ public class ModuleRegisterRequest(string key)
     public EMoModules? RequestFrom { get; set; }
     public EMoModuleConfigMethods? RequestMethod { get; set; }
     public int Order { get; set; }
+
+    public override string ToString()
+    {
+        return Key;
+    }
 }
