@@ -2,6 +2,7 @@ using System.Text.Json;
 using Dapr.Client;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MoLibrary.Core.Extensions;
 using MoLibrary.Dapr.Modules;
 using MoLibrary.StateStore;
 using MoLibrary.StateStore.QueryBuilder;
@@ -49,9 +50,8 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         }
         catch (Exception e)
         {
-            logger.LogError(e, "ERROR query state from {StateStoreName} using exp: {exp}", StateStoreName,
+            throw e.CreateException(logger, "ERROR query state from {0} using exp: {1}", StateStoreName,
                 queryStr);
-            throw;
         }
     }
 
@@ -84,15 +84,14 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
                         }
                         catch (Exception e)
                         {
-                            throw new Exception($"无法将Json值：\"{item.Value}\"反序列化为：{typeof(T).FullName}");
+                            throw e.CreateException(logger, "Failed to deserialize JSON value \"{0}\" to type {1}", item.Value, typeof(T).GetCleanFullName());
                         }
                     });
         }
         catch (Exception e)
         {
-            logger.LogError(e, "ERROR Getting bulk state from {StateStoreName}{Keys}", StateStoreName,
-                               finalKeys);
-            throw;
+            throw e.CreateException(logger, "ERROR Getting bulk state from {0} with keys: {1}", StateStoreName,
+                string.Join(", ", finalKeys));
         }
     }
 
@@ -119,9 +118,8 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         }
         catch (Exception e)
         {
-            logger.LogError(e, "ERROR Getting bulk state from {StateStoreName}{Keys}", StateStoreName,
-                finalKeys);
-            throw;
+            throw e.CreateException(logger, "ERROR Getting bulk state from {0} with keys: {1}", StateStoreName,
+                string.Join(", ", finalKeys));
         }
     }
 
@@ -140,9 +138,8 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         }
         catch (Exception e)
         {
-            logger.LogError(e, "ERROR Getting state from {StateStoreName}{Key}", StateStoreName,
+            throw e.CreateException(logger, "ERROR Getting state from {0} with key: {1}", StateStoreName,
                 finalKey);
-            throw;
         }
     }
 
@@ -160,9 +157,8 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         }
         catch (Exception e)
         {
-            logger.LogError(e, "ERROR Getting state from {StateStoreName}{Key}", StateStoreName,
+            throw e.CreateException(logger, "ERROR Getting state from {0} with key: {1}", StateStoreName,
                 finalKey);
-            throw;
         }
     }
 
@@ -202,9 +198,8 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         }
         catch (Exception e)
         {
-            logger.LogError(e, "ERROR Saving state to {StateStoreName}{Key}", StateStoreName,
+            throw e.CreateException(logger, "ERROR Saving state to {0} with key: {1}", StateStoreName,
                 finalKey);
-            throw;
         }
     }
 
@@ -227,9 +222,8 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         }
         catch (Exception e)
         {
-            logger.LogError(e, "ERROR Deleting state from {StateStoreName}{Key}", StateStoreName,
+            throw e.CreateException(logger, "ERROR Deleting state from {0} with key: {1}", StateStoreName,
                 finalKey);
-            throw;
         }
     }
 
@@ -253,9 +247,8 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         }
         catch (Exception e)
         {
-            logger.LogError(e, "ERROR Getting bulk state from {StateStoreName}{Keys}", StateStoreName,
-                finalKeys);
-            throw;
+            throw e.CreateException(logger, "ERROR Deleting bulk state from {0} with keys: {1}", StateStoreName,
+                string.Join(", ", finalKeys));
         }
     }
 
@@ -273,9 +266,8 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         }
         catch (Exception e)
         {
-            logger.LogError(e, "ERROR Getting state from {StateStoreName}{Key}", StateStoreName,
+            throw e.CreateException(logger, "ERROR Getting state and version from {0} with key: {1}", StateStoreName,
                 finalKey);
-            throw;
         }
     }
 
