@@ -71,42 +71,21 @@ public abstract class MoModuleWithDependencies<TModuleSelf, TModuleOption>(TModu
     where TModuleOption : MoModuleOption<TModuleSelf>, new()
     where TModuleSelf : MoModuleWithDependencies<TModuleSelf, TModuleOption>
 {
-    public List<EMoModules> DependedModules { get; set; } = [];
-  
     /// <summary>
     /// 声明依赖的模块，并进行配置等
     /// </summary>
     public abstract void ClaimDependencies();
    
-    /// <summary>
-    /// Declares a dependency on another module and returns a guide for configuring that module.
-    /// </summary>
-    /// <typeparam name="TOtherModuleGuide">Type of the module guide for the dependent module.</typeparam>
-    /// <returns>A module guide for configuring the dependent module.</returns>
+   
     protected TOtherModuleGuide DependsOnModule<TOtherModuleGuide>()  
         where TOtherModuleGuide : MoModuleGuide, new()
     {
-        // Add dependency to the list if it's not already there
-        var targetModule = new TOtherModuleGuide().GetTargetModuleEnum();
-        if (!DependedModules.Contains(targetModule))
-        {
-            DependedModules.Add(targetModule);
-            
-            // Register this dependency relationship in the ModuleAnalyser
-            ModuleAnalyser.AddDependency(CurModuleEnum(), targetModule);
-        }
-        
-        // Create and return the module guide
-        return new TOtherModuleGuide()
-        {
-            GuideFrom = CurModuleEnum()
-        };
+        return MoModuleGuide.DeclareDependency<TOtherModuleGuide>(CurModuleEnum(), CurModuleEnum());
     }
 }
 
 public interface IWantDependsOnOtherModules
 {
-    public List<EMoModules> DependedModules { get; set; }
     /// <summary>
     /// 声明依赖的模块，并进行配置等
     /// </summary>

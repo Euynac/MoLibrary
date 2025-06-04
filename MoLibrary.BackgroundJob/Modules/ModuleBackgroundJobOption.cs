@@ -32,9 +32,9 @@ public class ModuleBackgroundJobOption : MoModuleOption<ModuleBackgroundJob>
 
     #region TaskSchedule
     /// <summary>
-    /// 开启作业执行时间监控 TODO 需自动解决依赖模块
+    /// 开启作业执行时间监控
     /// </summary>
-    public bool EnableWorkerDurationMonitor { get; set; }
+    internal bool EnableWorkerDurationMonitor { get; set; }
 
     #endregion
 }

@@ -21,6 +21,37 @@ public class MoModuleGuide
         // This should be overridden in specific module guides
         return default;
     }
+
+    /// <summary>
+    /// Declares a dependency on another module from given module and returns a guide for configuring that module.
+    /// </summary>
+    /// <typeparam name="TDependsModuleGuide">Type of the module guide for the dependent module.</typeparam>
+    /// <returns>A module guide for configuring the dependent module.</returns>
+    internal static TDependsModuleGuide DeclareDependency<TDependsModuleGuide>(EMoModules fromModule, EMoModules? guideFrom)
+        where TDependsModuleGuide : MoModuleGuide, new()
+    {
+        // Add dependency to the list if it's not already there
+        var dependsOnEnum = new TDependsModuleGuide().GetTargetModuleEnum();
+
+        // Register this dependency relationship in the ModuleAnalyser
+        ModuleAnalyser.AddDependency(fromModule, dependsOnEnum);
+
+        return new TDependsModuleGuide()
+        {
+            GuideFrom = guideFrom
+        };
+    }
+
+    /// <summary>
+    /// Declares a dependency on another module and returns a guide for configuring that module.
+    /// </summary>
+    /// <typeparam name="TOtherModuleGuide">Type of the module guide for the dependent module.</typeparam>
+    /// <returns>A module guide for configuring the dependent module.</returns>
+    public TOtherModuleGuide DependsOnModule<TOtherModuleGuide>()
+        where TOtherModuleGuide : MoModuleGuide, new()
+    {
+        return DeclareDependency<TOtherModuleGuide>(GetTargetModuleEnum(), GuideFrom);
+    }
 }
 public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleGuide, IMoModuleGuide
     where TModuleOption : MoModuleOption<TModule>, new()
@@ -47,14 +78,7 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
         return Array.Empty<string>();
     }
     
-    protected TOtherModuleGuide DependsOnModule<TOtherModuleGuide>()
-        where TOtherModuleGuide : MoModuleGuide, new()
-    {
-        return new TOtherModuleGuide()
-        {
-            GuideFrom = GuideFrom
-        };
-    }
+  
 
     public void RegisterInstantly()
     {
