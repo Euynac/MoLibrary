@@ -43,5 +43,6 @@ public enum EMoModules
     SnowflakeId,
     Timekeeper,
     Excel,
-    CancellationManager
+    CancellationManager,
+    ProgressBar
 }
