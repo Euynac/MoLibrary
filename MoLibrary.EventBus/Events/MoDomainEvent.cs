@@ -3,7 +3,7 @@ namespace MoLibrary.EventBus.Events;
 /// <summary>
 /// 领域事件基类
 /// </summary>
-public class OurDomainEvent : IOurDomainEvent
+public class MoDomainEvent : IMoDomainEvent
 {
 
 }
@@ -11,7 +11,7 @@ public class OurDomainEvent : IOurDomainEvent
 /// <summary>
 /// 指示是领域事件
 /// </summary>
-public interface IOurDomainEvent
+public interface IMoDomainEvent
 {
 
 }
