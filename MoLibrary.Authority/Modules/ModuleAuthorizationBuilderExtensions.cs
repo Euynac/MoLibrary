@@ -7,6 +7,6 @@ public static class ModuleAuthorizationBuilderExtensions
     public static ModuleAuthorizationGuide ConfigModuleAuthorization<TEnum>(this WebApplicationBuilder builder, string claimTypeDefinition) where TEnum : struct, Enum
     {
         return new ModuleAuthorizationGuide().Register()
-            .AddDefaultPermissionBit<TEnum>(claimTypeDefinition);
+            .AddDefaultPermissionBit<TEnum>(claimTypeDefinition).AddDefaultMiddleware();
     }
 }

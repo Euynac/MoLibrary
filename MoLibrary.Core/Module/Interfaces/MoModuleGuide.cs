@@ -175,7 +175,7 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     /// <param name="context">Action to configure the application builder</param>
     /// <param name="order">Order in which this configuration should be applied</param>
     /// <param name="key">Unique key for this configuration</param>
-    protected void ConfigureApplicationBuilder(Action<ModuleRegisterContextWrapperForApplicationBuilder<TModuleOption>> context, EMoModuleOrder order = EMoModuleOrder.Normal, [CallerMemberName] string key = "")
+    protected void ConfigureApplicationBuilder(Action<ModuleRegisterContextWrapperForApplicationBuilder<TModuleOption>> context, EMoModuleApplicationMiddlewaresOrder order, [CallerMemberName] string key = "")
     {
         ConfigureModule(key, registerContext =>
         {
@@ -213,12 +213,12 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
         }, (int) order, EMoModuleConfigMethods.ConfigureBuilder);
     }
 
-    protected void ConfigureEndpoints(Action<ModuleRegisterContextWrapperForBuilder<TModuleOption>> context,
+    protected void ConfigureEndpoints(Action<ModuleRegisterContextWrapperForApplicationBuilder<TModuleOption>> context,
         EMoModuleOrder order = EMoModuleOrder.Normal, [CallerMemberName] string key = "")
     {
         ConfigureModule(key, registerContext =>
         {
-            context.Invoke(new ModuleRegisterContextWrapperForBuilder<TModuleOption>(registerContext));
+            context.Invoke(new ModuleRegisterContextWrapperForApplicationBuilder<TModuleOption>(registerContext));
         }, (int) order, EMoModuleConfigMethods.ConfigureEndpoints);
     }
 

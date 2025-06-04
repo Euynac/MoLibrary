@@ -40,10 +40,4 @@ public class ModuleAuthorization(ModuleAuthorizationOption option) : MoModuleWit
     public override void ClaimDependencies()
     {
     }
-
-    public override Res ConfigureApplicationBuilder(IApplicationBuilder app)
-    {
-        app.UseAuthorization();
-        return base.ConfigureApplicationBuilder(app);
-    }
 }

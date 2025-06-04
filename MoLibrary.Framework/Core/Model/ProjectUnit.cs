@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using MoLibrary.Framework.Core.Attributes;
 using MoLibrary.Framework.Core.Interfaces;
 using MoLibrary.Framework.Modules;
+using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.Framework.Core.Model;
 
@@ -105,9 +106,9 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
         switch (option.NameConventionMode ?? Option.ConventionOptions.NameConventionMode)
         {
             case ENameConventionMode.Strict:
-                throw new InvalidOperationException($"{Type.FullName}需满足命名限制：{option}");
+                throw new InvalidOperationException($"{Type.GetCleanFullName()}需满足命名限制：{option}");
             case ENameConventionMode.Warning:
-                Logger.Log(LogLevel.Error, $"{Type.FullName}需满足命名限制：{option}");
+                Logger.Log(LogLevel.Error, $"{Type.GetCleanFullName()}需满足命名限制：{option}");
                 break;
             case ENameConventionMode.Disable:
                 break;
