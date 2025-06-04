@@ -32,7 +32,6 @@ public class UnitRepository(Type type) : ProjectUnit(type, EProjectUnitType.Repo
     {
         var type = context.Type;
         var unit = new UnitRepository(type);
-        if (Option.ConventionOptions.EnablePerformanceMode && !unit.VerifyNameConvention()) return null;
         if (!type.IsImplementInterfaceGeneric(typeof(IMoRepository<>), out var exactGenericType)) return null;
         unit.CheckNameConventionMode();
         var repoInterface = type.GetInterface($"I{type.Name}");

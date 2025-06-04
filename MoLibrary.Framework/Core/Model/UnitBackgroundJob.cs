@@ -33,7 +33,6 @@ public class UnitBackgroundJob(Type type) : ProjectUnit(type, EProjectUnitType.B
     {
         var type = context.Type;
         var unit = new UnitBackgroundJob(type);
-        if (Option.ConventionOptions.EnablePerformanceMode && !unit.VerifyNameConvention()) return null;
         if (!type.IsClass || !type.IsSubclassOfRawGeneric(typeof(MoBackgroundJob<>), out var genericType) || genericType?.FullName is null) return null;
         unit.CheckNameConventionMode();
         unit.JobArgsType = genericType.GetGenericArguments().First();

@@ -30,10 +30,6 @@ public class UnitNameConventionOptions
     /// 使用惯例名称检查
     /// </summary>
     public bool EnableNameConvention { get; set; }
-    /// <summary>
-    /// 开启性能模式（即先检查命名，但并不一定性能更好）（注意，开启性能模式后，名称检查失败后提醒模式将失效）
-    /// </summary>
-    public bool EnablePerformanceMode { get; set; }
 }
 
 public class UnitNameConventionOption
