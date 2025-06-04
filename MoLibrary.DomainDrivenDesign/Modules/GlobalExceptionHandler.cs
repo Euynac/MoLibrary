@@ -10,6 +10,7 @@ using MoLibrary.Tool.General;
 using MoLibrary.Tool.MoResponse;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Diagnostics;
+using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.DomainDrivenDesign.Modules;
 
@@ -118,7 +119,7 @@ public class ModuleGlobalExceptionHandlerGuide : MoModuleGuide<ModuleGlobalExcep
 
     public ModuleGlobalExceptionHandlerGuide AddDefaultExceptionHandler()
     {
-        ConfigureServices(nameof(AddDefaultExceptionHandler), context =>
+        ConfigureServices(context =>
         {
             context.Services.AddExceptionHandler<DefaultGlobalExceptionHandler>();
         });
@@ -127,10 +128,10 @@ public class ModuleGlobalExceptionHandlerGuide : MoModuleGuide<ModuleGlobalExcep
 
     public ModuleGlobalExceptionHandlerGuide AddCustomExceptionHandler<THandler>() where THandler : class, IExceptionHandler
     {
-        ConfigureServices($"{nameof(AddCustomExceptionHandler)}_{typeof(THandler).Name}", context =>
+        ConfigureServices(context =>
         {
             context.Services.AddExceptionHandler<THandler>();
-        });
+        }, key: $"{nameof(AddCustomExceptionHandler)}_{typeof(THandler).GetCleanFullName()}");
         return this;
     }
 }

@@ -70,7 +70,7 @@ public class ModuleAutoControllersGuide : MoModuleGuide<ModuleAutoControllers, M
 {
     internal ModuleAutoControllersGuide ConfigureServices(Action<MvcOptions>? setupAction = null)
     {
-        ConfigureServices(nameof(ConfigureServices), context =>
+        ConfigureServices(context =>
         {
             context.Services.AddControllers(options =>
             {

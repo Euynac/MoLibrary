@@ -13,7 +13,7 @@ public class ModuleDataChannelGuide : MoModuleGuide<ModuleDataChannel, ModuleDat
     }
     public ModuleDataChannelGuide SetChannelBuilder<TBuilderEntrance>()
     {
-        ConfigureServices(nameof(SetChannelBuilder), context =>
+        ConfigureServices(context =>
         {
             context.Services.AddSingleton(typeof(ISetupPipeline), typeof(TBuilderEntrance));
         });

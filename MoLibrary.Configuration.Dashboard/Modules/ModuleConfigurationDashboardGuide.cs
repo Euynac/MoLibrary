@@ -35,7 +35,7 @@ public class ModuleConfigurationDashboardGuide : MoModuleGuide<ModuleConfigurati
         _isDashboard = true;
         ConfigureModuleOption(o => { o.ThisIsDashboard = true; });
         DependsOnModule<ModuleRegisterCentreGuide>().Register().SetAsCentreServer();
-        ConfigureServices(nameof(AddMoConfigurationDashboard), context =>
+        ConfigureServices(context =>
         {
             context.Services.AddSingleton<IMoConfigurationDashboard, TDashboard>();
             context.Services.AddSingleton<MemoryProviderForConfigCentre>();
@@ -64,8 +64,7 @@ public class ModuleConfigurationDashboardGuide : MoModuleGuide<ModuleConfigurati
             throw new InvalidOperationException("非面板服务无需注册面板仓储接口");
         }
         _isDashboard = true;
-        ConfigureServices(nameof(AddMoConfigurationDashboardStore),
-            context => { context.Services.Replace(ServiceDescriptor.Transient<IMoConfigurationStores, TStore>()); });
+        ConfigureServices(context => { context.Services.Replace(ServiceDescriptor.Transient<IMoConfigurationStores, TStore>()); });
         return this;
     }
 
@@ -83,7 +82,7 @@ public class ModuleConfigurationDashboardGuide : MoModuleGuide<ModuleConfigurati
         if (_isDashboard is true) throw new InvalidOperationException("面板服务无需注册面板客户端");
         _isDashboard = false;
         DependsOnModule<ModuleRegisterCentreGuide>().Register().SetAsCentreClient<TServer, TClient>();
-        ConfigureServices(nameof(AddMoConfigurationDashboardClient), context =>
+        ConfigureServices(context =>
         {
             context.Services.AddSingleton<IMoConfigurationModifier, MoConfigurationJsonFileModifier>();
         });

@@ -13,7 +13,7 @@ public class ModuleEventBusGuide : MoModuleGuide<ModuleEventBus, ModuleEventBusO
 
     public ModuleEventBusGuide SetDistributedEventBusProvider<TProvider>() where TProvider : class, IMoDistributedEventBus
     {
-        ConfigureServices(nameof(SetDistributedEventBusProvider), services =>
+        ConfigureServices(services =>
         {
             services.Services.AddSingleton<IMoDistributedEventBus, TProvider>();
             services.Services.AddSingleton<TProvider>();

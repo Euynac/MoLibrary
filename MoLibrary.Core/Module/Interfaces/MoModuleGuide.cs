@@ -160,7 +160,8 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
         RegisterModule(request);
     }
 
-    protected void ConfigureServices(string key, Action<ModuleRegisterContextWrapperForServices<TModuleOption>> context, EMoModuleOrder order = EMoModuleOrder.Normal)
+    protected void ConfigureServices(Action<ModuleRegisterContextWrapperForServices<TModuleOption>> context,
+        EMoModuleOrder order = EMoModuleOrder.Normal, [CallerMemberName] string key = "")
     {
         ConfigureModule(key, registerContext =>
         {

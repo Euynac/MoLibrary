@@ -32,7 +32,7 @@ public class ModuleSignalRGuide : MoModuleGuide<ModuleSignalR, ModuleSignalROpti
         where TIContract : IMoHubContract
         where TIUser : IMoCurrentUser
     {
-        ConfigureServices(nameof(AddMoSignalR), context =>
+        ConfigureServices(context =>
         {
             context.Services.AddSingleton<IUserIdProvider, MoUserIdProvider>();
             context.Services.AddSingleton<IMoSignalRConnectionManager, MoSignalRConnectionManager>();
@@ -51,7 +51,7 @@ public class ModuleSignalRGuide : MoModuleGuide<ModuleSignalR, ModuleSignalROpti
     /// </summary>
     public ModuleSignalRGuide AddMoSignalRSwagger(Action<SignalRSwaggerGenOptions> signalROption)
     {
-        ConfigureServices(nameof(AddMoSignalRSwagger), context =>
+        ConfigureServices(context =>
         {
             context.Services.ConfigureSwaggerGen(o =>
             {

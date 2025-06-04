@@ -87,7 +87,7 @@ public class ModuleLoggingGuide : MoModuleGuide<ModuleLogging, ModuleLoggingOpti
 {
     public ModuleLoggingGuide AddRequestResponseLoggingMiddleware(bool disableResponse = false, bool disableRequest = false)
     {
-        ConfigureServices(nameof(AddRequestResponseLoggingMiddleware), context =>
+        ConfigureServices(context =>
         {
             context.Services.AddTransient<RequestLoggingMiddleware>();
             context.Services.AddTransient<ResponseLoggingMiddleware>();

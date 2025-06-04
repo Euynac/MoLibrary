@@ -22,11 +22,11 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
             o.ThisIsCentreServer = true;
         });
 
-        ConfigureServices(SET_CENTRE_TYPE, context =>
+        ConfigureServices(context =>
         {
             context.Services.AddSingleton<IRegisterCentreServer, MemoryProviderForRegisterCentre>();
             context.Services.AddSingleton<IRegisterCentreClientConnector, DaprHttpForConnectClient>();
-        });
+        }, key: SET_CENTRE_TYPE);
 
         return this;
     }
@@ -41,11 +41,11 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
         {
             o.ThisIsCentreClient = true;
         });
-        ConfigureServices(SET_CENTRE_TYPE, context =>
+        ConfigureServices(context =>
         {
             context.Services.AddSingleton<IRegisterCentreServerConnector, TServer>();
             context.Services.AddSingleton<IRegisterCentreClient, TClient>();
-        });
+        }, key: SET_CENTRE_TYPE);
         return this;
     }
 }
