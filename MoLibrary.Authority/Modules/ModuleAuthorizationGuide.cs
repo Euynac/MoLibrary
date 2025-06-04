@@ -24,7 +24,7 @@ public class ModuleAuthorizationGuide : MoModuleGuide<ModuleAuthorization, Modul
     /// <returns></returns>
     internal ModuleAuthorizationGuide AddDefaultPermissionBit<TEnum>(string claimTypeDefinition) where TEnum : struct, Enum
     {
-        ConfigureServices(nameof(AddDefaultPermissionBit), context =>
+        ConfigureServices(context =>
         {
             var checker = new PermissionBitChecker<TEnum>(claimTypeDefinition);
             PermissionBitCheckerManager.AddChecker(checker);
@@ -41,7 +41,7 @@ public class ModuleAuthorizationGuide : MoModuleGuide<ModuleAuthorization, Modul
     /// <returns></returns>
     public ModuleAuthorizationGuide AddPermissionBit<TEnum>(string claimTypeDefinition) where TEnum : struct, Enum
     {
-        ConfigureServices($"{nameof(AddPermissionBit)}<{typeof(TEnum).Name}>", context =>
+        ConfigureServices(context =>
         {
             var checker = new PermissionBitChecker<TEnum>(claimTypeDefinition);
             PermissionBitCheckerManager.AddChecker(checker);
@@ -52,7 +52,7 @@ public class ModuleAuthorizationGuide : MoModuleGuide<ModuleAuthorization, Modul
 
     public ModuleAuthorizationGuide ConfigAsAlwaysAllow()
     {
-        ConfigureServices(nameof(ConfigAsAlwaysAllow), context =>
+        ConfigureServices(context =>
         {
             context.Services.Replace(ServiceDescriptor.Singleton<IAuthorizationService, AlwaysAllowAuthorizationService>());
             context.Services.Replace(ServiceDescriptor.Singleton<IMoAuthorizationService, AlwaysAllowAuthorizationService>());
@@ -65,7 +65,7 @@ public class ModuleAuthorizationGuide : MoModuleGuide<ModuleAuthorization, Modul
 
     public ModuleAuthorizationGuide AddAuthorizationInterceptor()
     {
-        ConfigureServices(nameof(AddAuthorizationInterceptor), context =>
+        ConfigureServices(context =>
         {
             context.Services.AddMoInterceptor<AuthorizationInterceptor>().CreateProxyWhenSatisfy((descriptor) =>
             {

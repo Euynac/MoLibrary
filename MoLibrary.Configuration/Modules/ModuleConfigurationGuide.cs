@@ -14,7 +14,7 @@ public class ModuleConfigurationGuide : MoModuleGuide<ModuleConfiguration, Modul
     /// <typeparam name="T"></typeparam>
     public ModuleConfigurationGuide AddMoConfigurationDomainInfo<T>() where T : class, IMoConfigurationServiceInfo
     {
-        ConfigureServices(nameof(AddMoConfigurationDomainInfo), context =>
+        ConfigureServices(context =>
         {
             context.Services.Replace(ServiceDescriptor.Singleton<IMoConfigurationServiceInfo, T>());
         });

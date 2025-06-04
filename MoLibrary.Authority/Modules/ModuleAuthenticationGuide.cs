@@ -12,7 +12,7 @@ public class ModuleAuthenticationGuide : MoModuleGuide<ModuleAuthentication, Mod
     }
     public ModuleAuthenticationGuide ConfigMoSystemUser<T>(T curSystemEnum, Action<MoSystemUserOptions>? action = null) where T : struct, Enum
     {
-        ConfigureServices(nameof(ConfigMoSystemUser), context =>
+        ConfigureServices(context =>
         {
             context.Services.Configure((MoSystemUserOptions o) =>
             {

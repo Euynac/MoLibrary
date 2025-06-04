@@ -21,7 +21,7 @@ public class ModuleRepositoryGuide : MoModuleGuide<ModuleRepository, ModuleRepos
     protected const string ADD_DB_CONTEXT_PROVIDER = nameof(ADD_DB_CONTEXT_PROVIDER);
     public ModuleRepositoryGuide AddMoUnitOfWorkDbContextProvider(bool addEventSupport = false)
     {
-        ConfigureServices(ADD_DB_CONTEXT_PROVIDER, context =>
+        ConfigureServices(context =>
         {
             if (addEventSupport)
             {
@@ -31,7 +31,7 @@ public class ModuleRepositoryGuide : MoModuleGuide<ModuleRepository, ModuleRepos
             {
                 context.Services.AddMoUnitOfWork();
             }
-        });
+        }, key: ADD_DB_CONTEXT_PROVIDER);
         return this;
     }
 
@@ -42,17 +42,17 @@ public class ModuleRepositoryGuide : MoModuleGuide<ModuleRepository, ModuleRepos
     /// <returns>The <see cref="IServiceCollection"/> so that additional calls can be chained.</returns>
     public ModuleRepositoryGuide AddMoDefaultDbContextProvider()
     {
-        ConfigureServices(ADD_DB_CONTEXT_PROVIDER, context =>
+        ConfigureServices(context =>
         {
             context.Services.AddScoped(typeof(IDbContextProvider<>), typeof(DefaultDbContextProvider<>));
-        });
+        }, key: ADD_DB_CONTEXT_PROVIDER);
         return this;
     }
 
     public ModuleRepositoryGuide AddMoDbContext<TDbContext>(Action<IServiceProvider, DbContextOptionsBuilder> optionsAction, Action<ModuleRepositoryOption>? moOptionsAction = null)
         where TDbContext : MoDbContext<TDbContext>
     {
-        ConfigureServices(nameof(AddMoDbContext), context =>
+        ConfigureServices(context =>
         {
             context.Services.AddMemoryCache();
 

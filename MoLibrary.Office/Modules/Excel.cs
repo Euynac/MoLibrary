@@ -53,14 +53,14 @@ public class ModuleExcelGuide : MoModuleGuide<ModuleExcel, ModuleExcelOption, Mo
     /// <returns></returns>
     public ModuleExcelGuide UseNpoiExcel()
     {
-        ConfigureServices(SET_EXCEL_PROVIDER, context =>
+        ConfigureServices(context =>
         {
             context.Services.AddSingleton<INpoiCellStyleHandle, NpoiCellStyleHandle>();
             context.Services.AddSingleton<INpoiExcelHandle, NpoiExcelHandle>();
 
             context.Services.AddTransient<IExcelImportManager, NpoiExcelImportProvider>();
             context.Services.AddTransient<IExcelExportManager, NpoiExcelExportProvider>();
-        });
+        }, key: SET_EXCEL_PROVIDER);
         return this;
     }
 
@@ -70,14 +70,14 @@ public class ModuleExcelGuide : MoModuleGuide<ModuleExcel, ModuleExcelOption, Mo
     /// <returns></returns>
     public ModuleExcelGuide UseEpPlusExcel()
     {
-        ConfigureServices(SET_EXCEL_PROVIDER, context =>
+        ConfigureServices(context =>
         {
             context.Services.AddSingleton<IEpPlusCellStyleHandle, EpPlusCellStyleHandle>();
             context.Services.AddSingleton<IEpPlusExcelHandle, EpPlusExcelHandle>();
 
             context.Services.AddTransient<IExcelImportManager, EpPlusExcelImportProvider>();
             context.Services.AddTransient<IExcelExportManager, EpPlusExcelExportProvider>();
-        });
+        }, key: SET_EXCEL_PROVIDER);
         return this;
     }
 }
