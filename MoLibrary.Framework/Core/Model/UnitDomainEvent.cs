@@ -16,7 +16,7 @@ public class UnitDomainEvent(Type type) : ProjectUnit(type, EProjectUnitType.Dom
     }
     protected override bool VerifyTypeConstrain()
     {
-        return Type.IsClass && Type.IsImplementInterface<IOurDomainEvent>();
+        return Type.IsClass && Type.IsImplementInterface<IMoDomainEvent>() && typeof(MoDomainEvent) != Type;
     }
 
     protected override UnitNameConventionOption? DefaultConventionOption()
