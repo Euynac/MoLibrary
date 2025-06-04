@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Logging;
 using System.Runtime.ExceptionServices;
 using System.Text;
@@ -36,6 +37,21 @@ public static class ExceptionExtensions
     public static void ReThrow(this Exception exception)
     {
         ExceptionDispatchInfo.Capture(exception).Throw();
+    }
+
+    /// <summary>
+    /// Creates a new exception with formatted message and logs the error
+    /// </summary>
+    /// <param name="innerException">The inner exception to wrap</param>
+    /// <param name="logger">The logger instance to log the error</param>
+    /// <param name="message">The message template with placeholders</param>
+    /// <param name="args">Arguments to format the message template</param>
+    /// <returns>A new Exception with the formatted message and inner exception</returns>
+    public static Exception CreateException(this Exception innerException, ILogger? logger, [StringSyntax(StringSyntaxAttribute.CompositeFormat)] string? message, params object?[] args)
+    {
+        var msg = string.Format(message ?? "An error occurred", args);
+        logger?.LogError(innerException, msg);
+        return new Exception(msg, innerException);
     }
 
 

@@ -42,5 +42,6 @@ public enum EMoModules
     DynamicProxy,
     SnowflakeId,
     Timekeeper,
-    Excel
+    Excel,
+    CancellationManager
 }

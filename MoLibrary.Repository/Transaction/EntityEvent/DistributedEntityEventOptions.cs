@@ -37,7 +37,7 @@ public class DistributedEntityEventOptions
     }
 
     /// <summary>
-    /// Adds distributed event mapping with an explicit ETO type
+    /// Adds distributed event mapping with an explicit ETO type. It will replace the existing mapping if it exists.
     /// </summary>
     /// <typeparam name="TEntity">The entity type</typeparam>
     /// <typeparam name="TEntityEto">The Event Transfer Object type</typeparam>
