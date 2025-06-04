@@ -150,7 +150,7 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
 
 
     #region 额外配置Module
-    protected void ConfigureModule(string key, Action<ModuleRegisterContext> context, int order, EMoModuleConfigMethods requestMethod)
+    private void ConfigureModule(string key, Action<ModuleRegisterContext> context, int order, EMoModuleConfigMethods requestMethod)
     {
         var request = new ModuleRegisterRequest(key)
         {
@@ -171,38 +171,40 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     /// <summary>
     /// Configures the application builder for the module
     /// </summary>
-    /// <param name="key">Unique key for this configuration</param>
     /// <param name="context">Action to configure the application builder</param>
     /// <param name="order">Order in which this configuration should be applied</param>
-    protected void ConfigureApplicationBuilder(string key, Action<ModuleRegisterContextWrapperForApplicationBuilder<TModuleOption>> context, EMoModuleOrder order = EMoModuleOrder.Normal)
+    /// <param name="key">Unique key for this configuration</param>
+    protected void ConfigureApplicationBuilder(Action<ModuleRegisterContextWrapperForApplicationBuilder<TModuleOption>> context, EMoModuleOrder order = EMoModuleOrder.Normal, [CallerMemberName] string key = "")
     {
         ConfigureModule(key, registerContext =>
         {
             context.Invoke(new ModuleRegisterContextWrapperForApplicationBuilder<TModuleOption>(registerContext));
         }, (int) order, EMoModuleConfigMethods.ConfigureApplicationBuilder);
-    }   
+    }
 
     /// <summary>
     /// Configures post-services setup for the module
     /// </summary>
-    /// <param name="key">Unique key for this configuration</param>
     /// <param name="context">Action to configure post-services</param>
     /// <param name="order">Order in which this configuration should be applied</param>
-    protected void PostConfigureServices(string key, Action<ModuleRegisterContextWrapperForServices<TModuleOption>> context, EMoModuleOrder order = EMoModuleOrder.Normal)
+    /// <param name="key">Unique key for this configuration</param>
+    protected void PostConfigureServices(Action<ModuleRegisterContextWrapperForServices<TModuleOption>> context,
+        EMoModuleOrder order = EMoModuleOrder.Normal, [CallerMemberName] string key = "")
     {
         ConfigureModule(key, registerContext =>
         {
             context.Invoke(new ModuleRegisterContextWrapperForServices<TModuleOption>(registerContext));
         }, (int) order, EMoModuleConfigMethods.PostConfigureServices);
     }
-    
+
     /// <summary>
     /// Configures the web application builder for the module
     /// </summary>
-    /// <param name="key">Unique key for this configuration</param>
     /// <param name="context">Action to configure the web application builder</param>
     /// <param name="order">Order in which this configuration should be applied</param>
-    protected void ConfigureBuilder(string key, Action<ModuleRegisterContextWrapperForBuilder<TModuleOption>> context, EMoModuleOrder order = EMoModuleOrder.Normal)
+    /// <param name="key">Unique key for this configuration</param>
+    protected void ConfigureBuilder(Action<ModuleRegisterContextWrapperForBuilder<TModuleOption>> context,
+        EMoModuleOrder order = EMoModuleOrder.Normal, [CallerMemberName] string key = "")
     {
         ConfigureModule(key, registerContext =>
         {
@@ -210,7 +212,8 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
         }, (int) order, EMoModuleConfigMethods.ConfigureBuilder);
     }
 
-    protected void ConfigureEndpoints(string key, Action<ModuleRegisterContextWrapperForBuilder<TModuleOption>> context, EMoModuleOrder order = EMoModuleOrder.Normal)
+    protected void ConfigureEndpoints(Action<ModuleRegisterContextWrapperForBuilder<TModuleOption>> context,
+        EMoModuleOrder order = EMoModuleOrder.Normal, [CallerMemberName] string key = "")
     {
         ConfigureModule(key, registerContext =>
         {

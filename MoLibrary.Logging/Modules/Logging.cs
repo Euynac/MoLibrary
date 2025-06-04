@@ -92,7 +92,7 @@ public class ModuleLoggingGuide : MoModuleGuide<ModuleLogging, ModuleLoggingOpti
             context.Services.AddTransient<RequestLoggingMiddleware>();
             context.Services.AddTransient<ResponseLoggingMiddleware>();
         });
-        ConfigureApplicationBuilder(nameof(AddRequestResponseLoggingMiddleware), context =>
+        ConfigureApplicationBuilder(context =>
         {
             if (!disableRequest)
             {

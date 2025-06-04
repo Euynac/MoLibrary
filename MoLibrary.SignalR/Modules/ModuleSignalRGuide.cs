@@ -67,7 +67,7 @@ public class ModuleSignalRGuide : MoModuleGuide<ModuleSignalR, ModuleSignalROpti
     public ModuleSignalRGuide MapMoHub<THubServer>([StringSyntax("Route")] string pattern) where THubServer : Hub
     {
      
-        ConfigureApplicationBuilder(nameof(MapMoHub), context =>
+        ConfigureApplicationBuilder(context =>
         {
             context.ApplicationBuilder.UseEndpoints(endpoints =>
             {
