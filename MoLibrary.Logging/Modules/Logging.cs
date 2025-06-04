@@ -105,7 +105,7 @@ public class ModuleLoggingGuide : MoModuleGuide<ModuleLogging, ModuleLoggingOpti
             }
 
             //builder.UseHttpLogging(); //asp.net 8后启用
-        }); 
+        }, EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting); 
         return this;
     }
 }

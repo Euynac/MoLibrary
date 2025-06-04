@@ -48,6 +48,20 @@ public class ModuleBackgroundJob(ModuleBackgroundJobOption option) : MoModule<Mo
         {
             Logger.LogWarning("未发现需要自动注册的Worker或Jobs");
         }
+        
+        // 注册所有发现的 Worker 类型为 Transient
+        foreach (var workerType in _backgroundWorkerTypes)
+        {
+            services.AddTransient(workerType);
+        }
+
+        // 注册所有发现的 Job 类型为 Transient
+        foreach (var jobType in _backgroundJobTypes)
+        {
+            services.AddTransient(jobType);
+        }
+
+
         HangfireRedisGlobalOptions.Queues = Option.Queues;
         HangfireRedisGlobalOptions.SupportedProject = Option.SupportedProject;
         GlobalConfiguration.Configuration.UseTypeResolver(s =>
@@ -283,11 +297,6 @@ public class ModuleBackgroundJob(ModuleBackgroundJobOption option) : MoModule<Mo
         foreach (var workerType in _backgroundWorkerTypes)
         {
             if (workerType.GetCustomAttribute<DisableAutoRegisterAttribute>() is not null) continue;
-            if (!workerType.IsAssignableTo(typeof(IMoBackgroundWorker)))
-            {
-                throw new Exception($"Given type ({workerType.AssemblyQualifiedName}) must implement the {typeof(IMoBackgroundWorker).AssemblyQualifiedName} interface, but it doesn't!");
-            }
-
             if (workerType.IsAssignableTo<IMoSimpleBackgroundWorker>())
             {
                 backgroundWorkerManager.AddAsync(workerType);
@@ -305,10 +314,6 @@ public class ModuleBackgroundJob(ModuleBackgroundJobOption option) : MoModule<Mo
         foreach (var jobType in _backgroundJobTypes)
         {
             if (jobType.GetCustomAttribute<DisableAutoRegisterAttribute>() is not null) continue;
-            if (!jobType.IsAssignableTo(typeof(IMoBackgroundJob<>)))
-            {
-                throw new Exception($"Given type ({jobType.AssemblyQualifiedName}) must implement the {typeof(IMoBackgroundJob<>).AssemblyQualifiedName} interface, but it doesn't!");
-            }
             backgroundJobManager.EnqueueAsync(jobType);
             Logger.LogInformation("已注册后台任务：{jobType}", jobType);
         }

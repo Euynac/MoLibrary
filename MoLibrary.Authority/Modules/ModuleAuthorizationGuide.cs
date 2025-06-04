@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MoLibrary.Authority.Authorization;
@@ -13,7 +14,16 @@ public class ModuleAuthorizationGuide : MoModuleGuide<ModuleAuthorization, Modul
 {
     protected override string[] GetRequestedConfigMethodKeys()
     {
-        return [nameof(AddDefaultPermissionBit)];
+        return [nameof(AddDefaultPermissionBit), nameof(AddDefaultMiddleware)];
+    }
+
+    internal ModuleAuthorizationGuide AddDefaultMiddleware()
+    {
+        ConfigureApplicationBuilder(o =>
+        {
+            o.ApplicationBuilder.UseAuthorization();
+        }, EMoModuleApplicationMiddlewaresOrder.AfterUseRouting);
+        return this;
     }
 
     /// <summary>

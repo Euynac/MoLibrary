@@ -36,7 +36,7 @@ public interface IMoModule
     Res PostConfigureServices(IServiceCollection services);
 
     /// <summary>
-    /// 配置应用程序管道
+    /// 配置应用程序管道，注意是在UseRouting之前
     /// </summary>
     /// <param name="app"></param>
     Res ConfigureApplicationBuilder(IApplicationBuilder app);

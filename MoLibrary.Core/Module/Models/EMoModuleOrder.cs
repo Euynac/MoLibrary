@@ -7,6 +7,12 @@ public enum EMoModuleOrder
     PreConfig = -100
 }
 
+public enum EMoModuleApplicationMiddlewaresOrder
+{
+    BeforeUseRouting = -2,
+    AfterUseRouting = 0,
+}
+
 public static class ModuleOrder
 {
     public static int MiddlewareUseRouting = -1;
