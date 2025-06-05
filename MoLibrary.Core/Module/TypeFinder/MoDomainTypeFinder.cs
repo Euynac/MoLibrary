@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+using MoLibrary.Core.Features.MoLogProvider;
 using MoLibrary.Tool.Extensions;
 using System.Reflection;
 
@@ -12,6 +14,8 @@ namespace MoLibrary.Core.Module.TypeFinder;
 /// <param name="options">类型查找器配置选项</param>
 public class MoDomainTypeFinder(ModuleCoreOptionTypeFinder options) : IDomainTypeFinder
 {
+    public ILogger? Logger { get; set; } = LogProvider.For<MoDomainTypeFinder>(); 
+
     #region Fields
 
     private bool _assemblyListLoaded;
@@ -37,6 +41,9 @@ public class MoDomainTypeFinder(ModuleCoreOptionTypeFinder options) : IDomainTyp
         var assemblies = entryAssembly.GetRelatedAssemblies(options.RelatedAssemblies);
 
         _assemblies.AddRange(assemblies.ToList());
+
+
+        Logger?.LogInformation($"(入口程序集代码中未引用的程序集目前将被剪枝)模块系统遍历程序集：{_assemblies.Select(p => p.GetName().Name).OrderBy(p => p).StringJoin("\n")}");
 
         _assemblyListLoaded = true;
     }
