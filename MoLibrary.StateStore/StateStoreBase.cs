@@ -30,13 +30,6 @@ public abstract class StateStoreBase(ILogger logger) : IStateStore
         return await GetBulkStateAsync<T>(keys, GetAutoPrefixFromType(typeof(T)), removePrefix, removeEmptyValue, cancellationToken);
     }
 
-    public async Task<Dictionary<string, string>> GetBulkStateAsync(IReadOnlyList<string> keys,
-        bool removePrefix = true,
-        bool removeEmptyValue = true,
-        CancellationToken cancellationToken = default)
-    {
-        return await GetBulkStateAsync(keys, null, removePrefix, removeEmptyValue, cancellationToken);
-    }
 
     public async Task<T?> GetStateAsync<T>(string key, 
         CancellationToken cancellationToken = default)
@@ -44,11 +37,7 @@ public abstract class StateStoreBase(ILogger logger) : IStateStore
         return await GetStateAsync<T>(key, GetAutoPrefixFromType(typeof(T)), cancellationToken);
     }
 
-    public async Task<string?> GetStateAsync(string key, CancellationToken cancellationToken = default)
-    {
-        return await GetStateAsync(key, null, cancellationToken);
-    }
-
+  
     public async Task<T?> GetSingleStateAsync<T>(CancellationToken cancellationToken = default) where T : class
     {
         return await GetStateAsync<T>(GetAutoPrefixFromType(typeof(T)), null, cancellationToken);
@@ -80,7 +69,7 @@ public abstract class StateStoreBase(ILogger logger) : IStateStore
         await DeleteBulkStateAsync(keys, null, cancellationToken);
     }
 
-    public async Task<(T value, string etag)> GetStateAndVersionAsync<T>(string key, CancellationToken cancellationToken = default)
+    public async Task<(T value, string version)> GetStateAndVersionAsync<T>(string key, CancellationToken cancellationToken = default)
     {
         return await GetStateAndVersionAsync<T>(key, GetAutoPrefixFromType(typeof(T)), cancellationToken);
     }
@@ -93,14 +82,8 @@ public abstract class StateStoreBase(ILogger logger) : IStateStore
         bool removeEmptyValue = true,
         CancellationToken cancellationToken = default);
 
-    public abstract Task<Dictionary<string, string>> GetBulkStateAsync(IReadOnlyList<string> keys, string? prefix,
-        bool removePrefix = true,
-        bool removeEmptyValue = true,
-        CancellationToken cancellationToken = default);
 
     public abstract Task<T?> GetStateAsync<T>(string key, string? prefix, CancellationToken cancellationToken = default);
-
-    public abstract Task<string?> GetStateAsync(string key, string? prefix, CancellationToken cancellationToken = default);
 
     public abstract Task SaveStateAsync<T>(string key, T value, string? prefix, CancellationToken cancellationToken = default, TimeSpan? ttl = null);
 
@@ -108,7 +91,7 @@ public abstract class StateStoreBase(ILogger logger) : IStateStore
 
     public abstract Task DeleteBulkStateAsync(IReadOnlyList<string> keys, string? prefix, CancellationToken cancellationToken = default);
 
-    public abstract Task<(T value, string etag)> GetStateAndVersionAsync<T>(string key, string? prefix, CancellationToken cancellationToken = default);
+    public abstract Task<(T value, string version)> GetStateAndVersionAsync<T>(string key, string? prefix, CancellationToken cancellationToken = default);
 
     #endregion
 

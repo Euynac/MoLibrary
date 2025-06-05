@@ -30,7 +30,7 @@ public class ModuleDaprStateStore(ModuleDaprStateStoreOption option)
 
     public override Res ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IStateStore, DaprStateStore>();
+        services.AddScoped<IDistributedStateStore, DaprStateStore>();
         return Res.Ok();
     }
 
