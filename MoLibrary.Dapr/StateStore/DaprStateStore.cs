@@ -184,7 +184,8 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         }
     }
 
-    public override async Task<(T value, string version)> GetStateAndVersionAsync<T>(string key, string? prefix, CancellationToken cancellationToken = default)
+    public override async Task<(T value, string etag)> GetStateAndVersionAsync<T>(string key, string? prefix,
+        CancellationToken cancellationToken = default)
     {
         var finalKey = GetKey(key, prefix);
         try
