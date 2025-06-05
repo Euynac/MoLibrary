@@ -11,7 +11,4 @@
   <ItemGroup>
     <ProjectReference Include="..\MoLibrary.Core\MoLibrary.Core.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="ProgressBar\" />
-  </ItemGroup>
 </Project>
