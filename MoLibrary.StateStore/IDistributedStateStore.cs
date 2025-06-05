@@ -3,7 +3,7 @@ using MoLibrary.StateStore.QueryBuilder;
 
 namespace MoLibrary.StateStore;
 
-public interface IRedisStateStore : IStateStore
+public interface IDistributedStateStore : IStateStore
 {
     /// <summary>
     /// 查询所有满足给定条件的状态

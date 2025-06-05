@@ -14,7 +14,7 @@ namespace MoLibrary.Dapr.StateStore;
 /// <summary>
 /// Dapr状态存储实现类
 /// </summary>
-public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOptions<ModuleDaprStateStoreOption> options) : IRedisStateStore
+public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOptions<ModuleDaprStateStoreOption> options) : IDistributedStateStore
 {
     /// <summary>
     /// 配置选项
