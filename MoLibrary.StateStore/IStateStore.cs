@@ -1,8 +1,6 @@
 namespace MoLibrary.StateStore;
 
-/// <summary>
-/// 状态存储接口，提供状态的增删改查功能
-/// </summary>
+
 public interface IStateStore
 {
     /// <summary>
@@ -54,33 +52,6 @@ public interface IStateStore
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 批量获取字符串类型的状态数据，不使用键前缀
-    /// </summary>
-    /// <param name="keys">状态键列表</param>
-    /// <param name="removePrefix">返回时是否自动移除Key前缀</param>
-    /// <param name="removeEmptyValue">是否移除空值</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>返回状态字典，获取失败返回空字典</returns>
-    Task<Dictionary<string, string>> GetBulkStateAsync(IReadOnlyList<string> keys,
-        bool removePrefix = true,
-        bool removeEmptyValue = true,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// 批量获取字符串类型的状态数据，使用指定的键前缀
-    /// </summary>
-    /// <param name="keys">状态键列表</param>
-    /// <param name="prefix">键前缀</param>
-    /// <param name="removePrefix">返回时是否自动移除Key前缀</param>
-    /// <param name="removeEmptyValue">是否移除空值</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>返回状态字典，获取失败返回空字典</returns>
-    Task<Dictionary<string, string>> GetBulkStateAsync(IReadOnlyList<string> keys, string? prefix,
-        bool removePrefix = true,
-        bool removeEmptyValue = true,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// 获取指定类型的单个状态数据，使用泛型T的类型名作为键前缀
     /// </summary>
     /// <typeparam name="T">状态数据类型</typeparam>
@@ -99,22 +70,7 @@ public interface IStateStore
     /// <returns>返回状态数据，获取失败返回null</returns>
     Task<T?> GetStateAsync<T>(string key, string? prefix, CancellationToken cancellationToken = default);
 
-    /// <summary>
-    /// 获取字符串类型的单个状态数据，不使用键前缀
-    /// </summary>
-    /// <param name="key">状态键</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>返回状态数据，获取失败返回null</returns>
-    Task<string?> GetStateAsync(string key, CancellationToken cancellationToken = default);
 
-    /// <summary>
-    /// 获取字符串类型的单个状态数据，使用指定的键前缀
-    /// </summary>
-    /// <param name="key">状态键</param>
-    /// <param name="prefix">键前缀</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>返回状态数据，获取失败返回null</returns>
-    Task<string?> GetStateAsync(string key, string? prefix, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 获取指定类型的系统级单例状态数据，使用类型名作为键
@@ -198,7 +154,6 @@ public interface IStateStore
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>删除操作的任务</returns>
     Task DeleteBulkStateAsync(IReadOnlyList<string> keys, string? prefix, CancellationToken cancellationToken = default);
-
     /// <summary>
     /// 获取状态数据及其版本标识，使用泛型T的类型名作为键前缀
     /// </summary>
@@ -206,7 +161,7 @@ public interface IStateStore
     /// <param name="key">状态键</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>返回包含状态值和版本标识的元组</returns>
-    Task<(T value, string etag)> GetStateAndVersionAsync<T>(string key, CancellationToken cancellationToken = default);
+    Task<(T value, string version)> GetStateAndVersionAsync<T>(string key, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 获取状态数据及其版本标识，使用指定的键前缀
@@ -216,5 +171,5 @@ public interface IStateStore
     /// <param name="prefix">键前缀</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>返回包含状态值和版本标识的元组</returns>
-    Task<(T value, string etag)> GetStateAndVersionAsync<T>(string key, string? prefix, CancellationToken cancellationToken = default);
+    Task<(T value, string version)> GetStateAndVersionAsync<T>(string key, string? prefix, CancellationToken cancellationToken = default);
 }

@@ -17,7 +17,7 @@ namespace MoLibrary.StateStore.CancellationManager;
 /// <param name="logger">日志记录器</param>
 /// <param name="options">配置选项</param>
 public class DefaultDistributedCancellationManager(
-    IStateStore stateStore,
+    IDistributedStateStore stateStore,
     ILogger<DefaultDistributedCancellationManager> logger,
     IOptions<ModuleCancellationManagerOption> options) : ICancellationManager
 {

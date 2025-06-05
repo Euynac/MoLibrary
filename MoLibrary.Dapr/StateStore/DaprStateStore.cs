@@ -14,7 +14,7 @@ namespace MoLibrary.Dapr.StateStore;
 /// <summary>
 /// Dapr状态存储实现类
 /// </summary>
-public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOptions<ModuleDaprStateStoreOption> options) : StateStoreBase(logger)
+public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOptions<ModuleDaprStateStoreOption> options) : DistributedStateStoreBase(logger)
 {
     /// <summary>
     /// 配置选项
@@ -26,7 +26,7 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
     /// </summary>
     private string StateStoreName => Option.StateStoreName;
 
-    public async Task<Dictionary<string, T?>> QueryStateAsync<T>(Func<QueryBuilder<T>, IFinishedQueryBuilder<T>> query, CancellationToken cancellationToken = default) where T : class
+    public override async Task<Dictionary<string, T?>> QueryStateAsync<T>(Func<QueryBuilder<T>, IFinishedQueryBuilder<T>> query, CancellationToken cancellationToken = default) where T : class
     {
         var queryStr = "";
         try
@@ -184,7 +184,7 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         }
     }
 
-    public override async Task<(T value, string etag)> GetStateAndVersionAsync<T>(string key, string? prefix, CancellationToken cancellationToken = default)
+    public override async Task<(T value, string version)> GetStateAndVersionAsync<T>(string key, string? prefix, CancellationToken cancellationToken = default)
     {
         var finalKey = GetKey(key, prefix);
         try
