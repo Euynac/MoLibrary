@@ -14,7 +14,7 @@ namespace MoLibrary.Dapr.StateStore;
 /// <summary>
 /// Dapr状态存储实现类
 /// </summary>
-public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOptions<ModuleDaprStateStoreOption> options) : IDistributedStateStore
+public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOptions<ModuleDaprStateStoreOption> options) : StateStoreBase(logger)
 {
     /// <summary>
     /// 配置选项
@@ -25,16 +25,6 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
     /// 状态存储名称
     /// </summary>
     private string StateStoreName => Option.StateStoreName;
-
-    public async Task<bool> ExistAsync<T>(string key, CancellationToken cancellationToken = default)
-    {
-        return await GetStateAsync<T>(key, null, cancellationToken) != null;
-    }
-
-    public async Task<bool> ExistAsync<T>(string key, string? prefix, CancellationToken cancellationToken = default)
-    {
-        return await GetStateAsync<T>(key, prefix, cancellationToken) != null;
-    }
 
     public async Task<Dictionary<string, T?>> QueryStateAsync<T>(Func<QueryBuilder<T>, IFinishedQueryBuilder<T>> query, CancellationToken cancellationToken = default) where T : class
     {
@@ -50,23 +40,15 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         }
         catch (Exception e)
         {
-            throw e.CreateException(logger, "ERROR query state from {0} using exp: {1}", StateStoreName,
+            throw e.CreateException(Logger, "ERROR query state from {0} using exp: {1}", StateStoreName,
                 queryStr);
         }
     }
 
-    public async Task<Dictionary<string, T?>> GetBulkStateAsync<T>(IReadOnlyList<string> keys,
+    public override async Task<Dictionary<string, T?>> GetBulkStateAsync<T>(IReadOnlyList<string> keys, string? prefix,
         bool removePrefix = true,
         bool removeEmptyValue = true,
-        CancellationToken cancellationToken = default)
-    {
-        return await GetBulkStateAsync<T>(keys, GetAutoPrefixFromType(typeof(T)), removePrefix, removeEmptyValue, cancellationToken);
-    }
-
-    public async Task<Dictionary<string, T?>> GetBulkStateAsync<T>(IReadOnlyList<string> keys, string? prefix,
-        bool removePrefix = true,
-        bool removeEmptyValue = true,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) where T : default
     {
         var finalKeys = keys.Select(k => GetKey(k, prefix)).ToList();
         try
@@ -84,26 +66,18 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
                         }
                         catch (Exception e)
                         {
-                            throw e.CreateException(logger, "Failed to deserialize JSON value \"{0}\" to type {1}", item.Value, typeof(T).GetCleanFullName());
+                            throw e.CreateException(Logger, "Failed to deserialize JSON value \"{0}\" to type {1}", item.Value, typeof(T).GetCleanFullName());
                         }
                     });
         }
         catch (Exception e)
         {
-            throw e.CreateException(logger, "ERROR Getting bulk state from {0} with keys: {1}", StateStoreName,
+            throw e.CreateException(Logger, "ERROR Getting bulk state from {0} with keys: {1}", StateStoreName,
                 string.Join(", ", finalKeys));
         }
     }
 
-    public async Task<Dictionary<string, string>> GetBulkStateAsync(IReadOnlyList<string> keys,
-        bool removePrefix = true,
-        bool removeEmptyValue = true,
-        CancellationToken cancellationToken = default)
-    {
-        return await GetBulkStateAsync(keys, null, removePrefix, removeEmptyValue, cancellationToken);
-    }
-
-    public async Task<Dictionary<string, string>> GetBulkStateAsync(IReadOnlyList<string> keys, string? prefix,
+    public override async Task<Dictionary<string, string>> GetBulkStateAsync(IReadOnlyList<string> keys, string? prefix,
         bool removePrefix = true,
         bool removeEmptyValue = true,
         CancellationToken cancellationToken = default)
@@ -118,18 +92,12 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         }
         catch (Exception e)
         {
-            throw e.CreateException(logger, "ERROR Getting bulk state from {0} with keys: {1}", StateStoreName,
+            throw e.CreateException(Logger, "ERROR Getting bulk state from {0} with keys: {1}", StateStoreName,
                 string.Join(", ", finalKeys));
         }
     }
 
-    public async Task<T?> GetStateAsync<T>(string key, 
-        CancellationToken cancellationToken = default)
-    {
-        return await GetStateAsync<T>(key, GetAutoPrefixFromType(typeof(T)), cancellationToken);
-    }
-
-    public async Task<T?> GetStateAsync<T>(string key, string? prefix, CancellationToken cancellationToken = default)
+    public override async Task<T?> GetStateAsync<T>(string key, string? prefix, CancellationToken cancellationToken = default) where T : default
     {
         var finalKey = GetKey(key, prefix);
         try
@@ -138,17 +106,12 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         }
         catch (Exception e)
         {
-            throw e.CreateException(logger, "ERROR Getting state from {0} with key: {1}", StateStoreName,
+            throw e.CreateException(Logger, "ERROR Getting state from {0} with key: {1}", StateStoreName,
                 finalKey);
         }
     }
 
-    public async Task<string?> GetStateAsync(string key, CancellationToken cancellationToken = default)
-    {
-        return await GetStateAsync(key, null, cancellationToken);
-    }
-
-    public async Task<string?> GetStateAsync(string key, string? prefix, CancellationToken cancellationToken = default)
+    public override async Task<string?> GetStateAsync(string key, string? prefix, CancellationToken cancellationToken = default)
     {
         var finalKey = GetKey(key, prefix);
         try
@@ -157,23 +120,12 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         }
         catch (Exception e)
         {
-            throw e.CreateException(logger, "ERROR Getting state from {0} with key: {1}", StateStoreName,
+            throw e.CreateException(Logger, "ERROR Getting state from {0} with key: {1}", StateStoreName,
                 finalKey);
         }
     }
 
-    public async Task<T?> GetSingleStateAsync<T>(CancellationToken cancellationToken = default) where T : class
-    {
-        return await GetStateAsync<T>(GetAutoPrefixFromType(typeof(T)), null, cancellationToken);
-    }
-
-    public async Task SaveStateAsync<T>(string key, T value, 
-        CancellationToken cancellationToken = default, TimeSpan? ttl = null)
-    {
-        await SaveStateAsync(key, value, GetAutoPrefixFromType(typeof(T)), cancellationToken, ttl);
-    }
-
-    public async Task SaveStateAsync<T>(string key, T value, string? prefix, CancellationToken cancellationToken = default, TimeSpan? ttl = null)
+    public override async Task SaveStateAsync<T>(string key, T value, string? prefix, CancellationToken cancellationToken = default, TimeSpan? ttl = null)
     {
         var finalKey = GetKey(key, prefix);
         try
@@ -198,22 +150,12 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         }
         catch (Exception e)
         {
-            throw e.CreateException(logger, "ERROR Saving state to {0} with key: {1}", StateStoreName,
+            throw e.CreateException(Logger, "ERROR Saving state to {0} with key: {1}", StateStoreName,
                 finalKey);
         }
     }
 
-    public async Task SaveSingleStateAsync<T>(T value, CancellationToken cancellationToken = default, TimeSpan? ttl = null) where T : class
-    {
-        await SaveStateAsync(GetAutoPrefixFromType(typeof(T)), value, GetAutoPrefixFromType(typeof(T)), cancellationToken, ttl);
-    }
-
-    public async Task DeleteStateAsync(string key, CancellationToken cancellationToken = default)
-    {
-        await DeleteStateAsync(key, null, cancellationToken);
-    }
-
-    public async Task DeleteStateAsync(string key, string? prefix, CancellationToken cancellationToken = default)
+    public override async Task DeleteStateAsync(string key, string? prefix, CancellationToken cancellationToken = default)
     {
         var finalKey = GetKey(key, prefix);
         try
@@ -222,22 +164,12 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         }
         catch (Exception e)
         {
-            throw e.CreateException(logger, "ERROR Deleting state from {0} with key: {1}", StateStoreName,
+            throw e.CreateException(Logger, "ERROR Deleting state from {0} with key: {1}", StateStoreName,
                 finalKey);
         }
     }
 
-    public async Task DeleteSingleStateAsync<T>(CancellationToken cancellationToken = default) where T : class
-    {
-        await DeleteStateAsync(GetAutoPrefixFromType(typeof(T)), null, cancellationToken);
-    }
-
-    public async Task DeleteBulkStateAsync(IReadOnlyList<string> keys, CancellationToken cancellationToken = default)
-    {
-        await DeleteBulkStateAsync(keys, null, cancellationToken);
-    }
-
-    public async Task DeleteBulkStateAsync(IReadOnlyList<string> keys, string? prefix, CancellationToken cancellationToken = default)
+    public override async Task DeleteBulkStateAsync(IReadOnlyList<string> keys, string? prefix, CancellationToken cancellationToken = default)
     {
         var finalKeys = keys.Select(k => GetKey(k, prefix)).ToList();
         try
@@ -247,17 +179,12 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         }
         catch (Exception e)
         {
-            throw e.CreateException(logger, "ERROR Deleting bulk state from {0} with keys: {1}", StateStoreName,
+            throw e.CreateException(Logger, "ERROR Deleting bulk state from {0} with keys: {1}", StateStoreName,
                 string.Join(", ", finalKeys));
         }
     }
 
-    public async Task<(T value, string etag)> GetStateAndVersionAsync<T>(string key, CancellationToken cancellationToken = default)
-    {
-        return await GetStateAndVersionAsync<T>(key, GetAutoPrefixFromType(typeof(T)), cancellationToken);
-    }
-
-    public async Task<(T value, string etag)> GetStateAndVersionAsync<T>(string key, string? prefix, CancellationToken cancellationToken = default)
+    public override async Task<(T value, string etag)> GetStateAndVersionAsync<T>(string key, string? prefix, CancellationToken cancellationToken = default)
     {
         var finalKey = GetKey(key, prefix);
         try
@@ -266,41 +193,10 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         }
         catch (Exception e)
         {
-            throw e.CreateException(logger, "ERROR Getting state and version from {0} with key: {1}", StateStoreName,
+            throw e.CreateException(Logger, "ERROR Getting state and version from {0} with key: {1}", StateStoreName,
                 finalKey);
         }
     }
 
-    /// <summary>
-    /// 生成带前缀的键
-    /// </summary>
-    /// <param name="key">原始键</param>
-    /// <param name="prefix">键前缀</param>
-    /// <returns>带前缀的键</returns>
-    private static string GetKey(string key, string? prefix = null)
-    {
-        return (prefix?.BeIfNotEmpty(prefix + "&&") ?? "") + key;
-    }
-
-    /// <summary>
-    /// 移除键前缀
-    /// </summary>
-    /// <param name="key">带前缀的键</param>
-    /// <param name="prefix">前缀</param>
-    /// <returns>移除前缀后的键</returns>
-    private static string RemovePrefix(string key, string? prefix)
-    {
-        if (string.IsNullOrEmpty(prefix)) return key;
-        var len = prefix.Length + 2;
-        return key.Remove(0, len);
-    }
-
-    /// <summary>
-    /// 根据类型自动生成前缀
-    /// </summary>
-    /// <param name="type">要生成前缀的类型</param>
-    protected virtual string GetAutoPrefixFromType(Type type)
-    {
-        return type.GetCleanFullName();
-    }
+ 
 }
