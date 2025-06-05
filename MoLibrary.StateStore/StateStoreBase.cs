@@ -69,7 +69,8 @@ public abstract class StateStoreBase(ILogger logger) : IStateStore
         await DeleteBulkStateAsync(keys, null, cancellationToken);
     }
 
-    public async Task<(T value, string version)> GetStateAndVersionAsync<T>(string key, CancellationToken cancellationToken = default)
+    public async Task<(T value, string etag)> GetStateAndVersionAsync<T>(string key,
+        CancellationToken cancellationToken = default)
     {
         return await GetStateAndVersionAsync<T>(key, GetAutoPrefixFromType(typeof(T)), cancellationToken);
     }
@@ -91,7 +92,8 @@ public abstract class StateStoreBase(ILogger logger) : IStateStore
 
     public abstract Task DeleteBulkStateAsync(IReadOnlyList<string> keys, string? prefix, CancellationToken cancellationToken = default);
 
-    public abstract Task<(T value, string version)> GetStateAndVersionAsync<T>(string key, string? prefix, CancellationToken cancellationToken = default);
+    public abstract Task<(T value, string etag)> GetStateAndVersionAsync<T>(string key, string? prefix,
+        CancellationToken cancellationToken = default);
 
     #endregion
 

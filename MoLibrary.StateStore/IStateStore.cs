@@ -154,6 +154,7 @@ public interface IStateStore
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>删除操作的任务</returns>
     Task DeleteBulkStateAsync(IReadOnlyList<string> keys, string? prefix, CancellationToken cancellationToken = default);
+
     /// <summary>
     /// 获取状态数据及其版本标识，使用泛型T的类型名作为键前缀
     /// </summary>
@@ -161,7 +162,7 @@ public interface IStateStore
     /// <param name="key">状态键</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>返回包含状态值和版本标识的元组</returns>
-    Task<(T value, string version)> GetStateAndVersionAsync<T>(string key, CancellationToken cancellationToken = default);
+    Task<(T value, string etag)> GetStateAndVersionAsync<T>(string key, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 获取状态数据及其版本标识，使用指定的键前缀
@@ -171,5 +172,6 @@ public interface IStateStore
     /// <param name="prefix">键前缀</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>返回包含状态值和版本标识的元组</returns>
-    Task<(T value, string version)> GetStateAndVersionAsync<T>(string key, string? prefix, CancellationToken cancellationToken = default);
+    Task<(T value, string etag)> GetStateAndVersionAsync<T>(string key, string? prefix,
+        CancellationToken cancellationToken = default);
 }

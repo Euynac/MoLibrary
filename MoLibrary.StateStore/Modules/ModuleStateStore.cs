@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Models;
+using MoLibrary.StateStore.MemoryProvider;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.StateStore.Modules;
@@ -15,7 +16,8 @@ public class ModuleStateStore(ModuleStateStoreOption option)
 
     public override Res ConfigureServices(IServiceCollection services)
     {
-
+        services.AddMemoryCache();
+        services.AddSingleton<IMemoryStateStore, MemoryCacheProvider>();
         return Res.Ok();
     }
 }
