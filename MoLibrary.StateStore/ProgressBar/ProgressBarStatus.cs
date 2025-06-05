@@ -1,6 +1,14 @@
 namespace MoLibrary.StateStore.ProgressBar;
 
 /// <summary>
+/// 进度条状态更新事件参数
+/// </summary>
+public class ProgressBarStatusEventArgs(ProgressBarStatus status) : EventArgs
+{
+    public ProgressBarStatus Status { get; } = status;
+}
+
+/// <summary>
 /// 进度条状态类，用于跟踪和管理任务的执行进度
 /// </summary>
 /// <param name="service">进度条服务接口</param>
@@ -61,6 +69,20 @@ public class ProgressBarStatus(ProgressBarSetting setting, IProgressBarService s
     public DateTime StartTime { get; set; } = DateTime.Now;
 
     /// <summary>
+    /// 进度条状态更新事件
+    /// </summary>
+    public event EventHandler<ProgressBarStatusEventArgs>? StatusUpdated;
+
+    /// <summary>
+    /// 触发状态更新事件
+    /// </summary>
+    /// <param name="e">事件参数</param>
+    protected virtual void OnStatusUpdated(ProgressBarStatusEventArgs e)
+    {
+        StatusUpdated?.Invoke(this, e);
+    }
+
+    /// <summary>
     /// 计算预估剩余完成时间
     /// </summary>
     /// <returns>预估剩余时间，如果当前步数小于等于0则返回最大时间值</returns>
@@ -81,6 +103,9 @@ public class ProgressBarStatus(ProgressBarSetting setting, IProgressBarService s
     {
         LastUpdated = DateTime.Now;
         await Service.SaveProgressBarStateAsync(this);
+        
+        // 触发状态更新事件
+        OnStatusUpdated(new ProgressBarStatusEventArgs(this));
     }
 
     /// <summary>
@@ -100,7 +125,6 @@ public class ProgressBarStatus(ProgressBarSetting setting, IProgressBarService s
     /// <returns>异步任务</returns>
     public virtual async Task CompleteTaskAsync()
     {
-
-        await SaveStatus();
+        await Service.FinishProgressBarAsync(this);
     }
 }

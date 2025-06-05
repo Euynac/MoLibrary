@@ -30,7 +30,7 @@ public interface IProgressBarService
 
 
     /// <summary>
-    /// 
+    /// 完成进度条任务
     /// </summary>
     /// <param name="status"></param>
     /// <returns></returns>
@@ -48,4 +48,14 @@ public class ProgressBarSetting
     /// 进度条任务的总步数，默认为100
     /// </summary>
     public int TotalSteps { get; set; } = 100;
+
+    /// <summary>
+    /// 进度条状态的生存时间，超过此时间后状态未更新将被自动清理，默认为10分钟
+    /// </summary>
+    public TimeSpan TimeToLive { get; set; } = TimeSpan.FromMinutes(10);
+
+    /// <summary>
+    /// 进度条状态完成后的生存时间，超过此时间后状态将被自动清理，默认为3分钟
+    /// </summary>
+    public TimeSpan CompletedTimeToLive { get; set; } = TimeSpan.FromMinutes(3);
 }
