@@ -41,6 +41,8 @@ public class UnitRepository(Type type) : ProjectUnit(type, EProjectUnitType.Repo
             return null;
         }
 
+     
+
         unit.EntityType = exactGenericType.GetGenericArguments().First();
         unit.RepoInterface = repoInterface;
         unit.IsHistoryRepo = type.Name.EndsWith("History");
