@@ -11,4 +11,7 @@
   <ItemGroup>
     <ProjectReference Include="..\MoLibrary.Core\MoLibrary.Core.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="MemoryProvider\" />
+  </ItemGroup>
 </Project>
