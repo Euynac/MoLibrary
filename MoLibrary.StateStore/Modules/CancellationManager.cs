@@ -48,8 +48,17 @@ public class ModuleCancellationManager(ModuleCancellationManagerOption option)
     /// <returns>返回配置结果</returns>
     public override void ConfigureServices(IServiceCollection services)
     {
-        // 注册分布式取消令牌管理器服务
-        services.AddSingleton<IMoCancellationManager, DefaultDistributedCancellationManager>();
+        // 根据配置选择合适的实现
+        if (Option.UseInMemoryImplementation)
+        {
+            // 注册内存版取消令牌管理器服务
+            services.AddSingleton<IMoCancellationManager, InMemoryCancellationManager>();
+        }
+        else
+        {
+            // 注册分布式取消令牌管理器服务
+            services.AddSingleton<IMoCancellationManager, DefaultDistributedCancellationManager>();
+        }
     }
 }
 
@@ -60,24 +69,40 @@ public class ModuleCancellationManagerGuide : MoModuleGuide<ModuleCancellationMa
     ModuleCancellationManagerGuide>
 {
     /// <summary>
-    /// 添加指定键的分布式取消令牌管理器
+    /// 添加指定键的取消令牌管理器
     /// </summary>
     /// <param name="key">服务键</param>
-    /// <param name="useDistributed"></param>
+    /// <param name="useInMemory">是否使用内存实现，默认为false</param>
     /// <returns>返回当前模块指南实例以支持链式调用</returns>
-    public ModuleCancellationManagerGuide AddKeyedCancellationManager(string key, bool useDistributed = false)
+    public ModuleCancellationManagerGuide AddKeyedCancellationManager(string key, bool useInMemory = false)
     {
-        DependsOnModule<ModuleStateStoreGuide>().Register().AddKeyedStateStore(key, useDistributed);
+        if (!useInMemory)
+        {
+            // 使用分布式实现，需要依赖StateStore
+            DependsOnModule<ModuleStateStoreGuide>().Register().AddKeyedStateStore(key, false);
+        }
+        
         ConfigureServices(context =>
         {
             context.Services.AddKeyedSingleton<IMoCancellationManager>(key, (serviceProvider, _) =>
             {
-                var stateStore = serviceProvider.GetRequiredKeyedService<IMoStateStore>(key);
-                return ActivatorUtilities.CreateInstance<DefaultDistributedCancellationManager>(serviceProvider, stateStore);
+                if (useInMemory)
+                {
+                    // 使用内存实现
+                    return ActivatorUtilities.CreateInstance<InMemoryCancellationManager>(serviceProvider);
+                }
+                else
+                {
+                    // 使用分布式实现
+                    var stateStore = serviceProvider.GetRequiredKeyedService<IMoStateStore>(key);
+                    return ActivatorUtilities.CreateInstance<DefaultDistributedCancellationManager>(serviceProvider, stateStore);
+                }
             });
         });
         return this;
     }
+
+
 }
 
 /// <summary>
@@ -86,7 +111,13 @@ public class ModuleCancellationManagerGuide : MoModuleGuide<ModuleCancellationMa
 public class ModuleCancellationManagerOption : MoModuleOption<ModuleCancellationManager>
 {
     /// <summary>
+    /// 是否使用内存实现，默认为false（使用分布式实现）
+    /// </summary>
+    public bool UseInMemoryImplementation { get; set; } = false;
+
+    /// <summary>
     /// 轮询间隔（毫秒），默认为1000ms
+    /// 仅在使用分布式实现时有效
     /// </summary>
     public int PollingIntervalMs { get; set; } = 1000;
 
@@ -98,6 +129,7 @@ public class ModuleCancellationManagerOption : MoModuleOption<ModuleCancellation
     /// <summary>
     /// 取消令牌状态的TTL（生存时间），默认为24小时
     /// 设置为null表示永不过期
+    /// 仅在使用分布式实现时有效
     /// </summary>
     public TimeSpan? StateTtl { get; set; } = TimeSpan.FromHours(24);
 
