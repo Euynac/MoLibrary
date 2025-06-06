@@ -10,7 +10,7 @@ using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.RegisterCentre.Modules;
 
-public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModule<ModuleRegisterCentre, ModuleRegisterCentreOption>(option)
+public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModule<ModuleRegisterCentre, ModuleRegisterCentreOption, ModuleRegisterCentreGuide>(option)
 {
     public override EMoModules CurModuleEnum()
     {

@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Module.BuilderWrapper;
 using MoLibrary.Core.Module.Features;
 using MoLibrary.Core.Module.Models;
@@ -54,10 +53,10 @@ public class MoModuleGuide
         return DeclareDependency<TOtherModuleGuide>(GetTargetModuleEnum(), GuideFrom);
     }
 }
-public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleGuide, IMoModuleGuide
+public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleGuide, IMoModuleGuide, IMoModuleGuideBridge
     where TModuleOption : MoModuleOption<TModule>, new()
     where TModuleGuideSelf : MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf>, new()
-    where TModule : MoModule<TModule, TModuleOption>, IMoModuleStaticInfo
+    where TModule : MoModule<TModule, TModuleOption, TModuleGuideSelf>, IMoModuleStaticInfo
 {
     public override EMoModules GetTargetModuleEnum()
     {

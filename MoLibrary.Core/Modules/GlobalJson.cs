@@ -22,7 +22,7 @@ public static class ModuleGlobalJsonBuilderExtensions
 }
 
 public class ModuleGlobalJson(ModuleGlobalJsonOption option)
-    : MoModule<ModuleGlobalJson, ModuleGlobalJsonOption>(option)
+    : MoModule<ModuleGlobalJson, ModuleGlobalJsonOption, ModuleGlobalJsonGuide>(option)
 {
     public override EMoModules CurModuleEnum()
     {

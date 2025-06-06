@@ -19,7 +19,7 @@ public static class ModuleDaprStateStoreBuilderExtensions
 }
 
 public class ModuleDaprStateStore(ModuleDaprStateStoreOption option)
-    : MoModuleWithDependencies<ModuleDaprStateStore, ModuleDaprStateStoreOption>(option)
+    : MoModuleWithDependencies<ModuleDaprStateStore, ModuleDaprStateStoreOption, ModuleDaprStateStoreGuide>(option)
 {
     public override EMoModules CurModuleEnum()
     {

@@ -42,9 +42,10 @@ public abstract class MoModule : IMoModule
 /// MoLibrary模块抽象基类
 /// 提供IMoLibraryModule接口的默认实现
 /// </summary>
-public abstract class MoModule<TModuleSelf, TModuleOption>(TModuleOption option) : MoModule, IMoModuleStaticInfo
+public abstract class MoModule<TModuleSelf, TModuleOption, TModuleGuide>(TModuleOption option) : MoModule, IMoModuleStaticInfo, IMoModuleGuideBridge
     where TModuleOption : MoModuleOption<TModuleSelf>, new() 
-    where TModuleSelf : MoModule<TModuleSelf, TModuleOption>
+    where TModuleSelf : MoModule<TModuleSelf, TModuleOption, TModuleGuide>
+    where TModuleGuide : MoModuleGuide<TModuleSelf, TModuleOption, TModuleGuide>, new()
 {
     public TModuleOption Option { get; } = option;
     public ILogger Logger { get;  } = option.Logger;
@@ -65,11 +66,17 @@ public abstract class MoModule<TModuleSelf, TModuleOption>(TModuleOption option)
         
         return moduleEnum;
     }
+
+    public void CheckRequiredMethod(string methodName, string? errorDetail = null)
+    {
+        new TModuleGuide().CheckRequiredMethod(methodName, errorDetail);
+    }
 }
 
-public abstract class MoModuleWithDependencies<TModuleSelf, TModuleOption>(TModuleOption option) : MoModule<TModuleSelf, TModuleOption>(option), IWantDependsOnOtherModules
+public abstract class MoModuleWithDependencies<TModuleSelf, TModuleOption, TModuleGuide>(TModuleOption option) : MoModule<TModuleSelf, TModuleOption, TModuleGuide>(option), IWantDependsOnOtherModules
     where TModuleOption : MoModuleOption<TModuleSelf>, new()
-    where TModuleSelf : MoModuleWithDependencies<TModuleSelf, TModuleOption>
+    where TModuleSelf : MoModuleWithDependencies<TModuleSelf, TModuleOption, TModuleGuide>
+    where TModuleGuide : MoModuleGuide<TModuleSelf, TModuleOption, TModuleGuide>, new()
 {
     /// <summary>
     /// 声明依赖的模块，并进行配置等

@@ -32,7 +32,7 @@ internal class MoHangfireAuthorizationFilter : IDashboardAuthorizationFilter
         return true;
     }
 }
-public class ModuleBackgroundJob(ModuleBackgroundJobOption option) : MoModule<ModuleBackgroundJob, ModuleBackgroundJobOption>(option), IWantIterateBusinessTypes
+public class ModuleBackgroundJob(ModuleBackgroundJobOption option) : MoModule<ModuleBackgroundJob, ModuleBackgroundJobOption, ModuleBackgroundJobGuide>(option), IWantIterateBusinessTypes
 {
     private readonly List<Type> _backgroundWorkerTypes = [];
     private readonly List<Type> _backgroundJobTypes = [];

@@ -24,7 +24,7 @@ public static class ModuleDaprBuilderExtensions
     }
 }
 
-public partial class ModuleDapr(ModuleDaprOption option) : MoModule<ModuleDapr, ModuleDaprOption>(option)
+public partial class ModuleDapr(ModuleDaprOption option) : MoModule<ModuleDapr, ModuleDaprOption, ModuleDaprGuide>(option)
 {
     public override EMoModules CurModuleEnum()
     {

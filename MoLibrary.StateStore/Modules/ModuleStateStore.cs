@@ -7,7 +7,7 @@ using MoLibrary.Tool.MoResponse;
 namespace MoLibrary.StateStore.Modules;
 
 public class ModuleStateStore(ModuleStateStoreOption option)
-    : MoModule<ModuleStateStore, ModuleStateStoreOption>(option)
+    : MoModule<ModuleStateStore, ModuleStateStoreOption, ModuleStateStoreGuide>(option)
 {
     public override EMoModules CurModuleEnum()
     {

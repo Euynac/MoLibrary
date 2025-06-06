@@ -5,7 +5,7 @@ using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.SignalR.Modules;
 
-public class ModuleSignalR(ModuleSignalROption option) : MoModule<ModuleSignalR, ModuleSignalROption>(option)
+public class ModuleSignalR(ModuleSignalROption option) : MoModule<ModuleSignalR, ModuleSignalROption, ModuleSignalRGuide>(option)
 {
     public override EMoModules CurModuleEnum()
     {

@@ -10,7 +10,7 @@ using MoLibrary.DependencyInjection.Implements;
 namespace MoLibrary.DependencyInjection.Modules;
 
 public class ModuleDependencyInjection(ModuleDependencyInjectionOption option)
-    : MoModule<ModuleDependencyInjection, ModuleDependencyInjectionOption>(option), IWantIterateBusinessTypes
+    : MoModule<ModuleDependencyInjection, ModuleDependencyInjectionOption, ModuleDependencyInjectionGuide>(option), IWantIterateBusinessTypes
 {
     private IConventionalRegistrar? _registrar;
     private IServiceCollection? _services;

@@ -12,7 +12,7 @@ using MoLibrary.Tool.MoResponse;
 namespace MoLibrary.DataChannel.Modules;
 
 public class ModuleDataChannel(ModuleDataChannelOption option)
-    : MoModule<ModuleDataChannel, ModuleDataChannelOption>(option)
+    : MoModule<ModuleDataChannel, ModuleDataChannelOption, ModuleDataChannelGuide>(option)
 {
     public override EMoModules CurModuleEnum()
     {

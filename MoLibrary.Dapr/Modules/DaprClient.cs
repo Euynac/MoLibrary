@@ -20,7 +20,7 @@ public static class ModuleDaprClientBuilderExtensions
 }
 
 public class ModuleDaprClient(ModuleDaprClientOption option)
-    : MoModule<ModuleDaprClient, ModuleDaprClientOption>(option)
+    : MoModule<ModuleDaprClient, ModuleDaprClientOption, ModuleDaprClientGuide>(option)
 {
     public override EMoModules CurModuleEnum()
     {

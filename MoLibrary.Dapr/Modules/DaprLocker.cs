@@ -20,7 +20,7 @@ public static class ModuleDaprLockerBuilderExtensions
 }
 
 public class ModuleDaprLocker(ModuleDaprLockerOption option)
-    : MoModuleWithDependencies<ModuleDaprLocker, ModuleDaprLockerOption>(option)
+    : MoModuleWithDependencies<ModuleDaprLocker, ModuleDaprLockerOption, ModuleDaprLockerGuide>(option)
 {
     public override EMoModules CurModuleEnum()
     {

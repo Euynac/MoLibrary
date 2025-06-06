@@ -31,7 +31,7 @@ public static class ModuleCancellationManagerBuilderExtensions
 /// 提供跨微服务实例的取消令牌管理功能
 /// </summary>
 public class ModuleCancellationManager(ModuleCancellationManagerOption option)
-    : MoModule<ModuleCancellationManager, ModuleCancellationManagerOption>(option)
+    : MoModule<ModuleCancellationManager, ModuleCancellationManagerOption, ModuleCancellationManagerGuide>(option)
 {
     /// <summary>
     /// 获取当前模块枚举值
