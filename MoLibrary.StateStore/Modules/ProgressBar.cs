@@ -1,9 +1,7 @@
 using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
-using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.StateStore.Modules;
 
@@ -24,16 +22,29 @@ public class ModuleProgressBar(ModuleProgressBarOption option)
     {
         return EMoModules.ProgressBar;
     }
-
-    public override Res ConfigureServices(IServiceCollection services)
-    {
-
-        return Res.Ok();
-    }
 }
 
 public class ModuleProgressBarGuide : MoModuleGuide<ModuleProgressBar, ModuleProgressBarOption, ModuleProgressBarGuide>
 {
+    /// <summary>
+    /// 配置进度条使用内存状态存储
+    /// </summary>
+    public ModuleProgressBarGuide UseMemoryStateStore()
+    {
+        DependsOnModule<ModuleStateStoreGuide>().Register().AddKeyedMemoryStateStore(nameof(ModuleProgressBar));
+        
+        return this;
+    }
+
+    /// <summary>
+    /// 配置进度条使用分布式状态存储
+    /// </summary>
+    public ModuleProgressBarGuide UseDistributedStateStore()
+    {
+        DependsOnModule<ModuleStateStoreGuide>().Register().AddKeyedDistributedStateStore(nameof(ModuleProgressBar));
+        
+        return this;
+    }
 
 
 }

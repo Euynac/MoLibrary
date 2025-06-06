@@ -1,12 +1,10 @@
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.Dapr.StateStore;
-using MoLibrary.StateStore;
-using MoLibrary.Tool.MoResponse;
 using System.ComponentModel.DataAnnotations;
+using MoLibrary.StateStore.Modules;
 
 namespace MoLibrary.Dapr.Modules;
 
@@ -28,15 +26,10 @@ public class ModuleDaprStateStore(ModuleDaprStateStoreOption option)
         return EMoModules.DaprStateStore;
     }
 
-    public override Res ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<IDistributedStateStore, DaprStateStore>();
-        return Res.Ok();
-    }
-
     public override void ClaimDependencies()
     {
         DependsOnModule<ModuleDaprClientGuide>().Register();
+        DependsOnModule<ModuleStateStoreGuide>().Register().RegisterDistributedStateStoreProvider<DaprStateStore>();
     }
 }
 
