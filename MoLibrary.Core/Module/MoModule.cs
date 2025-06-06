@@ -10,28 +10,23 @@ namespace MoLibrary.Core.Module;
 
 public abstract class MoModule : IMoModule
 {
-    public virtual Res ConfigureBuilder(WebApplicationBuilder builder)
+    public virtual void ConfigureBuilder(WebApplicationBuilder builder)
     {
-        return Res.Ok();
     }
 
-    public virtual Res ConfigureServices(IServiceCollection services)
+    public virtual void ConfigureServices(IServiceCollection services)
     {
-        return Res.Ok();
     }
   
-    public virtual Res PostConfigureServices(IServiceCollection services)
+    public virtual void PostConfigureServices(IServiceCollection services)
     {
-        return Res.Ok();
     }
-    public virtual Res ConfigureApplicationBuilder(IApplicationBuilder app)
+    public virtual void ConfigureApplicationBuilder(IApplicationBuilder app)
     {
-        return Res.Ok();
     }
 
-    public virtual Res ConfigureEndpoints(IApplicationBuilder app)
+    public virtual void ConfigureEndpoints(IApplicationBuilder app)
     {
-        return Res.Ok();
     }
 
     public abstract EMoModules CurModuleEnum();

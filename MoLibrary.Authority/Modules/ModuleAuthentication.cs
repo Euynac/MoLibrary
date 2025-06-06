@@ -37,7 +37,7 @@ public class ModuleAuthentication(ModuleAuthenticationOption option) : MoModule<
         return EMoModules.Authentication;
     }
 
-    public override Res ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(IServiceCollection services)
     {
         if (option.IsDebugging)
         {
@@ -102,11 +102,9 @@ public class ModuleAuthentication(ModuleAuthenticationOption option) : MoModule<
         //});
 
         #endregion
-
-        return Res.Ok();
     }
 
-    public override Res ConfigureEndpoints(IApplicationBuilder app)
+    public override void ConfigureEndpoints(IApplicationBuilder app)
     {
         app.UseEndpoints(endpoints =>
         {
@@ -136,13 +134,11 @@ public class ModuleAuthentication(ModuleAuthenticationOption option) : MoModule<
                 return operation;
             });
         });
-        return base.ConfigureEndpoints(app);
     }
 
     //必须在CORS中间件之后，不然会使得CORS失效
-    public override Res ConfigureApplicationBuilder(IApplicationBuilder app)
+    public override void ConfigureApplicationBuilder(IApplicationBuilder app)
     {
         app.UseAuthentication();
-        return Res.Ok();
     }
 }

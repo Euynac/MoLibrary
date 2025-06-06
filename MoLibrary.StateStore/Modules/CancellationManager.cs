@@ -47,7 +47,7 @@ public class ModuleCancellationManager(ModuleCancellationManagerOption option)
     /// </summary>
     /// <param name="services">服务集合</param>
     /// <returns>返回配置结果</returns>
-    public override Res ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(IServiceCollection services)
     {
         // 注册配置选项
         services.Configure<ModuleCancellationManagerOption>(options =>
@@ -59,8 +59,6 @@ public class ModuleCancellationManager(ModuleCancellationManagerOption option)
 
         // 注册分布式取消令牌管理器服务
         services.AddSingleton<IMoCancellationManager, DefaultDistributedCancellationManager>();
-
-        return Res.Ok();
     }
 }
 

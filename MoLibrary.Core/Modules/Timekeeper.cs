@@ -29,13 +29,12 @@ public class ModuleTimekeeper(ModuleTimekeeperOption option)
         return EMoModules.Timekeeper;
     }
 
-    public override Res ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(IServiceCollection services)
     {
         services.AddSingleton<IMoTimekeeper, MoTimekeeperManager>();
-        return Res.Ok();
     }
 
-    public override Res ConfigureEndpoints(IApplicationBuilder app)
+    public override void ConfigureEndpoints(IApplicationBuilder app)
     {
         app.UseEndpoints(endpoints =>
         {
@@ -67,7 +66,6 @@ public class ModuleTimekeeper(ModuleTimekeeperOption option)
                 return operation;
             });
         });
-        return base.ConfigureEndpoints(app);
     }
 }
 

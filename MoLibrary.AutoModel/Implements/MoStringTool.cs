@@ -1,8 +1,8 @@
-using MoLibrary.Tool.Extensions;
 using System.Globalization;
 using System.Text.RegularExpressions;
+using MoLibrary.Tool.Extensions;
 
-namespace MoLibrary.AutoModel.AutoModel.Implements;
+namespace MoLibrary.AutoModel.Implements;
 
 public static partial class MoStringTool
 {

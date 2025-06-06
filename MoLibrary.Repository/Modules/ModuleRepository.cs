@@ -14,10 +14,9 @@ public class ModuleRepository(ModuleRepositoryOption option)
         return EMoModules.Repository;
     }
 
-    public override Res ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(IServiceCollection services)
     {
 
-        return Res.Ok();
     }
 
     public override void ClaimDependencies()

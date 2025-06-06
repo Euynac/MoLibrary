@@ -31,16 +31,15 @@ public partial class ModuleDapr(ModuleDaprOption option) : MoModule<ModuleDapr, 
         return EMoModules.Dapr;
     }
 
-    public override Res ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(IServiceCollection services)
     {
         // Disabled temporarily until https://github.com/dapr/dotnet-sdk/issues/779 is resolved.
         //builder.Configuration.AddDaprSecretStore(
         //    "secretstore",
         //    new DaprClientBuilder().Build());
-        return Res.Ok();
     }
 
-    public override Res ConfigureEndpoints(IApplicationBuilder app)
+    public override void ConfigureEndpoints(IApplicationBuilder app)
     {
         app.UseEndpoints(endpoints =>
         {
@@ -95,7 +94,6 @@ public partial class ModuleDapr(ModuleDaprOption option) : MoModule<ModuleDapr, 
 
 
         });
-        return base.ConfigureEndpoints(app);
     }
 
    

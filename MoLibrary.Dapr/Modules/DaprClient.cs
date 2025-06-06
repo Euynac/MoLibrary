@@ -27,7 +27,7 @@ public class ModuleDaprClient(ModuleDaprClientOption option)
         return EMoModules.DaprClient;
     }
 
-    public override Res ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDaprClient(builder => builder.UseGrpcChannelOptions(new GrpcChannelOptions()
         {
@@ -36,7 +36,6 @@ public class ModuleDaprClient(ModuleDaprClientOption option)
             MaxRetryBufferSize = Option.MaxRetryBufferSize,
 
         }).UseJsonSerializationOptions(DefaultMoGlobalJsonOptions.GlobalJsonSerializerOptions));
-        return Res.Ok();
     }
 }
 

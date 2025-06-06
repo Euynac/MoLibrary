@@ -35,7 +35,7 @@ public class ModuleAutoControllers(ModuleAutoControllersOption option)
         return EMoModules.AutoControllers;
     }
 
-    public override Res ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(IServiceCollection services)
     {
         services.AddTransient<IMoServiceConvention, MoCrudControllerServiceConvention>();
         services.AddTransient<IApiDescriptionProvider, MoCrudApiDescriptionProvider>();
@@ -47,16 +47,14 @@ public class ModuleAutoControllers(ModuleAutoControllersOption option)
 
         // if you use v6's "minimal APIs" https://stackoverflow.com/questions/71932980/what-is-addendpointsapiexplorer-in-asp-net-core-6
         services.AddEndpointsApiExplorer();
-        return Res.Ok();
     }
 
-    public override Res ConfigureEndpoints(IApplicationBuilder app)
+    public override void ConfigureEndpoints(IApplicationBuilder app)
     {
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapControllers();
         });
-        return base.ConfigureEndpoints(app);
     }
 
     public override void ClaimDependencies()

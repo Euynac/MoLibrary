@@ -33,7 +33,7 @@ public class ModuleMapper(ModuleMapperOption option) : MoModule<ModuleMapper, Mo
         return EMoModules.Mapper;
     }
 
-    public override Res ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(IServiceCollection services)
     {
         if (option.DebugMapper)
         {
@@ -58,10 +58,9 @@ public class ModuleMapper(ModuleMapperOption option) : MoModule<ModuleMapper, Mo
         services.AddSingleton(TypeAdapterConfig.GlobalSettings);
         services.AddScoped<IMapper, ServiceMapper>();
         services.AddTransient<IMoMapper, MapsterProviderMoObjectMapper>();
-        return Res.Ok();
     }
 
-    public override Res ConfigureEndpoints(IApplicationBuilder app)
+    public override void ConfigureEndpoints(IApplicationBuilder app)
     {
         app.UseEndpoints(endpoints =>
         {
@@ -91,7 +90,6 @@ public class ModuleMapper(ModuleMapperOption option) : MoModule<ModuleMapper, Mo
                 return operation;
             });
         });
-        return base.ConfigureApplicationBuilder(app);
     }
 }
 

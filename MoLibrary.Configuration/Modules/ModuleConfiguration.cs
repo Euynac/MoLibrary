@@ -29,7 +29,7 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
         return EMoModules.Configuration;
     }
 
-    public override Res ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(IServiceCollection services)
     {
         _services = services;
         MoConfigurationManager.Setting = Option;
@@ -65,15 +65,13 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
         }
 
         _method = method;
-        return Res.Ok();
     }
 
-    public override Res PostConfigureServices(IServiceCollection services)
+    public override void PostConfigureServices(IServiceCollection services)
     {
         //巨坑：当Option的属性是List或Array等类型，有多个Configuration来源，那么这里面的元素会Append而不是替换。设计如此。dotnet/runtime #36384
         MoConfigurationManager.Setting.SetOtherSourceAction?.Invoke((ConfigurationManager) MoConfigurationManager.AppConfiguration);
         MoConfigurationCard.RefreshProviders();
-        return Res.Ok();
     }
 
     public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
@@ -119,12 +117,11 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
         }
     }
 
-    public override Res ConfigureApplicationBuilder(IApplicationBuilder app)
+    public override void ConfigureApplicationBuilder(IApplicationBuilder app)
     {
-        return Res.Ok();
     }
 
-    public override Res ConfigureEndpoints(IApplicationBuilder app)
+    public override void ConfigureEndpoints(IApplicationBuilder app)
     {
         app.UseEndpoints(endpoints =>
         {
@@ -172,7 +169,6 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
                     return operation;
                 });
         });
-        return Res.Ok();
     }
 
    

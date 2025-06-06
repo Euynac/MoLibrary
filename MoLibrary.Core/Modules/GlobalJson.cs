@@ -29,7 +29,7 @@ public class ModuleGlobalJson(ModuleGlobalJsonOption option)
         return EMoModules.GlobalJson;
     }
 
-    public override Res ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(IServiceCollection services)
     {
         var jsonSerializerOptions = new JsonSerializerOptions();
         jsonSerializerOptions.ConfigGlobalJsonSerializeOptions(Option);
@@ -51,8 +51,6 @@ public class ModuleGlobalJson(ModuleGlobalJsonOption option)
         });
 
         services.AddSingleton<IGlobalJsonOption, DefaultMoGlobalJsonOptions>();
-
-        return Res.Ok();
     }
 }
 

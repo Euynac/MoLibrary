@@ -31,9 +31,8 @@ public class ModuleExcel(ModuleExcelOption option) : MoModule<ModuleExcel, Modul
         return EMoModules.Excel;
     }
 
-    public override Res ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(IServiceCollection services)
     {
-        return Res.Ok();
     }
 }
 

@@ -27,7 +27,7 @@ public class ModuleConfigurationDashboard(ModuleConfigurationDashboardOption opt
         DependsOnModule<ModuleConfigurationGuide>().Register();
     }
 
-    public override Res ConfigureEndpoints(IApplicationBuilder app)
+    public override void ConfigureEndpoints(IApplicationBuilder app)
     {
         if (option.ThisIsDashboard)
         {
@@ -156,8 +156,6 @@ public class ModuleConfigurationDashboard(ModuleConfigurationDashboardOption opt
                 });
             });
         }
-
-        return Res.Ok();
     }
 }
 

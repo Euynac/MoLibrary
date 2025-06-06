@@ -14,7 +14,7 @@ public class ModuleStateStore(ModuleStateStoreOption option)
         return EMoModules.StateStore;
     }
 
-    public override Res ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(IServiceCollection services)
     {
         services.AddMemoryCache();
         services.AddSingleton<IMemoryStateStore, MemoryCacheProvider>();
@@ -28,6 +28,5 @@ public class ModuleStateStore(ModuleStateStoreOption option)
         {
             services.AddSingleton<IMoStateStore>(serviceProvider => serviceProvider.GetRequiredService<IMemoryStateStore>());
         }
-        return Res.Ok();
     }
 }
