@@ -19,7 +19,7 @@ public class ModuleStateStore(ModuleStateStoreOption option)
         services.AddSingleton<IMemoryStateStore, MemoryCacheProvider>();
         if (Option.UseDistributedProviderAsDefault)
         {
-            
+            CheckRequiredMethod(nameof(ModuleStateStoreGuide.RegisterDistributedStateStoreProvider), "未配置分布式状态存储Provider");
             services.AddSingleton<IMoStateStore>(serviceProvider =>
                 serviceProvider.GetRequiredService<IDistributedStateStore>());
         }

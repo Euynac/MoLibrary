@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using MediatR;
 using MoLibrary.Core.Module.BuilderWrapper;
 using MoLibrary.Core.Module.Features;
 using MoLibrary.Core.Module.Models;
@@ -161,6 +162,15 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
             ConfigureContext = context, Key = key
         };
         RegisterModule(request);
+    }
+
+    /// <summary>
+    /// 配置空注册，记录当前配置方法的调用。仅用于规避多次调用某些方法或未调用必须方法。
+    /// </summary>
+    /// <param name="key"></param>
+    protected internal void ConfigureEmpty([CallerMemberName] string key = "")
+    {
+        RegisterModule(new ModuleRegisterRequest(key));
     }
 
     protected internal void ConfigureServices(Action<ModuleRegisterContextWrapperForServices<TModuleOption>> context,

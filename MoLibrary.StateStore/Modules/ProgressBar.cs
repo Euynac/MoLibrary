@@ -16,39 +16,28 @@ public static class ModuleProgressBarBuilderExtensions
 }
 
 public class ModuleProgressBar(ModuleProgressBarOption option)
-    : MoModule<ModuleProgressBar, ModuleProgressBarOption, ModuleProgressBarGuide>(option)
+    : MoModuleWithDependencies<ModuleProgressBar, ModuleProgressBarOption, ModuleProgressBarGuide>(option)
 {
     public override EMoModules CurModuleEnum()
     {
         return EMoModules.ProgressBar;
     }
+
+    public override void ClaimDependencies()
+    {
+        DependsOnModule<ModuleCancellationManagerGuide>().Register().AddKeyedCancellationManager(nameof(ModuleProgressBar), Option.UseDistributedStateStore);
+    }
 }
 
 public class ModuleProgressBarGuide : MoModuleGuide<ModuleProgressBar, ModuleProgressBarOption, ModuleProgressBarGuide>
 {
-    /// <summary>
-    /// 配置进度条使用内存状态存储
-    /// </summary>
-    public ModuleProgressBarGuide UseMemoryStateStore()
-    {
-        DependsOnModule<ModuleStateStoreGuide>().Register().AddKeyedMemoryStateStore(nameof(ModuleProgressBar));
-        
-        return this;
-    }
-
-    /// <summary>
-    /// 配置进度条使用分布式状态存储
-    /// </summary>
-    public ModuleProgressBarGuide UseDistributedStateStore()
-    {
-        DependsOnModule<ModuleStateStoreGuide>().Register().AddKeyedDistributedStateStore(nameof(ModuleProgressBar));
-        
-        return this;
-    }
-
-
+    
 }
 
 public class ModuleProgressBarOption : MoModuleOption<ModuleProgressBar>
 {
+    /// <summary>
+    /// 使用分布式存储
+    /// </summary>
+    public bool UseDistributedStateStore { get; set; }
 }
