@@ -48,14 +48,6 @@ public class ModuleCancellationManager(ModuleCancellationManagerOption option)
     /// <returns>返回配置结果</returns>
     public override void ConfigureServices(IServiceCollection services)
     {
-        // 注册配置选项
-        services.Configure<ModuleCancellationManagerOption>(options =>
-        {
-            options.PollingIntervalMs = Option.PollingIntervalMs;
-            options.EnableVerboseLogging = Option.EnableVerboseLogging;
-            options.StateTtl = Option.StateTtl;
-        });
-
         // 注册分布式取消令牌管理器服务
         services.AddSingleton<IMoCancellationManager, DefaultDistributedCancellationManager>();
     }
@@ -67,6 +59,25 @@ public class ModuleCancellationManager(ModuleCancellationManagerOption option)
 public class ModuleCancellationManagerGuide : MoModuleGuide<ModuleCancellationManager, ModuleCancellationManagerOption,
     ModuleCancellationManagerGuide>
 {
+    /// <summary>
+    /// 添加指定键的分布式取消令牌管理器
+    /// </summary>
+    /// <param name="key">服务键</param>
+    /// <param name="useDistributed"></param>
+    /// <returns>返回当前模块指南实例以支持链式调用</returns>
+    public ModuleCancellationManagerGuide AddKeyedCancellationManager(string key, bool useDistributed = false)
+    {
+        DependsOnModule<ModuleStateStoreGuide>().Register().AddKeyedStateStore(key, useDistributed);
+        ConfigureServices(context =>
+        {
+            context.Services.AddKeyedSingleton<IMoCancellationManager>(key, (serviceProvider, _) =>
+            {
+                var stateStore = serviceProvider.GetRequiredKeyedService<IMoStateStore>(key);
+                return ActivatorUtilities.CreateInstance<DefaultDistributedCancellationManager>(serviceProvider, stateStore);
+            });
+        });
+        return this;
+    }
 }
 
 /// <summary>
@@ -89,4 +100,5 @@ public class ModuleCancellationManagerOption : MoModuleOption<ModuleCancellation
     /// 设置为null表示永不过期
     /// </summary>
     public TimeSpan? StateTtl { get; set; } = TimeSpan.FromHours(24);
+
 }

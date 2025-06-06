@@ -104,8 +104,7 @@ public static class MoModuleRegisterCentre
 
             try
             {
-                //根据info.ModuleOptionType创建模块配置实例
-                var option = Activator.CreateInstance(info.ModuleOptionType);
+                var option = info.CreateCurrentModuleOption();
                 if (Activator.CreateInstance(moduleType, option) is IWantDependsOnOtherModules moduleTmpInstance)
                 {
                     moduleTmpInstance.ClaimDependencies();

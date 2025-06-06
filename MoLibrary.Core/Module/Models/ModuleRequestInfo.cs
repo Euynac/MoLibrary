@@ -54,7 +54,22 @@ public class ModuleRequestInfo
     /// 模块单例，初始化模块配置阶段设置
     /// </summary>
     public MoModule? ModuleSingleton { get; internal set; }
-    
+
+    /// <summary>
+    /// 创建当前情况下的模块配置对象，仅用于少数特殊情况。
+    /// </summary>
+    /// <returns></returns>
+    public object CreateCurrentModuleOption()
+    {
+        var tmp = Activator.CreateInstance(ModuleOptionType)!;
+        foreach (var action in PendingConfigActions[ModuleOptionType].Values)
+        {
+            action.Invoke(tmp);
+        }
+
+        return tmp;
+    }
+
     /// <summary>
     /// 初始化最终配置，根据排序后的配置项获得最终配置对象，最后清空配置操作。
     /// </summary>

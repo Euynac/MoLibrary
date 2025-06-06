@@ -25,44 +25,24 @@ public class ModuleStateStoreGuide : MoModuleGuide<ModuleStateStore, ModuleState
     /// <param name="key">服务键</param>
     /// <param name="useDistributed">是否使用分布式存储，false则使用内存存储</param>
     /// <returns>返回当前模块指南实例以支持链式调用</returns>
-    protected ModuleStateStoreGuide AddKeyedStateStore(string key, bool useDistributed = false)
+    public ModuleStateStoreGuide AddKeyedStateStore(string key, bool useDistributed = false)
     {
         ConfigureServices(context =>
-        {
-            if (useDistributed)
             {
-                CheckRequiredMethod(nameof(RegisterDistributedStateStoreProvider));
-                context.Services.AddKeyedSingleton<IMoStateStore>(key, (serviceProvider, _) =>
-            serviceProvider.GetRequiredService<IDistributedStateStore>());
-            }
-            else
-            {
-                context.Services.AddKeyedSingleton<IMoStateStore>(key, (serviceProvider, _) =>
-            serviceProvider.GetRequiredService<IMemoryStateStore>());
-            }
-        });
-        
+                if (useDistributed)
+                {
+                    CheckRequiredMethod(nameof(RegisterDistributedStateStoreProvider));
+                    context.Services.AddKeyedSingleton<IMoStateStore>(key, (serviceProvider, _) =>
+                        serviceProvider.GetRequiredService<IDistributedStateStore>());
+                }
+                else
+                {
+                    context.Services.AddKeyedSingleton<IMoStateStore>(key, (serviceProvider, _) =>
+                        serviceProvider.GetRequiredService<IMemoryStateStore>());
+                }
+            }, key: $"{nameof(AddKeyedStateStore)}_{key}");
+
         return this;
-    }
-
-    /// <summary>
-    /// 注册指定键的内存状态存储服务
-    /// </summary>
-    /// <param name="key">服务键</param>
-    /// <returns>返回当前模块指南实例以支持链式调用</returns>
-    public ModuleStateStoreGuide AddKeyedMemoryStateStore(string key)
-    {
-        return AddKeyedStateStore(key, useDistributed: false);
-    }
-
-    /// <summary>
-    /// 注册指定键的分布式状态存储服务
-    /// </summary>
-    /// <param name="key">服务键</param>
-    /// <returns>返回当前模块指南实例以支持链式调用</returns>
-    public ModuleStateStoreGuide AddKeyedDistributedStateStore(string key)
-    {
-        return AddKeyedStateStore(key, useDistributed: true);
     }
 
 }
