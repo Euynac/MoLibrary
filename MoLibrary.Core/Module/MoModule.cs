@@ -29,6 +29,7 @@ public abstract class MoModule : IMoModule
     }
 
     public abstract EMoModules CurModuleEnum();
+    internal abstract void ConvertToRegisterRequest();
 }
 
 
@@ -61,7 +62,7 @@ public abstract class MoModule<TModuleSelf, TModuleOption, TModuleGuide>(TModule
         return moduleEnum;
     }
 
-    internal void ConvertToRegisterRequest()
+    internal override void ConvertToRegisterRequest()
     {
         var guide = new TModuleGuide();
 

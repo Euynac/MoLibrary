@@ -49,11 +49,16 @@ public class ModuleRequestInfo
     /// 必须配置的方法键列表，若未配置则会抛出异常。
     /// </summary>
     public List<string> RequiredConfigMethodKeys { get; set; } = [];
+
+    /// <summary>
+    /// 模块单例，初始化模块配置阶段设置
+    /// </summary>
+    public MoModule? ModuleSingleton { get; internal set; }
     
     /// <summary>
     /// 初始化最终配置，根据排序后的配置项获得最终配置对象，最后清空配置操作。
     /// </summary>
-    public void InitFinalConfigures()
+    public void InitFinalConfigures(Type moduleType)
     {
         foreach (var configType in PendingConfigActions.Keys)
         {
@@ -80,7 +85,19 @@ public class ModuleRequestInfo
         {
             FinalConfigures[ModuleOptionType] = Activator.CreateInstance(ModuleOptionType)!;
         }
-        
+
+        if (Activator.CreateInstance(moduleType, ModuleOption) is MoModule instance)
+        {
+            instance.ConvertToRegisterRequest();
+            ModuleSingleton = instance;
+        }
+
+        if (ModuleSingleton == null)
+        {
+            throw new Exception($"{moduleType.GetCleanFullName()}模块初始化最终设置失败！未能生成模块单例");
+        }
+
+
         // 清空待处理的配置操作
         PendingConfigActions.Clear();
     }

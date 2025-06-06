@@ -200,7 +200,5 @@ public class ModuleFrameworkMonitor(ModuleFrameworkMonitorOption option)
                 return operation;
             });
         });
-
-        return Res.Ok();
     }
 }
