@@ -20,6 +20,7 @@ public class ModuleStateStore(ModuleStateStoreOption option)
         services.AddSingleton<IMemoryStateStore, MemoryCacheProvider>();
         if (Option.UseDistributedProviderAsDefault)
         {
+            
             services.AddSingleton<IMoStateStore>(serviceProvider =>
                 serviceProvider.GetRequiredService<IDistributedStateStore>());
         }
