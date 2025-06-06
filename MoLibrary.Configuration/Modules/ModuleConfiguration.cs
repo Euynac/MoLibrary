@@ -117,10 +117,6 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
         }
     }
 
-    public override void ConfigureApplicationBuilder(IApplicationBuilder app)
-    {
-    }
-
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
         app.UseEndpoints(endpoints =>
