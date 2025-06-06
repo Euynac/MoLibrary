@@ -309,9 +309,9 @@ public static class MoModuleRegisterCentre
 
             try
             {
-                if(!afterGivenOrder)
+                ModuleProfiler.StartModulePhase(module.ModuleType, EMoModuleConfigMethods.ConfigureApplicationBuilder);
+                if (!afterGivenOrder)
                 {
-                    ModuleProfiler.StartModulePhase(module.ModuleType, EMoModuleConfigMethods.ConfigureApplicationBuilder);
                     var result = module.ModuleInstance.ConfigureApplicationBuilder(app);
 
                     if (!result.IsOk())
