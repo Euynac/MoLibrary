@@ -1,11 +1,10 @@
-
+using System.Net;
 using Hangfire.Common;
 using Hangfire.Dashboard;
+using Hangfire.HttpJob.Extension;
 using Hangfire.Logging;
 using Hangfire.Storage;
 using Newtonsoft.Json;
-using System.Net;
-using Hangfire.HttpJob.Extension;
 
 namespace Hangfire.HttpJob.Server
 {

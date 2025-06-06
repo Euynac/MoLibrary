@@ -1,7 +1,7 @@
-using MoLibrary.Repository.EntityInterfaces;
-using MoLibrary.Tool.Utils;
 using System.Linq.Expressions;
 using System.Reflection;
+using MoLibrary.Repository.EntityInterfaces;
+using MoLibrary.Tool.Utils;
 
 namespace MoLibrary.Repository.Extensions;
 

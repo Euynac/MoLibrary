@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using MoLibrary.Tool.Extensions;
@@ -27,7 +28,7 @@ namespace MoLibrary.Tool.Random
         {
             var count = byteCount.LimitInRange(1, 62);
             var b = new byte[count];
-            new System.Security.Cryptography.RNGCryptoServiceProvider().GetBytes(b);
+            new RNGCryptoServiceProvider().GetBytes(b);
             return b;
         }
 

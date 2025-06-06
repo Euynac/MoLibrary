@@ -2,7 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.EventBus.Abstractions;
-using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.EventBus.Modules;
 

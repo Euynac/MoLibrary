@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace MoLibrary.Tool.Web
 {
@@ -31,7 +32,7 @@ namespace MoLibrary.Tool.Web
         /// <returns>正常字符串</returns>
         public static string Unicode2String(string source)
         {
-            return new System.Text.RegularExpressions.Regex(@"\\u([0-9A-F]{4})", System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Compiled).Replace(
+            return new Regex(@"\\u([0-9A-F]{4})", RegexOptions.IgnoreCase | RegexOptions.Compiled).Replace(
                 source, x => string.Empty + Convert.ToChar(Convert.ToUInt16(x.Result("$1"), 16)));
         }
     }

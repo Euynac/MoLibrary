@@ -4,6 +4,7 @@ using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+
 // For AddSource
 
 namespace MoLibrary.Generators.AutoController;
@@ -183,7 +184,7 @@ public class HttpApiControllerSourceGenerator : IIncrementalGenerator
             var tags = group.SelectMany(c => c.Tags).Distinct().ToList();
 
             // Compute the controller name by taking the last segment of the route.
-            var segments = route.Split(['/'], System.StringSplitOptions.RemoveEmptyEntries);
+            var segments = route.Split(['/'], StringSplitOptions.RemoveEmptyEntries);
             var lastSegment = segments.LastOrDefault() ?? route;
             var lastSegmentPascalCase = string.Concat(lastSegment
                 .Split(['_', '-'], StringSplitOptions.RemoveEmptyEntries)

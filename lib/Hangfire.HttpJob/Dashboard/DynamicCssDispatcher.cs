@@ -1,5 +1,5 @@
-﻿using Hangfire.Dashboard;
-using System.Text;
+﻿using System.Text;
+using Hangfire.Dashboard;
 
 namespace Hangfire.HttpJob.Dashboard
 {

@@ -15,11 +15,11 @@
 // License along with Hangfire.Redis.StackExchange. If not, see <http://www.gnu.org/licenses/>.
 
 using System.Globalization;
+using Hangfire.Annotations;
 using Hangfire.Common;
 using Hangfire.Server;
 using Hangfire.Storage;
 using StackExchange.Redis;
-using Hangfire.Annotations;
 
 namespace Hangfire.Redis
 {

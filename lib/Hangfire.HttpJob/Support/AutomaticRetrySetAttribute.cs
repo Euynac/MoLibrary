@@ -1,6 +1,4 @@
-﻿
-
-using Hangfire.Common;
+﻿using Hangfire.Common;
 using Hangfire.HttpJob.Server;
 using Hangfire.Logging;
 using Hangfire.States;

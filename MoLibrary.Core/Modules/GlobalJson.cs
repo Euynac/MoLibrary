@@ -1,13 +1,12 @@
+using System.Text.Json;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
-using MoLibrary.Core.GlobalJson.Interfaces;
 using MoLibrary.Core.GlobalJson;
+using MoLibrary.Core.GlobalJson.Interfaces;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
-using MoLibrary.Tool.MoResponse;
-using System.Text.Json;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Mvc;
 
 namespace MoLibrary.Core.Modules;
 
@@ -40,12 +39,12 @@ public class ModuleGlobalJson(ModuleGlobalJsonOption option)
         services.AddHttpContextAccessor();
 
         //巨坑：minimal api 等全局注册
-        services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(o =>
+        services.Configure<JsonOptions>(o =>
         {
             o.SerializerOptions.CloneFrom(DefaultMoGlobalJsonOptions.GlobalJsonSerializerOptions);
         });
         //MVC框架HTTP请求与响应的JsonConverter全局注册
-        services.Configure<JsonOptions>(o =>
+        services.Configure<Microsoft.AspNetCore.Mvc.JsonOptions>(o =>
         {
             o.JsonSerializerOptions.CloneFrom(DefaultMoGlobalJsonOptions.GlobalJsonSerializerOptions);
         });

@@ -1,8 +1,8 @@
+using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Repository.EntityInterfaces;
 using MoLibrary.Tool.Utils;
-using System.Reflection;
 
 namespace MoLibrary.Repository.Registrar;
 public class MoEfCoreRegistrationOptions(Type dbContextType, IServiceCollection services)
