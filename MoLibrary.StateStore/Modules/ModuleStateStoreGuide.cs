@@ -31,7 +31,7 @@ public class ModuleStateStoreGuide : MoModuleGuide<ModuleStateStore, ModuleState
         {
             if (useDistributed)
             {
-                //TODO CheckRequiredMethod(nameof(RegisterDistributedStateStoreProvider));
+                CheckRequiredMethod(nameof(RegisterDistributedStateStoreProvider));
                 context.Services.AddKeyedSingleton<IMoStateStore>(key, (serviceProvider, _) =>
             serviceProvider.GetRequiredService<IDistributedStateStore>());
             }
