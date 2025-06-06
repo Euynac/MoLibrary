@@ -25,7 +25,7 @@ public static class ModuleGlobalExceptionHandlerBuilderExtensions
 }
 
 public class ModuleGlobalExceptionHandler(ModuleGlobalExceptionHandlerOption option)
-    : MoModule<ModuleGlobalExceptionHandler, ModuleGlobalExceptionHandlerOption>(option)
+    : MoModule<ModuleGlobalExceptionHandler, ModuleGlobalExceptionHandlerOption, ModuleGlobalExceptionHandlerGuide>(option)
 {
     public override EMoModules CurModuleEnum()
     {

@@ -16,7 +16,7 @@ using MoLibrary.Repository.Modules;
 
 namespace MoLibrary.DomainDrivenDesign.Modules;
 
-public class ModuleDomainDrivenDesign(ModuleDomainDrivenDesignOption option) : MoModuleWithDependencies<ModuleDomainDrivenDesign, ModuleDomainDrivenDesignOption>(option)
+public class ModuleDomainDrivenDesign(ModuleDomainDrivenDesignOption option) : MoModuleWithDependencies<ModuleDomainDrivenDesign, ModuleDomainDrivenDesignOption, ModuleDomainDrivenDesignGuide>(option)
 {
     public override EMoModules CurModuleEnum()
     {

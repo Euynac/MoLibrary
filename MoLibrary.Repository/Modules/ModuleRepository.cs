@@ -7,7 +7,7 @@ using MoLibrary.Tool.MoResponse;
 namespace MoLibrary.Repository.Modules;
 
 public class ModuleRepository(ModuleRepositoryOption option)
-    : MoModuleWithDependencies<ModuleRepository, ModuleRepositoryOption>(option)
+    : MoModuleWithDependencies<ModuleRepository, ModuleRepositoryOption, ModuleRepositoryGuide>(option)
 {
     public override EMoModules CurModuleEnum()
     {

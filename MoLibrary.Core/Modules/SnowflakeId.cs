@@ -19,7 +19,7 @@ public static class ModuleSnowflakeIdBuilderExtensions
 }
 
 public class ModuleSnowflakeId(ModuleSnowflakeIdOption option)
-    : MoModule<ModuleSnowflakeId, ModuleSnowflakeIdOption>(option)
+    : MoModule<ModuleSnowflakeId, ModuleSnowflakeIdOption, ModuleSnowflakeIdGuide>(option)
 {
     public override EMoModules CurModuleEnum()
     {

@@ -20,7 +20,7 @@ using MoLibrary.Tool.Extensions;
 namespace MoLibrary.Dapr.Modules;
 
 public class ModuleDaprEventBus(ModuleDaprEventBusOption option)
-    : MoModuleWithDependencies<ModuleDaprEventBus, ModuleDaprEventBusOption>(option)
+    : MoModuleWithDependencies<ModuleDaprEventBus, ModuleDaprEventBusOption, ModuleDaprEventBusGuide>(option)
 {
     public override EMoModules CurModuleEnum()
     {

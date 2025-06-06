@@ -13,7 +13,7 @@ using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.AutoModel.Modules;
 
-public class ModuleAutoModel(ModuleAutoModelOption option) : MoModule<ModuleAutoModel, ModuleAutoModelOption>(option)
+public class ModuleAutoModel(ModuleAutoModelOption option) : MoModule<ModuleAutoModel, ModuleAutoModelOption, ModuleAutoModelGuide>(option)
 {
     public override Res ConfigureServices(IServiceCollection services)
     {

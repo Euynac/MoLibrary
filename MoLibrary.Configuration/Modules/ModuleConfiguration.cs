@@ -20,7 +20,7 @@ using MoLibrary.Core.Module.Models;
 
 namespace MoLibrary.Configuration.Modules;
 
-public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<ModuleConfiguration, ModuleConfigurationOption>(option), IWantIterateBusinessTypes
+public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<ModuleConfiguration, ModuleConfigurationOption, ModuleConfigurationGuide>(option), IWantIterateBusinessTypes
 {
     private IServiceCollection _services = null!;
     private MethodInfo _method = null!;

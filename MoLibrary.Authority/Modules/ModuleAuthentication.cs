@@ -30,7 +30,7 @@ public class CustomAuthorizeFilter : IAuthorizationFilter
         }
     }
 }
-public class ModuleAuthentication(ModuleAuthenticationOption option) : MoModule<ModuleAuthentication, ModuleAuthenticationOption>(option)
+public class ModuleAuthentication(ModuleAuthenticationOption option) : MoModule<ModuleAuthentication, ModuleAuthenticationOption, ModuleAuthenticationGuide>(option)
 {
     public override EMoModules CurModuleEnum()
     {

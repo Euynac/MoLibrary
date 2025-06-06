@@ -16,7 +16,7 @@ public static class ModuleProgressBarBuilderExtensions
 }
 
 public class ModuleProgressBar(ModuleProgressBarOption option)
-    : MoModule<ModuleProgressBar, ModuleProgressBarOption>(option)
+    : MoModule<ModuleProgressBar, ModuleProgressBarOption, ModuleProgressBarGuide>(option)
 {
     public override EMoModules CurModuleEnum()
     {

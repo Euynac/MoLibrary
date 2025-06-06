@@ -9,7 +9,7 @@ using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Authority.Modules;
 
-public class ModuleAuthorization(ModuleAuthorizationOption option) : MoModuleWithDependencies<ModuleAuthorization, ModuleAuthorizationOption>(option)
+public class ModuleAuthorization(ModuleAuthorizationOption option) : MoModuleWithDependencies<ModuleAuthorization, ModuleAuthorizationOption, ModuleAuthorizationGuide>(option)
 {
     public override EMoModules CurModuleEnum()
     {

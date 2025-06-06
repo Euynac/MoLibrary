@@ -18,7 +18,7 @@ public static class ModuleMediatorBuilderExtensions
     }
 }
 
-public class ModuleMediator(ModuleMediatorOption option) : MoModule<ModuleMediator, ModuleMediatorOption>(option)
+public class ModuleMediator(ModuleMediatorOption option) : MoModule<ModuleMediator, ModuleMediatorOption, ModuleMediatorGuide>(option)
 {
     public override EMoModules CurModuleEnum()
     {

@@ -14,7 +14,7 @@ using MoLibrary.Tool.MoResponse;
 namespace MoLibrary.Configuration.Dashboard.Modules;
 
 public class ModuleConfigurationDashboard(ModuleConfigurationDashboardOption option)
-    : MoModuleWithDependencies<ModuleConfigurationDashboard, ModuleConfigurationDashboardOption>(option)
+    : MoModuleWithDependencies<ModuleConfigurationDashboard, ModuleConfigurationDashboardOption, ModuleConfigurationDashboardGuide>(option)
 {
     public override EMoModules CurModuleEnum()
     {

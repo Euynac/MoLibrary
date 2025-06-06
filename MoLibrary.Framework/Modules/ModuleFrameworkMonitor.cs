@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using MapsterMapper;
 using Microsoft.AspNetCore.Builder;
@@ -21,7 +21,7 @@ using MoLibrary.Tool.MoResponse;
 namespace MoLibrary.Framework.Modules;
 
 public class ModuleFrameworkMonitor(ModuleFrameworkMonitorOption option)
-    : MoModule<ModuleFrameworkMonitor, ModuleFrameworkMonitorOption>(option), IWantIterateBusinessTypes
+    : MoModule<ModuleFrameworkMonitor, ModuleFrameworkMonitorOption, ModuleFrameworkMonitorGuide>(option), IWantIterateBusinessTypes
 {
     private static void InitProjectUnitFactories()
     {

@@ -6,7 +6,7 @@ using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.EventBus.Modules;
 
-public class ModuleEventBus(ModuleEventBusOption option) : MoModule<ModuleEventBus, ModuleEventBusOption>(option)
+public class ModuleEventBus(ModuleEventBusOption option) : MoModule<ModuleEventBus, ModuleEventBusOption, ModuleEventBusGuide>(option)
 {
     public override EMoModules CurModuleEnum()
     {

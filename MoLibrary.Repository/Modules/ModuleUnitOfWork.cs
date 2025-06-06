@@ -10,7 +10,7 @@ using MoLibrary.Tool.MoResponse;
 namespace MoLibrary.Repository.Modules;
 
 public class ModuleUnitOfWork(ModuleUnitOfWorkOption option)
-    : MoModule<ModuleUnitOfWork, ModuleUnitOfWorkOption>(option)
+    : MoModule<ModuleUnitOfWork, ModuleUnitOfWorkOption, ModuleUnitOfWorkGuide>(option)
 {
     public override EMoModules CurModuleEnum()
     {

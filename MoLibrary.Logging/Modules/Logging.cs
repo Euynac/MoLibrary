@@ -27,7 +27,7 @@ public static class ModuleLoggingBuilderExtensions
     }
 }
 
-public class ModuleLogging(ModuleLoggingOption option) : MoModule<ModuleLogging, ModuleLoggingOption>(option)
+public class ModuleLogging(ModuleLoggingOption option) : MoModule<ModuleLogging, ModuleLoggingOption, ModuleLoggingGuide>(option)
 {
     public override EMoModules CurModuleEnum()
     {

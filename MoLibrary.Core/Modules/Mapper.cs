@@ -26,7 +26,7 @@ public static class ModuleMapperBuilderExtensions
     }
 }
 
-public class ModuleMapper(ModuleMapperOption option) : MoModule<ModuleMapper, ModuleMapperOption>(option)
+public class ModuleMapper(ModuleMapperOption option) : MoModule<ModuleMapper, ModuleMapperOption, ModuleMapperGuide>(option)
 {
     public override EMoModules CurModuleEnum()
     {
