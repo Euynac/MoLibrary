@@ -3,17 +3,19 @@ namespace MoLibrary.StateStore.ProgressBar;
 /// <summary>
 /// 进度条状态更新事件参数
 /// </summary>
-public class ProgressBarStatusEventArgs(ProgressBarStatus status) : EventArgs
+public class ProgressBarStatusEventArgs(ProgressBar status) : EventArgs
 {
-    public ProgressBarStatus Status { get; } = status;
+    public ProgressBar Status { get; } = status;
 }
+
+
 
 /// <summary>
 /// 进度条状态类，用于跟踪和管理任务的执行进度
 /// </summary>
 /// <param name="service">进度条服务接口</param>
 /// <param name="taskId">任务唯一标识符</param>
-public class ProgressBarStatus(ProgressBarSetting setting, IProgressBarService service, string taskId)
+public class ProgressBar(ProgressBarSetting setting, IProgressBarService service, string taskId)
 {
     public ProgressBarSetting Setting { get; } = setting;
 
