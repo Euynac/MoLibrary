@@ -127,7 +127,11 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     #endregion
 
 
-
+    public void CheckRequiredMethod(string methodName, string? errorDetail = null)
+    {
+        //TODO 检查当前模块指定的方法是否已配置，否则抛出异常
+        
+    }
 
     /// <summary>
     /// 发出模块注册请求

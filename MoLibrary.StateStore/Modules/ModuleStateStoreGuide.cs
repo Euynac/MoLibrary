@@ -5,8 +5,6 @@ namespace MoLibrary.StateStore.Modules;
 
 public class ModuleStateStoreGuide : MoModuleGuide<ModuleStateStore, ModuleStateStoreOption, ModuleStateStoreGuide>
 {
-
-
     /// <summary>
     /// 注册分布式状态存储服务提供者
     /// </summary>
@@ -34,12 +32,12 @@ public class ModuleStateStoreGuide : MoModuleGuide<ModuleStateStore, ModuleState
             if (useDistributed)
             {
                 //TODO CheckRequiredMethod(nameof(RegisterDistributedStateStoreProvider));
-                context.Services.AddKeyedSingleton<IStateStore>(key, (serviceProvider, _) =>
+                context.Services.AddKeyedSingleton<IMoStateStore>(key, (serviceProvider, _) =>
             serviceProvider.GetRequiredService<IDistributedStateStore>());
             }
             else
             {
-                context.Services.AddKeyedSingleton<IStateStore>(key, (serviceProvider, _) =>
+                context.Services.AddKeyedSingleton<IMoStateStore>(key, (serviceProvider, _) =>
             serviceProvider.GetRequiredService<IMemoryStateStore>());
             }
         });

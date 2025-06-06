@@ -1,6 +1,6 @@
 namespace MoLibrary.StateStore.ProgressBar;
 
-public interface IProgressBarService
+public interface IMoProgressBarService
 {
     /// <summary>
     /// 创建一个新的进度条任务
@@ -8,7 +8,7 @@ public interface IProgressBarService
     /// <param name="id">为空则生成GUID作为Key</param>
     /// <param name="settingAction"></param>
     /// <returns></returns>
-    Task<ProgressBarStatus> CreateProgressBarAsync(string? id = null, Action<ProgressBarSetting>? settingAction = null);
+    Task<ProgressBar> CreateProgressBarAsync(string? id = null, Action<ProgressBarSetting>? settingAction = null);
 
     /// <summary>
     /// 创建一个新的自定义进度条任务
@@ -18,7 +18,14 @@ public interface IProgressBarService
     /// <param name="settingAction"></param>
     /// <returns></returns>
     Task<TCustom> CreateProgressBarAsync<TCustom>(string? id = null, Action<ProgressBarSetting>? settingAction = null)
-        where TCustom : ProgressBarStatus;
+        where TCustom : ProgressBar;
+
+    /// <summary>
+    /// 获取指定进度条状态
+    /// </summary>
+    /// <param name="id"></param>
+    /// <returns></returns>
+    Task<ProgressBarStatus> GetProgressBarStatus(string id);
 
 
     /// <summary>
@@ -26,7 +33,7 @@ public interface IProgressBarService
     /// </summary>
     /// <param name="status"></param>
     /// <returns></returns>
-    ValueTask SaveProgressBarStateAsync(ProgressBarStatus status);
+    ValueTask SaveProgressBarStateAsync(ProgressBar status);
 
 
     /// <summary>
@@ -34,7 +41,7 @@ public interface IProgressBarService
     /// </summary>
     /// <param name="status"></param>
     /// <returns></returns>
-    Task FinishProgressBarAsync(ProgressBarStatus status);
+    Task FinishProgressBarAsync(ProgressBar status);
 }
 
 public class ProgressBarSetting

@@ -1,7 +1,7 @@
 namespace MoLibrary.StateStore;
 
 
-public interface IStateStore
+public interface IMoStateStore
 {
     /// <summary>
     /// 判断指定键的状态是否存在，使用泛型T的类型名作为键前缀

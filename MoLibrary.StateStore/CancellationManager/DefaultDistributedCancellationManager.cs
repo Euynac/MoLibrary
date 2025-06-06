@@ -6,6 +6,8 @@ using MoLibrary.StateStore.Modules;
 
 namespace MoLibrary.StateStore.CancellationManager;
 
+//TODO 是不是应该用分布式锁
+
 /// <summary>
 /// 默认分布式取消令牌管理器实现
 /// 使用 IStateStore 作为底层存储，实现跨微服务实例的取消令牌管理
@@ -17,9 +19,9 @@ namespace MoLibrary.StateStore.CancellationManager;
 /// <param name="logger">日志记录器</param>
 /// <param name="options">配置选项</param>
 public class DefaultDistributedCancellationManager(
-    IStateStore stateStore,
+    IMoStateStore stateStore,
     ILogger<DefaultDistributedCancellationManager> logger,
-    IOptions<ModuleCancellationManagerOption> options) : ICancellationManager
+    IOptions<ModuleCancellationManagerOption> options) : IMoCancellationManager
 {
     private const string StateKeyPrefix = "DistributedCancellation";
 

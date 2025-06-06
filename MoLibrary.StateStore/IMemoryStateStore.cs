@@ -1,6 +1,6 @@
 namespace MoLibrary.StateStore;
 
-public interface IMemoryStateStore : IStateStore
+public interface IMemoryStateStore : IMoStateStore
 {
     
 }
