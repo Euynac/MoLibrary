@@ -58,7 +58,7 @@ public class ModuleCancellationManager(ModuleCancellationManagerOption option)
         });
 
         // 注册分布式取消令牌管理器服务
-        services.AddSingleton<ICancellationManager, DefaultDistributedCancellationManager>();
+        services.AddSingleton<IMoCancellationManager, DefaultDistributedCancellationManager>();
 
         return Res.Ok();
     }

@@ -6,7 +6,7 @@ namespace MoLibrary.StateStore;
 /// <summary>
 /// 状态存储接口，提供状态的增删改查功能
 /// </summary>
-public interface IDistributedStateStore : IStateStore
+public interface IDistributedStateStore : IMoStateStore
 {
     /// <summary>
     /// 批量获取字符串类型的状态数据，不使用键前缀

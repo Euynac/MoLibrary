@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.StateStore.MemoryProvider;
@@ -18,6 +18,15 @@ public class ModuleStateStore(ModuleStateStoreOption option)
     {
         services.AddMemoryCache();
         services.AddSingleton<IMemoryStateStore, MemoryCacheProvider>();
+        if (Option.UseDistributedProviderAsDefault)
+        {
+            services.AddSingleton<IMoStateStore>(serviceProvider =>
+                serviceProvider.GetRequiredService<IDistributedStateStore>());
+        }
+        else
+        {
+            services.AddSingleton<IMoStateStore>(serviceProvider => serviceProvider.GetRequiredService<IMemoryStateStore>());
+        }
         return Res.Ok();
     }
 }

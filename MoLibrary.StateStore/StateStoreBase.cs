@@ -6,7 +6,7 @@ namespace MoLibrary.StateStore;
 /// <summary>
 /// 状态存储抽象基类
 /// </summary>
-public abstract class StateStoreBase(ILogger logger) : IStateStore
+public abstract class StateStoreBase(ILogger logger) : IMoStateStore
 {
     protected readonly ILogger Logger = logger;
 
