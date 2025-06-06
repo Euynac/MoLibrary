@@ -1,5 +1,5 @@
-using MoLibrary.StateStore.QueryBuilder.Interfaces;
 using MoLibrary.StateStore.QueryBuilder;
+using MoLibrary.StateStore.QueryBuilder.Interfaces;
 
 namespace MoLibrary.StateStore;
 

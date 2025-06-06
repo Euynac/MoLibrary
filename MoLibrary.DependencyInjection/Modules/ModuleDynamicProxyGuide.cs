@@ -1,8 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
-using MoLibrary.DependencyInjection.DynamicProxy.Abstract;
 using MoLibrary.DependencyInjection.DynamicProxy;
+using MoLibrary.DependencyInjection.DynamicProxy.Abstract;
 
 namespace MoLibrary.DependencyInjection.Modules;
 

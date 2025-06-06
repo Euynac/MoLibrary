@@ -1,6 +1,6 @@
-﻿using Hangfire.Server;
+﻿using Hangfire.Annotations;
+using Hangfire.Server;
 using StackExchange.Redis;
-using Hangfire.Annotations;
 
 namespace Hangfire.Redis
 {

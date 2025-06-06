@@ -1,13 +1,11 @@
-﻿
-
+﻿using System.ComponentModel;
+using System.Net.Http.Headers;
 using Hangfire.Console;
 using Hangfire.HttpJob.Server;
 using Hangfire.Logging;
 using Hangfire.Server;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
-using System.ComponentModel;
-using System.Net.Http.Headers;
 
 namespace Hangfire.HttpJob.Support
 {

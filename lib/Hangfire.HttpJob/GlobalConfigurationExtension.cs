@@ -1,12 +1,12 @@
+using System.Reflection;
 using Hangfire.Dashboard;
-using Hangfire.HttpJob.Dashboard.Pages;
 using Hangfire.HttpJob.Dashboard;
+using Hangfire.HttpJob.Dashboard.Pages;
+using Hangfire.HttpJob.InterFace;
 using Hangfire.HttpJob.Server;
 using Hangfire.HttpJob.Support;
-using System.Reflection;
-using Hangfire.HttpJob.InterFace;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Hangfire.HttpJob

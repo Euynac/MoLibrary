@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace MoLibrary.Tool.General
@@ -60,12 +61,12 @@ namespace MoLibrary.Tool.General
                         state = RemoveEscapeCharsStates.Reset;
                         break;
                     default:
-                        throw new System.Exception("Unknown state");
+                        throw new Exception("Unknown state");
                 }
             }
             if (state != RemoveEscapeCharsStates.Reset)
             {
-                throw new System.Exception($"{state} is not an accept state!");
+                throw new Exception($"{state} is not an accept state!");
             }
             return result.ToString();
         }

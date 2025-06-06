@@ -1,5 +1,6 @@
-using MoLibrary.Core.Features.MoLogProvider;
 using Microsoft.Extensions.Logging;
+using MoLibrary.Core.Features.MoLogProvider;
+using Serilog;
 using Serilog.Extensions.Logging;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
 
@@ -24,7 +25,7 @@ public class SerilogProvider : IMoLogProvider
     /// <summary>
     /// Initializes a new instance of the <see cref="SerilogProvider"/> class using the global Serilog logger.
     /// </summary>
-    public SerilogProvider() : this(Serilog.Log.Logger)
+    public SerilogProvider() : this(Log.Logger)
     {
     }
 

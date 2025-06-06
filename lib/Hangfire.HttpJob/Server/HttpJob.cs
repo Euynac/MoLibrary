@@ -1,14 +1,14 @@
-﻿using Hangfire.Console;
+﻿using System.ComponentModel;
+using System.Net;
+using System.Net.Http.Headers;
+using System.Text;
+using Hangfire.Console;
 using Hangfire.HttpJob.Support;
 using Hangfire.Logging;
 using Hangfire.Server;
 using MailKit.Net.Smtp;
 using MimeKit;
 using Newtonsoft.Json;
-using System.ComponentModel;
-using System.Net;
-using System.Net.Http.Headers;
-using System.Text;
 
 namespace Hangfire.HttpJob.Server
 {

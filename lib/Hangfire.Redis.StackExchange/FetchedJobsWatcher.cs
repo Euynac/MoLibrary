@@ -15,8 +15,8 @@
 // License along with Hangfire.Redis.StackExchange. If not, see <http://www.gnu.org/licenses/>.
 
 using Hangfire.Common;
-using Hangfire.Server;
 using Hangfire.Logging;
+using Hangfire.Server;
 using StackExchange.Redis;
 
 namespace Hangfire.Redis

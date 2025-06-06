@@ -1,5 +1,5 @@
-using MoLibrary.AutoModel.Model;
 using System.Linq.Expressions;
+using MoLibrary.AutoModel.Model;
 
 namespace MoLibrary.AutoModel.Interfaces;
 

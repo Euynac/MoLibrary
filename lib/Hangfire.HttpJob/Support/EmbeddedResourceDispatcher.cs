@@ -1,7 +1,5 @@
-﻿
-
+﻿using System.Reflection;
 using Hangfire.Dashboard;
-using System.Reflection;
 
 namespace Hangfire.HttpJob.Support
 {

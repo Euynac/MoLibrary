@@ -1,7 +1,7 @@
+using System.Runtime.CompilerServices;
 using MoLibrary.Core.Module.BuilderWrapper;
 using MoLibrary.Core.Module.Features;
 using MoLibrary.Core.Module.Models;
-using System.Runtime.CompilerServices;
 
 namespace MoLibrary.Core.Module.Interfaces;
 public class MoModuleGuide

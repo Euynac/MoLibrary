@@ -1,7 +1,7 @@
-using Microsoft.EntityFrameworkCore;
 using System.Linq.Dynamic.Core.CustomTypeProviders;
 using System.Text;
 using System.Text.RegularExpressions;
+using Microsoft.EntityFrameworkCore;
 
 namespace MoLibrary.AutoModel.Implements;
 

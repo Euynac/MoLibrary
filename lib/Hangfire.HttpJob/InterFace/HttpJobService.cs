@@ -1,4 +1,3 @@
-
 using Hangfire.HttpJob.Server;
 using Hangfire.Storage;
 using Newtonsoft.Json;

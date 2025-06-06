@@ -14,13 +14,13 @@
 // You should have received a copy of the GNU Lesser General Public
 // License along with Hangfire.Redis.StackExchange. If not, see <http://www.gnu.org/licenses/>.
 
+using Hangfire.Annotations;
+using Hangfire.Dashboard;
+using Hangfire.Logging;
 using Hangfire.Server;
 using Hangfire.States;
 using Hangfire.Storage;
-using Hangfire.Annotations;
-using Hangfire.Logging;
 using StackExchange.Redis;
-using Hangfire.Dashboard;
 
 namespace Hangfire.Redis
 {

@@ -1,8 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.MoResponse;
-using System.Diagnostics.CodeAnalysis;
 
 namespace MoLibrary.Core.Extensions;
 

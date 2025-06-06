@@ -62,7 +62,7 @@ public class ModuleConfigurationDashboard(ModuleConfigurationDashboardOption opt
 
 
                 endpoints.MapPost(MoConfigurationConventions.DashboardCentreConfigRollback,
-                    async ([FromBody] Modules.RollbackRequest req, [FromServices] IMoConfigurationCentre centre,
+                    async ([FromBody] RollbackRequest req, [FromServices] IMoConfigurationCentre centre,
                         [FromServices] IMoUnitOfWorkManager manager) =>
                     {
                         using var uow = manager.Begin();

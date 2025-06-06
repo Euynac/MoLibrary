@@ -1,9 +1,9 @@
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Builder;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.Dapr.StateStore;
-using System.ComponentModel.DataAnnotations;
 using MoLibrary.StateStore.Modules;
 
 namespace MoLibrary.Dapr.Modules;

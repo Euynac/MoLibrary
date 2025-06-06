@@ -5,7 +5,6 @@ using MoLibrary.Core.Module.Models;
 using MoLibrary.Repository.Transaction;
 using MoLibrary.Repository.Transaction.EntityEvent;
 using MoLibrary.Repository.Transaction.Interceptors;
-using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Repository.Modules;
 

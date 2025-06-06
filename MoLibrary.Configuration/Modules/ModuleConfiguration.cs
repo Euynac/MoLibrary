@@ -1,22 +1,22 @@
+using System.Reflection;
 using Dapr.Client;
+using Dapr.Extensions.Configuration;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.OpenApi.Models;
 using MoLibrary.Configuration.Annotations;
 using MoLibrary.Configuration.Interfaces;
 using MoLibrary.Configuration.Model;
 using MoLibrary.Configuration.Providers;
-using MoLibrary.Core.Module;
-using MoLibrary.Tool.MoResponse;
-using System.Reflection;
-using Dapr.Extensions.Configuration;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
-using Microsoft.OpenApi.Models;
 using MoLibrary.Core.Extensions;
+using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
+using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Configuration.Modules;
 
