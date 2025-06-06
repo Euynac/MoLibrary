@@ -67,6 +67,37 @@ public abstract class MoModule<TModuleSelf, TModuleOption, TModuleGuide>(TModule
         return moduleEnum;
     }
 
+    internal void ConvertToRegisterRequest()
+    {
+        var guide = new TModuleGuide();
+
+        guide.ConfigureBuilder(context =>
+        {
+            ConfigureBuilder(context.WebApplicationBuilder);
+        });
+
+        guide.ConfigureServices(context =>
+        {
+            ConfigureServices(context.Services);
+        });
+
+        guide.PostConfigureServices(context =>
+        {
+            PostConfigureServices(context.Services);
+        });
+
+        guide.ConfigureApplicationBuilder(context =>
+        {
+            ConfigureApplicationBuilder(context.ApplicationBuilder);
+        }, EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
+        
+        guide.ConfigureEndpoints(context =>
+        {
+            ConfigureEndpoints(context.ApplicationBuilder);
+        });
+    }
+    
+
     public void CheckRequiredMethod(string methodName, string? errorDetail = null)
     {
         new TModuleGuide().CheckRequiredMethod(methodName, errorDetail);
