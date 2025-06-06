@@ -34,7 +34,7 @@ public class ModuleLogging(ModuleLoggingOption option) : MoModule<ModuleLogging,
         return EMoModules.Logging;
     }
 
-    public override Res ConfigureBuilder(WebApplicationBuilder builder)
+    public override void ConfigureBuilder(WebApplicationBuilder builder)
     {
         var logBuilder = new LoggerConfiguration()
             .ReadFrom.Configuration(builder.Configuration);
@@ -52,7 +52,6 @@ public class ModuleLogging(ModuleLoggingOption option) : MoModule<ModuleLogging,
         var level =
             builder.Configuration.GetSectionRecursively("Serilog:MinimumLevel").Select(p => new { p.Key, p.Value }).ToList().ToJsonString();
         Log.Logger.Information("Set logging level: {LoggingLevel}", level);
-        return base.ConfigureBuilder(builder);
     }
 
     protected Logger CreateLogger(LoggerConfiguration configuration)

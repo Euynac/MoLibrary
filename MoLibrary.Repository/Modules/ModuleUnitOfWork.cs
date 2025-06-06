@@ -17,7 +17,7 @@ public class ModuleUnitOfWork(ModuleUnitOfWorkOption option)
         return EMoModules.UnitOfWork;
     }
 
-    public override Res ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(IServiceCollection services)
     {
         services.AddSingleton<IMoUnitOfWorkManager, MoUnitOfWorkManager>();
         services.AddTransient<IMoUnitOfWork, MoUnitOfWork>();
@@ -37,6 +37,5 @@ public class ModuleUnitOfWork(ModuleUnitOfWorkOption option)
         {
             p.Filters.AddService(typeof(MoActionFilterUow));
         });
-        return Res.Ok();
     }
 }

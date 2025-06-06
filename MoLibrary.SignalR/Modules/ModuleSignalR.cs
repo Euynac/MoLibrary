@@ -12,9 +12,4 @@ public class ModuleSignalR(ModuleSignalROption option) : MoModule<ModuleSignalR,
         return EMoModules.SignalR;
     }
 
-    public override Res ConfigureServices(IServiceCollection services)
-    {
-
-        return Res.Ok();
-    }
 }

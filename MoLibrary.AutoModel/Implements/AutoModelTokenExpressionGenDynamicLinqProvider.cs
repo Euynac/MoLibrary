@@ -1,15 +1,14 @@
-using Microsoft.Extensions.Options;
-using MoLibrary.AutoModel.Configurations;
-using MoLibrary.AutoModel.Implements;
-using MoLibrary.AutoModel.Interfaces;
-using MoLibrary.AutoModel.Model;
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Options;
+using MoLibrary.AutoModel.Configurations;
 using MoLibrary.AutoModel.Exceptions;
+using MoLibrary.AutoModel.Interfaces;
+using MoLibrary.AutoModel.Model;
 
-namespace MoLibrary.AutoModel.AutoModel.Implements;
+namespace MoLibrary.AutoModel.Implements;
 
 public partial class AutoModelTokenExpressionGenDynamicLinqProvider(IOptions<AutoModelExpressionOptions> expressionOptions) : IAutoModelTokenExpressionGen
 {

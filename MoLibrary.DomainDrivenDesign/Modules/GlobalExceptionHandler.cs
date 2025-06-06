@@ -37,7 +37,7 @@ public class ModuleGlobalExceptionHandler(ModuleGlobalExceptionHandlerOption opt
     /// </summary>
     
     //TODO Order 100
-    public override Res ConfigureApplicationBuilder(IApplicationBuilder app)
+    public override void ConfigureApplicationBuilder(IApplicationBuilder app)
     {
 
         //if (config.AppOptions.IsDebugging)
@@ -61,10 +61,9 @@ public class ModuleGlobalExceptionHandler(ModuleGlobalExceptionHandlerOption opt
         //                new Exception($"未知异常，在{feature?.Path}上。{feature.ToJsonStringForce()}"));
         //    await context.Response.WriteAsJsonAsync(response);
         //}));
-        return base.ConfigureApplicationBuilder(app);
     }
 
-    public override Res ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(IServiceCollection services)
     {
         services.AddSingleton<IMoExceptionHandler, MoExceptionHandler>();
         services.AddSingleton<IAsyncExceptionFilter, MoMvcExceptionFilter>();
@@ -109,7 +108,6 @@ public class ModuleGlobalExceptionHandler(ModuleGlobalExceptionHandlerOption opt
         {
             Logger.LogError("进程退出：{sender} {eventArgs}", sender?.ToJsonStringForce(), eventArgs?.ToJsonStringForce());
         };
-        return Res.Ok();
     }
 }
 

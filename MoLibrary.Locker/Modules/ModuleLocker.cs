@@ -13,9 +13,8 @@ public class ModuleLocker(ModuleLockerOption option) : MoModule<ModuleLocker, Mo
         return EMoModules.Locker;
     }
 
-    public override Res ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(IServiceCollection services)
     {
         services.AddSingleton<IDistributedLockKeyNormalizer, DistributedLockKeyNormalizer>();
-        return Res.Ok();
     }
 }

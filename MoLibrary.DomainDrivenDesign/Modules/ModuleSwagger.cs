@@ -23,7 +23,7 @@ public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger,
         return EMoModules.Swagger;
     }
 
-    public override Res ConfigureApplicationBuilder(IApplicationBuilder app)
+    public override void ConfigureApplicationBuilder(IApplicationBuilder app)
     {
         app.UseSwagger();
         app.UseSwaggerUI(c =>
@@ -31,16 +31,14 @@ public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger,
             c.SwaggerEndpoint($"/swagger/{option.Version}/swagger.json",
                 $"{option.AppName ?? "Unknown"} {option.Version}");
         });
-        return base.ConfigureApplicationBuilder(app);
     }
 
-    public override Res ConfigureEndpoints(IApplicationBuilder app)
+    public override void ConfigureEndpoints(IApplicationBuilder app)
     {
         app.UseEndpoints(endpoints => { endpoints.MapGet("/", () => Results.LocalRedirect("~/swagger")); });
-        return base.ConfigureEndpoints(app);
     }
 
-    public override Res ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(IServiceCollection services)
     {
         services.AddSwaggerGen(options =>
         {
@@ -116,6 +114,5 @@ public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger,
             option.ExtendSwaggerGenAction?.Invoke(options);
 
         }); //https://github.com/domaindrivendev/Swashbuckle.AspNetCore#include-descriptions-from-xml-comments
-        return Res.Ok();
     }
 }

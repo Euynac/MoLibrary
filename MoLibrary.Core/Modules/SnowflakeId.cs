@@ -26,11 +26,10 @@ public class ModuleSnowflakeId(ModuleSnowflakeIdOption option)
         return EMoModules.SnowflakeId;
     }
 
-    public override Res ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(IServiceCollection services)
     {
         var generator = new DefaultSingletonSnowflakeGenerator(option);
         services.AddSingleton<ISnowflakeGenerator>(generator);
-        return Res.Ok();
     }
 }
 

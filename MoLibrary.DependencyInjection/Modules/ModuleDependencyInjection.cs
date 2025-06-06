@@ -19,12 +19,11 @@ public class ModuleDependencyInjection(ModuleDependencyInjectionOption option)
         return EMoModules.DependencyInjection;
     }
 
-    public override Res ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(IServiceCollection services)
     {
         _registrar = new DefaultConventionalRegistrar(Option);
         services.AddTransient<IMoServiceProvider, DefaultMoServiceProvider>();
         _services = services;
-        return Res.Ok();
     }
 
 

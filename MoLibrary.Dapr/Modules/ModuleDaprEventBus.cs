@@ -27,18 +27,13 @@ public class ModuleDaprEventBus(ModuleDaprEventBusOption option)
         return EMoModules.DaprEventBus;
     }
 
-    public override Res ConfigureServices(IServiceCollection services)
-    {
-
-        return Res.Ok();
-    }
     private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-    public override Res ConfigureApplicationBuilder(IApplicationBuilder app)
+    public override void ConfigureApplicationBuilder(IApplicationBuilder app)
     {
         //用于解析data_base64等application/cloudevents+json格式的请求
         //必须位于abp的UseConfiguredEndpoints之前。
@@ -79,10 +74,8 @@ public class ModuleDaprEventBus(ModuleDaprEventBusOption option)
 
 
         });
-
-        return base.ConfigureApplicationBuilder(app);
     }
-    public override Res ConfigureEndpoints(IApplicationBuilder app)
+    public override void ConfigureEndpoints(IApplicationBuilder app)
     {
 
         app.UseEndpoints(endpoints =>
@@ -168,8 +161,6 @@ public class ModuleDaprEventBus(ModuleDaprEventBusOption option)
                 return operation;
             });
         });
-
-        return base.ConfigureApplicationBuilder(app);
     }
 
     public override void ClaimDependencies()

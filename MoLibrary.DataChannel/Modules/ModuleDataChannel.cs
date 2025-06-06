@@ -19,7 +19,7 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
         return EMoModules.DataChannel;
     }
 
-    public override Res ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(IServiceCollection services)
     {
 
         DataChannelCentral.Setting = Option;
@@ -39,10 +39,9 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
         {
             mvcOptions.Conventions.Add(new ModuleControllerModelConvention<DataChannelController>(Option));
         });
-        return Res.Ok();
     }
 
-    public override Res ConfigureApplicationBuilder(IApplicationBuilder app)
+    public override void ConfigureApplicationBuilder(IApplicationBuilder app)
     {
         //use ISetupPipeline
         if (app.ApplicationServices.GetService(typeof(ISetupPipeline)) is ISetupPipeline setup)
@@ -53,14 +52,11 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
         DataChannelCentral.StartBuild(app);
 
         // Channel initialization is now handled by the hosted service
-        return base.ConfigureApplicationBuilder(app);
     }
 
-    public override Res ConfigureEndpoints(IApplicationBuilder app)
+    public override void ConfigureEndpoints(IApplicationBuilder app)
     {
 
         DataChannelCentral.ConfigEndpoints(app);
-
-        return base.ConfigureEndpoints(app);
     }
 }

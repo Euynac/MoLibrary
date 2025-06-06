@@ -25,7 +25,7 @@ public class ModuleMediator(ModuleMediatorOption option) : MoModule<ModuleMediat
         return EMoModules.Mediator;
     }
 
-    public override Res ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(IServiceCollection services)
     {
         //TODO 优化为使用统一迭代方法
         services.AddMediatR(cfg =>
@@ -33,8 +33,6 @@ public class ModuleMediator(ModuleMediatorOption option) : MoModule<ModuleMediat
             cfg.RegisterServicesFromAssemblyContaining<IServiceResponse>();
             cfg.RegisterServicesFromAssembly(Assembly.GetEntryAssembly()!);
         });
-
-        return Res.Ok();
     }
 }
 

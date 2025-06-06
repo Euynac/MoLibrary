@@ -40,13 +40,12 @@ public class ModuleFrameworkMonitor(ModuleFrameworkMonitorOption option)
 
     private IServiceCollection _services = null!;
 
-    public override Res ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(IServiceCollection services)
     {
         _services = services;
         InitProjectUnitFactories();
      
         ProjectUnit.Option = option;
-        return Res.Ok();
     }
 
     public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
@@ -54,32 +53,28 @@ public class ModuleFrameworkMonitor(ModuleFrameworkMonitorOption option)
         return types.ExtractUnitInfo(_services).ExtractEnumInfo();
     }
 
-    public override Res PostConfigureServices(IServiceCollection services)
+    public override void PostConfigureServices(IServiceCollection services)
     {
         ProjectUnitStores.ProjectUnitsByFullName.Values.Do(p => p.DoingConnect());
         if (option.EnableRequestFilter)
         {
             services.AddRequestFilter();
         }
-
-        return base.PostConfigureServices(services);
     }
     class RequestFilterDto
     {
         public List<string>? Urls { get; set; }
         public bool? Disable { get; set; }
     }
-    public override Res ConfigureApplicationBuilder(IApplicationBuilder app)
+    public override void ConfigureApplicationBuilder(IApplicationBuilder app)
     {
         if (option.EnableRequestFilter)
         {
             app.UseRequestFilter();
         }
-
-        return base.ConfigureApplicationBuilder(app);
     }
     
-    public override Res ConfigureEndpoints(IApplicationBuilder app)
+    public override void ConfigureEndpoints(IApplicationBuilder app)
     {
         app.UseEndpoints(endpoints =>
         {

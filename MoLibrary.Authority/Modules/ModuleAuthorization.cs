@@ -16,7 +16,7 @@ public class ModuleAuthorization(ModuleAuthorizationOption option) : MoModuleWit
         return EMoModules.Authority;
     }
 
-    public override Res ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(IServiceCollection services)
     {
         services.AddAuthorization();
         //services.AddAuthorizationCore();
@@ -34,7 +34,6 @@ public class ModuleAuthorization(ModuleAuthorizationOption option) : MoModuleWit
         PermissionBitCheckerManager.Singleton = checker;
         services.AddSingleton(_ => manager);
         services.AddSingleton<IPermissionBitChecker, PermissionBitChecker>(_ => checker);
-        return Res.Ok();
     }
 
     public override void ClaimDependencies()

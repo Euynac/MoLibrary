@@ -23,7 +23,7 @@ public class ModuleDomainDrivenDesign(ModuleDomainDrivenDesignOption option) : M
         return EMoModules.DomainDrivenDesign;
     }
 
-    public override Res ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(IServiceCollection services)
     {
         //TODO 优化无需AOP
         services.AddMoInterceptor<PropertyInjectServiceProviderEmptyInterceptor>().CreateProxyWhenSatisfy(
@@ -38,7 +38,6 @@ public class ModuleDomainDrivenDesign(ModuleDomainDrivenDesignOption option) : M
 
                 return false;
             });
-        return Res.Ok();
     }
 
     public override void ClaimDependencies()

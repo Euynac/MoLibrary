@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
-using MoLibrary.AutoModel.AutoModel.Implements;
 using MoLibrary.AutoModel.Implements;
 using MoLibrary.AutoModel.Interfaces;
 using MoLibrary.Core.Module;
@@ -15,7 +14,7 @@ namespace MoLibrary.AutoModel.Modules;
 
 public class ModuleAutoModel(ModuleAutoModelOption option) : MoModule<ModuleAutoModel, ModuleAutoModelOption, ModuleAutoModelGuide>(option)
 {
-    public override Res ConfigureServices(IServiceCollection services)
+    public override void ConfigureServices(IServiceCollection services)
     {
         services.AddSingleton<IAutoModelSnapshotFactory, AutoModelSnapshotFactoryMemoryProvider>();
         services.AddSingleton(typeof(IAutoModelSnapshot<>), typeof(AutoModelSnapshotMemoryProvider<>));
@@ -26,7 +25,6 @@ public class ModuleAutoModel(ModuleAutoModelOption option) : MoModule<ModuleAuto
             typeof(AutoModelExpressionTokenizer<>));
         services.AddTransient<IAutoModelTokenExpressionGen, AutoModelTokenExpressionGenDynamicLinqProvider>();
         services.AddTransient<IAutoModelTypeConverter, AutoModelTypeConverter>();
-        return Res.Ok();
     }
 
     public override EMoModules CurModuleEnum()
@@ -34,7 +32,7 @@ public class ModuleAutoModel(ModuleAutoModelOption option) : MoModule<ModuleAuto
         return EMoModules.AutoModel;
     }
 
-    public override Res ConfigureEndpoints(IApplicationBuilder app)
+    public override void ConfigureEndpoints(IApplicationBuilder app)
     {
         app.UseEndpoints(endpoints =>
         {
@@ -66,6 +64,5 @@ public class ModuleAutoModel(ModuleAutoModelOption option) : MoModule<ModuleAuto
                 return operation;
             });
         });
-        return Res.Ok();
     }
 }

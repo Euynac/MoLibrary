@@ -26,13 +26,7 @@ public class ModuleSeeder(ModuleSeederOption option) : MoModule<ModuleSeeder, Mo
         return EMoModules.Seeder;
     }
 
-    public override Res ConfigureServices(IServiceCollection services)
-    {
-
-        return Res.Ok();
-    }
-
-    public override Res ConfigureApplicationBuilder(IApplicationBuilder app)
+    public override void ConfigureApplicationBuilder(IApplicationBuilder app)
     {
         foreach (var type in _seedTypes)
         {
@@ -40,7 +34,6 @@ public class ModuleSeeder(ModuleSeederOption option) : MoModule<ModuleSeeder, Mo
             seed.SeedAsync();
             //TODO 优化种子方法执行策略
         }
-        return Res.Ok();
     }
     public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
     {

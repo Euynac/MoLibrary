@@ -17,7 +17,7 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModule<
         return EMoModules.RegisterCentre;
     }
 
-    public override Res ConfigureApplicationBuilder(IApplicationBuilder app)
+    public override void ConfigureApplicationBuilder(IApplicationBuilder app)
     {
         if (option.ThisIsCentreClient)
         {
@@ -29,10 +29,9 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModule<
             }, TaskCreationOptions.LongRunning);
         }
         
-        return base.ConfigureApplicationBuilder(app);
     }
     
-    public override Res ConfigureEndpoints(IApplicationBuilder app)
+    public override void ConfigureEndpoints(IApplicationBuilder app)
     {
         if (option.ThisIsCentreServer)
         {
@@ -96,7 +95,5 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModule<
                 });
             });
         }
-        
-        return Res.Ok();
     }
 }

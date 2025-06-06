@@ -26,13 +26,6 @@ public class ModuleDaprLocker(ModuleDaprLockerOption option)
     {
         return EMoModules.DaprLocker;
     }
-
-    public override Res ConfigureServices(IServiceCollection services)
-    {
-
-        return Res.Ok();
-    }
-
     public override void ClaimDependencies()
     {
         DependsOnModule<ModuleLockerGuide>().Register().SetDistributedLockProvider<DaprMoDistributedLock>();

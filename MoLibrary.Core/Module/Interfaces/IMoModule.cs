@@ -21,25 +21,25 @@ public interface IMoModule
     /// 配置WebApplicationBuilder
     /// </summary>
     /// <param name="builder">WebApplicationBuilder实例</param>
-    Res ConfigureBuilder(WebApplicationBuilder builder);
+    void ConfigureBuilder(WebApplicationBuilder builder);
 
     /// <summary>
     /// 配置服务依赖注入
     /// </summary>
     /// <param name="services">服务集合</param>
-    Res ConfigureServices(IServiceCollection services);
+    void ConfigureServices(IServiceCollection services);
 
     /// <summary>
     /// 在执行遍历业务程序集类<see cref="IWantIterateBusinessTypes"/>后配置服务依赖注入
     /// </summary>
     /// <param name="services">服务集合</param>
-    Res PostConfigureServices(IServiceCollection services);
+    void PostConfigureServices(IServiceCollection services);
 
     /// <summary>
     /// 配置应用程序管道，注意是在UseRouting之前
     /// </summary>
     /// <param name="app"></param>
-    Res ConfigureApplicationBuilder(IApplicationBuilder app);
+    void ConfigureApplicationBuilder(IApplicationBuilder app);
 
     EMoModules CurModuleEnum();
 }
