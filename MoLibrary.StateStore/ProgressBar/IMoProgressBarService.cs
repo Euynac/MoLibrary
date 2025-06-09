@@ -27,6 +27,13 @@ public interface IMoProgressBarService
     /// <returns></returns>
     Task<ProgressBarStatus> GetProgressBarStatus(string id);
 
+    /// <summary>
+    /// 获取指定进度条的自定义状态
+    /// </summary>
+    /// <typeparam name="T">自定义状态类型</typeparam>
+    /// <param name="id">进度条ID</param>
+    /// <returns></returns>
+    Task<T?> GetProgressBarStatus<T>(string id) where T : ProgressBarStatus;
 
     /// <summary>
     /// 更新进度条状态
