@@ -110,13 +110,14 @@ public class ProgressBar(ProgressBarSetting setting, IMoProgressBarService servi
     /// <summary>
     /// 保存当前进度状态到存储服务
     /// </summary>
+    /// <param name="saveInstantly">是否立即保存，默认false。如果进度条有自动更新设置且此参数为false，则不会立即保存</param>
     /// <returns>异步任务</returns>
-    public virtual async ValueTask SaveStatus()
+    public virtual async ValueTask SaveStatus(bool saveInstantly = false)
     {
         if (IsCompleted || IsCancelled) return;
         
         Status.LastUpdated = DateTime.Now;
-        await Service.SaveProgressBarStateAsync(this);
+        await Service.SaveProgressBarStateAsync(this, saveInstantly);
         
         // 触发状态更新事件
         OnStatusUpdated(new ProgressBarEventArgs(this));
