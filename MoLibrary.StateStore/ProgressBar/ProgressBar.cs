@@ -22,7 +22,7 @@ public class ProgressBar(ProgressBarSetting setting, IMoProgressBarService servi
     /// <summary>
     /// 当前进度状态
     /// </summary>
-    public ProgressBarStatus Status { get; } = new(setting.TotalSteps);
+    public virtual ProgressBarStatus Status { get; protected set; } = new(setting.TotalSteps);
 
     /// <summary>
     /// 任务是否已完成
@@ -128,8 +128,9 @@ public class ProgressBar(ProgressBarSetting setting, IMoProgressBarService servi
     /// </summary>
     /// <param name="currentStep">当前步数，会确保不小于0</param>
     /// <param name="statusMessage">状态消息</param>
+    /// <param name="phase">当前阶段（可选）</param>
     /// <returns>异步任务</returns>
-    public virtual async Task UpdateStatusAsync(int currentStep, string? statusMessage = null)
+    public virtual async Task UpdateStatusAsync(int currentStep, string? statusMessage = null, string? phase = null)
     {
         ThrowIfCancellationRequested();
         if (IsCompleted || IsCancelled) return;
@@ -139,6 +140,10 @@ public class ProgressBar(ProgressBarSetting setting, IMoProgressBarService servi
         {
             Status.CurrentStatus = statusMessage;
         }
+        if (!string.IsNullOrEmpty(phase))
+        {
+            Status.Phase = phase;
+        }
         await SaveStatus();
     }
 
@@ -147,10 +152,30 @@ public class ProgressBar(ProgressBarSetting setting, IMoProgressBarService servi
     /// </summary>
     /// <param name="increment">递增步数，默认为1</param>
     /// <param name="statusMessage">状态消息</param>
+    /// <param name="phase">当前阶段（可选）</param>
     /// <returns>异步任务</returns>
-    public virtual async Task IncrementAsync(int increment = 1, string? statusMessage = null)
+    public virtual async Task IncrementAsync(int increment = 1, string? statusMessage = null, string? phase = null)
     {
-        await UpdateStatusAsync(Status.CurrentStep + increment, statusMessage);
+        await UpdateStatusAsync(Status.CurrentStep + increment, statusMessage, phase);
+    }
+
+    /// <summary>
+    /// 更新当前阶段
+    /// </summary>
+    /// <param name="phase">阶段名称</param>
+    /// <param name="statusMessage">状态消息（可选）</param>
+    /// <returns>异步任务</returns>
+    public virtual async Task UpdatePhaseAsync(string phase, string? statusMessage = null)
+    {
+        ThrowIfCancellationRequested();
+        if (IsCompleted || IsCancelled) return;
+        
+        Status.Phase = phase;
+        if (!string.IsNullOrEmpty(statusMessage))
+        {
+            Status.CurrentStatus = statusMessage;
+        }
+        await SaveStatus();
     }
 
     /// <summary>
@@ -179,6 +204,14 @@ public class ProgressBar(ProgressBarSetting setting, IMoProgressBarService servi
         if (IsCompleted || _isCancelled) return;
         
         _isCancelled = true;
+        
+        // 设置状态中的取消标记和取消原因
+        Status.IsCancelled = true;
+        if (!string.IsNullOrEmpty(reason))
+        {
+            Status.CancelReason = reason;
+        }
+        
         await Service.CancelProgressBarAsync(this, reason);
         
         // 触发取消事件

@@ -82,6 +82,13 @@ public class MoProgressBarService(
     }
 
     /// <summary>
+    /// 获取指定进度条的自定义状态
+    /// </summary>
+    /// <typeparam name="T">自定义状态类型</typeparam>
+    /// <param name="id">进度条ID</param>
+    /// <returns></returns>
+    public async Task<T?> GetProgressBarStatus<T>(string id) where T : ProgressBarStatus
+    /// <summary>
     /// 保存进度条状态
     /// </summary>
     /// <param name="progressBar">进度条实例</param>
@@ -214,15 +221,23 @@ public class MoProgressBarService(
                 await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
                 // 这里可以添加定期维护逻辑
             }
-            catch (TaskCanceledException)
-            {
-                break;
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error in progress bar service background task");
-            }
-        }
+        //// 后台服务主循环，可以用于监控和维护
+        //while (!stoppingToken.IsCancellationRequested)
+        //{
+        //    try
+        //    {
+        //        await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
+        //        // 这里可以添加定期维护逻辑
+        //    }
+        //    catch (TaskCanceledException)
+        //    {
+        //        break;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        logger.LogError(ex, "Error in progress bar service background task");
+        //    }
+        //}
     }
 
     public override void Dispose()

@@ -18,9 +18,24 @@ public class ProgressBarStatus(int totalSteps)
     public TimeSpan ElapsedTime => DateTime.Now - StartTime;
 
     /// <summary>
-    /// 当前状态描述
+    /// 当前状态描述（细致的进度描述）
     /// </summary>
     public string? CurrentStatus { get; set; }
+
+    /// <summary>
+    /// 当前阶段（粗粒度的进度阶段）
+    /// </summary>
+    public string? Phase { get; set; }
+
+    /// <summary>
+    /// 是否已取消
+    /// </summary>
+    public bool IsCancelled { get; set; }
+
+    /// <summary>
+    /// 取消原因
+    /// </summary>
+    public string? CancelReason { get; set; }
 
     /// <summary>
     /// 最后更新时间
