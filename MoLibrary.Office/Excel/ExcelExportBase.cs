@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using MoLibrary.Office.Excel.Attributes;
 using MoLibrary.Office.Excel.Models;
+using MoLibrary.StateStore.ProgressBar;
 
 namespace MoLibrary.Office.Excel
 {
@@ -73,6 +74,125 @@ namespace MoLibrary.Office.Excel
             }
             catch (Exception e)
             {
+                throw new Exception(e.Message, e);
+            }
+        }
+
+        /// <summary>
+        /// 带进度条的导出
+        /// </summary>
+        /// <typeparam name="TExportDto"><paramref name="data"/> 集合中元素的类（导出的表头顺序为字段顺序）</typeparam>
+        /// <param name="data">数据</param>
+        /// <param name="progressBar">进度条实例，如果为null则不显示进度</param>
+        /// <param name="optionAction">配置选项</param>
+        /// <param name="onlyExportHeaderName">只需要导出的表头名称（指定则按 <typeparamref name="TExportDto"/> 字段顺序导出全部，不指定空则按数组顺序导出）</param>
+        /// <returns></returns>
+        public async Task<byte[]> ExportWithProgressAsync<TExportDto>(List<TExportDto> data, ProgressBar? progressBar, Action<ExcelExportOptions>? optionAction, string[] onlyExportHeaderName)
+            where TExportDto : class, new()
+        {
+            try
+            {
+                if (progressBar != null)
+                {
+                    await progressBar.UpdateStatusAsync(0, "开始Excel导出", "初始化");
+                    progressBar.ThrowIfCancellationRequested();
+                }
+
+                var options = new ExcelExportOptions();
+                optionAction?.Invoke(options);
+                options.CheckError();
+
+                if (progressBar != null)
+                {
+                    await progressBar.UpdateStatusAsync(5, "配置验证完成", "初始化");
+                    progressBar.ThrowIfCancellationRequested();
+                }
+
+                //获取工作册
+                var workbook = GetWorkbook(options);
+
+                //创建工作表
+                var worksheet = CreateSheet(workbook, options);
+
+                if (progressBar != null)
+                {
+                    await progressBar.UpdateStatusAsync(10, "工作表创建完成", "表头处理");
+                    progressBar.ThrowIfCancellationRequested();
+                }
+
+                //验证表头，并获取要导出的表头信息
+                var headers = CheckHeader<TExportDto>(onlyExportHeaderName);
+
+                //表头行下标
+                var headerRowIndex = options.HeaderRowIndex - 1;
+
+                //先获取所有表头列的样式和字体
+                var headerStyle = GetHeaderColumnStyleAndFont<TExportDto>(workbook, worksheet);
+
+                if (progressBar != null)
+                {
+                    await progressBar.UpdateStatusAsync(15, "表头样式处理完成", "表头处理");
+                    progressBar.ThrowIfCancellationRequested();
+                }
+
+                //处理表头单元格
+                ProcessHeaderCell<TExportDto>(workbook, worksheet, headers, headerRowIndex, headerStyle);
+
+                if (progressBar != null)
+                {
+                    await progressBar.UpdateStatusAsync(20, "表头单元格处理完成", "数据处理");
+                    progressBar.ThrowIfCancellationRequested();
+                }
+
+                //数据起始行下标
+                var dataRowIndex = options.DataRowStartIndex - 1;
+
+                //先获取所有数据列的样式和字体
+                var dataStyle = GetDataColumnStyleAndFont<TExportDto>(workbook, worksheet);
+
+                //处理数据单元格（带进度汇报）
+                var footerRowIndex = await ProcessDataCellWithProgress(workbook, worksheet, headers, data, dataRowIndex, dataStyle, progressBar);
+
+                if (progressBar != null)
+                {
+                    await progressBar.UpdateStatusAsync(progressBar.Status.TotalSteps - 15, "数据处理完成", "最终处理");
+                    progressBar.ThrowIfCancellationRequested();
+                }
+
+                //处理底部数据统计
+                ProcessFooterStatistics<TExportDto>(workbook, worksheet, headers, dataRowIndex, footerRowIndex, headerStyle, dataStyle);
+
+                if (progressBar != null)
+                {
+                    await progressBar.UpdateStatusAsync(progressBar.Status.TotalSteps - 10, "底部统计处理完成", "最终处理");
+                    progressBar.ThrowIfCancellationRequested();
+                }
+
+                //处理列宽【有数据才能处理自动列宽，所以必须放到最后进行处理】
+                ProcessColumnWidth<TExportDto>(workbook, worksheet, headers);
+
+                if (progressBar != null)
+                {
+                    await progressBar.UpdateStatusAsync(progressBar.Status.TotalSteps - 5, "列宽处理完成", "最终处理");
+                    progressBar.ThrowIfCancellationRequested();
+                }
+
+                //转换并获取工作册字节
+                var result = GetAsByteArray(workbook, worksheet);
+
+                if (progressBar != null)
+                {
+                    await progressBar.CompleteTaskAsync();
+                }
+
+                return result;
+            }
+            catch (Exception e)
+            {
+                if (progressBar != null)
+                {
+                    await progressBar.CancelTaskAsync($"导出失败：{e.Message}");
+                }
                 throw new Exception(e.Message, e);
             }
         }
@@ -259,6 +379,116 @@ namespace MoLibrary.Office.Excel
             {
                 SetMergedRegion(workbook, worksheet, m.FromRowIndex, m.ToRowIndex, m.FromColumnIndex, m.ToColumnIndex);
             }
+        }
+
+        /// <summary>
+        /// 带进度汇报的数据单元格处理
+        /// </summary>
+        /// <typeparam name="TExportDto"><paramref name="data"/>集合中元素的类</typeparam>
+        /// <param name="workbook">工作册</param>
+        /// <param name="worksheet">工作表</param>
+        /// <param name="headers">要导出的表头信息</param>
+        /// <param name="data">数据集合</param>
+        /// <param name="rowIndex">下一行下标（起始下标： 0）</param>
+        /// <param name="dataStyle">数据样式</param>
+        /// <param name="progressBar">进度条实例</param>
+        /// <returns>下一行下标（从0开始）</returns>
+        private async Task<int> ProcessDataCellWithProgress<TExportDto>(TWorkbook workbook, TSheet worksheet, ExcelExportHeaderInfo[] headers, List<TExportDto> data, int rowIndex, List<ExcelCellStyleOutput<TCellStyle, DataStyleAttribute, DataFontAttribute>> dataStyle, ProgressBar? progressBar)
+            where TExportDto : class, new()
+        {
+            //可合并行区域信息
+            var rowMergedList = new List<ExcelExportMergedRegionInfo>();
+            var rowMergedHeader = GetHeaderProperties<TExportDto>().Where(a => a.GetCustomAttribute<MergeRowAttribute>() != null).Select(a => a.Name).ToList();
+
+            //可合并列区域信息
+            var columnMergedList = new List<ExcelExportMergedRegionInfo>();
+            var columnMergedHeader = typeof(TExportDto).GetCustomAttributes<MergeColumnAttribute>().Select(a => a.PropertyNames.Distinct().ToArray()).Where(a => a.Length > 1).ToList();
+
+            //验证合并特性值
+            CheckMergeAttribute<TExportDto>(columnMergedHeader);
+
+            var totalDataRows = data.Count;
+            var processedRows = 0;
+            
+            // 用于进度汇报的步数计算 (数据处理占总进度的60%)
+            var dataProgressStart = 20; // 数据处理从20%开始
+            var dataProgressRange = progressBar != null ? progressBar.Status.TotalSteps - 35 : 0; // 数据处理占总进度范围
+
+            //处理单元格 值、样式、字体、合并
+            foreach (var d in data)
+            {
+                // 检查取消
+                if (progressBar != null)
+                {
+                    progressBar.ThrowIfCancellationRequested();
+                }
+
+                for (var i = 0; i < headers.Length; i++)
+                {
+                    var info = headers[i];
+                    var columnIndex = i;
+                    var p = info.PropertyInfo;
+
+                    //创建单元格
+                    var cell = CreateCell(workbook, worksheet, rowIndex, columnIndex);
+
+                    //处理数据单元格值
+                    var value = p.GetValue(d);
+                    ProcessDataCellValue(workbook, worksheet, cell, p, value);
+
+                    //处理数据单元格样式和字体
+                    var cellStyleInfo = dataStyle.FirstOrDefault(a => a.PropertyInfo == p);
+                    SetDataCellStyleAndFont<TExportDto>(workbook, worksheet, cell, cellStyleInfo);
+
+                    //处理列合并
+                    ProcessMergeColumn(columnMergedHeader, columnMergedList, rowIndex, columnIndex, p, value);
+
+                    //处理行合并
+                    ProcessMergeRow(rowMergedHeader, rowMergedList, rowIndex, columnIndex, p, value);
+                }
+
+                //处理数据行 行高（必须先创建行，才能处理）
+                ProcessRowHeight<TExportDto>(workbook, worksheet, rowIndex, false);
+
+                //下一行下标
+                rowIndex++;
+                processedRows++;
+
+                // 汇报进度 (每处理100行或每10%汇报一次)
+                if (progressBar != null && (processedRows % 100 == 0 || processedRows % Math.Max(totalDataRows / 10, 1) == 0))
+                {
+                    var progressStep = dataProgressStart + (int)((double)processedRows / totalDataRows * dataProgressRange);
+                    await progressBar.UpdateStatusAsync(progressStep, $"已处理 {processedRows}/{totalDataRows} 行数据", "数据处理");
+                }
+            }
+
+            // 确保数据处理完成时更新进度
+            if (progressBar != null && processedRows == totalDataRows)
+            {
+                var finalProgressStep = dataProgressStart + dataProgressRange;
+                await progressBar.UpdateStatusAsync(finalProgressStep, $"数据处理完成，共处理 {totalDataRows} 行", "数据处理");
+            }
+
+            //下一行下标
+            var nextRowIndex = rowIndex;
+
+            //移除不能合并的
+            columnMergedList.RemoveAll(m => !m.IsCanMergedColumn());
+            rowMergedList.RemoveAll(m => !m.IsCanMergedRow());
+
+            //若该属性存在列合并，则移除所有行合（优先列合并）
+            rowMergedList.RemoveAll(m => columnMergedList.Any(a => a.PropertyNames.Intersect(m.PropertyNames).Any()));
+
+            //所有合并信息
+            var mergedRegion = rowMergedList.Concat(columnMergedList).ToList();
+
+            //处理数据合并区域
+            foreach (var m in mergedRegion)
+            {
+                SetMergedRegion(workbook, worksheet, m.FromRowIndex, m.ToRowIndex, m.FromColumnIndex, m.ToColumnIndex);
+            }
+
+            return nextRowIndex;
         }
 
         /// <summary>
