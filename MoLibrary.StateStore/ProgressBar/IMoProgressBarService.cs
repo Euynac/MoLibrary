@@ -42,6 +42,14 @@ public interface IMoProgressBarService
     /// <param name="status"></param>
     /// <returns></returns>
     Task FinishProgressBarAsync(ProgressBar status);
+
+    /// <summary>
+    /// 取消进度条任务
+    /// </summary>
+    /// <param name="status"></param>
+    /// <param name="reason">取消原因</param>
+    /// <returns></returns>
+    Task CancelProgressBarAsync(ProgressBar status, string? reason = null);
 }
 
 public class ProgressBarSetting

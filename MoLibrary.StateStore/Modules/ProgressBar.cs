@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
+using MoLibrary.StateStore.ProgressBar;
 
 namespace MoLibrary.StateStore.Modules;
 
@@ -23,15 +25,23 @@ public class ModuleProgressBar(ModuleProgressBarOption option)
         return EMoModules.ProgressBar;
     }
 
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddSingleton<IMoProgressBarService, MoProgressBarService>();
+        services.AddHostedService<MoProgressBarService>();
+    }
+
     public override void ClaimDependencies()
     {
         DependsOnModule<ModuleCancellationManagerGuide>().Register().AddKeyedCancellationManager(nameof(ModuleProgressBar), Option.UseDistributedStateStore);
+        DependsOnModule<ModuleStateStoreGuide>().Register().AddKeyedStateStore(nameof(ModuleProgressBar), Option.UseDistributedStateStore);
     }
 }
 
 public class ModuleProgressBarGuide : MoModuleGuide<ModuleProgressBar, ModuleProgressBarOption, ModuleProgressBarGuide>
 {
-    
+
+   
 }
 
 public class ModuleProgressBarOption : MoModuleOption<ModuleProgressBar>
