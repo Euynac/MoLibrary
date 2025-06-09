@@ -390,10 +390,24 @@ progressBar.Cancelled += (sender, e) =>
 // 使用带进度条的导出方法
 var data = GetList(); // 数据源
 var manager = new NpoiExcelExportManager(); // 实例化导出管理器
-var bytes = await manager.ExportAsync(data, progressBar, option =>
-{
-    option.SheetName = "Sheet1"; // 工作表名
-});
+
+// 方法1：同步导出
+var bytes = manager.Export(data, 
+    optionAction: option =>
+    {
+        option.SheetName = "Sheet1"; // 工作表名
+    }, 
+    progressBar: progressBar
+);
+
+// 方法2：异步导出 
+var bytes = await manager.ExportAsync(data, 
+    optionAction: option =>
+    {
+        option.SheetName = "Sheet1"; // 工作表名
+    }, 
+    progressBar: progressBar
+);
 
 File.WriteAllBytes("D:\\export.xlsx", bytes); // 保存Excel文件
 

@@ -1,4 +1,5 @@
 using MoLibrary.Office.Excel.Models;
+using MoLibrary.StateStore.ProgressBar;
 
 namespace MoLibrary.Office.Excel.EpPlus.Export
 {
@@ -10,11 +11,11 @@ namespace MoLibrary.Office.Excel.EpPlus.Export
     /// </remarks>
     public class EpPlusExcelExportProvider(IEpPlusCellStyleHandle epPlusCellStyleHandle, IEpPlusExcelHandle epPlusExcelHandle) : ExcelExportManager
     {
-        protected override byte[] ImplementExport<TExportDto>(List<TExportDto> data, Action<ExcelExportOptions> optionAction, string[] onlyExportHeaderName)
+        protected override byte[] ImplementExport<TExportDto>(List<TExportDto> data, Action<ExcelExportOptions> optionAction, string[] onlyExportHeaderName, ProgressBar? progressBar = null)
         {
             var export = new EpPlusExcelExportBase(epPlusCellStyleHandle, epPlusExcelHandle);
 
-            return export.Export(data, optionAction, onlyExportHeaderName);
+            return export.Export(data, optionAction, onlyExportHeaderName, progressBar);
         }
     }
 }

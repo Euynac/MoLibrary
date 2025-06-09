@@ -1,7 +1,8 @@
 using MoLibrary.Office.Excel.Models;
+using MoLibrary.StateStore.ProgressBar;
 
 namespace MoLibrary.Office.Excel.Npoi.Export
-{
+{   
     /// <summary>
     /// Npoi excel 导出服务
     /// </summary>
@@ -10,7 +11,7 @@ namespace MoLibrary.Office.Excel.Npoi.Export
     /// </remarks>
     public class NpoiExcelExportProvider(INpoiCellStyleHandle npoiCellStyleHandle, INpoiExcelHandle npoiExcelHandle) : ExcelExportManager
     {
-        protected override byte[] ImplementExport<TExportDto>(List<TExportDto> data, Action<ExcelExportOptions> optionAction, string[] onlyExportHeaderName)
+        protected override byte[] ImplementExport<TExportDto>(List<TExportDto> data, Action<ExcelExportOptions> optionAction, string[] onlyExportHeaderName, ProgressBar? progressBar = null)
         {
             var export = new NpoiExcelExportBase(npoiCellStyleHandle, npoiExcelHandle);
 
