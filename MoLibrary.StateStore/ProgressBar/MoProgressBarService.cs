@@ -88,6 +88,18 @@ public class MoProgressBarService(
     /// <param name="id">进度条ID</param>
     /// <returns></returns>
     public async Task<T?> GetProgressBarStatus<T>(string id) where T : ProgressBarStatus
+    {
+        try
+        {
+            var status = await stateStore.GetStateAsync<T>(id);
+            return status;
+        }
+        catch (Exception e)
+        {
+            throw e.CreateException(logger, "Failed to get custom progress bar status: {0}", id);
+        }
+    }
+
     /// <summary>
     /// 保存进度条状态
     /// </summary>
@@ -207,20 +219,12 @@ public class MoProgressBarService(
         }
         catch (Exception e)
         {
-            e.CreateException(logger, "Auto update failed for progress bar: {0}", progressBar.TaskId)
+            e.CreateException(logger, "Auto update failed for progress bar: {0}", progressBar.TaskId);
         }
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // 后台服务主循环，可以用于监控和维护
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            try
-            {
-                await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
-                // 这里可以添加定期维护逻辑
-            }
         //// 后台服务主循环，可以用于监控和维护
         //while (!stoppingToken.IsCancellationRequested)
         //{
