@@ -112,7 +112,7 @@ public static class MoModuleRegisterCentre
             }
             catch (Exception ex)
             {
-                ModuleErrorUtil.RecordModuleError(moduleType, ex.Message,
+                ModuleErrorUtil.RecordModuleError(moduleType, ex,
                     EMoModuleConfigMethods.ClaimDependencies, ModuleRegisterErrorType.InitializationError);
             }
         }
@@ -135,7 +135,7 @@ public static class MoModuleRegisterCentre
             }
             catch (Exception ex)
             {
-                ModuleErrorUtil.RecordModuleError(moduleType, ex.Message,
+                ModuleErrorUtil.RecordModuleError(moduleType, ex,
                     EMoModuleConfigMethods.InitFinalConfigures, ModuleRegisterErrorType.InitializationError);
             }
         }

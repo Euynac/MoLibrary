@@ -1,5 +1,6 @@
 using System.Text;
 using Microsoft.Extensions.Logging;
+using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module.BuilderWrapper;
 using MoLibrary.Core.Module.Features;
 using MoLibrary.Core.Module.Models;
@@ -119,21 +120,22 @@ public static class ModuleErrorUtil
     /// Records an error that occurred during module configuration.
     /// </summary>
     /// <param name="moduleType">The type of the module where the error occurred.</param>
-    /// <param name="errorMessage">The error message.</param>
+    /// <param name="exception">The error.</param>
     /// <param name="phase">The phase where the error occurred.</param>
     /// <param name="errorType">The type of error.</param>
     public static void RecordModuleError(
         Type moduleType, 
-        string? errorMessage, 
+        Exception exception, 
         EMoModuleConfigMethods phase, 
         ModuleRegisterErrorType errorType)
     {
         var error = new ModuleRegisterError 
         {
             ModuleType = moduleType,
-            ErrorMessage = $"Error in {phase}: {errorMessage}",
+            ErrorMessage = $"Error in {phase}: {exception.GetMessageRecursively()}",
             ErrorType = errorType,
-            Phase = phase
+            Phase = phase,
+            StackTrace = exception.StackTrace
         };
         ModuleRegisterErrors.Add(error);
         
@@ -159,10 +161,11 @@ public static class ModuleErrorUtil
         var error = new ModuleRegisterError
         {
             ModuleType = moduleType,
-            ErrorMessage = $"Error in request {request.Key} (from {request.RequestFrom}): {exception.Message}",
+            ErrorMessage = $"Error in request {request.Key} (from {request.RequestFrom}): {exception.GetMessageRecursively()}",
             ErrorType = ModuleRegisterErrorType.ConfigurationError,
             GuideFrom = request.RequestFrom,
-            Phase = request.RequestMethod
+            Phase = request.RequestMethod,
+            StackTrace = exception.StackTrace
         };
         ModuleRegisterErrors.Add(error);
         

@@ -61,13 +61,19 @@ public class ModuleRequestInfo
     /// <returns></returns>
     public object CreateCurrentModuleOption()
     {
-        var tmp = Activator.CreateInstance(ModuleOptionType)!;
-        foreach (var action in PendingConfigActions[ModuleOptionType].Values)
+        var currentModuleOption = Activator.CreateInstance(ModuleOptionType)!;
+        
+        if(!PendingConfigActions.TryGetValue(ModuleOptionType, out var value))
         {
-            action.Invoke(tmp);
+            return currentModuleOption;
         }
 
-        return tmp;
+        foreach (var action in value.Values)
+        {
+            action.Invoke(currentModuleOption);
+        }
+
+        return currentModuleOption;
     }
 
     /// <summary>

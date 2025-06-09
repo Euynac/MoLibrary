@@ -37,12 +37,17 @@ public class ModuleRegisterError
     /// <summary>
     /// List of missing configuration method keys.
     /// </summary>
-    public List<string> MissingConfigKeys { get; set; } = new();
+    public List<string> MissingConfigKeys { get; set; } = [];
     
     /// <summary>
     /// Information about module dependencies when the error occurred.
     /// </summary>
     public ModuleDependencyInfo? DependencyInfo { get; set; }
+
+    /// <summary>
+    /// The stack trace of the error that occurred during module registration.
+    /// </summary>
+    public string? StackTrace { get; set; }
 
     /// <summary>
     /// Returns a formatted string representation of the module registration error.
@@ -79,6 +84,11 @@ public class ModuleRegisterError
         {
             sb.AppendLine("  - Dependency Information:");
             sb.AppendLine($"    {DependencyInfo}");
+        }
+
+        if (StackTrace != null)
+        {
+            sb.AppendLine($"  - Stack Trace: {StackTrace}");
         }
         
         return sb.ToString();
