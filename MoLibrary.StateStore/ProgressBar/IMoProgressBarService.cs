@@ -31,9 +31,10 @@ public interface IMoProgressBarService
     /// <summary>
     /// 更新进度条状态
     /// </summary>
-    /// <param name="status"></param>
+    /// <param name="progressBar">进度条实例</param>
+    /// <param name="saveInstantly">是否立即保存，默认false。如果进度条有自动更新设置且此参数为false，则不会立即保存</param>
     /// <returns></returns>
-    ValueTask SaveProgressBarStateAsync(ProgressBar status);
+    ValueTask SaveProgressBarStateAsync(ProgressBar progressBar, bool saveInstantly = false);
 
 
     /// <summary>
