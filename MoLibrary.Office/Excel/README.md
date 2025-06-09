@@ -331,4 +331,84 @@ public static void AddxxxExcel(this IServiceCollection services)
 
 感谢开源社区的贡献，让我们能够在优秀项目的基础上继续改进和发展。
 
+# Excel Module
+
+Excel导出、导入模块
+
+## 导出功能
+
+基本导出示例：
+```csharp
+var data = GetList(); // 数据源
+var manager = new NpoiExcelExportManager(); // 实例化导出管理器
+var bytes = manager.Export(data, option =>
+{
+    option.SheetName = "Sheet1"; // 工作表名
+    option.HeaderRowIndex = 1;   // 表头行索引
+    option.DataRowStartIndex = 2; // 数据起始行索引
+});
+
+File.WriteAllBytes("D:\\export.xlsx", bytes); // 保存Excel文件
+```
+
+### 使用进度条导出
+
+本模块集成了MoLibrary.StateStore中的进度条功能，可以实时跟踪Excel导出进度：
+
+```csharp
+using MoLibrary.StateStore.ProgressBar;
+
+// 创建进度条服务实例
+var progressBarService = serviceProvider.GetService<IMoProgressBarService>();
+
+// 创建一个进度条任务
+var progressBar = await progressBarService.CreateProgressBarAsync(id: "excel-export-task", settingAction: setting =>
+{
+    setting.TotalSteps = 100; // 总步数，默认为100
+    setting.TimeToLive = TimeSpan.FromMinutes(15); // 进度条存活时间
+    // 可以设置自动更新间隔，避免频繁更新状态
+    setting.AutoUpdateDuration = TimeSpan.FromMilliseconds(300);
+});
+
+// 订阅进度条事件
+progressBar.StatusUpdated += (sender, e) =>
+{
+    var currentProgress = e.ProgressBar.Status;
+    Console.WriteLine($"当前进度: {currentProgress.CurrentStep}/{currentProgress.TotalSteps}, 状态: {currentProgress.CurrentStatus}");
+};
+
+progressBar.Completed += (sender, e) => 
+{
+    Console.WriteLine("Excel导出完成!");
+};
+
+progressBar.Cancelled += (sender, e) =>
+{
+    Console.WriteLine($"Excel导出已取消，原因: {e.CancelReason}");
+};
+
+// 使用带进度条的导出方法
+var data = GetList(); // 数据源
+var manager = new NpoiExcelExportManager(); // 实例化导出管理器
+var bytes = await manager.ExportAsync(data, progressBar, option =>
+{
+    option.SheetName = "Sheet1"; // 工作表名
+});
+
+File.WriteAllBytes("D:\\export.xlsx", bytes); // 保存Excel文件
+
+// 您也可以在其他地方通过任务ID获取进度条状态
+var progressStatus = await progressBarService.GetProgressBarStatus("excel-export-task");
+Console.WriteLine($"当前进度: {progressStatus.CurrentStep}/{progressStatus.TotalSteps}");
+```
+
+## 导入功能
+
+导入示例：
+```csharp
+var manager = new NpoiExcelImportManager();
+var bytes = File.ReadAllBytes("D:\\import.xlsx");
+var list = manager.Import<YourDto>(bytes);
+```
+
 
