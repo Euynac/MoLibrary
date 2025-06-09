@@ -10,6 +10,7 @@ using MoLibrary.Office.Excel.EpPlus.Import;
 using MoLibrary.Office.Excel.Npoi;
 using MoLibrary.Office.Excel.Npoi.Export;
 using MoLibrary.Office.Excel.Npoi.Import;
+using MoLibrary.StateStore.Modules;
 
 namespace MoLibrary.Office.Modules;
 
@@ -23,11 +24,16 @@ public static class ModuleExcelBuilderExtensions
     }
 }
 
-public class ModuleExcel(ModuleExcelOption option) : MoModule<ModuleExcel, ModuleExcelOption, ModuleExcelGuide>(option)
+public class ModuleExcel(ModuleExcelOption option) : MoModuleWithDependencies<ModuleExcel, ModuleExcelOption, ModuleExcelGuide>(option)
 {
     public override EMoModules CurModuleEnum()
     {
         return EMoModules.Excel;
+    }
+
+    public override void ClaimDependencies()
+    {
+        DependsOnModule<ModuleProgressBarGuide>().Register();
     }
 }
 
