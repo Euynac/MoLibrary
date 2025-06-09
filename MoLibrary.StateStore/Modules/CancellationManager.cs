@@ -30,7 +30,7 @@ public static class ModuleCancellationManagerBuilderExtensions
 /// 提供跨微服务实例的取消令牌管理功能
 /// </summary>
 public class ModuleCancellationManager(ModuleCancellationManagerOption option)
-    : MoModule<ModuleCancellationManager, ModuleCancellationManagerOption, ModuleCancellationManagerGuide>(option)
+    : MoModuleWithDependencies<ModuleCancellationManager, ModuleCancellationManagerOption, ModuleCancellationManagerGuide>(option)
 {
     /// <summary>
     /// 获取当前模块枚举值
@@ -49,7 +49,7 @@ public class ModuleCancellationManager(ModuleCancellationManagerOption option)
     public override void ConfigureServices(IServiceCollection services)
     {
         // 根据配置选择合适的实现
-        if (Option.UseInMemoryImplementation)
+        if (!Option.UseDistributed)
         {
             // 注册内存版取消令牌管理器服务
             services.AddSingleton<IMoCancellationManager, InMemoryCancellationManager>();
@@ -57,7 +57,19 @@ public class ModuleCancellationManager(ModuleCancellationManagerOption option)
         else
         {
             // 注册分布式取消令牌管理器服务
-            services.AddSingleton<IMoCancellationManager, DefaultDistributedCancellationManager>();
+            services.AddSingleton<IMoCancellationManager>((serviceProvider) =>
+            {
+                var stateStore = serviceProvider.GetRequiredKeyedService<IMoStateStore>(nameof(ModuleCancellationManager));
+                return ActivatorUtilities.CreateInstance<DistributedCancellationManager>(serviceProvider, stateStore);
+            });
+        }
+    }
+
+    public override void ClaimDependencies()
+    {
+        if (Option.UseDistributed)
+        {
+            DependsOnModule<ModuleStateStoreGuide>().Register().AddKeyedStateStore(nameof(ModuleCancellationManager), true);
         }
     }
 }
@@ -72,21 +84,21 @@ public class ModuleCancellationManagerGuide : MoModuleGuide<ModuleCancellationMa
     /// 添加指定键的取消令牌管理器
     /// </summary>
     /// <param name="key">服务键</param>
-    /// <param name="useInMemory">是否使用内存实现，默认为false</param>
+    /// <param name="useDistributed">是否使用内存实现，默认为false</param>
     /// <returns>返回当前模块指南实例以支持链式调用</returns>
-    public ModuleCancellationManagerGuide AddKeyedCancellationManager(string key, bool useInMemory = false)
+    public ModuleCancellationManagerGuide AddKeyedCancellationManager(string key, bool useDistributed = false)
     {
-        if (!useInMemory)
+        if (useDistributed)
         {
             // 使用分布式实现，需要依赖StateStore
-            DependsOnModule<ModuleStateStoreGuide>().Register().AddKeyedStateStore(key, false);
+            DependsOnModule<ModuleStateStoreGuide>().Register().AddKeyedStateStore(key, true);
         }
         
         ConfigureServices(context =>
         {
             context.Services.AddKeyedSingleton<IMoCancellationManager>(key, (serviceProvider, _) =>
             {
-                if (useInMemory)
+                if (!useDistributed)
                 {
                     // 使用内存实现
                     return ActivatorUtilities.CreateInstance<InMemoryCancellationManager>(serviceProvider);
@@ -95,7 +107,7 @@ public class ModuleCancellationManagerGuide : MoModuleGuide<ModuleCancellationMa
                 {
                     // 使用分布式实现
                     var stateStore = serviceProvider.GetRequiredKeyedService<IMoStateStore>(key);
-                    return ActivatorUtilities.CreateInstance<DefaultDistributedCancellationManager>(serviceProvider, stateStore);
+                    return ActivatorUtilities.CreateInstance<DistributedCancellationManager>(serviceProvider, stateStore);
                 }
             });
         });
@@ -113,7 +125,7 @@ public class ModuleCancellationManagerOption : MoModuleOption<ModuleCancellation
     /// <summary>
     /// 是否使用内存实现，默认为false（使用分布式实现）
     /// </summary>
-    public bool UseInMemoryImplementation { get; set; } = false;
+    public bool UseDistributed { get; set; } = false;
 
     /// <summary>
     /// 轮询间隔（毫秒），默认为1000ms
