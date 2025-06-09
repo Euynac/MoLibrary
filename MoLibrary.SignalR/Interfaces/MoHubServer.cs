@@ -8,7 +8,7 @@ namespace MoLibrary.SignalR.Interfaces;
 public abstract class MoHubServer<TIContract>(IMoSignalRConnectionManager connectionManager)
     : Hub<TIContract> where TIContract : class, IMoHubContract
 {
-    private static ILogger Logger => LogProvider.For<MoHubServer<TIContract>>();
+    protected static ILogger Logger => LogProvider.For<MoHubServer<TIContract>>();
     public override async Task OnConnectedAsync()
     {
         Logger.LogInformation("客户端：" + Context.ToJsonStringForce());
