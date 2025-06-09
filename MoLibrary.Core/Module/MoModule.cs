@@ -120,7 +120,7 @@ public abstract class MoModuleWithDependencies<TModuleSelf, TModuleOption, TModu
 public interface IWantDependsOnOtherModules
 {
     /// <summary>
-    /// 声明依赖的模块，并进行配置等。注意，在该方法中的Option不一定是最终的Option值，请谨慎在此方法中获取Option值。（仅能获取到开发者配置后的Option，无法合并其他模块自动注册期间设置的值）
+    /// 声明依赖的模块，并进行配置等。注意，在该方法中的Option不一定是最终的Option值，请谨慎在此方法中获取Option值。（目前仅能获取到开发者配置后的Option，无法合并其他模块自动注册期间设置的值）
     /// </summary>
     public void ClaimDependencies();
 }
