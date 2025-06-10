@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using MoLibrary.Core.Module.Features;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Tool.Extensions;
 
@@ -7,12 +8,14 @@ namespace MoLibrary.Core.Module.Models;
 /// <summary>
 /// 模块请求信息，用于存储模块的注册请求和配置信息。
 /// </summary>
-public class ModuleRequestInfo
+public class ModuleRegisterInfo(Type moduleType)
 {
+    public Type ModuleType { get; } = moduleType;
+
     /// <summary>
-    /// 模块是否已经被注册构建，如一些可提前注册的模块，在正式构建时需跳过。
+    /// 当前模块注册阶段
     /// </summary>
-    public bool HasBeenBuilt { get; set; }
+    public EMoModuleConfigMethods ModulePhase { get; set; }
     
     /// <summary>
     /// 模块注册顺序，数值越小越优先注册。用于控制模块按依赖关系的注册顺序。
@@ -55,6 +58,17 @@ public class ModuleRequestInfo
     /// </summary>
     public MoModule? ModuleSingleton { get; internal set; }
 
+    public void StartModulePhase(EMoModuleConfigMethods phase)
+    {
+        ModuleProfiler.StartModulePhase(ModuleType, EMoModuleConfigMethods.PostConfigureServices);
+        ModulePhase = phase;
+    }
+
+    public void EndModulePhase(EMoModuleConfigMethods phase)
+    {
+        ModuleProfiler.StopModulePhase(ModuleType, EMoModuleConfigMethods.PostConfigureServices);
+    }
+
     /// <summary>
     /// 创建当前情况下的模块配置对象，仅用于少数特殊情况。
     /// </summary>
@@ -79,7 +93,7 @@ public class ModuleRequestInfo
     /// <summary>
     /// 初始化最终配置，根据排序后的配置项获得最终配置对象，最后清空配置操作。
     /// </summary>
-    public void InitFinalConfigures(Type moduleType)
+    public void InitFinalConfigures()
     {
         foreach (var configType in PendingConfigActions.Keys)
         {
@@ -107,7 +121,7 @@ public class ModuleRequestInfo
             FinalConfigures[ModuleOptionType] = Activator.CreateInstance(ModuleOptionType)!;
         }
 
-        if (Activator.CreateInstance(moduleType, ModuleOption) is MoModule instance)
+        if (Activator.CreateInstance(ModuleType, ModuleOption) is MoModule instance)
         {
             instance.ConvertToRegisterRequest();
             ModuleSingleton = instance;
@@ -115,7 +129,7 @@ public class ModuleRequestInfo
 
         if (ModuleSingleton == null)
         {
-            throw new Exception($"{moduleType.GetCleanFullName()}模块初始化最终设置失败！未能生成模块单例");
+            throw new Exception($"{ModuleType.GetCleanFullName()}模块初始化最终设置失败！未能生成模块单例");
         }
 
 

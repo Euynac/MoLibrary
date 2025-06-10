@@ -23,7 +23,7 @@ public static class ModuleErrorUtil
     /// <param name="moduleRegisterContextDict">Dictionary of module registration contexts.</param>
     /// <exception cref="ModuleRegisterException">Thrown when module registration requirements are not met.</exception>
     public static void ValidateModuleRequirements(
-        Dictionary<Type, ModuleRequestInfo> moduleRegisterContextDict)
+        Dictionary<Type, ModuleRegisterInfo> moduleRegisterContextDict)
     {
         // Check if modules meet necessary configuration requirements
         foreach (var (moduleType, info) in moduleRegisterContextDict)

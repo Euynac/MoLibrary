@@ -98,12 +98,12 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     /// </summary>
     /// <typeparam name="TModule">模块类型。</typeparam>
     /// <returns>模块的注册请求信息。</returns>
-    private ModuleRequestInfo RegisterModule()
+    private ModuleRegisterInfo RegisterModule()
     {
         var moduleType = typeof(TModule);
         if (MoModuleRegisterCentre.TryGetModuleRequestInfo(moduleType, out var requestInfo)) return requestInfo;
 
-        requestInfo = new ModuleRequestInfo();
+        requestInfo = new ModuleRegisterInfo(moduleType);
         requestInfo.BindModuleOption<TModuleOption>();
         MoModuleRegisterCentre.AddModuleRegisterContext(moduleType, requestInfo);
         // 设置必须配置的方法键

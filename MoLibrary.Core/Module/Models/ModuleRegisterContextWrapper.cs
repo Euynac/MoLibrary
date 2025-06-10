@@ -8,8 +8,8 @@ namespace MoLibrary.Core.Module.Models;
 /// 模块注册上下文，用于处理模块注册过程中的服务配置
 /// </summary>
 /// <param name="services">服务集合</param>
-/// <param name="moduleRequestInfo">模块请求信息</param>
-public class ModuleRegisterContext(IServiceCollection? services, IApplicationBuilder? applicationBuilder, WebApplicationBuilder? webApplicationBuilder, ModuleRequestInfo moduleRequestInfo)
+/// <param name="moduleRegisterInfo">模块请求信息</param>
+public class ModuleRegisterContext(IServiceCollection? services, IApplicationBuilder? applicationBuilder, WebApplicationBuilder? webApplicationBuilder, ModuleRegisterInfo moduleRegisterInfo)
 {
     /// <summary>
     /// 服务集合
@@ -26,12 +26,12 @@ public class ModuleRegisterContext(IServiceCollection? services, IApplicationBui
     /// <summary>
     /// 模块请求信息
     /// </summary>
-    public ModuleRequestInfo ModuleRequestInfo { get; init; } = moduleRequestInfo;
+    public ModuleRegisterInfo ModuleRegisterInfo { get; init; } = moduleRegisterInfo;
 
     /// <summary>
     /// 当前模块相关模块设置
     /// </summary>
-    internal Dictionary<Type, object> Option  => ModuleRequestInfo.FinalConfigures;
+    internal Dictionary<Type, object> Option  => ModuleRegisterInfo.FinalConfigures;
 }
 
 /// <summary>
