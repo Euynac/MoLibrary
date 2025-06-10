@@ -58,15 +58,20 @@ public class ModuleRegisterInfo(Type moduleType)
     /// </summary>
     public MoModule? ModuleSingleton { get; internal set; }
 
+    public void SetModulePhase(EMoModuleConfigMethods phase)
+    {
+        ModulePhase = phase;
+    }
+
     public void StartModulePhase(EMoModuleConfigMethods phase)
     {
-        ModuleProfiler.StartModulePhase(ModuleType, EMoModuleConfigMethods.PostConfigureServices);
-        ModulePhase = phase;
+        ModuleProfiler.StartModulePhase(ModuleType, phase);
+        SetModulePhase(phase);
     }
 
     public void EndModulePhase(EMoModuleConfigMethods phase)
     {
-        ModuleProfiler.StopModulePhase(ModuleType, EMoModuleConfigMethods.PostConfigureServices);
+        ModuleProfiler.StopModulePhase(ModuleType, phase);
     }
 
     /// <summary>
@@ -194,5 +199,11 @@ public class ModuleRegisterInfo(Type moduleType)
         return RequiredConfigMethodKeys
             .Where(key => !configuredKeys.Contains(key))
             .ToList();
+    }
+
+
+    public override string ToString()
+    {
+        return $"{ModulePhase} - {ModuleType.Name}";
     }
 }

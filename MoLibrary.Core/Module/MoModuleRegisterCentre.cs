@@ -98,29 +98,33 @@ public static class MoModuleRegisterCentre
         var typeFinder = services.GetOrCreateDomainTypeFinder<MoDomainTypeFinder>();
         ModuleProfiler.StartPhase(nameof(EMoModuleConfigMethods.ClaimDependencies));
         // 1. 初次遍历所有注册的模块，判断若模块有依赖项，处理依赖关系
-        foreach (var (moduleType, info) in ModuleRegisterContextDict.Where(p => p.Value.ModulePhase == EMoModuleConfigMethods.None).OrderBy(p => p.Value.Order).Select(p => p).ToList())
-        {
-            if (!moduleType.IsImplementInterface(typeof(IWantDependsOnOtherModules))) continue;
 
-            info.StartModulePhase(EMoModuleConfigMethods.ClaimDependencies);
-            try
+        while (ModuleRegisterContextDict.Where(p=>p.Value.ModulePhase == EMoModuleConfigMethods.None).ToList() is {Count: > 0} list)
+        {
+            foreach (var (moduleType, info) in list.OrderBy(p => p.Value.Order).Select(p => p).ToList())
             {
-                var option = info.CreateCurrentModuleOption();
-                if (Activator.CreateInstance(moduleType, option) is IWantDependsOnOtherModules moduleTmpInstance)
+                info.StartModulePhase(EMoModuleConfigMethods.ClaimDependencies);
+                try
                 {
-                    moduleTmpInstance.ClaimDependencies();
+                    if (!moduleType.IsImplementInterface(typeof(IWantDependsOnOtherModules))) continue;
+                    var option = info.CreateCurrentModuleOption();
+                    if (Activator.CreateInstance(moduleType, option) is IWantDependsOnOtherModules moduleTmpInstance)
+                    {
+                        moduleTmpInstance.ClaimDependencies();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ModuleErrorUtil.RecordModuleError(moduleType, ex,
+                        EMoModuleConfigMethods.ClaimDependencies, ModuleRegisterErrorType.InitializationError);
+                }
+                finally
+                {
+                    info.EndModulePhase(EMoModuleConfigMethods.ClaimDependencies);
                 }
             }
-            catch (Exception ex)
-            {
-                ModuleErrorUtil.RecordModuleError(moduleType, ex,
-                    EMoModuleConfigMethods.ClaimDependencies, ModuleRegisterErrorType.InitializationError);
-            }
-            finally
-            {
-                info.EndModulePhase(EMoModuleConfigMethods.ClaimDependencies);
-            }
         }
+       
 
         ModuleProfiler.StopPhase(nameof(EMoModuleConfigMethods.ClaimDependencies));
 
@@ -135,8 +139,10 @@ public static class MoModuleRegisterCentre
         {
             try
             {
+                info.StartModulePhase(EMoModuleConfigMethods.InitFinalConfigures);
                 // 初始化模块配置
                 info.InitFinalConfigures();
+                info.EndModulePhase(EMoModuleConfigMethods.InitFinalConfigures);
             }
             catch (Exception ex)
             {
@@ -146,15 +152,15 @@ public static class MoModuleRegisterCentre
         }
         ModuleManager.Init();
         // 2.1 检查模块是否满足必要配置要求
-        ModuleErrorUtil.ValidateModuleRequirements(ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt).ToDictionary());
+        ModuleErrorUtil.ValidateModuleRequirements(ModuleRegisterContextDict.Where(p => p.Value.ModulePhase == EMoModuleConfigMethods.InitFinalConfigures).ToDictionary());
         ModuleProfiler.StopPhase(nameof(EMoModuleConfigMethods.InitFinalConfigures));
 
         // 2.2 注册模块服务
         ModuleProfiler.StartPhase(nameof(EMoModuleConfigMethods.ConfigureBuilder) + nameof(EMoModuleConfigMethods.ConfigureServices));
-        foreach (var (moduleType, info) in ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt && !ModuleManager.IsModuleDisabled(p.Key)).OrderBy(p => p.Value.Order))
+        foreach (var (moduleType, info) in ModuleRegisterContextDict.Where(p => p.Value.ModulePhase == EMoModuleConfigMethods.InitFinalConfigures).OrderBy(p => p.Value.Order))
         {
             // 调用模块构建方法
-            ModuleProfiler.StartModulePhase(moduleType, EMoModuleConfigMethods.ConfigureBuilder);
+            info.StartModulePhase(EMoModuleConfigMethods.ConfigureBuilder);
 
             // 执行额外的配置请求
             foreach (var request in info.RegisterRequests.Where(p => p.RequestMethod == EMoModuleConfigMethods.ConfigureBuilder).OrderBy(r => r.Order))
@@ -169,11 +175,11 @@ public static class MoModuleRegisterCentre
                 }
             }
 
-            ModuleProfiler.StopModulePhase(moduleType, EMoModuleConfigMethods.ConfigureBuilder);
+            info.EndModulePhase(EMoModuleConfigMethods.ConfigureBuilder);
 
 
             // 调用模块注册方法
-            ModuleProfiler.StartModulePhase(moduleType, EMoModuleConfigMethods.ConfigureServices);
+            info.StartModulePhase(EMoModuleConfigMethods.ConfigureServices);
 
             // 执行额外的配置请求
             foreach (var request in info.RegisterRequests.Where(p => p.RequestMethod == EMoModuleConfigMethods.ConfigureServices).OrderBy(r => r.Order))
@@ -188,7 +194,7 @@ public static class MoModuleRegisterCentre
                 }
             }
 
-            ModuleProfiler.StopModulePhase(moduleType, EMoModuleConfigMethods.ConfigureServices);
+            info.EndModulePhase(EMoModuleConfigMethods.ConfigureServices);
             snapshots.Add(new ModuleSnapshot(info.ModuleSingleton!, info));
         }
         ModuleProfiler.StopPhase(nameof(EMoModuleConfigMethods.ConfigureBuilder) + nameof(EMoModuleConfigMethods.ConfigureServices));
@@ -198,7 +204,7 @@ public static class MoModuleRegisterCentre
         ModuleProfiler.StartPhase(nameof(EMoModuleConfigMethods.IterateBusinessTypes));
         var businessTypes = typeFinder.GetTypes();
         var needToIterate = false;
-        foreach (var module in snapshots)
+        foreach (var module in snapshots.Where(p => p.RegisterInfo.ModulePhase == EMoModuleConfigMethods.ConfigureServices))
         {
             if (module.ModuleInstance is not IWantIterateBusinessTypes iterateModule) continue;
             needToIterate = true;
@@ -223,7 +229,7 @@ public static class MoModuleRegisterCentre
         ModuleProfiler.StartPhase(nameof(EMoModuleConfigMethods.PostConfigureServices));
         foreach (var module in snapshots)
         {
-            ModuleProfiler.StartModulePhase(module.ModuleType, EMoModuleConfigMethods.PostConfigureServices);
+            module.RegisterInfo.StartModulePhase(EMoModuleConfigMethods.PostConfigureServices);
             // 执行额外的配置请求
             foreach (var request in module.RegisterInfo.RegisterRequests.Where(p => p.RequestMethod == EMoModuleConfigMethods.PostConfigureServices).OrderBy(r => r.Order))
             {
@@ -237,7 +243,7 @@ public static class MoModuleRegisterCentre
                 }
             }
 
-            ModuleProfiler.StopModulePhase(module.ModuleType, EMoModuleConfigMethods.PostConfigureServices);
+            module.RegisterInfo.EndModulePhase(EMoModuleConfigMethods.PostConfigureServices);
         }
         ModuleProfiler.StopPhase(nameof(EMoModuleConfigMethods.PostConfigureServices));
         ModuleSnapshots.AddRange(snapshots);
@@ -257,15 +263,9 @@ public static class MoModuleRegisterCentre
 
         Func<ModuleRegisterRequest, bool> filter = afterGivenOrder ? request => request.Order > order : request => request.Order <= order;
         // 按优先级排序并配置应用程序构建器
-        foreach (var module in ModuleSnapshots)
+        foreach (var module in ModuleSnapshots.Where(p => p.RegisterInfo.ModulePhase == EMoModuleConfigMethods.PostConfigureServices))
         {
-            // Skip disabled modules
-            if (ModuleManager.IsModuleDisabled(module.ModuleType))
-            {
-                continue;
-            }
-
-            ModuleProfiler.StartModulePhase(module.ModuleType, EMoModuleConfigMethods.ConfigureApplicationBuilder);
+            module.RegisterInfo.StartModulePhase(EMoModuleConfigMethods.ConfigureApplicationBuilder);
 
             foreach (var request in module.RegisterInfo.RegisterRequests.Where(p => p.RequestMethod == EMoModuleConfigMethods.ConfigureApplicationBuilder).Where(filter).OrderBy(r => r.Order))
             {
@@ -278,8 +278,8 @@ public static class MoModuleRegisterCentre
                     ModuleErrorUtil.RecordRequestError(module.ModuleType, request, ex);
                 }
             }
-
-            ModuleProfiler.StopModulePhase(module.ModuleType, EMoModuleConfigMethods.ConfigureApplicationBuilder);
+            
+            module.RegisterInfo.EndModulePhase(EMoModuleConfigMethods.ConfigureApplicationBuilder);
 
         }
 
@@ -295,15 +295,9 @@ public static class MoModuleRegisterCentre
         ModuleProfiler.StartPhase(nameof(EMoModuleConfigMethods.ConfigureEndpoints));
 
         // 按优先级排序并配置端点路由构建器
-        foreach (var module in ModuleSnapshots)
+        foreach (var module in ModuleSnapshots.Where(p => p.RegisterInfo.ModulePhase == EMoModuleConfigMethods.ConfigureApplicationBuilder))
         {
-            // Skip disabled modules
-            if (ModuleManager.IsModuleDisabled(module.ModuleType))
-            {
-                continue;
-            }
-
-            ModuleProfiler.StartModulePhase(module.ModuleType, EMoModuleConfigMethods.ConfigureEndpoints);
+            module.RegisterInfo.StartModulePhase(EMoModuleConfigMethods.ConfigureEndpoints);
 
             foreach (var request in module.RegisterInfo.RegisterRequests.Where(p => p.RequestMethod == EMoModuleConfigMethods.ConfigureEndpoints).OrderBy(r => r.Order))
             {
@@ -317,7 +311,7 @@ public static class MoModuleRegisterCentre
                 }
             }
 
-            ModuleProfiler.StopModulePhase(module.ModuleType, EMoModuleConfigMethods.ConfigureEndpoints);
+            module.RegisterInfo.EndModulePhase(EMoModuleConfigMethods.ConfigureEndpoints);
         }
 
         ModuleProfiler.StopPhase(nameof(EMoModuleConfigMethods.ConfigureEndpoints));

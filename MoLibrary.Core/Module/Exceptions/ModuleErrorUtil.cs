@@ -190,7 +190,7 @@ public static class ModuleErrorUtil
             if (moduleOption.DisableModuleIfHasException ?? ModuleCoreOption.DisableModuleIfHasException)
             {
                 // Disable the module
-                if (ModuleManager.DisableModule(moduleType))
+                if (ModuleManager.DisableModule(requestInfo))
                 {
                     // Log the error but don't throw an exception for this module
                     MoModuleRegisterCentre.Logger.LogWarning(
