@@ -49,7 +49,7 @@ public static class MoModuleRegisterCentre
     /// <summary>
     /// 模块注册请求信息字典，用于存储所有注册过的模块类型及其注册信息。
     /// </summary>
-    public static Dictionary<Type, ModuleRequestInfo> ModuleRegisterContextDict { get; } = [];
+    public static Dictionary<Type, ModuleRegisterInfo> ModuleRegisterContextDict { get; } = [];
 
     /// <summary>
     /// Attempts to retrieve the ModuleRequestInfo for a specified module type.
@@ -57,7 +57,7 @@ public static class MoModuleRegisterCentre
     /// <param name="type">The type of the module to retrieve information for.</param>
     /// <param name="requestInfo"></param>
     /// <returns>The ModuleRequestInfo if found; otherwise, null.</returns>
-    public static bool TryGetModuleRequestInfo(Type type, [NotNullWhen(true)] out ModuleRequestInfo? requestInfo)
+    public static bool TryGetModuleRequestInfo(Type type, [NotNullWhen(true)] out ModuleRegisterInfo? requestInfo)
     {
         return ModuleRegisterContextDict.TryGetValue(type, out requestInfo);
     }
@@ -66,10 +66,10 @@ public static class MoModuleRegisterCentre
     /// 添加模块注册上下文
     /// </summary>
     /// <param name="moduleType">模块类型</param>
-    /// <param name="requestInfo">模块请求信息</param>
-    public static void AddModuleRegisterContext(Type moduleType, ModuleRequestInfo requestInfo)
+    /// <param name="registerInfo">模块请求信息</param>
+    public static void AddModuleRegisterContext(Type moduleType, ModuleRegisterInfo registerInfo)
     {
-        if (!ModuleRegisterContextDict.TryAdd(moduleType, requestInfo))
+        if (!ModuleRegisterContextDict.TryAdd(moduleType, registerInfo))
         {
             throw new ModuleRegisterException($"模块类型 {moduleType.FullName} 已存在");
         }
@@ -98,10 +98,11 @@ public static class MoModuleRegisterCentre
         var typeFinder = services.GetOrCreateDomainTypeFinder<MoDomainTypeFinder>();
         ModuleProfiler.StartPhase(nameof(EMoModuleConfigMethods.ClaimDependencies));
         // 1. 初次遍历所有注册的模块，判断若模块有依赖项，处理依赖关系
-        foreach (var (moduleType, info) in ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt).OrderBy(p => p.Value.Order).Select(p => p).ToList())
+        foreach (var (moduleType, info) in ModuleRegisterContextDict.Where(p => p.Value.ModulePhase == EMoModuleConfigMethods.None).OrderBy(p => p.Value.Order).Select(p => p).ToList())
         {
             if (!moduleType.IsImplementInterface(typeof(IWantDependsOnOtherModules))) continue;
 
+            info.StartModulePhase(EMoModuleConfigMethods.ClaimDependencies);
             try
             {
                 var option = info.CreateCurrentModuleOption();
@@ -115,6 +116,10 @@ public static class MoModuleRegisterCentre
                 ModuleErrorUtil.RecordModuleError(moduleType, ex,
                     EMoModuleConfigMethods.ClaimDependencies, ModuleRegisterErrorType.InitializationError);
             }
+            finally
+            {
+                info.EndModulePhase(EMoModuleConfigMethods.ClaimDependencies);
+            }
         }
 
         ModuleProfiler.StopPhase(nameof(EMoModuleConfigMethods.ClaimDependencies));
@@ -126,12 +131,12 @@ public static class MoModuleRegisterCentre
 
         // 2. 初始化模块配置
         ModuleProfiler.StartPhase(nameof(EMoModuleConfigMethods.InitFinalConfigures));
-        foreach (var (moduleType, info) in ModuleRegisterContextDict.Where(p => !p.Value.HasBeenBuilt).OrderBy(p => p.Value.Order))
+        foreach (var (moduleType, info) in ModuleRegisterContextDict.Where(p => p.Value.ModulePhase == EMoModuleConfigMethods.ClaimDependencies).OrderBy(p => p.Value.Order))
         {
             try
             {
                 // 初始化模块配置
-                info.InitFinalConfigures(moduleType);
+                info.InitFinalConfigures();
             }
             catch (Exception ex)
             {
@@ -185,8 +190,6 @@ public static class MoModuleRegisterCentre
 
             ModuleProfiler.StopModulePhase(moduleType, EMoModuleConfigMethods.ConfigureServices);
             snapshots.Add(new ModuleSnapshot(info.ModuleSingleton!, info));
-            info.HasBeenBuilt = true;
-
         }
         ModuleProfiler.StopPhase(nameof(EMoModuleConfigMethods.ConfigureBuilder) + nameof(EMoModuleConfigMethods.ConfigureServices));
 
@@ -222,11 +225,11 @@ public static class MoModuleRegisterCentre
         {
             ModuleProfiler.StartModulePhase(module.ModuleType, EMoModuleConfigMethods.PostConfigureServices);
             // 执行额外的配置请求
-            foreach (var request in module.RequestInfo.RegisterRequests.Where(p => p.RequestMethod == EMoModuleConfigMethods.PostConfigureServices).OrderBy(r => r.Order))
+            foreach (var request in module.RegisterInfo.RegisterRequests.Where(p => p.RequestMethod == EMoModuleConfigMethods.PostConfigureServices).OrderBy(r => r.Order))
             {
                 try
                 {
-                    request.ConfigureContext?.Invoke(new ModuleRegisterContext(services, null, builder, module.RequestInfo));
+                    request.ConfigureContext?.Invoke(new ModuleRegisterContext(services, null, builder, module.RegisterInfo));
                 }
                 catch (Exception ex)
                 {
@@ -264,11 +267,11 @@ public static class MoModuleRegisterCentre
 
             ModuleProfiler.StartModulePhase(module.ModuleType, EMoModuleConfigMethods.ConfigureApplicationBuilder);
 
-            foreach (var request in module.RequestInfo.RegisterRequests.Where(p => p.RequestMethod == EMoModuleConfigMethods.ConfigureApplicationBuilder).Where(filter).OrderBy(r => r.Order))
+            foreach (var request in module.RegisterInfo.RegisterRequests.Where(p => p.RequestMethod == EMoModuleConfigMethods.ConfigureApplicationBuilder).Where(filter).OrderBy(r => r.Order))
             {
                 try
                 {
-                    request.ConfigureContext?.Invoke(new ModuleRegisterContext(null, app, null, module.RequestInfo));
+                    request.ConfigureContext?.Invoke(new ModuleRegisterContext(null, app, null, module.RegisterInfo));
                 }
                 catch (Exception ex)
                 {
@@ -302,11 +305,11 @@ public static class MoModuleRegisterCentre
 
             ModuleProfiler.StartModulePhase(module.ModuleType, EMoModuleConfigMethods.ConfigureEndpoints);
 
-            foreach (var request in module.RequestInfo.RegisterRequests.Where(p => p.RequestMethod == EMoModuleConfigMethods.ConfigureEndpoints).OrderBy(r => r.Order))
+            foreach (var request in module.RegisterInfo.RegisterRequests.Where(p => p.RequestMethod == EMoModuleConfigMethods.ConfigureEndpoints).OrderBy(r => r.Order))
             {
                 try
                 {
-                    request.ConfigureContext?.Invoke(new ModuleRegisterContext(null, app, null, module.RequestInfo));
+                    request.ConfigureContext?.Invoke(new ModuleRegisterContext(null, app, null, module.RegisterInfo));
                 }
                 catch (Exception ex)
                 {

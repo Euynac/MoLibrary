@@ -5,6 +5,7 @@ namespace MoLibrary.Core.Module.Models;
 /// </summary>
 public enum EMoModuleConfigMethods
 {
+    None = 0,
     /// <summary>
     /// Module declares its dependencies on other modules.
     /// </summary>
@@ -44,5 +45,6 @@ public enum EMoModuleConfigMethods
     /// Configures the endpoints for the module.
     /// </summary>
     ConfigureEndpoints,
-  
+
+    Disabled
 }

@@ -355,7 +355,7 @@ public class ModuleAnalyser
         
         // 从 ModuleSnapshots 获取信息并按 Order 排序（这些都是启用的模块）
         var moduleInfos = MoModuleRegisterCentre.ModuleSnapshots
-            .OrderBy(snapshot => snapshot.RequestInfo.Order)
+            .OrderBy(snapshot => snapshot.RegisterInfo.Order)
             .ToList();
         
         // 从 ModuleManager 获取所有禁用的模块类型
@@ -370,7 +370,7 @@ public class ModuleAnalyser
             foreach (var snapshot in moduleInfos)
             {
                 var moduleEnum = snapshot.ModuleEnum;
-                var order = snapshot.RequestInfo.Order;
+                var order = snapshot.RegisterInfo.Order;
                 var moduleTypeName = snapshot.ModuleType.Name;
                 var initDuration = snapshot.TotalInitializationDurationMs;
                 

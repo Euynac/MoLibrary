@@ -6,8 +6,8 @@ namespace MoLibrary.Core.Module.Models;
 /// 表示模块的快照信息，包含模块实例、请求信息和状态。
 /// </summary>
 /// <param name="moduleInstance">模块实例</param>
-/// <param name="requestInfo">模块请求信息</param>
-public class ModuleSnapshot(MoModule moduleInstance, ModuleRequestInfo requestInfo)
+/// <param name="registerInfo">模块请求信息</param>
+public class ModuleSnapshot(MoModule moduleInstance, ModuleRegisterInfo registerInfo)
 {
     /// <summary>
     /// 模块实例
@@ -17,7 +17,7 @@ public class ModuleSnapshot(MoModule moduleInstance, ModuleRequestInfo requestIn
     /// <summary>
     /// 模块请求信息
     /// </summary>
-    public ModuleRequestInfo RequestInfo { get; set; } = requestInfo;
+    public ModuleRegisterInfo RegisterInfo { get; set; } = registerInfo;
     
     /// <summary>
     /// 模块类型
