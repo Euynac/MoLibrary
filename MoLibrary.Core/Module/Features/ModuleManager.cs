@@ -22,15 +22,22 @@ public static class ModuleManager
     /// <returns>A list of disabled module types</returns>
     internal static List<Type> GetDisabledModuleTypes()
     {
-        return DisabledModuleTypes.ToList();
+        return [.. DisabledModuleTypes];
     }
+
+    public static bool DisableModule(ModuleRegisterInfo moduleInfo)
+    {
+        moduleInfo.SetModulePhase(EMoModuleConfigMethods.Disabled);
+        return DisableModule(moduleInfo.ModuleType);
+    }
+
 
     /// <summary>
     /// Disables a module due to an exception or configuration
     /// </summary>
     /// <param name="moduleType">The type of module to disable</param>
     /// <returns>True if the module was successfully disabled, false if it was already disabled</returns>
-    internal static bool DisableModule(Type moduleType)
+    private static bool DisableModule(Type moduleType)
     {
         if (!DisabledModuleTypes.Add(moduleType)) return false;
         CascadeDisableModulesThatDependOn(moduleType);
@@ -107,7 +114,7 @@ public static class ModuleManager
         foreach (var (moduleType, info) in MoModuleRegisterCentre.ModuleRegisterContextDict)
         {
             if (!info.ModuleOption.IsDisabled) continue;
-            DisableModule(moduleType);
+            DisableModule(info);
             Logger.LogWarning("Module {ModuleName} is disabled by configuration", moduleType.Name);
         }
     }

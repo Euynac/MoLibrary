@@ -46,5 +46,5 @@ public enum EMoModuleConfigMethods
     /// </summary>
     ConfigureEndpoints,
 
-    Disabled
+    Disabled = 100
 }
