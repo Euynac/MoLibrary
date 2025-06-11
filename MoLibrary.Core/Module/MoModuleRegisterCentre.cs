@@ -263,7 +263,7 @@ public static class MoModuleRegisterCentre
 
         Func<ModuleRegisterRequest, bool> filter = afterGivenOrder ? request => request.Order > order : request => request.Order <= order;
         // 按优先级排序并配置应用程序构建器
-        foreach (var module in ModuleSnapshots.Where(p => p.RegisterInfo.ModulePhase == EMoModuleConfigMethods.PostConfigureServices))
+        foreach (var module in ModuleSnapshots.Where(p => p.RegisterInfo.ModulePhase is EMoModuleConfigMethods.PostConfigureServices or EMoModuleConfigMethods.ConfigureApplicationBuilder))
         {
             module.RegisterInfo.StartModulePhase(EMoModuleConfigMethods.ConfigureApplicationBuilder);
 

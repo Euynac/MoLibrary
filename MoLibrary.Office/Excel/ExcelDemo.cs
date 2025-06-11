@@ -13,7 +13,7 @@ namespace MoLibrary.Office.Excel
     /// <remarks>
     /// 构造
     /// </remarks>
-    public class ExcelDemo(IExcelImportManager excelImportManager, IExcelExportManager excelExportManager)
+    public class ExcelDemo(IMoExcelImportManager excelImportManager, IMoExcelExportManager excelExportManager)
     {
         /// <summary>
         /// 导入测试

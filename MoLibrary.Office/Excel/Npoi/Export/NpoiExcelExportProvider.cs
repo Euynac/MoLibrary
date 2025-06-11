@@ -11,7 +11,8 @@ namespace MoLibrary.Office.Excel.Npoi.Export
     /// </remarks>
     public class NpoiExcelExportProvider(INpoiCellStyleHandle npoiCellStyleHandle, INpoiExcelHandle npoiExcelHandle) : ExcelExportManager
     {
-        protected override byte[] ImplementExport<TExportDto>(List<TExportDto> data, Action<ExcelExportOptions> optionAction, string[] onlyExportHeaderName, ProgressBar? progressBar = null)
+        protected override byte[] ImplementExport<TExportDto>(IReadOnlyList<TExportDto> data,
+            Action<ExcelExportOptions> optionAction, string[]? onlyExportHeaderName, ProgressBar? progressBar = null)
         {
             var export = new NpoiExcelExportBase(npoiCellStyleHandle, npoiExcelHandle);
 

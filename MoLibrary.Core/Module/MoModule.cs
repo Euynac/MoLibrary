@@ -69,7 +69,7 @@ public abstract class MoModule<TModuleSelf, TModuleOption, TModuleGuide>(TModule
         guide.ConfigureBuilder(context =>
         {
             ConfigureBuilder(context.WebApplicationBuilder);
-        });
+        }, -1);
 
         guide.ConfigureServices(context =>
         {

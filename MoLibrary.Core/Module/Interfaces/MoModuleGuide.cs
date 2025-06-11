@@ -158,7 +158,9 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     {
         var request = new ModuleRegisterRequest(key)
         {
-            Order = order, RequestFrom = GuideFrom, RequestMethod = requestMethod,
+            Order = order,
+            RequestFrom = GuideFrom, 
+            RequestMethod = requestMethod,
             ConfigureContext = context, Key = key
         };
         RegisterModule(request);

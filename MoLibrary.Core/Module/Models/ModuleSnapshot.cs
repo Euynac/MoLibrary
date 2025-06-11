@@ -40,6 +40,6 @@ public class ModuleSnapshot(MoModule moduleInstance, ModuleRegisterInfo register
 
     public override string ToString()
     {
-        return $"[{ModuleEnum}] {ModuleType.Name}";
+        return $"[{ModuleEnum}] {RegisterInfo}";
     }
 }

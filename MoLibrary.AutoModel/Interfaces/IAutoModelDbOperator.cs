@@ -7,7 +7,7 @@ namespace MoLibrary.AutoModel.Interfaces;
 /// 适用于数据库的自动模型功能接口
 /// </summary>
 /// <typeparam name="TModel"></typeparam>
-public interface IAutoModelDbOperator<TModel>
+public interface IAutoModelDbOperator<TModel> : IAutoModelOperator<TModel>
 {
     /// <summary>
     /// 应用过滤器

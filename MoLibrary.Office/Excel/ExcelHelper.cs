@@ -141,12 +141,8 @@ namespace MoLibrary.Office.Excel
         /// </summary>
         /// <param name="property"></param>
         /// <returns></returns>
-        public static string? GetDisplayNameFromProperty(this PropertyInfo? property)
+        public static string GetDisplayNameFromProperty(this PropertyInfo property)
         {
-            if (property == null)
-            {
-                return null;
-            }
             return property.GetCustomAttribute<DisplayAttribute>()?.Name ?? property.Name;
         }
 
