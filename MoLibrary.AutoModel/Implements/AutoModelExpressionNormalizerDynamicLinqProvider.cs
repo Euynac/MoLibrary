@@ -23,24 +23,34 @@ public class AutoModelExpressionNormalizerDynamicLinqProvider<TModel>(
     protected ModuleAutoModelOption Options = options.Value;
     protected bool LinqToObject = false;
 
-    private List<AutoField> NormalizeLiteralSelect(string columns)
+    public List<AutoField> NormalizeLiteralSelect(string columns, bool isReverseSelect = false)
     {
-        var names = new List<AutoField>();
+        var fields = new List<AutoField>();
         var errors = new StringBuilder();
+        var all = isReverseSelect ? snapshot.GetFields().Select(GetSelectExpression).ToHashSet() : [];
         foreach (var column in columns.Split(ExpressionOptions.SelectSeparator,
                      StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
-            if (snapshot.GetField(column) is { } name)
+            if (snapshot.GetField(column) is not { } field)
             {
-                names.Add(name);
+                errors.Append($"{column},");
+                continue;
+            }
+
+            if (isReverseSelect)
+            {
+                if (GetSelectExpression(field) is { } name && all.Contains(name))
+                {
+                    fields.Add(field);
+                }
             }
             else
             {
-                errors.Append($"{column},");
+                fields.Add(field);
             }
         }
 
-        if (errors.Length <= 0) return names;
+        if (errors.Length <= 0) return fields;
         errors.Remove(errors.Length - 1, 1);
         throw new AutoModelNormalizeException($"选择字段{errors}无法识别。支持的激活名有：{string.Join(',', snapshot.GetAllActivateNames())}");
     }

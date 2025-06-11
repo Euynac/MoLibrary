@@ -14,7 +14,7 @@ namespace MoLibrary.Office.Excel
         /// </summary>
         /// <typeparam name="TExportDto"></typeparam>
         /// <returns></returns>
-        public static List<ExcelCellStyleInfo<HeaderStyleAttribute, HeaderFontAttribute>> GetHeaderStyleFontList<TExportDto>() where TExportDto : class, new()
+        public static List<ExcelCellStyleInfo<HeaderStyleAttribute, HeaderFontAttribute>> GetHeaderStyleFontList<TExportDto>() where TExportDto : class
         {
             var list = new List<ExcelCellStyleInfo<HeaderStyleAttribute, HeaderFontAttribute>>();
 
@@ -31,7 +31,7 @@ namespace MoLibrary.Office.Excel
         /// </summary>
         /// <typeparam name="TExportDto"></typeparam>
         /// <returns></returns>
-        public static List<ExcelCellStyleInfo<DataStyleAttribute, DataFontAttribute>> GetDataStyleFontList<TExportDto>() where TExportDto : class, new()
+        public static List<ExcelCellStyleInfo<DataStyleAttribute, DataFontAttribute>> GetDataStyleFontList<TExportDto>() where TExportDto : class
         {
             var list = new List<ExcelCellStyleInfo<DataStyleAttribute, DataFontAttribute>>();
 
@@ -49,7 +49,7 @@ namespace MoLibrary.Office.Excel
         /// <typeparam name="TExportDto"></typeparam>
         /// <param name="m">typeof(类)、PropertyInfo</param>
         /// <returns></returns>
-        public static ExcelCellStyleInfo<HeaderStyleAttribute, HeaderFontAttribute> GetHeaderStyleFont<TExportDto>(this MemberInfo m) where TExportDto : class, new()
+        public static ExcelCellStyleInfo<HeaderStyleAttribute, HeaderFontAttribute> GetHeaderStyleFont<TExportDto>(this MemberInfo m) where TExportDto : class
         {
             var style = m.GetHeaderStyleAttr<TExportDto>();
             var font = m.GetHeaderFontAttr<TExportDto>();
@@ -63,7 +63,7 @@ namespace MoLibrary.Office.Excel
         /// <typeparam name="TExportDto"></typeparam>
         /// <param name="m">typeof(类)、PropertyInfo</param>
         /// <returns></returns>
-        public static ExcelCellStyleInfo<DataStyleAttribute, DataFontAttribute> GetDataStyleFont<TExportDto>(this MemberInfo m) where TExportDto : class, new()
+        public static ExcelCellStyleInfo<DataStyleAttribute, DataFontAttribute> GetDataStyleFont<TExportDto>(this MemberInfo m) where TExportDto : class
         {
             var style = m.GetDataStyleAttr<TExportDto>();
             var font = m.GetDataFontAttr<TExportDto>();
@@ -77,7 +77,7 @@ namespace MoLibrary.Office.Excel
         /// <typeparam name="TExportDto"></typeparam>
         /// <param name="m">typeof(类)、PropertyInfo</param>
         /// <returns></returns>
-        public static HeaderStyleAttribute GetHeaderStyleAttr<TExportDto>(this MemberInfo m) where TExportDto : class, new()
+        public static HeaderStyleAttribute GetHeaderStyleAttr<TExportDto>(this MemberInfo m) where TExportDto : class
         {
             var classType = typeof(TExportDto);
 
@@ -93,7 +93,7 @@ namespace MoLibrary.Office.Excel
         /// <typeparam name="TExportDto"></typeparam>
         /// <param name="m">typeof(类)、PropertyInfo</param>
         /// <returns></returns>
-        public static HeaderFontAttribute GetHeaderFontAttr<TExportDto>(this MemberInfo m) where TExportDto : class, new()
+        public static HeaderFontAttribute GetHeaderFontAttr<TExportDto>(this MemberInfo m) where TExportDto : class
         {
             var classType = typeof(TExportDto);
 
@@ -109,7 +109,7 @@ namespace MoLibrary.Office.Excel
         /// <typeparam name="TExportDto"></typeparam>
         /// <param name="m">typeof(类)、PropertyInfo</param>
         /// <returns></returns>
-        public static DataStyleAttribute GetDataStyleAttr<TExportDto>(this MemberInfo m) where TExportDto : class, new()
+        public static DataStyleAttribute GetDataStyleAttr<TExportDto>(this MemberInfo m) where TExportDto : class
         {
             var classType = typeof(TExportDto);
 
@@ -125,7 +125,7 @@ namespace MoLibrary.Office.Excel
         /// <typeparam name="TExportDto"></typeparam>
         /// <param name="m">typeof(类)、PropertyInfo</param>
         /// <returns></returns>
-        public static DataFontAttribute GetDataFontAttr<TExportDto>(this MemberInfo m) where TExportDto : class, new()
+        public static DataFontAttribute GetDataFontAttr<TExportDto>(this MemberInfo m) where TExportDto : class
         {
             var classType = typeof(TExportDto);
 

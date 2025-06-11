@@ -117,7 +117,7 @@ namespace MoLibrary.Office.Excel
         /// 获取属性
         /// </summary>
         /// <typeparam name="TDto">导入或导出类</typeparam>
-        public static PropertyInfo[] GetProperties<TDto>() where TDto : class, new()
+        public static PropertyInfo[] GetProperties<TDto>() where TDto : class
         {
             var dtoType = typeof(TDto);
             var properties = dtoType.GetProperties()
@@ -130,7 +130,7 @@ namespace MoLibrary.Office.Excel
         /// 获取属性的 Display.Name 集合
         /// </summary>
         /// <returns></returns>
-        public static List<string> GetDisplayNameListFromProperty<TDto>() where TDto : class, new()
+        public static List<string> GetDisplayNameListFromProperty<TDto>() where TDto : class
         {
             return GetProperties<TDto>().Select(GetDisplayNameFromProperty).ToList();
         }
