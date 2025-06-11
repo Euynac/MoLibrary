@@ -1,67 +1,9 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Dynamic;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using MoLibrary.Core.Extensions;
-using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.Utils;
 
 namespace MoLibrary.Core.Features.MoTimekeeper;
-
-public interface IMoTimekeeper
-{
-    /// <summary>
-    /// 用于HTTP的自动结束的计时器
-    /// </summary>
-    /// <param name="key"></param>
-    /// <returns></returns>
-    public IDisposable CreateResAutoTimer(string key);
-
-    /// <summary>
-    /// 自动结束的计时器
-    /// </summary>
-    /// <param name="key"></param>
-    /// <param name="content"></param>
-    /// <returns></returns>
-    public AutoTimekeeper CreateAutoTimer(string key, string? content = null);
-
-    /// <summary>
-    /// 普通计时器，可以手动开始和结束
-    /// </summary>
-    /// <param name="key"></param>
-    /// <returns></returns>
-    public NormalTimekeeper CreateNormalTimer(string key);
-}
-
-public class MoTimekeeperManager(IHttpContextAccessor accessor, ILogger<MoTimekeeperManager> logger) : IMoTimekeeper
-{
-    public IDisposable CreateResAutoTimer(string key)
-    {
-        if (accessor.HttpContext?.GetOrNew<MoRequestContext>() is { } context)
-        {
-            return new ResAutoTimekeeper(context, key, logger);
-        }
-
-        return NullDisposable.Instance;
-    }
-
-    public AutoTimekeeper CreateAutoTimer(string key, string? content = null)
-    {
-        var keeper = new AutoTimekeeper(key, logger)
-        {
-            Content = content
-        };
-        return keeper;
-    }
-
-    public NormalTimekeeper CreateNormalTimer(string key)
-    {
-        return new NormalTimekeeper(key, logger);
-    }
-}
-
-
 
 public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
 {
@@ -219,50 +161,5 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
         {
             Logger.LogInformation("{name} cost time: {time}", Content ?? Key, GetElapsedMs());
         }
-    }
-}
-
-public class ResAutoTimekeeper : MoTimekeeperBase
-{
-    private readonly MoRequestContext? _context;
-
-    public ResAutoTimekeeper(MoRequestContext context, string key, ILogger logger) : base(key, logger)
-    {
-        _context = context;
-        Start();
-    }
-
-    public override void Dispose()
-    {
-        if (Disposed) return;
-        Disposed = true;
-        Finish();
-        if (_context is not null)
-        {
-            _context.OtherInfo ??= new ExpandoObject();
-            _context.OtherInfo.Append("timer", new { name = Key, duration = $"{Timer.ElapsedMilliseconds}ms" });
-        }
-        LoggingElapsedMs();
-    }
-}
-
-public class AutoTimekeeper : MoTimekeeperBase
-{
-    public AutoTimekeeper(string key, ILogger logger) : base(key, logger) => Timer.Start();
-    public override void Dispose()
-    {
-        if (Disposed) return;
-        Disposed = true;
-        Finish();
-        LoggingElapsedMs();
-    }
-}
-
-public class NormalTimekeeper(string key, ILogger logger) : MoTimekeeperBase(key, logger)
-{
-    public override void Finish()
-    {
-        base.Finish();
-        LoggingElapsedMs();
     }
 }
