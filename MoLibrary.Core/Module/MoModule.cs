@@ -74,12 +74,12 @@ public abstract class MoModule<TModuleSelf, TModuleOption, TModuleGuide>(TModule
         guide.ConfigureServices(context =>
         {
             ConfigureServices(context.Services);
-        });
+        }, -1);
 
         guide.PostConfigureServices(context =>
         {
             PostConfigureServices(context.Services);
-        });
+        }, -1);
 
         guide.ConfigureApplicationBuilder(context =>
         {
@@ -89,7 +89,7 @@ public abstract class MoModule<TModuleSelf, TModuleOption, TModuleGuide>(TModule
         guide.ConfigureEndpoints(context =>
         {
             ConfigureEndpoints(context.ApplicationBuilder);
-        });
+        }, -1);
     }
     
 
