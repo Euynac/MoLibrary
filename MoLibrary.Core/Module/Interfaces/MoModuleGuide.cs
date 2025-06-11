@@ -154,6 +154,13 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
 
 
     #region 额外配置Module
+    /// <summary>
+    /// 配置模块的核心方法，用于注册模块配置请求
+    /// </summary>
+    /// <param name="key">配置方法的唯一标识符</param>
+    /// <param name="context">模块注册上下文操作</param>
+    /// <param name="order">配置执行顺序</param>
+    /// <param name="requestMethod">请求的配置方法类型</param>
     private void ConfigureModule(string key, Action<ModuleRegisterContext> context, int order, EMoModuleConfigMethods requestMethod)
     {
         var request = new ModuleRegisterRequest(key)
@@ -169,72 +176,143 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     /// <summary>
     /// 配置空注册，记录当前配置方法的调用。仅用于规避多次调用某些方法或未调用必须方法。
     /// </summary>
-    /// <param name="key"></param>
+    /// <param name="key">配置方法的唯一标识符</param>
     protected internal void ConfigureEmpty([CallerMemberName] string key = "")
     {
         RegisterModule(new ModuleRegisterRequest(key));
     }
 
+    /// <summary>
+    /// 配置模块的服务注册
+    /// </summary>
+    /// <param name="context">服务配置上下文操作</param>
+    /// <param name="order">配置执行的具体顺序值</param>
+    /// <param name="key">配置方法的唯一标识符</param>
     protected internal void ConfigureServices(Action<ModuleRegisterContextWrapperForServices<TModuleOption>> context,
-        EMoModuleOrder order = EMoModuleOrder.Normal, [CallerMemberName] string key = "")
+        int order, [CallerMemberName] string key = "")
     {
         ConfigureModule(key, registerContext =>
         {
             context.Invoke(new ModuleRegisterContextWrapperForServices<TModuleOption>(registerContext));
-        }, (int) order, EMoModuleConfigMethods.ConfigureServices);
+        }, order, EMoModuleConfigMethods.ConfigureServices);
     }
 
     /// <summary>
-    /// Configures the application builder for the module
+    /// <inheritdoc cref="ConfigureServices(Action{ModuleRegisterContextWrapperForServices{TModuleOption}}, int, string)"/>
     /// </summary>
-    /// <param name="context">Action to configure the application builder</param>
-    /// <param name="order">Order in which this configuration should be applied</param>
-    /// <param name="key">Unique key for this configuration</param>
-    protected internal void ConfigureApplicationBuilder(Action<ModuleRegisterContextWrapperForApplicationBuilder<TModuleOption>> context, EMoModuleApplicationMiddlewaresOrder order, [CallerMemberName] string key = "")
+    /// <param name="context">服务配置上下文操作</param>
+    /// <param name="order">配置执行顺序枚举值</param>
+    /// <param name="key">配置方法的唯一标识符</param>
+    protected internal void ConfigureServices(Action<ModuleRegisterContextWrapperForServices<TModuleOption>> context,
+        EMoModuleOrder order = EMoModuleOrder.Normal, [CallerMemberName] string key = "")
+    {
+        ConfigureServices(context, (int)order, key);
+    }
+
+    /// <summary>
+    /// 配置应用程序构建器中间件管道
+    /// </summary>
+    /// <param name="context">应用程序构建器配置上下文操作</param>
+    /// <param name="order">中间件执行的具体顺序值</param>
+    /// <param name="key">配置方法的唯一标识符</param>
+    protected internal void ConfigureApplicationBuilder(Action<ModuleRegisterContextWrapperForApplicationBuilder<TModuleOption>> context, int order, [CallerMemberName] string key = "")
     {
         ConfigureModule(key, registerContext =>
         {
             context.Invoke(new ModuleRegisterContextWrapperForApplicationBuilder<TModuleOption>(registerContext));
-        }, (int) order, EMoModuleConfigMethods.ConfigureApplicationBuilder);
+        }, order, EMoModuleConfigMethods.ConfigureApplicationBuilder);
     }
 
     /// <summary>
-    /// Configures post-services setup for the module
+    /// <inheritdoc cref="ConfigureApplicationBuilder(Action{ModuleRegisterContextWrapperForApplicationBuilder{TModuleOption}}, int, string)"/>
     /// </summary>
-    /// <param name="context">Action to configure post-services</param>
-    /// <param name="order">Order in which this configuration should be applied</param>
-    /// <param name="key">Unique key for this configuration</param>
+    /// <param name="context">应用程序构建器配置上下文操作</param>
+    /// <param name="order">中间件执行顺序枚举值</param>
+    /// <param name="key">配置方法的唯一标识符</param>
+    protected internal void ConfigureApplicationBuilder(Action<ModuleRegisterContextWrapperForApplicationBuilder<TModuleOption>> context, EMoModuleApplicationMiddlewaresOrder order, [CallerMemberName] string key = "")
+    {
+        ConfigureApplicationBuilder(context, (int)order, key);
+    }
+
+    /// <summary>
+    /// 配置模块的后置服务设置
+    /// </summary>
+    /// <param name="context">后置服务配置上下文操作</param>
+    /// <param name="order">配置执行的具体顺序值</param>
+    /// <param name="key">配置方法的唯一标识符</param>
     protected internal void PostConfigureServices(Action<ModuleRegisterContextWrapperForServices<TModuleOption>> context,
-        EMoModuleOrder order = EMoModuleOrder.Normal, [CallerMemberName] string key = "")
+        int order, [CallerMemberName] string key = "")
     {
         ConfigureModule(key, registerContext =>
         {
             context.Invoke(new ModuleRegisterContextWrapperForServices<TModuleOption>(registerContext));
-        }, (int) order, EMoModuleConfigMethods.PostConfigureServices);
+        }, order, EMoModuleConfigMethods.PostConfigureServices);
     }
 
     /// <summary>
-    /// Configures the web application builder for the module
+    /// <inheritdoc cref="PostConfigureServices(Action{ModuleRegisterContextWrapperForServices{TModuleOption}}, int, string)"/>
     /// </summary>
-    /// <param name="context">Action to configure the web application builder</param>
-    /// <param name="order">Order in which this configuration should be applied</param>
-    /// <param name="key">Unique key for this configuration</param>
-    protected internal void ConfigureBuilder(Action<ModuleRegisterContextWrapperForBuilder<TModuleOption>> context,
+    /// <param name="context">后置服务配置上下文操作</param>
+    /// <param name="order">配置执行顺序枚举值</param>
+    /// <param name="key">配置方法的唯一标识符</param>
+    protected internal void PostConfigureServices(Action<ModuleRegisterContextWrapperForServices<TModuleOption>> context,
         EMoModuleOrder order = EMoModuleOrder.Normal, [CallerMemberName] string key = "")
+    {
+        PostConfigureServices(context, (int)order, key);
+    }
+
+    /// <summary>
+    /// 配置Web应用程序构建器
+    /// </summary>
+    /// <param name="context">Web应用程序构建器配置上下文操作</param>
+    /// <param name="order">配置执行的具体顺序值</param>
+    /// <param name="key">配置方法的唯一标识符</param>
+    protected internal void ConfigureBuilder(Action<ModuleRegisterContextWrapperForBuilder<TModuleOption>> context,
+        int order, [CallerMemberName] string key = "")
     {
         ConfigureModule(key, registerContext =>
         {
             context.Invoke(new ModuleRegisterContextWrapperForBuilder<TModuleOption>(registerContext));
-        }, (int) order, EMoModuleConfigMethods.ConfigureBuilder);
+        }, order, EMoModuleConfigMethods.ConfigureBuilder);
     }
 
-    protected internal void ConfigureEndpoints(Action<ModuleRegisterContextWrapperForApplicationBuilder<TModuleOption>> context,
+    /// <summary>
+    /// <inheritdoc cref="ConfigureBuilder(Action{ModuleRegisterContextWrapperForBuilder{TModuleOption}}, int, string)"/>
+    /// </summary>
+    /// <param name="context">Web应用程序构建器配置上下文操作</param>
+    /// <param name="order">配置执行顺序枚举值</param>
+    /// <param name="key">配置方法的唯一标识符</param>
+    protected internal void ConfigureBuilder(Action<ModuleRegisterContextWrapperForBuilder<TModuleOption>> context,
         EMoModuleOrder order = EMoModuleOrder.Normal, [CallerMemberName] string key = "")
+    {
+        ConfigureBuilder(context, (int)order, key);
+    }
+
+    /// <summary>
+    /// 配置模块的端点路由
+    /// </summary>
+    /// <param name="context">端点配置上下文操作</param>
+    /// <param name="order">配置执行的具体顺序值</param>
+    /// <param name="key">配置方法的唯一标识符</param>
+    protected internal void ConfigureEndpoints(Action<ModuleRegisterContextWrapperForApplicationBuilder<TModuleOption>> context,
+        int order, [CallerMemberName] string key = "")
     {
         ConfigureModule(key, registerContext =>
         {
             context.Invoke(new ModuleRegisterContextWrapperForApplicationBuilder<TModuleOption>(registerContext));
-        }, (int) order, EMoModuleConfigMethods.ConfigureEndpoints);
+        }, order, EMoModuleConfigMethods.ConfigureEndpoints);
+    }
+
+    /// <summary>
+    /// <inheritdoc cref="ConfigureEndpoints(Action{ModuleRegisterContextWrapperForApplicationBuilder{TModuleOption}}, int, string)"/>
+    /// </summary>
+    /// <param name="context">端点配置上下文操作</param>
+    /// <param name="order">配置执行顺序枚举值</param>
+    /// <param name="key">配置方法的唯一标识符</param>
+    protected internal void ConfigureEndpoints(Action<ModuleRegisterContextWrapperForApplicationBuilder<TModuleOption>> context,
+        EMoModuleOrder order = EMoModuleOrder.Normal, [CallerMemberName] string key = "")
+    {
+        ConfigureEndpoints(context, (int)order, key);
     }
 
 
