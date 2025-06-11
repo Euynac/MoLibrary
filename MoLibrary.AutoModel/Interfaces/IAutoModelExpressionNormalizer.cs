@@ -1,3 +1,5 @@
+using MoLibrary.AutoModel.Configurations;
+using MoLibrary.AutoModel.Model;
 using MoLibrary.Tool.General;
 
 namespace MoLibrary.AutoModel.Interfaces;
@@ -35,6 +37,14 @@ public interface IAutoModelExpressionNormalizer<TModel>
     /// 将执行转化为Linq to object
     /// </summary>
     void SetToLinqToObject();
+
+    /// <summary>
+    /// 将选择字段表达式转换为自动模型字段对象，需要使用 <see cref="AutoModelExpressionOptions.SelectSeparator"/> 分割
+    /// </summary>
+    /// <param name="columns"></param>
+    /// <param name="isReverseSelect">是否是反向选择，即选择除了给定字段的字段</param>
+    /// <returns></returns>
+    List<AutoField> NormalizeLiteralSelect(string columns, bool isReverseSelect = false);
 }
 
 public class NormalizedResult(string finalExpression, List<object?> @params)
