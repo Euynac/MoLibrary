@@ -37,7 +37,6 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
         public long? MemoryBytes { get; set; }
     }
 
-
     /// <summary>
     /// Record for storing timekeeper statistics
     /// </summary>
@@ -52,9 +51,23 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
         public DateTime? LastExecutedTime { get; set; }
     }
 
+    /// <summary>
+    /// Record for storing currently running timekeeper information
+    /// </summary>
+    /// <param name="Key">The key/name of the timekeeper</param>
+    /// <param name="StartTime">When the timekeeper was started</param>
+    /// <param name="Content">Optional content description</param>
+    public record RunningTimekeeperInfo(string Key, DateTime StartTime, string? Content)
+    {
+        /// <summary>
+        /// Current elapsed time in milliseconds
+        /// </summary>
+        public long CurrentElapsedMs => (long)(DateTime.Now - StartTime).TotalMilliseconds;
+    }
+
     private static readonly ConcurrentQueue<TimekeeperMeasurement> _queue = [];
     private static readonly Dictionary<string, TimekeeperStatistics> _recordDict = [];
-
+    private static readonly ConcurrentDictionary<string, RunningTimekeeperInfo> _runningTimekeepers = [];
 
     static MoTimekeeperBase()
     {
@@ -94,7 +107,17 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
         }, TaskCreationOptions.LongRunning);
     }
 
+    /// <summary>
+    /// Get completed timekeeper statistics
+    /// </summary>
+    /// <returns>Dictionary of completed timekeeper statistics</returns>
     public static IReadOnlyDictionary<string, TimekeeperStatistics> GetStatistics() => _recordDict;
+
+    /// <summary>
+    /// Get currently running timekeeper information
+    /// </summary>
+    /// <returns>Dictionary of currently running timekeeper information</returns>
+    public static IReadOnlyDictionary<string, RunningTimekeeperInfo> GetRunningTimekeepers() => _runningTimekeepers;
 
     public TimekeeperStatistics? GetRecords(string key)
     {
@@ -118,9 +141,14 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
         }
     }
     #endregion
+
     public virtual void Start()
     {
         Timer.Start();
+        
+        // Add to running timekeepers tracking
+        _runningTimekeepers.TryAdd(Key, new RunningTimekeeperInfo(Key, DateTime.Now, Content));
+        
         if (EnableMemoryMonitor)
         {
             MemoryUsage = GC.GetAllocatedBytesForCurrentThread();
@@ -130,6 +158,10 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
     public virtual void Finish()
     {
         Timer.Stop();
+        
+        // Remove from running timekeepers tracking
+        _runningTimekeepers.TryRemove(Key, out _);
+        
         if (EnableMemoryMonitor)
         {
             MemoryUsage -= GC.GetAllocatedBytesForCurrentThread();
@@ -146,6 +178,7 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
     {
         Disposed = true;
     }
+
     /// <summary>
     /// 获取ElapsedMilliseconds，例：10ms
     /// </summary>
