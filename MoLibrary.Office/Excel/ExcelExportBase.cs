@@ -28,7 +28,8 @@ namespace MoLibrary.Office.Excel
         /// <param name="onlyExportHeaderName">只需要导出的表头名称（指定则按 <typeparamref name="TExportDto"/> 字段顺序导出全部，不指定空则按数组顺序导出）</param>
         /// <param name="progressBar">进度条实例，可选，为null时不报告进度</param>
         /// <returns></returns>
-        public byte[] Export<TExportDto>(List<TExportDto> data, Action<ExcelExportOptions>? optionAction, string[] onlyExportHeaderName, ProgressBar? progressBar = null)
+        public byte[] Export<TExportDto>(IReadOnlyList<TExportDto> data, Action<ExcelExportOptions>? optionAction,
+            string[]? onlyExportHeaderName, ProgressBar? progressBar = null)
             where TExportDto : class, new()
         {
             try
@@ -222,12 +223,15 @@ namespace MoLibrary.Office.Excel
         /// <param name="data">数据集合</param>
         /// <param name="rowIndex">下一行下标（起始下标： 0）</param>
         /// <param name="dataStyle">数据样式</param>
+        /// <param name="nextRowIndex">下一行下标（起始下标： 0）</param>
         /// <param name="progressBar">进度条（可选）</param>
         /// <param name="currentStep">当前进度（仅当progressBar不为空时有效）</param>
         /// <param name="progressWeight">数据处理在整体进度中的权重（仅当progressBar不为空时有效）</param>
-        /// <param name="nextRowIndex">下一行下标（起始下标： 0）</param>
         /// <returns>下一行下标（从0开始）</returns>
-        private void ProcessDataCell<TExportDto>(TWorkbook workbook, TSheet worksheet, ExcelExportHeaderInfo[] headers, List<TExportDto> data, int rowIndex, List<ExcelCellStyleOutput<TCellStyle, DataStyleAttribute, DataFontAttribute>> dataStyle, out int nextRowIndex, ProgressBar? progressBar = null, int currentStep = 0, int progressWeight = 0)
+        private void ProcessDataCell<TExportDto>(TWorkbook workbook, TSheet worksheet, ExcelExportHeaderInfo[] headers,
+            IReadOnlyList<TExportDto> data, int rowIndex,
+            List<ExcelCellStyleOutput<TCellStyle, DataStyleAttribute, DataFontAttribute>> dataStyle,
+            out int nextRowIndex, ProgressBar? progressBar = null, int currentStep = 0, int progressWeight = 0)
             where TExportDto : class, new()
         {
             //可合并行区域信息

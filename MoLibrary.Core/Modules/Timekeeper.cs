@@ -54,7 +54,7 @@ public class ModuleTimekeeper(ModuleTimekeeperOption option)
                     averageMemory = $"{p.Value.AverageMemoryBytes?.FormatBytes()}",
                     lastMemory = $"{p.Value.LastMemoryBytes?.FormatBytes()}",
                     lastDuration = $"{p.Value.LastDuration:0.##}ms",
-
+                    lastExecutedTime = $"{p.Value.LastExecutedTime}",
                 });
                 await response.WriteAsJsonAsync(list);
             }).WithName("获取Timekeeper统计状态").WithOpenApi(operation =>

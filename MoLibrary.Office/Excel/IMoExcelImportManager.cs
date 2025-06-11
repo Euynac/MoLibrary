@@ -6,7 +6,7 @@ namespace MoLibrary.Office.Excel
     /// Excel 导入服务
     /// <para>请看例子 <see cref="ExcelDemo"/></para>
     /// </summary>
-    public interface IExcelImportManager
+    public interface IMoExcelImportManager
     {
         /// <summary>
         /// 导入

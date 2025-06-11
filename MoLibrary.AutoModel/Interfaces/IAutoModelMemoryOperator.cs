@@ -7,7 +7,7 @@ namespace MoLibrary.AutoModel.Interfaces;
 /// 适用于内存的自动模型功能接口
 /// </summary>
 /// <typeparam name="TModel"></typeparam>
-public interface IAutoModelMemoryOperator<TModel>
+public interface IAutoModelMemoryOperator<TModel> : IAutoModelOperator<TModel>
 {
     /// <summary>
     /// 获取过滤器

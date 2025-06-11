@@ -11,7 +11,8 @@ namespace MoLibrary.Office.Excel.EpPlus.Export
     /// </remarks>
     public class EpPlusExcelExportProvider(IEpPlusCellStyleHandle epPlusCellStyleHandle, IEpPlusExcelHandle epPlusExcelHandle) : ExcelExportManager
     {
-        protected override byte[] ImplementExport<TExportDto>(List<TExportDto> data, Action<ExcelExportOptions> optionAction, string[] onlyExportHeaderName, ProgressBar? progressBar = null)
+        protected override byte[] ImplementExport<TExportDto>(IReadOnlyList<TExportDto> data,
+            Action<ExcelExportOptions> optionAction, string[]? onlyExportHeaderName, ProgressBar? progressBar = null)
         {
             var export = new EpPlusExcelExportBase(epPlusCellStyleHandle, epPlusExcelHandle);
 

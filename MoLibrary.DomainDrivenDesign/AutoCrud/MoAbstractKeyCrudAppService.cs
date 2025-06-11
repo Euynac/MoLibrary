@@ -1,3 +1,8 @@
+
+
+
+
+using System.Collections.Generic;
 using System.Linq.Dynamic.Core;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.DynamicLinq;
@@ -59,7 +64,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
     /// </summary>
     /// <param name="input">The input parameters for the list operation</param>
     /// <returns>A paged response containing the mapped entity DTOs</returns>
-    public virtual async Task<ResPaged<dynamic>> GetListAsync(TGetListInput input)
+    protected virtual async Task<ListResult> InnerGetListAsync(TGetListInput input)
     {
         var query = await CreateFilteredQueryAsync(input);
 
@@ -78,7 +83,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
             if (featureSetting?.ShouldJumpCount() is not true)
             {
                 totalCount = await query.CountAsync();
-                if (totalCount == 0) return new ResPaged<dynamic>(0, []);
+                if (totalCount == 0) return new ListResult([]);
             }
         }
 
@@ -112,24 +117,21 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
         if (dynamicQuery is not IQueryable<TEntity> finalEntityQuery)
         {
             var selectedList = await dynamicQuery.ToDynamicListAsync();
-            return new ResPaged<dynamic>(totalCount ?? selectedList.Count, selectedList, curPage, pageSize);
+            return new ListResult(selectedList)
+            {
+                TotalCounts = totalCount ?? selectedList.Count
+            };
         }
 
         var entities = await finalEntityQuery.ToListAsync();
 
-        //var entityDtos = await MapToGetListOutputDtosAsync(entities);//性能优化 使用Mapster代替
-
-        //巨坑：ProjectToType中Dto若含有子表字段定义，会连带查出，无需主动Include。
-        //20240422 Mapster暂不支持复杂类型ProjectToType
-        //var entityDtos = await query.ProjectToType<TGetListOutputDto>(_mapper.Config).ToListAsync();
-
-        var entityDtos = ObjectMapper.Map<List<TEntity>, List<TGetListOutputDto>>(entities);
+        var entityDtos = await MapToGetListOutputDtosAsync(entities);
 
         if (curPage != null && pageSize != null && entityDtos.FirstOrDefault() is IHasDtoSequenceNumber)
         {
             // Calculate the starting index for the current page
             var startIndex = (curPage - 1) * pageSize + 1;
-            
+
             for (var i = 0; i < entityDtos.Count; i++)
             {
                 if (entityDtos[i] is IHasDtoSequenceNumber sequenceDto)
@@ -139,10 +141,35 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
             }
         }
 
+        return new ListResult((IReadOnlyList<dynamic>) entityDtos)
+        {
+            TotalCounts = totalCount ?? entityDtos.Count,
+            PageSize = pageSize,
+            CurrentPage = curPage
+        };
+    }
 
-        if ((await ApplyCustomActionToResponseListAsync(entityDtos)).IsFailed(out var error, out var data)) return error;
-        var list = (IReadOnlyList<dynamic>) data;
-        return new ResPaged<dynamic>(totalCount ?? list.Count, list, curPage, pageSize);
+    /// <summary>
+    /// Retrieves a paged list of entities based on the provided input.
+    /// Supports dynamic filtering, sorting, paging, and selecting specific properties.
+    /// </summary>
+    /// <param name="input">The input parameters for the list operation</param>
+    /// <returns>A paged response containing the mapped entity DTOs</returns>
+    public virtual async Task<ResPaged<dynamic>> GetListAsync(TGetListInput input)
+    {
+        var result = await InnerGetListAsync(input);
+        if (result.TotalCounts == 0) return new ResPaged<dynamic>(0, []);
+
+        if (result.Results is not List<TGetListOutputDto> dtos)
+            return new ResPaged<dynamic>(result.TotalCounts, result.Results, result.CurrentPage,
+                result.PageSize);
+        
+        
+        if ((await ApplyCustomActionToResponseListAsync(dtos)).IsFailed(out var error, out var data)) return error;
+        return new ResPaged<dynamic>(result.TotalCounts, (IReadOnlyList<dynamic>) dtos, result.CurrentPage,
+            result.PageSize);
+
+
     }
 
     /// <summary>
@@ -469,27 +496,20 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
     /// <summary>
     /// Maps a list of <typeparamref name="TEntity"/> to <typeparamref name="TGetListOutputDto"/> objects.
     /// </summary>
-    protected virtual async Task<List<TGetListOutputDto>> MapToGetListOutputDtosAsync(List<TEntity> entities)
+    protected virtual Task<List<TGetListOutputDto>> MapToGetListOutputDtosAsync(List<TEntity> entities)
     {
-        var dtos = new List<TGetListOutputDto>();
-
-        foreach (var entity in entities)
-        {
-            dtos.Add(MapToGetListOutputDto(entity));
-        }
-
-        return dtos;
-    }
-
-    /// <summary>
-    /// Maps <typeparamref name="TEntity"/> to <typeparamref name="TGetListOutputDto"/>.
-    /// It uses <see cref="IMoMapper"/> by default.
-    /// It can be overriden for custom mapping.
-    /// </summary>
-    protected virtual TGetListOutputDto MapToGetListOutputDto(TEntity entity)
-    {
-        return ObjectMapper.Map<TEntity, TGetListOutputDto>(entity);
+        //巨坑：ProjectToType中Dto若含有子表字段定义，会连带查出，无需主动Include。
+        //20240422 Mapster暂不支持复杂类型ProjectToType
+        //var entityDtos = await query.ProjectToType<TGetListOutputDto>(_mapper.Config).ToListAsync();
+        return Task.FromResult(ObjectMapper.Map<List<TEntity>, List<TGetListOutputDto>>(entities));
     }
     #endregion
-
+    protected class ListResult(IReadOnlyList<dynamic> results)
+    {
+        public IReadOnlyList<dynamic> Results { get; set; } = results;
+        public int TotalCounts { get; set; }
+        public int? PageSize { get; set; }
+        public int? CurrentPage { get; set; }
+    }
 }
+

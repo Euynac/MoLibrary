@@ -5,7 +5,7 @@ namespace MoLibrary.Office.Excel
     /// <summary>
     /// Excel 导入服务
     /// </summary>
-    public abstract class ExcelImportManager : IExcelImportManager
+    public abstract class ExcelImportManager : IMoExcelImportManager
     {
         /// <summary>
         /// 构造

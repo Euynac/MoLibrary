@@ -90,7 +90,7 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
     /// </summary>
     /// <param name="Name">The name/key of the timekeeper</param>
     /// <param name="Duration">The measured duration in milliseconds</param>
-    public record TimekeeperMeasurement(string Name, long Duration)
+    public record TimekeeperMeasurement(string Name, long Duration, DateTime ExecutedTime)
     {
         public long? MemoryBytes { get; set; }
     }
@@ -107,6 +107,7 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
         public long? AverageMemoryBytes { get; set; }
         public long? LastMemoryBytes { get; set; }
         public long? LastDuration { get; set; }
+        public DateTime? LastExecutedTime { get; set; }
     }
 
     private static readonly ConcurrentQueue<TimekeeperMeasurement> _queue = [];
@@ -133,14 +134,16 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
                         {
                             Times = cur.Times + 1, Average = average, AverageMemoryBytes = averageMemory,
                             LastMemoryBytes = info.MemoryBytes,
-                            LastDuration = info.Duration
+                            LastDuration = info.Duration,
+                            LastExecutedTime = info.ExecutedTime
                         };
                     }
                     else
                     {
                         _recordDict[info.Name] = new TimekeeperStatistics(1, info.Duration, DateTime.Now)
                         {
-                            AverageMemoryBytes = info.MemoryBytes
+                            AverageMemoryBytes = info.MemoryBytes,
+                            LastExecutedTime = DateTime.Now
                         };
                     }
                 }
@@ -163,7 +166,7 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
     private void DoRecord()
     {
         Check.NotNull(Key, nameof(Key));
-        _queue.Enqueue(new TimekeeperMeasurement(Key, Timer.ElapsedMilliseconds)
+        _queue.Enqueue(new TimekeeperMeasurement(Key, Timer.ElapsedMilliseconds, DateTime.Now)
         {
             MemoryBytes = MemoryUsage
         });
