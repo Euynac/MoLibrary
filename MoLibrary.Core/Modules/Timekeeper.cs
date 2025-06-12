@@ -64,6 +64,26 @@ public class ModuleTimekeeper(ModuleTimekeeperOption option)
                 operation.Tags = tagGroup;
                 return operation;
             });
+
+            endpoints.MapGet("/timekeeper/running", async (HttpResponse response, HttpContext context) =>
+            {
+                var runningTimekeepers = MoTimekeeperBase.GetRunningTimekeepers();
+                var list = runningTimekeepers.OrderByDescending(p => p.Value.CurrentElapsedMs).Select(p => new
+                {
+                    name = p.Key,
+                    content = p.Value.Content,
+                    startTime = $"{p.Value.StartTime:yyyy-MM-dd HH:mm:ss}",
+                    currentElapsed = $"{p.Value.CurrentElapsedMs}ms",
+                    runningDuration = $"{(DateTime.Now - p.Value.StartTime).TotalSeconds:0.##}s"
+                });
+                await response.WriteAsJsonAsync(list);
+            }).WithName("获取当前正在运行的Timekeeper").WithOpenApi(operation =>
+            {
+                operation.Summary = "获取当前正在运行的Timekeeper";
+                operation.Description = "获取当前正在运行的Timekeeper及其经过时间等统计信息";
+                operation.Tags = tagGroup;
+                return operation;
+            });
         });
     }
 }
