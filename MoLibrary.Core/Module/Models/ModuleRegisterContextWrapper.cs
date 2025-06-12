@@ -51,7 +51,7 @@ public class ModuleRegisterContextWrapper<TModuleOption>(ModuleRegisterContext c
     /// </summary>
     /// <typeparam name="TModuleExtraOption">模块额外选项类型</typeparam>
     /// <returns>模块额外选项实例</returns>
-    public TModuleExtraOption GetModuleExtraOption<TModuleExtraOption>() where TModuleExtraOption : IMoModuleOption, new()
+    public TModuleExtraOption GetModuleExtraOption<TModuleExtraOption>() where TModuleExtraOption : IMoModuleOptionBase, new()
     {
         return GetModuleExtraOptionOrDefault<TModuleExtraOption>() ?? new TModuleExtraOption();
     }
@@ -61,7 +61,7 @@ public class ModuleRegisterContextWrapper<TModuleOption>(ModuleRegisterContext c
     /// </summary>
     /// <typeparam name="TModuleExtraOption">模块额外选项类型</typeparam>
     /// <returns>模块额外选项实例或默认值</returns>
-    public TModuleExtraOption? GetModuleExtraOptionOrDefault<TModuleExtraOption>() where TModuleExtraOption : IMoModuleOption, new()
+    public TModuleExtraOption? GetModuleExtraOptionOrDefault<TModuleExtraOption>() where TModuleExtraOption : IMoModuleOptionBase, new()
     {
         if (Context.Option.TryGetValue(typeof(TModuleExtraOption), out var option))
         {
