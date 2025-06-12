@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Logging;
 using MoLibrary.Configuration.Annotations;
 using MoLibrary.Configuration.Model;
+using MoLibrary.Tool.Extensions;
+using MoLibrary.Tool.General;
 
 namespace MoLibrary.Configuration;
 
@@ -18,7 +20,6 @@ public static class UtilsOption
         return GetOptionItemString(config, configInstance);
        
     }
-
     /// <summary>
     /// 对指定配置类实例当前取值进行日志记录。使用 <see cref="OptionSettingAttribute"/> 中的LoggingFormat或Description进行格式化。
     /// </summary>
@@ -28,7 +29,7 @@ public static class UtilsOption
     {
         if (config == null)
         {
-            MoConfigurationManager.Logger.LogWarning("Option {FullName} is null.", typeof(T).FullName);
+            MoConfigurationManager.Logger.LogWarning("Option {FullName} is null.", typeof(T).GetCleanFullName());
             return;
         }
 
@@ -39,17 +40,24 @@ public static class UtilsOption
         foreach (var option in items)
         {
             var value = option.Value;
+            
+            var displayValue = option.Value;
+            if (value != null && value.GetType().IsClass && value.GetType() != typeof(string))
+            {
+                displayValue = value.ToJsonString();
+            }
+            
             if (option.Info is not { } optionAttr)
             {
-                MoConfigurationManager.Logger.LogInformation("[{0}] {1}: {2}", typeof(T).Name, option.Name, value);
+                MoConfigurationManager.Logger.LogInformation("[{0}] {1}: {2}", typeof(T).Name, option.Name, displayValue);
             }
             else if (optionAttr.LoggingFormat is { } format)
             {
-                MoConfigurationManager.Logger.LogInformation(format, value);
+                MoConfigurationManager.Logger.LogInformation(format, displayValue);
             }
             else if (optionAttr.Title is { } description)
             {
-                MoConfigurationManager.Logger.LogInformation("[{0}] {1}: {2}", typeof(T).Name, description, value);
+                MoConfigurationManager.Logger.LogInformation("[{0}] {1}: {2}", typeof(T).Name, description, displayValue);
             }
         }
     }
