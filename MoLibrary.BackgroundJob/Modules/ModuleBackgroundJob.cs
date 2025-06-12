@@ -296,7 +296,7 @@ public class ModuleBackgroundJob(ModuleBackgroundJobOption option) : MoModule<Mo
             if (workerType.GetCustomAttribute<DisableAutoRegisterAttribute>() is not null) continue;
             if (workerType.IsAssignableTo<IMoSimpleBackgroundWorker>())
             {
-                backgroundWorkerManager.AddAsync(workerType);
+                backgroundWorkerManager.AddAsync(workerType); //TODO 异步异常无法立即捕捉
                 Logger.LogInformation("已注册简单后台任务：{workerType}", workerType);
             }
             else
