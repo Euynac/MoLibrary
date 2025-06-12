@@ -35,6 +35,8 @@ public class ModuleBackgroundJob(ModuleBackgroundJobOption option) : MoModule<Mo
     private readonly List<Type> _backgroundWorkerTypes = [];
     private readonly List<Type> _backgroundJobTypes = [];
 
+    private bool _disable = false;
+
     public override EMoModules CurModuleEnum()
     {
         return EMoModules.BackgroundJob;
@@ -44,8 +46,13 @@ public class ModuleBackgroundJob(ModuleBackgroundJobOption option) : MoModule<Mo
     {
         if (_backgroundWorkerTypes.Count <= 0 && _backgroundJobTypes.Count <= 0)
         {
-            Logger.LogWarning("未发现需要自动注册的Worker或Jobs");
+            Logger.LogWarning("未发现需要自动注册的Worker或Jobs，将不启动Worker模块");
+            _disable = true;
+            return;
         }
+
+
+
 
         // 注册所有发现的 Worker 类型为 Transient
         foreach (var workerType in _backgroundWorkerTypes)
@@ -246,6 +253,8 @@ public class ModuleBackgroundJob(ModuleBackgroundJobOption option) : MoModule<Mo
 
     public override void ConfigureApplicationBuilder(IApplicationBuilder app)
     {
+        if(_disable) return;
+        
         Logger.LogInformation("发现继承自BackgroundWorker或Job的类，将启用Hangfire后台任务调度");
 
         //var supportCulturs = new[]
