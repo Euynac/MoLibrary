@@ -36,6 +36,23 @@ public static class TimeKeeperExtensions
                 operation.Tags = tagGroup;
                 return operation;
             });
+
+            endpoints.MapGet("/centre/timekeeper/running", async (HttpResponse response, HttpContext context, [FromServices] IRegisterCentreServer centreServer) =>
+            {
+                var dict = await centreServer.GetAsync<object>("/timekeeper/running");
+                return dict.Select(p => new
+                {
+                    p.Key.AppId,
+                    p.Value
+                });
+
+            }).WithName("批量获取Timekeeper运行状态").WithOpenApi(operation =>
+            {
+                operation.Summary = "批量获取Timekeeper运行状态";
+                operation.Description = "批量获取Timekeeper运行状态";
+                operation.Tags = tagGroup;
+                return operation;
+            });
         });
     }
 }
