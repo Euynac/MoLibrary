@@ -42,7 +42,7 @@ public class MoCrudControllerServiceConvention(
         {
             var controllerType = controller.ControllerType.AsType();
 
-            if (!controller.ControllerType.Name.EndsWith(CrudControllerOption.CrudControllerPostfix))
+            if (!controllerType.Name.EndsWith(CrudControllerOption.CrudControllerPostfix))
             {
                 continue;
             }
