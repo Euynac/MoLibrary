@@ -20,7 +20,7 @@ namespace MoLibrary.Office.Excel
         /// </summary>
         /// <typeparam name="TExportDto">导出的dto类</typeparam>
         /// <returns></returns>
-        public List<ExcelExportHeaderOutput> GetExportHeader<TExportDto>() where TExportDto : class, new()
+        public List<ExcelExportHeaderOutput> GetExportHeader<TExportDto>() where TExportDto : class
         {
             return ExcelHelper.GetProperties<TExportDto>().Select(a => new ExcelExportHeaderOutput
             {
@@ -42,7 +42,7 @@ namespace MoLibrary.Office.Excel
         /// <returns></returns>
         public byte[] Export<TExportDto>(IReadOnlyList<TExportDto> data,
             Action<ExcelExportOptions>? optionAction = null, string[]? onlyExportHeaderName = null,
-            ProgressBar? progressBar = null) where TExportDto : class, new()
+            ProgressBar? progressBar = null) where TExportDto : class
         {
             try
             {
@@ -69,7 +69,7 @@ namespace MoLibrary.Office.Excel
         /// <returns></returns>
         public async Task<byte[]> ExportAsync<TExportDto>(IReadOnlyList<TExportDto> data,
             Action<ExcelExportOptions>? optionAction = null, string[]? onlyExportHeaderName = null,
-            ProgressBar? progressBar = null) where TExportDto : class, new()
+            ProgressBar? progressBar = null) where TExportDto : class
         {
             return await Task.FromResult(Export(data, optionAction, onlyExportHeaderName, progressBar));
         }
@@ -88,6 +88,6 @@ namespace MoLibrary.Office.Excel
         /// <returns></returns>
         protected abstract byte[] ImplementExport<TExportDto>(IReadOnlyList<TExportDto> data,
             Action<ExcelExportOptions> optionAction, string[]? onlyExportHeaderName, ProgressBar? progressBar = null)
-            where TExportDto : class, new();
+            where TExportDto : class;
     }
 }

@@ -1,6 +1,8 @@
 using System.Linq.Dynamic.Core;
 using System.Linq.Dynamic.Core.CustomTypeProviders;
 using System.Linq.Expressions;
+using Microsoft.Extensions.Options;
+using MoLibrary.AutoModel.Configurations;
 using MoLibrary.AutoModel.Interfaces;
 using MoLibrary.AutoModel.Model;
 using MoLibrary.Tool.Extensions;
@@ -8,7 +10,7 @@ using MoLibrary.Tool.General;
 
 namespace MoLibrary.AutoModel.Implements;
 
-public class AutoModelMemoryOperatorDynamicLinqProvider<TModel> : IAutoModelMemoryOperator<TModel>
+public class AutoModelMemoryOperatorDynamicLinqProvider<TModel> : AutoModelOperatorBase<TModel>, IAutoModelMemoryOperator<TModel>
     where TModel : class
 {
     private readonly ParsingConfig _config = new()
@@ -18,7 +20,7 @@ public class AutoModelMemoryOperatorDynamicLinqProvider<TModel> : IAutoModelMemo
 
     private readonly IAutoModelExpressionNormalizer<TModel> _normalizer;
 
-    public AutoModelMemoryOperatorDynamicLinqProvider(IAutoModelExpressionNormalizer<TModel> normalizer)
+    public AutoModelMemoryOperatorDynamicLinqProvider(IAutoModelExpressionNormalizer<TModel> normalizer, IOptions<AutoModelExpressionOptions> options) : base(normalizer, options)
     {
         normalizer.SetToLinqToObject();
         _normalizer = normalizer;

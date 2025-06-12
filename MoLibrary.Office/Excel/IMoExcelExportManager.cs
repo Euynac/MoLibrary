@@ -14,7 +14,7 @@ namespace MoLibrary.Office.Excel
         /// </summary>
         /// <typeparam name="TExportDto">导出的dto类</typeparam>
         /// <returns></returns>
-        List<ExcelExportHeaderOutput> GetExportHeader<TExportDto>() where TExportDto : class, new();
+        List<ExcelExportHeaderOutput> GetExportHeader<TExportDto>() where TExportDto : class;
 
         /// <summary>
         /// 导出
@@ -30,7 +30,7 @@ namespace MoLibrary.Office.Excel
         /// <returns></returns>
         byte[] Export<TExportDto>(IReadOnlyList<TExportDto> data, Action<ExcelExportOptions>? optionAction = null,
             string[]? onlyExportHeaderName = null, ProgressBar? progressBar = null)
-            where TExportDto : class, new();
+            where TExportDto : class;
 
         /// <summary>
         /// 导出
@@ -46,6 +46,6 @@ namespace MoLibrary.Office.Excel
         /// <returns></returns>
         Task<byte[]> ExportAsync<TExportDto>(IReadOnlyList<TExportDto> data,
             Action<ExcelExportOptions>? optionAction = null, string[]? onlyExportHeaderName = null,
-            ProgressBar? progressBar = null) where TExportDto : class, new();
+            ProgressBar? progressBar = null) where TExportDto : class;
     }
 }
