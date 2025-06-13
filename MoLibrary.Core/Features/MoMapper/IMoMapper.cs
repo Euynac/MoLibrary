@@ -38,4 +38,6 @@ public interface IMoMapper
     /// <param name="sourceType"></param>
     /// <param name="destinationType"></param>
     object Map(object source, Type sourceType, Type destinationType);
+
+    IQueryable<TDestination> ProjectToType<TDestination>(IQueryable source);
 }

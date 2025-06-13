@@ -1,3 +1,4 @@
+using Mapster;
 using MapsterMapper;
 
 namespace MoLibrary.Core.Features.MoMapper;
@@ -13,7 +14,10 @@ public class MapsterProviderMoObjectMapper(IMapper mapper) : IMoMapper
     {
         return mapper.Map(source, destination);
     }
-
+    public IQueryable<TDestination> ProjectToType<TDestination>(IQueryable source)
+    {
+        return source.ProjectToType<TDestination>(mapper.Config);
+    }
     public object Map(object source, object destination, Type sourceType, Type destinationType)
     {
         return mapper.Map(source, destination, sourceType, destinationType);

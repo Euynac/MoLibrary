@@ -15,7 +15,7 @@ namespace MoLibrary.Framework.Features.Decorators;
 /// https://github.com/moframework/mo/issues/14378
 /// https://docs.mo.io/en/mo/7.4/Dependency-Injection#advanced-features
 /// </summary>
-public class InvocationChainRecorderMoInterceptor(IHttpContextAccessor accessor, IMoTimekeeper timekeeper, IMoExceptionHandler exceptionHandler) : MoInterceptor
+public class InvocationChainRecorderMoInterceptor(IHttpContextAccessor accessor, IMoTimekeeperFactory factory, IMoExceptionHandler exceptionHandler) : MoInterceptor
 {
     private bool ShouldRecordChain(IMoMethodInvocation invocation, out string? declaringType, out string? request)
     {
@@ -55,7 +55,7 @@ public class InvocationChainRecorderMoInterceptor(IHttpContextAccessor accessor,
             context.Invoking(declaringType ?? "", request ?? "");
             if (declaringType is { } key)
             {
-                keeper = timekeeper.CreateNormalTimer(key);
+                keeper = factory.CreateNormalTimer(key);
                 keeper.Start();
             }
         }

@@ -4,6 +4,7 @@
 
 using System.Collections.Generic;
 using System.Linq.Dynamic.Core;
+using Mapster;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.DynamicLinq;
 using Microsoft.Extensions.DependencyInjection;
@@ -123,9 +124,9 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
             };
         }
 
-        var entities = await finalEntityQuery.ToListAsync();
+        //var entities = await finalEntityQuery.ToListAsync();
 
-        var entityDtos = await MapToGetListOutputDtosAsync(entities);
+        var entityDtos = await MapToGetListOutputDtosAsync(finalEntityQuery);
 
         if (curPage != null && pageSize != null && entityDtos.FirstOrDefault() is IHasDtoSequenceNumber)
         {
@@ -165,7 +166,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
                 result.PageSize);
         
         
-        if ((await ApplyCustomActionToResponseListAsync(dtos)).IsFailed(out var error, out var data)) return error;
+        if ((await ApplyCustomActionToResponseListAsync(input, dtos)).IsFailed(out var error, out var data)) return error;
         return new ResPaged<dynamic>(result.TotalCounts, (IReadOnlyList<dynamic>) data, result.CurrentPage,
             result.PageSize);
 
@@ -362,14 +363,17 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
     #endregion
 
     #region 自定义设置
+
     /// <summary>
     /// 对响应的实体Dto内容进行验证或进一步处理
     /// </summary>
-    /// <param name="entities">要处理的实体DTO列表</param>
+    /// <param name="input"></param>
+    /// <param name="dtos">要处理的实体DTO列表</param>
     /// <returns>处理后的实体DTO列表，包装在Res结果中</returns>
-    protected virtual async Task<Res<List<TGetListOutputDto>>> ApplyCustomActionToResponseListAsync(List<TGetListOutputDto> entities)
+    protected virtual async Task<Res<List<TGetListOutputDto>>> ApplyCustomActionToResponseListAsync(TGetListInput input,
+        List<TGetListOutputDto> dtos)
     {
-        return entities;
+        return dtos;
     }
     /// <summary>
     /// 设置自定义过滤条件
@@ -496,12 +500,12 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
     /// <summary>
     /// Maps a list of <typeparamref name="TEntity"/> to <typeparamref name="TGetListOutputDto"/> objects.
     /// </summary>
-    protected virtual Task<List<TGetListOutputDto>> MapToGetListOutputDtosAsync(List<TEntity> entities)
+    protected virtual async Task<List<TGetListOutputDto>> MapToGetListOutputDtosAsync(IQueryable<TEntity> query)
     {
         //巨坑：ProjectToType中Dto若含有子表字段定义，会连带查出，无需主动Include。
         //20240422 Mapster暂不支持复杂类型ProjectToType
-        //var entityDtos = await query.ProjectToType<TGetListOutputDto>(_mapper.Config).ToListAsync();
-        return Task.FromResult(ObjectMapper.Map<List<TEntity>, List<TGetListOutputDto>>(entities));
+        return await ObjectMapper.ProjectToType<TGetListOutputDto>(query).ToListAsync();
+        //return Task.FromResult(ObjectMapper.Map<List<TEntity>, List<TGetListOutputDto>>(entities));
     }
     #endregion
     protected class ListResult(IReadOnlyList<dynamic> results)

@@ -34,12 +34,12 @@ public class MoTaskSchedulerBackgroundWorkerManager(
 
             var moduleOption = options.Value;
 
-            var timekeeper = moduleOption.EnableWorkerDurationMonitor ? ServiceProvider.GetRequiredService<IMoTimekeeper>() : null;
+            var timekeeper = moduleOption.EnableWorkerDurationMonitor ? ServiceProvider.GetRequiredService<IMoTimekeeperFactory>() : null;
             async void Action()
             {
                 try
                 {
-                    var keeper = timekeeper?.CreateNormalTimer(workerType.GetCleanFullName());
+                    using var keeper = timekeeper?.CreateNormalTimer(workerType.GetCleanFullName());
                     keeper?.Start();
                     // 使用Task.Run创建新线程运行任务，避免阻塞调度器线程
                     await Task.Run(async () =>

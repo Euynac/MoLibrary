@@ -147,7 +147,14 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
         Timer.Start();
         
         // Add to running timekeepers tracking
-        _runningTimekeepers.TryAdd(Key, new RunningTimekeeperInfo(Key, DateTime.Now, Content));
+        if (_runningTimekeepers.TryGetValue(Key, out var old))
+        {
+            _runningTimekeepers.TryUpdate(Key, new RunningTimekeeperInfo(Key, DateTime.Now, Content), old);
+        }
+        else
+        {
+            _runningTimekeepers.TryAdd(Key, new RunningTimekeeperInfo(Key, DateTime.Now, Content));
+        }
         
         if (EnableMemoryMonitor)
         {
@@ -177,6 +184,7 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
     public virtual void Dispose()
     {
         Disposed = true;
+        Finish();
     }
 
     /// <summary>

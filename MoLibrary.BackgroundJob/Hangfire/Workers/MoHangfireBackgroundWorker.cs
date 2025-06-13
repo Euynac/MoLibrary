@@ -1,4 +1,9 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using MoLibrary.BackgroundJob.Modules;
+using MoLibrary.Core.Features.MoTimekeeper;
 using MoLibrary.DependencyInjection.AppInterfaces;
+using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.BackgroundJob.Hangfire.Workers;
 
@@ -14,7 +19,14 @@ public abstract class MoHangfireBackgroundWorker : IMoHangfireBackgroundWorker
 
     public virtual async Task InternalDoWorkAsync(CancellationToken cancellationToken = default)
     {
+        var option = ServiceProvider.GetRequiredService<IOptions<ModuleBackgroundJobOption>>();
+        var factory = option.Value.EnableWorkerDurationMonitor
+            ? ServiceProvider.GetRequiredService<IMoTimekeeperFactory>()
+            : null;
+        using var keeper = factory?.CreateNormalTimer(GetType().GetCleanFullName());
+        keeper?.Start();
         await DoWorkAsync(cancellationToken);
+        keeper?.Finish();
     }
     public abstract Task DoWorkAsync(CancellationToken cancellationToken = default);
 

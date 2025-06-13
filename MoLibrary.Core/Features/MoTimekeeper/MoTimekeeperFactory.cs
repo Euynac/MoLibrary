@@ -5,7 +5,7 @@ using MoLibrary.Tool.Utils;
 
 namespace MoLibrary.Core.Features.MoTimekeeper;
 
-public class MoTimekeeperManager(IHttpContextAccessor accessor, ILogger<MoTimekeeperManager> logger) : IMoTimekeeper
+public class MoTimekeeperFactory(IHttpContextAccessor accessor, ILogger<MoTimekeeperFactory> logger) : IMoTimekeeperFactory
 {
     public IDisposable CreateResAutoTimer(string key)
     {
