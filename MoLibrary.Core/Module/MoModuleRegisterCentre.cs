@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Logging;
+using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Features.MoLogProvider;
 using MoLibrary.Core.Module.BuilderWrapper;
 using MoLibrary.Core.Module.Exceptions;
@@ -146,8 +147,8 @@ public static class MoModuleRegisterCentre
             }
             catch (Exception ex)
             {
-                ModuleErrorUtil.RecordModuleError(moduleType, ex,
-                    EMoModuleConfigMethods.InitFinalConfigures, ModuleRegisterErrorType.InitializationError);
+                throw ex.CreateException(Logger,
+                    $"{moduleType.GetCleanFullName()}进行{nameof(ModuleRegisterInfo.InitFinalConfigures)}时出现异常");
             }
         }
         ModuleManager.Init();

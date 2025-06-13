@@ -166,7 +166,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
         
         
         if ((await ApplyCustomActionToResponseListAsync(dtos)).IsFailed(out var error, out var data)) return error;
-        return new ResPaged<dynamic>(result.TotalCounts, (IReadOnlyList<dynamic>) dtos, result.CurrentPage,
+        return new ResPaged<dynamic>(result.TotalCounts, (IReadOnlyList<dynamic>) data, result.CurrentPage,
             result.PageSize);
 
 
