@@ -139,7 +139,7 @@ public static class ModuleErrorUtil
         };
         ModuleRegisterErrors.Add(error);
         
-        if(phase > EMoModuleConfigMethods.ClaimDependencies)
+        if(phase > EMoModuleConfigMethods.InitFinalConfigures)
         {
             // Immediately check if the module should be disabled due to exception
             CheckDisableModuleIfHasException(moduleType, error);
