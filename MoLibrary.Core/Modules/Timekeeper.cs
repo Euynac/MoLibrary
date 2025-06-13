@@ -30,7 +30,7 @@ public class ModuleTimekeeper(ModuleTimekeeperOption option)
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddSingleton<IMoTimekeeper, MoTimekeeperManager>();
+        services.AddSingleton<IMoTimekeeperFactory, MoTimekeeperFactory>();
     }
 
     public override void ConfigureEndpoints(IApplicationBuilder app)

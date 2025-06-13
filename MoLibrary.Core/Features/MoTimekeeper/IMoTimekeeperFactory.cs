@@ -1,6 +1,6 @@
 namespace MoLibrary.Core.Features.MoTimekeeper;
 
-public interface IMoTimekeeper
+public interface IMoTimekeeperFactory
 {
     /// <summary>
     /// 用于HTTP的自动结束的计时器
