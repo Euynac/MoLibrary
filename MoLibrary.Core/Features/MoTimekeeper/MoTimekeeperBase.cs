@@ -11,7 +11,11 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
     protected readonly ILogger Logger = logger;
     protected readonly Stopwatch Timer = new();
     protected bool Disposed;
-    protected bool IsNormalFinish;
+    protected bool IsFinished;
+    /// <summary>
+    /// 非常规的完成(从Dispose方法完成)，可能存在异常
+    /// </summary>
+    protected bool IsNotNormal;
     public bool EnableLogging { get; set; }
 
     /// <summary>
@@ -180,14 +184,15 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
         }
         DoRecord();
         Timer.Reset();
-        IsNormalFinish = true;//TODO
+        IsFinished = true;//TODO
     }
 
     public virtual void Dispose()
     {
         Disposed = true;
-        if (!IsNormalFinish)
+        if (!IsFinished)
         {
+            IsNotNormal = true;
             Finish();
         }
     }
