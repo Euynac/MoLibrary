@@ -44,5 +44,6 @@ public enum EMoModules
     Timekeeper,
     Excel,
     CancellationManager,
-    ProgressBar
+    ProgressBar,
+    Profiling
 }
