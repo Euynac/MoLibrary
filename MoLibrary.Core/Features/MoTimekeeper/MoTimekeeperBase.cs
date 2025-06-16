@@ -11,6 +11,7 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
     protected readonly ILogger Logger = logger;
     protected readonly Stopwatch Timer = new();
     protected bool Disposed;
+    protected bool IsNormalFinish;
     public bool EnableLogging { get; set; }
 
     /// <summary>
@@ -179,12 +180,16 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
         }
         DoRecord();
         Timer.Reset();
+        IsNormalFinish = true;//TODO
     }
 
     public virtual void Dispose()
     {
         Disposed = true;
-        Finish();
+        if (!IsNormalFinish)
+        {
+            Finish();
+        }
     }
 
     /// <summary>
