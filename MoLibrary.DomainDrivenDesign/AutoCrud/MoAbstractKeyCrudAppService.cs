@@ -444,7 +444,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
         return queryable;
     }
     /// <summary>
-    /// 在GetList方法时应用Include
+    /// 在Get查询详情时应用Include
     /// </summary>
     /// <param name="queryable">要应用Include的查询</param>
     /// <returns>应用Include后的查询</returns>
