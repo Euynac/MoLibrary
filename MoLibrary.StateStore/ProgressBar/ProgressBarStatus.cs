@@ -15,7 +15,7 @@ public class ProgressBarStatus(int totalSteps)
     /// <summary>
     /// 已经过的时间
     /// </summary>
-    public TimeSpan ElapsedTime => DateTime.Now - StartTime;
+    public TimeSpan ElapsedTime => CurrentStep >= TotalSteps ? LastUpdated - StartTime : DateTime.Now - StartTime;
 
     /// <summary>
     /// 当前状态描述（细致的进度描述）
@@ -56,14 +56,14 @@ public class ProgressBarStatus(int totalSteps)
     /// <summary>
     /// 预估剩余时间，基于当前进度计算剩余完成时间
     /// </summary>
-    public TimeSpan EstimatedRemaining => CalculateRemainingTime();
+    public TimeSpan? EstimatedRemaining => CalculateRemainingTime();
     /// <summary>
     /// 计算预估剩余完成时间
     /// </summary>
-    /// <returns>预估剩余时间，如果当前步数小于等于0则返回最大时间值</returns>
-    public virtual TimeSpan CalculateRemainingTime()
+    /// <returns>预估剩余时间，如果当前步数小于等于0则返回null</returns>
+    public virtual TimeSpan? CalculateRemainingTime()
     {
-        if (CurrentStep <= 0) return TimeSpan.MaxValue;
+        if (CurrentStep <= 0) return null;
 
         var elapsedPerStep = ElapsedTime.TotalMilliseconds / CurrentStep;
         var remainingSteps = TotalSteps - CurrentStep;

@@ -44,10 +44,10 @@ public class DaprHttpForConnectClient(DaprClient client, ILogger<DaprHttpForConn
         var response = await client.InvokeMethodWithResponseAsync(
             client.CreateInvokeMethodRequest(HttpMethod.Get, appid,
                 callbackUrl, []));
-
+        var content = "";
         try
         {
-            var content = await response.Content.ReadAsStringAsync();
+            content = await response.Content.ReadAsStringAsync();
             var res = JsonSerializer.Deserialize<TResponse>(content, jsonOption.GlobalOptions);
             if (res == null)
                 throw new InvocationException(appid, callbackUrl,
@@ -59,9 +59,14 @@ public class DaprHttpForConnectClient(DaprClient client, ILogger<DaprHttpForConn
             }
 
             //var res = await response.Content.ReadFromJsonAsync<TResponse>(jsonOption.GlobalOptions);
-            
+
 
             return res;
+        }
+        catch (JsonException jsonException)
+        {
+            var message = jsonException.GetMessageRecursively();
+            return Res.Fail(ResponseCode.BadRequest, "执行{0}服务{1}失败:{2}，Json数据：{3}", appid, callbackUrl, message, content);
         }
         catch (Exception e)
         {
@@ -89,9 +94,10 @@ public class DaprHttpForConnectClient(DaprClient client, ILogger<DaprHttpForConn
             client.CreateInvokeMethodRequest(HttpMethod.Post, appid,
                 callbackUrl, [], req));
 
+        var content = "";
         try
         {
-            var content = await response.Content.ReadAsStringAsync();
+            content = await response.Content.ReadAsStringAsync();
             var res = JsonSerializer.Deserialize<TResponse>(content, jsonOption.GlobalOptions);
             if (res == null)
                 throw new InvocationException(appid, callbackUrl,
@@ -102,6 +108,11 @@ public class DaprHttpForConnectClient(DaprClient client, ILogger<DaprHttpForConn
                 serviceResponse.AutoParseResponseFromOrigin(content);
             }
             return res;
+        }
+        catch (JsonException jsonException)
+        {
+            var message = jsonException.GetMessageRecursively();
+            return Res.Fail(ResponseCode.BadRequest, "执行{0}服务{1}失败:{2}，Json数据：{3}", appid, callbackUrl, message, content);
         }
         catch (Exception e)
         {

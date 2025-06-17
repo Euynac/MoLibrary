@@ -68,12 +68,12 @@ public class MoProgressBarService(
     /// <summary>
     /// 获取进度条状态
     /// </summary>
-    public async Task<ProgressBarStatus> GetProgressBarStatus(string id)
+    public async Task<ProgressBarStatus?> GetProgressBarStatus(string id)
     {
         try
         {
             var status = await stateStore.GetStateAsync<ProgressBarStatus>(id);
-            return status ?? throw new InvalidOperationException($"Progress bar '{id}' not found.");
+            return status;
         }
         catch (Exception e)
         {
