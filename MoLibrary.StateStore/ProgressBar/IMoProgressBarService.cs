@@ -1,5 +1,8 @@
 namespace MoLibrary.StateStore.ProgressBar;
 
+/// <summary>
+/// (Singleton) 进度条服务接口
+/// </summary>
 public interface IMoProgressBarService
 {
     /// <summary>

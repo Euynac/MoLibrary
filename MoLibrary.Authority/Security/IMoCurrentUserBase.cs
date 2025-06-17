@@ -33,6 +33,9 @@ public interface IMoUser
     string? Username { get; }
 }
 
+/// <summary>
+/// (Singleton)当前用户信息
+/// </summary>
 public interface IMoCurrentUser : IMoCurrentUserBase, IMoUser
 {
  

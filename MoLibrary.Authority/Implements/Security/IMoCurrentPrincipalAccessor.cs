@@ -6,7 +6,7 @@ namespace MoLibrary.Authority.Implements.Security;
 
 public class MoCurrentPrincipalAccessor(IHttpContextAccessor httpContextAccessor, IMoSystemUserManager systemUser) : IMoCurrentPrincipalAccessor
 {
-    private readonly AsyncLocal<ClaimsPrincipal> _currentPrincipal = new();
+    private static readonly AsyncLocal<ClaimsPrincipal> _currentPrincipal = new();
 
     protected virtual ClaimsPrincipal? GetClaimsPrincipal()
     {
