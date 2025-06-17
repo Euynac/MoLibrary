@@ -1,7 +1,7 @@
 namespace MoLibrary.StateStore.CancellationManager;
 
 /// <summary>
-/// 分布式取消令牌管理器接口
+/// (Singleton)分布式取消令牌管理器接口
 /// 提供跨微服务实例的取消令牌创建、取消和监听功能
 /// </summary>
 public interface IMoCancellationManager

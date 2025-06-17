@@ -46,7 +46,7 @@ public class ModuleAuthentication(ModuleAuthenticationOption option) : MoModule<
         }
         //依赖于AsyncLocal技术，异步static单例，不同的请求线程会有不同的HttpContext
         services.AddHttpContextAccessor();
-        services.AddTransient<IMoCurrentUser, MoCurrentUser>();
+        services.AddSingleton<IMoCurrentUser, MoCurrentUser>();
         services.AddSingleton<IMoJwtAuthManager, MoJwtAuthManager>();
         services.AddSingleton<IMoAuthManager, MoJwtAuthManager>();
         services.AddSingleton<IMoCurrentPrincipalAccessor, MoCurrentPrincipalAccessor>(); //为何用单例就行？

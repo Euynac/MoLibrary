@@ -28,6 +28,11 @@ public class ProgressBarStatus(int totalSteps)
     public string? Phase { get; set; }
 
     /// <summary>
+    /// 是否已结束
+    /// </summary>
+    public virtual bool IsEnd => IsCancelled || CurrentStep >= TotalSteps;
+
+    /// <summary>
     /// 是否已取消
     /// </summary>
     public bool IsCancelled { get; set; }
