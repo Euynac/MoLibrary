@@ -163,7 +163,7 @@ namespace MoLibrary.Office.Excel
 
                 foreach (var name in onlyExportHeaderName)
                 {
-                    var p = properties.FirstOrDefault(a => a.GetDisplayNameFromProperty() == name);
+                    var p = properties.FirstOrDefault(a => a.Name == name || a.GetDisplayNameFromProperty() == name);
                     if (p == null)
                     {
                         throw new Exception($"类【{className}】中未找到名称为【{name}】的 Display Name 或属性名称");

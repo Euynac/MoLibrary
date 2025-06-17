@@ -6,7 +6,6 @@ namespace MoLibrary.Office.Excel
     /// <summary>
     /// Excel 导出服务
     /// </summary>
-    /// TODO 当前EXCEL模块实现不支持动态的DTO类型，因其内部大量使用泛型实现，无法动态获取类型。另外需要尽量减少TExportDto的泛型限制
     public interface IMoExcelExportManager
     {
         /// <summary>

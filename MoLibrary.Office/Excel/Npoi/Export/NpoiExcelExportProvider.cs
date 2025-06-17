@@ -16,7 +16,7 @@ namespace MoLibrary.Office.Excel.Npoi.Export
         {
             var export = new NpoiExcelExportBase(npoiCellStyleHandle, npoiExcelHandle);
 
-            return export.Export(data, optionAction, onlyExportHeaderName);
+            return export.Export(data, optionAction, onlyExportHeaderName, progressBar);
         }
     }
 }
