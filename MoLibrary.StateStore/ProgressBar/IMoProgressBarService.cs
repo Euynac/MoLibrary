@@ -22,13 +22,18 @@ public interface IMoProgressBarService
     /// <returns></returns>
     Task<TCustom> CreateProgressBarAsync<TCustom>(string? id = null, Action<ProgressBarSetting>? settingAction = null)
         where TCustom : ProgressBar;
-
+    /// <summary>
+    /// 获取指定进度条的取消令牌
+    /// </summary>
+    /// <param name="id">取消令牌的唯一标识键</param>
+    /// <returns>返回与指定键关联的取消令牌</returns>
+    Task<CancellationToken> GetProgressBarCancellationTokenAsync(string id);
     /// <summary>
     /// 获取指定进度条状态
     /// </summary>
     /// <param name="id"></param>
     /// <returns></returns>
-    Task<ProgressBarStatus?> GetProgressBarStatus(string id);
+    Task<ProgressBarStatus?> GetProgressBarStatusAsync(string id);
 
     /// <summary>
     /// 获取指定进度条的自定义状态
@@ -36,7 +41,7 @@ public interface IMoProgressBarService
     /// <typeparam name="T">自定义状态类型</typeparam>
     /// <param name="id">进度条ID</param>
     /// <returns></returns>
-    Task<T?> GetProgressBarStatus<T>(string id) where T : ProgressBarStatus;
+    Task<T?> GetProgressBarStatusAsync<T>(string id) where T : ProgressBarStatus;
 
     /// <summary>
     /// 更新进度条状态

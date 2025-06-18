@@ -65,10 +65,15 @@ public class MoProgressBarService(
         }
     }
 
+    public async Task<CancellationToken> GetProgressBarCancellationTokenAsync(string id)
+    {
+        return await cancellationManager.GetOrCreateTokenAsync(id);
+    }
+
     /// <summary>
     /// 获取进度条状态
     /// </summary>
-    public async Task<ProgressBarStatus?> GetProgressBarStatus(string id)
+    public async Task<ProgressBarStatus?> GetProgressBarStatusAsync(string id)
     {
         try
         {
@@ -87,7 +92,7 @@ public class MoProgressBarService(
     /// <typeparam name="T">自定义状态类型</typeparam>
     /// <param name="id">进度条ID</param>
     /// <returns></returns>
-    public async Task<T?> GetProgressBarStatus<T>(string id) where T : ProgressBarStatus
+    public async Task<T?> GetProgressBarStatusAsync<T>(string id) where T : ProgressBarStatus
     {
         try
         {
@@ -138,7 +143,10 @@ public class MoProgressBarService(
 
             // 保存最终状态，使用完成后的TTL
             await stateStore.SaveStateAsync(progressBar.TaskId, progressBar.Status, ttl: progressBar.Setting.CompletedTimeToLive);
-            
+
+            // 通过取消管理器删除CancelToken
+            await cancellationManager.DeleteTokenAsync(progressBar.TaskId);
+
             logger.LogInformation("Finished progress bar task: {TaskId}", progressBar.TaskId);
         }
         catch (Exception e)

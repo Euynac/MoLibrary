@@ -182,10 +182,17 @@ public class ProgressBar(ProgressBarSetting setting, IMoProgressBarService servi
     /// 完成任务，保存最终状态
     /// </summary>
     /// <returns>异步任务</returns>
-    public virtual async Task CompleteTaskAsync()
+    public virtual async Task CompleteTaskAsync(string? statusMessage = null, string? phase = null)
     {
         if (IsCompleted || IsCancelled) return;
-        
+        if (!string.IsNullOrEmpty(statusMessage))
+        {
+            Status.CurrentStatus = statusMessage;
+        }
+        if (!string.IsNullOrEmpty(phase))
+        {
+            Status.Phase = phase;
+        }
         IsCompleted = true;
         Status.CurrentStep = Status.TotalSteps;
         await Service.FinishProgressBarAsync(this);

@@ -39,66 +39,60 @@ namespace MoLibrary.Office.Excel
                 optionAction?.Invoke(options);
                 options.CheckError();
 
-                // 进度相关变量
-                var totalSteps = 100;
-                var currentStep = 0;
-
-                progressBar?.UpdateStatusAsync(currentStep, "初始化Excel导出").Wait();
+              
+                progressBar?.IncrementAsync(1, "初始化Excel导出", "导出Excel").Wait();
 
                 //获取工作册
                 var workbook = GetWorkbook(options);
-                currentStep += 5;
-                progressBar?.UpdateStatusAsync(currentStep, "创建工作册").Wait();
+                progressBar?.IncrementAsync(4, "创建工作册").Wait();
 
                 //创建工作表
                 var worksheet = CreateSheet(workbook, options);
-                currentStep += 5;
-                progressBar?.UpdateStatusAsync(currentStep, "创建工作表").Wait();
+             
+                progressBar?.IncrementAsync(5, "创建工作表").Wait();
 
                 //验证表头，并获取要导出的表头信息
                 var headers = CheckHeader<TExportDto>(onlyExportHeaderName);
-                currentStep += 5;
-                progressBar?.UpdateStatusAsync(currentStep, "验证表头").Wait();
+                
+                progressBar?.IncrementAsync(5, "验证表头").Wait();
 
                 //表头行下标
                 var headerRowIndex = options.HeaderRowIndex - 1;
 
                 //先获取所有表头列的样式和字体
                 var headerStyle = GetHeaderColumnStyleAndFont<TExportDto>(workbook, worksheet);
-                currentStep += 5;
-                progressBar?.UpdateStatusAsync(currentStep, "创建表头样式").Wait();
+                
+                progressBar?.IncrementAsync(5, "创建表头样式").Wait();
 
                 //处理表头单元格
                 ProcessHeaderCell<TExportDto>(workbook, worksheet, headers, headerRowIndex, headerStyle);
-                currentStep += 10;
-                progressBar?.UpdateStatusAsync(currentStep, "处理表头").Wait();
+                progressBar?.IncrementAsync(10, "处理表头").Wait();
 
                 //数据起始行下标
                 var dataRowIndex = options.DataRowStartIndex - 1;
 
                 //先获取所有数据列的样式和字体
                 var dataStyle = GetDataColumnStyleAndFont<TExportDto>(workbook, worksheet);
-                currentStep += 5;
-                progressBar?.UpdateStatusAsync(currentStep, "创建数据样式").Wait();
+                
+                progressBar?.IncrementAsync(5, "创建数据样式").Wait();
 
                 //处理数据单元格
-                ProcessDataCell(workbook, worksheet, headers, data, dataRowIndex, dataStyle, out var footerRowIndex, progressBar, currentStep, 50);
-                currentStep += 50;
+                ProcessDataCell(workbook, worksheet, headers, data, dataRowIndex, dataStyle, out var footerRowIndex, progressBar, 50);
 
                 //处理底部数据统计
-                progressBar?.UpdateStatusAsync(currentStep, "处理数据统计").Wait();
+                progressBar?.IncrementAsync(5, "处理数据统计").Wait();
                 ProcessFooterStatistics<TExportDto>(workbook, worksheet, headers, dataRowIndex, footerRowIndex, headerStyle, dataStyle);
-                currentStep += 5;
+                
 
                 //处理列宽【有数据才能处理自动列宽，所以必须放到最后进行处理】
-                progressBar?.UpdateStatusAsync(currentStep, "处理列宽").Wait();
+                progressBar?.IncrementAsync(5, "处理列宽").Wait();
                 ProcessColumnWidth<TExportDto>(workbook, worksheet, headers);
-                currentStep += 5;
+                
 
                 //转换并获取工作册字节
-                progressBar?.UpdateStatusAsync(currentStep, "生成Excel文件").Wait();
+                progressBar?.IncrementAsync(5, "生成Excel文件").Wait();
                 var result = GetAsByteArray(workbook, worksheet);
-                progressBar?.UpdateStatusAsync(totalSteps, "Excel导出完成").Wait();
+                progressBar?.IncrementAsync(5, "Excel导出完成").Wait();
 
                 return result;
             }
@@ -109,76 +103,17 @@ namespace MoLibrary.Office.Excel
             }
         }
 
-        #region 私有
-
         /// <summary>
         /// 验证表头，并获取要导出的表头信息
         /// </summary>
         /// <typeparam name="TExportDto"></typeparam>
         /// <param name="onlyExportHeaderName">只需要导出的表头名称（指定则按 <typeparamref name="TExportDto"/> 字段顺序导出全部，不指定空则按数组顺序导出）</param>
-        private ExcelExportHeaderInfo[] CheckHeader<TExportDto>(string[]? onlyExportHeaderName) where TExportDto : class
+        public ExcelExportHeaderInfo[] CheckHeader<TExportDto>(string[]? onlyExportHeaderName) where TExportDto : class
         {
-            var className = typeof(TExportDto).Name;
-
-            var headers = new List<ExcelExportHeaderInfo>();
-
-            var properties = GetHeaderProperties<TExportDto>();
-
-            var headerDuplicate = properties.Select(a => a.GetDisplayNameFromProperty())
-                .GroupBy(a => a)
-                .Where(a => a.Count() > 1)
-                .Select(a => a.Key).Distinct().ToList();
-
-            if (headerDuplicate.Any())
-            {
-                throw new Exception(
-                    $"类【{className}】中 Display Name 重复（或与属性名称重复）：{string.Join(",", headerDuplicate)}");
-            }
-
-            if (onlyExportHeaderName == null || onlyExportHeaderName.LongLength == 0)
-            {
-                headers = properties.Select(a => new ExcelExportHeaderInfo
-                {
-                    PropertyInfo = a,
-                    HeaderName = a.GetDisplayNameFromProperty()
-                }).ToList();
-
-                if (!headers.Any())
-                {
-                    throw new Exception($"类【{className}】中没有要导出的表头信息");
-                }
-            }
-            else
-            {
-                var onlyDuplicate = onlyExportHeaderName
-                    .GroupBy(a => a)
-                    .Where(a => a.Count() > 1)
-                    .Select(a => a.Key).Distinct().ToList();
-
-                if (onlyDuplicate.Any())
-                {
-                    throw new Exception(
-                        $"指定表头名称重复：{string.Join(",", onlyDuplicate)}");
-                }
-
-                foreach (var name in onlyExportHeaderName)
-                {
-                    var p = properties.FirstOrDefault(a => a.Name == name || a.GetDisplayNameFromProperty() == name);
-                    if (p == null)
-                    {
-                        throw new Exception($"类【{className}】中未找到名称为【{name}】的 Display Name 或属性名称");
-                    }
-
-                    headers.Add(new ExcelExportHeaderInfo
-                    {
-                        PropertyInfo = p,
-                        HeaderName = p.GetDisplayNameFromProperty()
-                    });
-                }
-            }
-
-            return headers.ToArray();
+            return ExcelHelper.CheckHeader<TExportDto>(onlyExportHeaderName);
         }
+
+        #region 私有
 
         /// <summary>
         /// 处理表头单元格
@@ -225,13 +160,12 @@ namespace MoLibrary.Office.Excel
         /// <param name="dataStyle">数据样式</param>
         /// <param name="nextRowIndex">下一行下标（起始下标： 0）</param>
         /// <param name="progressBar">进度条（可选）</param>
-        /// <param name="currentStep">当前进度（仅当progressBar不为空时有效）</param>
         /// <param name="progressWeight">数据处理在整体进度中的权重（仅当progressBar不为空时有效）</param>
         /// <returns>下一行下标（从0开始）</returns>
         private void ProcessDataCell<TExportDto>(TWorkbook workbook, TSheet worksheet, ExcelExportHeaderInfo[] headers,
             IReadOnlyList<TExportDto> data, int rowIndex,
             List<ExcelCellStyleOutput<TCellStyle, DataStyleAttribute, DataFontAttribute>> dataStyle,
-            out int nextRowIndex, ProgressBar? progressBar = null, int currentStep = 0, int progressWeight = 0)
+            out int nextRowIndex, ProgressBar? progressBar = null, int progressWeight = 0)
             where TExportDto : class
         {
             //可合并行区域信息
@@ -248,9 +182,8 @@ namespace MoLibrary.Office.Excel
             // 进度条相关变量
             var dataCount = data.Count;
             var progressIncrement = dataCount > 0 && progressBar != null ? progressWeight / (double) dataCount : 0;
-            var currentProgress = currentStep;
 
-            progressBar?.UpdateStatusAsync(currentProgress, $"开始处理数据，共 {dataCount} 条").Wait();
+            progressBar?.UpdatePhaseAsync("处理数据", $"开始处理数据，共 {dataCount} 条").Wait();
 
             //处理单元格 值、样式、字体、合并
             var processedCount = 0;
@@ -294,8 +227,7 @@ namespace MoLibrary.Office.Excel
                     processedCount++;
                     if (processedCount % 50 == 0 || processedCount == dataCount) // 每处理50行或处理完所有数据更新一次进度
                     {
-                        currentProgress = currentStep + (int) (progressIncrement * processedCount);
-                        progressBar.UpdateStatusAsync(currentProgress, $"已处理 {processedCount}/{dataCount} 条数据").Wait();
+                        progressBar.IncrementAsync((int) (progressIncrement * processedCount), $"已处理 {processedCount}/{dataCount} 条数据").Wait();
                     }
                 }
             }
@@ -311,7 +243,7 @@ namespace MoLibrary.Office.Excel
             rowMergedList.RemoveAll(m => columnMergedList.Any(a => a.PropertyNames.Intersect(m.PropertyNames).Any()));
 
             //合并单元格区域
-            progressBar?.UpdateStatusAsync(currentProgress, "合并单元格").Wait();
+            progressBar?.IncrementAsync(0, "合并单元格").Wait();
 
             //所有合并信息
             var mergedRegion = rowMergedList.Concat(columnMergedList).ToList();
@@ -322,7 +254,7 @@ namespace MoLibrary.Office.Excel
                 SetMergedRegion(workbook, worksheet, m.FromRowIndex, m.ToRowIndex, m.FromColumnIndex, m.ToColumnIndex);
             }
 
-            progressBar?.UpdateStatusAsync(currentStep + progressWeight, "数据处理完成").Wait();
+            progressBar?.IncrementAsync(0, "数据处理完成").Wait();
         }
 
         /// <summary>

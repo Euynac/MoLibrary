@@ -157,7 +157,7 @@ public class ProgressBarExample
     public async Task GetStatusExample()
     {
         // 获取基本状态
-        var basicStatus = await _progressBarService.GetProgressBarStatus("basic-example");
+        var basicStatus = await _progressBarService.GetProgressBarStatusAsync("basic-example");
         Console.WriteLine($"基本进度: {basicStatus.Percentage}%, 阶段: {basicStatus.Phase}, 状态: {basicStatus.CurrentStatus}");
         
         if (basicStatus.IsCancelled)
@@ -174,7 +174,7 @@ public class ProgressBarExample
         }
 
         // 获取自定义状态
-        var customStatus = await _progressBarService.GetProgressBarStatus<CustomProgressBarStatus>("custom-example");
+        var customStatus = await _progressBarService.GetProgressBarStatusAsync<CustomProgressBarStatus>("custom-example");
         if (customStatus != null)
         {
             Console.WriteLine($"自定义进度: {customStatus.Percentage}%");
@@ -216,7 +216,7 @@ public class ProgressBarExample
         }
 
         // 稍后获取状态查看取消信息
-        var status = await _progressBarService.GetProgressBarStatus("cancel-example");
+        var status = await _progressBarService.GetProgressBarStatusAsync("cancel-example");
         Console.WriteLine($"从存储获取的取消状态: {status.IsCancelled}");
         Console.WriteLine($"从存储获取的取消原因: {status.CancelReason}");
     }
@@ -237,7 +237,7 @@ public class ProgressBarExample
         await progressBarA.UpdateStatusAsync(10, "处理了10项");
 
         // 模拟微服务B检查任务状态
-        var taskStatus = await _progressBarService.GetProgressBarStatus("cross-service-task");
+        var taskStatus = await _progressBarService.GetProgressBarStatusAsync("cross-service-task");
         Console.WriteLine($"微服务B检查: 进度 {taskStatus.Percentage}%, 阶段: {taskStatus.Phase}");
         
         if (taskStatus.IsCancelled)
@@ -250,7 +250,7 @@ public class ProgressBarExample
         await progressBarA.CancelTaskAsync("检测到异常，主动取消");
 
         // 微服务B再次检查状态
-        var updatedStatus = await _progressBarService.GetProgressBarStatus("cross-service-task");
+        var updatedStatus = await _progressBarService.GetProgressBarStatusAsync("cross-service-task");
         if (updatedStatus.IsCancelled)
         {
             Console.WriteLine($"微服务B检测到任务已被取消: {updatedStatus.CancelReason}");

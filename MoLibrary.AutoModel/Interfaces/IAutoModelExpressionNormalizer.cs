@@ -45,6 +45,15 @@ public interface IAutoModelExpressionNormalizer<TModel>
     /// <param name="isReverseSelect">是否是反向选择，即选择除了给定字段的字段</param>
     /// <returns></returns>
     List<AutoField> NormalizeLiteralSelect(string columns, bool isReverseSelect = false);
+
+    /// <summary>
+    /// <inheritdoc cref="NormalizeLiteralSelect"/>
+    /// </summary>
+    /// <param name="selectExpression"></param>
+    /// <param name="isReverseSelect"></param>
+    /// <returns></returns>
+    (List<AutoField> fields, List<string> failedList) NormalizeLiteralSelectWithoutException(string selectExpression,
+        bool isReverseSelect = false);
 }
 
 public class NormalizedResult(string finalExpression, List<object?> @params)
