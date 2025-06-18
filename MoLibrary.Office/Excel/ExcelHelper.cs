@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using MoLibrary.Office.Excel.Attributes;
+using MoLibrary.Office.Excel.Models;
 
 namespace MoLibrary.Office.Excel
 {
@@ -125,7 +126,74 @@ namespace MoLibrary.Office.Excel
                 .ToArray();
             return properties;
         }
+        /// <summary>
+        /// 验证表头，并获取要导出的表头信息
+        /// </summary>
+        /// <typeparam name="TExportDto"></typeparam>
+        /// <param name="onlyExportHeaderName">只需要导出的表头名称（指定则按 <typeparamref name="TExportDto"/> 字段顺序导出全部，不指定空则按数组顺序导出）</param>
+        public static ExcelExportHeaderInfo[] CheckHeader<TExportDto>(string[]? onlyExportHeaderName) where TExportDto : class
+        {
+            var className = typeof(TExportDto).Name;
 
+            var headers = new List<ExcelExportHeaderInfo>();
+
+            var properties = GetProperties<TExportDto>();
+
+            var headerDuplicate = properties.Select(a => a.GetDisplayNameFromProperty())
+                .GroupBy(a => a)
+                .Where(a => a.Count() > 1)
+                .Select(a => a.Key).Distinct().ToList();
+
+            if (headerDuplicate.Any())
+            {
+                throw new Exception(
+                    $"类【{className}】中 Display Name 重复（或与属性名称重复）：{string.Join(",", headerDuplicate)}");
+            }
+
+            if (onlyExportHeaderName == null || onlyExportHeaderName.LongLength == 0)
+            {
+                headers = properties.Select(a => new ExcelExportHeaderInfo
+                {
+                    PropertyInfo = a,
+                    HeaderName = a.GetDisplayNameFromProperty()
+                }).ToList();
+
+                if (!headers.Any())
+                {
+                    throw new Exception($"类【{className}】中没有要导出的表头信息");
+                }
+            }
+            else
+            {
+                var onlyDuplicate = onlyExportHeaderName
+                    .GroupBy(a => a)
+                    .Where(a => a.Count() > 1)
+                    .Select(a => a.Key).Distinct().ToList();
+
+                if (onlyDuplicate.Any())
+                {
+                    throw new Exception(
+                        $"指定表头名称重复：{string.Join(",", onlyDuplicate)}");
+                }
+
+                foreach (var name in onlyExportHeaderName)
+                {
+                    var p = properties.FirstOrDefault(a => a.Name.Equals(name, StringComparison.OrdinalIgnoreCase) || a.GetDisplayNameFromProperty() == name);
+                    if (p == null)
+                    {
+                        throw new Exception($"类【{className}】中未找到名称为【{name}】的 Display Name 或属性名称，或是否已使用{nameof(IgnoreColumnAttribute)}忽略");
+                    }
+
+                    headers.Add(new ExcelExportHeaderInfo
+                    {
+                        PropertyInfo = p,
+                        HeaderName = p.GetDisplayNameFromProperty()
+                    });
+                }
+            }
+
+            return headers.ToArray();
+        }
         /// <summary>
         /// 获取属性的 Display.Name 集合
         /// </summary>

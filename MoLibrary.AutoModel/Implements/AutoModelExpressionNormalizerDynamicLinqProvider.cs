@@ -25,15 +25,24 @@ public class AutoModelExpressionNormalizerDynamicLinqProvider<TModel>(
 
     public List<AutoField> NormalizeLiteralSelect(string columns, bool isReverseSelect = false)
     {
+        var (fields, failedList) = NormalizeLiteralSelectWithoutException(columns, isReverseSelect);
+
+        if (failedList.Count <= 0) return fields;
+        throw new AutoModelNormalizeException($"选择字段{failedList.StringJoin(",")}无法识别。支持的激活名有：{string.Join(',', snapshot.GetAllActivateNames())}");
+    }
+
+    public (List<AutoField> fields, List<string> failedList) NormalizeLiteralSelectWithoutException(string selectExpression,
+        bool isReverseSelect = false)
+    {
         var fields = new List<AutoField>();
-        var errors = new StringBuilder();
+        var errors = new List<string>();
         var all = isReverseSelect ? snapshot.GetFields().Select(GetSelectExpression).ToHashSet() : [];
-        foreach (var column in columns.Split(ExpressionOptions.SelectSeparator,
+        foreach (var column in selectExpression.Split(ExpressionOptions.SelectSeparator,
                      StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
             if (snapshot.GetField(column) is not { } field)
             {
-                errors.Append($"{column},");
+                errors.Add(column);
                 continue;
             }
 
@@ -49,10 +58,7 @@ public class AutoModelExpressionNormalizerDynamicLinqProvider<TModel>(
                 fields.Add(field);
             }
         }
-
-        if (errors.Length <= 0) return fields;
-        errors.Remove(errors.Length - 1, 1);
-        throw new AutoModelNormalizeException($"选择字段{errors}无法识别。支持的激活名有：{string.Join(',', snapshot.GetAllActivateNames())}");
+        return (fields, errors);
     }
 
     /// <summary>

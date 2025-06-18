@@ -38,8 +38,8 @@ public class InMemoryCancellationManager(ILogger<InMemoryCancellationManager> lo
         var tokenState = _tokenStates.GetOrAdd(key, k => new InMemoryTokenState
         {
             Key = k,
-            CreatedAt = DateTime.UtcNow,
-            LastUpdatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.Now,
+            LastUpdatedAt = DateTime.Now
         });
 
         // 获取或创建取消令牌源
@@ -75,11 +75,11 @@ public class InMemoryCancellationManager(ILogger<InMemoryCancellationManager> lo
         var tokenState = _tokenStates.GetOrAdd(key, k => new InMemoryTokenState
         {
             Key = k,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.Now
         });
 
         tokenState.IsCancelled = true;
-        tokenState.LastUpdatedAt = DateTime.UtcNow;
+        tokenState.LastUpdatedAt = DateTime.Now;
         tokenState.Version++;
 
         // 取消本地令牌源（如果存在）
@@ -124,11 +124,11 @@ public class InMemoryCancellationManager(ILogger<InMemoryCancellationManager> lo
         var tokenState = _tokenStates.GetOrAdd(key, k => new InMemoryTokenState
         {
             Key = k,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.Now
         });
 
         tokenState.IsCancelled = false;
-        tokenState.LastUpdatedAt = DateTime.UtcNow;
+        tokenState.LastUpdatedAt = DateTime.Now;
         tokenState.Version++;
 
         // 移除并重新创建取消令牌源
@@ -220,12 +220,12 @@ public class InMemoryCancellationManager(ILogger<InMemoryCancellationManager> lo
         /// <summary>
         /// 创建时间
         /// </summary>
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         /// <summary>
         /// 最后更新时间
         /// </summary>
-        public DateTime LastUpdatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime LastUpdatedAt { get; set; } = DateTime.Now;
 
         /// <summary>
         /// 版本号，用于状态变更追踪

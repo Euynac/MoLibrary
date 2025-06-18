@@ -69,8 +69,8 @@ public class DistributedCancellationManager(
             {
                 Key = key,
                 IsCancelled = false,
-                CreatedAt = DateTime.UtcNow,
-                LastUpdatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
+                LastUpdatedAt = DateTime.Now,
                 Version = 1
             };
             
@@ -109,7 +109,7 @@ public class DistributedCancellationManager(
             if (state != null)
             {
                 state.IsCancelled = true;
-                state.LastUpdatedAt = DateTime.UtcNow;
+                state.LastUpdatedAt = DateTime.Now;
                 state.Version++;
                 
                 await stateStore.SaveStateAsync(key, state, StateKeyPrefix, cancellationToken, _options.StateTtl);
@@ -160,7 +160,7 @@ public class DistributedCancellationManager(
             if (state != null)
             {
                 state.IsCancelled = false;
-                state.LastUpdatedAt = DateTime.UtcNow;
+                state.LastUpdatedAt = DateTime.Now;
                 state.Version++;
                 
                 await stateStore.SaveStateAsync(key, state, StateKeyPrefix, cancellationToken, _options.StateTtl);
@@ -356,12 +356,12 @@ public class DistributedCancellationManager(
         /// <summary>
         /// 创建时间
         /// </summary>
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         /// <summary>
         /// 最后更新时间
         /// </summary>
-        public DateTime LastUpdatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime LastUpdatedAt { get; set; } = DateTime.Now;
 
         /// <summary>
         /// 版本号，用于乐观锁控制
