@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -9,7 +9,7 @@ namespace MoLibrary.Tool.Extensions
     /// <summary>
     /// Extension methods of object or generic type.
     /// </summary>
-    public static class ObjectExtensions
+    public static partial class ObjectExtensions
     {
         #region Format
         /// <summary>
@@ -267,19 +267,5 @@ namespace MoLibrary.Tool.Extensions
             }
             return result;
         }
-        /// <summary>
-        /// Force cast object to specific type.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="obj"></param>
-        /// <returns></returns>
-        public static T ForceCast<T>(this object obj) => (T)obj;
-        /// <summary>
-        /// Use as to cast object to specific type.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="obj"></param>
-        /// <returns></returns>
-        public static T? AsCast<T>(this object obj) where T : class => obj as T;
     }
 }

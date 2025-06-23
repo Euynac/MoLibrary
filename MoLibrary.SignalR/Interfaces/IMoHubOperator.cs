@@ -92,4 +92,11 @@ public interface IMoHubOperator<TIContract, TIUser> where TIContract : IMoHubCon
     /// </summary>
     /// <returns></returns>
     IReadOnlyList<SignalRConnectionInfo> GetConnectionInfos();
+    
+    /// <summary>
+    /// 判断当前用户是否还在线
+    /// </summary>
+    /// <param name="user"></param>
+    /// <returns></returns>
+    bool IsUserStillOnline(TIUser user);
 }

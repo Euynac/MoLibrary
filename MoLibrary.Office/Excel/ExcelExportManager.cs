@@ -28,6 +28,26 @@ namespace MoLibrary.Office.Excel
             }).ToList();
         }
 
+        public byte[] Export<TExportDto>(IReadOnlyList<TExportDto> data, ExcelHeaderRequest[] requests, Action<ExcelExportOptions>? optionAction = null,
+            ProgressBar? progressBar = null) where TExportDto : class
+        {
+            try
+            {
+                return ImplementExport(data, requests, optionAction, progressBar);
+            }
+            catch (Exception e)
+            {
+                progressBar?.CancelTaskAsync($"导出失败: {e.Message}").Wait();
+                throw new Exception(e.Message, e);
+            }
+        }
+
+        public Task<byte[]> ExportAsync<TExportDto>(IReadOnlyList<TExportDto> data, ExcelHeaderRequest[] requests, Action<ExcelExportOptions>? optionAction = null,
+            ProgressBar? progressBar = null) where TExportDto : class
+        {
+            return Task.FromResult(Export(data, requests, optionAction, progressBar));
+        }
+
         /// <summary>
         /// 导出
         /// </summary>
@@ -46,7 +66,7 @@ namespace MoLibrary.Office.Excel
         {
             try
             {
-                return ImplementExport(data, optionAction, onlyExportHeaderName, progressBar);
+                return Export(data,onlyExportHeaderName?.Select(p=> new ExcelHeaderRequest(p)).ToArray() ?? [], optionAction, progressBar);
             }
             catch (Exception e)
             {
@@ -79,15 +99,13 @@ namespace MoLibrary.Office.Excel
         /// </summary>
         /// <typeparam name="TExportDto"><paramref name="data"/> 集合中元素的类（导出的表头顺序为字段顺序）</typeparam>
         /// <param name="data">数据</param>
+        /// <param name="requests"></param>
         /// <param name="optionAction">配置选项</param>
-        /// <param name="onlyExportHeaderName">只需要导出的表头名称
-        ///     <para>1.不指定则按 <typeparamref name="TExportDto"/> 字段顺序导出全部，指定则按数组顺序导出</para>
-        ///     <para>2.表头名称 HeaderName 可使用 <see cref="GetExportHeader{TExportDto}"/> 方法获取</para>
-        /// </param>
         /// <param name="progressBar">进度条（可选）</param>
         /// <returns></returns>
         protected abstract byte[] ImplementExport<TExportDto>(IReadOnlyList<TExportDto> data,
-            Action<ExcelExportOptions> optionAction, string[]? onlyExportHeaderName, ProgressBar? progressBar = null)
+            ExcelHeaderRequest[] requests,
+            Action<ExcelExportOptions>? optionAction, ProgressBar? progressBar = null)
             where TExportDto : class;
     }
 }

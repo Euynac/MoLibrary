@@ -1,18 +1,22 @@
+using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
+using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Xml.Serialization;
 
-namespace MoLibrary.Core.Extensions
+namespace MoLibrary.Tool.Extensions
 {
-    public static class ObjectExtensions
+    public static partial class ObjectExtensions
     {
         /// <summary>
         /// Used to simplify and beautify casting an object to a type.
         /// </summary>
-        /// <typeparam name="T">Type to be casted</typeparam>
+        /// <typeparam name="T">Type to be cast</typeparam>
         /// <param name="obj">Object to cast</param>
-        /// <returns>Casted object</returns>
+        /// <returns>Cast object</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static T As<T>(this object obj)
             where T : class
@@ -106,7 +110,7 @@ namespace MoLibrary.Core.Extensions
 
         public static string ToXmlString<T>(this T obj) where T : class
         {
-            XmlSerializer serializer = new XmlSerializer(typeof(T));
+            var serializer = new XmlSerializer(typeof(T));
 
             using StringWriter sw = new();
             serializer.Serialize(sw, obj);

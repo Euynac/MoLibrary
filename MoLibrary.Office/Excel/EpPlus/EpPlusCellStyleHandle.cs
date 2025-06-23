@@ -149,7 +149,7 @@ namespace MoLibrary.Office.Excel.EpPlus
                 return;
             }
 
-            styleAttr = styleAttr ?? new DataStyleAttribute();
+            styleAttr ??= new DataStyleAttribute();
 
             if (!string.IsNullOrWhiteSpace(styleAttr.DataFormat)) cellStyle.Numberformat.Format = styleAttr.DataFormat;
             cellStyle.ShrinkToFit = styleAttr.ShrinkToFit;

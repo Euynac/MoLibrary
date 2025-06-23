@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using System.Reflection;
 using MoLibrary.Core.Extensions;
+using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.Repository.EntityInterfaces;
 

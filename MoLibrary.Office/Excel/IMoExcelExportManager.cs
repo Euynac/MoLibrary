@@ -20,6 +20,29 @@ namespace MoLibrary.Office.Excel
         /// </summary>
         /// <typeparam name="TExportDto"><paramref name="data"/> 集合中元素的类（按 <typeparamref name="TExportDto"/> 字段顺序导出）</typeparam>
         /// <param name="data">数据</param>
+        /// <param name="requests"></param>
+        /// <param name="optionAction">配置选项</param>
+        /// <param name="progressBar">进度条实例，可选，为null时不报告进度</param>
+        /// <returns></returns>
+        byte[] Export<TExportDto>(IReadOnlyList<TExportDto> data, ExcelHeaderRequest[] requests, Action<ExcelExportOptions>? optionAction = null, ProgressBar? progressBar = null)
+            where TExportDto : class;
+
+        /// <summary>
+        /// 导出
+        /// </summary>
+        /// <typeparam name="TExportDto"><paramref name="data"/> 集合中元素的类（按 <typeparamref name="TExportDto"/> 字段顺序导出）</typeparam>
+        /// <param name="data">数据</param>
+        /// <param name="requests"></param>
+        /// <param name="optionAction">配置选项</param>
+        /// <param name="progressBar">进度条实例，可选，为null时不报告进度</param>
+        /// <returns></returns>
+        Task<byte[]> ExportAsync<TExportDto>(IReadOnlyList<TExportDto> data, ExcelHeaderRequest[] requests, Action<ExcelExportOptions>? optionAction = null, ProgressBar? progressBar = null)
+            where TExportDto : class;
+        /// <summary>
+        /// 导出
+        /// </summary>
+        /// <typeparam name="TExportDto"><paramref name="data"/> 集合中元素的类（按 <typeparamref name="TExportDto"/> 字段顺序导出）</typeparam>
+        /// <param name="data">数据</param>
         /// <param name="optionAction">配置选项</param>
         /// <param name="onlyExportHeaderName">只需要导出的表头名称
         ///     <para>1.不指定则按 <typeparamref name="TExportDto"/> 字段顺序导出全部，指定则按数组顺序导出</para>

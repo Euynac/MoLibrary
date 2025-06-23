@@ -9,39 +9,39 @@ namespace MoLibrary.Office.Excel
     /// </summary>
     public static class ExcelStyleHelper
     {
-        /// <summary>
-        /// 获取表头样式和字体集合
-        /// </summary>
-        /// <typeparam name="TExportDto"></typeparam>
-        /// <returns></returns>
-        public static List<ExcelCellStyleInfo<HeaderStyleAttribute, HeaderFontAttribute>> GetHeaderStyleFontList<TExportDto>() where TExportDto : class
-        {
-            var list = new List<ExcelCellStyleInfo<HeaderStyleAttribute, HeaderFontAttribute>>();
+        ///// <summary>
+        ///// 获取表头样式和字体集合
+        ///// </summary>
+        ///// <typeparam name="TExportDto"></typeparam>
+        ///// <returns></returns>
+        //public static List<ExcelCellStyleInfo<HeaderStyleAttribute, HeaderFontAttribute>> GetHeaderStyleFontList<TExportDto>() where TExportDto : class
+        //{
+        //    var list = new List<ExcelCellStyleInfo<HeaderStyleAttribute, HeaderFontAttribute>>();
 
-            foreach (var p in ExcelHelper.GetProperties<TExportDto>())
-            {
-                list.Add(p.GetHeaderStyleFont<TExportDto>());
-            }
+        //    foreach (var p in ExcelHelper.GetProperties<TExportDto>())
+        //    {
+        //        list.Add(p.GetHeaderStyleFont<TExportDto>());
+        //    }
 
-            return list;
-        }
+        //    return list;
+        //}
 
-        /// <summary>
-        /// 获取数据样式和字体集合
-        /// </summary>
-        /// <typeparam name="TExportDto"></typeparam>
-        /// <returns></returns>
-        public static List<ExcelCellStyleInfo<DataStyleAttribute, DataFontAttribute>> GetDataStyleFontList<TExportDto>() where TExportDto : class
-        {
-            var list = new List<ExcelCellStyleInfo<DataStyleAttribute, DataFontAttribute>>();
+        ///// <summary>
+        ///// 获取数据样式和字体集合
+        ///// </summary>
+        ///// <typeparam name="TExportDto"></typeparam>
+        ///// <returns></returns>
+        //public static List<ExcelCellStyleInfo<DataStyleAttribute, DataFontAttribute>> GetDataStyleFontList<TExportDto>() where TExportDto : class
+        //{
+        //    var list = new List<ExcelCellStyleInfo<DataStyleAttribute, DataFontAttribute>>();
 
-            foreach (var p in ExcelHelper.GetProperties<TExportDto>())
-            {
-                list.Add(p.GetDataStyleFont<TExportDto>());
-            }
+        //    foreach (var p in ExcelHelper.GetProperties<TExportDto>())
+        //    {
+        //        list.Add(p.GetDataStyleFont<TExportDto>());
+        //    }
 
-            return list;
-        }
+        //    return list;
+        //}
 
         /// <summary>
         /// 获取表头样式和字体

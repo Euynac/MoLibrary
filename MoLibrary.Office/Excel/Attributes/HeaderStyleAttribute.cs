@@ -43,7 +43,7 @@ namespace MoLibrary.Office.Excel.Attributes
         /// <para>Npoi</para>
         /// <para>EpPlus</para>
         /// </summary>
-        public string DataFormat { get; set; }
+        public string? DataFormat { get; set; }
 
         /// <summary>
         /// 是否自动换行
