@@ -1,11 +1,16 @@
 namespace MoLibrary.StateStore.ProgressBar;
 
-public class ProgressBarStatus(int totalSteps)
+public class ProgressBarStatus(int totalSteps, string id)
 {
     /// <summary>
     /// 总步数
     /// </summary>
     public int TotalSteps { get; } = totalSteps;
+
+    /// <summary>
+    /// 进度条作业Id
+    /// </summary>
+    public string Id { get; } = id;
 
     /// <summary>
     /// 当前进度步数

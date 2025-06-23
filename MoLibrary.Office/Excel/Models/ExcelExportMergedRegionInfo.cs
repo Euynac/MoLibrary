@@ -33,7 +33,7 @@ namespace MoLibrary.Office.Excel.Models
         /// <summary>
         /// 值
         /// </summary>
-        public object Value { get; set; }
+        public object? Value { get; set; }
 
         #region 方法
 

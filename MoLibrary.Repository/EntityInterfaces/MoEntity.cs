@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using MoLibrary.Tool.Extensions;
 
@@ -26,6 +27,7 @@ public abstract class MoEntity<TKey> : MoEntity, IMoEntity<TKey>
     /// Id of the entity.
     /// </summary>
     [JsonInclude]
+   // [Key]
     public TKey Id { get; protected set; } = default!;
 
     public override string ToString()

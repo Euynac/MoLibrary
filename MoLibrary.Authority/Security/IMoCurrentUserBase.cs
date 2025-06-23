@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Extensions;
+using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.Authority.Security;
 

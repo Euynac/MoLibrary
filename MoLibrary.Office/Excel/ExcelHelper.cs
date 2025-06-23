@@ -126,12 +126,15 @@ namespace MoLibrary.Office.Excel
                 .ToArray();
             return properties;
         }
+
         /// <summary>
         /// 验证表头，并获取要导出的表头信息
         /// </summary>
         /// <typeparam name="TExportDto"></typeparam>
         /// <param name="onlyExportHeaderName">只需要导出的表头名称（指定则按 <typeparamref name="TExportDto"/> 字段顺序导出全部，不指定空则按数组顺序导出）</param>
-        public static ExcelExportHeaderInfo[] CheckHeader<TExportDto>(string[]? onlyExportHeaderName) where TExportDto : class
+        /// <param name="optionsDisallowDuplicateHeader">检查导出字段选择重复性</param>
+        public static ExcelExportHeaderInfo[] CheckHeader<TExportDto>(ExcelHeaderRequest[] onlyExportHeaderName,
+            bool optionsDisallowDuplicateHeader = false) where TExportDto : class
         {
             var className = typeof(TExportDto).Name;
 
@@ -150,7 +153,7 @@ namespace MoLibrary.Office.Excel
                     $"类【{className}】中 Display Name 重复（或与属性名称重复）：{string.Join(",", headerDuplicate)}");
             }
 
-            if (onlyExportHeaderName == null || onlyExportHeaderName.LongLength == 0)
+            if (onlyExportHeaderName.LongLength == 0)
             {
                 headers = properties.Select(a => new ExcelExportHeaderInfo
                 {
@@ -165,19 +168,24 @@ namespace MoLibrary.Office.Excel
             }
             else
             {
-                var onlyDuplicate = onlyExportHeaderName
-                    .GroupBy(a => a)
-                    .Where(a => a.Count() > 1)
-                    .Select(a => a.Key).Distinct().ToList();
-
-                if (onlyDuplicate.Any())
+                if (optionsDisallowDuplicateHeader)
                 {
-                    throw new Exception(
-                        $"指定表头名称重复：{string.Join(",", onlyDuplicate)}");
+                    var onlyDuplicate = onlyExportHeaderName
+                        .GroupBy(a => a)
+                        .Where(a => a.Count() > 1)
+                        .Select(a => a.Key).Distinct().ToList();
+
+                    if (onlyDuplicate.Any())
+                    {
+                        throw new Exception(
+                            $"指定表头名称重复：{string.Join(",", onlyDuplicate)}");
+                    }
                 }
 
-                foreach (var name in onlyExportHeaderName)
+                foreach (var request in onlyExportHeaderName)
                 {
+                    var name = request.QueryName;
+
                     var p = properties.FirstOrDefault(a => a.Name.Equals(name, StringComparison.OrdinalIgnoreCase) || a.GetDisplayNameFromProperty() == name);
                     if (p == null)
                     {
@@ -187,7 +195,8 @@ namespace MoLibrary.Office.Excel
                     headers.Add(new ExcelExportHeaderInfo
                     {
                         PropertyInfo = p,
-                        HeaderName = p.GetDisplayNameFromProperty()
+                        HeaderName = request.CustomHeaderName ?? p.GetDisplayNameFromProperty(),
+                        Option = request
                     });
                 }
             }

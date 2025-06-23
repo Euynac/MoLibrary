@@ -15,14 +15,14 @@ public class ProgressBar(ProgressBarSetting setting, IMoProgressBarService servi
     /// <summary>
     /// 任务唯一标识符
     /// </summary>
-    public string TaskId { get; } = taskId;
+    public string TaskId => Status.Id;
 
     public ProgressBarSetting Setting { get; } = setting;
 
     /// <summary>
     /// 当前进度状态
     /// </summary>
-    public virtual ProgressBarStatus Status { get; protected set; } = new(setting.TotalSteps);
+    public virtual ProgressBarStatus Status { get; protected set; } = new(setting.TotalSteps, taskId);
 
     /// <summary>
     /// 任务是否已完成

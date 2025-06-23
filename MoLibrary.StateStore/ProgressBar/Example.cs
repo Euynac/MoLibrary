@@ -3,12 +3,8 @@ namespace MoLibrary.StateStore.ProgressBar;
 /// <summary>
 /// 自定义进度条状态示例
 /// </summary>
-public class CustomProgressBarStatus : ProgressBarStatus
+public class CustomProgressBarStatus(int totalSteps, string id) : ProgressBarStatus(totalSteps, id)
 {
-    public CustomProgressBarStatus(int totalSteps) : base(totalSteps)
-    {
-    }
-
     /// <summary>
     /// 自定义属性：处理的文件数量
     /// </summary>
@@ -28,19 +24,15 @@ public class CustomProgressBarStatus : ProgressBarStatus
 /// <summary>
 /// 自定义进度条示例
 /// </summary>
-public class CustomProgressBar : ProgressBar
+public class CustomProgressBar(ProgressBarSetting setting, IMoProgressBarService service, string taskId)
+    : ProgressBar(setting, service, taskId)
 {
-    public CustomProgressBar(ProgressBarSetting setting, IMoProgressBarService service, string taskId)
-        : base(setting, service, taskId)
-    {
-        // 使用自定义状态替换默认状态
-        Status = new CustomProgressBarStatus(setting.TotalSteps);
-    }
+    
 
     /// <summary>
     /// 获取自定义状态
     /// </summary>
-    public new CustomProgressBarStatus Status { get; private set; }
+    public new CustomProgressBarStatus Status { get; private set; } = new(setting.TotalSteps, taskId);// 使用自定义状态替换默认状态
 
     /// <summary>
     /// 更新文件处理进度

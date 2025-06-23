@@ -81,7 +81,7 @@ public class ModuleConfigurationDashboardGuide : MoModuleGuide<ModuleConfigurati
     {
         if (_isDashboard is true) throw new InvalidOperationException("面板服务无需注册面板客户端");
         _isDashboard = false;
-        DependsOnModule<ModuleRegisterCentreGuide>().Register().SetAsCentreClient<TServer, TClient>();
+        DependsOnModule<ModuleRegisterCentreGuide>().Register(action).SetAsCentreClient<TServer, TClient>();
         ConfigureServices(context =>
         {
             context.Services.AddSingleton<IMoConfigurationModifier, MoConfigurationJsonFileModifier>();

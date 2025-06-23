@@ -306,7 +306,7 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
                     //    break;
                     //}
 
-                    if (entry.Entity is IHasSoftDelete && entry.Entity.AsCast<IHasSoftDelete>()!.IsDeleted)
+                    if (entry.Entity is IHasSoftDelete && entry.Entity.As<IHasSoftDelete>().IsDeleted)
                     {
                         Publisher?.AddEntityDeletedEvent(entry.Entity);
 

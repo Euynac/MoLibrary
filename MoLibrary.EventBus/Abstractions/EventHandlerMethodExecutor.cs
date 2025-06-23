@@ -1,4 +1,5 @@
 using MoLibrary.Core.Extensions;
+using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.EventBus.Abstractions;
 

@@ -38,6 +38,11 @@ namespace MoLibrary.Office.Excel.Models
         public ExcelTypeEnum ExcelType { get; set; }
 
         /// <summary>
+        /// 检查<see cref="ExcelHeaderRequest.QueryName"/>是否有重复列，不允许选择导出相同的列
+        /// </summary>
+        public bool DisallowDuplicateHeader { get; set; }
+
+        /// <summary>
         /// 构造
         /// </summary>
         public ExcelExportOptions()

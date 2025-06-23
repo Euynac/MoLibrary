@@ -81,9 +81,9 @@ public class ProgressBarSetting
     public int TotalSteps { get; set; } = 100;
 
     /// <summary>
-    /// 进度条状态的生存时间，超过此时间后状态未更新将被自动清理，默认为10分钟
+    /// 进度条状态的生存时间，超过此时间后状态未更新将被自动清理，默认为5分钟
     /// </summary>
-    public TimeSpan TimeToLive { get; set; } = TimeSpan.FromMinutes(10);
+    public TimeSpan TimeToLive { get; set; } = TimeSpan.FromMinutes(5);
 
     /// <summary>
     /// 进度条状态完成后的生存时间，超过此时间后状态将被自动清理，默认为3分钟

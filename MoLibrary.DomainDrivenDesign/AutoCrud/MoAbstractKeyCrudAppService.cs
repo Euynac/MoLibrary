@@ -167,7 +167,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
         
         
         if ((await ApplyCustomActionToResponseListAsync(input, dtos)).IsFailed(out var error, out var data)) return error;
-        return new ResPaged<dynamic>(result.TotalCounts, (IReadOnlyList<dynamic>) data, result.CurrentPage,
+        return new ResPaged<dynamic>(result.TotalCounts, (IReadOnlyList<dynamic>) (data.IsNullOrEmptySet()? dtos: data), result.CurrentPage,
             result.PageSize);
 
 
@@ -395,7 +395,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
         var queryable = WithDetail() ? await Repository.WithDetailsAsync() : await Repository.GetQueryableAsync();
         queryable = queryable.AsNoTracking();
 
-        queryable = ApplyListInclude(queryable);
+        queryable = ApplyListInclude(queryable, input);
 
         queryable = await ApplyCustomFilterQueryAsync(input, queryable);
 
@@ -434,12 +434,14 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
     {
         return false;
     }
+
     /// <summary>
     /// 在GetList方法时应用Include
     /// </summary>
     /// <param name="queryable">要应用Include的查询</param>
+    /// <param name="input"></param>
     /// <returns>应用Include后的查询</returns>
-    protected virtual IQueryable<TEntity> ApplyListInclude(IQueryable<TEntity> queryable)
+    protected virtual IQueryable<TEntity> ApplyListInclude(IQueryable<TEntity> queryable, TGetListInput input)
     {
         return queryable;
     }
@@ -504,8 +506,8 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
     {
         //巨坑：ProjectToType中Dto若含有子表字段定义，会连带查出，无需主动Include。
         //20240422 Mapster暂不支持复杂类型ProjectToType
-        return await ObjectMapper.ProjectToType<TGetListOutputDto>(query).ToListAsync();
-        //return Task.FromResult(ObjectMapper.Map<List<TEntity>, List<TGetListOutputDto>>(entities));
+        //return await ObjectMapper.ProjectToType<TGetListOutputDto>(query).ToListAsync();
+        return ObjectMapper.Map<List<TEntity>, List<TGetListOutputDto>>(await query.ToListAsync());
     }
     #endregion
     protected class ListResult(IReadOnlyList<dynamic> results)

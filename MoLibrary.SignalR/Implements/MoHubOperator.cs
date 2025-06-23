@@ -70,6 +70,11 @@ public abstract class MoHubOperator<TIContract, THubServer, TIUser>(
         return Users(users);
     }
 
+    public bool IsUserStillOnline(TIUser user)
+    {
+        return GetConnectionInfos().Any(p => p.ClaimsPrincipal.AsMoCurrentUser().Id == user.Id);
+    }
+
     public TIContract Users(Predicate<TIUser> judge)
     {
         var users = GetUsers(judge);

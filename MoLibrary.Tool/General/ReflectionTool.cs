@@ -51,7 +51,7 @@ namespace MoLibrary.Tool.General
         /// <typeparam name="T"></typeparam>
         /// <param name="instance"></param>
         /// <returns></returns>
-        public static IEnumerable<object?> GetPublicPropertyValues<T>(this T instance) where T : class
+        public static IEnumerable<object?> GetPublicPropertyValues<T>(T instance) where T : class
         {
             var type = typeof(T);
             foreach (var propertyInfo in type.GetProperties())

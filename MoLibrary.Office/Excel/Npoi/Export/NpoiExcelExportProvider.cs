@@ -12,11 +12,12 @@ namespace MoLibrary.Office.Excel.Npoi.Export
     public class NpoiExcelExportProvider(INpoiCellStyleHandle npoiCellStyleHandle, INpoiExcelHandle npoiExcelHandle) : ExcelExportManager
     {
         protected override byte[] ImplementExport<TExportDto>(IReadOnlyList<TExportDto> data,
-            Action<ExcelExportOptions> optionAction, string[]? onlyExportHeaderName, ProgressBar? progressBar = null)
+            ExcelHeaderRequest[] requests,
+            Action<ExcelExportOptions>? optionAction, ProgressBar? progressBar = null)
         {
             var export = new NpoiExcelExportBase(npoiCellStyleHandle, npoiExcelHandle);
 
-            return export.Export(data, optionAction, onlyExportHeaderName, progressBar);
+            return export.Export(data, optionAction, requests, progressBar);
         }
     }
 }
