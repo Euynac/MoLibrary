@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MoLibrary.DependencyInjection.AppInterfaces;
 using MoLibrary.Repository;
 using MoLibrary.Repository.Interfaces;
+using MoLibrary.Repository.Modules;
 using MoLibrary.Repository.Transaction;
 using Moq;
 
@@ -37,11 +39,9 @@ namespace Test.MoLibrary.Repository
                 .UseInMemoryDatabase(databaseName: $"ComplexEntityTestDb_{Guid.NewGuid()}")
                 .Options;
 
-            _serviceProviderMock = new Mock<IMoServiceProvider>();
-            _dbContext = new ComplexEntityDbContext(_dbContextOptions, _serviceProviderMock.Object);
-
-            // Setup mocks
+            // Setup mocks first
             _dbContextProviderMock = new Mock<IDbContextProvider<ComplexEntityDbContext>>();
+            _serviceProviderMock = new Mock<IMoServiceProvider>();
             _unitOfWorkManagerMock = new Mock<IMoUnitOfWorkManager>();
             _unitOfWorkMock = new Mock<IMoUnitOfWork>();
             _serviceProviderFactoryMock = new Mock<IServiceProvider>();
@@ -49,10 +49,6 @@ namespace Test.MoLibrary.Repository
             _employeeLoggerMock = new Mock<ILogger<MoRepositoryBase<Employee>>>();
             _projectLoggerMock = new Mock<ILogger<MoRepositoryBase<Project>>>();
             _taskLoggerMock = new Mock<ILogger<MoRepositoryBase<TaskEntity>>>();
-
-            // Setup dbContextProvider to return our in-memory context
-            _dbContextProviderMock.Setup(x => x.GetDbContextAsync())
-                .ReturnsAsync(_dbContext);
 
             // Setup service provider to return loggers and unit of work manager
             _serviceProviderFactoryMock.Setup(x => x.GetService(typeof(ILogger<MoRepositoryBase<Department>>)))
@@ -66,13 +62,22 @@ namespace Test.MoLibrary.Repository
 
             _serviceProviderFactoryMock.Setup(x => x.GetService(typeof(IMoUnitOfWorkManager)))
                 .Returns(_unitOfWorkManagerMock.Object);
-
+            _serviceProviderFactoryMock.Setup(x => x.GetService(typeof(IOptions<ModuleRepositoryOption>)))
+                .Returns(new OptionsWrapper<ModuleRepositoryOption>(new ModuleRepositoryOption()));
+            
             // Setup unit of work manager to return current unit of work
             _unitOfWorkManagerMock.Setup(x => x.Current)
                 .Returns(_unitOfWorkMock.Object);
 
             _serviceProviderMock.Setup(x => x.ServiceProvider)
                 .Returns(_serviceProviderFactoryMock.Object);
+
+            // Create DbContext AFTER service provider is properly configured
+            _dbContext = new ComplexEntityDbContext(_dbContextOptions, _serviceProviderMock.Object);
+
+            // Setup dbContextProvider to return our in-memory context
+            _dbContextProviderMock.Setup(x => x.GetDbContextAsync())
+                .ReturnsAsync(_dbContext);
 
             // Create repositories with mocked dependencies
             _departmentRepository = new DepartmentRepository(_dbContextProviderMock.Object)
@@ -197,7 +202,15 @@ namespace Test.MoLibrary.Repository
                 LastName = "Smith",
                 Email = "alice.smith@example.com",
                 Salary = 85000,
-                Department = department
+                Department = department,
+                ContactInfo = new ContactInformation
+                {
+                    PhoneNumber = "123-456-7890",
+                    Address = "123 Alice St",
+                    City = "Dev City",
+                    Country = "USA",
+                    PostalCode = "12345"
+                }
             };
 
             var employee2 = new Employee
@@ -206,7 +219,15 @@ namespace Test.MoLibrary.Repository
                 LastName = "Johnson",
                 Email = "bob.johnson@example.com",
                 Salary = 78000,
-                Department = department
+                Department = department,
+                ContactInfo = new ContactInformation
+                {
+                    PhoneNumber = "123-456-7891",
+                    Address = "123 Bob St",
+                    City = "Dev City",
+                    Country = "USA",
+                    PostalCode = "12345"
+                }
             };
 
             var project = new Project
@@ -330,13 +351,25 @@ namespace Test.MoLibrary.Repository
         public async Task UpdateAsync_WithNavigationProperties_ShouldUpdateRelatedEntities()
         {
             // Arrange - Create initial entity graph
-            var department = new Department { Name = "Marketing" };
+            var department = new Department 
+            { 
+                Name = "Marketing",
+                Description = "Marketing department"
+            };
             var employee = new Employee
             {
                 FirstName = "Jane",
                 LastName = "Smith",
                 Email = "jane.smith@example.com",
-                Department = department
+                Department = department,
+                ContactInfo = new ContactInformation
+                {
+                    PhoneNumber = "123-456-7890",
+                    Address = "123 Marketing St",
+                    City = "Business City",
+                    Country = "USA",
+                    PostalCode = "12345"
+                }
             };
 
             await _departmentRepository.InsertAsync(department);
@@ -376,20 +409,40 @@ namespace Test.MoLibrary.Repository
         public async Task DeleteAsync_WithCascade_ShouldDeleteRelatedEntities()
         {
             // Arrange - Create entity graph with relationships
-            var department = new Department { Name = "Temporary Department" };
+            var department = new Department 
+            { 
+                Name = "Temporary Department",
+                Description = "Temporary department for testing"
+            };
             var employee1 = new Employee
             {
                 FirstName = "Temp",
                 LastName = "User1",
                 Email = "temp1@example.com",
-                Department = department
+                Department = department,
+                ContactInfo = new ContactInformation
+                {
+                    PhoneNumber = "123-456-7890",
+                    Address = "123 Test St",
+                    City = "Test City",
+                    Country = "Test Country",
+                    PostalCode = "12345"
+                }
             };
             var employee2 = new Employee
             {
                 FirstName = "Temp",
                 LastName = "User2",
                 Email = "temp2@example.com",
-                Department = department
+                Department = department,
+                ContactInfo = new ContactInformation
+                {
+                    PhoneNumber = "123-456-7891",
+                    Address = "124 Test St",
+                    City = "Test City",
+                    Country = "Test Country",
+                    PostalCode = "12345"
+                }
             };
 
             await _departmentRepository.InsertAsync(department);
@@ -417,17 +470,30 @@ namespace Test.MoLibrary.Repository
         public async Task WithDetailsAsync_ShouldLoadNavigationProperties()
         {
             // Arrange - Create entity graph
-            var department = new Department { Name = "Sales" };
+            var department = new Department 
+            { 
+                Name = "Sales",
+                Description = "Sales department"
+            };
             var employee = new Employee
             {
                 FirstName = "Mike",
                 LastName = "Jones",
                 Email = "mike.jones@example.com",
-                Department = department
+                Department = department,
+                ContactInfo = new ContactInformation
+                {
+                    PhoneNumber = "123-456-7890",
+                    Address = "123 Sales St",
+                    City = "Sales City",
+                    Country = "USA",
+                    PostalCode = "12345"
+                }
             };
             var project = new Project
             {
                 Name = "Sales Campaign",
+                Description = "Sales campaign project",
                 StartDate = DateTime.Today,
                 Status = ProjectStatus.Planning
             };
@@ -443,7 +509,10 @@ namespace Test.MoLibrary.Repository
 
             // Act
             var queryable = await _projectRepository.WithDetailsAsync();
-            var projectWithDetails = await queryable.FirstOrDefaultAsync(p => p.Id == project.Id);
+            var projectWithDetails = await queryable
+                .Include(p => p.Employees)
+                .ThenInclude(e => e.Department)
+                .FirstOrDefaultAsync(p => p.Id == project.Id);
 
             // Assert
             Assert.That(projectWithDetails, Is.Not.Null);

@@ -5,6 +5,7 @@ using MoLibrary.DependencyInjection.AppInterfaces;
 using MoLibrary.Repository;
 using MoLibrary.Repository.EntityInterfaces;
 using MoLibrary.Repository.Interfaces;
+using MoLibrary.Repository.Modules;
 using MoLibrary.Repository.Transaction;
 using Moq;
 
@@ -44,8 +45,8 @@ namespace Test.MoLibrary.Repository
             // Setup service provider to return logger and unit of work manager
             _serviceProviderFactoryMock.Setup(x => x.GetService(typeof(ILogger<MoRepositoryBase<TestEntity>>)))
                 .Returns(_loggerMock.Object);
-            _serviceProviderFactoryMock.Setup(x => x.GetService(typeof(IOptions<MoRepositoryOptions>)))
-                .Returns(new OptionsWrapper<MoRepositoryOptions>(new MoRepositoryOptions()));
+            _serviceProviderFactoryMock.Setup(x => x.GetService(typeof(IOptions<ModuleRepositoryOption>)))
+                .Returns(new OptionsWrapper<ModuleRepositoryOption>(new ModuleRepositoryOption()));
             _serviceProviderFactoryMock.Setup(x => x.GetService(typeof(IMoUnitOfWorkManager)))
                 .Returns(_unitOfWorkManagerMock.Object);
 
