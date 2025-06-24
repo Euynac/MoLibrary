@@ -66,7 +66,8 @@ public class MoUnitOfWorkManager(IServiceScopeFactory serviceScopeFactory)
             unitOfWork.OnDisposed(() =>
             {
                 SetUnitOfWork(outerUow);
-                //scope.Dispose();
+                // ReSharper disable once AccessToDisposedClosure
+                scope.Dispose();
             });
 
             return unitOfWork;
