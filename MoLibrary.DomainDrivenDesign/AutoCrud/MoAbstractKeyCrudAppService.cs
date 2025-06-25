@@ -256,6 +256,8 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
         var entity = await GetEntityByIdAsync(id);
         //TODO: Check if input has id different than given id and normalize if it's default value, throw ex otherwise
         MapToEntity(input, entity);
+
+        //TODO 其实可以不需要Update，因为已经开了跟踪，直接SaveChange即可
         await Repository.UpdateAsync(entity, autoSave: true);
 
         return await MapToGetOutputDtoAsync(entity);

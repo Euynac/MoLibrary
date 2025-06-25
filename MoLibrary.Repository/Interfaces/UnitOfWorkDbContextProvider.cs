@@ -32,7 +32,7 @@ public class UnitOfWorkDbContextProvider<TDbContext>(
         {
             return context;
         }
-
+        
         var dbContext = await CreateDbContextAsync(unitOfWork);
         unitOfWork.AttachDbContext(dbContext);
         return dbContext;
@@ -63,6 +63,11 @@ public class UnitOfWorkDbContextProvider<TDbContext>(
             var dbTransaction = unitOfWork.Options.IsolationLevel.HasValue
                 ? await dbContext.Database.BeginTransactionAsync(unitOfWork.Options.IsolationLevel.Value, token)
                 : await dbContext.Database.BeginTransactionAsync(token);
+
+            unitOfWork.OnDisposed(() =>
+            {
+                dbTransaction.Dispose();
+            });
         }
         catch (Exception e) when (e is InvalidOperationException or NotSupportedException)
         {

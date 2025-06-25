@@ -390,7 +390,7 @@ namespace MoLibrary.Tool.Extensions
                         var flag = index + 1 < chars.Length;
                         if (index > 0 & flag && !char.IsUpper(chars[index + 1]))
                         {
-                            if (chars[index + 1] != ' ' && chars[index + 1] != '_')
+                            if (chars[index + 1] != ' ' && chars[index + 1] != '_' && !chars[index + 1].IsDigit())
                                 break;
                             chars[index] = char.ToLowerInvariant(chars[index]);
                             break;

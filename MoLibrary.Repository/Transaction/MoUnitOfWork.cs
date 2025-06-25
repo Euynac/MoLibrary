@@ -77,7 +77,7 @@ public class MoUnitOfWork(
             _isCompleting = true;
             await SaveChangesAsync(cancellationToken);
 
-            //await publisher.FlushEventBuffer();
+            await publisher.FlushEventBuffer();
             await CommitTransactionsAsync(cancellationToken);
             await OnCompletedAsync();
             IsCompleted = true;
@@ -134,7 +134,6 @@ public class MoUnitOfWork(
 
     public virtual void Dispose()
     {
-        // TODO 是否应该自动提交事务？
         if (IsDisposed)
         {
             return;
@@ -147,12 +146,15 @@ public class MoUnitOfWork(
             OnFailed();
         }
 
+        //在CreateDbContextWithTransactionAsync中对事务对象进行Dispose对于未提交的事务会自动回滚
+        //事务回滚后，事务已经结束，不用再提交
+        //强制结束程序，数据库检测到客户端连接断开也会自动回滚事务
         OnDisposed();
 
         //dispose all db contexts
         foreach (var dbContext in _dbContexts.Values)
         {
-            dbContext.Dispose();
+            dbContext.Dispose();//对于未提交的事务会自动回滚
         }
     }
 
