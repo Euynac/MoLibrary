@@ -1,7 +1,7 @@
 namespace MoLibrary.Core.Features.MoScopedData;
 
 /// <summary>
-/// 环境数据接口，用于在Scoped生命周期内临时存储和管理状态数据
+/// 临时数据接口，用于在Scoped生命周期内临时存储和管理状态数据
 /// </summary>
 public interface IMoScopedData
 {
