@@ -1,17 +1,16 @@
-using System.Collections.Concurrent;
+using MoLibrary.Core.Features.MoScopedData;
 
-namespace MoLibrary.Core.Features.MoAmbientData;
+namespace MoLibrary.Repository.Transaction;
 
 /// <summary>
 /// 环境数据默认实现类，用于在Scoped生命周期内临时存储和管理状态数据。
 /// </summary>
-public class MoAmbientDataDefaultScopedProvider : IMoAmbientData
+public class MoScopedDataUnitOfWorkProvider(IMoUnitOfWorkManager manager) : IMoScopedData
 {
     /// <summary>
     /// 数据字典，用于存储键值对数据
     /// </summary>
-    public IDictionary<string, object?> DataDict => _dataDict;
-    private ConcurrentDictionary<string, object?> _dataDict { get; } = new();
+    public IDictionary<string, object?> DataDict => manager.Current?.Items ?? new Dictionary<string, object?>();
 
     /// <summary>
     /// 设置数据
@@ -20,7 +19,11 @@ public class MoAmbientDataDefaultScopedProvider : IMoAmbientData
     /// <param name="value">数据值</param>
     public void SetData(string key, object? value = null)
     {
-        _dataDict.AddOrUpdate(key, value, (_, _) => value);
+        var current = manager.Current;
+        if (current != null)
+        {
+            current.Items[key] = value;
+        }
     }
 
     /// <summary>
@@ -28,14 +31,15 @@ public class MoAmbientDataDefaultScopedProvider : IMoAmbientData
     /// </summary>
     /// <typeparam name="T">数据类型</typeparam>
     /// <param name="key">数据键</param>
-    /// <returns>数据值，如果不存在则返回null</returns>
+    /// <returns>数据值，如果不存在则返回默认值</returns>
     public T? GetData<T>(string key)
     {
-        if (DataDict.TryGetValue(key, out var value) && value is  T directValue)
+        var current = manager.Current;
+        if (current?.Items.TryGetValue(key, out var value) == true && value is T typedValue)
         {
-            return directValue;
+            return typedValue;
         }
-        return default;
+        return default(T);
     }
 
     /// <summary>
@@ -47,8 +51,12 @@ public class MoAmbientDataDefaultScopedProvider : IMoAmbientData
     /// <returns>数据值或默认值</returns>
     public T GetData<T>(string key, T defaultValue)
     {
-        var result = GetData<T>(key);
-        return result ?? defaultValue;
+        var current = manager.Current;
+        if (current?.Items.TryGetValue(key, out var value) == true && value is T typedValue)
+        {
+            return typedValue;
+        }
+        return defaultValue;
     }
 
     /// <summary>
@@ -58,7 +66,8 @@ public class MoAmbientDataDefaultScopedProvider : IMoAmbientData
     /// <returns>如果存在返回true，否则返回false</returns>
     public bool HasData(string key)
     {
-        return _dataDict.ContainsKey(key);
+        var current = manager.Current;
+        return current?.Items.ContainsKey(key) == true;
     }
 
     /// <summary>
@@ -68,7 +77,12 @@ public class MoAmbientDataDefaultScopedProvider : IMoAmbientData
     /// <returns>如果成功移除返回true，否则返回false</returns>
     public bool RemoveData(string key)
     {
-        return _dataDict.TryRemove(key, out _);
+        var current = manager.Current;
+        if (current != null)
+        {
+            return current.Items.Remove(key);
+        }
+        return false;
     }
 
     /// <summary>
@@ -76,27 +90,7 @@ public class MoAmbientDataDefaultScopedProvider : IMoAmbientData
     /// </summary>
     public void Clear()
     {
-        _dataDict.Clear();
+        var current = manager.Current;
+        current?.Items.Clear();
     }
-
-    /// <summary>
-    /// 获取或设置数据的索引器
-    /// </summary>
-    /// <param name="key">数据键</param>
-    /// <returns>数据值</returns>
-    public object? this[string key]
-    {
-        get => _dataDict.TryGetValue(key, out var value) ? value : null;
-        set
-        {
-            if (value == null)
-            {
-                _dataDict.TryRemove(key, out _);
-            }
-            else
-            {
-                _dataDict.AddOrUpdate(key, value, (_, _) => value);
-            }
-        }
-    }
-} 
+}

@@ -1,9 +1,9 @@
-namespace MoLibrary.Core.Features.MoAmbientData;
+namespace MoLibrary.Core.Features.MoScopedData;
 
 /// <summary>
 /// 环境数据接口，用于在Scoped生命周期内临时存储和管理状态数据
 /// </summary>
-public interface IMoAmbientData
+public interface IMoScopedData
 {
     /// <summary>
     /// 数据字典，用于存储键值对数据
@@ -52,11 +52,4 @@ public interface IMoAmbientData
     /// 清空所有数据
     /// </summary>
     void Clear();
-    
-    /// <summary>
-    /// 获取或设置数据的索引器
-    /// </summary>
-    /// <param name="key">数据键</param>
-    /// <returns>数据值</returns>
-    object? this[string key] { get; set; }
 }
