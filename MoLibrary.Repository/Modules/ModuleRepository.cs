@@ -15,5 +15,6 @@ public class ModuleRepository(ModuleRepositoryOption option)
     public override void ClaimDependencies()
     {
         DependsOnModule<ModuleMapperGuide>().Register();
+        DependsOnModule<ModuleAmbientDataGuide>().Register();
     }
 }

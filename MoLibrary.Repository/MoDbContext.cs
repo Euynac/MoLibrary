@@ -9,8 +9,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using MoLibrary.Core.Extensions;
+using MoLibrary.Core.Features.MoAmbientData;
 using MoLibrary.DependencyInjection.AppInterfaces;
+using MoLibrary.Repository.Attributes;
 using MoLibrary.Repository.EFCoreExtensions;
 using MoLibrary.Repository.EntityInterfaces;
 using MoLibrary.Repository.Extensions;
@@ -30,6 +31,7 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
     public IServiceProvider ServiceProvider { get; set; } = serviceProvider.ServiceProvider;
 
     public IMoAuditPropertySetter AuditPropertySetter => ServiceProvider.GetRequiredService<IMoAuditPropertySetter>();
+    public IMoAmbientData AmbientData => ServiceProvider.GetRequiredService<IMoAmbientData>();
 
     public ILogger<MoDbContext<TDbContext>> Logger => ServiceProvider.GetService<ILogger<MoDbContext<TDbContext>>>() ?? NullLogger<MoDbContext<TDbContext>>.Instance;
 
@@ -353,11 +355,28 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
 
     protected virtual void HandlePropertiesBeforeSave()
     {
+        var enableIgnoreUpdate = AmbientData.HasData(IgnoreUpdateAttribute.FEATURE_KEY);
         foreach (var entry in ChangeTracker.Entries())
         {
             if (entry.State is EntityState.Modified or EntityState.Deleted)
             {
                 UpdateConcurrencyStamp(entry);
+            }
+
+            if (enableIgnoreUpdate)
+            {
+                //如果有IgnoreUpdate特性，则忽略更新
+                foreach (var property in entry.Members)
+                {
+                    // 检查属性是否有IgnoreUpdateAttribute特性
+                    if (property is PropertyEntry propertyEntry && 
+                        propertyEntry.IsModified && 
+                        propertyEntry.Metadata.PropertyInfo?.GetCustomAttributes(typeof(IgnoreUpdateAttribute), false).Any() == true)
+                    {
+                        // 如果属性有IgnoreUpdateAttribute特性且被修改，则将IsModified设置为false来忽略更新
+                        propertyEntry.IsModified = false;
+                    }
+                }
             }
         }
     }
