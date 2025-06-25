@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MoLibrary.Core.Module.Interfaces;
+using MoLibrary.Core.Modules;
 using MoLibrary.DependencyInjection.DynamicProxy;
 using MoLibrary.DependencyInjection.DynamicProxy.DefaultInterceptors;
 using MoLibrary.Repository.EntityInterfaces;
@@ -21,6 +22,8 @@ public class ModuleRepositoryGuide : MoModuleGuide<ModuleRepository, ModuleRepos
     protected const string ADD_DB_CONTEXT_PROVIDER = nameof(ADD_DB_CONTEXT_PROVIDER);
     public ModuleRepositoryGuide AddMoUnitOfWorkDbContextProvider(bool addEventSupport = false)
     {
+        DependsOnModule<ModuleScopedDataGuide>().Register()
+            .AddKeyedScopedData<MoScopedDataUnitOfWorkProvider>(nameof(ModuleRepository));
         ConfigureServices(context =>
         {
             if (addEventSupport)

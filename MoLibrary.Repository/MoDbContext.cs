@@ -9,7 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using MoLibrary.Core.Features.MoAmbientData;
+using MoLibrary.Core.Features.MoScopedData;
 using MoLibrary.DependencyInjection.AppInterfaces;
 using MoLibrary.Repository.Attributes;
 using MoLibrary.Repository.EFCoreExtensions;
@@ -31,7 +31,7 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
     public IServiceProvider ServiceProvider { get; set; } = serviceProvider.ServiceProvider;
 
     public IMoAuditPropertySetter AuditPropertySetter => ServiceProvider.GetRequiredService<IMoAuditPropertySetter>();
-    public IMoAmbientData AmbientData => ServiceProvider.GetRequiredKeyedService<IMoAmbientData>(nameof(ModuleRepository));
+    public IMoScopedData? ScopedData => ServiceProvider.GetKeyedService<IMoScopedData>(nameof(ModuleRepository));
 
     public ILogger<MoDbContext<TDbContext>> Logger => ServiceProvider.GetService<ILogger<MoDbContext<TDbContext>>>() ?? NullLogger<MoDbContext<TDbContext>>.Instance;
 
@@ -355,7 +355,7 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
 
     protected virtual void HandlePropertiesBeforeSave()
     {
-        var enableIgnoreUpdate = AmbientData.HasData(IgnoreUpdateAttribute.FEATURE_KEY);
+        var enableIgnoreUpdate = ScopedData?.HasData(IgnoreUpdateAttribute.FEATURE_KEY);
         foreach (var entry in ChangeTracker.Entries())
         {
             if (entry.State is EntityState.Modified or EntityState.Deleted)
@@ -363,7 +363,7 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
                 UpdateConcurrencyStamp(entry);
             }
 
-            if (entry.State is EntityState.Modified && enableIgnoreUpdate)
+            if (entry.State is EntityState.Modified && enableIgnoreUpdate is true)
             {
                 //如果有IgnoreUpdate特性，则忽略更新
                 foreach (var property in entry.Members)

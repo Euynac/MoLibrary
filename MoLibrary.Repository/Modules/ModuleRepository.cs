@@ -1,6 +1,7 @@
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.Core.Modules;
+using MoLibrary.Repository.Transaction;
 
 namespace MoLibrary.Repository.Modules;
 
@@ -15,6 +16,5 @@ public class ModuleRepository(ModuleRepositoryOption option)
     public override void ClaimDependencies()
     {
         DependsOnModule<ModuleMapperGuide>().Register();
-        DependsOnModule<ModuleAmbientDataGuide>().Register();
     }
 }
