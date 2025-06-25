@@ -104,9 +104,6 @@ public abstract class MoModuleWithDependencies<TModuleSelf, TModuleOption, TModu
     where TModuleSelf : MoModuleWithDependencies<TModuleSelf, TModuleOption, TModuleGuide>
     where TModuleGuide : MoModuleGuide<TModuleSelf, TModuleOption, TModuleGuide>, new()
 {
-    /// <summary>
-    /// 声明依赖的模块，并进行配置等
-    /// </summary>
     public abstract void ClaimDependencies();
    
    
