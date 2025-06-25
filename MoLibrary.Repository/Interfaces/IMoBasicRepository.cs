@@ -122,7 +122,7 @@ public interface IMoBasicRepository<TEntity>
     Task InsertManyAsync(IEnumerable<TEntity> entities, bool autoSave = false, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Updates an existing entity.
+    /// Updates an existing entity.  只会标记根节点为Modified，更新当前根节点到传入的状态，对于嵌套的实体类，需要使用跟踪方式或手动标记Modified来进行更新。
     /// </summary>
     /// <param name="autoSave">
     /// Set true to automatically save changes to database.
