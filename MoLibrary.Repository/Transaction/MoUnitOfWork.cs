@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using MoLibrary.Core.Extensions;
 using MoLibrary.DependencyInjection.AppInterfaces;
 using MoLibrary.Repository.Transaction.EntityEvent;
@@ -77,7 +77,7 @@ public class MoUnitOfWork(
             _isCompleting = true;
             await SaveChangesAsync(cancellationToken);
 
-            await publisher.FlushEventBuffer();
+            //await publisher.FlushEventBuffer();
             await CommitTransactionsAsync(cancellationToken);
             await OnCompletedAsync();
             IsCompleted = true;
