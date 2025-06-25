@@ -10,21 +10,6 @@ using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.Repository;
 
-//public interface IScopedData
-//{
-//    public Dictionary<string, string> DataDict { get; set; }
-//}
-
-//public class ScopedData : IScopedData, IScopedDependency, IDisposable
-//{
-//    public Dictionary<string, string> DataDict { get; set; } = [];
-
-//    public void Dispose()
-//    {
-//        DataDict.Clear();
-//    }
-//}
-
 public class MoRepository<TDbContext, TEntity>(
     IDbContextProvider<TDbContext> dbContextProvider)
     : MoRepositoryBase<TEntity>, IMoRepository<TEntity>

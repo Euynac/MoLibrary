@@ -45,5 +45,9 @@ public enum EMoModules
     Excel,
     CancellationManager,
     ProgressBar,
-    Profiling
+    Profiling,
+    /// <summary>
+    /// 临时设置数据
+    /// </summary>
+    AmbientData
 }
