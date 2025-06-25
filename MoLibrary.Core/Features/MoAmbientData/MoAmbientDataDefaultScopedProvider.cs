@@ -3,9 +3,9 @@ using System.Collections.Concurrent;
 namespace MoLibrary.Core.Features.MoAmbientData;
 
 /// <summary>
-/// 环境数据实现类，用于在Scoped生命周期内临时存储和管理状态数据
+/// 环境数据默认实现类，用于在Scoped生命周期内临时存储和管理状态数据。
 /// </summary>
-public class MoAmbientData : IMoAmbientData
+public class MoAmbientDataDefaultScopedProvider : IMoAmbientData
 {
     /// <summary>
     /// 数据字典，用于存储键值对数据

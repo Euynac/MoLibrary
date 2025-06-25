@@ -38,7 +38,7 @@ public class ModuleAmbientData(ModuleAmbientDataOption option)
     public override void ConfigureServices(IServiceCollection services)
     {
         // 注册AmbientData服务为Scoped生命周期
-        services.AddScoped<IMoAmbientData, MoAmbientData>();
+        services.AddScoped<IMoAmbientData, MoAmbientDataDefaultScopedProvider>();
         
         base.ConfigureServices(services);
     }

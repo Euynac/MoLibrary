@@ -31,7 +31,7 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
     public IServiceProvider ServiceProvider { get; set; } = serviceProvider.ServiceProvider;
 
     public IMoAuditPropertySetter AuditPropertySetter => ServiceProvider.GetRequiredService<IMoAuditPropertySetter>();
-    public IMoAmbientData AmbientData => ServiceProvider.GetRequiredService<IMoAmbientData>();
+    public IMoAmbientData AmbientData => ServiceProvider.GetRequiredKeyedService<IMoAmbientData>(nameof(ModuleRepository));
 
     public ILogger<MoDbContext<TDbContext>> Logger => ServiceProvider.GetService<ILogger<MoDbContext<TDbContext>>>() ?? NullLogger<MoDbContext<TDbContext>>.Instance;
 
@@ -363,14 +363,13 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
                 UpdateConcurrencyStamp(entry);
             }
 
-            if (enableIgnoreUpdate)
+            if (entry.State is EntityState.Modified && enableIgnoreUpdate)
             {
                 //如果有IgnoreUpdate特性，则忽略更新
                 foreach (var property in entry.Members)
                 {
                     // 检查属性是否有IgnoreUpdateAttribute特性
-                    if (property is PropertyEntry propertyEntry && 
-                        propertyEntry.IsModified && 
+                    if (property is PropertyEntry {IsModified: true} propertyEntry && 
                         propertyEntry.Metadata.PropertyInfo?.GetCustomAttributes(typeof(IgnoreUpdateAttribute), false).Any() == true)
                     {
                         // 如果属性有IgnoreUpdateAttribute特性且被修改，则将IsModified设置为false来忽略更新

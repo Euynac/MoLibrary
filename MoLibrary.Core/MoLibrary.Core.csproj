@@ -20,8 +20,4 @@
     <ProjectReference Include="..\MoLibrary.Tool\MoLibrary.Tool.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Features\MoAmbientData\" />
-  </ItemGroup>
-
 </Project>

@@ -26,7 +26,7 @@ internal class MoChildUnitOfWork : IMoUnitOfWork
     public IMoUnitOfWork? Outer => _parent.Outer;
 
     public bool IsDisposed => _parent.IsDisposed;
-    public Dictionary<string, object> Items => _parent.Items;
+    public Dictionary<string, object?> Items => _parent.Items;
 
     public bool IsCompleted => _parent.IsCompleted;
 
