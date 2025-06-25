@@ -8,7 +8,7 @@ public interface IMoUnitOfWork : IDisposable, IMoServiceProviderAccessor
     Guid Id { get; }
     public bool IsDisposed { get; }
 
-    Dictionary<string, object> Items { get; }
+    Dictionary<string, object?> Items { get; }
     public bool IsCompleted { get; }
     public IMoUnitOfWork? Outer { get; }
     void Initialize(MoUnitOfWorkOptions options);

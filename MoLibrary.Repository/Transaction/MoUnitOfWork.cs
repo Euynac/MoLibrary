@@ -25,7 +25,7 @@ public class MoUnitOfWork(
 
     public IServiceProvider ServiceProvider { get; set; } = serviceProvider.ServiceProvider;
 
-    public Dictionary<string, object> Items { get; } = [];
+    public Dictionary<string, object?> Items { get; } = [];
 
     private readonly Dictionary<string, DbContext> _dbContexts = [];
 
