@@ -26,6 +26,10 @@ public class RegisterServiceStatus
     /// </summary>
     public long Version { get; set; }
     /// <summary>
+    /// 微服务发布版本号
+    /// </summary>
+    public string? ReleaseVersion { get; set; }
+    /// <summary>
     /// 项目名
     /// </summary>
     public required string ProjectName { get; set; }
