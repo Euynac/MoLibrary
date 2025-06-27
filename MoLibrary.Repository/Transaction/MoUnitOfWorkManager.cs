@@ -66,7 +66,7 @@ public class MoUnitOfWorkManager(IServiceScopeFactory serviceScopeFactory)
             unitOfWork.OnDisposed(() =>
             {
                 SetUnitOfWork(outerUow);
-                //scope.Dispose();
+                scope.Dispose();
             });
 
             return unitOfWork;
