@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.Core.Module.ModuleController;
+using MoLibrary.Core.Modules;
 using MoLibrary.DataChannel.Dashboard.Controllers;
 using MoLibrary.DataChannel.Interfaces;
 using MoLibrary.DataChannel.Services;
@@ -11,7 +12,7 @@ using MoLibrary.DataChannel.Services;
 namespace MoLibrary.DataChannel.Modules;
 
 public class ModuleDataChannel(ModuleDataChannelOption option)
-    : MoModule<ModuleDataChannel, ModuleDataChannelOption, ModuleDataChannelGuide>(option)
+    : MoModuleWithDependencies<ModuleDataChannel, ModuleDataChannelOption, ModuleDataChannelGuide>(option)
 {
     public override EMoModules CurModuleEnum()
     {
@@ -33,11 +34,6 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
         //        // 动态控制Controller的启用
         //        manager.FeatureProviders.Add(new ModuleControllerFeatureProvider<DataChannelController>(setting));
         //    });
-        // 添加自定义Convention
-        services.Configure<MvcOptions>(mvcOptions =>
-        {
-            mvcOptions.Conventions.Add(new ModuleControllerModelConvention<DataChannelController>(Option));
-        });
     }
 
     public override void ConfigureApplicationBuilder(IApplicationBuilder app)
@@ -57,5 +53,21 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
     {
 
         DataChannelCentral.ConfigEndpoints(app);
+    }
+
+    public override void ClaimDependencies()
+    {
+        DependsOnModule<ModuleControllersGuide>().Register().ConfigMvcOption((o, provider) =>
+        {
+            o.Conventions.Add(new ModuleControllerModelConvention<DataChannelController>(Option));
+        }).ConfigMvcBuilder((builder, provider) =>
+        {
+                //builder.AddApplicationPart(typeof(DataChannelController).Assembly)
+                //.ConfigureApplicationPartManager(manager =>
+                //{
+                //    // 动态控制Controller的启用
+                //    manager.FeatureProviders.Add(new ModuleControllerFeatureProvider<DataChannelController>(Option));
+                //});
+        });
     }
 }

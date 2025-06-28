@@ -7,13 +7,13 @@ namespace MoLibrary.DomainDrivenDesign.AutoController.Extensions;
 internal static class MoMvcOptionsExtensions
 {
     //https://stackoverflow.com/a/54148525  巨坑：service.Configure支持叠加
-    public static void ConfigMoMvcOptions(this MvcOptions options, IServiceCollection services)
+    public static void ConfigAutoController(this MvcOptions options, IServiceProvider provider)
     {
-        AddConventions(options, services);
+        AddConventions(options, provider);
         AddActionFilters(options);
         AddPageFilters(options);
         AddModelBinders(options);
-        AddMetadataProviders(options, services);
+        AddMetadataProviders(options, provider);
         AddFormatters(options);
     }
 
@@ -22,9 +22,9 @@ internal static class MoMvcOptionsExtensions
         //options.OutputFormatters.Insert(0, new RemoteStreamContentOutputFormatter());
     }
 
-    private static void AddConventions(MvcOptions options, IServiceCollection services)
+    private static void AddConventions(MvcOptions options, IServiceProvider provider)
     {
-        options.Conventions.Add(new MoServiceConventionWrapper(services.BuildServiceProvider()));
+        options.Conventions.Add(new MoServiceConventionWrapper(provider));
     }
 
     private static void AddActionFilters(MvcOptions options)
@@ -55,7 +55,7 @@ internal static class MoMvcOptionsExtensions
         //options.ModelBinderProviders.Insert(2, new AbpRemoteStreamContentModelBinderProvider());
     }
 
-    private static void AddMetadataProviders(MvcOptions options, IServiceCollection services)
+    private static void AddMetadataProviders(MvcOptions options, IServiceProvider services)
     {
         //options.ModelMetadataDetailsProviders.Add(new AbpDataAnnotationAutoLocalizationMetadataDetailsProvider(services));
 
