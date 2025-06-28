@@ -49,5 +49,6 @@ public enum EMoModules
     /// <summary>
     /// 临时设置数据
     /// </summary>
-    ScopedData
+    ScopedData,
+    Controllers
 }
