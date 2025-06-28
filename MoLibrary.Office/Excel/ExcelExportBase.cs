@@ -60,28 +60,25 @@ namespace MoLibrary.Office.Excel
                 var headerRowIndex = options.HeaderRowIndex - 1;
 
                 //先获取需要的表头列的样式和字体
-                var headerStyle = GetHeaderColumnStyleAndFont<TExportDto>(workbook, worksheet, headers);
+                var infoBundle = GetHeaderColumnStyleAndFont<TExportDto>(workbook, worksheet, headers);
 
-                progressBar?.IncrementAsync(5, "创建表头样式").Wait();
+                progressBar?.IncrementAsync(10, "创建表头及数据样式").Wait();
 
                 //处理表头单元格
-                ProcessHeaderCell<TExportDto>(workbook, worksheet, headers, headerRowIndex, headerStyle);
+                ProcessHeaderCell<TExportDto>(workbook, worksheet, headerRowIndex, infoBundle);
                 progressBar?.IncrementAsync(10, "处理表头").Wait();
 
                 //数据起始行下标
                 var dataRowIndex = options.DataRowStartIndex - 1;
 
-                //先获取需要的数据列的样式和字体
-                var dataStyle = GetDataColumnStyleAndFont<TExportDto>(workbook, worksheet, headers);
-
                 progressBar?.IncrementAsync(5, "创建数据样式").Wait();
 
                 //处理数据单元格
-                ProcessDataCell(workbook, worksheet, headers, data, dataRowIndex, dataStyle, out var footerRowIndex, progressBar, 50);
+                ProcessDataCell(workbook, worksheet, data, dataRowIndex, infoBundle, out var footerRowIndex, progressBar, 50);
 
                 //处理底部数据统计
                 progressBar?.IncrementAsync(5, "处理数据统计").Wait();
-                ProcessFooterStatistics<TExportDto>(workbook, worksheet, headers, dataRowIndex, footerRowIndex, headerStyle, dataStyle);
+                ProcessFooterStatistics<TExportDto>(workbook, worksheet, dataRowIndex, footerRowIndex, infoBundle);
 
 
                 //处理列宽【有数据才能处理自动列宽，所以必须放到最后进行处理】
@@ -123,15 +120,15 @@ namespace MoLibrary.Office.Excel
         /// <typeparam name="TExportDto"></typeparam>
         /// <param name="workbook">工作册</param>
         /// <param name="worksheet">工作表</param>
-        /// <param name="headers">要导出的表头信息</param>
         /// <param name="headerRowIndex">表头行下标（起始下标：0）</param>
-        /// <param name="headerStyle">表头样式</param>
-        private void ProcessHeaderCell<TExportDto>(TWorkbook workbook, TSheet worksheet, ExcelExportHeaderInfo[] headers, int headerRowIndex, List<ExcelCellStyleOutput<TCellStyle, HeaderStyleAttribute, HeaderFontAttribute>> headerStyle) where TExportDto : class
+        /// <param name="infoBundle">列样式集合</param>
+        private void ProcessHeaderCell<TExportDto>(TWorkbook workbook, TSheet worksheet, int headerRowIndex, List<ExcelExportHeaderInfoBundle<TCellStyle, HeaderStyleAttribute, HeaderFontAttribute, DataStyleAttribute, DataFontAttribute>> infoBundle) where TExportDto : class
         {
             //处理单元格 值、样式、字体、行高
-            for (var columnIndex = 0; columnIndex < headers.Length; columnIndex++)
+            for (var columnIndex = 0; columnIndex < infoBundle.Count; columnIndex++)
             {
-                var info = headers[columnIndex];
+                var info = infoBundle[columnIndex].Header;
+                var headerStyle = infoBundle[columnIndex].HeaderStyle!;
                 var p = info.PropertyInfo;
 
                 //创建单元格
@@ -141,8 +138,7 @@ namespace MoLibrary.Office.Excel
                 ProcessHeaderCellValue(workbook, worksheet, cell, p, info.HeaderName);
 
                 //处理表头单元格样式和字体
-                var cellStyleInfo = headerStyle.First(a => a.PropertyInfo == p);
-                SetHeaderCellStyleAndFont<TExportDto>(workbook, worksheet, cell, cellStyleInfo);
+                SetHeaderCellStyleAndFont<TExportDto>(workbook, worksheet, cell, headerStyle);
             }
 
             //处理表头行 行高（必须先创建行，才能处理）
@@ -155,17 +151,17 @@ namespace MoLibrary.Office.Excel
         /// <typeparam name="TExportDto"><paramref name="data"/>集合中元素的类</typeparam>
         /// <param name="workbook">工作册</param>
         /// <param name="worksheet">工作表</param>
-        /// <param name="headers">要导出的表头信息</param>
         /// <param name="data">数据集合</param>
         /// <param name="rowIndex">下一行下标（起始下标： 0）</param>
-        /// <param name="dataStyle">数据样式</param>
+        /// <param name="infoBundle">数据样式</param>
         /// <param name="nextRowIndex">下一行下标（起始下标： 0）</param>
         /// <param name="progressBar">进度条（可选）</param>
         /// <param name="progressWeight">数据处理在整体进度中的权重（仅当progressBar不为空时有效）</param>
         /// <returns>下一行下标（从0开始）</returns>
-        private void ProcessDataCell<TExportDto>(TWorkbook workbook, TSheet worksheet, ExcelExportHeaderInfo[] headers,
+        private void ProcessDataCell<TExportDto>(TWorkbook workbook, TSheet worksheet,
             IReadOnlyList<TExportDto> data, int rowIndex,
-            List<ExcelCellStyleOutput<TCellStyle, DataStyleAttribute, DataFontAttribute>> dataStyle,
+            List<ExcelExportHeaderInfoBundle<TCellStyle, HeaderStyleAttribute, HeaderFontAttribute, DataStyleAttribute,
+                DataFontAttribute>> infoBundle,
             out int nextRowIndex, ProgressBar? progressBar = null, int progressWeight = 0)
             where TExportDto : class
         {
@@ -193,9 +189,10 @@ namespace MoLibrary.Office.Excel
             {
                 progressBar?.ThrowIfCancellationRequested();
 
-                for (var columnIndex = 0; columnIndex < headers.Length; columnIndex++)
+                for (var columnIndex = 0; columnIndex < infoBundle.Count; columnIndex++)
                 {
-                    var info = headers[columnIndex];
+                    var info = infoBundle[columnIndex].Header;
+                    var dataStyle = infoBundle[columnIndex].DataStyle!;
                     var p = info.PropertyInfo;
 
                     //创建单元格
@@ -206,8 +203,7 @@ namespace MoLibrary.Office.Excel
                     ProcessDataCellValue(workbook, worksheet, cell, p, value);
 
                     //处理数据单元格样式和字体
-                    var cellStyleInfo = dataStyle.First(a => a.PropertyInfo == p);
-                    SetDataCellStyleAndFont<TExportDto>(workbook, worksheet, cell, cellStyleInfo);
+                    SetDataCellStyleAndFont<TExportDto>(workbook, worksheet, cell, dataStyle);
 
                     //处理列合并
                     ProcessMergeColumn(columnMergedHeader, columnMergedList, rowIndex, columnIndex, p, value);
@@ -313,7 +309,7 @@ namespace MoLibrary.Office.Excel
         /// <param name="columnIndex">当前列下标（起始下标：0）</param>
         /// <param name="propertyInfo">字段属性</param>
         /// <param name="value">值</param>
-        private void ProcessMergeRow(IReadOnlyList<string> rowMergedHeader, ICollection<ExcelExportMergedRegionInfo> mergedList, int rowIndex, int columnIndex, PropertyInfo propertyInfo, object value)
+        private void ProcessMergeRow(IReadOnlyList<string> rowMergedHeader, ICollection<ExcelExportMergedRegionInfo> mergedList, int rowIndex, int columnIndex, PropertyInfo propertyInfo, object? value)
         {
             if (rowMergedHeader.All(a => a != propertyInfo.Name))
             {
@@ -512,28 +508,45 @@ namespace MoLibrary.Office.Excel
         }
 
         /// <summary>
-        /// 获取所有表头列的样式和字体
+        /// 获取所有表头列及其数据的样式和字体
         /// </summary>
         /// <typeparam name="TExportDto"></typeparam>
         /// <param name="workbook">工作册</param>
         /// <param name="worksheet">工作表</param>
         /// <param name="headers"></param>
-        private List<ExcelCellStyleOutput<TCellStyle, HeaderStyleAttribute, HeaderFontAttribute>>
-            GetHeaderColumnStyleAndFont<TExportDto>(TWorkbook workbook,
+        private List<ExcelExportHeaderInfoBundle<TCellStyle, HeaderStyleAttribute, HeaderFontAttribute, DataStyleAttribute, DataFontAttribute>> GetHeaderColumnStyleAndFont<TExportDto>(TWorkbook workbook,
                 TSheet worksheet, ExcelExportHeaderInfo[] headers) where TExportDto : class
         {
-            var styles = new List<ExcelCellStyleOutput<TCellStyle, HeaderStyleAttribute, HeaderFontAttribute>>();
+            var styles = new List<ExcelExportHeaderInfoBundle<TCellStyle, HeaderStyleAttribute, HeaderFontAttribute, DataStyleAttribute, DataFontAttribute>>();
 
             //表头默认样式
-            var defaultAttr = typeof(TExportDto).GetHeaderStyleFont<TExportDto>();
-            var defaultStyle =
-                CreateHeaderStyleAndFont<TExportDto>(workbook, worksheet, defaultAttr.StyleAttr, defaultAttr.FontAttr);
+            var headerDefaultAttr = typeof(TExportDto).GetHeaderStyleFont<TExportDto>();
+            var headerDefaultStyle =
+                CreateHeaderStyleAndFont<TExportDto>(workbook, worksheet, headerDefaultAttr.StyleAttr, headerDefaultAttr.FontAttr);
+
+            //数据默认样式
+            var dataDefaultAttr = typeof(TExportDto).GetDataStyleFont<TExportDto>();
+            var dataDefaultStyle = CreateDataStyleAndFont<TExportDto>(workbook, worksheet, dataDefaultAttr.StyleAttr,
+                dataDefaultAttr.FontAttr);
 
             foreach (var info in headers)
             {
                 var propertyInfo = info.PropertyInfo;
+              
+                //添加
+                styles.Add(new ExcelExportHeaderInfoBundle<TCellStyle, HeaderStyleAttribute, HeaderFontAttribute, DataStyleAttribute, DataFontAttribute>(info)
+                {
+                    HeaderStyle = CreateHeaderStyle(propertyInfo, info),
+                    DataStyle = CreateCellStyle(propertyInfo, info)
+                });
+
+            }
+
+            return styles;
+            ExcelCellStyleOutput<TCellStyle, HeaderStyleAttribute, HeaderFontAttribute> CreateHeaderStyle(PropertyInfo propertyInfo, ExcelExportHeaderInfo info)
+            {
                 //表头样式
-                var cellStyle = defaultStyle;
+                var cellStyle = headerDefaultStyle;
 
                 var headerAttr = propertyInfo.GetHeaderStyleFont<TExportDto>();
 
@@ -542,53 +555,33 @@ namespace MoLibrary.Office.Excel
                 {
                     headerAttr.StyleAttr.DataFormat = SetDefaultDataFormat(typeof(string));
                 }
-                
+
+                headerAttr.StyleAttr.ColumnAutoSize = info.Option?.ColumnAutoSize ?? headerAttr.StyleAttr.ColumnAutoSize;
+                headerAttr.StyleAttr.ColumnSize = info.Option?.ColumnSize ?? headerAttr.StyleAttr.ColumnSize;
+
                 //属性上有样式、有字体样式，则重新创建样式
                 if (propertyInfo.HasHeaderStyleAttr() || propertyInfo.HasHeaderFontAttr())
                 {
                     cellStyle = CreateHeaderStyleAndFont<TExportDto>(workbook, worksheet, headerAttr.StyleAttr, headerAttr.FontAttr);
                 }
 
+
                 //添加
-                styles.Add(new ExcelCellStyleOutput<TCellStyle, HeaderStyleAttribute, HeaderFontAttribute>(propertyInfo, cellStyle, headerAttr.StyleAttr, headerAttr.FontAttr));
-
+                return new ExcelCellStyleOutput<TCellStyle, HeaderStyleAttribute, HeaderFontAttribute>(propertyInfo, cellStyle, headerAttr.StyleAttr, headerAttr.FontAttr);
             }
-
-            return styles;
-        }
-
-        /// <summary>
-        /// 获取所有数据列的样式和字体
-        /// </summary>
-        /// <typeparam name="TExportDto"></typeparam>
-        /// <param name="workbook">工作册</param>
-        /// <param name="worksheet">工作表</param>
-        /// <param name="headers"></param>
-        private List<ExcelCellStyleOutput<TCellStyle, DataStyleAttribute, DataFontAttribute>>
-            GetDataColumnStyleAndFont<TExportDto>(TWorkbook workbook,
-                TSheet worksheet, ExcelExportHeaderInfo[] headers) where TExportDto : class
-        {
-            var styles = new List<ExcelCellStyleOutput<TCellStyle, DataStyleAttribute, DataFontAttribute>>();
-
-            //数据默认样式
-            var dataDefaultAttr = typeof(TExportDto).GetDataStyleFont<TExportDto>();
-            var defaultDataStyle = CreateDataStyleAndFont<TExportDto>(workbook, worksheet, dataDefaultAttr.StyleAttr,
-                dataDefaultAttr.FontAttr);
-
-            foreach (var info in headers)
+            ExcelCellStyleOutput<TCellStyle, DataStyleAttribute, DataFontAttribute> CreateCellStyle(PropertyInfo propertyInfo, ExcelExportHeaderInfo info)
             {
-                var propertyInfo = info.PropertyInfo;
                 //数据样式
-                var cellStyle = defaultDataStyle;
+                var cellStyle = dataDefaultStyle;
 
                 var dataAttr = propertyInfo.GetDataStyleFont<TExportDto>();
 
                 //设置默认格式化
-                if (info.Option?.DataFormat is not {} dataFormat)
+                if (info.Option?.DataFormat is not { } dataFormat)
                 {
-                    if (CanSetDefaultFormat<TExportDto>(propertyInfo))
+                    if (CanSetDefaultFormat<TExportDto>(propertyInfo) && SetDefaultDataFormat(propertyInfo.PropertyType) is { } defaultDataFormat)
                     {
-                        dataAttr.StyleAttr.DataFormat = SetDefaultDataFormat(propertyInfo.PropertyType);
+                        dataAttr.StyleAttr.DataFormat = defaultDataFormat;
                     }
                 }
                 else
@@ -604,10 +597,8 @@ namespace MoLibrary.Office.Excel
                 }
 
                 //添加
-                styles.Add(new ExcelCellStyleOutput<TCellStyle, DataStyleAttribute, DataFontAttribute>(propertyInfo, cellStyle, dataAttr.StyleAttr, dataAttr.FontAttr));
+                return new ExcelCellStyleOutput<TCellStyle, DataStyleAttribute, DataFontAttribute>(propertyInfo, cellStyle, dataAttr.StyleAttr, dataAttr.FontAttr);
             }
-
-            return styles;
         }
 
         /// <summary>
@@ -619,7 +610,7 @@ namespace MoLibrary.Office.Excel
         {
             if (type.IsDateTime())
             {
-                return "yyyy-MM-dd";
+                return "yyyy-MM-dd HH:mm:ss";
             }
 
             return null;
@@ -662,24 +653,26 @@ namespace MoLibrary.Office.Excel
         /// </summary>
         /// <param name="workbook">工作册</param>
         /// <param name="worksheet">工作表</param>
-        /// <param name="headers">要导出的表头信息</param>
         /// <param name="dataStartRowIndex">数据起始行下标（起始下标：0）</param>
         /// <param name="nextRowIndex">下一行下标（起始下标：0）</param>
-        /// <param name="headerStyle">表头样式</param>
-        /// <param name="dataStyle">数据样式</param>
-
-        private void ProcessFooterStatistics<TExportDto>(TWorkbook workbook, TSheet worksheet, ExcelExportHeaderInfo[] headers, int dataStartRowIndex, int nextRowIndex, List<ExcelCellStyleOutput<TCellStyle, HeaderStyleAttribute, HeaderFontAttribute>> headerStyle, List<ExcelCellStyleOutput<TCellStyle, DataStyleAttribute, DataFontAttribute>> dataStyle) where TExportDto : class
+        /// <param name="infoBundles">表头样式</param>
+        private void ProcessFooterStatistics<TExportDto>(TWorkbook workbook, TSheet worksheet, int dataStartRowIndex,
+            int nextRowIndex,
+            List<ExcelExportHeaderInfoBundle<TCellStyle, HeaderStyleAttribute, HeaderFontAttribute, DataStyleAttribute,
+                DataFontAttribute>> infoBundles) where TExportDto : class
         {
             var dataEndRowIndex = nextRowIndex - 1;
 
             var properties = GetHeaderProperties<TExportDto>().Select(a => a.Name).ToList();
-            var pNames = headers.Select(a => a.PropertyInfo.Name).ToList();
+            var pNames = infoBundles.Select(p => p.Header.PropertyInfo.Name).ToList();
 
-            for (var i = 0; i < headers.Length; i++)
+            for (var i = 0; i < infoBundles.Count; i++)
             {
-                var info = headers[i];
+                var info = infoBundles[i].Header;
                 var columnIndex = i;
                 var p = info.PropertyInfo;
+                var headerStyle = infoBundles[i].HeaderStyle!;
+                var dataStyle = infoBundles[i].DataStyle!;
 
                 //公式
                 var fxAttrs = p.GetCustomAttributes<ColumnStatsAttribute>();
@@ -693,17 +686,14 @@ namespace MoLibrary.Office.Excel
                     var pIndex = pNames.IndexOf(fxAttr.ShowOnColumnPropertyName);
                     var pRowIndex = nextRowIndex + fxAttr.OffsetRow;
                     var pColumnIndex = pIndex == -1 ? columnIndex : pIndex;
-                    var pHeaderStyle = headerStyle.FirstOrDefault(a => a.PropertyInfo == p);
-                    var pDataStyle = dataStyle.FirstOrDefault(a => a.PropertyInfo == p);
+                 
                     var func = (FunctionEnum) fxAttr.Function;
 
                     if (fxAttr.IsShowLabel)
                     {
                         //获取标签文本
-                        if (fxAttr.Label == null)
-                        {
-                            fxAttr.Label = $"{info.HeaderName} {typeof(FunctionEnum).GetField(func.ToString()).GetCustomAttribute<DisplayAttribute>()?.Name}";
-                        }
+                        fxAttr.Label ??=
+                            $"{info.HeaderName} {typeof(FunctionEnum).GetField(func.ToString())?.GetCustomAttribute<DisplayAttribute>()?.Name}";
                         if (!string.IsNullOrWhiteSpace(fxAttr.Unit))
                         {
                             fxAttr.Label += $"（{fxAttr.Unit}）";
@@ -716,7 +706,7 @@ namespace MoLibrary.Office.Excel
                         SetCellValue(workbook, worksheet, textCell, typeof(string), fxAttr.Label);
 
                         //处理标签文本单元格样式和字体（采用表头样式）
-                        SetHeaderCellStyleAndFont<TExportDto>(workbook, worksheet, textCell, pHeaderStyle);
+                        SetHeaderCellStyleAndFont<TExportDto>(workbook, worksheet, textCell, headerStyle);
 
                         pRowIndex++;
                     }
@@ -734,7 +724,7 @@ namespace MoLibrary.Office.Excel
                     SetCellFormula(workbook, worksheet, cell, formula);
 
                     //处理统计单元格样式和字体（采用数据样式）
-                    SetDataCellStyleAndFont<TExportDto>(workbook, worksheet, cell, pDataStyle);
+                    SetDataCellStyleAndFont<TExportDto>(workbook, worksheet, cell, dataStyle);
                 }
             }
         }
