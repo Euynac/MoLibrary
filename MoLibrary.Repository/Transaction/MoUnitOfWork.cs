@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using MoLibrary.Core.Extensions;
 using MoLibrary.DependencyInjection.AppInterfaces;
 using MoLibrary.Repository.Transaction.EntityEvent;
@@ -7,7 +8,8 @@ namespace MoLibrary.Repository.Transaction;
 
 public class MoUnitOfWork(
     IMoServiceProvider serviceProvider,
-    IAsyncLocalEventPublisher publisher)
+    IAsyncLocalEventPublisher publisher,
+    ILogger<MoUnitOfWork> logger)
     : IMoUnitOfWork
 {
     public Guid Id { get; } = Guid.NewGuid();
@@ -97,9 +99,9 @@ public class MoUnitOfWork(
             return;
         }
 
-        _isRolledBack = true;
-
         await RollbackAllAsync(cancellationToken);
+
+        _isRolledBack = true;
     }
 
     public void OnDisposed(Action handler)
@@ -134,27 +136,45 @@ public class MoUnitOfWork(
 
     public virtual void Dispose()
     {
-        if (IsDisposed)
+        try
         {
-            return;
+            if (IsDisposed) //Scoped ServiceProvider结束后也会触发一次
+            {
+                return;
+            }
+
+            if (!IsCompleted || _exception != null)
+            {
+                OnFailed();
+            }
+
+            //在CreateDbContextWithTransactionAsync中对事务对象进行Dispose对于未提交的事务会自动回滚
+            //事务回滚后，事务已经结束，不用再提交
+            //强制结束程序，数据库检测到客户端连接断开也会自动回滚事务（实测发现不一定）
+            OnDisposed();
+
+            IsDisposed = true;
+
         }
-
-        IsDisposed = true;
-
-        if (!IsCompleted || _exception != null)
+        catch (Exception e)
         {
-            OnFailed();
+            logger.LogError(e, $"Exception occur when {nameof(MoUnitOfWork)} is disposing!");
         }
-
-        //在CreateDbContextWithTransactionAsync中对事务对象进行Dispose对于未提交的事务会自动回滚
-        //事务回滚后，事务已经结束，不用再提交
-        //强制结束程序，数据库检测到客户端连接断开也会自动回滚事务
-        OnDisposed();
-
-        //dispose all db contexts
-        foreach (var dbContext in _dbContexts.Values)
+        finally
         {
-            dbContext.Dispose();//对于未提交的事务会自动回滚
+            try
+            {
+                //dispose all db contexts
+                foreach (var dbContext in _dbContexts.Values)
+                {
+                    dbContext.Dispose();//对于未提交的事务会自动回滚
+                }
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e, $"Exception occur when {nameof(MoUnitOfWork)} is try disposing all related DbContexts!");
+            }
+           
         }
     }
 

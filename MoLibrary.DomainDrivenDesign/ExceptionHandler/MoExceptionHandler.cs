@@ -26,6 +26,8 @@ internal class MoExceptionHandler(ILogger<MoExceptionHandler> logger) : IMoExcep
         var problemDetail = new ProblemDetails();
         switch (exception)
         {
+            case MoExceptionBusinessError businessError:
+                return Res.Fail(businessError.Message);
             case MoAuthorizationException { Type: MoAuthorizationException.ExceptionType.NotLogin }:
                 return MoAuthorizationRes.NotLogin();
 
@@ -60,9 +62,9 @@ internal class MoExceptionHandler(ILogger<MoExceptionHandler> logger) : IMoExcep
                     //StatusCodes.Status500InternalServerError
                     Status = httpContext?.Response.StatusCode,
                     Title = exception.GetMessageRecursively(),
-                    Detail = exception.ToString(),
                     Extensions =
                     {
+                        ["stackTrace"] = exception.ToString().Split(new[]{'\r', '\n'}, StringSplitOptions.RemoveEmptyEntries),
                         ["response"] = httpContext?.Response.CloneAs<DtoHttpContextResponse>(),
                         ["request"] = httpContext?.Request.CloneAs<DtoHttpContextRequest>(),
                         ["connection"] = httpContext?.Connection.ToJsonStringForce(),

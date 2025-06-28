@@ -21,7 +21,7 @@ namespace MoLibrary.Office.Excel.Attributes
         /// 标签文本（将在数值的上一行展示）
         /// <para>如果为 null,则默认为：表头+公式名称</para>
         /// </summary>
-        public string Label { get; set; }
+        public string? Label { get; set; }
 
         /// <summary>
         /// 函数

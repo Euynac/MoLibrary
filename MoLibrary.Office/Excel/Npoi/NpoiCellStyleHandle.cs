@@ -114,7 +114,7 @@ namespace MoLibrary.Office.Excel.Npoi
         {
             var cellStyle = workbook.CreateCellStyle();
 
-            styleAttr = styleAttr ?? new DataStyleAttribute();
+            styleAttr ??= new DataStyleAttribute();
 
             if (!string.IsNullOrWhiteSpace(styleAttr.DataFormat)) cellStyle.DataFormat = workbook.CreateDataFormat().GetFormat(styleAttr.DataFormat);
             cellStyle.ShrinkToFit = styleAttr.ShrinkToFit;

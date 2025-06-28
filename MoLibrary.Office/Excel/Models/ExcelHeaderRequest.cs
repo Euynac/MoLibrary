@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace MoLibrary.Office.Excel.Models;
 
 /// <summary>
@@ -20,4 +22,15 @@ public class ExcelHeaderRequest(string queryName)
     /// 自定义格式
     /// </summary>
     public string? DataFormat { get; set; }
+    /// <summary>
+    /// 列自动调整大小
+    /// </summary>
+    public bool? ColumnAutoSize { get; set; }
+    /// <summary>
+    /// 列宽
+    /// <para>单位：字符</para>
+    /// <para>取值区间： [0-255]</para>
+    /// </summary>
+    [Range(0, 255)]
+    public int? ColumnSize { get; set; }
 }
