@@ -1,6 +1,3 @@
-using System.Dynamic;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MoLibrary.Tool.MoResponse;
 
@@ -11,66 +8,6 @@ namespace MoLibrary.Core.Features.MoChainTracing;
 /// </summary>
 public static class ChainTracingExtensions
 {
-    /// <summary>
-    /// 添加调用链追踪服务
-    /// </summary>
-    /// <param name="services">服务集合</param>
-    /// <returns>服务集合</returns>
-    public static IServiceCollection AddChainTracing(this IServiceCollection services)
-    {
-        services.AddSingleton<IMoChainTracing, AsyncLocalMoChainTracing>();
-        return services;
-    }
-
-    /// <summary>
-    /// 禁用调用链追踪服务（注册空实现）
-    /// </summary>
-    /// <param name="services">服务集合</param>
-    /// <returns>服务集合</returns>
-    public static IServiceCollection DisableChainTracing(this IServiceCollection services)
-    {
-        services.AddSingleton<IMoChainTracing>(_ => EmptyChainTracing.Instance);
-        return services;
-    }
-
-    /// <summary>
-    /// 条件性添加调用链追踪服务
-    /// </summary>
-    /// <param name="services">服务集合</param>
-    /// <param name="enabled">是否启用调用链追踪</param>
-    /// <returns>服务集合</returns>
-    public static IServiceCollection AddChainTracing(this IServiceCollection services, bool enabled)
-    {
-        if (enabled)
-        {
-            return services.AddChainTracing();
-        }
-        else
-        {
-            return services.DisableChainTracing();
-        }
-    }
-
-    /// <summary>
-    /// 条件性添加调用链追踪服务
-    /// </summary>
-    /// <param name="services">服务集合</param>
-    /// <param name="enabledCondition">启用条件函数</param>
-    /// <returns>服务集合</returns>
-    public static IServiceCollection AddChainTracing(this IServiceCollection services, Func<bool> enabledCondition)
-    {
-        return services.AddChainTracing(enabledCondition());
-    }
-
-    /// <summary>
-    /// 使用调用链追踪中间件
-    /// </summary>
-    /// <param name="app">应用程序构建器</param>
-    /// <returns>应用程序构建器</returns>
-    public static IApplicationBuilder UseChainTracing(this IApplicationBuilder app)
-    {
-        return app.UseMiddleware<ChainTracingMiddleware>();
-    }
 
     /// <summary>
     /// 执行带调用链追踪的操作
@@ -80,7 +17,7 @@ public static class ChainTracingExtensions
     /// <param name="operation">操作名称</param>
     /// <param name="action">要执行的操作</param>
     /// <param name="extraInfo">额外信息</param>
-    public static async Task ExecuteWithTraceAsync(this IMoChainTracing chainTracing, 
+    public static async Task ExecuteWithTraceAsync(this IMoChainTracing chainTracing,
         string handler, string operation, Func<Task> action, object? extraInfo = null)
     {
         var traceId = chainTracing.BeginTrace(handler, operation, extraInfo);
@@ -95,6 +32,8 @@ public static class ChainTracingExtensions
             throw;
         }
     }
+
+
 
     /// <summary>
     /// 执行带调用链追踪的操作并返回结果

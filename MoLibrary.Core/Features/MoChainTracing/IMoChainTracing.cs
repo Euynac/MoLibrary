@@ -42,25 +42,6 @@ public interface IMoChainTracing
     MoChainContext? GetCurrentChain();
 
     /// <summary>
-    /// 清空当前的调用链信息
-    /// </summary>
-    void ClearChain();
-
-    /// <summary>
-    /// 使用指定的调用链上下文执行操作
-    /// </summary>
-    /// <param name="context">调用链上下文</param>
-    /// <param name="action">要执行的操作</param>
-    Task ExecuteWithChainAsync(MoChainContext? context, Func<Task> action);
-
-    /// <summary>
-    /// 使用指定的调用链上下文执行操作
-    /// </summary>
-    /// <param name="context">调用链上下文</param>
-    /// <param name="func">要执行的操作</param>
-    Task<T> ExecuteWithChainAsync<T>(MoChainContext? context, Func<Task<T>> func);
-
-    /// <summary>
     /// 合并远程调用链信息
     /// </summary>
     /// <param name="traceId">当前调用链节点标识</param>

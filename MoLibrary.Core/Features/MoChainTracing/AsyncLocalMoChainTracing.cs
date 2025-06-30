@@ -136,66 +136,6 @@ public class AsyncLocalMoChainTracing(ILogger<AsyncLocalMoChainTracing>? logger 
     }
 
     /// <summary>
-    /// 清空当前的调用链信息
-    /// </summary>
-    public void ClearChain()
-    {
-        try
-        {
-            var context = _chainContext.Value;
-            if (context != null)
-            {
-                context.MarkComplete();
-                logger?.LogDebug("清空调用链上下文, 总耗时: {TotalDuration}ms", context.TotalDurationMs);
-            }
-
-            _chainContext.Value = null;
-        }
-        catch (Exception ex)
-        {
-            logger?.LogError(ex, "清空调用链上下文时发生异常");
-        }
-    }
-
-    /// <summary>
-    /// 使用指定的调用链上下文执行操作
-    /// </summary>
-    /// <param name="context">调用链上下文</param>
-    /// <param name="action">要执行的操作</param>
-    public async Task ExecuteWithChainAsync(MoChainContext? context, Func<Task> action)
-    {
-        var originalContext = _chainContext.Value;
-        try
-        {
-            _chainContext.Value = context;
-            await action();
-        }
-        finally
-        {
-            _chainContext.Value = originalContext;
-        }
-    }
-
-    /// <summary>
-    /// 使用指定的调用链上下文执行操作
-    /// </summary>
-    /// <param name="context">调用链上下文</param>
-    /// <param name="func">要执行的操作</param>
-    public async Task<T> ExecuteWithChainAsync<T>(MoChainContext? context, Func<Task<T>> func)
-    {
-        var originalContext = _chainContext.Value;
-        try
-        {
-            _chainContext.Value = context;
-            return await func();
-        }
-        finally
-        {
-            _chainContext.Value = originalContext;
-        }
-    }
-
-    /// <summary>
     /// 开始一个根调用链
     /// </summary>
     /// <param name="handler">处理者名称</param>
