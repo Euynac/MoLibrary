@@ -126,6 +126,164 @@ public class MoChainContext
         var json = JsonSerializer.Serialize(this);
         return JsonSerializer.Deserialize<MoChainContext>(json) ?? new MoChainContext();
     }
+
+    /// <summary>
+    /// 合并远程调用链信息
+    /// </summary>
+    /// <param name="traceId">当前调用链节点标识</param>
+    /// <param name="remoteChainInfo">远程调用链信息</param>
+    public void MergeRemoteChain(string traceId, object? remoteChainInfo)
+    {
+        if (remoteChainInfo == null || !NodeMap.TryGetValue(traceId, out var currentNode))
+        {
+            return;
+        }
+
+        try
+        {
+            // 尝试从不同的数据源解析远程调用链信息
+            MoChainNode? remoteRootNode = null;
+
+            if (remoteChainInfo is JsonElement jsonElement)
+            {
+                remoteRootNode = ExtractChainFromJsonElement(jsonElement);
+            }
+            else if (remoteChainInfo is string jsonString)
+            {
+                try
+                {
+                    var jsonDoc = JsonDocument.Parse(jsonString);
+                    remoteRootNode = ExtractChainFromJsonElement(jsonDoc.RootElement);
+                }
+                catch (JsonException)
+                {
+                    // 忽略 JSON 解析错误
+                }
+            }
+            else if (remoteChainInfo is IDictionary<string, object?> dict)
+            {
+                remoteRootNode = ExtractChainFromDictionary(dict);
+            }
+
+            if (remoteRootNode != null)
+            {
+                // 标记为远程调用
+                MarkAsRemoteCall(remoteRootNode);
+                
+                // 将远程调用链作为当前节点的子节点
+                currentNode.Children ??= new List<MoChainNode>();
+                currentNode.Children.Add(remoteRootNode);
+                remoteRootNode.Parent = currentNode;
+
+                // 更新节点映射
+                AddNodeToMap(remoteRootNode);
+            }
+        }
+        catch (Exception)
+        {
+            // 忽略合并过程中的异常，不影响主流程
+        }
+    }
+
+    /// <summary>
+    /// 从 JsonElement 中提取调用链信息
+    /// </summary>
+    /// <param name="jsonElement">JSON 元素</param>
+    /// <returns>调用链根节点</returns>
+    private static MoChainNode? ExtractChainFromJsonElement(JsonElement jsonElement)
+    {
+        try
+        {
+            // 检查是否有 chainTracing 字段
+            if (jsonElement.TryGetProperty("chainTracing", out var chainTracingElement))
+            {
+                if (chainTracingElement.TryGetProperty("rootNode", out var rootNodeElement))
+                {
+                    return JsonSerializer.Deserialize<MoChainNode>(rootNodeElement.GetRawText());
+                }
+            }
+
+            // 检查是否直接是 rootNode
+            if (jsonElement.TryGetProperty("traceId", out _) && 
+                jsonElement.TryGetProperty("handler", out _))
+            {
+                return JsonSerializer.Deserialize<MoChainNode>(jsonElement.GetRawText());
+            }
+        }
+        catch (JsonException)
+        {
+            // 忽略 JSON 解析错误
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// 从字典中提取调用链信息
+    /// </summary>
+    /// <param name="dict">字典</param>
+    /// <returns>调用链根节点</returns>
+    private static MoChainNode? ExtractChainFromDictionary(IDictionary<string, object?> dict)
+    {
+        try
+        {
+            // 检查是否有 chainTracing 字段
+            if (dict.TryGetValue("chainTracing", out var chainTracingValue) && 
+                chainTracingValue is IDictionary<string, object?> chainTracingDict)
+            {
+                if (chainTracingDict.TryGetValue("rootNode", out var rootNodeValue))
+                {
+                    var json = JsonSerializer.Serialize(rootNodeValue);
+                    return JsonSerializer.Deserialize<MoChainNode>(json);
+                }
+            }
+
+            // 检查是否直接是 rootNode
+            if (dict.ContainsKey("traceId") && dict.ContainsKey("handler"))
+            {
+                var json = JsonSerializer.Serialize(dict);
+                return JsonSerializer.Deserialize<MoChainNode>(json);
+            }
+        }
+        catch (JsonException)
+        {
+            // 忽略 JSON 解析错误
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// 标记节点及其子节点为远程调用
+    /// </summary>
+    /// <param name="node">节点</param>
+    private static void MarkAsRemoteCall(MoChainNode node)
+    {
+        node.IsRemoteCall = true;
+        if (node.Children != null)
+        {
+            foreach (var child in node.Children)
+            {
+                MarkAsRemoteCall(child);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 将节点及其子节点添加到映射中
+    /// </summary>
+    /// <param name="node">节点</param>
+    private void AddNodeToMap(MoChainNode node)
+    {
+        NodeMap[node.TraceId] = node;
+        if (node.Children != null)
+        {
+            foreach (var child in node.Children)
+            {
+                AddNodeToMap(child);
+            }
+        }
+    }
 }
 
 /// <summary>
