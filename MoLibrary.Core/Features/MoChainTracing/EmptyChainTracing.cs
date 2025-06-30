@@ -70,34 +70,6 @@ public class EmptyChainTracing : IMoChainTracing
     }
 
     /// <summary>
-    /// 清空当前的调用链信息（无操作）
-    /// </summary>
-    public void ClearChain()
-    {
-        // 无操作
-    }
-
-    /// <summary>
-    /// 使用指定的调用链上下文执行操作（直接执行操作，忽略调用链上下文）
-    /// </summary>
-    /// <param name="context">调用链上下文</param>
-    /// <param name="action">要执行的操作</param>
-    public async Task ExecuteWithChainAsync(MoChainContext? context, Func<Task> action)
-    {
-        await action();
-    }
-
-    /// <summary>
-    /// 使用指定的调用链上下文执行操作（直接执行操作，忽略调用链上下文）
-    /// </summary>
-    /// <param name="context">调用链上下文</param>
-    /// <param name="func">要执行的操作</param>
-    public async Task<T> ExecuteWithChainAsync<T>(MoChainContext? context, Func<Task<T>> func)
-    {
-        return await func();
-    }
-
-    /// <summary>
     /// 合并远程调用链信息（无操作）
     /// </summary>
     /// <param name="traceId">当前调用链节点标识</param>
