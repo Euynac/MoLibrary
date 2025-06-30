@@ -302,13 +302,7 @@ public class MoChainNode
     /// 异常信息的序列化表示
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? ExceptionMessage => Exception?.Message;
-
-    /// <summary>
-    /// 异常堆栈跟踪
-    /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? ExceptionStackTrace => Exception?.StackTrace;
+    public string[]? ExceptionMessage => Exception?.ToString().Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
 
     /// <summary>
     /// 开始时的额外信息
