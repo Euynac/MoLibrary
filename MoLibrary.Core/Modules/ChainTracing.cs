@@ -30,7 +30,7 @@ public static class ModuleChainTracingBuilderExtensions
 /// </summary>
 /// <param name="option">模块配置选项</param>
 public class ModuleChainTracing(ModuleChainTracingOption option)
-    : MoModule<ModuleChainTracing, ModuleChainTracingOption, ModuleChainTracingGuide>(option)
+    : MoModuleWithDependencies<ModuleChainTracing, ModuleChainTracingOption, ModuleChainTracingGuide>(option)
 {
     
     public override EMoModules CurModuleEnum()
@@ -49,13 +49,6 @@ public class ModuleChainTracing(ModuleChainTracingOption option)
         {
             services.AddSingleton<IMoChainTracing>(_ => EmptyChainTracing.Instance);
         }
-
-        //services.AddMvc(options =>
-        //{
-        //    // 添加全局 ActionFilter
-        //    options.Filters.Add<AutoChainTracingActionFilter>();
-        //});
-
     }
 
 
@@ -68,6 +61,16 @@ public class ModuleChainTracing(ModuleChainTracingOption option)
     }
 
 
+    public override void ClaimDependencies()
+    {
+        if (option.EnableActionFilter)
+        {
+            DependsOnModule<ModuleControllersGuide>().ConfigMvcOption((options, _) =>
+            {
+                options.Filters.Add<AutoChainTracingActionFilter>();
+            });
+        }
+    }
 }
 
 /// <summary>
