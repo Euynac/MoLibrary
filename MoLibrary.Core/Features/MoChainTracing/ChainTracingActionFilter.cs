@@ -71,8 +71,7 @@ public class ChainTracingActionFilter : IActionFilter, IResultFilter
             if (context.Exception != null)
             {
                 // 记录异常
-                _chainTracing.RecordException(actionTraceId, context.Exception);
-                _chainTracing.EndTrace(actionTraceId, $"Exception: {context.Exception.Message}", false);
+                _chainTracing.EndTrace(actionTraceId, $"Exception: {context.Exception.Message}", false, context.Exception);
                 
                 _logger.LogError(context.Exception, "Controller Action 执行异常: {ControllerName}.{ActionName}", 
                     controllerName, actionName);
@@ -241,8 +240,7 @@ public class AutoChainTracingActionFilter : IActionFilter, IResultFilter
         {
             if (context.Exception != null)
             {
-                _chainTracing.RecordException(actionTraceId, context.Exception);
-                _chainTracing.EndTrace(actionTraceId, $"Exception: {context.Exception.Message}", false);
+                _chainTracing.EndTrace(actionTraceId, $"Exception: {context.Exception.Message}", false, context.Exception);
             }
             else
             {

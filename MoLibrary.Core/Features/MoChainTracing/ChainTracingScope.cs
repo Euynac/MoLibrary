@@ -6,7 +6,6 @@ namespace MoLibrary.Core.Features.MoChainTracing;
 public class ChainTracingScope : IDisposable
 {
     private readonly IMoChainTracing _chainTracing;
-    private readonly string _traceId;
     private bool _disposed;
 
     /// <summary>
@@ -19,13 +18,13 @@ public class ChainTracingScope : IDisposable
     public ChainTracingScope(IMoChainTracing chainTracing, string handler, string operation, object? extraInfo = null)
     {
         _chainTracing = chainTracing;
-        _traceId = _chainTracing.BeginTrace(handler, operation, extraInfo);
+        TraceId = _chainTracing.BeginTrace(handler, operation, extraInfo);
     }
 
     /// <summary>
     /// 调用链节点标识
     /// </summary>
-    public string TraceId => _traceId;
+    public string TraceId { get; }
 
     /// <summary>
     /// 记录成功结果
@@ -36,7 +35,7 @@ public class ChainTracingScope : IDisposable
     {
         if (!_disposed)
         {
-            _chainTracing.EndTrace(_traceId, result ?? "Success", true, extraInfo);
+            _chainTracing.EndTrace(TraceId, result ?? "Success", true, null, extraInfo);
             _disposed = true;
         }
     }
@@ -50,7 +49,7 @@ public class ChainTracingScope : IDisposable
     {
         if (!_disposed)
         {
-            _chainTracing.EndTrace(_traceId, result ?? "Failed", false, extraInfo);
+            _chainTracing.EndTrace(TraceId, result ?? "Failed", false, null, extraInfo);
             _disposed = true;
         }
     }
@@ -64,7 +63,8 @@ public class ChainTracingScope : IDisposable
     {
         if (!_disposed)
         {
-            _chainTracing.RecordException(_traceId, exception, extraInfo);
+            _chainTracing.EndTrace(TraceId, $"Exception: {exception.Message}", false, exception, extraInfo);
+            _disposed = true;
         }
     }
 
@@ -76,7 +76,7 @@ public class ChainTracingScope : IDisposable
     {
         if (!_disposed)
         {
-            _chainTracing.MergeRemoteChain(_traceId, remoteChainInfo);
+            _chainTracing.MergeRemoteChain(TraceId, remoteChainInfo);
         }
     }
 
@@ -87,7 +87,7 @@ public class ChainTracingScope : IDisposable
     {
         if (!_disposed)
         {
-            _chainTracing.EndTrace(_traceId, "Completed", true);
+            _chainTracing.EndTrace(TraceId, "Completed", true, null);
             _disposed = true;
         }
     }

@@ -20,16 +20,9 @@ public interface IMoChainTracing
     /// <param name="traceId">调用链节点标识</param>
     /// <param name="result">调用结果描述</param>
     /// <param name="success">是否成功</param>
-    /// <param name="extraInfo">额外信息</param>
-    void EndTrace(string traceId, string? result = null, bool success = true, object? extraInfo = null);
-
-    /// <summary>
-    /// 记录异常信息
-    /// </summary>
-    /// <param name="traceId">调用链节点标识</param>
     /// <param name="exception">异常信息</param>
     /// <param name="extraInfo">额外信息</param>
-    void RecordException(string traceId, Exception exception, object? extraInfo = null);
+    void EndTrace(string traceId, string? result = null, bool success = true, Exception? exception = null, object? extraInfo = null);
 
     /// <summary>
     /// 记录简单的调用信息（一次性记录，适用于简单调用）

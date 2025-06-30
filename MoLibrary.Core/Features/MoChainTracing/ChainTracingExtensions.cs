@@ -91,8 +91,7 @@ public static class ChainTracingExtensions
         }
         catch (Exception ex)
         {
-            chainTracing.RecordException(traceId, ex);
-            chainTracing.EndTrace(traceId, $"Exception: {ex.Message}", false);
+            chainTracing.EndTrace(traceId, $"Exception: {ex.Message}", false, ex);
             throw;
         }
     }
@@ -129,8 +128,7 @@ public static class ChainTracingExtensions
         }
         catch (Exception ex)
         {
-            chainTracing.RecordException(traceId, ex);
-            chainTracing.EndTrace(traceId, $"Exception: {ex.Message}", false);
+            chainTracing.EndTrace(traceId, $"Exception: {ex.Message}", false, ex);
             throw;
         }
     }
@@ -154,8 +152,7 @@ public static class ChainTracingExtensions
         }
         catch (Exception ex)
         {
-            chainTracing.RecordException(traceId, ex);
-            chainTracing.EndTrace(traceId, $"Exception: {ex.Message}", false);
+            chainTracing.EndTrace(traceId, $"Exception: {ex.Message}", false, ex);
             throw;
         }
     }
@@ -192,8 +189,7 @@ public static class ChainTracingExtensions
         }
         catch (Exception ex)
         {
-            chainTracing.RecordException(traceId, ex);
-            chainTracing.EndTrace(traceId, $"Exception: {ex.Message}", false);
+            chainTracing.EndTrace(traceId, $"Exception: {ex.Message}", false, ex);
             throw;
         }
     }
@@ -346,8 +342,7 @@ public static class ChainTracingExtensions
         }
         catch (Exception ex)
         {
-            chainTracing.RecordException(traceId, ex);
-            chainTracing.EndTrace(traceId, $"Exception: {ex.Message}", false);
+            chainTracing.EndTrace(traceId, $"Exception: {ex.Message}", false, ex);
             throw;
         }
     }

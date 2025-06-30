@@ -61,8 +61,7 @@ public class ChainTracingMiddleware
         catch (Exception ex)
         {
             // 记录异常
-            _chainTracing.RecordException(rootTraceId, ex);
-            _chainTracing.EndTrace(rootTraceId, $"HTTP {context.Response.StatusCode} - Exception: {ex.Message}", false);
+            _chainTracing.EndTrace(rootTraceId, $"HTTP {context.Response.StatusCode} - Exception: {ex.Message}", false, ex);
             
             _logger.LogError(ex, "调用链中间件执行时发生异常");
             throw;
