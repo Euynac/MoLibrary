@@ -50,5 +50,9 @@ public enum EMoModules
     /// 临时设置数据
     /// </summary>
     ScopedData,
-    Controllers
+    Controllers,
+    /// <summary>
+    /// 链路追踪模块
+    /// </summary>
+    ChainTracing
 }
