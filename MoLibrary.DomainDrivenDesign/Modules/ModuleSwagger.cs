@@ -29,6 +29,10 @@ public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger,
         {
             c.SwaggerEndpoint($"/swagger/{option.Version}/swagger.json",
                 $"{option.AppName ?? "Unknown"} {option.Version}");
+            c.DocumentTitle = option.AppName ?? "Swagger UI";
+            //c.RoutePrefix = string.Empty; // 设置根路径访问Swagger UI
+            //c.InjectStylesheet("/swagger-ui/custom.css"); // 可选：自定义样式表
+            //c.InjectJavascript("/swagger-ui/custom.js"); // 可选：自定义JavaScript
         });
     }
 
