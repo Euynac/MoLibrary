@@ -54,8 +54,9 @@ public class AsyncLocalMoChainTracing(ILogger<AsyncLocalMoChainTracing>? logger 
     /// <param name="traceId">调用链节点标识</param>
     /// <param name="result">调用结果描述</param>
     /// <param name="success">是否成功</param>
+    /// <param name="exception">异常信息</param>
     /// <param name="extraInfo">额外信息</param>
-    public void EndTrace(string traceId, string? result = null, bool success = true, object? extraInfo = null)
+    public void EndTrace(string traceId, string? result = null, bool success = true, Exception? exception = null, object? extraInfo = null)
     {
         try
         {
@@ -66,7 +67,7 @@ public class AsyncLocalMoChainTracing(ILogger<AsyncLocalMoChainTracing>? logger 
                 return;
             }
 
-            context.CompleteNode(traceId, result, success, extraInfo);
+            context.CompleteNode(traceId, result, success, exception, extraInfo);
 
             logger?.LogDebug("完成调用链节点: TraceId: {TraceId}, Success: {Success}, Result: {Result}", 
                 traceId, success, result);
@@ -74,34 +75,6 @@ public class AsyncLocalMoChainTracing(ILogger<AsyncLocalMoChainTracing>? logger 
         catch (Exception ex)
         {
             logger?.LogError(ex, "完成调用链节点时发生异常: TraceId: {TraceId}", traceId);
-        }
-    }
-
-    /// <summary>
-    /// 记录异常信息
-    /// </summary>
-    /// <param name="traceId">调用链节点标识</param>
-    /// <param name="exception">异常信息</param>
-    /// <param name="extraInfo">额外信息</param>
-    public void RecordException(string traceId, Exception exception, object? extraInfo = null)
-    {
-        try
-        {
-            var context = _chainContext.Value;
-            if (context == null)
-            {
-                logger?.LogWarning("尝试记录异常但当前上下文为空: TraceId: {TraceId}", traceId);
-                return;
-            }
-
-            context.RecordException(traceId, exception, extraInfo);
-
-            logger?.LogDebug("记录调用链异常: TraceId: {TraceId}, Exception: {ExceptionMessage}", 
-                traceId, exception.Message);
-        }
-        catch (Exception ex)
-        {
-            logger?.LogError(ex, "记录调用链异常时发生异常: TraceId: {TraceId}", traceId);
         }
     }
 
@@ -142,7 +115,7 @@ public class AsyncLocalMoChainTracing(ILogger<AsyncLocalMoChainTracing>? logger 
             }
 
             context.AddNode(node);
-            context.CompleteNode(node.TraceId, result, success, extraInfo);
+            context.CompleteNode(node.TraceId, result, success, null, extraInfo);
 
             logger?.LogDebug("记录简单调用链: {Handler}.{Operation}, Success: {Success}, Duration: {Duration}ms", 
                 handler, operation, success, node.DurationMs);

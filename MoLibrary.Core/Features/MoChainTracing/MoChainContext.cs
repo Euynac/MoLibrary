@@ -75,37 +75,29 @@ public class MoChainContext
     /// <param name="traceId">调用链节点标识</param>
     /// <param name="result">调用结果</param>
     /// <param name="success">是否成功</param>
+    /// <param name="exception">异常信息</param>
     /// <param name="extraInfo">额外信息</param>
-    public void CompleteNode(string traceId, string? result = null, bool success = true, object? extraInfo = null)
+    public void CompleteNode(string traceId, string? result = null, bool success = true, Exception? exception = null, object? extraInfo = null)
     {
         if (NodeMap.TryGetValue(traceId, out var node))
         {
             node.EndTime = DateTime.UtcNow;
             node.Result = result;
             node.Success = success;
+            node.Exception = exception;
             node.EndExtraInfo = extraInfo;
+
+            // 如果有异常，自动设置为失败
+            if (exception != null)
+            {
+                node.Success = false;
+            }
 
             // 从活跃节点栈中移除
             if (ActiveNodes.Count > 0 && ActiveNodes.Peek().TraceId == traceId)
             {
                 ActiveNodes.Pop();
             }
-        }
-    }
-
-    /// <summary>
-    /// 记录异常信息
-    /// </summary>
-    /// <param name="traceId">调用链节点标识</param>
-    /// <param name="exception">异常信息</param>
-    /// <param name="extraInfo">额外信息</param>
-    public void RecordException(string traceId, Exception exception, object? extraInfo = null)
-    {
-        if (NodeMap.TryGetValue(traceId, out var node))
-        {
-            node.Exception = exception;
-            node.Success = false;
-            node.EndExtraInfo = extraInfo;
         }
     }
 
@@ -160,10 +152,7 @@ public class MoChainContext
                     // 忽略 JSON 解析错误
                 }
             }
-            else if (remoteChainInfo is IDictionary<string, object?> dict)
-            {
-                remoteRootNode = ExtractChainFromDictionary(dict);
-            }
+            
 
             if (remoteRootNode != null)
             {
@@ -171,7 +160,7 @@ public class MoChainContext
                 MarkAsRemoteCall(remoteRootNode);
                 
                 // 将远程调用链作为当前节点的子节点
-                currentNode.Children ??= new List<MoChainNode>();
+                currentNode.Children ??= [];
                 currentNode.Children.Add(remoteRootNode);
                 remoteRootNode.Parent = currentNode;
 
@@ -218,40 +207,7 @@ public class MoChainContext
         return null;
     }
 
-    /// <summary>
-    /// 从字典中提取调用链信息
-    /// </summary>
-    /// <param name="dict">字典</param>
-    /// <returns>调用链根节点</returns>
-    private static MoChainNode? ExtractChainFromDictionary(IDictionary<string, object?> dict)
-    {
-        try
-        {
-            // 检查是否有 chainTracing 字段
-            if (dict.TryGetValue("chainTracing", out var chainTracingValue) && 
-                chainTracingValue is IDictionary<string, object?> chainTracingDict)
-            {
-                if (chainTracingDict.TryGetValue("rootNode", out var rootNodeValue))
-                {
-                    var json = JsonSerializer.Serialize(rootNodeValue);
-                    return JsonSerializer.Deserialize<MoChainNode>(json);
-                }
-            }
-
-            // 检查是否直接是 rootNode
-            if (dict.ContainsKey("traceId") && dict.ContainsKey("handler"))
-            {
-                var json = JsonSerializer.Serialize(dict);
-                return JsonSerializer.Deserialize<MoChainNode>(json);
-            }
-        }
-        catch (JsonException)
-        {
-            // 忽略 JSON 解析错误
-        }
-
-        return null;
-    }
+  
 
     /// <summary>
     /// 标记节点及其子节点为远程调用
