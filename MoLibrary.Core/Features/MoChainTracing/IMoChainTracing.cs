@@ -66,4 +66,11 @@ public interface IMoChainTracing
     /// <param name="context">调用链上下文</param>
     /// <param name="func">要执行的操作</param>
     Task<T> ExecuteWithChainAsync<T>(MoChainContext? context, Func<Task<T>> func);
+
+    /// <summary>
+    /// 合并远程调用链信息
+    /// </summary>
+    /// <param name="traceId">当前调用链节点标识</param>
+    /// <param name="remoteChainInfo">远程调用链信息</param>
+    void MergeRemoteChain(string traceId, object? remoteChainInfo);
 } 

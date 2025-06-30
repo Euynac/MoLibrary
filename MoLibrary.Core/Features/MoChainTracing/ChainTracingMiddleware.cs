@@ -164,6 +164,7 @@ public static class ChainTracingResponseHelper
 
             // 将调用链信息添加到 ExtraInfo
             var extraInfo = (IDictionary<string, object?>)response.ExtraInfo;
+            var allNodes = chainContext.NodeMap.Values.ToList();
             extraInfo["chainTracing"] = new
             {
                 TotalDurationMs = chainContext.TotalDurationMs,
@@ -172,10 +173,12 @@ public static class ChainTracingResponseHelper
                 RootNode = chainContext.RootNode,
                 Summary = new
                 {
-                    TotalNodes = chainContext.NodeMap.Count,
-                    SuccessfulNodes = chainContext.NodeMap.Values.Count(n => n.Success),
-                    FailedNodes = chainContext.NodeMap.Values.Count(n => !n.Success),
-                    ActiveNodes = chainContext.ActiveNodes.Count
+                    TotalNodes = allNodes.Count,
+                    SuccessfulNodes = allNodes.Count(n => n.Success),
+                    FailedNodes = allNodes.Count(n => !n.Success),
+                    ActiveNodes = chainContext.ActiveNodes.Count,
+                    RemoteNodes = allNodes.Count(n => n.IsRemoteCall),
+                    LocalNodes = allNodes.Count(n => !n.IsRemoteCall)
                 }
             };
 

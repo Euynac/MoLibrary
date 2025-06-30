@@ -23,6 +23,11 @@ public class ChainTracingScope : IDisposable
     }
 
     /// <summary>
+    /// 调用链节点标识
+    /// </summary>
+    public string TraceId => _traceId;
+
+    /// <summary>
     /// 记录成功结果
     /// </summary>
     /// <param name="result">结果描述</param>
@@ -32,6 +37,7 @@ public class ChainTracingScope : IDisposable
         if (!_disposed)
         {
             _chainTracing.EndTrace(_traceId, result ?? "Success", true, extraInfo);
+            _disposed = true;
         }
     }
 
@@ -45,6 +51,7 @@ public class ChainTracingScope : IDisposable
         if (!_disposed)
         {
             _chainTracing.EndTrace(_traceId, result ?? "Failed", false, extraInfo);
+            _disposed = true;
         }
     }
 
@@ -58,6 +65,18 @@ public class ChainTracingScope : IDisposable
         if (!_disposed)
         {
             _chainTracing.RecordException(_traceId, exception, extraInfo);
+        }
+    }
+
+    /// <summary>
+    /// 合并远程调用链信息
+    /// </summary>
+    /// <param name="remoteChainInfo">远程调用链信息</param>
+    public void MergeRemoteChain(object? remoteChainInfo)
+    {
+        if (!_disposed)
+        {
+            _chainTracing.MergeRemoteChain(_traceId, remoteChainInfo);
         }
     }
 

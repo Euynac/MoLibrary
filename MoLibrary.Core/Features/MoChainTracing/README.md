@@ -318,7 +318,121 @@ public class UsersController : ControllerBase
 }
 ```
 
-### 5. 特性标记
+### 5. 微服务调用链合并
+
+在微服务架构中，调用链追踪需要跨服务传递和合并。模块提供了自动合并远程调用链的功能：
+
+```csharp
+public class OrderService
+{
+    private readonly IMoChainTracing _chainTracing;
+    private readonly HttpClient _httpClient;
+
+    public OrderService(IMoChainTracing chainTracing, HttpClient httpClient)
+    {
+        _chainTracing = chainTracing;
+        _httpClient = httpClient;
+    }
+
+    // 方式一：自动合并微服务调用链
+    public async Task<ServiceResponse<Order>> CreateOrderAsync(CreateOrderRequest request)
+    {
+        return await _chainTracing.ExecuteWithMicroserviceTraceAsync("UserService", "ValidateUser", 
+            async () =>
+            {
+                var response = await _httpClient.PostAsync("/api/users/validate", content);
+                var result = await response.Content.ReadFromJsonAsync<ServiceResponse<UserValidation>>();
+                return result; // 调用链信息会自动合并
+            });
+    }
+
+    // 方式二：使用作用域进行微服务调用
+    public async Task<ServiceResponse<Order>> ProcessOrderAsync(int orderId)
+    {
+        return await _chainTracing.ExecuteWithMicroserviceScopeAsync("PaymentService", "ProcessPayment",
+            async (scope) =>
+            {
+                var response = await _httpClient.PostAsync($"/api/payments/process/{orderId}", content);
+                var result = await response.Content.ReadFromJsonAsync<ServiceResponse<PaymentResult>>();
+                
+                // 调用链信息会自动合并到 scope 中
+                return result;
+            });
+    }
+
+    // 方式三：手动合并调用链
+    public async Task<ServiceResponse<Order>> GetOrderDetailsAsync(int orderId)
+    {
+        var traceId = _chainTracing.BeginTrace("Microservice(InventoryService)", "CheckInventory");
+        try
+        {
+            var response = await _httpClient.GetAsync($"/api/inventory/check/{orderId}");
+            var result = await response.Content.ReadFromJsonAsync<ServiceResponse<InventoryStatus>>();
+            
+            // 手动合并远程调用链
+            if (result.ExtraInfo != null)
+            {
+                _chainTracing.MergeRemoteChain(traceId, result.ExtraInfo);
+            }
+            
+            _chainTracing.EndTrace(traceId, $"Code: {result.Code}", result.Code == ResponseCode.Ok);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _chainTracing.RecordException(traceId, ex);
+            _chainTracing.EndTrace(traceId, "Failed", false);
+            throw;
+        }
+    }
+
+    // 方式四：简单记录微服务调用
+    public async Task<ServiceResponse<User>> GetUserInfoAsync(int userId)
+    {
+        var response = await _httpClient.GetAsync($"/api/users/{userId}");
+        var result = await response.Content.ReadFromJsonAsync<ServiceResponse<User>>();
+        
+        // 记录微服务调用并自动合并调用链
+        _chainTracing.RecordMicroserviceCall("UserService", "GetUser", result);
+        
+        return result;
+    }
+}
+```
+
+### 6. 跨服务调用链传递
+
+如果需要在微服务调用中传递当前的调用链信息：
+
+```csharp
+public class ApiClient
+{
+    private readonly IMoChainTracing _chainTracing;
+    private readonly HttpClient _httpClient;
+
+    // 提取调用链信息用于传递
+    public async Task<ServiceResponse<T>> CallServiceAsync<T>(string endpoint)
+    {
+        // 提取当前调用链信息
+        var chainInfo = _chainTracing.ExtractChainForPropagation();
+        
+        var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
+        
+        // 可以将调用链信息添加到请求头或请求体中
+        if (chainInfo != null)
+        {
+            request.Headers.Add("X-Chain-Tracing", JsonSerializer.Serialize(chainInfo));
+        }
+
+        var response = await _httpClient.SendAsync(request);
+        var result = await response.Content.ReadFromJsonAsync<ServiceResponse<T>>();
+        
+        return result;
+    }
+}
+```
+
+### 7. 特性标记
 
 ```csharp
 // 在特定控制器或 Action 上启用调用链追踪
@@ -465,7 +579,7 @@ builder.Services.AddMoChainTracing(options =>
 
 ## 响应格式
 
-调用链信息会自动附加到 `IServiceResponse.ExtraInfo` 中：
+调用链信息会自动附加到 `IServiceResponse.ExtraInfo` 中，支持微服务调用链的合并：
 
 ```json
 {
@@ -474,47 +588,88 @@ builder.Services.AddMoChainTracing(options =>
   "data": { /* 业务数据 */ },
   "extraInfo": {
     "chainTracing": {
-      "totalDurationMs": 156.23,
+      "totalDurationMs": 256.78,
       "startTime": "2024-01-01T10:00:00.000Z",
-      "endTime": "2024-01-01T10:00:00.156Z",
+      "endTime": "2024-01-01T10:00:00.256Z",
       "rootNode": {
         "traceId": "abc123def456",
         "handler": "HTTP",
-        "operation": "GET /api/users/1",
+        "operation": "GET /api/orders/1",
         "startTime": "2024-01-01T10:00:00.000Z",
-        "endTime": "2024-01-01T10:00:00.156Z",
-        "durationMs": 156.23,
+        "endTime": "2024-01-01T10:00:00.256Z",
+        "durationMs": 256.78,
         "success": true,
+        "isRemoteCall": false,
         "children": [
           {
             "traceId": "def456ghi789",
-            "handler": "Controller(UsersController)",
-            "operation": "GetUser",
-            "startTime": "2024-01-01T10:00:00.005Z",
-            "endTime": "2024-01-01T10:00:00.150Z",
-            "durationMs": 145.12,
+            "handler": "Controller(OrdersController)",
+            "operation": "GetOrder",
+            "durationMs": 245.12,
             "success": true,
+            "isRemoteCall": false,
             "children": [
               {
                 "traceId": "ghi789jkl012",
-                "handler": "UserService",
-                "operation": "GetUserAsync",
-                "durationMs": 120.45,
+                "handler": "OrderService",
+                "operation": "GetOrderAsync",
+                "durationMs": 220.45,
                 "success": true,
+                "isRemoteCall": false,
                 "children": [
                   {
                     "handler": "Database",
-                    "operation": "SELECT(Users)",
-                    "durationMs": 45.23,
+                    "operation": "SELECT(Orders)",
+                    "durationMs": 25.23,
                     "success": true,
+                    "isRemoteCall": false,
                     "result": "Success, Rows: 1"
                   },
                   {
-                    "handler": "Redis",
-                    "operation": "GET(user:1)",
-                    "durationMs": 12.34,
+                    "traceId": "jkl012mno345",
+                    "handler": "Microservice(UserService)",
+                    "operation": "GetUser",
+                    "durationMs": 180.34,
                     "success": true,
-                    "result": "Success"
+                    "isRemoteCall": false,
+                    "children": [
+                      {
+                        "traceId": "mno345pqr678",
+                        "handler": "HTTP",
+                        "operation": "GET /api/users/123",
+                        "durationMs": 175.22,
+                        "success": true,
+                        "isRemoteCall": true,
+                        "children": [
+                          {
+                            "traceId": "pqr678stu901",
+                            "handler": "Controller(UsersController)",
+                            "operation": "GetUser",
+                            "durationMs": 165.11,
+                            "success": true,
+                            "isRemoteCall": true,
+                            "children": [
+                              {
+                                "handler": "Database",
+                                "operation": "SELECT(Users)",
+                                "durationMs": 45.67,
+                                "success": true,
+                                "isRemoteCall": true,
+                                "result": "Success, Rows: 1"
+                              },
+                              {
+                                "handler": "Redis",
+                                "operation": "GET(user:123)",
+                                "durationMs": 12.44,
+                                "success": true,
+                                "isRemoteCall": true,
+                                "result": "Success"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
                   }
                 ]
               }
@@ -523,15 +678,24 @@ builder.Services.AddMoChainTracing(options =>
         ]
       },
       "summary": {
-        "totalNodes": 5,
-        "successfulNodes": 5,
+        "totalNodes": 9,
+        "successfulNodes": 9,
         "failedNodes": 0,
-        "activeNodes": 0
+        "activeNodes": 0,
+        "remoteNodes": 4,
+        "localNodes": 5
       }
     }
   }
 }
 ```
+
+### 调用链合并说明
+
+- **`isRemoteCall`**: 标识节点是否来自远程微服务调用
+- **远程调用链**: 自动合并到当前调用链的层次结构中
+- **节点统计**: 汇总信息包含本地节点和远程节点的统计
+- **完整追踪**: 可以看到从 HTTP 请求到跨微服务调用的完整链路
 
 ## 最佳实践
 

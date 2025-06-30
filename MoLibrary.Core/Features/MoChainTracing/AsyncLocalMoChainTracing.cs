@@ -264,4 +264,30 @@ public class AsyncLocalMoChainTracing(ILogger<AsyncLocalMoChainTracing>? logger 
         var context = _chainContext.Value;
         return context?.ActiveNodes.Count ?? 0;
     }
+
+    /// <summary>
+    /// 合并远程调用链信息
+    /// </summary>
+    /// <param name="traceId">当前调用链节点标识</param>
+    /// <param name="remoteChainInfo">远程调用链信息</param>
+    public void MergeRemoteChain(string traceId, object? remoteChainInfo)
+    {
+        try
+        {
+            var context = _chainContext.Value;
+            if (context == null)
+            {
+                logger?.LogWarning("尝试合并远程调用链但当前上下文为空: TraceId: {TraceId}", traceId);
+                return;
+            }
+
+            context.MergeRemoteChain(traceId, remoteChainInfo);
+
+            logger?.LogDebug("合并远程调用链: TraceId: {TraceId}", traceId);
+        }
+        catch (Exception ex)
+        {
+            logger?.LogError(ex, "合并远程调用链时发生异常: TraceId: {TraceId}", traceId);
+        }
+    }
 }
