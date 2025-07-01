@@ -1,4 +1,6 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using MoLibrary.Core.Modules;
 
 namespace MoLibrary.Core.Features.MoChainTracing;
 
@@ -8,10 +10,12 @@ namespace MoLibrary.Core.Features.MoChainTracing;
 /// <remarks>
 /// 构造函数
 /// </remarks>
+/// <param name="options">调用链追踪配置选项</param>
 /// <param name="logger">日志记录器</param>
-public class AsyncLocalMoChainTracing(ILogger<AsyncLocalMoChainTracing>? logger = null) : IMoChainTracing
+public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options, ILogger<AsyncLocalMoChainTracing>? logger = null) : IMoChainTracing
 {
     private static readonly AsyncLocal<MoChainContext?> _chainContext = new();
+    private readonly ModuleChainTracingOption _options = options.Value;
 
     /// <summary>
     /// 开始一个新的调用链节点
@@ -26,6 +30,22 @@ public class AsyncLocalMoChainTracing(ILogger<AsyncLocalMoChainTracing>? logger 
         {
             var context = _chainContext.Value ??= new MoChainContext();
 
+            // 检查最大调用链深度
+            if (IsMaxDepthReached())
+            {
+                logger?.LogWarning("调用链深度已达到最大限制 {MaxChainDepth}，跳过创建新节点: {Handler}.{Operation}", 
+                    _options.MaxChainDepth, handler, operation);
+                return Guid.NewGuid().ToString("N"); // 返回虚拟 TraceId，避免后续调用报错
+            }
+
+            // 检查最大节点数量
+            if (IsMaxNodeCountReached())
+            {
+                logger?.LogWarning("调用链节点数量已达到最大限制 {MaxNodeCount}，跳过创建新节点: {Handler}.{Operation}", 
+                    _options.MaxNodeCount, handler, operation);
+                return Guid.NewGuid().ToString("N"); // 返回虚拟 TraceId，避免后续调用报错
+            }
+
             var node = new MoChainNode
             {
                 Handler = handler,
@@ -36,8 +56,8 @@ public class AsyncLocalMoChainTracing(ILogger<AsyncLocalMoChainTracing>? logger 
 
             context.AddNode(node);
 
-            logger?.LogDebug("开始调用链节点: {Handler}.{Operation}, TraceId: {TraceId}", 
-                handler, operation, node.TraceId);
+            logger?.LogDebug("开始调用链节点: {Handler}.{Operation}, TraceId: {TraceId}, 当前深度: {Depth}, 总节点数: {NodeCount}", 
+                handler, operation, node.TraceId, context.ActiveNodes.Count, context.NodeMap.Count);
 
             return node.TraceId;
         }
@@ -94,6 +114,14 @@ public class AsyncLocalMoChainTracing(ILogger<AsyncLocalMoChainTracing>? logger 
         {
             var context = _chainContext.Value ??= new MoChainContext();
 
+            // 检查最大节点数量
+            if (IsMaxNodeCountReached())
+            {
+                logger?.LogWarning("调用链节点数量已达到最大限制 {MaxNodeCount}，跳过记录简单调用: {Handler}.{Operation}", 
+                    _options.MaxNodeCount, handler, operation);
+                return;
+            }
+
             var node = new MoChainNode
             {
                 Handler = handler,
@@ -117,8 +145,8 @@ public class AsyncLocalMoChainTracing(ILogger<AsyncLocalMoChainTracing>? logger 
             context.AddNode(node);
             context.CompleteNode(node.TraceId, result, success, null, extraInfo);
 
-            logger?.LogDebug("记录简单调用链: {Handler}.{Operation}, Success: {Success}, Duration: {Duration}ms", 
-                handler, operation, success, node.DurationMs);
+            logger?.LogDebug("记录简单调用链: {Handler}.{Operation}, Success: {Success}, Duration: {Duration}ms, 总节点数: {NodeCount}", 
+                handler, operation, success, node.DurationMs, context.NodeMap.Count);
         }
         catch (Exception ex)
         {
@@ -163,7 +191,7 @@ public class AsyncLocalMoChainTracing(ILogger<AsyncLocalMoChainTracing>? logger 
     /// 检查当前是否有活跃的调用链
     /// </summary>
     /// <returns>是否有活跃的调用链</returns>
-    public static bool HasActiveChain()
+    public bool HasActiveChain()
     {
         return _chainContext.Value != null;
     }
@@ -172,10 +200,40 @@ public class AsyncLocalMoChainTracing(ILogger<AsyncLocalMoChainTracing>? logger 
     /// 获取当前调用链的深度
     /// </summary>
     /// <returns>调用链深度</returns>
-    public static int GetChainDepth()
+    public int GetChainDepth()
     {
         var context = _chainContext.Value;
         return context?.ActiveNodes.Count ?? 0;
+    }
+
+    /// <summary>
+    /// 获取当前调用链的节点总数
+    /// </summary>
+    /// <returns>节点总数</returns>
+    public int GetNodeCount()
+    {
+        var context = _chainContext.Value;
+        return context?.NodeMap.Count ?? 0;
+    }
+
+    /// <summary>
+    /// 检查是否达到最大深度限制
+    /// </summary>
+    /// <param name="maxDepth">最大深度</param>
+    /// <returns>是否达到限制</returns>
+    public bool IsMaxDepthReached()
+    {
+        return GetChainDepth() >= _options.MaxChainDepth;
+    }
+
+    /// <summary>
+    /// 检查是否达到最大节点数量限制
+    /// </summary>
+    /// <param name="maxNodeCount">最大节点数量</param>
+    /// <returns>是否达到限制</returns>
+    public bool IsMaxNodeCountReached()
+    {
+        return GetNodeCount() >= _options.MaxNodeCount;
     }
 
     /// <summary>
