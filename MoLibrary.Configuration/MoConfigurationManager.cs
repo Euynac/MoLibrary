@@ -40,14 +40,7 @@ public static class MoConfigurationManager
     /// <summary>
     /// Gets the logger. If the logger is not initialized, a console logger is used.
     /// </summary>
-    internal static ILogger Logger =>
-        Setting.Logger ??= LoggerFactory.Create(builder =>
-        {
-            builder.AddFilter("Microsoft", LogLevel.Warning)
-                .AddFilter("System", LogLevel.Warning)
-                .AddFilter("MoConfiguration", LogLevel.Debug)
-                .AddConsole();
-        }).CreateLogger("MoConfiguration");
+    internal static ILogger Logger => Setting.Logger;
 
     /// <summary>
     /// Gets or sets the configuration settings.
