@@ -43,7 +43,7 @@ public static class MoGlobalJsonExtensions
         //options.NumberHandling = JsonNumberHandling.AllowReadingFromString | JsonNumberHandling.WriteAsString;
         options.NumberHandling = JsonNumberHandling.AllowReadingFromString;
 
-        options.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        //options.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
         //options.DictionaryKeyPolicy = JsonNamingPolicy.CamelCase;
         options.DictionaryKeyPolicy = new JsonCamelCaseNamingPolicy();
         options.PropertyNamingPolicy = new JsonCamelCaseNamingPolicy();

@@ -49,7 +49,13 @@ public class ModuleLogging(ModuleLoggingOption option) : MoModule<ModuleLogging,
         GlobalLog.Logger = new SerilogLoggerFactory(Log.Logger).CreateLogger("Global");
         LogProvider.Provider = new SerilogProvider(Log.Logger);
         MoModuleRegisterCentre.Logger = LogProvider.For(typeof(MoModuleRegisterCentre));
-
+        //LoggerFactory.Create(builder =>
+        //{
+        //    builder.AddFilter("Microsoft", LogLevel.Warning)
+        //        .AddFilter("System", LogLevel.Warning)
+        //        .AddFilter("MoConfiguration", LogLevel.Debug)
+        //        .AddConsole();
+        //}).CreateLogger("Test")
         var level =
             builder.Configuration.GetSectionRecursively("Serilog:MinimumLevel").Select(p => new { p.Key, p.Value }).ToList().ToJsonString();
         Log.Logger.Information("Set logging level: {LoggingLevel}", level);
