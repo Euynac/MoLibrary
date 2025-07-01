@@ -219,7 +219,6 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
     /// <summary>
     /// 检查是否达到最大深度限制
     /// </summary>
-    /// <param name="maxDepth">最大深度</param>
     /// <returns>是否达到限制</returns>
     public bool IsMaxDepthReached()
     {
@@ -229,7 +228,6 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
     /// <summary>
     /// 检查是否达到最大节点数量限制
     /// </summary>
-    /// <param name="maxNodeCount">最大节点数量</param>
     /// <returns>是否达到限制</returns>
     public bool IsMaxNodeCountReached()
     {
