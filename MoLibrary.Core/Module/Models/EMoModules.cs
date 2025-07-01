@@ -52,7 +52,11 @@ public enum EMoModules
     ScopedData,
     Controllers,
     /// <summary>
-    /// 链路追踪模块
+    /// 基本链路追踪模块
     /// </summary>
-    ChainTracing
+    ChainTracing,
+    /// <summary>
+    /// 框架链路追踪模块
+    /// </summary>
+    FrameworkChainTracing
 }
