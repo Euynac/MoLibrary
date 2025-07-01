@@ -100,7 +100,7 @@ public class ModuleChainTracingOption : MoModuleOption<ModuleChainTracing>
     /// <summary>
     /// 是否启用 ActionFilter
     /// </summary>
-    public bool EnableActionFilter { get; set; } = true;
+    public bool EnableActionFilter { get; set; } = false;
 
     /// <summary>
     /// 最大调用链深度（防止无限递归）

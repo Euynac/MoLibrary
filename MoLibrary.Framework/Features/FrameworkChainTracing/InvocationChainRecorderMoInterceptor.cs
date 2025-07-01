@@ -8,7 +8,7 @@ using MoLibrary.DomainDrivenDesign.ExceptionHandler;
 using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.MoResponse;
 
-namespace MoLibrary.Framework.Features.Decorators;
+namespace MoLibrary.Framework.Features.FrameworkChainTracing;
 
 /// <summary>
 /// https://kozmic.net/dynamic-proxy-tutorial/

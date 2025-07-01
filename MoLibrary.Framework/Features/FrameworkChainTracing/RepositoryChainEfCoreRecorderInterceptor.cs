@@ -6,7 +6,7 @@ using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Features;
 using MoLibrary.Tool.Extensions;
 
-namespace MoLibrary.Framework.Features.EfCoreExtensions;
+namespace MoLibrary.Framework.Features.FrameworkChainTracing;
 
 public class RepositoryChainEfCoreRecorderInterceptor(IHttpContextAccessor accessor, ILogger<RepositoryChainEfCoreRecorderInterceptor> logger) : DbCommandInterceptor
 {

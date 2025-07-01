@@ -7,7 +7,7 @@ using MoLibrary.DependencyInjection.DynamicProxy;
 using MoLibrary.DependencyInjection.DynamicProxy.Abstract;
 using MoLibrary.Tool.Extensions;
 
-namespace MoLibrary.Framework.Features.Decorators;
+namespace MoLibrary.Framework.Features.FrameworkChainTracing;
 
 public class InvocationChainSlowlyMethodDetectorInterceptor(ILogger<InvocationChainSlowlyMethodDetectorInterceptor> logger, IHttpContextAccessor accessor) : MoInterceptor
 {
