@@ -44,6 +44,8 @@ public class ModuleLogging(ModuleLoggingOption option) : MoModule<ModuleLogging,
 
 
         builder.Host.UseSerilog(Log.Logger); // 这里只注册了ILogger<T>的泛型日志，所以在依赖注入中使用需要使用泛型。
+        //设置后，内置的微软日志系统的配置将失效
+
         GlobalLog.Logger = new SerilogLoggerFactory(Log.Logger).CreateLogger("Global");
         LogProvider.Provider = new SerilogProvider(Log.Logger);
         MoModuleRegisterCentre.Logger = LogProvider.For(typeof(MoModuleRegisterCentre));

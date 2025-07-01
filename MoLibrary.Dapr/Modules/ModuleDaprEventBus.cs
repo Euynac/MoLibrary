@@ -104,13 +104,15 @@ public class ModuleDaprEventBus(ModuleDaprEventBusOption option)
             });
 
 
+            //TODO 优化此方法，目前格式化失败将未能拿到原始数据，难以排错。
             endpoints.MapPost(options.DaprEventBusCallback, async (HttpResponse response, HttpContext context, [FromServices] ILogger<DaprDistributedEventBus> logger, [FromServices] IGlobalJsonOption jsonOption) =>
             {
+                var topic = "";
                 try
                 {
                     var body = await JsonDocument.ParseAsync(context.Request.Body);
                     var pubSubName = body.RootElement.GetProperty("pubsubname").GetString();
-                    var topic = body.RootElement.GetProperty("topic").GetString();
+                    topic = body.RootElement.GetProperty("topic").GetString();
                     var data = body.RootElement.GetProperty("data").GetRawText();
                     if (string.IsNullOrWhiteSpace(pubSubName) || string.IsNullOrWhiteSpace(topic) || string.IsNullOrWhiteSpace(data))
                     {
@@ -147,7 +149,7 @@ public class ModuleDaprEventBus(ModuleDaprEventBusOption option)
                 catch (Exception e)
                 {
                     //TODO 后期需要实现死信队列
-                    logger.LogError(e, "接收Dapr领域事件出现异常");
+                    logger.LogError(e, $"接收Dapr领域事件 [{topic.BeNullIfEmpty() ?? "主题获取失败"}] 出现异常");
                     //return Results.BadRequest();
                     return Results.Ok();
                 }

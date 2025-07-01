@@ -48,7 +48,11 @@ public class ModuleGlobalExceptionHandler(ModuleGlobalExceptionHandlerOption opt
         //{  
         //    app.UseExceptionHandler(_ => { });
         //}
-        app.UseExceptionHandler(_ => { });
+
+
+
+        //默认情况下包含了一个默认的异常处理程序，会打印异常信息到控制台。如若要禁用此功能，需要在日志配置中设置"Microsoft.AspNetCore.Diagnostics.ExceptionHandlerMiddleware": "None"
+        app.UseExceptionHandler(_ => { });  
 
         //重写RESTful API异常处理
         //app.UseExceptionHandler(c => c.Run(async context =>
@@ -65,7 +69,7 @@ public class ModuleGlobalExceptionHandler(ModuleGlobalExceptionHandlerOption opt
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddSingleton<IMoExceptionHandler, MoExceptionHandler>();
+        services.AddSingleton<IMoExceptionHandler, MoExceptionHandler>(); 
         services.AddSingleton<IAsyncExceptionFilter, MoMvcExceptionFilter>();
         //services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ExceptionHandlerBehavior<,>));
       
