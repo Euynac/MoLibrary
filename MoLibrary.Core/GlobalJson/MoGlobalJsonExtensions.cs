@@ -10,7 +10,7 @@ public static class MoGlobalJsonExtensions
     public static void ConfigGlobalJsonSerializeOptions(this JsonSerializerOptions options, ModuleGlobalJsonOption extraOption)
     {
         options.Converters.Add(new NullableDateTimeJsonConverter());
-        options.Converters.Add(new DateTimeJsonConverter());
+        options.Converters.Add(new MoDateTimeJsonConverter());
         //options.Converters.Add(new StringJsonConverter { HttpContextAccessor = httpContextAccessor });
         //options.Converters.Add(new JsonConverterFactoryForICollection { HttpContextAccessor = httpContextAccessor });
         options.Converters.Add(new NullableGuidJsonConverter());
