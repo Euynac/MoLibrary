@@ -22,14 +22,17 @@ public static class TransientProxy
     {
         // 检查组件是否需要Transient生命周期
         if (IsTransientComponent(componentType))
-            return new TransientPipeEndpointProxy(serviceProvider, componentType, entranceType, metadata);
+        {
+            var serviceScopeFactory = serviceProvider.GetRequiredService<IServiceScopeFactory>();
+            return new TransientPipeEndpointProxy(serviceScopeFactory, componentType, entranceType, metadata);
+        }
 
         if (metadata != null)
         {
-            return (IPipeEndpoint)ActivatorUtilities.CreateInstance(serviceProvider, componentType, metadata);
+            return (IPipeEndpoint) ActivatorUtilities.CreateInstance(serviceProvider, componentType, metadata);
         }
 
-        return (IPipeEndpoint)ActivatorUtilities.CreateInstance(serviceProvider, componentType);
+        return (IPipeEndpoint) ActivatorUtilities.CreateInstance(serviceProvider, componentType);
 
     }
 
@@ -43,10 +46,11 @@ public static class TransientProxy
     {
         if (!IsTransientComponent(componentType))
         {
-            return (IPipeTransformMiddleware)ActivatorUtilities.CreateInstance(serviceProvider, componentType);
+            return (IPipeTransformMiddleware) ActivatorUtilities.CreateInstance(serviceProvider, componentType);
         }
 
-        return new TransientPipeTransformMiddlewareProxy(serviceProvider, componentType);
+        var serviceScopeFactory = serviceProvider.GetRequiredService<IServiceScopeFactory>();
+        return new TransientPipeTransformMiddlewareProxy(serviceScopeFactory, componentType);
     }
 
     /// <summary>
@@ -59,10 +63,11 @@ public static class TransientProxy
     {
         if (!IsTransientComponent(componentType))
         {
-            return (IPipeEndpointMiddleware)ActivatorUtilities.CreateInstance(serviceProvider, componentType);
+            return (IPipeEndpointMiddleware) ActivatorUtilities.CreateInstance(serviceProvider, componentType);
         }
 
-        return new TransientPipeEndpointMiddlewareProxy(serviceProvider, componentType);
+        var serviceScopeFactory = serviceProvider.GetRequiredService<IServiceScopeFactory>();
+        return new TransientPipeEndpointMiddlewareProxy(serviceScopeFactory, componentType);
     }
 
     /// <summary>
@@ -106,30 +111,31 @@ public static class TransientProxy
 /// 提供创建Transient实例的基本功能
 /// </summary>
 internal abstract class TransientComponentProxyBase(
-    IServiceProvider serviceProvider,
+    IServiceScopeFactory serviceScopeFactory,
     Type componentType,
     object? metadata)
 {
-    protected readonly IServiceProvider ServiceProvider = serviceProvider;
+    protected readonly IServiceScopeFactory ServiceScopeFactory = serviceScopeFactory;
     protected readonly Type ComponentType = componentType;
     protected readonly object? Metadata = metadata;
+
     /// <summary>
     /// 创建特定类型的组件实例
     /// </summary>
     /// <typeparam name="T">目标类型</typeparam>
+    /// <param name="scopedServiceProvider">从外部scope提供的ServiceProvider</param>
     /// <returns>创建的实例</returns>
-    protected T CreateInstance<T>() where T : class
+    protected T CreateInstance<T>(IServiceProvider scopedServiceProvider) where T : class
     {
-        using var scope = ServiceProvider.GetRequiredService<IServiceScopeFactory>().CreateScope();
         var obj = Metadata != null
-            ? ActivatorUtilities.CreateInstance(scope.ServiceProvider, ComponentType, Metadata)
-            : ActivatorUtilities.CreateInstance(scope.ServiceProvider, ComponentType);
-       
+            ? ActivatorUtilities.CreateInstance(scopedServiceProvider, ComponentType, Metadata)
+            : ActivatorUtilities.CreateInstance(scopedServiceProvider, ComponentType);
+
         if (obj is T typedInstance)
         {
             return typedInstance;
         }
-        
+
         throw new Exception($"无法创建类型为 {ComponentType.FullName} 的实例");
     }
 }
@@ -138,8 +144,8 @@ internal abstract class TransientComponentProxyBase(
 /// 端点代理类
 /// 实现对Transient端点的代理
 /// </summary>
-internal class TransientPipeEndpointProxy(IServiceProvider serviceProvider, Type componentType, EDataSource entranceType, object? metadata)
-    : TransientComponentProxyBase(serviceProvider, componentType, metadata), ICommunicationCore
+internal class TransientPipeEndpointProxy(IServiceScopeFactory serviceScopeFactory, Type componentType, EDataSource entranceType, object? metadata)
+    : TransientComponentProxyBase(serviceScopeFactory, componentType, metadata), ICommunicationCore
 {
     private readonly SemaphoreSlim _initLock = new(1, 1);
     private readonly SemaphoreSlim _disposeLock = new(1, 1);
@@ -152,7 +158,8 @@ internal class TransientPipeEndpointProxy(IServiceProvider serviceProvider, Type
 
     public async Task ReceiveDataAsync(DataContext data)
     {
-        var instance = CreateInstance<IPipeEndpoint>();
+        using var scope = ServiceScopeFactory.CreateScope();
+        var instance = CreateInstance<IPipeEndpoint>(scope.ServiceProvider);
         instance.Pipe = Pipe;
         instance.EntranceType = EntranceType;
         await instance.ReceiveDataAsync(data);
@@ -160,7 +167,8 @@ internal class TransientPipeEndpointProxy(IServiceProvider serviceProvider, Type
 
     public dynamic GetMetadata()
     {
-        var instance = CreateInstance<IPipeEndpoint>();
+        using var scope = ServiceScopeFactory.CreateScope();
+        var instance = CreateInstance<IPipeEndpoint>(scope.ServiceProvider);
         return instance.GetMetadata();
     }
 
@@ -174,10 +182,11 @@ internal class TransientPipeEndpointProxy(IServiceProvider serviceProvider, Type
         {
             if (_isInit)
                 return;
-            
+
             _isInit = true;
 
-            var instance = CreateInstance<IPipeEndpoint>();
+            using var scope = ServiceScopeFactory.CreateScope();
+            var instance = CreateInstance<IPipeEndpoint>(scope.ServiceProvider);
             instance.Pipe = Pipe;
             instance.EntranceType = EntranceType;
 
@@ -202,11 +211,12 @@ internal class TransientPipeEndpointProxy(IServiceProvider serviceProvider, Type
         {
             if (_isDisposed)
                 return;
-            
+
             _isDisposed = true;
             _isInit = false;
 
-            var instance = CreateInstance<ICommunicationCore>();
+            using var scope = ServiceScopeFactory.CreateScope();
+            var instance = CreateInstance<ICommunicationCore>(scope.ServiceProvider);
             await instance.DisposeAsync();
         }
         finally
@@ -221,7 +231,8 @@ internal class TransientPipeEndpointProxy(IServiceProvider serviceProvider, Type
     /// <returns>连接方向</returns>
     public EConnectionDirection SupportedConnectionDirection()
     {
-        var instance = CreateInstance<ICommunicationCore>();
+        using var scope = ServiceScopeFactory.CreateScope();
+        var instance = CreateInstance<ICommunicationCore>(scope.ServiceProvider);
         return instance.SupportedConnectionDirection();
     }
 
@@ -237,7 +248,8 @@ internal class TransientPipeEndpointProxy(IServiceProvider serviceProvider, Type
             await InitAsync();
         }
 
-        var instance = CreateInstance<ICommunicationCore>();
+        using var scope = ServiceScopeFactory.CreateScope();
+        var instance = CreateInstance<ICommunicationCore>(scope.ServiceProvider);
         instance.Pipe = Pipe;
         instance.EntranceType = EntranceType;
         await instance.SendDataAsync(data);
@@ -249,17 +261,18 @@ internal class TransientPipeEndpointProxy(IServiceProvider serviceProvider, Type
 /// 实现对Transient转换中间件的代理
 /// </summary>
 internal class TransientPipeTransformMiddlewareProxy(
-    IServiceProvider serviceProvider,
+    IServiceScopeFactory serviceScopeFactory,
     Type componentType)
-    : TransientComponentProxyBase(serviceProvider, componentType, null), IPipeTransformMiddleware
+    : TransientComponentProxyBase(serviceScopeFactory, componentType, null), IPipeTransformMiddleware
 {
     public async Task<DataContext> PassAsync(DataContext context)
     {
-        var instance = CreateInstance<IPipeTransformMiddleware>();
+        using var scope = ServiceScopeFactory.CreateScope();
+        var instance = CreateInstance<IPipeTransformMiddleware>(scope.ServiceProvider);
         // 如果中间件需要访问管道，则设置管道引用
         if (instance is IWantAccessPipeline wantAccess && Pipeline != null)
         {
-                wantAccess.Pipe = Pipeline;
+            wantAccess.Pipe = Pipeline;
         }
 
         return await instance.PassAsync(context);
@@ -267,7 +280,8 @@ internal class TransientPipeTransformMiddlewareProxy(
 
     public dynamic GetMetadata()
     {
-        var instance = CreateInstance<IPipeTransformMiddleware>();
+        using var scope = ServiceScopeFactory.CreateScope();
+        var instance = CreateInstance<IPipeTransformMiddleware>(scope.ServiceProvider);
         return instance.GetMetadata();
     }
 
@@ -279,13 +293,14 @@ internal class TransientPipeTransformMiddlewareProxy(
 /// 实现对Transient端点中间件的代理
 /// </summary>
 internal class TransientPipeEndpointMiddlewareProxy(
-    IServiceProvider serviceProvider,
+    IServiceScopeFactory serviceScopeFactory,
     Type componentType)
-    : TransientComponentProxyBase(serviceProvider, componentType, null), IPipeEndpointMiddleware
+    : TransientComponentProxyBase(serviceScopeFactory, componentType, null), IPipeEndpointMiddleware
 {
     public dynamic GetMetadata()
     {
-        var instance = CreateInstance<IPipeEndpointMiddleware>();
+        using var scope = ServiceScopeFactory.CreateScope();
+        var instance = CreateInstance<IPipeEndpointMiddleware>(scope.ServiceProvider);
         return instance.GetMetadata();
     }
 

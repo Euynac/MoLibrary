@@ -31,7 +31,7 @@ public class DefaultCore : CommunicationCore<MetadataForDefault>
 /// </summary>
 /// <typeparam name="TCore"></typeparam>
 /// <typeparam name="TMetadata">设置Channel的元数据配置</typeparam>
-/// <param name="metadata"></param>
+/// <param name="metadata">子类直接注入获取即可</param>
 public class DefaultCore<TCore, TMetadata>(TMetadata metadata) : CommunicationCore<TMetadata>(metadata) where TMetadata : CommunicationMetadata<TCore> where TCore : DefaultCore<TCore, TMetadata>
 {
     public override EConnectionDirection SupportedConnectionDirection()
