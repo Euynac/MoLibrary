@@ -175,13 +175,7 @@ public static class ChainTracingExtensions
 
         return new
         {
-            chainTracing = new
-            {
-                rootNode = context.Root,
-                totalDurationMs = context.TotalDuration,
-                startTime = context.StartTime,
-                endTime = context.EndTime
-            }
+            chainTracing = context.Root
         };
     }
 }
