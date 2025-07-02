@@ -1,3 +1,4 @@
+using JetBrains.Annotations;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -105,8 +106,9 @@ public abstract class MoModuleWithDependencies<TModuleSelf, TModuleOption, TModu
     where TModuleGuide : MoModuleGuide<TModuleSelf, TModuleOption, TModuleGuide>, new()
 {
     public abstract void ClaimDependencies();
-   
-   
+
+
+    [MustUseReturnValue]
     protected TOtherModuleGuide DependsOnModule<TOtherModuleGuide>()  
         where TOtherModuleGuide : MoModuleGuide, new()
     {

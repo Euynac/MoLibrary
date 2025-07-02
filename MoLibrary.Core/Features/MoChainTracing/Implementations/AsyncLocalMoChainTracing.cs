@@ -1,8 +1,9 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MoLibrary.Core.Features.MoChainTracing.Models;
 using MoLibrary.Core.Modules;
 
-namespace MoLibrary.Core.Features.MoChainTracing;
+namespace MoLibrary.Core.Features.MoChainTracing.Implementations;
 
 /// <summary>
 /// 基于 AsyncLocal 的调用链追踪实现
@@ -20,11 +21,13 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
     /// <summary>
     /// 开始一个新的调用链节点
     /// </summary>
-    /// <param name="handler">处理者名称</param>
     /// <param name="operation">操作名称</param>
+    /// <param name="handler">处理者名称</param>
     /// <param name="extraInfo">额外信息</param>
+    /// <param name="type"></param>
     /// <returns>调用链节点标识</returns>
-    public string BeginTrace(string handler, string operation, object? extraInfo = null)
+    public string BeginTrace(string operation, string? handler, object? extraInfo = null,
+        EChainTracingType type = EChainTracingType.Unknown)
     {
         try
         {
@@ -50,6 +53,7 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
             {
                 Handler = handler,
                 Operation = operation,
+                Type = type,
                 StartExtraInfo = extraInfo,
                 StartTime = DateTime.UtcNow
             };
@@ -76,7 +80,8 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
     /// <param name="success">是否成功</param>
     /// <param name="exception">异常信息</param>
     /// <param name="extraInfo">额外信息</param>
-    public void EndTrace(string traceId, string? result = null, bool success = true, Exception? exception = null, object? extraInfo = null)
+    public void EndTrace(string traceId, string? result = null, bool success = true, Exception? exception = null,
+        object? extraInfo = null)
     {
         try
         {
@@ -101,14 +106,15 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
     /// <summary>
     /// 记录简单的调用信息
     /// </summary>
-    /// <param name="handler">处理者名称</param>
     /// <param name="operation">操作名称</param>
+    /// <param name="handler">处理者名称</param>
     /// <param name="success">是否成功</param>
     /// <param name="result">调用结果</param>
     /// <param name="duration">执行时间</param>
     /// <param name="extraInfo">额外信息</param>
-    public void RecordTrace(string handler, string operation, bool success = true, string? result = null, 
-        TimeSpan? duration = null, object? extraInfo = null)
+    /// <param name="type"></param>
+    public void RecordTrace(string operation, string? handler, bool success = true, string? result = null,
+        TimeSpan? duration = null, object? extraInfo = null, EChainTracingType type = EChainTracingType.Unknown)
     {
         try
         {
@@ -127,8 +133,9 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
                 Handler = handler,
                 Operation = operation,
                 StartTime = DateTime.UtcNow,
-                Success = success,
+                IsFailed = !success ? true : null,
                 Result = result,
+                Type = type,
                 StartExtraInfo = extraInfo,
                 EndExtraInfo = extraInfo
             };
@@ -146,7 +153,7 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
             context.CompleteNode(node.TraceId, result, success, null, extraInfo);
 
             logger?.LogDebug("记录简单调用链: {Handler}.{Operation}, Success: {Success}, Duration: {Duration}ms, 总节点数: {NodeCount}", 
-                handler, operation, success, node.DurationMs, context.NodeMap.Count);
+                handler, operation, success, node.Duration, context.NodeMap.Count);
         }
         catch (Exception ex)
         {
@@ -161,30 +168,6 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
     public MoChainContext? GetCurrentChain()
     {
         return _chainContext.Value;
-    }
-
-    /// <summary>
-    /// 开始一个根调用链
-    /// </summary>
-    /// <param name="handler">处理者名称</param>
-    /// <param name="operation">操作名称</param>
-    /// <param name="extraInfo">额外信息</param>
-    /// <returns>调用链节点标识</returns>
-    public static string BeginRootTrace(string handler, string operation, object? extraInfo = null)
-    {
-        var context = new MoChainContext();
-        _chainContext.Value = context;
-
-        var node = new MoChainNode
-        {
-            Handler = handler,
-            Operation = operation,
-            StartExtraInfo = extraInfo,
-            StartTime = DateTime.UtcNow
-        };
-
-        context.AddNode(node);
-        return node.TraceId;
     }
 
     /// <summary>
@@ -259,4 +242,11 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
             logger?.LogError(ex, "合并远程调用链时发生异常: TraceId: {TraceId}", traceId);
         }
     }
+
+    public bool ContainsTrace(string traceId)
+    {
+        var context = _chainContext.Value;
+        return context?.NodeMap.ContainsKey(traceId) ?? false;
+    }
+
 }
