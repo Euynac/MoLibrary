@@ -1,4 +1,6 @@
 using Microsoft.Extensions.Logging;
+using MoLibrary.Core.Features.MoChainTracing.Implementations;
+using MoLibrary.Core.Features.MoChainTracing.Models;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Core.Features.MoChainTracing;
@@ -8,245 +10,21 @@ namespace MoLibrary.Core.Features.MoChainTracing;
 /// </summary>
 public static class ChainTracingExtensions
 {
-
-    /// <summary>
-    /// 执行带调用链追踪的操作
-    /// </summary>
-    /// <param name="chainTracing">调用链追踪服务</param>
-    /// <param name="handler">处理者名称</param>
-    /// <param name="operation">操作名称</param>
-    /// <param name="action">要执行的操作</param>
-    /// <param name="extraInfo">额外信息</param>
-    public static async Task ExecuteWithTraceAsync(this IMoChainTracing chainTracing,
-        string handler, string operation, Func<Task> action, object? extraInfo = null)
-    {
-        var traceId = chainTracing.BeginTrace(handler, operation, extraInfo);
-        try
-        {
-            await action();
-            chainTracing.EndTrace(traceId, "Success", true);
-        }
-        catch (Exception ex)
-        {
-            chainTracing.EndTrace(traceId, $"Exception: {ex.Message}", false, ex);
-            throw;
-        }
-    }
-
-
-
-    /// <summary>
-    /// 执行带调用链追踪的操作并返回结果
-    /// </summary>
-    /// <typeparam name="T">返回类型</typeparam>
-    /// <param name="chainTracing">调用链追踪服务</param>
-    /// <param name="handler">处理者名称</param>
-    /// <param name="operation">操作名称</param>
-    /// <param name="func">要执行的操作</param>
-    /// <param name="extraInfo">额外信息</param>
-    /// <returns>操作结果</returns>
-    public static async Task<T> ExecuteWithTraceAsync<T>(this IMoChainTracing chainTracing, 
-        string handler, string operation, Func<Task<T>> func, object? extraInfo = null)
-    {
-        var traceId = chainTracing.BeginTrace(handler, operation, extraInfo);
-        try
-        {
-            var result = await func();
-            
-            // 如果结果是 IServiceResponse，提取状态信息
-            if (result is IServiceResponse serviceResponse)
-            {
-                chainTracing.EndTrace(traceId, $"Code: {serviceResponse.Code}", serviceResponse.Code == ResponseCode.Ok);
-            }
-            else
-            {
-                chainTracing.EndTrace(traceId, "Success", true);
-            }
-            
-            return result;
-        }
-        catch (Exception ex)
-        {
-            chainTracing.EndTrace(traceId, $"Exception: {ex.Message}", false, ex);
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// 执行带调用链追踪的同步操作
-    /// </summary>
-    /// <param name="chainTracing">调用链追踪服务</param>
-    /// <param name="handler">处理者名称</param>
-    /// <param name="operation">操作名称</param>
-    /// <param name="action">要执行的操作</param>
-    /// <param name="extraInfo">额外信息</param>
-    public static void ExecuteWithTrace(this IMoChainTracing chainTracing, 
-        string handler, string operation, Action action, object? extraInfo = null)
-    {
-        var traceId = chainTracing.BeginTrace(handler, operation, extraInfo);
-        try
-        {
-            action();
-            chainTracing.EndTrace(traceId, "Success", true);
-        }
-        catch (Exception ex)
-        {
-            chainTracing.EndTrace(traceId, $"Exception: {ex.Message}", false, ex);
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// 执行带调用链追踪的同步操作并返回结果
-    /// </summary>
-    /// <typeparam name="T">返回类型</typeparam>
-    /// <param name="chainTracing">调用链追踪服务</param>
-    /// <param name="handler">处理者名称</param>
-    /// <param name="operation">操作名称</param>
-    /// <param name="func">要执行的操作</param>
-    /// <param name="extraInfo">额外信息</param>
-    /// <returns>操作结果</returns>
-    public static T ExecuteWithTrace<T>(this IMoChainTracing chainTracing, 
-        string handler, string operation, Func<T> func, object? extraInfo = null)
-    {
-        var traceId = chainTracing.BeginTrace(handler, operation, extraInfo);
-        try
-        {
-            var result = func();
-            
-            // 如果结果是 IServiceResponse，提取状态信息
-            if (result is IServiceResponse serviceResponse)
-            {
-                chainTracing.EndTrace(traceId, $"Code: {serviceResponse.Code}", serviceResponse.Code == ResponseCode.Ok);
-            }
-            else
-            {
-                chainTracing.EndTrace(traceId, "Success", true);
-            }
-            
-            return result;
-        }
-        catch (Exception ex)
-        {
-            chainTracing.EndTrace(traceId, $"Exception: {ex.Message}", false, ex);
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// 为 IServiceResponse 附加调用链信息
-    /// </summary>
-    /// <param name="response">服务响应</param>
-    /// <param name="chainTracing">调用链追踪服务</param>
-    /// <param name="logger">日志记录器</param>
-    /// <returns>服务响应（用于链式调用）</returns>
-    public static T WithChainTracing<T>(this T response, IMoChainTracing chainTracing, ILogger? logger = null) 
-        where T : IServiceResponse
-    {
-        ChainTracingResponseHelper.AttachChainToResponse(response, chainTracing, logger);
-        return response;
-    }
-
-    /// <summary>
-    /// 记录数据库调用
-    /// </summary>
-    /// <param name="chainTracing">调用链追踪服务</param>
-    /// <param name="operation">数据库操作</param>
-    /// <param name="tableName">表名</param>
-    /// <param name="success">是否成功</param>
-    /// <param name="duration">执行时间</param>
-    /// <param name="rowsAffected">影响行数</param>
-    /// <param name="extraInfo">额外信息</param>
-    public static void RecordDatabaseCall(this IMoChainTracing chainTracing, 
-        string operation, string? tableName = null, bool success = true, 
-        TimeSpan? duration = null, int? rowsAffected = null, object? extraInfo = null)
-    {
-        var handler = "Database";
-        var operationName = string.IsNullOrEmpty(tableName) ? operation : $"{operation}({tableName})";
-        var result = success ? $"Success" : "Failed";
-        
-        if (rowsAffected.HasValue)
-        {
-            result += $", Rows: {rowsAffected}";
-        }
-
-        chainTracing.RecordTrace(handler, operationName, success, result, duration, extraInfo);
-    }
-
-    /// <summary>
-    /// 记录 Redis 调用
-    /// </summary>
-    /// <param name="chainTracing">调用链追踪服务</param>
-    /// <param name="operation">Redis 操作</param>
-    /// <param name="key">Redis 键</param>
-    /// <param name="success">是否成功</param>
-    /// <param name="duration">执行时间</param>
-    /// <param name="extraInfo">额外信息</param>
-    public static void RecordRedisCall(this IMoChainTracing chainTracing, 
-        string operation, string? key = null, bool success = true, 
-        TimeSpan? duration = null, object? extraInfo = null)
-    {
-        var handler = "Redis";
-        var operationName = string.IsNullOrEmpty(key) ? operation : $"{operation}({key})";
-        var result = success ? "Success" : "Failed";
-
-        chainTracing.RecordTrace(handler, operationName, success, result, duration, extraInfo);
-    }
-
-    /// <summary>
-    /// 记录外部 API 调用
-    /// </summary>
-    /// <param name="chainTracing">调用链追踪服务</param>
-    /// <param name="serviceName">服务名称</param>
-    /// <param name="endpoint">API 端点</param>
-    /// <param name="method">HTTP 方法</param>
-    /// <param name="statusCode">响应状态码</param>
-    /// <param name="success">是否成功</param>
-    /// <param name="duration">执行时间</param>
-    /// <param name="extraInfo">额外信息</param>
-    public static void RecordExternalApiCall(this IMoChainTracing chainTracing, 
-        string serviceName, string endpoint, string method = "GET", 
-        int? statusCode = null, bool success = true, TimeSpan? duration = null, object? extraInfo = null)
-    {
-        var handler = $"ExternalAPI({serviceName})";
-        var operationName = $"{method} {endpoint}";
-        var result = statusCode.HasValue ? $"HTTP {statusCode}" : (success ? "Success" : "Failed");
-
-        chainTracing.RecordTrace(handler, operationName, success, result, duration, extraInfo);
-    }
-
-    /// <summary>
-    /// 记录领域服务调用
-    /// </summary>
-    /// <param name="chainTracing">调用链追踪服务</param>
-    /// <param name="serviceName">服务名称</param>
-    /// <param name="methodName">方法名称</param>
-    /// <param name="success">是否成功</param>
-    /// <param name="duration">执行时间</param>
-    /// <param name="result">调用结果</param>
-    /// <param name="extraInfo">额外信息</param>
-    public static void RecordDomainServiceCall(this IMoChainTracing chainTracing, 
-        string serviceName, string methodName, bool success = true, 
-        TimeSpan? duration = null, string? result = null, object? extraInfo = null)
-    {
-        var handler = $"DomainService({serviceName})";
-        var finalResult = result ?? (success ? "Success" : "Failed");
-
-        chainTracing.RecordTrace(handler, methodName, success, finalResult, duration, extraInfo);
-    }
-
     /// <summary>
     /// 开始作用域追踪
     /// </summary>
     /// <param name="chainTracing">调用链追踪服务</param>
-    /// <param name="handler">处理者名称</param>
     /// <param name="operation">操作名称</param>
+    /// <param name="handler">处理者名称</param>
     /// <param name="extraInfo">额外信息</param>
+    /// <param name="type"></param>
     /// <returns>作用域追踪器</returns>
-    public static ChainTracingScope BeginScope(this IMoChainTracing chainTracing, 
-        string handler, string operation, object? extraInfo = null)
+    public static ChainTracingScope BeginScope(this IMoChainTracing chainTracing,
+        string operation,
+        string? handler, object? extraInfo = null,
+        EChainTracingType type = EChainTracingType.Unknown)
     {
-        return new ChainTracingScope(chainTracing, handler, operation, extraInfo);
+        return new ChainTracingScope(chainTracing, operation, handler, extraInfo, type);
     }
 
     /// <summary>
@@ -263,7 +41,7 @@ public static class ChainTracingExtensions
         string serviceName, string operation, Func<Task<T>> httpCall, object? extraInfo = null)
         where T : IServiceResponse
     {
-        var traceId = chainTracing.BeginTrace($"Microservice({serviceName})", operation, extraInfo);
+        var traceId = chainTracing.BeginTrace(operation, $"Microservice({serviceName})", extraInfo);
         try
         {
             var result = await httpCall();
@@ -300,7 +78,7 @@ public static class ChainTracingExtensions
         string serviceName, string operation, Func<ChainTracingScope, Task<T>> httpCall, object? extraInfo = null)
         where T : IServiceResponse
     {
-        using var scope = chainTracing.BeginScope($"Microservice({serviceName})", operation, extraInfo);
+        using var scope = chainTracing.BeginScope(operation, $"Microservice({serviceName})", extraInfo);
         try
         {
             var result = await httpCall(scope);
@@ -312,13 +90,13 @@ public static class ChainTracingExtensions
             }
             
             var success = result.Code == ResponseCode.Ok;
-            scope.RecordSuccess($"Code: {result.Code}");
+            scope.EndWithSuccess($"Code: {result.Code}");
             
             return result;
         }
         catch (Exception ex)
         {
-            scope.RecordException(ex);
+            scope.EndWithException(ex);
             throw;
         }
     }
@@ -339,9 +117,9 @@ public static class ChainTracingExtensions
         bool success = true, TimeSpan? duration = null, object? extraInfo = null)
     {
         var handler = $"Microservice({serviceName})";
-        var result = response != null ? $"Code: {response.Code}" : (success ? "Success" : "Failed");
+        var result = response != null ? $"Code: {response.Code}" : success ? "Success" : "Failed";
 
-        var traceId = chainTracing.BeginTrace(handler, operation, extraInfo);
+        var traceId = chainTracing.BeginTrace(operation, handler, extraInfo);
         
         // 如果有响应且包含调用链信息，则合并
         if (response?.ExtraInfo != null)
@@ -390,7 +168,7 @@ public static class ChainTracingExtensions
     public static object? ExtractChainForPropagation(this IMoChainTracing chainTracing)
     {
         var context = chainTracing.GetCurrentChain();
-        if (context?.RootNode == null)
+        if (context?.Root == null)
         {
             return null;
         }
@@ -399,8 +177,8 @@ public static class ChainTracingExtensions
         {
             chainTracing = new
             {
-                rootNode = context.RootNode,
-                totalDurationMs = context.TotalDurationMs,
+                rootNode = context.Root,
+                totalDurationMs = context.TotalDuration,
                 startTime = context.StartTime,
                 endTime = context.EndTime
             }
