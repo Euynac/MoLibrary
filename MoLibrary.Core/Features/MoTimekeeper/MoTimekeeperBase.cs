@@ -169,6 +169,7 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
 
     public virtual void Finish()
     {
+        if(IsFinished) return;
         Timer.Stop();
         
         // Remove from running timekeepers tracking
@@ -184,7 +185,7 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
         }
         DoRecord();
         Timer.Reset();
-        IsFinished = true;//TODO
+        IsFinished = true;
     }
 
     public virtual void Dispose()

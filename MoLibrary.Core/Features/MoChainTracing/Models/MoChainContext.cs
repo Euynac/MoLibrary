@@ -3,7 +3,7 @@ using System.Dynamic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace MoLibrary.Core.Features.MoChainTracing;
+namespace MoLibrary.Core.Features.MoChainTracing.Models;
 
 /// <summary>
 /// 调用链上下文，用于存储整个调用链的信息
@@ -13,7 +13,7 @@ public class MoChainContext
     /// <summary>
     /// 调用链的根节点
     /// </summary>
-    public MoChainNode? RootNode { get; set; }
+    public MoChainNode? Root { get; set; }
 
     /// <summary>
     /// 当前活跃的调用链节点
@@ -27,24 +27,29 @@ public class MoChainContext
     [JsonIgnore]
     public ConcurrentDictionary<string, MoChainNode> NodeMap { get; set; } = new();
 
+
     /// <summary>
     /// 调用链开始时间
     /// </summary>
+
+    [JsonIgnore]
     public DateTime StartTime { get; set; } = DateTime.UtcNow;
 
     /// <summary>
     /// 调用链结束时间
     /// </summary>
+    [JsonIgnore]
     public DateTime? EndTime { get; set; }
 
     /// <summary>
     /// 总执行时间（毫秒）
     /// </summary>
-    public double? TotalDurationMs => EndTime?.Subtract(StartTime).TotalMilliseconds;
+    public string? TotalDuration => EndTime?.Subtract(StartTime).TotalMilliseconds is { } milliseconds ? $"{milliseconds}ms" : null;
 
     /// <summary>
     /// 其他信息
     /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ExpandoObject? OtherInfo { get; set; }
 
     /// <summary>
@@ -53,9 +58,9 @@ public class MoChainContext
     /// <param name="node">调用链节点</param>
     public void AddNode(MoChainNode node)
     {
-        if (RootNode == null)
+        if (Root == null)
         {
-            RootNode = node;
+            Root = node;
         }
         else if (ActiveNodes.Count > 0)
         {
@@ -83,14 +88,13 @@ public class MoChainContext
         {
             node.EndTime = DateTime.UtcNow;
             node.Result = result;
-            node.Success = success;
             node.Exception = exception;
             node.EndExtraInfo = extraInfo;
 
             // 如果有异常，自动设置为失败
-            if (exception != null)
+            if (exception != null || !success)
             {
-                node.Success = false;
+                node.IsFailed = true;
             }
 
             // 从活跃节点栈中移除
@@ -241,96 +245,3 @@ public class MoChainContext
         }
     }
 }
-
-/// <summary>
-/// 调用链节点，表示一个具体的调用
-/// </summary>
-public class MoChainNode
-{
-    /// <summary>
-    /// 调用链节点唯一标识
-    /// </summary>
-    public string TraceId { get; set; } = Guid.NewGuid().ToString("N");
-
-    /// <summary>
-    /// 处理者名称（如服务名、类名等）
-    /// </summary>
-    public string Handler { get; set; } = string.Empty;
-
-    /// <summary>
-    /// 操作名称（如方法名、操作描述等）
-    /// </summary>
-    public string Operation { get; set; } = string.Empty;
-
-    /// <summary>
-    /// 开始时间
-    /// </summary>
-    public DateTime StartTime { get; set; } = DateTime.UtcNow;
-
-    /// <summary>
-    /// 结束时间
-    /// </summary>
-    public DateTime? EndTime { get; set; }
-
-    /// <summary>
-    /// 执行时间（毫秒）
-    /// </summary>
-    public double? DurationMs => EndTime?.Subtract(StartTime).TotalMilliseconds;
-
-    /// <summary>
-    /// 调用结果描述
-    /// </summary>
-    public string? Result { get; set; }
-
-    /// <summary>
-    /// 是否成功
-    /// </summary>
-    public bool Success { get; set; } = true;
-
-    /// <summary>
-    /// 是否为远程调用
-    /// </summary>
-    public bool IsRemoteCall { get; set; }
-
-    /// <summary>
-    /// 异常信息
-    /// </summary>
-    [JsonIgnore]
-    public Exception? Exception { get; set; }
-
-    /// <summary>
-    /// 异常信息的序列化表示
-    /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string[]? ExceptionMessage => Exception?.ToString().Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-
-    /// <summary>
-    /// 开始时的额外信息
-    /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public object? StartExtraInfo { get; set; }
-
-    /// <summary>
-    /// 结束时的额外信息
-    /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public object? EndExtraInfo { get; set; }
-
-    /// <summary>
-    /// 子调用链节点
-    /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public List<MoChainNode>? Children { get; set; }
-
-    /// <summary>
-    /// 父调用链节点
-    /// </summary>
-    [JsonIgnore]
-    public MoChainNode? Parent { get; set; }
-
-    /// <summary>
-    /// 备注信息
-    /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Remarks { get; set; }
-} 

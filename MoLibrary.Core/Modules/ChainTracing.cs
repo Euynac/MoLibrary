@@ -4,6 +4,8 @@ using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.Core.Features.MoChainTracing;
+using MoLibrary.Core.Features.MoChainTracing.Decorators;
+using MoLibrary.Core.Features.MoChainTracing.Implementations;
 
 namespace MoLibrary.Core.Modules;
 
@@ -52,22 +54,20 @@ public class ModuleChainTracing(ModuleChainTracingOption option)
     }
 
 
-    public override void ConfigureApplicationBuilder(IApplicationBuilder app)
-    {
-        if (Option is { Enabled: true, UseMiddleware: true})
-        {
-            app.UseMiddleware<ChainTracingMiddleware>();
-        }
-    }
-
-
     public override void ClaimDependencies()
     {
-        if (option.EnableActionFilter)
+        if (option.EnableControllerTracing || option.EnableAttachToRes)
         {
-            DependsOnModule<ModuleControllersGuide>().ConfigMvcOption((options, _) =>
+            DependsOnModule<ModuleControllersGuide>().Register().ConfigMvcOption((options, _) =>
             {
-                options.Filters.Add<AutoChainTracingActionFilter>();
+                if(option.EnableControllerTracing)
+                {
+                    options.Filters.Add<ChainTracingProviderController>();
+                }
+                if(option.EnableAttachToRes)
+                {
+                    options.Filters.Add<ChainTracingAttachingActionFilter>();
+                }
             });
         }
     }
@@ -92,15 +92,14 @@ public class ModuleChainTracingOption : MoModuleOption<ModuleChainTracing>
     public bool Enabled { get; set; } = true;
 
     /// <summary>
-    /// 是否使用调用链追踪中间件
+    /// 是否启用 Controller Tracing
     /// </summary>
-    public bool UseMiddleware { get; set; } = true;
-
+    public bool EnableControllerTracing { get; set; } = true;
 
     /// <summary>
-    /// 是否启用 ActionFilter
+    /// 是否启用将调用链信息附加到响应中
     /// </summary>
-    public bool EnableActionFilter { get; set; } = false;
+    public bool EnableAttachToRes { get; set; } = true;
 
     /// <summary>
     /// 最大调用链深度（防止无限递归）
