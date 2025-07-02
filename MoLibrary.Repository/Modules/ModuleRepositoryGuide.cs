@@ -58,6 +58,8 @@ public class ModuleRepositoryGuide : MoModuleGuide<ModuleRepository, ModuleRepos
     {
         ConfigureServices(context =>
         {
+            var option = context.ModuleOption;
+
             context.Services.AddMemoryCache();
 
             context.Services.AddTransient(typeof(IDbContextProvider<>), typeof(UnitOfWorkDbContextProvider<>));
