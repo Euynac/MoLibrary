@@ -42,11 +42,6 @@ public class MoChainContext
     public DateTime? EndTime { get; set; }
 
     /// <summary>
-    /// 总执行时间（毫秒）
-    /// </summary>
-    public string? TotalDuration => EndTime?.Subtract(StartTime).TotalMilliseconds is { } milliseconds ? $"{milliseconds}ms" : null;
-
-    /// <summary>
     /// 其他信息
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
