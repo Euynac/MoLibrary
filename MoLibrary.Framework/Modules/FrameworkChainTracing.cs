@@ -3,6 +3,7 @@ using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.Core.Modules;
+using MoLibrary.DependencyInjection.Modules;
 
 namespace MoLibrary.Framework.Modules;
 
@@ -26,7 +27,8 @@ public class ModuleFrameworkChainTracing(ModuleFrameworkChainTracingOption optio
 
     public override void ClaimDependencies()
     {
-        DependsOnModule<ModuleChainTracingGuide>();
+        DependsOnModule<ModuleChainTracingGuide>().Register();
+        DependsOnModule<ModuleDynamicProxyGuide>().Register();
     }
 }
 

@@ -1,3 +1,5 @@
+using MoLibrary.Core.Features.MoChainTracing.Models;
+
 namespace MoLibrary.Core.Features.MoChainTracing;
 
 /// <summary>
@@ -8,11 +10,13 @@ public interface IMoChainTracing
     /// <summary>
     /// 开始一个新的调用链节点
     /// </summary>
-    /// <param name="handler">处理者名称（如服务名、类名等）</param>
     /// <param name="operation">操作名称（如方法名、操作描述等）</param>
+    /// <param name="handler">处理者名称（如服务名、类名等）</param>
     /// <param name="extraInfo">额外信息</param>
+    /// <param name="type"></param>
     /// <returns>调用链节点标识，用于后续完成调用</returns>
-    string BeginTrace(string handler, string operation, object? extraInfo = null);
+    string BeginTrace(string operation, string? handler, object? extraInfo = null,
+        EChainTracingType type = EChainTracingType.Unknown);
 
     /// <summary>
     /// 完成一个调用链节点
@@ -22,18 +26,28 @@ public interface IMoChainTracing
     /// <param name="success">是否成功</param>
     /// <param name="exception">异常信息</param>
     /// <param name="extraInfo">额外信息</param>
-    void EndTrace(string traceId, string? result = null, bool success = true, Exception? exception = null, object? extraInfo = null);
+    void EndTrace(string traceId, string? result = null, bool success = true, Exception? exception = null,
+        object? extraInfo = null);
+
+    /// <summary>
+    /// 检查是否包含指定的调用链节点
+    /// </summary>
+    /// <param name="traceId">调用链节点标识</param>
+    /// <returns>是否包含</returns>
+    bool ContainsTrace(string traceId);
 
     /// <summary>
     /// 记录简单的调用信息（一次性记录，适用于简单调用）
     /// </summary>
-    /// <param name="handler">处理者名称</param>
     /// <param name="operation">操作名称</param>
+    /// <param name="handler">处理者名称</param>
     /// <param name="success">是否成功</param>
     /// <param name="result">调用结果</param>
     /// <param name="duration">执行时间</param>
     /// <param name="extraInfo">额外信息</param>
-    void RecordTrace(string handler, string operation, bool success = true, string? result = null, TimeSpan? duration = null, object? extraInfo = null);
+    /// <param name="type"></param>
+    void RecordTrace(string operation, string? handler, bool success = true, string? result = null,
+        TimeSpan? duration = null, object? extraInfo = null, EChainTracingType type = EChainTracingType.Unknown);
 
     /// <summary>
     /// 获取当前的调用链信息

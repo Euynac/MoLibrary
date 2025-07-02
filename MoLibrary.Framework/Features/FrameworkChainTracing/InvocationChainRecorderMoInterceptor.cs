@@ -11,9 +11,7 @@ using MoLibrary.Tool.MoResponse;
 namespace MoLibrary.Framework.Features.FrameworkChainTracing;
 
 /// <summary>
-/// https://kozmic.net/dynamic-proxy-tutorial/
-/// https://github.com/moframework/mo/issues/14378
-/// https://docs.mo.io/en/mo/7.4/Dependency-Injection#advanced-features
+
 /// </summary>
 public class InvocationChainRecorderMoInterceptor(IHttpContextAccessor accessor, IMoTimekeeperFactory factory, IMoExceptionHandler exceptionHandler) : MoInterceptor
 {

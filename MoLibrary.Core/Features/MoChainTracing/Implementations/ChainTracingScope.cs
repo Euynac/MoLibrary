@@ -1,4 +1,7 @@
-namespace MoLibrary.Core.Features.MoChainTracing;
+using MoLibrary.Core.Extensions;
+using MoLibrary.Core.Features.MoChainTracing.Models;
+
+namespace MoLibrary.Core.Features.MoChainTracing.Implementations;
 
 /// <summary>
 /// 调用链追踪作用域，实现 IDisposable 模式
@@ -12,13 +15,15 @@ public class ChainTracingScope : IDisposable
     /// 构造函数
     /// </summary>
     /// <param name="chainTracing">调用链追踪服务</param>
-    /// <param name="handler">处理者名称</param>
     /// <param name="operation">操作名称</param>
+    /// <param name="handler">处理者名称</param>
     /// <param name="extraInfo">额外信息</param>
-    public ChainTracingScope(IMoChainTracing chainTracing, string handler, string operation, object? extraInfo = null)
+    /// <param name="type"></param>
+    public ChainTracingScope(IMoChainTracing chainTracing, string operation, string? handler, object? extraInfo = null,
+        EChainTracingType type = EChainTracingType.Unknown)
     {
         _chainTracing = chainTracing;
-        TraceId = _chainTracing.BeginTrace(handler, operation, extraInfo);
+        TraceId = _chainTracing.BeginTrace(operation, handler, extraInfo, type);
     }
 
     /// <summary>
@@ -31,7 +36,7 @@ public class ChainTracingScope : IDisposable
     /// </summary>
     /// <param name="result">结果描述</param>
     /// <param name="extraInfo">额外信息</param>
-    public void RecordSuccess(string? result = null, object? extraInfo = null)
+    public void EndWithSuccess(string? result = null, object? extraInfo = null)
     {
         if (!_disposed)
         {
@@ -45,7 +50,7 @@ public class ChainTracingScope : IDisposable
     /// </summary>
     /// <param name="result">结果描述</param>
     /// <param name="extraInfo">额外信息</param>
-    public void RecordFailure(string? result = null, object? extraInfo = null)
+    public void EndWithFailure(string? result = null, object? extraInfo = null)
     {
         if (!_disposed)
         {
@@ -58,12 +63,13 @@ public class ChainTracingScope : IDisposable
     /// 记录异常
     /// </summary>
     /// <param name="exception">异常信息</param>
+    /// <param name="result">结果描述</param>
     /// <param name="extraInfo">额外信息</param>
-    public void RecordException(Exception exception, object? extraInfo = null)
+    public void EndWithException(Exception exception, string? result = null, object? extraInfo = null)
     {
         if (!_disposed)
         {
-            _chainTracing.EndTrace(TraceId, $"Exception: {exception.Message}", false, exception, extraInfo);
+            _chainTracing.EndTrace(TraceId, result ?? $"Exception: {exception.GetMessageRecursively()}", false, exception, extraInfo);
             _disposed = true;
         }
     }
@@ -87,7 +93,10 @@ public class ChainTracingScope : IDisposable
     {
         if (!_disposed)
         {
-            _chainTracing.EndTrace(TraceId, "Completed", true, null);
+            if (!_chainTracing.ContainsTrace(TraceId))
+            {
+                _chainTracing.EndTrace(TraceId, "Auto-Completed", true, null);
+            }
             _disposed = true;
         }
     }

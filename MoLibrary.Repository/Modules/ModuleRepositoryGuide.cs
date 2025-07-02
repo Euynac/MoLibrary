@@ -10,6 +10,7 @@ using MoLibrary.Repository.Interfaces;
 using MoLibrary.Repository.Registrar;
 using MoLibrary.Repository.Transaction;
 using MoLibrary.Tool.Extensions;
+// ReSharper disable ExplicitCallerInfoArgument
 
 namespace MoLibrary.Repository.Modules;
 
@@ -57,6 +58,8 @@ public class ModuleRepositoryGuide : MoModuleGuide<ModuleRepository, ModuleRepos
     {
         ConfigureServices(context =>
         {
+            var option = context.ModuleOption;
+
             context.Services.AddMemoryCache();
 
             context.Services.AddTransient(typeof(IDbContextProvider<>), typeof(UnitOfWorkDbContextProvider<>));
@@ -90,9 +93,9 @@ public class ModuleRepositoryGuide : MoModuleGuide<ModuleRepository, ModuleRepos
 
             //TODO 优化无需AOP
             context.Services.AddMoInterceptor<PropertyInjectServiceProviderEmptyInterceptor>().CreateProxyWhenSatisfy(
-                context =>
+                proxyBuildContext =>
                 {
-                    var type = context.ImplementationType;
+                    var type = proxyBuildContext.ImplementationType;
                     if (type.IsAssignableTo<IMoRepository>())
                     {
                         //GlobalLog.LogInformation("property injection: {service}", type.GetGenericTypeName());
