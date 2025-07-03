@@ -1,4 +1,6 @@
-﻿using System.Text;
+using System.Collections;
+using System.Collections.Concurrent;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Configuration;
@@ -17,7 +19,9 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
 {
     public static JsonSerializerOptions JsonSerializerOptions { get; } =
         new() { WriteIndented = true, ReadCommentHandling = JsonCommentHandling.Skip};
-    
+
+    private readonly HashSet<string> _skipCheckJsonPath = [];
+
     /// <summary>
     /// 配置如何处理删除的属性
     /// </summary>
@@ -77,11 +81,16 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
         {
             var directory = FileTool.GetDirectoryPath(path)!;
             Directory.CreateDirectory(directory);
-            var contents = GetDefaultFileContents();
+            var contents = GetDefaultFileContents();    
             File.WriteAllText(path, contents, Encoding.UTF8);
         }
         else
         {
+            foreach (var item in card.Configuration.OptionItems.Where(p=>IsShouldJumpCheckType(p.PropertyInfo.PropertyType)))
+            {
+                _skipCheckJsonPath.Add(item.Key.Replace(":", "."));
+            }
+
             // 检查配置类是否有变化，并更新文件
             UpdateConfigFile(path, MoConfigurationManager.Setting.RemovedPropertyHandling);
         }
@@ -169,7 +178,7 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
             {
                 removedProperties.AddRange(existingRemovedProperties);
             }
-            
+
             // 递归比较默认对象和现有对象的结构差异
             var fileChanged = RecursivelyUpdateProperties(defaultSection, existingSection, sectionName, removedProperties);
             
@@ -204,13 +213,19 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
     /// <returns>如果文件有变化则返回true</returns>
     private bool RecursivelyUpdateProperties(JsonObject defaultObj, JsonObject existingObj, string currentPath, List<RemovedPropertyInfo> removedProperties)
     {
+
+        if (_skipCheckJsonPath.Contains(currentPath)) // 如果是字典加入跳过比较列表
+        {
+            MoConfigurationManager.Logger.LogDebug($"跳过Dictionary类型节点的内部结构比较: {currentPath}");
+            return false;
+        }
         var hasChanges = false;
-        
+
         // 检查是否有新属性需要添加
         foreach (var property in defaultObj)
         {
             var propertyPath = $"{currentPath}.{property.Key}";
-            
+
             if (!existingObj.ContainsKey(property.Key))
             {
                 // 添加新属性
@@ -238,7 +253,7 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
         foreach (var property in existingObj)
         {
             var propertyPath = $"{currentPath}.{property.Key}";
-            
+
             if (!defaultObj.ContainsKey(property.Key))
             {
                 // 记录被移除的属性信息
@@ -298,7 +313,7 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
         try
         {
             // 逐行读取历史记录
-            var historySection = jsonContent.Substring(historyStart);
+            var historySection = jsonContent[historyStart..];
             var lines = historySection.Split('\n');
             
             for (var i = 1; i < lines.Length; i++)
@@ -307,20 +322,20 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
                 if (!line.StartsWith("//")) continue;
                 
                 // 提取属性路径、删除时间和属性值
-                line = line.Substring(2).Trim(); // 移除注释标记
+                line = line[2..].Trim(); // 移除注释标记
                 
                 // 解析特定格式: [2023-01-01 12:00:00] path.to.property: {"value": 123}
                 var timestampEnd = line.IndexOf(']');
                 if (timestampEnd == -1) continue;
                 
                 var timestampStr = line.Substring(1, timestampEnd - 1);
-                var remaining = line.Substring(timestampEnd + 1).Trim();
+                var remaining = line[(timestampEnd + 1)..].Trim();
                 
                 var pathEnd = remaining.IndexOf(':');
                 if (pathEnd == -1) continue;
                 
-                var path = remaining.Substring(0, pathEnd).Trim();
-                var valueJson = remaining.Substring(pathEnd + 1).Trim();
+                var path = remaining[..pathEnd].Trim();
+                var valueJson = remaining[(pathEnd + 1)..].Trim();
                 
                 if (DateTime.TryParse(timestampStr, out var timestamp) && 
                     !string.IsNullOrEmpty(valueJson))
@@ -384,5 +399,19 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
         return sb.ToString();
     }
 
+    /// <summary>
+    /// 此方法用于修复Dictionary属性在配置文件结构比较时的bug。
+    /// 当配置类包含字典类型属性时，
+    /// JSON序列化后每个Key会成为JSON对象的属性，导致RecursivelyUpdateProperties
+    /// 方法将用户添加的新Key误认为是需要移除的属性。
+    /// 
+    /// 通过识别Dictionary类型的属性并跳过其内部键值对的结构比较，
+    /// 用户可以自由地在配置文件中添加、修改、删除Dictionary的键值对，
+    /// 而不会被系统误判为配置结构变更。
+    /// </summary>
+    private static bool IsShouldJumpCheckType(Type type)
+    {
+        return type.IsAssignableTo<IDictionary>();
+    }
     #endregion
 }
