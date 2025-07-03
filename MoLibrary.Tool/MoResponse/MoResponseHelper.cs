@@ -195,19 +195,7 @@ public static class MoResponseHelper
         return result;
     }
 
-    /// <summary>
-    /// 继承错误，没有错误则返回本身
-    /// </summary>
-    /// <param name="self"></param>
-    /// <param name="response"></param>
-    public static T InheritError<T>(this T self, IServiceResponse response) where T : IServiceResponse
-    {
-        if (response.IsOk() && response.IsServiceNormal()) return self;
-        self.Message += $"\n继承错误：[{response.GetType().Name}] {response.Message}";
-        self.Message = self.Message.TrimStart();
-        self.Code = response.Code;
-        return self;
-    }
+   
     /// <summary>
     /// 合并返回值信息，保全两个Res的信息，一般用于两个Res类型不一致的情况
     /// </summary>
@@ -221,7 +209,6 @@ public static class MoResponseHelper
         self.ExtraInfo!.Merge(response.ExtraInfo);
         self.Message = response.Message;
         self.Code = response.Code;
-        //self.ExtraInfo = response.ExtraInfo;
         return self;
     }
     /// <summary>

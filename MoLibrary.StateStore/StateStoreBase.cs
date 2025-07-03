@@ -12,17 +12,17 @@ public abstract class StateStoreBase(ILogger logger) : IMoStateStore
 
     #region 可以自举的方法实现
 
-    public async Task<bool> ExistAsync<T>(string key, CancellationToken cancellationToken = default)
+    public virtual async Task<bool> ExistAsync<T>(string key, CancellationToken cancellationToken = default)
     {
         return await GetStateAsync<T>(key, null, cancellationToken) != null;
     }
 
-    public async Task<bool> ExistAsync<T>(string key, string? prefix, CancellationToken cancellationToken = default)
+    public virtual async Task<bool> ExistAsync<T>(string key, string? prefix, CancellationToken cancellationToken = default)
     {
         return await GetStateAsync<T>(key, prefix, cancellationToken) != null;
     }
 
-    public async Task<Dictionary<string, T?>> GetBulkStateAsync<T>(IReadOnlyList<string> keys,
+    public virtual async Task<Dictionary<string, T?>> GetBulkStateAsync<T>(IReadOnlyList<string> keys,
         bool removePrefix = true,
         bool removeEmptyValue = true,
         CancellationToken cancellationToken = default)
@@ -31,45 +31,45 @@ public abstract class StateStoreBase(ILogger logger) : IMoStateStore
     }
 
 
-    public async Task<T?> GetStateAsync<T>(string key, 
+    public virtual async Task<T?> GetStateAsync<T>(string key, 
         CancellationToken cancellationToken = default)
     {
         return await GetStateAsync<T>(key, GetAutoPrefixFromType(typeof(T)), cancellationToken);
     }
 
   
-    public async Task<T?> GetSingleStateAsync<T>(CancellationToken cancellationToken = default) where T : class
+    public virtual async Task<T?> GetSingleStateAsync<T>(CancellationToken cancellationToken = default) where T : class
     {
         return await GetStateAsync<T>(GetAutoPrefixFromType(typeof(T)), null, cancellationToken);
     }
 
-    public async Task SaveStateAsync<T>(string key, T value, 
+    public virtual async Task SaveStateAsync<T>(string key, T value, 
         CancellationToken cancellationToken = default, TimeSpan? ttl = null)
     {
         await SaveStateAsync(key, value, GetAutoPrefixFromType(typeof(T)), cancellationToken, ttl);
     }
 
-    public async Task SaveSingleStateAsync<T>(T value, CancellationToken cancellationToken = default, TimeSpan? ttl = null) where T : class
+    public virtual async Task SaveSingleStateAsync<T>(T value, CancellationToken cancellationToken = default, TimeSpan? ttl = null) where T : class
     {
         await SaveStateAsync(GetAutoPrefixFromType(typeof(T)), value, GetAutoPrefixFromType(typeof(T)), cancellationToken, ttl);
     }
 
-    public async Task DeleteStateAsync(string key, CancellationToken cancellationToken = default)
+    public virtual async Task DeleteStateAsync(string key, CancellationToken cancellationToken = default)
     {
         await DeleteStateAsync(key, null, cancellationToken);
     }
 
-    public async Task DeleteSingleStateAsync<T>(CancellationToken cancellationToken = default) where T : class
+    public virtual async Task DeleteSingleStateAsync<T>(CancellationToken cancellationToken = default) where T : class
     {
         await DeleteStateAsync(GetAutoPrefixFromType(typeof(T)), null, cancellationToken);
     }
 
-    public async Task DeleteBulkStateAsync(IReadOnlyList<string> keys, CancellationToken cancellationToken = default)
+    public virtual async Task DeleteBulkStateAsync(IReadOnlyList<string> keys, CancellationToken cancellationToken = default)
     {
         await DeleteBulkStateAsync(keys, null, cancellationToken);
     }
 
-    public async Task<(T value, string etag)> GetStateAndVersionAsync<T>(string key,
+    public virtual async Task<(T value, string etag)> GetStateAndVersionAsync<T>(string key,
         CancellationToken cancellationToken = default)
     {
         return await GetStateAndVersionAsync<T>(key, GetAutoPrefixFromType(typeof(T)), cancellationToken);

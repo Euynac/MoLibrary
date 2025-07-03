@@ -5,6 +5,12 @@
 	<PropertyGroup>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 	</PropertyGroup>
+
+	<ItemGroup>
+	  <Compile Remove="Databases\**" />
+	  <EmbeddedResource Remove="Databases\**" />
+	  <None Remove="Databases\**" />
+	</ItemGroup>
 	<ItemGroup>
     <PackageReference Include="Dapr.Actors" Version="1.14.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.0" />
@@ -45,8 +51,5 @@
 	  <ProjectReference Include="..\MoLibrary.Validation\MoLibrary.Validation.csproj">
 	    <TreatAsUsed>true</TreatAsUsed>
 	  </ProjectReference>
-	</ItemGroup>
-	<ItemGroup>
-	  <Folder Include="Databases\" />
 	</ItemGroup>
 </Project>
