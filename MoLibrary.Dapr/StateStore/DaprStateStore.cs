@@ -53,7 +53,7 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         var finalKeys = keys.Select(k => GetKey(k, prefix)).ToList();
         try
         {
-            return (await dapr.GetBulkStateAsync(StateStoreName, finalKeys, 0,
+            return (await dapr.GetBulkStateAsync(StateStoreName, finalKeys, Option.DefaultBulkParallelism,
                 cancellationToken: cancellationToken))
                 .WhereIf(removeEmptyValue, p => !string.IsNullOrEmpty(p.Value))
                 .ToDictionary(
@@ -85,7 +85,7 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         var finalKeys = keys.Select(k => GetKey(k, prefix)).ToList();
         try
         {
-            return (await dapr.GetBulkStateAsync(StateStoreName, finalKeys, 0,
+            return (await dapr.GetBulkStateAsync(StateStoreName, finalKeys, Option.DefaultBulkParallelism,
                 cancellationToken: cancellationToken))
                 .WhereIf(removeEmptyValue, p => !string.IsNullOrEmpty(p.Value))
                 .ToDictionary(p => removePrefix ? RemovePrefix(p.Key, prefix) : p.Key, item => item.Value);

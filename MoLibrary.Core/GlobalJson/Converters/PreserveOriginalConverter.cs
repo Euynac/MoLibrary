@@ -27,3 +27,27 @@ public class PreserveOriginalConverter : JsonConverter<object>
         }
     }
 }
+
+/// <summary>
+/// 保留原始Json格式输出
+/// </summary>
+public class PreserveOriginalConverter<T> : JsonConverter<T>
+{
+    //internal static JsonSerializerOptions Options = new() {Encoder = JavaScriptEncoder.Default};
+    internal static JsonSerializerOptions Options = new();
+  
+    public override T? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        return JsonSerializer.Deserialize<T?>(ref reader, options);
+    }
+
+    public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
+    {
+        if(value == null)
+        {
+            writer.WriteNullValue();
+            return;
+        }
+        JsonSerializer.Serialize(writer, value, value.GetType(), Options);
+    }
+}

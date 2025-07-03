@@ -69,7 +69,7 @@ public static class MoResponseHelper
     /// <summary>
     /// [not 200] 代表请求存在问题
     /// </summary>
-    public static bool IsFailed<T>(this Res<T> res, [NotNullWhen(true)] out Res? error, [MaybeNullWhen(false)] out T data)
+    public static bool IsFailed<T>(this Res<T> res, [NotNullWhen(true)] out Res? error, [MaybeNullWhen(true)]out T data)
     {
         error = null;
         if (res.IsOk(out data)) return false;
