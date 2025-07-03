@@ -34,7 +34,7 @@ public class ChainTracingAttachingActionFilter(IMoChainTracing chainTracing, IOp
         {
             chain.MarkComplete();
             serviceResponse.ExtraInfo ??= new ExpandoObject();
-            serviceResponse.ExtraInfo.Append("chain", chain);
+            serviceResponse.ExtraInfo.Append("chain", chain.Root);
         }
     }
 }

@@ -49,5 +49,10 @@ public class ModuleDaprStateStoreOption : MoModuleOption<ModuleDaprStateStore>
     /// </summary>
     [Required]
     public string StateStoreName { get; set; } = null!;
+
+    /// <summary>
+    /// The number of concurrent get operations the Dapr runtime will issue to the state store. a value equal to or smaller than 0 means max parallelism.
+    /// </summary>
+    public int? DefaultBulkParallelism { get; set; } 
 }
 
