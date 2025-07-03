@@ -1,9 +1,13 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.Core.Modules;
 using MoLibrary.DependencyInjection.Modules;
+using MoLibrary.Framework.Features.FrameworkChainTracing;
+using MoLibrary.StateStore;
+using MoLibrary.StateStore.Modules;
 
 namespace MoLibrary.Framework.Modules;
 
@@ -29,6 +33,18 @@ public class ModuleFrameworkChainTracing(ModuleFrameworkChainTracingOption optio
     {
         DependsOnModule<ModuleChainTracingGuide>().Register();
         DependsOnModule<ModuleDynamicProxyGuide>().Register();
+        if(option.EnableStateStoreTracing)
+        {
+            DependsOnModule<ModuleStateStoreGuide>().Register();
+        }
+    }
+
+    public override void PostConfigureServices(IServiceCollection services)
+    {
+        if(option.EnableStateStoreTracing)
+        {
+            services.Decorate<IMoStateStore, ChainTrackingProviderMoStateStoreDecorator>();
+        }
     }
 }
 
@@ -41,4 +57,10 @@ public class ModuleFrameworkChainTracingGuide : MoModuleGuide<ModuleFrameworkCha
 
 public class ModuleFrameworkChainTracingOption : MoModuleOption<ModuleFrameworkChainTracing>
 {
+    
+    /// <summary>
+    /// 是否启用StateStore的调用链追踪
+    /// </summary>
+    public bool EnableStateStoreTracing { get; set; }
+
 }

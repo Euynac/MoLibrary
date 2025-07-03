@@ -51,7 +51,7 @@ public class ChainTrackingProviderInvocationInterceptor(
                            ?? "Unknown";
             
             // 获取请求名称，优先使用第一个参数的类型名（如果符合条件）
-            var firstArgType = invocation.Arguments.FirstOrDefault()?.GetType();
+            //var firstArgType = invocation.Arguments.FirstOrDefault()?.GetType();
             operationName = invocation.Method.Name;
             return true;
         }
@@ -124,7 +124,37 @@ public class ChainTrackingProviderInvocationInterceptor(
             // 记录异常到调用链
             scope.EndWithException(ex, $"执行方法 {invocation.Method.DeclaringType?.Name}.{invocation.Method.Name} 异常");
 
-            invocation.ReturnValue = await exceptionHandler.TryHandleAsync(null, ex, CancellationToken.None);
+            if (CreateRes(invocation.Method.ReturnType) is IServiceResponse exRes)
+            {
+                var res = await exceptionHandler.TryHandleAsync(null, ex, CancellationToken.None);
+                exRes.ExtraInfo = res.ExtraInfo;
+                exRes.Message = res.Message;
+                exRes.Code = res.Code;
+                invocation.ReturnValue = exRes;
+            }
+            else
+            {
+                throw;
+            }
         }
     }
-} 
+
+    private static object? CreateRes(Type type)
+    {
+        while (true)
+        {
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Task<>))
+            {
+                type = type.GetGenericArguments()[0];
+                continue;
+            }
+
+            if (type.IsImplementInterface(typeof(IServiceResponse)) && type.CanCreateInstanceUsingParameterlessConstructor())
+            {
+                return Activator.CreateInstance(type);
+            }
+
+            return null;
+        }
+    }
+}
