@@ -3,13 +3,6 @@ namespace MoLibrary.Core.Features.MoTimekeeper;
 public interface IMoTimekeeperFactory
 {
     /// <summary>
-    /// 用于HTTP的自动结束的计时器
-    /// </summary>
-    /// <param name="key"></param>
-    /// <returns></returns>
-    public IDisposable CreateResAutoTimer(string key);
-
-    /// <summary>
     /// 自动结束的计时器
     /// </summary>
     /// <param name="key"></param>
