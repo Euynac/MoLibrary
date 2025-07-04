@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 
-namespace MoLibrary.Core.Features.MoDecorator;
+namespace MoLibrary.Core.Features.MoDecorator.Strategies;
 
 public abstract class DecorationStrategy(Type serviceType, string? serviceKey)
 {
