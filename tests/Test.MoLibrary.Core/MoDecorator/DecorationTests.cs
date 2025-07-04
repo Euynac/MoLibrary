@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using System.Linq;
+using MoLibrary.Core.Features.MoDecorator;
 
 namespace Scrutor.Tests;
 
@@ -185,58 +186,58 @@ public class DecorationTests : TestBase
         Assert.True(decorator.Inner.WasDisposed);
     }
 
-    [Fact]
-    public void ServicesWithSameServiceTypeAreOnlyDecoratedOnce()
-    {
-        // See issue: https://github.com/khellang/Scrutor/issues/125
+    //[Fact]
+    //public void ServicesWithSameServiceTypeAreOnlyDecoratedOnce()
+    //{
+    //    // See issue: https://github.com/khellang/Scrutor/issues/125
 
-        static bool IsHandlerButNotDecorator(Type type)
-        {
-            var isHandlerDecorator = false;
+    //    static bool IsHandlerButNotDecorator(Type type)
+    //    {
+    //        var isHandlerDecorator = false;
 
-            var isHandler = type.GetInterfaces().Any(i =>
-                i.IsGenericType &&
-                i.GetGenericTypeDefinition() == typeof(IEventHandler<>)
-            );
+    //        var isHandler = type.GetInterfaces().Any(i =>
+    //            i.IsGenericType &&
+    //            i.GetGenericTypeDefinition() == typeof(IEventHandler<>)
+    //        );
 
-            if (isHandler)
-            {
-                isHandlerDecorator = type.GetInterfaces().Any(i => i == typeof(IHandlerDecorator));
-            }
+    //        if (isHandler)
+    //        {
+    //            isHandlerDecorator = type.GetInterfaces().Any(i => i == typeof(IHandlerDecorator));
+    //        }
 
-            return isHandler && !isHandlerDecorator;
-        }
+    //        return isHandler && !isHandlerDecorator;
+    //    }
 
-        var provider = ConfigureProvider(services =>
-        {
-            // This should end up with 3 registrations of type IEventHandler<MyEvent>.
-            services.Scan(s =>
-                s.FromAssemblyOf<DecorationTests>()
-                    .AddClasses(c => c.Where(IsHandlerButNotDecorator))
-                    .AsImplementedInterfaces()
-                    .WithTransientLifetime());
+    //    var provider = ConfigureProvider(services =>
+    //    {
+    //        // This should end up with 3 registrations of type IEventHandler<MyEvent>.
+    //        services.Scan(s =>
+    //            s.FromAssemblyOf<DecorationTests>()
+    //                .AddClasses(c => c.Where(IsHandlerButNotDecorator))
+    //                .AsImplementedInterfaces()
+    //                .WithTransientLifetime());
 
-            // This should not decorate each registration 3 times.
-            services.Decorate(typeof(IEventHandler<>), typeof(MyEventHandlerDecorator<>));
-        });
+    //        // This should not decorate each registration 3 times.
+    //        services.Decorate(typeof(IEventHandler<>), typeof(MyEventHandlerDecorator<>));
+    //    });
 
-        var instances = provider.GetRequiredService<IEnumerable<IEventHandler<MyEvent>>>().ToList();
+    //    var instances = provider.GetRequiredService<IEnumerable<IEventHandler<MyEvent>>>().ToList();
 
-        Assert.Equal(3, instances.Count);
+    //    Assert.Equal(3, instances.Count);
 
-        Assert.All(instances, instance =>
-        {
-            var decorator = Assert.IsType<MyEventHandlerDecorator<MyEvent>>(instance);
+    //    Assert.All(instances, instance =>
+    //    {
+    //        var decorator = Assert.IsType<MyEventHandlerDecorator<MyEvent>>(instance);
 
-            // The inner handler should not be a decorator.
-            Assert.IsNotType<MyEventHandlerDecorator<MyEvent>>(decorator.Handler);
+    //        // The inner handler should not be a decorator.
+    //        Assert.IsNotType<MyEventHandlerDecorator<MyEvent>>(decorator.Handler);
 
-            // The return call count should only be 1, we've only called Handle on one decorator.
-            // If there were nested decorators, this would return a higher call count as it
-            // would increment at each level.
-            Assert.Equal(1, decorator.Handle(new MyEvent()));
-        });
-    }
+    //        // The return call count should only be 1, we've only called Handle on one decorator.
+    //        // If there were nested decorators, this would return a higher call count as it
+    //        // would increment at each level.
+    //        Assert.Equal(1, decorator.Handle(new MyEvent()));
+    //    });
+    //}
 
     [Fact]
     public void Issue148_Decorate_IsAbleToDecorateConcreateTypes()

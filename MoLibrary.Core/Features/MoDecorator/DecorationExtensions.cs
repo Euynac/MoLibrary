@@ -6,7 +6,7 @@ using MoLibrary.Tool.Utils;
 namespace MoLibrary.Core.Features.MoDecorator;
 
 [PublicAPI]
-public static partial class ServiceCollectionExtensions
+public static partial class DecorationExtensions
 {
     private const string DecoratedServiceKeySuffix = "+Decorated";
 
@@ -220,6 +220,7 @@ public static partial class ServiceCollectionExtensions
         return services.TryDecorate(DecorationStrategy.WithFactory(serviceType, serviceKey: null, decorator));
     }
 
+ 
     /// <summary>
     /// Decorates all registered services using the specified <paramref name="strategy"/>.
     /// </summary>

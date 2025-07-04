@@ -22,6 +22,12 @@ public abstract class DecorationStrategy(Type serviceType, string? serviceKey)
     internal static DecorationStrategy WithFactory(Type serviceType, string? serviceKey, Func<object, IServiceProvider, object> decoratorFactory) =>
         Create(serviceType, serviceKey, decoratorType: null, decoratorFactory);
 
+    internal static DecorationStrategy WithInterfaceProxy(Type targetInterface, string? serviceKey, Type decoratorType) =>
+        new InterfaceProxyDecorationStrategy(targetInterface, serviceKey, decoratorType, decoratorFactory: null);
+
+    internal static DecorationStrategy WithInterfaceProxy(Type targetInterface, string? serviceKey, Func<object, IServiceProvider, object> decoratorFactory) =>
+        new InterfaceProxyDecorationStrategy(targetInterface, serviceKey, decoratorType: null, decoratorFactory);
+
     protected static Func<IServiceProvider, object?, object> TypeDecorator(Type serviceType, string serviceKey, Type decoratorType)
     {
         return (serviceProvider, _) =>
