@@ -13,10 +13,10 @@ namespace MoLibrary.Framework.Features.FrameworkChainTracing;
 /// <param name="stateStore">被装饰的StateStore实例</param>
 /// <param name="chainTracing">调用链追踪服务</param>
 /// <param name="logger">日志记录器</param>
-public class ChainTrackingProviderMoStateStoreDecorator(
+public class ChainTrackingProviderIMoStateStoreDecorator(
     IMoStateStore stateStore,
     IMoChainTracing chainTracing,
-    ILogger<ChainTrackingProviderMoStateStoreDecorator> logger) : StateStoreBase(logger)
+    ILogger<ChainTrackingProviderIMoStateStoreDecorator> logger) : StateStoreBase(logger)
 {
     /// <summary>
     /// 记录StateStore操作开始

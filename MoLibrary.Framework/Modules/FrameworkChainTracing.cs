@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using MoLibrary.Core.Features.MoDecorator;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
@@ -43,7 +44,8 @@ public class ModuleFrameworkChainTracing(ModuleFrameworkChainTracingOption optio
     {
         if(option.EnableStateStoreTracing)
         {
-            services.Decorate<IMoStateStore, ChainTrackingProviderMoStateStoreDecorator>();
+            services.Decorate<IMoStateStore, ChainTrackingProviderIMoStateStoreDecorator>();
+            services.Decorate<IDistributedStateStore, ChainTrackingProviderIDistributedStateStoreDecorator>();
         }
     }
 }
