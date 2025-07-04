@@ -1,3 +1,5 @@
+using MoLibrary.Core.Features.MoDecorator.Strategies;
+
 namespace MoLibrary.Core.Features.MoDecorator;
 
 public class DecorationException(DecorationStrategy strategy) : MissingTypeRegistrationException(strategy.ServiceType)

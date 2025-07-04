@@ -1,4 +1,4 @@
-namespace MoLibrary.Core.Features.MoDecorator;
+namespace MoLibrary.Core.Features.MoDecorator.Strategies;
 
 public class OpenGenericDecorationStrategy(
     Type serviceType,
