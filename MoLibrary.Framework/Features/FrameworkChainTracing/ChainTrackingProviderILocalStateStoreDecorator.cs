@@ -6,8 +6,8 @@ using MoLibrary.StateStore.QueryBuilder.Interfaces;
 
 namespace MoLibrary.Framework.Features.FrameworkChainTracing;
 
-public class ChainTrackingProviderIDistributedStateStoreDecorator(IDistributedStateStore stateStore, IMoChainTracing chainTracing, ILogger<ChainTrackingProviderIDistributedStateStoreDecorator> logger) : ChainTrackingProviderIMoStateStoreDecorator(stateStore, chainTracing, logger),
-    IDistributedStateStore
+public class ChainTrackingProviderILocalStateStoreDecorator(IDistributedStateStore stateStore, IMoChainTracing chainTracing, ILogger<ChainTrackingProviderIDistributedStateStoreDecorator> logger) : ChainTrackingProviderIMoStateStoreDecorator(stateStore, chainTracing, logger),
+    IMemoryStateStore
 {
     public Task<Dictionary<string, string>> GetBulkStateAsync(IReadOnlyList<string> keys, bool removePrefix = true, bool removeEmptyValue = true,
         CancellationToken cancellationToken = default)
