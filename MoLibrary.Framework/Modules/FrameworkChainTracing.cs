@@ -44,8 +44,8 @@ public class ModuleFrameworkChainTracing(ModuleFrameworkChainTracingOption optio
     {
         if(option.EnableStateStoreTracing)
         {
-            services.Decorate<IMoStateStore, ChainTrackingProviderIMoStateStoreDecorator>();
-            services.Decorate<IDistributedStateStore, ChainTrackingProviderIDistributedStateStoreDecorator>();
+            //services.Decorate<IMoStateStore, ChainTrackingProviderIMoStateStoreDecorator>();
+            //services.Decorate<IDistributedStateStore, ChainTrackingProviderIDistributedStateStoreDecorator>();
         }
     }
 }
