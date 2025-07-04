@@ -1,4 +1,5 @@
 using MoLibrary.Core.Features.MoChainTracing;
+using MoLibrary.Core.Features.MoChainTracing.Decorators;
 using MoLibrary.Core.Features.MoTimekeeper;
 using MoLibrary.DependencyInjection.DynamicProxy;
 using MoLibrary.DependencyInjection.DynamicProxy.Abstract;
@@ -126,7 +127,7 @@ public class ChainTrackingProviderInvocationInterceptor(
 
             if (CreateRes(invocation.Method.ReturnType) is IServiceResponse exRes)
             {
-                var res = await exceptionHandler.TryHandleAsync(null, ex, CancellationToken.None);
+                var res = await exceptionHandler.TryHandleWithCurrentHttpContextAsync(ex, CancellationToken.None);
                 exRes.ExtraInfo = res.ExtraInfo;
                 exRes.Message = res.Message;
                 exRes.Code = res.Code;

@@ -14,8 +14,13 @@ using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.DomainDrivenDesign.ExceptionHandler;
 
-internal class MoExceptionHandler(ILogger<MoExceptionHandler> logger) : IMoExceptionHandler
+internal class MoExceptionHandler(ILogger<MoExceptionHandler> logger, IHttpContextAccessor accessor) : IMoExceptionHandler
 {
+    public Task<Res> TryHandleWithCurrentHttpContextAsync(Exception exception, CancellationToken cancellationToken)
+    {
+        return TryHandleAsync(accessor.HttpContext, exception, cancellationToken);
+    }
+
     public void LogException(HttpContext? httpContext, Exception exception)
     {
         logger.LogError(exception, $"{httpContext?.Request.Path} threw an exception");
