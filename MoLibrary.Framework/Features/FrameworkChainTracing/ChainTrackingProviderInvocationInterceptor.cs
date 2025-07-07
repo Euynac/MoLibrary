@@ -1,13 +1,30 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using MoLibrary.Core.Features.MoChainTracing;
-using MoLibrary.Core.Features.MoChainTracing.Decorators;
 using MoLibrary.Core.Features.MoTimekeeper;
 using MoLibrary.DependencyInjection.DynamicProxy;
 using MoLibrary.DependencyInjection.DynamicProxy.Abstract;
 using MoLibrary.DomainDrivenDesign.ExceptionHandler;
+using MoLibrary.Framework.Features.MoRpc;
 using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Framework.Features.FrameworkChainTracing;
+
+public record InvocationInfo(MethodInfo MethodInfo)
+{
+    public string HandlerName => MethodInfo.ReflectedType?.Name
+                                   ?? MethodInfo.DeclaringType?.Name
+                                   ?? "Unknown";
+
+    public string OperationName => MethodInfo.Name;
+
+    /// <summary>
+    /// 是否是远程调用，需要合并调用链
+    /// </summary>
+    public bool IsRemoteCall => MethodInfo.DeclaringType?.IsImplementInterface<IMoRpcApi>() is true;
+}
+
 
 /// <summary>
 /// 基于新的 ChainTracking 系统的方法调用链追踪拦截器
@@ -28,13 +45,12 @@ public class ChainTrackingProviderInvocationInterceptor(
     /// 判断是否应该记录调用链
     /// </summary>
     /// <param name="invocation">方法调用信息</param>
-    /// <param name="declaringType">声明类型名称</param>
-    /// <param name="operationName">操作名称</param>
+    /// <param name="info"></param>
     /// <returns>是否应该记录调用链</returns>
-    private static bool ShouldRecordChain(IMoMethodInvocation invocation, out string declaringType, out string operationName)
+    private static bool ShouldRecordChain(IMoMethodInvocation invocation, [NotNullWhen(true)] out InvocationInfo? info)
     {
         var returnType = invocation.Method.ReturnType;
-        
+        info = null;
         // 如果是 Task<T>，获取 T 的类型
         if (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(Task<>))
         {
@@ -46,19 +62,10 @@ public class ChainTrackingProviderInvocationInterceptor(
         
         if (shouldRecord)
         {
-            // 获取声明类型名称
-            declaringType = invocation.Method.ReflectedType?.Name 
-                           ?? invocation.Method.DeclaringType?.Name 
-                           ?? "Unknown";
-            
-            // 获取请求名称，优先使用第一个参数的类型名（如果符合条件）
-            //var firstArgType = invocation.Arguments.FirstOrDefault()?.GetType();
-            operationName = invocation.Method.Name;
+            info = new InvocationInfo(invocation.Method);
             return true;
         }
         
-        declaringType = string.Empty;
-        operationName = string.Empty;
         return false;
     }
 
@@ -70,9 +77,7 @@ public class ChainTrackingProviderInvocationInterceptor(
     /// <param name="invocation">方法调用信息</param>
     public override async Task InterceptAsync(IMoMethodInvocation invocation)
     {
-        var shouldRecord = ShouldRecordChain(invocation, out var declaringType, out var operationName);
-        
-        if (!shouldRecord)
+        if (!ShouldRecordChain(invocation, out var info))
         {
             // 不需要记录调用链的方法，直接执行
             try
@@ -88,10 +93,10 @@ public class ChainTrackingProviderInvocationInterceptor(
         }
 
         // 开始调用链追踪
-        using var scope = chainTracing.BeginScope(operationName, declaringType);
+        using var scope = chainTracing.BeginScope(info.OperationName, info.HandlerName);
 
         // 创建计时器
-        using var timer = timekeeperFactory.CreateNormalTimer(declaringType);
+        using var timer = timekeeperFactory.CreateNormalTimer(info.HandlerName);
         timer.Start();
         
         try
@@ -107,7 +112,12 @@ public class ChainTrackingProviderInvocationInterceptor(
                 var success = response.Code == ResponseCode.Ok;
                 var resultDescription =
                     $"{responseTypeName}({response.Code}){(response.Message?.LimitMaxLength(100, "...").BeNullIfWhiteSpace() is {} msg ? $"[{msg}]" : null)}";
-                
+
+                if (info.IsRemoteCall)
+                {
+                    scope.MergeRemoteChain(response);
+                }
+
                 if (success)
                 {
                     scope.EndWithSuccess(resultDescription);

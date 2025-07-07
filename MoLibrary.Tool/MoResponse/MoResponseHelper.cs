@@ -13,7 +13,8 @@ public static class MoResponseHelper
     /// <summary>
     /// [500] 微服务调用后需要检查，如果为False，应为服务调用出错，需要记录到微服务调用日志中去。接口调用异常由Mediator自动进行AOP，try catch进行日志记录
     /// </summary>
-    public static bool IsServiceNormal(this IServiceResponse res) => res.Code != ResponseCode.InternalError;
+    public static bool IsServiceNormal(this IServiceResponse res) =>
+        res.Code != ResponseCode.InternalError && !IsNotValidResponse(res);
 
     /// <summary>
     ///  [200] 代表请求正常处理
