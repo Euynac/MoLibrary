@@ -222,7 +222,8 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
     /// </summary>
     /// <param name="traceId">当前调用链节点标识</param>
     /// <param name="remoteChainInfo">远程调用链信息</param>
-    public void MergeRemoteChain(string traceId, object? remoteChainInfo)
+    /// <returns>是否成功合并</returns>
+    public bool MergeRemoteChain(string traceId, object? remoteChainInfo)
     {
         try
         {
@@ -230,17 +231,47 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
             if (context == null)
             {
                 logger?.LogWarning("尝试合并远程调用链但当前上下文为空: TraceId: {TraceId}", traceId);
-                return;
+                return false;
             }
 
-            context.MergeRemoteChain(traceId, remoteChainInfo);
+            var success = context.MergeRemoteChain(traceId, remoteChainInfo);
 
-            logger?.LogDebug("合并远程调用链: TraceId: {TraceId}", traceId);
+            if (success)
+            {
+                logger?.LogDebug("合并远程调用链成功: TraceId: {TraceId}", traceId);
+            }
+            else
+            {
+                var remoteChainInfoStr = GetLimitedString(remoteChainInfo?.ToString(), 1000);
+                logger?.LogWarning("合并远程调用链失败: TraceId: {TraceId}, RemoteChainInfo: {RemoteChainInfo}", 
+                    traceId, remoteChainInfoStr);
+            }
+
+            return success;
         }
         catch (Exception ex)
         {
-            logger?.LogError(ex, "合并远程调用链时发生异常: TraceId: {TraceId}", traceId);
+            var remoteChainInfoStr = GetLimitedString(remoteChainInfo?.ToString(), 1000);
+            logger?.LogError(ex, "合并远程调用链时发生异常: TraceId: {TraceId}, RemoteChainInfo: {RemoteChainInfo}", 
+                traceId, remoteChainInfoStr);
+            return false;
         }
+    }
+
+    /// <summary>
+    /// 获取限制长度的字符串
+    /// </summary>
+    /// <param name="input">输入字符串</param>
+    /// <param name="maxLength">最大长度</param>
+    /// <returns>限制长度的字符串</returns>
+    private static string GetLimitedString(string? input, int maxLength)
+    {
+        if (string.IsNullOrEmpty(input))
+        {
+            return string.Empty;
+        }
+
+        return input.Length <= maxLength ? input : input.Substring(0, maxLength) + "...";
     }
 
     public bool ContainsTrace(string traceId)
