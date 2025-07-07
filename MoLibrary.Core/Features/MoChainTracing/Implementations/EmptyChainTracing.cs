@@ -79,9 +79,11 @@ public class EmptyChainTracing : IMoChainTracing
     /// </summary>
     /// <param name="traceId">当前调用链节点标识</param>
     /// <param name="remoteChainInfo">远程调用链信息</param>
-    public void MergeRemoteChain(string traceId, object? remoteChainInfo)
+    /// <returns>始终返回 false</returns>
+    public bool MergeRemoteChain(string traceId, object? remoteChainInfo)
     {
         // 无操作
+        return false;
     }
 
     public bool ContainsTrace(string traceId)

@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Dynamic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Core.Features.MoChainTracing.Models;
 
@@ -123,11 +124,12 @@ public class MoChainContext
     /// </summary>
     /// <param name="traceId">当前调用链节点标识</param>
     /// <param name="remoteChainInfo">远程调用链信息</param>
-    public void MergeRemoteChain(string traceId, object? remoteChainInfo)
+    /// <returns>是否成功合并</returns>
+    public bool MergeRemoteChain(string traceId, object? remoteChainInfo)
     {
         if (remoteChainInfo == null || !NodeMap.TryGetValue(traceId, out var currentNode))
         {
-            return;
+            return false;
         }
 
         try
@@ -151,6 +153,10 @@ public class MoChainContext
                     // 忽略 JSON 解析错误
                 }
             }
+            else if (remoteChainInfo is IServiceResponse serviceResponse)
+            {
+                remoteRootNode = ExtractChainFromServiceResponse(serviceResponse);
+            }
             
 
             if (remoteRootNode != null)
@@ -165,11 +171,15 @@ public class MoChainContext
 
                 // 更新节点映射
                 AddNodeToMap(remoteRootNode);
+                return true;
             }
+            
+            return false;
         }
         catch (Exception)
         {
             // 忽略合并过程中的异常，不影响主流程
+            return false;
         }
     }
 
@@ -206,7 +216,89 @@ public class MoChainContext
         return null;
     }
 
-  
+    /// <summary>
+    /// 从 IServiceResponse 中提取调用链信息
+    /// </summary>
+    /// <param name="serviceResponse">服务响应对象</param>
+    /// <returns>调用链根节点</returns>
+    private static MoChainNode? ExtractChainFromServiceResponse(IServiceResponse serviceResponse)
+    {
+        try
+        {
+            if (serviceResponse.ExtraInfo == null)
+            {
+                return null;
+            }
+
+            // 将 ExpandoObject 转换为字典以便访问
+            var extraInfoDict = serviceResponse.ExtraInfo as IDictionary<string, object?>;
+            if (extraInfoDict == null)
+            {
+                return null;
+            }
+
+            // 检查是否有 chainTracing 字段
+            if (extraInfoDict.TryGetValue("chainTracing", out var chainTracingValue))
+            {
+                if (chainTracingValue is ExpandoObject chainTracingObj)
+                {
+                    var chainTracingDict = chainTracingObj as IDictionary<string, object?>;
+                    if (chainTracingDict?.TryGetValue("rootNode", out var rootNodeValue) == true)
+                    {
+                        return ExtractChainNodeFromObject(rootNodeValue);
+                    }
+                }
+                else if (chainTracingValue != null)
+                {
+                    return ExtractChainNodeFromObject(chainTracingValue);
+                }
+            }
+
+            // 检查是否直接有 rootNode 字段
+            if (extraInfoDict.TryGetValue("rootNode", out var directRootNodeValue))
+            {
+                return ExtractChainNodeFromObject(directRootNodeValue);
+            }
+        }
+        catch (Exception)
+        {
+            // 忽略提取过程中的异常
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// 从对象中提取调用链节点
+    /// </summary>
+    /// <param name="nodeValue">节点值</param>
+    /// <returns>调用链节点</returns>
+    private static MoChainNode? ExtractChainNodeFromObject(object? nodeValue)
+    {
+        if (nodeValue == null)
+        {
+            return null;
+        }
+
+        try
+        {
+            // 如果已经是 MoChainNode，直接返回
+            if (nodeValue is MoChainNode chainNode)
+            {
+                return chainNode;
+            }
+
+            // 尝试序列化为 JSON 再反序列化
+            var json = JsonSerializer.Serialize(nodeValue);
+            return JsonSerializer.Deserialize<MoChainNode>(json);
+        }
+        catch (Exception)
+        {
+            // 忽略转换过程中的异常
+        }
+
+        return null;
+    }
 
     /// <summary>
     /// 标记节点及其子节点为远程调用
