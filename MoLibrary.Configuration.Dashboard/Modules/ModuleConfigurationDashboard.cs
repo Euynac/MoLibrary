@@ -96,7 +96,7 @@ public class ModuleConfigurationDashboard(ModuleConfigurationDashboardOption opt
                     {
                         if ((await centre.GetSpecificOptionItemAsync(key, appid)).IsFailed(out var error, out var data))
                             return error.GetResponse();
-                        return ((IServiceResponse) Res.Ok(data)).GetResponse();
+                        return ((IMoResponse) Res.Ok(data)).GetResponse();
                     }).WithName("获取指定配置状态").WithOpenApi(operation =>
                 {
                     operation.Summary = "获取指定配置状态";
@@ -113,7 +113,7 @@ public class ModuleConfigurationDashboard(ModuleConfigurationDashboardOption opt
 
                     if ((await dashboard.DashboardDisplayMode(data, mode)).IsFailed(out error, out var arranged))
                         return error.GetResponse();
-                    return ((IServiceResponse) Res.Ok(arranged)).GetResponse();
+                    return ((IMoResponse) Res.Ok(arranged)).GetResponse();
                 }).WithName("获取所有微服务配置状态").WithOpenApi(operation =>
                 {
                     operation.Summary = "获取所有微服务配置状态";

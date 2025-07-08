@@ -16,7 +16,7 @@ public static class RESTfulApiExtensions
     public static async Task<object> GetResponse(this Task<object> response, ControllerBase controller)
     {
         var res = await response;
-        if (res is IServiceResponse serviceResponse)
+        if (res is IMoResponse serviceResponse)
         {
             return new ObjectResult(serviceResponse)
             {
@@ -33,9 +33,9 @@ public static class RESTfulApiExtensions
     /// <param name="controller"></param>
     /// <returns></returns>
     public static async Task<ObjectResult> GetResponse<T>(this Task<T> response, ControllerBase controller)
-        where T : IServiceResponse
+        where T : IMoResponse
     {
-        var res = await response as IServiceResponse;
+        var res = await response as IMoResponse;
         return new ObjectResult(res)
         {
             StatusCode = (int?)res.GetHttpStatusCode()

@@ -1,4 +1,5 @@
 using MoLibrary.Core.Features.MoChainTracing.Models;
+using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Core.Features.MoChainTracing;
 
@@ -59,7 +60,12 @@ public interface IMoChainTracing
     /// 合并远程调用链信息
     /// </summary>
     /// <param name="traceId">当前调用链节点标识</param>
-    /// <param name="remoteChainInfo">远程调用链信息</param>
+    /// <param name="remoteRes"></param>
     /// <returns>是否成功合并</returns>
-    bool MergeRemoteChain(string traceId, object? remoteChainInfo);
+    void MergeRemoteChain(string traceId, IMoResponse remoteRes);
+
+    /// <summary>
+    /// 一般用于 AsyncLocal 最外层初次赋值。但最好在最外层开启一个Chain。
+    /// </summary>
+    void Init();
 } 

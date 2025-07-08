@@ -4,13 +4,14 @@ using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using MoLibrary.Core.Extensions;
-using MoLibrary.Core.Features;
+using MoLibrary.Core.Features.MoChainTracing;
+using MoLibrary.Core.Features.MoChainTracing.Models;
 using MoLibrary.Core.GlobalJson.Interfaces;
 using MoLibrary.DomainDrivenDesign.ExceptionHandler;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Framework.Features.MoRpc;
+
 
 public static class MoDaprRpcHttpInfoExtensions
 {
@@ -27,9 +28,9 @@ public static class MoDaprRpcHttpInfoExtensions
 
 
 /// <summary>
-/// 用于扩展Dapr调用相关功能，如自定义Header、链路追踪
+/// 用于扩展Dapr调用相关功能，如自定义Header、链路追踪。注意该中间件是添加给Dapr ActorHost服务。
 /// </summary>
-internal sealed class MoRpcApiHttpInfoMiddleware(IGlobalJsonOption jsonOption, IMoExceptionHandler handler) : IMiddleware
+internal sealed class MoRpcApiHttpInfoMiddleware(IGlobalJsonOption jsonOption, IMoExceptionHandler handler, IMoChainTracing tracing) : IMiddleware
 {
     public async Task InvokeAsync(HttpContext context, RequestDelegate next)
     {
@@ -85,18 +86,29 @@ internal sealed class MoRpcApiHttpInfoMiddleware(IGlobalJsonOption jsonOption, I
         context.Response.Body = memoryStream;
         try
         {
+            using var scope = tracing.BeginScope(context.Request.Path.Value ?? "Actor", "Actor");
             // Hand over to the next middleware and wait for the call to return
             await next(context);
 
             memoryStream.Position = 0;
             var originResponse =
-                await JsonSerializer.DeserializeAsync<JsonNode>(memoryStream, jsonOption.GlobalOptions);
+                await JsonSerializer.DeserializeAsync<Res>(memoryStream, jsonOption.GlobalOptions);
+
+            scope.EndWithSuccess();
+
+            // 检查返回结果
+            if (tracing.GetCurrentChain() is { } chain )
+            {
+                chain.MarkComplete();
+
+                originResponse!.AppendExtraInfo(MoChainContext.CHAIN_KEY, chain.Root);
+            }
+
 
             using var newResStream = new MemoryStream();
             context.Response.Body = newResStream;
 
-            originResponse![nameof(Res.ExtraInfo)] =
-                JsonSerializer.SerializeToNode(context.GetOrDefault<MoRequestContext>(), jsonOption.GlobalOptions);
+            
 
             await context.Response.WriteAsJsonAsync(originResponse, jsonOption.GlobalOptions);
 

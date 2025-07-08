@@ -1,4 +1,5 @@
 using MoLibrary.Core.Features.MoChainTracing.Models;
+using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Core.Features.MoChainTracing.Implementations;
 
@@ -78,12 +79,14 @@ public class EmptyChainTracing : IMoChainTracing
     /// 合并远程调用链信息（无操作）
     /// </summary>
     /// <param name="traceId">当前调用链节点标识</param>
-    /// <param name="remoteChainInfo">远程调用链信息</param>
+    /// <param name="remoteRes"></param>
     /// <returns>始终返回 false</returns>
-    public bool MergeRemoteChain(string traceId, object? remoteChainInfo)
+    public void MergeRemoteChain(string traceId, IMoResponse remoteRes)
     {
-        // 无操作
-        return false;
+    }
+
+    public void Init()
+    {
     }
 
     public bool ContainsTrace(string traceId)

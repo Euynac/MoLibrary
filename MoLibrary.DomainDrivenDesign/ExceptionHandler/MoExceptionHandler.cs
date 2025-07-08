@@ -73,7 +73,6 @@ internal class MoExceptionHandler(ILogger<MoExceptionHandler> logger, IHttpConte
                         ["response"] = httpContext?.Response.CloneAs<DtoHttpContextResponse>(),
                         ["request"] = httpContext?.Request.CloneAs<DtoHttpContextRequest>(),
                         ["connection"] = httpContext?.Connection.ToJsonStringForce(),
-                        ["chainInfo"] = httpContext?.GetOrDefault<MoRequestContext>(),
                         ["time"] = DateTime.Now,
                         ["utcTime"] = DateTime.UtcNow,
                     }

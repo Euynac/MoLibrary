@@ -41,7 +41,7 @@ public static class MinimalApiExtensions
     /// <typeparam name="T"></typeparam>
     /// <param name="response"></param>
     /// <returns></returns>
-    public static IResult GetResponse<T>(this T response) where T : IServiceResponse
+    public static IResult GetResponse<T>(this T response) where T : IMoResponse
     {
         return Results.Json(response, statusCode: (int?)response.GetHttpStatusCode());
     }

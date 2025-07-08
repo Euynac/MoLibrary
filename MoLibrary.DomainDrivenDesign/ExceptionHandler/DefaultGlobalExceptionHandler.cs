@@ -15,7 +15,7 @@ public class DefaultGlobalExceptionHandler(IMoExceptionHandler handler) : IExcep
         var res = await handler.TryHandleAsync(httpContext, exception, cancellationToken);
         handler.LogException(httpContext, exception);
         httpContext.Response.StatusCode =
-            (int)(((IServiceResponse?)res)?.GetHttpStatusCode() ?? HttpStatusCode.InternalServerError);
+            (int)(res.GetHttpStatusCode() ?? HttpStatusCode.InternalServerError);
 
         await httpContext.Response.WriteAsJsonAsync(res, cancellationToken);
         return true;

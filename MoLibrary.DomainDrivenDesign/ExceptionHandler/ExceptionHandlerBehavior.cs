@@ -10,7 +10,7 @@ namespace MoLibrary.DomainDrivenDesign.ExceptionHandler;
 /// <typeparam name="TRequest">The type of the request.</typeparam>
 /// <typeparam name="TResponse">The type of the response.</typeparam>
 public class ExceptionHandlerBehavior<TRequest, TResponse>(IMoExceptionHandler handler, IHttpContextAccessor accessor)
-    : IPipelineBehavior<TRequest, TResponse> where TRequest : IRequest<TResponse> where TResponse : IServiceResponse, new()
+    : IPipelineBehavior<TRequest, TResponse> where TRequest : IRequest<TResponse> where TResponse : IMoResponse, new()
 {
     /// <summary>
     /// Handles the request and catches any exceptions that occur during processing.

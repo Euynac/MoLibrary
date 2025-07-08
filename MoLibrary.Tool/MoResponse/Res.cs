@@ -11,7 +11,7 @@ namespace MoLibrary.Tool.MoResponse;
 /// 统一响应模型，仅含有响应码和响应信息
 /// </summary>
 [DebuggerDisplay("{GetDebugValue()}")]
-public class Res : IServiceResponse
+public class Res : IMoResponse
 {
     public string? Message { get; set; }
 
@@ -164,7 +164,7 @@ public class Res : IServiceResponse
 /// </summary>
 /// <typeparam name="T"></typeparam>
 [DebuggerDisplay("{GetDebugValue()}")]
-public record Res<T> : IServiceResponse
+public record Res<T> : IMoResponse
 {
     public string? Message { get; set; }
     public ResponseCode? Code { get; set; }

@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using MoLibrary.Core.Features.MoChainTracing;
+using MoLibrary.Core.Features.MoChainTracing.Models;
 using MoLibrary.Core.Features.MoTimekeeper;
 using MoLibrary.DependencyInjection.DynamicProxy;
 using MoLibrary.DependencyInjection.DynamicProxy.Abstract;
@@ -23,6 +24,12 @@ public record InvocationInfo(MethodInfo MethodInfo)
     /// 是否是远程调用，需要合并调用链
     /// </summary>
     public bool IsRemoteCall => MethodInfo.DeclaringType?.IsImplementInterface<IMoRpcApi>() is true;
+
+    public EChainTracingType GetInvocationType()
+    {
+        if (IsRemoteCall) return EChainTracingType.RemoteService;
+        return EChainTracingType.Unknown;
+    }
 }
 
 
@@ -58,7 +65,7 @@ public class ChainTrackingProviderInvocationInterceptor(
         }
         
         // 判断返回类型是否实现 IServiceResponse 接口
-        var shouldRecord = returnType.IsImplementInterface(typeof(IServiceResponse));
+        var shouldRecord = returnType.IsImplementInterface(typeof(IMoResponse));
         
         if (shouldRecord)
         {
@@ -92,8 +99,11 @@ public class ChainTrackingProviderInvocationInterceptor(
             return;
         }
 
+        var isRemoteCall = info.IsRemoteCall;
+
         // 开始调用链追踪
-        using var scope = chainTracing.BeginScope(info.OperationName, info.HandlerName);
+        using var scope =
+            chainTracing.BeginScope(info.OperationName, info.HandlerName, type: info.GetInvocationType());
 
         // 创建计时器
         using var timer = timekeeperFactory.CreateNormalTimer(info.HandlerName);
@@ -107,13 +117,13 @@ public class ChainTrackingProviderInvocationInterceptor(
             // 处理成功响应
             var responseTypeName = ChainTracingHelper.GetResponseTypeName(invocation.Method.ReturnType);
             
-            if (invocation.ReturnValue is IServiceResponse response)
+            if (invocation.ReturnValue is IMoResponse response)
             {
                 var success = response.Code == ResponseCode.Ok;
                 var resultDescription =
-                    $"{responseTypeName}({response.Code}){(response.Message?.LimitMaxLength(100, "...").BeNullIfWhiteSpace() is {} msg ? $"[{msg}]" : null)}";
+                    $"{responseTypeName}({response.Code}){(response.Message?.LimitMaxLength(1000, "...").BeNullIfWhiteSpace() is {} msg ? $"[{msg}]" : null)}";
 
-                if (info.IsRemoteCall)
+                if (isRemoteCall)
                 {
                     scope.MergeRemoteChain(response);
                 }
@@ -135,7 +145,7 @@ public class ChainTrackingProviderInvocationInterceptor(
             // 记录异常到调用链
             scope.EndWithException(ex, $"执行方法 {invocation.Method.DeclaringType?.Name}.{invocation.Method.Name} 异常");
 
-            if (CreateRes(invocation.Method.ReturnType) is IServiceResponse exRes)
+            if (CreateRes(invocation.Method.ReturnType) is IMoResponse exRes)
             {
                 var res = await exceptionHandler.TryHandleWithCurrentHttpContextAsync(ex, CancellationToken.None);
                 exRes.ExtraInfo = res.ExtraInfo;
@@ -160,7 +170,7 @@ public class ChainTrackingProviderInvocationInterceptor(
                 continue;
             }
 
-            if (type.IsImplementInterface(typeof(IServiceResponse)) && type.CanCreateInstanceUsingParameterlessConstructor())
+            if (type.IsImplementInterface(typeof(IMoResponse)) && type.CanCreateInstanceUsingParameterlessConstructor())
             {
                 return Activator.CreateInstance(type);
             }

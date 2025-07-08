@@ -1,4 +1,6 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
+using JetBrains.Annotations;
 using MoLibrary.Core.GlobalJson.Interfaces;
 using MoLibrary.Tool.Extensions;
 
@@ -70,4 +72,11 @@ public class DefaultMoGlobalJsonOptions : IGlobalJsonOption
     }
 
     public JsonSerializerOptions GlobalOptions => GlobalJsonSerializerOptions;
+
+    [return: NotNullIfNotNull("str")]
+    public string? UsingJsonNamePolicy(string? str)
+    {
+        if(str == null) return null;
+        return GlobalOptions.PropertyNamingPolicy?.ConvertName(str) ?? str;
+    }
 }

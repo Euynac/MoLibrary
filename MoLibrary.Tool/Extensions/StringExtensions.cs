@@ -581,6 +581,7 @@ namespace MoLibrary.Tool.Extensions
         /// <param name="strToTrim"></param>
         /// <returns></returns>
         [ContractAnnotation("str:notnull => notnull; str:null => null")]
+        [return: NotNullIfNotNull("str")]
         public static string? TrimEndOnce(this string? str, string strToTrim)
         {
             if (str.IsNullOrEmpty() || strToTrim.IsNullOrEmpty()) return str;

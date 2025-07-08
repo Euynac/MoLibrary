@@ -5,7 +5,7 @@ using MoLibrary.Tool.General;
 namespace MoLibrary.Tool.MoResponse;
 
 [DebuggerDisplay("{GetDebugValue()}")]
-public record ResError<T> : IServiceResponse
+public record ResError<T> : IMoResponse
 {
     public string? Message { get; set; }
     public ResponseCode? Code { get; set; }

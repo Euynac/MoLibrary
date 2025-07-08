@@ -1,6 +1,7 @@
 using System.Dynamic;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Options;
+using MoLibrary.Core.Features.MoChainTracing.Models;
 using MoLibrary.Core.Modules;
 using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.MoResponse;
@@ -30,11 +31,11 @@ public class ChainTracingAttachingActionFilter(IMoChainTracing chainTracing, IOp
     public void OnActionExecuted(ActionExecutedContext context)
     {
         // 检查返回结果
-        if (chainTracing.GetCurrentChain() is { } chain && ChainTracingHelper.ExtractResult(context.Result) is IServiceResponse serviceResponse)
+        if (chainTracing.GetCurrentChain() is { } chain && ChainTracingHelper.ExtractResult(context.Result) is IMoResponse serviceResponse)
         {
             chain.MarkComplete();
             serviceResponse.ExtraInfo ??= new ExpandoObject();
-            serviceResponse.ExtraInfo.Append("chain", chain.Root);
+            serviceResponse.ExtraInfo.Append(MoChainContext.CHAIN_KEY, chain.Root);
         }
     }
 }

@@ -12,7 +12,7 @@ public class MoResultFilterMvc: IResultFilter
 {
     public void OnResultExecuting(ResultExecutingContext context)
     {
-        if (context.Result is ObjectResult { Value: IServiceResponse response } && !response.IsOk())
+        if (context.Result is ObjectResult { Value: IMoResponse response } && !response.IsOk())
         {
             context.HttpContext.Response.StatusCode =
                 (int?) response.GetHttpStatusCode() ?? (int) HttpStatusCode.BadRequest;
