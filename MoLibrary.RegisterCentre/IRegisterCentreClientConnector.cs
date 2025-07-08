@@ -53,7 +53,7 @@ public class DaprHttpForConnectClient(DaprClient client, ILogger<DaprHttpForConn
                 throw new InvocationException(appid, callbackUrl,
                     new Exception("Json序列化为空"), response);
 
-            if (res is IServiceResponse serviceResponse)
+            if (res is IMoResponse serviceResponse)
             {
                 serviceResponse.AutoParseResponseFromOrigin(content);
             }
@@ -103,7 +103,7 @@ public class DaprHttpForConnectClient(DaprClient client, ILogger<DaprHttpForConn
                 throw new InvocationException(appid, callbackUrl,
                     new Exception("Json序列化为空"), response);
 
-            if (res is IServiceResponse serviceResponse)
+            if (res is IMoResponse serviceResponse)
             {
                 serviceResponse.AutoParseResponseFromOrigin(content);
             }

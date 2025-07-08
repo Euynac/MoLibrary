@@ -30,7 +30,7 @@ public class ModuleMediator(ModuleMediatorOption option) : MoModule<ModuleMediat
         //TODO 优化为使用统一迭代方法
         services.AddMediatR(cfg =>
         {
-            cfg.RegisterServicesFromAssemblyContaining<IServiceResponse>();
+            cfg.RegisterServicesFromAssemblyContaining<IMoResponse>();
             cfg.RegisterServicesFromAssembly(Assembly.GetEntryAssembly()!);
         });
     }

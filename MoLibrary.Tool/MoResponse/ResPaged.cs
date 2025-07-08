@@ -9,7 +9,7 @@ namespace MoLibrary.Tool.MoResponse;
 /// 统一分页响应模型
 /// </summary>
 /// <typeparam name="TDto"></typeparam>
-public class ResPaged<TDto> : IServiceResponse
+public class ResPaged<TDto> : IMoResponse
 {
     public string? Message { get; set; }
     public ResponseCode? Code { get; set; } = ResponseCode.Ok;

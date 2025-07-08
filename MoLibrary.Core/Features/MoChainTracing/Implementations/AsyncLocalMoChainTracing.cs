@@ -1,7 +1,12 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MoLibrary.Core.Features.MoChainTracing.Models;
+using MoLibrary.Core.GlobalJson.Interfaces;
 using MoLibrary.Core.Modules;
+using MoLibrary.Tool.Extensions;
+using MoLibrary.Tool.MoResponse;
+using System.Text.Json;
+using MoLibrary.Tool.General;
 
 namespace MoLibrary.Core.Features.MoChainTracing.Implementations;
 
@@ -13,7 +18,7 @@ namespace MoLibrary.Core.Features.MoChainTracing.Implementations;
 /// </remarks>
 /// <param name="options">调用链追踪配置选项</param>
 /// <param name="logger">日志记录器</param>
-public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options, ILogger<AsyncLocalMoChainTracing>? logger = null) : IMoChainTracing
+public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options, ILogger<AsyncLocalMoChainTracing> logger, IGlobalJsonOption jsonOption) : IMoChainTracing
 {
     private static readonly AsyncLocal<MoChainContext?> _chainContext = new();
     private readonly ModuleChainTracingOption _options = options.Value;
@@ -36,7 +41,7 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
             // 检查最大调用链深度
             if (IsMaxDepthReached())
             {
-                logger?.LogWarning("调用链深度已达到最大限制 {MaxChainDepth}，跳过创建新节点: {Handler}.{Operation}", 
+                logger.LogWarning("调用链深度已达到最大限制 {MaxChainDepth}，跳过创建新节点: {Handler}.{Operation}", 
                     _options.MaxChainDepth, handler, operation);
                 return Guid.NewGuid().ToString("N"); // 返回虚拟 TraceId，避免后续调用报错
             }
@@ -44,7 +49,7 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
             // 检查最大节点数量
             if (IsMaxNodeCountReached())
             {
-                logger?.LogWarning("调用链节点数量已达到最大限制 {MaxNodeCount}，跳过创建新节点: {Handler}.{Operation}", 
+                logger.LogWarning("调用链节点数量已达到最大限制 {MaxNodeCount}，跳过创建新节点: {Handler}.{Operation}", 
                     _options.MaxNodeCount, handler, operation);
                 return Guid.NewGuid().ToString("N"); // 返回虚拟 TraceId，避免后续调用报错
             }
@@ -60,14 +65,14 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
 
             context.AddNode(node);
 
-            logger?.LogDebug("开始调用链节点: {Handler}.{Operation}, TraceId: {TraceId}, 当前深度: {Depth}, 总节点数: {NodeCount}", 
+            logger.LogDebug("开始调用链节点: {Handler}.{Operation}, TraceId: {TraceId}, 当前深度: {Depth}, 总节点数: {NodeCount}", 
                 handler, operation, node.TraceId, context.ActiveNodes.Count, context.NodeMap.Count);
 
             return node.TraceId;
         }
         catch (Exception ex)
         {
-            logger?.LogError(ex, "开始调用链节点时发生异常: {Handler}.{Operation}", handler, operation);
+            logger.LogError(ex, "开始调用链节点时发生异常: {Handler}.{Operation}", handler, operation);
             return Guid.NewGuid().ToString("N"); // 返回一个虚拟的 TraceId，避免后续调用报错
         }
     }
@@ -88,18 +93,18 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
             var context = _chainContext.Value;
             if (context == null)
             {
-                logger?.LogWarning("尝试完成调用链节点但当前上下文为空: TraceId: {TraceId}", traceId);
+                logger.LogWarning("尝试完成调用链节点但当前上下文为空: TraceId: {TraceId}", traceId);
                 return;
             }
 
             context.CompleteNode(traceId, result, success, exception, extraInfo);
 
-            logger?.LogDebug("完成调用链节点: TraceId: {TraceId}, Success: {Success}, Result: {Result}", 
+            logger.LogDebug("完成调用链节点: TraceId: {TraceId}, Success: {Success}, Result: {Result}", 
                 traceId, success, result);
         }
         catch (Exception ex)
         {
-            logger?.LogError(ex, "完成调用链节点时发生异常: TraceId: {TraceId}", traceId);
+            logger.LogError(ex, "完成调用链节点时发生异常: TraceId: {TraceId}", traceId);
         }
     }
 
@@ -123,7 +128,7 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
             // 检查最大节点数量
             if (IsMaxNodeCountReached())
             {
-                logger?.LogWarning("调用链节点数量已达到最大限制 {MaxNodeCount}，跳过记录简单调用: {Handler}.{Operation}", 
+                logger.LogWarning("调用链节点数量已达到最大限制 {MaxNodeCount}，跳过记录简单调用: {Handler}.{Operation}", 
                     _options.MaxNodeCount, handler, operation);
                 return;
             }
@@ -152,12 +157,12 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
             context.AddNode(node);
             context.CompleteNode(node.TraceId, result, success, null, extraInfo);
 
-            logger?.LogDebug("记录简单调用链: {Handler}.{Operation}, Success: {Success}, Duration: {Duration}ms, 总节点数: {NodeCount}", 
+            logger.LogDebug("记录简单调用链: {Handler}.{Operation}, Success: {Success}, Duration: {Duration}ms, 总节点数: {NodeCount}", 
                 handler, operation, success, node.Duration, context.NodeMap.Count);
         }
         catch (Exception ex)
         {
-            logger?.LogError(ex, "记录简单调用链时发生异常: {Handler}.{Operation}", handler, operation);
+            logger.LogError(ex, "记录简单调用链时发生异常: {Handler}.{Operation}", handler, operation);
         }
     }
 
@@ -221,57 +226,50 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
     /// 合并远程调用链信息
     /// </summary>
     /// <param name="traceId">当前调用链节点标识</param>
-    /// <param name="remoteChainInfo">远程调用链信息</param>
+    /// <param name="remoteRes"></param>
     /// <returns>是否成功合并</returns>
-    public bool MergeRemoteChain(string traceId, object? remoteChainInfo)
+    public void MergeRemoteChain(string traceId, IMoResponse remoteRes)
     {
         try
         {
             var context = _chainContext.Value;
             if (context == null)
             {
-                logger?.LogWarning("尝试合并远程调用链但当前上下文为空: TraceId: {TraceId}", traceId);
-                return false;
+                logger.LogWarning("尝试合并远程调用链但当前上下文为空: TraceId: {TraceId}", traceId);
+                return;
             }
-
-            var success = context.MergeRemoteChain(traceId, remoteChainInfo);
-
-            if (success)
+            var success = false;
+          
+            if (remoteRes.ExtraInfo is { } expando)
             {
-                logger?.LogDebug("合并远程调用链成功: TraceId: {TraceId}", traceId);
-            }
-            else
-            {
-                var remoteChainInfoStr = GetLimitedString(remoteChainInfo?.ToString(), 1000);
-                logger?.LogWarning("合并远程调用链失败: TraceId: {TraceId}, RemoteChainInfo: {RemoteChainInfo}", 
-                    traceId, remoteChainInfoStr);
+                var node = new MoChainNode();
+                if (expando.GetOrDefault(jsonOption.UsingJsonNamePolicy(MoChainContext.CHAIN_KEY)) is JsonElement
+                    jsonElement && jsonElement.Deserialize<MoChainNode>(jsonOption.GlobalOptions) is {} chainNode)
+                {
+                    node = chainNode;
+                }
+
+                node.EndExtraInfo = expando.Unfold().Where(p => p.Key != MoChainContext.CHAIN_KEY).ToDictionary();
+                success = context.MergeRemoteChain(traceId, node);
             }
 
-            return success;
+            if (success) return;
+
+            var remoteChainInfoStr = remoteRes.ToJsonString()?.LimitMaxLength(3000, "...");
+            logger.LogWarning("合并远程调用链失败: TraceId: {TraceId}, RemoteChainInfo: {RemoteChainInfo}",
+                traceId, remoteChainInfoStr);
         }
         catch (Exception ex)
         {
-            var remoteChainInfoStr = GetLimitedString(remoteChainInfo?.ToString(), 1000);
-            logger?.LogError(ex, "合并远程调用链时发生异常: TraceId: {TraceId}, RemoteChainInfo: {RemoteChainInfo}", 
+            var remoteChainInfoStr = remoteRes.ToJsonString()?.LimitMaxLength(3000, "...");
+            logger.LogError(ex, "合并远程调用链时发生异常: TraceId: {TraceId}, RemoteChainInfo: {RemoteChainInfo}", 
                 traceId, remoteChainInfoStr);
-            return false;
         }
     }
 
-    /// <summary>
-    /// 获取限制长度的字符串
-    /// </summary>
-    /// <param name="input">输入字符串</param>
-    /// <param name="maxLength">最大长度</param>
-    /// <returns>限制长度的字符串</returns>
-    private static string GetLimitedString(string? input, int maxLength)
+    public void Init()
     {
-        if (string.IsNullOrEmpty(input))
-        {
-            return string.Empty;
-        }
-
-        return input.Length <= maxLength ? input : input.Substring(0, maxLength) + "...";
+        _chainContext.Value ??= new MoChainContext();
     }
 
     public bool ContainsTrace(string traceId)

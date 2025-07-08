@@ -54,7 +54,7 @@ public class ChainTracingProviderController(IMoChainTracing chainTracing, ILogge
             {
                 // 检查返回结果
                 var result = ChainTracingHelper.ExtractResult(context.Result);
-                if (result is IServiceResponse response)
+                if (result is IMoResponse response)
                 {
                     chainTracing.EndTrace(actionTraceId, $"{ChainTracingHelper.GetResponseTypeName(response.GetType())}({response.Code}){(response.Message?.LimitMaxLength(100, "...").BeNullIfWhiteSpace() is { } msg ? $"[{msg}]" : null)}", response.Code == ResponseCode.Ok);
                   

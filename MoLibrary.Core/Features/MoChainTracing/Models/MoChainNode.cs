@@ -7,11 +7,27 @@ namespace MoLibrary.Core.Features.MoChainTracing.Models;
 /// </summary>
 public class MoChainNode
 {
+    #region 用于调用链合并等情况
+
+    private string[]? _exceptionMessage;
+    private string? _duration;
+    private EChainTracingType _type;
+
+    #endregion
+
     /// <summary>
     /// 调用链节点类型
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public EChainTracingType Type { get; set; } = EChainTracingType.Unknown;
+    public EChainTracingType Type
+    {
+        get => _type;
+        set
+        {
+            _type = value;
+            SetRemoteAttr(_type);
+        }
+    }
 
     /// <summary>
     /// 调用链节点唯一标识
@@ -45,8 +61,11 @@ public class MoChainNode
     /// <summary>
     /// 执行时间（毫秒）
     /// </summary>
-    public string? Duration =>
-        EndTime?.Subtract(StartTime).TotalMilliseconds is { } milliseconds ? $"{milliseconds}ms" : null;
+    public string? Duration
+    {
+        get => _duration ?? (EndTime?.Subtract(StartTime).TotalMilliseconds is { } milliseconds ? $"{milliseconds}ms" : null);
+        set => _duration = value;
+    }
 
     /// <summary>
     /// 调用结果描述
@@ -63,8 +82,8 @@ public class MoChainNode
     /// <summary>
     /// 是否为远程调用
     /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public bool? IsRemoteCall { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool IsRemoteCall { get; set; }
 
     /// <summary>
     /// 异常信息
@@ -76,7 +95,11 @@ public class MoChainNode
     /// 异常信息的序列化表示
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string[]? ExceptionMessage => Exception?.ToString().Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+    public string[]? ExceptionMessage
+    {
+        get => _exceptionMessage ?? Exception?.ToString().Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        set => _exceptionMessage = value;
+    }
 
     /// <summary>
     /// 开始时的额外信息
@@ -107,4 +130,10 @@ public class MoChainNode
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Remarks { get; set; }
+
+
+    public void SetRemoteAttr(EChainTracingType type)
+    {
+        IsRemoteCall = type == EChainTracingType.RemoteService;
+    }
 }

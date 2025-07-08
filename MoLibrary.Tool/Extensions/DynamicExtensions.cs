@@ -5,6 +5,11 @@ namespace MoLibrary.Tool.Extensions;
 
 public static class DynamicExtensions
 {
+    public static IDictionary<string, object> Unfold(this ExpandoObject obj)
+    {
+        return obj!;
+    }
+
     public static bool Exist(this ExpandoObject obj, string name)
     {
         var dict = (IDictionary<string, object>) obj!;

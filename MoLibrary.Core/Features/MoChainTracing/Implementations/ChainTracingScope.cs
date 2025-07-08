@@ -1,5 +1,6 @@
 using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Features.MoChainTracing.Models;
+using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Core.Features.MoChainTracing.Implementations;
 
@@ -78,10 +79,10 @@ public class ChainTracingScope : IDisposable
     /// 合并远程调用链信息
     /// </summary>
     /// <param name="remoteChainInfo">远程调用链信息</param>
-    public void MergeRemoteChain(object? remoteChainInfo)
+    public void MergeRemoteChain(IMoResponse remoteChainInfo)
     {
         if (!_disposed)
-        {
+        { 
             _chainTracing.MergeRemoteChain(TraceId, remoteChainInfo);
         }
     }

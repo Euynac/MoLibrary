@@ -18,7 +18,7 @@ public static class HttpApiExtensions
     /// <param name="response">需要检查 IsSuccess 属性是否是 <b>true</b>，否则 <typeparamref name="TResponse"/> 的属性全为null或默认值，非有效值</param>
     /// <returns></returns>
     public static async Task<TResponse> GetResponse<TResponse>(this Task<HttpResponseMessage> response)
-        where TResponse : class, IServiceResponse, new()
+        where TResponse : class, IMoResponse, new()
     {
         var resContent = string.Empty;
         HttpResponseMessage? httpResponse = null;
@@ -129,17 +129,17 @@ public static class HttpApiExtensions
     /// <param name="response">需要检查 IsSuccess 属性是否是 <b>true</b>，否则 response 的属性全为null或默认值，非有效值</param>
     /// <param name="responseType">必须是IServiceResponse类型，且包含无参构造函数</param>
     /// <returns></returns>
-    public static async Task<IServiceResponse> GetResponse(this Task<HttpResponseMessage> response, Type responseType)
+    public static async Task<IMoResponse> GetResponse(this Task<HttpResponseMessage> response, Type responseType)
     {
         var resContent = string.Empty;
         HttpResponseMessage? httpResponse = null;
         Exception? e = null;
-        IServiceResponse? res = default;
+        IMoResponse? res = default;
         try
         {
             httpResponse = await response;
             resContent = await httpResponse.Content.ReadAsStringAsync();
-            res = (IServiceResponse?)JsonSerializer.Deserialize(resContent, responseType, DefaultMoGlobalJsonOptions.GlobalJsonSerializerOptions);
+            res = (IMoResponse?)JsonSerializer.Deserialize(resContent, responseType, DefaultMoGlobalJsonOptions.GlobalJsonSerializerOptions);
             if (res?.IsServiceNormal() is true)
             {
                 return res;
@@ -150,7 +150,7 @@ public static class HttpApiExtensions
             e = ex;
         }
 
-        var errorRes = (IServiceResponse?)Activator.CreateInstance(responseType)!;
+        var errorRes = (IMoResponse?)Activator.CreateInstance(responseType)!;
         errorRes.Code = ResponseCode.InternalError;
         errorRes.Message = "接口响应出错";
 

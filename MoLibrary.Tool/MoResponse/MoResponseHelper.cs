@@ -1,7 +1,9 @@
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Dynamic;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using MoLibrary.Tool.Extensions;
@@ -11,15 +13,56 @@ namespace MoLibrary.Tool.MoResponse;
 public static class MoResponseHelper
 {
     /// <summary>
+    /// 获取响应码对应的HttpStatusCode
+    /// </summary>
+    /// <returns></returns>
+    public static HttpStatusCode? GetHttpStatusCode(this IMoResponse? response)
+    {
+        if (response == null) return null;
+        switch (response.Code)
+        {
+            case ResponseCode.Ok:
+                return HttpStatusCode.OK;
+
+
+            case ResponseCode.Unauthorized:
+            case ResponseCode.RefreshTokenExpired:
+            case ResponseCode.AccessTokenExpired:
+                return HttpStatusCode.Unauthorized;
+
+
+            case ResponseCode.Forbidden:
+                return HttpStatusCode.Forbidden;
+
+
+            case ResponseCode.ValidateError:
+            case ResponseCode.ErrorWarning:
+            case ResponseCode.BadRequest:
+                return HttpStatusCode.BadRequest;
+
+
+            case ResponseCode.InternalError:
+                return HttpStatusCode.InternalServerError;
+
+
+            case null:
+            case ResponseCode.Unknown:
+                return null;
+            default:
+                throw new ArgumentOutOfRangeException(response.ToString(), $"未填写当前状态码{response.Code}对应HTTP状态码的值！");
+        }
+    }
+
+    /// <summary>
     /// [500] 微服务调用后需要检查，如果为False，应为服务调用出错，需要记录到微服务调用日志中去。接口调用异常由Mediator自动进行AOP，try catch进行日志记录
     /// </summary>
-    public static bool IsServiceNormal(this IServiceResponse res) =>
+    public static bool IsServiceNormal(this IMoResponse res) =>
         res.Code != ResponseCode.InternalError && !IsNotValidResponse(res);
 
     /// <summary>
     ///  [200] 代表请求正常处理
     /// </summary>
-    public static bool IsOk(this IServiceResponse res) => res.Code == ResponseCode.Ok;
+    public static bool IsOk(this IMoResponse res) => res.Code == ResponseCode.Ok;
 
     /// <summary>
     /// 从远程调用请求结果 自动验证并附加信息
@@ -27,7 +70,7 @@ public static class MoResponseHelper
     /// <param name="res"></param>
     /// <param name="originInfo">HTTP等原始Response</param>
     /// <returns></returns>
-    public static void AutoParseResponseFromOrigin(this IServiceResponse res, string originInfo)
+    public static void AutoParseResponseFromOrigin(this IMoResponse res, string originInfo)
     {
         if (IsNotValidResponse(res))
         {
@@ -38,7 +81,7 @@ public static class MoResponseHelper
     /// <summary>
     ///  不是一个有效的请求，代表可能返回值并不符合此规范，应注意此情况进行特殊处理。
     /// </summary>
-    public static bool IsNotValidResponse(this IServiceResponse res)
+    public static bool IsNotValidResponse(this IMoResponse res)
     {
         return res.Code == null;
     }
@@ -48,7 +91,7 @@ public static class MoResponseHelper
     /// <param name="res"></param>
     /// <param name="name"></param>
     /// <param name="info"></param>
-    public static T SetExtraInfo<T>(this T res, string name, object? info) where T : IServiceResponse
+    public static T SetExtraInfo<T>(this T res, string name, object? info = null) where T : IMoResponse
     {
         res.ExtraInfo ??= new ExpandoObject();
         res.ExtraInfo.Set(name, info);
@@ -60,7 +103,7 @@ public static class MoResponseHelper
     /// <param name="res"></param>
     /// <param name="name"></param>
     /// <param name="info"></param>
-    public static T AppendExtraInfo<T>(this T res, string name, object? info) where T : IServiceResponse
+    public static T AppendExtraInfo<T>(this T res, string name, object? info = null) where T : IMoResponse
     {
         res.ExtraInfo ??= new ExpandoObject();
         res.ExtraInfo.Append(name, info);
@@ -150,7 +193,7 @@ public static class MoResponseHelper
     /// <param name="self"></param>
     /// <param name="hint"></param>
     /// <returns></returns>
-    public static T Ok<T>(this T self, string hint) where T : IServiceResponse
+    public static T Ok<T>(this T self, string hint) where T : IMoResponse
     {
         self.Code = ResponseCode.Ok;
         self.Message = hint;
@@ -202,7 +245,7 @@ public static class MoResponseHelper
     /// </summary>
     /// <param name="self"></param>
     /// <param name="response"></param>
-    public static T MergeRes<T>(this T self, IServiceResponse response) where T : IServiceResponse
+    public static T MergeRes<T>(this T self, IMoResponse response) where T : IMoResponse
     {
         self.AppendExtraInfo("oriMsg", self.Message);
         self.AppendExtraInfo("oriCode", self.Code);
@@ -218,7 +261,7 @@ public static class MoResponseHelper
     /// <param name="self"></param>
     /// <param name="message"></param>
     public static T AppendMsg<T>(this T self, string? message)
-        where T : IServiceResponse
+        where T : IMoResponse
     {
         return Append(self, message, null);
     }
@@ -229,7 +272,7 @@ public static class MoResponseHelper
     /// <param name="message"></param>
     /// <param name="code"></param>
     private static T Append<T>(this T self, string? message, ResponseCode? code)
-        where T : IServiceResponse
+        where T : IMoResponse
     {
         if (!string.IsNullOrWhiteSpace(message))
         {
@@ -250,7 +293,7 @@ public static class MoResponseHelper
     /// <param name="message"></param>
     /// <param name="code"></param>
     public static T AppendError<T>(this T self, string? message, ResponseCode code = ResponseCode.BadRequest)
-        where T : IServiceResponse
+        where T : IMoResponse
     {
         return Append(self, message, code);
     }
@@ -266,8 +309,8 @@ public static class MoResponseHelper
     /// <returns></returns>
     public static async Task<TResponse> OkOrFallback<TLastResponse, TResponse>(this Task<TLastResponse> res,
         TResponse okResponse,
-        TResponse? fallback = null) where TLastResponse : IServiceResponse
-        where TResponse : class, IServiceResponse, new()
+        TResponse? fallback = null) where TLastResponse : IMoResponse
+        where TResponse : class, IMoResponse, new()
     {
         var lastRes = await res;
         return lastRes.IsOk() ? okResponse : (fallback ?? new TResponse()).AppendError(lastRes.Message);
@@ -278,14 +321,14 @@ public static class MoResponseHelper
     /// </summary>
     /// <param name="response"></param>
     /// <returns></returns>
-    public static IServiceResponse ToServiceResponse(this IServiceResponse response) => response;
+    public static IMoResponse ToServiceResponse(this IMoResponse response) => response;
     /// <summary>
     /// 转换为特定类型返回
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="response"></param>
     /// <returns></returns>
-    public static T ToServiceResponse<T>(this IServiceResponse response) where T : IServiceResponse, new() => new()
+    public static T ToServiceResponse<T>(this IMoResponse response) where T : IMoResponse, new() => new()
     {
         Code = response.Code,
         Message = response.Message,

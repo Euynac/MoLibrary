@@ -13,7 +13,7 @@ public class MoEndpointFilterResult : IEndpointFilter
     public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
         var result = await next(context);
-        if (result is ObjectResult { Value: IServiceResponse response } objResult)
+        if (result is ObjectResult { Value: IMoResponse response } objResult)
         {
             context.HttpContext.Response.StatusCode =
                 (int?) response.GetHttpStatusCode() ?? (int) HttpStatusCode.BadRequest;
