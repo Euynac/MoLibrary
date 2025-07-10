@@ -1,4 +1,6 @@
-﻿@inherits LayoutComponentBase
+@using MoLibrary.UI.UICore
+@inherits LayoutComponentBase
+@inject IUIComponentRegistry UIRegistry
 
 <MudThemeProvider Theme="@_theme" IsDarkMode="_isDarkMode" />
 <MudPopoverProvider />
@@ -14,6 +16,17 @@
     </MudAppBar>
     <MudDrawer id="nav-drawer" @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
         <NavMenu />
+        <MudNavMenu>
+            @foreach (var navItem in UIRegistry.GetNavItems())
+            {
+                <MudNavLink Href="@navItem.Href" 
+                            Icon="@navItem.Icon" 
+                            Disabled="@navItem.Disabled"
+                            OnClick="@navItem.OnClick">
+                    @navItem.Text
+                </MudNavLink>
+            }
+        </MudNavMenu>
     </MudDrawer>
     <MudMainContent Class="pt-16 pa-4">
         @Body
