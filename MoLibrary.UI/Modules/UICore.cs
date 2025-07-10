@@ -23,7 +23,7 @@ public static class ModuleUICoreBuilderExtensions
     public static ModuleUICoreGuide ConfigModuleUICore(this WebApplicationBuilder builder,
         Action<ModuleUICoreOption>? action = null)
     {
-        return new ModuleUICoreGuide().Register(action);
+        return new ModuleUICoreGuide().Register(action).AddBasicMiddlewares();
     }
 }
 
@@ -71,27 +71,33 @@ public class ModuleUICoreGuide : MoModuleGuide<ModuleUICore, ModuleUICoreOption,
     /// 注意：这些中间件应该由宿主应用程序调用
     /// </summary>
     /// <returns>配置引导器</returns>
-    public ModuleUICoreGuide AddUIMiddlewares()
+    public ModuleUICoreGuide AddBasicMiddlewares()
     {
         ConfigureApplicationBuilder(builder =>
         {
             var app = builder.ApplicationBuilder;
 
-            app.UseExceptionHandler("/Error", createScopeForErrors: true);
+            //app.UseExceptionHandler("/Error", createScopeForErrors: true);
 
             //app.MapStaticAssets();  // .NET 9支持
 
             // 静态文件支持（用于MudBlazor资源）
-            app.UseStaticFiles(); 
-            
-            builder.WebApplication.MapRazorComponents<MoApp>()
-                .AddInteractiveServerRenderMode();
+            app.UseStaticFiles();
 
             // 防伪令牌
-            //app.UseAntiforgery();
+            // Configure your application startup by adding app.UseAntiforgery() in the application startup code. If there are calls to app.UseRouting() and app.UseEndpoints(...), the call to app.UseAntiforgery() must go between them. Calls to app.UseAntiforgery() must be placed after calls to app.UseAuthentication() and app.UseAuthorization()."
+            builder.ApplicationBuilder.UseAntiforgery();
 
-        }, EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
+        }, EMoModuleApplicationMiddlewaresOrder.AfterUseRouting);
+
+
         
+        ConfigureEndpoints(builder =>
+        {
+            builder.WebApplication.MapRazorComponents<MoApp>()
+                .AddInteractiveServerRenderMode();
+        });
+
         return this;
     }
 }
