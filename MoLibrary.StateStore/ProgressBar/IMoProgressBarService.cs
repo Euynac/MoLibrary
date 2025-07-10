@@ -14,14 +14,28 @@ public interface IMoProgressBarService
     Task<ProgressBar> CreateProgressBarAsync(string? id = null, Action<ProgressBarSetting>? settingAction = null);
 
     /// <summary>
+    /// 获取分布式进度条
+    /// </summary>
+    /// <param name="id"></param>
+    /// <returns></returns>
+    Task<ProgressBar?> FetchDistributedProgressBar(string id);
+    /// <summary>
     /// 创建一个新的自定义进度条任务
     /// </summary>
-    /// <typeparam name="TCustom"></typeparam>
+    /// <typeparam name="TCustomProgressBar"></typeparam>
     /// <param name="id">为空则生成GUID作为Key</param>
     /// <param name="settingAction"></param>
     /// <returns></returns>
-    Task<TCustom> CreateProgressBarAsync<TCustom>(string? id = null, Action<ProgressBarSetting>? settingAction = null)
-        where TCustom : ProgressBar;
+    Task<TCustomProgressBar> CreateProgressBarAsync<TCustomProgressBar>(string? id = null, Action<ProgressBarSetting>? settingAction = null)
+        where TCustomProgressBar : ProgressBar;
+
+
+    /// <summary>
+    /// 获取自定义分布式进度条
+    /// </summary>
+    /// <param name="id"></param>
+    /// <returns></returns>
+    Task<TCustomProgressBar?> FetchDistributedProgressBar<TCustomProgressBar, TCustomStatus>(string id) where TCustomProgressBar : ProgressBar where TCustomStatus : ProgressBarStatus;
     /// <summary>
     /// 获取指定进度条的取消令牌
     /// </summary>
@@ -38,19 +52,20 @@ public interface IMoProgressBarService
     /// <summary>
     /// 获取指定进度条的自定义状态
     /// </summary>
-    /// <typeparam name="T">自定义状态类型</typeparam>
+    /// <typeparam name="TCustomStatus">自定义状态类型</typeparam>
     /// <param name="id">进度条ID</param>
     /// <returns></returns>
-    Task<T?> GetProgressBarStatusAsync<T>(string id) where T : ProgressBarStatus;
+    Task<TCustomStatus?> GetProgressBarStatusAsync<TCustomStatus>(string id) where TCustomStatus : ProgressBarStatus;
 
     /// <summary>
     /// 更新进度条状态
     /// </summary>
     /// <param name="progressBar">进度条实例</param>
     /// <param name="saveInstantly">是否立即保存，默认false。如果进度条有自动更新设置且此参数为false，则不会立即保存</param>
+    /// <param name="isComplete">是否是完成状态</param>
     /// <returns></returns>
-    ValueTask SaveProgressBarStateAsync(ProgressBar progressBar, bool saveInstantly = false);
-
+    ValueTask SaveProgressBarStateAsync(ProgressBar progressBar, bool saveInstantly = false,
+        bool isComplete = false);
 
     /// <summary>
     /// 完成进度条任务
@@ -76,6 +91,11 @@ public class ProgressBarSetting
     public TimeSpan? AutoUpdateDuration { get; set; }
 
     /// <summary>
+    /// 创建分布式进度条
+    /// </summary>
+    public bool UseDistributedProgressBar { get; set; }
+
+    /// <summary>
     /// 进度条任务的总步数，默认为100
     /// </summary>
     public int TotalSteps { get; set; } = 100;
@@ -89,4 +109,9 @@ public class ProgressBarSetting
     /// 进度条状态完成后的生存时间，超过此时间后状态将被自动清理，默认为3分钟
     /// </summary>
     public TimeSpan CompletedTimeToLive { get; set; } = TimeSpan.FromMinutes(3);
+    
+    /// <summary>
+    /// 分布式印记
+    /// </summary>
+    internal string? DistributedStamp { get; set; }
 }

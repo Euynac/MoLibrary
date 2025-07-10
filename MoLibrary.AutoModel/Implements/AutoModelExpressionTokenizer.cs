@@ -149,6 +149,11 @@ public partial class AutoModelExpressionTokenizer<TModel>(
             {
                 token.TokenExpression = $"!({token.TokenExpression})";
             }
+
+            if (token.Conditions.HasTheFlag(EFieldConditions.ExpLike))
+            {
+                token.TokenExpression = $"({token.TokenExpression})";
+            }
             supplementObjects.AddRange(supplementParamObjects);
 
         }

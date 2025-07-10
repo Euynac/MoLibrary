@@ -136,15 +136,15 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
                 case < 0:
                     throw new InvalidOperationException("ttl can not smaller than zero");
                 case 0:
-                    await dapr.SaveStateAsync(StateStoreName, finalKey, value, cancellationToken: cancellationToken,
+                    await dapr.SaveStateAsync(StateStoreName, finalKey, (object?) value, cancellationToken: cancellationToken,
                         metadata: new Dictionary<string, string> { { "ttlInSeconds", "-1" } });
                     break;
                 case { } seconds:
-                    await dapr.SaveStateAsync(StateStoreName, finalKey, value, cancellationToken: cancellationToken,
+                    await dapr.SaveStateAsync(StateStoreName, finalKey, (object?) value, cancellationToken: cancellationToken,
                         metadata: new Dictionary<string, string> { { "ttlInSeconds", seconds.ToString() } });
                     break;
                 default:
-                    await dapr.SaveStateAsync(StateStoreName, finalKey, value, cancellationToken: cancellationToken);
+                    await dapr.SaveStateAsync(StateStoreName, finalKey,(object?) value, cancellationToken: cancellationToken);
                     break;
             }
         }

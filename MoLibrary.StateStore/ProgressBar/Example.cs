@@ -25,14 +25,9 @@ public class CustomProgressBarStatus(int totalSteps, string id) : ProgressBarSta
 /// 自定义进度条示例
 /// </summary>
 public class CustomProgressBar(ProgressBarSetting setting, IMoProgressBarService service, string taskId)
-    : ProgressBar(setting, service, taskId)
+    : ProgressBar<CustomProgressBarStatus>(setting, service, taskId)
 {
     
-
-    /// <summary>
-    /// 获取自定义状态
-    /// </summary>
-    public new CustomProgressBarStatus Status { get; private set; } = new(setting.TotalSteps, taskId);// 使用自定义状态替换默认状态
 
     /// <summary>
     /// 更新文件处理进度
@@ -42,12 +37,17 @@ public class CustomProgressBar(ProgressBarSetting setting, IMoProgressBarService
     /// <returns></returns>
     public async Task UpdateFileProgressAsync(string fileName, long fileSize)
     {
-        var customStatus = Status;
+        var customStatus = CustomStatus;
         customStatus.ProcessedFiles++;
         customStatus.ProcessedBytes += fileSize;
         customStatus.CurrentFileName = fileName;
 
         await IncrementAsync(1, $"处理文件: {fileName}", "文件处理阶段");
+    }
+
+    public override CustomProgressBarStatus CreateDefaultCustomStatus()
+    {
+        return new CustomProgressBarStatus(Setting.TotalSteps, taskId);
     }
 }
 

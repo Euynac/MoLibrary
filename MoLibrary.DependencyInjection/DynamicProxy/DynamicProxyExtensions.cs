@@ -367,7 +367,7 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
 public enum EDynamicProxyKind
 {
     /// <summary>
-    /// Proxy class methods marked as virtual.
+    /// Proxy class methods marked as virtual.   TODO 目前仅支持virtual方法的代理
     /// </summary>
     ClassProxy,
     /// <summary>
