@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
@@ -93,20 +92,6 @@ public class ModuleUICoreGuide : MoModuleGuide<ModuleUICore, ModuleUICoreOption,
 
         }, EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
         
-        return this;
-    }
-    
-    /// <summary>
-    /// 配置UI路由
-    /// </summary>
-    /// <typeparam name="TApp">应用根组件类型</typeparam>
-    public ModuleUICoreGuide ConfigureUIRouting<TApp>() where TApp : ComponentBase
-    {
-        ConfigureEndpoints(builder =>
-        {
-            builder.WebApplication.MapRazorComponents<TApp>()
-                .AddInteractiveServerRenderMode();
-        });
         return this;
     }
 }
