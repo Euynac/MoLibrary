@@ -175,7 +175,9 @@ public record Res<T> : IMoResponse
     /// Response的响应数据项
     /// </summary>
     public T? Data { get; set; }
-
+    /// <summary>
+    /// 创建空返回（并不代表成功）
+    /// </summary>
     public Res()
     {
         Message = "";

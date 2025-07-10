@@ -53,6 +53,16 @@ public class MoChainContext
     public ExpandoObject? OtherInfo { get; set; }
 
     /// <summary>
+    /// 某些操作很大量而且可能并发的情况，且本身不会有子操作，不应该加入活跃节点，可能导致无法合理关闭调用链，造成Json Cycle问题
+    /// </summary>
+    /// <param name="type"></param>
+    /// <returns></returns>
+    public static bool CanHasChildrenOperation(EChainTracingType type)
+    {
+        return type != EChainTracingType.Database;
+    }
+
+    /// <summary>
     /// 添加一个新的调用链节点
     /// </summary>
     /// <param name="node">调用链节点</param>
@@ -70,7 +80,10 @@ public class MoChainContext
             node.Parent = parent;
         }
 
-        ActiveNodes.Push(node);
+        if (CanHasChildrenOperation(node.Type))
+        {
+            ActiveNodes.Push(node);
+        }
         NodeMap[node.TraceId] = node;
     }
 

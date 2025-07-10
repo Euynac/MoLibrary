@@ -1,15 +1,68 @@
-using MoLibrary.StateStore.CancellationManager;
+using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.StateStore.ProgressBar;
 
 /// <summary>
+/// 自定义进度条类
+/// </summary>
+/// <typeparam name="TCustomStatus"></typeparam>
+public abstract class ProgressBar<TCustomStatus>(
+    ProgressBarSetting setting,
+    IMoProgressBarService service,
+    string taskId)
+    : ProgressBar(setting, service, taskId)
+    where TCustomStatus : ProgressBarStatus
+{
+    private TCustomStatus? _customStatus;
+
+    /// <summary>
+    /// 请使用<see cref="CustomStatus"/>
+    /// </summary>
+    public override ProgressBarStatus Status
+    {
+        get => CustomStatus;
+        protected set
+        {
+            if (value is TCustomStatus customStatus) CustomStatus = customStatus;
+            throw new InvalidOperationException(
+                $"Can not set origin status when using custom status property in {GetType().GetCleanFullName()}!");
+        }
+    }
+
+    public TCustomStatus CustomStatus
+    {
+        get => _customStatus ?? throw new InvalidOperationException($"未能成功获取进度状态，请检查是否未调用{nameof(InitProgressBarStatus)}");
+        protected set => _customStatus = value;
+    }
+
+
+    public abstract TCustomStatus CreateDefaultCustomStatus();
+
+    public override void InitProgressBarStatus(object? distributedStatus = null)
+    {
+        CustomStatus = distributedStatus switch
+        {
+            null => CreateDefaultCustomStatus(),
+            TCustomStatus status => status,
+            _ => throw new InvalidOperationException($"{distributedStatus.GetType().GetCleanFullName()} 不是有效的 {typeof(TCustomStatus).Name} 类型，无法初始化进度条状态")
+        };
+    }
+}
+
+
+
+/// <summary>
 /// 进度条类，用于跟踪和管理任务的执行进度
 /// </summary>
+/// <remarks>
+/// 进度条类，用于跟踪和管理任务的执行进度
+/// </remarks>
+/// <param name="setting"></param>
 /// <param name="service">进度条服务接口</param>
 /// <param name="taskId">任务唯一标识符</param>
 public class ProgressBar(ProgressBarSetting setting, IMoProgressBarService service, string taskId)
 {
-    private bool _isCancelled = false;
+    private bool _isCancelled;
     private CancellationToken? _cancellationToken;
 
     /// <summary>
@@ -19,10 +72,15 @@ public class ProgressBar(ProgressBarSetting setting, IMoProgressBarService servi
 
     public ProgressBarSetting Setting { get; } = setting;
 
+    private ProgressBarStatus? _status;
     /// <summary>
     /// 当前进度状态
     /// </summary>
-    public virtual ProgressBarStatus Status { get; protected set; } = new(setting.TotalSteps, taskId);
+    public virtual ProgressBarStatus Status
+    {
+        get => _status ?? throw new InvalidOperationException($"未能成功获取进度状态，请检查是否未调用{nameof(InitProgressBarStatus)}");
+        protected set => _status = value;
+    }
 
     /// <summary>
     /// 任务是否已完成
@@ -58,6 +116,36 @@ public class ProgressBar(ProgressBarSetting setting, IMoProgressBarService servi
     /// 进度条完成事件
     /// </summary>
     public event EventHandler<ProgressBarEventArgs>? Completed;
+
+    /// <summary>
+    /// 初始化进度条状态
+    /// </summary>
+    /// <param name="distributedStatus"></param>
+    /// <exception cref="InvalidOperationException"></exception>
+    public virtual void InitProgressBarStatus(object? distributedStatus = null)
+    {
+        _status = distributedStatus switch
+        {
+            null => new ProgressBarStatus(Setting.TotalSteps, taskId),
+            ProgressBarStatus status => status,
+            _ => throw new InvalidOperationException($"{distributedStatus.GetType().GetCleanFullName()} 不是有效的 {nameof(ProgressBarStatus)} 类型，无法初始化进度条状态")
+        };
+    }
+
+    #region 分布式操作
+
+    /// <summary>
+    /// 分布式印记，指示当前分布式进度条所处服务
+    /// </summary>
+    public string? DistributedStamp { get; set; }
+
+
+    /// <summary>
+    /// 是否是当前可控制分布式进度条（指示当前服务正在更改进度条状态）
+    /// </summary>
+    public bool IsCurrentTurn => Setting.DistributedStamp == DistributedStamp;
+
+    #endregion
 
     /// <summary>
     /// 设置取消令牌

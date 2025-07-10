@@ -136,4 +136,10 @@ public class MoChainNode
     {
         IsRemoteCall = type == EChainTracingType.RemoteService;
     }
+
+
+    public override string ToString()
+    {
+        return $"[{Type}]{Handler}-{Operation}";
+    }
 }

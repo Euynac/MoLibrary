@@ -57,6 +57,7 @@ public partial class AutoModelTokenExpressionGenDynamicLinqProvider(IOptions<Aut
 
     public string GenerateTokenExpression(FieldToken token, int num, int totalParamCount, out List<object> supplementParamObjects)
     {
+        _supplementParameterObjects.Clear();
         _curValue = token.ConvertedValue;
         supplementParamObjects = _supplementParameterObjects;
         if (ShouldBreakConvertedValue(out var result)) return result;
