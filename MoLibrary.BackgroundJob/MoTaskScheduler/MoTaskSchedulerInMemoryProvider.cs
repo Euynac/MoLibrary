@@ -19,7 +19,7 @@ public class MoTaskSchedulerInMemoryProvider : IMoTaskScheduler
     /// <summary>
     /// 最大并发任务数
     /// </summary>
-    private readonly int _maxConcurrentTasks = 20;
+    private readonly int _maxConcurrentTasks = 30;
     /// <summary>
     /// 信号量超时时间
     /// </summary>
@@ -36,7 +36,7 @@ public class MoTaskSchedulerInMemoryProvider : IMoTaskScheduler
     }
 
     public int AddTask(string expression, Func<Task> task, DateTime? startAt = null, DateTime? endAt = null,
-        bool skipWhenPreviousIsRunning = false)
+        bool skipWhenPreviousIsRunning = false, string? name = null)
     {
         if (!IsValidExpression(expression)) throw new ArgumentException($"Crontab 表达式 \"{expression}\" 错误");
 
@@ -47,7 +47,8 @@ public class MoTaskSchedulerInMemoryProvider : IMoTaskScheduler
             Task = task,
             StartAt = startAt ?? DateTime.Now,
             EndAt = endAt,
-            SkipWhenPreviousIsRunning = skipWhenPreviousIsRunning
+            SkipWhenPreviousIsRunning = skipWhenPreviousIsRunning,
+            Name = name
         };
 
         _tasks.TryAdd(scheduledTask.Id, scheduledTask);
@@ -100,11 +101,12 @@ public class MoTaskSchedulerInMemoryProvider : IMoTaskScheduler
         foreach (var task in _tasks.Values.Where(t =>
                      t.IsEnabled && t.StartAt <= now && (!t.EndAt.HasValue || t.EndAt.Value >= now)))
         {
-            var schedule = CrontabSchedule.Parse(task.Expression,new CrontabSchedule.ParseOptions { IncludingSeconds = true });
+            var schedule = CrontabSchedule.Parse(task.Expression, new CrontabSchedule.ParseOptions { IncludingSeconds = true });
             if (!IsInSchedule(now, schedule)) continue;
             // 如果启用了跳过功能且任务正在运行，则跳过本次执行
-            if (task is { SkipWhenPreviousIsRunning: true, IsRunning: true})
+            if (task is { SkipWhenPreviousIsRunning: true, IsRunning: true })
             {
+                _logger?.LogWarning($"Task {task.GetTaskName()} is running, skipping this execution");
                 continue;
             }
 
@@ -124,13 +126,13 @@ public class MoTaskSchedulerInMemoryProvider : IMoTaskScheduler
         var success = await _threadPoolSemaphore.WaitAsync(_semaphoreTimeout);
         if (!success)
         {
-            _logger?.LogWarning($"Failed to acquire semaphore for task {scheduledTask.Id} within timeout {_semaphoreTimeout}");
+            _logger?.LogWarning($"Failed to acquire semaphore for task {scheduledTask.GetTaskName()} within timeout {_semaphoreTimeout}");
             return;
         }
         try
         {
             // 在后台线程中执行任务
-            _ = Task.Run(async () =>
+            await Task.Run(async () =>
             {
                 try
                 {
@@ -143,7 +145,7 @@ public class MoTaskSchedulerInMemoryProvider : IMoTaskScheduler
                 }
                 catch (Exception e)
                 {
-                    _logger?.LogError(e, $"Task {scheduledTask.Id} execution failed");
+                    _logger?.LogError(e, $"Task {scheduledTask.GetTaskName()} execution failed");
                 }
                 finally
                 {
@@ -154,11 +156,11 @@ public class MoTaskSchedulerInMemoryProvider : IMoTaskScheduler
                 }
             });
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             // 如果Task.Run失败，确保释放信号量
             _threadPoolSemaphore.Release();
-            _logger?.LogError(ex, "Failed to start task execution in thread pool");
+            _logger?.LogError(ex, $"Failed to start task execution in thread pool for task {scheduledTask.GetTaskName()}");
         }
     }
 
