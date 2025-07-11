@@ -53,7 +53,8 @@ public class MoTaskSchedulerBackgroundWorkerManager(
                 }
             }
 
-            scheduler.AddTask(worker.CronExpression, Action, name: workerType.GetCleanFullName());
+            scheduler.AddTask(worker.CronExpression, Action, name: workerType.GetCleanFullName(),
+                skipWhenPreviousIsRunning: true);
         }
         else
         {
