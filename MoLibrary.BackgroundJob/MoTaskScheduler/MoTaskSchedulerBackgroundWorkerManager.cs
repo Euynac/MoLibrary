@@ -34,27 +34,16 @@ public class MoTaskSchedulerBackgroundWorkerManager(
             var moduleOption = options.Value;
 
             var timekeeper = moduleOption.EnableWorkerDurationMonitor ? ServiceProvider.GetRequiredService<IMoTimekeeper>() : null;
-            async void Action()
+            async Task Action()
             {
                 try
                 {
-                    var keeper = timekeeper?.CreateNormalTimer(workerType.GetCleanFullName());
+                    using var keeper = timekeeper?.CreateNormalTimer(workerType.GetCleanFullName());
                     keeper?.Start();
-                    // 使用Task.Run创建新线程运行任务，避免阻塞调度器线程
-                    await Task.Run(async () =>
-                    {
-                        try
-                        {
-                            var factory = ServiceProvider.GetRequiredService<IServiceScopeFactory>();
-                            await using var scope = factory.CreateAsyncScope();
-                            var scopedProvider = scope.ServiceProvider;
-                            await ((IMoTaskSchedulerBackgroundWorker) scopedProvider.GetRequiredService(workerType)).DoWorkAsync(cancellationToken);
-                        }
-                        catch (Exception ex)
-                        {
-                            logger.LogError(ex, $"执行后台任务 {workerType.Name} 时发生错误");
-                        }
-                    }, cancellationToken);
+                    var factory = ServiceProvider.GetRequiredService<IServiceScopeFactory>();
+                    await using var scope = factory.CreateAsyncScope();
+                    var scopedProvider = scope.ServiceProvider;
+                    await ((IMoTaskSchedulerBackgroundWorker) scopedProvider.GetRequiredService(workerType)).DoWorkAsync(cancellationToken);
                     keeper?.Finish();
                 }
                 catch (Exception e)
@@ -63,7 +52,8 @@ public class MoTaskSchedulerBackgroundWorkerManager(
                 }
             }
 
-            scheduler.AddTask(worker.CronExpression, Action);
+            scheduler.AddTask(worker.CronExpression, Action, name: workerType.GetCleanFullName(),
+                skipWhenPreviousIsRunning: true);
         }
         else
         {
