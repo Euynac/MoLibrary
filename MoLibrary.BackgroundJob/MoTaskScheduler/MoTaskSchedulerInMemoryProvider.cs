@@ -19,21 +19,23 @@ public class MoTaskSchedulerInMemoryProvider : IMoTaskScheduler
         _timer.Start();
     }
 
-    public int AddTask(string expression, Action action, DateTime? startAt = null, DateTime? endAt = null)
+    public int AddTask(string expression, Func<Task> task, DateTime? startAt = null, DateTime? endAt = null,
+        bool skipWhenPreviousIsRunning = false)
     {
         if (!IsValidExpression(expression)) throw new ArgumentException($"Crontab 表达式 \"{expression}\" 错误");
 
-        var task = new ScheduledTask
+        var scheduledTask = new ScheduledTask
         {
             Id = _nextTaskId++,
             Expression = expression,
-            Action = action,
+            Task = task,
             StartAt = startAt ?? DateTime.Now,
-            EndAt = endAt
+            EndAt = endAt,
+            SkipWhenPreviousIsRunning = skipWhenPreviousIsRunning
         };
 
-        _tasks.TryAdd(task.Id, task);
-        return task.Id;
+        _tasks.TryAdd(scheduledTask.Id, scheduledTask);
+        return scheduledTask.Id;
     }
 
     public bool DeleteTask(int taskId)
@@ -82,10 +84,34 @@ public class MoTaskSchedulerInMemoryProvider : IMoTaskScheduler
                      t.IsEnabled && t.StartAt <= now && (!t.EndAt.HasValue || t.EndAt.Value >= now)))
         {
             var schedule = CrontabSchedule.Parse(task.Expression,new CrontabSchedule.ParseOptions { IncludingSeconds = true });
-            if (IsInSchedule(now, schedule))
+            if (!IsInSchedule(now, schedule)) continue;
+            // 如果启用了跳过功能且任务正在运行，则跳过本次执行
+            if (task is { SkipWhenPreviousIsRunning: true, IsRunning: true})
             {
-                task.Action.Invoke();
-                task.TotalExecutedTimes++;
+                continue;
+            }
+
+
+         
+            async Task Action()
+            {
+                try
+                {
+                    // 设置任务为运行状态
+                    task.IsRunning = true;
+                    // 使用Task.Run创建新线程运行任务，避免阻塞调度器线程
+                    await Task.Run(task.Task);
+                    // 增加执行次数
+                    task.TotalExecutedTimes++;
+                }
+                catch (Exception e)
+                {
+                }
+                finally
+                {
+                    // 确保任务完成后重置运行状态
+                    task.IsRunning = false;
+                }
             }
         }
     }
