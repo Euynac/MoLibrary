@@ -16,6 +16,7 @@ public class MoTaskSchedulerInMemoryProvider : IMoTaskScheduler
     private readonly Timer _timer;
     private int _nextTaskId = 1;
     private readonly SemaphoreSlim _threadPoolSemaphore;
+    public int CurrentRunningCount => _maxConcurrentTasks - _threadPoolSemaphore.CurrentCount;
     /// <summary>
     /// 最大并发任务数
     /// </summary>
@@ -102,7 +103,7 @@ public class MoTaskSchedulerInMemoryProvider : IMoTaskScheduler
                      t.IsEnabled && t.StartAt <= now && (!t.EndAt.HasValue || t.EndAt.Value >= now)))
         {
             var schedule = CrontabSchedule.Parse(task.Expression, new CrontabSchedule.ParseOptions { IncludingSeconds = true });
-            if (!IsInSchedule(now, schedule)) continue;
+            if (!IsInSchedule(DateTime.Now, schedule)) continue;
             // 如果启用了跳过功能且任务正在运行，则跳过本次执行
             if (task is { SkipWhenPreviousIsRunning: true, IsRunning: true })
             {
