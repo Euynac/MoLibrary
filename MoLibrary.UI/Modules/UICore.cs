@@ -66,6 +66,25 @@ public class ModuleUICore(ModuleUICoreOption option)
 /// </summary>
 public class ModuleUICoreGuide : MoModuleGuide<ModuleUICore, ModuleUICoreOption, ModuleUICoreGuide>
 {
+
+
+    /// <summary>
+    /// 注册UI组件
+    /// </summary>
+    /// <param name="registrationAction">组件注册配置操作</param>
+    /// <returns>配置引导器</returns>
+    public ModuleUICoreGuide RegisterUIComponents(Action<IUIComponentRegistry> registrationAction)
+    {
+        // 在应用程序启动时执行组件注册
+        ConfigureApplicationBuilder(builder =>
+        {
+            var registry = builder.ApplicationBuilder.ApplicationServices.GetRequiredService<IUIComponentRegistry>();
+            registrationAction(registry);
+        }, EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
+
+        return this;
+    }
+
     /// <summary>
     /// 添加UI基础中间件
     /// 注意：这些中间件应该由宿主应用程序调用
