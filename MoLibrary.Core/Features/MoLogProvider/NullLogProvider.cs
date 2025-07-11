@@ -18,7 +18,7 @@ public class NullLogProvider : IMoLogProvider
     }
 
     /// <inheritdoc />
-    public ILogger CreateLogger<T>()
+    public ILogger<T> CreateLogger<T>()
     {
         return _loggerFactory.CreateLogger<T>();
     }
@@ -30,7 +30,7 @@ public class NullLogProvider : IMoLogProvider
     }
     
     /// <inheritdoc />
-    public ILogger CreateLogger<T>(LogLevel minLogLevel)
+    public ILogger<T> CreateLogger<T>(LogLevel minLogLevel)
     {
         // For NullLogProvider, we ignore the minimum log level as it doesn't log anything anyway
         return _loggerFactory.CreateLogger<T>();
