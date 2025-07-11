@@ -10,9 +10,10 @@ public interface IMoTaskScheduler
     /// <param name="startAt">任务开始时间</param>
     /// <param name="endAt">任务结束时间</param>
     /// <param name="skipWhenPreviousIsRunning">当前一个任务实例还在运行时是否跳过本次执行</param>
+    /// <param name="name"></param>
     /// <returns>任务 ID</returns>
     int AddTask(string expression, Func<Task> task, DateTime? startAt = null, DateTime? endAt = null,
-        bool skipWhenPreviousIsRunning = false);
+        bool skipWhenPreviousIsRunning = false, string? name = null);
 
     /// <summary>
     ///     删除定时任务
@@ -51,7 +52,12 @@ public class ScheduledTask
     /// 要执行的任务动作
     /// </summary>
     public required Func<Task> Task { get; set; }
-    
+
+    /// <summary>
+    /// 任务名
+    /// </summary>
+    public string? Name { get; set; }
+
     /// <summary>
     /// 任务结束时间，如果为 null 表示任务永不结束
     /// </summary>
@@ -93,4 +99,18 @@ public class ScheduledTask
     /// 任务当前是否正在运行（内部使用）
     /// </summary>
     internal bool IsRunning { get; set; }
+
+    /// <summary>
+    /// 获取任务名称
+    /// </summary>
+    /// <returns>任务名称</returns>
+    public string GetTaskName()
+    {
+        return Name ?? Id.ToString();
+    }
+
+    public override string ToString()
+    {
+        return $"Task {Name ?? Id.ToString()}";
+    }
 }
