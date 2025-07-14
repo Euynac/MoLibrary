@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Components.Routing;
+
 namespace MoLibrary.UI.UICore;
 
 /// <summary>
@@ -62,7 +64,7 @@ public class UINavItem
     public List<UINavItem> Children { get; init; } = new();
 
     /// <summary>
-    /// 点击事件处理
+    /// 点击事件
     /// </summary>
     public Action? OnClick { get; init; }
 
@@ -75,4 +77,9 @@ public class UINavItem
     /// 排序顺序
     /// </summary>
     public int Order { get; init; }
+
+    /// <summary>
+    /// 导航链接匹配模式
+    /// </summary>
+    public NavLinkMatch NavLinkMatch { get; init; } = NavLinkMatch.Prefix;
 } 
