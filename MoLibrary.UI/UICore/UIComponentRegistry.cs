@@ -1,5 +1,6 @@
 using System.Reflection;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Routing;
 
 namespace MoLibrary.UI.UICore;
 
@@ -8,21 +9,27 @@ namespace MoLibrary.UI.UICore;
 /// </summary>
 public class UIComponentRegistry : IUIComponentRegistry
 {
-    private readonly HashSet<Assembly> _assemblies = new();
+    private readonly HashSet<Assembly> _assemblies = [];
     private readonly Dictionary<string, Type> _components = new();
-    private readonly List<UIPageInfo> _pages = new();
-    private readonly List<UINavItem> _navItems = new();
+    private readonly List<UIPageInfo> _pages = [];
+    private readonly List<UINavItem> _navItems = [];
 
     /// <summary>
     /// 注册页面组件
     /// </summary>
-    public void RegisterPage(string route, Type componentType, string displayName, string? icon = null, string? category = null)
+    /// <typeparam name="T">组件类型，必须继承自ComponentBase</typeparam>
+    /// <param name="route">路由路径</param>
+    /// <param name="displayName">显示名称</param>
+    /// <param name="icon">图标</param>
+    /// <param name="category">分类</param>
+    /// <param name="addToNav">是否添加到导航菜单</param>
+    /// <param name="navOrder">导航菜单排序顺序</param>
+    /// <param name="navLinkMatch">导航链接匹配模式</param>
+    public void RegisterComponent<T>(string route, string displayName, string? icon = null, string? category = null, bool addToNav = false, int navOrder = 0, NavLinkMatch navLinkMatch = NavLinkMatch.Prefix) where T : ComponentBase
     {
-        if (!typeof(ComponentBase).IsAssignableFrom(componentType))
-        {
-            throw new ArgumentException($"Component type {componentType.Name} must inherit from ComponentBase", nameof(componentType));
-        }
-
+        var componentType = typeof(T);
+        
+        // 注册页面信息
         var pageInfo = new UIPageInfo
         {
             Route = route,
@@ -31,24 +38,27 @@ public class UIComponentRegistry : IUIComponentRegistry
             Icon = icon,
             Category = category
         };
-
         _pages.Add(pageInfo);
-    }
 
-    /// <summary>
-    /// 注册可重用组件
-    /// </summary>
-    public void RegisterComponent<T>(string name) where T : ComponentBase
-    {
-        _components[name] = typeof(T);
-    }
+        // 注册组件类型（用于名称查找）
+        _components[route] = componentType;
 
-    /// <summary>
-    /// 注册导航菜单项
-    /// </summary>
-    public void RegisterNavItem(UINavItem menuItem)
-    {
-        _navItems.Add(menuItem);
+        // 如果需要，自动创建导航菜单项
+        if (addToNav)
+        {
+            var navItem = new UINavItem
+            {
+                Text = displayName,
+                Href = route,
+                Icon = icon,
+                Order = navOrder,
+                NavLinkMatch = navLinkMatch
+            };
+            _navItems.Add(navItem);
+        }
+
+        // 添加组件所在的程序集
+        _assemblies.Add(componentType.Assembly);
     }
 
     /// <summary>
