@@ -1,5 +1,8 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
@@ -41,6 +44,13 @@ public class ModuleUICore(ModuleUICoreOption option)
     public override EMoModules CurModuleEnum()
     {
         return EMoModules.UICore;
+    }
+
+    public override void ConfigureBuilder(WebApplicationBuilder builder)
+    {
+        //巨坑：WebAssets 在VS中debug环境可以获得css等资源文件，但编译后的debug环境404错误
+        //https://github.com/MudBlazor/MudBlazor/issues/2793
+        builder.WebHost.UseStaticWebAssets();
     }
 
     /// <summary>
@@ -103,6 +113,12 @@ public class ModuleUICoreGuide : MoModuleGuide<ModuleUICore, ModuleUICoreOption,
             // 静态文件支持（用于MudBlazor资源）
             app.UseStaticFiles();
 
+            //app.UseStaticFiles(new StaticFileOptions()
+            //{
+            //    FileProvider = new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), "CustomStyles")),
+            //    RequestPath = new PathString("/CustomStyles")
+            //});
+
             // 防伪令牌
             // Configure your application startup by adding app.UseAntiforgery() in the application startup code. If there are calls to app.UseRouting() and app.UseEndpoints(...), the call to app.UseAntiforgery() must go between them. Calls to app.UseAntiforgery() must be placed after calls to app.UseAuthentication() and app.UseAuthorization()."
             builder.ApplicationBuilder.UseAntiforgery();
@@ -118,7 +134,7 @@ public class ModuleUICoreGuide : MoModuleGuide<ModuleUICore, ModuleUICoreOption,
 
             builder.WebApplication.MapRazorComponents<MoApp>()
                 .AddInteractiveServerRenderMode().AddAdditionalAssemblies(registry.GetAdditionalAssemblies());
-            //如果缺少Map中的AddAdditionalAssemblies，那么通过F5刷新将会导致404。但通过Router中访问却不会404。
+            //巨坑：如果缺少Map中的AddAdditionalAssemblies，那么通过F5刷新将会导致404。但通过Router中访问却不会404。
         });
 
         return this;

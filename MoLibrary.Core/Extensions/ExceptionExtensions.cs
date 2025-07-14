@@ -22,7 +22,7 @@ public static class ExceptionExtensions
             {
                 sb.Append(';');
             }
-            sb.Append(curException.Message);
+            sb.Append($"{e.GetType().Name}:{curException.Message}");
             curException = curException.InnerException;
         }
         return sb.ToString();
