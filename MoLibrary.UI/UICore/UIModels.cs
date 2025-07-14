@@ -59,6 +59,10 @@ public class UINavItem
     public bool IsExpanded { get; set; }
 
     /// <summary>
+    /// 导航项分类
+    /// </summary>
+    public string? Category { get; set; }
+    /// <summary>
     /// 子菜单项
     /// </summary>
     public List<UINavItem> Children { get; init; } = new();
