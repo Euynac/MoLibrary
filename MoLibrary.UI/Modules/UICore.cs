@@ -1,13 +1,11 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Win32;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.UI.Components;
 using MoLibrary.UI.UICore;
 using MudBlazor.Services;
-using System.Reflection;
 
 namespace MoLibrary.UI.Modules;
 
@@ -132,4 +130,8 @@ public class ModuleUICoreGuide : MoModuleGuide<ModuleUICore, ModuleUICoreOption,
 /// </summary>
 public class ModuleUICoreOption : MoModuleOption<ModuleUICore>
 {
+    /// <summary>
+    /// 应用栏名称
+    /// </summary>
+    public string UIAppBarName { get; set; } = "MoLibrary";
 }

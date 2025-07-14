@@ -15,24 +15,11 @@
 ## 安装使用
 
 ```cs
-// 在其他模块的注册方法中
-public void RegisterUIComponents(IUIComponentRegistry registry)
-{
-    // 注册页面
-    registry.RegisterPage("/users", typeof(UserListPage), "用户管理", Icons.Material.Filled.Person, "系统管理");
-    
-    // 注册导航项
-    registry.RegisterNavItem(new UINavItem 
-    { 
-        Text = "用户管理", 
-        Href = "/users", 
-        Icon = Icons.Material.Filled.Person,
-        Order = 100
+ builder.ConfigModuleUICore().RegisterUIComponents(registry =>
+    {
+        // 注册SignalR调试组件，同时添加到导航菜单
+        registry.RegisterComponent<SignalRDebug>("debug", "SignalR调试", Icons.Material.Filled.ManageAccounts, "SignalR调试", addToNav: true, navOrder: 100);
     });
-    
-    // 注册可重用组件
-    registry.RegisterComponent<UserSelectorComponent>("UserSelector");
-}
 ```
 
 ## 最佳实践
