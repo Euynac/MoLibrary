@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.AspNetCore.Components;
 
 namespace MoLibrary.UI.UICore;
@@ -23,6 +24,12 @@ public interface IUIComponentRegistry
     /// <typeparam name="T">组件类型</typeparam>
     /// <param name="name">组件名称</param>
     void RegisterComponent<T>(string name) where T : ComponentBase;
+
+    /// <summary>
+    /// 获取当前注册组件相关的附加的程序集
+    /// </summary>
+    /// <returns>附加的程序集</returns>
+    Assembly[] GetAdditionalAssemblies();
 
     /// <summary>
     /// 注册导航菜单项
