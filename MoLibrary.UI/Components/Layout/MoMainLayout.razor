@@ -1,6 +1,9 @@
 @using MoLibrary.UI.UICore
+@using Microsoft.Extensions.Options
+@using MoLibrary.UI.Modules
 @inherits LayoutComponentBase
 @inject IUIComponentRegistry UIRegistry
+@inject IOptions<ModuleUICoreOption> Options
 
 <MudThemeProvider Theme="@_theme" IsDarkMode="_isDarkMode" />
 <MudPopoverProvider />
@@ -9,13 +12,12 @@
 <MudLayout>
     <MudAppBar Elevation="1">
         <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
-        <MudText Typo="Typo.h5" Class="ml-3">Application</MudText>
+        <MudText Typo="Typo.h5" Class="ml-3">@Options.Value.UIAppBarName</MudText>
         <MudSpacer />
         <MudIconButton Icon="@(DarkLightModeButtonIcon)" Color="Color.Inherit" OnClick="@DarkModeToggle" />
         <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
     </MudAppBar>
     <MudDrawer id="nav-drawer" @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
-        <NavMenu />
         <MudNavMenu>
             @foreach (var navItem in UIRegistry.GetNavItems())
             {
