@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.AspNetCore.Components;
 
 namespace MoLibrary.UI.UICore;
@@ -7,6 +8,7 @@ namespace MoLibrary.UI.UICore;
 /// </summary>
 public class UIComponentRegistry : IUIComponentRegistry
 {
+    private readonly HashSet<Assembly> _assemblies = new();
     private readonly Dictionary<string, Type> _components = new();
     private readonly List<UIPageInfo> _pages = new();
     private readonly List<UINavItem> _navItems = new();
@@ -71,5 +73,14 @@ public class UIComponentRegistry : IUIComponentRegistry
     public Type? GetComponentType(string name)
     {
         return _components.TryGetValue(name, out var type) ? type : null;
+    }
+
+    /// <summary>
+    /// 获取当前注册组件相关的附加的程序集
+    /// </summary>
+    /// <returns>附加的程序集</returns>
+    public Assembly[] GetAdditionalAssemblies()
+    {
+        return _assemblies.ToArray();
     }
 } 

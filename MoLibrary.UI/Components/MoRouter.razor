@@ -5,10 +5,10 @@
 @inject IUIComponentRegistry UIRegistry
 
 <Router AppAssembly="@typeof(MoRouter).Assembly" 
-        AdditionalAssemblies="@GetAdditionalAssemblies()">
-    <Found>
-        <RouteView RouteData="@context" DefaultLayout="@typeof(MoMainLayout)" />
-        <FocusOnNavigate RouteData="@context" Selector="h1" />
+        AdditionalAssemblies="@UIRegistry.GetAdditionalAssemblies()">
+    <Found Context="routeData">
+        <RouteView RouteData="routeData" DefaultLayout="@typeof(MoMainLayout)" />
+        <FocusOnNavigate RouteData="routeData" Selector="h1" />
     </Found>
     <NotFound>
         <PageTitle>Not found</PageTitle>
@@ -20,18 +20,3 @@
         </LayoutView>
     </NotFound>
 </Router>
-
-@code {
-    private Assembly[] GetAdditionalAssemblies()
-    {
-        var assemblies = new HashSet<Assembly>();
-        
-        // 添加包含注册页面的程序集
-        foreach (var page in UIRegistry.GetRegisteredPages())
-        {
-            assemblies.Add(page.ComponentType.Assembly);
-        }
-        
-        return assemblies.ToArray();
-    }
-}

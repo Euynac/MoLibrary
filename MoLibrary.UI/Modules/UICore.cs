@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Win32;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.UI.Components;
 using MoLibrary.UI.UICore;
 using MudBlazor.Services;
+using System.Reflection;
 
 namespace MoLibrary.UI.Modules;
 
@@ -113,8 +115,12 @@ public class ModuleUICoreGuide : MoModuleGuide<ModuleUICore, ModuleUICoreOption,
         
         ConfigureEndpoints(builder =>
         {
+            var registry = builder.ApplicationBuilder.ApplicationServices.GetRequiredService<IUIComponentRegistry>();
+
+
             builder.WebApplication.MapRazorComponents<MoApp>()
-                .AddInteractiveServerRenderMode();
+                .AddInteractiveServerRenderMode().AddAdditionalAssemblies(registry.GetAdditionalAssemblies());
+            //如果缺少Map中的AddAdditionalAssemblies，那么通过F5刷新将会导致404。但通过Router中访问却不会404。
         });
 
         return this;
