@@ -5,6 +5,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <!-- 启用静态Web资源支持 -->
+    <StaticWebAssetProjectMode>Default</StaticWebAssetProjectMode>
+    <!-- 确保生成静态Web资源清单 -->
+    <GenerateStaticWebAssetsManifest>true</GenerateStaticWebAssetsManifest>
   </PropertyGroup>
 
   <ItemGroup>

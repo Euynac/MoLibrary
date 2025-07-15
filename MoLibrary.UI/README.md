@@ -30,6 +30,51 @@
 4. **服务注入**：在组件中通过依赖注入获取所需的服务
 5. **错误处理**：在组件中实现适当的错误处理和用户反馈
 
+## 静态资源配置
+
+### Razor类库静态资源访问
+
+由于本项目是Razor类库，静态资源访问需要特殊配置：
+
+#### 项目配置 (MoLibrary.UI.csproj)
+```xml
+<PropertyGroup>
+  <!-- 启用静态Web资源支持 -->
+  <StaticWebAssetProjectMode>Default</StaticWebAssetProjectMode>
+  <!-- 确保生成静态Web资源清单 -->
+  <GenerateStaticWebAssetsManifest>true</GenerateStaticWebAssetsManifest>
+</PropertyGroup>
+```
+
+#### 在Web应用程序中的配置
+```cs
+// 在Program.cs或Startup.cs中
+builder.WebHost.UseStaticWebAssets();
+app.UseStaticFiles();
+```
+
+#### 静态资源访问路径
+- **wwwroot文件夹中的资源**：`/_content/MoLibrary.UI/[相对路径]`
+- **JavaScript文件**：`/_content/MoLibrary.UI/js/filename.js`
+- **CSS文件**：`/_content/MoLibrary.UI/css/filename.css`
+
+#### 在Razor组件中引用JavaScript模块
+```cs
+// 正确的引用方式
+jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "/_content/MoLibrary.UI/js/module.js");
+
+// 错误的引用方式（仅适用于Web应用程序）
+jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/module.js");
+```
+
+### 离线静态资源管理
+
+为了支持离线使用，所有第三方JavaScript库都应该下载到本地：
+
+1. **下载依赖库**：将第三方库文件保存到`wwwroot/lib/`目录
+2. **按需加载**：在组件中按正确顺序加载依赖项
+3. **版本管理**：在README中记录使用的库版本
+
 ## 依赖项
 
 - .NET 8.0

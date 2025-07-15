@@ -1,9 +1,50 @@
 // 依赖关系图可视化
 let graph = null;
 let container = null;
+let d3 = null;
+
+// 动态加载D3.js库
+async function loadD3() {
+    if (d3 === null) {
+        try {
+            // 检查是否已经加载到全局对象
+            if (window.d3) {
+                d3 = window.d3;
+                return d3;
+            }
+            
+            // 动态创建script标签加载D3.js
+            const script = document.createElement('script');
+            script.src = '/_content/MoLibrary.UI/lib/d3.min.js';
+            script.type = 'text/javascript';
+            
+            // 返回Promise等待脚本加载完成
+            return new Promise((resolve, reject) => {
+                script.onload = () => {
+                    if (window.d3) {
+                        d3 = window.d3;
+                        resolve(d3);
+                    } else {
+                        reject(new Error('D3.js library not found after loading'));
+                    }
+                };
+                script.onerror = () => {
+                    reject(new Error('Failed to load D3.js library'));
+                };
+                document.head.appendChild(script);
+            });
+        } catch (error) {
+            console.error('Failed to load D3.js:', error);
+            throw error;
+        }
+    }
+    return d3;
+}
 
 // 初始化依赖关系图
-export function initializeDependencyGraph(containerId, nodes, edges) {
+export async function initializeDependencyGraph(containerId, nodes, edges) {
+    // 确保D3.js已加载
+    await loadD3();
     container = document.getElementById(containerId);
     if (!container) return;
 
@@ -226,8 +267,9 @@ export function initializeDependencyGraph(containerId, nodes, edges) {
 }
 
 // 改变布局
-export function changeLayout(layout) {
+export async function changeLayout(layout) {
     if (!graph) return;
+    await loadD3();
 
     const { simulation, nodes } = graph;
     const width = container.clientWidth;
@@ -274,8 +316,9 @@ export function changeLayout(layout) {
 }
 
 // 应用过滤器
-export function applyFilter(filter) {
+export async function applyFilter(filter) {
     if (!graph) return;
+    await loadD3();
 
     const { link, node, label, edges } = graph;
 
@@ -309,24 +352,28 @@ export function applyFilter(filter) {
 }
 
 // 缩放控制
-export function zoomIn() {
+export async function zoomIn() {
     if (!graph) return;
+    await loadD3();
     graph.svg.transition().call(graph.zoom.scaleBy, 1.2);
 }
 
-export function zoomOut() {
+export async function zoomOut() {
     if (!graph) return;
+    await loadD3();
     graph.svg.transition().call(graph.zoom.scaleBy, 1 / 1.2);
 }
 
-export function resetZoom() {
+export async function resetZoom() {
     if (!graph) return;
+    await loadD3();
     graph.svg.transition().call(graph.zoom.transform, d3.zoomIdentity);
 }
 
 // 导出图片
-export function exportGraph(filename) {
+export async function exportGraph(filename) {
     if (!graph) return;
+    await loadD3();
 
     const svgElement = graph.svg.node();
     const serializer = new XMLSerializer();
@@ -350,7 +397,5 @@ export function exportGraph(filename) {
     image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(source);
 }
 
-// 确保D3.js已加载
-if (typeof d3 === 'undefined') {
-    console.error('D3.js library is required for dependency graph visualization');
-} 
+// D3.js库将在使用时动态加载
+console.log('Dependency graph module loaded. D3.js will be loaded dynamically when needed.'); 
