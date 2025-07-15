@@ -33,6 +33,7 @@ public class UIComponentRegistry : IUIComponentRegistry
     /// <param name="navLinkMatch">导航链接匹配模式</param>
     public void RegisterComponent<T>(string route, string displayName, string? icon = null, string? category = null, bool addToNav = false, int navOrder = 0, NavLinkMatch navLinkMatch = NavLinkMatch.Prefix) where T : ComponentBase
     {
+        route = route.TrimStart('/');
         var componentType = typeof(T);
         
         // 注册页面信息
