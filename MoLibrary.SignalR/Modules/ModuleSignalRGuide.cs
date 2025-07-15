@@ -81,39 +81,15 @@ public class ModuleSignalRGuide : MoModuleGuide<ModuleSignalR, ModuleSignalROpti
     /// </summary>
     public ModuleSignalRGuide MapMoHub<THubServer>([StringSyntax("Route")] string pattern) where THubServer : Hub
     {
-
+        ConfigureModuleOption(option =>
+        {
+            option.Hubs.Add(typeof(THubServer));
+        });
         ConfigureEndpoints(context =>
         {
             context.ApplicationBuilder.UseEndpoints(endpoints =>
             {
                 endpoints.MapHub<THubServer>(pattern);
-                var tagGroup = new List<OpenApiTag>
-                {
-                    new() {Name = context.ModuleOption.GetSwaggerGroupName(), Description = "SignalR相关功能扩展"}
-                };
-                endpoints.MapGet(context.ModuleOption.ServerMethodsRoute, async (HttpResponse response, HttpContext _) =>
-                {
-                    var methods = typeof(THubServer).GetMethods().Where(p => p.DeclaringType == typeof(THubServer))
-                        .Select(p =>
-                            new
-                            {
-                                desc = p.GetCustomAttribute<SignalRMethodAttribute>()?.Description ?? p.Name,
-                                p.Name,
-                                args = p.GetParameters().Select(a => new
-                                {
-                                    type = a.ParameterType.Name,
-                                    a.Name
-                                }).ToList()
-                            }).ToList();
-
-                    await response.WriteAsJsonAsync(methods);
-                }).WithName("获取SignalR所有Server端事件定义").WithOpenApi(operation =>
-                {
-                    operation.Summary = "获取SignalR所有Server端事件定义";
-                    operation.Description = "获取SignalR所有Server端事件定义";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
             });
         });
         return this;
