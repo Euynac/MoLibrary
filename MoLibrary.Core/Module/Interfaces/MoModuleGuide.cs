@@ -212,7 +212,7 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     protected internal void ConfigureServices(Action<ModuleRegisterContextWrapperForServices<TModuleOption>> context,
         EMoModuleOrder order = EMoModuleOrder.Normal, string? secondKey = null, [CallerMemberName] string key = "")
     {
-        ConfigureServices(context, (int)order, key);
+        ConfigureServices(context, (int)order, secondKey, key);
     }
 
     /// <summary>
@@ -243,7 +243,7 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
         Action<ModuleRegisterContextWrapperForApplicationBuilder<TModuleOption>> context,
         EMoModuleApplicationMiddlewaresOrder order, string? secondKey = null, [CallerMemberName] string key = "")
     {
-        ConfigureApplicationBuilder(context, (int)order, key);
+        ConfigureApplicationBuilder(context, (int)order, secondKey, key);
     }
 
     /// <summary>
@@ -274,7 +274,7 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
         Action<ModuleRegisterContextWrapperForServices<TModuleOption>> context,
         EMoModuleOrder order = EMoModuleOrder.Normal, string? secondKey = null, [CallerMemberName] string key = "")
     {
-        PostConfigureServices(context, (int)order, key);
+        PostConfigureServices(context, (int)order, secondKey, key);
     }
 
     /// <summary>
@@ -298,12 +298,12 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     /// </summary>
     /// <param name="context">Web应用程序构建器配置上下文操作</param>
     /// <param name="order">配置执行顺序枚举值</param>
-    /// <param name="secondKey"></param>
+    /// <param name="secondKey">配置方法第二标志符，用于某些可多次调用该方法的情况，若本身可多次调用，可传入<see cref=" Guid.NewGuid()"/></param>
     /// <param name="key">配置方法的唯一标识符</param>
     protected internal void ConfigureBuilder(Action<ModuleRegisterContextWrapperForBuilder<TModuleOption>> context,
         EMoModuleOrder order = EMoModuleOrder.Normal, string? secondKey = null, [CallerMemberName] string key = "")
     {
-        ConfigureBuilder(context, (int)order, key);
+        ConfigureBuilder(context, (int)order, secondKey, key);
     }
 
     /// <summary>
