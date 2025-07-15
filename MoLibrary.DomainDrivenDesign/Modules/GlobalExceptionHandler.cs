@@ -133,7 +133,7 @@ public class ModuleGlobalExceptionHandlerGuide : MoModuleGuide<ModuleGlobalExcep
         ConfigureServices(context =>
             {
                 context.Services.AddExceptionHandler<THandler>();
-            }, key: $"{nameof(AddCustomExceptionHandler)}_{typeof(THandler).GetCleanFullName()}");
+            }, secondKey: typeof(THandler).GetCleanFullName());
         return this;
     }
 }
