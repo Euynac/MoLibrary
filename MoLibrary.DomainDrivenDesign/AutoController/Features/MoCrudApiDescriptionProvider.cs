@@ -83,15 +83,18 @@ public class MoCrudApiDescriptionProvider(IModelMetadataProvider modelMetadataPr
         foreach (var apiDescription in context.Results.Where(p=>p.ActionDescriptor.IsControllerAction()))
         {
             var controllerActionDescriptor = apiDescription.ActionDescriptor.AsControllerActionDescriptor();
+            var type = controllerActionDescriptor.ControllerTypeInfo;
+
+            if (!type.AsType().IsImplementInterface<IMoCrudAppService>())
+            {
+                continue;
+            }
+
             if (!controllerActionDescriptor.ActionName.EqualsAny("List", "GetList"))
             {
                 continue;
             }
-            var type = controllerActionDescriptor.ControllerTypeInfo;
-            if (!type.ImplementedInterfaces.Contains(typeof(IMoCrudAppService)))
-            {
-                continue;
-            }
+           
 
             var finalBaseType = type.BaseType;
             while (finalBaseType is not null)

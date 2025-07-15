@@ -23,6 +23,7 @@ public class ModuleControllerModelConvention<TModuleController>(IMoModuleControl
 
                 // 设置Swagger标签
                 controller.ApiExplorer.GroupName = options.GetSwaggerGroupName();
+                controller.ApiExplorer.IsVisible = options.IsVisibleInSwagger;
             }
         }
     }
