@@ -131,9 +131,9 @@ public class ModuleGlobalExceptionHandlerGuide : MoModuleGuide<ModuleGlobalExcep
     public ModuleGlobalExceptionHandlerGuide AddCustomExceptionHandler<THandler>() where THandler : class, IExceptionHandler
     {
         ConfigureServices(context =>
-        {
-            context.Services.AddExceptionHandler<THandler>();
-        }, key: $"{nameof(AddCustomExceptionHandler)}_{typeof(THandler).GetCleanFullName()}");
+            {
+                context.Services.AddExceptionHandler<THandler>();
+            }, key: $"{nameof(AddCustomExceptionHandler)}_{typeof(THandler).GetCleanFullName()}");
         return this;
     }
 }
