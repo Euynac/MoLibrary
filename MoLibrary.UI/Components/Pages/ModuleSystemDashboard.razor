@@ -1,0 +1,879 @@
+@page "/module-system-dashboard"
+@using MoLibrary.Core.Module.Dashboard.Interfaces
+@using MoLibrary.Core.Module.Dashboard.Models
+@using MoLibrary.Core.Module.Models
+@using MudBlazor
+@inject IModuleSystemStatusService StatusService
+@inject ISnackbar SnackBar
+
+<PageTitle>模块系统仪表板</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h3" Class="mb-4">
+        <MudIcon Icon="@Icons.Material.Filled.Dashboard" Class="mr-2" />
+        模块系统仪表板
+    </MudText>
+
+    <MudTabs Elevation="4" Rounded="true" ApplyEffectsToContainer="true" Class="mb-4">
+        <MudTabPanel Text="系统概览" Icon="@Icons.Material.Filled.Assessment">
+            <div class="overview-container">
+                @if (systemStatus != null)
+                {
+                    <MudGrid>
+                        <!-- 系统状态概览 -->
+                        <MudItem xs="12" md="6" lg="3">
+                            <MudCard Class="status-card">
+                                <MudCardContent>
+                                    <div class="status-header">
+                                        <MudIcon Icon="@GetStatusIcon(systemStatus.State)" 
+                                               Color="@GetStatusColor(systemStatus.State)" Size="Size.Large" />
+                                        <MudText Typo="Typo.h6">系统状态</MudText>
+                                    </div>
+                                    <MudText Typo="Typo.body1" Class="mt-2">
+                                        @GetStatusText(systemStatus.State)
+                                    </MudText>
+                                    <MudProgressLinear Color="@GetStatusColor(systemStatus.State)" 
+                                                     Value="@(systemStatus.IsInitialized ? 100 : 0)" 
+                                                     Class="mt-2" />
+                                </MudCardContent>
+                            </MudCard>
+                        </MudItem>
+
+                        <!-- 模块统计 -->
+                        <MudItem xs="12" md="6" lg="3">
+                            <MudCard Class="stats-card">
+                                <MudCardContent>
+                                    <div class="stats-header">
+                                        <MudIcon Icon="@Icons.Material.Filled.Apps" Color="Color.Primary" Size="Size.Large" />
+                                        <MudText Typo="Typo.h6">模块统计</MudText>
+                                    </div>
+                                    <MudText Typo="Typo.h5" Class="mt-2">@systemStatus.TotalModules</MudText>
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                        启用: @systemStatus.EnabledModules | 禁用: @systemStatus.DisabledModules
+                                    </MudText>
+                                </MudCardContent>
+                            </MudCard>
+                        </MudItem>
+
+                        <!-- 初始化时间 -->
+                        <MudItem xs="12" md="6" lg="3">
+                            <MudCard Class="performance-card">
+                                <MudCardContent>
+                                    <div class="performance-header">
+                                        <MudIcon Icon="@Icons.Material.Filled.Timer" Color="Color.Warning" Size="Size.Large" />
+                                        <MudText Typo="Typo.h6">初始化时间</MudText>
+                                    </div>
+                                    <MudText Typo="Typo.h5" Class="mt-2">@(systemStatus.TotalInitializationTimeMs)ms</MudText>
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                        @(systemStatus.StartTime?.ToString("HH:mm:ss") ?? "未知")
+                                    </MudText>
+                                </MudCardContent>
+                            </MudCard>
+                        </MudItem>
+
+                        <!-- 健康状态 -->
+                        <MudItem xs="12" md="6" lg="3">
+                            <MudCard Class="health-card">
+                                <MudCardContent>
+                                    <div class="health-header">
+                                        <MudIcon Icon="@GetHealthIcon()" 
+                                               Color="@GetHealthColor()" Size="Size.Large" />
+                                        <MudText Typo="Typo.h6">健康状态</MudText>
+                                    </div>
+                                    <MudText Typo="Typo.body1" Class="mt-2">
+                                        @GetHealthText()
+                                    </MudText>
+                                    @if (systemStatus.HasRegistrationErrors || systemStatus.HasCircularDependencies)
+                                    {
+                                        <MudChip T="string" Color="Color.Error" Size="Size.Small" Class="mt-2">
+                                            存在问题
+                                        </MudChip>
+                                    }
+                                </MudCardContent>
+                            </MudCard>
+                        </MudItem>
+                    </MudGrid>
+                }
+            </div>
+        </MudTabPanel>
+
+        <MudTabPanel Text="性能监控" Icon="@Icons.Material.Filled.Speed">
+            <div class="performance-container">
+                @if (systemPerformance != null)
+                {
+                    <MudGrid>
+                        <!-- 性能概览 -->
+                        <MudItem xs="12" md="6">
+                            <MudCard>
+                                <MudCardHeader>
+                                    <CardHeaderContent>
+                                        <MudText Typo="Typo.h6">性能概览</MudText>
+                                    </CardHeaderContent>
+                                </MudCardHeader>
+                                <MudCardContent>
+                                    <MudStack>
+                                        <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                            <MudText Typo="Typo.subtitle1">总初始化时间</MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">@($"{systemPerformance.TotalSystemInitializationTimeMs}ms")</MudText>
+                                        </MudPaper>
+                                        <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                            <MudText Typo="Typo.subtitle1">系统阶段总耗时</MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">@($"{systemPerformance.TotalSystemPhaseDurationMs}ms")</MudText>
+                                        </MudPaper>
+                                        <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                            <MudText Typo="Typo.subtitle1">模块阶段总耗时</MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">@($"{systemPerformance.TotalModulePhaseDurationMs}ms")</MudText>
+                                        </MudPaper>
+                                        <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                            <MudText Typo="Typo.subtitle1">总模块阶段执行次数</MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">@systemPerformance.TotalModulePhaseExecutions.ToString()</MudText>
+                                        </MudPaper>
+                                    </MudStack>
+                                </MudCardContent>
+                            </MudCard>
+                        </MudItem>
+
+                        <!-- 最慢模块 -->
+                        <MudItem xs="12" md="6">
+                            <MudCard>
+                                <MudCardHeader>
+                                    <CardHeaderContent>
+                                        <MudText Typo="Typo.h6">最慢模块</MudText>
+                                    </CardHeaderContent>
+                                </MudCardHeader>
+                                <MudCardContent>
+                                    @if (systemPerformance.SlowestModules.Any())
+                                    {
+                                        <MudStack>
+                                            @foreach (var module in systemPerformance.SlowestModules.Take(5))
+                                            {
+                                                <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                                    <div class="d-flex align-center justify-space-between">
+                                                        <div>
+                                                            <MudText Typo="Typo.subtitle1">@module.ModuleTypeName</MudText>
+                                                            <MudText Typo="Typo.body2" Color="Color.Secondary">@($"{module.TotalDurationMs}ms")</MudText>
+                                                        </div>
+                                                        <MudChip T="string" Color="Color.Warning" Size="Size.Small">
+                                                            @module.ModuleEnum.ToString()
+                                                        </MudChip>
+                                                    </div>
+                                                </MudPaper>
+                                            }
+                                        </MudStack>
+                                    }
+                                    else
+                                    {
+                                        <MudText Color="Color.Secondary">暂无性能数据</MudText>
+                                    }
+                                </MudCardContent>
+                            </MudCard>
+                        </MudItem>
+
+                        <!-- 阶段性能 -->
+                        <MudItem xs="12">
+                            <MudCard>
+                                <MudCardHeader>
+                                    <CardHeaderContent>
+                                        <MudText Typo="Typo.h6">阶段性能分析</MudText>
+                                    </CardHeaderContent>
+                                </MudCardHeader>
+                                <MudCardContent>
+                                    @if (systemPerformance.PhasePerformances.Any())
+                                    {
+                                        <MudDataGrid Items="@systemPerformance.PhasePerformances" 
+                                                   SortMode="SortMode.Multiple" 
+                                                   Filterable="true" 
+                                                   Hideable="true">
+                                            <Columns>
+                                                <PropertyColumn Property="x => x.Order" Title="顺序" />
+                                                <PropertyColumn Property="x => x.PhaseName" Title="阶段名称" />
+                                                <PropertyColumn Property="x => x.DurationMs" Title="耗时 (ms)" />
+                                                <TemplateColumn Title="进度">
+                                                    <CellTemplate>
+                                                        @{
+                                                            var maxDuration = systemPerformance.PhasePerformances.Max(p => p.DurationMs);
+                                                            var percentage = maxDuration > 0 ? (double)context.Item.DurationMs / maxDuration * 100 : 0;
+                                                        }
+                                                        <MudProgressLinear Color="Color.Primary" 
+                                                                         Value="@percentage" 
+                                                                         Class="my-2" />
+                                                    </CellTemplate>
+                                                </TemplateColumn>
+                                            </Columns>
+                                        </MudDataGrid>
+                                    }
+                                    else
+                                    {
+                                        <MudText Color="Color.Secondary">暂无阶段性能数据</MudText>
+                                    }
+                                </MudCardContent>
+                            </MudCard>
+                        </MudItem>
+                    </MudGrid>
+                }
+            </div>
+        </MudTabPanel>
+
+        <MudTabPanel Text="健康检查" Icon="@Icons.Material.Filled.HealthAndSafety">
+            <div class="health-container">
+                @if (healthCheck != null)
+                {
+                    <MudGrid>
+                        <!-- 健康概览 -->
+                        <MudItem xs="12" md="4">
+                            <MudCard Class="health-overview-card">
+                                <MudCardHeader>
+                                    <CardHeaderContent>
+                                        <MudText Typo="Typo.h6">健康概览</MudText>
+                                    </CardHeaderContent>
+                                </MudCardHeader>
+                                <MudCardContent>
+                                    <div class="health-status">
+                                        <MudIcon Icon="@GetHealthStatusIcon(healthCheck.OverallHealth)" 
+                                               Color="@GetHealthStatusColor(healthCheck.OverallHealth)" 
+                                               Size="Size.Large" />
+                                        <MudText Typo="Typo.h6" Class="ml-2">
+                                            @healthCheck.OverallHealth.ToString()
+                                        </MudText>
+                                    </div>
+                                    <MudText Typo="Typo.body2" Class="mt-2">
+                                        @healthCheck.HealthSummary
+                                    </MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">
+                                        检查时间: @healthCheck.CheckTime.ToString("yyyy-MM-dd HH:mm:ss")
+                                    </MudText>
+                                </MudCardContent>
+                            </MudCard>
+                        </MudItem>
+
+                        <!-- 性能指标 -->
+                        <MudItem xs="12" md="8">
+                            <MudCard>
+                                <MudCardHeader>
+                                    <CardHeaderContent>
+                                        <MudText Typo="Typo.h6">性能指标</MudText>
+                                    </CardHeaderContent>
+                                </MudCardHeader>
+                                <MudCardContent>
+                                    <MudGrid>
+                                        <MudItem xs="6" md="3">
+                                            <MudText Typo="Typo.subtitle2">平均初始化时间</MudText>
+                                            <MudText Typo="Typo.h6" Color="Color.Primary">
+                                                @($"{healthCheck.PerformanceMetrics.AverageModuleInitTimeMs:F2}ms")
+                                            </MudText>
+                                        </MudItem>
+                                        <MudItem xs="6" md="3">
+                                            <MudText Typo="Typo.subtitle2">最慢模块时间</MudText>
+                                            <MudText Typo="Typo.h6" Color="Color.Warning">
+                                                @($"{healthCheck.PerformanceMetrics.SlowestModuleInitTimeMs}ms")
+                                            </MudText>
+                                        </MudItem>
+                                        <MudItem xs="6" md="3">
+                                            <MudText Typo="Typo.subtitle2">效率评分</MudText>
+                                            <MudText Typo="Typo.h6" Color="Color.Success">
+                                                @($"{healthCheck.PerformanceMetrics.InitializationEfficiencyScore}/100")
+                                            </MudText>
+                                        </MudItem>
+                                        <MudItem xs="6" md="3">
+                                            <MudText Typo="Typo.subtitle2">内存使用</MudText>
+                                            <MudText Typo="Typo.h6" Color="Color.Info">
+                                                @(healthCheck.PerformanceMetrics.MemoryUsageBytes.HasValue ? 
+                                                    $"{healthCheck.PerformanceMetrics.MemoryUsageBytes.Value / 1024 / 1024:F2}MB" : "N/A")
+                                            </MudText>
+                                        </MudItem>
+                                    </MudGrid>
+                                </MudCardContent>
+                            </MudCard>
+                        </MudItem>
+
+                        <!-- 健康检查项目 -->
+                        <MudItem xs="12" md="6">
+                            <MudCard>
+                                <MudCardHeader>
+                                    <CardHeaderContent>
+                                        <MudText Typo="Typo.h6">检查项目</MudText>
+                                    </CardHeaderContent>
+                                </MudCardHeader>
+                                <MudCardContent>
+                                    @if (healthCheck.HealthCheckItems.Any())
+                                    {
+                                        <MudStack>
+                                            @foreach (var item in healthCheck.HealthCheckItems)
+                                            {
+                                                <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                                    <div class="d-flex align-center justify-space-between">
+                                                        <div class="d-flex align-center">
+                                                            <MudIcon Icon="@GetHealthStatusIcon(item.Status)" 
+                                                                   Color="@GetHealthStatusColor(item.Status)" 
+                                                                   Class="mr-2" />
+                                                            <div>
+                                                                <MudText Typo="Typo.subtitle1">@item.Name</MudText>
+                                                                <MudText Typo="Typo.body2" Color="Color.Secondary">@item.Details</MudText>
+                                                            </div>
+                                                        </div>
+                                                        <MudChip T="string" Color="@GetHealthStatusColor(item.Status)" Size="Size.Small">
+                                                            @item.Status.ToString()
+                                                        </MudChip>
+                                                    </div>
+                                                </MudPaper>
+                                            }
+                                        </MudStack>
+                                    }
+                                    else
+                                    {
+                                        <MudText Color="Color.Secondary">暂无检查项目</MudText>
+                                    }
+                                </MudCardContent>
+                            </MudCard>
+                        </MudItem>
+
+                        <!-- 问题列表 -->
+                        <MudItem xs="12" md="6">
+                            <MudCard>
+                                <MudCardHeader>
+                                    <CardHeaderContent>
+                                        <MudText Typo="Typo.h6">发现的问题</MudText>
+                                    </CardHeaderContent>
+                                </MudCardHeader>
+                                <MudCardContent>
+                                    @if (healthCheck.Issues.Any())
+                                    {
+                                        <MudStack>
+                                            @foreach (var issue in healthCheck.Issues)
+                                            {
+                                                <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                                    <div class="d-flex align-center justify-space-between">
+                                                        <div class="d-flex align-center">
+                                                            <MudIcon Icon="@GetIssueSeverityIcon(issue.Severity)" 
+                                                                   Color="@GetIssueSeverityColor(issue.Severity)" 
+                                                                   Class="mr-2" />
+                                                            <div>
+                                                                <MudText Typo="Typo.subtitle1">@issue.Title</MudText>
+                                                                <MudText Typo="Typo.body2" Color="Color.Secondary">@issue.Description</MudText>
+                                                            </div>
+                                                        </div>
+                                                        <MudChip T="string" Color="@GetIssueSeverityColor(issue.Severity)" Size="Size.Small">
+                                                            @issue.Severity.ToString()
+                                                        </MudChip>
+                                                    </div>
+                                                </MudPaper>
+                                            }
+                                        </MudStack>
+                                    }
+                                    else
+                                    {
+                                        <MudText Color="Color.Success">
+                                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Class="mr-2" />
+                                            未发现问题
+                                        </MudText>
+                                    }
+                                </MudCardContent>
+                            </MudCard>
+                        </MudItem>
+                    </MudGrid>
+                }
+            </div>
+        </MudTabPanel>
+
+        <MudTabPanel Text="模块管理" Icon="@Icons.Material.Filled.ViewModule">
+            <div class="module-container">
+                @if (registrationInfo != null)
+                {
+                    <MudGrid>
+                        <!-- 模块统计 -->
+                        <MudItem xs="12" md="4">
+                            <MudCard>
+                                <MudCardHeader>
+                                    <CardHeaderContent>
+                                        <MudText Typo="Typo.h6">模块统计</MudText>
+                                    </CardHeaderContent>
+                                </MudCardHeader>
+                                <MudCardContent>
+                                    <MudStack>
+                                        <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                            <MudText Typo="Typo.subtitle1">总模块数</MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">@registrationInfo.Statistics.TotalModules.ToString()</MudText>
+                                        </MudPaper>
+                                        <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                            <MudText Typo="Typo.subtitle1">启用模块</MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">@registrationInfo.Statistics.EnabledModules.ToString()</MudText>
+                                        </MudPaper>
+                                        <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                            <MudText Typo="Typo.subtitle1">禁用模块</MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">@registrationInfo.Statistics.DisabledModules.ToString()</MudText>
+                                        </MudPaper>
+                                        <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                            <MudText Typo="Typo.subtitle1">总初始化时间</MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">@($"{registrationInfo.Statistics.TotalInitializationTimeMs}ms")</MudText>
+                                        </MudPaper>
+                                    </MudStack>
+                                </MudCardContent>
+                            </MudCard>
+                        </MudItem>
+
+                        <!-- 模块列表 -->
+                        <MudItem xs="12" md="8">
+                            <MudCard>
+                                <MudCardHeader>
+                                    <CardHeaderContent>
+                                        <MudText Typo="Typo.h6">模块列表</MudText>
+                                    </CardHeaderContent>
+                                    <CardHeaderActions>
+                                        <MudButton Variant="Variant.Text" 
+                                                 Color="Color.Primary" 
+                                                 StartIcon="@Icons.Material.Filled.Refresh"
+                                                 OnClick="RefreshData">
+                                            刷新
+                                        </MudButton>
+                                    </CardHeaderActions>
+                                </MudCardHeader>
+                                <MudCardContent>
+                                    <MudDataGrid Items="@(registrationInfo.EnabledModules.Concat(registrationInfo.DisabledModules))" 
+                                               SortMode="SortMode.Multiple" 
+                                               Filterable="true" 
+                                               Hideable="true"
+                                               Dense="true">
+                                        <Columns>
+                                            <PropertyColumn Property="x => x.ModuleTypeName" Title="模块名称" />
+                                            <TemplateColumn Title="状态">
+                                                <CellTemplate>
+                                                    <MudChip T="string" Color="@(context.Item.IsDisabled ? Color.Warning : Color.Success)" 
+                                                           Size="Size.Small">
+                                                        @(context.Item.IsDisabled ? "禁用" : "启用")
+                                                    </MudChip>
+                                                </CellTemplate>
+                                            </TemplateColumn>
+                                            <PropertyColumn Property="x => x.Order" Title="顺序" />
+                                            <PropertyColumn Property="x => x.InitializationTimeMs" Title="初始化时间(ms)" />
+                                            <TemplateColumn Title="依赖">
+                                                <CellTemplate>
+                                                    <MudChip T="string" Color="Color.Info" Size="Size.Small">
+                                                        @context.Item.Dependencies.Count
+                                                    </MudChip>
+                                                </CellTemplate>
+                                            </TemplateColumn>
+                                            <TemplateColumn Title="操作">
+                                                <CellTemplate>
+                                                    <MudButton Variant="Variant.Text" 
+                                                             Color="Color.Primary" 
+                                                             Size="Size.Small"
+                                                             OnClick="@(() => ViewModuleDetail(context.Item.ModuleEnum))">
+                                                        详情
+                                                    </MudButton>
+                                                </CellTemplate>
+                                            </TemplateColumn>
+                                        </Columns>
+                                    </MudDataGrid>
+                                </MudCardContent>
+                            </MudCard>
+                        </MudItem>
+                    </MudGrid>
+                }
+            </div>
+        </MudTabPanel>
+
+        <MudTabPanel Text="依赖关系" Icon="@Icons.Material.Filled.AccountTree">
+            <div class="dependency-container">
+                @if (dependencyGraph != null)
+                {
+                    <MudGrid>
+                        <!-- 依赖关系概览 -->
+                        <MudItem xs="12" md="4">
+                            <MudCard>
+                                <MudCardHeader>
+                                    <CardHeaderContent>
+                                        <MudText Typo="Typo.h6">依赖关系概览</MudText>
+                                    </CardHeaderContent>
+                                </MudCardHeader>
+                                <MudCardContent>
+                                    <MudStack>
+                                        <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                            <MudText Typo="Typo.subtitle1">总节点数</MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">@dependencyGraph.Nodes.Count.ToString()</MudText>
+                                        </MudPaper>
+                                        <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                            <MudText Typo="Typo.subtitle1">总依赖关系</MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">@dependencyGraph.Edges.Count.ToString()</MudText>
+                                        </MudPaper>
+                                        <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                            <div class="d-flex align-center justify-space-between">
+                                                <div>
+                                                    <MudText Typo="Typo.subtitle1">循环依赖</MudText>
+                                                    <MudText Typo="Typo.body2" Color="Color.Secondary">@(dependencyGraph.HasCircularDependencies ? "存在" : "无")</MudText>
+                                                </div>
+                                                @if (dependencyGraph.HasCircularDependencies)
+                                                {
+                                                    <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" />
+                                                }
+                                                else
+                                                {
+                                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
+                                                }
+                                            </div>
+                                        </MudPaper>
+                                        <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                            <MudText Typo="Typo.subtitle1">依赖层级</MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">@dependencyGraph.ModuleLayers.Count.ToString()</MudText>
+                                        </MudPaper>
+                                    </MudStack>
+                                </MudCardContent>
+                            </MudCard>
+                        </MudItem>
+
+                        <!-- 模块层级 -->
+                        <MudItem xs="12" md="8">
+                            <MudCard>
+                                <MudCardHeader>
+                                    <CardHeaderContent>
+                                        <MudText Typo="Typo.h6">模块层级结构</MudText>
+                                    </CardHeaderContent>
+                                </MudCardHeader>
+                                <MudCardContent>
+                                    @if (dependencyGraph.ModuleLayers.Any())
+                                    {
+                                        @foreach (var layer in dependencyGraph.ModuleLayers.OrderBy(l => l.Key))
+                                        {
+                                            <MudPaper Class="pa-2 mb-2" Elevation="1">
+                                                <MudText Typo="Typo.subtitle2" Class="mb-2">
+                                                    层级 @layer.Key
+                                                </MudText>
+                                                <div class="module-chips">
+                                                    @foreach (var module in layer.Value)
+                                                    {
+                                                        var node = dependencyGraph.Nodes.FirstOrDefault(n => n.Module == module);
+                                                        <MudChip T="string" Color="@(node?.IsPartOfCycle == true ? Color.Warning : Color.Primary)" 
+                                                               Size="Size.Small" 
+                                                               Class="ma-1">
+                                                            @module.ToString()
+                                                        </MudChip>
+                                                    }
+                                                </div>
+                                            </MudPaper>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <MudText Color="Color.Secondary">暂无层级数据</MudText>
+                                    }
+                                </MudCardContent>
+                            </MudCard>
+                        </MudItem>
+
+                        <!-- 依赖关系表 -->
+                        <MudItem xs="12">
+                            <MudCard>
+                                <MudCardHeader>
+                                    <CardHeaderContent>
+                                        <MudText Typo="Typo.h6">依赖关系详情</MudText>
+                                    </CardHeaderContent>
+                                </MudCardHeader>
+                                <MudCardContent>
+                                    <MudDataGrid Items="@dependencyGraph.Edges" 
+                                               SortMode="SortMode.Multiple" 
+                                               Filterable="true" 
+                                               Hideable="true"
+                                               Dense="true">
+                                        <Columns>
+                                            <PropertyColumn Property="x => x.SourceModule" Title="源模块" />
+                                            <PropertyColumn Property="x => x.TargetModule" Title="目标模块" />
+                                            <TemplateColumn Title="依赖类型">
+                                                <CellTemplate>
+                                                    <MudChip T="string" Color="@GetDependencyTypeColor(context.Item.DependencyType)" 
+                                                           Size="Size.Small">
+                                                        @context.Item.DependencyType.ToString()
+                                                    </MudChip>
+                                                </CellTemplate>
+                                            </TemplateColumn>
+                                            <TemplateColumn Title="循环依赖">
+                                                <CellTemplate>
+                                                    @if (context.Item.IsPartOfCycle)
+                                                    {
+                                                        <MudIcon Icon="@Icons.Material.Filled.Warning" 
+                                                               Color="Color.Warning" />
+                                                    }
+                                                    else
+                                                    {
+                                                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" 
+                                                               Color="Color.Success" />
+                                                    }
+                                                </CellTemplate>
+                                            </TemplateColumn>
+                                        </Columns>
+                                    </MudDataGrid>
+                                </MudCardContent>
+                            </MudCard>
+                        </MudItem>
+                    </MudGrid>
+                }
+            </div>
+        </MudTabPanel>
+    </MudTabs>
+</MudContainer>
+
+<!-- 模块详情对话框 -->
+<MudDialog @bind-IsVisible="showModuleDetail" Options="dialogOptions">
+    <DialogContent>
+        @if (selectedModuleDetail != null)
+        {
+            <MudText Typo="Typo.h6" Class="mb-3">
+                模块详情 - @selectedModuleDetail.BasicInfo.ModuleTypeName
+            </MudText>
+            
+            <MudTabs>
+                <MudTabPanel Text="基本信息">
+                    <MudStack>
+                        <MudPaper Class="pa-3 mb-2" Elevation="1">
+                            <MudText Typo="Typo.subtitle1">模块类型</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@selectedModuleDetail.BasicInfo.ModuleFullTypeName</MudText>
+                        </MudPaper>
+                        <MudPaper Class="pa-3 mb-2" Elevation="1">
+                            <MudText Typo="Typo.subtitle1">模块枚举</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@selectedModuleDetail.BasicInfo.ModuleEnum.ToString()</MudText>
+                        </MudPaper>
+                        <MudPaper Class="pa-3 mb-2" Elevation="1">
+                            <MudText Typo="Typo.subtitle1">注册顺序</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@selectedModuleDetail.BasicInfo.Order.ToString()</MudText>
+                        </MudPaper>
+                        <MudPaper Class="pa-3 mb-2" Elevation="1">
+                            <MudText Typo="Typo.subtitle1">初始化时间</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@($"{selectedModuleDetail.BasicInfo.InitializationTimeMs}ms")</MudText>
+                        </MudPaper>
+                        <MudPaper Class="pa-3 mb-2" Elevation="1">
+                            <MudText Typo="Typo.subtitle1">是否禁用</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@(selectedModuleDetail.BasicInfo.IsDisabled ? "是" : "否")</MudText>
+                        </MudPaper>
+                    </MudStack>
+                </MudTabPanel>
+                
+                <MudTabPanel Text="性能信息">
+                    <MudStack>
+                        <MudPaper Class="pa-3 mb-2" Elevation="1">
+                            <MudText Typo="Typo.subtitle1">总耗时</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@($"{selectedModuleDetail.PerformanceInfo.TotalDurationMs}ms")</MudText>
+                        </MudPaper>
+                        @if (selectedModuleDetail.PerformanceInfo.PhaseDurations.Any())
+                        {
+                            @foreach (var phase in selectedModuleDetail.PerformanceInfo.PhaseDurations)
+                            {
+                                <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                    <MudText Typo="Typo.subtitle1">@phase.Key.ToString()</MudText>
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">@($"{phase.Value}ms")</MudText>
+                                </MudPaper>
+                            }
+                        }
+                    </MudStack>
+                </MudTabPanel>
+                
+                <MudTabPanel Text="依赖关系">
+                    <MudStack>
+                        <MudPaper Class="pa-3 mb-2" Elevation="1">
+                            <MudText Typo="Typo.subtitle1">直接依赖数</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@selectedModuleDetail.DependencyInfo.DirectDependencies.Count.ToString()</MudText>
+                        </MudPaper>
+                        <MudPaper Class="pa-3 mb-2" Elevation="1">
+                            <MudText Typo="Typo.subtitle1">总依赖数</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@selectedModuleDetail.DependencyInfo.AllDependencies.Count.ToString()</MudText>
+                        </MudPaper>
+                        <MudPaper Class="pa-3 mb-2" Elevation="1">
+                            <MudText Typo="Typo.subtitle1">依赖此模块的数量</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@selectedModuleDetail.DependencyInfo.DependedByModules.Count.ToString()</MudText>
+                        </MudPaper>
+                        @if (selectedModuleDetail.DependencyInfo.IsPartOfCycle)
+                        {
+                            <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                <div class="d-flex align-center justify-space-between">
+                                    <div>
+                                        <MudText Typo="Typo.subtitle1">循环依赖</MudText>
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">@string.Join(" → ", selectedModuleDetail.DependencyInfo.CyclePath)</MudText>
+                                    </div>
+                                    <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" />
+                                </div>
+                            </MudPaper>
+                        }
+                    </MudStack>
+                </MudTabPanel>
+                
+                @if (selectedModuleDetail.Errors.Any())
+                {
+                    <MudTabPanel Text="错误信息">
+                        <MudStack>
+                            @foreach (var error in selectedModuleDetail.Errors)
+                            {
+                                <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                    <div class="d-flex align-center justify-space-between">
+                                        <div>
+                                            <MudText Typo="Typo.subtitle1">@error.ErrorType</MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">@error.ErrorMessage</MudText>
+                                        </div>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                            @error.ErrorTime.ToString("HH:mm:ss")
+                                        </MudText>
+                                    </div>
+                                </MudPaper>
+                            }
+                        </MudStack>
+                    </MudTabPanel>
+                }
+            </MudTabs>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Primary" OnClick="CloseModuleDetail">关闭</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private ModuleSystemStatus? systemStatus;
+    private ModuleSystemPerformance? systemPerformance;
+    private ModuleSystemHealthCheck? healthCheck;
+    private ModuleRegistrationInfo? registrationInfo;
+    private ModuleDependencyGraph? dependencyGraph;
+    private ModuleDetailInfo? selectedModuleDetail;
+    private bool showModuleDetail = false;
+    
+    private DialogOptions dialogOptions = new DialogOptions 
+    { 
+        CloseButton = true, 
+        CloseOnEscapeKey = true,
+        FullWidth = true,
+        MaxWidth = MaxWidth.Medium
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshData();
+    }
+
+    private async Task RefreshData()
+    {
+        try
+        {
+            systemStatus = StatusService.GetSystemStatus();
+            systemPerformance = StatusService.GetSystemPerformance();
+            healthCheck = StatusService.GetHealthCheck();
+            registrationInfo = StatusService.GetRegistrationInfo();
+            dependencyGraph = StatusService.GetDependencyGraph();
+            
+            SnackBar.Add("数据已刷新", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            SnackBar.Add($"刷新数据失败: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ViewModuleDetail(EMoModules moduleEnum)
+    {
+        try
+        {
+            selectedModuleDetail = StatusService.GetModuleDetail(moduleEnum);
+            if (selectedModuleDetail != null)
+            {
+                showModuleDetail = true;
+            }
+            else
+            {
+                SnackBar.Add("模块详情不存在", Severity.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            SnackBar.Add($"获取模块详情失败: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void CloseModuleDetail()
+    {
+        showModuleDetail = false;
+        selectedModuleDetail = null;
+    }
+
+    #region Helper Methods
+
+    private string GetStatusIcon(ModuleSystemState state) => state switch
+    {
+        ModuleSystemState.NotInitialized => Icons.Material.Filled.HourglassEmpty,
+        ModuleSystemState.Initializing => Icons.Material.Filled.HourglassFull,
+        ModuleSystemState.Initialized => Icons.Material.Filled.CheckCircle,
+        ModuleSystemState.Failed => Icons.Material.Filled.Error,
+        _ => Icons.Material.Filled.HelpOutline
+    };
+
+    private Color GetStatusColor(ModuleSystemState state) => state switch
+    {
+        ModuleSystemState.NotInitialized => Color.Dark,
+        ModuleSystemState.Initializing => Color.Warning,
+        ModuleSystemState.Initialized => Color.Success,
+        ModuleSystemState.Failed => Color.Error,
+        _ => Color.Default
+    };
+
+    private string GetStatusText(ModuleSystemState state) => state switch
+    {
+        ModuleSystemState.NotInitialized => "未初始化",
+        ModuleSystemState.Initializing => "初始化中",
+        ModuleSystemState.Initialized => "已初始化",
+        ModuleSystemState.Failed => "初始化失败",
+        _ => "未知状态"
+    };
+
+    private string GetHealthIcon() => systemStatus?.HasRegistrationErrors == true || systemStatus?.HasCircularDependencies == true
+        ? Icons.Material.Filled.Error
+        : Icons.Material.Filled.CheckCircle;
+
+    private Color GetHealthColor() => systemStatus?.HasRegistrationErrors == true || systemStatus?.HasCircularDependencies == true
+        ? Color.Error
+        : Color.Success;
+
+    private string GetHealthText() => systemStatus?.HasRegistrationErrors == true || systemStatus?.HasCircularDependencies == true
+        ? "存在问题"
+        : "健康";
+
+    private string GetHealthStatusIcon(HealthStatus status) => status switch
+    {
+        HealthStatus.Healthy => Icons.Material.Filled.CheckCircle,
+        HealthStatus.Warning => Icons.Material.Filled.Warning,
+        HealthStatus.Unhealthy => Icons.Material.Filled.Error,
+        HealthStatus.Critical => Icons.Material.Filled.Dangerous,
+        _ => Icons.Material.Filled.HelpOutline
+    };
+
+    private Color GetHealthStatusColor(HealthStatus status) => status switch
+    {
+        HealthStatus.Healthy => Color.Success,
+        HealthStatus.Warning => Color.Warning,
+        HealthStatus.Unhealthy => Color.Error,
+        HealthStatus.Critical => Color.Error,
+        _ => Color.Default
+    };
+
+    private string GetIssueSeverityIcon(IssueSeverity severity) => severity switch
+    {
+        IssueSeverity.Information => Icons.Material.Filled.Info,
+        IssueSeverity.Low => Icons.Material.Filled.Warning,
+        IssueSeverity.Medium => Icons.Material.Filled.PriorityHigh,
+        IssueSeverity.High => Icons.Material.Filled.Error,
+        IssueSeverity.Critical => Icons.Material.Filled.Dangerous,
+        _ => Icons.Material.Filled.HelpOutline
+    };
+
+    private Color GetIssueSeverityColor(IssueSeverity severity) => severity switch
+    {
+        IssueSeverity.Information => Color.Info,
+        IssueSeverity.Low => Color.Warning,
+        IssueSeverity.Medium => Color.Warning,
+        IssueSeverity.High => Color.Error,
+        IssueSeverity.Critical => Color.Error,
+        _ => Color.Default
+    };
+
+    private Color GetDependencyTypeColor(DependencyType type) => type switch
+    {
+        DependencyType.Direct => Color.Primary,
+        DependencyType.Transitive => Color.Info,
+        DependencyType.Circular => Color.Warning,
+        _ => Color.Default
+    };
+
+    #endregion
+} 

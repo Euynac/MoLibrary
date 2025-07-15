@@ -9,7 +9,9 @@ using MoLibrary.Core.Module.Dashboard;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.UI.Components;
+using MoLibrary.UI.Components.Pages;
 using MoLibrary.UI.UICore;
+using MudBlazor;
 using MudBlazor.Services;
 
 namespace MoLibrary.UI.Modules;
@@ -63,7 +65,7 @@ public class ModuleUICore(ModuleUICoreOption option)
     {
 
         // 注册模块系统状态服务
-        if (Option.AddModuleSystemUI)
+        if (!Option.DisableModuleSystemUI)
         {
             services.AddSingleton<IModuleSystemStatusService, ModuleSystemStatusService>();
         }
@@ -141,6 +143,10 @@ public class ModuleUICoreGuide : MoModuleGuide<ModuleUICore, ModuleUICoreOption,
         {
             var registry = builder.ApplicationBuilder.ApplicationServices.GetRequiredService<IUIComponentRegistry>();
 
+            if (!builder.ModuleOption.DisableModuleSystemUI)
+            {
+                registry.RegisterComponent<ModuleSystemDashboard>("module-system-dashboard", "模块系统概览", Icons.Material.Filled.Dashboard, "模块系统", true);
+            }
 
             builder.WebApplication.MapRazorComponents<MoApp>()
                 .AddInteractiveServerRenderMode().AddAdditionalAssemblies(registry.GetAdditionalAssemblies());
@@ -162,8 +168,8 @@ public class ModuleUICoreOption : MoModuleOption<ModuleUICore>
     public string UIAppBarName { get; set; } = "MoLibrary";
 
     /// <summary>
-    /// 使用模块系统UI界面
+    /// 禁用模块系统UI界面
     /// </summary>
-    public bool AddModuleSystemUI { get; set; }
+    public bool DisableModuleSystemUI { get; set; }
 
 }

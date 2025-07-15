@@ -1,6 +1,7 @@
 using System.Reflection;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
+using MoLibrary.UI.Components;
 
 namespace MoLibrary.UI.UICore;
 
@@ -13,6 +14,11 @@ public class UIComponentRegistry : IUIComponentRegistry
     private readonly Dictionary<string, Type> _components = new();
     private readonly List<UIPageInfo> _pages = [];
     private readonly List<UINavItem> _navItems = [];
+
+    /// <summary>
+    /// 已经注册的程序集不可再注册
+    /// </summary>
+    private readonly HashSet<Assembly> _excludedAssemblies = [typeof(MoRouter).Assembly];
 
     /// <summary>
     /// 注册页面组件
@@ -57,8 +63,12 @@ public class UIComponentRegistry : IUIComponentRegistry
             _navItems.Add(navItem);
         }
 
-        // 添加组件所在的程序集
-        _assemblies.Add(componentType.Assembly);
+        if (!_excludedAssemblies.Contains(componentType.Assembly))
+        {
+            // 添加组件所在的程序集
+            _assemblies.Add(componentType.Assembly);
+        }
+
     }
 
     /// <summary>
