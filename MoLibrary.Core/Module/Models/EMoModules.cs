@@ -62,5 +62,7 @@ public enum EMoModules
     /// <summary>
     /// UI 核心模块，用于界面基础构建
     /// </summary>
-    UICore
+    UICore,
+    FrameworkUI,
+    SignalrUI
 }
