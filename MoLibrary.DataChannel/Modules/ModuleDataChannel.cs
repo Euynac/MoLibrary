@@ -62,12 +62,12 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
             o.Conventions.Add(new ModuleControllerModelConvention<DataChannelController>(Option));
         }).ConfigMvcBuilder((builder, provider) =>
         {
-                //builder.AddApplicationPart(typeof(DataChannelController).Assembly)
-                //.ConfigureApplicationPartManager(manager =>
-                //{
-                //    // 动态控制Controller的启用
-                //    manager.FeatureProviders.Add(new ModuleControllerFeatureProvider<DataChannelController>(Option));
-                //});
+            //builder.AddApplicationPart(typeof(DataChannelController).Assembly)
+            //.ConfigureApplicationPartManager(manager =>
+            //{
+            //    // 动态控制Controller的启用
+            //    manager.FeatureProviders.Add(new ModuleControllerFeatureProvider<DataChannelController>(Option));
+            //});
         });
     }
 }

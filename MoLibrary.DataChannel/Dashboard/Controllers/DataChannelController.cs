@@ -5,9 +5,7 @@ using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.DataChannel.Dashboard.Controllers;
 
-[Route("data-channel")]
 [ApiController]
-//[Tags("DataChannel")]
 public class DataChannelController(IDataChannelManager manager) : MoModuleControllerBase
 {
     /// <summary>

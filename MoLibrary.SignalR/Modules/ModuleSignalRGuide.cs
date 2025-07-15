@@ -1,17 +1,13 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Reflection;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.OpenApi.Models;
 using MoLibrary.Authority.Security;
 using MoLibrary.Core.GlobalJson;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.SignalR.Implements;
 using MoLibrary.SignalR.Interfaces;
 using SignalRSwaggerGen;
-using SignalRSwaggerGen.Attributes;
 
 namespace MoLibrary.SignalR.Modules;
 
@@ -84,14 +80,14 @@ public class ModuleSignalRGuide : MoModuleGuide<ModuleSignalR, ModuleSignalROpti
         ConfigureModuleOption(option =>
         {
             option.Hubs.Add(typeof(THubServer));
-        });
+        }, secondKey: typeof(THubServer).Name);
         ConfigureEndpoints(context =>
         {
             context.ApplicationBuilder.UseEndpoints(endpoints =>
             {
                 endpoints.MapHub<THubServer>(pattern);
             });
-        });
+        }, secondKey: typeof(THubServer).Name);
         return this;
     }
 
