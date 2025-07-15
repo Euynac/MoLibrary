@@ -1,0 +1,156 @@
+@using MoLibrary.Core.Module.Dashboard.Models
+@using MoLibrary.Core.Module.Models
+@using MudBlazor
+
+<div class="overview-container">
+    @if (SystemStatus != null)
+    {
+        <MudGrid>
+            <!-- 系统状态概览 -->
+            <MudItem xs="12" md="6" lg="3">
+                <MudCard Class="status-card">
+                    <MudCardContent>
+                        <div class="status-header">
+                            <MudIcon Icon="@GetStatusIcon(SystemStatus.State)" 
+                                   Color="@GetStatusColor(SystemStatus.State)" Size="Size.Large" />
+                            <MudText Typo="Typo.h6">系统状态</MudText>
+                        </div>
+                        <MudText Typo="Typo.body1" Class="mt-2">
+                            @GetStatusText(SystemStatus.State)
+                        </MudText>
+                        <MudProgressLinear Color="@GetStatusColor(SystemStatus.State)" 
+                                         Value="@(SystemStatus.IsInitialized ? 100 : 0)" 
+                                         Class="mt-2" />
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <!-- 模块统计 -->
+            <MudItem xs="12" md="6" lg="3">
+                <MudCard Class="stats-card">
+                    <MudCardContent>
+                        <div class="stats-header">
+                            <MudIcon Icon="@Icons.Material.Filled.Apps" Color="Color.Primary" Size="Size.Large" />
+                            <MudText Typo="Typo.h6">模块统计</MudText>
+                        </div>
+                        <MudText Typo="Typo.h5" Class="mt-2">@SystemStatus.TotalModules</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            启用: @SystemStatus.EnabledModules | 禁用: @SystemStatus.DisabledModules
+                        </MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <!-- 初始化时间 -->
+            <MudItem xs="12" md="6" lg="3">
+                <MudCard Class="performance-card">
+                    <MudCardContent>
+                        <div class="performance-header">
+                            <MudIcon Icon="@Icons.Material.Filled.Timer" Color="Color.Warning" Size="Size.Large" />
+                            <MudText Typo="Typo.h6">初始化时间</MudText>
+                        </div>
+                        <MudText Typo="Typo.h5" Class="mt-2">@(SystemStatus.TotalInitializationTimeMs)ms</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            @(SystemStatus.StartTime?.ToString("HH:mm:ss") ?? "未知")
+                        </MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <!-- 健康状态 -->
+            <MudItem xs="12" md="6" lg="3">
+                <MudCard Class="health-card">
+                    <MudCardContent>
+                        <div class="health-header">
+                            <MudIcon Icon="@GetHealthIcon()" 
+                                   Color="@GetHealthColor()" Size="Size.Large" />
+                            <MudText Typo="Typo.h6">健康状态</MudText>
+                        </div>
+                        <MudText Typo="Typo.body1" Class="mt-2">
+                            @GetHealthText()
+                        </MudText>
+                        @if (SystemStatus.HasRegistrationErrors || SystemStatus.HasCircularDependencies)
+                        {
+                            <MudChip T="string" Color="Color.Error" Size="Size.Small" Class="mt-2">
+                                存在问题
+                            </MudChip>
+                        }
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// 系统状态数据
+    /// </summary>
+    [Parameter] public ModuleSystemStatus? SystemStatus { get; set; }
+
+    /// <summary>
+    /// 获取状态图标
+    /// </summary>
+    /// <param name="state">系统状态</param>
+    /// <returns>图标名称</returns>
+    private string GetStatusIcon(ModuleSystemState state) => state switch
+    {
+        ModuleSystemState.NotInitialized => Icons.Material.Filled.HourglassEmpty,
+        ModuleSystemState.Initializing => Icons.Material.Filled.HourglassFull,
+        ModuleSystemState.Initialized => Icons.Material.Filled.CheckCircle,
+        ModuleSystemState.Failed => Icons.Material.Filled.Error,
+        _ => Icons.Material.Filled.HelpOutline
+    };
+
+    /// <summary>
+    /// 获取状态颜色
+    /// </summary>
+    /// <param name="state">系统状态</param>
+    /// <returns>颜色</returns>
+    private Color GetStatusColor(ModuleSystemState state) => state switch
+    {
+        ModuleSystemState.NotInitialized => Color.Dark,
+        ModuleSystemState.Initializing => Color.Warning,
+        ModuleSystemState.Initialized => Color.Success,
+        ModuleSystemState.Failed => Color.Error,
+        _ => Color.Default
+    };
+
+    /// <summary>
+    /// 获取状态文本
+    /// </summary>
+    /// <param name="state">系统状态</param>
+    /// <returns>状态文本</returns>
+    private string GetStatusText(ModuleSystemState state) => state switch
+    {
+        ModuleSystemState.NotInitialized => "未初始化",
+        ModuleSystemState.Initializing => "初始化中",
+        ModuleSystemState.Initialized => "已初始化",
+        ModuleSystemState.Failed => "初始化失败",
+        _ => "未知状态"
+    };
+
+    /// <summary>
+    /// 获取健康状态图标
+    /// </summary>
+    /// <returns>图标名称</returns>
+    private string GetHealthIcon() => SystemStatus?.HasRegistrationErrors == true || SystemStatus?.HasCircularDependencies == true
+        ? Icons.Material.Filled.Error
+        : Icons.Material.Filled.CheckCircle;
+
+    /// <summary>
+    /// 获取健康状态颜色
+    /// </summary>
+    /// <returns>颜色</returns>
+    private Color GetHealthColor() => SystemStatus?.HasRegistrationErrors == true || SystemStatus?.HasCircularDependencies == true
+        ? Color.Error
+        : Color.Success;
+
+    /// <summary>
+    /// 获取健康状态文本
+    /// </summary>
+    /// <returns>健康状态文本</returns>
+    private string GetHealthText() => SystemStatus?.HasRegistrationErrors == true || SystemStatus?.HasCircularDependencies == true
+        ? "存在问题"
+        : "健康";
+} 
