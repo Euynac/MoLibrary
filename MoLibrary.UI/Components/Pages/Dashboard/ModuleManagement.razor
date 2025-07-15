@@ -1,0 +1,124 @@
+@using MoLibrary.Core.Module.Dashboard.Models
+@using MoLibrary.Core.Module.Models
+@using MudBlazor
+
+<div class="module-container">
+    @if (RegistrationInfo != null)
+    {
+        <MudGrid>
+            <!-- 模块统计 -->
+            <MudItem xs="12" md="4">
+                <MudCard>
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">模块统计</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudStack>
+                            <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                <MudText Typo="Typo.subtitle1">总模块数</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@RegistrationInfo.Statistics.TotalModules.ToString()</MudText>
+                            </MudPaper>
+                            <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                <MudText Typo="Typo.subtitle1">启用模块</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@RegistrationInfo.Statistics.EnabledModules.ToString()</MudText>
+                            </MudPaper>
+                            <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                <MudText Typo="Typo.subtitle1">禁用模块</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@RegistrationInfo.Statistics.DisabledModules.ToString()</MudText>
+                            </MudPaper>
+                            <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                <MudText Typo="Typo.subtitle1">总初始化时间</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@($"{RegistrationInfo.Statistics.TotalInitializationTimeMs}ms")</MudText>
+                            </MudPaper>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <!-- 模块列表 -->
+            <MudItem xs="12" md="8">
+                <MudCard>
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">模块列表</MudText>
+                        </CardHeaderContent>
+                        <CardHeaderActions>
+                            <MudButton Variant="Variant.Text" 
+                                     Color="Color.Primary" 
+                                     StartIcon="@Icons.Material.Filled.Refresh"
+                                     OnClick="OnRefreshClicked">
+                                刷新
+                            </MudButton>
+                        </CardHeaderActions>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudDataGrid Items="@(RegistrationInfo.EnabledModules.Concat(RegistrationInfo.DisabledModules))" 
+                                   SortMode="SortMode.Multiple" 
+                                   Filterable="true" 
+                                   Hideable="true"
+                                   Dense="true">
+                            <Columns>
+                                <PropertyColumn Property="x => x.ModuleTypeName" Title="模块名称" />
+                                <TemplateColumn Title="状态">
+                                    <CellTemplate>
+                                        <MudChip T="string" Color="@(context.Item.IsDisabled ? Color.Warning : Color.Success)" 
+                                               Size="Size.Small">
+                                            @(context.Item.IsDisabled ? "禁用" : "启用")
+                                        </MudChip>
+                                    </CellTemplate>
+                                </TemplateColumn>
+                                <PropertyColumn Property="x => x.Order" Title="顺序" />
+                                <PropertyColumn Property="x => x.InitializationTimeMs" Title="初始化时间(ms)" />
+                                <TemplateColumn Title="依赖">
+                                    <CellTemplate>
+                                        <MudChip T="string" Color="Color.Info" Size="Size.Small">
+                                            @context.Item.Dependencies.Count
+                                        </MudChip>
+                                    </CellTemplate>
+                                </TemplateColumn>
+                                <TemplateColumn Title="操作">
+                                    <CellTemplate>
+                                        <MudButton Variant="Variant.Text" 
+                                                 Color="Color.Primary" 
+                                                 Size="Size.Small"
+                                                 OnClick="@(() => OnModuleDetailClicked.InvokeAsync(context.Item.ModuleEnum))">
+                                            详情
+                                        </MudButton>
+                                    </CellTemplate>
+                                </TemplateColumn>
+                            </Columns>
+                        </MudDataGrid>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// 模块注册信息
+    /// </summary>
+    [Parameter] public ModuleRegistrationInfo? RegistrationInfo { get; set; }
+
+    /// <summary>
+    /// 刷新数据事件
+    /// </summary>
+    [Parameter] public EventCallback OnRefresh { get; set; }
+
+    /// <summary>
+    /// 查看模块详情事件
+    /// </summary>
+    [Parameter] public EventCallback<EMoModules> OnModuleDetailClicked { get; set; }
+
+    /// <summary>
+    /// 处理刷新按钮点击事件
+    /// </summary>
+    /// <returns></returns>
+    private async Task OnRefreshClicked()
+    {
+        await OnRefresh.InvokeAsync();
+    }
+} 

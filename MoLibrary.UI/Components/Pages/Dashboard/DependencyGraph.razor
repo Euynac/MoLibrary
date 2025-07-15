@@ -1,0 +1,351 @@
+@using MoLibrary.Core.Module.Dashboard.Models
+@using MoLibrary.Core.Module.Models
+@using MudBlazor
+@using Microsoft.JSInterop
+
+<div class="dependency-container">
+    @if (DependencyGraphData != null)
+    {
+        <MudGrid>
+            <!-- 依赖关系概览 -->
+            <MudItem xs="12" md="4">
+                <MudCard>
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">依赖关系概览</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudStack>
+                            <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                <MudText Typo="Typo.subtitle1">总节点数</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@DependencyGraphData.Nodes.Count.ToString()</MudText>
+                            </MudPaper>
+                            <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                <MudText Typo="Typo.subtitle1">总依赖关系</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@DependencyGraphData.Edges.Count.ToString()</MudText>
+                            </MudPaper>
+                            <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                <div class="d-flex align-center justify-space-between">
+                                    <div>
+                                        <MudText Typo="Typo.subtitle1">循环依赖</MudText>
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">@(DependencyGraphData.HasCircularDependencies ? "存在" : "无")</MudText>
+                                    </div>
+                                    @if (DependencyGraphData.HasCircularDependencies)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" />
+                                    }
+                                    else
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
+                                    }
+                                </div>
+                            </MudPaper>
+                            <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                <MudText Typo="Typo.subtitle1">依赖层级</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@DependencyGraphData.ModuleLayers.Count.ToString()</MudText>
+                            </MudPaper>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <!-- 图表控制 -->
+            <MudItem xs="12" md="8">
+                <MudCard>
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">图表控制</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudGrid>
+                            <MudItem xs="12" md="6">
+                                <MudSelect T="string" Value="selectedLayout" Label="布局算法" 
+                                         ValueChanged="OnLayoutChanged" Variant="Variant.Outlined">
+                                    <MudSelectItem Value="@("force")">力导向布局</MudSelectItem>
+                                    <MudSelectItem Value="@("hierarchical")">层次布局</MudSelectItem>
+                                    <MudSelectItem Value="@("circular")">环形布局</MudSelectItem>
+                                </MudSelect>
+                            </MudItem>
+                            <MudItem xs="12" md="6">
+                                <MudSelect T="string" Value="selectedFilter" Label="过滤器" 
+                                         ValueChanged="OnFilterChanged" Variant="Variant.Outlined">
+                                    <MudSelectItem Value="@("all")">显示全部</MudSelectItem>
+                                    <MudSelectItem Value="@("direct")">仅直接依赖</MudSelectItem>
+                                    <MudSelectItem Value="@("cycle")">仅循环依赖</MudSelectItem>
+                                </MudSelect>
+                            </MudItem>
+                        </MudGrid>
+                        <MudDivider Class="my-4" />
+                        <MudStack Row="true" Spacing="2">
+                            <MudButton Variant="Variant.Text" Color="Color.Primary" 
+                                     StartIcon="@Icons.Material.Filled.ZoomIn" 
+                                     OnClick="ZoomIn">
+                                放大
+                            </MudButton>
+                            <MudButton Variant="Variant.Text" Color="Color.Primary" 
+                                     StartIcon="@Icons.Material.Filled.ZoomOut" 
+                                     OnClick="ZoomOut">
+                                缩小
+                            </MudButton>
+                            <MudButton Variant="Variant.Text" Color="Color.Primary" 
+                                     StartIcon="@Icons.Material.Filled.CenterFocusStrong" 
+                                     OnClick="ResetZoom">
+                                重置视图
+                            </MudButton>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <!-- 依赖关系图 -->
+            <MudItem xs="12">
+                <MudCard>
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">依赖关系图</MudText>
+                        </CardHeaderContent>
+                        <CardHeaderActions>
+                            <MudButton Variant="Variant.Text" 
+                                     Color="Color.Primary" 
+                                     StartIcon="@Icons.Material.Filled.Download"
+                                     OnClick="ExportGraph">
+                                导出图片
+                            </MudButton>
+                        </CardHeaderActions>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <div id="dependency-graph-container" style="height: 600px; width: 100%; border: 1px solid #ddd; border-radius: 4px;">
+                            <!-- 图表将在这里渲染 -->
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <!-- 图例 -->
+            <MudItem xs="12" md="6">
+                <MudCard>
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">图例</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudStack>
+                            <div class="d-flex align-center">
+                                <div class="legend-circle" style="background-color: #2196F3; width: 20px; height: 20px; border-radius: 50%; margin-right: 8px;"></div>
+                                <MudText Typo="Typo.body2">启用模块</MudText>
+                            </div>
+                            <div class="d-flex align-center">
+                                <div class="legend-circle" style="background-color: #FF9800; width: 20px; height: 20px; border-radius: 50%; margin-right: 8px;"></div>
+                                <MudText Typo="Typo.body2">禁用模块</MudText>
+                            </div>
+                            <div class="d-flex align-center">
+                                <div class="legend-circle" style="background-color: #F44336; width: 20px; height: 20px; border-radius: 50%; margin-right: 8px;"></div>
+                                <MudText Typo="Typo.body2">循环依赖模块</MudText>
+                            </div>
+                            <div class="d-flex align-center">
+                                <div class="legend-line" style="background-color: #4CAF50; width: 30px; height: 2px; margin-right: 8px;"></div>
+                                <MudText Typo="Typo.body2">直接依赖</MudText>
+                            </div>
+                            <div class="d-flex align-center">
+                                <div class="legend-line" style="background-color: #9C27B0; width: 30px; height: 2px; margin-right: 8px;"></div>
+                                <MudText Typo="Typo.body2">传递依赖</MudText>
+                            </div>
+                            <div class="d-flex align-center">
+                                <div class="legend-line" style="background-color: #FF5722; width: 30px; height: 2px; margin-right: 8px;"></div>
+                                <MudText Typo="Typo.body2">循环依赖</MudText>
+                            </div>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <!-- 节点详情 -->
+            <MudItem xs="12" md="6">
+                <MudCard>
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">节点详情</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        @if (!string.IsNullOrEmpty(selectedNodeInfo))
+                        {
+                            <div>
+                                <MudText Typo="Typo.body1">@selectedNodeInfo</MudText>
+                            </div>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                鼠标悬停在节点上查看详情
+                            </MudText>
+                        }
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    }
+</div>
+
+@code {
+    private IJSObjectReference? jsModule;
+    private string selectedLayout = "force";
+    private string selectedFilter = "all";
+    private string selectedNodeInfo = "";
+
+    /// <summary>
+    /// 依赖关系图数据
+    /// </summary>
+    [Parameter] public ModuleDependencyGraph? DependencyGraphData { get; set; }
+
+    /// <summary>
+    /// JavaScript运行时
+    /// </summary>
+    [Inject] public IJSRuntime JSRuntime { get; set; } = default!;
+
+    /// <summary>
+    /// 组件初始化后
+    /// </summary>
+    /// <returns></returns>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && DependencyGraphData != null)
+        {
+            jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/dependency-graph.js");
+            await InitializeGraph();
+        }
+    }
+
+    /// <summary>
+    /// 初始化图表
+    /// </summary>
+    /// <returns></returns>
+    private async Task InitializeGraph()
+    {
+        if (jsModule == null || DependencyGraphData == null) return;
+
+        var nodes = DependencyGraphData.Nodes.Select(n => new
+        {
+            id = n.Module.ToString(),
+            label = n.Module.ToString(),
+            isPartOfCycle = n.IsPartOfCycle,
+            isDisabled = false // 这里需要根据实际情况设置
+        }).ToArray();
+
+        var edges = DependencyGraphData.Edges.Select(e => new
+        {
+            source = e.SourceModule.ToString(),
+            target = e.TargetModule.ToString(),
+            dependencyType = e.DependencyType.ToString(),
+            isPartOfCycle = e.IsPartOfCycle
+        }).ToArray();
+
+        await jsModule.InvokeVoidAsync("initializeDependencyGraph", "dependency-graph-container", nodes, edges);
+    }
+
+    /// <summary>
+    /// 布局改变事件
+    /// </summary>
+    /// <param name="layout">布局类型</param>
+    /// <returns></returns>
+    private async Task OnLayoutChanged(string layout)
+    {
+        selectedLayout = layout;
+        if (jsModule != null)
+        {
+            await jsModule.InvokeVoidAsync("changeLayout", layout);
+        }
+    }
+
+    /// <summary>
+    /// 过滤器改变事件
+    /// </summary>
+    /// <param name="filter">过滤器类型</param>
+    /// <returns></returns>
+    private async Task OnFilterChanged(string filter)
+    {
+        selectedFilter = filter;
+        if (jsModule != null)
+        {
+            await jsModule.InvokeVoidAsync("applyFilter", filter);
+        }
+    }
+
+    /// <summary>
+    /// 放大图表
+    /// </summary>
+    /// <returns></returns>
+    private async Task ZoomIn()
+    {
+        if (jsModule != null)
+        {
+            await jsModule.InvokeVoidAsync("zoomIn");
+        }
+    }
+
+    /// <summary>
+    /// 缩小图表
+    /// </summary>
+    /// <returns></returns>
+    private async Task ZoomOut()
+    {
+        if (jsModule != null)
+        {
+            await jsModule.InvokeVoidAsync("zoomOut");
+        }
+    }
+
+    /// <summary>
+    /// 重置视图
+    /// </summary>
+    /// <returns></returns>
+    private async Task ResetZoom()
+    {
+        if (jsModule != null)
+        {
+            await jsModule.InvokeVoidAsync("resetZoom");
+        }
+    }
+
+    /// <summary>
+    /// 导出图片
+    /// </summary>
+    /// <returns></returns>
+    private async Task ExportGraph()
+    {
+        if (jsModule != null)
+        {
+            await jsModule.InvokeVoidAsync("exportGraph", "dependency-graph.png");
+        }
+    }
+
+    /// <summary>
+    /// 获取依赖类型颜色
+    /// </summary>
+    /// <param name="type">依赖类型</param>
+    /// <returns>颜色</returns>
+    private Color GetDependencyTypeColor(DependencyType type) => type switch
+    {
+        DependencyType.Direct => Color.Primary,
+        DependencyType.Transitive => Color.Info,
+        DependencyType.Circular => Color.Warning,
+        _ => Color.Default
+    };
+
+    /// <summary>
+    /// 资源释放
+    /// </summary>
+    /// <returns></returns>
+    public async ValueTask DisposeAsync()
+    {
+        if (jsModule != null)
+        {
+            await jsModule.DisposeAsync();
+        }
+    }
+}
+
+@implements IAsyncDisposable 

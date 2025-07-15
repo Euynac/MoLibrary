@@ -1,0 +1,124 @@
+@using MoLibrary.Core.Module.Dashboard.Models
+@using MudBlazor
+
+<div class="performance-container">
+    @if (SystemPerformance != null)
+    {
+        <MudGrid>
+            <!-- 性能概览 -->
+            <MudItem xs="12" md="6">
+                <MudCard>
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">性能概览</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudStack>
+                            <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                <MudText Typo="Typo.subtitle1">总初始化时间</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@($"{SystemPerformance.TotalSystemInitializationTimeMs}ms")</MudText>
+                            </MudPaper>
+                            <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                <MudText Typo="Typo.subtitle1">系统阶段总耗时</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@($"{SystemPerformance.TotalSystemPhaseDurationMs}ms")</MudText>
+                            </MudPaper>
+                            <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                <MudText Typo="Typo.subtitle1">模块阶段总耗时</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@($"{SystemPerformance.TotalModulePhaseDurationMs}ms")</MudText>
+                            </MudPaper>
+                            <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                <MudText Typo="Typo.subtitle1">总模块阶段执行次数</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@SystemPerformance.TotalModulePhaseExecutions.ToString()</MudText>
+                            </MudPaper>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <!-- 最慢模块 -->
+            <MudItem xs="12" md="6">
+                <MudCard>
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">最慢模块</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        @if (SystemPerformance.SlowestModules.Any())
+                        {
+                            <MudStack>
+                                @foreach (var module in SystemPerformance.SlowestModules.Take(5))
+                                {
+                                    <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                        <div class="d-flex align-center justify-space-between">
+                                            <div>
+                                                <MudText Typo="Typo.subtitle1">@module.ModuleTypeName</MudText>
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">@($"{module.TotalDurationMs}ms")</MudText>
+                                            </div>
+                                            <MudChip T="string" Color="Color.Warning" Size="Size.Small">
+                                                @module.ModuleEnum.ToString()
+                                            </MudChip>
+                                        </div>
+                                    </MudPaper>
+                                }
+                            </MudStack>
+                        }
+                        else
+                        {
+                            <MudText Color="Color.Secondary">暂无性能数据</MudText>
+                        }
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <!-- 阶段性能 -->
+            <MudItem xs="12">
+                <MudCard>
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">阶段性能分析</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        @if (SystemPerformance.PhasePerformances.Any())
+                        {
+                            <MudDataGrid Items="@SystemPerformance.PhasePerformances" 
+                                       SortMode="SortMode.Multiple" 
+                                       Filterable="true" 
+                                       Hideable="true">
+                                <Columns>
+                                    <PropertyColumn Property="x => x.Order" Title="顺序" />
+                                    <PropertyColumn Property="x => x.PhaseName" Title="阶段名称" />
+                                    <PropertyColumn Property="x => x.DurationMs" Title="耗时 (ms)" />
+                                    <TemplateColumn Title="进度">
+                                        <CellTemplate>
+                                            @{
+                                                var maxDuration = SystemPerformance.PhasePerformances.Max(p => p.DurationMs);
+                                                var percentage = maxDuration > 0 ? (double)context.Item.DurationMs / maxDuration * 100 : 0;
+                                            }
+                                            <MudProgressLinear Color="Color.Primary" 
+                                                             Value="@percentage" 
+                                                             Class="my-2" />
+                                        </CellTemplate>
+                                    </TemplateColumn>
+                                </Columns>
+                            </MudDataGrid>
+                        }
+                        else
+                        {
+                            <MudText Color="Color.Secondary">暂无阶段性能数据</MudText>
+                        }
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// 系统性能数据
+    /// </summary>
+    [Parameter] public ModuleSystemPerformance? SystemPerformance { get; set; }
+} 
