@@ -40,7 +40,7 @@ public class ModuleStateStoreGuide : MoModuleGuide<ModuleStateStore, ModuleState
                     context.Services.AddKeyedSingleton<IMoStateStore>(key, (serviceProvider, _) =>
                         serviceProvider.GetRequiredService<IMemoryStateStore>());
                 }
-            }, key: $"{nameof(AddKeyedStateStore)}_{key}");
+            }, secondKey: key);
 
         return this;
     }
