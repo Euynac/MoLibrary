@@ -1,0 +1,511 @@
+@attribute [Route(SIGNALR_DEBUG_URL)]
+@using Microsoft.AspNetCore.SignalR.Client
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+@using MudBlazor
+@using System.Text.Json
+@inject ISnackbar Snackbar
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+
+<PageTitle>SignalR调试</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h3" Class="mb-4">
+        <MudIcon Icon="@Icons.Material.Filled.Settings" Class="mr-2" />
+        SignalR调试
+    </MudText>
+
+    <!-- 连接配置 -->
+    <MudPaper Class="pa-4 mb-4" Elevation="2">
+        <MudText Typo="Typo.h5" Class="mb-3">连接配置</MudText>
+        <MudGrid>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="accessToken" 
+                            Label="Access Token" 
+                            Variant="Variant.Outlined"
+                            HelperText="输入用于SignalR连接的访问令牌" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="hubUrl" 
+                            Label="Hub URL" 
+                            Variant="Variant.Outlined"
+                            HelperText="SignalR Hub的URL地址" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudButton Variant="Variant.Filled" 
+                         Color="Color.Primary" 
+                         OnClick="ConnectAsync"
+                         Disabled="isConnecting">
+                    @if (isConnecting)
+                    {
+                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                        <MudText Class="ms-2">连接中...</MudText>
+                    }
+                    else
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Cable" />
+                        <MudText Class="ms-2">@(IsConnected ? "重新连接" : "连接")</MudText>
+                    }
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" 
+                         Color="Color.Secondary" 
+                         OnClick="DisconnectAsync"
+                         Disabled="!IsConnected"
+                         Class="ms-2">
+                    <MudIcon Icon="@Icons.Material.Filled.PowerOff" />
+                    <MudText Class="ms-2">断开连接</MudText>
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <!-- 连接状态 -->
+    <MudPaper Class="pa-4 mb-4" Elevation="2">
+        <MudText Typo="Typo.h5" Class="mb-3">连接状态</MudText>
+        <MudChip Color="@GetConnectionStatusColor()" 
+                Label="true" 
+                Size="Size.Medium"
+                T="string">
+            @connectionStatus
+        </MudChip>
+        @if (!string.IsNullOrEmpty(connectionId))
+        {
+            <MudText Typo="Typo.body2" Class="mt-2">
+                连接ID: @connectionId
+            </MudText>
+        }
+    </MudPaper>
+
+    <!-- 消息发送 -->
+    <MudPaper Class="pa-4 mb-4" Elevation="2">
+        <MudText Typo="Typo.h5" Class="mb-3">发送消息</MudText>
+        <MudGrid>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="userName" 
+                            Label="用户名" 
+                            Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="message" 
+                            Label="消息内容" 
+                            Variant="Variant.Outlined"
+                            OnKeyDown="OnMessageKeyDown" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudButton Variant="Variant.Filled" 
+                         Color="Color.Success" 
+                         OnClick="SendMessageAsync"
+                         Disabled="!IsConnected || string.IsNullOrWhiteSpace(message)">
+                    <MudIcon Icon="@Icons.Material.Filled.Send" />
+                    <MudText Class="ms-2">发送消息</MudText>
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <!-- 方法调用 -->
+    <MudPaper Class="pa-4 mb-4" Elevation="2">
+        <MudText Typo="Typo.h5" Class="mb-3">方法调用</MudText>
+        <MudGrid>
+            <MudItem xs="12" sm="6">
+                <MudSelect @bind-Value="selectedMethod" 
+                         Label="选择方法" 
+                         Variant="Variant.Outlined"
+                         T="string">
+                    @foreach (var method in availableMethods)
+                    {
+                        <MudSelectItem Value="@method">@method</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="methodArguments" 
+                            Label="方法参数 (JSON格式)" 
+                            Variant="Variant.Outlined"
+                            Lines="3" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudButton Variant="Variant.Filled" 
+                         Color="Color.Primary" 
+                         OnClick="InvokeMethodAsync"
+                         Disabled="!IsConnected || string.IsNullOrWhiteSpace(selectedMethod)">
+                    <MudIcon Icon="@Icons.Material.Filled.PlayArrow" />
+                    <MudText Class="ms-2">调用方法</MudText>
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <!-- 消息列表 -->
+    <MudPaper Class="pa-4" Elevation="2">
+        <MudText Typo="Typo.h5" Class="mb-3">消息日志</MudText>
+        <MudButton Variant="Variant.Outlined" 
+                 Color="Color.Warning" 
+                 OnClick="ClearMessages"
+                 Class="mb-3">
+            <MudIcon Icon="@Icons.Material.Filled.Clear" />
+            <MudText Class="ms-2">清空日志</MudText>
+        </MudButton>
+        
+        <MudVirtualize Items="messages" Context="msg" ItemSize="60">
+            <div class="d-flex align-center pa-2 @(msg.IsError ? "mud-error-text" : "")">
+                <MudIcon Icon="@GetMessageIcon(msg.Type)" 
+                        Color="@GetMessageColor(msg.Type)" 
+                        Class="mr-3" />
+                <div class="flex-grow-1">
+                    <MudText Typo="Typo.body2">
+                        <strong>[@msg.Timestamp.ToString("HH:mm:ss")]</strong> @msg.Content
+                    </MudText>
+                    @if (!string.IsNullOrEmpty(msg.Details))
+                    {
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                            @msg.Details
+                        </MudText>
+                    }
+                </div>
+            </div>
+            <MudDivider />
+        </MudVirtualize>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    public const string SIGNALR_DEBUG_URL = "/signalr-debug";
+
+    private HubConnection? hubConnection;
+    private string accessToken = "eyJhbGciOiJodHRwOi8vd3d3LnczLm9yZy8yMDAxLzA0L3htbGRzaWctbW9yZSNobWFjLXNoYTI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiYWRtaW4iLCJ1aWQiOiI5OWQ5ZDI3OS03YTE2LTc2NDAtMmI3OS0zYTEzZjliOTY0MzIiLCJuaWNrbmFtZSI6IkFkbWluIiwiYml0IjoiMTExMTExMTExMTExMTExMSIsImFsYXJtIjoiMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMSIsInJpZCI6IjEiLCJleHAiOjUzMjY3MzU3NzksImlzcyI6IkZJUFNWNyIsImF1ZCI6IkZJUFNWNyJ9.DlDmF8MqGXfR6Qz-f_SATYn4RiPJOI83C4WpdJE1s5s";
+    private string hubUrl = "/chathub";
+    private string connectionStatus = "未连接";
+    private string connectionId = "";
+    private bool isConnecting = false;
+    private string userName = "";
+    private string message = "";
+    private string selectedMethod = "";
+    private string methodArguments = "";
+    
+    private readonly List<string> availableMethods = new()
+    {
+        "SendMessage",
+        "SendMessageToAll",
+        "SendMessageToUser",
+        "JoinGroup",
+        "LeaveGroup",
+        "SendMessageToGroup"
+    };
+
+    private readonly List<SignalRMessage> messages = new();
+
+    /// <summary>
+    /// 判断是否已连接
+    /// </summary>
+    private bool IsConnected => hubConnection?.State == HubConnectionState.Connected;
+
+    /// <summary>
+    /// 连接到SignalR Hub
+    /// </summary>
+    private async Task ConnectAsync()
+    {
+        try
+        {
+            isConnecting = true;
+            
+            if (hubConnection is not null)
+            {
+                await hubConnection.DisposeAsync();
+            }
+
+            hubConnection = new HubConnectionBuilder()
+                .WithUrl(hubUrl, options =>
+                {
+                    if (!string.IsNullOrWhiteSpace(accessToken))
+                    {
+                        options.AccessTokenProvider = () => Task.FromResult(accessToken);
+                    }
+                })
+                .WithAutomaticReconnect()
+                .Build();
+
+            // 注册Hub方法
+            RegisterHubMethods();
+
+            // 连接状态变化处理
+            hubConnection.Closed += OnConnectionClosed;
+            hubConnection.Reconnecting += OnReconnecting;
+            hubConnection.Reconnected += OnReconnected;
+
+            await hubConnection.StartAsync();
+            
+            connectionStatus = "已连接";
+            connectionId = hubConnection.ConnectionId ?? "";
+            
+            AddMessage("系统", "SignalR连接成功", MessageType.Success);
+            Snackbar.Add("SignalR连接成功", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            connectionStatus = "连接失败";
+            connectionId = "";
+            AddMessage("系统", $"连接失败: {ex.Message}", MessageType.Error);
+            Snackbar.Add($"连接失败: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isConnecting = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// 断开连接
+    /// </summary>
+    private async Task DisconnectAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+            hubConnection = null;
+        }
+        
+        connectionStatus = "已断开";
+        connectionId = "";
+        AddMessage("系统", "SignalR连接已断开", MessageType.Info);
+        Snackbar.Add("SignalR连接已断开", Severity.Info);
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// 发送消息
+    /// </summary>
+    private async Task SendMessageAsync()
+    {
+        if (hubConnection is null || !IsConnected || string.IsNullOrWhiteSpace(message))
+            return;
+
+        try
+        {
+            await hubConnection.SendAsync("SendMessage", userName, message);
+            AddMessage("发送", $"{userName}: {message}", MessageType.Sent);
+            message = "";
+        }
+        catch (Exception ex)
+        {
+            AddMessage("错误", $"发送消息失败: {ex.Message}", MessageType.Error);
+            Snackbar.Add($"发送消息失败: {ex.Message}", Severity.Error);
+        }
+    }
+
+    /// <summary>
+    /// 调用方法
+    /// </summary>
+    private async Task InvokeMethodAsync()
+    {
+        if (hubConnection is null || !IsConnected || string.IsNullOrWhiteSpace(selectedMethod))
+            return;
+
+        try
+        {
+            object[]? args = null;
+            
+            if (!string.IsNullOrWhiteSpace(methodArguments))
+            {
+                args = JsonSerializer.Deserialize<object[]>(methodArguments);
+            }
+
+            if (args != null)
+            {
+                await hubConnection.SendAsync(selectedMethod, args);
+            }
+            else
+            {
+                await hubConnection.SendAsync(selectedMethod);
+            }
+            
+            AddMessage("调用", $"方法 {selectedMethod} 调用成功", MessageType.Success);
+            Snackbar.Add($"方法 {selectedMethod} 调用成功", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            AddMessage("错误", $"调用方法失败: {ex.Message}", MessageType.Error);
+            Snackbar.Add($"调用方法失败: {ex.Message}", Severity.Error);
+        }
+    }
+
+    /// <summary>
+    /// 注册Hub方法
+    /// </summary>
+    private void RegisterHubMethods()
+    {
+        if (hubConnection is null) return;
+
+        hubConnection.On<string, string>("ReceiveMessage", (user, message) =>
+        {
+            AddMessage("接收", $"{user}: {message}", MessageType.Received);
+            InvokeAsync(StateHasChanged);
+        });
+
+        hubConnection.On<string>("SystemMessage", (message) =>
+        {
+            AddMessage("系统", message, MessageType.System);
+            InvokeAsync(StateHasChanged);
+        });
+    }
+
+    /// <summary>
+    /// 消息输入框键盘事件
+    /// </summary>
+    private async Task OnMessageKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+        {
+            await SendMessageAsync();
+        }
+    }
+
+    /// <summary>
+    /// 清空消息列表
+    /// </summary>
+    private void ClearMessages()
+    {
+        messages.Clear();
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// 添加消息到列表
+    /// </summary>
+    private void AddMessage(string source, string content, MessageType type)
+    {
+        messages.Insert(0, new SignalRMessage
+        {
+            Source = source,
+            Content = content,
+            Type = type,
+            Timestamp = DateTime.Now,
+            IsError = type == MessageType.Error
+        });
+        
+        // 限制消息数量
+        if (messages.Count > 1000)
+        {
+            messages.RemoveAt(messages.Count - 1);
+        }
+        
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// 获取连接状态颜色
+    /// </summary>
+    private Color GetConnectionStatusColor()
+    {
+        return connectionStatus switch
+        {
+            "已连接" => Color.Success,
+            "连接中" => Color.Warning,
+            "重连中" => Color.Warning,
+            _ => Color.Error
+        };
+    }
+
+    /// <summary>
+    /// 获取消息图标
+    /// </summary>
+    private string GetMessageIcon(MessageType type)
+    {
+        return type switch
+        {
+            MessageType.Sent => Icons.Material.Filled.Send,
+            MessageType.Received => Icons.Material.Filled.Inbox,
+            MessageType.System => Icons.Material.Filled.Info,
+            MessageType.Success => Icons.Material.Filled.CheckCircle,
+            MessageType.Error => Icons.Material.Filled.Error,
+            _ => Icons.Material.Filled.Message
+        };
+    }
+
+    /// <summary>
+    /// 获取消息颜色
+    /// </summary>
+    private Color GetMessageColor(MessageType type)
+    {
+        return type switch
+        {
+            MessageType.Sent => Color.Primary,
+            MessageType.Received => Color.Secondary,
+            MessageType.System => Color.Info,
+            MessageType.Success => Color.Success,
+            MessageType.Error => Color.Error,
+            _ => Color.Default
+        };
+    }
+
+    /// <summary>
+    /// 连接关闭处理
+    /// </summary>
+    private Task OnConnectionClosed(Exception? exception)
+    {
+        connectionStatus = "连接已关闭";
+        connectionId = "";
+        AddMessage("系统", exception?.Message ?? "连接已关闭", MessageType.Error);
+        return InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// 重连中处理
+    /// </summary>
+    private Task OnReconnecting(Exception? exception)
+    {
+        connectionStatus = "重连中";
+        AddMessage("系统", "正在重连...", MessageType.Info);
+        return InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// 重连成功处理
+    /// </summary>
+    private Task OnReconnected(string? connectionId)
+    {
+        connectionStatus = "已连接";
+        this.connectionId = connectionId ?? "";
+        AddMessage("系统", "重连成功", MessageType.Success);
+        return InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// 组件销毁
+    /// </summary>
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+
+    /// <summary>
+    /// SignalR消息模型
+    /// </summary>
+    private class SignalRMessage
+    {
+        public string Source { get; set; } = "";
+        public string Content { get; set; } = "";
+        public string Details { get; set; } = "";
+        public MessageType Type { get; set; }
+        public DateTime Timestamp { get; set; }
+        public bool IsError { get; set; }
+    }
+
+    /// <summary>
+    /// 消息类型枚举
+    /// </summary>
+    private enum MessageType
+    {
+        Sent,
+        Received,
+        System,
+        Success,
+        Error,
+        Info
+    }
+} 

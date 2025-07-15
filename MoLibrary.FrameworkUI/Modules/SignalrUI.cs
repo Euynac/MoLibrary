@@ -1,0 +1,52 @@
+using Microsoft.AspNetCore.Builder;
+using MoLibrary.Core.Module;
+using MoLibrary.Core.Module.Interfaces;
+using MoLibrary.Core.Module.Models;
+using MoLibrary.FrameworkUI.Pages;
+using MoLibrary.SignalR.Modules;
+using MoLibrary.UI.Modules;
+using MudBlazor;
+
+namespace MoLibrary.FrameworkUI.Modules;
+
+
+public static class ModuleSignalrUIBuilderExtensions
+{
+    public static ModuleSignalrUIGuide ConfigModuleSignalrUI(this WebApplicationBuilder builder,
+        Action<ModuleSignalrUIOption>? action = null)
+    {
+        return new ModuleSignalrUIGuide().Register(action);
+    }
+}
+
+public class ModuleSignalrUI(ModuleSignalrUIOption option)
+    : MoModuleWithDependencies<ModuleSignalrUI, ModuleSignalrUIOption, ModuleSignalrUIGuide>(option)
+{
+    public override EMoModules CurModuleEnum()
+    {
+        return EMoModules.SignalrUI;
+    }
+
+    public override void ClaimDependencies()
+    {
+        if (!Option.DisableSignalRDebugPage)
+        {
+            DependsOnModule<ModuleSignalRGuide>().Register();
+            DependsOnModule<ModuleUICoreGuide>().Register().RegisterUIComponents(p => p.RegisterComponent<SignalRDebug>(SignalRDebug.SIGNALR_DEBUG_URL, "SignalR调试", Icons.Material.Filled.Settings, "系统管理", addToNav: true, navOrder: 100));
+        }
+    }
+}
+
+public class ModuleSignalrUIGuide : MoModuleGuide<ModuleSignalrUI, ModuleSignalrUIOption, ModuleSignalrUIGuide>
+{
+
+
+}
+
+public class ModuleSignalrUIOption : MoModuleOption<ModuleSignalrUI>
+{ 
+    /// <summary>
+    /// 是否禁用SignalR调试页面
+    /// </summary>
+    public bool DisableSignalRDebugPage { get; set; }
+}
