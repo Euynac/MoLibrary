@@ -158,12 +158,13 @@ public class ModuleRegisterInfo(Type moduleType)
     /// <param name="order">配置操作执行顺序。</param>
     /// <param name="optionAction">配置操作委托。</param>
     /// <param name="guideFrom"></param>
-    /// <param name="caller"></param>
+    /// <param name="key"></param>
+    /// <param name="secondKey"></param>
     public void AddConfigureAction<TOption>(int order, Action<TOption> optionAction, EMoModules? guideFrom,
-        string caller) where TOption : class, IMoModuleOptionBase, new()
+        string? secondKey, string key) where TOption : class, IMoModuleOptionBase, new()
     {
         RegisterRequests.Add(
-            new ModuleRegisterRequest($"{caller}:ConfigOption<{typeof(TOption).Name}>_{Guid.NewGuid()}")
+            new ModuleRegisterRequest($"{key}{secondKey?.BeAfter("_")}:ConfigOption<{typeof(TOption).Name}>")
             {
                 ConfigureContext = context =>
                 {

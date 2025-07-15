@@ -3,6 +3,7 @@ using MediatR;
 using MoLibrary.Core.Module.BuilderWrapper;
 using MoLibrary.Core.Module.Features;
 using MoLibrary.Core.Module.Models;
+using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.Core.Module.Interfaces;
 public class MoModuleGuide
@@ -154,16 +155,19 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
 
 
     #region 额外配置Module
+
     /// <summary>
     /// 配置模块的核心方法，用于注册模块配置请求
     /// </summary>
     /// <param name="key">配置方法的唯一标识符</param>
+    /// <param name="secondKey">配置方法第二标志符，用于某些可多次调用该方法的情况，若本身可多次调用，可传入<see cref=" Guid.NewGuid()"/></param>
     /// <param name="context">模块注册上下文操作</param>
     /// <param name="order">配置执行顺序</param>
     /// <param name="requestMethod">请求的配置方法类型</param>
-    private void ConfigureModule(string key, Action<ModuleRegisterContext> context, int order, EMoModuleConfigMethods requestMethod)
+    private void ConfigureModule(string key, string? secondKey, Action<ModuleRegisterContext> context, int order,
+        EMoModuleConfigMethods requestMethod)
     {
-        var request = new ModuleRegisterRequest(key)
+        var request = new ModuleRegisterRequest($"{key}{secondKey?.BeAfter("_")}")
         {
             Order = order,
             RequestFrom = GuideFrom, 
@@ -187,24 +191,26 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     /// </summary>
     /// <param name="context">服务配置上下文操作</param>
     /// <param name="order">配置执行的具体顺序值</param>
+    /// <param name="secondKey">配置方法第二标志符，用于某些可多次调用该方法的情况，若本身可多次调用，可传入<see cref=" Guid.NewGuid()"/></param>
     /// <param name="key">配置方法的唯一标识符</param>
     protected internal void ConfigureServices(Action<ModuleRegisterContextWrapperForServices<TModuleOption>> context,
-        int order, [CallerMemberName] string key = "")
+        int order, string? secondKey = null, [CallerMemberName] string key = "")
     {
-        ConfigureModule(key, registerContext =>
+        ConfigureModule(key, secondKey, registerContext =>
         {
             context.Invoke(new ModuleRegisterContextWrapperForServices<TModuleOption>(registerContext));
         }, order, EMoModuleConfigMethods.ConfigureServices);
     }
 
     /// <summary>
-    /// <inheritdoc cref="ConfigureServices(Action{ModuleRegisterContextWrapperForServices{TModuleOption}}, int, string)"/>
+    /// <inheritdoc cref="ConfigureServices(System.Action{MoLibrary.Core.Module.Models.ModuleRegisterContextWrapperForServices{TModuleOption}},int,string?,string)"/>
     /// </summary>
     /// <param name="context">服务配置上下文操作</param>
     /// <param name="order">配置执行顺序枚举值</param>
+    /// <param name="secondKey">配置方法第二标志符，用于某些可多次调用该方法的情况，若本身可多次调用，可传入<see cref=" Guid.NewGuid()"/></param>
     /// <param name="key">配置方法的唯一标识符</param>
     protected internal void ConfigureServices(Action<ModuleRegisterContextWrapperForServices<TModuleOption>> context,
-        EMoModuleOrder order = EMoModuleOrder.Normal, [CallerMemberName] string key = "")
+        EMoModuleOrder order = EMoModuleOrder.Normal, string? secondKey = null, [CallerMemberName] string key = "")
     {
         ConfigureServices(context, (int)order, key);
     }
@@ -214,22 +220,28 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     /// </summary>
     /// <param name="context">应用程序构建器配置上下文操作</param>
     /// <param name="order">中间件执行的具体顺序值</param>
+    /// <param name="secondKey">配置方法第二标志符，用于某些可多次调用该方法的情况，若本身可多次调用，可传入<see cref=" Guid.NewGuid()"/></param>
     /// <param name="key">配置方法的唯一标识符</param>
-    protected internal void ConfigureApplicationBuilder(Action<ModuleRegisterContextWrapperForApplicationBuilder<TModuleOption>> context, int order, [CallerMemberName] string key = "")
+    protected internal void ConfigureApplicationBuilder(
+        Action<ModuleRegisterContextWrapperForApplicationBuilder<TModuleOption>> context, int order,
+        string? secondKey = null, [CallerMemberName] string key = "")
     {
-        ConfigureModule(key, registerContext =>
+        ConfigureModule(key, secondKey, registerContext =>
         {
             context.Invoke(new ModuleRegisterContextWrapperForApplicationBuilder<TModuleOption>(registerContext));
         }, order, EMoModuleConfigMethods.ConfigureApplicationBuilder);
     }
 
     /// <summary>
-    /// <inheritdoc cref="ConfigureApplicationBuilder(Action{ModuleRegisterContextWrapperForApplicationBuilder{TModuleOption}}, int, string)"/>
+    /// <inheritdoc cref="ConfigureApplicationBuilder(System.Action{MoLibrary.Core.Module.Models.ModuleRegisterContextWrapperForApplicationBuilder{TModuleOption}},int,string?,string)"/>
     /// </summary>
     /// <param name="context">应用程序构建器配置上下文操作</param>
     /// <param name="order">中间件执行顺序枚举值</param>
+    /// <param name="secondKey">配置方法第二标志符，用于某些可多次调用该方法的情况，若本身可多次调用，可传入<see cref=" Guid.NewGuid()"/></param>
     /// <param name="key">配置方法的唯一标识符</param>
-    protected internal void ConfigureApplicationBuilder(Action<ModuleRegisterContextWrapperForApplicationBuilder<TModuleOption>> context, EMoModuleApplicationMiddlewaresOrder order, [CallerMemberName] string key = "")
+    protected internal void ConfigureApplicationBuilder(
+        Action<ModuleRegisterContextWrapperForApplicationBuilder<TModuleOption>> context,
+        EMoModuleApplicationMiddlewaresOrder order, string? secondKey = null, [CallerMemberName] string key = "")
     {
         ConfigureApplicationBuilder(context, (int)order, key);
     }
@@ -239,24 +251,28 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     /// </summary>
     /// <param name="context">后置服务配置上下文操作</param>
     /// <param name="order">配置执行的具体顺序值</param>
+    /// <param name="secondKey">配置方法第二标志符，用于某些可多次调用该方法的情况，若本身可多次调用，可传入<see cref=" Guid.NewGuid()"/></param>
     /// <param name="key">配置方法的唯一标识符</param>
-    protected internal void PostConfigureServices(Action<ModuleRegisterContextWrapperForServices<TModuleOption>> context,
-        int order, [CallerMemberName] string key = "")
+    protected internal void PostConfigureServices(
+        Action<ModuleRegisterContextWrapperForServices<TModuleOption>> context,
+        int order, string? secondKey = null, [CallerMemberName] string key = "")
     {
-        ConfigureModule(key, registerContext =>
+        ConfigureModule(key, secondKey, registerContext =>
         {
             context.Invoke(new ModuleRegisterContextWrapperForServices<TModuleOption>(registerContext));
         }, order, EMoModuleConfigMethods.PostConfigureServices);
     }
 
     /// <summary>
-    /// <inheritdoc cref="PostConfigureServices(Action{ModuleRegisterContextWrapperForServices{TModuleOption}}, int, string)"/>
+    /// <inheritdoc cref="PostConfigureServices(System.Action{MoLibrary.Core.Module.Models.ModuleRegisterContextWrapperForServices{TModuleOption}},int,string?,string)"/>
     /// </summary>
     /// <param name="context">后置服务配置上下文操作</param>
     /// <param name="order">配置执行顺序枚举值</param>
+    /// <param name="secondKey">配置方法第二标志符，用于某些可多次调用该方法的情况，若本身可多次调用，可传入<see cref=" Guid.NewGuid()"/></param>
     /// <param name="key">配置方法的唯一标识符</param>
-    protected internal void PostConfigureServices(Action<ModuleRegisterContextWrapperForServices<TModuleOption>> context,
-        EMoModuleOrder order = EMoModuleOrder.Normal, [CallerMemberName] string key = "")
+    protected internal void PostConfigureServices(
+        Action<ModuleRegisterContextWrapperForServices<TModuleOption>> context,
+        EMoModuleOrder order = EMoModuleOrder.Normal, string? secondKey = null, [CallerMemberName] string key = "")
     {
         PostConfigureServices(context, (int)order, key);
     }
@@ -266,24 +282,26 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     /// </summary>
     /// <param name="context">Web应用程序构建器配置上下文操作</param>
     /// <param name="order">配置执行的具体顺序值</param>
+    /// <param name="secondKey">配置方法第二标志符，用于某些可多次调用该方法的情况，若本身可多次调用，可传入<see cref=" Guid.NewGuid()"/></param>
     /// <param name="key">配置方法的唯一标识符</param>
     protected internal void ConfigureBuilder(Action<ModuleRegisterContextWrapperForBuilder<TModuleOption>> context,
-        int order, [CallerMemberName] string key = "")
+        int order, string? secondKey = null, [CallerMemberName] string key = "")
     {
-        ConfigureModule(key, registerContext =>
+        ConfigureModule(key, secondKey, registerContext =>
         {
             context.Invoke(new ModuleRegisterContextWrapperForBuilder<TModuleOption>(registerContext));
         }, order, EMoModuleConfigMethods.ConfigureBuilder);
     }
 
     /// <summary>
-    /// <inheritdoc cref="ConfigureBuilder(Action{ModuleRegisterContextWrapperForBuilder{TModuleOption}}, int, string)"/>
+    /// <inheritdoc cref="ConfigureBuilder(System.Action{MoLibrary.Core.Module.Models.ModuleRegisterContextWrapperForBuilder{TModuleOption}},int,string?,string)"/>
     /// </summary>
     /// <param name="context">Web应用程序构建器配置上下文操作</param>
     /// <param name="order">配置执行顺序枚举值</param>
+    /// <param name="secondKey"></param>
     /// <param name="key">配置方法的唯一标识符</param>
     protected internal void ConfigureBuilder(Action<ModuleRegisterContextWrapperForBuilder<TModuleOption>> context,
-        EMoModuleOrder order = EMoModuleOrder.Normal, [CallerMemberName] string key = "")
+        EMoModuleOrder order = EMoModuleOrder.Normal, string? secondKey = null, [CallerMemberName] string key = "")
     {
         ConfigureBuilder(context, (int)order, key);
     }
@@ -293,26 +311,30 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     /// </summary>
     /// <param name="context">端点配置上下文操作</param>
     /// <param name="order">配置执行的具体顺序值</param>
+    /// <param name="secondKey">配置方法第二标志符，用于某些可多次调用该方法的情况，若本身可多次调用，可传入<see cref=" Guid.NewGuid()"/></param>
     /// <param name="key">配置方法的唯一标识符</param>
-    protected internal void ConfigureEndpoints(Action<ModuleRegisterContextWrapperForApplicationBuilder<TModuleOption>> context,
-        int order, [CallerMemberName] string key = "")
+    protected internal void ConfigureEndpoints(
+        Action<ModuleRegisterContextWrapperForApplicationBuilder<TModuleOption>> context,
+        int order, string? secondKey = null, [CallerMemberName] string key = "")
     {
-        ConfigureModule(key, registerContext =>
+        ConfigureModule(key, secondKey, registerContext =>
         {
             context.Invoke(new ModuleRegisterContextWrapperForApplicationBuilder<TModuleOption>(registerContext));
         }, order, EMoModuleConfigMethods.ConfigureEndpoints);
     }
 
     /// <summary>
-    /// <inheritdoc cref="ConfigureEndpoints(Action{ModuleRegisterContextWrapperForApplicationBuilder{TModuleOption}}, int, string)"/>
+    /// <inheritdoc cref="ConfigureEndpoints(System.Action{MoLibrary.Core.Module.Models.ModuleRegisterContextWrapperForApplicationBuilder{TModuleOption}},int,string?,string)"/>
     /// </summary>
     /// <param name="context">端点配置上下文操作</param>
     /// <param name="order">配置执行顺序枚举值</param>
+    /// <param name="secondKey">配置方法第二标志符，用于某些可多次调用该方法的情况，若本身可多次调用，可传入<see cref=" Guid.NewGuid()"/></param>
     /// <param name="key">配置方法的唯一标识符</param>
-    protected internal void ConfigureEndpoints(Action<ModuleRegisterContextWrapperForApplicationBuilder<TModuleOption>> context,
-        EMoModuleOrder order = EMoModuleOrder.Normal, [CallerMemberName] string key = "")
+    protected internal void ConfigureEndpoints(
+        Action<ModuleRegisterContextWrapperForApplicationBuilder<TModuleOption>> context,
+        EMoModuleOrder order = EMoModuleOrder.Normal, string? secondKey = null, [CallerMemberName] string key = "")
     {
-        ConfigureEndpoints(context, (int)order, key);
+        ConfigureEndpoints(context, (int)order, secondKey, key);
     }
 
 
@@ -320,21 +342,45 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
 
     #region 额外设置
 
-    public TModuleGuideSelf ConfigureModuleOption(Action<TModuleOption>? optionAction, EMoModuleOrder order = EMoModuleOrder.Normal, [CallerMemberName] string caller = "")
+    /// <summary>
+    /// 配置模块选项
+    /// </summary>
+    /// <param name="optionAction">模块选项配置操作</param>
+    /// <param name="order">配置执行顺序枚举值</param>
+    /// <param name="secondKey">配置方法第二标志符，用于某些可多次调用该方法的情况，若本身可多次调用，可传入<see cref=" Guid.NewGuid()"/></param>
+    /// <param name="key">配置方法的唯一标识符</param>
+    public TModuleGuideSelf ConfigureModuleOption(Action<TModuleOption>? optionAction,
+        EMoModuleOrder order = EMoModuleOrder.Normal, string? secondKey = null, [CallerMemberName] string key = "")
     {
-        return ConfigureOption(optionAction, (int) order, caller);
+        return ConfigureOption(optionAction, (int) order, secondKey, key);
     }
-    private TModuleGuideSelf ConfigureOption<TOption>(Action<TOption>? optionAction, int order, string caller) where TOption : class, IMoModuleOptionBase, new()
+
+    /// <summary>
+    /// 配置模块选项
+    /// </summary>
+    /// <param name="optionAction">模块选项配置操作</param>
+    /// <param name="order">配置执行顺序枚举值</param>
+    /// <param name="secondKey">配置方法第二标志符，用于某些可多次调用该方法的情况，若本身可多次调用，可传入<see cref=" Guid.NewGuid()"/></param>
+    private TModuleGuideSelf ConfigureOption<TOption>(Action<TOption>? optionAction, int order, string? secondKey,
+        string key) where TOption : class, IMoModuleOptionBase, new()
     {
         if(optionAction == null) return (TModuleGuideSelf) this;
 
         var requestInfo = RegisterModule();
-        requestInfo.AddConfigureAction(order, optionAction, GuideFrom, caller);
+        requestInfo.AddConfigureAction(order, optionAction, GuideFrom, secondKey, key);
         return (TModuleGuideSelf) this;
     }
-    public TModuleGuideSelf ConfigureExtraOption<TOption>(Action<TOption>? optionAction, EMoModuleOrder order = EMoModuleOrder.Normal, [CallerMemberName] string caller = "") where TOption : class, IMoModuleExtraOption<TModule>, new()
+
+    /// <summary>
+    /// 配置模块额外选项
+    /// </summary>
+    /// <param name="optionAction">模块额外选项配置操作</param>
+    /// <param name="order">配置执行顺序枚举值</param>
+    /// <param name="secondKey">配置方法第二标志符，用于某些可多次调用该方法的情况，若本身可多次调用，可传入<see cref=" Guid.NewGuid()"/></param>
+    public TModuleGuideSelf ConfigureExtraOption<TOption>(Action<TOption>? optionAction,
+        EMoModuleOrder order = EMoModuleOrder.Normal, string? secondKey = null, [CallerMemberName] string key = "") where TOption : class, IMoModuleExtraOption<TModule>, new()
     {
-        return ConfigureOption(optionAction, (int) order, caller);
+        return ConfigureOption(optionAction, (int) order, secondKey, key);
     }
 
     #endregion
