@@ -52,7 +52,7 @@ public class ModuleUICore(ModuleUICoreOption option)
 
     public override void ConfigureBuilder(WebApplicationBuilder builder)
     {
-        //巨坑：WebAssets 在VS中debug环境可以获得css等资源文件，但编译后的debug环境404错误
+        //巨坑：如果不使用下面的语句，WebAssets 在VS中debug环境虽然可以获得css等资源文件，但编译后的debug环境404错误
         //https://github.com/MudBlazor/MudBlazor/issues/2793
         builder.WebHost.UseStaticWebAssets();
     }
@@ -122,7 +122,7 @@ public class ModuleUICoreGuide : MoModuleGuide<ModuleUICore, ModuleUICoreOption,
 
             //app.MapStaticAssets();  // .NET 9支持
 
-            // 静态文件支持（用于MudBlazor资源）
+            // 静态文件支持（用于MudBlazor资源和Razor类库静态资源）
             app.UseStaticFiles();
 
             //app.UseStaticFiles(new StaticFileOptions()
