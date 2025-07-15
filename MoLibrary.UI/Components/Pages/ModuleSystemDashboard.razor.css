@@ -1,0 +1,352 @@
+.overview-container {
+    padding: 1rem 0;
+}
+
+.status-card,
+.stats-card,
+.performance-card,
+.health-card {
+    height: 100%;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.status-card:hover,
+.stats-card:hover,
+.performance-card:hover,
+.health-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.status-header,
+.stats-header,
+.performance-header,
+.health-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.performance-container,
+.health-container,
+.module-container,
+.dependency-container {
+    padding: 1rem 0;
+}
+
+.health-overview-card {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+.health-status {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.module-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+/* 数据表格样式优化 */
+::deep .mud-table {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+::deep .mud-table-head {
+    background-color: rgba(var(--mud-palette-primary-rgb), 0.08);
+}
+
+::deep .mud-table-row:hover {
+    background-color: rgba(var(--mud-palette-primary-rgb), 0.04);
+}
+
+/* 进度条样式 */
+::deep .mud-progress-linear {
+    height: 6px;
+    border-radius: 3px;
+}
+
+/* 卡片阴影效果 */
+::deep .mud-card {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+::deep .mud-card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* 标签页样式 */
+::deep .mud-tabs .mud-tab-panel {
+    padding: 1rem;
+}
+
+::deep .mud-tabs .mud-tab-slider {
+    background-color: var(--mud-palette-primary);
+    height: 3px;
+    border-radius: 2px;
+}
+
+/* 芯片样式 */
+::deep .mud-chip {
+    border-radius: 16px;
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+}
+
+/* 列表项样式 */
+::deep .mud-list-item {
+    border-radius: 8px;
+    margin-bottom: 0.25rem;
+}
+
+::deep .mud-list-item:hover {
+    background-color: rgba(var(--mud-palette-primary-rgb), 0.04);
+}
+
+/* 对话框样式 */
+::deep .mud-dialog {
+    border-radius: 12px;
+}
+
+::deep .mud-dialog-content {
+    padding: 1.5rem;
+}
+
+/* 按钮样式 */
+::deep .mud-button-text {
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+::deep .mud-button-text:hover {
+    background-color: rgba(var(--mud-palette-primary-rgb), 0.08);
+}
+
+/* 纸张容器样式 */
+::deep .mud-paper {
+    border-radius: 8px;
+    background-color: rgba(var(--mud-palette-surface-rgb), 0.8);
+    backdrop-filter: blur(10px);
+}
+
+/* 层级结构样式 */
+.module-chips .mud-chip {
+    margin: 0.125rem;
+    font-size: 0.7rem;
+}
+
+/* 响应式设计 */
+@media (max-width: 960px) {
+    .overview-container,
+    .performance-container,
+    .health-container,
+    .module-container,
+    .dependency-container {
+        padding: 0.5rem 0;
+    }
+    
+    .status-header,
+    .stats-header,
+    .performance-header,
+    .health-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+    
+    .module-chips {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 600px) {
+    .health-status {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    ::deep .mud-card {
+        margin-bottom: 1rem;
+    }
+    
+    ::deep .mud-tabs .mud-tab-panel {
+        padding: 0.5rem;
+    }
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.overview-container > *,
+.performance-container > *,
+.health-container > *,
+.module-container > *,
+.dependency-container > * {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* 状态指示器 */
+.status-indicator {
+    position: relative;
+    display: inline-block;
+}
+
+.status-indicator::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -8px;
+    width: 4px;
+    height: 100%;
+    background-color: var(--mud-palette-primary);
+    border-radius: 2px;
+}
+
+/* 数据网格优化 */
+::deep .mud-data-grid {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+::deep .mud-data-grid-header {
+    background-color: rgba(var(--mud-palette-primary-rgb), 0.08);
+    font-weight: 600;
+}
+
+::deep .mud-data-grid-row {
+    transition: background-color 0.2s ease;
+}
+
+::deep .mud-data-grid-row:hover {
+    background-color: rgba(var(--mud-palette-primary-rgb), 0.04);
+}
+
+/* 加载状态 */
+.loading-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 200px;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* 空状态样式 */
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: var(--mud-palette-text-secondary);
+}
+
+.empty-state svg {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+/* 健康状态特殊样式 */
+.health-critical {
+    background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+}
+
+.health-warning {
+    background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
+}
+
+.health-success {
+    background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%);
+}
+
+/* 模块层级可视化 */
+.module-layer {
+    position: relative;
+    margin-bottom: 1rem;
+}
+
+.module-layer::before {
+    content: '';
+    position: absolute;
+    left: -1rem;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(to bottom, var(--mud-palette-primary), transparent);
+    border-radius: 2px;
+}
+
+/* 性能指标样式 */
+.performance-metric {
+    text-align: center;
+    padding: 1rem;
+    border-radius: 8px;
+    background: rgba(var(--mud-palette-surface-rgb), 0.6);
+    backdrop-filter: blur(10px);
+}
+
+.performance-metric h6 {
+    margin: 0.5rem 0;
+    font-weight: 600;
+}
+
+.performance-metric .metric-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+/* 图标动画 */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.status-icon {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+/* 数据表格筛选器样式 */
+::deep .mud-table-toolbar {
+    padding: 1rem;
+    background-color: rgba(var(--mud-palette-surface-rgb), 0.8);
+    border-radius: 8px 8px 0 0;
+}
+
+/* 滚动条样式 */
+::deep .mud-table-container::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::deep .mud-table-container::-webkit-scrollbar-track {
+    background: rgba(var(--mud-palette-surface-rgb), 0.1);
+    border-radius: 4px;
+}
+
+::deep .mud-table-container::-webkit-scrollbar-thumb {
+    background: rgba(var(--mud-palette-primary-rgb), 0.3);
+    border-radius: 4px;
+}
+
+::deep .mud-table-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(var(--mud-palette-primary-rgb), 0.5);
+} 
