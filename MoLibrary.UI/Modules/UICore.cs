@@ -145,7 +145,7 @@ public class ModuleUICoreGuide : MoModuleGuide<ModuleUICore, ModuleUICoreOption,
 
             if (!builder.ModuleOption.DisableModuleSystemUI)
             {
-                registry.RegisterComponent<ModuleSystemDashboard>("module-system-dashboard", "模块系统概览", Icons.Material.Filled.Dashboard, "模块系统", true);
+                registry.RegisterComponent<ModuleSystemDashboard>(ModuleSystemDashboard.MODULE_SYSTEM_DASHBOARD_URL, "模块系统概览", Icons.Material.Filled.Dashboard, "模块系统", true);
             }
 
             builder.WebApplication.MapRazorComponents<MoApp>()

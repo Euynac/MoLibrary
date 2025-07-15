@@ -1,8 +1,7 @@
-@page "/module-system-dashboard"
+@attribute [Route(MODULE_SYSTEM_DASHBOARD_URL)]
 @using MoLibrary.Core.Module.Dashboard.Interfaces
 @using MoLibrary.Core.Module.Dashboard.Models
 @using MoLibrary.Core.Module.Models
-@using MudBlazor
 @using MoLibrary.UI.Components.Pages.Dashboard
 @inject IModuleSystemStatusService StatusService
 @inject ISnackbar SnackBar
@@ -45,6 +44,7 @@
                    SelectedModuleDetail="selectedModuleDetail" />
 
 @code {
+    public const string MODULE_SYSTEM_DASHBOARD_URL = "/module-system-dashboard";
     private ModuleSystemStatus? systemStatus;
     private ModuleSystemPerformance? systemPerformance;
     private ModuleSystemHealthCheck? healthCheck;
