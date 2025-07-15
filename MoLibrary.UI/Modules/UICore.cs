@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using MoLibrary.Core.Module;
+using MoLibrary.Core.Module.Dashboard.Interfaces;
+using MoLibrary.Core.Module.Dashboard;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.UI.Components;
@@ -59,6 +61,14 @@ public class ModuleUICore(ModuleUICoreOption option)
     /// <param name="services">服务集合</param>
     public override void ConfigureServices(IServiceCollection services)
     {
+
+        // 注册模块系统状态服务
+        if (Option.AddModuleSystemUI)
+        {
+            services.AddSingleton<IModuleSystemStatusService, ModuleSystemStatusService>();
+        }
+
+
         // 添加MudBlazor服务
         services.AddMudServices();
 
@@ -150,4 +160,10 @@ public class ModuleUICoreOption : MoModuleOption<ModuleUICore>
     /// 应用栏名称
     /// </summary>
     public string UIAppBarName { get; set; } = "MoLibrary";
+
+    /// <summary>
+    /// 使用模块系统UI界面
+    /// </summary>
+    public bool AddModuleSystemUI { get; set; }
+
 }
