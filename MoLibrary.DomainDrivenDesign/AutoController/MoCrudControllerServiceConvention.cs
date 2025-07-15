@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc.ApplicationModels;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using MoLibrary.Core.Extensions;
 using MoLibrary.DomainDrivenDesign.Attributes;
 using MoLibrary.DomainDrivenDesign.AutoController.Features;
 using MoLibrary.DomainDrivenDesign.AutoController.Interfaces;
@@ -42,7 +41,7 @@ public class MoCrudControllerServiceConvention(
         {
             var controllerType = controller.ControllerType.AsType();
 
-            if (!controllerType.Name.EndsWith(CrudControllerOption.CrudControllerPostfix))
+            if (!controllerType.IsImplementInterface<IMoCrudAppService>())
             {
                 continue;
             }
