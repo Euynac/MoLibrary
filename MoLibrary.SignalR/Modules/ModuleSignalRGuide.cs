@@ -79,7 +79,7 @@ public class ModuleSignalRGuide : MoModuleGuide<ModuleSignalR, ModuleSignalROpti
     {
         ConfigureModuleOption(option =>
         {
-            option.Hubs.Add(typeof(THubServer));
+            option.Hubs.Add(new MoHubInfo(typeof(THubServer), pattern));
         }, secondKey: typeof(THubServer).Name);
         ConfigureEndpoints(context =>
         {
