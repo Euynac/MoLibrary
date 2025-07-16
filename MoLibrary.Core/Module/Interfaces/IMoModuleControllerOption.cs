@@ -46,7 +46,7 @@ public interface IMoModuleControllerOption
     public string GetSwaggerGroupName();
 
     /// <summary>
-    /// Final controller route template.
+    /// Final controller route template. Hint: if your controller method route starts with "/", then this template will be ignored!
     /// </summary>
     /// <typeparam name="TController"></typeparam>
     /// <returns></returns>

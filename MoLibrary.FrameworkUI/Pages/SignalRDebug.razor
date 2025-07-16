@@ -1,11 +1,20 @@
 @attribute [Route(SIGNALR_DEBUG_URL)]
 @using Microsoft.AspNetCore.SignalR.Client
 @using Microsoft.AspNetCore.Components.Web
+@using Microsoft.Extensions.Options
 @using Microsoft.JSInterop
+@using MoLibrary.SignalR.Modules
 @using MudBlazor
 @using System.Text.Json
+@using MoLibrary.SignalR.Controllers
+@using MoLibrary.SignalR.Models
+@using System.Net.Http.Json
+@using MoLibrary.Tool.MoResponse
 @inject ISnackbar SnackBar
 @inject IJSRuntime JSRuntime
+@inject IOptions<ModuleSignalROption> SignalROptions
+@inject HttpClient HttpClient
+@inject NavigationManager NavigationManager
 @implements IAsyncDisposable
 
 <PageTitle>SignalR调试</PageTitle>
@@ -27,16 +36,22 @@
                             HelperText="输入用于SignalR连接的访问令牌" />
             </MudItem>
             <MudItem xs="12">
-                <MudTextField @bind-Value="hubUrl" 
-                            Label="Hub URL" 
-                            Variant="Variant.Outlined"
-                            HelperText="SignalR Hub的URL地址" />
+                <MudSelect @bind-Value="selectedHubRoute" 
+                         Label="Hub URL" 
+                         Variant="Variant.Outlined"
+                         HelperText="选择要连接的SignalR Hub"
+                         T="string">
+                    @foreach (var hub in availableHubs)
+                    {
+                        <MudSelectItem Value="@hub.Route">@hub.Source (@hub.Route)</MudSelectItem>
+                    }
+                </MudSelect>
             </MudItem>
             <MudItem xs="12">
                 <MudButton Variant="Variant.Filled" 
                          Color="Color.Primary" 
                          OnClick="ConnectAsync"
-                         Disabled="isConnecting">
+                         Disabled="isConnecting || string.IsNullOrEmpty(selectedHubRoute)">
                     @if (isConnecting)
                     {
                         <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
@@ -55,6 +70,13 @@
                          Class="ms-2">
                     <MudIcon Icon="@Icons.Material.Filled.PowerOff" />
                     <MudText Class="ms-2">断开连接</MudText>
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" 
+                         Color="Color.Info" 
+                         OnClick="LoadHubMethodsAsync"
+                         Class="ms-2">
+                    <MudIcon Icon="@Icons.Material.Filled.Refresh" />
+                    <MudText Class="ms-2">刷新Hub信息</MudText>
                 </MudButton>
             </MudItem>
         </MudGrid>
@@ -75,11 +97,87 @@
                 连接ID: @connectionId
             </MudText>
         }
+        @if (!string.IsNullOrEmpty(selectedHubRoute))
+        {
+            <MudText Typo="Typo.body2" Class="mt-1">
+                当前Hub: @selectedHubRoute
+            </MudText>
+        }
     </MudPaper>
 
-    <!-- 消息发送 -->
+    <!-- Hub方法监听 -->
     <MudPaper Class="pa-4 mb-4" Elevation="2">
-        <MudText Typo="Typo.h5" Class="mb-3">发送消息</MudText>
+        <MudText Typo="Typo.h5" Class="mb-3">Hub方法监听</MudText>
+        @if (currentHubMethods.Any())
+        {
+            <MudGrid>
+                @foreach (var method in currentHubMethods)
+                {
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudCheckBox Checked="@method.IsListening" 
+                                   Label="@method.DisplayName"
+                                   Color="Color.Primary"
+                                   T="bool"
+                                   CheckedChanged="@((bool isChecked) => ToggleMethodListener(method, isChecked))" />
+                    </MudItem>
+                }
+            </MudGrid>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Info">请先连接到Hub以加载可用的方法</MudAlert>
+        }
+    </MudPaper>
+
+    <!-- 方法调用 -->
+    <MudPaper Class="pa-4 mb-4" Elevation="2">
+        <MudText Typo="Typo.h5" Class="mb-3">方法调用</MudText>
+        <MudGrid>
+            <MudItem xs="12" sm="6">
+                <MudSelect Value="@selectedMethodName" 
+                         Label="选择方法" 
+                         Variant="Variant.Outlined"
+                         T="string"
+                         ValueChanged="OnMethodSelectionChanged">
+                    @foreach (var method in currentHubMethods)
+                    {
+                        <MudSelectItem Value="@method.Name">@method.DisplayName</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12">
+                @if (selectedMethod != null && selectedMethod.Args.Any())
+                {
+                    <MudText Typo="Typo.h6" Class="mb-2">参数设置:</MudText>
+                    @foreach (var arg in selectedMethod.Args)
+                    {
+                        <MudTextField @bind-Value="methodParameters[arg.Name]" 
+                                    Label="@($"{arg.Name} ({arg.Type})")" 
+                                    Variant="Variant.Outlined"
+                                    Class="mb-2"
+                                    HelperText="@($"参数类型: {arg.Type}")" />
+                    }
+                }
+                else if (selectedMethod != null)
+                {
+                    <MudAlert Severity="Severity.Info">该方法无需参数</MudAlert>
+                }
+            </MudItem>
+            <MudItem xs="12">
+                <MudButton Variant="Variant.Filled" 
+                         Color="Color.Primary" 
+                         OnClick="InvokeMethodAsync"
+                         Disabled="!IsConnected || string.IsNullOrWhiteSpace(selectedMethodName)">
+                    <MudIcon Icon="@Icons.Material.Filled.PlayArrow" />
+                    <MudText Class="ms-2">调用方法</MudText>
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <!-- 消息发送 (保留原有的简单消息发送功能) -->
+    <MudPaper Class="pa-4 mb-4" Elevation="2">
+        <MudText Typo="Typo.h5" Class="mb-3">快速消息发送</MudText>
         <MudGrid>
             <MudItem xs="12" sm="6">
                 <MudTextField @bind-Value="userName" 
@@ -99,39 +197,6 @@
                          Disabled="!IsConnected || string.IsNullOrWhiteSpace(message)">
                     <MudIcon Icon="@Icons.Material.Filled.Send" />
                     <MudText Class="ms-2">发送消息</MudText>
-                </MudButton>
-            </MudItem>
-        </MudGrid>
-    </MudPaper>
-
-    <!-- 方法调用 -->
-    <MudPaper Class="pa-4 mb-4" Elevation="2">
-        <MudText Typo="Typo.h5" Class="mb-3">方法调用</MudText>
-        <MudGrid>
-            <MudItem xs="12" sm="6">
-                <MudSelect @bind-Value="selectedMethod" 
-                         Label="选择方法" 
-                         Variant="Variant.Outlined"
-                         T="string">
-                    @foreach (var method in availableMethods)
-                    {
-                        <MudSelectItem Value="@method">@method</MudSelectItem>
-                    }
-                </MudSelect>
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="methodArguments" 
-                            Label="方法参数 (JSON格式)" 
-                            Variant="Variant.Outlined"
-                            Lines="3" />
-            </MudItem>
-            <MudItem xs="12">
-                <MudButton Variant="Variant.Filled" 
-                         Color="Color.Primary" 
-                         OnClick="InvokeMethodAsync"
-                         Disabled="!IsConnected || string.IsNullOrWhiteSpace(selectedMethod)">
-                    <MudIcon Icon="@Icons.Material.Filled.PlayArrow" />
-                    <MudText Class="ms-2">调用方法</MudText>
                 </MudButton>
             </MudItem>
         </MudGrid>
@@ -174,32 +239,119 @@
     public const string SIGNALR_DEBUG_URL = "/signalr-debug";
 
     private HubConnection? hubConnection;
-    private string accessToken = "eyJhbGciOiJodHRwOi8vd3d3LnczLm9yZy8yMDAxLzA0L3htbGRzaWctbW9yZSNobWFjLXNoYTI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiYWRtaW4iLCJ1aWQiOiI5OWQ5ZDI3OS03YTE2LTc2NDAtMmI3OS0zYTEzZjliOTY0MzIiLCJuaWNrbmFtZSI6IkFkbWluIiwiYml0IjoiMTExMTExMTExMTExMTExMSIsImFsYXJtIjoiMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMSIsInJpZCI6IjEiLCJleHAiOjUzMjY3MzU3NzksImlzcyI6IkZJUFNWNyIsImF1ZCI6IkZJUFNWNyJ9.DlDmF8MqGXfR6Qz-f_SATYn4RiPJOI83C4WpdJE1s5s";
-    private string hubUrl = "/chathub";
+    private string accessToken = "";
+    private string selectedHubRoute = "";
     private string connectionStatus = "未连接";
     private string connectionId = "";
     private bool isConnecting = false;
     private string userName = "";
     private string message = "";
-    private string selectedMethod = "";
-    private string methodArguments = "";
+    private string selectedMethodName = "";
     
-    private readonly List<string> availableMethods = new()
-    {
-        "SendMessage",
-        "SendMessageToAll",
-        "SendMessageToUser",
-        "JoinGroup",
-        "LeaveGroup",
-        "SendMessageToGroup"
-    };
-
+    private readonly List<SignalRServerGroupInfo> availableHubs = new();
+    private readonly List<HubMethodInfo> currentHubMethods = new();
+    private readonly Dictionary<string, string> methodParameters = new();
     private readonly List<SignalRMessage> messages = new();
+
+    private HubMethodInfo? selectedMethod => currentHubMethods.FirstOrDefault(m => m.Name == selectedMethodName);
 
     /// <summary>
     /// 判断是否已连接
     /// </summary>
     private bool IsConnected => hubConnection?.State == HubConnectionState.Connected;
+
+    /// <summary>
+    /// 组件初始化
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        // 使用配置中的默认AccessToken
+        accessToken = SignalROptions.Value.DefaultAccessToken ?? "";
+        await LoadHubMethodsAsync();
+    }
+
+    /// <summary>
+    /// 加载Hub方法信息
+    /// </summary>
+    private async Task LoadHubMethodsAsync()
+    {
+        try
+        {
+            var controllerRoute = SignalROptions.Value.GetControllerRouteTemplate<ModuleSignalRController>();
+            
+            // 使用NavigationManager.BaseUri确保有正确的基础地址
+            var baseUri = NavigationManager.BaseUri.TrimEnd('/');
+            var apiUrl = $"{baseUri}/{controllerRoute.TrimStart('/')}/hubs";
+            
+            AddMessage("系统", $"正在加载Hub信息: {apiUrl}", MessageType.Info);
+            
+            var response = await HttpClient.GetAsync(apiUrl);
+            if (response.IsSuccessStatusCode)
+            {
+                var apiResponse = await response.Content.ReadFromJsonAsync<Res<List<SignalRServerGroupInfo>>>();
+                if (apiResponse != null)
+                {
+                    if (apiResponse.IsFailed(out var error, out var hubGroups))
+                    {
+                        var errorMessage = error?.Message ?? "响应失败";
+                        AddMessage("错误", $"加载Hub信息失败: {errorMessage}", MessageType.Error);
+                        return;
+                    }
+                    availableHubs.Clear();
+                    availableHubs.AddRange(hubGroups);
+                        
+                    // 如果当前没有选择Hub，默认选择第一个
+                    if (string.IsNullOrEmpty(selectedHubRoute) && availableHubs.Any())
+                    {
+                        selectedHubRoute = availableHubs.First().Route;
+                    }
+                        
+                    UpdateCurrentHubMethods();
+                    AddMessage("系统", $"成功加载 {availableHubs.Count} 个Hub信息", MessageType.Success);
+                }
+                else
+                {
+                    AddMessage("错误", "无法解析响应数据", MessageType.Error);
+                }
+            }
+            else
+            {
+                AddMessage("错误", $"加载Hub信息失败: {response.StatusCode} - {response.ReasonPhrase}", MessageType.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            AddMessage("错误", $"加载Hub信息时发生异常: {ex.Message}", MessageType.Error);
+        }
+        
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// 更新当前Hub的方法列表
+    /// </summary>
+    private void UpdateCurrentHubMethods()
+    {
+        currentHubMethods.Clear();
+        
+        var currentHub = availableHubs.FirstOrDefault(h => h.Route == selectedHubRoute);
+        if (currentHub != null)
+        {
+            foreach (var method in currentHub.Methods)
+            {
+                currentHubMethods.Add(new HubMethodInfo
+                {
+                    Name = method.Name,
+                    DisplayName = $"{method.Desc} ({method.Name})",
+                    Args = method.Args,
+                    IsListening = true // 默认监听所有方法
+                });
+            }
+        }
+        
+        // 清除旧的参数
+        methodParameters.Clear();
+    }
 
     /// <summary>
     /// 连接到SignalR Hub
@@ -215,7 +367,12 @@
                 await hubConnection.DisposeAsync();
             }
 
-            hubConnection = new HubConnectionBuilder()
+            // 构建正确的Hub URL
+            var baseUri = NavigationManager.BaseUri.TrimEnd('/');
+            var hubRoute = selectedHubRoute.StartsWith("/") ? selectedHubRoute : $"/{selectedHubRoute}";
+            var hubUrl = $"{baseUri}{hubRoute}";
+            
+            var hubConnectionBuilder = new HubConnectionBuilder()
                 .WithUrl(hubUrl, options =>
                 {
                     if (!string.IsNullOrWhiteSpace(accessToken))
@@ -223,8 +380,9 @@
                         options.AccessTokenProvider = () => Task.FromResult(accessToken);
                     }
                 })
-                .WithAutomaticReconnect()
-                .Build();
+                .WithAutomaticReconnect();
+
+            hubConnection = hubConnectionBuilder.Build();
 
             // 注册Hub方法
             RegisterHubMethods();
@@ -239,7 +397,7 @@
             connectionStatus = "已连接";
             connectionId = hubConnection.ConnectionId ?? "";
             
-            AddMessage("系统", "SignalR连接成功", MessageType.Success);
+            AddMessage("系统", $"成功连接到SignalR Hub: {hubUrl}", MessageType.Success);
             SnackBar.Add("SignalR连接成功", Severity.Success);
         }
         catch (Exception ex)
@@ -284,7 +442,7 @@
 
         try
         {
-            await hubConnection.SendAsync("SendMessage", userName, message);
+            await hubConnection.SendAsync("ReceiveTestMessage", userName, message);
             AddMessage("发送", $"{userName}: {message}", MessageType.Sent);
             message = "";
         }
@@ -300,29 +458,32 @@
     /// </summary>
     private async Task InvokeMethodAsync()
     {
-        if (hubConnection is null || !IsConnected || string.IsNullOrWhiteSpace(selectedMethod))
+        if (hubConnection is null || !IsConnected || string.IsNullOrWhiteSpace(selectedMethodName) || selectedMethod == null)
             return;
 
         try
         {
-            object[]? args = null;
+            var args = new List<object>();
             
-            if (!string.IsNullOrWhiteSpace(methodArguments))
+            foreach (var arg in selectedMethod.Args)
             {
-                args = JsonSerializer.Deserialize<object[]>(methodArguments);
+                if (methodParameters.TryGetValue(arg.Name, out var paramValue))
+                {
+                    var convertedValue = ConvertArgument(paramValue, arg.Type);
+                    args.Add(convertedValue);
+                }
+                else
+                {
+                    // 如果没有提供参数值，根据类型提供默认值
+                    args.Add(GetDefaultValue(arg.Type));
+                }
             }
 
-            if (args != null)
-            {
-                await hubConnection.SendAsync(selectedMethod, args);
-            }
-            else
-            {
-                await hubConnection.SendAsync(selectedMethod);
-            }
+            await hubConnection.SendAsync(selectedMethodName, args.ToArray());
             
-            AddMessage("调用", $"方法 {selectedMethod} 调用成功", MessageType.Success);
-            SnackBar.Add($"方法 {selectedMethod} 调用成功", Severity.Success);
+            var argsDisplay = args.Any() ? $"参数: {string.Join(", ", args.Select(a => a?.ToString() ?? "null"))}" : "无参数";
+            AddMessage("调用", $"方法 {selectedMethodName} 调用成功 - {argsDisplay}", MessageType.Success);
+            SnackBar.Add($"方法 {selectedMethodName} 调用成功", Severity.Success);
         }
         catch (Exception ex)
         {
@@ -332,23 +493,190 @@
     }
 
     /// <summary>
+    /// 方法选择变化处理
+    /// </summary>
+    private void OnMethodSelectionChanged(string methodName)
+    {
+        selectedMethodName = methodName;
+        methodParameters.Clear();
+        
+        if (selectedMethod != null)
+        {
+            foreach (var arg in selectedMethod.Args)
+            {
+                methodParameters[arg.Name] = "";
+            }
+        }
+        
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// 切换方法监听
+    /// </summary>
+    private void ToggleMethodListener(HubMethodInfo method, bool isListening)
+    {
+        method.IsListening = isListening;
+        
+        if (hubConnection != null)
+        {
+            if (isListening)
+            {
+                RegisterSingleHubMethod(method);
+                AddMessage("系统", $"开始监听方法: {method.Name}", MessageType.Info);
+            }
+            else
+            {
+                hubConnection.Remove(method.Name);
+                AddMessage("系统", $"停止监听方法: {method.Name}", MessageType.Info);
+            }
+        }
+        
+        StateHasChanged();
+    }
+
+    /// <summary>
     /// 注册Hub方法
     /// </summary>
     private void RegisterHubMethods()
     {
         if (hubConnection is null) return;
 
-        hubConnection.On<string, string>("ReceiveMessage", (user, message) =>
+        foreach (var method in currentHubMethods.Where(m => m.IsListening))
         {
-            AddMessage("接收", $"{user}: {message}", MessageType.Received);
-            InvokeAsync(StateHasChanged);
-        });
+            RegisterSingleHubMethod(method);
+        }
+    }
 
-        hubConnection.On<string>("SystemMessage", (message) =>
+    /// <summary>
+    /// 注册单个Hub方法
+    /// </summary>
+    private void RegisterSingleHubMethod(HubMethodInfo method)
+    {
+        if (hubConnection is null) return;
+
+        // 根据参数数量动态注册不同的方法签名
+        switch (method.Args.Count)
         {
-            AddMessage("系统", message, MessageType.System);
-            InvokeAsync(StateHasChanged);
-        });
+            case 0:
+                hubConnection.On(method.Name, () =>
+                {
+                    AddMessage("接收", $"{method.Name}: 无参数", MessageType.Received);
+                    InvokeAsync(StateHasChanged);
+                });
+                break;
+            case 1:
+                hubConnection.On<object>(method.Name, (arg1) =>
+                {
+                    AddMessage("接收", $"{method.Name}: {arg1?.ToString() ?? "null"}", MessageType.Received);
+                    InvokeAsync(StateHasChanged);
+                });
+                break;
+            case 2:
+                hubConnection.On<object, object>(method.Name, (arg1, arg2) =>
+                {
+                    var args = new[] { arg1?.ToString() ?? "null", arg2?.ToString() ?? "null" };
+                    AddMessage("接收", $"{method.Name}: {string.Join(", ", args)}", MessageType.Received);
+                    InvokeAsync(StateHasChanged);
+                });
+                break;
+            case 3:
+                hubConnection.On<object, object, object>(method.Name, (arg1, arg2, arg3) =>
+                {
+                    var args = new[] { arg1?.ToString() ?? "null", arg2?.ToString() ?? "null", arg3?.ToString() ?? "null" };
+                    AddMessage("接收", $"{method.Name}: {string.Join(", ", args)}", MessageType.Received);
+                    InvokeAsync(StateHasChanged);
+                });
+                break;
+            case 4:
+                hubConnection.On<object, object, object, object>(method.Name, (arg1, arg2, arg3, arg4) =>
+                {
+                    var args = new[] { arg1?.ToString() ?? "null", arg2?.ToString() ?? "null", arg3?.ToString() ?? "null", arg4?.ToString() ?? "null" };
+                    AddMessage("接收", $"{method.Name}: {string.Join(", ", args)}", MessageType.Received);
+                    InvokeAsync(StateHasChanged);
+                });
+                break;
+            case 5:
+                hubConnection.On<object, object, object, object, object>(method.Name, (arg1, arg2, arg3, arg4, arg5) =>
+                {
+                    var args = new[] { arg1?.ToString() ?? "null", arg2?.ToString() ?? "null", arg3?.ToString() ?? "null", arg4?.ToString() ?? "null", arg5?.ToString() ?? "null" };
+                    AddMessage("接收", $"{method.Name}: {string.Join(", ", args)}", MessageType.Received);
+                    InvokeAsync(StateHasChanged);
+                });
+                break;
+            default:
+                // 对于参数过多的方法，使用反射动态注册
+                RegisterHubMethodWithReflection(method);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// 使用反射注册Hub方法（用于参数较多的情况）
+    /// </summary>
+    private void RegisterHubMethodWithReflection(HubMethodInfo method)
+    {
+        if (hubConnection is null) return;
+
+        try
+        {
+            // 对于参数过多的方法，使用通用处理
+            var parameterTypes = method.Args.Select(_ => typeof(object)).ToArray();
+            var onMethod = typeof(HubConnection).GetMethods()
+                .Where(m => m.Name == "On" && m.IsGenericMethod)
+                .FirstOrDefault(m => m.GetParameters().Length == 2);
+
+            if (onMethod != null && parameterTypes.Length <= 16) // SignalR最多支持16个参数
+            {
+                var genericMethod = onMethod.MakeGenericMethod(parameterTypes);
+                
+                // 创建一个动态委托来处理任意数量的参数
+                var handler = CreateDynamicHandler(method.Name, method.Args.Count);
+                
+                genericMethod.Invoke(hubConnection, new object[] { method.Name, handler });
+            }
+            else
+            {
+                AddMessage("警告", $"方法 {method.Name} 参数过多({method.Args.Count})，无法注册监听", MessageType.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            AddMessage("错误", $"注册方法 {method.Name} 失败: {ex.Message}", MessageType.Error);
+        }
+    }
+
+    /// <summary>
+    /// 创建动态处理器
+    /// </summary>
+    private Delegate CreateDynamicHandler(string methodName, int paramCount)
+    {
+        return paramCount switch
+        {
+            6 => new Action<object, object, object, object, object, object>((a1, a2, a3, a4, a5, a6) =>
+            {
+                var args = new[] { a1, a2, a3, a4, a5, a6 }.Select(a => a?.ToString() ?? "null");
+                AddMessage("接收", $"{methodName}: {string.Join(", ", args)}", MessageType.Received);
+                InvokeAsync(StateHasChanged);
+            }),
+            7 => new Action<object, object, object, object, object, object, object>((a1, a2, a3, a4, a5, a6, a7) =>
+            {
+                var args = new[] { a1, a2, a3, a4, a5, a6, a7 }.Select(a => a?.ToString() ?? "null");
+                AddMessage("接收", $"{methodName}: {string.Join(", ", args)}", MessageType.Received);
+                InvokeAsync(StateHasChanged);
+            }),
+            8 => new Action<object, object, object, object, object, object, object, object>((a1, a2, a3, a4, a5, a6, a7, a8) =>
+            {
+                var args = new[] { a1, a2, a3, a4, a5, a6, a7, a8 }.Select(a => a?.ToString() ?? "null");
+                AddMessage("接收", $"{methodName}: {string.Join(", ", args)}", MessageType.Received);
+                InvokeAsync(StateHasChanged);
+            }),
+            _ => new Action(() =>
+            {
+                AddMessage("接收", $"{methodName}: 参数过多，无法解析", MessageType.Received);
+                InvokeAsync(StateHasChanged);
+            })
+        };
     }
 
     /// <summary>
@@ -369,6 +697,67 @@
     {
         messages.Clear();
         StateHasChanged();
+    }
+
+    /// <summary>
+    /// 转换参数类型
+    /// </summary>
+    private object ConvertArgument(string value, string type)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return GetDefaultValue(type);
+
+        try
+        {
+            return type.ToLower() switch
+            {
+                "string" => value,
+                "boolean" => bool.Parse(value),
+                "int32" or "int" => int.Parse(value),
+                "int64" or "long" => long.Parse(value),
+                "double" => double.Parse(value),
+                "decimal" => decimal.Parse(value),
+                "datetime" => DateTime.Parse(value),
+                _ => TryParseJson(value) ?? value
+            };
+        }
+        catch
+        {
+            return value; // 如果转换失败，返回原始字符串
+        }
+    }
+
+    /// <summary>
+    /// 获取类型默认值
+    /// </summary>
+    private object GetDefaultValue(string type)
+    {
+        return type.ToLower() switch
+        {
+            "string" => "",
+            "boolean" => false,
+            "int32" or "int" => 0,
+            "int64" or "long" => 0L,
+            "double" => 0.0,
+            "decimal" => 0m,
+            "datetime" => DateTime.Now,
+            _ => ""
+        };
+    }
+
+    /// <summary>
+    /// 尝试解析JSON
+    /// </summary>
+    private object? TryParseJson(string value)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<object>(value);
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     /// <summary>
@@ -481,6 +870,17 @@
         {
             await hubConnection.DisposeAsync();
         }
+    }
+
+    /// <summary>
+    /// Hub方法信息
+    /// </summary>
+    private class HubMethodInfo
+    {
+        public string Name { get; set; } = "";
+        public string DisplayName { get; set; } = "";
+        public List<SignalRMethodParameter> Args { get; set; } = [];
+        public bool IsListening { get; set; }
     }
 
     /// <summary>
