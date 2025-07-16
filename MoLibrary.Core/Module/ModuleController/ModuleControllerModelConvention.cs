@@ -19,7 +19,7 @@ public class ModuleControllerModelConvention<TModuleController>(IMoModuleControl
                 {
                     selector.AttributeRouteModel = new AttributeRouteModel
                     {
-                        Template = $"{options.RoutePrefix}/{controller.ControllerName}"
+                        Template = options.GetControllerRouteTemplate<TModuleController>()
                     };
                 }
 

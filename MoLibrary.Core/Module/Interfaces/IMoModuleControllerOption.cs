@@ -1,3 +1,5 @@
+using MoLibrary.Core.Module.ModuleController;
+
 namespace MoLibrary.Core.Module.Interfaces;
 
 /// <summary>
@@ -42,4 +44,11 @@ public interface IMoModuleControllerOption
     /// </summary>
     /// <returns></returns>
     public string GetSwaggerGroupName();
+
+    /// <summary>
+    /// Final controller route template.
+    /// </summary>
+    /// <typeparam name="TController"></typeparam>
+    /// <returns></returns>
+    public string GetControllerRouteTemplate<TController>() where TController : MoModuleControllerBase;
 }

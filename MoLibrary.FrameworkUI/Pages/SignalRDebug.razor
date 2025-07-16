@@ -4,7 +4,7 @@
 @using Microsoft.JSInterop
 @using MudBlazor
 @using System.Text.Json
-@inject ISnackbar Snackbar
+@inject ISnackbar SnackBar
 @inject IJSRuntime JSRuntime
 @implements IAsyncDisposable
 
@@ -240,14 +240,14 @@
             connectionId = hubConnection.ConnectionId ?? "";
             
             AddMessage("系统", "SignalR连接成功", MessageType.Success);
-            Snackbar.Add("SignalR连接成功", Severity.Success);
+            SnackBar.Add("SignalR连接成功", Severity.Success);
         }
         catch (Exception ex)
         {
             connectionStatus = "连接失败";
             connectionId = "";
             AddMessage("系统", $"连接失败: {ex.Message}", MessageType.Error);
-            Snackbar.Add($"连接失败: {ex.Message}", Severity.Error);
+            SnackBar.Add($"连接失败: {ex.Message}", Severity.Error);
         }
         finally
         {
@@ -270,7 +270,7 @@
         connectionStatus = "已断开";
         connectionId = "";
         AddMessage("系统", "SignalR连接已断开", MessageType.Info);
-        Snackbar.Add("SignalR连接已断开", Severity.Info);
+        SnackBar.Add("SignalR连接已断开", Severity.Info);
         StateHasChanged();
     }
 
@@ -291,7 +291,7 @@
         catch (Exception ex)
         {
             AddMessage("错误", $"发送消息失败: {ex.Message}", MessageType.Error);
-            Snackbar.Add($"发送消息失败: {ex.Message}", Severity.Error);
+            SnackBar.Add($"发送消息失败: {ex.Message}", Severity.Error);
         }
     }
 
@@ -322,12 +322,12 @@
             }
             
             AddMessage("调用", $"方法 {selectedMethod} 调用成功", MessageType.Success);
-            Snackbar.Add($"方法 {selectedMethod} 调用成功", Severity.Success);
+            SnackBar.Add($"方法 {selectedMethod} 调用成功", Severity.Success);
         }
         catch (Exception ex)
         {
             AddMessage("错误", $"调用方法失败: {ex.Message}", MessageType.Error);
-            Snackbar.Add($"调用方法失败: {ex.Message}", Severity.Error);
+            SnackBar.Add($"调用方法失败: {ex.Message}", Severity.Error);
         }
     }
 
