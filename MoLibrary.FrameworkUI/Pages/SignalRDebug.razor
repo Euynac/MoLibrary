@@ -5,12 +5,14 @@
 @using MoLibrary.SignalR.Modules
 @using MudBlazor
 @using System.Text.Json
+@using MoLibrary.Core.GlobalJson.Interfaces
 @using MoLibrary.SignalR.Controllers
 @using MoLibrary.SignalR.Models
 @inject ISnackbar SnackBar
 @inject IJSRuntime JSRuntime
 @inject IOptions<ModuleSignalROption> SignalROptions
 @inject NavigationManager NavigationManager
+@inject IGlobalJsonOption JsonOption
 @implements IAsyncDisposable
 
 <PageTitle>SignalR调试</PageTitle>
@@ -386,7 +388,7 @@
             if (result.GetProperty("success").GetBoolean())
             {
                 var dataProperty = result.GetProperty("data");
-                var hubGroups = JsonSerializer.Deserialize<List<SignalRServerGroupInfo>>(dataProperty.GetRawText());
+                var hubGroups = JsonSerializer.Deserialize<List<SignalRServerGroupInfo>>(dataProperty.GetRawText(), JsonOption.GlobalOptions);
                 
                 availableHubs.Clear();
                 if (hubGroups != null)
