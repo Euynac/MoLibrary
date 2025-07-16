@@ -7,6 +7,8 @@ public class ModuleControllerModelConvention<TModuleController>(IMoModuleControl
 {
     public void Apply(ApplicationModel application)
     {
+        if (options.DisableControllers) return;
+
         foreach (var controller in application.Controllers)
         {
             // 识别库中的Controller

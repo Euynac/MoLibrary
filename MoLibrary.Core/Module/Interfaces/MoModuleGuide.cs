@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
-using MediatR;
+using Microsoft.Extensions.Logging;
+using MoLibrary.Core.Features.MoLogProvider;
 using MoLibrary.Core.Module.BuilderWrapper;
 using MoLibrary.Core.Module.Features;
 using MoLibrary.Core.Module.Models;
@@ -12,7 +13,22 @@ public class MoModuleGuide
     /// 指示模块配置来源
     /// </summary>
     public EMoModules? GuideFrom { get; set; }
+
+    /// <summary>
+    /// Lazy-loaded logger instance for this module guide.
+    /// </summary>
+    private readonly Lazy<ILogger> _loggerLazy;
     
+    /// <summary>
+    /// Gets the logger instance for this module guide.
+    /// </summary>
+    public ILogger Logger => _loggerLazy.Value;
+
+    public MoModuleGuide()
+    {
+        _loggerLazy = new Lazy<ILogger>(() => LogProvider.For(GetType()));
+    }
+
     /// <summary>
     /// Gets the target module enum this guide is for.
     /// </summary>
