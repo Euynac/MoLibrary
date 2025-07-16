@@ -512,30 +512,6 @@
     }
 
     /// <summary>
-    /// 切换方法监听
-    /// </summary>
-    private void ToggleMethodListener(HubMethodInfo method, bool isListening)
-    {
-        method.IsListening = isListening;
-        
-        if (hubConnection != null)
-        {
-            if (isListening)
-            {
-                RegisterSingleHubMethod(method);
-                AddMessage("系统", $"开始监听方法: {method.Name}", MessageType.Info);
-            }
-            else
-            {
-                hubConnection.Remove(method.Name);
-                AddMessage("系统", $"停止监听方法: {method.Name}", MessageType.Info);
-            }
-        }
-        
-        StateHasChanged();
-    }
-
-    /// <summary>
     /// 注册Hub方法
     /// </summary>
     private void RegisterHubMethods()
@@ -555,128 +531,61 @@
     {
         if (hubConnection is null) return;
 
-        // 根据参数数量动态注册不同的方法签名
-        switch (method.Args.Count)
+        // 使用简化的动态监听方式，类似JavaScript中的...args
+        var parameterTypes = method.Args.Select(arg => GetClrType(arg.Type)).ToArray();
+        
+        hubConnection.On(method.Name, parameterTypes, (args) =>
         {
-            case 0:
-                hubConnection.On(method.Name, () =>
-                {
-                    AddMessage("接收", $"{method.Name}: 无参数", MessageType.Received);
-                    InvokeAsync(StateHasChanged);
-                });
-                break;
-            case 1:
-                hubConnection.On<object>(method.Name, (arg1) =>
-                {
-                    AddMessage("接收", $"{method.Name}: {arg1?.ToString() ?? "null"}", MessageType.Received);
-                    InvokeAsync(StateHasChanged);
-                });
-                break;
-            case 2:
-                hubConnection.On<object, object>(method.Name, (arg1, arg2) =>
-                {
-                    var args = new[] { arg1?.ToString() ?? "null", arg2?.ToString() ?? "null" };
-                    AddMessage("接收", $"{method.Name}: {string.Join(", ", args)}", MessageType.Received);
-                    InvokeAsync(StateHasChanged);
-                });
-                break;
-            case 3:
-                hubConnection.On<object, object, object>(method.Name, (arg1, arg2, arg3) =>
-                {
-                    var args = new[] { arg1?.ToString() ?? "null", arg2?.ToString() ?? "null", arg3?.ToString() ?? "null" };
-                    AddMessage("接收", $"{method.Name}: {string.Join(", ", args)}", MessageType.Received);
-                    InvokeAsync(StateHasChanged);
-                });
-                break;
-            case 4:
-                hubConnection.On<object, object, object, object>(method.Name, (arg1, arg2, arg3, arg4) =>
-                {
-                    var args = new[] { arg1?.ToString() ?? "null", arg2?.ToString() ?? "null", arg3?.ToString() ?? "null", arg4?.ToString() ?? "null" };
-                    AddMessage("接收", $"{method.Name}: {string.Join(", ", args)}", MessageType.Received);
-                    InvokeAsync(StateHasChanged);
-                });
-                break;
-            case 5:
-                hubConnection.On<object, object, object, object, object>(method.Name, (arg1, arg2, arg3, arg4, arg5) =>
-                {
-                    var args = new[] { arg1?.ToString() ?? "null", arg2?.ToString() ?? "null", arg3?.ToString() ?? "null", arg4?.ToString() ?? "null", arg5?.ToString() ?? "null" };
-                    AddMessage("接收", $"{method.Name}: {string.Join(", ", args)}", MessageType.Received);
-                    InvokeAsync(StateHasChanged);
-                });
-                break;
-            default:
-                // 对于参数过多的方法，使用反射动态注册
-                RegisterHubMethodWithReflection(method);
-                break;
-        }
+            var argsDisplay = args?.Length > 0 
+                ? string.Join(", ", args.Select(arg => arg?.ToString() ?? "null"))
+                : "无参数";
+            
+            AddMessage("接收", $"{method.Name}: {argsDisplay}", MessageType.Received);
+            return InvokeAsync(StateHasChanged);
+        });
     }
 
     /// <summary>
-    /// 使用反射注册Hub方法（用于参数较多的情况）
+    /// 获取CLR类型
     /// </summary>
-    private void RegisterHubMethodWithReflection(HubMethodInfo method)
+    private Type GetClrType(string typeName)
     {
-        if (hubConnection is null) return;
-
-        try
+        return typeName.ToLower() switch
         {
-            // 对于参数过多的方法，使用通用处理
-            var parameterTypes = method.Args.Select(_ => typeof(object)).ToArray();
-            var onMethod = typeof(HubConnection).GetMethods()
-                .Where(m => m.Name == "On" && m.IsGenericMethod)
-                .FirstOrDefault(m => m.GetParameters().Length == 2);
+            "string" => typeof(string),
+            "boolean" => typeof(bool),
+            "int32" or "int" => typeof(int),
+            "int64" or "long" => typeof(long),
+            "double" => typeof(double),
+            "decimal" => typeof(decimal),
+            "datetime" => typeof(DateTime),
+            _ => typeof(object)
+        };
+    }
 
-            if (onMethod != null && parameterTypes.Length <= 16) // SignalR最多支持16个参数
+    /// <summary>
+    /// 切换方法监听
+    /// </summary>
+    private void ToggleMethodListener(HubMethodInfo method, bool isListening)
+    {
+        method.IsListening = isListening;
+        
+        if (hubConnection != null)
+        {
+            if (isListening)
             {
-                var genericMethod = onMethod.MakeGenericMethod(parameterTypes);
-                
-                // 创建一个动态委托来处理任意数量的参数
-                var handler = CreateDynamicHandler(method.Name, method.Args.Count);
-                
-                genericMethod.Invoke(hubConnection, new object[] { method.Name, handler });
+                RegisterSingleHubMethod(method);
+                AddMessage("系统", $"开始监听方法: {method.Name}", MessageType.Info);
             }
             else
             {
-                AddMessage("警告", $"方法 {method.Name} 参数过多({method.Args.Count})，无法注册监听", MessageType.Error);
+                // 简化的取消监听方式
+                hubConnection.Remove(method.Name);
+                AddMessage("系统", $"停止监听方法: {method.Name}", MessageType.Info);
             }
         }
-        catch (Exception ex)
-        {
-            AddMessage("错误", $"注册方法 {method.Name} 失败: {ex.Message}", MessageType.Error);
-        }
-    }
-
-    /// <summary>
-    /// 创建动态处理器
-    /// </summary>
-    private Delegate CreateDynamicHandler(string methodName, int paramCount)
-    {
-        return paramCount switch
-        {
-            6 => new Action<object, object, object, object, object, object>((a1, a2, a3, a4, a5, a6) =>
-            {
-                var args = new[] { a1, a2, a3, a4, a5, a6 }.Select(a => a?.ToString() ?? "null");
-                AddMessage("接收", $"{methodName}: {string.Join(", ", args)}", MessageType.Received);
-                InvokeAsync(StateHasChanged);
-            }),
-            7 => new Action<object, object, object, object, object, object, object>((a1, a2, a3, a4, a5, a6, a7) =>
-            {
-                var args = new[] { a1, a2, a3, a4, a5, a6, a7 }.Select(a => a?.ToString() ?? "null");
-                AddMessage("接收", $"{methodName}: {string.Join(", ", args)}", MessageType.Received);
-                InvokeAsync(StateHasChanged);
-            }),
-            8 => new Action<object, object, object, object, object, object, object, object>((a1, a2, a3, a4, a5, a6, a7, a8) =>
-            {
-                var args = new[] { a1, a2, a3, a4, a5, a6, a7, a8 }.Select(a => a?.ToString() ?? "null");
-                AddMessage("接收", $"{methodName}: {string.Join(", ", args)}", MessageType.Received);
-                InvokeAsync(StateHasChanged);
-            }),
-            _ => new Action(() =>
-            {
-                AddMessage("接收", $"{methodName}: 参数过多，无法解析", MessageType.Received);
-                InvokeAsync(StateHasChanged);
-            })
-        };
+        
+        StateHasChanged();
     }
 
     /// <summary>
