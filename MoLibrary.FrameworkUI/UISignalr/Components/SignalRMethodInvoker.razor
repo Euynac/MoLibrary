@@ -1,0 +1,127 @@
+@using MoLibrary.FrameworkUI.Models
+@using MudBlazor
+
+<!-- 方法调用 -->
+<MudPaper Class="pa-4 mb-4" Elevation="2">
+    <MudText Typo="Typo.h5" Class="mb-3">方法调用</MudText>
+    <MudGrid>
+        <MudItem xs="12" sm="6">
+            <MudSelect @bind-Value="SelectedMethodName" 
+                     Label="选择方法" 
+                     Variant="Variant.Outlined"
+                     T="string">
+                @foreach (var method in HubMethods)
+                {
+                    <MudSelectItem Value="@method.Name">@method.DisplayName</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12">
+            @if (SelectedMethod != null && SelectedMethod.Args.Any())
+            {
+                <MudText Typo="Typo.h6" Class="mb-2">参数设置:</MudText>
+                @foreach (var arg in SelectedMethod.Args)
+                {
+                    <MudTextField @bind-Value="MethodParameters[arg.Name]" 
+                                Label="@($"{arg.Name} ({arg.Type})")" 
+                                Variant="Variant.Outlined"
+                                Class="mb-2"
+                                HelperText="@($"参数类型: {arg.Type}")" />
+                }
+            }
+            else if (SelectedMethod != null)
+            {
+                <MudAlert Severity="Severity.Info">该方法无需参数</MudAlert>
+            }
+        </MudItem>
+        <MudItem xs="12">
+            <MudButton Variant="Variant.Filled" 
+                     Color="Color.Primary" 
+                     OnClick="InvokeMethodAsync"
+                     Disabled="!IsConnected || string.IsNullOrWhiteSpace(SelectedMethodName)">
+                <MudIcon Icon="@Icons.Material.Filled.PlayArrow" />
+                <MudText Class="ms-2">调用方法</MudText>
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@code {
+    /// <summary>
+    /// Hub方法列表
+    /// </summary>
+    [Parameter] public List<HubMethodInfo> HubMethods { get; set; } = [];
+
+    /// <summary>
+    /// 是否已连接
+    /// </summary>
+    [Parameter] public bool IsConnected { get; set; }
+
+    /// <summary>
+    /// 选择的方法名称
+    /// </summary>
+    [Parameter] public string SelectedMethodName { get; set; } = "";
+
+    /// <summary>
+    /// 选择的方法名称变化回调
+    /// </summary>
+    [Parameter] public EventCallback<string> SelectedMethodNameChanged { get; set; }
+
+    /// <summary>
+    /// 方法参数
+    /// </summary>
+    [Parameter] public Dictionary<string, string> MethodParameters { get; set; } = new();
+
+    /// <summary>
+    /// 调用方法回调
+    /// </summary>
+    [Parameter] public EventCallback<(string methodName, List<MethodCallParameter> parameters)> OnInvokeMethod { get; set; }
+
+    /// <summary>
+    /// 当前选择的方法
+    /// </summary>
+    private HubMethodInfo? SelectedMethod => HubMethods.FirstOrDefault(m => m.Name == SelectedMethodName);
+
+    /// <summary>
+    /// 方法名称变化处理
+    /// </summary>
+    /// <param name="methodName">方法名称</param>
+    protected override async Task OnParametersSetAsync()
+    {
+        if (SelectedMethod != null)
+        {
+            // 确保参数字典包含所有需要的参数
+            foreach (var arg in SelectedMethod.Args)
+            {
+                if (!MethodParameters.ContainsKey(arg.Name))
+                {
+                    MethodParameters[arg.Name] = "";
+                }
+            }
+        }
+        await base.OnParametersSetAsync();
+    }
+
+    /// <summary>
+    /// 调用方法
+    /// </summary>
+    private async Task InvokeMethodAsync()
+    {
+        if (SelectedMethod == null) return;
+
+        var parameters = new List<MethodCallParameter>();
+        
+        foreach (var arg in SelectedMethod.Args)
+        {
+            var value = MethodParameters.GetValueOrDefault(arg.Name, "");
+            parameters.Add(new MethodCallParameter
+            {
+                Name = arg.Name,
+                Value = value,
+                Type = arg.Type
+            });
+        }
+
+        await OnInvokeMethod.InvokeAsync((SelectedMethodName, parameters));
+    }
+} 

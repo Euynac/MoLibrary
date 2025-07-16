@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.FrameworkUI.Pages;
+using MoLibrary.FrameworkUI.Services;
 using MoLibrary.SignalR.Modules;
 using MoLibrary.UI.Modules;
 using MudBlazor;
@@ -25,6 +27,11 @@ public class ModuleSignalrUI(ModuleSignalrUIOption option)
     public override EMoModules CurModuleEnum()
     {
         return EMoModules.SignalrUI;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<SignalRDebugService>();
     }
 
     public override void ClaimDependencies()

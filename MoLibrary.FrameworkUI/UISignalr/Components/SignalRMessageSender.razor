@@ -1,0 +1,90 @@
+@using MoLibrary.FrameworkUI.Models
+@using MudBlazor
+@using Microsoft.AspNetCore.Components.Web
+
+<!-- 快速消息发送 -->
+<MudPaper Class="pa-4 mb-4" Elevation="2">
+    <MudText Typo="Typo.h5" Class="mb-3">快速消息发送</MudText>
+    <MudGrid>
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="UserName" 
+                        Label="用户名" 
+                        Variant="Variant.Outlined" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="Message" 
+                        Label="消息内容" 
+                        Variant="Variant.Outlined"
+                        OnKeyDown="OnMessageKeyDown" />
+        </MudItem>
+        <MudItem xs="12">
+            <MudButton Variant="Variant.Filled" 
+                     Color="Color.Success" 
+                     OnClick="SendMessageAsync"
+                     Disabled="!IsConnected || string.IsNullOrWhiteSpace(Message)">
+                <MudIcon Icon="@Icons.Material.Filled.Send" />
+                <MudText Class="ms-2">发送消息</MudText>
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@code {
+    /// <summary>
+    /// 用户名
+    /// </summary>
+    [Parameter] public string UserName { get; set; } = "";
+
+    /// <summary>
+    /// 用户名变化回调
+    /// </summary>
+    [Parameter] public EventCallback<string> UserNameChanged { get; set; }
+
+    /// <summary>
+    /// 消息内容
+    /// </summary>
+    [Parameter] public string Message { get; set; } = "";
+
+    /// <summary>
+    /// 消息内容变化回调
+    /// </summary>
+    [Parameter] public EventCallback<string> MessageChanged { get; set; }
+
+    /// <summary>
+    /// 是否已连接
+    /// </summary>
+    [Parameter] public bool IsConnected { get; set; }
+
+    /// <summary>
+    /// 发送消息回调
+    /// </summary>
+    [Parameter] public EventCallback<(string userName, string message)> OnSendMessage { get; set; }
+
+    /// <summary>
+    /// 消息输入框键盘事件
+    /// </summary>
+    /// <param name="e">键盘事件参数</param>
+    private async Task OnMessageKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+        {
+            await SendMessageAsync();
+        }
+    }
+
+    /// <summary>
+    /// 发送消息
+    /// </summary>
+    private async Task SendMessageAsync()
+    {
+        if (!IsConnected || string.IsNullOrWhiteSpace(Message))
+            return;
+
+        var tempMessage = Message;
+        Message = "";
+        await MessageChanged.InvokeAsync(Message);
+        
+        await OnSendMessage.InvokeAsync((UserName, tempMessage));
+        StateHasChanged();
+    }
+}
