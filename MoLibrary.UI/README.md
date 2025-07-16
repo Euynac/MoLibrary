@@ -63,8 +63,6 @@ app.UseStaticFiles();
 // 正确的引用方式
 jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "/_content/MoLibrary.UI/js/module.js");
 
-// 错误的引用方式（仅适用于Web应用程序）
-jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/module.js");
 ```
 
 ### 离线静态资源管理
