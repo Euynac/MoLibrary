@@ -68,13 +68,18 @@ public class ModuleUICore(ModuleUICoreOption option)
             services.AddSingleton<IModuleSystemStatusService, ModuleSystemStatusService>();
         }
 
-
         // 添加MudBlazor服务
         services.AddMudServices();
 
         // 添加Razor组件和交互式服务器组件服务
         services.AddRazorComponents()
-            .AddInteractiveServerComponents();
+            .AddInteractiveServerComponents(o =>
+            {
+                o.DetailedErrors = Option.EnableDebug;
+            }).AddHubOptions(options =>
+            {
+                options.EnableDetailedErrors = Option.EnableDebug;
+            });
 
         // 注册UI组件管理服务
         services.AddSingleton<IUIComponentRegistry, UIComponentRegistry>();
@@ -122,7 +127,7 @@ public class ModuleUICoreGuide : MoModuleGuide<ModuleUICore, ModuleUICoreOption,
 
             // 静态文件支持（用于MudBlazor资源和Razor类库静态资源）
             app.UseStaticFiles();
-
+            
             //app.UseStaticFiles(new StaticFileOptions()
             //{
             //    FileProvider = new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), "CustomStyles")),
@@ -169,5 +174,10 @@ public class ModuleUICoreOption : MoModuleOption<ModuleUICore>
     /// 禁用模块系统UI界面
     /// </summary>
     public bool DisableModuleSystemUI { get; set; }
+
+    /// <summary>
+    /// 开启Debug模式
+    /// </summary>
+    public bool EnableDebug { get; set; } = true;
 
 }
