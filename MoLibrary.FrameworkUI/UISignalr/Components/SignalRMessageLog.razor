@@ -1,0 +1,92 @@
+@using MoLibrary.FrameworkUI.Models
+@using MudBlazor
+
+<!-- 消息列表 -->
+<MudPaper Class="pa-4" Elevation="2">
+    <MudText Typo="Typo.h5" Class="mb-3">消息日志</MudText>
+    <MudButton Variant="Variant.Outlined" 
+             Color="Color.Warning" 
+             OnClick="ClearMessagesAsync"
+             Class="mb-3">
+        <MudIcon Icon="@Icons.Material.Filled.Clear" />
+        <MudText Class="ms-2">清空日志</MudText>
+    </MudButton>
+    
+    <MudVirtualize Items="Messages" Context="msg" ItemSize="60">
+        <div class="d-flex align-center pa-2 @(msg.IsError ? "mud-error-text" : "")">
+            <MudIcon Icon="@GetMessageIcon(msg.Type)" 
+                    Color="@GetMessageColor(msg.Type)" 
+                    Class="mr-3" />
+            <div class="flex-grow-1">
+                <MudText Typo="Typo.body2">
+                    <strong>[@msg.Timestamp.ToString("HH:mm:ss")]</strong> @msg.Content
+                </MudText>
+                @if (!string.IsNullOrEmpty(msg.Details))
+                {
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                        @msg.Details
+                    </MudText>
+                }
+            </div>
+        </div>
+        <MudDivider />
+    </MudVirtualize>
+</MudPaper>
+
+@code {
+    /// <summary>
+    /// 消息列表
+    /// </summary>
+    [Parameter] public List<SignalRMessage> Messages { get; set; } = [];
+
+    /// <summary>
+    /// 清空消息回调
+    /// </summary>
+    [Parameter] public EventCallback OnClearMessages { get; set; }
+
+    /// <summary>
+    /// 清空消息
+    /// </summary>
+    private async Task ClearMessagesAsync()
+    {
+        await OnClearMessages.InvokeAsync();
+    }
+
+    /// <summary>
+    /// 获取消息图标
+    /// </summary>
+    /// <param name="type">消息类型</param>
+    /// <returns>图标</returns>
+    private string GetMessageIcon(MessageType type)
+    {
+        return type switch
+        {
+            MessageType.Sent => Icons.Material.Filled.Send,
+            MessageType.Received => Icons.Material.Filled.Inbox,
+            MessageType.System => Icons.Material.Filled.Info,
+            MessageType.Success => Icons.Material.Filled.CheckCircle,
+            MessageType.Error => Icons.Material.Filled.Error,
+            MessageType.Info => Icons.Material.Filled.Info,
+            _ => Icons.Material.Filled.Message
+        };
+    }
+
+    /// <summary>
+    /// 获取消息颜色
+    /// </summary>
+    /// <param name="type">消息类型</param>
+    /// <returns>颜色</returns>
+    private Color GetMessageColor(MessageType type)
+    {
+        return type switch
+        {
+            MessageType.Sent => Color.Primary,
+            MessageType.Received => Color.Secondary,
+            MessageType.System => Color.Info,
+            MessageType.Success => Color.Success,
+            MessageType.Error => Color.Error,
+            MessageType.Info => Color.Info,
+            _ => Color.Default
+        };
+    }
+} 

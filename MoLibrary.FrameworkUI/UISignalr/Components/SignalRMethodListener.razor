@@ -1,0 +1,104 @@
+@using MoLibrary.FrameworkUI.Models
+@using MudBlazor
+
+<!-- Hub方法监听 -->
+<MudPaper Class="pa-4 mb-4" Elevation="2">
+    <MudText Typo="Typo.h5" Class="mb-3">Hub方法监听</MudText>
+    <MudGrid Class="mb-3">
+        <MudItem xs="12">
+            <MudButton Variant="Variant.Outlined" 
+                     Color="Color.Primary" 
+                     OnClick="EnableAllListenersAsync"
+                     Disabled="!IsConnected">
+                全部启用
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" 
+                     Color="Color.Secondary" 
+                     OnClick="DisableAllListenersAsync"
+                     Disabled="!IsConnected"
+                     Class="ms-2">
+                全部禁用
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+    @if (HubMethods.Any())
+    {
+        <MudGrid>
+            @foreach (var method in HubMethods)
+            {
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Class="pa-2">
+                        <MudCheckBox Value="@method.IsListening" 
+                                   Label="@method.DisplayName"
+                                   Color="Color.Primary"
+                                   T="bool"
+                                   ValueChanged="@((bool isChecked) => ToggleMethodListenerAsync(method, isChecked))" />
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                            参数: @(method.Args.Any() ? string.Join(", ", method.Args.Select(a => $"{a.Type} {a.Name}")) : "无")
+                        </MudText>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                            接收次数: @method.ReceivedCount
+                        </MudText>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Info">请先连接到Hub以加载可用的方法</MudAlert>
+    }
+</MudPaper>
+
+@code {
+    /// <summary>
+    /// Hub方法列表
+    /// </summary>
+    [Parameter] public List<HubMethodInfo> HubMethods { get; set; } = [];
+
+    /// <summary>
+    /// 是否已连接
+    /// </summary>
+    [Parameter] public bool IsConnected { get; set; }
+
+    /// <summary>
+    /// 切换方法监听回调
+    /// </summary>
+    [Parameter] public EventCallback<(HubMethodInfo method, bool isListening)> OnToggleMethodListener { get; set; }
+
+    /// <summary>
+    /// 启用所有监听器回调
+    /// </summary>
+    [Parameter] public EventCallback OnEnableAllListeners { get; set; }
+
+    /// <summary>
+    /// 禁用所有监听器回调
+    /// </summary>
+    [Parameter] public EventCallback OnDisableAllListeners { get; set; }
+
+    /// <summary>
+    /// 切换方法监听器
+    /// </summary>
+    /// <param name="method">方法信息</param>
+    /// <param name="isListening">是否监听</param>
+    private async Task ToggleMethodListenerAsync(HubMethodInfo method, bool isListening)
+    {
+        await OnToggleMethodListener.InvokeAsync((method, isListening));
+    }
+
+    /// <summary>
+    /// 启用所有监听器
+    /// </summary>
+    private async Task EnableAllListenersAsync()
+    {
+        await OnEnableAllListeners.InvokeAsync();
+    }
+
+    /// <summary>
+    /// 禁用所有监听器
+    /// </summary>
+    private async Task DisableAllListenersAsync()
+    {
+        await OnDisableAllListeners.InvokeAsync();
+    }
+} 

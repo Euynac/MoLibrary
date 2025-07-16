@@ -1,0 +1,137 @@
+@using MoLibrary.FrameworkUI.Models
+@using MoLibrary.FrameworkUI.Services
+@using MoLibrary.SignalR.Models
+@using MudBlazor
+
+<!-- 连接配置 -->
+<MudPaper Class="pa-4 mb-4" Elevation="2">
+    <MudText Typo="Typo.h5" Class="mb-3">连接配置</MudText>
+    <MudGrid>
+        <MudItem xs="12">
+            <MudTextField @bind-Value="AccessToken" 
+                        Label="Access Token" 
+                        Variant="Variant.Outlined"
+                        HelperText="输入用于SignalR连接的访问令牌" />
+        </MudItem>
+        <MudItem xs="12">
+            <MudSelect @bind-Value="SelectedHubRoute" 
+                     Label="Hub URL" 
+                     Variant="Variant.Outlined"
+                     HelperText="选择要连接的SignalR Hub"
+                     T="string">
+                @foreach (var hub in AvailableHubs)
+                {
+                    <MudSelectItem Value="@hub.Route">@hub.Source (@hub.Route)</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12">
+            <MudButton Variant="Variant.Filled" 
+                     Color="Color.Primary" 
+                     OnClick="ConnectAsync"
+                     Disabled="IsConnecting || string.IsNullOrEmpty(SelectedHubRoute)">
+                @if (IsConnecting)
+                {
+                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                    <MudText Class="ms-2">连接中...</MudText>
+                }
+                else
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Cable" />
+                    <MudText Class="ms-2">@(IsConnected ? "重新连接" : "连接")</MudText>
+                }
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" 
+                     Color="Color.Secondary" 
+                     OnClick="DisconnectAsync"
+                     Disabled="!IsConnected"
+                     Class="ms-2">
+                <MudIcon Icon="@Icons.Material.Filled.PowerOff" />
+                <MudText Class="ms-2">断开连接</MudText>
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" 
+                     Color="Color.Info" 
+                     OnClick="RefreshHubsAsync"
+                     Class="ms-2">
+                <MudIcon Icon="@Icons.Material.Filled.Refresh" />
+                <MudText Class="ms-2">刷新Hub信息</MudText>
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@code {
+    /// <summary>
+    /// 访问令牌
+    /// </summary>
+    [Parameter] public string AccessToken { get; set; } = "";
+
+    /// <summary>
+    /// 访问令牌变化回调
+    /// </summary>
+    [Parameter] public EventCallback<string> AccessTokenChanged { get; set; }
+
+    /// <summary>
+    /// 选中的Hub路由
+    /// </summary>
+    [Parameter] public string SelectedHubRoute { get; set; } = "";
+
+    /// <summary>
+    /// 选中的Hub路由变化回调
+    /// </summary>
+    [Parameter] public EventCallback<string> SelectedHubRouteChanged { get; set; }
+
+    /// <summary>
+    /// 可用的Hub列表
+    /// </summary>
+    [Parameter] public List<SignalRServerGroupInfo> AvailableHubs { get; set; } = [];
+
+    /// <summary>
+    /// 是否正在连接
+    /// </summary>
+    [Parameter] public bool IsConnecting { get; set; }
+
+    /// <summary>
+    /// 是否已连接
+    /// </summary>
+    [Parameter] public bool IsConnected { get; set; }
+
+    /// <summary>
+    /// 连接回调
+    /// </summary>
+    [Parameter] public EventCallback OnConnect { get; set; }
+
+    /// <summary>
+    /// 断开连接回调
+    /// </summary>
+    [Parameter] public EventCallback OnDisconnect { get; set; }
+
+    /// <summary>
+    /// 刷新Hub信息回调
+    /// </summary>
+    [Parameter] public EventCallback OnRefreshHubs { get; set; }
+
+    /// <summary>
+    /// 连接异步
+    /// </summary>
+    private async Task ConnectAsync()
+    {
+        await OnConnect.InvokeAsync();
+    }
+
+    /// <summary>
+    /// 断开连接异步
+    /// </summary>
+    private async Task DisconnectAsync()
+    {
+        await OnDisconnect.InvokeAsync();
+    }
+
+    /// <summary>
+    /// 刷新Hub信息异步
+    /// </summary>
+    private async Task RefreshHubsAsync()
+    {
+        await OnRefreshHubs.InvokeAsync();
+    }
+} 
