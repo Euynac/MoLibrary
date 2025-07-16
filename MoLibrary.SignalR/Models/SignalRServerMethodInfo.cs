@@ -1,6 +1,29 @@
 namespace MoLibrary.SignalR.Models;
 
 /// <summary>
+/// SignalR服务端组信息
+/// </summary>
+public class SignalRServerGroupInfo
+{
+
+    /// <summary>
+    /// 组来源Hub类名
+    /// </summary>
+    public required string Source { get; set; } 
+
+    /// <summary>
+    /// 组Hub路由
+    /// </summary>
+    public required string Route { get; set; }
+
+    /// <summary>
+    /// 组方法列表
+    /// </summary>
+    public List<SignalRServerMethodInfo> Methods { get; set; } = [];
+}
+
+
+/// <summary>
 /// SignalR服务端方法信息
 /// </summary>
 public class SignalRServerMethodInfo
@@ -20,10 +43,6 @@ public class SignalRServerMethodInfo
     /// </summary>
     public List<SignalRMethodParameter> Args { get; set; } = [];
 
-    /// <summary>
-    /// 方法所属的Hub类型名称
-    /// </summary>
-    public string Source { get; set; } = string.Empty;
 }
 
 /// <summary>

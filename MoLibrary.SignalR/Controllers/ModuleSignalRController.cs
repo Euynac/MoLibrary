@@ -25,11 +25,13 @@ public class ModuleSignalRController(IOptions<ModuleSignalROption> options) : Mo
     [HttpGet("/hubs")]
     public IActionResult GetServerMethods()
     {
-        // 遍历所有注册的Hub类型，提取其所有方法，并增加 source 属性（类型名）
-        var methods = _option.Hubs
-            .SelectMany(hubType =>
-                hubType.GetMethods()
-                    .Where(p => p.DeclaringType == hubType)
+        var groups = _option.Hubs
+            .Select(hubInfo => new SignalRServerGroupInfo
+            {
+                Source = hubInfo.HubType.Name,
+                Route = hubInfo.HubRoute,
+                Methods = hubInfo.HubType.GetMethods()
+                    .Where(p => p.DeclaringType == hubInfo.HubType)
                     .Select(p => new SignalRServerMethodInfo
                     {
                         Desc = p.GetCustomAttribute<SignalRMethodAttribute>()?.Description ?? p.Name,
@@ -38,11 +40,10 @@ public class ModuleSignalRController(IOptions<ModuleSignalROption> options) : Mo
                         {
                             Type = a.ParameterType.Name,
                             Name = a.Name ?? string.Empty
-                        }).ToList(),
-                        Source = hubType.Name
-                    })
-            ).ToList();
+                        }).ToList()
+                    }).ToList()
+            }).ToList();
 
-        return Res.Ok(methods).GetResponse(this);
+        return Res.Ok(groups).GetResponse(this);
     }
 } 
