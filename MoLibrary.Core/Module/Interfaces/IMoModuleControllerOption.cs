@@ -26,7 +26,7 @@ public interface IMoModuleControllerOption
     /// <value>
     /// <c>true</c> if controllers are enabled; otherwise, <c>false</c>.
     /// </value>
-    public bool EnableControllers { get; set; }
+    public bool DisableControllers { get; set; }
 
     /// <summary>
     /// If <c>true</c>, <c>APIExplorer.ApiDescription</c> objects will be created for the associated

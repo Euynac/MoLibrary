@@ -1,21 +1,17 @@
-using System.Reflection;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Mvc.Controllers;
+using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.Core.Module.ModuleController;
 
-public class ConditionalControllerFeatureProvider(Func<TypeInfo, bool> predicate)
+public class ConditionalControllerFeatureProvider(HashSet<Type> enabledTypes)
     : IApplicationFeatureProvider<ControllerFeature>
 {
     public void PopulateFeature(IEnumerable<ApplicationPart> parts, ControllerFeature feature)
     {
         var toRemove = feature.Controllers
-            .Where(c => !predicate(c))
+            .Where(c => !enabledTypes.Contains(c) && c.IsSubclassOf(typeof(MoModuleControllerBase)))
             .ToList();
-
-        foreach (var controller in toRemove)
-        {
-            feature.Controllers.Remove(controller);
-        }
+        feature.Controllers.RemoveAll(toRemove);
     }
 }

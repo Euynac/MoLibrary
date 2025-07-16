@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using MoLibrary.Core.Module.Dashboard.Interfaces;
 using MoLibrary.Core.Module.Dashboard.Models;
-using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
+using MoLibrary.Core.Module.ModuleController;
 
 namespace MoLibrary.Core.Module.Dashboard;
 
@@ -11,7 +11,7 @@ namespace MoLibrary.Core.Module.Dashboard;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-public class ModuleStatusController : ControllerBase
+public class ModuleStatusController : MoModuleControllerBase
 {
     private readonly IModuleSystemStatusService _statusService;
 
