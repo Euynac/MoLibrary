@@ -12,6 +12,7 @@ namespace MoLibrary.FrameworkUI.Services
     {
         private readonly IJSRuntime _jsRuntime;
         private DotNetObjectReference<SignalRDebugService>? _dotNetRef;
+        private bool _disposed = false;
         private readonly List<SignalRMessage> _messages = [];
         private readonly List<HubMethodInfo> _hubMethods = [];
         private readonly List<SignalRServerGroupInfo> _hubGroups = [];
@@ -47,7 +48,37 @@ namespace MoLibrary.FrameworkUI.Services
         public async Task InitializeAsync()
         {
             _dotNetRef = DotNetObjectReference.Create(this);
+            
+            // 等待JavaScript加载完成后再设置回调
+            await WaitForJavaScriptAsync();
             await SetupJavaScriptCallbacks();
+        }
+
+        /// <summary>
+        /// 等待JavaScript加载完成
+        /// </summary>
+        private async Task WaitForJavaScriptAsync()
+        {
+            var maxRetries = 10;
+            var retryDelay = 100;
+            
+            for (int i = 0; i < maxRetries; i++)
+            {
+                try
+                {
+                    // 尝试调用signalRDebug对象的方法来检查是否已加载
+                    await _jsRuntime.InvokeAsync<object>("signalRDebug.getHubsData");
+                    return; // 成功，退出循环
+                }
+                catch
+                {
+                    // JavaScript尚未加载完成，等待一会儿再试
+                    await Task.Delay(retryDelay);
+                    retryDelay = Math.Min(retryDelay * 2, 1000); // 指数退避，最大1秒
+                }
+            }
+            
+            AddMessage("系统", "JavaScript加载超时，某些功能可能无法正常工作", MessageType.Error);
         }
 
         /// <summary>
@@ -236,18 +267,28 @@ namespace MoLibrary.FrameworkUI.Services
                 var args = new List<object>();
                 var method = _hubMethods.FirstOrDefault(m => m.Name == methodName);
 
-                if (method != null)
+                if (method == null)
                 {
-                    for (int i = 0; i < method.Args.Count; i++)
-                    {
-                        var arg = method.Args[i];
-                        var parameter = parameters.FirstOrDefault(p => p.Name == arg.Name);
-                        var value = parameter?.Value ?? "";
+                    AddMessage("错误", $"未找到方法: {methodName}", MessageType.Error);
+                    return false;
+                }
 
-                        // 根据参数类型转换值
-                        var convertedValue = ConvertParameterValue(value, arg.Type);
-                        args.Add(convertedValue);
-                    }
+                // 详细记录参数转换过程
+                AddMessage("系统", $"开始调用方法: {methodName}", MessageType.Info);
+                
+                for (int i = 0; i < method.Args.Count; i++)
+                {
+                    var arg = method.Args[i];
+                    var parameter = parameters.FirstOrDefault(p => p.Name == arg.Name);
+                    var value = parameter?.Value ?? "";
+
+                    AddMessage("系统", $"参数 {arg.Name} ({arg.Type}): '{value}'", MessageType.Info);
+
+                    // 根据参数类型转换值
+                    var convertedValue = ConvertParameterValue(value, arg.Type);
+                    args.Add(convertedValue);
+                    
+                    AddMessage("系统", $"转换后的值: {convertedValue?.GetType().Name ?? "null"} = {convertedValue}", MessageType.Info);
                 }
 
                 var result = await _jsRuntime.InvokeAsync<JsonElement>("signalRDebug.invokeMethod", methodName, args.ToArray());
@@ -261,12 +302,17 @@ namespace MoLibrary.FrameworkUI.Services
                 {
                     var error = result.GetProperty("error").GetString();
                     AddMessage("错误", $"调用方法失败: {error}", MessageType.Error);
+                    
+                    // 添加参数信息帮助调试
+                    AddMessage("调试", $"调用参数: {string.Join(", ", args.Select((arg, idx) => $"{method.Args[idx].Name}={arg}"))}", MessageType.Info);
+                    
                     return false;
                 }
             }
             catch (Exception ex)
             {
                 AddMessage("错误", $"调用方法失败: {ex.Message}", MessageType.Error);
+                AddMessage("调试", $"异常详情: {ex}", MessageType.Error);
                 return false;
             }
         }
@@ -286,24 +332,43 @@ namespace MoLibrary.FrameworkUI.Services
 
             try
             {
-                return type.ToLower() switch
+                var normalizedType = type.ToLower().Replace("system.", "");
+                
+                return normalizedType switch
                 {
                     "string" => value,
                     "int" or "int32" => int.Parse(value),
                     "long" or "int64" => long.Parse(value),
                     "double" => double.Parse(value),
                     "float" or "single" => float.Parse(value),
-                    "bool" or "boolean" => bool.Parse(value),
+                    "bool" or "boolean" => ParseBooleanValue(value),
                     "datetime" => DateTime.Parse(value),
                     "guid" => Guid.Parse(value),
-                    _ when type.StartsWith("system.") => ConvertSystemType(value, type),
+                    _ when normalizedType.StartsWith("system.") => ConvertSystemType(value, type),
                     _ => TryParseAsJson(value, type)
                 };
             }
-            catch
+            catch (Exception ex)
             {
+                AddMessage("系统", $"参数转换失败: {value} -> {type}, 错误: {ex.Message}", MessageType.Error);
                 return GetDefaultValue(type);
             }
+        }
+
+        /// <summary>
+        /// 解析布尔值
+        /// </summary>
+        /// <param name="value">字符串值</param>
+        /// <returns>布尔值</returns>
+        private bool ParseBooleanValue(string value)
+        {
+            var normalizedValue = value.ToLower().Trim();
+            return normalizedValue switch
+            {
+                "true" or "1" or "yes" or "y" or "on" => true,
+                "false" or "0" or "no" or "n" or "off" => false,
+                _ => bool.Parse(value) // 如果都不匹配，使用默认解析
+            };
         }
 
         /// <summary>
@@ -494,6 +559,8 @@ namespace MoLibrary.FrameworkUI.Services
         [JSInvokable("Invoke")]
         public void Invoke(string source, string content, string type)
         {
+            if (_disposed) return;
+            
             var messageType = type switch
             {
                 "Sent" => MessageType.Sent,
@@ -529,6 +596,8 @@ namespace MoLibrary.FrameworkUI.Services
         [JSInvokable("OnConnectionStatusChanged")]
         public void OnConnectionStatusChanged(string status)
         {
+            if (_disposed) return;
+            
             AddMessage("系统", $"连接状态变化: {status}", MessageType.System);
             _connectionState.Status = status;
             ConnectionStateChanged?.Invoke(_connectionState);
@@ -541,6 +610,8 @@ namespace MoLibrary.FrameworkUI.Services
         [JSInvokable("SetConnectionId")]
         public void SetConnectionId(string id)
         {
+            if (_disposed) return;
+            
             _connectionState.ConnectionId = id;
             ConnectionStateChanged?.Invoke(_connectionState);
         }
@@ -578,6 +649,13 @@ namespace MoLibrary.FrameworkUI.Services
         /// </summary>
         public async ValueTask DisposeAsync()
         {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
+
             try
             {
                 await _jsRuntime.InvokeVoidAsync("signalRDebug.disconnect");
