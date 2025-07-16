@@ -733,8 +733,9 @@
     /// JavaScript回调：连接状态变化
     /// </summary>
     [JSInvokable]
-    public void Invoke(string status)
+    public void OnConnectionStatusChanged(string status)
     {
+        AddMessage("系统", $"连接状态变化: {status}", MessageType.System);
         connectionStatus = status;
         InvokeAsync(StateHasChanged);
     }

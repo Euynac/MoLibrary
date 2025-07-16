@@ -67,7 +67,7 @@ const signalRDebug = {
             // Set up connection event handlers
             connection.onclose((error) => {
                 if (connectionStatusCallback) {
-                    connectionStatusCallback.invokeMethodAsync('Invoke', 'Disconnected');
+                    connectionStatusCallback.invokeMethodAsync('OnConnectionStatusChanged', 'Disconnected');
                 }
                 if (connectionIdCallback) {
                     connectionIdCallback.invokeMethodAsync('SetConnectionId', '');
@@ -80,7 +80,7 @@ const signalRDebug = {
             
             connection.onreconnecting((error) => {
                 if (connectionStatusCallback) {
-                    connectionStatusCallback.invokeMethodAsync('Invoke', 'Reconnecting');
+                    connectionStatusCallback.invokeMethodAsync('OnConnectionStatusChanged', 'Reconnecting');
                 }
                 if (messageCallback) {
                     messageCallback.invokeMethodAsync('Invoke', 'System', 'Reconnecting...', 'Info');
@@ -89,7 +89,7 @@ const signalRDebug = {
             
             connection.onreconnected((connectionId) => {
                 if (connectionStatusCallback) {
-                    connectionStatusCallback.invokeMethodAsync('Invoke', 'Connected');
+                    connectionStatusCallback.invokeMethodAsync('OnConnectionStatusChanged', 'Connected');
                 }
                 if (connectionIdCallback) {
                     connectionIdCallback.invokeMethodAsync('SetConnectionId', connectionId || '');
@@ -102,12 +102,22 @@ const signalRDebug = {
             // Start connection
             await connection.start();
             
+            console.log('SignalR connection started successfully');
+            
             if (connectionStatusCallback) {
-                connectionStatusCallback.invokeMethodAsync('Invoke', 'Connected');
+                console.log('Calling OnConnectionStatusChanged with: Connected');
+                connectionStatusCallback.invokeMethodAsync('OnConnectionStatusChanged', 'Connected');
+            } else {
+                console.log('Warning: connectionStatusCallback is null');
             }
+            
             if (connectionIdCallback) {
+                console.log('Calling SetConnectionId with:', connection.connectionId || '');
                 connectionIdCallback.invokeMethodAsync('SetConnectionId', connection.connectionId || '');
+            } else {
+                console.log('Warning: connectionIdCallback is null');
             }
+            
             if (messageCallback) {
                 messageCallback.invokeMethodAsync('Invoke', 'System', 'Connected successfully', 'Success');
             }
@@ -115,7 +125,7 @@ const signalRDebug = {
             return { success: true };
         } catch (error) {
             if (connectionStatusCallback) {
-                connectionStatusCallback.invokeMethodAsync('Invoke', 'Disconnected');
+                connectionStatusCallback.invokeMethodAsync('OnConnectionStatusChanged', 'Disconnected');
             }
             if (messageCallback) {
                 messageCallback.invokeMethodAsync('Invoke', 'System', `Connection failed: ${error.message}`, 'Error');
@@ -136,7 +146,7 @@ const signalRDebug = {
             registeredListeners.clear();
             
             if (connectionStatusCallback) {
-                connectionStatusCallback.invokeMethodAsync('Invoke', 'Disconnected');
+                connectionStatusCallback.invokeMethodAsync('OnConnectionStatusChanged', 'Disconnected');
             }
             if (connectionIdCallback) {
                 connectionIdCallback.invokeMethodAsync('SetConnectionId', '');
