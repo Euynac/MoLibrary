@@ -57,6 +57,6 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
 
     public override void ClaimDependencies()
     {
-        DependsOnModule<ModuleControllersGuide>().Register().RegisterMoControllers<DataChannelController>(Option);
+        DependsOnModule<ModuleControllersGuide>().Register().RegisterMoControllers<ModuleDataChannelController>(Option);
     }
 }
