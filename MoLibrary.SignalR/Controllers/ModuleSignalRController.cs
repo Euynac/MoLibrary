@@ -22,7 +22,7 @@ public class ModuleSignalRController(IOptions<ModuleSignalROption> options) : Mo
     /// 获取SignalR所有Server端事件定义
     /// </summary>
     /// <returns>SignalR服务端方法信息列表</returns>
-    [HttpGet("/hubs")]
+    [HttpGet("hubs")]
     public IActionResult GetServerMethods()
     {
         var groups = _option.Hubs
