@@ -1,4 +1,5 @@
 using MoLibrary.Core.Module.BuilderWrapper;
+using MoLibrary.Core.Module.ModuleController;
 
 namespace MoLibrary.Core.Module.Interfaces;
 
@@ -11,6 +12,9 @@ public class MoModuleControllerOption<TModule> : MoModuleOption<TModule>, IMoMod
 
     public bool? IsVisibleInSwagger { get; set; }
 
-
     public string GetSwaggerGroupName() => SwaggerTag ?? ModuleCoreOption.DefaultModuleSwaggerGroupName ?? typeof(TModule).Name;
+    public virtual string GetControllerRouteTemplate<TController>() where TController: MoModuleControllerBase
+    {
+        return $"{RoutePrefix}/{typeof(TController).Name}";
+    }
 }
