@@ -41,6 +41,22 @@ public static class RESTfulApiExtensions
             StatusCode = (int?)res.GetHttpStatusCode()
         };
     }
+
+    /// <summary>
+    /// 封装为RESTful API response
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="response"></param>
+    /// <param name="controller"></param>
+    /// <returns></returns>
+    public static ObjectResult GetResponse<T>(this T response, ControllerBase controller)
+        where T : IMoResponse
+    {
+        return new ObjectResult(response)
+        {
+            StatusCode = (int?)response.GetHttpStatusCode()
+        };
+    }
     /// <summary>
     /// 封装为RESTful API response
     /// </summary>

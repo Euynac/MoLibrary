@@ -6,7 +6,7 @@ using MoLibrary.Tool.MoResponse;
 namespace MoLibrary.DataChannel.Dashboard.Controllers;
 
 [ApiController]
-public class DataChannelController(IDataChannelManager manager) : MoModuleControllerBase
+public class ModuleDataChannelController(IDataChannelManager manager) : MoModuleControllerBase
 {
     /// <summary>
     /// 对给定ID的DataChannel进行重新初始化操作
