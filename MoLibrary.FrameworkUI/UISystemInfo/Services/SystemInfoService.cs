@@ -5,7 +5,7 @@ using MoLibrary.FrameworkUI.UISystemInfo.Controllers;
 using MoLibrary.FrameworkUI.UISystemInfo.Models;
 using MoLibrary.Tool.MoResponse;
 using System.Text.Json;
-using MoLibrary.UI.UICore;
+using MoLibrary.UI.UICore.Interfaces;
 
 namespace MoLibrary.FrameworkUI.UISystemInfo.Services;
 
@@ -20,7 +20,7 @@ public class SystemInfoService
     private readonly ModuleSystemInfoUIOption _option;
     
     // 新的抽象调用器（可选使用）
-    private readonly IMoUIControllerInvoker<ModuleSystemInfoUIOption>? _controllerInvoker;
+    private readonly IUIControllerInvoker<ModuleSystemInfoUIOption>? _controllerInvoker;
 
     public SystemInfoService(HttpClient httpClient, NavigationManager navigationManager, IOptions<ModuleSystemInfoUIOption> option)
     {
@@ -33,7 +33,7 @@ public class SystemInfoService
     /// 使用新抽象的构造函数（推荐）
     /// </summary>
     /// <param name="controllerInvoker">Controller调用器</param>
-    public SystemInfoService(IMoUIControllerInvoker<ModuleSystemInfoUIOption> controllerInvoker)
+    public SystemInfoService(IUIControllerInvoker<ModuleSystemInfoUIOption> controllerInvoker)
     {
         _controllerInvoker = controllerInvoker;
     }

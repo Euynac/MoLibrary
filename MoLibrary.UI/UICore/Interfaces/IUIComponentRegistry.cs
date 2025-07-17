@@ -1,8 +1,9 @@
 using System.Reflection;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
+using MoLibrary.UI.UICore.Models;
 
-namespace MoLibrary.UI.UICore;
+namespace MoLibrary.UI.UICore.Interfaces;
 
 /// <summary>
 /// UI组件注册接口，用于模块化注册Blazor组件

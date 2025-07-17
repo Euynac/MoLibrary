@@ -2,8 +2,10 @@ using System.Reflection;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
 using MoLibrary.UI.Components;
+using MoLibrary.UI.UICore.Interfaces;
+using MoLibrary.UI.UICore.Models;
 
-namespace MoLibrary.UI.UICore;
+namespace MoLibrary.UI.UICore.Services;
 
 /// <summary>
 /// UI组件注册服务实现

@@ -2,13 +2,13 @@ using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.ModuleController;
 using MoLibrary.Tool.MoResponse;
 
-namespace MoLibrary.UI.UICore;
+namespace MoLibrary.UI.UICore.Interfaces;
 
 /// <summary>
 /// UI Controller调用器接口，用于调用Controller API
 /// </summary>
 /// <typeparam name="TControllerOption">Controller选项类型</typeparam>
-public interface IMoUIControllerInvoker<TControllerOption>
+public interface IUIControllerInvoker<TControllerOption>
     where TControllerOption : IMoModuleControllerOption
 {
     /// <summary>
