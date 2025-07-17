@@ -45,6 +45,10 @@ public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger,
         {
             options.DocumentFilter<CustomDocumentFilter>();
             options.SchemaFilter<CustomSchemaFilter>();
+            
+            // 添加GroupName到Tags的转换过滤器
+            options.OperationFilter<GroupNameToTagsOperationFilter>();
+            
             options.SwaggerDoc(option.Version, new OpenApiInfo
             {
                 Title = option.AppName,
