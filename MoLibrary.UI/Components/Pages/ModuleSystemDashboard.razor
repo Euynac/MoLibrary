@@ -9,32 +9,42 @@
 <PageTitle>模块系统仪表板</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
-    <MudText Typo="Typo.h3" Class="mb-4">
+    <MudText Typo="Typo.h3" Class="mb-6">
         <MudIcon Icon="@Icons.Material.Filled.Dashboard" Class="mr-2" />
         模块系统仪表板
     </MudText>
 
-    <MudTabs Elevation="4" Rounded="true" ApplyEffectsToContainer="true" Class="mb-4">
+    <MudTabs Elevation="4" Rounded="true" ApplyEffectsToContainer="true" Class="mb-6">
         <MudTabPanel Text="系统概览" Icon="@Icons.Material.Filled.Assessment">
-            <SystemOverview SystemStatus="systemStatus" />
+            <div class="tab-content-container">
+                <SystemOverview SystemStatus="systemStatus" />
+            </div>
         </MudTabPanel>
 
         <MudTabPanel Text="性能监控" Icon="@Icons.Material.Filled.Speed">
-            <PerformanceMonitoring SystemPerformance="systemPerformance" />
+            <div class="tab-content-container">
+                <PerformanceMonitoring SystemPerformance="systemPerformance" />
+            </div>
         </MudTabPanel>
 
         <MudTabPanel Text="健康检查" Icon="@Icons.Material.Filled.HealthAndSafety">
-            <HealthCheck HealthCheckData="healthCheck" />
+            <div class="tab-content-container">
+                <HealthCheck HealthCheckData="healthCheck" />
+            </div>
         </MudTabPanel>
 
         <MudTabPanel Text="模块管理" Icon="@Icons.Material.Filled.ViewModule">
-            <ModuleManagement RegistrationInfo="registrationInfo" 
-                            OnRefresh="RefreshData" 
-                            OnModuleDetailClicked="ViewModuleDetail" />
+            <div class="tab-content-container">
+                <ModuleManagement RegistrationInfo="registrationInfo" 
+                                OnRefresh="RefreshData" 
+                                OnModuleDetailClicked="ViewModuleDetail" />
+            </div>
         </MudTabPanel>
 
         <MudTabPanel Text="依赖关系" Icon="@Icons.Material.Filled.AccountTree">
-            <DependencyGraph DependencyGraphData="dependencyGraph" />
+            <div class="tab-content-container">
+                <DependencyGraph DependencyGraphData="dependencyGraph" />
+            </div>
         </MudTabPanel>
     </MudTabs>
 </MudContainer>
@@ -42,6 +52,13 @@
 <!-- 模块详情对话框 -->
 <ModuleDetailDialog @bind-IsVisible="showModuleDetail" 
                    SelectedModuleDetail="selectedModuleDetail" />
+
+<style>
+    .tab-content-container {
+        padding: 24px 0;
+        min-height: 400px;
+    }
+</style>
 
 @code {
     public const string MODULE_SYSTEM_DASHBOARD_URL = "/module-system-dashboard";
