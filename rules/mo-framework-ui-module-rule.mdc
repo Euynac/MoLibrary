@@ -104,13 +104,13 @@ public class Module$ModuleUIName$(Module$ModuleUIName$Option option)
 - 示例：`SignalRConnectionConfig.razor`、`SignalRMessageLog.razor`
 
 ### 3.3 服务抽象原则
-- 业务逻辑抽离到Service层
+- 业务逻辑直接在Service层实现，不通过HTTP API调用
 - Service文件放在 `$UIFolderName$/Services/` 目录下  
 - 命名格式：`$ModuleName$Service.cs`
-- 使用`IUIControllerInvoker<Module$ModuleName$UIOption>`进行Controller调用
+- 服务直接实现业务逻辑，通过依赖注入获取所需的其他服务
 - 所有服务方法返回值必须不为空，使用`Res<T>`或`Res`类型
 - 异常情况必须捕获并返回`Res.Fail`
-- 通过依赖注入使用服务
+- Blazor页面通过依赖注入直接使用服务
 
 ### 3.4 数据模型管理
 - 页面相关的数据模型放在 `$UIFolderName$/Models/` 目录下
@@ -150,18 +150,89 @@ public class Module$ModuleUIName$(Module$ModuleUIName$Option option)
   }
   ```
 
-## 5. Controller集成模式
+## 5. 服务和Controller集成模式
 
-### 5.1 Controller开发规范
-当需要为UI模块提供API支持时，应遵循以下模式：
+### 5.1 服务层开发规范
+服务层是业务逻辑的核心实现，直接提供功能给Blazor页面使用：
 
-#### 5.1.1 Controller位置和命名
+#### 5.1.1 服务实现模式
+```csharp
+/// <summary>
+/// $ModuleName$服务，实现核心业务逻辑
+/// </summary>
+public class $ModuleName$Service
+{
+    // 通过依赖注入获取所需服务
+    private readonly ILogger<$ModuleName$Service> _logger;
+    private readonly IOtherService _otherService;
+
+    public $ModuleName$Service(ILogger<$ModuleName$Service> logger, IOtherService otherService)
+    {
+        _logger = logger;
+        _otherService = otherService;
+    }
+
+    /// <summary>
+    /// 业务方法实现
+    /// </summary>
+    /// <param name="parameter">参数</param>
+    /// <returns>返回值不为空，错误时返回Res.Fail</returns>
+    public async Task<Res<TResponse>> GetDataAsync(TRequest parameter)
+    {
+        try
+        {
+            // 直接实现业务逻辑
+            var result = await DoBusinessLogic(parameter);
+            return Res.Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "业务操作失败");
+            return Res.Fail<TResponse>($"操作失败: {ex.Message}");
+        }
+    }
+
+    private async Task<TResponse> DoBusinessLogic(TRequest parameter)
+    {
+        // 具体业务逻辑实现
+        // ...
+        return result;
+    }
+}
+```
+
+### 5.2 Controller开发规范（可选）
+当需要为其他系统提供API接口时，Controller依赖服务层实现：
+
+#### 5.2.1 Controller位置和命名
 - Controller文件位置：`$UIFolderName$/Controllers/Module$ModuleName$Controller.cs`
 - Controller命名：`Module$ModuleName$Controller`
 - 继承：`MoModuleControllerBase`
 - 特性：`[ApiController]`
 
-#### 5.1.2 模块选项配置
+#### 5.2.2 Controller实现示例
+```csharp
+[ApiController]
+public class Module$ModuleName$Controller : MoModuleControllerBase
+{
+    private readonly $ModuleName$Service _service;
+
+    public Module$ModuleName$Controller($ModuleName$Service service)
+    {
+        _service = service;
+    }
+
+    [HttpGet("endpoint")]
+    public async Task<IActionResult> GetData([FromQuery] TRequest parameter)
+    {
+        // 调用服务层实现
+        var result = await _service.GetDataAsync(parameter);
+        return result.GetResponse(this);
+    }
+}
+```
+
+#### 5.2.3 模块选项配置
 UI模块选项必须继承`MoModuleControllerOption`：
 ```csharp
 public class Module$ModuleName$UIOption : MoModuleControllerOption<Module$ModuleName$UI>
@@ -170,14 +241,14 @@ public class Module$ModuleName$UIOption : MoModuleControllerOption<Module$Module
 }
 ```
 
-#### 5.1.3 Controller注册
+#### 5.2.4 Controller注册
 在模块的`ClaimDependencies`方法中注册Controller：
 ```csharp
 public override void ClaimDependencies()
 {
     if (!Option.DisableUI$ModuleName$Page)
     {
-        // 注册Controller依赖
+        // 注册Controller依赖（可选）
         DependsOnModule<ModuleControllersGuide>().Register()
             .RegisterMoControllers<Module$ModuleName$Controller>(Option);
         
@@ -186,102 +257,11 @@ public override void ClaimDependencies()
 }
 ```
 
-#### 5.1.4 Controller实现示例
+### 5.3 Blazor页面调用服务规范
+
+#### 5.3.1 服务注入和调用
 ```csharp
-[ApiController]
-public class Module$ModuleName$Controller : MoModuleControllerBase
-{
-    [HttpGet("endpoint")]
-    public IActionResult GetData()
-    {
-        try
-        {
-            var data = // 获取数据逻辑
-            return Res.Ok(data).GetResponse(this);
-        }
-        catch (Exception ex)
-        {
-            return Res.Fail($"操作失败: {ex.Message}").GetResponse(this);
-        }
-    }
-}
-```
-
-#### 5.1.5 响应类型规范
-- 必须使用`Res<T>`或`Res`类型作为返回值
-- 引用`MoLibrary.Core.Extensions`中的`RESTfulApiExtensions`
-- 使用`.GetResponse(this)`方法进行响应封装
-
-### 5.2 调用Controller的服务模式
-
-#### 5.2.1 服务文件位置
-- 服务文件：`$UIFolderName$/Services/$ModuleName$Service.cs`
-- 用途：封装对自身Controller的HTTP调用
-
-#### 5.2.2 服务实现模式
-
-**统一使用IUIControllerInvoker调用模式**
-```csharp
-/// <summary>
-/// $ModuleName$服务，用于调用自身的Controller
-/// </summary>
-/// <param name="controllerInvoker">Controller调用器</param>
-public class $ModuleName$Service(IUIControllerInvoker<Module$ModuleName$UIOption> controllerInvoker)
-{
-    /// <summary>
-    /// 示例API调用方法
-    /// </summary>
-    /// <param name="parameter">参数</param>
-    /// <returns>返回值不为空，错误时返回Res.Fail</returns>
-    public async Task<Res<TResponse>> GetDataAsync(TRequest parameter)
-    {
-        try
-        {
-            // 构建API路径，包含查询参数
-            var path = "api/endpoint";
-            if (parameter != null)
-            {
-                path += $"?param={parameter}";
-            }
-
-            // 使用 IUIControllerInvoker 调用 Controller
-            var result = await controllerInvoker.GetAsync<Module$ModuleName$Controller, TResponse>(path);
-
-            // 直接返回 Res 结果，有错误时会自动传递
-            return result;
-        }
-        catch (Exception ex)
-        {
-            // 异常情况下返回失败结果
-            return Res.Fail<TResponse>($"调用失败: {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// POST请求示例
-    /// </summary>
-    /// <param name="request">请求数据</param>
-    /// <returns>返回值不为空，错误时返回Res.Fail</returns>
-    public async Task<Res<TResponse>> PostDataAsync(TRequest request)
-    {
-        try
-        {
-            var result = await controllerInvoker.PostAsync<Module$ModuleName$Controller, TRequest, TResponse>("api/endpoint", request);
-            return result;
-        }
-        catch (Exception ex)
-        {
-            return Res.Fail<TResponse>($"提交失败: {ex.Message}");
-        }
-    }
-}
-```
-
-#### 5.2.3 服务调用规范
-
-**在组件中调用服务的正确方式：**
-```csharp
-// 在组件中使用服务
+// 在Blazor页面中注入服务
 @inject $ModuleName$Service $ModuleName$Service
 
 @code {
@@ -307,14 +287,14 @@ public class $ModuleName$Service(IUIControllerInvoker<Module$ModuleName$UIOption
 }
 ```
 
-**重要规则：**
+#### 5.3.2 重要规则
 - 所有服务方法的返回值必须不为空
 - 成功时返回`Res.Ok(data)`，失败时返回`Res.Fail(errorMessage)`
 - 异常情况必须捕获并返回`Res.Fail`
 - 调用方使用`IsFailed(out var error, out var data)`模式检查结果
 - 成功时`data`保证不为null，失败时`error`包含错误信息
 
-#### 5.2.4 依赖注入配置
+#### 5.3.3 依赖注入配置
 在模块的`ConfigureServices`方法中注册服务：
 ```csharp
 public override void ConfigureServices(IServiceCollection services)
@@ -323,10 +303,10 @@ public override void ConfigureServices(IServiceCollection services)
 }
 ```
 
-### 5.3 数据模型管理
-- 响应模型位置：`$UIFolderName$/Models/`
+### 5.4 数据模型管理
+- 数据模型位置：`$UIFolderName$/Models/`
 - 命名约定：`$ModuleName$Response`、`$ModuleName$Request`等
-- 与Controller返回的数据结构保持一致
+- 用于服务层和Controller之间的数据传输
 
 ## 6. 示例参考
 
@@ -341,6 +321,6 @@ public override void ConfigureServices(IServiceCollection services)
 - 模块文件：`Modules/SystemInfoUI.cs`
 - UI文件夹：`UISystemInfo/`
 - 页面文件：`Pages/UISystemInfoPage.razor`
-- Controller：`UISystemInfo/Controllers/ModuleSystemInfoController.cs`
-- 服务：`UISystemInfo/Services/SystemInfoService.cs` (使用IUIControllerInvoker模式)
+- 服务：`UISystemInfo/Services/SystemInfoService.cs` (直接实现业务逻辑)
+- Controller：`UISystemInfo/Controllers/ModuleSystemInfoController.cs` (依赖服务实现)
 - 模型：`UISystemInfo/Models/SystemInfoResponse.cs`
