@@ -1,6 +1,7 @@
 @page "/home"
 @using MoLibrary.FrameworkUI.UISystemInfo.Services
 @using MoLibrary.FrameworkUI.UISystemInfo.Models
+@using MoLibrary.Tool.MoResponse
 @using MudBlazor
 @inject SystemInfoService SystemInfoService
 @inject ISnackbar Snackbar
@@ -21,6 +22,9 @@
     else if (_systemInfo != null)
     {
         <MudGrid>
+    using MoLibrary.Tool.MoResponse;
+    using MoLibrary.Tool.MoResponse;
+    using MoLibrary.Tool.MoResponse;
             <!-- 基本信息卡片 -->
             <MudItem xs="12" md="6">
                 <MudCard>
@@ -195,11 +199,15 @@
 
         try
         {
-            _systemInfo = await SystemInfoService.GetSystemInfoAsync(simple: false);
-            if (_systemInfo == null)
+            if ((await SystemInfoService.GetSystemInfoAsync(simple: false)).IsFailed(out var error, out var data))
             {
-                Snackbar.Add("加载系统信息失败", Severity.Error);
+                Snackbar.Add("加载系统信息失败:" + error, Severity.Error);
             }
+            else
+            {
+                _systemInfo = data;
+            }
+            
         }
         catch (Exception ex)
         {
