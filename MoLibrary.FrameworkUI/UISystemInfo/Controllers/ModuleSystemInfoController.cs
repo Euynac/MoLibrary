@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module.ModuleController;
 using MoLibrary.Tool.MoResponse;
+using MoLibrary.FrameworkUI.UISystemInfo.Models;
 
 namespace MoLibrary.FrameworkUI.UISystemInfo.Controllers;
 
@@ -31,52 +32,45 @@ public class ModuleSystemInfoController : MoModuleControllerBase
 
             var fileInfo = FileVersionInfo.GetVersionInfo(entryAssembly.Location);
             var buildTime = System.IO.File.GetLastWriteTime(fileInfo.FileName);
-            var environmentInfo = new
+
+            var response = new SystemInfoResponse
             {
-                Environment.Version,
-                Environment.UserName,
-                Environment.MachineName,
-                Environment.OSVersion,
-                Environment.ProcessId,
-                Environment.CurrentDirectory,
-                Environment.HasShutdownStarted,
-                Environment.Is64BitOperatingSystem,
-                Environment.Is64BitProcess,
-                Environment.IsPrivilegedProcess,
-                Environment.TickCount,
-                Environment.UserDomainName,
-                Environment.WorkingSet,
-                Environment.SystemPageSize,
-                environments = Environment.GetEnvironmentVariables(),
-                Environment.UserInteractive,
-                Environment.ProcessPath,
+                BuildTime = buildTime,
+                LocalTime = DateTime.Now,
+                UtcTime = DateTime.UtcNow
             };
 
             if (simple is not true)
             {
-                var infos = new
+                response.FileInfo = fileInfo;
+                response.EnvironmentInfo = new EnvironmentInfo
                 {
-                    buildTime,
-                    localTime = DateTime.Now,
-                    utcTime = DateTime.UtcNow,
-                    fileInfo,
-                    environmentInfo,
+                    Version = Environment.Version,
+                    UserName = Environment.UserName,
+                    MachineName = Environment.MachineName,
+                    OSVersion = Environment.OSVersion,
+                    ProcessId = Environment.ProcessId,
+                    CurrentDirectory = Environment.CurrentDirectory,
+                    HasShutdownStarted = Environment.HasShutdownStarted,
+                    Is64BitOperatingSystem = Environment.Is64BitOperatingSystem,
+                    Is64BitProcess = Environment.Is64BitProcess,
+                    IsPrivilegedProcess = Environment.IsPrivilegedProcess,
+                    TickCount = Environment.TickCount,
+                    UserDomainName = Environment.UserDomainName,
+                    WorkingSet = Environment.WorkingSet,
+                    SystemPageSize = Environment.SystemPageSize,
+                    Environments = Environment.GetEnvironmentVariables().Cast<System.Collections.DictionaryEntry>()
+                        .ToDictionary(entry => entry.Key.ToString()!, entry => entry.Value),
+                    UserInteractive = Environment.UserInteractive,
+                    ProcessPath = Environment.ProcessPath
                 };
-
-                return Res.Ok(infos).GetResponse(this);
             }
             else
             {
-                var infos = new
-                {
-                    buildTime,
-                    localTime = DateTime.Now,
-                    utcTime = DateTime.UtcNow,
-                    fileInfo.ProductVersion
-                };
-
-                return Res.Ok(infos).GetResponse(this);
+                response.ProductVersion = fileInfo.ProductVersion;
             }
+
+            return Res.Ok(response).GetResponse(this);
         }
         catch (Exception ex)
         {
