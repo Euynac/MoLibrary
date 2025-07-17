@@ -1,4 +1,4 @@
-@attribute [Route(SIGNALR_DEBUG_URL)]
+@attribute [Route(UI_SIGNALR_URL)]
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.Extensions.Options
 @using MoLibrary.FrameworkUI.UISignalr.Components
@@ -88,7 +88,7 @@
     /// <summary>
     /// SignalR调试页面URL
     /// </summary>
-    public const string SIGNALR_DEBUG_URL = "/signalr-debug";
+    public const string UI_SIGNALR_URL = "/signalr-debug";
 
     private string _accessToken = "";
     private string _selectedHubRoute = "";

@@ -36,10 +36,10 @@ public class ModuleSignalrUI(ModuleSignalrUIOption option)
 
     public override void ClaimDependencies()
     {
-        if (!Option.DisableSignalRDebugPage)
+        if (!Option.DisableUISingalrPage)
         {
             DependsOnModule<ModuleSignalRGuide>().Register();
-            DependsOnModule<ModuleUICoreGuide>().Register().RegisterUIComponents(p => p.RegisterComponent<UISignalRPage>(UISignalRPage.SIGNALR_DEBUG_URL, "SignalR调试", Icons.Material.Filled.Settings, "系统管理", addToNav: true, navOrder: 100));
+            DependsOnModule<ModuleUICoreGuide>().Register().RegisterUIComponents(p => p.RegisterComponent<UISignalRPage>(UISignalRPage.UI_SIGNALR_URL, "SignalR调试", Icons.Material.Filled.Settings, "系统管理", addToNav: true, navOrder: 100));
         }
     }
 }
@@ -55,5 +55,5 @@ public class ModuleSignalrUIOption : MoModuleOption<ModuleSignalrUI>
     /// <summary>
     /// 是否禁用SignalR调试页面
     /// </summary>
-    public bool DisableSignalRDebugPage { get; set; }
+    public bool DisableUISingalrPage { get; set; }
 }
