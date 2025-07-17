@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Components.Routing;
 
-namespace MoLibrary.UI.UICore;
+namespace MoLibrary.UI.UICore.Models;
 
 /// <summary>
 /// UI页面信息

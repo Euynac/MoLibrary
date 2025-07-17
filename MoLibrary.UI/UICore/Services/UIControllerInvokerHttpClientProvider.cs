@@ -6,39 +6,29 @@ using MoLibrary.Core.GlobalJson.Interfaces;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.ModuleController;
 using MoLibrary.Tool.MoResponse;
+using MoLibrary.UI.UICore.Interfaces;
 
-namespace MoLibrary.UI.UICore;
+namespace MoLibrary.UI.UICore.Services;
 
 /// <summary>
 /// 基于HttpClient的UI Controller调用器实现
 /// </summary>
 /// <typeparam name="TControllerOption">Controller选项类型</typeparam>
-public class MoUIControllerInvokerHttpClientProvider<TControllerOption> : IMoUIControllerInvoker<TControllerOption>
+/// <remarks>
+/// 初始化Controller调用器
+/// </remarks>
+/// <param name="option">Controller选项</param>
+/// <param name="httpClient">HTTP客户端</param>
+/// <param name="navigationManager">导航管理器</param>
+/// <param name="globalJsonOption">全局JSON选项</param>
+public class UIControllerInvokerHttpClientProvider<TControllerOption>(
+    IOptions<TControllerOption> option,
+    HttpClient httpClient,
+    NavigationManager navigationManager,
+    IGlobalJsonOption globalJsonOption) : IUIControllerInvoker<TControllerOption>
     where TControllerOption : class, IMoModuleControllerOption
 {
-    private readonly HttpClient _httpClient;
-    private readonly NavigationManager _navigationManager;
-    private readonly TControllerOption _option;
-    private readonly IGlobalJsonOption _globalJsonOption;
-
-    /// <summary>
-    /// 初始化Controller调用器
-    /// </summary>
-    /// <param name="option">Controller选项</param>
-    /// <param name="httpClient">HTTP客户端</param>
-    /// <param name="navigationManager">导航管理器</param>
-    /// <param name="globalJsonOption">全局JSON选项</param>
-    public MoUIControllerInvokerHttpClientProvider(
-        IOptions<TControllerOption> option,
-        HttpClient httpClient,
-        NavigationManager navigationManager,
-        IGlobalJsonOption globalJsonOption)
-    {
-        _option = option.Value;
-        _httpClient = httpClient;
-        _navigationManager = navigationManager;
-        _globalJsonOption = globalJsonOption;
-    }
+    private readonly TControllerOption _option = option.Value;
 
     /// <summary>
     /// 执行GET请求
@@ -53,7 +43,7 @@ public class MoUIControllerInvokerHttpClientProvider<TControllerOption> : IMoUIC
         try
         {
             var url = BuildUrl<TController>(path);
-            var response = await _httpClient.GetAsync(url);
+            var response = await httpClient.GetAsync(url);
             
             if (response.IsSuccessStatusCode)
             {
@@ -85,7 +75,7 @@ public class MoUIControllerInvokerHttpClientProvider<TControllerOption> : IMoUIC
         {
             var url = BuildUrl<TController>(path);
             var jsonContent = SerializeRequest(request);
-            var response = await _httpClient.PostAsync(url, jsonContent);
+            var response = await httpClient.PostAsync(url, jsonContent);
             
             if (response.IsSuccessStatusCode)
             {
@@ -110,7 +100,7 @@ public class MoUIControllerInvokerHttpClientProvider<TControllerOption> : IMoUIC
     private string BuildUrl<TController>(string path) where TController : MoModuleControllerBase
     {
         var controllerRoute = _option.GetRoute<TController>(path);
-        var baseUri = _navigationManager.BaseUri.TrimEnd('/');
+        var baseUri = navigationManager.BaseUri.TrimEnd('/');
         return $"{baseUri}/{controllerRoute.TrimStart('/')}";
     }
 
@@ -122,7 +112,7 @@ public class MoUIControllerInvokerHttpClientProvider<TControllerOption> : IMoUIC
     /// <returns>序列化后的HTTP内容</returns>
     private StringContent SerializeRequest<TRequest>(TRequest request)
     {
-        var json = JsonSerializer.Serialize(request, _globalJsonOption.GlobalOptions);
+        var json = JsonSerializer.Serialize(request, globalJsonOption.GlobalOptions);
         return new StringContent(json, Encoding.UTF8, "application/json");
     }
 
@@ -134,6 +124,6 @@ public class MoUIControllerInvokerHttpClientProvider<TControllerOption> : IMoUIC
     /// <returns>反序列化后的响应结果</returns>
     private Res<TResponse>? DeserializeResponse<TResponse>(string content)
     {
-        return JsonSerializer.Deserialize<Res<TResponse>>(content, _globalJsonOption.GlobalOptions);
+        return JsonSerializer.Deserialize<Res<TResponse>>(content, globalJsonOption.GlobalOptions);
     }
 } 

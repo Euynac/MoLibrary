@@ -8,9 +8,10 @@ using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.UI.Components;
 using MoLibrary.UI.Components.Pages;
-using MoLibrary.UI.UICore;
 using MudBlazor;
 using MudBlazor.Services;
+using MoLibrary.UI.UICore.Interfaces;
+using MoLibrary.UI.UICore.Services;
 
 namespace MoLibrary.UI.Modules;
 
@@ -86,7 +87,7 @@ public class ModuleUICore(ModuleUICoreOption option)
 
 
         // 注册通用Controller调用器
-        services.AddScoped(typeof(IMoUIControllerInvoker<>), typeof(MoUIControllerInvokerHttpClientProvider<>));
+        services.AddScoped(typeof(IUIControllerInvoker<>), typeof(UIControllerInvokerHttpClientProvider<>));
     }
 }
 
