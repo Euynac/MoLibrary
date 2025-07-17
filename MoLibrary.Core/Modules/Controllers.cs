@@ -90,7 +90,7 @@ public class ModuleControllersGuide : MoModuleGuide<ModuleControllers, ModuleCon
     }
     public ModuleControllersGuide RegisterMoControllers<TController>(IMoModuleControllerOption options) where TController : MoModuleControllerBase
     {
-        if (options.DisableControllers)
+        if (options.GetIsControllerDisabled())
         {
             Logger.LogWarning("MoModuleController {Controller} is disabled", typeof(TController).Name);
             return this;

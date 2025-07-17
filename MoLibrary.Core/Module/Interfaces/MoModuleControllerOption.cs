@@ -5,17 +5,23 @@ namespace MoLibrary.Core.Module.Interfaces;
 
 public class MoModuleControllerOption<TModule> : MoModuleOption<TModule>, IMoModuleControllerOption where TModule : IMoModule
 {
-    public string? SwaggerTag { get; set; }
+    public string? SwaggerGroup { get; set; }
 
-    public string RoutePrefix { get; set; } = typeof(TModule).Name;
-    public bool DisableControllers { get; set; }
+    public string? RoutePrefix { get; set; }
+    public bool? IsControllerDisabled { get; set; }
 
     public bool? IsVisibleInSwagger { get; set; }
 
-    public string GetSwaggerGroupName() => SwaggerTag ?? ModuleCoreOption.DefaultModuleSwaggerGroupName ?? typeof(TModule).Name;
+    public string GetSwaggerGroupName() => SwaggerGroup ?? ModuleCoreOption.DefaultModuleSwaggerGroupName ?? typeof(TModule).Name;
+
+
+    public bool GetIsControllerDisabled() => IsControllerDisabled ?? ModuleCoreOption.DefaultDisableControllers ?? false;
+
+    public bool GetIsVisibleInSwagger() => IsVisibleInSwagger ?? ModuleCoreOption.DefaultIsVisibleInSwagger ?? true;
+
     public virtual string GetControllerRouteTemplate<TController>() where TController: MoModuleControllerBase
     {
-        return $"{RoutePrefix}/{typeof(TController).Name}";
+        return RoutePrefix ?? ModuleCoreOption.DefaultRoutePrefix ?? $"{typeof(TModule).Name}/{typeof(TController).Name}";
     }
 
     public virtual string GetRoute<TController>(string path) where TController: MoModuleControllerBase
