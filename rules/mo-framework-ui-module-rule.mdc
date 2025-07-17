@@ -53,7 +53,7 @@ public class Module$ModuleUIName$(Module$ModuleUIName$Option option)
     public override void ConfigureServices(IServiceCollection services)
     {
         // 注册相关服务
-        services.AddScoped<$ModuleName$DebugService>();
+        services.AddScoped<$ModuleName$Service>();
     }
 
     public override void ClaimDependencies()
@@ -88,7 +88,7 @@ public class Module$ModuleUIName$(Module$ModuleUIName$Option option)
 @using MoLibrary.FrameworkUI.$UIFolderName$.Components
 @using MoLibrary.FrameworkUI.$UIFolderName$.Services
 @using MoLibrary.FrameworkUI.$UIFolderName$.Models
-@inject $ModuleName$DebugService $ModuleName$DebugService
+@inject $ModuleName$Service $ModuleName$Service
 ```
 
 ## 3. 模块化开发要求
@@ -106,7 +106,10 @@ public class Module$ModuleUIName$(Module$ModuleUIName$Option option)
 ### 3.3 服务抽象原则
 - 业务逻辑抽离到Service层
 - Service文件放在 `$UIFolderName$/Services/` 目录下  
-- 命名格式：`$ModuleName$DebugService.cs`或`$ModuleName$ManageService.cs`
+- 命名格式：`$ModuleName$Service.cs`
+- 使用`IUIControllerInvoker<Module$ModuleName$UIOption>`进行Controller调用
+- 所有服务方法返回值必须不为空，使用`Res<T>`或`Res`类型
+- 异常情况必须捕获并返回`Res.Fail`
 - 通过依赖注入使用服务
 
 ### 3.4 数据模型管理
@@ -130,6 +133,22 @@ public class Module$ModuleUIName$(Module$ModuleUIName$Option option)
 - 实现统一的错误处理机制
 - 使用ISnackbar显示用户友好的错误信息
 - 记录详细的调试日志
+
+### 4.4 Blazor生命周期最佳实践
+- **避免在OnInitializedAsync中进行耗时操作**：接口初始化和JavaScript互操作不应放在OnInitializedAsync中，这会导致页面阻塞和空白等待
+- **使用OnAfterRenderAsync进行初始化**：将耗时的接口调用和JavaScript互操作放在OnAfterRenderAsync(bool firstRender)中
+- **确保只在首次渲染时执行**：使用firstRender参数确保初始化逻辑只在首次渲染时执行一次
+- **示例代码**：
+  ```csharp
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+      if (firstRender)
+      {
+          await LoadDataAsync(); // 耗时的接口调用
+          await JSRuntime.InvokeVoidAsync("initializeComponent"); // JavaScript互操作
+      }
+  }
+  ```
 
 ## 5. Controller集成模式
 
@@ -201,65 +220,101 @@ public class Module$ModuleName$Controller : MoModuleControllerBase
 
 #### 5.2.2 服务实现模式
 
-根据Controller来源的不同，有两种URL获取方式：
-
-**方式一：UI模块自身的Controller**
+**统一使用IUIControllerInvoker调用模式**
 ```csharp
-public class $ModuleName$Service
+/// <summary>
+/// $ModuleName$服务，用于调用自身的Controller
+/// </summary>
+/// <param name="controllerInvoker">Controller调用器</param>
+public class $ModuleName$Service(IUIControllerInvoker<Module$ModuleName$UIOption> controllerInvoker)
 {
-    private readonly HttpClient _httpClient;
-    private readonly NavigationManager _navigationManager;
-    private readonly Module$ModuleName$UIOption _option;
-
-    public $ModuleName$Service(HttpClient httpClient, NavigationManager navigationManager, IOptions<Module$ModuleName$UIOption> option)
+    /// <summary>
+    /// 示例API调用方法
+    /// </summary>
+    /// <param name="parameter">参数</param>
+    /// <returns>返回值不为空，错误时返回Res.Fail</returns>
+    public async Task<Res<TResponse>> GetDataAsync(TRequest parameter)
     {
-        _httpClient = httpClient;
-        _navigationManager = navigationManager;
-        _option = option.Value;
+        try
+        {
+            // 构建API路径，包含查询参数
+            var path = "api/endpoint";
+            if (parameter != null)
+            {
+                path += $"?param={parameter}";
+            }
+
+            // 使用 IUIControllerInvoker 调用 Controller
+            var result = await controllerInvoker.GetAsync<Module$ModuleName$Controller, TResponse>(path);
+
+            // 直接返回 Res 结果，有错误时会自动传递
+            return result;
+        }
+        catch (Exception ex)
+        {
+            // 异常情况下返回失败结果
+            return Res.Fail<TResponse>($"调用失败: {ex.Message}");
+        }
     }
 
-    public async Task<TResponse?> CallApiAsync()
+    /// <summary>
+    /// POST请求示例
+    /// </summary>
+    /// <param name="request">请求数据</param>
+    /// <returns>返回值不为空，错误时返回Res.Fail</returns>
+    public async Task<Res<TResponse>> PostDataAsync(TRequest request)
     {
-        // 使用Option的GetRoute方法获取完整路由
-        var controllerRoute = _option.GetRoute<Module$ModuleName$Controller>("endpoint");
-        var baseUri = _navigationManager.BaseUri.TrimEnd('/');
-        var url = $"{baseUri}/{controllerRoute.TrimStart('/')}";
-        
-        var response = await _httpClient.GetAsync(url);
-        // 处理响应...
+        try
+        {
+            var result = await controllerInvoker.PostAsync<Module$ModuleName$Controller, TRequest, TResponse>("api/endpoint", request);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail<TResponse>($"提交失败: {ex.Message}");
+        }
     }
 }
 ```
 
-**方式二：其他模块的Controller**
-```csharp
-public class $ModuleName$Service
-{
-    private readonly HttpClient _httpClient;
-    private readonly NavigationManager _navigationManager;
-    private readonly ModuleOtherOption _otherOption;
+#### 5.2.3 服务调用规范
 
-    public $ModuleName$Service(HttpClient httpClient, NavigationManager navigationManager, IOptions<ModuleOtherOption> otherOption)
+**在组件中调用服务的正确方式：**
+```csharp
+// 在组件中使用服务
+@inject $ModuleName$Service $ModuleName$Service
+
+@code {
+    private async Task LoadDataAsync()
     {
-        _httpClient = httpClient;
-        _navigationManager = navigationManager;
-        _otherOption = otherOption.Value;
+        // 使用IsFailed方法检查结果并获取数据或错误
+        if ((await $ModuleName$Service.GetDataAsync(parameter)).IsFailed(out var error, out var data))
+        {
+            // 处理错误情况
+            Snackbar.Add($"操作失败: {error}", Severity.Error);
+            return;
+        }
+
+        // 处理成功情况，data不为null
+        ProcessData(data);
     }
 
-    public async Task<TResponse?> CallApiAsync()
+    private void ProcessData(TResponse data)
     {
-        // 使用其他模块Option的GetControllerRouteTemplate方法
-        var controllerRoute = _otherOption.GetControllerRouteTemplate<ModuleOtherController>();
-        var baseUri = _navigationManager.BaseUri.TrimEnd('/');
-        var url = $"{baseUri}/{controllerRoute.TrimStart('/')}/endpoint";
-        
-        var response = await _httpClient.GetAsync(url);
-        // 处理响应...
+        // 处理数据，data保证不为null
+        // ...
     }
 }
 ```
 
-#### 5.2.3 依赖注入配置
+**重要规则：**
+- 所有服务方法的返回值必须不为空
+- 成功时返回`Res.Ok(data)`，失败时返回`Res.Fail(errorMessage)`
+- 异常情况必须捕获并返回`Res.Fail`
+- 调用方使用`IsFailed(out var error, out var data)`模式检查结果
+- 成功时`data`保证不为null，失败时`error`包含错误信息
+
+#### 5.2.4 依赖注入配置
 在模块的`ConfigureServices`方法中注册服务：
 ```csharp
 public override void ConfigureServices(IServiceCollection services)
@@ -280,12 +335,12 @@ public override void ConfigureServices(IServiceCollection services)
 - UI文件夹：`UISignalr/`
 - 页面文件：`Pages/UISignalRPage.razor`
 - 组件：`UISignalr/Components/SignalRConnectionConfig.razor`等
-- 服务：`UISignalr/Services/SignalRDebugService.cs`
+- 服务：`UISignalr/Services/SignalRService.cs`
 
 以UISystemInfo模块为例（带Controller集成）：
 - 模块文件：`Modules/SystemInfoUI.cs`
 - UI文件夹：`UISystemInfo/`
 - 页面文件：`Pages/UISystemInfoPage.razor`
 - Controller：`UISystemInfo/Controllers/ModuleSystemInfoController.cs`
-- 服务：`UISystemInfo/Services/SystemInfoService.cs`
+- 服务：`UISystemInfo/Services/SystemInfoService.cs` (使用IUIControllerInvoker模式)
 - 模型：`UISystemInfo/Models/SystemInfoResponse.cs`

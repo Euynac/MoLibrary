@@ -187,9 +187,12 @@
     private bool _loading = true;
     private SystemInfoResponse? _systemInfo;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await LoadSystemInfo();
+        if (firstRender)
+        {
+            await LoadSystemInfo();
+        }
     }
 
     private async Task LoadSystemInfo()
