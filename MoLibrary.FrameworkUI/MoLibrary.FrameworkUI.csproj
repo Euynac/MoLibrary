@@ -8,6 +8,7 @@
     <StaticWebAssetProjectMode>Default</StaticWebAssetProjectMode>
     <!-- 确保生成静态Web资源清单 -->
     <GenerateStaticWebAssetsManifest>true</GenerateStaticWebAssetsManifest>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\MoLibrary.Framework\MoLibrary.Framework.csproj" />
