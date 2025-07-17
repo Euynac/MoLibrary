@@ -53,6 +53,14 @@ public class DaprHttpForConnectClient(DaprClient client, ILogger<DaprHttpForConn
                 throw new InvocationException(appid, callbackUrl,
                     new Exception("Json序列化为空"), response);
 
+            if (res is IMoResponse serviceResponse)
+            {
+                serviceResponse.AutoParseResponseFromOrigin(content);
+            }
+
+            //var res = await response.Content.ReadFromJsonAsync<TResponse>(jsonOption.GlobalOptions);
+
+
             return res;
         }
         catch (JsonException jsonException)
@@ -95,6 +103,10 @@ public class DaprHttpForConnectClient(DaprClient client, ILogger<DaprHttpForConn
                 throw new InvocationException(appid, callbackUrl,
                     new Exception("Json序列化为空"), response);
 
+            if (res is IMoResponse serviceResponse)
+            {
+                serviceResponse.AutoParseResponseFromOrigin(content);
+            }
             return res;
         }
         catch (JsonException jsonException)

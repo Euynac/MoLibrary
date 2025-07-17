@@ -65,6 +65,20 @@ public static class MoResponseHelper
     public static bool IsOk(this IMoResponse res) => res.Code == ResponseCode.Ok;
 
     /// <summary>
+    /// 从远程调用请求结果 自动验证并附加信息
+    /// </summary>
+    /// <param name="res"></param>
+    /// <param name="originInfo">HTTP等原始Response</param>
+    /// <returns></returns>
+    public static void AutoParseResponseFromOrigin(this IMoResponse res, string originInfo)
+    {
+        if (IsNotValidResponse(res))
+        {
+            res.AppendExtraInfo("originRes", originInfo);
+        }
+    }
+
+    /// <summary>
     ///  不是一个有效的请求，代表可能返回值并不符合此规范，应注意此情况进行特殊处理。
     /// </summary>
     public static bool IsNotValidResponse(this IMoResponse res)
