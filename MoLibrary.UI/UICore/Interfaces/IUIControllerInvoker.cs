@@ -18,7 +18,7 @@ public interface IUIControllerInvoker<TControllerOption>
     /// <typeparam name="TResponse">响应数据类型</typeparam>
     /// <param name="path">API路径</param>
     /// <returns>响应结果</returns>
-    Task<Res<TResponse>?> GetAsync<TController, TResponse>(string path)
+    Task<Res<TResponse>> GetAsync<TController, TResponse>(string path)
         where TController : MoModuleControllerBase;
 
     /// <summary>
@@ -30,6 +30,6 @@ public interface IUIControllerInvoker<TControllerOption>
     /// <param name="path">API路径</param>
     /// <param name="request">请求数据</param>
     /// <returns>响应结果</returns>
-    Task<Res<TResponse>?> PostAsync<TController, TRequest, TResponse>(string path, TRequest request)
+    Task<Res<TResponse>> PostAsync<TController, TRequest, TResponse>(string path, TRequest request)
         where TController : MoModuleControllerBase;
 } 

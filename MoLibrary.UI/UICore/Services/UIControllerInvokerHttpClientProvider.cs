@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Options;
+using MoLibrary.Core.Extensions;
 using MoLibrary.Core.GlobalJson.Interfaces;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.ModuleController;
@@ -37,7 +38,7 @@ public class UIControllerInvokerHttpClientProvider<TControllerOption>(
     /// <typeparam name="TResponse">响应数据类型</typeparam>
     /// <param name="path">API路径</param>
     /// <returns>响应结果</returns>
-    public async Task<Res<TResponse>?> GetAsync<TController, TResponse>(string path)
+    public async Task<Res<TResponse>> GetAsync<TController, TResponse>(string path)
         where TController : MoModuleControllerBase
     {
         try
@@ -48,14 +49,24 @@ public class UIControllerInvokerHttpClientProvider<TControllerOption>(
             if (response.IsSuccessStatusCode)
             {
                 var content = await response.Content.ReadAsStringAsync();
-                return DeserializeResponse<TResponse>(content);
+                var result = DeserializeResponse<TResponse>(content);
+                if (result == null)
+                    return Res.Fail(ResponseCode.BadRequest, "反序列化响应失败，返回结果为空");
+                
+                return result;
             }
             
-            return null;
+            return Res.Fail(ResponseCode.BadRequest, "HTTP请求失败，状态码：{0}", response.StatusCode);
         }
-        catch
+        catch (JsonException jsonException)
         {
-            return null;
+            var message = jsonException.GetMessageRecursively();
+            return Res.Fail(ResponseCode.BadRequest, "执行GET请求{0}失败，JSON反序列化错误：{1}", path, message);
+        }
+        catch (Exception e)
+        {
+            var message = e.GetMessageRecursively();
+            return Res.Fail(ResponseCode.BadRequest, "执行GET请求{0}失败：{1}", path, message);
         }
     }
 
@@ -68,7 +79,7 @@ public class UIControllerInvokerHttpClientProvider<TControllerOption>(
     /// <param name="path">API路径</param>
     /// <param name="request">请求数据</param>
     /// <returns>响应结果</returns>
-    public async Task<Res<TResponse>?> PostAsync<TController, TRequest, TResponse>(string path, TRequest request)
+    public async Task<Res<TResponse>> PostAsync<TController, TRequest, TResponse>(string path, TRequest request)
         where TController : MoModuleControllerBase
     {
         try
@@ -80,14 +91,24 @@ public class UIControllerInvokerHttpClientProvider<TControllerOption>(
             if (response.IsSuccessStatusCode)
             {
                 var content = await response.Content.ReadAsStringAsync();
-                return DeserializeResponse<TResponse>(content);
+                var result = DeserializeResponse<TResponse>(content);
+                if (result == null)
+                    return Res.Fail(ResponseCode.BadRequest, "反序列化响应失败，返回结果为空");
+                
+                return result;
             }
             
-            return null;
+            return Res.Fail(ResponseCode.BadRequest, "HTTP请求失败，状态码：{0}", response.StatusCode);
         }
-        catch
+        catch (JsonException jsonException)
         {
-            return null;
+            var message = jsonException.GetMessageRecursively();
+            return Res.Fail(ResponseCode.BadRequest, "执行POST请求{0}失败，JSON反序列化错误：{1}", path, message);
+        }
+        catch (Exception e)
+        {
+            var message = e.GetMessageRecursively();
+            return Res.Fail(ResponseCode.BadRequest, "执行POST请求{0}失败：{1}", path, message);
         }
     }
 
