@@ -188,7 +188,7 @@ public class $ModuleName$Service
         catch (Exception ex)
         {
             _logger.LogError(ex, "业务操作失败");
-            return Res.Fail<TResponse>($"操作失败: {ex.Message}");
+            return Res.Fail($"操作失败: {ex.Message}");
         }
     }
 
