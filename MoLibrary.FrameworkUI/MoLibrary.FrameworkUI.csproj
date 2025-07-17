@@ -9,10 +9,6 @@
     <!-- 确保生成静态Web资源清单 -->
     <GenerateStaticWebAssetsManifest>true</GenerateStaticWebAssetsManifest>
   </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.12" />
-  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MoLibrary.Framework\MoLibrary.Framework.csproj" />
     <ProjectReference Include="..\MoLibrary.UI\MoLibrary.UI.csproj" />

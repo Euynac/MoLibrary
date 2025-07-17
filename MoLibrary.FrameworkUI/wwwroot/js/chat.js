@@ -247,38 +247,11 @@ const signalRDebug = {
         }
 
         try {
+            // 不进行自动类型转换，保持C#传递过来的类型
+            // C#端已经做了正确的类型转换，JavaScript端应该直接使用
             const convertedArgs = args.map(arg => {
-                if (typeof arg === 'string') {
-                    const trimmed = arg.trim();
-
-                    // If empty string, return as is
-                    if (trimmed === '') {
-                        return arg;
-                    }
-
-                    // Try to parse as JSON for complex types
-                    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-                        try {
-                            return JSON.parse(trimmed);
-                        } catch {
-                            return arg;
-                        }
-                    }
-
-                    // Try to parse as number if it looks like a number
-                    if (/^-?\d+(\.\d+)?$/.test(trimmed)) {
-                        const num = parseFloat(trimmed);
-                        return Number.isInteger(num) ? parseInt(trimmed) : num;
-                    }
-
-                    // Try to parse as boolean
-                    if (trimmed.toLowerCase() === 'true' || trimmed.toLowerCase() === 'false') {
-                        return trimmed.toLowerCase() === 'true';
-                    }
-
-                    // Return as string
-                    return arg;
-                }
+                // 直接返回参数，不进行任何自动转换
+                // 让C#端的SignalRDebugService.ConvertParameterValue方法负责类型转换
                 return arg;
             });
 

@@ -25,7 +25,7 @@
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
     <MudText Typo="Typo.h3" Class="mb-4">
         <MudIcon Icon="@Icons.Material.Filled.Settings" Class="mr-2" />
-        SignalR调试 (JavaScript版)
+        SignalR调试
     </MudText>
 
     <!-- 连接配置 -->
@@ -39,6 +39,18 @@
                            OnConnect="ConnectAsync"
                            OnDisconnect="DisconnectAsync"
                            OnRefreshHubs="LoadHubsAsync" />
+
+    <!-- 调试设置 -->
+    <MudPaper Class="pa-4 mb-4" Elevation="2">
+        <MudText Typo="Typo.h6" Class="mb-2">调试设置</MudText>
+        <MudSwitch T="bool"
+                   @bind-Value="@VerboseLogging" 
+                   Label="启用详细调试日志" 
+                   Color="Color.Primary" />
+        <MudText Typo="Typo.caption" Class="mt-1 mud-text-secondary">
+            开启后会显示参数转换和方法调用的详细信息，有助于调试参数类型问题
+        </MudText>
+    </MudPaper>
 
     <!-- 连接状态 -->
     <SignalRConnectionStatus ConnectionState="@_connectionState"
@@ -89,6 +101,27 @@
     private readonly Dictionary<string, string> _methodParameters = new();
     private readonly List<SignalRMessage> _messages = [];
     private SignalRConnectionState _connectionState = new();
+    private bool _verboseLogging = false; // 详细调试日志开关
+
+    /// <summary>
+    /// 详细调试日志属性，变化时自动更新服务
+    /// </summary>
+    private bool VerboseLogging
+    {
+        get => _verboseLogging;
+        set
+        {
+            if (_verboseLogging != value)
+            {
+                _verboseLogging = value;
+                if (SignalRDebugService != null)
+                {
+                    SignalRDebugService.IsVerboseLoggingEnabled = value;
+                }
+                StateHasChanged();
+            }
+        }
+    }
 
     /// <summary>
     /// 组件初始化
@@ -99,6 +132,9 @@
         
         // 初始化SignalR调试服务
         await SignalRDebugService.InitializeAsync();
+        
+        // 确保初始化后立即设置详细日志状态
+        SignalRDebugService.IsVerboseLoggingEnabled = _verboseLogging;
         
         // 订阅事件
         SignalRDebugService.MessageReceived += OnMessageReceived;
@@ -370,16 +406,30 @@
     private void OnSelectedMethodNameChanged(string methodName)
     {
         _selectedMethodName = methodName;
-        _methodParameters.Clear();
         
+        // 获取新选择的方法
         var method = _hubMethods.FirstOrDefault(m => m.Name == methodName);
         if (method != null)
         {
+            // 只为新方法的参数添加默认值，保留已有的参数值
             foreach (var arg in method.Args)
             {
-                _methodParameters[arg.Name] = "";
+                if (!_methodParameters.ContainsKey(arg.Name))
+                {
+                    _methodParameters[arg.Name] = "";
+                }
+                // 不清空已有的参数值，让用户手动管理
+            }
+            
+            // 移除不属于当前方法的参数（可选，也可以保留以便切换回来时使用）
+            var currentMethodArgNames = method.Args.Select(a => a.Name).ToHashSet();
+            var keysToRemove = _methodParameters.Keys.Where(k => !currentMethodArgNames.Contains(k)).ToList();
+            foreach (var key in keysToRemove)
+            {
+                _methodParameters.Remove(key);
             }
         }
+        
         StateHasChanged();
     }
 
