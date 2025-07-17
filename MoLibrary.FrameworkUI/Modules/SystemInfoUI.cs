@@ -3,7 +3,9 @@ using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
+using MoLibrary.Core.Modules;
 using MoLibrary.FrameworkUI.Pages;
+using MoLibrary.FrameworkUI.UISystemInfo.Controllers;
 using MoLibrary.FrameworkUI.UISystemInfo.Services;
 using MoLibrary.UI.Modules;
 using MudBlazor;
@@ -42,6 +44,10 @@ public class ModuleSystemInfoUI(ModuleSystemInfoUIOption option)
     {
         if (!Option.DisableUISystemInfoPage)
         {
+            // 注册Controller依赖
+            DependsOnModule<ModuleControllersGuide>().Register()
+                .RegisterMoControllers<ModuleSystemInfoController>(Option);
+            
             DependsOnModule<ModuleUICoreGuide>().Register()
                 .RegisterUIComponents(p => p.RegisterComponent<UISystemInfoPage>(
                     UISystemInfoPage.SYSTEM_INFO_URL, 
@@ -64,7 +70,7 @@ public class ModuleSystemInfoUIGuide : MoModuleGuide<ModuleSystemInfoUI, ModuleS
 /// <summary>
 /// SystemInfoUI模块选项
 /// </summary>
-public class ModuleSystemInfoUIOption : MoModuleOption<ModuleSystemInfoUI>
+public class ModuleSystemInfoUIOption : MoModuleControllerOption<ModuleSystemInfoUI>
 { 
     /// <summary>
     /// 是否禁用系统信息页面

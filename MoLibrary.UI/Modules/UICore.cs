@@ -83,6 +83,10 @@ public class ModuleUICore(ModuleUICoreOption option)
 
         // 注册UI组件管理服务
         services.AddSingleton<IUIComponentRegistry, UIComponentRegistry>();
+
+
+        // 注册通用Controller调用器
+        services.AddScoped(typeof(IMoUIControllerInvoker<>), typeof(MoUIControllerInvokerHttpClientProvider<>));
     }
 }
 

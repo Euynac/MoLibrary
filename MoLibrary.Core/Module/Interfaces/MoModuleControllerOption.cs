@@ -17,4 +17,13 @@ public class MoModuleControllerOption<TModule> : MoModuleOption<TModule>, IMoMod
     {
         return $"{RoutePrefix}/{typeof(TController).Name}";
     }
+
+    public virtual string GetRoute<TController>(string path) where TController: MoModuleControllerBase
+    {
+        var controllerRoute = GetControllerRouteTemplate<TController>();
+        var trimmedPath = path?.TrimStart('/') ?? string.Empty;
+        return string.IsNullOrEmpty(trimmedPath) 
+            ? controllerRoute 
+            : $"{controllerRoute}/{trimmedPath}";
+    }
 }
