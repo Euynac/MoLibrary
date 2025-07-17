@@ -39,7 +39,7 @@ public class ModuleSignalrUI(ModuleSignalrUIOption option)
         if (!Option.DisableSignalRDebugPage)
         {
             DependsOnModule<ModuleSignalRGuide>().Register();
-            DependsOnModule<ModuleUICoreGuide>().Register().RegisterUIComponents(p => p.RegisterComponent<SignalRDebug>(SignalRDebug.SIGNALR_DEBUG_URL, "SignalR调试", Icons.Material.Filled.Settings, "系统管理", addToNav: true, navOrder: 100));
+            DependsOnModule<ModuleUICoreGuide>().Register().RegisterUIComponents(p => p.RegisterComponent<UISignalRPage>(UISignalRPage.SIGNALR_DEBUG_URL, "SignalR调试", Icons.Material.Filled.Settings, "系统管理", addToNav: true, navOrder: 100));
         }
     }
 }
