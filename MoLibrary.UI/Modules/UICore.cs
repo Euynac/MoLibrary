@@ -183,6 +183,6 @@ public class ModuleUICoreOption : MoModuleOption<ModuleUICore>
     /// <summary>
     /// 开启Debug模式
     /// </summary>
-    public bool EnableDebug { get; set; } = true;
+    public bool EnableDebug { get; set; }
 
 }
