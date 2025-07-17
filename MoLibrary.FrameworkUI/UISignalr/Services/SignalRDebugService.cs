@@ -1,9 +1,9 @@
-using Microsoft.JSInterop;
-using MoLibrary.FrameworkUI.Models;
-using MoLibrary.SignalR.Models;
 using System.Text.Json;
+using Microsoft.JSInterop;
+using MoLibrary.FrameworkUI.UISignalr.Models;
+using MoLibrary.SignalR.Models;
 
-namespace MoLibrary.FrameworkUI.Services
+namespace MoLibrary.FrameworkUI.UISignalr.Services
 {
     /// <summary>
     /// SignalR调试服务

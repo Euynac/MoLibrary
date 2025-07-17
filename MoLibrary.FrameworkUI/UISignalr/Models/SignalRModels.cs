@@ -1,6 +1,6 @@
 using MoLibrary.SignalR.Models;
 
-namespace MoLibrary.FrameworkUI.Models
+namespace MoLibrary.FrameworkUI.UISignalr.Models
 {
     /// <summary>
     /// Hub方法信息
