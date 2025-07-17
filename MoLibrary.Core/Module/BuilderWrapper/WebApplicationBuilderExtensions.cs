@@ -43,7 +43,7 @@ public static class WebApplicationBuilderExtensions
         {
             WebApplicationBuilderInstance = builder;
         }
-        var typeFinder = builder.Services.GetOrCreateDomainTypeFinder<MoDomainTypeFinder>(typeFinderConfigure);
+        builder.Services.GetOrCreateMoModuleSystemTypeFinder(typeFinderConfigure);
     }
 
     /// <summary>
