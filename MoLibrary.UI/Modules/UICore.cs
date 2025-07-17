@@ -158,7 +158,7 @@ public class ModuleUICoreGuide : MoModuleGuide<ModuleUICore, ModuleUICoreOption,
 
             builder.WebApplication.MapRazorComponents<MoApp>()
                 .AddInteractiveServerRenderMode().AddAdditionalAssemblies(registry.GetAdditionalAssemblies());
-            //巨坑：如果缺少Map中的AddAdditionalAssemblies，那么通过F5刷新将会导致404。但通过Router中访问却不会404。
+            //巨坑：如果缺少中间件中的AddAdditionalAssemblies，那么通过F5刷新将会导致404。但通过Router中访问却不会404。
         });
 
         return this;
@@ -173,7 +173,7 @@ public class ModuleUICoreOption : MoModuleOption<ModuleUICore>
     /// <summary>
     /// 应用栏名称
     /// </summary>
-    public string UIAppBarName { get; set; } = "MoLibrary";
+    public string UIAppBarName { get; set; } = nameof(MoLibrary);
 
     /// <summary>
     /// 禁用模块系统UI界面
