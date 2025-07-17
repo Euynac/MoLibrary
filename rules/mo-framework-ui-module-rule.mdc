@@ -142,7 +142,32 @@ public class Module$ModuleUIName$(Module$ModuleUIName$Option option)
 - 继承：`MoModuleControllerBase`
 - 特性：`[ApiController]`
 
-#### 5.1.2 Controller实现示例
+#### 5.1.2 模块选项配置
+UI模块选项必须继承`MoModuleControllerOption`：
+```csharp
+public class Module$ModuleName$UIOption : MoModuleControllerOption<Module$ModuleName$UI>
+{ 
+    public bool DisableUI$ModuleName$Page { get; set; }
+}
+```
+
+#### 5.1.3 Controller注册
+在模块的`ClaimDependencies`方法中注册Controller：
+```csharp
+public override void ClaimDependencies()
+{
+    if (!Option.DisableUI$ModuleName$Page)
+    {
+        // 注册Controller依赖
+        DependsOnModule<ModuleControllersGuide>().Register()
+            .RegisterMoControllers<Module$ModuleName$Controller>(Option);
+        
+        // 其他依赖注册...
+    }
+}
+```
+
+#### 5.1.4 Controller实现示例
 ```csharp
 [ApiController]
 public class Module$ModuleName$Controller : MoModuleControllerBase
@@ -163,7 +188,7 @@ public class Module$ModuleName$Controller : MoModuleControllerBase
 }
 ```
 
-#### 5.1.3 响应类型规范
+#### 5.1.5 响应类型规范
 - 必须使用`Res<T>`或`Res`类型作为返回值
 - 引用`MoLibrary.Core.Extensions`中的`RESTfulApiExtensions`
 - 使用`.GetResponse(this)`方法进行响应封装
@@ -175,36 +200,61 @@ public class Module$ModuleName$Controller : MoModuleControllerBase
 - 用途：封装对自身Controller的HTTP调用
 
 #### 5.2.2 服务实现模式
+
+根据Controller来源的不同，有两种URL获取方式：
+
+**方式一：UI模块自身的Controller**
 ```csharp
 public class $ModuleName$Service
 {
     private readonly HttpClient _httpClient;
     private readonly NavigationManager _navigationManager;
+    private readonly Module$ModuleName$UIOption _option;
 
-    public $ModuleName$Service(HttpClient httpClient, NavigationManager navigationManager)
+    public $ModuleName$Service(HttpClient httpClient, NavigationManager navigationManager, IOptions<Module$ModuleName$UIOption> option)
     {
         _httpClient = httpClient;
         _navigationManager = navigationManager;
+        _option = option.Value;
     }
 
     public async Task<TResponse?> CallApiAsync()
     {
-        var controllerRoute = GetControllerRouteTemplate(typeof(Module$ModuleName$Controller));
+        // 使用Option的GetRoute方法获取完整路由
+        var controllerRoute = _option.GetRoute<Module$ModuleName$Controller>("endpoint");
+        var baseUri = _navigationManager.BaseUri.TrimEnd('/');
+        var url = $"{baseUri}/{controllerRoute.TrimStart('/')}";
+        
+        var response = await _httpClient.GetAsync(url);
+        // 处理响应...
+    }
+}
+```
+
+**方式二：其他模块的Controller**
+```csharp
+public class $ModuleName$Service
+{
+    private readonly HttpClient _httpClient;
+    private readonly NavigationManager _navigationManager;
+    private readonly ModuleOtherOption _otherOption;
+
+    public $ModuleName$Service(HttpClient httpClient, NavigationManager navigationManager, IOptions<ModuleOtherOption> otherOption)
+    {
+        _httpClient = httpClient;
+        _navigationManager = navigationManager;
+        _otherOption = otherOption.Value;
+    }
+
+    public async Task<TResponse?> CallApiAsync()
+    {
+        // 使用其他模块Option的GetControllerRouteTemplate方法
+        var controllerRoute = _otherOption.GetControllerRouteTemplate<ModuleOtherController>();
         var baseUri = _navigationManager.BaseUri.TrimEnd('/');
         var url = $"{baseUri}/{controllerRoute.TrimStart('/')}/endpoint";
         
         var response = await _httpClient.GetAsync(url);
         // 处理响应...
-    }
-
-    private static string GetControllerRouteTemplate(Type controllerType)
-    {
-        var controllerName = controllerType.Name.Replace("Controller", "");
-        if (controllerName.StartsWith("Module"))
-        {
-            controllerName = controllerName.Substring(6);
-        }
-        return $"api/v1/{controllerName}";
     }
 }
 ```
