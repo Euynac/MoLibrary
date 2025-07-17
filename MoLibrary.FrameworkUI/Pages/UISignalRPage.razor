@@ -5,12 +5,14 @@
 @using MoLibrary.SignalR.Modules
 @using MudBlazor
 @using MoLibrary.Core.GlobalJson.Interfaces
+@using MoLibrary.FrameworkUI.Modules
 @using MoLibrary.FrameworkUI.UISignalr.Models
 @using MoLibrary.FrameworkUI.UISignalr.Services
 @using MoLibrary.SignalR.Controllers
 @using MoLibrary.SignalR.Models
 @inject ISnackbar SnackBar
 @inject IOptions<ModuleSignalROption> SignalROptions
+@inject IOptions<ModuleSignalrUIOption> SignalRUIOptions
 @inject NavigationManager NavigationManager
 @inject IGlobalJsonOption JsonOption
 @inject SignalRDebugService SignalRDebugService
@@ -154,11 +156,11 @@
     /// </summary>
     protected override async Task OnInitializedAsync()
     {
-        _accessToken = SignalROptions.Value.DefaultAccessToken ?? "";
-        
-      
-        
-      
+        _accessToken = SignalRUIOptions.Value.DefaultAccessToken ?? "";
+
+
+
+
     }
 
     /// <summary>
