@@ -53,15 +53,16 @@
     private ModuleDetailInfo? selectedModuleDetail;
     private bool showModuleDetail = false;
 
-    /// <summary>
-    /// 组件初始化
-    /// </summary>
-    /// <returns></returns>
-    protected override async Task OnInitializedAsync()
-    {
-        await RefreshData();
-    }
+   
 
+   
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await RefreshData();
+        }
+    }
     /// <summary>
     /// 刷新数据
     /// </summary>
