@@ -56,4 +56,9 @@ public class ModuleSignalrUIOption : MoModuleOption<ModuleSignalrUI>
     /// 是否禁用SignalR调试页面
     /// </summary>
     public bool DisableUISingalrPage { get; set; }
+
+    /// <summary>
+    /// 默认AccessToken用于SignalR调试页面
+    /// </summary>
+    public string? DefaultAccessToken { get; set; }
 }
