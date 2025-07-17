@@ -2,19 +2,14 @@
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.Extensions.Options
 @using MoLibrary.FrameworkUI.UISignalr.Components
-@using MoLibrary.SignalR.Modules
 @using MudBlazor
-@using MoLibrary.Core.GlobalJson.Interfaces
 @using MoLibrary.FrameworkUI.Modules
 @using MoLibrary.FrameworkUI.UISignalr.Models
 @using MoLibrary.FrameworkUI.UISignalr.Services
-@using MoLibrary.SignalR.Controllers
 @using MoLibrary.SignalR.Models
 @inject ISnackbar SnackBar
-@inject IOptions<ModuleSignalROption> SignalROptions
 @inject IOptions<ModuleSignalrUIOption> SignalRUIOptions
 @inject NavigationManager NavigationManager
-@inject IGlobalJsonOption JsonOption
 @inject SignalRDebugService SignalRDebugService
 @implements IAsyncDisposable
 
@@ -186,11 +181,7 @@
     {
         try
         {
-            var controllerRoute = SignalROptions.Value.GetControllerRouteTemplate<ModuleSignalRController>();
-            var baseUri = NavigationManager.BaseUri.TrimEnd('/');
-            var apiUrl = $"{baseUri}/{controllerRoute.TrimStart('/')}/hubs";
-
-            var success = await SignalRDebugService.LoadHubsAsync(apiUrl, JsonOption.GlobalOptions);
+            var success = await SignalRDebugService.LoadHubsAsync();
             
             if (success)
             {

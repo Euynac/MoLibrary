@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.Core.Modules;
@@ -12,6 +13,10 @@ public class ModuleSignalR(ModuleSignalROption option) : MoModuleWithDependencie
         return EMoModules.SignalR;
     }
 
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<MoSignalRManageService>();
+    }
 
     public override void ClaimDependencies()
     {

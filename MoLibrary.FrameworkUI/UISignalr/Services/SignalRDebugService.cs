@@ -1,7 +1,9 @@
 using System.Text.Json;
 using Microsoft.JSInterop;
 using MoLibrary.FrameworkUI.UISignalr.Models;
+using MoLibrary.SignalR.Controllers;
 using MoLibrary.SignalR.Models;
+using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.FrameworkUI.UISignalr.Services
 {
@@ -11,6 +13,7 @@ namespace MoLibrary.FrameworkUI.UISignalr.Services
     public class SignalRDebugService : IAsyncDisposable
     {
         private readonly IJSRuntime _jsRuntime;
+        private readonly MoSignalRManageService _signalRService;
         private DotNetObjectReference<SignalRDebugService>? _dotNetRef;
         private bool _disposed = false;
         private readonly List<SignalRMessage> _messages = [];
@@ -42,9 +45,11 @@ namespace MoLibrary.FrameworkUI.UISignalr.Services
         /// 构造函数
         /// </summary>
         /// <param name="jsRuntime">JavaScript运行时</param>
-        public SignalRDebugService(IJSRuntime jsRuntime)
+        /// <param name="signalRService">SignalR业务服务</param>
+        public SignalRDebugService(IJSRuntime jsRuntime, MoSignalRManageService signalRService)
         {
             _jsRuntime = jsRuntime;
+            _signalRService = signalRService;
         }
 
         /// <summary>
@@ -106,53 +111,42 @@ namespace MoLibrary.FrameworkUI.UISignalr.Services
         /// <summary>
         /// 加载Hub信息
         /// </summary>
-        /// <param name="apiUrl">API URL</param>
-        /// <param name="jsonOptions">JSON选项</param>
         /// <returns>是否成功</returns>
-        public async Task<bool> LoadHubsAsync(string apiUrl, JsonSerializerOptions jsonOptions)
+        public async Task<bool> LoadHubsAsync()
         {
             try
             {
-                var result = await _jsRuntime.InvokeAsync<JsonElement>("signalRDebug.loadHubs", apiUrl);
+                var result = await _signalRService.GetHubInfosAsync();
 
-                if (result.GetProperty("success").GetBoolean())
+                if (result.IsFailed(out var error, out var hubGroups))
                 {
-                    var dataProperty = result.GetProperty("data");
-                    var hubGroups = JsonSerializer.Deserialize<List<SignalRServerGroupInfo>>(dataProperty.GetRawText(), jsonOptions);
-
-                    _hubMethods.Clear();
-                    _hubGroups.Clear();
-                    
-                    if (hubGroups != null)
-                    {
-                        // 保存原始的Hub组信息
-                        _hubGroups.AddRange(hubGroups);
-                        
-                        foreach (var hubGroup in hubGroups)
-                        {
-                            foreach (var method in hubGroup.Methods)
-                            {
-                                _hubMethods.Add(new HubMethodInfo
-                                {
-                                    Name = method.Name,
-                                    DisplayName = $"{method.Desc} ({method.Name})",
-                                    Args = method.Args,
-                                    IsListening = false,
-                                    ReceivedCount = 0
-                                });
-                            }
-                        }
-                    }
-
-                    AddMessage("系统", $"成功加载 {hubGroups?.Count ?? 0} 个Hub信息", MessageType.Success);
-                    return true;
-                }
-                else
-                {
-                    var error = result.GetProperty("error").GetString();
                     AddMessage("错误", $"加载Hub信息失败: {error}", MessageType.Error);
                     return false;
                 }
+
+                _hubMethods.Clear();
+                _hubGroups.Clear();
+                
+                // 保存原始的Hub组信息
+                _hubGroups.AddRange(hubGroups);
+                
+                foreach (var hubGroup in hubGroups)
+                {
+                    foreach (var method in hubGroup.Methods)
+                    {
+                        _hubMethods.Add(new HubMethodInfo
+                        {
+                            Name = method.Name,
+                            DisplayName = $"{method.Desc} ({method.Name})",
+                            Args = method.Args,
+                            IsListening = false,
+                            ReceivedCount = 0
+                        });
+                    }
+                }
+
+                AddMessage("系统", $"成功加载 {hubGroups.Count} 个Hub信息", MessageType.Success);
+                return true;
             }
             catch (Exception ex)
             {
