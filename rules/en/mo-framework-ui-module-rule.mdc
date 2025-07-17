@@ -1,0 +1,141 @@
+---
+description: Rules and guidelines for building UI modules using MoFramework
+globs: *.cs,*.razor
+alwaysApply: false
+---
+
+# Variable Definition
+
+> Variables represent context-specific parameters and are enclosed in `$`.
+
+- `$ModuleName$` - Represents the module name. Must use PascalCase.
+- `$ModuleUIName$` - UI module name, format: `$ModuleName$UI`.
+- `$UIFolderName$` - UI folder name, format: `UI$ModuleName$`.
+- `$PageName$` - Page name, format: `UI$ModuleName$Page`.
+- `$RouteURL$` - Page route URL, must use kebab-case, suggested format: `/$module-name$-debug` or `/$module-name$-manage`.
+
+# MoFramework UI Module Rules
+
+## 1. Module File Structure
+
+### 1.1 Create UI Module Class File
+- File location: `MoLibrary.FrameworkUI/Modules/$ModuleUIName$.cs`
+- File naming: Module name + UI format, e.g., `SignalrUI.cs`
+- Class naming: `Module$ModuleUIName$`
+
+### 1.2 Create UI Module Folder
+- Folder location: `MoLibrary.FrameworkUI/$UIFolderName$/`
+- Folder naming: UI + module name, e.g., `UISignalr`
+- Subfolder structure:
+  ```
+  UI$ModuleName$/
+  ├── Components/     # Blazor components
+  ├── Models/         # Data models
+  └── Services/       # Business services
+  ```
+
+### 1.3 Create Page File
+- File location: `MoLibrary.FrameworkUI/Pages/$PageName$.razor`
+- File naming: UI + module name + Page, e.g., `UISignalRPage.razor`
+
+## 2. Code Structure Specifications
+
+### 2.1 UI Module Class Implementation
+```csharp
+public class Module$ModuleUIName$(Module$ModuleUIName$Option option)
+    : MoModuleWithDependencies<Module$ModuleUIName$, Module$ModuleUIName$Option, Module$ModuleUIName$Guide>(option)
+{
+    public override EMoModules CurModuleEnum()
+    {
+        return EMoModules.$ModuleUIName$;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        // Register related services
+        services.AddScoped<$ModuleName$DebugService>();
+    }
+
+    public override void ClaimDependencies()
+    {
+        if (!Option.Disable$ModuleName$Page)
+        {
+            DependsOnModule<Module$ModuleName$Guide>().Register();
+            DependsOnModule<ModuleUICoreGuide>().Register()
+                .RegisterUIComponents(p => p.RegisterComponent<$PageName$>(
+                    $PageName$.$ModuleName$_DEBUG_URL, 
+                    "$ModuleName$ Debug", 
+                    Icons.Material.Filled.Settings, 
+                    "System Management", 
+                    addToNav: true, 
+                    navOrder: 100));
+        }
+    }
+}
+```
+
+### 2.2 Page Route Definition
+```csharp
+@attribute [Route($ModuleName$_DEBUG_URL)]
+
+@code {
+    public const string $ModuleName$_DEBUG_URL = "/$route-url$";
+}
+```
+
+### 2.3 Page Dependency Injection
+```csharp
+@using MoLibrary.FrameworkUI.$UIFolderName$.Components
+@using MoLibrary.FrameworkUI.$UIFolderName$.Services
+@using MoLibrary.FrameworkUI.$UIFolderName$.Models
+@inject $ModuleName$DebugService $ModuleName$DebugService
+```
+
+## 3. Modular Development Requirements
+
+### 3.1 Component Separation Principles
+- **Single Responsibility**: Each component is responsible for only one specific function
+- **Reusability**: Extract common functionality into independent components
+- **Parameterization**: Control component behavior and display through parameters
+
+### 3.2 Component Naming Conventions
+- Component files are placed in the `$UIFolderName$/Components/` directory
+- Naming format: `$ModuleName$$FunctionName$.razor`
+- Examples: `SignalRConnectionConfig.razor`, `SignalRMessageLog.razor`
+
+### 3.3 Service Abstraction Principles
+- Extract business logic to the Service layer
+- Service files are placed in the `$UIFolderName$/Services/` directory
+- Naming format: `$ModuleName$DebugService.cs` or `$ModuleName$ManageService.cs`
+- Use services through dependency injection
+
+### 3.4 Data Model Management
+- Page-related data models are placed in the `$UIFolderName$/Models/` directory
+- Use strongly typed models, avoid dynamic types
+- Model naming should clearly express its purpose
+
+## 4. Development Best Practices
+
+### 4.1 Code Reuse
+- Components with similar functionality should abstract common base classes or interfaces
+- Encapsulate common UI interaction logic into reusable services
+- Use MudBlazor component library for unified styles and themes
+
+### 4.2 Performance Optimization
+- Split large components into smaller ones to reduce re-rendering scope
+- Use `@key` directive to optimize list rendering
+- Avoid complex calculations in templates
+
+### 4.3 Error Handling
+- Implement unified error handling mechanisms
+- Use ISnackbar to display user-friendly error messages
+- Log detailed debugging information
+
+## 5. Example Reference
+
+Using UISignalR module as an example:
+- Module file: `Modules/SignalrUI.cs`
+- UI folder: `UISignalr/`
+- Page file: `Pages/UISignalRPage.razor`
+- Components: `UISignalr/Components/SignalRConnectionConfig.razor`, etc.
+- Services: `UISignalr/Services/SignalRDebugService.cs`
