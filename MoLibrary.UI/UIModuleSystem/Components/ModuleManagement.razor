@@ -2,35 +2,75 @@
 @using MoLibrary.Core.Module.Models
 @using MudBlazor
 
-<div class="module-container">
+<div class="module-management-container">
     @if (RegistrationInfo != null)
     {
-        <MudGrid>
+        <MudGrid Spacing="4">
             <!-- 模块统计 -->
             <MudItem xs="12" md="4">
-                <MudCard>
+                <MudCard Style="height: 500px;">
                     <MudCardHeader>
                         <CardHeaderContent>
-                            <MudText Typo="Typo.h6">模块统计</MudText>
+                            <div class="d-flex align-center">
+                                <MudIcon Icon="@Icons.Material.Filled.Analytics" Color="Color.Primary" Class="mr-2" />
+                                <MudText Typo="Typo.h6">模块统计</MudText>
+                            </div>
                         </CardHeaderContent>
                     </MudCardHeader>
-                    <MudCardContent>
-                        <MudStack>
-                            <MudPaper Class="pa-3 mb-2" Elevation="1">
-                                <MudText Typo="Typo.subtitle1">总模块数</MudText>
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">@RegistrationInfo.Statistics.TotalModules.ToString()</MudText>
+                    <MudCardContent Style="height: calc(100% - 80px); overflow-y: auto;">
+                        <MudStack Spacing="3">
+                            <MudPaper Class="pa-4" Elevation="2">
+                                <div class="d-flex justify-space-between align-center">
+                                    <div>
+                                        <MudText Typo="Typo.subtitle1" Color="Color.Primary">总模块数</MudText>
+                                        <MudText Typo="Typo.h4" Color="Color.Primary">@RegistrationInfo.Statistics.TotalModules.ToString()</MudText>
+                                    </div>
+                                    <MudIcon Icon="@Icons.Material.Filled.Apps" Color="Color.Primary" Size="Size.Large" />
+                                </div>
                             </MudPaper>
-                            <MudPaper Class="pa-3 mb-2" Elevation="1">
-                                <MudText Typo="Typo.subtitle1">启用模块</MudText>
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">@RegistrationInfo.Statistics.EnabledModules.ToString()</MudText>
+                            <MudPaper Class="pa-4" Elevation="2">
+                                <div class="d-flex justify-space-between align-center">
+                                    <div>
+                                        <MudText Typo="Typo.subtitle1" Color="Color.Success">启用模块</MudText>
+                                        <MudText Typo="Typo.h4" Color="Color.Success">@RegistrationInfo.Statistics.EnabledModules.ToString()</MudText>
+                                    </div>
+                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Large" />
+                                </div>
                             </MudPaper>
-                            <MudPaper Class="pa-3 mb-2" Elevation="1">
-                                <MudText Typo="Typo.subtitle1">禁用模块</MudText>
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">@RegistrationInfo.Statistics.DisabledModules.ToString()</MudText>
+                            <MudPaper Class="pa-4" Elevation="2">
+                                <div class="d-flex justify-space-between align-center">
+                                    <div>
+                                        <MudText Typo="Typo.subtitle1" Color="Color.Warning">禁用模块</MudText>
+                                        <MudText Typo="Typo.h4" Color="Color.Warning">@RegistrationInfo.Statistics.DisabledModules.ToString()</MudText>
+                                    </div>
+                                    <MudIcon Icon="@Icons.Material.Filled.Block" Color="Color.Warning" Size="Size.Large" />
+                                </div>
                             </MudPaper>
-                            <MudPaper Class="pa-3 mb-2" Elevation="1">
-                                <MudText Typo="Typo.subtitle1">总初始化时间</MudText>
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">@($"{RegistrationInfo.Statistics.TotalInitializationTimeMs}ms")</MudText>
+                            <MudPaper Class="pa-4" Elevation="2">
+                                <div class="d-flex justify-space-between align-center">
+                                    <div>
+                                        <MudText Typo="Typo.subtitle1" Color="Color.Info">总初始化时间</MudText>
+                                        <MudText Typo="Typo.h4" Color="Color.Info">@($"{RegistrationInfo.Statistics.TotalInitializationTimeMs}ms")</MudText>
+                                    </div>
+                                    <MudIcon Icon="@Icons.Material.Filled.Timer" Color="Color.Info" Size="Size.Large" />
+                                </div>
+                            </MudPaper>
+                            <!-- 添加一个统计图表 -->
+                            <MudPaper Class="pa-4" Elevation="2">
+                                <MudText Typo="Typo.subtitle1" Class="mb-3">模块分布</MudText>
+                                <div class="d-flex justify-space-between align-center mb-2">
+                                    <MudText Typo="Typo.body2">启用模块</MudText>
+                                    <MudText Typo="Typo.body2">@($"{GetPercentage(RegistrationInfo.Statistics.EnabledModules, RegistrationInfo.Statistics.TotalModules):F1}%")</MudText>
+                                </div>
+                                <MudProgressLinear Color="Color.Success" 
+                                                 Value="@GetPercentage(RegistrationInfo.Statistics.EnabledModules, RegistrationInfo.Statistics.TotalModules)" 
+                                                 Class="mb-2" />
+                                <div class="d-flex justify-space-between align-center mb-2">
+                                    <MudText Typo="Typo.body2">禁用模块</MudText>
+                                    <MudText Typo="Typo.body2">@($"{GetPercentage(RegistrationInfo.Statistics.DisabledModules, RegistrationInfo.Statistics.TotalModules):F1}%")</MudText>
+                                </div>
+                                <MudProgressLinear Color="Color.Warning" 
+                                                 Value="@GetPercentage(RegistrationInfo.Statistics.DisabledModules, RegistrationInfo.Statistics.TotalModules)" />
                             </MudPaper>
                         </MudStack>
                     </MudCardContent>
@@ -39,43 +79,61 @@
 
             <!-- 模块列表 -->
             <MudItem xs="12" md="8">
-                <MudCard>
+                <MudCard Style="height: 500px;">
                     <MudCardHeader>
                         <CardHeaderContent>
-                            <MudText Typo="Typo.h6">模块列表</MudText>
+                            <div class="d-flex align-center">
+                                <MudIcon Icon="@Icons.Material.Filled.ViewModule" Color="Color.Primary" Class="mr-2" />
+                                <MudText Typo="Typo.h6">模块列表</MudText>
+                            </div>
                         </CardHeaderContent>
                         <CardHeaderActions>
-                            <MudButton Variant="Variant.Text" 
+                            <MudButton Variant="Variant.Filled" 
                                      Color="Color.Primary" 
+                                     Size="Size.Small"
                                      StartIcon="@Icons.Material.Filled.Refresh"
                                      OnClick="OnRefreshClicked">
                                 刷新
                             </MudButton>
                         </CardHeaderActions>
                     </MudCardHeader>
-                    <MudCardContent>
+                    <MudCardContent Style="height: calc(100% - 80px);">
                         <MudDataGrid Items="@(RegistrationInfo.EnabledModules.Concat(RegistrationInfo.DisabledModules))" 
                                    SortMode="SortMode.Multiple" 
                                    Filterable="true" 
                                    Hideable="true"
-                                   Dense="true">
+                                   Dense="true"
+                                   Height="400px">
                             <Columns>
                                 <PropertyColumn Property="x => x.ModuleTypeName" Title="模块名称" />
                                 <TemplateColumn Title="状态">
                                     <CellTemplate>
                                         <MudChip T="string" Color="@(context.Item.IsDisabled ? Color.Warning : Color.Success)" 
-                                               Size="Size.Small">
+                                               Size="Size.Small"
+                                               Icon="@(context.Item.IsDisabled ? Icons.Material.Filled.Block : Icons.Material.Filled.CheckCircle)">
                                             @(context.Item.IsDisabled ? "禁用" : "启用")
                                         </MudChip>
                                     </CellTemplate>
                                 </TemplateColumn>
                                 <PropertyColumn Property="x => x.Order" Title="顺序" />
-                                <PropertyColumn Property="x => x.InitializationTimeMs" Title="初始化时间(ms)" />
+                                <TemplateColumn Title="初始化时间">
+                                    <CellTemplate>
+                                        <div class="d-flex align-center">
+                                            <MudText Typo="Typo.body2" Class="mr-2">@($"{context.Item.InitializationTimeMs}ms")</MudText>
+                                            <MudProgressLinear Color="@GetInitTimeColor(context.Item.InitializationTimeMs)" 
+                                                             Value="@GetInitTimePercentage(context.Item.InitializationTimeMs)" 
+                                                             Style="width: 80px;" />
+                                        </div>
+                                    </CellTemplate>
+                                </TemplateColumn>
                                 <TemplateColumn Title="依赖">
                                     <CellTemplate>
-                                        <MudChip T="string" Color="Color.Info" Size="Size.Small">
-                                            @context.Item.Dependencies.Count
-                                        </MudChip>
+                                        <MudBadge Content="@context.Item.Dependencies.Count" 
+                                                Color="@(context.Item.Dependencies.Count > 0 ? Color.Info : Color.Default)" 
+                                                Overlap="true" 
+                                                Bordered="true">
+                                            <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small" />
+                                        </MudBadge>
                                     </CellTemplate>
                                 </TemplateColumn>
                                 <TemplateColumn Title="操作">
@@ -83,6 +141,7 @@
                                         <MudButton Variant="Variant.Text" 
                                                  Color="Color.Primary" 
                                                  Size="Size.Small"
+                                                 StartIcon="@Icons.Material.Filled.Info"
                                                  OnClick="@(() => OnModuleDetailClicked.InvokeAsync(context.Item.ModuleEnum))">
                                             详情
                                         </MudButton>
@@ -95,7 +154,38 @@
             </MudItem>
         </MudGrid>
     }
+    else
+    {
+        <MudGrid Spacing="4">
+            <MudItem xs="12" md="4">
+                <MudCard Style="height: 500px;">
+                    <MudCardContent Class="d-flex align-center justify-center" Style="height: 100%;">
+                        <div class="text-center">
+                            <MudProgressCircular Indeterminate="true" Class="mb-2" />
+                            <MudText Color="Color.Secondary">加载模块统计...</MudText>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" md="8">
+                <MudCard Style="height: 500px;">
+                    <MudCardContent Class="d-flex align-center justify-center" Style="height: 100%;">
+                        <div class="text-center">
+                            <MudProgressCircular Indeterminate="true" Class="mb-2" />
+                            <MudText Color="Color.Secondary">加载模块列表...</MudText>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    }
 </div>
+
+<style>
+    .module-management-container {
+        width: 100%;
+    }
+</style>
 
 @code {
     /// <summary>
@@ -120,5 +210,44 @@
     private async Task OnRefreshClicked()
     {
         await OnRefresh.InvokeAsync();
+    }
+
+    /// <summary>
+    /// 获取百分比
+    /// </summary>
+    /// <param name="value">值</param>
+    /// <param name="total">总数</param>
+    /// <returns>百分比</returns>
+    private double GetPercentage(int value, int total)
+    {
+        return total > 0 ? (double)value / total * 100 : 0;
+    }
+
+    /// <summary>
+    /// 获取初始化时间颜色
+    /// </summary>
+    /// <param name="timeMs">时间毫秒</param>
+    /// <returns>颜色</returns>
+    private Color GetInitTimeColor(long timeMs) => timeMs switch
+    {
+        <= 100 => Color.Success,
+        <= 500 => Color.Info,
+        <= 1000 => Color.Warning,
+        _ => Color.Error
+    };
+
+    /// <summary>
+    /// 获取初始化时间百分比
+    /// </summary>
+    /// <param name="timeMs">时间毫秒</param>
+    /// <returns>百分比</returns>
+    private double GetInitTimePercentage(long timeMs)
+    {
+        if (RegistrationInfo == null) return 0;
+        
+        var allModules = RegistrationInfo.EnabledModules.Concat(RegistrationInfo.DisabledModules);
+        var maxTime = allModules.Max(m => m.InitializationTimeMs);
+        
+        return maxTime > 0 ? (double)timeMs / maxTime * 100 : 0;
     }
 } 

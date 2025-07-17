@@ -2,85 +2,157 @@
 @using MoLibrary.Core.Module.Models
 @using MudBlazor
 
-<div class="overview-container">
+<div class="system-overview-container">
     @if (SystemStatus != null)
     {
-        <MudGrid>
+        <MudGrid Spacing="4">
             <!-- 系统状态概览 -->
-            <MudItem xs="12" md="6" lg="3">
-                <MudCard Class="status-card">
-                    <MudCardContent>
-                        <div class="status-header">
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Class="status-card" Style="height: 180px;">
+                    <MudCardContent Class="d-flex flex-column" Style="height: 100%;">
+                        <div class="card-header d-flex align-center mb-3">
                             <MudIcon Icon="@GetStatusIcon(SystemStatus.State)" 
-                                   Color="@GetStatusColor(SystemStatus.State)" Size="Size.Large" />
+                                   Color="@GetStatusColor(SystemStatus.State)" 
+                                   Size="Size.Medium" 
+                                   Class="mr-3" />
                             <MudText Typo="Typo.h6">系统状态</MudText>
                         </div>
-                        <MudText Typo="Typo.body1" Class="mt-2">
-                            @GetStatusText(SystemStatus.State)
-                        </MudText>
-                        <MudProgressLinear Color="@GetStatusColor(SystemStatus.State)" 
-                                         Value="@(SystemStatus.IsInitialized ? 100 : 0)" 
-                                         Class="mt-2" />
+                        <div class="flex-grow-1 d-flex flex-column justify-center">
+                            <MudText Typo="Typo.h5" Class="mb-2" Color="@GetStatusColor(SystemStatus.State)">
+                                @GetStatusText(SystemStatus.State)
+                            </MudText>
+                            <MudProgressLinear Color="@GetStatusColor(SystemStatus.State)" 
+                                             Value="@(SystemStatus.IsInitialized ? 100 : 0)" 
+                                             Class="mt-auto" />
+                        </div>
                     </MudCardContent>
                 </MudCard>
             </MudItem>
 
             <!-- 模块统计 -->
-            <MudItem xs="12" md="6" lg="3">
-                <MudCard Class="stats-card">
-                    <MudCardContent>
-                        <div class="stats-header">
-                            <MudIcon Icon="@Icons.Material.Filled.Apps" Color="Color.Primary" Size="Size.Large" />
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Class="stats-card" Style="height: 180px;">
+                    <MudCardContent Class="d-flex flex-column" Style="height: 100%;">
+                        <div class="card-header d-flex align-center mb-3">
+                            <MudIcon Icon="@Icons.Material.Filled.Apps" 
+                                   Color="Color.Primary" 
+                                   Size="Size.Medium" 
+                                   Class="mr-3" />
                             <MudText Typo="Typo.h6">模块统计</MudText>
                         </div>
-                        <MudText Typo="Typo.h5" Class="mt-2">@SystemStatus.TotalModules</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">
-                            启用: @SystemStatus.EnabledModules | 禁用: @SystemStatus.DisabledModules
-                        </MudText>
+                        <div class="flex-grow-1 d-flex flex-column justify-center">
+                            <MudText Typo="Typo.h4" Color="Color.Primary" Class="mb-2">
+                                @SystemStatus.TotalModules
+                            </MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-auto">
+                                <MudChip T="string" Size="Size.Small" Color="Color.Success" Class="mr-2">
+                                    启用: @SystemStatus.EnabledModules
+                                </MudChip>
+                                <MudChip T="string" Size="Size.Small" Color="Color.Warning">
+                                    禁用: @SystemStatus.DisabledModules
+                                </MudChip>
+                            </MudText>
+                        </div>
                     </MudCardContent>
                 </MudCard>
             </MudItem>
 
             <!-- 初始化时间 -->
-            <MudItem xs="12" md="6" lg="3">
-                <MudCard Class="performance-card">
-                    <MudCardContent>
-                        <div class="performance-header">
-                            <MudIcon Icon="@Icons.Material.Filled.Timer" Color="Color.Warning" Size="Size.Large" />
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Class="performance-card" Style="height: 180px;">
+                    <MudCardContent Class="d-flex flex-column" Style="height: 100%;">
+                        <div class="card-header d-flex align-center mb-3">
+                            <MudIcon Icon="@Icons.Material.Filled.Timer" 
+                                   Color="Color.Warning" 
+                                   Size="Size.Medium" 
+                                   Class="mr-3" />
                             <MudText Typo="Typo.h6">初始化时间</MudText>
                         </div>
-                        <MudText Typo="Typo.h5" Class="mt-2">@(SystemStatus.TotalInitializationTimeMs)ms</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">
-                            @(SystemStatus.StartTime?.ToString("HH:mm:ss") ?? "未知")
-                        </MudText>
+                        <div class="flex-grow-1 d-flex flex-column justify-center">
+                            <MudText Typo="Typo.h4" Color="Color.Warning" Class="mb-2">
+                                @(SystemStatus.TotalInitializationTimeMs)ms
+                            </MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-auto">
+                                启动时间: @(SystemStatus.StartTime?.ToString("HH:mm:ss") ?? "未知")
+                            </MudText>
+                        </div>
                     </MudCardContent>
                 </MudCard>
             </MudItem>
 
             <!-- 健康状态 -->
-            <MudItem xs="12" md="6" lg="3">
-                <MudCard Class="health-card">
-                    <MudCardContent>
-                        <div class="health-header">
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Class="health-card" Style="height: 180px;">
+                    <MudCardContent Class="d-flex flex-column" Style="height: 100%;">
+                        <div class="card-header d-flex align-center mb-3">
                             <MudIcon Icon="@GetHealthIcon()" 
-                                   Color="@GetHealthColor()" Size="Size.Large" />
+                                   Color="@GetHealthColor()" 
+                                   Size="Size.Medium" 
+                                   Class="mr-3" />
                             <MudText Typo="Typo.h6">健康状态</MudText>
                         </div>
-                        <MudText Typo="Typo.body1" Class="mt-2">
-                            @GetHealthText()
-                        </MudText>
-                        @if (SystemStatus.HasRegistrationErrors || SystemStatus.HasCircularDependencies)
-                        {
-                            <MudChip T="string" Color="Color.Error" Size="Size.Small" Class="mt-2">
-                                存在问题
-                            </MudChip>
-                        }
+                        <div class="flex-grow-1 d-flex flex-column justify-center">
+                            <MudText Typo="Typo.h5" Color="@GetHealthColor()" Class="mb-2">
+                                @GetHealthText()
+                            </MudText>
+                            <div class="mt-auto">
+                                @if (SystemStatus.HasRegistrationErrors || SystemStatus.HasCircularDependencies)
+                                {
+                                    <MudChip T="string" Color="Color.Error" Size="Size.Small">
+                                        <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Class="mr-1" />
+                                        存在问题
+                                    </MudChip>
+                                }
+                                else
+                                {
+                                    <MudChip T="string" Color="Color.Success" Size="Size.Small">
+                                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-1" />
+                                        运行正常
+                                    </MudChip>
+                                }
+                            </div>
+                        </div>
                     </MudCardContent>
                 </MudCard>
             </MudItem>
         </MudGrid>
     }
+    else
+    {
+        <MudGrid Spacing="4">
+            @for (int i = 0; i < 4; i++)
+            {
+                <MudItem xs="12" sm="6" md="3">
+                    <MudCard Style="height: 180px;">
+                        <MudCardContent Class="d-flex align-center justify-center" Style="height: 100%;">
+                            <MudProgressCircular Indeterminate="true" />
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    }
 </div>
+
+<style>
+    .system-overview-container {
+        width: 100%;
+    }
+
+    .card-header {
+        border-bottom: 1px solid var(--mud-palette-divider);
+        padding-bottom: 8px;
+    }
+
+    .status-card:hover,
+    .stats-card:hover,
+    .performance-card:hover,
+    .health-card:hover {
+        transform: translateY(-2px);
+        transition: transform 0.2s ease-in-out;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+</style>
 
 @code {
     /// <summary>
