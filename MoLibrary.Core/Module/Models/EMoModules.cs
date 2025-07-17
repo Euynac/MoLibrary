@@ -64,5 +64,6 @@ public enum EMoModules
     /// </summary>
     UICore,
     FrameworkUI,
-    SignalrUI
+    SignalrUI,
+    SystemInfoUI
 }
