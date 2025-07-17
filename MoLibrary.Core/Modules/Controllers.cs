@@ -28,7 +28,7 @@ public class ModuleControllers(ModuleControllersOption option)
             {
 
             })
-            .AddControllersAsServices();
+            .AddControllersAsServices(); 
 
 
         if (Option.MvcBuilderActions.Count <= 0 && Option.MvcOptionActions.Count <= 0 && Option.DependentServicesActions.Count <= 0) return;
