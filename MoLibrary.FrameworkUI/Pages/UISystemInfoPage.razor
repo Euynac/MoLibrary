@@ -1,0 +1,234 @@
+@page "/home"
+@using MoLibrary.FrameworkUI.UISystemInfo.Services
+@using MoLibrary.FrameworkUI.UISystemInfo.Models
+@using MudBlazor
+@inject SystemInfoService SystemInfoService
+@inject ISnackbar Snackbar
+
+<PageTitle>系统信息</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-4">
+    <MudText Typo="Typo.h4" GutterBottom="true" Class="mb-6">
+        <MudIcon Icon="Icons.Material.Filled.Info" Class="mr-3" />
+        系统信息
+    </MudText>
+
+    @if (_loading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+        <MudText Typo="Typo.body1" Class="mt-4">正在加载系统信息...</MudText>
+    }
+    else if (_systemInfo != null)
+    {
+        <MudGrid>
+            <!-- 基本信息卡片 -->
+            <MudItem xs="12" md="6">
+                <MudCard>
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">
+                                <MudIcon Icon="Icons.Material.Filled.Schedule" Class="mr-2" />
+                                基本信息
+                            </MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudStack Spacing="3">
+                            <MudText>
+                                <strong>构建时间:</strong> @_systemInfo.BuildTime.ToString("yyyy-MM-dd HH:mm:ss")
+                            </MudText>
+                            <MudText>
+                                <strong>本地时间:</strong> @_systemInfo.LocalTime.ToString("yyyy-MM-dd HH:mm:ss")
+                            </MudText>
+                            <MudText>
+                                <strong>UTC时间:</strong> @_systemInfo.UtcTime.ToString("yyyy-MM-dd HH:mm:ss")
+                            </MudText>
+                            @if (!string.IsNullOrEmpty(_systemInfo.ProductVersion))
+                            {
+                                <MudText>
+                                    <strong>产品版本:</strong> @_systemInfo.ProductVersion
+                                </MudText>
+                            }
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <!-- 环境信息卡片 -->
+            @if (_systemInfo.EnvironmentInfo != null)
+            {
+                <MudItem xs="12" md="6">
+                    <MudCard>
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.h6">
+                                    <MudIcon Icon="Icons.Material.Filled.Computer" Class="mr-2" />
+                                    环境信息
+                                </MudText>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            <MudStack Spacing="3">
+                                <MudText>
+                                    <strong>机器名:</strong> @_systemInfo.EnvironmentInfo.MachineName
+                                </MudText>
+                                <MudText>
+                                    <strong>用户名:</strong> @_systemInfo.EnvironmentInfo.UserName
+                                </MudText>
+                                <MudText>
+                                    <strong>进程ID:</strong> @_systemInfo.EnvironmentInfo.ProcessId
+                                </MudText>
+                                <MudText>
+                                    <strong>64位操作系统:</strong> @(_systemInfo.EnvironmentInfo.Is64BitOperatingSystem ? "是" : "否")
+                                </MudText>
+                                <MudText>
+                                    <strong>64位进程:</strong> @(_systemInfo.EnvironmentInfo.Is64BitProcess ? "是" : "否")
+                                </MudText>
+                                <MudText>
+                                    <strong>工作集:</strong> @FormatBytes(_systemInfo.EnvironmentInfo.WorkingSet)
+                                </MudText>
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+
+                <!-- 文件信息卡片 -->
+                @if (_systemInfo.FileInfo != null)
+                {
+                    <MudItem xs="12" md="6">
+                        <MudCard>
+                            <MudCardHeader>
+                                <CardHeaderContent>
+                                    <MudText Typo="Typo.h6">
+                                        <MudIcon Icon="Icons.Material.Filled.InsertDriveFile" Class="mr-2" />
+                                        文件信息
+                                    </MudText>
+                                </CardHeaderContent>
+                            </MudCardHeader>
+                            <MudCardContent>
+                                <MudStack Spacing="3">
+                                    <MudText>
+                                        <strong>产品名称:</strong> @_systemInfo.FileInfo.ProductName
+                                    </MudText>
+                                    <MudText>
+                                        <strong>产品版本:</strong> @_systemInfo.FileInfo.ProductVersion
+                                    </MudText>
+                                    <MudText>
+                                        <strong>文件版本:</strong> @_systemInfo.FileInfo.FileVersion
+                                    </MudText>
+                                    <MudText>
+                                        <strong>公司名称:</strong> @_systemInfo.FileInfo.CompanyName
+                                    </MudText>
+                                    <MudText>
+                                        <strong>版权信息:</strong> @_systemInfo.FileInfo.LegalCopyright
+                                    </MudText>
+                                </MudStack>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+                }
+
+                <!-- 系统详细信息卡片 -->
+                <MudItem xs="12" md="6">
+                    <MudCard>
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.h6">
+                                    <MudIcon Icon="Icons.Material.Filled.Settings" Class="mr-2" />
+                                    系统详细信息
+                                </MudText>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            <MudStack Spacing="3">
+                                <MudText>
+                                    <strong>.NET版本:</strong> @_systemInfo.EnvironmentInfo.Version?.ToString()
+                                </MudText>
+                                <MudText>
+                                    <strong>操作系统:</strong> @_systemInfo.EnvironmentInfo.OSVersion?.ToString()
+                                </MudText>
+                                <MudText>
+                                    <strong>当前目录:</strong> @_systemInfo.EnvironmentInfo.CurrentDirectory
+                                </MudText>
+                                <MudText>
+                                    <strong>系统页面大小:</strong> @_systemInfo.EnvironmentInfo.SystemPageSize bytes
+                                </MudText>
+                                <MudText>
+                                    <strong>用户交互式:</strong> @(_systemInfo.EnvironmentInfo.UserInteractive ? "是" : "否")
+                                </MudText>
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Error">
+            <MudText>加载系统信息失败，请稍后重试。</MudText>
+        </MudAlert>
+    }
+
+    <!-- 刷新按钮 -->
+    <MudFab Color="Color.Primary" 
+           StartIcon="Icons.Material.Filled.Refresh" 
+           Style="position: fixed; bottom: 24px; right: 24px;"
+           OnClick="RefreshSystemInfo" />
+</MudContainer>
+
+@code {
+    public const string SYSTEM_INFO_URL = "/home";
+
+    private bool _loading = true;
+    private SystemInfoResponse? _systemInfo;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSystemInfo();
+    }
+
+    private async Task LoadSystemInfo()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        try
+        {
+            _systemInfo = await SystemInfoService.GetSystemInfoAsync(simple: false);
+            if (_systemInfo == null)
+            {
+                Snackbar.Add("加载系统信息失败", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"加载系统信息时发生错误: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefreshSystemInfo()
+    {
+        await LoadSystemInfo();
+        Snackbar.Add("系统信息已刷新", Severity.Success);
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        const int scale = 1024;
+        string[] orders = ["bytes", "KB", "MB", "GB", "TB"];
+        double max = bytes;
+        int order = 0;
+        while (max >= scale && order < orders.Length - 1)
+        {
+            order++;
+            max = max / scale;
+        }
+        return $"{max:##.##} {orders[order]}";
+    }
+} 
