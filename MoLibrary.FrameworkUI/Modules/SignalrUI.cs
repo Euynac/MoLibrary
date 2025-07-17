@@ -5,6 +5,8 @@ using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.FrameworkUI.Pages;
 using MoLibrary.FrameworkUI.UISignalr.Services;
+using MoLibrary.SignalR.Controllers;
+using MoLibrary.SignalR.Implements;
 using MoLibrary.SignalR.Modules;
 using MoLibrary.UI.Modules;
 using MudBlazor;
