@@ -7,24 +7,35 @@
     <MudText Typo="Typo.h5" Class="mb-3">快速消息发送</MudText>
     <MudGrid>
         <MudItem xs="12" sm="6">
-            <MudTextField @bind-Value="UserName" 
+            <MudTextField Value="@UserName"
+                        ValueChanged="@((string value) => OnUserNameChangedInternal(value))"
                         Label="用户名" 
                         Variant="Variant.Outlined" />
         </MudItem>
         <MudItem xs="12" sm="6">
-            <MudTextField @bind-Value="Message" 
+            <MudTextField Value="@Message"
+                        ValueChanged="@((string value) => OnMessageChangedInternal(value))"
                         Label="消息内容" 
                         Variant="Variant.Outlined"
                         OnKeyDown="OnMessageKeyDown" />
         </MudItem>
         <MudItem xs="12">
-            <MudButton Variant="Variant.Filled" 
-                     Color="Color.Success" 
-                     OnClick="SendMessageAsync"
-                     Disabled="!IsConnected || string.IsNullOrWhiteSpace(Message)">
-                <MudIcon Icon="@Icons.Material.Filled.Send" />
-                <MudText Class="ms-2">发送消息</MudText>
-            </MudButton>
+            <MudStack Row Spacing="2">
+                <MudButton Variant="Variant.Filled" 
+                         Color="Color.Success" 
+                         OnClick="SendMessageAsync"
+                         Disabled="!IsConnected || string.IsNullOrWhiteSpace(Message)">
+                    <MudIcon Icon="@Icons.Material.Filled.Send" />
+                    <MudText Class="ms-2">发送消息</MudText>
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" 
+                         Color="Color.Secondary" 
+                         OnClick="ClearMessageAsync"
+                         Disabled="string.IsNullOrWhiteSpace(Message)">
+                    <MudIcon Icon="@Icons.Material.Filled.Clear" />
+                    <MudText Class="ms-2">清空</MudText>
+                </MudButton>
+            </MudStack>
         </MudItem>
     </MudGrid>
 </MudPaper>
@@ -80,11 +91,31 @@
         if (!IsConnected || string.IsNullOrWhiteSpace(Message))
             return;
 
-        var tempMessage = Message;
+        await OnSendMessage.InvokeAsync((UserName, Message));
+        
+        // 发送成功后不清空输入框，保持用户输入的内容
+        // 如果用户需要清空，可以点击"清空"按钮
+    }
+
+    /// <summary>
+    /// 清空消息输入框
+    /// </summary>
+    private async Task ClearMessageAsync()
+    {
         Message = "";
         await MessageChanged.InvokeAsync(Message);
-        
-        await OnSendMessage.InvokeAsync((UserName, tempMessage));
         StateHasChanged();
+    }
+
+    private void OnUserNameChangedInternal(string value)
+    {
+        UserName = value;
+        UserNameChanged.InvokeAsync(value);
+    }
+
+    private void OnMessageChangedInternal(string value)
+    {
+        Message = value;
+        MessageChanged.InvokeAsync(value);
     }
 }

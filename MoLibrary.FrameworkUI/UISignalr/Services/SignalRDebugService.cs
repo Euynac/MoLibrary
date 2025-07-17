@@ -19,6 +19,11 @@ namespace MoLibrary.FrameworkUI.Services
         private readonly SignalRConnectionState _connectionState = new();
 
         /// <summary>
+        /// 是否启用详细调试日志
+        /// </summary>
+        public bool IsVerboseLoggingEnabled { get; set; } = false;
+
+        /// <summary>
         /// 消息接收事件
         /// </summary>
         public event Action<SignalRMessage>? MessageReceived;
@@ -273,8 +278,11 @@ namespace MoLibrary.FrameworkUI.Services
                     return false;
                 }
 
-                // 详细记录参数转换过程
-                AddMessage("系统", $"开始调用方法: {methodName}", MessageType.Info);
+                // 详细记录参数转换过程（仅在启用详细日志时）
+                if (IsVerboseLoggingEnabled)
+                {
+                    AddMessage("系统", $"开始调用方法: {methodName}", MessageType.Info);
+                }
                 
                 for (int i = 0; i < method.Args.Count; i++)
                 {
@@ -282,13 +290,19 @@ namespace MoLibrary.FrameworkUI.Services
                     var parameter = parameters.FirstOrDefault(p => p.Name == arg.Name);
                     var value = parameter?.Value ?? "";
 
-                    AddMessage("系统", $"参数 {arg.Name} ({arg.Type}): '{value}'", MessageType.Info);
+                    if (IsVerboseLoggingEnabled)
+                    {
+                        AddMessage("系统", $"参数 {arg.Name} ({arg.Type}): '{value}'", MessageType.Info);
+                    }
 
                     // 根据参数类型转换值
                     var convertedValue = ConvertParameterValue(value, arg.Type);
                     args.Add(convertedValue);
                     
-                    AddMessage("系统", $"转换后的值: {convertedValue?.GetType().Name ?? "null"} = {convertedValue}", MessageType.Info);
+                    if (IsVerboseLoggingEnabled)
+                    {
+                        AddMessage("系统", $"转换后的值: {convertedValue?.GetType().Name ?? "null"} = {convertedValue}", MessageType.Info);
+                    }
                 }
 
                 var result = await _jsRuntime.InvokeAsync<JsonElement>("signalRDebug.invokeMethod", methodName, args.ToArray());
@@ -334,23 +348,61 @@ namespace MoLibrary.FrameworkUI.Services
             {
                 var normalizedType = type.ToLower().Replace("system.", "");
                 
-                return normalizedType switch
+                // 记录转换过程（仅在启用详细日志时）
+                if (IsVerboseLoggingEnabled)
                 {
+                    AddMessage("调试", $"参数转换: '{value}' -> {type} (标准化: {normalizedType})", MessageType.Info);
+                }
+                
+                var result = normalizedType switch
+                {
+                    // 字符串类型：直接返回原值，不进行任何转换
                     "string" => value,
-                    "int" or "int32" => int.Parse(value),
-                    "long" or "int64" => long.Parse(value),
-                    "double" => double.Parse(value),
-                    "float" or "single" => float.Parse(value),
+                    
+                    // 数值类型：严格按照类型转换
+                    "int" or "int32" => int.Parse(value.Trim()),
+                    "long" or "int64" => long.Parse(value.Trim()),
+                    "double" => double.Parse(value.Trim()),
+                    "float" or "single" => float.Parse(value.Trim()),
+                    
+                    // 布尔类型：支持多种格式
                     "bool" or "boolean" => ParseBooleanValue(value),
-                    "datetime" => DateTime.Parse(value),
-                    "guid" => Guid.Parse(value),
+                    
+                    // 日期时间类型
+                    "datetime" => DateTime.Parse(value.Trim()),
+                    
+                    // GUID类型
+                    "guid" => Guid.Parse(value.Trim()),
+                    
+                    // 处理完整的系统类型名称
                     _ when normalizedType.StartsWith("system.") => ConvertSystemType(value, type),
-                    _ => TryParseAsJson(value, type)
+                    
+                    // 数组和列表类型：尝试JSON解析
+                    _ when normalizedType.Contains("[]") || normalizedType.Contains("list") || normalizedType.Contains("array") =>
+                        TryParseAsJson(value, type),
+                    
+                    // 其他复杂类型：尝试JSON解析，失败则返回原字符串
+                    _ => TryParseComplexType(value, type)
                 };
+                
+                if (IsVerboseLoggingEnabled)
+                {
+                    AddMessage("调试", $"转换结果: {result?.GetType().Name ?? "null"} = {result}", MessageType.Info);
+                }
+                return result;
             }
             catch (Exception ex)
             {
-                AddMessage("系统", $"参数转换失败: {value} -> {type}, 错误: {ex.Message}", MessageType.Error);
+                AddMessage("错误", $"参数转换失败: '{value}' -> {type}, 错误: {ex.Message}", MessageType.Error);
+                
+                // 转换失败时，对于string类型返回原值，其他类型返回默认值
+                var normalizedType = type.ToLower().Replace("system.", "");
+                if (normalizedType == "string")
+                {
+                    AddMessage("系统", $"转换失败，返回原字符串值: '{value}'", MessageType.Info);
+                    return value;
+                }
+                
                 return GetDefaultValue(type);
             }
         }
@@ -367,7 +419,7 @@ namespace MoLibrary.FrameworkUI.Services
             {
                 "true" or "1" or "yes" or "y" or "on" => true,
                 "false" or "0" or "no" or "n" or "off" => false,
-                _ => bool.Parse(value) // 如果都不匹配，使用默认解析
+                _ => bool.Parse(value.Trim()) // 如果都不匹配，使用默认解析
             };
         }
 
@@ -382,15 +434,15 @@ namespace MoLibrary.FrameworkUI.Services
             var typeName = type.Replace("System.", "").ToLower();
             return typeName switch
             {
-                "string" => value,
-                "int32" => int.Parse(value),
-                "int64" => long.Parse(value),
-                "double" => double.Parse(value),
-                "single" => float.Parse(value),
-                "boolean" => bool.Parse(value),
-                "datetime" => DateTime.Parse(value),
-                "guid" => Guid.Parse(value),
-                _ => value
+                "string" => value, // 确保System.String也返回原字符串
+                "int32" => int.Parse(value.Trim()),
+                "int64" => long.Parse(value.Trim()),
+                "double" => double.Parse(value.Trim()),
+                "single" => float.Parse(value.Trim()),
+                "boolean" => ParseBooleanValue(value),
+                "datetime" => DateTime.Parse(value.Trim()),
+                "guid" => Guid.Parse(value.Trim()),
+                _ => value // 未知的系统类型，返回原字符串
             };
         }
 
@@ -404,12 +456,55 @@ namespace MoLibrary.FrameworkUI.Services
         {
             try
             {
-                return JsonSerializer.Deserialize<object>(value) ?? value;
+                var trimmedValue = value.Trim();
+                if (trimmedValue.StartsWith("[") && trimmedValue.EndsWith("]"))
+                {
+                    return JsonSerializer.Deserialize<object[]>(trimmedValue) ?? new object[0];
+                }
+                else if (trimmedValue.StartsWith("{") && trimmedValue.EndsWith("}"))
+                {
+                    return JsonSerializer.Deserialize<object>(trimmedValue) ?? new object();
+                }
+                else
+                {
+                    // 不是JSON格式，返回原字符串
+                    return value;
+                }
             }
             catch
             {
+                // JSON解析失败，返回原字符串
                 return value;
             }
+        }
+
+        /// <summary>
+        /// 尝试解析复杂类型
+        /// </summary>
+        /// <param name="value">字符串值</param>
+        /// <param name="type">类型名称</param>
+        /// <returns>解析结果</returns>
+        private object TryParseComplexType(string value, string type)
+        {
+            var trimmedValue = value.Trim();
+            
+            // 如果看起来像JSON，尝试解析
+            if ((trimmedValue.StartsWith("{") && trimmedValue.EndsWith("}")) ||
+                (trimmedValue.StartsWith("[") && trimmedValue.EndsWith("]")))
+            {
+                try
+                {
+                    return JsonSerializer.Deserialize<object>(trimmedValue) ?? value;
+                }
+                catch
+                {
+                    // JSON解析失败，返回原字符串
+                    return value;
+                }
+            }
+            
+            // 不像JSON，直接返回原字符串
+            return value;
         }
 
         /// <summary>
