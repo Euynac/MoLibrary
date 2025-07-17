@@ -124,28 +124,41 @@
     }
 
     /// <summary>
+    /// 组件渲染后处理
+    /// </summary>
+    /// <param name="firstRender">是否首次渲染</param>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // 初始化SignalR调试服务
+            await SignalRDebugService.InitializeAsync();
+            // 确保初始化后立即设置详细日志状态
+            SignalRDebugService.IsVerboseLoggingEnabled = _verboseLogging;
+            
+            // 订阅事件
+            SignalRDebugService.MessageReceived += OnMessageReceived;
+            SignalRDebugService.ConnectionStateChanged += OnConnectionStateChanged;
+            SignalRDebugService.MethodListenerChanged += OnMethodListenerChanged;
+            
+            // 加载Hub信息
+            await LoadHubsAsync();
+            
+            // 初始化组件状态
+            await UpdateComponentState();
+        }
+    }
+
+    /// <summary>
     /// 组件初始化
     /// </summary>
     protected override async Task OnInitializedAsync()
     {
         _accessToken = SignalROptions.Value.DefaultAccessToken ?? "";
         
-        // 初始化SignalR调试服务
-        await SignalRDebugService.InitializeAsync();
+      
         
-        // 确保初始化后立即设置详细日志状态
-        SignalRDebugService.IsVerboseLoggingEnabled = _verboseLogging;
-        
-        // 订阅事件
-        SignalRDebugService.MessageReceived += OnMessageReceived;
-        SignalRDebugService.ConnectionStateChanged += OnConnectionStateChanged;
-        SignalRDebugService.MethodListenerChanged += OnMethodListenerChanged;
-        
-        // 加载Hub信息
-        await LoadHubsAsync();
-        
-        // 初始化组件状态
-        await UpdateComponentState();
+      
     }
 
     /// <summary>
