@@ -75,3 +75,51 @@
         margin-bottom: 12px;
     }
 }
+
+/* 深色主题适配 */
+@media (prefers-color-scheme: dark) {
+    .modern-card {
+        background: var(--mud-palette-surface);
+        border-color: rgba(var(--mud-palette-lines-default-rgb), 0.2);
+    }
+    
+    .overview-stat-card {
+        background: linear-gradient(135deg, rgba(var(--mud-palette-primary-rgb), 0.08) 0%, rgba(var(--mud-palette-info-rgb), 0.08) 100%);
+        border-color: rgba(var(--mud-palette-lines-default-rgb), 0.2);
+    }
+    
+    .dependency-graph-canvas {
+        background: linear-gradient(135deg, rgba(var(--mud-palette-surface-rgb), 0.08) 0%, rgba(var(--mud-palette-primary-rgb), 0.04) 100%);
+        border-color: rgba(var(--mud-palette-lines-default-rgb), 0.2);
+    }
+    
+    .node-detail-content {
+        background: linear-gradient(135deg, rgba(var(--mud-palette-surface-rgb), 0.08) 0%, rgba(var(--mud-palette-secondary-rgb), 0.04) 100%);
+        border-color: rgba(var(--mud-palette-lines-default-rgb), 0.2);
+    }
+}
+
+/* MudBlazor 深色主题适配 */
+[data-theme="dark"] .modern-card,
+.mud-theme-dark .modern-card {
+    background: var(--mud-palette-surface);
+    border-color: rgba(var(--mud-palette-lines-default-rgb), 0.2);
+}
+
+[data-theme="dark"] .overview-stat-card,
+.mud-theme-dark .overview-stat-card {
+    background: linear-gradient(135deg, rgba(var(--mud-palette-primary-rgb), 0.08) 0%, rgba(var(--mud-palette-info-rgb), 0.08) 100%);
+    border-color: rgba(var(--mud-palette-lines-default-rgb), 0.2);
+}
+
+[data-theme="dark"] .dependency-graph-canvas,
+.mud-theme-dark .dependency-graph-canvas {
+    background: linear-gradient(135deg, rgba(var(--mud-palette-surface-rgb), 0.08) 0%, rgba(var(--mud-palette-primary-rgb), 0.04) 100%);
+    border-color: rgba(var(--mud-palette-lines-default-rgb), 0.2);
+}
+
+[data-theme="dark"] .node-detail-content,
+.mud-theme-dark .node-detail-content {
+    background: linear-gradient(135deg, rgba(var(--mud-palette-surface-rgb), 0.08) 0%, rgba(var(--mud-palette-secondary-rgb), 0.04) 100%);
+    border-color: rgba(var(--mud-palette-lines-default-rgb), 0.2);
+}

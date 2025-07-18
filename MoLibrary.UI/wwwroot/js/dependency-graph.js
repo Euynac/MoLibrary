@@ -43,7 +43,10 @@ async function loadD3() {
 
 // 获取当前主题
 function isDarkMode() {
-    return document.body.classList.contains('dark-theme') || 
+    // 检查 MudBlazor 的暗黑模式
+    return document.documentElement.classList.contains('mud-theme-dark') ||
+           document.body.classList.contains('mud-theme-dark') ||
+           document.body.classList.contains('dark-theme') || 
            window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 
@@ -171,11 +174,23 @@ export async function initializeDependencyGraph(containerId, nodes, edges) {
             .attr('fill', d => getNodeColor(d, colors))
             .attr('stroke', colors.background)
             .attr('stroke-width', 3)
-            .style('cursor', 'pointer')
+            .style('cursor', 'move')
             .call(d3.drag()
-                .on('start', dragstarted)
-                .on('drag', dragged)
-                .on('end', dragended));
+                .on('start', function(event, d) {
+                    if (!event.active) simulation.alphaTarget(0.3).restart();
+                    d.fx = d.x;
+                    d.fy = d.y;
+                })
+                .on('drag', function(event, d) {
+                    d.fx = event.x;
+                    d.fy = event.y;
+                })
+                .on('end', function(event, d) {
+                    if (!event.active) simulation.alphaTarget(0);
+                    // 不设置为null，保持拖动后的位置
+                    // d.fx = null;
+                    // d.fy = null;
+                }));
 
         // 添加节点标签
         const label = g.append('g')
@@ -247,6 +262,26 @@ export async function initializeDependencyGraph(containerId, nodes, edges) {
 
         // 监听主题变化
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateTheme);
+        
+        // 监听MudBlazor主题变化
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'attributes' && 
+                    (mutation.attributeName === 'class' || mutation.attributeName === 'data-theme')) {
+                    updateTheme();
+                }
+            });
+        });
+        
+        observer.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['class', 'data-theme']
+        });
+        
+        observer.observe(document.body, {
+            attributes: true,
+            attributeFilter: ['class', 'data-theme']
+        });
 
         console.log('Dependency graph initialized successfully');
     } catch (error) {
@@ -349,22 +384,7 @@ export async function initializeDependencyGraph(containerId, nodes, edges) {
         }
     }
 
-    function dragstarted(event, d) {
-        if (!event.active) simulation.alphaTarget(0.3).restart();
-        d.fx = d.x;
-        d.fy = d.y;
-    }
 
-    function dragged(event, d) {
-        d.fx = event.x;
-        d.fy = event.y;
-    }
-
-    function dragended(event, d) {
-        if (!event.active) simulation.alphaTarget(0);
-        d.fx = null;
-        d.fy = null;
-    }
 }
 
 // 更新主题
@@ -378,11 +398,22 @@ function updateTheme() {
     graph.svg.style('background-color', colors.background);
     
     // 更新节点颜色
-    graph.node.attr('fill', d => getNodeColor(d, colors));
+    graph.node.attr('fill', d => {
+        if (d.isPartOfCycle) return colors.nodeColors.cycle;
+        if (d.isDisabled) return colors.nodeColors.disabled;
+        return colors.nodeColors.normal;
+    });
     graph.node.attr('stroke', colors.background);
     
     // 更新边颜色
-    graph.link.attr('stroke', d => getEdgeColor(d.dependencyType, colors));
+    graph.link.attr('stroke', d => {
+        switch (d.dependencyType) {
+            case 'Direct': return colors.edgeColors.direct;
+            case 'Transitive': return colors.edgeColors.transitive;
+            case 'Circular': return colors.edgeColors.circular;
+            default: return colors.edgeColors.default;
+        }
+    });
     
     // 更新标签颜色
     graph.label.style('fill', colors.nodeColors.text);
@@ -593,6 +624,11 @@ function getEdgeColor(type, colors) {
         case 'Circular': return colors.edgeColors.circular;
         default: return colors.edgeColors.default;
     }
+}
+
+// 导出主题更新函数
+export function refreshTheme() {
+    updateTheme();
 }
 
 // D3.js库将在使用时动态加载
