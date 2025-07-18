@@ -1,0 +1,311 @@
+@using MoLibrary.Core.Module.Dashboard.Models
+@using MudBlazor
+
+<div class="health-check-container">
+    @if (HealthCheckData != null)
+    {
+        <MudGrid Spacing="4">
+            <!-- 健康概览 -->
+            <MudItem xs="12" md="4">
+                <MudCard Class="health-overview-card" Style="height: 280px;">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <div class="d-flex align-center">
+                                <MudIcon Icon="@Icons.Material.Filled.HealthAndSafety" Color="Color.Primary" Class="mr-2" />
+                                <MudText Typo="Typo.h6">健康概览</MudText>
+                            </div>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent Class="d-flex flex-column" Style="height: calc(100% - 80px);">
+                        <div class="text-center mb-4">
+                            <MudIcon Icon="@GetHealthStatusIcon(HealthCheckData.OverallHealth)" 
+                                   Color="@GetHealthStatusColor(HealthCheckData.OverallHealth)" 
+                                   Size="Size.Large" />
+                            <MudText Typo="Typo.h5" Class="mt-2" Color="@GetHealthStatusColor(HealthCheckData.OverallHealth)">
+                                @HealthCheckData.OverallHealth.ToString()
+                            </MudText>
+                        </div>
+                        <div class="flex-grow-1">
+                            <MudText Typo="Typo.body2" Class="mb-3">
+                                @HealthCheckData.HealthSummary
+                            </MudText>
+                            <MudDivider Class="mb-3" />
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                检查时间: @HealthCheckData.CheckTime.ToString("yyyy-MM-dd HH:mm:ss")
+                            </MudText>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <!-- 性能指标 -->
+            <MudItem xs="12" md="8">
+                <MudCard Style="height: 280px;">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <div class="d-flex align-center">
+                                <MudIcon Icon="@Icons.Material.Filled.Speed" Color="Color.Info" Class="mr-2" />
+                                <MudText Typo="Typo.h6">性能指标</MudText>
+                            </div>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent Style="height: calc(100% - 80px); overflow-y: auto;">
+                        <MudGrid Spacing="2">
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudPaper Class="pa-3 text-center" Elevation="2" Style="height: 120px;">
+                                    <MudIcon Icon="@Icons.Material.Filled.Timer" Color="Color.Primary" Size="Size.Medium" Class="mb-2" />
+                                    <MudText Typo="Typo.subtitle2">平均初始化时间</MudText>
+                                    <MudText Typo="Typo.h6" Color="Color.Primary">
+                                        @($"{HealthCheckData.PerformanceMetrics.AverageModuleInitTimeMs:F2}ms")
+                                    </MudText>
+                                </MudPaper>
+                            </MudItem>
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudPaper Class="pa-3 text-center" Elevation="2" Style="height: 120px;">
+                                    <MudIcon Icon="@Icons.Material.Filled.HourglassFull" Color="Color.Warning" Size="Size.Medium" Class="mb-2" />
+                                    <MudText Typo="Typo.subtitle2">最慢模块时间</MudText>
+                                    <MudText Typo="Typo.h6" Color="Color.Warning">
+                                        @($"{HealthCheckData.PerformanceMetrics.SlowestModuleInitTimeMs}ms")
+                                    </MudText>
+                                </MudPaper>
+                            </MudItem>
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudPaper Class="pa-3 text-center" Elevation="2" Style="height: 120px;">
+                                    <MudIcon Icon="@Icons.Material.Filled.Star" Color="Color.Success" Size="Size.Medium" Class="mb-2" />
+                                    <MudText Typo="Typo.subtitle2">效率评分</MudText>
+                                    <MudText Typo="Typo.h6" Color="Color.Success">
+                                        @($"{HealthCheckData.PerformanceMetrics.InitializationEfficiencyScore}/100")
+                                    </MudText>
+                                </MudPaper>
+                            </MudItem>
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudPaper Class="pa-3 text-center" Elevation="2" Style="height: 120px;">
+                                    <MudIcon Icon="@Icons.Material.Filled.Memory" Color="Color.Info" Size="Size.Medium" Class="mb-2" />
+                                    <MudText Typo="Typo.subtitle2">内存使用</MudText>
+                                    <MudText Typo="Typo.h6" Color="Color.Info">
+                                        @(HealthCheckData.PerformanceMetrics.MemoryUsageBytes.HasValue ? 
+                                            $"{HealthCheckData.PerformanceMetrics.MemoryUsageBytes.Value / 1024 / 1024:F2}MB" : "N/A")
+                                    </MudText>
+                                </MudPaper>
+                            </MudItem>
+                        </MudGrid>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <!-- 健康检查项目 -->
+            <MudItem xs="12" md="6">
+                <MudCard Style="height: 400px;">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <div class="d-flex align-center">
+                                <MudIcon Icon="@Icons.Material.Filled.Checklist" Color="Color.Success" Class="mr-2" />
+                                <MudText Typo="Typo.h6">检查项目</MudText>
+                            </div>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent Style="height: calc(100% - 80px); overflow-y: auto;">
+                        @if (HealthCheckData.HealthCheckItems.Any())
+                        {
+                            <MudStack Spacing="2">
+                                @foreach (var item in HealthCheckData.HealthCheckItems)
+                                {
+                                    <MudPaper Class="pa-3" Elevation="2">
+                                        <div class="d-flex align-center justify-space-between">
+                                            <div class="d-flex align-center">
+                                                <MudIcon Icon="@GetHealthStatusIcon(item.Status)" 
+                                                       Color="@GetHealthStatusColor(item.Status)" 
+                                                       Class="mr-3" />
+                                                <div>
+                                                    <MudText Typo="Typo.subtitle1">@item.Name</MudText>
+                                                    <MudText Typo="Typo.body2" Color="Color.Secondary">@item.Details</MudText>
+                                                </div>
+                                            </div>
+                                            <MudChip T="string" Color="@GetHealthStatusColor(item.Status)" Size="Size.Small">
+                                                @item.Status.ToString()
+                                            </MudChip>
+                                        </div>
+                                    </MudPaper>
+                                }
+                            </MudStack>
+                        }
+                        else
+                        {
+                            <div class="d-flex align-center justify-center" style="height: 100%;">
+                                <div class="text-center">
+                                    <MudIcon Icon="@Icons.Material.Filled.Checklist" Size="Size.Large" Color="Color.Secondary" Class="mb-2" />
+                                    <MudText Color="Color.Secondary">暂无检查项目</MudText>
+                                </div>
+                            </div>
+                        }
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <!-- 问题列表 -->
+            <MudItem xs="12" md="6">
+                <MudCard Style="height: 400px;">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <div class="d-flex align-center">
+                                <MudIcon Icon="@Icons.Material.Filled.BugReport" Color="Color.Error" Class="mr-2" />
+                                <MudText Typo="Typo.h6">发现的问题</MudText>
+                            </div>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent Style="height: calc(100% - 80px); overflow-y: auto;">
+                        @if (HealthCheckData.Issues.Any())
+                        {
+                            <MudStack Spacing="2">
+                                @foreach (var issue in HealthCheckData.Issues)
+                                {
+                                    <MudPaper Class="pa-3" Elevation="2">
+                                        <div class="d-flex align-center justify-space-between">
+                                            <div class="d-flex align-center">
+                                                <MudIcon Icon="@GetIssueSeverityIcon(issue.Severity)" 
+                                                       Color="@GetIssueSeverityColor(issue.Severity)" 
+                                                       Class="mr-3" />
+                                                <div>
+                                                    <MudText Typo="Typo.subtitle1">@issue.Title</MudText>
+                                                    <MudText Typo="Typo.body2" Color="Color.Secondary">@issue.Description</MudText>
+                                                </div>
+                                            </div>
+                                            <MudChip T="string" Color="@GetIssueSeverityColor(issue.Severity)" Size="Size.Small">
+                                                @issue.Severity.ToString()
+                                            </MudChip>
+                                        </div>
+                                    </MudPaper>
+                                }
+                            </MudStack>
+                        }
+                        else
+                        {
+                            <div class="d-flex align-center justify-center" style="height: 100%;">
+                                <div class="text-center">
+                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Large" Color="Color.Success" Class="mb-2" />
+                                    <MudText Color="Color.Success">未发现问题</MudText>
+                                </div>
+                            </div>
+                        }
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    }
+    else
+    {
+        <MudGrid Spacing="4">
+            <MudItem xs="12" md="4">
+                <MudCard Style="height: 280px;">
+                    <MudCardContent Class="d-flex align-center justify-center" Style="height: 100%;">
+                        <div class="text-center">
+                            <MudProgressCircular Indeterminate="true" Class="mb-2" />
+                            <MudText Color="Color.Secondary">加载健康概览...</MudText>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" md="8">
+                <MudCard Style="height: 280px;">
+                    <MudCardContent Class="d-flex align-center justify-center" Style="height: 100%;">
+                        <div class="text-center">
+                            <MudProgressCircular Indeterminate="true" Class="mb-2" />
+                            <MudText Color="Color.Secondary">加载性能指标...</MudText>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudCard Style="height: 400px;">
+                    <MudCardContent Class="d-flex align-center justify-center" Style="height: 100%;">
+                        <div class="text-center">
+                            <MudProgressCircular Indeterminate="true" Class="mb-2" />
+                            <MudText Color="Color.Secondary">加载检查项目...</MudText>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudCard Style="height: 400px;">
+                    <MudCardContent Class="d-flex align-center justify-center" Style="height: 100%;">
+                        <div class="text-center">
+                            <MudProgressCircular Indeterminate="true" Class="mb-2" />
+                            <MudText Color="Color.Secondary">加载问题列表...</MudText>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    }
+</div>
+
+<style>
+    .health-check-container {
+        width: 100%;
+    }
+</style>
+
+@code {
+    /// <summary>
+    /// 健康检查数据
+    /// </summary>
+    [Parameter] public ModuleSystemHealthCheck? HealthCheckData { get; set; }
+
+    /// <summary>
+    /// 获取健康状态图标
+    /// </summary>
+    /// <param name="status">健康状态</param>
+    /// <returns>图标名称</returns>
+    private string GetHealthStatusIcon(HealthStatus status) => status switch
+    {
+        HealthStatus.Healthy => Icons.Material.Filled.CheckCircle,
+        HealthStatus.Warning => Icons.Material.Filled.Warning,
+        HealthStatus.Unhealthy => Icons.Material.Filled.Error,
+        HealthStatus.Critical => Icons.Material.Filled.Dangerous,
+        _ => Icons.Material.Filled.HelpOutline
+    };
+
+    /// <summary>
+    /// 获取健康状态颜色
+    /// </summary>
+    /// <param name="status">健康状态</param>
+    /// <returns>颜色</returns>
+    private Color GetHealthStatusColor(HealthStatus status) => status switch
+    {
+        HealthStatus.Healthy => Color.Success,
+        HealthStatus.Warning => Color.Warning,
+        HealthStatus.Unhealthy => Color.Error,
+        HealthStatus.Critical => Color.Error,
+        _ => Color.Default
+    };
+
+    /// <summary>
+    /// 获取问题严重程度图标
+    /// </summary>
+    /// <param name="severity">严重程度</param>
+    /// <returns>图标名称</returns>
+    private string GetIssueSeverityIcon(IssueSeverity severity) => severity switch
+    {
+        IssueSeverity.Information => Icons.Material.Filled.Info,
+        IssueSeverity.Low => Icons.Material.Filled.Warning,
+        IssueSeverity.Medium => Icons.Material.Filled.PriorityHigh,
+        IssueSeverity.High => Icons.Material.Filled.Error,
+        IssueSeverity.Critical => Icons.Material.Filled.Dangerous,
+        _ => Icons.Material.Filled.HelpOutline
+    };
+
+    /// <summary>
+    /// 获取问题严重程度颜色
+    /// </summary>
+    /// <param name="severity">严重程度</param>
+    /// <returns>颜色</returns>
+    private Color GetIssueSeverityColor(IssueSeverity severity) => severity switch
+    {
+        IssueSeverity.Information => Color.Info,
+        IssueSeverity.Low => Color.Warning,
+        IssueSeverity.Medium => Color.Warning,
+        IssueSeverity.High => Color.Error,
+        IssueSeverity.Critical => Color.Error,
+        _ => Color.Default
+    };
+} 

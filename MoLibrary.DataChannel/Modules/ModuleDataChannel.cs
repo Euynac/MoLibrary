@@ -57,17 +57,6 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
 
     public override void ClaimDependencies()
     {
-        DependsOnModule<ModuleControllersGuide>().Register().ConfigMvcOption((o, provider) =>
-        {
-            o.Conventions.Add(new ModuleControllerModelConvention<DataChannelController>(Option));
-        }).ConfigMvcBuilder((builder, provider) =>
-        {
-                //builder.AddApplicationPart(typeof(DataChannelController).Assembly)
-                //.ConfigureApplicationPartManager(manager =>
-                //{
-                //    // 动态控制Controller的启用
-                //    manager.FeatureProviders.Add(new ModuleControllerFeatureProvider<DataChannelController>(Option));
-                //});
-        });
+        DependsOnModule<ModuleControllersGuide>().Register().RegisterMoControllers<ModuleDataChannelController>(Option);
     }
 }

@@ -1,0 +1,347 @@
+@using MoLibrary.FrameworkUI.UISignalr.Models
+@using MudBlazor
+
+<!-- 方法调用 -->
+<MudPaper Class="pa-4 mb-4" Elevation="2">
+    <MudText Typo="Typo.h5" Class="mb-3">方法调用</MudText>
+    <MudGrid>
+        <MudItem xs="12" sm="6">
+            <MudSelect Value="@SelectedMethodName"
+                     ValueChanged="@((string value) => OnSelectedMethodNameChangedInternal(value))"
+                     Label="选择方法" 
+                     Variant="Variant.Outlined"
+                     T="string">
+                @foreach (var method in HubMethods)
+                {
+                    <MudSelectItem Value="@method.Name">@method.DisplayName</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12">
+            @if (SelectedMethod != null && SelectedMethod.Args.Any())
+            {
+                <MudText Typo="Typo.h6" Class="mb-2">参数设置:</MudText>
+                @foreach (var arg in SelectedMethod.Args)
+                {
+                    var value = GetParameterValue(arg.Name);
+                    var isValid = ValidateParameterValue(value, arg.Type);
+                    
+                    <MudTextField Value="@value" 
+                                Label="@($"{arg.Name} ({GetDisplayType(arg.Type)})")" 
+                                Variant="Variant.Outlined"
+                                Class="mb-2"
+                                HelperText="@GetParameterHelperText(arg.Type)"
+                                Error="@(!isValid && !string.IsNullOrEmpty(value))"
+                                ErrorText="@(isValid ? "" : GetParameterErrorText(value, arg.Type))"
+                                ValueChanged="@((string newValue) => SetParameterValue(arg.Name, newValue))" />
+                }
+            }
+            else if (SelectedMethod != null)
+            {
+                <MudAlert Severity="Severity.Info">该方法无需参数</MudAlert>
+            }
+        </MudItem>
+        <MudItem xs="12">
+            <MudStack Row Spacing="2">
+                <MudButton Variant="Variant.Filled" 
+                         Color="Color.Primary" 
+                         OnClick="InvokeMethodAsync"
+                         Disabled="!IsConnected || string.IsNullOrWhiteSpace(SelectedMethodName) || !AreParametersValid()">
+                    <MudIcon Icon="@Icons.Material.Filled.PlayArrow" />
+                    <MudText Class="ms-2">调用方法</MudText>
+                </MudButton>
+                @if (SelectedMethod != null && SelectedMethod.Args.Any())
+                {
+                    <MudButton Variant="Variant.Outlined" 
+                             Color="Color.Secondary" 
+                             OnClick="ClearParametersAsync">
+                        <MudIcon Icon="@Icons.Material.Filled.Clear" />
+                        <MudText Class="ms-2">清空参数</MudText>
+                    </MudButton>
+                }
+            </MudStack>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@code {
+    /// <summary>
+    /// Hub方法列表
+    /// </summary>
+    [Parameter] public List<HubMethodInfo> HubMethods { get; set; } = [];
+
+    /// <summary>
+    /// 是否已连接
+    /// </summary>
+    [Parameter] public bool IsConnected { get; set; }
+
+    /// <summary>
+    /// 选择的方法名称
+    /// </summary>
+    [Parameter] public string SelectedMethodName { get; set; } = "";
+
+    /// <summary>
+    /// 选择的方法名称变化回调
+    /// </summary>
+    [Parameter] public EventCallback<string> SelectedMethodNameChanged { get; set; }
+
+    /// <summary>
+    /// 方法参数
+    /// </summary>
+    [Parameter] public Dictionary<string, string> MethodParameters { get; set; } = new();
+
+    /// <summary>
+    /// 调用方法回调
+    /// </summary>
+    [Parameter] public EventCallback<(string methodName, List<MethodCallParameter> parameters)> OnInvokeMethod { get; set; }
+
+    /// <summary>
+    /// 当前选择的方法
+    /// </summary>
+    private HubMethodInfo? SelectedMethod => HubMethods.FirstOrDefault(m => m.Name == SelectedMethodName);
+
+    /// <summary>
+    /// 安全获取参数值
+    /// </summary>
+    /// <param name="parameterName">参数名称</param>
+    /// <returns>参数值</returns>
+    private string GetParameterValue(string parameterName)
+    {
+        return MethodParameters?.GetValueOrDefault(parameterName, "") ?? "";
+    }
+
+    /// <summary>
+    /// 安全设置参数值
+    /// </summary>
+    /// <param name="parameterName">参数名称</param>
+    /// <param name="value">参数值</param>
+    private void SetParameterValue(string parameterName, string value)
+    {
+        if (MethodParameters != null)
+        {
+            MethodParameters[parameterName] = value ?? "";
+        }
+    }
+
+    /// <summary>
+    /// 参数设置变化处理
+    /// </summary>
+    protected override async Task OnParametersSetAsync()
+    {
+        // 确保MethodParameters字典不为null
+        MethodParameters ??= new Dictionary<string, string>();
+        
+        if (SelectedMethod != null)
+        {
+            // 确保参数字典包含所有需要的参数
+            foreach (var arg in SelectedMethod.Args)
+            {
+                if (!MethodParameters.ContainsKey(arg.Name))
+                {
+                    MethodParameters[arg.Name] = "";
+                }
+            }
+        }
+        await base.OnParametersSetAsync();
+    }
+
+    /// <summary>
+    /// 获取显示类型名称
+    /// </summary>
+    /// <param name="type">参数类型</param>
+    /// <returns>显示类型名称</returns>
+    private string GetDisplayType(string type)
+    {
+        var normalizedType = type.ToLower().Replace("system.", "");
+        
+        return normalizedType switch
+        {
+            "string" => "string",
+            "int" or "int32" => "int",
+            "long" or "int64" => "long",
+            "double" => "double",
+            "float" or "single" => "float",
+            "bool" or "boolean" => "bool",
+            "datetime" => "DateTime",
+            "guid" => "Guid",
+            _ => type
+        };
+    }
+
+    /// <summary>
+    /// 获取参数帮助文本
+    /// </summary>
+    /// <param name="type">参数类型</param>
+    /// <returns>帮助文本</returns>
+    private string GetParameterHelperText(string type)
+    {
+        var normalizedType = type.ToLower().Replace("system.", "");
+        
+        return normalizedType switch
+        {
+            "string" => "字符串类型 - 直接输入文本内容",
+            "int" or "int32" => "整数类型 - 例如: 123",
+            "long" or "int64" => "长整数类型 - 例如: 123456789",
+            "double" => "双精度浮点数类型 - 例如: 123.45",
+            "float" or "single" => "单精度浮点数类型 - 例如: 123.45",
+            "bool" or "boolean" => "布尔类型 - 输入: true 或 false",
+            "datetime" => "日期时间类型 - 例如: 2023-12-01 12:00:00",
+            "guid" => "GUID类型 - 例如: 12345678-1234-1234-1234-123456789abc",
+            _ when normalizedType.Contains("[]") => "数组类型 - 输入JSON格式，例如: [\"item1\",\"item2\"]",
+            _ when normalizedType.Contains("list") => "列表类型 - 输入JSON格式，例如: [\"item1\",\"item2\"]",
+            _ => $"复杂类型 ({type}) - 输入JSON格式"
+        };
+    }
+
+    /// <summary>
+    /// 获取参数错误文本
+    /// </summary>
+    /// <param name="value">参数值</param>
+    /// <param name="type">参数类型</param>
+    /// <returns>错误文本</returns>
+    private string GetParameterErrorText(string value, string type)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return "";
+        }
+
+        var normalizedType = type.ToLower().Replace("system.", "");
+        
+        return normalizedType switch
+        {
+            "int" or "int32" => "请输入有效的整数",
+            "long" or "int64" => "请输入有效的长整数",
+            "double" => "请输入有效的双精度数字",
+            "float" or "single" => "请输入有效的单精度数字",
+            "bool" or "boolean" => "请输入 true 或 false",
+            "datetime" => "请输入有效的日期时间格式",
+            "guid" => "请输入有效的GUID格式",
+            _ => "参数格式无效"
+        };
+    }
+
+    /// <summary>
+    /// 验证参数值
+    /// </summary>
+    /// <param name="value">参数值</param>
+    /// <param name="type">参数类型</param>
+    /// <returns>是否有效</returns>
+    private bool ValidateParameterValue(string value, string type)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return true; // 允许空值，让服务器端处理默认值
+        }
+
+        var normalizedType = type.ToLower().Replace("system.", "");
+        
+        try
+        {
+            switch (normalizedType)
+            {
+                case "string":
+                    return true; // 字符串总是有效的
+                case "int" or "int32":
+                    return int.TryParse(value, out _);
+                case "long" or "int64":
+                    return long.TryParse(value, out _);
+                case "double":
+                    return double.TryParse(value, out _);
+                case "float" or "single":
+                    return float.TryParse(value, out _);
+                case "bool" or "boolean":
+                    var trimmed = value.ToLower().Trim();
+                    return trimmed == "true" || trimmed == "false" || 
+                           trimmed == "1" || trimmed == "0" || 
+                           trimmed == "yes" || trimmed == "no" || 
+                           trimmed == "y" || trimmed == "n";
+                case "datetime":
+                    return DateTime.TryParse(value, out _);
+                case "guid":
+                    return Guid.TryParse(value, out _);
+                default:
+                    // 对于复杂类型，尝试解析为JSON
+                    if (value.Trim().StartsWith("{") || value.Trim().StartsWith("["))
+                    {
+                        try
+                        {
+                            System.Text.Json.JsonDocument.Parse(value);
+                            return true;
+                        }
+                        catch
+                        {
+                            return false;
+                        }
+                    }
+                    return true; // 其他情况假设有效
+            }
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 检查所有参数是否有效
+    /// </summary>
+    /// <returns>是否所有参数都有效</returns>
+    private bool AreParametersValid()
+    {
+        if (SelectedMethod == null) return true;
+
+        return SelectedMethod.Args.All(arg => 
+        {
+            var value = GetParameterValue(arg.Name);
+            return ValidateParameterValue(value, arg.Type);
+        });
+    }
+
+    /// <summary>
+    /// 清空所有参数
+    /// </summary>
+    private async Task ClearParametersAsync()
+    {
+        if (SelectedMethod != null)
+        {
+            foreach (var arg in SelectedMethod.Args)
+            {
+                MethodParameters[arg.Name] = "";
+            }
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// 调用方法
+    /// </summary>
+    private async Task InvokeMethodAsync()
+    {
+        if (SelectedMethod == null || !AreParametersValid()) return;
+
+        var parameters = new List<MethodCallParameter>();
+        
+        foreach (var arg in SelectedMethod.Args)
+        {
+            var value = GetParameterValue(arg.Name);
+            parameters.Add(new MethodCallParameter
+            {
+                Name = arg.Name,
+                Value = value,
+                Type = arg.Type
+            });
+        }
+
+        await OnInvokeMethod.InvokeAsync((SelectedMethodName, parameters));
+    }
+
+    /// <summary>
+    /// 处理方法名称变化
+    /// </summary>
+    private async Task OnSelectedMethodNameChangedInternal(string value)
+    {
+        SelectedMethodName = value;
+        await SelectedMethodNameChanged.InvokeAsync(value);
+    }
+} 

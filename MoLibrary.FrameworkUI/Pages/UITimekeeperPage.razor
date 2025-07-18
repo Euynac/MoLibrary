@@ -1,0 +1,246 @@
+@page "/timekeeper-debug"
+@using MoLibrary.FrameworkUI.UITimekeeper.Services
+@using MoLibrary.FrameworkUI.UITimekeeper.Models
+@using MoLibrary.Tool.MoResponse
+@using MudBlazor
+@inject TimekeeperService TimekeeperService
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-4">
+    <!-- 标题栏 -->
+    <MudPaper Class="pa-4 mb-4" Style="background: linear-gradient(45deg, #FF6F00 30%, #FF9800 90%); color: white;">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                <MudIcon Icon="@Icons.Material.Filled.Timer" Size="Size.Large" />
+                <MudText Typo="Typo.h4" Style="font-weight: 500; margin: 0;">Timekeeper 调试</MudText>
+            </MudStack>
+            <MudStack Row="true" Spacing="2">
+                <MudButton StartIcon="@Icons.Material.Filled.Refresh" 
+                          Color="Color.Inherit" 
+                          Variant="Variant.Outlined" 
+                          OnClick="RefreshData"
+                          Size="Size.Medium"
+                          Style="border-color: white; color: white;">
+                    刷新数据
+                </MudButton>
+            </MudStack>
+        </MudStack>
+    </MudPaper>
+
+    @if (_loading)
+    {
+        <MudStack AlignItems="AlignItems.Center" Spacing="4" Class="pa-8">
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+            <MudText Typo="Typo.h6" Color="Color.Primary">正在加载数据...</MudText>
+        </MudStack>
+    }
+    else
+    {
+        <MudGrid Spacing="3">
+            <!-- 正在运行的 Timekeeper -->
+            <MudItem xs="12" lg="6">
+                <MudCard Style="height: 100%; display: flex; flex-direction: column;" Elevation="2">
+                    <MudCardHeader Class="pb-2">
+                        <CardHeaderContent>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.PlayArrow" Color="Color.Success" />
+                                <MudText Typo="Typo.h6" Style="font-weight: 500;">正在运行的 Timekeeper</MudText>
+                                <MudBadge Content="@_runningTimekeepers.Count" Color="Color.Primary" Overlap="false" />
+                            </MudStack>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent Class="flex-grow-1">
+                        @if (_runningTimekeepers.Any())
+                        {
+                            <MudTable Items="@_runningTimekeepers" Hover="true" Striped="true" Dense="true" FixedHeader="true">
+                                <HeaderContent>
+                                    <MudTh>名称</MudTh>
+                                    <MudTh>内容</MudTh>
+                                    <MudTh>开始时间</MudTh>
+                                    <MudTh>当前耗时</MudTh>
+                                    <MudTh>运行时长</MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    <MudTd Style="font-family: monospace; font-size: 0.875rem;">@context.Name</MudTd>
+                                    <MudTd Style="font-size: 0.875rem;">@(context.Content ?? "无")</MudTd>
+                                    <MudTd Style="font-size: 0.875rem;">@context.StartTime</MudTd>
+                                    <MudTd Style="font-family: monospace; font-size: 0.875rem; color: var(--mud-palette-success);">
+                                        @context.CurrentElapsed
+                                    </MudTd>
+                                    <MudTd Style="font-size: 0.875rem;">@context.RunningDuration</MudTd>
+                                </RowTemplate>
+                            </MudTable>
+                        }
+                        else
+                        {
+                            <MudAlert Severity="Severity.Info" Class="mb-4">
+                                <MudText>当前没有正在运行的 Timekeeper</MudText>
+                            </MudAlert>
+                        }
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <!-- 统计信息 -->
+            <MudItem xs="12" lg="6">
+                <MudCard Style="height: 100%; display: flex; flex-direction: column;" Elevation="2">
+                    <MudCardHeader Class="pb-2">
+                        <CardHeaderContent>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.Analytics" Color="Color.Primary" />
+                                <MudText Typo="Typo.h6" Style="font-weight: 500;">统计信息</MudText>
+                                <MudBadge Content="@_statistics.Count" Color="Color.Secondary" Overlap="false" />
+                            </MudStack>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent Class="flex-grow-1">
+                        @if (_statistics.Any())
+                        {
+                            <MudTable Items="@_statistics" Hover="true" Striped="true" Dense="true" FixedHeader="true">
+                                <HeaderContent>
+                                    <MudTh>名称</MudTh>
+                                    <MudTh>次数</MudTh>
+                                    <MudTh>平均耗时</MudTh>
+                                    <MudTh>最后耗时</MudTh>
+                                    <MudTh>频率/分钟</MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    <MudTd Style="font-family: monospace; font-size: 0.875rem;">@context.Name</MudTd>
+                                    <MudTd Style="font-size: 0.875rem;">@context.Times</MudTd>
+                                    <MudTd Style="font-family: monospace; font-size: 0.875rem; color: var(--mud-palette-warning);">
+                                        @context.Average
+                                    </MudTd>
+                                    <MudTd Style="font-family: monospace; font-size: 0.875rem;">@context.LastDuration</MudTd>
+                                    <MudTd Style="font-size: 0.875rem;">@context.TimesEveryMinutes</MudTd>
+                                </RowTemplate>
+                            </MudTable>
+                        }
+                        else
+                        {
+                            <MudAlert Severity="Severity.Info" Class="mb-4">
+                                <MudText>暂无统计信息</MudText>
+                            </MudAlert>
+                        }
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <!-- 详细统计信息 -->
+            @if (_statistics.Any())
+            {
+                <MudItem xs="12">
+                    <MudCard Elevation="2">
+                        <MudCardHeader Class="pb-2">
+                            <CardHeaderContent>
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@Icons.Material.Filled.TableChart" Color="Color.Info" />
+                                    <MudText Typo="Typo.h6" Style="font-weight: 500;">详细统计信息</MudText>
+                                </MudStack>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            <MudTable Items="@_statistics" Hover="true" Striped="true" Dense="true" FixedHeader="true">
+                                <HeaderContent>
+                                    <MudTh>名称</MudTh>
+                                    <MudTh>执行次数</MudTh>
+                                    <MudTh>平均耗时</MudTh>
+                                    <MudTh>最后耗时</MudTh>
+                                    <MudTh>创建时间</MudTh>
+                                    <MudTh>频率/分钟</MudTh>
+                                    <MudTh>平均内存</MudTh>
+                                    <MudTh>最后内存</MudTh>
+                                    <MudTh>最后执行时间</MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    <MudTd Style="font-family: monospace; font-size: 0.875rem;">@context.Name</MudTd>
+                                    <MudTd Style="font-size: 0.875rem;">@context.Times</MudTd>
+                                    <MudTd Style="font-family: monospace; font-size: 0.875rem; color: var(--mud-palette-warning);">
+                                        @context.Average
+                                    </MudTd>
+                                    <MudTd Style="font-family: monospace; font-size: 0.875rem;">@context.LastDuration</MudTd>
+                                    <MudTd Style="font-size: 0.875rem;">@context.CreateAt</MudTd>
+                                    <MudTd Style="font-size: 0.875rem;">@context.TimesEveryMinutes</MudTd>
+                                    <MudTd Style="font-size: 0.875rem;">@(context.AverageMemory ?? "无")</MudTd>
+                                    <MudTd Style="font-size: 0.875rem;">@(context.LastMemory ?? "无")</MudTd>
+                                    <MudTd Style="font-size: 0.875rem;">@(context.LastExecutedTime ?? "无")</MudTd>
+                                </RowTemplate>
+                            </MudTable>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+</MudContainer>
+
+@code {
+    /// <summary>
+    /// Timekeeper调试页面URL
+    /// </summary>
+    public const string TIMEKEEPER_DEBUG_URL = "/timekeeper-debug";
+
+    private bool _loading = true;
+    private List<TimekeeperStatisticsResponse> _statistics = new();
+    private List<RunningTimekeeperResponse> _runningTimekeepers = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadDataAsync();
+        }
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        try
+        {
+            // 同时加载统计信息和正在运行的信息
+            var statisticsTask = TimekeeperService.GetTimekeeperStatusAsync();
+            var runningTask = TimekeeperService.GetRunningTimekeepersAsync();
+
+            await Task.WhenAll(statisticsTask, runningTask);
+
+            // 处理统计信息结果
+            if (statisticsTask.Result.IsFailed(out var statisticsError, out var statisticsData))
+            {
+                Snackbar.Add($"加载统计信息失败: {statisticsError}", Severity.Error);
+                _statistics = new List<TimekeeperStatisticsResponse>();
+            }
+            else
+            {
+                _statistics = statisticsData;
+            }
+
+            // 处理正在运行的信息结果
+            if (runningTask.Result.IsFailed(out var runningError, out var runningData))
+            {
+                Snackbar.Add($"加载正在运行的信息失败: {runningError}", Severity.Error);
+                _runningTimekeepers = new List<RunningTimekeeperResponse>();
+            }
+            else
+            {
+                _runningTimekeepers = runningData;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"加载数据失败: {ex.Message}", Severity.Error);
+            _statistics = new List<TimekeeperStatisticsResponse>();
+            _runningTimekeepers = new List<RunningTimekeeperResponse>();
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefreshData()
+    {
+        await LoadDataAsync();
+    }
+} 

@@ -1,0 +1,129 @@
+@attribute [Route(MODULE_SYSTEM_DASHBOARD_URL)]
+@using MoLibrary.Core.Module.Dashboard.Interfaces
+@using MoLibrary.Core.Module.Dashboard.Models
+@using MoLibrary.Core.Module.Models
+@using MoLibrary.UI.UIModuleSystem.Components
+@inject IModuleSystemStatusService StatusService
+@inject ISnackbar SnackBar
+
+<PageTitle>模块系统仪表板</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h3" Class="mb-6">
+        <MudIcon Icon="@Icons.Material.Filled.Dashboard" Class="mr-2" />
+        模块系统仪表板
+    </MudText>
+
+    <MudTabs Elevation="4" Rounded="true" ApplyEffectsToContainer="true" Class="mb-6">
+        <MudTabPanel Text="系统概览" Icon="@Icons.Material.Filled.Assessment">
+            <div class="tab-content-container">
+                <SystemOverview SystemStatus="systemStatus" />
+            </div>
+        </MudTabPanel>
+
+        <MudTabPanel Text="性能监控" Icon="@Icons.Material.Filled.Speed">
+            <div class="tab-content-container">
+                <PerformanceMonitoring SystemPerformance="systemPerformance" />
+            </div>
+        </MudTabPanel>
+
+        <MudTabPanel Text="健康检查" Icon="@Icons.Material.Filled.HealthAndSafety">
+            <div class="tab-content-container">
+                <HealthCheck HealthCheckData="healthCheck" />
+            </div>
+        </MudTabPanel>
+
+        <MudTabPanel Text="模块管理" Icon="@Icons.Material.Filled.ViewModule">
+            <div class="tab-content-container">
+                <ModuleManagement RegistrationInfo="registrationInfo" 
+                                OnRefresh="RefreshData" 
+                                OnModuleDetailClicked="ViewModuleDetail" />
+            </div>
+        </MudTabPanel>
+
+        <MudTabPanel Text="依赖关系" Icon="@Icons.Material.Filled.AccountTree">
+            <div class="tab-content-container">
+                <DependencyGraph DependencyGraphData="dependencyGraph" />
+            </div>
+        </MudTabPanel>
+    </MudTabs>
+</MudContainer>
+
+<!-- 模块详情对话框 -->
+<ModuleDetailDialog @bind-IsVisible="showModuleDetail" 
+                   SelectedModuleDetail="selectedModuleDetail" />
+
+<style>
+    .tab-content-container {
+        padding: 24px 0;
+        min-height: 400px;
+    }
+</style>
+
+@code {
+    public const string MODULE_SYSTEM_DASHBOARD_URL = "/module-system-dashboard";
+    private ModuleSystemStatus? systemStatus;
+    private ModuleSystemPerformance? systemPerformance;
+    private ModuleSystemHealthCheck? healthCheck;
+    private ModuleRegistrationInfo? registrationInfo;
+    private ModuleDependencyGraph? dependencyGraph;
+    private ModuleDetailInfo? selectedModuleDetail;
+    private bool showModuleDetail = false;
+
+   
+
+   
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await RefreshData();
+        }
+    }
+    /// <summary>
+    /// 刷新数据
+    /// </summary>
+    /// <returns></returns>
+    private async Task RefreshData()
+    {
+        try
+        {
+            systemStatus = StatusService.GetSystemStatus();
+            systemPerformance = StatusService.GetSystemPerformance();
+            healthCheck = StatusService.GetHealthCheck();
+            registrationInfo = StatusService.GetRegistrationInfo();
+            dependencyGraph = StatusService.GetDependencyGraph();
+            
+            SnackBar.Add("数据已刷新", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            SnackBar.Add($"刷新数据失败: {ex.Message}", Severity.Error);
+        }
+    }
+
+    /// <summary>
+    /// 查看模块详情
+    /// </summary>
+    /// <param name="moduleEnum">模块枚举</param>
+    /// <returns></returns>
+    private async Task ViewModuleDetail(EMoModules moduleEnum)
+    {
+        try
+        {
+            selectedModuleDetail = StatusService.GetModuleDetail(moduleEnum);
+            if (selectedModuleDetail != null)
+            {
+                showModuleDetail = true;
+            }
+            else
+            {
+                SnackBar.Add("模块详情不存在", Severity.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            SnackBar.Add($"获取模块详情失败: {ex.Message}", Severity.Error);
+        }
+    }
+} 

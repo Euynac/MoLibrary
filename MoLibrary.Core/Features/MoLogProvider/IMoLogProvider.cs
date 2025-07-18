@@ -12,7 +12,7 @@ public interface IMoLogProvider
     /// </summary>
     /// <typeparam name="T">The type requesting the logger.</typeparam>
     /// <returns>An ILogger instance for the specified type.</returns>
-    ILogger CreateLogger<T>();
+    ILogger<T> CreateLogger<T>();
 
     /// <summary>
     /// Creates a logger instance for the specified type.
@@ -27,7 +27,7 @@ public interface IMoLogProvider
     /// <typeparam name="T">The type requesting the logger.</typeparam>
     /// <param name="minLogLevel">The minimum log level to display.</param>
     /// <returns>An ILogger instance for the specified type with the specified minimum log level.</returns>
-    ILogger CreateLogger<T>(LogLevel minLogLevel);
+    ILogger<T> CreateLogger<T>(LogLevel minLogLevel);
     
     /// <summary>
     /// Creates a logger instance for the specified type with a minimum log level.

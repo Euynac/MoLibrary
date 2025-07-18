@@ -7,6 +7,8 @@ public class ModuleControllerModelConvention<TModuleController>(IMoModuleControl
 {
     public void Apply(ApplicationModel application)
     {
+        if (options.GetIsControllerDisabled()) return;
+
         foreach (var controller in application.Controllers)
         {
             // 识别库中的Controller
@@ -17,12 +19,13 @@ public class ModuleControllerModelConvention<TModuleController>(IMoModuleControl
                 {
                     selector.AttributeRouteModel = new AttributeRouteModel
                     {
-                        Template = $"{options.RoutePrefix}/{controller.ControllerName}"
+                        Template = options.GetControllerRouteTemplate<TModuleController>()
                     };
                 }
 
                 // 设置Swagger标签
                 controller.ApiExplorer.GroupName = options.GetSwaggerGroupName();
+                controller.ApiExplorer.IsVisible = options.GetIsVisibleInSwagger();
             }
         }
     }

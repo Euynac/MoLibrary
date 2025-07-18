@@ -21,7 +21,7 @@ public class ConsoleLogProvider : IMoLogProvider
     }
 
     /// <inheritdoc />
-    public ILogger CreateLogger<T>()
+    public ILogger<T> CreateLogger<T>()
     {
         return _loggerFactory.CreateLogger<T>();
     }
@@ -33,10 +33,10 @@ public class ConsoleLogProvider : IMoLogProvider
     }
     
     /// <inheritdoc />
-    public ILogger CreateLogger<T>(LogLevel minLogLevel)
+    public ILogger<T> CreateLogger<T>(LogLevel minLogLevel)
     {
         var logger = _loggerFactory.CreateLogger<T>();
-        return new MinimumLevelLogger(logger, minLogLevel);
+        return new MinimumLevelLogger<T>(logger, minLogLevel);
     }
     
     /// <inheritdoc />

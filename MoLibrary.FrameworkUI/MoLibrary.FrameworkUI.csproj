@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!-- 启用静态Web资源支持 -->
+    <StaticWebAssetProjectMode>Default</StaticWebAssetProjectMode>
+    <!-- 确保生成静态Web资源清单 -->
+    <GenerateStaticWebAssetsManifest>true</GenerateStaticWebAssetsManifest>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MoLibrary.Framework\MoLibrary.Framework.csproj" />
+    <ProjectReference Include="..\MoLibrary.UI\MoLibrary.UI.csproj" />
+  </ItemGroup>
+</Project>

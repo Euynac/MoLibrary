@@ -1,0 +1,304 @@
+@page "/home"
+@using MoLibrary.FrameworkUI.UISystemInfo.Services
+@using MoLibrary.FrameworkUI.UISystemInfo.Models
+@using MoLibrary.Tool.MoResponse
+@using MudBlazor
+@inject SystemInfoService SystemInfoService
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-4">
+    <!-- 标题栏 -->
+    <MudPaper Class="pa-4 mb-4" Style="background: linear-gradient(45deg, #6A1B9A 30%, #9C27B0 90%); color: white;">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Large" />
+                <MudText Typo="Typo.h4" Style="font-weight: 500; margin: 0;">系统信息</MudText>
+            </MudStack>
+            <MudStack Row="true" Spacing="2">
+                <MudButton StartIcon="@Icons.Material.Filled.Refresh" 
+                          Color="Color.Inherit" 
+                          Variant="Variant.Outlined" 
+                          OnClick="RefreshSystemInfo"
+                          Size="Size.Medium"
+                          Style="border-color: white; color: white;">
+                    刷新信息
+                </MudButton>
+            </MudStack>
+        </MudStack>
+    </MudPaper>
+
+    @if (_loading)
+    {
+        <MudStack AlignItems="AlignItems.Center" Spacing="4" Class="pa-8">
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+            <MudText Typo="Typo.h6" Color="Color.Primary">正在加载系统信息...</MudText>
+        </MudStack>
+    }
+    else if (_systemInfo != null)
+    {
+        <MudGrid Spacing="3">
+            <!-- 基本信息卡片 -->
+            <MudItem xs="12" md="6" lg="4">
+                <MudCard Style="height: 100%; display: flex; flex-direction: column;" Elevation="2">
+                    <MudCardHeader Class="pb-2">
+                        <CardHeaderContent>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.Schedule" Color="Color.Primary" />
+                                <MudText Typo="Typo.h6" Style="font-weight: 500;">基本信息</MudText>
+                            </MudStack>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent Style="flex: 1; padding-top: 8px;">
+                        <MudStack Spacing="3">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Small" Color="Color.Success" />
+                                <MudText><strong>构建时间:</strong></MudText>
+                            </MudStack>
+                            <MudText Class="ml-6" Style="color: #666;">@_systemInfo.BuildTime.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                            
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.AccessTime" Size="Size.Small" Color="Color.Info" />
+                                <MudText><strong>本地时间:</strong></MudText>
+                            </MudStack>
+                            <MudText Class="ml-6" Style="color: #666;">@_systemInfo.LocalTime.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                            
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.Public" Size="Size.Small" Color="Color.Warning" />
+                                <MudText><strong>UTC时间:</strong></MudText>
+                            </MudStack>
+                            <MudText Class="ml-6" Style="color: #666;">@_systemInfo.UtcTime.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                            
+                            @if (!string.IsNullOrEmpty(_systemInfo.ProductVersion))
+                            {
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@Icons.Material.Filled.Label" Size="Size.Small" Color="Color.Secondary" />
+                                    <MudText><strong>产品版本:</strong></MudText>
+                                </MudStack>
+                                <MudText Class="ml-6" Style="color: #666;">@_systemInfo.ProductVersion</MudText>
+                            }
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <!-- 环境信息卡片 -->
+            @if (_systemInfo.EnvironmentInfo != null)
+            {
+                <MudItem xs="12" md="6" lg="4">
+                    <MudCard Style="height: 100%; display: flex; flex-direction: column;" Elevation="2">
+                        <MudCardHeader Class="pb-2">
+                            <CardHeaderContent>
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@Icons.Material.Filled.Computer" Color="Color.Primary" />
+                                    <MudText Typo="Typo.h6" Style="font-weight: 500;">环境信息</MudText>
+                                </MudStack>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent Style="flex: 1; padding-top: 8px;">
+                            <MudStack Spacing="3">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@Icons.Material.Filled.DeviceHub" Size="Size.Small" Color="Color.Success" />
+                                    <MudText><strong>机器名:</strong></MudText>
+                                </MudStack>
+                                <MudText Class="ml-6" Style="color: #666;">@_systemInfo.EnvironmentInfo.MachineName</MudText>
+                                
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Color="Color.Info" />
+                                    <MudText><strong>用户名:</strong></MudText>
+                                </MudStack>
+                                <MudText Class="ml-6" Style="color: #666;">@_systemInfo.EnvironmentInfo.UserName</MudText>
+                                
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small" Color="Color.Warning" />
+                                    <MudText><strong>进程ID:</strong></MudText>
+                                </MudStack>
+                                <MudText Class="ml-6" Style="color: #666;">@_systemInfo.EnvironmentInfo.ProcessId</MudText>
+                                
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@Icons.Material.Filled.Architecture" Size="Size.Small" Color="Color.Secondary" />
+                                    <MudText><strong>64位操作系统:</strong></MudText>
+                                </MudStack>
+                                <MudText Class="ml-6" Style="color: #666;">@(_systemInfo.EnvironmentInfo.Is64BitOperatingSystem ? "是" : "否")</MudText>
+                                
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@Icons.Material.Filled.Memory" Size="Size.Small" Color="Color.Tertiary" />
+                                    <MudText><strong>工作集:</strong></MudText>
+                                </MudStack>
+                                <MudText Class="ml-6" Style="color: #666;">@FormatBytes(_systemInfo.EnvironmentInfo.WorkingSet)</MudText>
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+
+                <!-- 文件信息卡片 -->
+                @if (_systemInfo.FileInfo != null)
+                {
+                    <MudItem xs="12" md="6" lg="4">
+                        <MudCard Style="height: 100%; display: flex; flex-direction: column;" Elevation="2">
+                            <MudCardHeader Class="pb-2">
+                                <CardHeaderContent>
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                        <MudIcon Icon="@Icons.Material.Filled.InsertDriveFile" Color="Color.Primary" />
+                                        <MudText Typo="Typo.h6" Style="font-weight: 500;">文件信息</MudText>
+                                    </MudStack>
+                                </CardHeaderContent>
+                            </MudCardHeader>
+                            <MudCardContent Style="flex: 1; padding-top: 8px;">
+                                <MudStack Spacing="3">
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                        <MudIcon Icon="@Icons.Material.Filled.Apps" Size="Size.Small" Color="Color.Success" />
+                                        <MudText><strong>产品名称:</strong></MudText>
+                                    </MudStack>
+                                    <MudText Class="ml-6" Style="color: #666;">@_systemInfo.FileInfo.ProductName</MudText>
+                                    
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                        <MudIcon Icon="@Icons.Material.Filled.Tag" Size="Size.Small" Color="Color.Info" />
+                                        <MudText><strong>产品版本:</strong></MudText>
+                                    </MudStack>
+                                    <MudText Class="ml-6" Style="color: #666;">@_systemInfo.FileInfo.ProductVersion</MudText>
+                                    
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                        <MudIcon Icon="@Icons.Material.Filled.Code" Size="Size.Small" Color="Color.Warning" />
+                                        <MudText><strong>文件版本:</strong></MudText>
+                                    </MudStack>
+                                    <MudText Class="ml-6" Style="color: #666;">@_systemInfo.FileInfo.FileVersion</MudText>
+                                    
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                        <MudIcon Icon="@Icons.Material.Filled.Business" Size="Size.Small" Color="Color.Secondary" />
+                                        <MudText><strong>公司名称:</strong></MudText>
+                                    </MudStack>
+                                    <MudText Class="ml-6" Style="color: #666;">@_systemInfo.FileInfo.CompanyName</MudText>
+                                    
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                        <MudIcon Icon="@Icons.Material.Filled.Copyright" Size="Size.Small" Color="Color.Tertiary" />
+                                        <MudText><strong>版权信息:</strong></MudText>
+                                    </MudStack>
+                                    <MudText Class="ml-6" Style="color: #666;">@_systemInfo.FileInfo.LegalCopyright</MudText>
+                                </MudStack>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+                }
+
+                <!-- 系统详细信息卡片 -->
+                <MudItem xs="12" md="6" lg="4">
+                    <MudCard Style="height: 100%; display: flex; flex-direction: column;" Elevation="2">
+                        <MudCardHeader Class="pb-2">
+                            <CardHeaderContent>
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@Icons.Material.Filled.Settings" Color="Color.Primary" />
+                                    <MudText Typo="Typo.h6" Style="font-weight: 500;">系统详细信息</MudText>
+                                </MudStack>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent Style="flex: 1; padding-top: 8px;">
+                            <MudStack Spacing="3">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@Icons.Material.Filled.DeveloperMode" Size="Size.Small" Color="Color.Success" />
+                                    <MudText><strong>.NET版本:</strong></MudText>
+                                </MudStack>
+                                <MudText Class="ml-6" Style="color: #666;">@_systemInfo.EnvironmentInfo.Version?.ToString()</MudText>
+                                
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@Icons.Material.Filled.DesktopWindows" Size="Size.Small" Color="Color.Info" />
+                                    <MudText><strong>操作系统:</strong></MudText>
+                                </MudStack>
+                                <MudText Class="ml-6" Style="color: #666;">@_systemInfo.EnvironmentInfo.OSVersion?.ToString()</MudText>
+                                
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@Icons.Material.Filled.Folder" Size="Size.Small" Color="Color.Warning" />
+                                    <MudText><strong>当前目录:</strong></MudText>
+                                </MudStack>
+                                <MudText Class="ml-6" Style="color: #666; word-break: break-all;">@_systemInfo.EnvironmentInfo.CurrentDirectory</MudText>
+                                
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@Icons.Material.Filled.Storage" Size="Size.Small" Color="Color.Secondary" />
+                                    <MudText><strong>系统页面大小:</strong></MudText>
+                                </MudStack>
+                                <MudText Class="ml-6" Style="color: #666;">@_systemInfo.EnvironmentInfo.SystemPageSize bytes</MudText>
+                                
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@Icons.Material.Filled.TouchApp" Size="Size.Small" Color="Color.Tertiary" />
+                                    <MudText><strong>用户交互式:</strong></MudText>
+                                </MudStack>
+                                <MudText Class="ml-6" Style="color: #666;">@(_systemInfo.EnvironmentInfo.UserInteractive ? "是" : "否")</MudText>
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Error" Class="ma-4">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.Error" />
+                <MudText>加载系统信息失败，请稍后重试。</MudText>
+            </MudStack>
+        </MudAlert>
+    }
+</MudContainer>
+
+@code {
+    public const string SYSTEM_INFO_URL = "/home";
+
+    private bool _loading = true;
+    private SystemInfoResponse? _systemInfo;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadSystemInfo();
+        }
+    }
+
+    private async Task LoadSystemInfo()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        try
+        {
+            if ((await SystemInfoService.GetSystemInfoAsync(simple: false)).IsFailed(out var error, out var data))
+            {
+                Snackbar.Add("加载系统信息失败:" + error, Severity.Error);
+            }
+            else
+            {
+                _systemInfo = data;
+            }
+            
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"加载系统信息时发生错误: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefreshSystemInfo()
+    {
+        await LoadSystemInfo();
+        Snackbar.Add("系统信息已刷新", Severity.Success);
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        const int scale = 1024;
+        string[] orders = ["bytes", "KB", "MB", "GB", "TB"];
+        double max = bytes;
+        int order = 0;
+        while (max >= scale && order < orders.Length - 1)
+        {
+            order++;
+            max = max / scale;
+        }
+        return $"{max:##.##} {orders[order]}";
+    }
+} 

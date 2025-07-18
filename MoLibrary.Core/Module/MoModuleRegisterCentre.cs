@@ -96,7 +96,7 @@ public static class MoModuleRegisterCentre
         // 清空之前的错误记录
         ModuleRegisterErrors.Clear();
 
-        var typeFinder = services.GetOrCreateDomainTypeFinder<MoDomainTypeFinder>();
+        var typeFinder = services.GetOrCreateMoModuleSystemTypeFinder();
         ModuleProfiler.StartPhase(nameof(EMoModuleConfigMethods.ClaimDependencies));
         // 1. 初次遍历所有注册的模块，判断若模块有依赖项，处理依赖关系
 

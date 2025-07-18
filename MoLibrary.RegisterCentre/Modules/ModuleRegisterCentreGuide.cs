@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Module.Interfaces;
+// ReSharper disable ExplicitCallerInfoArgument
 
 namespace MoLibrary.RegisterCentre.Modules;
 
@@ -20,7 +21,7 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
         ConfigureModuleOption(o =>
         {
             o.ThisIsCentreServer = true;
-        });
+        }, key: SET_CENTRE_TYPE);
 
         ConfigureServices(context =>
         {
@@ -40,7 +41,7 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
         ConfigureModuleOption(o =>
         {
             o.ThisIsCentreClient = true;
-        });
+        }, key: SET_CENTRE_TYPE);
         ConfigureServices(context =>
         {
             context.Services.AddSingleton<IRegisterCentreServerConnector, TServer>();

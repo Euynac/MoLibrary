@@ -58,5 +58,13 @@ public enum EMoModules
     /// <summary>
     /// 框架链路追踪模块
     /// </summary>
-    FrameworkChainTracing
+    FrameworkChainTracing,
+    /// <summary>
+    /// UI 核心模块，用于界面基础构建
+    /// </summary>
+    UICore,
+    FrameworkUI,
+    SignalrUI,
+    SystemInfoUI,
+    TimekeeperUI
 }

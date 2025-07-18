@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
@@ -6,8 +6,6 @@ using Hangfire.Console;
 using Hangfire.HttpJob.Support;
 using Hangfire.Logging;
 using Hangfire.Server;
-using MailKit.Net.Smtp;
-using MimeKit;
 using Newtonsoft.Json;
 
 namespace Hangfire.HttpJob.Server
@@ -16,7 +14,7 @@ namespace Hangfire.HttpJob.Server
     {
         private readonly ILog _logger = LogProvider.For<HttpJob>();
         public static HangfireHttpJobOptions HangfireHttpJobOptions;
-        private static MimeMessage mimeMessage;
+        //private static MimeMessage mimeMessage;
         private readonly IHttpClientFactory _httpClientFactory;
 
         public HttpJob(IHttpClientFactory httpClientFactory)
@@ -24,46 +22,46 @@ namespace Hangfire.HttpJob.Server
             _httpClientFactory = httpClientFactory;
         }
 
-        /// <summary>
-        /// 发送邮件
-        /// </summary>
-        /// <param name="jobname">任务名称</param>
-        /// <param name="Url">地址</param>
-        /// <param name="exception">异常信息</param>
-        /// <returns></returns>
-        public async Task<bool> SendEmail(string jobname, string Url, string exception)
-        {
-            try
-            {
-                mimeMessage = new MimeMessage();
-                mimeMessage.From.Add(new MailboxAddress("mail", HangfireHttpJobOptions.SendMailAddress));
-                var SendMailList = HangfireHttpJobOptions.SendToMailList;
-                HangfireHttpJobOptions.SendToMailList.ForEach(k =>
-                {
-                    mimeMessage.To.Add(new MailboxAddress("mail", k));
-                });
-                mimeMessage.Subject = HangfireHttpJobOptions.SMTPSubject;
-                var builder = new BodyBuilder
-                {
-                    //builder.TextBody = $"执行出错,任务名称【{item.JobName}】,错误详情：{ex}";
-                    HtmlBody = SethtmlBody(jobname, Url, $"执行出错，错误详情:{exception}")
-                };
-                mimeMessage.Body = builder.ToMessageBody();
-                var client = new SmtpClient();
-                await client.ConnectAsync(HangfireHttpJobOptions.SMTPServerAddress, HangfireHttpJobOptions.SMTPPort, true);     //连接服务
-                client.AuthenticationMechanisms.Remove("XOAUTH2");
-                await client.AuthenticateAsync(HangfireHttpJobOptions.SendMailAddress,
-                     HangfireHttpJobOptions.SMTPPwd); //验证账号密码
-                await client.SendAsync(mimeMessage);
-                await client.DisconnectAsync(true);
-            }
-            catch (Exception ee)
-            {
-                _logger.Info($"邮件服务异常，异常为：{ee}");
-                return false;
-            }
-            return true;
-        }
+        ///// <summary>
+        ///// 发送邮件
+        ///// </summary>
+        ///// <param name="jobname">任务名称</param>
+        ///// <param name="Url">地址</param>
+        ///// <param name="exception">异常信息</param>
+        ///// <returns></returns>
+        //public async Task<bool> SendEmail(string jobname, string Url, string exception)
+        //{
+        //    try
+        //    {
+        //        mimeMessage = new MimeMessage();
+        //        mimeMessage.From.Add(new MailboxAddress("mail", HangfireHttpJobOptions.SendMailAddress));
+        //        var SendMailList = HangfireHttpJobOptions.SendToMailList;
+        //        HangfireHttpJobOptions.SendToMailList.ForEach(k =>
+        //        {
+        //            mimeMessage.To.Add(new MailboxAddress("mail", k));
+        //        });
+        //        mimeMessage.Subject = HangfireHttpJobOptions.SMTPSubject;
+        //        var builder = new BodyBuilder
+        //        {
+        //            //builder.TextBody = $"执行出错,任务名称【{item.JobName}】,错误详情：{ex}";
+        //            HtmlBody = SethtmlBody(jobname, Url, $"执行出错，错误详情:{exception}")
+        //        };
+        //        mimeMessage.Body = builder.ToMessageBody();
+        //        var client = new SmtpClient();
+        //        await client.ConnectAsync(HangfireHttpJobOptions.SMTPServerAddress, HangfireHttpJobOptions.SMTPPort, true);     //连接服务
+        //        client.AuthenticationMechanisms.Remove("XOAUTH2");
+        //        await client.AuthenticateAsync(HangfireHttpJobOptions.SendMailAddress,
+        //             HangfireHttpJobOptions.SMTPPwd); //验证账号密码
+        //        await client.SendAsync(mimeMessage);
+        //        await client.DisconnectAsync(true);
+        //    }
+        //    catch (Exception ee)
+        //    {
+        //        _logger.Info($"邮件服务异常，异常为：{ee}");
+        //        return false;
+        //    }
+        //    return true;
+        //}
 
         /// <summary>
         /// 设置httpclient
@@ -219,10 +217,10 @@ namespace Hangfire.HttpJob.Server
                 //获取重试次数
                 var count = context.GetJobParameter<string>("RetryCount");
                 context.SetTextColor(ConsoleTextColor.Red);
-                if (count == HangfireHttpJobOptions.AttemptsCountArray.Count().ToString() && HangfireHttpJobOptions.UseEmail)//重试达到三次的时候发邮件通知
-                {
-                    await SendEmail(item.JobName, item.Url, ex.ToString());
-                }
+                //if (count == HangfireHttpJobOptions.AttemptsCountArray.Count().ToString() && HangfireHttpJobOptions.UseEmail)//重试达到三次的时候发邮件通知
+                //{
+                //    await SendEmail(item.JobName, item.Url, ex.ToString());
+                //}
                 _logger.Error($"任务执行出错: \n 错误消息：{ex.Message} \n 异常详情：{ex.StackTrace}");
                 context.WriteLine($"执行出错：{ex.Message}");
                 throw;//不抛异常不会执行重试操作

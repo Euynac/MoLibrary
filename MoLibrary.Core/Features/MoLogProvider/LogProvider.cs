@@ -31,7 +31,7 @@ public static class LogProvider
     /// </summary>
     /// <typeparam name="T">The type requesting the logger.</typeparam>
     /// <returns>An ILogger instance for the specified type.</returns>
-    public static ILogger For<T>()
+    public static ILogger<T> For<T>()
     {
         return _provider.CreateLogger<T>();
     }
