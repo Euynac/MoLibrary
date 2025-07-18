@@ -103,6 +103,7 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
                         _recordDict[info.Name] = new TimekeeperStatistics(1, info.Duration, DateTime.Now)
                         {
                             AverageMemoryBytes = info.MemoryBytes,
+                            LastDuration = info.Duration,
                             LastExecutedTime = DateTime.Now
                         };
                     }

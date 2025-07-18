@@ -37,7 +37,10 @@ public class ModuleDataChannelController(IDataChannelManager manager) : MoModule
         {
             p.Id,
             Middlewares = p.Pipe.GetMiddlewares().Select(m => new { m.GetType().Name, metadata = m.GetMetadata() }),
-            Endpoints = p.Pipe.GetEndpoints().Select(m => new { m.GetType().Name, metadata = m.GetMetadata() })
+            p.Pipe.InnerEndpoint,
+            p.Pipe.OuterEndpoint,
+            p.Pipe.IsNotAvailable,
+            p.Pipe.IsInitialized,
         });
 
         return Ok(channels);
