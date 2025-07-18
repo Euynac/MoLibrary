@@ -45,104 +45,121 @@
         </CardHeaderActions>
     </MudCardHeader>
     <MudCardContent Style="flex: 1; padding-top: 8px;">
-        <MudStack Spacing="3">
-            <!-- 状态信息 -->
-            <MudStack Row="true" Spacing="2">
-                <MudChip T="string" Color="@(Channel.IsInitialized ? Color.Success : Color.Secondary)" Size="Size.Small">
-                    @(Channel.IsInitialized ? "已初始化" : "未初始化")
-                </MudChip>
-                @if (Channel.IsInitializing)
-                {
-                    <MudChip T="string" Color="Color.Warning" Size="Size.Small">
-                        初始化中
-                    </MudChip>
-                }
-                @if (Channel.IsNotAvailable)
-                {
-                    <MudChip T="string" Color="Color.Error" Size="Size.Small">
-                        不可用
-                    </MudChip>
-                }
+        @if (_isReInitializing)
+        {
+            <!-- Loading遮罩 -->
+            <MudStack AlignItems="AlignItems.Center" Spacing="3" Class="pa-8">
+                <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+                <MudText Typo="Typo.h6" Color="Color.Primary" Style="font-weight: 500;">
+                    正在重新初始化...
+                </MudText>
+                <MudText Typo="Typo.body2" Style="color: var(--mud-palette-text-secondary);">
+                    请稍候，这可能需要几秒钟
+                </MudText>
             </MudStack>
+        }
+        else
+        {
+            <!-- 正常内容 -->
+            <MudStack Spacing="3">
+                <!-- 状态信息 -->
+                <MudStack Row="true" Spacing="2">
+                    <MudChip T="string" Color="@(Channel.IsInitialized ? Color.Success : Color.Secondary)" Size="Size.Small">
+                        @(Channel.IsInitialized ? "已初始化" : "未初始化")
+                    </MudChip>
+                    @if (Channel.IsInitializing)
+                    {
+                        <MudChip T="string" Color="Color.Warning" Size="Size.Small">
+                            初始化中
+                        </MudChip>
+                    }
+                    @if (Channel.IsNotAvailable)
+                    {
+                        <MudChip T="string" Color="Color.Error" Size="Size.Small">
+                            不可用
+                        </MudChip>
+                    }
+                </MudStack>
 
-            <!-- 端点信息 -->
-            <MudStack Spacing="2">
-                <MudText Typo="Typo.subtitle2" Style="font-weight: 500;">端点信息</MudText>
-                
-                <!-- 内部端点 -->
-                <MudExpansionPanels Elevation="0" Dense="true">
-                    <MudExpansionPanel>
-                        <TitleContent>
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                <MudIcon Icon="@Icons.Material.Filled.Input" Size="Size.Small" Color="Color.Info" />
-                                <MudText Style="color: var(--mud-palette-text-primary);">内部: @Channel.InnerEndpoint.Name</MudText>
-                            </MudStack>
-                        </TitleContent>
-                        <ChildContent>
-                            <MetadataDisplay Metadata="Channel.InnerEndpoint.Metadata" />
-                        </ChildContent>
-                    </MudExpansionPanel>
-                </MudExpansionPanels>
-
-                <!-- 外部端点 -->
-                <MudExpansionPanels Elevation="0" Dense="true">
-                    <MudExpansionPanel>
-                        <TitleContent>
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                <MudIcon Icon="@Icons.Material.Filled.Output" Size="Size.Small" Color="Color.Success" />
-                                <MudText Style="color: var(--mud-palette-text-primary);">外部: @Channel.OuterEndpoint.Name</MudText>
-                            </MudStack>
-                        </TitleContent>
-                        <ChildContent>
-                            <MetadataDisplay Metadata="Channel.OuterEndpoint.Metadata" />
-                        </ChildContent>
-                    </MudExpansionPanel>
-                </MudExpansionPanels>
-            </MudStack>
-
-            <!-- 中间件信息 -->
-            @if (Channel.Middlewares.Any())
-            {
+                <!-- 端点信息 -->
                 <MudStack Spacing="2">
-                    <MudText Typo="Typo.subtitle2" Style="font-weight: 500;">中间件 (@Channel.Middlewares.Count)</MudText>
+                    <MudText Typo="Typo.subtitle2" Style="font-weight: 500;">端点信息</MudText>
+                    
+                    <!-- 内部端点 -->
                     <MudExpansionPanels Elevation="0" Dense="true">
-                        @foreach (var middleware in Channel.Middlewares)
-                        {
-                            <MudExpansionPanel>
-                                <TitleContent>
-                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                        <MudIcon Icon="@GetComponentIcon(middleware.Type)" Size="Size.Small" Color="Color.Secondary" />
-                                        <MudText Style="color: var(--mud-palette-text-primary);">@middleware.Name</MudText>
-                                        <MudChip T="string" Color="Color.Secondary" Size="Size.Small" Label="true">
-                                            @middleware.Type.ToString()
-                                        </MudChip>
-                                    </MudStack>
-                                </TitleContent>
-                                <ChildContent>
-                                    <MetadataDisplay Metadata="middleware.Metadata" />
-                                </ChildContent>
-                            </MudExpansionPanel>
-                        }
+                        <MudExpansionPanel>
+                            <TitleContent>
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@Icons.Material.Filled.Input" Size="Size.Small" Color="Color.Info" />
+                                    <MudText Style="color: var(--mud-palette-text-primary);">内部: @Channel.InnerEndpoint.Name</MudText>
+                                </MudStack>
+                            </TitleContent>
+                            <ChildContent>
+                                <MetadataDisplay Metadata="Channel.InnerEndpoint.Metadata" />
+                            </ChildContent>
+                        </MudExpansionPanel>
+                    </MudExpansionPanels>
+
+                    <!-- 外部端点 -->
+                    <MudExpansionPanels Elevation="0" Dense="true">
+                        <MudExpansionPanel>
+                            <TitleContent>
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@Icons.Material.Filled.Output" Size="Size.Small" Color="Color.Success" />
+                                    <MudText Style="color: var(--mud-palette-text-primary);">外部: @Channel.OuterEndpoint.Name</MudText>
+                                </MudStack>
+                            </TitleContent>
+                            <ChildContent>
+                                <MetadataDisplay Metadata="Channel.OuterEndpoint.Metadata" />
+                            </ChildContent>
+                        </MudExpansionPanel>
                     </MudExpansionPanels>
                 </MudStack>
-            }
 
-            <!-- 异常信息 -->
-            @if (Channel.HasExceptions)
-            {
-                <MudStack Spacing="2">
-                    <MudText Typo="Typo.subtitle2" Style="font-weight: 500; color: #f44336;">异常信息</MudText>
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                        <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error" />
-                        <MudText Style="color: #666;">当前异常: @Channel.ExceptionCount</MudText>
+                <!-- 中间件信息 -->
+                @if (Channel.Middlewares.Any())
+                {
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.subtitle2" Style="font-weight: 500;">中间件 (@Channel.Middlewares.Count)</MudText>
+                        <MudExpansionPanels Elevation="0" Dense="true">
+                            @foreach (var middleware in Channel.Middlewares)
+                            {
+                                <MudExpansionPanel>
+                                    <TitleContent>
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                            <MudIcon Icon="@GetComponentIcon(middleware.Type)" Size="Size.Small" Color="Color.Secondary" />
+                                            <MudText Style="color: var(--mud-palette-text-primary);">@middleware.Name</MudText>
+                                            <MudChip T="string" Color="Color.Secondary" Size="Size.Small" Label="true">
+                                                @middleware.Type.ToString()
+                                            </MudChip>
+                                        </MudStack>
+                                    </TitleContent>
+                                    <ChildContent>
+                                        <MetadataDisplay Metadata="middleware.Metadata" />
+                                    </ChildContent>
+                                </MudExpansionPanel>
+                            }
+                        </MudExpansionPanels>
                     </MudStack>
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                        <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Small" Color="Color.Warning" />
-                        <MudText Style="color: #666;">历史异常: @Channel.TotalExceptionCount</MudText>
+                }
+
+                <!-- 异常信息 -->
+                @if (Channel.HasExceptions)
+                {
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.subtitle2" Style="font-weight: 500; color: #f44336;">异常信息</MudText>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error" />
+                            <MudText Style="color: #666;">当前异常: @Channel.ExceptionCount</MudText>
+                        </MudStack>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Small" Color="Color.Warning" />
+                            <MudText Style="color: #666;">历史异常: @Channel.TotalExceptionCount</MudText>
+                        </MudStack>
                     </MudStack>
-                </MudStack>
-            }
-        </MudStack>
+                }
+            </MudStack>
+        }
     </MudCardContent>
 </MudCard>
 
@@ -185,12 +202,25 @@
 
         try
         {
-            await OnReInitialize.InvokeAsync(Channel.Id);
+            // 使用ConfigureAwait(false)避免死锁，并确保异步操作不阻塞UI线程
+            await Task.Run(async () => 
+            {
+                await OnReInitialize.InvokeAsync(Channel.Id);
+            }).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            // 可以在这里添加错误处理逻辑
+            System.Diagnostics.Debug.WriteLine($"重新初始化失败: {ex.Message}");
         }
         finally
         {
-            _isReInitializing = false;
-            StateHasChanged();
+            // 确保在UI线程上更新状态
+            await InvokeAsync(() =>
+            {
+                _isReInitializing = false;
+                StateHasChanged();
+            });
         }
     }
 
@@ -200,12 +230,7 @@
     /// <returns></returns>
     private string GetCardStyle()
     {
-        var baseStyle = "height: 100%; display: flex; flex-direction: column;";
-        if (_isReInitializing)
-        {
-            baseStyle += " opacity: 0.7;";
-        }
-        return baseStyle;
+        return "height: 100%; display: flex; flex-direction: column;";
     }
 
     /// <summary>

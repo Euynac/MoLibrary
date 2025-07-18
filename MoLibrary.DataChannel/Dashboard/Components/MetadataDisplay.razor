@@ -89,7 +89,10 @@
 
         try
         {
-            var jsonString = JsonSerializer.Serialize(Metadata, new JsonSerializerOptions
+            // 预处理枚举类型，将枚举转换为字符串
+            var processedMetadata = PreprocessEnums(Metadata);
+            
+            var jsonString = JsonSerializer.Serialize(processedMetadata, new JsonSerializerOptions
             {
                 WriteIndented = true,
                 Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
@@ -112,6 +115,75 @@
                 }
             };
         }
+    }
+
+    /// <summary>
+    /// 预处理对象，将枚举类型转换为字符串
+    /// </summary>
+    /// <param name="obj">要处理的对象</param>
+    /// <returns>处理后的对象</returns>
+    private object? PreprocessEnums(object? obj)
+    {
+        if (obj == null) return null;
+
+        var type = obj.GetType();
+
+        // 如果是枚举类型，直接转换为字符串
+        if (type.IsEnum)
+        {
+            return obj.ToString();
+        }
+
+        // 如果是基础类型，直接返回
+        if (type.IsPrimitive || type == typeof(string) || type == typeof(DateTime) || type == typeof(decimal) || type == typeof(Guid))
+        {
+            return obj;
+        }
+
+        // 如果是可空枚举类型
+        var underlyingType = Nullable.GetUnderlyingType(type);
+        if (underlyingType?.IsEnum == true)
+        {
+            return obj.ToString();
+        }
+
+        // 如果是集合类型
+        if (obj is System.Collections.IEnumerable enumerable && type != typeof(string))
+        {
+            var list = new List<object?>();
+            foreach (var item in enumerable)
+            {
+                list.Add(PreprocessEnums(item));
+            }
+            return list;
+        }
+
+        // 如果是复杂对象，递归处理属性
+        if (type.IsClass || type.IsValueType)
+        {
+            var result = new Dictionary<string, object?>();
+            var properties = type.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+            
+            foreach (var property in properties)
+            {
+                if (property.CanRead)
+                {
+                    try
+                    {
+                        var value = property.GetValue(obj);
+                        result[property.Name] = PreprocessEnums(value);
+                    }
+                    catch
+                    {
+                        // 忽略无法读取的属性
+                        result[property.Name] = "无法读取";
+                    }
+                }
+            }
+            return result;
+        }
+
+        return obj;
     }
 
     /// <summary>

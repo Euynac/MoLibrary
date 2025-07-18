@@ -148,7 +148,7 @@
                                                 {
                                                     <MudButton Size="Size.Small" 
                                                              Color="Color.Warning" 
-                                                             OnClick="@(() => OnClearChannelExceptions?.Invoke(context.Item.ChannelId))"
+                                                             OnClick="@(async () => await HandleClearChannelExceptions(context.Item.ChannelId))"
                                                              StartIcon="@Icons.Material.Filled.Clear">
                                                         清空
                                                     </MudButton>
@@ -173,9 +173,6 @@
             </MudStack>
         }
     </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="Close" Color="Color.Primary">关闭</MudButton>
-    </DialogActions>
 </MudDialog>
 
 @code {
@@ -194,13 +191,29 @@
     /// <summary>
     /// 清空Channel异常事件
     /// </summary>
-    [Parameter] public Action<string>? OnClearChannelExceptions { get; set; }
+    [Parameter] public Func<string, Task>? OnClearChannelExceptions { get; set; }
 
     /// <summary>
-    /// 关闭对话框
+    /// 获取刷新后的异常统计数据
     /// </summary>
-    private void Close()
+    [Parameter] public Func<Task<ExceptionSummaryInfo?>>? OnGetRefreshData { get; set; }
+
+    private async Task HandleClearChannelExceptions(string channelId)
     {
-        MudDialog?.Close();
+        if (OnClearChannelExceptions != null)
+        {
+            await OnClearChannelExceptions(channelId);
+            
+            // 刷新对话框数据
+            if (OnGetRefreshData != null)
+            {
+                var refreshedData = await OnGetRefreshData();
+                if (refreshedData != null)
+                {
+                    ExceptionSummary = refreshedData;
+                    StateHasChanged();
+                }
+            }
+        }
     }
 } 
