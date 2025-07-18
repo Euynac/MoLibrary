@@ -5,25 +5,29 @@
 <div class="system-overview-container">
     @if (SystemStatus != null)
     {
-        <MudGrid Spacing="4">
+        <MudGrid Spacing="4" Class="mb-4">
             <!-- 系统状态概览 -->
             <MudItem xs="12" sm="6" md="3">
-                <MudCard Class="status-card" Style="height: 180px;">
-                    <MudCardContent Class="d-flex flex-column" Style="height: 100%;">
-                        <div class="card-header d-flex align-center mb-3">
+                <MudCard Class="status-card modern-card">
+                    <MudCardContent Class="pa-4">
+                        <div class="card-header d-flex align-center mb-4">
                             <MudIcon Icon="@GetStatusIcon(SystemStatus.State)" 
                                    Color="@GetStatusColor(SystemStatus.State)" 
-                                   Size="Size.Medium" 
+                                   Size="Size.Large" 
                                    Class="mr-3" />
                             <MudText Typo="Typo.h6">系统状态</MudText>
                         </div>
-                        <div class="flex-grow-1 d-flex flex-column justify-center">
-                            <MudText Typo="Typo.h5" Class="mb-2" Color="@GetStatusColor(SystemStatus.State)">
+                        <div class="card-content">
+                            <MudText Typo="Typo.h4" Class="mb-3" Color="@GetStatusColor(SystemStatus.State)">
                                 @GetStatusText(SystemStatus.State)
                             </MudText>
                             <MudProgressLinear Color="@GetStatusColor(SystemStatus.State)" 
                                              Value="@(SystemStatus.IsInitialized ? 100 : 0)" 
-                                             Class="mt-auto" />
+                                             Class="mb-2" 
+                                             Size="Size.Medium" />
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                @(SystemStatus.IsInitialized ? "系统已完成初始化" : "系统正在初始化...")
+                            </MudText>
                         </div>
                     </MudCardContent>
                 </MudCard>
@@ -31,26 +35,31 @@
 
             <!-- 模块统计 -->
             <MudItem xs="12" sm="6" md="3">
-                <MudCard Class="stats-card" Style="height: 180px;">
-                    <MudCardContent Class="d-flex flex-column" Style="height: 100%;">
-                        <div class="card-header d-flex align-center mb-3">
+                <MudCard Class="stats-card modern-card">
+                    <MudCardContent Class="pa-4">
+                        <div class="card-header d-flex align-center mb-4">
                             <MudIcon Icon="@Icons.Material.Filled.Apps" 
                                    Color="Color.Primary" 
-                                   Size="Size.Medium" 
+                                   Size="Size.Large" 
                                    Class="mr-3" />
                             <MudText Typo="Typo.h6">模块统计</MudText>
                         </div>
-                        <div class="flex-grow-1 d-flex flex-column justify-center">
-                            <MudText Typo="Typo.h4" Color="Color.Primary" Class="mb-2">
+                        <div class="card-content">
+                            <MudText Typo="Typo.h4" Color="Color.Primary" Class="mb-3">
                                 @SystemStatus.TotalModules
                             </MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-auto">
-                                <MudChip T="string" Size="Size.Small" Color="Color.Success" Class="mr-2">
-                                    启用: @SystemStatus.EnabledModules
+                            <MudStack Row="true" Spacing="1" Class="mb-2">
+                                <MudChip T="string" Size="Size.Small" Color="Color.Success">
+                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-1" />
+                                    @SystemStatus.EnabledModules
                                 </MudChip>
                                 <MudChip T="string" Size="Size.Small" Color="Color.Warning">
-                                    禁用: @SystemStatus.DisabledModules
+                                    <MudIcon Icon="@Icons.Material.Filled.Block" Size="Size.Small" Class="mr-1" />
+                                    @SystemStatus.DisabledModules
                                 </MudChip>
+                            </MudStack>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                总模块数量
                             </MudText>
                         </div>
                     </MudCardContent>
@@ -59,21 +68,28 @@
 
             <!-- 初始化时间 -->
             <MudItem xs="12" sm="6" md="3">
-                <MudCard Class="performance-card" Style="height: 180px;">
-                    <MudCardContent Class="d-flex flex-column" Style="height: 100%;">
-                        <div class="card-header d-flex align-center mb-3">
+                <MudCard Class="performance-card modern-card">
+                    <MudCardContent Class="pa-4">
+                        <div class="card-header d-flex align-center mb-4">
                             <MudIcon Icon="@Icons.Material.Filled.Timer" 
                                    Color="Color.Warning" 
-                                   Size="Size.Medium" 
+                                   Size="Size.Large" 
                                    Class="mr-3" />
                             <MudText Typo="Typo.h6">初始化时间</MudText>
                         </div>
-                        <div class="flex-grow-1 d-flex flex-column justify-center">
-                            <MudText Typo="Typo.h4" Color="Color.Warning" Class="mb-2">
+                        <div class="card-content">
+                            <MudText Typo="Typo.h4" Color="Color.Warning" Class="mb-3">
                                 @(SystemStatus.TotalInitializationTimeMs)ms
                             </MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-auto">
+                            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
                                 启动时间: @(SystemStatus.StartTime?.ToString("HH:mm:ss") ?? "未知")
+                            </MudText>
+                            <MudProgressLinear Color="Color.Warning" 
+                                             Value="@GetInitTimeProgress(SystemStatus.TotalInitializationTimeMs)" 
+                                             Class="mb-2"
+                                             Size="Size.Medium" />
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                @GetInitTimeDescription(SystemStatus.TotalInitializationTimeMs)
                             </MudText>
                         </div>
                     </MudCardContent>
@@ -82,35 +98,39 @@
 
             <!-- 健康状态 -->
             <MudItem xs="12" sm="6" md="3">
-                <MudCard Class="health-card" Style="height: 180px;">
-                    <MudCardContent Class="d-flex flex-column" Style="height: 100%;">
-                        <div class="card-header d-flex align-center mb-3">
+                <MudCard Class="health-card modern-card">
+                    <MudCardContent Class="pa-4">
+                        <div class="card-header d-flex align-center mb-4">
                             <MudIcon Icon="@GetHealthIcon()" 
                                    Color="@GetHealthColor()" 
-                                   Size="Size.Medium" 
+                                   Size="Size.Large" 
                                    Class="mr-3" />
                             <MudText Typo="Typo.h6">健康状态</MudText>
                         </div>
-                        <div class="flex-grow-1 d-flex flex-column justify-center">
-                            <MudText Typo="Typo.h5" Color="@GetHealthColor()" Class="mb-2">
+                        <div class="card-content">
+                            <MudText Typo="Typo.h4" Color="@GetHealthColor()" Class="mb-3">
                                 @GetHealthText()
                             </MudText>
-                            <div class="mt-auto">
+                            <div class="mb-2">
                                 @if (SystemStatus.HasRegistrationErrors || SystemStatus.HasCircularDependencies)
                                 {
-                                    <MudChip T="string" Color="Color.Error" Size="Size.Small">
+                                    <MudChip T="string" Color="Color.Error" Size="Size.Small" Class="mb-1">
                                         <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Class="mr-1" />
                                         存在问题
                                     </MudChip>
                                 }
                                 else
                                 {
-                                    <MudChip T="string" Color="Color.Success" Size="Size.Small">
+                                    <MudChip T="string" Color="Color.Success" Size="Size.Small" Class="mb-1">
                                         <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-1" />
                                         运行正常
                                     </MudChip>
                                 }
                             </div>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                @(SystemStatus.HasRegistrationErrors ? "检测到注册错误" : 
+                                  SystemStatus.HasCircularDependencies ? "检测到循环依赖" : "系统健康运行")
+                            </MudText>
                         </div>
                     </MudCardContent>
                 </MudCard>
@@ -119,13 +139,16 @@
     }
     else
     {
-        <MudGrid Spacing="4">
+        <MudGrid Spacing="4" Class="mb-4">
             @for (int i = 0; i < 4; i++)
             {
                 <MudItem xs="12" sm="6" md="3">
-                    <MudCard Style="height: 180px;">
-                        <MudCardContent Class="d-flex align-center justify-center" Style="height: 100%;">
-                            <MudProgressCircular Indeterminate="true" />
+                    <MudCard Class="modern-card">
+                        <MudCardContent Class="pa-4 d-flex align-center justify-center" Style="min-height: 200px;">
+                            <div class="text-center">
+                                <MudProgressCircular Indeterminate="true" Class="mb-3" />
+                                <MudText Color="Color.Secondary">加载中...</MudText>
+                            </div>
                         </MudCardContent>
                     </MudCard>
                 </MudItem>
@@ -133,26 +156,6 @@
         </MudGrid>
     }
 </div>
-
-<style>
-    .system-overview-container {
-        width: 100%;
-    }
-
-    .card-header {
-        border-bottom: 1px solid var(--mud-palette-divider);
-        padding-bottom: 8px;
-    }
-
-    .status-card:hover,
-    .stats-card:hover,
-    .performance-card:hover,
-    .health-card:hover {
-        transform: translateY(-2px);
-        transition: transform 0.2s ease-in-out;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    }
-</style>
 
 @code {
     /// <summary>
@@ -225,4 +228,27 @@
     private string GetHealthText() => SystemStatus?.HasRegistrationErrors == true || SystemStatus?.HasCircularDependencies == true
         ? "存在问题"
         : "健康";
+
+    /// <summary>
+    /// 获取初始化时间进度
+    /// </summary>
+    /// <param name="totalTimeMs">总初始化时间（毫秒）</param>
+    /// <returns>进度值</returns>
+    private double GetInitTimeProgress(long totalTimeMs)
+    {
+        if (totalTimeMs == 0) return 0;
+        return SystemStatus?.IsInitialized == true ? 100 : (SystemStatus?.TotalInitializationTimeMs ?? 0) / totalTimeMs * 100;
+    }
+
+    /// <summary>
+    /// 获取初始化时间描述
+    /// </summary>
+    /// <param name="totalTimeMs">总初始化时间（毫秒）</param>
+    /// <returns>描述文本</returns>
+    private string GetInitTimeDescription(long totalTimeMs)
+    {
+        if (totalTimeMs == 0) return "系统正在启动...";
+        if (SystemStatus?.IsInitialized == true) return "系统已完成初始化";
+        return $"系统已运行 {totalTimeMs}ms";
+    }
 } 

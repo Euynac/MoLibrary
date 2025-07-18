@@ -4,10 +4,10 @@
 <div class="performance-monitoring-container">
     @if (SystemPerformance != null)
     {
-        <MudGrid Spacing="4">
+        <MudGrid Spacing="4" Class="mb-4">
             <!-- 性能概览 -->
             <MudItem xs="12" md="6">
-                <MudCard Style="height: 400px;">
+                <MudCard Class="modern-card">
                     <MudCardHeader>
                         <CardHeaderContent>
                             <div class="d-flex align-center">
@@ -16,47 +16,47 @@
                             </div>
                         </CardHeaderContent>
                     </MudCardHeader>
-                    <MudCardContent Style="height: calc(100% - 80px); overflow-y: auto;">
-                        <MudGrid Spacing="2">
+                    <MudCardContent Class="pa-4">
+                        <MudGrid Spacing="3">
                             <MudItem xs="12">
-                                <MudPaper Class="pa-4" Elevation="2">
+                                <MudPaper Class="pa-4 performance-metric-card" Elevation="2">
                                     <div class="d-flex justify-space-between align-center">
                                         <div>
                                             <MudText Typo="Typo.subtitle1" Color="Color.Primary">总初始化时间</MudText>
-                                            <MudText Typo="Typo.h6" Color="Color.Primary">@($"{SystemPerformance.TotalSystemInitializationTimeMs}ms")</MudText>
+                                            <MudText Typo="Typo.h5" Color="Color.Primary">@($"{SystemPerformance.TotalSystemInitializationTimeMs}ms")</MudText>
                                         </div>
                                         <MudIcon Icon="@Icons.Material.Filled.Timer" Color="Color.Primary" Size="Size.Large" />
                                     </div>
                                 </MudPaper>
                             </MudItem>
                             <MudItem xs="12">
-                                <MudPaper Class="pa-4" Elevation="2">
+                                <MudPaper Class="pa-4 performance-metric-card" Elevation="2">
                                     <div class="d-flex justify-space-between align-center">
                                         <div>
                                             <MudText Typo="Typo.subtitle1" Color="Color.Info">系统阶段总耗时</MudText>
-                                            <MudText Typo="Typo.h6" Color="Color.Info">@($"{SystemPerformance.TotalSystemPhaseDurationMs}ms")</MudText>
+                                            <MudText Typo="Typo.h5" Color="Color.Info">@($"{SystemPerformance.TotalSystemPhaseDurationMs}ms")</MudText>
                                         </div>
                                         <MudIcon Icon="@Icons.Material.Filled.Timeline" Color="Color.Info" Size="Size.Large" />
                                     </div>
                                 </MudPaper>
                             </MudItem>
                             <MudItem xs="12">
-                                <MudPaper Class="pa-4" Elevation="2">
+                                <MudPaper Class="pa-4 performance-metric-card" Elevation="2">
                                     <div class="d-flex justify-space-between align-center">
                                         <div>
                                             <MudText Typo="Typo.subtitle1" Color="Color.Success">模块阶段总耗时</MudText>
-                                            <MudText Typo="Typo.h6" Color="Color.Success">@($"{SystemPerformance.TotalModulePhaseDurationMs}ms")</MudText>
+                                            <MudText Typo="Typo.h5" Color="Color.Success">@($"{SystemPerformance.TotalModulePhaseDurationMs}ms")</MudText>
                                         </div>
                                         <MudIcon Icon="@Icons.Material.Filled.Memory" Color="Color.Success" Size="Size.Large" />
                                     </div>
                                 </MudPaper>
                             </MudItem>
                             <MudItem xs="12">
-                                <MudPaper Class="pa-4" Elevation="2">
+                                <MudPaper Class="pa-4 performance-metric-card" Elevation="2">
                                     <div class="d-flex justify-space-between align-center">
                                         <div>
                                             <MudText Typo="Typo.subtitle1" Color="Color.Warning">总模块阶段执行次数</MudText>
-                                            <MudText Typo="Typo.h6" Color="Color.Warning">@SystemPerformance.TotalModulePhaseExecutions.ToString()</MudText>
+                                            <MudText Typo="Typo.h5" Color="Color.Warning">@SystemPerformance.TotalModulePhaseExecutions.ToString()</MudText>
                                         </div>
                                         <MudIcon Icon="@Icons.Material.Filled.PlayArrow" Color="Color.Warning" Size="Size.Large" />
                                     </div>
@@ -69,7 +69,7 @@
 
             <!-- 最慢模块 -->
             <MudItem xs="12" md="6">
-                <MudCard Style="height: 400px;">
+                <MudCard Class="modern-card">
                     <MudCardHeader>
                         <CardHeaderContent>
                             <div class="d-flex align-center">
@@ -78,20 +78,20 @@
                             </div>
                         </CardHeaderContent>
                     </MudCardHeader>
-                    <MudCardContent Style="height: calc(100% - 80px); overflow-y: auto;">
+                    <MudCardContent Class="pa-4">
                         @if (SystemPerformance.SlowestModules.Any())
                         {
-                            <MudStack Spacing="2">
+                            <MudStack Spacing="3">
                                 @foreach (var (module, index) in SystemPerformance.SlowestModules.Take(5).Select((m, i) => (m, i)))
                                 {
-                                    <MudPaper Class="pa-4" Elevation="2">
+                                    <MudPaper Class="pa-4 slowest-module-card" Elevation="2">
                                         <div class="d-flex align-center justify-space-between">
                                             <div class="d-flex align-center">
-                                                <MudAvatar Color="@GetRankColor(index)" Size="Size.Small" Class="mr-3">
-                                                    <MudText Typo="Typo.caption">@(index + 1)</MudText>
+                                                <MudAvatar Color="@GetRankColor(index)" Size="Size.Medium" Class="mr-3">
+                                                    <MudText Typo="Typo.subtitle1" Style="font-weight: bold;">@(index + 1)</MudText>
                                                 </MudAvatar>
                                                 <div>
-                                                    <MudText Typo="Typo.subtitle1">@module.ModuleTypeName</MudText>
+                                                    <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@module.ModuleTypeName</MudText>
                                                     <MudText Typo="Typo.body2" Color="Color.Secondary">@module.ModuleEnum.ToString()</MudText>
                                                 </div>
                                             </div>
@@ -99,7 +99,9 @@
                                                 <MudText Typo="Typo.h6" Color="@GetRankColor(index)">@($"{module.TotalDurationMs}ms")</MudText>
                                                 <MudProgressLinear Value="@GetPercentage(module.TotalDurationMs)" 
                                                                  Color="@GetRankColor(index)" 
-                                                                 Class="mt-1" />
+                                                                 Class="mt-2" 
+                                                                 Size="Size.Medium" 
+                                                                 Style="width: 100px;" />
                                             </div>
                                         </div>
                                     </MudPaper>
@@ -108,9 +110,9 @@
                         }
                         else
                         {
-                            <div class="d-flex align-center justify-center" style="height: 100%;">
+                            <div class="d-flex align-center justify-center" style="min-height: 200px;">
                                 <div class="text-center">
-                                    <MudIcon Icon="@Icons.Material.Filled.Speed" Size="Size.Large" Color="Color.Secondary" Class="mb-2" />
+                                    <MudIcon Icon="@Icons.Material.Filled.Speed" Size="Size.Large" Color="Color.Secondary" Class="mb-3" />
                                     <MudText Color="Color.Secondary">暂无性能数据</MudText>
                                 </div>
                             </div>
@@ -121,7 +123,7 @@
 
             <!-- 阶段性能 -->
             <MudItem xs="12">
-                <MudCard Style="min-height: 500px;">
+                <MudCard Class="modern-card">
                     <MudCardHeader>
                         <CardHeaderContent>
                             <div class="d-flex align-center">
@@ -130,15 +132,16 @@
                             </div>
                         </CardHeaderContent>
                     </MudCardHeader>
-                    <MudCardContent Style="height: calc(100% - 80px);">
+                    <MudCardContent Class="pa-0">
                         @if (SystemPerformance.PhasePerformances.Any())
                         {
                             <MudDataGrid Items="@SystemPerformance.PhasePerformances" 
                                        SortMode="SortMode.Multiple" 
                                        Filterable="true" 
                                        Hideable="true"
-                                       Height="400px"
-                                       Dense="true">
+                                       Dense="true"
+                                       T="PhasePerformanceInfo"
+                                       Style="min-height: 400px;">
                                 <Columns>
                                     <PropertyColumn Property="x => x.Order" Title="顺序" />
                                     <PropertyColumn Property="x => x.PhaseName" Title="阶段名称" />
@@ -153,7 +156,7 @@
                                                 <MudProgressLinear Color="@GetPerformanceColor(percentage)" 
                                                                  Value="@percentage" 
                                                                  Class="mr-2" 
-                                                                 Style="width: 100px;" />
+                                                                 Style="width: 120px; height: 8px;" />
                                                 <MudText Typo="Typo.caption" Color="Color.Secondary">@($"{percentage:F1}%")</MudText>
                                             </div>
                                         </CellTemplate>
@@ -174,9 +177,9 @@
                         }
                         else
                         {
-                            <div class="d-flex align-center justify-center" style="height: 100%;">
+                            <div class="d-flex align-center justify-center" style="min-height: 400px;">
                                 <div class="text-center">
-                                    <MudIcon Icon="@Icons.Material.Filled.Analytics" Size="Size.Large" Color="Color.Secondary" Class="mb-2" />
+                                    <MudIcon Icon="@Icons.Material.Filled.Analytics" Size="Size.Large" Color="Color.Secondary" Class="mb-3" />
                                     <MudText Color="Color.Secondary">暂无阶段性能数据</MudText>
                                 </div>
                             </div>
@@ -188,32 +191,32 @@
     }
     else
     {
-        <MudGrid Spacing="4">
+        <MudGrid Spacing="4" Class="mb-4">
             <MudItem xs="12" md="6">
-                <MudCard Style="height: 400px;">
-                    <MudCardContent Class="d-flex align-center justify-center" Style="height: 100%;">
+                <MudCard Class="modern-card">
+                    <MudCardContent Class="pa-4 d-flex align-center justify-center" Style="min-height: 300px;">
                         <div class="text-center">
-                            <MudProgressCircular Indeterminate="true" Class="mb-2" />
+                            <MudProgressCircular Indeterminate="true" Class="mb-3" />
                             <MudText Color="Color.Secondary">加载性能概览...</MudText>
                         </div>
                     </MudCardContent>
                 </MudCard>
             </MudItem>
             <MudItem xs="12" md="6">
-                <MudCard Style="height: 400px;">
-                    <MudCardContent Class="d-flex align-center justify-center" Style="height: 100%;">
+                <MudCard Class="modern-card">
+                    <MudCardContent Class="pa-4 d-flex align-center justify-center" Style="min-height: 300px;">
                         <div class="text-center">
-                            <MudProgressCircular Indeterminate="true" Class="mb-2" />
+                            <MudProgressCircular Indeterminate="true" Class="mb-3" />
                             <MudText Color="Color.Secondary">加载最慢模块...</MudText>
                         </div>
                     </MudCardContent>
                 </MudCard>
             </MudItem>
             <MudItem xs="12">
-                <MudCard Style="min-height: 500px;">
-                    <MudCardContent Class="d-flex align-center justify-center" Style="height: 100%;">
+                <MudCard Class="modern-card">
+                    <MudCardContent Class="pa-4 d-flex align-center justify-center" Style="min-height: 400px;">
                         <div class="text-center">
-                            <MudProgressCircular Indeterminate="true" Class="mb-2" />
+                            <MudProgressCircular Indeterminate="true" Class="mb-3" />
                             <MudText Color="Color.Secondary">加载阶段性能数据...</MudText>
                         </div>
                     </MudCardContent>
@@ -222,12 +225,6 @@
         </MudGrid>
     }
 </div>
-
-<style>
-    .performance-monitoring-container {
-        width: 100%;
-    }
-</style>
 
 @code {
     /// <summary>

@@ -1,0 +1,62 @@
+.performance-monitoring-container {
+    width: 100%;
+}
+
+.modern-card {
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(var(--mud-palette-lines-default-rgb), 0.12);
+}
+
+    .modern-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    }
+
+.performance-metric-card {
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    background: linear-gradient(135deg, rgba(var(--mud-palette-primary-rgb), 0.02) 0%, rgba(var(--mud-palette-secondary-rgb), 0.02) 100%);
+}
+
+    .performance-metric-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    }
+
+.slowest-module-card {
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    background: linear-gradient(135deg, rgba(var(--mud-palette-error-rgb), 0.02) 0%, rgba(var(--mud-palette-warning-rgb), 0.02) 100%);
+}
+
+    .slowest-module-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    }
+
+/* 数据网格优化 */
+::deep .mud-data-grid {
+    border-radius: 0 0 12px 12px;
+}
+
+    ::deep .mud-data-grid .mud-data-grid-header {
+        background-color: rgba(var(--mud-palette-tertiary-rgb), 0.05);
+        font-weight: 600;
+    }
+
+    ::deep .mud-data-grid .mud-data-grid-row:hover {
+        background-color: rgba(var(--mud-palette-tertiary-rgb), 0.04);
+    }
+
+/* 响应式设计 */
+@media (max-width: 960px) {
+    .modern-card {
+        margin-bottom: 16px;
+    }
+
+    .performance-metric-card,
+    .slowest-module-card {
+        margin-bottom: 12px;
+    }
+}

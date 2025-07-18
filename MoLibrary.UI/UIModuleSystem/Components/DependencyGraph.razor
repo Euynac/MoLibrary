@@ -6,10 +6,10 @@
 <div class="dependency-graph-container">
     @if (DependencyGraphData != null)
     {
-        <MudGrid Spacing="4">
+        <MudGrid Spacing="4" Class="mb-4">
             <!-- 依赖关系概览 -->
             <MudItem xs="12" md="4">
-                <MudCard Style="height: 320px;">
+                <MudCard Class="modern-card">
                     <MudCardHeader>
                         <CardHeaderContent>
                             <div class="d-flex align-center">
@@ -18,49 +18,49 @@
                             </div>
                         </CardHeaderContent>
                     </MudCardHeader>
-                    <MudCardContent Style="height: calc(100% - 80px); overflow-y: auto;">
-                        <MudStack Spacing="2">
-                            <MudPaper Class="pa-3" Elevation="2">
+                    <MudCardContent Class="pa-4">
+                        <MudStack Spacing="3">
+                            <MudPaper Class="pa-4 overview-stat-card" Elevation="2">
                                 <div class="d-flex justify-space-between align-center">
                                     <div>
                                         <MudText Typo="Typo.subtitle1" Color="Color.Primary">总节点数</MudText>
-                                        <MudText Typo="Typo.h6" Color="Color.Primary">@DependencyGraphData.Nodes.Count.ToString()</MudText>
+                                        <MudText Typo="Typo.h5" Color="Color.Primary">@DependencyGraphData.Nodes.Count.ToString()</MudText>
                                     </div>
-                                    <MudIcon Icon="@Icons.Material.Filled.Hub" Color="Color.Primary" Size="Size.Medium" />
+                                    <MudIcon Icon="@Icons.Material.Filled.Hub" Color="Color.Primary" Size="Size.Large" />
                                 </div>
                             </MudPaper>
-                            <MudPaper Class="pa-3" Elevation="2">
+                            <MudPaper Class="pa-4 overview-stat-card" Elevation="2">
                                 <div class="d-flex justify-space-between align-center">
                                     <div>
                                         <MudText Typo="Typo.subtitle1" Color="Color.Info">总依赖关系</MudText>
-                                        <MudText Typo="Typo.h6" Color="Color.Info">@DependencyGraphData.Edges.Count.ToString()</MudText>
+                                        <MudText Typo="Typo.h5" Color="Color.Info">@DependencyGraphData.Edges.Count.ToString()</MudText>
                                     </div>
-                                    <MudIcon Icon="@Icons.Material.Filled.Link" Color="Color.Info" Size="Size.Medium" />
+                                    <MudIcon Icon="@Icons.Material.Filled.Link" Color="Color.Info" Size="Size.Large" />
                                 </div>
                             </MudPaper>
-                            <MudPaper Class="pa-3" Elevation="2">
+                            <MudPaper Class="pa-4 overview-stat-card" Elevation="2">
                                 <div class="d-flex justify-space-between align-center">
                                     <div>
                                         <MudText Typo="Typo.subtitle1" Color="@(DependencyGraphData.HasCircularDependencies ? Color.Warning : Color.Success)">循环依赖</MudText>
-                                        <MudText Typo="Typo.h6" Color="@(DependencyGraphData.HasCircularDependencies ? Color.Warning : Color.Success)">@(DependencyGraphData.HasCircularDependencies ? "存在" : "无")</MudText>
+                                        <MudText Typo="Typo.h5" Color="@(DependencyGraphData.HasCircularDependencies ? Color.Warning : Color.Success)">@(DependencyGraphData.HasCircularDependencies ? "存在" : "无")</MudText>
                                     </div>
                                     @if (DependencyGraphData.HasCircularDependencies)
                                     {
-                                        <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Medium" />
+                                        <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Large" />
                                     }
                                     else
                                     {
-                                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Medium" />
+                                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Large" />
                                     }
                                 </div>
                             </MudPaper>
-                            <MudPaper Class="pa-3" Elevation="2">
+                            <MudPaper Class="pa-4 overview-stat-card" Elevation="2">
                                 <div class="d-flex justify-space-between align-center">
                                     <div>
                                         <MudText Typo="Typo.subtitle1" Color="Color.Secondary">依赖层级</MudText>
-                                        <MudText Typo="Typo.h6" Color="Color.Secondary">@DependencyGraphData.ModuleLayers.Count.ToString()</MudText>
+                                        <MudText Typo="Typo.h5" Color="Color.Secondary">@DependencyGraphData.ModuleLayers.Count.ToString()</MudText>
                                     </div>
-                                    <MudIcon Icon="@Icons.Material.Filled.Layers" Color="Color.Secondary" Size="Size.Medium" />
+                                    <MudIcon Icon="@Icons.Material.Filled.Layers" Color="Color.Secondary" Size="Size.Large" />
                                 </div>
                             </MudPaper>
                         </MudStack>
@@ -70,7 +70,7 @@
 
             <!-- 图表控制 -->
             <MudItem xs="12" md="8">
-                <MudCard Style="height: 320px;">
+                <MudCard Class="modern-card">
                     <MudCardHeader>
                         <CardHeaderContent>
                             <div class="d-flex align-center">
@@ -79,8 +79,8 @@
                             </div>
                         </CardHeaderContent>
                     </MudCardHeader>
-                    <MudCardContent Style="height: calc(100% - 80px); overflow-y: auto;">
-                        <MudGrid Spacing="3">
+                    <MudCardContent Class="pa-4">
+                        <MudGrid Spacing="4">
                             <MudItem xs="12" md="6">
                                 <MudSelect T="string" Value="selectedLayout" Label="布局算法" 
                                          ValueChanged="OnLayoutChanged" Variant="Variant.Outlined"
@@ -130,7 +130,7 @@
                                 </MudSelect>
                             </MudItem>
                         </MudGrid>
-                        <MudDivider Class="my-3" />
+                        <MudDivider Class="my-4" />
                         <MudStack Row="true" Spacing="2" Justify="Justify.Center">
                             <MudButton Variant="Variant.Outlined" Color="Color.Primary" 
                                      Size="Size.Small"
@@ -157,7 +157,7 @@
 
             <!-- 依赖关系图 -->
             <MudItem xs="12">
-                <MudCard Style="min-height: 650px;">
+                <MudCard Class="modern-card">
                     <MudCardHeader>
                         <CardHeaderContent>
                             <div class="d-flex align-center">
@@ -175,9 +175,10 @@
                             </MudButton>
                         </CardHeaderActions>
                     </MudCardHeader>
-                    <MudCardContent Style="height: calc(100% - 80px);">
+                    <MudCardContent Class="pa-0">
                         <MudPaper id="dependency-graph-container" 
-                                Style="height: 550px; width: 100%;" 
+                                Class="dependency-graph-canvas"
+                                Style="height: 600px; width: 100%;" 
                                 Elevation="2">
                             <!-- 图表将在这里渲染 -->
                         </MudPaper>
@@ -187,7 +188,7 @@
 
             <!-- 图例 -->
             <MudItem xs="12" md="6">
-                <MudCard Style="height: 400px;">
+                <MudCard Class="modern-card">
                     <MudCardHeader>
                         <CardHeaderContent>
                             <div class="d-flex align-center">
@@ -196,39 +197,39 @@
                             </div>
                         </CardHeaderContent>
                     </MudCardHeader>
-                    <MudCardContent Style="height: calc(100% - 80px); overflow-y: auto;">
-                        <MudStack Spacing="3">
+                    <MudCardContent Class="pa-4">
+                        <MudStack Spacing="4">
                             <div>
-                                <MudText Typo="Typo.subtitle1" Class="mb-2">节点类型</MudText>
+                                <MudText Typo="Typo.subtitle1" Class="mb-3">节点类型</MudText>
                                 <MudStack Spacing="2">
                                     <div class="d-flex align-center">
-                                        <div class="legend-circle" style="background-color: #2196F3; width: 20px; height: 20px; border-radius: 50%; margin-right: 12px;"></div>
+                                        <div class="legend-circle" style="background-color: #64B5F6; width: 24px; height: 24px; border-radius: 50%; margin-right: 12px;"></div>
                                         <MudText Typo="Typo.body2">启用模块</MudText>
                                     </div>
                                     <div class="d-flex align-center">
-                                        <div class="legend-circle" style="background-color: #FF9800; width: 20px; height: 20px; border-radius: 50%; margin-right: 12px;"></div>
+                                        <div class="legend-circle" style="background-color: #FFB74D; width: 24px; height: 24px; border-radius: 50%; margin-right: 12px;"></div>
                                         <MudText Typo="Typo.body2">禁用模块</MudText>
                                     </div>
                                     <div class="d-flex align-center">
-                                        <div class="legend-circle" style="background-color: #F44336; width: 20px; height: 20px; border-radius: 50%; margin-right: 12px;"></div>
+                                        <div class="legend-circle" style="background-color: #E57373; width: 24px; height: 24px; border-radius: 50%; margin-right: 12px;"></div>
                                         <MudText Typo="Typo.body2">循环依赖模块</MudText>
                                     </div>
                                 </MudStack>
                             </div>
                             <MudDivider />
                             <div>
-                                <MudText Typo="Typo.subtitle1" Class="mb-2">连线类型</MudText>
+                                <MudText Typo="Typo.subtitle1" Class="mb-3">连线类型</MudText>
                                 <MudStack Spacing="2">
                                     <div class="d-flex align-center">
-                                        <div class="legend-line" style="background-color: #4CAF50; width: 30px; height: 2px; margin-right: 12px;"></div>
+                                        <div class="legend-line" style="background-color: #81C784; width: 30px; height: 3px; margin-right: 12px;"></div>
                                         <MudText Typo="Typo.body2">直接依赖</MudText>
                                     </div>
                                     <div class="d-flex align-center">
-                                        <div class="legend-line" style="background-color: #9C27B0; width: 30px; height: 2px; margin-right: 12px;"></div>
+                                        <div class="legend-line" style="background-color: #BA68C8; width: 30px; height: 3px; margin-right: 12px; border-top: 2px dashed #BA68C8; background: none;"></div>
                                         <MudText Typo="Typo.body2">传递依赖</MudText>
                                     </div>
                                     <div class="d-flex align-center">
-                                        <div class="legend-line" style="background-color: #FF5722; width: 30px; height: 2px; margin-right: 12px;"></div>
+                                        <div class="legend-line" style="background-color: #FF8A65; width: 30px; height: 3px; margin-right: 12px;"></div>
                                         <MudText Typo="Typo.body2">循环依赖</MudText>
                                     </div>
                                 </MudStack>
@@ -240,7 +241,7 @@
 
             <!-- 节点详情 -->
             <MudItem xs="12" md="6">
-                <MudCard Style="height: 400px;">
+                <MudCard Class="modern-card">
                     <MudCardHeader>
                         <CardHeaderContent>
                             <div class="d-flex align-center">
@@ -249,24 +250,17 @@
                             </div>
                         </CardHeaderContent>
                     </MudCardHeader>
-                    <MudCardContent Style="height: calc(100% - 80px); overflow-y: auto;">
-                        @if (!string.IsNullOrEmpty(selectedNodeInfo))
-                        {
-                            <MudPaper Class="pa-4" Elevation="2">
-                                <MudText Typo="Typo.body1">@selectedNodeInfo</MudText>
-                            </MudPaper>
-                        }
-                        else
-                        {
-                            <div class="d-flex align-center justify-center" style="height: 100%;">
+                    <MudCardContent Class="pa-4">
+                        <div class="node-detail-content" style="min-height: 200px;">
+                            <div class="d-flex align-center justify-center" style="height: 100%; color: var(--mud-palette-text-secondary);">
                                 <div class="text-center">
-                                    <MudIcon Icon="@Icons.Material.Filled.TouchApp" Size="Size.Large" Color="Color.Secondary" Class="mb-2" />
-                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                    <MudIcon Icon="@Icons.Material.Filled.TouchApp" Size="Size.Large" Color="Color.Secondary" Class="mb-3" />
+                                    <MudText Typo="Typo.body1" Color="Color.Secondary">
                                         鼠标悬停在节点上查看详情
                                     </MudText>
                                 </div>
                             </div>
-                        }
+                        </div>
                     </MudCardContent>
                 </MudCard>
             </MudItem>
@@ -274,14 +268,14 @@
     }
     else
     {
-        <MudGrid Spacing="4">
+        <MudGrid Spacing="4" Class="mb-4">
             @for (int i = 0; i < 6; i++)
             {
                 <MudItem xs="12" md="@(i == 2 ? 12 : 6)">
-                    <MudCard Style="@(i == 2 ? "min-height: 650px;" : "height: 400px;")">
-                        <MudCardContent Class="d-flex align-center justify-center" Style="height: 100%;">
+                    <MudCard Class="modern-card">
+                        <MudCardContent Class="pa-4 d-flex align-center justify-center" Style="@(i == 2 ? "min-height: 600px;" : "min-height: 300px;")">
                             <div class="text-center">
-                                <MudProgressCircular Indeterminate="true" Class="mb-2" />
+                                <MudProgressCircular Indeterminate="true" Class="mb-3" />
                                 <MudText Color="Color.Secondary">@GetLoadingText(i)</MudText>
                             </div>
                         </MudCardContent>
@@ -291,20 +285,6 @@
         </MudGrid>
     }
 </div>
-
-<style>
-    .dependency-graph-container {
-        width: 100%;
-    }
-    
-    .legend-circle {
-        flex-shrink: 0;
-    }
-    
-    .legend-line {
-        flex-shrink: 0;
-    }
-</style>
 
 @code {
     private IJSObjectReference? jsModule;

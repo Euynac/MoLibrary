@@ -1,0 +1,81 @@
+.module-detail-header {
+    border-bottom: 1px solid rgba(var(--mud-palette-lines-default-rgb), 0.12);
+    padding-bottom: 16px;
+}
+
+.tab-content {
+    padding: 0 8px;
+}
+
+.detail-card {
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    background: linear-gradient(135deg, rgba(var(--mud-palette-primary-rgb), 0.02) 0%, rgba(var(--mud-palette-surface-rgb), 0.02) 100%);
+}
+
+    .detail-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    }
+
+.phase-card {
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    background: linear-gradient(135deg, rgba(var(--mud-palette-secondary-rgb), 0.02) 0%, rgba(var(--mud-palette-surface-rgb), 0.02) 100%);
+}
+
+    .phase-card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+
+.dependency-stat-card {
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    background: linear-gradient(135deg, rgba(var(--mud-palette-info-rgb), 0.02) 0%, rgba(var(--mud-palette-primary-rgb), 0.02) 100%);
+}
+
+    .dependency-stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    }
+
+/* 标签页内容间距 */
+::deep .mud-tabs .mud-tab-panel {
+    padding: 0;
+}
+
+/* 芯片样式调整 */
+::deep .mud-chip {
+    margin: 2px;
+    transition: all 0.2s ease;
+}
+
+    ::deep .mud-chip:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+/* 警告框样式 */
+::deep .mud-alert {
+    border-radius: 8px;
+}
+
+/* 响应式设计 */
+@media (max-width: 600px) {
+    .module-detail-header {
+        text-align: center;
+    }
+
+    .tab-content {
+        padding: 0 4px;
+    }
+
+    .detail-card {
+        text-align: center;
+    }
+
+    .dependency-stat-card {
+        margin-bottom: 16px;
+    }
+}
