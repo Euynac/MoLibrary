@@ -187,6 +187,7 @@ public class DataPipeline
             catch (Exception e)
             {
                 IsNotAvailable = true;
+                IsInitializing = false;
                 DataChannelCentral.Logger.LogError(e, "DataPipeline:{Id}初始化失败", Id);
                 return $"DataPipeline:{Id}初始化失败:{e.GetMessageRecursively()}";
             }

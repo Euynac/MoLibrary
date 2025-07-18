@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using MoLibrary.DataChannel.Modules;
 
 namespace MoLibrary.DataChannel.Services;
 
@@ -12,8 +14,9 @@ namespace MoLibrary.DataChannel.Services;
 /// 初始化数据通道初始化服务的新实例
 /// </remarks>
 /// <param name="logger">日志记录器实例，用于记录初始化过程中的事件</param>
-public class DataChannelInitializerService(ILogger<DataChannelInitializerService>? logger = null) : IHostedService
+public class DataChannelInitializerService(IOptions<ModuleDataChannelOption> options, ILogger<DataChannelInitializerService>? logger = null) : IHostedService
 {
+    private readonly int _initThreadCount = options.Value.InitThreadCount;
 
     /// <summary>
     /// 启动初始化过程
@@ -24,7 +27,7 @@ public class DataChannelInitializerService(ILogger<DataChannelInitializerService
     /// <returns>表示异步初始化操作的任务</returns>
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _ = Parallel.ForEachAsync(DataChannelCentral.Channels,new ParallelOptions{MaxDegreeOfParallelism = 10,CancellationToken = cancellationToken}, async (channel, token) =>
+        _ = Parallel.ForEachAsync(DataChannelCentral.Channels,new ParallelOptions{MaxDegreeOfParallelism = _initThreadCount,CancellationToken = cancellationToken}, async (channel, token) =>
         {
             try
             {
