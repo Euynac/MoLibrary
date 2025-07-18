@@ -36,6 +36,21 @@ public class ChainTracingAttachingActionFilter(IMoChainTracing chainTracing, IOp
             chain.MarkComplete();
             serviceResponse.ExtraInfo ??= new ExpandoObject();
             serviceResponse.ExtraInfo.Append(MoChainContext.CHAIN_KEY, chain.Root);
+            if(chain.IsolatedNodes is not null)
+            {
+                serviceResponse.ExtraInfo.Append(MoChainContext.CHAIN_KEY+"_error", chain.IsolatedNodes.Select(p => new
+                {
+                    p.Operation,
+                    p.Handler,
+                    p.Duration,
+                    p.Type,
+                    p.ExceptionMessage,
+                    p.StartTime,
+                    p.EndTime,
+                    p.TraceId,
+                }));
+            }
+           
         }
     }
 }

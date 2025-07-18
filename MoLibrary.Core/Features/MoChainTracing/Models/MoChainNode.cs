@@ -7,12 +7,49 @@ namespace MoLibrary.Core.Features.MoChainTracing.Models;
 /// </summary>
 public class MoChainNode
 {
+    /// <summary>
+    /// 当前节点所属调用链层级
+    /// </summary>
+    public int Deepth { get; set; }
+    
+    /// <summary>
+    /// 设置父节点
+    /// </summary>
+    /// <param name="parent"></param>
+    public void SetParent(MoChainNode parent)
+    {
+        Deepth = parent.Deepth + 1;
+        Parent = parent;
+    }
     #region 用于调用链合并等情况
 
     private string[]? _exceptionMessage;
     private string? _duration;
     private EChainTracingType _type;
+    /// <summary>
+    /// 更新子节点深度，且不超过深度限制，超过则丢弃
+    /// </summary>
+    public void ReCalculateDepthAndClean(int currentDeepth, int maxChainDepth)
+    {
+        Deepth = currentDeepth;
 
+        if (Children == null || Children.Count < 0)
+        {
+            return;
+        }
+
+
+        if (currentDeepth > maxChainDepth)
+        {
+            Children?.Clear();
+            return;
+        }
+
+        foreach (var child in Children)
+        {
+            child.ReCalculateDepthAndClean(currentDeepth+1, maxChainDepth);
+        }
+    }
     #endregion
 
     /// <summary>
@@ -123,7 +160,7 @@ public class MoChainNode
     /// 父调用链节点
     /// </summary>
     [JsonIgnore]
-    public MoChainNode? Parent { get; set; }
+    public MoChainNode? Parent { get; private set; }
 
     /// <summary>
     /// 备注信息
