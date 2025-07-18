@@ -21,35 +21,35 @@
 
     <MudTabs Elevation="4" Rounded="true" ApplyEffectsToContainer="true" Class="mb-6">
         <MudTabPanel Text="系统概览" Icon="@Icons.Material.Filled.Assessment">
-            <MudPaper Class="pa-4 ma-2" Elevation="1">
+            <div class="tab-content-panel">
                 <SystemOverview SystemStatus="systemStatus" />
-            </MudPaper>
+            </div>
         </MudTabPanel>
 
         <MudTabPanel Text="性能监控" Icon="@Icons.Material.Filled.Speed">
-            <MudPaper Class="pa-4 ma-2" Elevation="1">
+            <div class="tab-content-panel">
                 <PerformanceMonitoring SystemPerformance="systemPerformance" />
-            </MudPaper>
+            </div>
         </MudTabPanel>
 
         <MudTabPanel Text="健康检查" Icon="@Icons.Material.Filled.HealthAndSafety">
-            <MudPaper Class="pa-4 ma-2" Elevation="1">
+            <div class="tab-content-panel">
                 <HealthCheck HealthCheckData="healthCheck" />
-            </MudPaper>
+            </div>
         </MudTabPanel>
 
         <MudTabPanel Text="模块管理" Icon="@Icons.Material.Filled.ViewModule">
-            <MudPaper Class="pa-4 ma-2" Elevation="1">
+            <div class="tab-content-panel">
                 <ModuleManagement RegistrationInfo="registrationInfo" 
                                 OnRefresh="RefreshData" 
                                 OnModuleDetailClicked="ViewModuleDetail" />
-            </MudPaper>
+            </div>
         </MudTabPanel>
 
         <MudTabPanel Text="依赖关系" Icon="@Icons.Material.Filled.AccountTree">
-            <MudPaper Class="pa-4 ma-2" Elevation="1">
+            <div class="tab-content-panel">
                 <DependencyGraph DependencyGraphData="dependencyGraph" />
-            </MudPaper>
+            </div>
         </MudTabPanel>
     </MudTabs>
 </MudContainer>
