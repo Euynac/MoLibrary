@@ -69,7 +69,7 @@ public class ModuleScopedDataGuide : MoModuleGuide<ModuleScopedData, ModuleScope
         ConfigureServices(context =>
             {
                 context.Services.AddKeyedScoped<IMoScopedData, T>(key);
-            }, key: $"{nameof(AddKeyedScopedData)}_{key}");
+            }, secondKey: key);
 
         return this;
     }

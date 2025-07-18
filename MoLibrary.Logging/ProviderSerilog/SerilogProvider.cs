@@ -30,9 +30,10 @@ public class SerilogProvider : IMoLogProvider
     }
 
     /// <inheritdoc />
-    public ILogger CreateLogger<T>()
+    public ILogger<T> CreateLogger<T>()
     {
-        return _provider.CreateLogger(typeof(T).FullName ?? typeof(T).Name);
+        var logger = _provider.CreateLogger(typeof(T).FullName ?? typeof(T).Name);
+        return new LoggerWrapper<T>(logger);
     }
 
     /// <inheritdoc />
@@ -42,10 +43,10 @@ public class SerilogProvider : IMoLogProvider
     }
     
     /// <inheritdoc />
-    public ILogger CreateLogger<T>(LogLevel minLogLevel)
+    public ILogger<T> CreateLogger<T>(LogLevel minLogLevel)
     {
         var logger = CreateLogger<T>();
-        return new MinimumLevelLogger(logger, minLogLevel);
+        return new MinimumLevelLogger<T>(logger, minLogLevel);
     }
     
     /// <inheritdoc />
@@ -53,5 +54,41 @@ public class SerilogProvider : IMoLogProvider
     {
         var logger = CreateLogger(type);
         return new MinimumLevelLogger(logger, minLogLevel);
+    }
+}
+
+/// <summary>
+/// Wrapper class to convert ILogger to ILogger&lt;T&gt;.
+/// </summary>
+/// <typeparam name="T">The type for which the logger is created.</typeparam>
+internal class LoggerWrapper<T> : ILogger<T>
+{
+    private readonly ILogger _logger;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LoggerWrapper{T}"/> class.
+    /// </summary>
+    /// <param name="logger">The underlying logger to wrap.</param>
+    public LoggerWrapper(ILogger logger)
+    {
+        _logger = logger;
+    }
+
+    /// <inheritdoc />
+    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+    {
+        _logger.Log(logLevel, eventId, state, exception, formatter);
+    }
+
+    /// <inheritdoc />
+    public bool IsEnabled(LogLevel logLevel)
+    {
+        return _logger.IsEnabled(logLevel);
+    }
+
+    /// <inheritdoc />
+    public IDisposable? BeginScope<TState>(TState state) where TState : notnull
+    {
+        return _logger.BeginScope(state);
     }
 }

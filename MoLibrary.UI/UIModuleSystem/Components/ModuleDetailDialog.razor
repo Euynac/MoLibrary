@@ -1,0 +1,152 @@
+@using MoLibrary.Core.Module.Dashboard.Models
+@using MoLibrary.Core.Module.Models
+@using MudBlazor
+
+<MudDialog @bind-Visible="IsVisible" Options="DialogOptions">
+    <DialogContent>
+        @if (SelectedModuleDetail != null)
+        {
+            <MudText Typo="Typo.h6" Class="mb-3">
+                模块详情 - @SelectedModuleDetail.BasicInfo.ModuleTypeName
+            </MudText>
+            
+            <MudTabs>
+                <MudTabPanel Text="基本信息">
+                    <MudStack>
+                        <MudPaper Class="pa-3 mb-2" Elevation="1">
+                            <MudText Typo="Typo.subtitle1">模块类型</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@SelectedModuleDetail.BasicInfo.ModuleFullTypeName</MudText>
+                        </MudPaper>
+                        <MudPaper Class="pa-3 mb-2" Elevation="1">
+                            <MudText Typo="Typo.subtitle1">模块枚举</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@SelectedModuleDetail.BasicInfo.ModuleEnum.ToString()</MudText>
+                        </MudPaper>
+                        <MudPaper Class="pa-3 mb-2" Elevation="1">
+                            <MudText Typo="Typo.subtitle1">注册顺序</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@SelectedModuleDetail.BasicInfo.Order.ToString()</MudText>
+                        </MudPaper>
+                        <MudPaper Class="pa-3 mb-2" Elevation="1">
+                            <MudText Typo="Typo.subtitle1">初始化时间</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@($"{SelectedModuleDetail.BasicInfo.InitializationTimeMs}ms")</MudText>
+                        </MudPaper>
+                        <MudPaper Class="pa-3 mb-2" Elevation="1">
+                            <MudText Typo="Typo.subtitle1">是否禁用</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@(SelectedModuleDetail.BasicInfo.IsDisabled ? "是" : "否")</MudText>
+                        </MudPaper>
+                    </MudStack>
+                </MudTabPanel>
+                
+                <MudTabPanel Text="性能信息">
+                    <MudStack>
+                        <MudPaper Class="pa-3 mb-2" Elevation="1">
+                            <MudText Typo="Typo.subtitle1">总耗时</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@($"{SelectedModuleDetail.PerformanceInfo.TotalDurationMs}ms")</MudText>
+                        </MudPaper>
+                        @if (SelectedModuleDetail.PerformanceInfo.PhaseDurations.Any())
+                        {
+                            @foreach (var phase in SelectedModuleDetail.PerformanceInfo.PhaseDurations)
+                            {
+                                <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                    <MudText Typo="Typo.subtitle1">@phase.Key.ToString()</MudText>
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">@($"{phase.Value}ms")</MudText>
+                                </MudPaper>
+                            }
+                        }
+                    </MudStack>
+                </MudTabPanel>
+                
+                <MudTabPanel Text="依赖关系">
+                    <MudStack>
+                        <MudPaper Class="pa-3 mb-2" Elevation="1">
+                            <MudText Typo="Typo.subtitle1">直接依赖数</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@SelectedModuleDetail.DependencyInfo.DirectDependencies.Count.ToString()</MudText>
+                        </MudPaper>
+                        <MudPaper Class="pa-3 mb-2" Elevation="1">
+                            <MudText Typo="Typo.subtitle1">总依赖数</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@SelectedModuleDetail.DependencyInfo.AllDependencies.Count.ToString()</MudText>
+                        </MudPaper>
+                        <MudPaper Class="pa-3 mb-2" Elevation="1">
+                            <MudText Typo="Typo.subtitle1">依赖此模块的数量</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@SelectedModuleDetail.DependencyInfo.DependedByModules.Count.ToString()</MudText>
+                        </MudPaper>
+                        @if (SelectedModuleDetail.DependencyInfo.IsPartOfCycle)
+                        {
+                            <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                <div class="d-flex align-center justify-space-between">
+                                    <div>
+                                        <MudText Typo="Typo.subtitle1">循环依赖</MudText>
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">@string.Join(" → ", SelectedModuleDetail.DependencyInfo.CyclePath)</MudText>
+                                    </div>
+                                    <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" />
+                                </div>
+                            </MudPaper>
+                        }
+                    </MudStack>
+                </MudTabPanel>
+                
+                @if (SelectedModuleDetail.Errors.Any())
+                {
+                    <MudTabPanel Text="错误信息">
+                        <MudStack>
+                            @foreach (var error in SelectedModuleDetail.Errors)
+                            {
+                                <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                    <div class="d-flex align-center justify-space-between">
+                                        <div>
+                                            <MudText Typo="Typo.subtitle1">@error.ErrorType</MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">@error.ErrorMessage</MudText>
+                                        </div>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                            @error.ErrorTime.ToString("HH:mm:ss")
+                                        </MudText>
+                                    </div>
+                                </MudPaper>
+                            }
+                        </MudStack>
+                    </MudTabPanel>
+                }
+            </MudTabs>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Primary" OnClick="OnClose">关闭</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    /// <summary>
+    /// 是否显示对话框
+    /// </summary>
+    [Parameter] public bool IsVisible { get; set; }
+
+    /// <summary>
+    /// 是否显示对话框改变事件
+    /// </summary>
+    [Parameter] public EventCallback<bool> IsVisibleChanged { get; set; }
+
+    /// <summary>
+    /// 选中的模块详情
+    /// </summary>
+    [Parameter] public ModuleDetailInfo? SelectedModuleDetail { get; set; }
+
+    /// <summary>
+    /// 对话框选项
+    /// </summary>
+    private DialogOptions DialogOptions = new()
+    {
+        CloseButton = true,
+        CloseOnEscapeKey = true,
+        FullWidth = true,
+        MaxWidth = MaxWidth.Medium
+    };
+
+    /// <summary>
+    /// 关闭对话框
+    /// </summary>
+    /// <returns></returns>
+    private async Task OnClose()
+    {
+        IsVisible = false;
+        await IsVisibleChanged.InvokeAsync(IsVisible);
+    }
+} 

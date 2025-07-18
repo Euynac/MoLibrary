@@ -90,6 +90,7 @@ public static class TypeExtensions
     /// <param name="interfaceType"></param>
     /// <returns></returns>
     /// <exception cref="InvalidOperationException"></exception>
+    //[MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsImplementInterface(this Type type, Type interfaceType)
     {
         if (!interfaceType.IsInterface)

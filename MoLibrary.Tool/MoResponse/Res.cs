@@ -49,18 +49,9 @@ public class Res : IMoResponse
         Code = code;
     }
 
-    public static implicit operator Res((string msg, ResponseCode code) res) => new(res.msg, res.code);
-
     public static implicit operator Res(string res) => new(res, ResponseCode.BadRequest);
 
     public static implicit operator string(Res res) => res.Message ?? "";
-
-    public static implicit operator Res((Exception e, string msg) res)
-    {
-        var result = new Res(res.e);
-        return result.AppendError(res.msg, ResponseCode.InternalError);
-    }
-
 
     /// <summary>
     /// 创建一个成功的响应
@@ -108,6 +99,14 @@ public class Res : IMoResponse
     {
         return new Res<T>(data);
     }
+
+    /// <summary>
+    /// 根据数据是否为空返回成功或失败响应
+    /// </summary>
+    /// <param name="data">要检查的数据</param>
+    /// <param name="errorWhenNull">数据为空时的错误信息</param>
+    /// <returns>数据不为空时返回成功响应，否则返回错误响应</returns>
+    public static Res<T> OkOrFailWhenNull<T>(T? data, string errorWhenNull) => data == null ? errorWhenNull : data;
 
     public static Res<T> Create<T>(T data, ResponseCode code)
     {
@@ -157,7 +156,6 @@ public class Res : IMoResponse
 
         return $"{Message}({Code})";
     }
-
 }
 /// <summary>
 /// 统一响应模型
@@ -205,15 +203,10 @@ public record Res<T> : IMoResponse
         Code = ResponseCode.InternalError;
     }
 
-    public static implicit operator Res<T>((string msg, T data) res) => new(res.msg, ResponseCode.Ok) { Data = res.data };
-
     public static implicit operator Res<T>(string res) => new(res, ResponseCode.BadRequest);
 
     public static implicit operator Res<T>(T data) => new(data);
-
-    public static implicit operator string(Res<T> res) => res.Message ?? "";
-
-    public static implicit operator Res<T>((T? data, string errorWhenNull) res) => res.data == null ? res.errorWhenNull : res.data;
+   
 
     /// <summary>
     /// 提取为新响应数据

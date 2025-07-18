@@ -1,14 +1,12 @@
-using System.Reflection;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
-using MoLibrary.AutoModel.Interfaces;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Models;
-using MoLibrary.DomainDrivenDesign.AutoCrud.Interfaces;
+using MoLibrary.Core.Module.TypeFinder;
 using MoLibrary.DomainDrivenDesign.Swagger;
 using MoLibrary.Tool.Extensions;
 using Unchase.Swashbuckle.AspNetCore.Extensions.Extensions;
@@ -47,6 +45,10 @@ public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger,
         {
             options.DocumentFilter<CustomDocumentFilter>();
             options.SchemaFilter<CustomSchemaFilter>();
+            
+            // 添加GroupName到Tags的转换过滤器
+            options.OperationFilter<GroupNameToTagsOperationFilter>();
+            
             options.SwaggerDoc(option.Version, new OpenApiInfo
             {
                 Title = option.AppName,
@@ -69,11 +71,9 @@ public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger,
             //巨坑：要显示swagger文档，需要设置项目<GenerateDocumentationFile>True</GenerateDocumentationFile> XML文档用于生成swagger api注释。另外还要在设置中指定xml文档地址
 
             var documentAssemblies = (option.DocumentAssemblies ?? []).ToList();
-            documentAssemblies.Add(typeof(MoCrudPageRequestDto).Assembly.GetName().Name!);
-            documentAssemblies.Add(typeof(IHasRequestFilter).Assembly.GetName().Name!);
-            if (!option.DisableAutoIncludeEntryAsDocumentAssembly)
+            if (!option.DisableAutoIncludeModuleSystemRelatedAsDocumentAssembly)
             {
-                documentAssemblies.Add(Assembly.GetEntryAssembly()!.GetName().Name!);
+                documentAssemblies.AddRange(services.GetOrCreateMoModuleSystemTypeFinder().GetAssemblies().Select(p => p.GetName().Name!));
             }
 
             foreach (var name in documentAssemblies.Distinct())
@@ -83,9 +83,9 @@ public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger,
                 {
                     options.IncludeXmlComments(filePath);
                 }
-                else
+                else if(!name.StartsWith(nameof(MoLibrary)))
                 {
-                    Logger.LogWarning($"Swagger XML file not found: {filePath}");
+                    Logger.LogWarning($"Swagger XML file not found: {filePath}, you need to add <GenerateDocumentationFile>True</GenerateDocumentationFile> into your .csproj file to generate swagger documents");
                 }
             }
             //似乎必须写在IncludeXmlComments下面，而且只支持/// <inheritdoc /> 一行

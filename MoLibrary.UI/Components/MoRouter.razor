@@ -1,0 +1,23 @@
+ @using System.Reflection
+@using Microsoft.AspNetCore.Components.Routing
+@using MoLibrary.UI.Components.Layout
+@using MoLibrary.UI.UICore
+@using MoLibrary.UI.UICore.Interfaces
+@inject IUIComponentRegistry UIRegistry
+
+<Router AppAssembly="@typeof(MoRouter).Assembly" 
+        AdditionalAssemblies="@UIRegistry.GetAdditionalAssemblies()">
+    <Found Context="routeData">
+        <RouteView RouteData="routeData" DefaultLayout="@typeof(MoMainLayout)" />
+        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <PageTitle>Not found</PageTitle>
+        <LayoutView Layout="@typeof(MoMainLayout)">
+            <MudAlert Severity="Severity.Error">
+                <MudText Typo="Typo.h6">页面未找到</MudText>
+                <MudText>抱歉，请求的页面不存在。</MudText>
+            </MudAlert>
+        </LayoutView>
+    </NotFound>
+</Router>

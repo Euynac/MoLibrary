@@ -28,9 +28,9 @@ public class ModuleSwaggerOption : MoModuleOption<ModuleSwagger>
     public string[]? DocumentAssemblies { get; set; }
 
     /// <summary>
-    /// 是否禁用自动包含入口程序集作为文档生成
+    /// 是否禁用自动使用模块系统加载的相关程序集作为Swagger文档生成的入口。
     /// </summary>
-    public bool DisableAutoIncludeEntryAsDocumentAssembly { get; set; }
+    public bool DisableAutoIncludeModuleSystemRelatedAsDocumentAssembly { get; set; }
 
     /// <summary>
     /// 是否使用认证

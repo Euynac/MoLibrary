@@ -1,0 +1,55 @@
+@using MoLibrary.FrameworkUI.UISignalr.Models
+@using MudBlazor
+
+<!-- 连接状态 -->
+<MudPaper Class="pa-4 mb-4" Elevation="2">
+    <MudText Typo="Typo.h5" Class="mb-3">连接状态</MudText>
+    <MudChip Color="@GetConnectionStatusColor()" 
+            Label="true" 
+            Size="Size.Medium"
+            T="string">
+        @ConnectionState.Status
+    </MudChip>
+    @if (!string.IsNullOrEmpty(ConnectionState.ConnectionId))
+    {
+        <MudText Typo="Typo.body2" Class="mt-2">
+            连接ID: @ConnectionState.ConnectionId
+        </MudText>
+    }
+    @if (!string.IsNullOrEmpty(SelectedHubRoute))
+    {
+        <MudText Typo="Typo.body2" Class="mt-1">
+            当前Hub: @SelectedHubRoute
+        </MudText>
+    }
+    <MudText Typo="Typo.body2" Class="mt-1">
+        接收到的消息总数: @ConnectionState.TotalReceivedMessages
+    </MudText>
+</MudPaper>
+
+@code {
+    /// <summary>
+    /// 连接状态
+    /// </summary>
+    [Parameter] public SignalRConnectionState ConnectionState { get; set; } = new();
+
+    /// <summary>
+    /// 选中的Hub路由
+    /// </summary>
+    [Parameter] public string SelectedHubRoute { get; set; } = "";
+
+    /// <summary>
+    /// 获取连接状态颜色
+    /// </summary>
+    /// <returns>颜色</returns>
+    private Color GetConnectionStatusColor()
+    {
+        return ConnectionState.Status switch
+        {
+            "Connected" => Color.Success,
+            "Connecting" => Color.Warning,
+            "Reconnecting" => Color.Warning,
+            _ => Color.Error
+        };
+    }
+} 

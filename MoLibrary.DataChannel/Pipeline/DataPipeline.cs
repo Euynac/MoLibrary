@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using MoLibrary.Core.Extensions;
 using MoLibrary.DataChannel.CoreCommunication;
 using MoLibrary.DataChannel.Interfaces;
 using MoLibrary.Tool.Extensions;
@@ -177,7 +178,7 @@ public class DataPipeline
             {
                 IsNotAvailable = true;
                 DataChannelCentral.Logger.LogError(e, "DataPipeline:{Id}初始化失败", Id);
-                return (e, $"DataPipeline:{Id}初始化失败");
+                return $"DataPipeline:{Id}初始化失败:{e.GetMessageRecursively()}";
             }
         }
 

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Module.Interfaces;
+using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.Core.Module.Models;
 
@@ -20,7 +21,15 @@ public class ModuleRegisterContext(IServiceCollection? services, IApplicationBui
     /// 应用构建器
     /// </summary>
     public IApplicationBuilder? ApplicationBuilder { get; init; } = applicationBuilder;
+
+    /// <summary>
+    /// 应用
+    /// </summary>
+    public WebApplication? WebApplication => ApplicationBuilder == null ? null : ApplicationBuilder as WebApplication ?? throw new InvalidOperationException($"当前{nameof(ApplicationBuilder)}是{ApplicationBuilder.GetType().GetCleanFullName()}类型，而不是{nameof(WebApplication)}类型！");
     
+    /// <summary>
+    /// 应用构建器
+    /// </summary>
     public WebApplicationBuilder? WebApplicationBuilder { get; init; } = webApplicationBuilder;
     
     /// <summary>
@@ -80,6 +89,7 @@ public class ModuleRegisterContextWrapperForServices<TModuleOption>(ModuleRegist
 public class ModuleRegisterContextWrapperForApplicationBuilder<TModuleOption>(ModuleRegisterContext context) : ModuleRegisterContextWrapper<TModuleOption>(context) where TModuleOption : IMoModuleOption
 {
     public IApplicationBuilder ApplicationBuilder => Context.ApplicationBuilder!;
+    public WebApplication WebApplication => Context.WebApplication!;
 }
 
 public class ModuleRegisterContextWrapperForBuilder<TModuleOption>(ModuleRegisterContext context) : ModuleRegisterContextWrapper<TModuleOption>(context) where TModuleOption : IMoModuleOption
