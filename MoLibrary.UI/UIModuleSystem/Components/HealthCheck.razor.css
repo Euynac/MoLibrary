@@ -1,0 +1,93 @@
+.health-check-container {
+    width: 100%;
+}
+
+.modern-card {
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(var(--mud-palette-lines-default-rgb), 0.12);
+}
+
+    .modern-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    }
+
+.health-overview-card {
+    background: linear-gradient(135deg, rgba(var(--mud-palette-primary-rgb), 0.02) 0%, rgba(var(--mud-palette-success-rgb), 0.02) 100%);
+}
+
+.health-status-icon {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.health-summary {
+    text-align: center;
+}
+
+.performance-metric-card {
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    background: linear-gradient(135deg, rgba(var(--mud-palette-info-rgb), 0.02) 0%, rgba(var(--mud-palette-primary-rgb), 0.02) 100%);
+}
+
+    .performance-metric-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    }
+
+.health-check-item-card {
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    background: linear-gradient(135deg, rgba(var(--mud-palette-success-rgb), 0.02) 0%, rgba(var(--mud-palette-info-rgb), 0.02) 100%);
+}
+
+    .health-check-item-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    }
+
+.issue-card {
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    background: linear-gradient(135deg, rgba(var(--mud-palette-error-rgb), 0.02) 0%, rgba(var(--mud-palette-warning-rgb), 0.02) 100%);
+}
+
+    .issue-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    }
+
+/* 脉冲动画 */
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* 响应式设计 */
+@media (max-width: 960px) {
+    .modern-card {
+        margin-bottom: 16px;
+    }
+
+    .performance-metric-card,
+    .health-check-item-card,
+    .issue-card {
+        margin-bottom: 12px;
+    }
+}
+
+@media (max-width: 600px) {
+    .performance-metric-card {
+        text-align: center;
+    }
+}

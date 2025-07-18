@@ -5,10 +5,10 @@
 <div class="module-management-container">
     @if (RegistrationInfo != null)
     {
-        <MudGrid Spacing="4">
+        <MudGrid Spacing="4" Class="mb-4">
             <!-- 模块统计 -->
             <MudItem xs="12" md="4">
-                <MudCard Style="height: 500px;">
+                <MudCard Class="modern-card">
                     <MudCardHeader>
                         <CardHeaderContent>
                             <div class="d-flex align-center">
@@ -17,9 +17,9 @@
                             </div>
                         </CardHeaderContent>
                     </MudCardHeader>
-                    <MudCardContent Style="height: calc(100% - 80px); overflow-y: auto;">
+                    <MudCardContent Class="pa-4">
                         <MudStack Spacing="3">
-                            <MudPaper Class="pa-4" Elevation="2">
+                            <MudPaper Class="pa-4 modern-stat-card" Elevation="2">
                                 <div class="d-flex justify-space-between align-center">
                                     <div>
                                         <MudText Typo="Typo.subtitle1" Color="Color.Primary">总模块数</MudText>
@@ -28,7 +28,7 @@
                                     <MudIcon Icon="@Icons.Material.Filled.Apps" Color="Color.Primary" Size="Size.Large" />
                                 </div>
                             </MudPaper>
-                            <MudPaper Class="pa-4" Elevation="2">
+                            <MudPaper Class="pa-4 modern-stat-card" Elevation="2">
                                 <div class="d-flex justify-space-between align-center">
                                     <div>
                                         <MudText Typo="Typo.subtitle1" Color="Color.Success">启用模块</MudText>
@@ -37,7 +37,7 @@
                                     <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Large" />
                                 </div>
                             </MudPaper>
-                            <MudPaper Class="pa-4" Elevation="2">
+                            <MudPaper Class="pa-4 modern-stat-card" Elevation="2">
                                 <div class="d-flex justify-space-between align-center">
                                     <div>
                                         <MudText Typo="Typo.subtitle1" Color="Color.Warning">禁用模块</MudText>
@@ -46,7 +46,7 @@
                                     <MudIcon Icon="@Icons.Material.Filled.Block" Color="Color.Warning" Size="Size.Large" />
                                 </div>
                             </MudPaper>
-                            <MudPaper Class="pa-4" Elevation="2">
+                            <MudPaper Class="pa-4 modern-stat-card" Elevation="2">
                                 <div class="d-flex justify-space-between align-center">
                                     <div>
                                         <MudText Typo="Typo.subtitle1" Color="Color.Info">总初始化时间</MudText>
@@ -55,8 +55,8 @@
                                     <MudIcon Icon="@Icons.Material.Filled.Timer" Color="Color.Info" Size="Size.Large" />
                                 </div>
                             </MudPaper>
-                            <!-- 添加一个统计图表 -->
-                            <MudPaper Class="pa-4" Elevation="2">
+                            <!-- 模块分布图表 -->
+                            <MudPaper Class="pa-4 modern-stat-card" Elevation="2">
                                 <MudText Typo="Typo.subtitle1" Class="mb-3">模块分布</MudText>
                                 <div class="d-flex justify-space-between align-center mb-2">
                                     <MudText Typo="Typo.body2">启用模块</MudText>
@@ -64,13 +64,15 @@
                                 </div>
                                 <MudProgressLinear Color="Color.Success" 
                                                  Value="@GetPercentage(RegistrationInfo.Statistics.EnabledModules, RegistrationInfo.Statistics.TotalModules)" 
-                                                 Class="mb-2" />
+                                                 Class="mb-2" 
+                                                 Size="Size.Medium" />
                                 <div class="d-flex justify-space-between align-center mb-2">
                                     <MudText Typo="Typo.body2">禁用模块</MudText>
                                     <MudText Typo="Typo.body2">@($"{GetPercentage(RegistrationInfo.Statistics.DisabledModules, RegistrationInfo.Statistics.TotalModules):F1}%")</MudText>
                                 </div>
                                 <MudProgressLinear Color="Color.Warning" 
-                                                 Value="@GetPercentage(RegistrationInfo.Statistics.DisabledModules, RegistrationInfo.Statistics.TotalModules)" />
+                                                 Value="@GetPercentage(RegistrationInfo.Statistics.DisabledModules, RegistrationInfo.Statistics.TotalModules)" 
+                                                 Size="Size.Medium" />
                             </MudPaper>
                         </MudStack>
                     </MudCardContent>
@@ -79,7 +81,7 @@
 
             <!-- 模块列表 -->
             <MudItem xs="12" md="8">
-                <MudCard Style="height: 500px;">
+                <MudCard Class="modern-card">
                     <MudCardHeader>
                         <CardHeaderContent>
                             <div class="d-flex align-center">
@@ -97,13 +99,14 @@
                             </MudButton>
                         </CardHeaderActions>
                     </MudCardHeader>
-                    <MudCardContent Style="height: calc(100% - 80px);">
+                    <MudCardContent Class="pa-0">
                         <MudDataGrid Items="@(RegistrationInfo.EnabledModules.Concat(RegistrationInfo.DisabledModules))" 
                                    SortMode="SortMode.Multiple" 
                                    Filterable="true" 
                                    Hideable="true"
                                    Dense="true"
-                                   Height="400px">
+                                   T="ModuleBasicInfo"
+                                   Style="min-height: 500px;">
                             <Columns>
                                 <PropertyColumn Property="x => x.ModuleTypeName" Title="模块名称" />
                                 <TemplateColumn Title="状态">
@@ -122,7 +125,7 @@
                                             <MudText Typo="Typo.body2" Class="mr-2">@($"{context.Item.InitializationTimeMs}ms")</MudText>
                                             <MudProgressLinear Color="@GetInitTimeColor(context.Item.InitializationTimeMs)" 
                                                              Value="@GetInitTimePercentage(context.Item.InitializationTimeMs)" 
-                                                             Style="width: 80px;" />
+                                                             Style="width: 80px; height: 8px;" />
                                         </div>
                                     </CellTemplate>
                                 </TemplateColumn>
@@ -156,22 +159,22 @@
     }
     else
     {
-        <MudGrid Spacing="4">
+        <MudGrid Spacing="4" Class="mb-4">
             <MudItem xs="12" md="4">
-                <MudCard Style="height: 500px;">
-                    <MudCardContent Class="d-flex align-center justify-center" Style="height: 100%;">
+                <MudCard Class="modern-card">
+                    <MudCardContent Class="pa-4 d-flex align-center justify-center" Style="min-height: 400px;">
                         <div class="text-center">
-                            <MudProgressCircular Indeterminate="true" Class="mb-2" />
+                            <MudProgressCircular Indeterminate="true" Class="mb-3" />
                             <MudText Color="Color.Secondary">加载模块统计...</MudText>
                         </div>
                     </MudCardContent>
                 </MudCard>
             </MudItem>
             <MudItem xs="12" md="8">
-                <MudCard Style="height: 500px;">
-                    <MudCardContent Class="d-flex align-center justify-center" Style="height: 100%;">
+                <MudCard Class="modern-card">
+                    <MudCardContent Class="pa-4 d-flex align-center justify-center" Style="min-height: 400px;">
                         <div class="text-center">
-                            <MudProgressCircular Indeterminate="true" Class="mb-2" />
+                            <MudProgressCircular Indeterminate="true" Class="mb-3" />
                             <MudText Color="Color.Secondary">加载模块列表...</MudText>
                         </div>
                     </MudCardContent>
@@ -181,11 +184,6 @@
     }
 </div>
 
-<style>
-    .module-management-container {
-        width: 100%;
-    }
-</style>
 
 @code {
     /// <summary>

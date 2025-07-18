@@ -1,0 +1,43 @@
+.system-overview-container {
+    width: 100%;
+}
+
+.modern-card {
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(var(--mud-palette-lines-default-rgb), 0.12);
+}
+
+    .modern-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    }
+
+.card-header {
+    border-bottom: 1px solid rgba(var(--mud-palette-lines-default-rgb), 0.12);
+    padding-bottom: 12px;
+}
+
+.card-content {
+    padding-top: 8px;
+}
+
+/* 响应式设计 */
+@media (max-width: 960px) {
+    .modern-card {
+        margin-bottom: 16px;
+    }
+}
+
+@media (max-width: 600px) {
+    .card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+        .card-header .mud-icon {
+            margin-right: 0;
+            margin-bottom: 4px;
+        }
+}

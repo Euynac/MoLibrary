@@ -1,0 +1,77 @@
+.dependency-graph-container {
+    width: 100%;
+}
+
+.modern-card {
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(var(--mud-palette-lines-default-rgb), 0.12);
+}
+
+    .modern-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    }
+
+.overview-stat-card {
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    background: linear-gradient(135deg, rgba(var(--mud-palette-primary-rgb), 0.02) 0%, rgba(var(--mud-palette-info-rgb), 0.02) 100%);
+}
+
+    .overview-stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    }
+
+.dependency-graph-canvas {
+    border-radius: 0 0 12px 12px;
+    background: linear-gradient(135deg, rgba(var(--mud-palette-surface-rgb), 0.02) 0%, rgba(var(--mud-palette-primary-rgb), 0.01) 100%);
+}
+
+.legend-circle {
+    flex-shrink: 0;
+    border: 2px solid rgba(var(--mud-palette-lines-default-rgb), 0.2);
+    transition: all 0.2s ease;
+}
+
+    .legend-circle:hover {
+        transform: scale(1.1);
+        border-color: rgba(var(--mud-palette-primary-rgb), 0.4);
+    }
+
+.legend-line {
+    flex-shrink: 0;
+    border-radius: 2px;
+    transition: all 0.2s ease;
+}
+
+    .legend-line:hover {
+        transform: scaleY(1.5);
+    }
+
+.node-detail-content {
+    border-radius: 8px;
+    background: linear-gradient(135deg, rgba(var(--mud-palette-surface-rgb), 0.02) 0%, rgba(var(--mud-palette-secondary-rgb), 0.01) 100%);
+}
+
+/* 响应式设计 */
+@media (max-width: 960px) {
+    .dependency-graph-canvas {
+        height: 400px !important;
+    }
+
+    .modern-card {
+        margin-bottom: 16px;
+    }
+}
+
+@media (max-width: 600px) {
+    .dependency-graph-canvas {
+        height: 300px !important;
+    }
+
+    .overview-stat-card {
+        margin-bottom: 12px;
+    }
+}
