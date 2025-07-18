@@ -5,6 +5,9 @@
     padding: 0 16px;
 }
 
+::deep .mud-tabs-panels {
+    margin: 20px
+}
 /* 页面头部样式 */
 .page-header {
     background: linear-gradient(135deg, rgba(var(--mud-palette-primary-rgb), 0.08) 0%, rgba(var(--mud-palette-secondary-rgb), 0.04) 100%);
