@@ -63,7 +63,7 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
                 StartTime = DateTime.UtcNow
             };
 
-            context.AddNode(node);
+            context.AddNode(node, _options.MaxNodeCount);
 
             logger.LogDebug("开始调用链节点: {Handler}.{Operation}, TraceId: {TraceId}, 当前深度: {Depth}, 总节点数: {NodeCount}", 
                 handler, operation, node.TraceId, context.ActiveNodes.Count, context.NodeMap.Count);
@@ -154,7 +154,7 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
                 node.EndTime = DateTime.UtcNow;
             }
 
-            context.AddNode(node);
+            context.AddNode(node, _options.MaxNodeCount);
             context.CompleteNode(node.TraceId, result, success, null, extraInfo);
 
             logger.LogDebug("记录简单调用链: {Handler}.{Operation}, Success: {Success}, Duration: {Duration}ms, 总节点数: {NodeCount}", 
@@ -250,7 +250,7 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
                 }
 
                 node.EndExtraInfo = expando.Unfold().Where(p => p.Key != MoChainContext.CHAIN_KEY).ToDictionary();
-                success = context.MergeRemoteChain(traceId, node);
+                success = context.MergeRemoteChain(traceId, node, _options.MaxChainDepth);
             }
 
             if (success) return;
