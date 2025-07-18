@@ -50,7 +50,6 @@ public class DataChannelManager : IDataChannelManager
     /// <returns>属于指定组的所有数据通道实例的只读列表</returns>
     public IReadOnlyList<DataChannel> FetchGroup(string groupId)
     {
-        //TODO 性能优化
         return DataChannelCentral.Channels.Values.Where(p => p.Pipe.GroupId == groupId).ToList();
     }
 

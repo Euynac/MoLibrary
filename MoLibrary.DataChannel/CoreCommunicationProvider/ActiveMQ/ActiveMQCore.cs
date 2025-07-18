@@ -21,7 +21,7 @@ public class ActiveMQCore(MetadataForActiveMQ metadata, ILogger<ActiveMQCore> lo
         }
     }
 
-    public override async Task InitAsync()
+    public override async Task InitAsync(CancellationToken cancellationToken = default)
     {
         var brokerUri = Metadata.BrokerUri;
         var factory = new NMSConnectionFactory(brokerUri); 

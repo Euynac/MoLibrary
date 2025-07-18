@@ -33,7 +33,7 @@ namespace MoLibrary.DataChannel.CoreCommunicationProvider.TCP
             }
         }
 
-        public override async Task InitAsync()
+        public override async Task InitAsync(CancellationToken cancellationToken = default)
         {
             var tcpClientExtends = new TcpServerExtends();
       //      heartbeat = new Timer(TimerCallback, null , 0, 10000);

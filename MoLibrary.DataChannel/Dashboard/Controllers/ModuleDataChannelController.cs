@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module.ModuleController;
+using MoLibrary.DataChannel.Dashboard.Models;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.DataChannel.Dashboard.Controllers;
@@ -14,13 +15,13 @@ public class ModuleDataChannelController(IDataChannelManager manager) : MoModule
     /// <param name="id"></param>
     /// <returns></returns>
     [HttpGet("channel/{id}/re-init")]
-    public async Task<IActionResult> ReInit(string id)
+    public async Task<IActionResult> ReInit(string id, CancellationToken cancellationToken = default)
     {
         var channel = manager.Fetch(id);
 
         if (channel is not null)
         {
-            return await channel.ReInitialize().GetResponse(this);
+            return await channel.ReInitialize(cancellationToken).GetResponse(this);
         }
 
         return NotFound(Res.Fail("未找到对应的DataChannel"));
@@ -36,13 +37,16 @@ public class ModuleDataChannelController(IDataChannelManager manager) : MoModule
         var channels = manager.FetchAll().Select(p => new
         {
             p.Id,
-            Middlewares = p.Pipe.GetMiddlewares().Select(m => new { m.GetType().Name, metadata = m.GetMetadata() }),
-            p.Pipe.InnerEndpoint,
-            p.Pipe.OuterEndpoint,
+            Middlewares = p.Pipe.GetMiddlewares().Select(m => new ComponentInfo(m)),
+            InnerEndpoint = new ComponentInfo(p.Pipe.InnerEndpoint),
+            OuterEndpoint = new ComponentInfo(p.Pipe.OuterEndpoint),
             p.Pipe.IsNotAvailable,
             p.Pipe.IsInitialized,
+            p.Pipe.IsInitializing
         });
 
         return Ok(channels);
     }
+
+    
 }
