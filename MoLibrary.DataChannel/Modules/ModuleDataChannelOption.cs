@@ -9,5 +9,14 @@ namespace MoLibrary.DataChannel.Modules;
 /// </summary>
 public class ModuleDataChannelOption : MoModuleControllerOption<ModuleDataChannel>
 {
-    // Logger property removed, using base class Logger
+    /// <summary>
+    /// 最近异常保留数量
+    /// </summary>
+    public int RecentExceptionToKeep { get; set; } = 10;
+
+    /// <summary>
+    /// 初始化线程数
+    /// </summary>
+    public int InitThreadCount { get; set; } = 10;
+    
 }

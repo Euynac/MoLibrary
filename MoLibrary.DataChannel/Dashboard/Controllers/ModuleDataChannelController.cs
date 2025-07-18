@@ -13,6 +13,7 @@ public class ModuleDataChannelController(IDataChannelManager manager) : MoModule
     /// 对给定ID的DataChannel进行重新初始化操作
     /// </summary>
     /// <param name="id"></param>
+    /// <param name="cancellationToken"></param>
     /// <returns></returns>
     [HttpGet("channel/{id}/re-init")]
     public async Task<IActionResult> ReInit(string id, CancellationToken cancellationToken = default)
