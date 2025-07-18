@@ -207,7 +207,16 @@
             {
                 ["ExceptionSummary"] = summary,
                 ["OnViewChannelExceptions"] = new Action<string>(async channelId => await ViewChannelExceptions(channelId)),
-                ["OnClearChannelExceptions"] = new Action<string>(async channelId => await ClearChannelExceptions(channelId))
+                ["OnClearChannelExceptions"] = new Func<string, Task>(async channelId => await ClearChannelExceptions(channelId)),
+                ["OnGetRefreshData"] = new Func<Task<ExceptionSummaryInfo?>>(async () => 
+                {
+                    // 重新加载异常统计数据
+                    if (!(await DataChannelService.GetExceptionSummaryAsync()).IsFailed(out var error, out var newSummary))
+                    {
+                        return newSummary;
+                    }
+                    return null;
+                })
             };
 
             var options = new DialogOptions
