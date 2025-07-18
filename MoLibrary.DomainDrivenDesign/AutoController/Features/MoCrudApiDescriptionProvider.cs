@@ -14,7 +14,6 @@ public class MoCrudApiDescriptionProvider(IModelMetadataProvider modelMetadataPr
         IOptions<MvcOptions> mvcOptionsAccessor)
     : IApiDescriptionProvider
 {
-    private readonly MvcOptions _mvcOptions = mvcOptionsAccessor.Value;
     public void OnProvidersExecuted(ApiDescriptionProviderContext context)
     {
     }

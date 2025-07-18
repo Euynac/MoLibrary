@@ -11,7 +11,7 @@ public interface IMoModuleControllerOption
     /// Gets the Swagger group name for the module.
     /// </summary>
     /// <returns></returns>
-    public string GetSwaggerGroupName();
+    public string GetApiGroupName();
     /// <summary>
     /// Gets a value indicating whether controllers are disabled for the module.
     /// </summary>

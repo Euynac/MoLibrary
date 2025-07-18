@@ -109,7 +109,7 @@ public class ModuleAuthentication(ModuleAuthenticationOption option) : MoModule<
         {
             var tagGroup = new List<OpenApiTag>
             {
-                new() { Name = option.GetSwaggerGroupName(), Description = "JWT相关接口" }
+                new() { Name = option.GetApiGroupName(), Description = "JWT相关接口" }
             };
             endpoints.MapGet("/jwt/decode/{token}", async (HttpResponse response, HttpContext context, string token) =>
             {

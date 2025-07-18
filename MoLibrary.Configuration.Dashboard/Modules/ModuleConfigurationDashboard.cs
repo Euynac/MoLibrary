@@ -33,7 +33,7 @@ public class ModuleConfigurationDashboard(ModuleConfigurationDashboardOption opt
         {
             app.UseEndpoints(endpoints =>
             {
-                var tagGroup = new List<OpenApiTag> { new() { Name = option.GetSwaggerGroupName(), Description = "配置中心" } };
+                var tagGroup = new List<OpenApiTag> { new() { Name = option.GetApiGroupName(), Description = "配置中心" } };
                 endpoints.MapGet(MoConfigurationConventions.DashboardCentreConfigHistory,
                     async ([FromQuery] string? key, [FromQuery] string? appid, [FromQuery] DateTime? start,
                         [FromQuery] DateTime? end, [FromServices] IMoConfigurationStores stores,
@@ -128,7 +128,7 @@ public class ModuleConfigurationDashboard(ModuleConfigurationDashboardOption opt
             app.UseEndpoints(endpoints =>
             {
                 var tagGroup = new List<OpenApiTag>
-                    {new() {Name = option.GetSwaggerGroupName(), Description = "热配置面板相关内置接口"}};
+                    {new() {Name = option.GetApiGroupName(), Description = "热配置面板相关内置接口"}};
                 endpoints.MapPost(MoConfigurationConventions.DashboardClientConfigUpdate,
                     async (DtoUpdateConfig req, [FromServices] IMoConfigurationModifier modifier) =>
                     {

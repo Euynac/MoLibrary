@@ -66,7 +66,7 @@ public class ModuleMapper(ModuleMapperOption option) : MoModule<ModuleMapper, Mo
         {
             var tagGroup = new List<OpenApiTag>
             {
-                new() { Name = option.GetSwaggerGroupName(), Description = "Mapper相关接口" }
+                new() { Name = option.GetApiGroupName(), Description = "Mapper相关接口" }
             };
             endpoints.MapGet("/mapper/status", async (HttpResponse response, HttpContext context) =>
             {

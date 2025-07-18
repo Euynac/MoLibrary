@@ -37,7 +37,7 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModule<
         {
             app.UseEndpoints(endpoints =>
             {
-                var tagGroup = new List<OpenApiTag> { new() { Name = option.GetSwaggerGroupName(), Description = "注册中心" } };
+                var tagGroup = new List<OpenApiTag> { new() { Name = option.GetApiGroupName(), Description = "注册中心" } };
                 endpoints.MapPost(MoRegisterCentreConventions.ServerCentreRegister, async (RegisterServiceStatus req, [FromServices] IRegisterCentreServer centre) =>
                 {
                     if ((await centre.Register(req)).IsFailed(out var error)) return error;
@@ -82,7 +82,7 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModule<
         {
             app.UseEndpoints(endpoints =>
             {
-                var tagGroup = new List<OpenApiTag> { new() { Name = option.GetSwaggerGroupName(), Description = "注册中心客户端相关内置接口" } };
+                var tagGroup = new List<OpenApiTag> { new() { Name = option.GetApiGroupName(), Description = "注册中心客户端相关内置接口" } };
                 endpoints.MapGet(MoRegisterCentreConventions.ClientReconnectCentre, async (HttpResponse response, HttpContext context, [FromServices] IRegisterCentreServerConnector connector, [FromServices] IRegisterCentreClient client) =>
                 {
                     return await connector.Register(client.GetServiceStatus());
