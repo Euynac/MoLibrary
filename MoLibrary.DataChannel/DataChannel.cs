@@ -28,9 +28,9 @@ public class DataChannel(DataPipeline pipeline)
     /// 当通道需要重置或重新连接时调用
     /// </summary>
     /// <returns>初始化结果，包含成功状态和可能的错误信息</returns>
-    public async Task<Res> ReInitialize()
+    public async Task<Res> ReInitialize(CancellationToken cancellationToken = default)
     {
-        return await Pipe.InitAsync();
+        return await Pipe.InitAsync(cancellationToken);
     }
 
     /// <summary>

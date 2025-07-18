@@ -172,7 +172,7 @@ internal class TransientPipeEndpointProxy(IServiceScopeFactory serviceScopeFacto
         return instance.GetMetadata();
     }
 
-    public async Task InitAsync()
+    public async Task InitAsync(CancellationToken cancellationToken = default)
     {
         if (_isInit)
             return;
@@ -201,7 +201,7 @@ internal class TransientPipeEndpointProxy(IServiceScopeFactory serviceScopeFacto
         }
     }
 
-    public async Task DisposeAsync()
+    public async Task DisposeAsync(CancellationToken cancellationToken = default)
     {
         if (_isDisposed)
             return;

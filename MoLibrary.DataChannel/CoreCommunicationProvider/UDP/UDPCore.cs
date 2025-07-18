@@ -20,7 +20,7 @@ public class UDPCore(MetadataForUDP metadata, ILogger<UDPCore> logger) : Communi
         //}
     }
 
-    public override async Task InitAsync()
+    public override async Task InitAsync(CancellationToken cancellationToken = default)
     {
         try
         {

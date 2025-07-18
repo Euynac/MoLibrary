@@ -8,8 +8,8 @@ namespace MoLibrary.DataChannel.CoreCommunication;
 /// </summary>
 public abstract class CommunicationCore : ICommunicationCore
 {
-    public abstract Task InitAsync();
-    public abstract Task DisposeAsync();
+    public abstract Task InitAsync(CancellationToken cancellationToken = default);
+    public abstract Task DisposeAsync(CancellationToken cancellationToken = default);
 
 
     public abstract EConnectionDirection SupportedConnectionDirection();
@@ -100,12 +100,12 @@ public abstract class CommunicationCore<TMetadata>(TMetadata metadata) : Communi
 {
     public TMetadata Metadata { get; private set; } = metadata;
 
-    public override Task InitAsync()
+    public override Task InitAsync(CancellationToken cancellationToken = default)
     {
         return Task.CompletedTask;
     }
 
-    public override Task DisposeAsync()
+    public override Task DisposeAsync(CancellationToken cancellationToken = default)
     {
         return Task.CompletedTask;
     }

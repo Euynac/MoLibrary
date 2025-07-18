@@ -8,18 +8,12 @@ namespace MoLibrary.DataChannel.Services;
 /// 实现IHostedService接口，在应用程序启动时负责初始化所有注册的数据通道
 /// 解决通道初始化与应用程序生命周期同步的问题
 /// </summary>
-public class DataChannelInitializerService : IHostedService
+/// <remarks>
+/// 初始化数据通道初始化服务的新实例
+/// </remarks>
+/// <param name="logger">日志记录器实例，用于记录初始化过程中的事件</param>
+public class DataChannelInitializerService(ILogger<DataChannelInitializerService>? logger = null) : IHostedService
 {
-    private readonly ILogger<DataChannelInitializerService>? _logger;
-
-    /// <summary>
-    /// 初始化数据通道初始化服务的新实例
-    /// </summary>
-    /// <param name="logger">日志记录器实例，用于记录初始化过程中的事件</param>
-    public DataChannelInitializerService(ILogger<DataChannelInitializerService>? logger = null)
-    {
-        _logger = logger;
-    }
 
     /// <summary>
     /// 启动初始化过程
@@ -28,31 +22,21 @@ public class DataChannelInitializerService : IHostedService
     /// </summary>
     /// <param name="cancellationToken">取消令牌，可用于取消初始化操作</param>
     /// <returns>表示异步初始化操作的任务</returns>
-    public async Task StartAsync(CancellationToken cancellationToken)
+    public Task StartAsync(CancellationToken cancellationToken)
     {
-        _logger?.LogInformation("Starting initialization of all data channels");
-        
-        try
+        _ = Parallel.ForEachAsync(DataChannelCentral.Channels,new ParallelOptions{MaxDegreeOfParallelism = 10,CancellationToken = cancellationToken}, async (channel, token) =>
         {
-            foreach (var channel in DataChannelCentral.Channels.TakeWhile(channel => !cancellationToken.IsCancellationRequested))
+            try
             {
-                try
-                {
-                    await channel.Value.Pipe.InitAsync();
-                    _logger?.LogInformation("Successfully initialized channel: {ChannelId}", channel.Key);
-                }
-                catch (Exception ex)
-                {
-                    _logger?.LogError(ex, "Failed to initialize channel: {ChannelId}", channel.Key);
-                }
+                await channel.Value.Pipe.InitAsync(token);
+                logger?.LogInformation("Successfully initialized channel: {ChannelId}", channel.Key);
             }
-
-            _logger?.LogInformation("Completed initialization of all data channels");
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogError(ex, "An error occurred during channel initialization");
-        }
+            catch (Exception ex)
+            {
+                logger?.LogError(ex, "Failed to initialize channel: {ChannelId}", channel.Key);
+            }
+        });
+        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -64,7 +48,7 @@ public class DataChannelInitializerService : IHostedService
     /// <returns>表示异步停止操作的任务</returns>
     public Task StopAsync(CancellationToken cancellationToken)
     {
-        _logger?.LogInformation("DataChannelInitializerService is stopping");
+        logger?.LogInformation("DataChannelInitializerService is stopping");
         return Task.CompletedTask;
     }
 } 

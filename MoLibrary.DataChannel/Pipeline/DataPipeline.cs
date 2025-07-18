@@ -43,6 +43,11 @@ public class DataPipeline
     public bool IsInitialized { get; private set; }
 
     /// <summary>
+    /// 是否正在初始化
+    /// </summary>
+    public bool IsInitializing { get; private set; }
+
+    /// <summary>
     /// 是否已不可用
     /// 当初始化失败或发生致命错误时设置为true
     /// </summary>
@@ -162,8 +167,13 @@ public class DataPipeline
     /// 设置管道引用并初始化所有通信核心
     /// </summary>
     /// <returns>初始化结果，包含成功状态和可能的错误信息</returns>
-    internal async Task<Res> InitAsync()
+    internal async Task<Res> InitAsync(CancellationToken cancellationToken = default)
     {
+        if(IsInitializing)
+        {
+            return Res.Ok("管道正在初始化中");
+        }
+        IsInitializing = true;
         InnerEndpoint.Pipe = this;
         OuterEndpoint.Pipe = this;
         GetMiddlewares().OfType<IWantAccessPipeline>().Do(p => p.Pipe = this);
@@ -172,7 +182,7 @@ public class DataPipeline
         {
             try
             {
-                await communicationCore.InitAsync();
+                await communicationCore.InitAsync(cancellationToken);
             }
             catch (Exception e)
             {
@@ -183,7 +193,8 @@ public class DataPipeline
         }
 
         IsInitialized = true;
-        return Res.Ok();
+        IsInitializing = false;
+        return Res.Ok("管道初始化成功");
     }
 
     /// <summary>

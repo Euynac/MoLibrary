@@ -14,7 +14,7 @@ namespace MoLibrary.DataChannel.CoreCommunicationProvider.TCP
           await  client.SendMsg(data.Data.ToString() ,logger,manager);
          }
 
-        public override async Task InitAsync()
+        public override async Task InitAsync(CancellationToken cancellationToken = default)
         {
             var tcpClientExtends = new TcpClientExtends();
             client = tcpClientExtends;
@@ -31,7 +31,7 @@ namespace MoLibrary.DataChannel.CoreCommunicationProvider.TCP
             return EConnectionDirection.InputAndOutput;
         }
 
-        public override Task DisposeAsync()
+        public override Task DisposeAsync(CancellationToken cancellationToken = default)
         {
             client.Dispose();
             return base.DisposeAsync();
