@@ -121,7 +121,7 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
     {
         app.UseEndpoints(endpoints =>
         {
-            var tagGroup = new List<OpenApiTag> { new() { Name = option.GetSwaggerGroupName(), Description = "热配置相关内置接口" } };
+            var tagGroup = new List<OpenApiTag> { new() { Name = option.GetApiGroupName(), Description = "热配置相关内置接口" } };
             endpoints.MapGet(MoConfigurationConventions.GetConfigStatus, async (HttpResponse response,
                 HttpContext context, [FromQuery] bool? onlyCurDomain,
                 [FromServices] IMoConfigurationCardManager manager) =>

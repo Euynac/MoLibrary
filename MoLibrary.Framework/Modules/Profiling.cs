@@ -48,7 +48,7 @@ public class ModuleProfiling(ModuleProfilingOption option)
     {
         app.UseEndpoints(endpoints =>
         {
-            var tagGroup = new List<OpenApiTag> { new() { Name = option.GetSwaggerGroupName(), Description = "程序性能监测接口" } };
+            var tagGroup = new List<OpenApiTag> { new() { Name = option.GetApiGroupName(), Description = "程序性能监测接口" } };
 
             // 获取系统性能信息
             endpoints.MapGet("/profiling/simple", async ([FromServices] IMoProfiling profiling, HttpResponse response, HttpContext context) =>

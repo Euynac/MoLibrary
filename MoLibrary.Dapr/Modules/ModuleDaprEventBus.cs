@@ -87,7 +87,7 @@ public class ModuleDaprEventBus(ModuleDaprEventBusOption option)
         {
             var tagGroup = new List<OpenApiTag>
             {
-                new() { Name = option.GetSwaggerGroupName(), Description = "Dapr相关接口" }
+                new() { Name = option.GetApiGroupName(), Description = "Dapr相关接口" }
             };
             var options = app.ApplicationServices.GetRequiredService<IOptions<ModuleDaprEventBusOption>>().Value;
 

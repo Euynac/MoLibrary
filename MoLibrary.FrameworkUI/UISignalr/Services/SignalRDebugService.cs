@@ -303,19 +303,16 @@ namespace MoLibrary.FrameworkUI.UISignalr.Services
 
                 if (result.GetProperty("success").GetBoolean())
                 {
-                    AddMessage("系统", $"方法 {methodName} 调用成功", MessageType.Success);
                     return true;
                 }
-                else
-                {
-                    var error = result.GetProperty("error").GetString();
-                    AddMessage("错误", $"调用方法失败: {error}", MessageType.Error);
+
+                var error = result.GetProperty("error").GetString();
+                AddMessage("错误", $"调用方法失败: {error}", MessageType.Error);
                     
-                    // 添加参数信息帮助调试
-                    AddMessage("调试", $"调用参数: {string.Join(", ", args.Select((arg, idx) => $"{method.Args[idx].Name}={arg}"))}", MessageType.Info);
+                // 添加参数信息帮助调试
+                AddMessage("调试", $"调用参数: {string.Join(", ", args.Select((arg, idx) => $"{method.Args[idx].Name}={arg}"))}", MessageType.Info);
                     
-                    return false;
-                }
+                return false;
             }
             catch (Exception ex)
             {

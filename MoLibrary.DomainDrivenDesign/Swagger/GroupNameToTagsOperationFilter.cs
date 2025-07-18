@@ -15,7 +15,7 @@ internal class GroupNameToTagsOperationFilter : IOperationFilter
         if (!string.IsNullOrEmpty(apiDescription.GroupName))
         {
             operation.Tags ??= new List<OpenApiTag>();
-            operation.Tags.Clear();
+            operation.Tags.Clear(); //默认情况下如果不自己打Tag，会有一个默认的Tag，值和Controller名相同。
             var controllerName = context.MethodInfo.DeclaringType?.Name ?? "Unknown";
             operation.Tags.Add(new OpenApiTag
             {

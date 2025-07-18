@@ -45,7 +45,7 @@ public partial class ModuleDapr(ModuleDaprOption option) : MoModule<ModuleDapr, 
         {
             var tagGroup = new List<OpenApiTag>
             {
-                new() { Name = option.GetSwaggerGroupName(), Description = "Dapr相关接口" }
+                new() { Name = option.GetApiGroupName(), Description = "Dapr相关接口" }
             };
             endpoints.Map("/dapr/invocation/{*rest}", async (string rest, HttpResponse response, HttpContext context) =>
             {

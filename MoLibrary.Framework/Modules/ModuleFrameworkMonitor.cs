@@ -78,7 +78,7 @@ public class ModuleFrameworkMonitor(ModuleFrameworkMonitorOption option)
     {
         app.UseEndpoints(endpoints =>
         {
-            var tagGroup = new List<OpenApiTag> { new() { Name = option.GetSwaggerGroupName(), Description = "系统框架内置接口" } };
+            var tagGroup = new List<OpenApiTag> { new() { Name = option.GetApiGroupName(), Description = "系统框架内置接口" } };
 
             endpoints.MapPost("/framework/units/domain-event/{eventKey}/publish", async ([FromRoute] string eventKey, [FromServices] IMoDistributedEventBus eventBus, [FromServices] IGlobalJsonOption jsonOption, [FromBody] JsonNode eventContent, HttpResponse response, HttpContext context) =>
             {

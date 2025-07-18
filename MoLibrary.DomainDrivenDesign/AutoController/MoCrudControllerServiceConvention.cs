@@ -67,12 +67,6 @@ public class MoCrudControllerServiceConvention(
 
     protected virtual void ConfigureApiExplorer(ControllerModel controller)
     {
-        if (string.IsNullOrEmpty(controller.ApiExplorer.GroupName))
-        {
-            controller.ApiExplorer.GroupName = controller.ControllerName;
-        }
-
-        var name = controller.DisplayName;
 
         if (controller.ApiExplorer.IsVisible is not false)
         {

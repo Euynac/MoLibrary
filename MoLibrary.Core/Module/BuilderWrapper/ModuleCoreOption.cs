@@ -36,7 +36,7 @@ public class ModuleCoreOption
     /// <summary>
     /// 设置含有Endpoints的模块的默认Swagger分组名称，默认情况下以模块名为分组名称。
     /// </summary>
-    public static string? DefaultModuleSwaggerGroupName { get; set; } 
+    public static string? DefaultModuleApiGroupName { get; set; } 
 
     /// <summary>
     /// 设置含有Endpoints的模块的默认Swagger分组名称
@@ -44,7 +44,7 @@ public class ModuleCoreOption
     /// <param name="swaggerGroupName">Swagger分组名称</param>
     public void SetDefaultModuleSwaggerGroupName(string swaggerGroupName)
     {
-        DefaultModuleSwaggerGroupName = swaggerGroupName;
+        DefaultModuleApiGroupName = swaggerGroupName;
     }
 
     /// <summary>
