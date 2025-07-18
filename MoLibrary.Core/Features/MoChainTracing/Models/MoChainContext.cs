@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Dynamic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Core.Features.MoChainTracing.Models;
@@ -25,6 +26,11 @@ public class MoChainContext
     /// </summary>
     [JsonIgnore]
     public Stack<MoChainNode> ActiveNodes { get; set; } = new();
+
+    /// <summary>
+    /// 孤立节点，代表该调用链有异常某些操作未及时关闭或顺序不对
+    /// </summary>
+    public List<MoChainNode>? IsolatedNodes { get; set; }
 
     /// <summary>
     /// 调用链节点映射（用于快速查找）
@@ -66,21 +72,22 @@ public class MoChainContext
     /// 添加一个新的调用链节点
     /// </summary>
     /// <param name="node">调用链节点</param>
-    public void AddNode(MoChainNode node)
+    public void AddNode(MoChainNode node, int maxNodeCount)
     {
         if (Root == null)
         {
             Root = node;
+            node.Deepth = 1;
         }
         else if (ActiveNodes.Count > 0)
         {
             var parent = ActiveNodes.Peek();
             parent.Children ??= [];
             parent.Children.Add(node);
-            node.Parent = parent;
+            node.SetParent(parent);
         }
 
-        if (CanHasChildrenOperation(node.Type))
+        if (CanHasChildrenOperation(node.Type) || node.Deepth <= maxNodeCount)
         {
             ActiveNodes.Push(node);
         }
@@ -111,9 +118,13 @@ public class MoChainContext
             }
 
             // 从活跃节点栈中移除
-            if (ActiveNodes.Count > 0 && ActiveNodes.Peek().TraceId == traceId)
+            if (ActiveNodes.Count > 0)
             {
-                ActiveNodes.Pop();
+                while (ActiveNodes.Pop() is { } topNode && topNode.TraceId != traceId)
+                {
+                    IsolatedNodes ??= [];
+                    IsolatedNodes.Add(topNode);
+                }
             }
         }
     }
@@ -142,7 +153,7 @@ public class MoChainContext
     /// <param name="traceId">当前调用链节点标识</param>
     /// <param name="remoteChainNode"></param>
     /// <returns>是否成功合并</returns>
-    public bool MergeRemoteChain(string traceId, MoChainNode? remoteChainNode)
+    public bool MergeRemoteChain(string traceId, MoChainNode? remoteChainNode, int maxChainDepth)
     {
         if (remoteChainNode == null) return false;
         if (!NodeMap.TryGetValue(traceId, out var currentNode))
@@ -150,49 +161,11 @@ public class MoChainContext
             return false;
         }
 
-        // 标记为远程调用
-        //MarkAsRemoteCall(remoteChainNode);
-
         // 将远程调用链作为当前节点的子节点
         currentNode.Children ??= [];
         currentNode.Children.Add(remoteChainNode);
-        remoteChainNode.Parent = currentNode;
-
-        // 更新节点映射
-        AddNodeToMap(remoteChainNode);
+        remoteChainNode.SetParent(currentNode);
+        remoteChainNode.ReCalculateDepthAndClean(remoteChainNode.Deepth, maxChainDepth);
         return true;
-    }
-
-  
-    /// <summary>
-    /// 标记节点及其子节点为远程调用
-    /// </summary>
-    /// <param name="node">节点</param>
-    private static void MarkAsRemoteCall(MoChainNode node)
-    {
-        node.IsRemoteCall = true;
-        if (node.Children != null)
-        {
-            foreach (var child in node.Children)
-            {
-                MarkAsRemoteCall(child);
-            }
-        }
-    }
-
-    /// <summary>
-    /// 将节点及其子节点添加到映射中
-    /// </summary>
-    /// <param name="node">节点</param>
-    private void AddNodeToMap(MoChainNode node)
-    {
-        NodeMap[node.TraceId] = node;
-        if (node.Children != null)
-        {
-            foreach (var child in node.Children)
-            {
-                AddNodeToMap(child);
-            }
-        }
     }
 }
