@@ -18,19 +18,19 @@
                 <MudCard Elevation="1" Class="pa-3">
                     <MudStack Row="true" Spacing="4">
                         <MudStack>
-                            <MudText Typo="Typo.caption" Style="color: #666;">Pipeline ID</MudText>
+                            <MudText Typo="Typo.caption" Style="color: var(--mud-palette-text-secondary);">Pipeline ID</MudText>
                             <MudText Typo="Typo.body2" Style="font-weight: 500;">@ExceptionInfo.PipelineId</MudText>
                         </MudStack>
                         <MudStack>
-                            <MudText Typo="Typo.caption" Style="color: #666;">当前异常</MudText>
-                            <MudText Typo="Typo.body2" Style="font-weight: 500; color: #f44336;">@ExceptionInfo.CurrentExceptions</MudText>
+                            <MudText Typo="Typo.caption" Style="color: var(--mud-palette-text-secondary);">当前异常</MudText>
+                            <MudText Typo="Typo.body2" Style="font-weight: 500; color: var(--mud-palette-error);">@ExceptionInfo.CurrentExceptions</MudText>
                         </MudStack>
                         <MudStack>
-                            <MudText Typo="Typo.caption" Style="color: #666;">历史异常</MudText>
-                            <MudText Typo="Typo.body2" Style="font-weight: 500; color: #ff9800;">@ExceptionInfo.TotalExceptions</MudText>
+                            <MudText Typo="Typo.caption" Style="color: var(--mud-palette-text-secondary);">历史异常</MudText>
+                            <MudText Typo="Typo.body2" Style="font-weight: 500; color: var(--mud-palette-warning);">@ExceptionInfo.TotalExceptions</MudText>
                         </MudStack>
                         <MudStack>
-                            <MudText Typo="Typo.caption" Style="color: #666;">异常池大小</MudText>
+                            <MudText Typo="Typo.caption" Style="color: var(--mud-palette-text-secondary);">异常池大小</MudText>
                             <MudText Typo="Typo.body2" Style="font-weight: 500;">@ExceptionInfo.MaxPoolSize</MudText>
                         </MudStack>
                     </MudStack>
@@ -58,6 +58,80 @@
                             </TemplateColumn>
                         </Columns>
                     </MudDataGrid>
+
+                    <!-- 异常详细信息展开区域 -->
+                    @if (_selectedExceptionDetail != null)
+                    {
+                        <MudCollapse Expanded="true">
+                            <MudCard Elevation="2" Class="pa-3" Style="border-left: 4px solid var(--mud-palette-error);">
+                                <MudStack Spacing="3">
+                                    <!-- 详细信息标题和收起按钮 -->
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <MudText Typo="Typo.h6" Style="color: var(--mud-palette-error);">
+                                            <MudIcon Icon="@Icons.Material.Filled.BugReport" Class="mr-2" />
+                                            异常详细信息
+                                        </MudText>
+                                        <MudButton Size="Size.Small" Color="Color.Secondary" 
+                                                 OnClick="HideExceptionDetails"
+                                                 StartIcon="@Icons.Material.Filled.ExpandLess">
+                                            收起
+                                        </MudButton>
+                                    </MudStack>
+
+                                    <!-- 基本信息 -->
+                                    <MudCard Elevation="1" Class="pa-3">
+                                        <MudStack Spacing="2">
+                                            <MudStack Row="true" Spacing="4">
+                                                <MudStack>
+                                                    <MudText Typo="Typo.caption" Style="color: var(--mud-palette-text-secondary);">异常时间</MudText>
+                                                    <MudText Typo="Typo.body2">@_selectedExceptionDetail.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                                                </MudStack>
+                                                <MudStack>
+                                                    <MudText Typo="Typo.caption" Style="color: var(--mud-palette-text-secondary);">异常源类型</MudText>
+                                                    <MudText Typo="Typo.body2">@_selectedExceptionDetail.SourceType</MudText>
+                                                </MudStack>
+                                                <MudStack>
+                                                    <MudText Typo="Typo.caption" Style="color: var(--mud-palette-text-secondary);">异常类型</MudText>
+                                                    <MudText Typo="Typo.body2">@_selectedExceptionDetail.ExceptionType</MudText>
+                                                </MudStack>
+                                            </MudStack>
+                                            
+                                            @if (!string.IsNullOrEmpty(_selectedExceptionDetail.SourceDescription))
+                                            {
+                                                <MudStack>
+                                                    <MudText Typo="Typo.caption" Style="color: var(--mud-palette-text-secondary);">异常源描述</MudText>
+                                                    <MudText Typo="Typo.body2">@_selectedExceptionDetail.SourceDescription</MudText>
+                                                </MudStack>
+                                            }
+                                        </MudStack>
+                                    </MudCard>
+
+                                    <!-- 异常消息 -->
+                                    <MudCard Elevation="1" Class="pa-3">
+                                        <MudStack Spacing="2">
+                                            <MudText Typo="Typo.subtitle2" Style="font-weight: 500;">异常消息</MudText>
+                                            <MudAlert Severity="Severity.Error" Class="ma-0">
+                                                @_selectedExceptionDetail.Message
+                                            </MudAlert>
+                                        </MudStack>
+                                    </MudCard>
+
+                                    <!-- 异常堆栈 -->
+                                    @if (!string.IsNullOrEmpty(_selectedExceptionDetail.StackTrace))
+                                    {
+                                        <MudCard Elevation="1" Class="pa-3">
+                                            <MudStack Spacing="2">
+                                                <MudText Typo="Typo.subtitle2" Style="font-weight: 500;">异常堆栈</MudText>
+                                                <MudPaper Style="max-height: 300px; overflow-y: auto; background-color: var(--mud-palette-surface-variant); padding: 12px; border: 1px solid var(--mud-palette-divider);">
+                                                    <pre style="margin: 0; font-family: 'Courier New', monospace; font-size: 12px; white-space: pre-wrap; color: var(--mud-palette-text-primary);">@_selectedExceptionDetail.StackTrace</pre>
+                                                </MudPaper>
+                                            </MudStack>
+                                        </MudCard>
+                                    }
+                                </MudStack>
+                            </MudCard>
+                        </MudCollapse>
+                    }
                 }
                 else
                 {
@@ -66,79 +140,6 @@
             </MudStack>
         }
     </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="Cancel">关闭</MudButton>
-    </DialogActions>
-</MudDialog>
-
-<!-- 异常详情对话框 -->
-<MudDialog @bind-IsVisible="_exceptionDetailDialogVisible" Options="new DialogOptions() { MaxWidth = MaxWidth.Large, FullWidth = true }">
-    <TitleContent>
-        <MudText Typo="Typo.h6">
-            <MudIcon Icon="@Icons.Material.Filled.BugReport" Class="mr-3" />
-            异常详细信息
-        </MudText>
-    </TitleContent>
-    <DialogContent>
-        @if (_selectedExceptionDetail != null)
-        {
-            <MudStack Spacing="3">
-                <!-- 基本信息 -->
-                <MudCard Elevation="1" Class="pa-3">
-                    <MudStack Spacing="2">
-                        <MudStack Row="true" Spacing="4">
-                            <MudStack>
-                                <MudText Typo="Typo.caption" Style="color: #666;">异常时间</MudText>
-                                <MudText Typo="Typo.body2">@_selectedExceptionDetail.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
-                            </MudStack>
-                            <MudStack>
-                                <MudText Typo="Typo.caption" Style="color: #666;">异常源类型</MudText>
-                                <MudText Typo="Typo.body2">@_selectedExceptionDetail.SourceType</MudText>
-                            </MudStack>
-                            <MudStack>
-                                <MudText Typo="Typo.caption" Style="color: #666;">异常类型</MudText>
-                                <MudText Typo="Typo.body2">@_selectedExceptionDetail.ExceptionType</MudText>
-                            </MudStack>
-                        </MudStack>
-                        
-                        @if (!string.IsNullOrEmpty(_selectedExceptionDetail.SourceDescription))
-                        {
-                            <MudStack>
-                                <MudText Typo="Typo.caption" Style="color: #666;">异常源描述</MudText>
-                                <MudText Typo="Typo.body2">@_selectedExceptionDetail.SourceDescription</MudText>
-                            </MudStack>
-                        }
-                    </MudStack>
-                </MudCard>
-
-                <!-- 异常消息 -->
-                <MudCard Elevation="1" Class="pa-3">
-                    <MudStack Spacing="2">
-                        <MudText Typo="Typo.subtitle2" Style="font-weight: 500;">异常消息</MudText>
-                        <MudAlert Severity="Severity.Error" Class="ma-0">
-                            @_selectedExceptionDetail.Message
-                        </MudAlert>
-                    </MudStack>
-                </MudCard>
-
-                <!-- 异常堆栈 -->
-                @if (!string.IsNullOrEmpty(_selectedExceptionDetail.StackTrace))
-                {
-                    <MudCard Elevation="1" Class="pa-3">
-                        <MudStack Spacing="2">
-                            <MudText Typo="Typo.subtitle2" Style="font-weight: 500;">异常堆栈</MudText>
-                            <MudPaper Style="max-height: 300px; overflow-y: auto; background-color: var(--mud-palette-surface-variant); padding: 12px; border: 1px solid var(--mud-palette-divider);">
-                                <pre style="margin: 0; font-family: 'Courier New', monospace; font-size: 12px; white-space: pre-wrap; color: var(--mud-palette-text-primary);">@_selectedExceptionDetail.StackTrace</pre>
-                            </MudPaper>
-                        </MudStack>
-                    </MudCard>
-                }
-            </MudStack>
-        }
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="@(() => _exceptionDetailDialogVisible = false)">关闭</MudButton>
-    </DialogActions>
 </MudDialog>
 
 @code {
@@ -154,7 +155,6 @@
     /// </summary>
     [Parameter] public ChannelExceptionInfo ExceptionInfo { get; set; } = null!;
 
-    private bool _exceptionDetailDialogVisible = false;
     private ExceptionDetailInfo? _selectedExceptionDetail;
 
     /// <summary>
@@ -164,14 +164,15 @@
     private void ShowExceptionDetails(ExceptionDetailInfo exception)
     {
         _selectedExceptionDetail = exception;
-        _exceptionDetailDialogVisible = true;
+        StateHasChanged();
     }
 
     /// <summary>
-    /// 取消对话框
+    /// 隐藏异常详情
     /// </summary>
-    private void Cancel()
+    private void HideExceptionDetails()
     {
-        MudDialog?.Close();
+        _selectedExceptionDetail = null;
+        StateHasChanged();
     }
 } 

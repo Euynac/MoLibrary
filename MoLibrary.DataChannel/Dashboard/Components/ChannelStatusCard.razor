@@ -2,7 +2,7 @@
 @using MudBlazor
 @using System.Text.Json
 
-<MudCard Elevation="2" Style="height: 100%; display: flex; flex-direction: column;">
+<MudCard Elevation="2" Style="@GetCardStyle()">
     <MudCardHeader Class="pb-2">
         <CardHeaderContent>
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
@@ -17,23 +17,31 @@
             </MudStack>
         </CardHeaderContent>
         <CardHeaderActions>
-            <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small">
-                <MudMenuItem OnClick="@(() => OnReInitialize.InvokeAsync(Channel.Id))" 
-                            Icon="@Icons.Material.Filled.Refresh">
-                    重新初始化
-                </MudMenuItem>
-                <MudMenuItem OnClick="@(() => OnViewExceptions.InvokeAsync(Channel.Id))" 
-                            Icon="@Icons.Material.Filled.ErrorOutline">
-                    查看异常
-                </MudMenuItem>
-                @if (Channel.HasExceptions)
-                {
-                    <MudMenuItem OnClick="@(() => OnClearExceptions.InvokeAsync(Channel.Id))" 
-                                Icon="@Icons.Material.Filled.Clear">
-                        清空异常
+            @if (_isReInitializing)
+            {
+                <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true" />
+            }
+            else
+            {
+                <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small">
+                    <MudMenuItem OnClick="HandleReInitialize" 
+                                Icon="@Icons.Material.Filled.Refresh"
+                                Disabled="_isReInitializing">
+                        重新初始化
                     </MudMenuItem>
-                }
-            </MudMenu>
+                    <MudMenuItem OnClick="@(() => OnViewExceptions.InvokeAsync(Channel.Id))" 
+                                Icon="@Icons.Material.Filled.ErrorOutline">
+                        查看异常
+                    </MudMenuItem>
+                    @if (Channel.HasExceptions)
+                    {
+                        <MudMenuItem OnClick="@(() => OnClearExceptions.InvokeAsync(Channel.Id))" 
+                                    Icon="@Icons.Material.Filled.Clear">
+                            清空异常
+                        </MudMenuItem>
+                    }
+                </MudMenu>
+            }
         </CardHeaderActions>
     </MudCardHeader>
     <MudCardContent Style="flex: 1; padding-top: 8px;">
@@ -60,34 +68,36 @@
             <!-- 端点信息 -->
             <MudStack Spacing="2">
                 <MudText Typo="Typo.subtitle2" Style="font-weight: 500;">端点信息</MudText>
-                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                    <MudIcon Icon="@Icons.Material.Filled.Input" Size="Size.Small" Color="Color.Info" />
-                    <MudTooltip Arrow="true" Placement="Placement.Top" Style="max-width: 400px;">
+                
+                <!-- 内部端点 -->
+                <MudExpansionPanels Elevation="0" Dense="true">
+                    <MudExpansionPanel>
+                        <TitleContent>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.Input" Size="Size.Small" Color="Color.Info" />
+                                <MudText Style="color: var(--mud-palette-text-primary);">内部: @Channel.InnerEndpoint.Name</MudText>
+                            </MudStack>
+                        </TitleContent>
                         <ChildContent>
-                            <MudText Style="color: #666; cursor: help;">内部: @Channel.InnerEndpoint.Name</MudText>
+                            <MetadataDisplay Metadata="Channel.InnerEndpoint.Metadata" />
                         </ChildContent>
-                        <TooltipContent>
-                            <MudPaper Style="padding: 8px; background-color: var(--mud-palette-surface-variant); border: 1px solid var(--mud-palette-divider);">
-                                <MudText Typo="Typo.caption" Style="font-weight: 500; margin-bottom: 4px;">内部端点配置</MudText>
-                                <div style="font-family: 'Courier New', monospace; font-size: 12px; white-space: pre-line; color: var(--mud-palette-text-primary);">@FormatMetadata(Channel.InnerEndpoint.Metadata)</div>
-                            </MudPaper>
-                        </TooltipContent>
-                    </MudTooltip>
-                </MudStack>
-                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                    <MudIcon Icon="@Icons.Material.Filled.Output" Size="Size.Small" Color="Color.Success" />
-                    <MudTooltip Arrow="true" Placement="Placement.Top" Style="max-width: 400px;">
+                    </MudExpansionPanel>
+                </MudExpansionPanels>
+
+                <!-- 外部端点 -->
+                <MudExpansionPanels Elevation="0" Dense="true">
+                    <MudExpansionPanel>
+                        <TitleContent>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.Output" Size="Size.Small" Color="Color.Success" />
+                                <MudText Style="color: var(--mud-palette-text-primary);">外部: @Channel.OuterEndpoint.Name</MudText>
+                            </MudStack>
+                        </TitleContent>
                         <ChildContent>
-                            <MudText Style="color: #666; cursor: help;">外部: @Channel.OuterEndpoint.Name</MudText>
+                            <MetadataDisplay Metadata="Channel.OuterEndpoint.Metadata" />
                         </ChildContent>
-                        <TooltipContent>
-                            <MudPaper Style="padding: 8px; background-color: var(--mud-palette-surface-variant); border: 1px solid var(--mud-palette-divider);">
-                                <MudText Typo="Typo.caption" Style="font-weight: 500; margin-bottom: 4px;">外部端点配置</MudText>
-                                <div style="font-family: 'Courier New', monospace; font-size: 12px; white-space: pre-line; color: var(--mud-palette-text-primary);">@FormatMetadata(Channel.OuterEndpoint.Metadata)</div>
-                            </MudPaper>
-                        </TooltipContent>
-                    </MudTooltip>
-                </MudStack>
+                    </MudExpansionPanel>
+                </MudExpansionPanels>
             </MudStack>
 
             <!-- 中间件信息 -->
@@ -95,23 +105,25 @@
             {
                 <MudStack Spacing="2">
                     <MudText Typo="Typo.subtitle2" Style="font-weight: 500;">中间件 (@Channel.Middlewares.Count)</MudText>
-                    @foreach (var middleware in Channel.Middlewares)
-                    {
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                            <MudIcon Icon="@GetComponentIcon(middleware.Type)" Size="Size.Small" Color="Color.Secondary" />
-                            <MudTooltip Arrow="true" Placement="Placement.Top" Style="max-width: 400px;">
+                    <MudExpansionPanels Elevation="0" Dense="true">
+                        @foreach (var middleware in Channel.Middlewares)
+                        {
+                            <MudExpansionPanel>
+                                <TitleContent>
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                        <MudIcon Icon="@GetComponentIcon(middleware.Type)" Size="Size.Small" Color="Color.Secondary" />
+                                        <MudText Style="color: var(--mud-palette-text-primary);">@middleware.Name</MudText>
+                                        <MudChip T="string" Color="Color.Secondary" Size="Size.Small" Label="true">
+                                            @middleware.Type.ToString()
+                                        </MudChip>
+                                    </MudStack>
+                                </TitleContent>
                                 <ChildContent>
-                                    <MudText Style="color: #666; cursor: help;">@middleware.Name</MudText>
+                                    <MetadataDisplay Metadata="middleware.Metadata" />
                                 </ChildContent>
-                                <TooltipContent>
-                                    <MudPaper Style="padding: 8px; background-color: var(--mud-palette-surface-variant); border: 1px solid var(--mud-palette-divider);">
-                                        <MudText Typo="Typo.caption" Style="font-weight: 500; margin-bottom: 4px;">@middleware.Name 配置</MudText>
-                                        <div style="font-family: 'Courier New', monospace; font-size: 12px; white-space: pre-line; color: var(--mud-palette-text-primary);">@FormatMetadata(middleware.Metadata)</div>
-                                    </MudPaper>
-                                </TooltipContent>
-                            </MudTooltip>
-                        </MudStack>
-                    }
+                            </MudExpansionPanel>
+                        }
+                    </MudExpansionPanels>
                 </MudStack>
             }
 
@@ -156,6 +168,47 @@
     [Parameter] public EventCallback<string> OnClearExceptions { get; set; }
 
     /// <summary>
+    /// 重新初始化进行中状态
+    /// </summary>
+    private bool _isReInitializing = false;
+
+    /// <summary>
+    /// 处理重新初始化
+    /// </summary>
+    /// <returns></returns>
+    private async Task HandleReInitialize()
+    {
+        if (_isReInitializing) return;
+
+        _isReInitializing = true;
+        StateHasChanged();
+
+        try
+        {
+            await OnReInitialize.InvokeAsync(Channel.Id);
+        }
+        finally
+        {
+            _isReInitializing = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// 获取卡片样式
+    /// </summary>
+    /// <returns></returns>
+    private string GetCardStyle()
+    {
+        var baseStyle = "height: 100%; display: flex; flex-direction: column;";
+        if (_isReInitializing)
+        {
+            baseStyle += " opacity: 0.7;";
+        }
+        return baseStyle;
+    }
+
+    /// <summary>
     /// 获取Channel图标
     /// </summary>
     /// <returns></returns>
@@ -196,63 +249,5 @@
         };
     }
 
-    /// <summary>
-    /// 格式化组件元数据信息，用于工具提示显示
-    /// </summary>
-    /// <param name="metadata">元数据对象</param>
-    /// <returns>格式化后的字符串</returns>
-    private string FormatMetadata(object metadata)
-    {
-        if (metadata == null) return "暂无配置信息";
 
-        try
-        {
-            var json = JsonSerializer.Serialize(metadata, new JsonSerializerOptions 
-            { 
-                WriteIndented = true,
-                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-            });
-            
-            // 将JSON格式化为更易读的形式
-            var lines = json.Split('\n');
-            var formattedLines = new List<string>();
-            
-            foreach (var line in lines)
-            {
-                var trimmed = line.Trim();
-                if (trimmed.StartsWith("\"") && trimmed.Contains(":"))
-                {
-                    var parts = trimmed.Split(':', 2);
-                    if (parts.Length == 2)
-                    {
-                        var key = parts[0].Trim().Trim('"');
-                        var value = parts[1].Trim().TrimEnd(',').Trim('"');
-                        
-                        // 美化键名显示
-                        var displayKey = key.Length > 20 ? key.Substring(0, 17) + "..." : key;
-                        var displayValue = value.Length > 40 ? value.Substring(0, 37) + "..." : value;
-                        
-                        formattedLines.Add($"• {displayKey}: {displayValue}");
-                    }
-                }
-                else if (trimmed == "{" || trimmed == "}")
-                {
-                    // 跳过大括号
-                    continue;
-                }
-                else if (!string.IsNullOrWhiteSpace(trimmed) && !trimmed.StartsWith("\""))
-                {
-                    // 处理其他值
-                    var displayValue = trimmed.Length > 50 ? trimmed.Substring(0, 47) + "..." : trimmed;
-                    formattedLines.Add($"• {displayValue}");
-                }
-            }
-
-            return formattedLines.Count > 0 ? string.Join("\n", formattedLines) : "暂无配置信息";
-        }
-        catch (Exception ex)
-        {
-            return $"配置信息格式化失败\n错误: {ex.Message}";
-        }
-    }
 } 

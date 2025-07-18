@@ -1,0 +1,209 @@
+@using MudBlazor
+@using System.Text.Json
+@using System.Text.Json.Serialization
+
+<MudStack Spacing="2">
+    @if (MetadataItems?.Any() == true)
+    {
+        @foreach (var item in MetadataItems)
+        {
+            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Start" 
+                     Style="padding: 8px; border-radius: 4px; background-color: var(--mud-palette-surface-variant);">
+                <MudText Typo="Typo.body2" 
+                        Style="font-weight: 600; color: var(--mud-palette-primary); min-width: 120px; text-align: left;">
+                    @item.Key:
+                </MudText>
+                <MudStack Spacing="1" Style="flex: 1;">
+                    @if (item.IsComplexValue)
+                    {
+                        <MudExpansionPanels Elevation="0" Dense="true">
+                            <MudExpansionPanel>
+                                <TitleContent>
+                                    <MudText Typo="Typo.body2" Style="color: var(--mud-palette-text-primary);">
+                                        <MudIcon Icon="@Icons.Material.Filled.DataObject" Size="Size.Small" Class="mr-2" />
+                                        复杂对象 (点击展开)
+                                    </MudText>
+                                </TitleContent>
+                                <ChildContent>
+                                    <MudPaper Style="padding: 12px; background-color: var(--mud-palette-background-grey); border: 1px solid var(--mud-palette-divider); max-height: 300px; overflow-y: auto;">
+                                        <pre style="margin: 0; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 12px; white-space: pre-wrap; color: var(--mud-palette-text-primary); line-height: 1.4;">@item.Value</pre>
+                                    </MudPaper>
+                                </ChildContent>
+                            </MudExpansionPanel>
+                        </MudExpansionPanels>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2" 
+                                Style="color: var(--mud-palette-text-primary); word-break: break-word; white-space: pre-wrap;">
+                            @item.Value
+                        </MudText>
+                    }
+                </MudStack>
+            </MudStack>
+        }
+    }
+    else
+    {
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" 
+                 Style="padding: 12px; border-radius: 4px; background-color: var(--mud-palette-surface-variant);">
+            <MudIcon Icon="@Icons.Material.Filled.Info" 
+                    Size="Size.Small" 
+                    Style="color: var(--mud-palette-text-secondary);" />
+            <MudText Typo="Typo.body2" 
+                    Style="color: var(--mud-palette-text-secondary); font-style: italic;">
+                暂无配置信息
+            </MudText>
+        </MudStack>
+    }
+</MudStack>
+
+@code {
+    /// <summary>
+    /// 元数据对象
+    /// </summary>
+    [Parameter] public object? Metadata { get; set; }
+
+    /// <summary>
+    /// 处理后的元数据项列表
+    /// </summary>
+    private List<MetadataItem>? MetadataItems => ProcessMetadata();
+
+    /// <summary>
+    /// 元数据项
+    /// </summary>
+    private class MetadataItem
+    {
+        public string Key { get; set; } = string.Empty;
+        public string Value { get; set; } = string.Empty;
+        public bool IsComplexValue { get; set; }
+    }
+
+    /// <summary>
+    /// 处理元数据对象，转换为可显示的项列表
+    /// </summary>
+    /// <returns>元数据项列表</returns>
+    private List<MetadataItem>? ProcessMetadata()
+    {
+        if (Metadata == null) return null;
+
+        try
+        {
+            var jsonString = JsonSerializer.Serialize(Metadata, new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            });
+
+            var jsonElement = JsonSerializer.Deserialize<JsonElement>(jsonString);
+            return ExtractMetadataItems(jsonElement);
+        }
+        catch (Exception)
+        {
+            // 如果JSON序列化失败，尝试直接处理
+            return new List<MetadataItem>
+            {
+                new MetadataItem
+                {
+                    Key = "原始数据",
+                    Value = Metadata.ToString() ?? "null",
+                    IsComplexValue = false
+                }
+            };
+        }
+    }
+
+    /// <summary>
+    /// 从JsonElement中提取元数据项
+    /// </summary>
+    /// <param name="element">JSON元素</param>
+    /// <param name="keyPrefix">键前缀</param>
+    /// <returns>元数据项列表</returns>
+    private List<MetadataItem> ExtractMetadataItems(JsonElement element, string keyPrefix = "")
+    {
+        var items = new List<MetadataItem>();
+
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var property in element.EnumerateObject())
+            {
+                var key = string.IsNullOrEmpty(keyPrefix) ? property.Name : $"{keyPrefix}.{property.Name}";
+                
+                if (property.Value.ValueKind == JsonValueKind.Object || property.Value.ValueKind == JsonValueKind.Array)
+                {
+                    // 复杂对象，直接序列化显示
+                    var complexValue = JsonSerializer.Serialize(property.Value, new JsonSerializerOptions
+                    {
+                        WriteIndented = true,
+                        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                    });
+
+                    items.Add(new MetadataItem
+                    {
+                        Key = key,
+                        Value = complexValue,
+                        IsComplexValue = true
+                    });
+                }
+                else
+                {
+                    // 简单值
+                    var value = property.Value.ValueKind switch
+                    {
+                        JsonValueKind.String => property.Value.GetString() ?? "",
+                        JsonValueKind.Number => property.Value.GetDecimal().ToString(),
+                        JsonValueKind.True => "true",
+                        JsonValueKind.False => "false",
+                        JsonValueKind.Null => "null",
+                        _ => property.Value.ToString()
+                    };
+
+                    items.Add(new MetadataItem
+                    {
+                        Key = key,
+                        Value = value,
+                        IsComplexValue = false
+                    });
+                }
+            }
+        }
+        else if (element.ValueKind == JsonValueKind.Array)
+        {
+            var arrayValue = JsonSerializer.Serialize(element, new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            });
+
+            items.Add(new MetadataItem
+            {
+                Key = string.IsNullOrEmpty(keyPrefix) ? "数组数据" : keyPrefix,
+                Value = arrayValue,
+                IsComplexValue = true
+            });
+        }
+        else
+        {
+            // 原始值
+            var value = element.ValueKind switch
+            {
+                JsonValueKind.String => element.GetString() ?? "",
+                JsonValueKind.Number => element.GetDecimal().ToString(),
+                JsonValueKind.True => "true",
+                JsonValueKind.False => "false",
+                JsonValueKind.Null => "null",
+                _ => element.ToString()
+            };
+
+            items.Add(new MetadataItem
+            {
+                Key = string.IsNullOrEmpty(keyPrefix) ? "值" : keyPrefix,
+                Value = value,
+                IsComplexValue = false
+            });
+        }
+
+        return items;
+    }
+} 
