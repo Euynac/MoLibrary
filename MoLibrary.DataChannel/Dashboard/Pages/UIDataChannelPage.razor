@@ -199,11 +199,32 @@
             if ((await DataChannelService.GetExceptionSummaryAsync()).IsFailed(out var error, out var summary))
             {
                 Snackbar.Add("加载异常统计失败: " + error, Severity.Error);
+                return;
             }
-            else
+
+            // 显示异常统计详细对话框
+            var parameters = new DialogParameters
             {
-                _exceptionSummary = summary;
-                StateHasChanged();
+                ["ExceptionSummary"] = summary,
+                ["OnViewChannelExceptions"] = new Action<string>(async channelId => await ViewChannelExceptions(channelId)),
+                ["OnClearChannelExceptions"] = new Action<string>(async channelId => await ClearChannelExceptions(channelId))
+            };
+
+            var options = new DialogOptions
+            {
+                MaxWidth = MaxWidth.ExtraLarge,
+                FullWidth = true,
+                CloseButton = true,
+                BackdropClick = true
+            };
+
+            var dialog = await DialogService.ShowAsync<ExceptionSummaryDialog>("异常统计详情", parameters, options);
+            var result = await dialog.Result;
+
+            if (!result?.Canceled is true)
+            {
+                // 对话框关闭后刷新数据
+                await LoadData();
             }
         }
         catch (Exception ex)

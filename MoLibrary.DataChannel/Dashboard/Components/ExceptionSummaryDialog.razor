@@ -1,0 +1,206 @@
+@using MoLibrary.DataChannel.Dashboard.Models
+@using MudBlazor
+@using System.Text.Json
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Analytics" Class="mr-3" />
+            异常统计详情
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (ExceptionSummary != null)
+        {
+            <MudStack Spacing="4">
+                <!-- 总体统计卡片 -->
+                <MudGrid Spacing="3">
+                    <MudItem xs="12" md="6" lg="3">
+                        <MudCard Elevation="2" Class="pa-3">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.Storage" Color="Color.Primary" Size="Size.Large" />
+                                <MudStack Spacing="1">
+                                    <MudText Typo="Typo.subtitle2" Style="font-weight: 500;">总Channel数</MudText>
+                                    <MudText Typo="Typo.h5" Color="Color.Primary">@ExceptionSummary.TotalChannels</MudText>
+                                </MudStack>
+                            </MudStack>
+                        </MudCard>
+                    </MudItem>
+                    <MudItem xs="12" md="6" lg="3">
+                        <MudCard Elevation="2" Class="pa-3">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" Size="Size.Large" />
+                                <MudStack Spacing="1">
+                                    <MudText Typo="Typo.subtitle2" Style="font-weight: 500;">异常Channel数</MudText>
+                                    <MudText Typo="Typo.h5" Color="Color.Error">@ExceptionSummary.ChannelsWithExceptions</MudText>
+                                </MudStack>
+                            </MudStack>
+                        </MudCard>
+                    </MudItem>
+                    <MudItem xs="12" md="6" lg="3">
+                        <MudCard Elevation="2" Class="pa-3">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Large" />
+                                <MudStack Spacing="1">
+                                    <MudText Typo="Typo.subtitle2" Style="font-weight: 500;">当前异常总数</MudText>
+                                    <MudText Typo="Typo.h5" Color="Color.Warning">@ExceptionSummary.TotalCurrentExceptions</MudText>
+                                </MudStack>
+                            </MudStack>
+                        </MudCard>
+                    </MudItem>
+                    <MudItem xs="12" md="6" lg="3">
+                        <MudCard Elevation="2" Class="pa-3">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.History" Color="Color.Info" Size="Size.Large" />
+                                <MudStack Spacing="1">
+                                    <MudText Typo="Typo.subtitle2" Style="font-weight: 500;">历史异常总数</MudText>
+                                    <MudText Typo="Typo.h5" Color="Color.Info">@ExceptionSummary.TotalHistoricalExceptions</MudText>
+                                </MudStack>
+                            </MudStack>
+                        </MudCard>
+                    </MudItem>
+                </MudGrid>
+
+                <!-- Channel详细统计表格 -->
+                @if (ExceptionSummary.ChannelSummaries.Any())
+                {
+                    <MudCard Elevation="2" Class="pa-3">
+                        <MudStack Spacing="3">
+                            <MudText Typo="Typo.h6" Style="font-weight: 500;">
+                                <MudIcon Icon="@Icons.Material.Filled.TableChart" Class="mr-2" />
+                                Channel异常详细统计
+                            </MudText>
+                            
+                            <MudDataGrid Items="ExceptionSummary.ChannelSummaries" 
+                                       Filterable="true" 
+                                       Sortable="true" 
+                                       Hover="true" 
+                                       Dense="true" 
+                                       Style="max-height: 600px; overflow-y: auto;"
+                                       ReadOnly="true">
+                                <Columns>
+                                    <PropertyColumn Property="x => x.ChannelId" Title="Channel ID" />
+                                    <PropertyColumn Property="x => x.PipelineId" Title="Pipeline ID" />
+                                    <TemplateColumn Title="状态">
+                                        <CellTemplate>
+                                            @if (context.Item.HasExceptions)
+                                            {
+                                                <MudChip Color="Color.Error" Size="Size.Small" Icon="@Icons.Material.Filled.Error">
+                                                    有异常
+                                                </MudChip>
+                                            }
+                                            else
+                                            {
+                                                <MudChip Color="Color.Success" Size="Size.Small" Icon="@Icons.Material.Filled.CheckCircle">
+                                                    正常
+                                                </MudChip>
+                                            }
+                                        </CellTemplate>
+                                    </TemplateColumn>
+                                    <PropertyColumn Property="x => x.CurrentExceptionCount" Title="当前异常数" />
+                                    <PropertyColumn Property="x => x.TotalExceptionCount" Title="总异常数" />
+                                    <PropertyColumn Property="x => x.MaxPoolSize" Title="异常池大小" />
+                                    <TemplateColumn Title="最新异常时间">
+                                        <CellTemplate>
+                                            @if (context.Item.LatestException.HasValue)
+                                            {
+                                                <MudText>@context.Item.LatestException.Value.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                                            }
+                                            else
+                                            {
+                                                <MudText Style="color: var(--mud-palette-text-secondary);">无</MudText>
+                                            }
+                                        </CellTemplate>
+                                    </TemplateColumn>
+                                    <TemplateColumn Title="异常率">
+                                        <CellTemplate>
+                                            @{
+                                                var rate = context.Item.MaxPoolSize > 0 
+                                                    ? (double)context.Item.CurrentExceptionCount / context.Item.MaxPoolSize * 100 
+                                                    : 0;
+                                                var color = rate switch
+                                                {
+                                                    >= 80 => Color.Error,
+                                                    >= 50 => Color.Warning,
+                                                    > 0 => Color.Info,
+                                                    _ => Color.Success
+                                                };
+                                            }
+                                            <MudProgressLinear Color="@color" 
+                                                             Value="@rate" 
+                                                             Class="mt-1" 
+                                                             Style="height: 8px;" />
+                                            <MudText Typo="Typo.caption" Class="mt-1">
+                                                @($"{rate:F1}%")
+                                            </MudText>
+                                        </CellTemplate>
+                                    </TemplateColumn>
+                                    <TemplateColumn Title="操作">
+                                        <CellTemplate>
+                                            <MudStack Row="true" Spacing="1">
+                                                <MudButton Size="Size.Small" 
+                                                         Color="Color.Info" 
+                                                         OnClick="@(() => OnViewChannelExceptions?.Invoke(context.Item.ChannelId))"
+                                                         StartIcon="@Icons.Material.Filled.ErrorOutline">
+                                                    查看异常
+                                                </MudButton>
+                                                @if (context.Item.HasExceptions)
+                                                {
+                                                    <MudButton Size="Size.Small" 
+                                                             Color="Color.Warning" 
+                                                             OnClick="@(() => OnClearChannelExceptions?.Invoke(context.Item.ChannelId))"
+                                                             StartIcon="@Icons.Material.Filled.Clear">
+                                                        清空
+                                                    </MudButton>
+                                                }
+                                            </MudStack>
+                                        </CellTemplate>
+                                    </TemplateColumn>
+                                </Columns>
+                            </MudDataGrid>
+                        </MudStack>
+                    </MudCard>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Info">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.Info" />
+                            <MudText>暂无Channel数据</MudText>
+                        </MudStack>
+                    </MudAlert>
+                }
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close" Color="Color.Primary">关闭</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IDialogReference? MudDialog { get; set; }
+
+    /// <summary>
+    /// 异常统计信息
+    /// </summary>
+    [Parameter] public ExceptionSummaryInfo ExceptionSummary { get; set; } = null!;
+
+    /// <summary>
+    /// 查看Channel异常事件
+    /// </summary>
+    [Parameter] public Action<string>? OnViewChannelExceptions { get; set; }
+
+    /// <summary>
+    /// 清空Channel异常事件
+    /// </summary>
+    [Parameter] public Action<string>? OnClearChannelExceptions { get; set; }
+
+    /// <summary>
+    /// 关闭对话框
+    /// </summary>
+    private void Close()
+    {
+        MudDialog?.Close();
+    }
+} 
