@@ -66,5 +66,6 @@ public enum EMoModules
     FrameworkUI,
     SignalrUI,
     SystemInfoUI,
-    TimekeeperUI
+    TimekeeperUI,
+    DataChannelUI
 }

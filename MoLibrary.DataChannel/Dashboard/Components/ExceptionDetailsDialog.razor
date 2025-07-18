@@ -1,0 +1,177 @@
+@using MoLibrary.DataChannel.Dashboard.Models
+@using MudBlazor
+@using System.Text.Json
+@inject IDialogService DialogService
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Class="mr-3" />
+            异常详情 - @ChannelId
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (ExceptionInfo != null)
+        {
+            <MudStack Spacing="3">
+                <!-- 基本信息 -->
+                <MudCard Elevation="1" Class="pa-3">
+                    <MudStack Row="true" Spacing="4">
+                        <MudStack>
+                            <MudText Typo="Typo.caption" Style="color: #666;">Pipeline ID</MudText>
+                            <MudText Typo="Typo.body2" Style="font-weight: 500;">@ExceptionInfo.PipelineId</MudText>
+                        </MudStack>
+                        <MudStack>
+                            <MudText Typo="Typo.caption" Style="color: #666;">当前异常</MudText>
+                            <MudText Typo="Typo.body2" Style="font-weight: 500; color: #f44336;">@ExceptionInfo.CurrentExceptions</MudText>
+                        </MudStack>
+                        <MudStack>
+                            <MudText Typo="Typo.caption" Style="color: #666;">历史异常</MudText>
+                            <MudText Typo="Typo.body2" Style="font-weight: 500; color: #ff9800;">@ExceptionInfo.TotalExceptions</MudText>
+                        </MudStack>
+                        <MudStack>
+                            <MudText Typo="Typo.caption" Style="color: #666;">异常池大小</MudText>
+                            <MudText Typo="Typo.body2" Style="font-weight: 500;">@ExceptionInfo.MaxPoolSize</MudText>
+                        </MudStack>
+                    </MudStack>
+                </MudCard>
+                
+                <!-- 异常列表 -->
+                @if (ExceptionInfo.Exceptions.Any())
+                {
+                    <MudDataGrid Items="ExceptionInfo.Exceptions" Filterable="true" Sortable="true" 
+                               Hover="true" Dense="true" Style="max-height: 500px; overflow-y: auto;"
+                               ReadOnly="true" EditMode="DataGridEditMode.Cell">
+                        <Columns>
+                            <PropertyColumn Property="x => x.Timestamp" Title="时间" Format="yyyy-MM-dd HH:mm:ss" />
+                            <PropertyColumn Property="x => x.SourceType" Title="异常源类型" />
+                            <PropertyColumn Property="x => x.ExceptionType" Title="异常类型" />
+                            <PropertyColumn Property="x => x.Message" Title="异常信息" />
+                            <TemplateColumn Title="操作">
+                                <CellTemplate>
+                                    <MudButton Size="Size.Small" Color="Color.Info" 
+                                             OnClick="@(() => ShowExceptionDetails(context.Item))"
+                                             StartIcon="@Icons.Material.Filled.Info">
+                                        详情
+                                    </MudButton>
+                                </CellTemplate>
+                            </TemplateColumn>
+                        </Columns>
+                    </MudDataGrid>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Info">暂无异常信息</MudAlert>
+                }
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">关闭</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<!-- 异常详情对话框 -->
+<MudDialog @bind-IsVisible="_exceptionDetailDialogVisible" Options="new DialogOptions() { MaxWidth = MaxWidth.Large, FullWidth = true }">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.BugReport" Class="mr-3" />
+            异常详细信息
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_selectedExceptionDetail != null)
+        {
+            <MudStack Spacing="3">
+                <!-- 基本信息 -->
+                <MudCard Elevation="1" Class="pa-3">
+                    <MudStack Spacing="2">
+                        <MudStack Row="true" Spacing="4">
+                            <MudStack>
+                                <MudText Typo="Typo.caption" Style="color: #666;">异常时间</MudText>
+                                <MudText Typo="Typo.body2">@_selectedExceptionDetail.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                            </MudStack>
+                            <MudStack>
+                                <MudText Typo="Typo.caption" Style="color: #666;">异常源类型</MudText>
+                                <MudText Typo="Typo.body2">@_selectedExceptionDetail.SourceType</MudText>
+                            </MudStack>
+                            <MudStack>
+                                <MudText Typo="Typo.caption" Style="color: #666;">异常类型</MudText>
+                                <MudText Typo="Typo.body2">@_selectedExceptionDetail.ExceptionType</MudText>
+                            </MudStack>
+                        </MudStack>
+                        
+                        @if (!string.IsNullOrEmpty(_selectedExceptionDetail.SourceDescription))
+                        {
+                            <MudStack>
+                                <MudText Typo="Typo.caption" Style="color: #666;">异常源描述</MudText>
+                                <MudText Typo="Typo.body2">@_selectedExceptionDetail.SourceDescription</MudText>
+                            </MudStack>
+                        }
+                    </MudStack>
+                </MudCard>
+
+                <!-- 异常消息 -->
+                <MudCard Elevation="1" Class="pa-3">
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.subtitle2" Style="font-weight: 500;">异常消息</MudText>
+                        <MudAlert Severity="Severity.Error" Class="ma-0">
+                            @_selectedExceptionDetail.Message
+                        </MudAlert>
+                    </MudStack>
+                </MudCard>
+
+                <!-- 异常堆栈 -->
+                @if (!string.IsNullOrEmpty(_selectedExceptionDetail.StackTrace))
+                {
+                    <MudCard Elevation="1" Class="pa-3">
+                        <MudStack Spacing="2">
+                            <MudText Typo="Typo.subtitle2" Style="font-weight: 500;">异常堆栈</MudText>
+                            <MudPaper Style="max-height: 300px; overflow-y: auto; background-color: var(--mud-palette-surface-variant); padding: 12px; border: 1px solid var(--mud-palette-divider);">
+                                <pre style="margin: 0; font-family: 'Courier New', monospace; font-size: 12px; white-space: pre-wrap; color: var(--mud-palette-text-primary);">@_selectedExceptionDetail.StackTrace</pre>
+                            </MudPaper>
+                        </MudStack>
+                    </MudCard>
+                }
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _exceptionDetailDialogVisible = false)">关闭</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IDialogReference? MudDialog { get; set; }
+
+    /// <summary>
+    /// Channel ID
+    /// </summary>
+    [Parameter] public string ChannelId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 异常信息
+    /// </summary>
+    [Parameter] public ChannelExceptionInfo ExceptionInfo { get; set; } = null!;
+
+    private bool _exceptionDetailDialogVisible = false;
+    private ExceptionDetailInfo? _selectedExceptionDetail;
+
+    /// <summary>
+    /// 显示异常详情
+    /// </summary>
+    /// <param name="exception">异常详情信息</param>
+    private void ShowExceptionDetails(ExceptionDetailInfo exception)
+    {
+        _selectedExceptionDetail = exception;
+        _exceptionDetailDialogVisible = true;
+    }
+
+    /// <summary>
+    /// 取消对话框
+    /// </summary>
+    private void Cancel()
+    {
+        MudDialog?.Close();
+    }
+} 

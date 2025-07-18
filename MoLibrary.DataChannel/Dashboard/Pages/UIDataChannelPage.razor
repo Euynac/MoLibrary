@@ -1,0 +1,293 @@
+@page "/datachannel-manage"
+@using MoLibrary.DataChannel.Dashboard.Services
+@using MoLibrary.DataChannel.Dashboard.Models
+@using MoLibrary.DataChannel.Dashboard.Components
+@using MoLibrary.Tool.MoResponse
+@using MudBlazor
+@using System.Text.Json
+@inject DataChannelService DataChannelService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-4">
+    <!-- 标题栏 -->
+    <MudPaper Class="pa-4 mb-4" Style="background: linear-gradient(45deg, #1976D2 30%, #42A5F5 90%); color: white;">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                <MudIcon Icon="@Icons.Material.Filled.DataObject" Size="Size.Large" />
+                <MudText Typo="Typo.h4" Style="font-weight: 500; margin: 0;">DataChannel管理</MudText>
+            </MudStack>
+            <MudStack Row="true" Spacing="2">
+                <MudButton StartIcon="@Icons.Material.Filled.Refresh" 
+                          Color="Color.Inherit" 
+                          Variant="Variant.Outlined" 
+                          OnClick="RefreshData"
+                          Size="Size.Medium"
+                          Style="border-color: white; color: white;">
+                    刷新数据
+                </MudButton>
+                <MudButton StartIcon="@Icons.Material.Filled.ErrorOutline" 
+                          Color="Color.Inherit" 
+                          Variant="Variant.Outlined" 
+                          OnClick="LoadExceptionSummary"
+                          Size="Size.Medium"
+                          Style="border-color: white; color: white;">
+                    异常统计
+                </MudButton>
+            </MudStack>
+        </MudStack>
+    </MudPaper>
+
+    @if (_loading)
+    {
+        <MudStack AlignItems="AlignItems.Center" Spacing="4" Class="pa-8">
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+            <MudText Typo="Typo.h6" Color="Color.Primary">正在加载DataChannel信息...</MudText>
+        </MudStack>
+    }
+    else
+    {
+        <!-- 统计信息卡片 -->
+        @if (_exceptionSummary != null)
+        {
+            <MudGrid Spacing="3" Class="mb-4">
+                <MudItem xs="12" md="6" lg="3">
+                    <MudCard Elevation="2">
+                        <MudCardContent>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.Storage" Color="Color.Primary" Size="Size.Large" />
+                                <MudStack Spacing="1">
+                                    <MudText Typo="Typo.h6" Style="font-weight: 500;">总Channel数</MudText>
+                                    <MudText Typo="Typo.h4" Color="Color.Primary">@_exceptionSummary.TotalChannels</MudText>
+                                </MudStack>
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+                <MudItem xs="12" md="6" lg="3">
+                    <MudCard Elevation="2">
+                        <MudCardContent>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" Size="Size.Large" />
+                                <MudStack Spacing="1">
+                                    <MudText Typo="Typo.h6" Style="font-weight: 500;">异常Channel数</MudText>
+                                    <MudText Typo="Typo.h4" Color="Color.Error">@_exceptionSummary.ChannelsWithExceptions</MudText>
+                                </MudStack>
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+                <MudItem xs="12" md="6" lg="3">
+                    <MudCard Elevation="2">
+                        <MudCardContent>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Large" />
+                                <MudStack Spacing="1">
+                                    <MudText Typo="Typo.h6" Style="font-weight: 500;">当前异常总数</MudText>
+                                    <MudText Typo="Typo.h4" Color="Color.Warning">@_exceptionSummary.TotalCurrentExceptions</MudText>
+                                </MudStack>
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+                <MudItem xs="12" md="6" lg="3">
+                    <MudCard Elevation="2">
+                        <MudCardContent>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.History" Color="Color.Info" Size="Size.Large" />
+                                <MudStack Spacing="1">
+                                    <MudText Typo="Typo.h6" Style="font-weight: 500;">历史异常总数</MudText>
+                                    <MudText Typo="Typo.h4" Color="Color.Info">@_exceptionSummary.TotalHistoricalExceptions</MudText>
+                                </MudStack>
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            </MudGrid>
+        }
+
+        <!-- Channel列表 -->
+        @if (_channels != null && _channels.Any())
+        {
+            <MudGrid Spacing="3">
+                @foreach (var channel in _channels)
+                {
+                    <MudItem xs="12" lg="6" xl="4">
+                        <ChannelStatusCard Channel="channel" 
+                                         OnReInitialize="ReInitializeChannel" 
+                                         OnViewExceptions="ViewChannelExceptions" 
+                                         OnClearExceptions="ClearChannelExceptions" />
+                    </MudItem>
+                }
+            </MudGrid>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Info" Class="ma-4">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.Info" />
+                    <MudText>暂无DataChannel数据</MudText>
+                </MudStack>
+            </MudAlert>
+        }
+    }
+</MudContainer>
+
+@code {
+    public const string DATACHANNEL_MANAGE_URL = "/datachannel-manage";
+
+    private bool _loading = true;
+    private List<ChannelStatusInfo>? _channels;
+    private ExceptionSummaryInfo? _exceptionSummary;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadData();
+        }
+    }
+
+    private async Task LoadData()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        try
+        {
+            // 加载Channel状态
+            if ((await DataChannelService.GetChannelsStatusAsync()).IsFailed(out var error1, out var channels))
+            {
+                Snackbar.Add("加载DataChannel状态失败: " + error1, Severity.Error);
+            }
+            else
+            {
+                _channels = channels;
+            }
+
+            // 加载异常统计
+            if ((await DataChannelService.GetExceptionSummaryAsync()).IsFailed(out var error2, out var summary))
+            {
+                Snackbar.Add("加载异常统计失败: " + error2, Severity.Error);
+            }
+            else
+            {
+                _exceptionSummary = summary;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"加载数据时发生错误: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefreshData()
+    {
+        await LoadData();
+        Snackbar.Add("数据已刷新", Severity.Success);
+    }
+
+    private async Task LoadExceptionSummary()
+    {
+        try
+        {
+            if ((await DataChannelService.GetExceptionSummaryAsync()).IsFailed(out var error, out var summary))
+            {
+                Snackbar.Add("加载异常统计失败: " + error, Severity.Error);
+            }
+            else
+            {
+                _exceptionSummary = summary;
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"加载异常统计时发生错误: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ReInitializeChannel(string channelId)
+    {
+        try
+        {
+            if ((await DataChannelService.ReInitializeChannelAsync(channelId)).IsFailed(out var error))
+            {
+                Snackbar.Add("重新初始化失败: " + error, Severity.Error);
+            }
+            else
+            {
+                Snackbar.Add("重新初始化成功", Severity.Success);
+                await LoadData();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"重新初始化时发生错误: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ViewChannelExceptions(string channelId)
+    {
+        try
+        {
+            if ((await DataChannelService.GetChannelExceptionsAsync(channelId)).IsFailed(out var error, out var exceptions))
+            {
+                Snackbar.Add("加载异常信息失败: " + error, Severity.Error);
+                return;
+            }
+
+            var parameters = new DialogParameters
+            {
+                ["ChannelId"] = channelId,
+                ["ExceptionInfo"] = exceptions
+            };
+
+            var options = new DialogOptions
+            {
+                MaxWidth = MaxWidth.ExtraLarge,
+                FullWidth = true,
+                CloseButton = true,
+                BackdropClick = true
+            };
+
+            var dialog = await DialogService.ShowAsync<ExceptionDetailsDialog>("异常详情", parameters, options);
+            var result = await dialog.Result;
+
+            if (!result?.Canceled is true)
+            {
+                // 如果需要，可以在这里处理对话框的返回结果
+                await LoadData();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"查看异常信息时发生错误: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ClearChannelExceptions(string channelId)
+    {
+        try
+        {
+            if ((await DataChannelService.ClearChannelExceptionsAsync(channelId)).IsFailed(out var error))
+            {
+                Snackbar.Add("清空异常信息失败: " + error, Severity.Error);
+            }
+            else
+            {
+                Snackbar.Add("异常信息已清空", Severity.Success);
+                await LoadData();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"清空异常信息时发生错误: {ex.Message}", Severity.Error);
+        }
+    }
+} 
