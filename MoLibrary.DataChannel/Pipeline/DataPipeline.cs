@@ -1,7 +1,9 @@
 using Microsoft.Extensions.Logging;
 using MoLibrary.Core.Extensions;
 using MoLibrary.DataChannel.CoreCommunication;
+using MoLibrary.DataChannel.Exceptions;
 using MoLibrary.DataChannel.Interfaces;
+using MoLibrary.DataChannel.Modules;
 using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.MoResponse;
 
@@ -54,6 +56,16 @@ public class DataPipeline
     public bool IsNotAvailable { get; set; }
 
     /// <summary>
+    /// 异常池，用于收集和管理管道运行中的异常
+    /// </summary>
+    public ExceptionPool ExceptionPool { get; private set; }
+
+    /// <summary>
+    /// 是否存在异常
+    /// </summary>
+    public bool HasExceptions => ExceptionPool?.HasExceptions ?? false;
+
+    /// <summary>
     /// 初始化数据管道的新实例
     /// </summary>
     /// <param name="innerEndpoint">内部端点</param>
@@ -66,6 +78,8 @@ public class DataPipeline
         OuterEndpoint = outerEndpoint;
         Id = id;
         GroupId = groupId;
+        
+        ExceptionPool = new ExceptionPool(id, DataChannelCentral.Setting.RecentExceptionToKeep);
     }
 
     /// <summary>
@@ -143,6 +157,16 @@ public class DataPipeline
     }
 
     /// <summary>
+    /// 收集异常信息到异常池
+    /// </summary>
+    /// <param name="exception">发生的异常</param>
+    /// <param name="source">异常来源对象</param>
+    public void CollectException(Exception exception, object source)
+    {
+        ExceptionPool.AddException(exception, source);
+    }
+
+    /// <summary>
     /// 发送数据到管道
     /// 数据将经过转换中间件处理，然后根据入口方向发送到相应的端点
     /// </summary>
@@ -150,16 +174,39 @@ public class DataPipeline
     /// <returns>表示异步操作的任务</returns>
     public async Task SendDataAsync(DataContext data)
     {
-        await TransformMiddlewares.DoAsync(async p => data = await p.PassAsync(data));
-        if (data.Source == EDataSource.Outer)
+        // 处理转换中间件
+        await TransformMiddlewares.DoAsync(async p =>
         {
-            await InnerEndpoint.ReceiveDataAsync(data);
-        }
-        else if(data.Source == EDataSource.Inner)
+            try
+            {
+                data = await p.PassAsync(data);
+            }
+            catch (Exception ex)
+            {
+                CollectException(ex, p);
+                throw; // 重新抛出异常以保持原有行为
+            }
+        });
+      
+
+        // 处理端点
+        try
         {
-            await OuterEndpoint.ReceiveDataAsync(data);
+            if (data.Source == EDataSource.Outer)
+            {
+                await InnerEndpoint.ReceiveDataAsync(data);
+            }
+            else if(data.Source == EDataSource.Inner)
+            {
+                await OuterEndpoint.ReceiveDataAsync(data);
+            }
         }
-        
+        catch (Exception ex)
+        {
+            var targetEndpoint = data.Source == EDataSource.Outer ? InnerEndpoint : OuterEndpoint;
+            CollectException(ex, targetEndpoint);
+            throw; // 重新抛出异常以保持原有行为
+        }
     }
 
     /// <summary>
@@ -186,6 +233,9 @@ public class DataPipeline
             }
             catch (Exception e)
             {
+                // 收集异常信息
+                CollectException(e, communicationCore);
+                
                 IsNotAvailable = true;
                 IsInitializing = false;
                 DataChannelCentral.Logger.LogError(e, "DataPipeline:{Id}初始化失败", Id);
@@ -205,6 +255,7 @@ public class DataPipeline
     internal async Task DisposeAsync()
     {
         await GetEndpoints().OfType<ICommunicationCore>().DoAsync(async p => await p.DisposeAsync());
+        ExceptionPool?.Dispose();
         IsInitialized = false;
     }
 }

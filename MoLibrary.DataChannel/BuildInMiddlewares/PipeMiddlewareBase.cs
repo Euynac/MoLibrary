@@ -37,5 +37,5 @@ public abstract class PipeMonitorMiddlewareBase : IPipeMonitorMiddleware
         };
     }
 
-    public DataPipeline Pipe { get; set; }
+    public DataPipeline Pipe { get; set; } = null!;
 }
