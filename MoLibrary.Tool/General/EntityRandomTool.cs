@@ -1,6 +1,6 @@
 using System.Linq;
 
-namespace MoLibrary.Tool.Random
+namespace MoLibrary.Tool.General
 {
     /// <summary>
     /// Random Tool for entity or linq.

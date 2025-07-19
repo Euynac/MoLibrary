@@ -1,22 +1,28 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading;
 using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.Maths;
 
-namespace MoLibrary.Tool.Random
+namespace MoLibrary.Tool.General
 {
     /// <summary>
     /// Random Tool (Thread-safe)
     /// </summary>
     public static class RandomTool
     {
-        private static int _seed = Environment.TickCount;
-        private static readonly ThreadLocal<System.Random> _randomSeed =
-            new(() => new System.Random(Interlocked.Increment(ref _seed)));
+        // Cache for character pools to avoid repeated string concatenation
+        private static readonly string _numberPool = "0123456789";
+        private static readonly string _lowerPool = "abcdefghijklmnopqrstuvwxyz";
+        private static readonly string _upperPool = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        private static readonly string _specialPool = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
+
+        /// <summary>
+        /// Thread-safe random instance with null safety
+        /// </summary>
+        private static readonly Random _random = Random.Shared;
 
         #region 随机生成
         /// <summary>
@@ -28,7 +34,8 @@ namespace MoLibrary.Tool.Random
         {
             var count = byteCount.LimitInRange(1, 62);
             var b = new byte[count];
-            new RNGCryptoServiceProvider().GetBytes(b);
+            using var rng = RandomNumberGenerator.Create();
+            rng.GetBytes(b);
             return b;
         }
 
@@ -69,7 +76,7 @@ namespace MoLibrary.Tool.Random
                         return GetDateTimeBetween(DateTime.Today, DateTime.Today.Add(TimeSpan.FromDays(365)))
                             .ToString("HH:mm:ss");
                     }
-                    if(match.Groups["id"].Success)
+                    if (match.Groups["id"].Success)
                     {
                         return id.ToString();
                     }
@@ -92,7 +99,7 @@ namespace MoLibrary.Tool.Random
                     };
                 });
             }
-       
+
 
         }
 
@@ -110,17 +117,32 @@ namespace MoLibrary.Tool.Random
         ///<returns>指定长度的随机字符串</returns>
         public static string GetString(int length, bool useNum = true, bool useLow = false, bool useUpp = false, bool useSpecial = false, string? custom = null)
         {
-            var s = new StringBuilder();
-            var randomPool = custom ?? "";
-            if (useNum) { randomPool += "0123456789"; }
-            if (useLow) { randomPool += "abcdefghijklmnopqrstuvwxyz"; }
-            if (useUpp) { randomPool += "ABCDEFGHIJKLMNOPQRSTUVWXYZ"; }
-            if (useSpecial) { randomPool += "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"; }
-            while (length-- > 0)
+            if (length <= 0) return string.Empty;
+
+            var randomPool = BuildCharacterPool(useNum, useLow, useUpp, useSpecial, custom);
+            if (randomPool.Length == 0) return string.Empty;
+
+            var result = new char[length];
+            var random = _random;
+
+            for (int i = 0; i < length; i++)
             {
-                s.Append(randomPool.Substring(_randomSeed.Value.Next(0, randomPool.Length), 1));
+                result[i] = randomPool[random.Next(randomPool.Length)];
             }
-            return s.ToString();
+
+            return new string(result);
+        }
+
+        private static string BuildCharacterPool(bool useNum, bool useLow, bool useUpp, bool useSpecial, string? custom)
+        {
+            var poolBuilder = new StringBuilder(custom ?? "");
+
+            if (useNum) poolBuilder.Append(_numberPool);
+            if (useLow) poolBuilder.Append(_lowerPool);
+            if (useUpp) poolBuilder.Append(_upperPool);
+            if (useSpecial) poolBuilder.Append(_specialPool);
+
+            return poolBuilder.ToString();
         }
 
         #endregion
@@ -142,7 +164,8 @@ namespace MoLibrary.Tool.Random
         /// <returns></returns>
         public static IEnumerable<T>? Get<T>(int count, params T[] candidates)
         {
-            return RandomGet(candidates.ToList(), count);
+            Random.Shared.GetItems<T>(candidates.AsSpan(), 4);
+            return RandomGet(candidates.ToArray(), count);
         }
         /// <summary>
         /// Get a random item from given items.
@@ -156,7 +179,7 @@ namespace MoLibrary.Tool.Random
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <returns>return null when the set is null</returns>
-        public static IEnumerable<T>? RandomGetFrom<T>(int count, params T[]? candidates) => candidates.RandomGet(count);
+        public static IEnumerable<T>? RandomGetFrom<T>(int count, params T[]? candidates) => candidates?.RandomGet(count);
 
         /// <summary>
         /// Get a random item from the array.
@@ -170,7 +193,7 @@ namespace MoLibrary.Tool.Random
             if (list == null || !list.Any()) return default;
             return hashString != null ?
                 list[GetInt(0, list.Length - 1, hashString)]
-                : list[_randomSeed.Value.Next(list.Length)];
+                : list[_random.Next(list.Length)];
         }
 
         /// <summary>
@@ -184,7 +207,7 @@ namespace MoLibrary.Tool.Random
         {
             if (list == null || !list.Any()) return default;
             return hashString != null ? list.ElementAt(GetInt(0, list.Count - 1, hashString)) :
-                list.ElementAt(_randomSeed.Value.Next(list.Count));
+                list.ElementAt(_random.Next(list.Count));
         }
 
         /// <summary>
@@ -197,14 +220,34 @@ namespace MoLibrary.Tool.Random
         /// <returns>return null when the set is null</returns>
         public static IEnumerable<T>? RandomGet<T>(this ICollection<T>? list, int count, string? hashString = null)
         {
-            if (list == null || !list.Any()) return null;
-            if (count == 1) return new List<T> { RandomGetOne(list)! };
-            if (count > list.Count())
+            if (list == null || list.Count == 0) return null;
+            if (count <= 0) return Enumerable.Empty<T>();
+            if (count == 1) return new[] { RandomGetOne(list, hashString)! };
+            if (count >= list.Count) return RandomList(list, hashString);
+
+            // Use Fisher-Yates shuffle for better performance with large collections
+            if (hashString == null && list.Count > 100)
             {
-                return RandomList(list, hashString);
+                return FisherYatesShuffle(list).Take(count);
             }
-            return hashString != null ? list.OrderBy(_ => hashString.GetHashCode()).Take(count) :
-                list.OrderBy(_ => Guid.NewGuid()).Take(count);
+
+            return hashString != null
+                ? list.OrderBy(_ => hashString.GetHashCode()).Take(count)
+                : list.OrderBy(_ => Guid.NewGuid()).Take(count);
+        }
+
+        private static IEnumerable<T> FisherYatesShuffle<T>(ICollection<T> source)
+        {
+            var array = source.ToArray();
+            var random = _random;
+
+            for (int i = array.Length - 1; i > 0; i--)
+            {
+                int j = random.Next(i + 1);
+                (array[i], array[j]) = (array[j], array[i]);
+            }
+
+            return array;
         }
 
         /// <summary>
@@ -216,9 +259,17 @@ namespace MoLibrary.Tool.Random
         /// <returns></returns>
         public static IEnumerable<T>? RandomList<T>(this ICollection<T>? list, string? hashString = null)
         {
-            if (list == null || !list.Any()) return list;
-            return hashString != null ? list.OrderBy(o => hashString.GetHashCode()) :
-                list.OrderBy(o => Guid.NewGuid());
+            if (list == null || list.Count == 0) return list;
+
+            // Use Fisher-Yates for better performance with large collections
+            if (hashString == null && list.Count > 50)
+            {
+                return FisherYatesShuffle(list);
+            }
+
+            return hashString != null
+                ? list.OrderBy(o => hashString.GetHashCode())
+                : list.OrderBy(o => Guid.NewGuid());
         }
         #endregion
 
@@ -226,8 +277,13 @@ namespace MoLibrary.Tool.Random
 
         public static DateTime GetDateTimeBetween(DateTime left, DateTime right, TimeExtensions.DateTimePart truncateTo = TimeExtensions.DateTimePart.Second)
         {
-            if(right < left) throw new Exception("Right border is smaller than left!");
-            var randomTime = new DateTime(left.Ticks + GetLong(1, right.Ticks - left.Ticks - 1));
+            if (right < left) throw new ArgumentException("Right border must be greater than or equal to left border!", nameof(right));
+            if (left == right) return left;
+
+            var tickRange = right.Ticks - left.Ticks;
+            if (tickRange <= 1) return left;
+
+            var randomTime = new DateTime(left.Ticks + GetLong(0, tickRange));
             return TimeExtensions.Truncate(randomTime, truncateTo);
         }
 
@@ -242,7 +298,7 @@ namespace MoLibrary.Tool.Random
         {
             var enumType = typeof(T);
             var length = Enum.GetNames(enumType).Length;
-            return (T)Enum.Parse(enumType, _randomSeed.Value.Next(length).ToString());
+            return (T) Enum.Parse(enumType, _random.Next(length).ToString());
         }
         #endregion
 
@@ -263,29 +319,29 @@ namespace MoLibrary.Tool.Random
             var minValue = leftInterval.NumType == NumberType.Infinitesimal ? double.MinValue : leftInterval.Value;
             if (rightInterval.NumType == NumberType.Infinity || leftInterval.NumType == NumberType.Infinitesimal)
             {
-                var randomFactor = _randomSeed.Value.NextDouble();
+                var randomFactor = _random.NextDouble();
                 return minValue + randomFactor * maxValue - randomFactor * minValue;//如不这样可能会溢出
             }
 
-            return _randomSeed.Value.NextDouble() * (maxValue - minValue) + minValue;
+            return _random.NextDouble() * (maxValue - minValue) + minValue;
         }
         /// <summary>
         /// Generate a random double between minValue and maxValue (include min but not max value).
-        /// Recommend using Random.Shared.
+
         /// </summary>
         /// <returns></returns>
-        public static double GetDouble(double minValue, double maxValue) => _randomSeed.Value.NextDouble() * (maxValue - minValue) + minValue;
+        public static double GetDouble(double minValue, double maxValue) => _random.NextDouble() * (maxValue - minValue) + minValue;
         /// <summary>
         /// Generate a random double between minValue and maxValue base on hash code (include min but not max value).
-        /// Recommend using Random.Shared.
+
         /// </summary>
         /// <param name="minValue"></param>
         /// <param name="maxValue"></param>
         /// <param name="objectToHash"></param>
         /// <returns></returns>
         public static double GetDouble(double minValue, double maxValue, object objectToHash) =>
-            ((objectToHash.GetHashCode() + Math.Abs((long)int.MinValue)) /
-             (double)(int.MaxValue + Math.Abs((long)int.MinValue))) * (maxValue - minValue) + minValue;
+            ((objectToHash.GetHashCode() + Math.Abs((long) int.MinValue)) /
+             (double) (int.MaxValue + Math.Abs((long) int.MinValue))) * (maxValue - minValue) + minValue;
         /// <summary>
         /// 产生区间范围中的随机整数
         /// </summary>
@@ -297,22 +353,22 @@ namespace MoLibrary.Tool.Random
             var minValue = intervalDoublePair.GetLeftIntervalNearestNumber();
             if (minValue > maxValue) return minValue;//区间相同就麻烦了
             if (maxValue == int.MaxValue) maxValue--;
-            return _randomSeed.Value.Next(minValue, maxValue + 1);
+            return _random.Next(minValue, maxValue + 1);
         }
         /// <summary>
         /// Generate a random integer between minValue and maxValue (include min and max value).
-        /// Recommend using Random.Shared.
+
         /// </summary>
         /// <returns></returns>
         public static int GetInt(int minValue, int maxValue)
         {
             if (minValue >= maxValue) return minValue;
             if (maxValue == int.MaxValue) maxValue--;
-            return _randomSeed.Value.Next(minValue, maxValue + 1);
+            return _random.Next(minValue, maxValue + 1);
         }
         /// <summary>
         /// Generate a random integer between minValue and maxValue base on hash code (include min and max value).
-        /// Recommend using Random.Shared.
+
         /// </summary>
         /// <returns></returns>
         ///https://stackoverflow.com/a/29811247/18731746
@@ -321,35 +377,35 @@ namespace MoLibrary.Tool.Random
             if (minValue >= maxValue) return minValue;
             long modular = maxValue - minValue + 1;
             var hashCode = Math.Abs(objectToHash.GetHashCode());
-            var rest = (int)(hashCode % modular);
+            var rest = (int) (hashCode % modular);
             return minValue + rest;
         }
         /// <summary>
         /// Generate a random long integer between minValue and maxValue (include min and max value).
-        /// Recommend using Random.Shared.
+
         /// </summary>
         /// <returns></returns>
         public static long GetLong(long minValue, long maxValue)
         {
-            if (maxValue <= minValue)
+            if (maxValue < minValue)
                 throw new ArgumentOutOfRangeException(nameof(maxValue), "max must be >= min!");
             if (maxValue == minValue) return maxValue;
-            //Working with ulong so that modulo works correctly with values > long.MaxValue
-            var uRange = (ulong)(maxValue - minValue);
 
-            //Prevent a modolo bias; see https://stackoverflow.com/a/10984975/238419
-            //for more information.
-            //In the worst case, the expected number of calls is 2 (though usually it's
-            //much closer to 1) so this loop doesn't really hurt performance at all.
+            var uRange = (ulong) (maxValue - minValue);
+            if (uRange == 0) return minValue;
+
+            // Prevent modulo bias using rejection sampling
             ulong ulongRand;
+            var threshold = ulong.MaxValue - (ulong.MaxValue % uRange + 1) % uRange;
+
             do
             {
                 var buf = new byte[8];
-                _randomSeed.Value.NextBytes(buf);
-                ulongRand = (ulong)BitConverter.ToInt64(buf, 0);
-            } while (ulongRand > ulong.MaxValue - (ulong.MaxValue % uRange + 1) % uRange);
+                _random.NextBytes(buf);
+                ulongRand = (ulong) BitConverter.ToInt64(buf, 0);
+            } while (ulongRand > threshold);
 
-            return (long)(ulongRand % uRange) + minValue;
+            return (long) (ulongRand % uRange) + minValue;
         }
         #endregion
 
@@ -401,7 +457,10 @@ namespace MoLibrary.Tool.Random
         /// <param name="minProbability">0-1之间 最小可能性，影响值+基础值的最小值</param>
         /// <returns></returns>
         public static bool ProbablyTrue(this double probability, double influenceValue = 0, double maxProbability = 1, double minProbability = 0)
-            => (probability + influenceValue).LimitInRange(minProbability, maxProbability) - _randomSeed.Value.NextDouble() > 0;
+        {
+            var finalProbability = (probability + influenceValue).LimitInRange(minProbability, maxProbability);
+            return _random.NextDouble() < finalProbability;
+        }
 
         /// <summary>
         /// 结果基于给定的哈希，有x%可能性返回true
@@ -413,8 +472,11 @@ namespace MoLibrary.Tool.Random
         /// <param name="minProbability">0-1之间 最小可能性，影响值+基础值的最小值</param>
         /// <returns></returns>
         public static bool ProbablyTrue(this double probability, object objectToHash, double influenceValue = 0, double maxProbability = 1,
-            double minProbability = 0) =>
-            (probability + influenceValue).LimitInRange(minProbability, maxProbability) - GetDouble(0,1,objectToHash) > 0;
+            double minProbability = 0)
+        {
+            var finalProbability = (probability + influenceValue).LimitInRange(minProbability, maxProbability);
+            return GetDouble(0, 1, objectToHash) < finalProbability;
+        }
 
         #endregion
 
@@ -427,7 +489,7 @@ namespace MoLibrary.Tool.Random
         }
 
         #endregion
-   
+
 
 
     }
