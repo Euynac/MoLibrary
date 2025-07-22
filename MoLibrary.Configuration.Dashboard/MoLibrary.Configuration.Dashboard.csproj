@@ -1,13 +1,15 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+  
   <ItemGroup>
     <ProjectReference Include="..\MoLibrary.Configuration\MoLibrary.Configuration.csproj" />
     <ProjectReference Include="..\MoLibrary.RegisterCentre\MoLibrary.RegisterCentre.csproj" />
     <ProjectReference Include="..\MoLibrary.Repository\MoLibrary.Repository.csproj" />
+    <ProjectReference Include="..\MoLibrary.UI\MoLibrary.UI.csproj" />
   </ItemGroup>
 </Project>

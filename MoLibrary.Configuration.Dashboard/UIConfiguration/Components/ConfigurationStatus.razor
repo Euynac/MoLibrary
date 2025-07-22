@@ -1,0 +1,271 @@
+@using MoLibrary.Configuration.Dashboard.UIConfiguration.Models
+@using MoLibrary.Configuration.Dashboard.UIConfiguration.Services
+@using MoLibrary.Tool.MoResponse
+@using MudBlazor
+@inject ConfigurationService ConfigurationService
+@inject ISnackbar Snackbar
+@implements IDisposable
+
+<MudCard>
+    <MudCardHeader>
+        <CardHeaderContent>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <MudText Typo="Typo.h6">实时配置监控</MudText>
+                <div>
+                    <MudSwitch T="bool" @bind-Checked="_autoRefresh" 
+                              Label="自动刷新" 
+                              Color="Color.Primary"
+                              LabelPosition="LabelPosition.Start" />
+                    <MudText Typo="Typo.caption" Class="ml-2">
+                        @($"更新时间: {_lastUpdateTime:HH:mm:ss}")
+                    </MudText>
+                </div>
+            </div>
+        </CardHeaderContent>
+    </MudCardHeader>
+    
+    <MudCardContent>
+        <!-- 统计卡片 -->
+        <MudGrid Class="mb-4">
+            <MudItem xs="12" md="3">
+                <MudCard Outlined="true">
+                    <MudCardContent>
+                        <div style="display: flex; align-items: center;">
+                            <MudIcon Icon="@Icons.Material.Filled.Settings" 
+                                    Color="Color.Primary" 
+                                    Style="font-size: 2rem;" Class="mr-3" />
+                            <div>
+                                <MudText Typo="Typo.h4">@_totalConfigs</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">配置总数</MudText>
+                            </div>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            
+            <MudItem xs="12" md="3">
+                <MudCard Outlined="true">
+                    <MudCardContent>
+                        <div style="display: flex; align-items: center;">
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" 
+                                    Color="Color.Success" 
+                                    Style="font-size: 2rem;" Class="mr-3" />
+                            <div>
+                                <MudText Typo="Typo.h4">@_activeConfigs</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">激活配置</MudText>
+                            </div>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            
+            <MudItem xs="12" md="3">
+                <MudCard Outlined="true">
+                    <MudCardContent>
+                        <div style="display: flex; align-items: center;">
+                            <MudIcon Icon="@Icons.Material.Filled.Apps" 
+                                    Color="Color.Info" 
+                                    Style="font-size: 2rem;" Class="mr-3" />
+                            <div>
+                                <MudText Typo="Typo.h4">@_appCount</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">应用数量</MudText>
+                            </div>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            
+            <MudItem xs="12" md="3">
+                <MudCard Outlined="true">
+                    <MudCardContent>
+                        <div style="display: flex; align-items: center;">
+                            <MudIcon Icon="@Icons.Material.Filled.Update" 
+                                    Color="Color.Warning" 
+                                    Style="font-size: 2rem;" Class="mr-3" />
+                            <div>
+                                <MudText Typo="Typo.h4">@_recentUpdates</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">今日更新</MudText>
+                            </div>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+
+        <!-- 应用配置状态 -->
+        <MudText Typo="Typo.h6" Class="mb-3">应用配置状态</MudText>
+        <MudGrid>
+            @foreach (var appGroup in _configsByApp)
+            {
+                <MudItem xs="12" md="6" lg="4">
+                    <MudCard Outlined="true">
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <MudText Typo="Typo.h6">@appGroup.Key</MudText>
+                                    <MudChip T="string" Text="@appGroup.Value.Count.ToString()" 
+                                            Size="Size.Small" 
+                                            Color="Color.Primary" />
+                                </div>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            <div style="margin-bottom: 8px;">
+                                <div style="display: flex; justify-content: space-between;">
+                                    <MudText Typo="Typo.body2">激活配置</MudText>
+                                    <MudText Typo="Typo.body2">@appGroup.Value.Count(c => c.IsActive)</MudText>
+                                </div>
+                                <MudProgressLinear Value="@GetActivePercentage(appGroup.Value)" 
+                                                  Color="Color.Success" 
+                                                  Size="Size.Small" />
+                            </div>
+                            
+                            <!-- 最近更新的配置 -->
+                            @{
+                                var recentConfigs = appGroup.Value
+                                    .Where(c => c.LastModified > DateTime.Now.AddDays(-1))
+                                    .OrderByDescending(c => c.LastModified)
+                                    .Take(3);
+                            }
+                            @if (recentConfigs.Any())
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1">最近更新:</MudText>
+                                @foreach (var config in recentConfigs)
+                                {
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                        <MudText Typo="Typo.caption">@config.Key</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                            @config.LastModified.ToString("HH:mm")
+                                        </MudText>
+                                    </div>
+                                }
+                            }
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+
+        <!-- 配置类型分布 -->
+        <MudText Typo="Typo.h6" Class="mb-3 mt-4">配置类型分布</MudText>
+        <MudGrid>
+            @foreach (var typeGroup in _configsByType)
+            {
+                <MudItem xs="6" md="3">
+                    <MudCard Outlined="true">
+                        <MudCardContent Class="text-center">
+                            <MudText Typo="Typo.h5">@typeGroup.Value.Count</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@typeGroup.Key</MudText>
+                            <MudProgressCircular Value="@GetTypePercentage(typeGroup.Value.Count)" 
+                                               Size="Size.Small" 
+                                               Color="Color.Info" />
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+
+        <!-- 刷新状态 -->
+        @if (_loading)
+        {
+            <div class="d-flex justify-center pa-4">
+                <MudProgressCircular Indeterminate="true" />
+                <MudText Class="ml-2">正在刷新数据...</MudText>
+            </div>
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    private List<ConfigurationItemViewModel> _configurations = new();
+    private Dictionary<string, List<ConfigurationItemViewModel>> _configsByApp = new();
+    private Dictionary<string, List<ConfigurationItemViewModel>> _configsByType = new();
+    
+    private int _totalConfigs = 0;
+    private int _activeConfigs = 0;
+    private int _appCount = 0;
+    private int _recentUpdates = 0;
+    
+    private bool _autoRefresh = true;
+    private DateTime _lastUpdateTime = DateTime.Now;
+    private bool _loading = false;
+    private Timer? _refreshTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadStatusData();
+        
+        // 设置自动刷新计时器
+        _refreshTimer = new Timer(async _ =>
+        {
+            if (_autoRefresh)
+            {
+                await InvokeAsync(async () =>
+                {
+                    await LoadStatusData();
+                    StateHasChanged();
+                });
+            }
+        }, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+    }
+
+    private async Task LoadStatusData()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        try
+        {
+            if ((await ConfigurationService.GetAllConfigsAsync()).IsFailed(out var error, out var data))
+            {
+                Snackbar.Add($"加载配置状态失败: {error}", Severity.Error);
+                return;
+            }
+
+            _configurations = data;
+            _lastUpdateTime = DateTime.Now;
+
+            // 计算统计数据
+            _totalConfigs = _configurations.Count;
+            _activeConfigs = _configurations.Count(c => c.IsActive);
+            _appCount = _configurations.Select(c => c.AppId).Distinct().Count();
+            _recentUpdates = _configurations.Count(c => c.LastModified.Date == DateTime.Today);
+
+            // 按应用分组
+            _configsByApp = _configurations
+                .GroupBy(c => c.AppId)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            // 按类型分组
+            _configsByType = _configurations
+                .GroupBy(c => c.Type)
+                .ToDictionary(g => g.Key, g => g.ToList());
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"加载配置状态失败: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private double GetActivePercentage(List<ConfigurationItemViewModel> configs)
+    {
+        if (!configs.Any()) return 0;
+        return (double)configs.Count(c => c.IsActive) / configs.Count * 100;
+    }
+
+    private double GetTypePercentage(int typeCount)
+    {
+        if (_totalConfigs == 0) return 0;
+        return (double)typeCount / _totalConfigs * 100;
+    }
+
+    public void Dispose()
+    {
+        _refreshTimer?.Dispose();
+    }
+}

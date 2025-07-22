@@ -1,0 +1,228 @@
+@using MoLibrary.Configuration.Dashboard.UIConfiguration.Models
+@using MoLibrary.Configuration.Dashboard.UIConfiguration.Services
+@using MoLibrary.Tool.MoResponse
+@using MudBlazor
+@inject ConfigurationService ConfigurationService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudContainer Style="max-width: 600px;">
+            <MudText Typo="Typo.h6" Class="mb-4">编辑配置项</MudText>
+            
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_configKey" 
+                                 Label="配置键" 
+                                 ReadOnly="true"
+                                 Variant="Variant.Outlined" />
+                </MudItem>
+                
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_configAppId" 
+                                 Label="应用ID" 
+                                 ReadOnly="true"
+                                 Variant="Variant.Outlined" />
+                </MudItem>
+                
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_configType" 
+                                 Label="配置类型" 
+                                 ReadOnly="true"
+                                 Variant="Variant.Outlined" />
+                </MudItem>
+                
+                <MudItem xs="12">
+                    @if (_configType == "Boolean" || _configType == "bool")
+                    {
+                        <MudSwitch T="bool" @bind-Checked="_boolValue" 
+                                  Label="配置值" 
+                                  Color="Color.Primary" />
+                    }
+                    else if (_configType == "Number" || _configType == "Int32" || _configType == "Int64")
+                    {
+                        <MudNumericField @bind-Value="_numericValue" 
+                                        Label="配置值" 
+                                        Variant="Variant.Outlined" />
+                    }
+                    else
+                    {
+                        <MudTextField @bind-Value="_configValue" 
+                                     Label="配置值" 
+                                     Lines="3"
+                                     Variant="Variant.Outlined" 
+                                     HelperText="支持JSON格式配置" />
+                    }
+                </MudItem>
+                
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_configDescription" 
+                                 Label="描述信息" 
+                                 ReadOnly="true"
+                                 Lines="2"
+                                 Variant="Variant.Outlined" />
+                </MudItem>
+                
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_updateReason" 
+                                 Label="更新说明" 
+                                 Placeholder="请说明本次更新的原因..."
+                                 Lines="2"
+                                 Variant="Variant.Outlined" />
+                </MudItem>
+            </MudGrid>
+            
+            @if (!string.IsNullOrEmpty(_validationMessage))
+            {
+                <MudAlert Severity="Severity.Warning" Class="mt-3">
+                    @_validationMessage
+                </MudAlert>
+            }
+        </MudContainer>
+    </DialogContent>
+    
+    <DialogActions>
+        <MudButton OnClick="Cancel">取消</MudButton>
+        <MudButton Color="Color.Primary" 
+                  Variant="Variant.Filled"
+                  OnClick="SaveChanges"
+                  Disabled="_saving">
+            @if (_saving)
+            {
+                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true"/>
+                <MudText Class="ms-2">保存中...</MudText>
+            }
+            else
+            {
+                <MudText>保存</MudText>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+	[CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public EventCallback<ConfigurationItemViewModel> OnConfigurationUpdated { get; set; }
+
+    private ConfigurationItemViewModel? _currentConfig;
+    private string _configKey = string.Empty;
+    private string _configAppId = string.Empty;
+    private string _configValue = string.Empty;
+    private string _configType = string.Empty;
+    private string _configDescription = string.Empty;
+    private string _updateReason = string.Empty;
+    private string _validationMessage = string.Empty;
+    private bool _saving = false;
+    
+    // 针对不同类型的值
+    private bool _boolValue = false;
+    private decimal _numericValue = 0;
+
+    public async Task ShowEditDialogAsync(ConfigurationItemViewModel config)
+    {
+        _currentConfig = config;
+        _configKey = config.Key;
+        _configAppId = config.AppId;
+        _configValue = config.Value;
+        _configType = config.Type;
+        _configDescription = config.Description;
+        _updateReason = string.Empty;
+        _validationMessage = string.Empty;
+        
+        // 根据类型设置相应的值
+        if (_configType == "Boolean" || _configType == "bool")
+        {
+            bool.TryParse(_configValue, out _boolValue);
+        }
+        else if (_configType == "Number" || _configType == "Int32" || _configType == "Int64")
+        {
+            decimal.TryParse(_configValue, out _numericValue);
+        }
+        
+        StateHasChanged();
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private async Task SaveChanges()
+    {
+        if (string.IsNullOrEmpty(_updateReason))
+        {
+            _validationMessage = "请填写更新说明";
+            return;
+        }
+
+        _saving = true;
+        _validationMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            // 根据类型获取正确的值
+            object finalValue = _configValue;
+            if (_configType == "Boolean" || _configType == "bool")
+            {
+                finalValue = _boolValue;
+            }
+            else if (_configType == "Number" || _configType == "Int32" || _configType == "Int64")
+            {
+                finalValue = _numericValue;
+            }
+
+            var request = new ConfigurationUpdateRequest
+            {
+                Key = _configKey,
+                Value = finalValue,
+                AppId = _configAppId,
+                Reason = _updateReason
+            };
+
+            if ((await ConfigurationService.UpdateConfigAsync(request)).IsFailed(out var error))
+            {
+                _validationMessage = $"更新失败: {error}";
+                return;
+            }
+
+            // 更新当前配置对象
+            if (_currentConfig != null)
+            {
+                _currentConfig.Value = finalValue.ToString() ?? string.Empty;
+                _currentConfig.LastModified = DateTime.Now;
+                await OnConfigurationUpdated.InvokeAsync(_currentConfig);
+            }
+
+            Snackbar.Add("配置更新成功", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            _validationMessage = $"更新失败: {ex.Message}";
+            Snackbar.Add($"配置更新失败: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+            StateHasChanged();
+        }
+    }
+
+    private bool ValidateValue()
+    {
+        if (string.IsNullOrWhiteSpace(_configValue))
+        {
+            return true; // 允许空值
+        }
+
+        return _configType switch
+        {
+            "Boolean" or "bool" => bool.TryParse(_configValue, out _),
+            "Number" or "Int32" => int.TryParse(_configValue, out _),
+            "Int64" => long.TryParse(_configValue, out _),
+            "Decimal" => decimal.TryParse(_configValue, out _),
+            _ => true // 字符串类型总是有效的
+        };
+    }
+}

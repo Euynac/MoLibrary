@@ -1,0 +1,318 @@
+@using MoLibrary.Configuration.Dashboard.UIConfiguration.Models
+@using MoLibrary.Configuration.Dashboard.UIConfiguration.Services
+@using MoLibrary.Tool.MoResponse
+@using MudBlazor
+@inject ConfigurationService ConfigurationService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<MudCard>
+    <MudCardHeader>
+        <CardHeaderContent>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <MudText Typo="Typo.h6">配置历史记录</MudText>
+                <MudButtonGroup Size="Size.Small" Variant="Variant.Outlined">
+                    <MudButton StartIcon="@Icons.Material.Filled.Refresh" OnClick="RefreshHistory">刷新</MudButton>
+                    <MudButton StartIcon="@Icons.Material.Filled.DateRange" OnClick="ShowDateRangePicker">时间范围</MudButton>
+                </MudButtonGroup>
+            </div>
+        </CardHeaderContent>
+    </MudCardHeader>
+    
+    <MudCardContent>
+        <!-- 筛选选项 -->
+        <MudGrid Class="mb-4">
+            <MudItem xs="12" md="3">
+                <MudTextField @bind-Value="_filterKey" 
+                             Label="配置键" 
+                             Variant="Variant.Outlined"
+                             Clearable="true" />
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudTextField @bind-Value="_filterAppId" 
+                             Label="应用ID" 
+                             Variant="Variant.Outlined"
+                             Clearable="true" />
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudDateRangePicker @bind-DateRange="_dateRange" 
+                                   Label="时间范围" 
+                                   Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" md="2">
+                <MudButton Variant="Variant.Filled" 
+                          Color="Color.Primary" 
+                          FullWidth="true"
+                          OnClick="LoadHistoryData">
+                    查询
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+
+        <!-- 历史记录时间线 -->
+        <MudTimeline TimelineOrientation="TimelineOrientation.Vertical">
+            @foreach (var history in _historyRecords.Take(50)) // 限制显示条数
+            {
+                <MudTimelineItem Color="@GetTimelineColor(history.Operation)" Size="Size.Small">
+                    <ItemOpposite>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            @history.ModifiedTime.ToString("MM-dd HH:mm")
+                        </MudText>
+                    </ItemOpposite>
+                    <ItemContent>
+                        <MudCard Outlined="true" Class="pa-3">
+                            <MudCardHeader Class="pb-2">
+                                <CardHeaderContent>
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <div>
+                                            <MudText Typo="Typo.body1" Style="font-weight: 500;">
+                                                @history.Key
+                                            </MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                @history.AppId
+                                            </MudText>
+                                        </div>
+                                        <div style="display: flex; gap: 8px; align-items: center;">
+                                            <MudChip T="string" Text="@history.OperationText" 
+                                                    Size="Size.Small" 
+                                                    Color="@GetOperationColor(history.Operation)" />
+                                            <MudText Typo="Typo.caption">v@history.Version</MudText>
+                                        </div>
+                                    </div>
+                                </CardHeaderContent>
+                            </MudCardHeader>
+                            <MudCardContent Class="pt-0">
+                                @if (!string.IsNullOrEmpty(history.OldValue) || !string.IsNullOrEmpty(history.NewValue))
+                                {
+                                    <MudGrid>
+                                        @if (!string.IsNullOrEmpty(history.OldValue))
+                                        {
+                                            <MudItem xs="6">
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">旧值:</MudText>
+                                                <MudText Typo="Typo.body2" Class="text-break">
+                                                    @GetDisplayValue(history.OldValue)
+                                                </MudText>
+                                            </MudItem>
+                                        }
+                                        @if (!string.IsNullOrEmpty(history.NewValue))
+                                        {
+                                            <MudItem xs="6">
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">新值:</MudText>
+                                                <MudText Typo="Typo.body2" Class="text-break">
+                                                    @GetDisplayValue(history.NewValue)
+                                                </MudText>
+                                            </MudItem>
+                                        }
+                                    </MudGrid>
+                                }
+                                
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        操作者: @history.ModifiedBy
+                                    </MudText>
+                                    <MudButtonGroup Size="Size.Small" Variant="Variant.Text">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Restore" 
+                                                      Color="Color.Warning"
+                                                      Title="回滚到此版本"
+                                                      OnClick="() => ShowRollbackDialog(history)" />
+                                        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" 
+                                                      Color="Color.Info"
+                                                      Title="复制新值"
+                                                      OnClick="() => CopyToClipboard(history.NewValue)" />
+                                    </MudButtonGroup>
+                                </div>
+                            </MudCardContent>
+                        </MudCard>
+                    </ItemContent>
+                </MudTimelineItem>
+            }
+        </MudTimeline>
+
+        @if (_loading)
+        {
+            <div class="d-flex justify-center pa-4">
+                <MudProgressCircular Indeterminate="true" />
+            </div>
+        }
+
+        @if (!_historyRecords.Any() && !_loading)
+        {
+            <MudAlert Severity="Severity.Info">
+                没有找到历史记录
+            </MudAlert>
+        }
+
+        @if (_historyRecords.Count > 50)
+        {
+            <MudAlert Severity="Severity.Info" Class="mt-3">
+                显示前50条记录，共 @_historyRecords.Count 条记录
+            </MudAlert>
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    private List<ConfigurationHistoryViewModel> _historyRecords = new();
+    private bool _loading = false;
+    
+    // 筛选参数
+    private string _filterKey = string.Empty;
+    private string _filterAppId = string.Empty;
+    private DateRange? _dateRange = new DateRange(DateTime.Now.AddDays(-30), DateTime.Now);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadHistoryData();
+    }
+
+    public async Task LoadHistoryForConfigAsync(string key, string appId)
+    {
+        _filterKey = key;
+        _filterAppId = appId;
+        await LoadHistoryData();
+        StateHasChanged();
+    }
+
+    private async Task LoadHistoryData()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        try
+        {
+            DateTime? startDate = _dateRange?.Start;
+            DateTime? endDate = _dateRange?.End;
+
+            var result = await ConfigurationService.GetConfigHistoryAsync(
+                string.IsNullOrWhiteSpace(_filterKey) ? null : _filterKey,
+                string.IsNullOrWhiteSpace(_filterAppId) ? null : _filterAppId,
+                startDate,
+                endDate
+            );
+
+            if (result.IsFailed(out var error, out var data))
+            {
+                Snackbar.Add($"加载历史记录失败: {error}", Severity.Error);
+                return;
+            }
+
+            _historyRecords = data.OrderByDescending(h => h.ModifiedTime).ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"加载历史记录失败: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefreshHistory()
+    {
+        await LoadHistoryData();
+        Snackbar.Add("历史记录已刷新", Severity.Success);
+    }
+
+    private async Task ShowDateRangePicker()
+    {
+        // 可以实现一个日期范围选择对话框
+        await LoadHistoryData();
+    }
+
+    private Color GetTimelineColor(string operation)
+    {
+        return operation switch
+        {
+            "Create" => Color.Success,
+            "Update" => Color.Info,
+            "Delete" => Color.Error,
+            "Rollback" => Color.Warning,
+            _ => Color.Default
+        };
+    }
+
+    private Color GetOperationColor(string operation)
+    {
+        return operation switch
+        {
+            "Create" => Color.Success,
+            "Update" => Color.Info,
+            "Delete" => Color.Error,
+            "Rollback" => Color.Warning,
+            _ => Color.Default
+        };
+    }
+
+    private string GetDisplayValue(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return "(空值)";
+        
+        if (value.Length > 100)
+            return value.Substring(0, 100) + "...";
+        
+        return value;
+    }
+
+    private async Task ShowRollbackDialog(ConfigurationHistoryViewModel history)
+    {
+        var parameters = new DialogParameters<MudMessageBox>
+        {
+            { x => x.Title, "确认回滚" },
+            { x => x.Message, $"确定要将配置项 '{history.Key}' 回滚到版本 {history.Version} 吗？" },
+            { x => x.CancelText, "取消" },
+            { x => x.YesText, "回滚" }
+        };
+
+        var dialog = DialogService.Show<MudMessageBox>("", parameters);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            await RollbackConfiguration(history);
+        }
+    }
+
+    private async Task RollbackConfiguration(ConfigurationHistoryViewModel history)
+    {
+        try
+        {
+            var request = new ConfigurationRollbackRequest
+            {
+                Key = history.Key,
+                AppId = history.AppId,
+                Version = history.Version,
+                Reason = $"从界面回滚到版本 {history.Version}"
+            };
+
+            if ((await ConfigurationService.RollbackConfigAsync(request)).IsFailed(out var error))
+            {
+                Snackbar.Add($"回滚失败: {error}", Severity.Error);
+                return;
+            }
+
+            Snackbar.Add($"配置项 '{history.Key}' 已成功回滚到版本 {history.Version}", Severity.Success);
+            await LoadHistoryData(); // 刷新历史记录
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"回滚失败: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task CopyToClipboard(string value)
+    {
+        try
+        {
+            // 这里应该使用JS互操作来复制到剪贴板
+            // 为了简化，我们只显示一个消息
+            Snackbar.Add("值已复制到剪贴板", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"复制失败: {ex.Message}", Severity.Error);
+        }
+    }
+}

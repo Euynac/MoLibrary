@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using MoLibrary.Configuration.Annotations;
+using MoLibrary.Configuration.Controllers;
 using MoLibrary.Configuration.Interfaces;
 using MoLibrary.Configuration.Model;
 using MoLibrary.Configuration.Providers;
@@ -16,11 +17,12 @@ using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
+using MoLibrary.Core.Modules;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Configuration.Modules;
 
-public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<ModuleConfiguration, ModuleConfigurationOption, ModuleConfigurationGuide>(option), IWantIterateBusinessTypes
+public class ModuleConfiguration(ModuleConfigurationOption option) : MoModuleWithDependencies<ModuleConfiguration, ModuleConfigurationOption, ModuleConfigurationGuide>(option), IWantIterateBusinessTypes
 {
     private IServiceCollection _services = null!;
     private MethodInfo _method = null!;
@@ -65,6 +67,13 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
         }
 
         _method = method;
+    }
+
+    public override void ClaimDependencies()
+    {
+        // 注册Controller依赖
+        DependsOnModule<ModuleControllersGuide>().Register()
+            .RegisterMoControllers<ModuleConfigurationController>(Option);
     }
 
     public override void PostConfigureServices(IServiceCollection services)
@@ -117,55 +126,6 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
         }
     }
 
-    public override void ConfigureEndpoints(IApplicationBuilder app)
-    {
-        app.UseEndpoints(endpoints =>
-        {
-            var tagGroup = new List<OpenApiTag> { new() { Name = option.GetApiGroupName(), Description = "热配置相关内置接口" } };
-            endpoints.MapGet(MoConfigurationConventions.GetConfigStatus, async (HttpResponse response,
-                HttpContext context, [FromQuery] bool? onlyCurDomain,
-                [FromServices] IMoConfigurationCardManager manager) =>
-            {
-                return Res.Create(manager.GetDomainConfigs(onlyCurDomain), ResponseCode.Ok).GetResponse();
-            }).WithName("获取热配置状态信息").WithOpenApi(operation =>
-            {
-                operation.Summary = "获取热配置状态信息";
-                operation.Description = "获取热配置状态信息";
-                operation.Tags = tagGroup;
-                return operation;
-            });
-
-            endpoints.MapGet("/option/debug", async (HttpResponse response, HttpContext context) =>
-                {
-                    var res = new
-                    {
-                        debug = MoConfigurationManager.GetDebugView().Split(Environment.NewLine),
-                    };
-
-                    return res;
-                }).WithName("获取DebuggingView")
-                .WithOpenApi(operation =>
-                {
-                    operation.Summary = "获取DebuggingView";
-                    operation.Description = "展示配置项来源数据以及提供者";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
-
-            endpoints.MapGet("/option/providers", async (HttpResponse response, HttpContext context) =>
-                {
-                    var res = MoConfigurationManager.GetProviders();
-                    return res;
-                }).WithName("获取配置提供者")
-                .WithOpenApi(operation =>
-                {
-                    operation.Summary = "获取配置提供者";
-                    operation.Description = "获取配置提供者";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
-        });
-    }
 
    
 }
