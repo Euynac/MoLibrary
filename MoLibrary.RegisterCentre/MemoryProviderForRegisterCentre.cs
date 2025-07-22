@@ -45,7 +45,7 @@ public class MemoryProviderForRegisterCentre(IHttpContextAccessor accessor, IReg
         if (status.AppId.IsNullOrWhiteSpace()) return Res.Fail("该微服务未设置APPID，无法注册");
 
         if (req.FromClient is null && accessor.HttpContext?.Connection is { } connection)
-        {d
+        {
             req.FromClient =
                 $"[Remote: {connection.RemoteIpAddress?.ToString()}:{connection.RemotePort}][Local: {connection.LocalIpAddress?.ToString()}:{connection.LocalPort}";
         }

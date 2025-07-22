@@ -1,0 +1,255 @@
+@using MoLibrary.Configuration.Dashboard.UIConfiguration.Models
+@using MoLibrary.Configuration.Dashboard.UIConfiguration.Services
+@using MoLibrary.Tool.MoResponse
+@using MudBlazor
+@inject ConfigurationService ConfigurationService
+@inject ISnackbar Snackbar
+
+<MudCard>
+    <MudCardHeader>
+        <CardHeaderContent>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <MudText Typo="Typo.h6">配置项列表</MudText>
+                <MudButton Variant="Variant.Filled" 
+                          Color="Color.Primary" 
+                          StartIcon="@Icons.Material.Filled.Refresh"
+                          OnClick="RefreshDataAsync">
+                    刷新
+                </MudButton>
+            </div>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent>
+        <!-- 搜索和筛选 -->
+        <MudGrid Class="mb-4">
+            <MudItem xs="12" md="4">
+                <MudTextField @bind-Value="_searchKeyword" 
+                             Label="搜索关键字" 
+                             Variant="Variant.Outlined"
+                             Adornment="Adornment.End"
+                             AdornmentIcon="@Icons.Material.Filled.Search"
+                             OnAdornmentClick="SearchConfigsAsync" />
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudSelect @bind-Value="_selectedAppId" 
+                          Label="应用ID" 
+                          Variant="Variant.Outlined">
+                    <MudSelectItem Value="@((string?)null)">全部</MudSelectItem>
+                    @foreach (var appId in _appIds)
+                    {
+                        <MudSelectItem Value="@appId">@appId</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudSelect @bind-Value="_selectedStatus" 
+                          Label="状态" 
+                          Variant="Variant.Outlined">
+                    <MudSelectItem Value="@((bool?)null)">全部</MudSelectItem>
+                    <MudSelectItem Value="true">激活</MudSelectItem>
+                    <MudSelectItem Value="false">未激活</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="2">
+                <MudButton Variant="Variant.Outlined" 
+                          Color="Color.Primary" 
+                          FullWidth="true"
+                          OnClick="SearchConfigsAsync">
+                    筛选
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+
+        <!-- 数据表格 -->
+        <MudTable Items="@_configurations" 
+                  Dense="@_dense" 
+                  Hover="true" 
+                  Striped="true"
+                  Loading="@_loading"
+                  LoadingProgressColor="Color.Info">
+            <ToolBarContent>
+                <MudText Typo="Typo.h6">配置项 (@_configurations.Count)</MudText>
+                <MudSpacer />
+                <MudSwitch T="bool" @bind-Checked="@_dense" Label="紧凑模式" Color="Color.Primary" />
+            </ToolBarContent>
+            <HeaderContent>
+                <MudTh><MudTableSortLabel SortBy="new Func<ConfigurationItemViewModel, object>(x => x.Key)">配置键</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<ConfigurationItemViewModel, object>(x => x.AppId)">应用ID</MudTableSortLabel></MudTh>
+                <MudTh>配置值</MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<ConfigurationItemViewModel, object>(x => x.Type)">类型</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<ConfigurationItemViewModel, object>(x => x.IsActive)">状态</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<ConfigurationItemViewModel, object>(x => x.LastModified)">最后修改</MudTableSortLabel></MudTh>
+                <MudTh>操作</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="配置键">
+                    <MudText Typo="Typo.body2" Style="font-weight: 500;">@context.Key</MudText>
+                    @if (!string.IsNullOrEmpty(context.Description))
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@context.Description</MudText>
+                    }
+                </MudTd>
+                <MudTd DataLabel="应用ID">
+                    <MudChip T="string" Text="@context.AppId" Size="Size.Small" />
+                </MudTd>
+                <MudTd DataLabel="配置值">
+                    <div style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                         title="@context.Value">
+                        @context.Value
+                    </div>
+                </MudTd>
+                <MudTd DataLabel="类型">
+                    <MudChip T="string" Text="@context.Type" Size="Size.Small" Color="Color.Info" />
+                </MudTd>
+                <MudTd DataLabel="状态">
+                    <MudChip T="string" Text="@context.StatusText" 
+                            Size="Size.Small" 
+                            Color="@(context.IsActive ? Color.Success : Color.Warning)" />
+                </MudTd>
+                <MudTd DataLabel="最后修改">@context.LastModified.ToString("yyyy-MM-dd HH:mm")</MudTd>
+                <MudTd DataLabel="操作">
+                    <MudButtonGroup Size="Size.Small" Variant="Variant.Text">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                      Color="Color.Primary"
+                                      Title="编辑"
+                                      OnClick="() => OnEditRequested.InvokeAsync(context)" />
+                        <MudIconButton Icon="@Icons.Material.Filled.History" 
+                                      Color="Color.Info"
+                                      Title="历史"
+                                      OnClick="() => OnHistoryRequested.InvokeAsync(context)" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                      Color="Color.Error"
+                                      Title="删除"
+                                      OnClick="() => OnDeleteRequested.InvokeAsync(context)" />
+                    </MudButtonGroup>
+                </MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <MudText>没有找到配置项</MudText>
+            </NoRecordsContent>
+            <LoadingContent>
+                <MudText>加载配置数据中...</MudText>
+            </LoadingContent>
+        </MudTable>
+
+        <!-- 分页 -->
+        @if (_totalCount > _pageSize)
+        {
+            <div class="d-flex justify-center mt-4">
+                <MudPagination Count="@_totalPages" 
+                              Selected="@(_currentPage + 1)"
+                              SelectedChanged="OnPageChanged" 
+                              ShowFirstButton="true" 
+                              ShowLastButton="true" />
+            </div>
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public EventCallback<ConfigurationItemViewModel> OnEditRequested { get; set; }
+    [Parameter] public EventCallback<ConfigurationItemViewModel> OnHistoryRequested { get; set; }
+    [Parameter] public EventCallback<ConfigurationItemViewModel> OnDeleteRequested { get; set; }
+
+    private List<ConfigurationItemViewModel> _configurations = new();
+    private List<string> _appIds = new();
+    private bool _loading = false;
+    private bool _dense = false;
+
+    // 搜索和筛选
+    private string _searchKeyword = string.Empty;
+    private string? _selectedAppId;
+    private bool? _selectedStatus;
+
+    // 分页
+    private int _currentPage = 0;
+    private int _pageSize = 20;
+    private int _totalCount = 0;
+    private int _totalPages => (int)Math.Ceiling((double)_totalCount / _pageSize);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    public async Task LoadDataAsync()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        try
+        {
+            if ((await ConfigurationService.GetAllConfigsAsync()).IsFailed(out var error, out var data))
+            {
+                Snackbar.Add($"加载配置失败: {error}", Severity.Error);
+                return;
+            }
+
+            _configurations = data;
+            _totalCount = data.Count;
+
+            // 提取应用ID列表
+            _appIds = data.Select(c => c.AppId).Distinct().OrderBy(x => x).ToList();
+
+            // 应用筛选
+            ApplyFilters();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"加载配置失败: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    public async Task RefreshDataAsync()
+    {
+        await LoadDataAsync();
+        Snackbar.Add("配置列表已刷新", Severity.Success);
+    }
+
+    private async Task SearchConfigsAsync()
+    {
+        _currentPage = 0;
+        ApplyFilters();
+        StateHasChanged();
+    }
+
+    private void ApplyFilters()
+    {
+        var filtered = _configurations.AsEnumerable();
+
+        // 关键字搜索
+        if (!string.IsNullOrWhiteSpace(_searchKeyword))
+        {
+            filtered = filtered.Where(c => 
+                c.Key.Contains(_searchKeyword, StringComparison.OrdinalIgnoreCase) ||
+                c.Value.Contains(_searchKeyword, StringComparison.OrdinalIgnoreCase) ||
+                c.Description.Contains(_searchKeyword, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // 应用ID筛选
+        if (!string.IsNullOrEmpty(_selectedAppId))
+        {
+            filtered = filtered.Where(c => c.AppId == _selectedAppId);
+        }
+
+        // 状态筛选
+        if (_selectedStatus.HasValue)
+        {
+            filtered = filtered.Where(c => c.IsActive == _selectedStatus.Value);
+        }
+
+        _configurations = filtered.ToList();
+        _totalCount = _configurations.Count;
+    }
+
+    private async Task OnPageChanged(int page)
+    {
+        _currentPage = page - 1;
+        StateHasChanged();
+    }
+}
