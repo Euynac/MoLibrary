@@ -41,12 +41,12 @@ public class DtoOptionItem
     /// 配置基本类型
     /// </summary>
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public OptionItemValueBasicType Type { get; set; } = OptionItemValueBasicType.String;
+    public EOptionItemValueBasicType Type { get; set; } = EOptionItemValueBasicType.String;
     /// <summary>
     /// 配置特殊类型
     /// </summary>
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public OptionItemValueSpecialType? SpecialType { get; set; }
+    public EOptionItemValueSpecialType? SpecialType { get; set; }
 
     /// <summary>
     /// 正则验证表达式

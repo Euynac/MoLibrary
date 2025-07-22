@@ -1,7 +1,8 @@
 namespace MoLibrary.Configuration.Model;
 
-public enum OptionItemValueBasicType
+public enum EOptionItemValueBasicType
 {
+    None,
     String,
     Numeric,
     DateTime,
@@ -11,8 +12,9 @@ public enum OptionItemValueBasicType
     Object
 }
 
-public enum OptionItemValueSpecialType
+public enum EOptionItemValueSpecialType
 {
+    None,
     Array,
     Dict
 }
