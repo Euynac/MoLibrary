@@ -34,7 +34,7 @@ public class MoExtendedOptionsBuilderConfigurationExtensions
 }
 
 /// <summary>
-/// 解决默认值、及多来源添加问题  TODO 目前仅解决默认值一半的问题（未能解决嵌套集合类型仍使用默认值情况），暂未实现多来源添加问题解决； 
+/// 解决默认值、及多来源添加问题  TODO 暂未实现多来源添加问题解决； 
 /// </summary>
 /// <typeparam name="TOptions"></typeparam>
 public class CollectionReplacedNamedConfigureFromConfigurationOptions<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TOptions> :
@@ -71,26 +71,48 @@ public class CollectionReplacedNamedConfigureFromConfigurationOptions<[Dynamical
     }
 
     /// <summary>
-    /// 解决Configuration的对于ICollection的行为存在多来源时默认是Append的情况，将其改写为覆盖
+    /// 解决Configuration的对于ICollection、数组等的行为存在多来源时默认是Append的情况，将其改写为覆盖
     /// </summary>
     /// <param name="options"></param>
     /// <param name="configurations"></param>
     /// <returns></returns>
     public static TOptions DoNotUseDefaultIfConfigurationContains(ref TOptions options, IConfiguration configurations)
     {
-        //巨坑：该方案对于嵌套类型中的集合类型无法生效。其原理应该是new了一个其嵌套类型的对象。所以对于这种情况，目前解决方案是嵌套集合类型不要使用默认值。
-        foreach (var collectionProperty in GetAllCollectionProperties(options.GetType()))
-        {
-            var value = (dynamic?)collectionProperty.GetValue(options);
-            if (value == null || value!.Count == 0) continue;
-            var section = configurations.GetSection(GetPropertyName(collectionProperty));
-            if (section.Exists())
-            {
-                value!.Clear();
-            }
-        }
+
+        var name = options.GetType().Name;
+        var obj = (object)options;
+        CleanOptionDefaultValueIfHasExternalConfig(ref obj, configurations);
 
         return options;
+
+
+        void CleanOptionDefaultValueIfHasExternalConfig(ref object option, IConfiguration sections)
+        {
+            foreach (var collectionProperty in GetAllCollectionProperties(option.GetType()))
+            {
+                var value = (dynamic?) collectionProperty.GetValue(option);
+                if (value == null) continue;
+                var section = sections.GetSection(GetPropertyName(collectionProperty));
+                if (!section.Exists())
+                {
+                    continue; //如果没有外部配置的，则读取默认值。
+                }
+
+                if(collectionProperty.PropertyType.IsCollectionType() || collectionProperty.PropertyType.IsArray)
+                {
+                    //if (value is Array {Length: > 0} array && array.GetType().GetElementType() is {} elementType)
+                    //{
+                    //    collectionProperty.SetValue(options, Array.CreateInstance(elementType, 0));
+                    //    continue;
+                    //}
+                    collectionProperty.SetValue(option, null);
+                }
+                else if (collectionProperty.PropertyType.IsClassObject()) //解决嵌套属性类型存在相同的Append问题的情况
+                {
+                    CleanOptionDefaultValueIfHasExternalConfig(ref value, sections);
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -100,12 +122,20 @@ public class CollectionReplacedNamedConfigureFromConfigurationOptions<[Dynamical
     /// <returns></returns>
     private static IEnumerable<PropertyInfo> GetAllCollectionProperties([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type)
     {
-        for (var t = type; t != typeof(object); t = t.BaseType)
+        for (var t = type; t != typeof(object); t = t?.BaseType)
         {
             if (t == null) continue;
             foreach (var property in t.GetProperties(BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
             {
                 if (property.PropertyType.IsCollectionType())
+                {
+                    yield return property;
+                }
+                else if (property.PropertyType.IsArray)
+                {
+                    yield return property;
+                }
+                else if (property.PropertyType.IsClassObject())
                 {
                     yield return property;
                 }

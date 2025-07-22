@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Dashboard.Interfaces;
 using MoLibrary.Core.Module.Dashboard;
@@ -51,9 +52,16 @@ public class ModuleUICore(ModuleUICoreOption option)
 
     public override void ConfigureBuilder(WebApplicationBuilder builder)
     {
-        //巨坑：如果不使用下面的语句，WebAssets 在VS中debug环境虽然可以获得css等资源文件，但编译后的debug环境404错误
-        //https://github.com/MudBlazor/MudBlazor/issues/2793
-        builder.WebHost.UseStaticWebAssets();
+        if (builder.Environment.IsStaging())
+        {
+            //巨坑：如果不使用下面的语句，WebAssets 在VS中debug环境虽然可以获得css等资源文件，但编译后的debug环境404错误。但生产环境又会访问.nuget目录，导致异常 所以必须限定环境，不能用于生产，生产要通过dotnet publish命令发布。
+            //https://github.com/MudBlazor/MudBlazor/issues/2793
+            builder.WebHost.UseStaticWebAssets();
+            //测试环境可以通过查看.StaticWebAssets.xml看生成的静态资源文件。
+
+            //生产环境是运行dotnet publish，会自动将依赖的static web assets拷贝到wwwroot文件夹。（直接通过dotnet build release 模式是不会生成wwwroot的）
+            //https://learn.microsoft.com/en-us/aspnet/core/razor-pages/ui-class?view=aspnetcore-8.0&tabs=visual-stuido#consume-content-from-a-referenced-rcl
+        }
     }
 
     /// <summary>
