@@ -43,12 +43,12 @@
                 </MudSelect>
             </MudItem>
             <MudItem xs="12" md="3">
-                <MudSelect @bind-Value="_selectedStatus" 
+                <MudSelect T="bool?" @bind-Value="_selectedStatus" 
                           Label="状态" 
                           Variant="Variant.Outlined">
-                    <MudSelectItem Value="@((bool?)null)">全部</MudSelectItem>
-                    <MudSelectItem Value="true">激活</MudSelectItem>
-                    <MudSelectItem Value="false">未激活</MudSelectItem>
+                    <MudSelectItem T="bool?" Value="@((bool?)null)">全部</MudSelectItem>
+                    <MudSelectItem T="bool?" Value="@((bool?)true)">在线</MudSelectItem>
+                    <MudSelectItem T="bool?" Value="@((bool?)false)">离线</MudSelectItem>
                 </MudSelect>
             </MudItem>
             <MudItem xs="12" md="2">
