@@ -65,6 +65,10 @@ Static web assets (wwwroot) are handled through:
 - Split files to avoid overly large single files
 - Instead of just fixing errors, use simplified thinking and refactor whenever possible
 
+## Dependency Injection Guidelines
+- Always use primary constructor when creating a class with single constructor using dependency injection
+  - More details can be read in @rules\primary-constructor.mdc
+
 ## Blazor and MudBlazor Notes
 - When using the MudBlazor Icon property in Blazor, you must reference it with an "@" prefix, for example, Icon="@Icons.Material.Filled.Info", instead of Icon="Icons.Material.Filled.Info". Omitting the "@" prefix will cause the Icon not to work.
 - In Blazor, JavaScript interop calls cannot be made in OnInitializedAsync because, during static rendering, JavaScript interop calls can only be executed in the OnAfterRenderAsync lifecycle method. Additionally, most time-consuming interface initialization tasks should not be placed in OnInitializedAsync, as this can cause page blocking and blank waiting. The correct approach is to perform JavaScript interop and time-consuming initialization in OnAfterRenderAsync(bool firstRender), using the firstRender parameter to ensure execution only during the first render.
