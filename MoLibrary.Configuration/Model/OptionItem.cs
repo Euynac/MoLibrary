@@ -53,7 +53,7 @@ public class OptionItem
     /// <summary>
     /// 配置基本类型
     /// </summary>
-    public OptionItemValueBasicType BasicType { get; set; }
+    public EOptionItemValueBasicType BasicType { get; set; }
     /// <summary>
     /// 配置基本的系统类型，去除nullable、List等泛型类型后的纯净类型
     /// </summary>
@@ -61,7 +61,7 @@ public class OptionItem
     /// <summary>
     /// 配置特殊类型
     /// </summary>
-    public OptionItemValueSpecialType? SpecialType { get; set; }
+    public EOptionItemValueSpecialType? SpecialType { get; set; }
     /// <summary>
     /// 使用:拼接作为Key，与原生Configuration Key保持一致
     /// </summary>
@@ -173,7 +173,7 @@ public class OptionItem
     {
         var setting = property.GetCustomAttribute<RegularExpressionAttribute>()?.Pattern;
         if (setting != null) return setting;
-        if (BasicType == OptionItemValueBasicType.Enum)
+        if (BasicType == EOptionItemValueBasicType.Enum)
         {
             var values = Enum.GetNames(UnderlyingType);
             return $"^({values.StringJoin("|")})$";
@@ -193,7 +193,7 @@ public class OptionItem
         UnderlyingType = type;
         if (type.IsArray)
         {
-            SpecialType = OptionItemValueSpecialType.Array;
+            SpecialType = EOptionItemValueSpecialType.Array;
             UnderlyingType = type.GetElementType() ?? throw new Exception($"不被支持的数组类型：{type.FullName}，其元素类型无法获取");
         }
         else if (type.IsGenericType)
@@ -201,13 +201,13 @@ public class OptionItem
             var generic = type.GetGenericTypeDefinition();
             if (generic == typeof(List<>))
             {
-                SpecialType = OptionItemValueSpecialType.Array;
+                SpecialType = EOptionItemValueSpecialType.Array;
                 UnderlyingType = type.GetGenericArguments().First();
             }
 
             if (generic == typeof(Dictionary<,>))
             {
-                SpecialType = OptionItemValueSpecialType.Dict;
+                SpecialType = EOptionItemValueSpecialType.Dict;
                 UnderlyingType = type.GetGenericArguments().First();
             }
         }
@@ -223,42 +223,42 @@ public class OptionItem
             UnderlyingType = UnderlyingType.StripNullable();
             if (NumericSet.Contains(UnderlyingType))
             {
-                BasicType = OptionItemValueBasicType.Numeric;
+                BasicType = EOptionItemValueBasicType.Numeric;
                 return;
             }
             if (DateTimeSet.Contains(UnderlyingType))
             {
-                BasicType = OptionItemValueBasicType.DateTime;
+                BasicType = EOptionItemValueBasicType.DateTime;
                 return;
             }
 
             if (UnderlyingType.IsEnum)
             {
-                BasicType = OptionItemValueBasicType.Enum;
+                BasicType = EOptionItemValueBasicType.Enum;
                 return;
             }
 
 
             if (UnderlyingType == typeof(bool))
             {
-                BasicType = OptionItemValueBasicType.Boolean;
+                BasicType = EOptionItemValueBasicType.Boolean;
                 return;
             }
 
             if (UnderlyingType == typeof(TimeSpan))
             {
-                BasicType = OptionItemValueBasicType.TimeSpan;
+                BasicType = EOptionItemValueBasicType.TimeSpan;
                 return;
             }
         }
 
         if (UnderlyingType.IsClass && UnderlyingType != typeof(string))
         {
-            BasicType = OptionItemValueBasicType.Object;
+            BasicType = EOptionItemValueBasicType.Object;
             return;
         }
 
-        BasicType = OptionItemValueBasicType.String;
+        BasicType = EOptionItemValueBasicType.String;
         return;
     }
 
