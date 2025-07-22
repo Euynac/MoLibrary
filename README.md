@@ -32,7 +32,7 @@ MoLibrary 是一个模块化的 .NET 基础设施库，允许您单独使用某�
 
 ## 📦 可用模块
 
-MoLibrary 目前提供以下模块：
+MoLibrary 目前提供40+模块，以下是部分模块（待补充）
 
 - **Core**：核心功能和基础设施
 - **DomainDrivenDesign**：DDD 模式实现
@@ -69,35 +69,26 @@ dotnet add package MoLibrary.DependencyInjection
 MoLibrary 使用模块化的方式来注册和配置服务：
 
 ```csharp
-// 注册核心模块
-services.AddMoModule();
-
-// 注册其他模块
-services.AddMoModuleRepository(options => {
-    // 配置模块选项
-    options.ConnectionString = "your-connection-string";
+builder.ConfigModuleConfigurationDashboard().AddMoConfigurationDashboardClient<DaprHttpForConnectServer, ProjectServiceInfo>(s =>
+{
+    s.ClientRetryTimes = 3;
+    s.HeartbeatDuration = 10000;
+    s.RetryDuration = 6000;
 });
 ```
 
-模块通常会返回一个 `ModuleGuide` 对象，用于进一步配置：
+> 模块通常会返回一个 `ModuleGuide` 对象，用于进一步配置。
 
-```csharp
-services.AddMoModuleRepository()
-        .ConfigureDatabase(options => {
-            options.ConnectionString = "your-connection-string";
-        })
-        .AddDefaultRepositories();
-```
 
 
 ## 📚 核心概念
 
-MoLibrary 的核心概念是 `MoModule`，每个模块遵循统一的注册和配置模式：
+MoLibrary 的核心概念是 `MoModule`，作为库的核心注册机制，每个Library有一个或多个`Module`，每个`Module`组成如下：
 
-1. **ModuleOption{ModuleName}**: 模块的配置选项
-2. **ModuleGuide{ModuleName}**: 模块配置的向导类
-3. **Module{ModuleName}**: 包含依赖注入和中间件配置的具体实现
-4. **ModuleBuilderExtensions{ModuleName}**: 面向用户的扩展方法
+1. `Module{ModuleName}Option`: 模块Option的设置
+2. `Module{ModuleName}Guide`: 模块配置的向导类
+3. `Module{ModuleName}`: 含有依赖注入的方式以及配置ASP.NET Core中间件等具体实现
+4. `Module{ModuleName}BuilderExtensions`: 面向用户的扩展方法
 
 
 ## 🤝 贡献

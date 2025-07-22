@@ -38,7 +38,7 @@ public abstract class MoRegisterCentreServerConnectorBase(IRegisterCentreClient 
             }
             finally
             {
-                await Task.Delay(option.Value.RetryDuration*1000);
+                await Task.Delay(option.Value.RetryDuration);
                 retryTimes--;
             }
         }
@@ -63,7 +63,7 @@ public abstract class MoRegisterCentreServerConnectorBase(IRegisterCentreClient 
             }
             finally
             {
-                await Task.Delay(option.Value.HeartbeatDuration*1000);
+                await Task.Delay(option.Value.HeartbeatDuration);
             }
         }
     }

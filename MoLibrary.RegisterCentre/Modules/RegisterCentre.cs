@@ -176,16 +176,16 @@ public class ModuleRegisterCentreOption : MoModuleControllerOption<ModuleRegiste
     public int MaxParallelInvokerCount { get; set; }
 
     /// <summary>
-    /// 客户端心跳频率
+    /// 客户端心跳频率（单位：ms）
     /// </summary>
-    public int HeartbeatDuration { get; set; } = 10;
+    public int HeartbeatDuration { get; set; } = 10000;
 
     /// <summary>
     /// 客户端注册中心重试次数
     /// </summary>
     public int ClientRetryTimes { get; set; } = 3;
     /// <summary>
-    /// 客户端重试频率
+    /// 客户端重试频率（单位：ms）
     /// </summary>
-    public int RetryDuration { get; set; } = 5;
+    public int RetryDuration { get; set; } = 5000;
 }
