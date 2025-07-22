@@ -1,4 +1,5 @@
-@using MoLibrary.Configuration.Dashboard.UIConfiguration.Models
+@using MoLibrary.Configuration.Model
+@using MoLibrary.Configuration.Dashboard.Model
 @using MoLibrary.Configuration.Dashboard.UIConfiguration.Services
 @using MoLibrary.Tool.MoResponse
 @using MudBlazor
@@ -19,8 +20,8 @@
                 </MudItem>
                 
                 <MudItem xs="12">
-                    <MudTextField @bind-Value="_configAppId" 
-                                 Label="应用ID" 
+                    <MudTextField @bind-Value="_configTitle" 
+                                 Label="显示标题" 
                                  ReadOnly="true"
                                  Variant="Variant.Outlined" />
                 </MudItem>
@@ -33,13 +34,13 @@
                 </MudItem>
                 
                 <MudItem xs="12">
-                    @if (_configType == "Boolean" || _configType == "bool")
+                    @if (_configType == "Boolean")
                     {
                         <MudSwitch T="bool" @bind-Checked="_boolValue" 
                                   Label="配置值" 
                                   Color="Color.Primary" />
                     }
-                    else if (_configType == "Number" || _configType == "Int32" || _configType == "Int64")
+                    else if (_configType == "Int32" || _configType == "Int64")
                     {
                         <MudNumericField @bind-Value="_numericValue" 
                                         Label="配置值" 
@@ -102,11 +103,11 @@
 
 @code {
 	[CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
-    [Parameter] public EventCallback<ConfigurationItemViewModel> OnConfigurationUpdated { get; set; }
+    [Parameter] public EventCallback<DtoOptionItem> OnConfigurationUpdated { get; set; }
 
-    private ConfigurationItemViewModel? _currentConfig;
+    private DtoOptionItem? _currentConfig;
     private string _configKey = string.Empty;
-    private string _configAppId = string.Empty;
+    private string _configTitle = string.Empty;
     private string _configValue = string.Empty;
     private string _configType = string.Empty;
     private string _configDescription = string.Empty;
@@ -118,23 +119,23 @@
     private bool _boolValue = false;
     private decimal _numericValue = 0;
 
-    public async Task ShowEditDialogAsync(ConfigurationItemViewModel config)
+    public async Task ShowEditDialogAsync(DtoOptionItem config)
     {
         _currentConfig = config;
         _configKey = config.Key;
-        _configAppId = config.AppId;
-        _configValue = config.Value;
-        _configType = config.Type;
-        _configDescription = config.Description;
+        _configTitle = config.Title;
+        _configValue = config.Value?.ToString() ?? string.Empty;
+        _configType = config.Type.ToString();
+        _configDescription = config.Desc ?? string.Empty;
         _updateReason = string.Empty;
         _validationMessage = string.Empty;
         
         // 根据类型设置相应的值
-        if (_configType == "Boolean" || _configType == "bool")
+        if (_configType == "Boolean")
         {
             bool.TryParse(_configValue, out _boolValue);
         }
-        else if (_configType == "Number" || _configType == "Int32" || _configType == "Int64")
+        else if (_configType == "Int32" || _configType == "Int64")
         {
             decimal.TryParse(_configValue, out _numericValue);
         }
@@ -163,24 +164,16 @@
         {
             // 根据类型获取正确的值
             object finalValue = _configValue;
-            if (_configType == "Boolean" || _configType == "bool")
+            if (_configType == "Boolean")
             {
                 finalValue = _boolValue;
             }
-            else if (_configType == "Number" || _configType == "Int32" || _configType == "Int64")
+            else if (_configType == "Int32" || _configType == "Int64")
             {
                 finalValue = _numericValue;
             }
 
-            var request = new ConfigurationUpdateRequest
-            {
-                Key = _configKey,
-                Value = finalValue,
-                AppId = _configAppId,
-                Reason = _updateReason
-            };
-
-            if ((await ConfigurationService.UpdateConfigAsync(request)).IsFailed(out var error))
+            if ((await ConfigurationService.UpdateConfigAsync(_configKey, finalValue)).IsFailed(out var error))
             {
                 _validationMessage = $"更新失败: {error}";
                 return;
@@ -189,8 +182,7 @@
             // 更新当前配置对象
             if (_currentConfig != null)
             {
-                _currentConfig.Value = finalValue.ToString() ?? string.Empty;
-                _currentConfig.LastModified = DateTime.Now;
+                _currentConfig.Value = finalValue;
                 await OnConfigurationUpdated.InvokeAsync(_currentConfig);
             }
 
@@ -218,8 +210,8 @@
 
         return _configType switch
         {
-            "Boolean" or "bool" => bool.TryParse(_configValue, out _),
-            "Number" or "Int32" => int.TryParse(_configValue, out _),
+            "Boolean" => bool.TryParse(_configValue, out _),
+            "Int32" => int.TryParse(_configValue, out _),
             "Int64" => long.TryParse(_configValue, out _),
             "Decimal" => decimal.TryParse(_configValue, out _),
             _ => true // 字符串类型总是有效的

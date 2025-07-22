@@ -9,12 +9,12 @@ public interface IMoConfigurationDashboard
     /// 重新排布默认规则
     /// </summary>
     /// <returns></returns>
-    public Task<Res<dynamic>> DashboardDisplayMode(List<DtoDomainConfigs> configs, string? mode);
+    public Task<Res<List<DtoDomainConfigs>>> DashboardDisplayMode(List<DtoDomainConfigs> configs, string? mode);
 }
 
 public class DefaultArrangeDashboard : IMoConfigurationDashboard
 {
-    public async Task<Res<dynamic>> DashboardDisplayMode(List<DtoDomainConfigs> configs, string? mode)
+    public async Task<Res<List<DtoDomainConfigs>>> DashboardDisplayMode(List<DtoDomainConfigs> configs, string? mode)
     {
         return configs;
     }

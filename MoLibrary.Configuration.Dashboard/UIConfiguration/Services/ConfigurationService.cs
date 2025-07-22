@@ -1,7 +1,9 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging;
 using MoLibrary.Configuration.Dashboard.Interfaces;
 using MoLibrary.Configuration.Dashboard.Model;
-using MoLibrary.Configuration.Dashboard.UIConfiguration.Models;
+using MoLibrary.Configuration.Model;
 using MoLibrary.Repository.Transaction;
 using MoLibrary.Tool.MoResponse;
 
@@ -10,69 +12,59 @@ namespace MoLibrary.Configuration.Dashboard.UIConfiguration.Services;
 /// <summary>
 /// 配置服务，实现配置管理核心业务逻辑
 /// </summary>
-public class ConfigurationService
+/// <param name="configCentre">配置中心接口</param>
+/// <param name="dashboard">配置仪表板接口</param>
+/// <param name="stores">配置存储接口</param>
+/// <param name="modifier">配置修改器接口</param>
+/// <param name="uowManager">工作单元管理器</param>
+/// <param name="logger">日志记录器</param>
+public class ConfigurationService(
+    IMoConfigurationCentre configCentre,
+    IMoConfigurationDashboard dashboard,
+    IMoConfigurationStores stores,
+    IMoConfigurationModifier modifier,
+    IMoUnitOfWorkManager uowManager,
+    ILogger<ConfigurationService> logger)
 {
-    private readonly IMoConfigurationCentre _configCentre;
-    private readonly IMoConfigurationDashboard _dashboard;
-    private readonly IMoConfigurationStores _stores;
-    private readonly IMoConfigurationModifier _modifier;
-    private readonly IMoUnitOfWorkManager _uowManager;
-    private readonly ILogger<ConfigurationService> _logger;
-
-    public ConfigurationService(
-        IMoConfigurationCentre configCentre,
-        IMoConfigurationDashboard dashboard,
-        IMoConfigurationStores stores,
-        IMoConfigurationModifier modifier,
-        IMoUnitOfWorkManager uowManager,
-        ILogger<ConfigurationService> logger)
-    {
-        _configCentre = configCentre;
-        _dashboard = dashboard;
-        _stores = stores;
-        _modifier = modifier;
-        _uowManager = uowManager;
-        _logger = logger;
-    }
-
     /// <summary>
     /// 获取所有配置状态
     /// </summary>
     /// <param name="mode">显示模式</param>
     /// <returns>配置状态列表</returns>
-    public async Task<Res<List<ConfigurationItemViewModel>>> GetAllConfigsAsync(string? mode = null)
+    public async Task<Res<List<DtoOptionItem>>> GetAllConfigsAsync(string? mode = null)
     {
         try
         {
-            if ((await _configCentre.GetRegisteredServicesConfigsAsync()).IsFailed(out var error, out var data))
+            if ((await configCentre.GetRegisteredServicesConfigsAsync()).IsFailed(out var error, out var data))
             {
-                _logger.LogError("获取注册服务配置失败: {Error}", error);
+                logger.LogError("获取注册服务配置失败: {Error}", error);
                 return Res.Fail($"获取注册服务配置失败: {error}");
             }
 
-            if ((await _dashboard.DashboardDisplayMode(data, mode)).IsFailed(out error, out var arranged))
+            if ((await dashboard.DashboardDisplayMode(data, mode)).IsFailed(out error, out var arranged))
             {
-                _logger.LogError("配置显示模式处理失败: {Error}", error);
+                logger.LogError("配置显示模式处理失败: {Error}", error);
                 return Res.Fail($"配置显示模式处理失败: {error}");
             }
 
-            var viewModels = arranged.Select(config => new ConfigurationItemViewModel
+            var allItems = new List<DtoOptionItem>();
+            foreach (var domainConfig in arranged)
             {
-                Key = config.Key ?? "Unknown",
-                AppId = config.AppId ?? "Unknown",
-                Value = config.Value?.ToString() ?? "",
-                Type = config.Type ?? "Unknown",
-                IsActive = config.IsActive,
-                LastModified = config.LastModified ?? DateTime.Now,
-                Description = config.Description ?? ""
-            }).ToList();
+                foreach (var serviceConfig in domainConfig.Children)
+                {
+                    foreach (var config in serviceConfig.Children)
+                    {
+                        allItems.AddRange(config.Items);
+                    }
+                }
+            }
 
-            _logger.LogDebug("成功获取 {Count} 个配置项", viewModels.Count);
-            return Res.Ok(viewModels);
+            logger.LogDebug("成功获取 {Count} 个配置项", allItems.Count);
+            return Res.Ok(allItems);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "获取所有配置失败");
+            logger.LogError(ex, "获取所有配置失败");
             return Res.Fail($"获取所有配置失败: {ex.Message}");
         }
     }
@@ -83,34 +75,22 @@ public class ConfigurationService
     /// <param name="key">配置键</param>
     /// <param name="appId">应用ID</param>
     /// <returns>配置项详情</returns>
-    public async Task<Res<ConfigurationDetailViewModel>> GetConfigDetailAsync(string key, string? appId = null)
+    public async Task<Res<DtoOptionItem>> GetConfigDetailAsync(string key, string? appId = null)
     {
         try
         {
-            if ((await _configCentre.GetSpecificOptionItemAsync(key, appId)).IsFailed(out var error, out var data))
+            if ((await configCentre.GetSpecificOptionItemAsync(key, appId)).IsFailed(out var error, out var data))
             {
-                _logger.LogError("获取指定配置项失败: {Key}, {AppId}, {Error}", key, appId, error);
+                logger.LogError("获取指定配置项失败: {Key}, {AppId}, {Error}", key, appId, error);
                 return Res.Fail($"获取配置项失败: {error}");
             }
 
-            var detail = new ConfigurationDetailViewModel
-            {
-                Key = data.Key ?? key,
-                AppId = data.AppId ?? appId ?? "Unknown",
-                Value = data.Value?.ToString() ?? "",
-                Type = data.Type ?? "Unknown",
-                IsActive = data.IsActive,
-                LastModified = data.LastModified ?? DateTime.Now,
-                Description = data.Description ?? "",
-                ValidationRules = data.ValidationRules ?? new List<string>()
-            };
-
-            _logger.LogDebug("成功获取配置项详情: {Key}", key);
-            return Res.Ok(detail);
+            logger.LogDebug("成功获取配置项详情: {Key}", key);
+            return Res.Ok(data);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "获取配置详情失败: {Key}", key);
+            logger.LogError(ex, "获取配置详情失败: {Key}", key);
             return Res.Fail($"获取配置详情失败: {ex.Message}");
         }
     }
@@ -123,7 +103,7 @@ public class ConfigurationService
     /// <param name="start">开始时间</param>
     /// <param name="end">结束时间</param>
     /// <returns>历史记录列表</returns>
-    public async Task<Res<List<ConfigurationHistoryViewModel>>> GetConfigHistoryAsync(
+    public async Task<Res<List<DtoOptionHistory>>> GetConfigHistoryAsync(
         string? key = null, 
         string? appId = null, 
         DateTime? start = null, 
@@ -131,39 +111,26 @@ public class ConfigurationService
     {
         try
         {
-            using var uow = _uowManager.Begin();
+            using var uow = uowManager.Begin();
 
             var historyResult = (key != null && appId != null)
-                ? await _stores.GetHistory(key, appId)
+                ? await stores.GetHistory(key, appId)
                 : (start != null && end != null)
-                    ? await _stores.GetHistory(start.Value, end.Value)
-                    : await _stores.GetHistory(DateTime.Now.Subtract(TimeSpan.FromDays(180)), DateTime.Now);
+                    ? await stores.GetHistory(start.Value, end.Value)
+                    : await stores.GetHistory(DateTime.Now.Subtract(TimeSpan.FromDays(180)), DateTime.Now);
 
             if (historyResult.IsFailed(out var error, out var historyData))
             {
-                _logger.LogError("获取配置历史失败: {Error}", error);
+                logger.LogError("获取配置历史失败: {Error}", error);
                 return Res.Fail($"获取配置历史失败: {error}");
             }
 
-            var historyViewModels = historyData.Select(h => new ConfigurationHistoryViewModel
-            {
-                Id = h.Id,
-                Key = h.Key ?? "Unknown",
-                AppId = h.AppId ?? "Unknown",
-                OldValue = h.OldValue?.ToString() ?? "",
-                NewValue = h.NewValue?.ToString() ?? "",
-                ModifiedBy = h.ModifiedBy ?? "System",
-                ModifiedTime = h.ModifiedTime,
-                Operation = h.Operation ?? "Update",
-                Version = h.Version ?? "1.0"
-            }).ToList();
-
-            _logger.LogDebug("成功获取 {Count} 条历史记录", historyViewModels.Count);
-            return Res.Ok(historyViewModels);
+            logger.LogDebug("成功获取 {Count} 条历史记录", historyData.Count);
+            return Res.Ok(historyData);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "获取配置历史失败");
+            logger.LogError(ex, "获取配置历史失败");
             return Res.Fail($"获取配置历史失败: {ex.Message}");
         }
     }
@@ -171,35 +138,37 @@ public class ConfigurationService
     /// <summary>
     /// 更新配置项
     /// </summary>
-    /// <param name="request">更新请求</param>
+    /// <param name="key">配置键</param>
+    /// <param name="value">配置值</param>
+    /// <param name="appId">应用ID</param>
     /// <returns>更新结果</returns>
-    public async Task<Res<bool>> UpdateConfigAsync(ConfigurationUpdateRequest request)
+    public async Task<Res<bool>> UpdateConfigAsync(string key, object value, string? appId = null)
     {
         try
         {
-            using var uow = _uowManager.Begin();
+            using var uow = uowManager.Begin();
 
             var updateDto = new DtoUpdateConfig
             {
-                Key = request.Key,
-                Value = request.Value,
-                AppId = request.AppId
+                Key = key,
+                Value = JsonNode.Parse(JsonSerializer.Serialize(value)),
+                AppId = appId
             };
 
-            var result = await _configCentre.UpdateConfig(updateDto);
+            var result = await configCentre.UpdateConfig(updateDto);
             
             if (result.IsFailed(out var error))
             {
-                _logger.LogError("更新配置失败: {Key}, {Error}", request.Key, error);
+                logger.LogError("更新配置失败: {Key}, {Error}", key, error);
                 return Res.Fail($"更新配置失败: {error}");
             }
 
-            _logger.LogInformation("成功更新配置: {Key}", request.Key);
+            logger.LogInformation("成功更新配置: {Key}", key);
             return Res.Ok(true);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "更新配置失败: {Key}", request.Key);
+            logger.LogError(ex, "更新配置失败: {Key}", key);
             return Res.Fail($"更新配置失败: {ex.Message}");
         }
     }
@@ -207,28 +176,30 @@ public class ConfigurationService
     /// <summary>
     /// 回滚配置到指定版本
     /// </summary>
-    /// <param name="request">回滚请求</param>
+    /// <param name="key">配置键</param>
+    /// <param name="appId">应用ID</param>
+    /// <param name="version">目标版本</param>
     /// <returns>回滚结果</returns>
-    public async Task<Res<bool>> RollbackConfigAsync(ConfigurationRollbackRequest request)
+    public async Task<Res<bool>> RollbackConfigAsync(string key, string appId, string version)
     {
         try
         {
-            using var uow = _uowManager.Begin();
+            using var uow = uowManager.Begin();
 
-            var result = await _configCentre.RollbackConfig(request.Key, request.AppId, request.Version);
+            var result = await configCentre.RollbackConfig(key, appId, version);
             
             if (result.IsFailed(out var error))
             {
-                _logger.LogError("回滚配置失败: {Key}, {Version}, {Error}", request.Key, request.Version, error);
+                logger.LogError("回滚配置失败: {Key}, {Version}, {Error}", key, version, error);
                 return Res.Fail($"回滚配置失败: {error}");
             }
 
-            _logger.LogInformation("成功回滚配置: {Key} to version {Version}", request.Key, request.Version);
+            logger.LogInformation("成功回滚配置: {Key} to version {Version}", key, version);
             return Res.Ok(true);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "回滚配置失败: {Key}", request.Key);
+            logger.LogError(ex, "回滚配置失败: {Key}", key);
             return Res.Fail($"回滚配置失败: {ex.Message}");
         }
     }
@@ -236,42 +207,42 @@ public class ConfigurationService
     /// <summary>
     /// 热更新客户端配置
     /// </summary>
-    /// <param name="request">更新请求</param>
+    /// <param name="key">配置键</param>
+    /// <param name="value">配置值</param>
     /// <returns>更新结果</returns>
-    public async Task<Res<bool>> UpdateClientConfigAsync(ConfigurationUpdateRequest request)
+    public async Task<Res<bool>> UpdateClientConfigAsync(string key, object value)
     {
         try
         {
-            var value = request.Value;
-
-            if ((await _modifier.IsOptionExist(request.Key)).IsOk(out var option))
+            var node = JsonNode.Parse(JsonSerializer.Serialize(value));
+            if ((await modifier.IsOptionExist(key)).IsOk(out var option))
             {
-                var result = await _modifier.UpdateOption(option, value);
-                if (result.IsSuccess)
+                if ((await modifier.UpdateOption(option, node)).IsFailed(out var error))
                 {
-                    _logger.LogInformation("成功更新选项配置: {Key}", request.Key);
-                    return Res.Ok(true);
+                    logger.LogError("更新选项配置失败: {Key}, {Error}", key, error);
+                    return Res.Fail($"更新选项配置失败: {error}");
                 }
-                return Res.Fail($"更新选项配置失败: {result.Message}");
+                logger.LogInformation("成功更新选项配置: {Key}", key);
+                return Res.Ok(true);
             }
 
-            if ((await _modifier.IsConfigExist(request.Key)).IsOk(out var config))
+            if ((await modifier.IsConfigExist(key)).IsOk(out var config))
             {
-                var result = await _modifier.UpdateConfig(config, value);
-                if (result.IsSuccess)
+                if ((await modifier.UpdateConfig(config, node)).IsFailed(out var error))
                 {
-                    _logger.LogInformation("成功更新配置: {Key}", request.Key);
-                    return Res.Ok(true);
+                    logger.LogError("更新配置失败: {Key}, {Error}", key, error);
+                    return Res.Fail($"更新配置失败: {error}");
                 }
-                return Res.Fail($"更新配置失败: {result.Message}");
+                logger.LogInformation("成功更新配置: {Key}", key);
+                return Res.Ok(true);
             }
 
-            _logger.LogWarning("找不到配置项: {Key}", request.Key);
-            return Res.Fail($"更新失败，找不到Key为{request.Key}的配置");
+            logger.LogWarning("找不到配置项: {Key}", key);
+            return Res.Fail($"更新失败，找不到Key为{key}的配置");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "更新客户端配置失败: {Key}", request.Key);
+            logger.LogError(ex, "更新客户端配置失败: {Key}", key);
             return Res.Fail($"更新客户端配置失败: {ex.Message}");
         }
     }

@@ -1,4 +1,5 @@
-@using MoLibrary.Configuration.Dashboard.UIConfiguration.Models
+@using MoLibrary.Configuration.Model
+@using MoLibrary.Configuration.Dashboard.Model
 @using MoLibrary.Configuration.Dashboard.UIConfiguration.Services
 @using MoLibrary.Tool.MoResponse
 @using MudBlazor
@@ -73,40 +74,38 @@
                 <MudSwitch T="bool" @bind-Checked="@_dense" Label="紧凑模式" Color="Color.Primary" />
             </ToolBarContent>
             <HeaderContent>
-                <MudTh><MudTableSortLabel SortBy="new Func<ConfigurationItemViewModel, object>(x => x.Key)">配置键</MudTableSortLabel></MudTh>
-                <MudTh><MudTableSortLabel SortBy="new Func<ConfigurationItemViewModel, object>(x => x.AppId)">应用ID</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<DtoOptionItem, object>(x => x.Key)">配置键</MudTableSortLabel></MudTh>
+                <MudTh>显示标题</MudTh>
                 <MudTh>配置值</MudTh>
-                <MudTh><MudTableSortLabel SortBy="new Func<ConfigurationItemViewModel, object>(x => x.Type)">类型</MudTableSortLabel></MudTh>
-                <MudTh><MudTableSortLabel SortBy="new Func<ConfigurationItemViewModel, object>(x => x.IsActive)">状态</MudTableSortLabel></MudTh>
-                <MudTh><MudTableSortLabel SortBy="new Func<ConfigurationItemViewModel, object>(x => x.LastModified)">最后修改</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<DtoOptionItem, object>(x => x.Type)">类型</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<DtoOptionItem, object>(x => x.IsOffline)">状态</MudTableSortLabel></MudTh>
+                <MudTh>描述</MudTh>
                 <MudTh>操作</MudTh>
             </HeaderContent>
             <RowTemplate>
                 <MudTd DataLabel="配置键">
                     <MudText Typo="Typo.body2" Style="font-weight: 500;">@context.Key</MudText>
-                    @if (!string.IsNullOrEmpty(context.Description))
-                    {
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@context.Description</MudText>
-                    }
                 </MudTd>
-                <MudTd DataLabel="应用ID">
-                    <MudChip T="string" Text="@context.AppId" Size="Size.Small" />
+                <MudTd DataLabel="显示标题">
+                    <MudText Typo="Typo.body2">@context.Title</MudText>
                 </MudTd>
                 <MudTd DataLabel="配置值">
                     <div style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
-                         title="@context.Value">
-                        @context.Value
+                         title="@context.Value?.ToString()">
+                        @context.Value?.ToString()
                     </div>
                 </MudTd>
                 <MudTd DataLabel="类型">
-                    <MudChip T="string" Text="@context.Type" Size="Size.Small" Color="Color.Info" />
+                    <MudChip T="string" Text="@context.Type.ToString()" Size="Size.Small" Color="Color.Info" />
                 </MudTd>
                 <MudTd DataLabel="状态">
-                    <MudChip T="string" Text="@context.StatusText" 
+                    <MudChip T="string" Text="@(!context.IsOffline ? "在线" : "离线")" 
                             Size="Size.Small" 
-                            Color="@(context.IsActive ? Color.Success : Color.Warning)" />
+                            Color="@(!context.IsOffline ? Color.Success : Color.Warning)" />
                 </MudTd>
-                <MudTd DataLabel="最后修改">@context.LastModified.ToString("yyyy-MM-dd HH:mm")</MudTd>
+                <MudTd DataLabel="描述">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@(context.Desc ?? "")</MudText>
+                </MudTd>
                 <MudTd DataLabel="操作">
                     <MudButtonGroup Size="Size.Small" Variant="Variant.Text">
                         <MudIconButton Icon="@Icons.Material.Filled.Edit" 
@@ -147,11 +146,11 @@
 </MudCard>
 
 @code {
-    [Parameter] public EventCallback<ConfigurationItemViewModel> OnEditRequested { get; set; }
-    [Parameter] public EventCallback<ConfigurationItemViewModel> OnHistoryRequested { get; set; }
-    [Parameter] public EventCallback<ConfigurationItemViewModel> OnDeleteRequested { get; set; }
+    [Parameter] public EventCallback<DtoOptionItem> OnEditRequested { get; set; }
+    [Parameter] public EventCallback<DtoOptionItem> OnHistoryRequested { get; set; }
+    [Parameter] public EventCallback<DtoOptionItem> OnDeleteRequested { get; set; }
 
-    private List<ConfigurationItemViewModel> _configurations = new();
+    private List<DtoOptionItem> _configurations = new();
     private List<string> _appIds = new();
     private bool _loading = false;
     private bool _dense = false;
@@ -188,8 +187,12 @@
             _configurations = data;
             _totalCount = data.Count;
 
-            // 提取应用ID列表
-            _appIds = data.Select(c => c.AppId).Distinct().OrderBy(x => x).ToList();
+            // 提取来源列表作为AppId替代
+            _appIds = data.Where(c => !string.IsNullOrEmpty(c.Source))
+                         .Select(c => c.Source!)
+                         .Distinct()
+                         .OrderBy(x => x)
+                         .ToList();
 
             // 应用筛选
             ApplyFilters();
@@ -227,20 +230,21 @@
         {
             filtered = filtered.Where(c => 
                 c.Key.Contains(_searchKeyword, StringComparison.OrdinalIgnoreCase) ||
-                c.Value.Contains(_searchKeyword, StringComparison.OrdinalIgnoreCase) ||
-                c.Description.Contains(_searchKeyword, StringComparison.OrdinalIgnoreCase));
+                (c.Value?.ToString() ?? "").Contains(_searchKeyword, StringComparison.OrdinalIgnoreCase) ||
+                (c.Desc ?? "").Contains(_searchKeyword, StringComparison.OrdinalIgnoreCase) ||
+                (c.Title ?? "").Contains(_searchKeyword, StringComparison.OrdinalIgnoreCase));
         }
 
-        // 应用ID筛选
+        // 来源筛选
         if (!string.IsNullOrEmpty(_selectedAppId))
         {
-            filtered = filtered.Where(c => c.AppId == _selectedAppId);
+            filtered = filtered.Where(c => c.Source == _selectedAppId);
         }
 
         // 状态筛选
         if (_selectedStatus.HasValue)
         {
-            filtered = filtered.Where(c => c.IsActive == _selectedStatus.Value);
+            filtered = filtered.Where(c => !c.IsOffline == _selectedStatus.Value);
         }
 
         _configurations = filtered.ToList();

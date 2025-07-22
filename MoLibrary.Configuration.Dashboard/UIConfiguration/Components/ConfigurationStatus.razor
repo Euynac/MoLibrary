@@ -1,4 +1,5 @@
-@using MoLibrary.Configuration.Dashboard.UIConfiguration.Models
+@using MoLibrary.Configuration.Model
+@using MoLibrary.Configuration.Dashboard.Model
 @using MoLibrary.Configuration.Dashboard.UIConfiguration.Services
 @using MoLibrary.Tool.MoResponse
 @using MudBlazor
@@ -112,8 +113,8 @@
                         <MudCardContent>
                             <div style="margin-bottom: 8px;">
                                 <div style="display: flex; justify-content: space-between;">
-                                    <MudText Typo="Typo.body2">激活配置</MudText>
-                                    <MudText Typo="Typo.body2">@appGroup.Value.Count(c => c.IsActive)</MudText>
+                                    <MudText Typo="Typo.body2">在线配置</MudText>
+                                    <MudText Typo="Typo.body2">@appGroup.Value.Count(c => !c.IsOffline)</MudText>
                                 </div>
                                 <MudProgressLinear Value="@GetActivePercentage(appGroup.Value)" 
                                                   Color="Color.Success" 
@@ -123,8 +124,6 @@
                             <!-- 最近更新的配置 -->
                             @{
                                 var recentConfigs = appGroup.Value
-                                    .Where(c => c.LastModified > DateTime.Now.AddDays(-1))
-                                    .OrderByDescending(c => c.LastModified)
                                     .Take(3);
                             }
                             @if (recentConfigs.Any())
@@ -135,7 +134,7 @@
                                     <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
                                         <MudText Typo="Typo.caption">@config.Key</MudText>
                                         <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                            @config.LastModified.ToString("HH:mm")
+                                            @config.Type.ToString()
                                         </MudText>
                                     </div>
                                 }
@@ -177,9 +176,9 @@
 </MudCard>
 
 @code {
-    private List<ConfigurationItemViewModel> _configurations = new();
-    private Dictionary<string, List<ConfigurationItemViewModel>> _configsByApp = new();
-    private Dictionary<string, List<ConfigurationItemViewModel>> _configsByType = new();
+    private List<DtoOptionItem> _configurations = new();
+    private Dictionary<string, List<DtoOptionItem>> _configsByApp = new();
+    private Dictionary<string, List<DtoOptionItem>> _configsByType = new();
     
     private int _totalConfigs = 0;
     private int _activeConfigs = 0;
@@ -227,18 +226,22 @@
 
             // 计算统计数据
             _totalConfigs = _configurations.Count;
-            _activeConfigs = _configurations.Count(c => c.IsActive);
-            _appCount = _configurations.Select(c => c.AppId).Distinct().Count();
-            _recentUpdates = _configurations.Count(c => c.LastModified.Date == DateTime.Today);
+            _activeConfigs = _configurations.Count(c => !c.IsOffline);
+            _appCount = _configurations.Where(c => !string.IsNullOrEmpty(c.Source))
+                                     .Select(c => c.Source)
+                                     .Distinct()
+                                     .Count();
+            _recentUpdates = _configurations.Count(); // 暂时设为所有配置
 
-            // 按应用分组
+            // 按来源分组
             _configsByApp = _configurations
-                .GroupBy(c => c.AppId)
+                .Where(c => !string.IsNullOrEmpty(c.Source))
+                .GroupBy(c => c.Source!)
                 .ToDictionary(g => g.Key, g => g.ToList());
 
             // 按类型分组
             _configsByType = _configurations
-                .GroupBy(c => c.Type)
+                .GroupBy(c => c.Type.ToString())
                 .ToDictionary(g => g.Key, g => g.ToList());
         }
         catch (Exception ex)
@@ -252,10 +255,10 @@
         }
     }
 
-    private double GetActivePercentage(List<ConfigurationItemViewModel> configs)
+    private double GetActivePercentage(List<DtoOptionItem> configs)
     {
         if (!configs.Any()) return 0;
-        return (double)configs.Count(c => c.IsActive) / configs.Count * 100;
+        return (double)configs.Count(c => !c.IsOffline) / configs.Count * 100;
     }
 
     private double GetTypePercentage(int typeCount)

@@ -1,7 +1,8 @@
 @page "/configuration-manage"
 @using MoLibrary.Configuration.Dashboard.UIConfiguration.Components
 @using MoLibrary.Configuration.Dashboard.UIConfiguration.Services
-@using MoLibrary.Configuration.Dashboard.UIConfiguration.Models
+@using MoLibrary.Configuration.Model
+@using MoLibrary.Configuration.Dashboard.Model
 @using MudBlazor
 @inject ConfigurationService ConfigurationService
 @inject ISnackbar Snackbar
@@ -73,7 +74,7 @@
         }
     }
 
-    private async Task HandleEditRequested(ConfigurationItemViewModel config)
+    private async Task HandleEditRequested(DtoOptionItem config)
     {
         if (_configurationEditor != null)
         {
@@ -81,15 +82,15 @@
         }
     }
 
-    private async Task HandleHistoryRequested(ConfigurationItemViewModel config)
+    private async Task HandleHistoryRequested(DtoOptionItem config)
     {
         if (_configurationHistory != null)
         {
-            await _configurationHistory.LoadHistoryForConfigAsync(config.Key, config.AppId);
+            await _configurationHistory.LoadHistoryForConfigAsync(config.Key, null);
         }
     }
 
-    private async Task HandleDeleteRequested(ConfigurationItemViewModel config)
+    private async Task HandleDeleteRequested(DtoOptionItem config)
     {
         var parameters = new DialogParameters<MudMessageBox>
         {
@@ -111,7 +112,7 @@
         }
     }
 
-    private async Task HandleConfigurationUpdated(ConfigurationItemViewModel config)
+    private async Task HandleConfigurationUpdated(DtoOptionItem config)
     {
         // 配置更新后刷新列表
         if (_configurationList != null)
@@ -122,7 +123,7 @@
         Snackbar.Add($"配置项 '{config.Key}' 更新成功", Severity.Success);
     }
 
-    private async Task DeleteConfigurationAsync(ConfigurationItemViewModel config)
+    private async Task DeleteConfigurationAsync(DtoOptionItem config)
     {
         try
         {
