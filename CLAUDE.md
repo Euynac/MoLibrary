@@ -55,3 +55,7 @@ Static web assets (wwwroot) are handled through:
 - Individual module wwwroot folders
 - Automatic merging during build
 - MudBlazor components in UI modules
+
+## Development Guidelines
+
+- When creating new UI, always follow the rule in @rules\mo-framework-ui-module-rule.mdc
