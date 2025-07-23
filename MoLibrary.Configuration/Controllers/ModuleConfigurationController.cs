@@ -1,8 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
-using MoLibrary.Configuration.Interfaces;
+using MoLibrary.Configuration.Services;
+using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module.ModuleController;
-using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Configuration.Controllers;
 
@@ -11,18 +10,8 @@ namespace MoLibrary.Configuration.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-public class ModuleConfigurationController : MoModuleControllerBase
+public class ModuleConfigurationController(ModuleConfigurationService moduleConfigurationService) : MoModuleControllerBase
 {
-    private readonly IMoConfigurationCardManager _configCardManager;
-    private readonly ILogger<ModuleConfigurationController> _logger;
-
-    public ModuleConfigurationController(
-        IMoConfigurationCardManager configCardManager,
-        ILogger<ModuleConfigurationController> logger)
-    {
-        _configCardManager = configCardManager;
-        _logger = logger;
-    }
 
     /// <summary>
     /// 获取热配置状态信息
@@ -32,16 +21,8 @@ public class ModuleConfigurationController : MoModuleControllerBase
     [HttpGet("status")]
     public async Task<IActionResult> GetConfigStatus([FromQuery] bool? onlyCurDomain = null)
     {
-        try
-        {
-            var result = _configCardManager.GetDomainConfigs(onlyCurDomain);
-            return Ok(Res.Create(result, ResponseCode.Ok));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "获取配置状态失败");
-            return BadRequest(Res.Fail($"获取配置状态失败: {ex.Message}"));
-        }
+        var result = await moduleConfigurationService.GetConfigStatusAsync(onlyCurDomain);
+        return result.GetResponse(this);
     }
 
     /// <summary>
@@ -51,17 +32,8 @@ public class ModuleConfigurationController : MoModuleControllerBase
     [HttpGet("debug")]
     public async Task<IActionResult> GetDebugView()
     {
-        try
-        {
-            var debugView = MoConfigurationManager.GetDebugView().Split(Environment.NewLine);
-            var result = new { debug = debugView };
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "获取配置调试视图失败");
-            return BadRequest(Res.Fail($"获取配置调试视图失败: {ex.Message}"));
-        }
+        var result = await moduleConfigurationService.GetDebugViewAsync();
+        return result.GetResponse(this);
     }
 
     /// <summary>
@@ -71,15 +43,7 @@ public class ModuleConfigurationController : MoModuleControllerBase
     [HttpGet("providers")]
     public async Task<IActionResult> GetProviders()
     {
-        try
-        {
-            var providers = MoConfigurationManager.GetProviders();
-            return Ok(providers);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "获取配置提供者失败");
-            return BadRequest(Res.Fail($"获取配置提供者失败: {ex.Message}"));
-        }
+        var result = await moduleConfigurationService.GetProvidersAsync();
+        return result.GetResponse(this);
     }
 }

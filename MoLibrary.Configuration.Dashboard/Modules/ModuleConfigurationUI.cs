@@ -5,7 +5,6 @@ using MoLibrary.Configuration.Modules;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.UI.Modules;
-using MoLibrary.UI.UICore.Interfaces;
 using MudBlazor;
 
 namespace MoLibrary.Configuration.Dashboard.Modules;
@@ -25,6 +24,8 @@ public class ModuleConfigurationUI(ModuleConfigurationUIOption option)
     {
         // 注册配置服务
         services.AddScoped<ConfigurationService>();
+        services.AddScoped<ConfigurationClientService>();
+        services.AddScoped<ConfigurationDashboardService>();
     }
 
     public override void ClaimDependencies()
@@ -39,13 +40,26 @@ public class ModuleConfigurationUI(ModuleConfigurationUIOption option)
 
             // 依赖UI核心模块并注册UI组件
             DependsOnModule<ModuleUICoreGuide>().Register()
-                .RegisterUIComponents(registry => registry.RegisterComponent<UIConfigurationPage>(
-                    UIConfigurationPage.CONFIGURATION_DEBUG_URL, 
-                    "配置管理", 
-                    Icons.Material.Filled.Settings, 
-                    "系统管理", 
-                    addToNav: true, 
-                    navOrder: 100));
+                .RegisterUIComponents(registry => 
+                {
+                    // 注册客户端配置页面
+                    registry.RegisterComponent<UIConfigurationClientPage>(
+                        UIConfigurationClientPage.CONFIGURATION_CLIENT_URL, 
+                        "配置客户端", 
+                        Icons.Material.Filled.Devices, 
+                        "系统管理", 
+                        addToNav: true, 
+                        navOrder: 100);
+                    
+                    // 注册面板配置页面
+                    registry.RegisterComponent<UIConfigurationDashboardPage>(
+                        UIConfigurationDashboardPage.CONFIGURATION_DASHBOARD_URL, 
+                        "配置面板", 
+                        Icons.Material.Filled.Dashboard, 
+                        "系统管理", 
+                        addToNav: true, 
+                        navOrder: 101);
+                });
         }
     }
 }

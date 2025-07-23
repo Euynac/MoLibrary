@@ -1,0 +1,139 @@
+@using MoLibrary.Configuration.Model
+@using MudBlazor
+@using System.Text.Json
+
+@if (OptionItem?.Value != null)
+{
+    <div class="value-display">
+        @switch (OptionItem.Type)
+        {
+            case EOptionItemValueBasicType.Boolean:
+                <MudChip T="string" Size="Size.Small" Color="@(GetBooleanValue() ? Color.Success : Color.Default)" 
+                         Text="@(GetBooleanValue() ? "True" : "False")" />
+                break;
+
+            case EOptionItemValueBasicType.Numeric:
+                <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="@GetNumericValue().ToString()" />
+                break;
+
+            case EOptionItemValueBasicType.String:
+                <MudChip T="string" Size="Size.Small" Color="Color.Default" Text="@GetStringValue()" />
+                break;
+
+            case EOptionItemValueBasicType.DateTime:
+                <MudChip T="string" Size="Size.Small" Color="Color.Tertiary" Text="@GetDateTimeValue().ToString("yyyy-MM-dd HH:mm:ss")" />
+                break;
+
+            case EOptionItemValueBasicType.TimeSpan:
+                <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Text="@GetTimeSpanValue().ToString()" />
+                break;
+
+            case EOptionItemValueBasicType.Enum:
+                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Text="@GetStringValue()" />
+                break;
+
+            case EOptionItemValueBasicType.Object:
+                @if (OptionItem.SpecialType == EOptionItemValueSpecialType.Array)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Warning" Text="@($"Array[{GetArrayLength()}]")" />
+                }
+                else if (OptionItem.SpecialType == EOptionItemValueSpecialType.Dict)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Error" Text="@($"Dict[{GetDictLength()}]")" />
+                }
+                else
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Dark" Text="Object" />
+                }
+                break;
+
+            default:
+                <MudChip T="string" Size="Size.Small" Color="Color.Default" Text="@JsonSerializer.Serialize(OptionItem.Value)" />
+                break;
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public DtoOptionItem? OptionItem { get; set; }
+
+    private bool GetBooleanValue()
+    {
+        if (OptionItem?.Value is bool boolValue)
+            return boolValue;
+        
+        if (OptionItem?.Value is JsonElement element && element.ValueKind == JsonValueKind.True)
+            return true;
+            
+        return false;
+    }
+
+    private decimal GetNumericValue()
+    {
+        if (OptionItem?.Value is decimal decimalValue)
+            return decimalValue;
+        
+        if (OptionItem?.Value is JsonElement element && element.ValueKind == JsonValueKind.Number)
+            return element.GetDecimal();
+            
+        return 0;
+    }
+
+    private string GetStringValue()
+    {
+        if (OptionItem?.Value is string stringValue)
+            return stringValue.Length > 20 ? stringValue[..20] + "..." : stringValue;
+        
+        if (OptionItem?.Value is JsonElement element && element.ValueKind == JsonValueKind.String)
+        {
+            var value = element.GetString() ?? "";
+            return value.Length > 20 ? value[..20] + "..." : value;
+        }
+            
+        return JsonSerializer.Serialize(OptionItem?.Value);
+    }
+
+    private DateTime GetDateTimeValue()
+    {
+        if (OptionItem?.Value is DateTime dateTimeValue)
+            return dateTimeValue;
+        
+        if (OptionItem?.Value is JsonElement element && element.ValueKind == JsonValueKind.String)
+        {
+            if (DateTime.TryParse(element.GetString(), out var parsed))
+                return parsed;
+        }
+            
+        return DateTime.MinValue;
+    }
+
+    private TimeSpan GetTimeSpanValue()
+    {
+        if (OptionItem?.Value is TimeSpan timeSpanValue)
+            return timeSpanValue;
+        
+        if (OptionItem?.Value is JsonElement element && element.ValueKind == JsonValueKind.String)
+        {
+            if (TimeSpan.TryParse(element.GetString(), out var parsed))
+                return parsed;
+        }
+            
+        return TimeSpan.Zero;
+    }
+
+    private int GetArrayLength()
+    {
+        if (OptionItem?.Value is JsonElement element && element.ValueKind == JsonValueKind.Array)
+            return element.GetArrayLength();
+            
+        return 0;
+    }
+
+    private int GetDictLength()
+    {
+        if (OptionItem?.Value is JsonElement element && element.ValueKind == JsonValueKind.Object)
+            return element.EnumerateObject().Count();
+            
+        return 0;
+    }
+}

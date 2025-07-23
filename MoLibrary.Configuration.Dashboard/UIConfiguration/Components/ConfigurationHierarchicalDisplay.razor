@@ -1,0 +1,148 @@
+@using MoLibrary.Configuration.Model
+@using MoLibrary.Configuration.Dashboard.Model
+@using MudBlazor
+@using System.Text.Json
+
+<MudTreeView T="TreeNode" MultiSelection="false" Hover="true" ExpandOnClick="true" @bind-SelectedValue="selectedValue">
+    @foreach (var domain in Configs)
+    {
+        <MudTreeViewItem T="TreeNode" Value="new TreeNode { Type = NodeType.Domain, Data = domain }" Text="@domain.Title" Icon="@Icons.Material.Filled.Domain" Expanded="true">
+            @foreach (var service in domain.Children)
+            {
+                <MudTreeViewItem T="TreeNode" Value="new TreeNode { Type = NodeType.Service, Data = service }" Text="@service.Title" Icon="@Icons.Material.Filled.Apps">
+                    @foreach (var config in service.Children)
+                    {
+                        <MudTreeViewItem T="TreeNode" Value="new TreeNode { Type = NodeType.Config, Data = config }" Text="@config.Title" Icon="@Icons.Material.Filled.Settings">
+                            @foreach (var item in config.Items)
+                            {
+                                <MudTreeViewItem T="TreeNode" Value="new TreeNode { Type = NodeType.OptionItem, Data = item }" Text="@item.Title" Icon="@GetOptionIcon(item)">
+                                    <BodyContent>
+                                        <div class="d-flex align-center justify-space-between">
+                                            <div class="flex-grow-1">
+                                                <MudText Typo="Typo.body2">@item.Title</MudText>
+                                                <MudText Typo="Typo.caption" Class="text-muted">@item.Desc</MudText>
+                                            </div>
+                                            <div class="d-flex align-center gap-2">
+                                                @if (!item.IsOffline)
+                                                {
+                                                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Text="在线" />
+                                                }
+                                                else
+                                                {
+                                                    <MudChip T="string" Size="Size.Small" Color="Color.Warning" Text="离线" />
+                                                }
+                                                <ConfigurationValueDisplay OptionItem="item" />
+                                                <MudButton Size="Size.Small" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Edit" 
+                                                           OnClick="() => OpenEditDialog(item, config.AppId)">编辑</MudButton>
+                                            </div>
+                                        </div>
+                                    </BodyContent>
+                                </MudTreeViewItem>
+                            }
+                        </MudTreeViewItem>
+                    }
+                </MudTreeViewItem>
+            }
+        </MudTreeViewItem>
+    }
+</MudTreeView>
+
+<MudDialog @bind-IsVisible="isEditDialogOpen" Options="dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">编辑配置项</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (editingItem != null)
+        {
+            <div class="mb-4">
+                <MudText Typo="Typo.body2" Class="mb-2"><strong>配置项:</strong> @editingItem.Title</MudText>
+                <MudText Typo="Typo.caption" Class="mb-2">@editingItem.Desc</MudText>
+                <MudText Typo="Typo.caption" Class="mb-2"><strong>Key:</strong> @editingItem.Key</MudText>
+                <MudText Typo="Typo.caption" Class="mb-2"><strong>当前值:</strong> @JsonSerializer.Serialize(editingItem.Value)</MudText>
+            </div>
+            <ConfigurationValueEditor OptionItem="editingItem" @bind-Value="editValue" />
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseEditDialog">取消</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveConfiguration">保存</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public List<DtoDomainConfigs> Configs { get; set; } = [];
+    [Parameter] public EventCallback<DtoUpdateConfig> OnConfigUpdate { get; set; }
+
+    private TreeNode? selectedValue;
+    private bool isEditDialogOpen = false;
+    private DtoOptionItem? editingItem;
+    private string? editingAppId;
+    private object? editValue;
+
+    private readonly DialogOptions dialogOptions = new()
+    {
+        MaxWidth = MaxWidth.Medium,
+        FullWidth = true
+    };
+
+    public class TreeNode
+    {
+        public NodeType Type { get; set; }
+        public object Data { get; set; } = null!;
+    }
+
+    public enum NodeType
+    {
+        Domain,
+        Service,
+        Config,
+        OptionItem
+    }
+
+    private string GetOptionIcon(DtoOptionItem item)
+    {
+        return item.Type switch
+        {
+            EOptionItemValueBasicType.Boolean => Icons.Material.Filled.ToggleOn,
+            EOptionItemValueBasicType.Numeric => Icons.Material.Filled.Numbers,
+            EOptionItemValueBasicType.String => Icons.Material.Filled.TextFields,
+            EOptionItemValueBasicType.DateTime => Icons.Material.Filled.Schedule,
+            EOptionItemValueBasicType.TimeSpan => Icons.Material.Filled.Timer,
+            EOptionItemValueBasicType.Enum => Icons.Material.Filled.List,
+            EOptionItemValueBasicType.Object => Icons.Material.Filled.DataObject,
+            _ => Icons.Material.Filled.Settings
+        };
+    }
+
+    private void OpenEditDialog(DtoOptionItem item, string appId)
+    {
+        editingItem = item;
+        editingAppId = appId;
+        editValue = item.Value;
+        isEditDialogOpen = true;
+    }
+
+    private void CloseEditDialog()
+    {
+        isEditDialogOpen = false;
+        editingItem = null;
+        editingAppId = null;
+        editValue = null;
+    }
+
+    private async Task SaveConfiguration()
+    {
+        if (editingItem != null && editingAppId != null)
+        {
+            var updateRequest = new DtoUpdateConfig
+            {
+                AppId = editingAppId,
+                Key = editingItem.Key,
+                Value = JsonSerializer.SerializeToNode(editValue)
+            };
+
+            await OnConfigUpdate.InvokeAsync(updateRequest);
+            CloseEditDialog();
+        }
+    }
+}
