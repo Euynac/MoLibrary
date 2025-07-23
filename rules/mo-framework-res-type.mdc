@@ -10,6 +10,8 @@ public override async Task<Res<ResponseUserCheck>> Handle(QueryUserCheck request
     if (userInfo == null)
     {
         return $"用户名{request.Username}不存在";
+        //or return Res.Fail($"用户名{request.Username}不存在");
+        //不要使用泛型Res<string>.Fail("用户名不存在")
     }
     return _mapper.Map<ResponseUserCheck>(userInfo);
 }

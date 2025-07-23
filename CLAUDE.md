@@ -64,10 +64,12 @@ Static web assets (wwwroot) are handled through:
 - Write reusable, low-coupling and high-cohesion implementations with multiple abstractions
 - Split files to avoid overly large single files
 - Instead of just fixing errors, use simplified thinking and refactor whenever possible
+- If you feel the design is inadequate or lacks necessary information, you may raise concerns and propose improvements for user confirmation before proceeding.
 
 ## Dependency Injection Guidelines
 - Always use primary constructor when creating a class with single constructor using dependency injection
   - More details can be read in @rules\primary-constructor.mdc
+- 定义Module{Name}Option后，要使用模块Option，直接注入IOption<TModuleOption>或IOptionSnapshot<TModuleOption>使用即可。
 
 ## Blazor and MudBlazor Notes
 - When using the MudBlazor Icon property in Blazor, you must reference it with an "@" prefix, for example, Icon="@Icons.Material.Filled.Info", instead of Icon="Icons.Material.Filled.Info". Omitting the "@" prefix will cause the Icon not to work.
@@ -76,3 +78,4 @@ Static web assets (wwwroot) are handled through:
 
 ## Interface Return Value Guidelines
 - 对于前端(Controller以及Blazor使用的)的接口的返回值定义，请使用 @统一返回模型Res，使用方式详见 @rules\mo-framework-res-type.mdc 
+```
