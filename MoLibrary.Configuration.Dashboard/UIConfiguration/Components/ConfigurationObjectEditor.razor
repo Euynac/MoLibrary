@@ -1,0 +1,141 @@
+@using MoLibrary.Configuration.Model
+@using MudBlazor
+@using System.Text.Json
+
+<MudCard>
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">对象编辑器 - @SubStructure?.Title</MudText>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent>
+        @if (SubStructure?.Items != null)
+        {
+            @foreach (var item in SubStructure.Items)
+            {
+                <div class="mb-3">
+                    <MudText Typo="Typo.subtitle2" Class="mb-1">@item.Title</MudText>
+                    @if (!string.IsNullOrEmpty(item.Desc))
+                    {
+                        <MudText Typo="Typo.caption" Class="mb-2 text-muted">@item.Desc</MudText>
+                    }
+                    
+                    @switch (item.Type)
+                    {
+                        case EOptionItemValueBasicType.Boolean:
+                            <MudSwitch T="bool" Value="GetBoolValue(item.Key)" ValueChanged="(bool v) => SetValue(item.Key, v)" 
+                                       Label="@item.Title" Color="Color.Primary" />
+                            break;
+                        case EOptionItemValueBasicType.Numeric:
+                            <MudNumericField T="decimal" Value="GetDecimalValue(item.Key)" ValueChanged="(decimal v) => SetValue(item.Key, v)" 
+                                             Label="@item.Title" Variant="Variant.Outlined" />
+                            break;
+                        case EOptionItemValueBasicType.String:
+                        case EOptionItemValueBasicType.Enum:
+                            <MudTextField Value="GetStringValue(item.Key)" ValueChanged="(string v) => SetValue(item.Key, v)" 
+                                          Label="@item.Title" Variant="Variant.Outlined" />
+                            break;
+                        case EOptionItemValueBasicType.DateTime:
+                            <MudDatePicker Date="GetDateTimeValue(item.Key)" DateChanged="(DateTime? v) => SetValue(item.Key, v)" 
+                                           Label="@item.Title" Variant="Variant.Outlined" />
+                            break;
+                        default:
+                            <MudTextField Value="GetJsonValue(item.Key)" ValueChanged="(string v) => SetJsonValue(item.Key, v)" 
+                                          Label="@($"{item.Title} (JSON)")" Variant="Variant.Outlined" />
+                            break;
+                    }
+                </div>
+            }
+        }
+        else
+        {
+            <MudText Typo="Typo.caption" Class="text-muted">无子结构定义</MudText>
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public DtoConfig? SubStructure { get; set; }
+    [Parameter] public Dictionary<string, object>? Value { get; set; }
+    [Parameter] public EventCallback<Dictionary<string, object>> ValueChanged { get; set; }
+
+    private Dictionary<string, object> currentValue = [];
+
+    protected override void OnParametersSet()
+    {
+        if (Value != null)
+        {
+            currentValue = new Dictionary<string, object>(Value);
+        }
+    }
+
+    private bool GetBoolValue(string key)
+    {
+        if (currentValue.TryGetValue(key, out var value))
+        {
+            if (value is bool b) return b;
+            if (value is JsonElement { ValueKind: JsonValueKind.True }) return true;
+        }
+        return false;
+    }
+
+    private decimal GetDecimalValue(string key)
+    {
+        if (currentValue.TryGetValue(key, out var value))
+        {
+            if (value is decimal d) return d;
+            if (value is JsonElement { ValueKind: JsonValueKind.Number } element) return element.GetDecimal();
+        }
+        return 0;
+    }
+
+    private string GetStringValue(string key)
+    {
+        if (currentValue.TryGetValue(key, out var value))
+        {
+            if (value is string s) return s;
+            if (value is JsonElement { ValueKind: JsonValueKind.String } element) return element.GetString() ?? "";
+        }
+        return "";
+    }
+
+    private DateTime? GetDateTimeValue(string key)
+    {
+        if (currentValue.TryGetValue(key, out var value))
+        {
+            if (value is DateTime dt) return dt;
+            if (value is JsonElement { ValueKind: JsonValueKind.String } element && DateTime.TryParse(element.GetString(), out var parsed))
+                return parsed;
+        }
+        return null;
+    }
+
+    private string GetJsonValue(string key)
+    {
+        if (currentValue.TryGetValue(key, out var value))
+        {
+            return JsonSerializer.Serialize(value, new JsonSerializerOptions { WriteIndented = true });
+        }
+        return "";
+    }
+
+    private async Task SetValue(string key, object? value)
+    {
+        currentValue[key] = value ?? "";
+        await ValueChanged.InvokeAsync(currentValue);
+    }
+
+    private async Task SetJsonValue(string key, string jsonValue)
+    {
+        try
+        {
+            var value = JsonSerializer.Deserialize<object>(jsonValue);
+            currentValue[key] = value ?? "";
+            await ValueChanged.InvokeAsync(currentValue);
+        }
+        catch
+        {
+            // 忽略无效的JSON，保持原值
+        }
+    }
+}

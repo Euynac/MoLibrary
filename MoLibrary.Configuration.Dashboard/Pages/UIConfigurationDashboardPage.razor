@@ -1,0 +1,61 @@
+@page "/configuration-dashboard"
+@using MoLibrary.Configuration.Dashboard.UIConfiguration.Components
+@using MoLibrary.Configuration.Dashboard.UIConfiguration.Services
+@using MoLibrary.Configuration.Dashboard.Modules
+@using Microsoft.Extensions.Options
+@using MudBlazor
+@inject IOptionsSnapshot<ModuleConfigurationDashboardOption> DashboardOptions
+@inject ISnackbar Snackbar
+
+<PageTitle>配置面板</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
+    <MudText Typo="Typo.h4" Class="mb-4">配置面板</MudText>
+    
+    @if (DashboardOptions.Value.ThisIsDashboard)
+    {
+        <MudTabs Elevation="4" Rounded="true" Color="Color.Primary">
+            <MudTabPanel Text="配置列表">
+                <div class="pa-4">
+                    <ConfigurationList @ref="configList" />
+                </div>
+            </MudTabPanel>
+            
+            <MudTabPanel Text="配置历史">
+                <div class="pa-4">
+                    <ConfigurationHistory />
+                </div>
+            </MudTabPanel>
+            
+            <MudTabPanel Text="实时监控">
+                <div class="pa-4">
+                    <ConfigurationStatus />
+                </div>
+            </MudTabPanel>
+        </MudTabs>
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Info" Class="ma-4">
+            <MudText Typo="Typo.h6">当前非面板服务</MudText>
+            <MudText Typo="Typo.body1">当前服务未配置为配置面板服务，无法显示配置面板功能。</MudText>
+            <MudText Typo="Typo.body2" Class="mt-2">
+                如需启用配置面板功能，请在应用程序配置中设置 ThisIsDashboard 为 true。
+            </MudText>
+        </MudAlert>
+    }
+</MudContainer>
+
+@code {
+    public const string CONFIGURATION_DASHBOARD_URL = "/configuration-dashboard";
+    
+    private ConfigurationList? configList;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            StateHasChanged();
+        }
+    }
+}

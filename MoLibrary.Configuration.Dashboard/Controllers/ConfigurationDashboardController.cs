@@ -1,10 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
-using MoLibrary.Configuration.Dashboard.Interfaces;
 using MoLibrary.Configuration.Dashboard.Model;
+using MoLibrary.Configuration.Dashboard.UIConfiguration.Services;
+using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module.ModuleController;
-using MoLibrary.Repository.Transaction;
-using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Configuration.Dashboard.Controllers;
 
@@ -13,27 +11,8 @@ namespace MoLibrary.Configuration.Dashboard.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/configuration")]
-public class ConfigurationDashboardController : MoModuleControllerBase
+public class ConfigurationDashboardController(ConfigurationDashboardService configurationDashboardService) : MoModuleControllerBase
 {
-    private readonly IMoConfigurationCentre _configCentre;
-    private readonly IMoConfigurationDashboard _dashboard;
-    private readonly IMoConfigurationStores _stores;
-    private readonly IMoUnitOfWorkManager _uowManager;
-    private readonly ILogger<ConfigurationDashboardController> _logger;
-
-    public ConfigurationDashboardController(
-        IMoConfigurationCentre configCentre,
-        IMoConfigurationDashboard dashboard,
-        IMoConfigurationStores stores,
-        IMoUnitOfWorkManager uowManager,
-        ILogger<ConfigurationDashboardController> logger)
-    {
-        _configCentre = configCentre;
-        _dashboard = dashboard;
-        _stores = stores;
-        _uowManager = uowManager;
-        _logger = logger;
-    }
 
     /// <summary>
     /// 获取所有微服务配置状态
@@ -43,21 +22,8 @@ public class ConfigurationDashboardController : MoModuleControllerBase
     [HttpGet("status")]
     public async Task<IActionResult> GetAllConfigStatus([FromQuery] string? mode = null)
     {
-        try
-        {
-            if ((await _configCentre.GetRegisteredServicesConfigsAsync()).IsFailed(out var error, out var data))
-                return BadRequest(error);
-
-            if ((await _dashboard.DashboardDisplayMode(data, mode)).IsFailed(out error, out var arranged))
-                return BadRequest(error);
-
-            return Ok(Res.Ok(arranged));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "获取所有配置状态失败");
-            return BadRequest(Res.Fail($"获取所有配置状态失败: {ex.Message}"));
-        }
+        var result = await configurationDashboardService.GetAllConfigStatusAsync(mode);
+        return result.GetResponse(this);
     }
 
     /// <summary>
@@ -69,18 +35,8 @@ public class ConfigurationDashboardController : MoModuleControllerBase
     [HttpGet("option/status")]
     public async Task<IActionResult> GetOptionItemStatus([FromQuery] string? appid, [FromQuery] string key)
     {
-        try
-        {
-            if ((await _configCentre.GetSpecificOptionItemAsync(key, appid)).IsFailed(out var error, out var data))
-                return BadRequest(error);
-
-            return Ok(Res.Ok(data));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "获取指定配置状态失败");
-            return BadRequest(Res.Fail($"获取指定配置状态失败: {ex.Message}"));
-        }
+        var result = await configurationDashboardService.GetOptionItemStatusAsync(appid, key);
+        return result.GetResponse(this);
     }
 
     /// <summary>
@@ -98,30 +54,8 @@ public class ConfigurationDashboardController : MoModuleControllerBase
         [FromQuery] DateTime? start,
         [FromQuery] DateTime? end)
     {
-        try
-        {
-            using var uow = _uowManager.Begin();
-
-            if (appid != null && key != null)
-            {
-                var result = await _stores.GetHistory(key, appid);
-                return Ok(result);
-            }
-
-            if (start != null && end != null)
-            {
-                var result = await _stores.GetHistory(start.Value, end.Value);
-                return Ok(result);
-            }
-
-            var defaultResult = await _stores.GetHistory(DateTime.Now.Subtract(TimeSpan.FromDays(180)), DateTime.Now);
-            return Ok(defaultResult);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "获取配置历史失败");
-            return BadRequest(Res.Fail($"获取配置历史失败: {ex.Message}"));
-        }
+        var result = await configurationDashboardService.GetConfigHistoryAsync(key, appid, start, end);
+        return result.GetResponse(this);
     }
 
     /// <summary>
@@ -132,17 +66,8 @@ public class ConfigurationDashboardController : MoModuleControllerBase
     [HttpPost("update")]
     public async Task<IActionResult> UpdateConfig([FromBody] DtoUpdateConfig request)
     {
-        try
-        {
-            using var uow = _uowManager.Begin();
-            var result = await _configCentre.UpdateConfig(request);
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "更新配置失败");
-            return BadRequest(Res.Fail($"更新配置失败: {ex.Message}"));
-        }
+        var result = await configurationDashboardService.UpdateConfigAsync(request);
+        return result.GetResponse(this);
     }
 
     /// <summary>
@@ -153,17 +78,8 @@ public class ConfigurationDashboardController : MoModuleControllerBase
     [HttpPost("rollback")]
     public async Task<IActionResult> RollbackConfig([FromBody] RollbackRequest request)
     {
-        try
-        {
-            using var uow = _uowManager.Begin();
-            var result = await _configCentre.RollbackConfig(request.Key, request.AppId, request.Version);
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "回滚配置失败");
-            return BadRequest(Res.Fail($"回滚配置失败: {ex.Message}"));
-        }
+        var result = await configurationDashboardService.RollbackConfigAsync(request.Key, request.AppId, request.Version);
+        return result.GetResponse(this);
     }
 }
 

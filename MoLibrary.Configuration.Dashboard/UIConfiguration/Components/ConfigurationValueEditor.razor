@@ -1,0 +1,255 @@
+@using MoLibrary.Configuration.Model
+@using MudBlazor
+@using System.Text.Json
+
+<div class="configuration-value-editor">
+    @switch (OptionItem?.Type)
+    {
+        case EOptionItemValueBasicType.Boolean:
+            <MudSwitch T="bool" Value="boolValue" ValueChanged="async (bool v) => { boolValue = v; await OnValueChanged(); }" 
+                       Label="@OptionItem.Title" Color="Color.Primary" />
+            break;
+
+        case EOptionItemValueBasicType.Numeric:
+            <MudNumericField T="decimal" Value="numericValue" ValueChanged="async (decimal v) => { numericValue = v; await OnValueChanged(); }" 
+                             Label="@OptionItem.Title" Variant="Variant.Outlined" />
+            break;
+
+        case EOptionItemValueBasicType.String:
+            @if (!string.IsNullOrEmpty(OptionItem.RegexPattern))
+            {
+                <MudTextField Value="stringValue" ValueChanged="async (string v) => { stringValue = v; await OnValueChanged(); }" 
+                              Label="@OptionItem.Title" Variant="Variant.Outlined" 
+                              Validation="@(new Func<string, string?>(ValidateRegex))" />
+            }
+            else
+            {
+                <MudTextField Value="stringValue" ValueChanged="async (string v) => { stringValue = v; await OnValueChanged(); }" 
+                              Label="@OptionItem.Title" Variant="Variant.Outlined" />
+            }
+            break;
+
+        case EOptionItemValueBasicType.DateTime:
+            <MudDatePicker Date="dateTimeValue" DateChanged="async (DateTime? v) => { dateTimeValue = v; await OnValueChanged(); }" 
+                           Label="@OptionItem.Title" Variant="Variant.Outlined" />
+            break;
+
+        case EOptionItemValueBasicType.TimeSpan:
+            <MudTextField Value="timeSpanString" ValueChanged="async (string v) => { timeSpanString = v; await OnValueChanged(); }" 
+                          Label="@($"{OptionItem.Title} (格式: HH:mm:ss)")" 
+                          Variant="Variant.Outlined" Validation="@(new Func<string, string?>(ValidateTimeSpan))" />
+            break;
+
+        case EOptionItemValueBasicType.Enum:
+            <MudTextField Value="stringValue" ValueChanged="async (string v) => { stringValue = v; await OnValueChanged(); }" 
+                          Label="@OptionItem.Title" Variant="Variant.Outlined" 
+                          HelperText="枚举值，请输入有效的枚举名称" />
+            break;
+
+        case EOptionItemValueBasicType.Object:
+            @if (OptionItem.SpecialType == EOptionItemValueSpecialType.Array)
+            {
+                <ConfigurationArrayEditor Value="arrayValue" ValueChanged="async (List<object> v) => { arrayValue = v; await OnValueChanged(); }" OptionItem="OptionItem" />
+            }
+            else if (OptionItem.SpecialType == EOptionItemValueSpecialType.Dict)
+            {
+                <ConfigurationDictEditor Value="dictValue" ValueChanged="async (Dictionary<string, object> v) => { dictValue = v; await OnValueChanged(); }" OptionItem="OptionItem" />
+            }
+            else if (OptionItem.SubStructure != null)
+            {
+                <ConfigurationObjectEditor Value="objectValue" ValueChanged="async (Dictionary<string, object> v) => { objectValue = v; await OnValueChanged(); }" SubStructure="OptionItem.SubStructure" />
+            }
+            else
+            {
+                <MudTextField Value="jsonString" ValueChanged="async (string v) => { jsonString = v; await OnValueChanged(); }" 
+                              Label="@($"{OptionItem.Title} (JSON)")" 
+                              Variant="Variant.Outlined" Lines="5" 
+                              Validation="@(new Func<string, string?>(ValidateJson))" />
+            }
+            break;
+
+        default:
+            <MudTextField Value="jsonString" ValueChanged="async (string v) => { jsonString = v; await OnValueChanged(); }" 
+                          Label="@($"{OptionItem.Title} (JSON)")" 
+                          Variant="Variant.Outlined" Lines="3" 
+                          Validation="@(new Func<string, string?>(ValidateJson))" />
+            break;
+    }
+</div>
+
+@code {
+    [Parameter] public DtoOptionItem? OptionItem { get; set; }
+    [Parameter] public object? Value { get; set; }
+    [Parameter] public EventCallback<object?> ValueChanged { get; set; }
+
+    private bool boolValue;
+    private decimal numericValue;
+    private string stringValue = "";
+    private DateTime? dateTimeValue;
+    private string timeSpanString = "";
+    private List<object> arrayValue = [];
+    private Dictionary<string, object> dictValue = [];
+    private Dictionary<string, object> objectValue = [];
+    private string jsonString = "";
+
+    protected override void OnParametersSet()
+    {
+        if (Value != null && OptionItem != null)
+        {
+            InitializeValue();
+        }
+    }
+
+    private void InitializeValue()
+    {
+        switch (OptionItem?.Type)
+        {
+            case EOptionItemValueBasicType.Boolean:
+                boolValue = ConvertToBoolean(Value);
+                break;
+            case EOptionItemValueBasicType.Numeric:
+                numericValue = ConvertToDecimal(Value);
+                break;
+            case EOptionItemValueBasicType.String:
+            case EOptionItemValueBasicType.Enum:
+                stringValue = ConvertToString(Value);
+                break;
+            case EOptionItemValueBasicType.DateTime:
+                dateTimeValue = ConvertToDateTime(Value);
+                break;
+            case EOptionItemValueBasicType.TimeSpan:
+                timeSpanString = ConvertToTimeSpan(Value).ToString();
+                break;
+            case EOptionItemValueBasicType.Object:
+                if (OptionItem.SpecialType == EOptionItemValueSpecialType.Array)
+                {
+                    arrayValue = ConvertToArray(Value);
+                }
+                else if (OptionItem.SpecialType == EOptionItemValueSpecialType.Dict)
+                {
+                    dictValue = ConvertToDictionary(Value);
+                }
+                else
+                {
+                    objectValue = ConvertToObject(Value);
+                }
+                break;
+            default:
+                jsonString = JsonSerializer.Serialize(Value, new JsonSerializerOptions { WriteIndented = true });
+                break;
+        }
+    }
+
+    private async Task OnValueChanged()
+    {
+        object? newValue = OptionItem?.Type switch
+        {
+            EOptionItemValueBasicType.Boolean => boolValue,
+            EOptionItemValueBasicType.Numeric => numericValue,
+            EOptionItemValueBasicType.String or EOptionItemValueBasicType.Enum => stringValue,
+            EOptionItemValueBasicType.DateTime => dateTimeValue,
+            EOptionItemValueBasicType.TimeSpan => TimeSpan.TryParse(timeSpanString, out var ts) ? ts : TimeSpan.Zero,
+            EOptionItemValueBasicType.Object when OptionItem.SpecialType == EOptionItemValueSpecialType.Array => arrayValue,
+            EOptionItemValueBasicType.Object when OptionItem.SpecialType == EOptionItemValueSpecialType.Dict => dictValue,
+            EOptionItemValueBasicType.Object => objectValue,
+            _ => JsonSerializer.Deserialize<object>(jsonString)
+        };
+
+        await ValueChanged.InvokeAsync(newValue);
+    }
+
+    private bool ConvertToBoolean(object? value)
+    {
+        if (value is bool b) return b;
+        if (value is JsonElement { ValueKind: JsonValueKind.True }) return true;
+        return false;
+    }
+
+    private decimal ConvertToDecimal(object? value)
+    {
+        if (value is decimal d) return d;
+        if (value is JsonElement { ValueKind: JsonValueKind.Number } element) return element.GetDecimal();
+        return 0;
+    }
+
+    private string ConvertToString(object? value)
+    {
+        if (value is string s) return s;
+        if (value is JsonElement { ValueKind: JsonValueKind.String } element) return element.GetString() ?? "";
+        return JsonSerializer.Serialize(value);
+    }
+
+    private DateTime? ConvertToDateTime(object? value)
+    {
+        if (value is DateTime dt) return dt;
+        if (value is JsonElement { ValueKind: JsonValueKind.String } element && DateTime.TryParse(element.GetString(), out var parsed))
+            return parsed;
+        return null;
+    }
+
+    private TimeSpan ConvertToTimeSpan(object? value)
+    {
+        if (value is TimeSpan ts) return ts;
+        if (value is JsonElement { ValueKind: JsonValueKind.String } element && TimeSpan.TryParse(element.GetString(), out var parsed))
+            return parsed;
+        return TimeSpan.Zero;
+    }
+
+    private List<object> ConvertToArray(object? value)
+    {
+        if (value is JsonElement { ValueKind: JsonValueKind.Array } element)
+            return element.EnumerateArray().Select(x => (object)x).ToList();
+        return [];
+    }
+
+    private Dictionary<string, object> ConvertToDictionary(object? value)
+    {
+        if (value is JsonElement { ValueKind: JsonValueKind.Object } element)
+            return element.EnumerateObject().ToDictionary(x => x.Name, x => (object)x.Value);
+        return [];
+    }
+
+    private Dictionary<string, object> ConvertToObject(object? value)
+    {
+        if (value is JsonElement { ValueKind: JsonValueKind.Object } element)
+            return element.EnumerateObject().ToDictionary(x => x.Name, x => (object)x.Value);
+        return [];
+    }
+
+    private string? ValidateRegex(string value)
+    {
+        if (!string.IsNullOrEmpty(OptionItem?.RegexPattern))
+        {
+            try
+            {
+                if (!System.Text.RegularExpressions.Regex.IsMatch(value ?? "", OptionItem.RegexPattern))
+                    return "值不符合正则表达式模式";
+            }
+            catch
+            {
+                return "正则表达式模式无效";
+            }
+        }
+        return null;
+    }
+
+    private string? ValidateTimeSpan(string value)
+    {
+        if (!TimeSpan.TryParse(value, out _))
+            return "时间跨度格式无效，请使用 HH:mm:ss 格式";
+        return null;
+    }
+
+    private string? ValidateJson(string value)
+    {
+        try
+        {
+            JsonSerializer.Deserialize<object>(value);
+            return null;
+        }
+        catch
+        {
+            return "JSON 格式无效";
+        }
+    }
+}

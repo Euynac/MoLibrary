@@ -1,0 +1,193 @@
+@page "/configuration-client"
+@using MoLibrary.Configuration.Dashboard.UIConfiguration.Services
+@using MoLibrary.Configuration.Dashboard.UIConfiguration.Components
+@using MoLibrary.Configuration.Model
+@using MoLibrary.Configuration.Dashboard.Model
+@using MudBlazor
+@using System.Text.Json
+@using MoLibrary.Tool.MoResponse
+@inject ConfigurationClientService ConfigurationClientService
+@inject MoLibrary.Configuration.Services.ModuleConfigurationService ModuleConfigurationService
+@inject ISnackbar Snackbar
+
+<PageTitle>配置客户端</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
+    <MudText Typo="Typo.h4" Class="mb-4">配置客户端</MudText>
+    
+    <MudTabs Elevation="4" Rounded="true" Color="Color.Primary">
+        <MudTabPanel Text="配置状态">
+            <div class="pa-4">
+                <MudGrid>
+                    <MudItem xs="12">
+                        <MudCard>
+                            <MudCardHeader>
+                                <CardHeaderContent>
+                                    <MudText Typo="Typo.h6">配置状态</MudText>
+                                </CardHeaderContent>
+                                <CardHeaderActions>
+                                    <MudSwitch @bind-Value="onlyCurDomain" Label="仅当前域" Color="Color.Primary" />
+                                    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadConfigStatusAsync">刷新</MudButton>
+                                </CardHeaderActions>
+                            </MudCardHeader>
+                            <MudCardContent>
+                                @if (configStatus != null)
+                                {
+                                    <ConfigurationHierarchicalDisplay Configs="configStatus" OnConfigUpdate="HandleConfigUpdate" />
+                                }
+                                else if (isLoading)
+                                {
+                                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                                }
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+                </MudGrid>
+            </div>
+        </MudTabPanel>
+        
+        <MudTabPanel Text="调试视图">
+            <div class="pa-4">
+                <MudCard>
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">配置调试视图</MudText>
+                        </CardHeaderContent>
+                        <CardHeaderActions>
+                            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadDebugViewAsync">刷新</MudButton>
+                        </CardHeaderActions>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        @if (debugView != null)
+                        {
+                            <MudPaper Class="pa-4" Style="background-color: #1e1e1e; color: #d4d4d4; font-family: 'Consolas', monospace;">
+                                @foreach (var line in debugView)
+                                {
+                                    <div>@line</div>
+                                }
+                            </MudPaper>
+                        }
+                        else if (isLoadingDebug)
+                        {
+                            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                        }
+                    </MudCardContent>
+                </MudCard>
+            </div>
+        </MudTabPanel>
+        
+        <MudTabPanel Text="配置提供者">
+            <div class="pa-4">
+                <MudCard>
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">配置提供者</MudText>
+                        </CardHeaderContent>
+                        <CardHeaderActions>
+                            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadProvidersAsync">刷新</MudButton>
+                        </CardHeaderActions>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        @if (providers != null)
+                        {
+                            <MudPaper Class="pa-4" Style="background-color: #f5f5f5; font-family: 'Consolas', monospace;">
+                                <pre>@JsonSerializer.Serialize(providers, new JsonSerializerOptions { WriteIndented = true })</pre>
+                            </MudPaper>
+                        }
+                        else if (isLoadingProviders)
+                        {
+                            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                        }
+                    </MudCardContent>
+                </MudCard>
+            </div>
+        </MudTabPanel>
+    </MudTabs>
+</MudContainer>
+
+@code {
+    public const string CONFIGURATION_CLIENT_URL = "/configuration-client";
+    
+    private List<DtoDomainConfigs>? configStatus;
+    private string[]? debugView;
+    private object? providers;
+    private bool onlyCurDomain = false;
+    private bool isLoading = false;
+    private bool isLoadingDebug = false;
+    private bool isLoadingProviders = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadConfigStatusAsync();
+        }
+    }
+
+    private async Task LoadConfigStatusAsync()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        if ((await ModuleConfigurationService.GetConfigStatusAsync(onlyCurDomain)).IsFailed(out var error, out var data))
+        {
+            Snackbar.Add($"加载配置状态失败: {error}", Severity.Error);
+        }
+        else
+        {
+            configStatus = data;
+        }
+
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task LoadDebugViewAsync()
+    {
+        isLoadingDebug = true;
+        StateHasChanged();
+
+        if ((await ModuleConfigurationService.GetDebugViewAsync()).IsFailed(out var error, out var data))
+        {
+            Snackbar.Add($"加载调试视图失败: {error}", Severity.Error);
+        }
+        else
+        {
+            debugView = data;
+        }
+
+        isLoadingDebug = false;
+        StateHasChanged();
+    }
+
+    private async Task LoadProvidersAsync()
+    {
+        isLoadingProviders = true;
+        StateHasChanged();
+
+        if ((await ModuleConfigurationService.GetProvidersAsync()).IsFailed(out var error, out var data))
+        {
+            Snackbar.Add($"加载配置提供者失败: {error}", Severity.Error);
+        }
+        else
+        {
+            providers = data;
+        }
+
+        isLoadingProviders = false;
+        StateHasChanged();
+    }
+
+    private async Task HandleConfigUpdate(DtoUpdateConfig updateRequest)
+    {
+        if ((await ConfigurationClientService.UpdateConfigAsync(updateRequest)).IsFailed(out var error))
+        {
+            Snackbar.Add($"配置更新失败: {error}", Severity.Error);
+        }
+        else
+        {
+            Snackbar.Add("配置更新成功", Severity.Success);
+            await LoadConfigStatusAsync();
+        }
+    }
+}

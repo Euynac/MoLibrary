@@ -1,0 +1,76 @@
+@using MoLibrary.Configuration.Model
+@using MudBlazor
+@using System.Text.Json
+
+<MudCard>
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">字典编辑器</MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Add" OnClick="AddItem">新增项</MudButton>
+        </CardHeaderActions>
+    </MudCardHeader>
+    <MudCardContent>
+        @if (items.Any())
+        {
+            @for (int i = 0; i < items.Count; i++)
+            {
+                var index = i; // Capture for closure
+                <div class="d-flex align-center gap-2 mb-2">
+                    <MudTextField @bind-Value="items[index].Key" Label="Key" Variant="Variant.Outlined" Style="min-width: 150px;" />
+                    <MudTextField @bind-Value="items[index].Value" Label="Value" Variant="Variant.Outlined" Class="flex-grow-1" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="() => RemoveItem(index)" />
+                </div>
+            }
+        }
+        else
+        {
+            <MudText Typo="Typo.caption" Class="text-muted">暂无字典项，点击"新增项"添加</MudText>
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public DtoOptionItem? OptionItem { get; set; }
+    [Parameter] public Dictionary<string, object>? Value { get; set; }
+    [Parameter] public EventCallback<Dictionary<string, object>> ValueChanged { get; set; }
+
+    private List<DictItem> items = [];
+
+    public class DictItem
+    {
+        public string Key { get; set; } = "";
+        public string Value { get; set; } = "";
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (Value != null)
+        {
+            items = Value.Select(kvp => new DictItem { Key = kvp.Key, Value = kvp.Value?.ToString() ?? "" }).ToList();
+        }
+    }
+
+    private async Task AddItem()
+    {
+        items.Add(new DictItem());
+        await NotifyValueChanged();
+    }
+
+    private async Task RemoveItem(int index)
+    {
+        if (index >= 0 && index < items.Count)
+        {
+            items.RemoveAt(index);
+            await NotifyValueChanged();
+        }
+    }
+
+    private async Task NotifyValueChanged()
+    {
+        var dict = items.Where(x => !string.IsNullOrEmpty(x.Key))
+                       .ToDictionary(x => x.Key, x => (object)x.Value);
+        await ValueChanged.InvokeAsync(dict);
+    }
+}

@@ -13,6 +13,7 @@ using MoLibrary.Configuration.Controllers;
 using MoLibrary.Configuration.Interfaces;
 using MoLibrary.Configuration.Model;
 using MoLibrary.Configuration.Providers;
+using MoLibrary.Configuration.Services;
 using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
@@ -40,6 +41,7 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModuleWit
         services.AddOptions();
         services.AddSingleton<IMoConfigurationCardManager, MoConfigurationCardManager>();
         services.AddSingleton<IMoConfigurationServiceInfo, MoConfigurationServiceInfoDefault>();
+        services.AddScoped<ModuleConfigurationService>();
 
         if (Option is { UseDaprProvider: true, AppConfiguration: ConfigurationManager manager})
         {

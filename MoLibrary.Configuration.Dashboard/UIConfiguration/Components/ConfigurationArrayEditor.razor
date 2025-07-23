@@ -1,0 +1,68 @@
+@using MoLibrary.Configuration.Model
+@using MudBlazor
+@using System.Text.Json
+
+<MudCard>
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">数组编辑器</MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Add" OnClick="AddItem">新增项</MudButton>
+        </CardHeaderActions>
+    </MudCardHeader>
+    <MudCardContent>
+        @if (items.Any())
+        {
+            @for (int i = 0; i < items.Count; i++)
+            {
+                var index = i; // Capture for closure
+                <div class="d-flex align-center gap-2 mb-2">
+                    <MudTextField @bind-Value="items[index]" Label="@($"项 {index + 1}")" Variant="Variant.Outlined" Class="flex-grow-1" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="() => RemoveItem(index)" />
+                </div>
+            }
+        }
+        else
+        {
+            <MudText Typo="Typo.caption" Class="text-muted">暂无数组项，点击"新增项"添加</MudText>
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public DtoOptionItem? OptionItem { get; set; }
+    [Parameter] public List<object>? Value { get; set; }
+    [Parameter] public EventCallback<List<object>> ValueChanged { get; set; }
+
+    private List<string> items = [];
+
+    protected override void OnParametersSet()
+    {
+        if (Value != null)
+        {
+            items = Value.Select(x => x?.ToString() ?? "").ToList();
+        }
+    }
+
+    private async Task AddItem()
+    {
+        items.Add("");
+        await NotifyValueChanged();
+    }
+
+    private async Task RemoveItem(int index)
+    {
+        if (index >= 0 && index < items.Count)
+        {
+            items.RemoveAt(index);
+            await NotifyValueChanged();
+        }
+    }
+
+    private async Task NotifyValueChanged()
+    {
+        var objectList = items.Cast<object>().ToList();
+        await ValueChanged.InvokeAsync(objectList);
+    }
+}
