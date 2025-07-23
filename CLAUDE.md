@@ -87,3 +87,6 @@ Static web assets (wwwroot) are handled through:
     - @rules\mudblazor\CLAUDE_MIGRATION_GUIDE.md
     - @rules\mudblazor\CLAUDE_COMPONENT_REFERENCE.md
   - 源码路径：@rules\mudblazor\src
+
+## Available MCP Servers
+- **mcp__microsoft-docs__microsoft_docs_search**: MCP Server for searching Microsoft/Azure official documentation. This is particularly useful for finding ASP.NET Core, Blazor, and related documentation and best practices.
