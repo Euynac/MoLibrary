@@ -30,6 +30,7 @@
   - [ ] 实现 `MoErrorBoundary.razor` 错误边界组件
   - [ ] 实现 `MoDataGrid.razor` 增强数据网格
   - [ ] 实现 `MoFormField.razor` 表单字段包装器
+  - [ ] 创建 `IMoSnackbar` 接口和 `MoSnackbar` 组件封装
 
 #### Phase 2: 重构现有组件（第3-4周）
 - [ ] 建立组件层次结构

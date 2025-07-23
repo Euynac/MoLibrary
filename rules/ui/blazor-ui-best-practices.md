@@ -388,5 +388,100 @@ public class CustomValidator : ComponentBase
 }
 ```
 
+## 11. 模块开发最佳实践
+
+### 11.1 依赖注入配置
+使用模块Option时，直接注入 `IOptions<TModuleOption>` 或 `IOptionsSnapshot<TModuleOption>` 使用：
+```csharp
+@inject IOptions<ModuleUIOption> Options
+
+@code {
+    protected override void OnInitialized()
+    {
+        var appBarName = Options.Value.UIAppBarName;
+    }
+}
+```
+
+### 11.2 代码复用策略
+- 相似功能的组件要抽象出公共基类或接口
+- 通用的UI交互逻辑封装成可复用的服务
+- 统一的样式和主题使用MudBlazor组件库
+
+### 11.3 性能优化技巧
+- 大组件拆分为小组件，减少重渲染范围
+- 使用 `@key` 指令优化列表渲染
+- 避免在模板中进行复杂计算
+
+### 11.4 统一错误处理
+- 使用 `IMoSnackbar` 显示用户友好的错误信息（将来会封装 ISnackbar）
+- 记录详细的调试日志供开发排查
+- 实现统一的错误处理机制
+
+```csharp
+@inject ISnackbar Snackbar  // 将来改为 IMoSnackbar
+
+private async Task HandleOperation()
+{
+    if ((await Service.ExecuteAsync()).IsFailed(out var error))
+    {
+        Snackbar.Add(error.Message, Severity.Error);
+        return;
+    }
+    
+    Snackbar.Add("操作成功", Severity.Success);
+}
+```
+
+## 12. 服务层最佳实践
+
+### 12.1 服务返回值规范
+- 所有服务方法的返回值必须不为空，使用 `Res<T>` 或 `Res` 类型
+- 成功时返回 `Res.Ok(data)`，失败时返回 `Res.Fail(errorMessage)`
+- 异常情况必须捕获并返回 `Res.Fail`
+
+### 12.2 服务调用模式
+```csharp
+// 在Blazor页面中注入服务
+@inject UserService UserService
+
+@code {
+    private async Task LoadDataAsync()
+    {
+        // 使用IsFailed方法检查结果并获取数据或错误
+        if ((await UserService.GetDataAsync(parameter)).IsFailed(out var error, out var data))
+        {
+            // 处理错误情况
+            Snackbar.Add($"操作失败: {error.Message}", Severity.Error);
+            return;
+        }
+
+        // 处理成功情况，data不为null
+        ProcessData(data);
+    }
+}
+```
+
+### 12.3 服务注册
+在模块的 `ConfigureServices` 方法中注册服务：
+```csharp
+public override void ConfigureServices(IServiceCollection services)
+{
+    services.AddScoped<UserService>();
+}
+```
+
+## 13. 数据模型管理
+
+### 13.1 模型组织
+- 页面相关的数据模型放在 `UI{ModuleName}/Models/` 目录下
+- 使用强类型模型，避免动态类型
+- 模型命名要清晰表达其用途
+
+### 13.2 模型命名约定
+- 请求模型：`{Feature}Request`
+- 响应模型：`{Feature}Response`
+- 视图模型：`{Feature}ViewModel`
+
 ## 总结
 遵循这些最佳实践将帮助您构建高质量、可维护、性能优异的Blazor应用。记住，这些是指导原则，应根据具体项目需求灵活应用。
