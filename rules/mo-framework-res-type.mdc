@@ -21,6 +21,16 @@ public override async Task<Res<ResponseUserCheck>> Handle(QueryUserCheck request
 if ((await userManger.FillUserInfo(user)).IsFailed(out error)) return error;
 ```
 
+要快速获取数据，请使用以下模式：
+
+```csharp
+if ((await userManger.FillUserInfo(user)).IsFailed(out var error, out var data)) return error;
+//use data...
+```
+
+
+
+
 ## `Res<T>`的基本定义
 
 ```csharp
@@ -37,7 +47,6 @@ public record Res<T> : IServiceResponse
 
     public static implicit operator Res<T>(string res) => new(res, ResponseCode.BadRequest);
     public static implicit operator Res<T>(T data) => new(data);
-    public static implicit operator string(Res<T> res) => res.Message ?? "";
 }
 
 public record Res : IServiceResponse
