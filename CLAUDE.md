@@ -79,5 +79,11 @@ Static web assets (wwwroot) are handled through:
 
 ## Interface Return Value Guidelines
 - 对于前端(Controller以及Blazor使用的)的接口的返回值定义，请使用 @统一返回模型Res，使用方式详见 @rules\mo-framework-res-type.mdc 
-```
-```
+
+## MudBlazor Development Notes
+- 编写MudBlazor相关代码时，参考迁移文档掌握最新API，且目前提供了引导文档以及源码，能够检索实现。
+  - 迁移文档参考路径：
+    - @rules\mudblazor\CLAUDE_MUDBLAZOR_OFFICIAL_MIGRATION.md
+    - @rules\mudblazor\CLAUDE_MIGRATION_GUIDE.md
+    - @rules\mudblazor\CLAUDE_COMPONENT_REFERENCE.md
+  - 源码路径：@rules\mudblazor\src
