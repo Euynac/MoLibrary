@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(find:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "mcp__microsoft-docs__microsoft_docs_search"
     ],
     "deny": []
   }
