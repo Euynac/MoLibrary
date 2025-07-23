@@ -58,7 +58,12 @@ public class ModuleConfigurationService(
         try
         {
             var providers = MoConfigurationManager.GetProviders();
-            return Res.Ok(providers);
+            // 如果providers为空或只包含空白字符，返回友好提示
+            if (string.IsNullOrWhiteSpace(providers))
+            {
+                return Res.Ok(new { message = "暂无配置提供者数据，请检查配置模块是否正确初始化" });
+            }
+            return Res.Ok(new { content = providers });
         }
         catch (Exception ex)
         {

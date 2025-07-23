@@ -2,9 +2,13 @@
 @using MoLibrary.Configuration.Dashboard.UIConfiguration.Components
 @using MoLibrary.Configuration.Dashboard.UIConfiguration.Services
 @using MoLibrary.Configuration.Dashboard.Modules
+@using MoLibrary.Configuration.Model
+@using MoLibrary.Configuration.Dashboard.Model
 @using Microsoft.Extensions.Options
 @using MudBlazor
+@using MoLibrary.Tool.MoResponse
 @inject IOptionsSnapshot<ModuleConfigurationDashboardOption> DashboardOptions
+@inject ConfigurationDashboardService ConfigurationDashboardService
 @inject ISnackbar Snackbar
 
 <PageTitle>配置面板</PageTitle>
@@ -15,9 +19,32 @@
     @if (DashboardOptions.Value.ThisIsDashboard)
     {
         <MudTabs Elevation="4" Rounded="true" Color="Color.Primary">
-            <MudTabPanel Text="配置列表">
+            <MudTabPanel Text="配置状态">
                 <div class="pa-4">
-                    <ConfigurationList @ref="configList" />
+                    <MudGrid>
+                        <MudItem xs="12">
+                            <MudCard>
+                                <MudCardHeader>
+                                    <CardHeaderContent>
+                                        <MudText Typo="Typo.h6">配置状态</MudText>
+                                    </CardHeaderContent>
+                                    <CardHeaderActions>
+                                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadConfigStatusAsync">刷新</MudButton>
+                                    </CardHeaderActions>
+                                </MudCardHeader>
+                                <MudCardContent>
+                                    @if (configStatus != null)
+                                    {
+                                        <ConfigurationHierarchicalDisplay Configs="configStatus" OnConfigUpdate="HandleConfigUpdate" />
+                                    }
+                                    else if (isLoading)
+                                    {
+                                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                                    }
+                                </MudCardContent>
+                            </MudCard>
+                        </MudItem>
+                    </MudGrid>
                 </div>
             </MudTabPanel>
             
@@ -49,13 +76,48 @@
 @code {
     public const string CONFIGURATION_DASHBOARD_URL = "/configuration-dashboard";
     
-    private ConfigurationList? configList;
+    private List<DtoDomainConfigs>? configStatus;
+    private bool isLoading = false;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            StateHasChanged();
+            if (DashboardOptions.Value.ThisIsDashboard)
+            {
+                await LoadConfigStatusAsync();
+            }
+        }
+    }
+
+    private async Task LoadConfigStatusAsync()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        if ((await ConfigurationDashboardService.GetAllConfigStatusAsync()).IsFailed(out var error, out var data))
+        {
+            Snackbar.Add($"加载配置状态失败: {error}", Severity.Error);
+        }
+        else
+        {
+            configStatus = data;
+        }
+
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task HandleConfigUpdate(DtoUpdateConfig updateRequest)
+    {
+        if ((await ConfigurationDashboardService.UpdateConfigAsync(updateRequest)).IsFailed(out var error))
+        {
+            Snackbar.Add($"配置更新失败: {error}", Severity.Error);
+        }
+        else
+        {
+            Snackbar.Add("配置更新成功", Severity.Success);
+            await LoadConfigStatusAsync();
         }
     }
 }
