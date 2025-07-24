@@ -13,11 +13,11 @@
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-4">
     <!-- 标题栏 -->
-    <MudPaper Class="pa-4 mb-4" Style="background: linear-gradient(45deg, #1976D2 30%, #42A5F5 90%); color: white;">
+    <MudPaper Class="title-header pa-4 mb-4">
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
                 <MudIcon Icon="@Icons.Material.Filled.DataObject" Size="Size.Large" />
-                <MudText Typo="Typo.h4" Style="font-weight: 500; margin: 0;">DataChannel管理</MudText>
+                <MudText Typo="Typo.h4" Class="title-text">DataChannel管理</MudText>
             </MudStack>
             <MudStack Row="true" Spacing="2">
                 <MudButton StartIcon="@Icons.Material.Filled.Refresh" 
@@ -25,7 +25,7 @@
                           Variant="Variant.Outlined" 
                           OnClick="RefreshData"
                           Size="Size.Medium"
-                          Style="border-color: white; color: white;">
+                          Class="header-button">
                     刷新数据
                 </MudButton>
                 <MudButton StartIcon="@Icons.Material.Filled.ErrorOutline" 
@@ -33,7 +33,7 @@
                           Variant="Variant.Outlined" 
                           OnClick="LoadExceptionSummary"
                           Size="Size.Medium"
-                          Style="border-color: white; color: white;">
+                          Class="header-button">
                     异常统计
                 </MudButton>
             </MudStack>
@@ -42,9 +42,9 @@
 
     @if (_loading)
     {
-        <MudStack AlignItems="AlignItems.Center" Spacing="4" Class="pa-8">
+        <MudStack AlignItems="AlignItems.Center" Spacing="4" Class="loading-container">
             <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
-            <MudText Typo="Typo.h6" Color="Color.Primary">正在加载DataChannel信息...</MudText>
+            <MudText Typo="Typo.h6" Color="Color.Primary" Class="loading-text">正在加载DataChannel信息...</MudText>
         </MudStack>
     }
     else
@@ -52,14 +52,14 @@
         <!-- 统计信息卡片 -->
         @if (_exceptionSummary != null)
         {
-            <MudGrid Spacing="3" Class="mb-4">
+            <MudGrid Spacing="3" Class="stats-grid mb-4">
                 <MudItem xs="12" md="6" lg="3">
                     <MudCard Elevation="2">
                         <MudCardContent>
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                 <MudIcon Icon="@Icons.Material.Filled.Storage" Color="Color.Primary" Size="Size.Large" />
                                 <MudStack Spacing="1">
-                                    <MudText Typo="Typo.h6" Style="font-weight: 500;">总Channel数</MudText>
+                                    <MudText Typo="Typo.h6" Class="stats-card-title">总Channel数</MudText>
                                     <MudText Typo="Typo.h4" Color="Color.Primary">@_exceptionSummary.TotalChannels</MudText>
                                 </MudStack>
                             </MudStack>
@@ -72,7 +72,7 @@
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                 <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" Size="Size.Large" />
                                 <MudStack Spacing="1">
-                                    <MudText Typo="Typo.h6" Style="font-weight: 500;">异常Channel数</MudText>
+                                    <MudText Typo="Typo.h6" Class="stats-card-title">异常Channel数</MudText>
                                     <MudText Typo="Typo.h4" Color="Color.Error">@_exceptionSummary.ChannelsWithExceptions</MudText>
                                 </MudStack>
                             </MudStack>
@@ -85,7 +85,7 @@
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                 <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Large" />
                                 <MudStack Spacing="1">
-                                    <MudText Typo="Typo.h6" Style="font-weight: 500;">当前异常总数</MudText>
+                                    <MudText Typo="Typo.h6" Class="stats-card-title">当前异常总数</MudText>
                                     <MudText Typo="Typo.h4" Color="Color.Warning">@_exceptionSummary.TotalCurrentExceptions</MudText>
                                 </MudStack>
                             </MudStack>
@@ -98,7 +98,7 @@
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                 <MudIcon Icon="@Icons.Material.Filled.History" Color="Color.Info" Size="Size.Large" />
                                 <MudStack Spacing="1">
-                                    <MudText Typo="Typo.h6" Style="font-weight: 500;">历史异常总数</MudText>
+                                    <MudText Typo="Typo.h6" Class="stats-card-title">历史异常总数</MudText>
                                     <MudText Typo="Typo.h4" Color="Color.Info">@_exceptionSummary.TotalHistoricalExceptions</MudText>
                                 </MudStack>
                             </MudStack>
@@ -111,7 +111,7 @@
         <!-- Channel列表 -->
         @if (_channels != null && _channels.Any())
         {
-            <MudGrid Spacing="3">
+            <MudGrid Spacing="3" Class="channel-grid">
                 @foreach (var channel in _channels)
                 {
                     <MudItem xs="12" lg="6" xl="4">
@@ -125,7 +125,7 @@
         }
         else
         {
-            <MudAlert Severity="Severity.Info" Class="ma-4">
+            <MudAlert Severity="Severity.Info" Class="empty-state-container">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                     <MudIcon Icon="@Icons.Material.Filled.Info" />
                     <MudText>暂无DataChannel数据</MudText>

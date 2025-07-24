@@ -1,0 +1,97 @@
+/* 异常统计对话框样式 */
+
+/* 统计卡片标题 */
+.stats-card-title {
+    font-weight: 500;
+}
+
+/* 异常详情标题 */
+.exception-details-title {
+    font-weight: 500;
+}
+
+/* 数据表格容器 */
+.exception-table-container {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+/* 空状态文本 */
+.empty-state-text {
+    color: var(--mud-palette-text-secondary);
+}
+
+/* 进度条样式 */
+.exception-progress {
+    height: 8px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .exception-table-container {
+        max-height: 400px;
+    }
+}
+
+@media (max-width: 576px) {
+    .exception-table-container {
+        max-height: 300px;
+    }
+}
+
+/* MudBlazor组件自定义样式 */
+::deep .exception-table-container .mud-table-container {
+    max-height: inherit;
+}
+
+::deep .exception-table-container .mud-data-grid {
+    max-height: inherit;
+}
+
+/* 统计网格布局 */
+::deep .stats-grid .mud-grid-item {
+    display: flex;
+}
+
+::deep .stats-grid .mud-card {
+    width: 100%;
+    height: 100%;
+}
+
+/* 对话框内容区域 */
+::deep .mud-dialog .mud-dialog-content {
+    padding: 0 24px 24px 24px;
+}
+
+/* 数据网格行样式 */
+::deep .exception-table-container .mud-table-row:hover {
+    background-color: var(--mud-palette-action-hover);
+}
+
+/* 进度条颜色 */
+::deep .exception-progress .mud-progress-linear-bar {
+    transition: width 0.3s ease;
+}
+
+/* 卡片间距优化 */
+::deep .stats-grid .mud-card-content {
+    padding: 16px;
+}
+
+/* 滚动条样式 */
+.exception-table-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.exception-table-container::-webkit-scrollbar-track {
+    background: var(--mud-palette-background-grey);
+}
+
+.exception-table-container::-webkit-scrollbar-thumb {
+    background: var(--mud-palette-text-disabled);
+    border-radius: 4px;
+}
+
+.exception-table-container::-webkit-scrollbar-thumb:hover {
+    background: var(--mud-palette-text-secondary);
+}

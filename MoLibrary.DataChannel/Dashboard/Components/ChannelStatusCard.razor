@@ -2,12 +2,12 @@
 @using MudBlazor
 @using System.Text.Json
 
-<MudCard Elevation="2" Style="@GetCardStyle()">
+<MudCard Elevation="2" Class="@GetCardClass()">
     <MudCardHeader Class="pb-2">
         <CardHeaderContent>
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                 <MudIcon Icon="@GetChannelIcon()" Color="@GetChannelColor()" />
-                <MudText Typo="Typo.h6" Style="font-weight: 500;">@Channel.Id</MudText>
+                <MudText Typo="Typo.h6" Class="channel-title">@Channel.Id</MudText>
                 @if (Channel.HasExceptions)
                 {
                     <MudChip T="string" Color="Color.Error" Size="Size.Small" Label="true">
@@ -44,16 +44,16 @@
             }
         </CardHeaderActions>
     </MudCardHeader>
-    <MudCardContent Style="flex: 1; padding-top: 8px;">
+    <MudCardContent Class="channel-content">
         @if (_isReInitializing)
         {
             <!-- Loading遮罩 -->
-            <MudStack AlignItems="AlignItems.Center" Spacing="3" Class="pa-8">
+            <MudStack AlignItems="AlignItems.Center" Spacing="3" Class="loading-container">
                 <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
-                <MudText Typo="Typo.h6" Color="Color.Primary" Style="font-weight: 500;">
+                <MudText Typo="Typo.h6" Color="Color.Primary" Class="loading-title">
                     正在重新初始化...
                 </MudText>
-                <MudText Typo="Typo.body2" Style="color: var(--mud-palette-text-secondary);">
+                <MudText Typo="Typo.body2" Class="loading-subtitle">
                     请稍候，这可能需要几秒钟
                 </MudText>
             </MudStack>
@@ -83,7 +83,7 @@
 
                 <!-- 端点信息 -->
                 <MudStack Spacing="2">
-                    <MudText Typo="Typo.subtitle2" Style="font-weight: 500;">端点信息</MudText>
+                    <MudText Typo="Typo.subtitle2" Class="endpoint-section-title">端点信息</MudText>
                     
                     <!-- 内部端点 -->
                     <MudExpansionPanels Elevation="0" Dense="true">
@@ -91,7 +91,7 @@
                             <TitleContent>
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                     <MudIcon Icon="@Icons.Material.Filled.Input" Size="Size.Small" Color="Color.Info" />
-                                    <MudText Style="color: var(--mud-palette-text-primary);">内部: @Channel.InnerEndpoint.Name</MudText>
+                                    <MudText Class="endpoint-text">内部: @Channel.InnerEndpoint.Name</MudText>
                                 </MudStack>
                             </TitleContent>
                             <ChildContent>
@@ -106,7 +106,7 @@
                             <TitleContent>
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                     <MudIcon Icon="@Icons.Material.Filled.Output" Size="Size.Small" Color="Color.Success" />
-                                    <MudText Style="color: var(--mud-palette-text-primary);">外部: @Channel.OuterEndpoint.Name</MudText>
+                                    <MudText Class="endpoint-text">外部: @Channel.OuterEndpoint.Name</MudText>
                                 </MudStack>
                             </TitleContent>
                             <ChildContent>
@@ -120,7 +120,7 @@
                 @if (Channel.Middlewares.Any())
                 {
                     <MudStack Spacing="2">
-                        <MudText Typo="Typo.subtitle2" Style="font-weight: 500;">中间件 (@Channel.Middlewares.Count)</MudText>
+                        <MudText Typo="Typo.subtitle2" Class="middleware-section-title">中间件 (@Channel.Middlewares.Count)</MudText>
                         <MudExpansionPanels Elevation="0" Dense="true">
                             @foreach (var middleware in Channel.Middlewares)
                             {
@@ -128,7 +128,7 @@
                                     <TitleContent>
                                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                             <MudIcon Icon="@GetComponentIcon(middleware.Type)" Size="Size.Small" Color="@GetComponentColor(middleware.Type)" />
-                                            <MudText Style="color: var(--mud-palette-text-primary);">@middleware.Name</MudText>
+                                            <MudText Class="middleware-name">@middleware.Name</MudText>
                                             <MudChip T="string" Color="@GetComponentColor(middleware.Type)" Size="Size.Small" Label="true">
                                                 @GetComponentTypeDisplayName(middleware.Type)
                                             </MudChip>
@@ -147,26 +147,26 @@
                                             <MudStack Spacing="3">
                                                 <!-- 元数据信息 -->
                                                 <MudStack Spacing="2">
-                                                    <MudText Typo="Typo.subtitle2" Style="font-weight: 500; color: var(--mud-palette-primary);">基础信息</MudText>
+                                                    <MudText Typo="Typo.subtitle2" Class="info-display-section-title">基础信息</MudText>
                                                     <MetadataDisplay Metadata="middleware.Metadata" />
                                                 </MudStack>
 
                                                 <!-- 展示字典信息 -->
                                                 <MudStack Spacing="2">
-                                                    <MudText Typo="Typo.subtitle2" Style="font-weight: 500; color: var(--mud-palette-info);">
+                                                    <MudText Typo="Typo.subtitle2" Class="stats-section-title">
                                                         <MudIcon Icon="@Icons.Material.Filled.QueryStats" Size="Size.Small" Class="mr-1" />
                                                         统计信息
                                                     </MudText>
-                                                    <MudPaper Style="padding: 12px; background-color: var(--mud-palette-background-grey); border: 1px solid var(--mud-palette-info);">
+                                                    <MudPaper Class="stats-container">
                                                         <MudGrid Spacing="2">
                                                             @foreach (var kvp in middleware.InfoDictionary)
                                                             {
                                                                 <MudItem xs="12" sm="6" md="4">
                                                                     <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
                                                                         <MudIcon Icon="@GetInfoIcon(kvp.Value)" Size="Size.Small" Color="@GetInfoColor(kvp.Value)" />
-                                                                        <MudStack Spacing="0" Style="flex: 1;">
-                                                                            <MudText Typo="Typo.caption" Style="color: var(--mud-palette-text-secondary);">@kvp.Key</MudText>
-                                                                            <MudText Typo="Typo.body2" Style="font-weight: 500; color: var(--mud-palette-text-primary);">@FormatInfoValue(kvp.Value)</MudText>
+                                                                        <MudStack Spacing="0" Class="stats-item-container">
+                                                                            <MudText Typo="Typo.caption" Class="stats-item-key">@kvp.Key</MudText>
+                                                                            <MudText Typo="Typo.body2" Class="stats-item-value">@FormatInfoValue(kvp.Value)</MudText>
                                                                         </MudStack>
                                                                     </MudStack>
                                                                 </MudItem>
@@ -192,14 +192,14 @@
                 @if (Channel.HasExceptions)
                 {
                     <MudStack Spacing="2">
-                        <MudText Typo="Typo.subtitle2" Style="font-weight: 500; color: #f44336;">异常信息</MudText>
+                        <MudText Typo="Typo.subtitle2" Class="exception-section-title">异常信息</MudText>
                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                             <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error" />
-                            <MudText Style="color: #666;">当前异常: @Channel.ExceptionCount</MudText>
+                            <MudText Class="exception-text">当前异常: @Channel.ExceptionCount</MudText>
                         </MudStack>
                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                             <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Small" Color="Color.Warning" />
-                            <MudText Style="color: #666;">历史异常: @Channel.TotalExceptionCount</MudText>
+                            <MudText Class="exception-text">历史异常: @Channel.TotalExceptionCount</MudText>
                         </MudStack>
                     </MudStack>
                 }
@@ -270,12 +270,21 @@
     }
 
     /// <summary>
-    /// 获取卡片样式
+    /// 获取卡片CSS类
     /// </summary>
     /// <returns></returns>
-    private string GetCardStyle()
+    private string GetCardClass()
     {
-        return "height: 100%; display: flex; flex-direction: column;";
+        var classes = new List<string> { "channel-card" };
+        
+        if (Channel.HasExceptions)
+            classes.Add("has-exceptions");
+        else if (Channel.IsNotAvailable)
+            classes.Add("not-available");
+        else if (Channel.IsInitialized)
+            classes.Add("initialized");
+            
+        return string.Join(" ", classes);
     }
 
     /// <summary>

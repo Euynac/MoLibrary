@@ -1,0 +1,199 @@
+/* 元数据展示组件样式 */
+
+/* 元数据项容器 */
+.metadata-item {
+    padding: 8px;
+    border-radius: 4px;
+    background-color: var(--mud-palette-surface-variant);
+}
+
+/* 元数据键样式 */
+.metadata-key {
+    font-weight: 600;
+    color: var(--mud-palette-primary);
+    min-width: 120px;
+    text-align: left;
+}
+
+/* 元数据值容器 */
+.metadata-value-container {
+    flex: 1;
+}
+
+/* 简单值样式 */
+.metadata-simple-value {
+    color: var(--mud-palette-text-primary);
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
+/* 复杂对象标题 */
+.metadata-complex-title {
+    color: var(--mud-palette-text-primary);
+}
+
+/* 复杂对象容器 */
+.metadata-complex-container {
+    padding: 12px;
+    background-color: var(--mud-palette-background-grey);
+    border: 1px solid var(--mud-palette-divider);
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+/* 代码样式 */
+.metadata-code {
+    margin: 0;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 12px;
+    white-space: pre-wrap;
+    color: var(--mud-palette-text-primary);
+    line-height: 1.4;
+}
+
+/* 空状态容器 */
+.metadata-empty-state {
+    padding: 12px;
+    border-radius: 4px;
+    background-color: var(--mud-palette-surface-variant);
+}
+
+/* 空状态图标 */
+.metadata-empty-icon {
+    color: var(--mud-palette-text-secondary);
+}
+
+/* 空状态文本 */
+.metadata-empty-text {
+    color: var(--mud-palette-text-secondary);
+    font-style: italic;
+}
+
+/* 响应式设计 */
+@media (max-width: 576px) {
+    .metadata-key {
+        min-width: 80px;
+        font-size: 0.875rem;
+    }
+    
+    .metadata-complex-container {
+        max-height: 200px;
+        padding: 8px;
+    }
+    
+    .metadata-code {
+        font-size: 11px;
+    }
+}
+
+@media (max-width: 768px) {
+    .metadata-item {
+        padding: 6px;
+    }
+    
+    .metadata-empty-state {
+        padding: 8px;
+    }
+}
+
+/* MudBlazor组件自定义样式 */
+::deep .metadata-item .mud-stack-row {
+    align-items: flex-start;
+}
+
+::deep .metadata-complex-container .mud-paper {
+    border-radius: 4px;
+}
+
+/* 展开面板优化 */
+::deep .metadata-item .mud-expansion-panels {
+    box-shadow: none;
+}
+
+::deep .metadata-item .mud-expansion-panel {
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+::deep .metadata-item .mud-expansion-panel-content {
+    padding: 0;
+}
+
+/* 滚动条样式 */
+.metadata-complex-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.metadata-complex-container::-webkit-scrollbar-track {
+    background: var(--mud-palette-background-grey);
+}
+
+.metadata-complex-container::-webkit-scrollbar-thumb {
+    background: var(--mud-palette-text-disabled);
+    border-radius: 3px;
+}
+
+.metadata-complex-container::-webkit-scrollbar-thumb:hover {
+    background: var(--mud-palette-text-secondary);
+}
+
+/* 语法高亮效果 */
+.metadata-code .json-key {
+    color: #0451a5;
+    font-weight: bold;
+}
+
+.metadata-code .json-string {
+    color: #a31515;
+}
+
+.metadata-code .json-number {
+    color: #098658;
+}
+
+.metadata-code .json-boolean {
+    color: #0000ff;
+}
+
+.metadata-code .json-null {
+    color: #808080;
+}
+
+/* 悬停效果 */
+.metadata-item:hover {
+    background-color: var(--mud-palette-action-hover);
+    transition: background-color 0.2s ease;
+}
+
+/* 焦点状态 */
+.metadata-item:focus-within {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+}
+
+/* 展开动画 */
+::deep .metadata-item .mud-collapse {
+    transition: all 0.3s ease;
+}
+
+/* 图标对齐 */
+::deep .metadata-item .mud-icon {
+    margin-top: 2px;
+}
+
+/* 空状态动画 */
+.metadata-empty-state {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
