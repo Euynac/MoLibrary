@@ -28,5 +28,10 @@ public enum EPipeComponentType
     /// <summary>
     /// 基础管道中间件类型
     /// </summary>
-    BaseMiddleware
+    BaseMiddleware,
+    
+    /// <summary>
+    /// 信息展示中间件类型
+    /// </summary>
+    InfoDisplayMiddleware
 }

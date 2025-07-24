@@ -127,15 +127,60 @@
                                 <MudExpansionPanel>
                                     <TitleContent>
                                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                            <MudIcon Icon="@GetComponentIcon(middleware.Type)" Size="Size.Small" Color="Color.Secondary" />
+                                            <MudIcon Icon="@GetComponentIcon(middleware.Type)" Size="Size.Small" Color="@GetComponentColor(middleware.Type)" />
                                             <MudText Style="color: var(--mud-palette-text-primary);">@middleware.Name</MudText>
-                                            <MudChip T="string" Color="Color.Secondary" Size="Size.Small" Label="true">
-                                                @middleware.Type.ToString()
+                                            <MudChip T="string" Color="@GetComponentColor(middleware.Type)" Size="Size.Small" Label="true">
+                                                @GetComponentTypeDisplayName(middleware.Type)
                                             </MudChip>
+                                            @if (middleware.Type == EPipeComponentType.InfoDisplayMiddleware && middleware.InfoDictionary?.Count > 0)
+                                            {
+                                                <MudChip T="string" Color="Color.Info" Size="Size.Small" Icon="@Icons.Material.Filled.Info">
+                                                    @middleware.InfoDictionary.Count 项信息
+                                                </MudChip>
+                                            }
                                         </MudStack>
                                     </TitleContent>
                                     <ChildContent>
-                                        <MetadataDisplay Metadata="middleware.Metadata" />
+                                        @if (middleware.Type == EPipeComponentType.InfoDisplayMiddleware && middleware.InfoDictionary?.Any() == true)
+                                        {
+                                            <!-- 信息展示中间件特殊显示 -->
+                                            <MudStack Spacing="3">
+                                                <!-- 元数据信息 -->
+                                                <MudStack Spacing="2">
+                                                    <MudText Typo="Typo.subtitle2" Style="font-weight: 500; color: var(--mud-palette-primary);">基础信息</MudText>
+                                                    <MetadataDisplay Metadata="middleware.Metadata" />
+                                                </MudStack>
+
+                                                <!-- 展示字典信息 -->
+                                                <MudStack Spacing="2">
+                                                    <MudText Typo="Typo.subtitle2" Style="font-weight: 500; color: var(--mud-palette-info);">
+                                                        <MudIcon Icon="@Icons.Material.Filled.QueryStats" Size="Size.Small" Class="mr-1" />
+                                                        统计信息
+                                                    </MudText>
+                                                    <MudPaper Style="padding: 12px; background-color: var(--mud-palette-background-grey); border: 1px solid var(--mud-palette-info);">
+                                                        <MudGrid Spacing="2">
+                                                            @foreach (var kvp in middleware.InfoDictionary)
+                                                            {
+                                                                <MudItem xs="12" sm="6" md="4">
+                                                                    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                                                                        <MudIcon Icon="@GetInfoIcon(kvp.Value)" Size="Size.Small" Color="@GetInfoColor(kvp.Value)" />
+                                                                        <MudStack Spacing="0" Style="flex: 1;">
+                                                                            <MudText Typo="Typo.caption" Style="color: var(--mud-palette-text-secondary);">@kvp.Key</MudText>
+                                                                            <MudText Typo="Typo.body2" Style="font-weight: 500; color: var(--mud-palette-text-primary);">@FormatInfoValue(kvp.Value)</MudText>
+                                                                        </MudStack>
+                                                                    </MudStack>
+                                                                </MudItem>
+                                                            }
+                                                        </MudGrid>
+                                                    </MudPaper>
+                                                </MudStack>
+                                            </MudStack>
+                                        }
+                                        else
+                                        {
+                                            <!-- 普通中间件显示 -->
+                                            <MetadataDisplay Metadata="middleware.Metadata" />
+                                        }
                                     </ChildContent>
                                 </MudExpansionPanel>
                             }
@@ -270,7 +315,102 @@
             EPipeComponentType.TransformMiddleware => Icons.Material.Filled.Transform,
             EPipeComponentType.MonitorMiddleware => Icons.Material.Filled.Monitor,
             EPipeComponentType.EndpointMiddleware => Icons.Material.Filled.Router,
+            EPipeComponentType.InfoDisplayMiddleware => Icons.Material.Filled.Dashboard,
             _ => Icons.Material.Filled.Extension
+        };
+    }
+
+    /// <summary>
+    /// 获取组件颜色
+    /// </summary>
+    /// <param name="type">组件类型</param>
+    /// <returns></returns>
+    private Color GetComponentColor(EPipeComponentType type)
+    {
+        return type switch
+        {
+            EPipeComponentType.Endpoint => Color.Primary,
+            EPipeComponentType.TransformMiddleware => Color.Secondary,
+            EPipeComponentType.MonitorMiddleware => Color.Info,
+            EPipeComponentType.EndpointMiddleware => Color.Warning,
+            EPipeComponentType.InfoDisplayMiddleware => Color.Success,
+            _ => Color.Default
+        };
+    }
+
+    /// <summary>
+    /// 获取组件类型显示名称
+    /// </summary>
+    /// <param name="type">组件类型</param>
+    /// <returns></returns>
+    private string GetComponentTypeDisplayName(EPipeComponentType type)
+    {
+        return type switch
+        {
+            EPipeComponentType.Endpoint => "端点",
+            EPipeComponentType.TransformMiddleware => "转换中间件",
+            EPipeComponentType.MonitorMiddleware => "监控中间件",
+            EPipeComponentType.EndpointMiddleware => "端点中间件",
+            EPipeComponentType.InfoDisplayMiddleware => "信息展示",
+            EPipeComponentType.BaseMiddleware => "基础中间件",
+            _ => type.ToString()
+        };
+    }
+
+    /// <summary>
+    /// 获取信息项图标
+    /// </summary>
+    /// <param name="value">信息值</param>
+    /// <returns></returns>
+    private string GetInfoIcon(object value)
+    {
+        return value switch
+        {
+            long or int => Icons.Material.Filled.Numbers,
+            double or float or decimal => Icons.Material.Filled.Numbers,
+            string => Icons.Material.Filled.TextFields,
+            bool => Icons.Material.Filled.ToggleOn,
+            DateTime => Icons.Material.Filled.Schedule,
+            _ => Icons.Material.Filled.Info
+        };
+    }
+
+    /// <summary>
+    /// 获取信息项颜色
+    /// </summary>
+    /// <param name="value">信息值</param>
+    /// <returns></returns>
+    private Color GetInfoColor(object value)
+    {
+        return value switch
+        {
+            long or int => Color.Primary,
+            double or float or decimal => Color.Primary,
+            string => Color.Secondary,
+            bool => Color.Success,
+            DateTime => Color.Info,
+            _ => Color.Default
+        };
+    }
+
+    /// <summary>
+    /// 格式化信息值显示
+    /// </summary>
+    /// <param name="value">信息值</param>
+    /// <returns></returns>
+    private string FormatInfoValue(object value)
+    {
+        return value switch
+        {
+            long longValue => longValue.ToString("N0"),
+            int intValue => intValue.ToString("N0"),
+            double doubleValue => doubleValue.ToString("F2"),
+            float floatValue => floatValue.ToString("F2"),
+            decimal decimalValue => decimalValue.ToString("F2"),
+            DateTime dateTimeValue => dateTimeValue.ToString("yyyy-MM-dd HH:mm:ss"),
+            bool boolValue => boolValue ? "是" : "否",
+            null => "空",
+            _ => value.ToString() ?? "未知"
         };
     }
 
