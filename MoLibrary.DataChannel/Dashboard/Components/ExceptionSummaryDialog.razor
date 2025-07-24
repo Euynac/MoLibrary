@@ -14,13 +14,13 @@
         {
             <MudStack Spacing="4">
                 <!-- 总体统计卡片 -->
-                <MudGrid Spacing="3">
+                <MudGrid Spacing="3" Class="stats-grid">
                     <MudItem xs="12" md="6" lg="3">
                         <MudCard Elevation="2" Class="pa-3">
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                 <MudIcon Icon="@Icons.Material.Filled.Storage" Color="Color.Primary" Size="Size.Large" />
                                 <MudStack Spacing="1">
-                                    <MudText Typo="Typo.subtitle2" Style="font-weight: 500;">总Channel数</MudText>
+                                    <MudText Typo="Typo.subtitle2" Class="stats-card-title">总Channel数</MudText>
                                     <MudText Typo="Typo.h5" Color="Color.Primary">@ExceptionSummary.TotalChannels</MudText>
                                 </MudStack>
                             </MudStack>
@@ -31,7 +31,7 @@
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                 <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" Size="Size.Large" />
                                 <MudStack Spacing="1">
-                                    <MudText Typo="Typo.subtitle2" Style="font-weight: 500;">异常Channel数</MudText>
+                                    <MudText Typo="Typo.subtitle2" Class="stats-card-title">异常Channel数</MudText>
                                     <MudText Typo="Typo.h5" Color="Color.Error">@ExceptionSummary.ChannelsWithExceptions</MudText>
                                 </MudStack>
                             </MudStack>
@@ -42,7 +42,7 @@
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                 <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Large" />
                                 <MudStack Spacing="1">
-                                    <MudText Typo="Typo.subtitle2" Style="font-weight: 500;">当前异常总数</MudText>
+                                    <MudText Typo="Typo.subtitle2" Class="stats-card-title">当前异常总数</MudText>
                                     <MudText Typo="Typo.h5" Color="Color.Warning">@ExceptionSummary.TotalCurrentExceptions</MudText>
                                 </MudStack>
                             </MudStack>
@@ -53,7 +53,7 @@
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                 <MudIcon Icon="@Icons.Material.Filled.History" Color="Color.Info" Size="Size.Large" />
                                 <MudStack Spacing="1">
-                                    <MudText Typo="Typo.subtitle2" Style="font-weight: 500;">历史异常总数</MudText>
+                                    <MudText Typo="Typo.subtitle2" Class="stats-card-title">历史异常总数</MudText>
                                     <MudText Typo="Typo.h5" Color="Color.Info">@ExceptionSummary.TotalHistoricalExceptions</MudText>
                                 </MudStack>
                             </MudStack>
@@ -66,7 +66,7 @@
                 {
                     <MudCard Elevation="2" Class="pa-3">
                         <MudStack Spacing="3">
-                            <MudText Typo="Typo.h6" Style="font-weight: 500;">
+                            <MudText Typo="Typo.h6" Class="exception-details-title">
                                 <MudIcon Icon="@Icons.Material.Filled.TableChart" Class="mr-2" />
                                 Channel异常详细统计
                             </MudText>
@@ -76,7 +76,7 @@
                                        Sortable="true" 
                                        Hover="true" 
                                        Dense="true" 
-                                       Style="max-height: 600px; overflow-y: auto;"
+                                       Class="exception-table-container"
                                        ReadOnly="true">
                                 <Columns>
                                     <PropertyColumn Property="x => x.ChannelId" Title="Channel ID" />
@@ -108,7 +108,7 @@
                                             }
                                             else
                                             {
-                                                <MudText Style="color: var(--mud-palette-text-secondary);">无</MudText>
+                                                <MudText Class="empty-state-text">无</MudText>
                                             }
                                         </CellTemplate>
                                     </TemplateColumn>
@@ -128,8 +128,7 @@
                                             }
                                             <MudProgressLinear Color="@color" 
                                                              Value="@rate" 
-                                                             Class="mt-1" 
-                                                             Style="height: 8px;" />
+                                                             Class="exception-progress mt-1" />
                                             <MudText Typo="Typo.caption" Class="mt-1">
                                                 @($"{rate:F1}%")
                                             </MudText>

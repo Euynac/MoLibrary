@@ -1,0 +1,163 @@
+/* 异常详情对话框样式 */
+
+/* 信息项标签 */
+.info-label {
+    color: var(--mud-palette-text-secondary);
+}
+
+/* 信息项值 - 普通 */
+.info-value {
+    font-weight: 500;
+}
+
+/* 信息项值 - 错误状态 */
+.info-value-error {
+    font-weight: 500;
+    color: var(--mud-palette-error);
+}
+
+/* 信息项值 - 警告状态 */
+.info-value-warning {
+    font-weight: 500;
+    color: var(--mud-palette-warning);
+}
+
+/* 异常表格容器 */
+.exception-table-container {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+/* 异常卡片 */
+.exception-card {
+    border-left: 4px solid var(--mud-palette-error);
+}
+
+/* 异常标题 */
+.exception-title {
+    color: var(--mud-palette-error);
+}
+
+/* 异常信息标签 */
+.exception-info-label {
+    color: var(--mud-palette-text-secondary);
+}
+
+/* 异常章节标题 */
+.exception-section-title {
+    font-weight: 500;
+}
+
+/* 异常堆栈容器 */
+.exception-stack-container {
+    max-height: 300px;
+    overflow-y: auto;
+    background-color: var(--mud-palette-surface-variant);
+    padding: 12px;
+    border: 1px solid var(--mud-palette-divider);
+}
+
+/* 异常堆栈文本 */
+.exception-stack-text {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 12px;
+    white-space: pre-wrap;
+    line-height: 1.4;
+    color: var(--mud-palette-text-primary);
+    margin: 0;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .exception-table-container {
+        max-height: 350px;
+    }
+    
+    .exception-stack-container {
+        max-height: 200px;
+        padding: 8px;
+    }
+    
+    .exception-stack-text {
+        font-size: 11px;
+    }
+}
+
+@media (max-width: 576px) {
+    .exception-table-container {
+        max-height: 250px;
+    }
+    
+    .exception-stack-container {
+        max-height: 150px;
+    }
+}
+
+/* MudBlazor组件自定义样式 */
+::deep .exception-table-container .mud-table-container {
+    max-height: inherit;
+}
+
+::deep .exception-table-container .mud-data-grid {
+    max-height: inherit;
+}
+
+/* 异常卡片内容间距 */
+::deep .exception-card .mud-card-content {
+    padding: 12px;
+}
+
+/* 信息网格布局 */
+::deep .exception-info-grid .mud-grid-item {
+    margin-bottom: 8px;
+}
+
+/* 对话框标题样式 */
+::deep .mud-dialog .mud-dialog-title {
+    border-bottom: 1px solid var(--mud-palette-divider);
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+}
+
+/* 滚动条样式 */
+.exception-table-container::-webkit-scrollbar,
+.exception-stack-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.exception-table-container::-webkit-scrollbar-track,
+.exception-stack-container::-webkit-scrollbar-track {
+    background: var(--mud-palette-background-grey);
+}
+
+.exception-table-container::-webkit-scrollbar-thumb,
+.exception-stack-container::-webkit-scrollbar-thumb {
+    background: var(--mud-palette-text-disabled);
+    border-radius: 3px;
+}
+
+.exception-table-container::-webkit-scrollbar-thumb:hover,
+.exception-stack-container::-webkit-scrollbar-thumb:hover {
+    background: var(--mud-palette-text-secondary);
+}
+
+/* 异常展开效果 */
+::deep .exception-card .mud-collapse {
+    transition: all 0.3s ease;
+}
+
+/* 堆栈文本选择样式 */
+.exception-stack-text::selection {
+    background: var(--mud-palette-primary-lighten);
+}
+
+/* 数据表格行悬停效果 */
+::deep .exception-table-container .mud-table-row:hover {
+    background-color: var(--mud-palette-action-hover);
+}
+
+/* 异常卡片悬停效果 */
+.exception-card:hover {
+    box-shadow: 0 4px 8px rgba(244, 67, 54, 0.1);
+    transition: box-shadow 0.3s ease;
+}

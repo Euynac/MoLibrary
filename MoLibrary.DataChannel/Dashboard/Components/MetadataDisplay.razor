@@ -7,26 +7,24 @@
     {
         @foreach (var item in MetadataItems)
         {
-            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Start" 
-                     Style="padding: 8px; border-radius: 4px; background-color: var(--mud-palette-surface-variant);">
-                <MudText Typo="Typo.body2" 
-                        Style="font-weight: 600; color: var(--mud-palette-primary); min-width: 120px; text-align: left;">
+            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Start" Class="metadata-item">
+                <MudText Typo="Typo.body2" Class="metadata-key">
                     @item.Key:
                 </MudText>
-                <MudStack Spacing="1" Style="flex: 1;">
+                <MudStack Spacing="1" Class="metadata-value-container">
                     @if (item.IsComplexValue)
                     {
                         <MudExpansionPanels Elevation="0" Dense="true">
                             <MudExpansionPanel>
                                 <TitleContent>
-                                    <MudText Typo="Typo.body2" Style="color: var(--mud-palette-text-primary);">
+                                    <MudText Typo="Typo.body2" Class="metadata-complex-title">
                                         <MudIcon Icon="@Icons.Material.Filled.DataObject" Size="Size.Small" Class="mr-2" />
                                         复杂对象 (点击展开)
                                     </MudText>
                                 </TitleContent>
                                 <ChildContent>
-                                    <MudPaper Style="padding: 12px; background-color: var(--mud-palette-background-grey); border: 1px solid var(--mud-palette-divider); max-height: 300px; overflow-y: auto;">
-                                        <pre style="margin: 0; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 12px; white-space: pre-wrap; color: var(--mud-palette-text-primary); line-height: 1.4;">@item.Value</pre>
+                                    <MudPaper Class="metadata-complex-container">
+                                        <pre class="metadata-code">@item.Value</pre>
                                     </MudPaper>
                                 </ChildContent>
                             </MudExpansionPanel>
@@ -34,8 +32,7 @@
                     }
                     else
                     {
-                        <MudText Typo="Typo.body2" 
-                                Style="color: var(--mud-palette-text-primary); word-break: break-word; white-space: pre-wrap;">
+                        <MudText Typo="Typo.body2" Class="metadata-simple-value">
                             @item.Value
                         </MudText>
                     }
@@ -45,13 +42,11 @@
     }
     else
     {
-        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" 
-                 Style="padding: 12px; border-radius: 4px; background-color: var(--mud-palette-surface-variant);">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="metadata-empty-state">
             <MudIcon Icon="@Icons.Material.Filled.Info" 
                     Size="Size.Small" 
-                    Style="color: var(--mud-palette-text-secondary);" />
-            <MudText Typo="Typo.body2" 
-                    Style="color: var(--mud-palette-text-secondary); font-style: italic;">
+                    Class="metadata-empty-icon" />
+            <MudText Typo="Typo.body2" Class="metadata-empty-text">
                 暂无配置信息
             </MudText>
         </MudStack>
