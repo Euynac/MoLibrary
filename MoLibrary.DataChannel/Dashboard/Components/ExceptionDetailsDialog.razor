@@ -47,6 +47,7 @@
                             <PropertyColumn Property="x => x.SourceType" Title="异常源类型" />
                             <PropertyColumn Property="x => x.ExceptionType" Title="异常类型" />
                             <PropertyColumn Property="x => x.Message" Title="异常信息" />
+                            <PropertyColumn Property="x => x.BusinessDescription" Title="业务描述" />
                             <TemplateColumn Title="操作">
                                 <CellTemplate>
                                     <MudButton Size="Size.Small" Color="Color.Info" 
@@ -101,6 +102,14 @@
                                                 <MudStack>
                                                     <MudText Typo="Typo.caption" Class="exception-info-label">异常源描述</MudText>
                                                     <MudText Typo="Typo.body2">@_selectedExceptionDetail.SourceDescription</MudText>
+                                                </MudStack>
+                                            }
+                                            
+                                            @if (!string.IsNullOrEmpty(_selectedExceptionDetail.BusinessDescription))
+                                            {
+                                                <MudStack>
+                                                    <MudText Typo="Typo.caption" Class="exception-info-label">业务描述</MudText>
+                                                    <MudText Typo="Typo.body2" Class="business-description">@_selectedExceptionDetail.BusinessDescription</MudText>
                                                 </MudStack>
                                             }
                                         </MudStack>

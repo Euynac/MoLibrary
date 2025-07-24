@@ -75,4 +75,9 @@ public class ExceptionDetailInfo
     /// 异常堆栈
     /// </summary>
     public string StackTrace { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// 业务描述
+    /// </summary>
+    public string BusinessDescription { get; set; } = string.Empty;
 } 
