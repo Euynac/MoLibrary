@@ -84,9 +84,21 @@ public class ExceptionPool
     /// <param name="source">异常来源对象</param>
     public void AddException(Exception exception, object source)
     {
+        AddException(exception, source, null);
+    }
+
+    /// <summary>
+    /// 添加异常到池中（带业务描述）
+    /// 如果池已满，将移除最旧的异常
+    /// </summary>
+    /// <param name="exception">异常对象</param>
+    /// <param name="source">异常来源对象</param>
+    /// <param name="businessDescription">业务描述信息</param>
+    public void AddException(Exception exception, object source, string? businessDescription)
+    {
         if (exception == null) return;
 
-        var pipelineException = new PipelineException(exception, source);
+        var pipelineException = new PipelineException(exception, source, businessDescription);
         
         _lock.EnterWriteLock();
         try
