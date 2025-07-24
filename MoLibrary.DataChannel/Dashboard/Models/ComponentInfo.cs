@@ -1,4 +1,5 @@
 using MoLibrary.DataChannel.Pipeline;
+using MoLibrary.DataChannel.BuildInMiddlewares;
 
 namespace MoLibrary.DataChannel.Dashboard.Models;
 
@@ -23,6 +24,12 @@ public class ComponentInfo(IPipeComponent component)
     public object Metadata => component.GetMetadata();
 
     /// <summary>
+    /// 信息展示字典（仅对信息展示中间件有效）
+    /// </summary>
+    public IReadOnlyDictionary<string, object>? InfoDictionary => 
+        component is PipeInfoDisplayMiddlewareBase infoMiddleware ? infoMiddleware.GetInfoDictionary() : null;
+
+    /// <summary>
     /// 获取管道组件类型
     /// </summary>
     /// <param name="type">组件类型</param>
@@ -34,14 +41,20 @@ public class ComponentInfo(IPipeComponent component)
             return EPipeComponentType.Endpoint;
         }
         
-        if (type.IsAssignableTo(typeof(IPipeTransformMiddleware)))
+        // 优先检查信息展示中间件，因为它继承自监控中间件
+        if (type.IsAssignableTo(typeof(PipeInfoDisplayMiddlewareBase)))
         {
-            return EPipeComponentType.TransformMiddleware;
+            return EPipeComponentType.InfoDisplayMiddleware;
         }
         
         if (type.IsAssignableTo(typeof(IPipeMonitorMiddleware)))
         {
             return EPipeComponentType.MonitorMiddleware;
+        }
+        
+        if (type.IsAssignableTo(typeof(IPipeTransformMiddleware)))
+        {
+            return EPipeComponentType.TransformMiddleware;
         }
         
         if (type.IsAssignableTo(typeof(IPipeEndpointMiddleware)))

@@ -4,7 +4,8 @@
       "Bash(find:*)",
       "Bash(mkdir:*)",
       "mcp__microsoft-docs__microsoft_docs_search",
-      "Bash(dotnet build)"
+      "Bash(dotnet build)",
+      "Bash(dotnet build:*)"
     ],
     "deny": []
   }
