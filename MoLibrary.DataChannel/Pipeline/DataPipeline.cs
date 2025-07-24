@@ -167,6 +167,17 @@ public class DataPipeline
     }
 
     /// <summary>
+    /// 收集异常信息到异常池（带业务描述）
+    /// </summary>
+    /// <param name="exception">发生的异常</param>
+    /// <param name="source">异常来源对象</param>
+    /// <param name="businessDescription">业务描述信息</param>
+    public void CollectException(Exception exception, object source, string? businessDescription)
+    {
+        ExceptionPool.AddException(exception, source, businessDescription);
+    }
+
+    /// <summary>
     /// 发送数据到管道
     /// 数据将经过转换中间件处理，然后根据入口方向发送到相应的端点
     /// </summary>

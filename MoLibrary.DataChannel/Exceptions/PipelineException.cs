@@ -36,6 +36,11 @@ public class PipelineException
     public string SourceDescription { get; set; }
 
     /// <summary>
+    /// 业务描述信息
+    /// </summary>
+    public string? BusinessDescription { get; set; }
+
+    /// <summary>
     /// 初始化管道异常信息
     /// </summary>
     /// <param name="exception">异常对象</param>
@@ -45,6 +50,24 @@ public class PipelineException
         Timestamp = DateTime.Now;
         Exception = exception;
         Source = source;
+        
+        // 确定来源类型和描述
+        SourceType = DetermineSourceType(source);
+        SourceDescription = DetermineSourceDescription(source);
+    }
+
+    /// <summary>
+    /// 初始化管道异常信息（带业务描述）
+    /// </summary>
+    /// <param name="exception">异常对象</param>
+    /// <param name="source">异常来源对象</param>
+    /// <param name="businessDescription">业务描述信息</param>
+    public PipelineException(Exception exception, object source, string? businessDescription)
+    {
+        Timestamp = DateTime.Now;
+        Exception = exception;
+        Source = source;
+        BusinessDescription = businessDescription;
         
         // 确定来源类型和描述
         SourceType = DetermineSourceType(source);
