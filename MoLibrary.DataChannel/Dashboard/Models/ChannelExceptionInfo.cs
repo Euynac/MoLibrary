@@ -79,5 +79,5 @@ public class ExceptionDetailInfo
     /// <summary>
     /// 业务描述
     /// </summary>
-    public string BusinessDescription { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
 } 

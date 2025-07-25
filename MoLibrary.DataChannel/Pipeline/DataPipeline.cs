@@ -161,20 +161,10 @@ public class DataPipeline
     /// </summary>
     /// <param name="exception">发生的异常</param>
     /// <param name="source">异常来源对象</param>
-    public void CollectException(Exception exception, object source)
+    /// <param name="description">异常描述信息</param>
+    public void CollectException(Exception exception, object source, string? description = null)
     {
-        ExceptionPool.AddException(exception, source);
-    }
-
-    /// <summary>
-    /// 收集异常信息到异常池（带业务描述）
-    /// </summary>
-    /// <param name="exception">发生的异常</param>
-    /// <param name="source">异常来源对象</param>
-    /// <param name="businessDescription">业务描述信息</param>
-    public void CollectException(Exception exception, object source, string? businessDescription)
-    {
-        ExceptionPool.AddException(exception, source, businessDescription);
+        ExceptionPool.AddException(exception, source, description);
     }
 
     /// <summary>
