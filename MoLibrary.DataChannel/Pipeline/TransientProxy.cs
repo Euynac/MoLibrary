@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using MoLibrary.DataChannel.CoreCommunication;
 using MoLibrary.DataChannel.Interfaces;
 
@@ -153,6 +154,14 @@ internal class TransientPipeEndpointProxy(IServiceScopeFactory serviceScopeFacto
     private bool _isDisposed;
 
     public DataPipeline Pipe { get; set; } = null!;
+    public void CollectException(Exception exception, object? source = null, string? description = null, ILogger? logger = null)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var instance = CreateInstance<IPipeEndpoint>(scope.ServiceProvider);
+        instance.Pipe = Pipe;
+        instance.EntranceType = EntranceType;
+        instance.CollectException(exception, source, description, logger);
+    }
 
     public EDataSource EntranceType { get; set; } = entranceType;
 
@@ -177,7 +186,7 @@ internal class TransientPipeEndpointProxy(IServiceScopeFactory serviceScopeFacto
         if (_isInit)
             return;
 
-        await _initLock.WaitAsync();
+        await _initLock.WaitAsync(cancellationToken);
         try
         {
             if (_isInit)
@@ -192,7 +201,7 @@ internal class TransientPipeEndpointProxy(IServiceScopeFactory serviceScopeFacto
 
             if (instance is ICommunicationCore communicationCore)
             {
-                await communicationCore.InitAsync();
+                await communicationCore.InitAsync(cancellationToken);
             }
         }
         finally
@@ -206,7 +215,7 @@ internal class TransientPipeEndpointProxy(IServiceScopeFactory serviceScopeFacto
         if (_isDisposed)
             return;
 
-        await _disposeLock.WaitAsync();
+        await _disposeLock.WaitAsync(cancellationToken);
         try
         {
             if (_isDisposed)
@@ -217,7 +226,7 @@ internal class TransientPipeEndpointProxy(IServiceScopeFactory serviceScopeFacto
 
             using var scope = ServiceScopeFactory.CreateScope();
             var instance = CreateInstance<ICommunicationCore>(scope.ServiceProvider);
-            await instance.DisposeAsync();
+            await instance.DisposeAsync(cancellationToken);
         }
         finally
         {
@@ -305,4 +314,10 @@ internal class TransientPipeEndpointMiddlewareProxy(
     }
 
     public DataPipeline Pipe { get; set; } = null!;
+    public void CollectException(Exception exception, object? source = null, string? description = null, ILogger? logger = null)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var instance = CreateInstance<IPipeEndpointMiddleware>(scope.ServiceProvider);
+        instance.CollectException(exception, source, description, logger);
+    }
 }
