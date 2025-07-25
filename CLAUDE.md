@@ -73,9 +73,10 @@ Static web assets (wwwroot) are handled through:
 
 ## Blazor and MudBlazor Notes
 - When using the MudBlazor Icon property in Blazor, you must reference it with an "@" prefix, for example, Icon="@Icons.Material.Filled.Info", instead of Icon="Icons.Material.Filled.Info". Omitting the "@" prefix will cause the Icon not to work.
-- In Blazor, JavaScript interop calls cannot be made in OnInitializedAsync because, during static rendering, JavaScript interop calls can only be executed in the OnAfterRenderAsync lifecycle method. Additionally, most time-consuming interface initialization tasks should not be placed in OnInitializedAsync, as this can cause page blocking and blank waiting. The correct approach is to perform JavaScript interop and time-consuming initialization in OnAfterRenderAsync(bool firstRender), using the firstRender parameter to ensure execution only during the first render.
+- In Blazor, JavaScript interop calls cannot be made in OnInitializedAsync because, during static rendering, JavaScript interop calls can only be executed in OnAfterRenderAsync lifecycle method. Additionally, most time-consuming interface initialization tasks should not be placed in OnInitializedAsync, as this can cause page blocking and blank waiting. The correct approach is to perform JavaScript interop and time-consuming initialization in OnAfterRenderAsync(bool firstRender), using the firstRender parameter to ensure execution only during the first render.
 - 使用 MudBlazor 的泛型组件（如 MudSwitch、MudChip）时，必须显式指定 T 类型参数，否则会出现类型推断错误。
 - 当前项目UI模块使用的框架是MudBlazor 8.9.0
+- 不要用<style>标签，必须用CSS isolation。
 
 ## Interface Return Value Guidelines
 - 对于前端(Controller以及Blazor使用的)的接口的返回值定义，请使用 @统一返回模型Res，使用方式详见 @rules\mo-framework-res-type.mdc 
