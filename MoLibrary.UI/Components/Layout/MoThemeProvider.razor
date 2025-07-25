@@ -21,24 +21,43 @@
     {
         if (firstRender)
         {
-            // 检查用户偏好设置或系统主题
-            var prefersDark = await JSRuntime.InvokeAsync<bool>("window.matchMedia", "(prefers-color-scheme: dark)").ConfigureAwait(false);
-            ThemeService.IsDarkMode = prefersDark;
-            
-            // 应用保存的主题偏好（如果有）
-            var savedTheme = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "mo-theme-preference").ConfigureAwait(false);
-            if (!string.IsNullOrEmpty(savedTheme))
+            try
             {
-                ThemeService.IsDarkMode = savedTheme == "dark";
+                var module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/theme-helper.js").ConfigureAwait(false);
+                var prefersDark = await module.InvokeAsync<bool>("getThemePreference").ConfigureAwait(false);
+                
+                // Use InvokeAsync to ensure we're on the UI thread when setting the theme
+                await InvokeAsync(() =>
+                {
+                    ThemeService.IsDarkMode = prefersDark;
+                });
+            }
+            catch (Exception)
+            {
+                // 如果JavaScript模块加载失败，使用默认主题
+                await InvokeAsync(() =>
+                {
+                    ThemeService.IsDarkMode = false;
+                });
             }
         }
     }
 
     private async void OnThemeChanged()
     {
-        // 保存主题偏好到localStorage
-        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "mo-theme-preference", ThemeService.IsDarkMode ? "dark" : "light");
-        await InvokeAsync(StateHasChanged);
+        try
+        {
+            // 保存主题偏好到localStorage
+            var module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/theme-helper.js").ConfigureAwait(false);
+            await module.InvokeVoidAsync("saveThemePreference", ThemeService.IsDarkMode);
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception)
+        {
+            // 如果JavaScript模块加载失败，回退到直接调用localStorage
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "mo-theme-preference", ThemeService.IsDarkMode ? "dark" : "light");
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     public void Dispose()
