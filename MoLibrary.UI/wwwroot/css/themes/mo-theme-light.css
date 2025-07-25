@@ -1,5 +1,6 @@
 /* MoLibrary Light Theme - 日间模式主题 */
-:root {
+:root[data-theme="default-light"],
+.mo-theme-default-light {
     /* Light Mode Color Palette */
     --mo-background-default: #fafafa;
     --mo-background-paper: #ffffff;
@@ -53,7 +54,7 @@
 }
 
 /* 应用到MudBlazor Light模式 */
-.mud-theme-provider {
+.mo-theme-default-light .mud-theme-provider {
     /* Background */
     --mud-palette-background: var(--mo-background-default);
     --mud-palette-surface: var(--mo-surface);
@@ -107,35 +108,35 @@
 }
 
 /* Light Mode特定样式 */
-.mud-card {
+.mo-theme-default-light .mud-card {
     background-color: var(--mo-background-paper);
     border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-.mud-button-outlined {
+.mo-theme-default-light .mud-button-outlined {
     border-color: rgba(0, 0, 0, 0.23);
 }
 
-.mud-input-outlined .mud-input-outlined-border {
+.mo-theme-default-light .mud-input-outlined .mud-input-outlined-border {
     border-color: var(--mo-input-border);
 }
 
-.mud-input-outlined:hover .mud-input-outlined-border {
+.mo-theme-default-light .mud-input-outlined:hover .mud-input-outlined-border {
     border-color: var(--mo-input-border-hover);
 }
 
-.mud-table {
+.mo-theme-default-light .mud-table {
     background-color: var(--mo-background-paper);
 }
 
-.mud-table-row:nth-child(even) {
+.mo-theme-default-light .mud-table-row:nth-child(even) {
     background-color: var(--mo-table-striped);
 }
 
 /* 特殊效果 - Light Mode */
-.mud-elevation-1,
-.mud-elevation-2,
-.mud-elevation-4,
-.mud-elevation-8 {
+.mo-theme-default-light .mud-elevation-1,
+.mo-theme-default-light .mud-elevation-2,
+.mo-theme-default-light .mud-elevation-4,
+.mo-theme-default-light .mud-elevation-8 {
     background-color: var(--mo-background-paper);
 }

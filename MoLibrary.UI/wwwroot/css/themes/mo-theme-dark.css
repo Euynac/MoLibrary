@@ -1,6 +1,6 @@
 /* MoLibrary Dark Theme - 夜间模式主题 */
-:root[data-theme="dark"],
-.dark-mode {
+:root[data-theme="default-dark"],
+.mo-theme-default-dark {
     /* Dark Mode Color Palette */
     --mo-background-default: #121212;
     --mo-background-paper: #1e1e1e;
@@ -69,7 +69,7 @@
 }
 
 /* 应用到MudBlazor Dark模式 */
-.dark-mode .mud-theme-provider {
+.mo-theme-default-dark .mud-theme-provider {
     /* Background */
     --mud-palette-background: var(--mo-background-default);
     --mud-palette-surface: var(--mo-surface);
@@ -132,62 +132,62 @@
 }
 
 /* Dark Mode特定样式 */
-.dark-mode .mud-card {
+.mo-theme-default-dark .mud-card {
     background-color: var(--mo-background-paper);
     border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.dark-mode .mud-button-outlined {
+.mo-theme-default-dark .mud-button-outlined {
     border-color: rgba(255, 255, 255, 0.23);
 }
 
-.dark-mode .mud-button-filled {
+.mo-theme-default-dark .mud-button-filled {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-.dark-mode .mud-input-outlined .mud-input-outlined-border {
+.mo-theme-default-dark .mud-input-outlined .mud-input-outlined-border {
     border-color: var(--mo-input-border);
 }
 
-.dark-mode .mud-input-outlined:hover .mud-input-outlined-border {
+.mo-theme-default-dark .mud-input-outlined:hover .mud-input-outlined-border {
     border-color: var(--mo-input-border-hover);
 }
 
-.dark-mode .mud-table {
+.mo-theme-default-dark .mud-table {
     background-color: var(--mo-background-paper);
 }
 
-.dark-mode .mud-table-row:nth-child(even) {
+.mo-theme-default-dark .mud-table-row:nth-child(even) {
     background-color: var(--mo-table-striped);
 }
 
 /* 特殊效果 - Dark Mode */
-.dark-mode .mud-elevation-1 {
+.mo-theme-default-dark .mud-elevation-1 {
     background-color: var(--mo-elevation-1-bg);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
 }
 
-.dark-mode .mud-elevation-2 {
+.mo-theme-default-dark .mud-elevation-2 {
     background-color: var(--mo-elevation-2-bg);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
 }
 
-.dark-mode .mud-elevation-4 {
+.mo-theme-default-dark .mud-elevation-4 {
     background-color: var(--mo-elevation-4-bg);
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
 }
 
-.dark-mode .mud-elevation-8 {
+.mo-theme-default-dark .mud-elevation-8 {
     background-color: var(--mo-elevation-8-bg);
     box-shadow: 0 16px 32px rgba(0, 0, 0, 0.4);
 }
 
 /* Dark Mode卡片悬停效果 */
-.dark-mode .mud-card:hover {
+.mo-theme-default-dark .mud-card:hover {
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
 /* Dark Mode按钮悬停效果 */
-.dark-mode .mud-button:hover {
+.mo-theme-default-dark .mud-button:hover {
     background-color: var(--mo-action-hover);
 }
