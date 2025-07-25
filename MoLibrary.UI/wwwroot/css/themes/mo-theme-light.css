@@ -1,0 +1,141 @@
+/* MoLibrary Light Theme - 日间模式主题 */
+:root {
+    /* Light Mode Color Palette */
+    --mo-background-default: #fafafa;
+    --mo-background-paper: #ffffff;
+    --mo-surface: #ffffff;
+    
+    /* Text Colors */
+    --mo-text-primary: rgba(0, 0, 0, 0.87);
+    --mo-text-secondary: rgba(0, 0, 0, 0.6);
+    --mo-text-disabled: rgba(0, 0, 0, 0.38);
+    
+    /* Divider */
+    --mo-divider: rgba(0, 0, 0, 0.12);
+    
+    /* Action Colors */
+    --mo-action-hover: rgba(0, 0, 0, 0.04);
+    --mo-action-selected: rgba(0, 0, 0, 0.08);
+    --mo-action-disabled: rgba(0, 0, 0, 0.26);
+    --mo-action-disabled-background: rgba(0, 0, 0, 0.12);
+    
+    /* State Colors */
+    --mo-success-main: #4caf50;
+    --mo-success-light: #81c784;
+    --mo-success-dark: #388e3c;
+    
+    --mo-error-main: #f44336;
+    --mo-error-light: #e57373;
+    --mo-error-dark: #d32f2f;
+    
+    --mo-warning-main: #ff9800;
+    --mo-warning-light: #ffb74d;
+    --mo-warning-dark: #f57c00;
+    
+    --mo-info-main: #2196f3;
+    --mo-info-light: #64b5f6;
+    --mo-info-dark: #1976d2;
+    
+    /* Component Specific - Light Mode */
+    --mo-appbar-background: #ffffff;
+    --mo-appbar-text: rgba(0, 0, 0, 0.87);
+    
+    --mo-drawer-background: #ffffff;
+    --mo-drawer-text: rgba(0, 0, 0, 0.87);
+    
+    --mo-table-hover: rgba(0, 0, 0, 0.04);
+    --mo-table-striped: rgba(0, 0, 0, 0.02);
+    
+    /* Input Field Colors */
+    --mo-input-border: rgba(0, 0, 0, 0.42);
+    --mo-input-border-hover: rgba(0, 0, 0, 0.87);
+    --mo-input-background: rgba(0, 0, 0, 0.04);
+}
+
+/* 应用到MudBlazor Light模式 */
+.mud-theme-provider {
+    /* Background */
+    --mud-palette-background: var(--mo-background-default);
+    --mud-palette-surface: var(--mo-surface);
+    --mud-palette-background-gray: var(--mo-background-paper);
+    
+    /* Text */
+    --mud-palette-text-primary: var(--mo-text-primary);
+    --mud-palette-text-secondary: var(--mo-text-secondary);
+    --mud-palette-text-disabled: var(--mo-text-disabled);
+    
+    /* Dividers */
+    --mud-palette-divider: var(--mo-divider);
+    --mud-palette-divider-light: rgba(0, 0, 0, 0.06);
+    
+    /* Actions */
+    --mud-palette-action-default: var(--mo-text-primary);
+    --mud-palette-action-default-hover: var(--mo-action-hover);
+    --mud-palette-action-disabled: var(--mo-action-disabled);
+    --mud-palette-action-disabled-background: var(--mo-action-disabled-background);
+    
+    /* States */
+    --mud-palette-success: var(--mo-success-main);
+    --mud-palette-success-lighten: var(--mo-success-light);
+    --mud-palette-success-darken: var(--mo-success-dark);
+    
+    --mud-palette-error: var(--mo-error-main);
+    --mud-palette-error-lighten: var(--mo-error-light);
+    --mud-palette-error-darken: var(--mo-error-dark);
+    
+    --mud-palette-warning: var(--mo-warning-main);
+    --mud-palette-warning-lighten: var(--mo-warning-light);
+    --mud-palette-warning-darken: var(--mo-warning-dark);
+    
+    --mud-palette-info: var(--mo-info-main);
+    --mud-palette-info-lighten: var(--mo-info-light);
+    --mud-palette-info-darken: var(--mo-info-dark);
+    
+    /* Components */
+    --mud-palette-appbar-background: var(--mo-appbar-background);
+    --mud-palette-appbar-text: var(--mo-appbar-text);
+    
+    --mud-palette-drawer-background: var(--mo-drawer-background);
+    --mud-palette-drawer-text: var(--mo-drawer-text);
+    
+    --mud-palette-table-hover: var(--mo-table-hover);
+    --mud-palette-table-striped: var(--mo-table-striped);
+    
+    /* Lines */
+    --mud-palette-lines-default: var(--mo-divider);
+    --mud-palette-lines-inputs: var(--mo-input-border);
+}
+
+/* Light Mode特定样式 */
+.mud-card {
+    background-color: var(--mo-background-paper);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.mud-button-outlined {
+    border-color: rgba(0, 0, 0, 0.23);
+}
+
+.mud-input-outlined .mud-input-outlined-border {
+    border-color: var(--mo-input-border);
+}
+
+.mud-input-outlined:hover .mud-input-outlined-border {
+    border-color: var(--mo-input-border-hover);
+}
+
+.mud-table {
+    background-color: var(--mo-background-paper);
+}
+
+.mud-table-row:nth-child(even) {
+    background-color: var(--mo-table-striped);
+}
+
+/* 特殊效果 - Light Mode */
+.mud-elevation-1,
+.mud-elevation-2,
+.mud-elevation-4,
+.mud-elevation-8 {
+    background-color: var(--mo-background-paper);
+}

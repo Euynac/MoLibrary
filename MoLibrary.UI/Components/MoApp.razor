@@ -9,6 +9,10 @@
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
     @* <link href=@Assets["_content/MudBlazor/MudBlazor.min.css"] rel="stylesheet" /> *@
     <link href="_content/MudBlazor/MudBlazor.min.css?v=@(Metadata.Version)" rel="stylesheet" />
+    
+    <!-- MoLibrary 主题 CSS -->
+    <link href="_content/MoLibrary.UI/css/mo-theme-main.css" rel="stylesheet" />
+    
 	<!-- 巨坑：支持消费应用的 CSS isolation 最终是打包成了bundle(可以通过编译目录下的YourProject.staticwebassets.runtime.json)，所以要根据入口程序集名称获取 -->
     <link href="@(Assembly.GetEntryAssembly()?.GetName().Name).styles.css" rel="stylesheet" />
   
@@ -21,6 +25,7 @@
     <script src="_framework/blazor.web.js"></script>
     @* <script src=@Assets["_content/MudBlazor/MudBlazor.min.js"]></script> *@
     <script src="_content/MudBlazor/MudBlazor.min.js?v=@Metadata.Version"></script>
+    <script src="_content/MoLibrary.UI/js/theme-helper.js"></script>
 </body>
 
 </html>
