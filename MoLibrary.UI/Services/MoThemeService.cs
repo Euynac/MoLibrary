@@ -9,6 +9,7 @@ public class MoThemeService
 {
     private bool _isDarkMode = false;
     private MudTheme _currentTheme;
+    private string _currentThemeName = "default";
 
     public event Action? OnThemeChanged;
 
@@ -26,10 +27,45 @@ public class MoThemeService
     }
 
     public MudTheme CurrentTheme => _currentTheme;
+    
+    public string CurrentThemeName
+    {
+        get => _currentThemeName;
+        set
+        {
+            if (_currentThemeName != value)
+            {
+                _currentThemeName = value;
+                _currentTheme = CreateThemeByName(value);
+                OnThemeChanged?.Invoke();
+            }
+        }
+    }
 
     public MoThemeService()
     {
         _currentTheme = CreateMoTheme();
+    }
+    
+    /// <summary>
+    /// 可用的主题列表
+    /// </summary>
+    public static readonly (string Name, string DisplayName, string Description)[] AvailableThemes = new[]
+    {
+        ("default", "默认主题", "经典的Material Design风格"),
+        ("glassmorphic", "毛玻璃主题", "现代化的毛玻璃效果，具有未来感和科技感")
+    };
+
+    /// <summary>
+    /// 根据主题名称创建主题
+    /// </summary>
+    private MudTheme CreateThemeByName(string themeName)
+    {
+        return themeName switch
+        {
+            "glassmorphic" => CreateGlassmorphicTheme(),
+            _ => CreateMoTheme()
+        };
     }
 
     /// <summary>
@@ -254,6 +290,84 @@ public class MoThemeService
     }
 
     /// <summary>
+    /// 创建毛玻璃主题
+    /// </summary>
+    private MudTheme CreateGlassmorphicTheme()
+    {
+        return new MudTheme()
+        {
+            PaletteLight = new PaletteLight()
+            {
+                Primary = "#667eea",
+                PrimaryLighten = "#8b9bf5",
+                PrimaryDarken = "#5568d5",
+                Secondary = "#f093fb",
+                SecondaryLighten = "#f5b3fd",
+                SecondaryDarken = "#d673e6",
+                Tertiary = "#4facfe",
+                TertiaryLighten = "#87c5fe",
+                TertiaryDarken = "#00f2fe",
+                Info = "#4299e1",
+                Success = "#48bb78",
+                Warning = "#ed8936",
+                Error = "#f56565",
+                Dark = "#1a202c",
+                TextPrimary = "#1a202c",
+                TextSecondary = "#4a5568",
+                TextDisabled = "#a0aec0",
+                Background = "#f8f9ff",
+                BackgroundGray = "#f0f2ff",
+                Surface = "rgba(255, 255, 255, 0.8)",
+                DrawerBackground = "rgba(255, 255, 255, 0.95)",
+                AppbarBackground = "rgba(255, 255, 255, 0.85)",
+                LinesDefault = "rgba(255, 255, 255, 0.18)",
+                TableStriped = "rgba(103, 126, 234, 0.02)",
+                TableHover = "rgba(103, 126, 234, 0.04)"
+            },
+            PaletteDark = new PaletteDark()
+            {
+                Primary = "#00d4ff",
+                PrimaryLighten = "#4de0ff",
+                PrimaryDarken = "#00a8cc",
+                Secondary = "#ff006e",
+                SecondaryLighten = "#ff4d96",
+                SecondaryDarken = "#cc0056",
+                Tertiary = "#00ff88",
+                TertiaryLighten = "#4dffaa",
+                TertiaryDarken = "#00cc6a",
+                Info = "#00d4ff",
+                Success = "#00ff88",
+                Warning = "#ffaa00",
+                Error = "#ff0055",
+                Dark = "#0a0e27",
+                TextPrimary = "#ffffff",
+                TextSecondary = "#a0aec0",
+                TextDisabled = "#4a5568",
+                Background = "#0a0e27",
+                BackgroundGray = "#0d1128",
+                Surface = "rgba(13, 17, 40, 0.8)",
+                DrawerBackground = "rgba(13, 17, 40, 0.95)",
+                AppbarBackground = "rgba(13, 17, 40, 0.85)",
+                LinesDefault = "rgba(255, 255, 255, 0.08)",
+                TableStriped = "rgba(0, 212, 255, 0.02)",
+                TableHover = "rgba(0, 212, 255, 0.08)"
+            },
+            LayoutProperties = new LayoutProperties()
+            {
+                DefaultBorderRadius = "12px",
+                DrawerWidthLeft = "260px",
+                DrawerWidthRight = "260px",
+                DrawerMiniWidthLeft = "68px",
+                DrawerMiniWidthRight = "68px",
+                AppbarHeight = "64px"
+            },
+            Typography = CreateMoTheme().Typography,
+            Shadows = new Shadow(),
+            ZIndex = new ZIndex()
+        };
+    }
+
+    /// <summary>
     /// 切换主题模式
     /// </summary>
     public void ToggleTheme()
@@ -266,6 +380,16 @@ public class MoThemeService
     /// </summary>
     public string GetThemeCssClass()
     {
-        return IsDarkMode ? "dark-mode" : "light-mode";
+        var mode = IsDarkMode ? "dark" : "light";
+        return $"mo-theme-{_currentThemeName}-{mode}";
+    }
+    
+    /// <summary>
+    /// 获取主题的data-theme属性值
+    /// </summary>
+    public string GetThemeDataAttribute()
+    {
+        var mode = IsDarkMode ? "dark" : "light";
+        return $"{_currentThemeName}-{mode}";
     }
 }

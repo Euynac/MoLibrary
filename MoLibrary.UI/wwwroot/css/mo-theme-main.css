@@ -10,7 +10,10 @@
 /* 3. 引入夜间模式样式 */
 @import url('./themes/mo-theme-dark.css');
 
-/* 4. 自定义主题样式示例 */
+/* 4. 引入现代化毛玻璃主题 */
+@import url('./themes/mo-theme-glassmorphic.css');
+
+/* 5. 自定义主题样式示例 */
 /* 如需创建新主题，可以创建新的CSS文件并在此引入 */
 /* @import url('./themes/mo-theme-custom.css'); */
 

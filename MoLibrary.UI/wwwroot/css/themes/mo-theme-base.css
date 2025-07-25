@@ -217,3 +217,157 @@
 .mud-elevation-8 {
     box-shadow: 0 16px 32px rgba(0,0,0,0.14) !important;
 }
+
+/* Common Modern Card Styles (extracted from CSS isolation) */
+.mo-modern-card,
+.modern-card {
+    border-radius: var(--mo-card-border-radius);
+    transition: all 0.3s ease;
+    border: 1px solid rgba(var(--mud-palette-lines-default-rgb), 0.12);
+}
+
+.mo-modern-card:hover,
+.modern-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* Modern Stat Card */
+.mo-modern-stat-card,
+.modern-stat-card {
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.mo-modern-stat-card:hover,
+.modern-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+/* Card Header and Content */
+.mo-card-header,
+.card-header {
+    border-bottom: 1px solid rgba(var(--mud-palette-lines-default-rgb), 0.12);
+    padding-bottom: 12px;
+}
+
+.mo-card-content,
+.card-content {
+    padding-top: 8px;
+}
+
+/* Data Grid Enhancements */
+.mud-data-grid {
+    border-radius: 0 0 var(--mo-card-border-radius) var(--mo-card-border-radius);
+}
+
+.mud-data-grid .mud-data-grid-header {
+    background-color: rgba(var(--mud-palette-primary-rgb), 0.05);
+    font-weight: 600;
+}
+
+.mud-data-grid .mud-data-grid-row:hover {
+    background-color: rgba(var(--mud-palette-primary-rgb), 0.04);
+}
+
+/* Loading States */
+.mo-loading-container {
+    padding: 2rem;
+}
+
+.mo-loading-title {
+    font-weight: 500;
+}
+
+.mo-loading-subtitle {
+    color: var(--mud-palette-text-secondary);
+}
+
+/* Section Titles */
+.mo-section-title {
+    font-weight: 500;
+}
+
+/* Stats Container */
+.mo-stats-container {
+    padding: 12px;
+    background-color: var(--mud-palette-background-grey);
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mo-button-border-radius);
+}
+
+.mo-stats-item-key {
+    color: var(--mud-palette-text-secondary);
+}
+
+.mo-stats-item-value {
+    font-weight: 500;
+    color: var(--mud-palette-text-primary);
+}
+
+/* Status Card States */
+.mo-card-status-error {
+    border-left: 4px solid var(--mud-palette-error);
+}
+
+.mo-card-status-warning {
+    border-left: 4px solid var(--mud-palette-warning);
+}
+
+.mo-card-status-success {
+    border-left: 4px solid var(--mud-palette-success);
+}
+
+/* Expansion Panel Enhancements */
+.mud-expansion-panels {
+    box-shadow: none;
+}
+
+.mud-expansion-panel {
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mo-button-border-radius);
+    margin-bottom: 8px;
+}
+
+.mud-expansion-panel:last-child {
+    margin-bottom: 0;
+}
+
+/* Icon Alignment */
+.mud-icon {
+    display: flex;
+    align-items: center;
+}
+
+/* Responsive Utilities */
+@media (max-width: 960px) {
+    .mo-modern-card,
+    .modern-card {
+        margin-bottom: 16px;
+    }
+    
+    .mo-modern-stat-card,
+    .modern-stat-card {
+        margin-bottom: 12px;
+    }
+}
+
+@media (max-width: 600px) {
+    .mo-card-header,
+    .card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .mo-card-header .mud-icon,
+    .card-header .mud-icon {
+        margin-right: 0;
+        margin-bottom: 4px;
+    }
+    
+    .mo-stats-container .mud-grid-item {
+        min-width: 100%;
+    }
+}

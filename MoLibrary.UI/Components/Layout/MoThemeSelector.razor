@@ -1,0 +1,50 @@
+@using MoLibrary.UI.Services
+@inject MoThemeService ThemeService
+
+<MudMenu Icon="@Icons.Material.Filled.Palette" Color="Color.Inherit" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+    <MudStack Spacing="2" Class="pa-4" Style="min-width: 280px;">
+        <MudText Typo="Typo.h6" Class="mb-2">主题设置</MudText>
+        
+        <MudDivider Class="mb-2" />
+        
+        <MudText Typo="Typo.subtitle2" Class="mb-1">选择主题</MudText>
+        <MudRadioGroup T="string" Value="@ThemeService.CurrentThemeName" ValueChanged="OnThemeChanged">
+            @foreach (var theme in MoThemeService.AvailableThemes)
+            {
+                <MudRadio Value="@theme.Name" Color="Color.Primary">
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.body2">@theme.DisplayName</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@theme.Description</MudText>
+                    </MudStack>
+                </MudRadio>
+            }
+        </MudRadioGroup>
+        
+        <MudDivider Class="my-2" />
+
+		<MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+            <MudText Typo="Typo.subtitle2">深色模式</MudText>
+            <MudSwitch @bind-Value="ThemeService.IsDarkMode" Color="Color.Primary" />
+        </MudStack>
+        
+        <MudDivider Class="my-2" />
+        
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
+            当前主题: @GetCurrentThemeDisplayName()
+        </MudText>
+    </MudStack>
+</MudMenu>
+
+@code {
+    private void OnThemeChanged(string newTheme)
+    {
+        ThemeService.CurrentThemeName = newTheme;
+    }
+    
+    private string GetCurrentThemeDisplayName()
+    {
+        var current = MoThemeService.AvailableThemes.FirstOrDefault(t => t.Name == ThemeService.CurrentThemeName);
+        var mode = ThemeService.IsDarkMode ? "深色" : "浅色";
+        return $"{current.DisplayName} - {mode}";
+    }
+}
