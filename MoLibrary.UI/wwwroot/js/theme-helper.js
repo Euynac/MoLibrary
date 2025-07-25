@@ -11,22 +11,8 @@ export function watchSystemTheme(callback) {
     });
 }
 
-export function saveThemePreference(isDark) {
-    localStorage.setItem('mo-theme-preference', isDark ? 'dark' : 'light');
-}
-
-export function getThemePreference() {
-    const saved = localStorage.getItem('mo-theme-preference');
-    if (saved) {
-        return saved === 'dark';
-    }
-    return getSystemDarkMode();
-}
-
 export function saveThemeData(themeName, mode) {
     localStorage.setItem('mo-theme-data', `${themeName}|${mode}`);
-    // 兼容旧版本
-    localStorage.setItem('mo-theme-preference', mode);
 }
 
 export function getThemeData() {
@@ -34,10 +20,10 @@ export function getThemeData() {
     if (saved) {
         return saved;
     }
-    // 兼容旧版本
-    const oldPreference = localStorage.getItem('mo-theme-preference');
-    if (oldPreference) {
-        return `default|${oldPreference}`;
-    }
     return `default|${getSystemDarkMode() ? 'dark' : 'light'}`;
 }
+
+export function setDocumentTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+}
+

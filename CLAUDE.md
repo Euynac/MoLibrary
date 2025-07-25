@@ -91,3 +91,6 @@ Static web assets (wwwroot) are handled through:
 
 ## Available MCP Servers
 - **mcp__microsoft-docs__microsoft_docs_search**: MCP Server for searching Microsoft/Azure official documentation. This is particularly useful for finding ASP.NET Core, Blazor, and related documentation and best practices.
+
+## Code Modernization Guidelines
+- 除非是特别嘱咐要兼容旧版本，所有重构或改动都不需要考虑旧版本兼容性。

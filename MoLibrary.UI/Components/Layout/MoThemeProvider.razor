@@ -21,56 +21,38 @@
     {
         if (firstRender)
         {
-            try
+            var module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/MoLibrary.UI/js/theme-helper.js").ConfigureAwait(false);
+            var themeData = await module.InvokeAsync<string>("getThemeData").ConfigureAwait(false);
+            
+            await InvokeAsync(() =>
             {
-                var module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/theme-helper.js").ConfigureAwait(false);
-                var themeData = await module.InvokeAsync<string>("getThemeData").ConfigureAwait(false);
-                
-                // Use InvokeAsync to ensure we're on the UI thread when setting the theme
-                await InvokeAsync(() =>
+                if (!string.IsNullOrEmpty(themeData))
                 {
-                    if (!string.IsNullOrEmpty(themeData))
+                    var parts = themeData.Split('|');
+                    if (parts.Length == 2)
                     {
-                        var parts = themeData.Split('|');
-                        if (parts.Length == 2)
-                        {
-                            ThemeService.CurrentThemeName = parts[0];
-                            ThemeService.IsDarkMode = parts[1] == "dark";
-                        }
-                        else
-                        {
-                            // 旧版本兼容
-                            ThemeService.IsDarkMode = themeData == "dark";
-                        }
+                        ThemeService.CurrentThemeName = parts[0];
+                        ThemeService.IsDarkMode = parts[1] == "dark";
                     }
-                });
-            }
-            catch (Exception)
-            {
-                // 如果JavaScript模块加载失败，使用默认主题
-                await InvokeAsync(() =>
-                {
-                    ThemeService.IsDarkMode = false;
-                });
-            }
+                }
+            });
+            
+            // 设置document root的data-theme属性
+            await module.InvokeVoidAsync("setDocumentTheme", ThemeService.GetThemeDataAttribute());
         }
     }
 
     private async void OnThemeChanged()
     {
-        try
-        {
-            // 保存主题偏好到localStorage
-            var module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/theme-helper.js").ConfigureAwait(false);
-            await module.InvokeVoidAsync("saveThemeData", ThemeService.CurrentThemeName, ThemeService.IsDarkMode ? "dark" : "light");
-            await InvokeAsync(StateHasChanged);
-        }
-        catch (Exception)
-        {
-            // 如果JavaScript模块加载失败，回退到直接调用localStorage
-            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "mo-theme-data", $"{ThemeService.CurrentThemeName}|{(ThemeService.IsDarkMode ? "dark" : "light")}");
-            await InvokeAsync(StateHasChanged);
-        }
+        var module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/MoLibrary.UI/js/theme-helper.js").ConfigureAwait(false);
+        
+        // 保存主题偏好到localStorage
+        await module.InvokeVoidAsync("saveThemeData", ThemeService.CurrentThemeName, ThemeService.IsDarkMode ? "dark" : "light");
+        
+        // 设置document root的data-theme属性
+        await module.InvokeVoidAsync("setDocumentTheme", ThemeService.GetThemeDataAttribute());
+        
+        await InvokeAsync(StateHasChanged);
     }
 
     public void Dispose()
