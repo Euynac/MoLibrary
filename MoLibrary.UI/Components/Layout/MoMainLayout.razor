@@ -3,6 +3,7 @@
 @using MoLibrary.UI.UICore
 @using MoLibrary.UI.UICore.Interfaces
 @using MoLibrary.UI.Services
+@using MoLibrary.UI.Components.Layout
 @inherits LayoutComponentBase
 @inject IUIComponentRegistry UIRegistry
 @inject IOptions<ModuleUICoreOption> Options
@@ -18,7 +19,7 @@
         <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
         <MudText Typo="Typo.h5" Class="ml-3">@Options.Value.UIAppBarName</MudText>
         <MudSpacer />
-        <MudIconButton Icon="@(GetThemeToggleIcon())" Color="Color.Inherit" OnClick="@ThemeService.ToggleTheme" />
+        <MoThemeSelector />
         <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
     </MudAppBar>
     <MudDrawer id="nav-drawer" @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
@@ -58,13 +59,6 @@
     private void DrawerToggle()
     {
         _drawerOpen = !_drawerOpen;
-    }
-
-    private string GetThemeToggleIcon()
-    {
-        return ThemeService.IsDarkMode 
-            ? Icons.Material.Filled.LightMode 
-            : Icons.Material.Filled.DarkMode;
     }
 
     public void Dispose()

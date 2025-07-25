@@ -5,7 +5,7 @@
 
 <MudThemeProvider Theme="@ThemeService.CurrentTheme" IsDarkMode="@ThemeService.IsDarkMode" />
 
-<div class="@ThemeService.GetThemeCssClass()">
+<div class="@ThemeService.GetThemeCssClass()" data-theme="@ThemeService.GetThemeDataAttribute()">
     @ChildContent
 </div>
 
@@ -24,12 +24,25 @@
             try
             {
                 var module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/theme-helper.js").ConfigureAwait(false);
-                var prefersDark = await module.InvokeAsync<bool>("getThemePreference").ConfigureAwait(false);
+                var themeData = await module.InvokeAsync<string>("getThemeData").ConfigureAwait(false);
                 
                 // Use InvokeAsync to ensure we're on the UI thread when setting the theme
                 await InvokeAsync(() =>
                 {
-                    ThemeService.IsDarkMode = prefersDark;
+                    if (!string.IsNullOrEmpty(themeData))
+                    {
+                        var parts = themeData.Split('|');
+                        if (parts.Length == 2)
+                        {
+                            ThemeService.CurrentThemeName = parts[0];
+                            ThemeService.IsDarkMode = parts[1] == "dark";
+                        }
+                        else
+                        {
+                            // 旧版本兼容
+                            ThemeService.IsDarkMode = themeData == "dark";
+                        }
+                    }
                 });
             }
             catch (Exception)
@@ -49,13 +62,13 @@
         {
             // 保存主题偏好到localStorage
             var module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/theme-helper.js").ConfigureAwait(false);
-            await module.InvokeVoidAsync("saveThemePreference", ThemeService.IsDarkMode);
+            await module.InvokeVoidAsync("saveThemeData", ThemeService.CurrentThemeName, ThemeService.IsDarkMode ? "dark" : "light");
             await InvokeAsync(StateHasChanged);
         }
         catch (Exception)
         {
             // 如果JavaScript模块加载失败，回退到直接调用localStorage
-            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "mo-theme-preference", ThemeService.IsDarkMode ? "dark" : "light");
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "mo-theme-data", $"{ThemeService.CurrentThemeName}|{(ThemeService.IsDarkMode ? "dark" : "light")}");
             await InvokeAsync(StateHasChanged);
         }
     }
