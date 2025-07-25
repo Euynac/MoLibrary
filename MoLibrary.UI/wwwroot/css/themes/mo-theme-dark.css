@@ -1,0 +1,193 @@
+/* MoLibrary Dark Theme - 夜间模式主题 */
+:root[data-theme="dark"],
+.dark-mode {
+    /* Dark Mode Color Palette */
+    --mo-background-default: #121212;
+    --mo-background-paper: #1e1e1e;
+    --mo-surface: #1e1e1e;
+    
+    /* Text Colors */
+    --mo-text-primary: rgba(255, 255, 255, 0.87);
+    --mo-text-secondary: rgba(255, 255, 255, 0.7);
+    --mo-text-disabled: rgba(255, 255, 255, 0.5);
+    
+    /* Divider */
+    --mo-divider: rgba(255, 255, 255, 0.12);
+    
+    /* Action Colors */
+    --mo-action-hover: rgba(255, 255, 255, 0.08);
+    --mo-action-selected: rgba(255, 255, 255, 0.16);
+    --mo-action-disabled: rgba(255, 255, 255, 0.3);
+    --mo-action-disabled-background: rgba(255, 255, 255, 0.12);
+    
+    /* Primary & Secondary - Adjusted for Dark Mode */
+    --mo-primary-main: #90caf9;
+    --mo-primary-light: #e3f2fd;
+    --mo-primary-dark: #42a5f5;
+    
+    --mo-secondary-main: #f48fb1;
+    --mo-secondary-light: #fce4ec;
+    --mo-secondary-dark: #ec407a;
+    
+    /* State Colors - Adjusted for Dark Mode */
+    --mo-success-main: #66bb6a;
+    --mo-success-light: #a5d6a7;
+    --mo-success-dark: #4caf50;
+    
+    --mo-error-main: #ef5350;
+    --mo-error-light: #ef9a9a;
+    --mo-error-dark: #e53935;
+    
+    --mo-warning-main: #ffa726;
+    --mo-warning-light: #ffcc80;
+    --mo-warning-dark: #ff9800;
+    
+    --mo-info-main: #42a5f5;
+    --mo-info-light: #90caf9;
+    --mo-info-dark: #2196f3;
+    
+    /* Component Specific - Dark Mode */
+    --mo-appbar-background: #1e1e1e;
+    --mo-appbar-text: rgba(255, 255, 255, 0.87);
+    
+    --mo-drawer-background: #1e1e1e;
+    --mo-drawer-text: rgba(255, 255, 255, 0.87);
+    
+    --mo-table-hover: rgba(255, 255, 255, 0.08);
+    --mo-table-striped: rgba(255, 255, 255, 0.02);
+    
+    /* Input Field Colors */
+    --mo-input-border: rgba(255, 255, 255, 0.7);
+    --mo-input-border-hover: rgba(255, 255, 255, 0.87);
+    --mo-input-background: rgba(255, 255, 255, 0.05);
+    
+    /* Elevation - Dark Mode需要更明显的层次 */
+    --mo-elevation-1-bg: #1e1e1e;
+    --mo-elevation-2-bg: #222222;
+    --mo-elevation-4-bg: #272727;
+    --mo-elevation-8-bg: #2c2c2c;
+}
+
+/* 应用到MudBlazor Dark模式 */
+.dark-mode .mud-theme-provider {
+    /* Background */
+    --mud-palette-background: var(--mo-background-default);
+    --mud-palette-surface: var(--mo-surface);
+    --mud-palette-background-gray: var(--mo-background-paper);
+    
+    /* Text */
+    --mud-palette-text-primary: var(--mo-text-primary);
+    --mud-palette-text-secondary: var(--mo-text-secondary);
+    --mud-palette-text-disabled: var(--mo-text-disabled);
+    
+    /* Dividers */
+    --mud-palette-divider: var(--mo-divider);
+    --mud-palette-divider-light: rgba(255, 255, 255, 0.06);
+    
+    /* Actions */
+    --mud-palette-action-default: var(--mo-text-primary);
+    --mud-palette-action-default-hover: var(--mo-action-hover);
+    --mud-palette-action-disabled: var(--mo-action-disabled);
+    --mud-palette-action-disabled-background: var(--mo-action-disabled-background);
+    
+    /* Primary & Secondary */
+    --mud-palette-primary: var(--mo-primary-main);
+    --mud-palette-primary-lighten: var(--mo-primary-light);
+    --mud-palette-primary-darken: var(--mo-primary-dark);
+    
+    --mud-palette-secondary: var(--mo-secondary-main);
+    --mud-palette-secondary-lighten: var(--mo-secondary-light);
+    --mud-palette-secondary-darken: var(--mo-secondary-dark);
+    
+    /* States */
+    --mud-palette-success: var(--mo-success-main);
+    --mud-palette-success-lighten: var(--mo-success-light);
+    --mud-palette-success-darken: var(--mo-success-dark);
+    
+    --mud-palette-error: var(--mo-error-main);
+    --mud-palette-error-lighten: var(--mo-error-light);
+    --mud-palette-error-darken: var(--mo-error-dark);
+    
+    --mud-palette-warning: var(--mo-warning-main);
+    --mud-palette-warning-lighten: var(--mo-warning-light);
+    --mud-palette-warning-darken: var(--mo-warning-dark);
+    
+    --mud-palette-info: var(--mo-info-main);
+    --mud-palette-info-lighten: var(--mo-info-light);
+    --mud-palette-info-darken: var(--mo-info-dark);
+    
+    /* Components */
+    --mud-palette-appbar-background: var(--mo-appbar-background);
+    --mud-palette-appbar-text: var(--mo-appbar-text);
+    
+    --mud-palette-drawer-background: var(--mo-drawer-background);
+    --mud-palette-drawer-text: var(--mo-drawer-text);
+    
+    --mud-palette-table-hover: var(--mo-table-hover);
+    --mud-palette-table-striped: var(--mo-table-striped);
+    
+    /* Lines */
+    --mud-palette-lines-default: var(--mo-divider);
+    --mud-palette-lines-inputs: var(--mo-input-border);
+}
+
+/* Dark Mode特定样式 */
+.dark-mode .mud-card {
+    background-color: var(--mo-background-paper);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dark-mode .mud-button-outlined {
+    border-color: rgba(255, 255, 255, 0.23);
+}
+
+.dark-mode .mud-button-filled {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode .mud-input-outlined .mud-input-outlined-border {
+    border-color: var(--mo-input-border);
+}
+
+.dark-mode .mud-input-outlined:hover .mud-input-outlined-border {
+    border-color: var(--mo-input-border-hover);
+}
+
+.dark-mode .mud-table {
+    background-color: var(--mo-background-paper);
+}
+
+.dark-mode .mud-table-row:nth-child(even) {
+    background-color: var(--mo-table-striped);
+}
+
+/* 特殊效果 - Dark Mode */
+.dark-mode .mud-elevation-1 {
+    background-color: var(--mo-elevation-1-bg);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.dark-mode .mud-elevation-2 {
+    background-color: var(--mo-elevation-2-bg);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+.dark-mode .mud-elevation-4 {
+    background-color: var(--mo-elevation-4-bg);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+}
+
+.dark-mode .mud-elevation-8 {
+    background-color: var(--mo-elevation-8-bg);
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* Dark Mode卡片悬停效果 */
+.dark-mode .mud-card:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* Dark Mode按钮悬停效果 */
+.dark-mode .mud-button:hover {
+    background-color: var(--mo-action-hover);
+}

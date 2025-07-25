@@ -13,6 +13,7 @@ using MudBlazor;
 using MudBlazor.Services;
 using MoLibrary.UI.UICore.Interfaces;
 using MoLibrary.UI.UICore.Services;
+using MoLibrary.UI.Services;
 
 namespace MoLibrary.UI.Modules;
 
@@ -93,6 +94,8 @@ public class ModuleUICore(ModuleUICoreOption option)
         // 注册UI组件管理服务
         services.AddSingleton<IUIComponentRegistry, UIComponentRegistry>();
 
+        // 注册主题服务
+        services.AddSingleton<MoThemeService>();
 
         // 注册通用Controller调用器
         services.AddScoped(typeof(IUIControllerInvoker<>), typeof(UIControllerInvokerHttpClientProvider<>));

@@ -1,0 +1,48 @@
+@using MoLibrary.UI.Services
+@inject MoThemeService ThemeService
+@inject IJSRuntime JSRuntime
+@implements IDisposable
+
+<MudThemeProvider Theme="@ThemeService.CurrentTheme" IsDarkMode="@ThemeService.IsDarkMode" />
+
+<div class="@ThemeService.GetThemeCssClass()">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    protected override void OnInitialized()
+    {
+        ThemeService.OnThemeChanged += OnThemeChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // 检查用户偏好设置或系统主题
+            var prefersDark = await JSRuntime.InvokeAsync<bool>("window.matchMedia", "(prefers-color-scheme: dark)").ConfigureAwait(false);
+            ThemeService.IsDarkMode = prefersDark;
+            
+            // 应用保存的主题偏好（如果有）
+            var savedTheme = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "mo-theme-preference").ConfigureAwait(false);
+            if (!string.IsNullOrEmpty(savedTheme))
+            {
+                ThemeService.IsDarkMode = savedTheme == "dark";
+            }
+        }
+    }
+
+    private async void OnThemeChanged()
+    {
+        // 保存主题偏好到localStorage
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "mo-theme-preference", ThemeService.IsDarkMode ? "dark" : "light");
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        ThemeService.OnThemeChanged -= OnThemeChanged;
+    }
+}

@@ -1,0 +1,219 @@
+/* MoLibrary Base Theme - 基础主题变量定义 */
+:root {
+    /* 自定义颜色变量 - 覆盖MudBlazor默认值 */
+    /* Primary Colors */
+    --mo-primary-main: #1976d2;
+    --mo-primary-light: #42a5f5;
+    --mo-primary-dark: #1565c0;
+    
+    /* Secondary Colors */
+    --mo-secondary-main: #dc004e;
+    --mo-secondary-light: #ff5983;
+    --mo-secondary-dark: #9a0036;
+    
+    /* 组件样式变量 */
+    /* Button Styles */
+    --mo-button-border-radius: 6px;
+    --mo-button-padding-x: 16px;
+    --mo-button-padding-y: 8px;
+    --mo-button-font-weight: 500;
+    --mo-button-text-transform: none;
+    --mo-button-box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    --mo-button-transition: all 0.3s ease;
+    
+    /* Card Styles */
+    --mo-card-border-radius: 12px;
+    --mo-card-padding: 24px;
+    --mo-card-box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    --mo-card-border: 1px solid rgba(0,0,0,0.08);
+    
+    /* Input Styles */
+    --mo-input-border-radius: 8px;
+    --mo-input-padding: 12px 16px;
+    --mo-input-border-width: 2px;
+    
+    /* Dialog Styles */
+    --mo-dialog-border-radius: 16px;
+    --mo-dialog-padding: 32px;
+    
+    /* Chip Styles */
+    --mo-chip-border-radius: 16px;
+    --mo-chip-padding: 4px 12px;
+    
+    /* Table Styles */
+    --mo-table-border-radius: 8px;
+    --mo-table-row-hover-bg: rgba(0,0,0,0.04);
+    
+    /* 全局间距 */
+    --mo-spacing-xs: 4px;
+    --mo-spacing-sm: 8px;
+    --mo-spacing-md: 16px;
+    --mo-spacing-lg: 24px;
+    --mo-spacing-xl: 32px;
+    
+    /* 动画时长 */
+    --mo-transition-fast: 150ms;
+    --mo-transition-normal: 300ms;
+    --mo-transition-slow: 450ms;
+}
+
+/* 将自定义变量映射到MudBlazor CSS变量 */
+.mud-theme-provider {
+    /* 覆盖主色调 */
+    --mud-palette-primary: var(--mo-primary-main);
+    --mud-palette-primary-lighten: var(--mo-primary-light);
+    --mud-palette-primary-darken: var(--mo-primary-dark);
+    
+    --mud-palette-secondary: var(--mo-secondary-main);
+    --mud-palette-secondary-lighten: var(--mo-secondary-light);
+    --mud-palette-secondary-darken: var(--mo-secondary-dark);
+    
+    /* 覆盖默认圆角 */
+    --mud-default-borderradius: var(--mo-button-border-radius);
+}
+
+/* 全局组件样式覆盖 */
+/* Buttons */
+.mud-button {
+    border-radius: var(--mo-button-border-radius) !important;
+    padding: var(--mo-button-padding-y) var(--mo-button-padding-x) !important;
+    font-weight: var(--mo-button-font-weight) !important;
+    text-transform: var(--mo-button-text-transform) !important;
+    transition: var(--mo-button-transition) !important;
+}
+
+.mud-button-filled {
+    box-shadow: var(--mo-button-box-shadow) !important;
+}
+
+.mud-button:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
+    transform: translateY(-1px);
+}
+
+/* Cards */
+.mud-card {
+    border-radius: var(--mo-card-border-radius) !important;
+    box-shadow: var(--mo-card-box-shadow) !important;
+    border: var(--mo-card-border) !important;
+    transition: box-shadow var(--mo-transition-normal) !important;
+}
+
+.mud-card:hover {
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15) !important;
+}
+
+.mud-card-content {
+    padding: var(--mo-card-padding) !important;
+}
+
+/* Input Fields */
+.mud-input-control {
+    border-radius: var(--mo-input-border-radius) !important;
+}
+
+.mud-input-outlined .mud-input-outlined-border {
+    border-radius: var(--mo-input-border-radius) !important;
+    border-width: var(--mo-input-border-width) !important;
+}
+
+.mud-input-filled {
+    border-radius: var(--mo-input-border-radius) var(--mo-input-border-radius) 0 0 !important;
+}
+
+/* Dialogs */
+.mud-dialog {
+    border-radius: var(--mo-dialog-border-radius) !important;
+}
+
+.mud-dialog-content {
+    padding: var(--mo-dialog-padding) !important;
+}
+
+/* Chips */
+.mud-chip {
+    border-radius: var(--mo-chip-border-radius) !important;
+    padding: var(--mo-chip-padding) !important;
+}
+
+/* Tables */
+.mud-table {
+    border-radius: var(--mo-table-border-radius) !important;
+    overflow: hidden;
+}
+
+.mud-table-container {
+    border-radius: var(--mo-table-border-radius) !important;
+}
+
+.mud-table-row:hover {
+    background-color: var(--mo-table-row-hover-bg) !important;
+}
+
+/* Select & Autocomplete */
+.mud-select .mud-input-control,
+.mud-autocomplete .mud-input-control {
+    border-radius: var(--mo-input-border-radius) !important;
+}
+
+/* Menu & Popover */
+.mud-popover {
+    border-radius: var(--mo-card-border-radius) !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15) !important;
+}
+
+.mud-menu {
+    border-radius: var(--mo-card-border-radius) !important;
+}
+
+/* List Items */
+.mud-list-item {
+    border-radius: var(--mo-button-border-radius) !important;
+    margin: var(--mo-spacing-xs) var(--mo-spacing-sm) !important;
+    transition: background-color var(--mo-transition-fast) !important;
+}
+
+/* Progress */
+.mud-progress-linear {
+    border-radius: 4px !important;
+}
+
+.mud-progress-circular svg {
+    transform: scale(1.1);
+}
+
+/* Tooltips */
+.mud-tooltip {
+    border-radius: var(--mo-button-border-radius) !important;
+}
+
+/* Snackbar */
+.mud-snackbar {
+    border-radius: var(--mo-button-border-radius) !important;
+}
+
+/* 统一过渡效果 */
+.mud-button,
+.mud-card,
+.mud-chip,
+.mud-list-item,
+.mud-input-control {
+    transition-duration: var(--mo-transition-normal) !important;
+}
+
+/* 统一阴影效果 */
+.mud-elevation-1 {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08) !important;
+}
+
+.mud-elevation-2 {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+}
+
+.mud-elevation-4 {
+    box-shadow: 0 8px 16px rgba(0,0,0,0.12) !important;
+}
+
+.mud-elevation-8 {
+    box-shadow: 0 16px 32px rgba(0,0,0,0.14) !important;
+}
