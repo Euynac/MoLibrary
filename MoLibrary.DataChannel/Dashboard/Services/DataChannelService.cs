@@ -112,7 +112,7 @@ public class DataChannelService
                     Timestamp = ex.Timestamp,
                     SourceType = ex.SourceType,
                     SourceDescription = ex.SourceDescription,
-                    BusinessDescription = ex.BusinessDescription ?? string.Empty,
+                    Description = ex.Description ?? string.Empty,
                     ExceptionType = ex.Exception.GetType().Name,
                     Message = ex.Exception.Message,
                     StackTrace = ex.Exception.StackTrace ?? string.Empty

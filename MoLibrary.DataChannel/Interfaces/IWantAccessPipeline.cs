@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using MoLibrary.DataChannel.Pipeline;
 
 namespace MoLibrary.DataChannel.Interfaces;
@@ -15,26 +16,14 @@ public interface IWantAccessPipeline
     /// </summary>
     public DataPipeline Pipe { get; set; }
 
-    /// <summary>
-    /// 收集异常信息到管道的异常池
-    /// 为开发者提供便捷的异常收集接口，无需直接访问Pipe属性
-    /// </summary>
-    /// <param name="exception">发生的异常</param>
-    /// <param name="source">异常来源对象，可选参数，默认为当前实例</param>
-    void CollectException(Exception exception, object? source = null)
-    {
-        Pipe?.CollectException(exception, source ?? this);
-    }
 
     /// <summary>
-    /// 收集异常信息到管道的异常池（带业务描述）
-    /// 为开发者提供便捷的异常收集接口，无需直接访问Pipe属性
+    /// 收集异常信息到管道的异常池
     /// </summary>
     /// <param name="exception">发生的异常</param>
-    /// <param name="businessDescription">业务描述信息</param>
     /// <param name="source">异常来源对象，可选参数，默认为当前实例</param>
-    void CollectException(Exception exception, string? businessDescription, object? source = null)
-    {
-        Pipe?.CollectException(exception, source ?? this, businessDescription);
-    }
+    /// <param name="description">异常描述信息</param>
+    /// <param name="logger"></param>
+    public void CollectException(Exception exception, object? source = null, string? description = null,
+        ILogger? logger = null);
 }

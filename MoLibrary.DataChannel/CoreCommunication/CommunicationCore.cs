@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using MoLibrary.DataChannel.Pipeline;
 
 namespace MoLibrary.DataChannel.CoreCommunication;
@@ -11,7 +12,12 @@ public abstract class CommunicationCore : ICommunicationCore
     public abstract Task InitAsync(CancellationToken cancellationToken = default);
     public abstract Task DisposeAsync(CancellationToken cancellationToken = default);
 
-
+    public void CollectException(Exception exception, object? source = null, string? description = null,
+        ILogger? logger = null)
+    {
+        Pipe.CollectException(exception, source ?? this, description);
+        logger?.LogError(exception, description);
+    }
     public abstract EConnectionDirection SupportedConnectionDirection();
 
     /// <summary>

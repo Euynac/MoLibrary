@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using Microsoft.Extensions.Logging;
+using MoLibrary.DataChannel.Interfaces;
 using MoLibrary.DataChannel.Pipeline;
 
 namespace MoLibrary.DataChannel.BuildInMiddlewares;
@@ -39,6 +41,12 @@ public abstract class PipeMonitorMiddlewareBase : IPipeMonitorMiddleware
     }
 
     public DataPipeline Pipe { get; set; } = null!;
+    public virtual void CollectException(Exception exception, object? source = null, string? description = null,
+        ILogger? logger = null)
+    {
+        Pipe.CollectException(exception, source ?? this, description);
+        logger?.LogError(exception, description);
+    }
 }
 
 /// <summary>
