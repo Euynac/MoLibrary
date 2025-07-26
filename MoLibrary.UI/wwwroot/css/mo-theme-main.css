@@ -1,16 +1,14 @@
 /* MoLibrary Theme Main Entry Point */
 /* 这是主CSS文件，引入所有主题相关的CSS */
+/* 颜色由 MudBlazor 主题系统管理，CSS 只负责组件样式 */
 
-/* 1. 引入基础主题样式 */
-@import url('./themes/mo-theme-base.css');
-
-/* 2. 引入日间模式样式 */
+/* 1. 引入日间模式样式 */
 @import url('./themes/mo-theme-light.css');
 
-/* 3. 引入夜间模式样式 */
+/* 2. 引入夜间模式样式 */
 @import url('./themes/mo-theme-dark.css');
 
-/* 4. 引入现代化毛玻璃主题 */
+/* 3. 引入现代化毛玻璃主题 */
 @import url('./themes/mo-theme-glassmorphic.css');
 
 /* 5. 自定义主题样式示例 */

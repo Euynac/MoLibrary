@@ -1,4 +1,5 @@
 /* MoLibrary Glassmorphic Theme - 真正的毛玻璃效果主题 */
+/* 只包含组件样式和毛玻璃效果，颜色由 MudBlazor 主题系统管理 */
 
 :root {
     /* Glass Effect Variables */
@@ -7,36 +8,46 @@
     --mo-glass-opacity: 0.85;
     --mo-glass-border-width: 1px;
     
-    /* Gradient Colors */
-    --mo-gradient-primary-start: #667eea;
-    --mo-gradient-primary-end: #764ba2;
-    --mo-gradient-secondary-start: #f093fb;
-    --mo-gradient-secondary-end: #f5576c;
-    --mo-gradient-accent-start: #4facfe;
-    --mo-gradient-accent-end: #00f2fe;
-    
     /* Animation Durations */
     --mo-animation-smooth: 400ms;
     --mo-animation-bounce: 600ms;
     --mo-animation-glow: 2s;
+    
+    /* 组件样式变量 */
+    --mo-button-border-radius: 12px;
+    --mo-button-padding-x: 16px;
+    --mo-button-padding-y: 8px;
+    --mo-button-font-weight: 500;
+    --mo-button-text-transform: none;
+    --mo-button-transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    --mo-card-border-radius: 16px;
+    --mo-card-padding: 24px;
+    
+    --mo-input-border-radius: 12px;
+    --mo-input-padding: 12px 16px;
+    --mo-input-border-width: 2px;
+    
+    --mo-dialog-border-radius: 20px;
+    --mo-dialog-padding: 32px;
+    
+    --mo-chip-border-radius: 16px;
+    --mo-chip-padding: 4px 12px;
+    
+    --mo-table-border-radius: 12px;
+    
+    /* 全局间距 */
+    --mo-spacing-xs: 4px;
+    --mo-spacing-sm: 8px;
+    --mo-spacing-md: 16px;
+    --mo-spacing-lg: 24px;
+    --mo-spacing-xl: 32px;
 }
 
 /* Light Mode Glassmorphic Theme */
 :root[data-theme="glassmorphic-light"],
 .mo-theme-glassmorphic-light {
-    /* Primary Colors */
-    --mo-primary-main: #667eea;
-    --mo-primary-light: #8b9bf5;
-    --mo-primary-dark: #5568d5;
-    
-    /* Secondary Colors */
-    --mo-secondary-main: #f093fb;
-    --mo-secondary-light: #f5b3fd;
-    --mo-secondary-dark: #d673e6;
-    
-    /* Background Colors - 有渐变的背景便于毛玻璃效果显现 */
-    --mo-background-default: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    --mo-background-paper: rgba(255, 255, 255, 0.15);
+    /* 毛玻璃背景效果变量 */
     --mo-background-glass: rgba(255, 255, 255, 0.25);
     --mo-background-overlay: rgba(255, 255, 255, 0.3);
     
@@ -45,30 +56,17 @@
     --mo-glass-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
     --mo-glass-inner-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3);
     
-    /* Text Colors - 确保在毛玻璃背景上可见 */
-    --mo-text-primary: #1a202c;
-    --mo-text-secondary: #2d3748;
-    --mo-text-disabled: #718096;
-    --mo-text-hint: #a0aec0;
-    
     /* Surface Colors */
     --mo-surface-light: rgba(255, 255, 255, 0.2);
     --mo-surface-medium: rgba(255, 255, 255, 0.3);
     --mo-surface-heavy: rgba(255, 255, 255, 0.4);
     
-    /* State Colors */
-    --mo-success-main: #48bb78;
-    --mo-error-main: #f56565;
-    --mo-warning-main: #ed8936;
-    --mo-info-main: #4299e1;
-    
     /* Hover States */
     --mo-hover-overlay: rgba(255, 255, 255, 0.2);
-    --mo-hover-glow: 0 0 20px rgba(103, 126, 234, 0.4);
+    --mo-hover-glow: 0 0 20px var(--mud-palette-primary);
     
     /* Component Specific */
-    --mo-button-gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1)), 
-                         linear-gradient(135deg, var(--mo-gradient-primary-start), var(--mo-gradient-primary-end));
+    --mo-button-gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1));
     --mo-card-gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.1));
     --mo-header-gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1));
 }
@@ -76,19 +74,7 @@
 /* Dark Mode Glassmorphic Theme */
 :root[data-theme="glassmorphic-dark"],
 .mo-theme-glassmorphic-dark {
-    /* Primary Colors */
-    --mo-primary-main: #00d4ff;
-    --mo-primary-light: #4de0ff;
-    --mo-primary-dark: #00a8cc;
-    
-    /* Secondary Colors */
-    --mo-secondary-main: #ff006e;
-    --mo-secondary-light: #ff4d96;
-    --mo-secondary-dark: #cc0056;
-    
-    /* Background Colors - 深色渐变背景 */
-    --mo-background-default: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 50%, #0f1419 100%);
-    --mo-background-paper: rgba(13, 17, 40, 0.3);
+    /* 毛玻璃背景效果变量 */
     --mo-background-glass: rgba(13, 17, 40, 0.4);
     --mo-background-overlay: rgba(13, 17, 40, 0.6);
     
@@ -97,36 +83,23 @@
     --mo-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
     --mo-glass-inner-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
     
-    /* Text Colors */
-    --mo-text-primary: #ffffff;
-    --mo-text-secondary: #e2e8f0;
-    --mo-text-disabled: #718096;
-    --mo-text-hint: #4a5568;
-    
     /* Surface Colors */
     --mo-surface-light: rgba(255, 255, 255, 0.05);
     --mo-surface-medium: rgba(255, 255, 255, 0.1);
     --mo-surface-heavy: rgba(255, 255, 255, 0.15);
     
-    /* State Colors */
-    --mo-success-main: #00ff88;
-    --mo-error-main: #ff0055;
-    --mo-warning-main: #ffaa00;
-    --mo-info-main: #00d4ff;
-    
     /* Hover States */
     --mo-hover-overlay: rgba(0, 212, 255, 0.1);
-    --mo-hover-glow: 0 0 30px rgba(0, 212, 255, 0.5);
+    --mo-hover-glow: 0 0 30px var(--mud-palette-primary);
     
     /* Component Specific */
-    --mo-button-gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05)), 
-                         linear-gradient(135deg, var(--mo-gradient-accent-start), var(--mo-gradient-accent-end));
+    --mo-button-gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
     --mo-card-gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
     --mo-header-gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
     
     /* Neon Effects */
     --mo-neon-text-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
-    --mo-neon-box-shadow: 0 0 20px var(--mo-primary-main), inset 0 0 20px rgba(0, 212, 255, 0.1);
+    --mo-neon-box-shadow: 0 0 20px var(--mud-palette-primary), inset 0 0 20px rgba(0, 212, 255, 0.1);
 }
 
 /* 设置渐变背景 */
@@ -135,6 +108,7 @@
     min-height: 100vh;
 }
 
+/* Light Mode 渐变背景 */
 .mo-theme-glassmorphic-light::before {
     content: '';
     position: fixed;
@@ -142,10 +116,11 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: var(--mo-background-default);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     z-index: -10;
 }
 
+/* Dark Mode 渐变背景 */
 .mo-theme-glassmorphic-dark::before {
     content: '';
     position: fixed;
@@ -153,7 +128,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: var(--mo-background-default);
+    background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 50%, #0f1419 100%);
     z-index: -10;
 }
 
@@ -168,6 +143,7 @@
         -webkit-backdrop-filter: blur(var(--mo-glass-blur));
         border: var(--mo-glass-border-width) solid var(--mo-glass-border) !important;
         box-shadow: var(--mo-glass-shadow), var(--mo-glass-inner-shadow) !important;
+        border-radius: var(--mo-card-border-radius) !important;
         position: relative;
         overflow: hidden;
     }
@@ -191,17 +167,21 @@
         -webkit-backdrop-filter: blur(8px);
         border: var(--mo-glass-border-width) solid var(--mo-glass-border) !important;
         box-shadow: var(--mo-glass-inner-shadow) !important;
+        border-radius: var(--mo-button-border-radius) !important;
+        padding: var(--mo-button-padding-y) var(--mo-button-padding-x) !important;
+        font-weight: var(--mo-button-font-weight) !important;
+        text-transform: var(--mo-button-text-transform) !important;
         position: relative;
         overflow: hidden;
         transition: all var(--mo-animation-smooth) cubic-bezier(0.4, 0, 0.2, 1) !important;
-        color: var(--mo-text-primary) !important;
+        color: var(--mud-palette-text-primary) !important;
     }
     
     .mud-button-filled {
         background: var(--mo-button-gradient) !important;
         border: var(--mo-glass-border-width) solid var(--mo-glass-border) !important;
         box-shadow: 0 4px 15px rgba(103, 126, 234, 0.3), var(--mo-glass-inner-shadow) !important;
-        color: white !important;
+        color: var(--mud-palette-primary-text) !important;
     }
     
     .mud-button:hover {
@@ -215,36 +195,40 @@
         background: var(--mo-surface-light) !important;
         backdrop-filter: blur(var(--mo-glass-blur));
         -webkit-backdrop-filter: blur(var(--mo-glass-blur));
-        border-radius: 12px !important;
+        border-radius: var(--mo-input-border-radius) !important;
         position: relative;
         overflow: hidden;
     }
     
     .mud-input-outlined .mud-input-outlined-border {
         border: var(--mo-glass-border-width) solid var(--mo-glass-border) !important;
-        border-radius: 12px !important;
+        border-radius: var(--mo-input-border-radius) !important;
         transition: all var(--mo-animation-smooth) !important;
     }
     
     .mud-input-outlined:hover .mud-input-outlined-border {
-        border-color: var(--mo-primary-main) !important;
+        border-color: var(--mud-palette-primary) !important;
         box-shadow: 0 0 0 2px rgba(103, 126, 234, 0.2) !important;
     }
     
     .mud-input-outlined.mud-input-focused .mud-input-outlined-border {
         border-width: 2px !important;
-        border-color: var(--mo-primary-main) !important;
+        border-color: var(--mud-palette-primary) !important;
         box-shadow: 0 0 0 4px rgba(103, 126, 234, 0.2) !important;
     }
     
-  
     /* Glass Dialog */
     .mud-dialog {
         background: var(--mo-background-overlay) !important;
         backdrop-filter: blur(var(--mo-glass-blur-heavy));
         -webkit-backdrop-filter: blur(var(--mo-glass-blur-heavy));
         border: var(--mo-glass-border-width) solid var(--mo-glass-border) !important;
+        border-radius: var(--mo-dialog-border-radius) !important;
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+    }
+    
+    .mud-dialog-content {
+        padding: var(--mo-dialog-padding) !important;
     }
     
     /* Glass AppBar */
@@ -256,7 +240,6 @@
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1) !important;
     }
     
-  
     /* Glass Navigation Drawer */
     .mud-drawer .mud-drawer-content {
         background: var(--mo-background-glass) !important;
@@ -265,16 +248,16 @@
         border-right: var(--mo-glass-border-width) solid var(--mo-glass-border) !important;
     }
     
-
-    
     /* Modern Chips */
     .mud-chip {
         background: var(--mo-surface-medium) !important;
         backdrop-filter: blur(var(--mo-glass-blur));
         -webkit-backdrop-filter: blur(var(--mo-glass-blur));
         border: var(--mo-glass-border-width) solid var(--mo-glass-border) !important;
+        border-radius: var(--mo-chip-border-radius) !important;
+        padding: var(--mo-chip-padding) !important;
         transition: all var(--mo-animation-smooth) !important;
-        color: var(--mo-text-primary) !important;
+        color: var(--mud-palette-text-primary) !important;
     }
     
     .mud-chip:hover {
@@ -288,12 +271,12 @@
         backdrop-filter: blur(var(--mo-glass-blur));
         -webkit-backdrop-filter: blur(var(--mo-glass-blur));
         border: var(--mo-glass-border-width) solid var(--mo-glass-border) !important;
+        border-radius: var(--mo-table-border-radius) !important;
     }
     
     .mud-table-row:hover {
         background: var(--mo-hover-overlay) !important;
     }
-    
 
     /* Glass Expansion Panels */
     .mud-expansion-panel {
@@ -321,7 +304,7 @@
     
     .mud-progress-linear .mud-progress-linear-bar {
         background: var(--mo-button-gradient) !important;
-        box-shadow: 0 0 10px var(--mo-primary-main) !important;
+        box-shadow: 0 0 10px var(--mud-palette-primary) !important;
     }
     
     /* Glass Tooltips */
@@ -330,8 +313,9 @@
         backdrop-filter: blur(var(--mo-glass-blur-heavy));
         -webkit-backdrop-filter: blur(var(--mo-glass-blur-heavy));
         border: var(--mo-glass-border-width) solid var(--mo-glass-border) !important;
+        border-radius: var(--mo-button-border-radius) !important;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-        color: var(--mo-text-primary) !important;
+        color: var(--mud-palette-text-primary) !important;
     }
     
     /* Modern Snackbar */
@@ -340,13 +324,31 @@
         backdrop-filter: blur(var(--mo-glass-blur-heavy));
         -webkit-backdrop-filter: blur(var(--mo-glass-blur-heavy));
         border: var(--mo-glass-border-width) solid var(--mo-glass-border) !important;
+        border-radius: var(--mo-button-border-radius) !important;
         box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2) !important;
-        color: var(--mo-text-primary) !important;
+        color: var(--mud-palette-text-primary) !important;
+    }
+    
+    /* Glass Popover */
+    .mud-popover {
+        background: var(--mo-background-overlay) !important;
+        backdrop-filter: blur(var(--mo-glass-blur-heavy));
+        -webkit-backdrop-filter: blur(var(--mo-glass-blur-heavy));
+        border: var(--mo-glass-border-width) solid var(--mo-glass-border) !important;
+        border-radius: var(--mo-card-border-radius) !important;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.15) !important;
+    }
+    
+    .mud-menu {
+        background: var(--mo-background-overlay) !important;
+        backdrop-filter: blur(var(--mo-glass-blur-heavy));
+        -webkit-backdrop-filter: blur(var(--mo-glass-blur-heavy));
+        border-radius: var(--mo-card-border-radius) !important;
     }
     
     /* Futuristic Scrollbar */
     ::-webkit-scrollbar-thumb {
-        background: linear-gradient(var(--mo-primary-main), var(--mo-secondary-main)) !important;
+        background: linear-gradient(var(--mud-palette-primary), var(--mud-palette-secondary)) !important;
         border-radius: 10px !important;
         backdrop-filter: blur(5px);
     }
@@ -362,8 +364,8 @@
 .mo-theme-glassmorphic-dark {
     /* Neon Buttons */
     .mud-button-filled-primary {
-        background: var(--mo-primary-main) !important;
-        color: var(--mo-text-primary) !important;
+        background: var(--mud-palette-primary) !important;
+        color: var(--mud-palette-primary-text) !important;
         box-shadow: var(--mo-neon-box-shadow) !important;
         text-shadow: 0 0 5px rgba(255, 255, 255, 0.5) !important;
     }
@@ -374,25 +376,25 @@
     
     /* Neon Text */
     .mo-neon-text {
-        color: var(--mo-primary-main) !important;
+        color: var(--mud-palette-primary) !important;
         text-shadow: var(--mo-neon-text-shadow) !important;
     }
     
     /* Glowing Borders */
     .mo-glow-border {
-        border: 2px solid var(--mo-primary-main) !important;
-        box-shadow: 0 0 10px var(--mo-primary-main), inset 0 0 10px rgba(0, 212, 255, 0.2) !important;
+        border: 2px solid var(--mud-palette-primary) !important;
+        box-shadow: 0 0 10px var(--mud-palette-primary), inset 0 0 10px rgba(0, 212, 255, 0.2) !important;
     }
 }
 
 /* Animations */
 @keyframes mo-neon-pulse {
     0%, 100% { 
-        box-shadow: 0 0 20px var(--mo-primary-main), 
+        box-shadow: 0 0 20px var(--mud-palette-primary), 
                     inset 0 0 20px rgba(0, 212, 255, 0.1);
     }
     50% { 
-        box-shadow: 0 0 40px var(--mo-primary-main), 
+        box-shadow: 0 0 40px var(--mud-palette-primary), 
                     inset 0 0 30px rgba(0, 212, 255, 0.2);
     }
 }
