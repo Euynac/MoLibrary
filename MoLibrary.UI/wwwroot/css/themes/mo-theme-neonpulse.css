@@ -1,0 +1,446 @@
+/* 霓虹脉冲主题样式 - Neon Pulse Theme */
+
+/* 主题变量定义 */
+:root[data-theme="neonpulse-light"],
+.mo-theme-neonpulse-light {
+    /* 霓虹效果变量 */
+    --mo-neon-glow-sm: 0 0 10px;
+    --mo-neon-glow-md: 0 0 20px;
+    --mo-neon-glow-lg: 0 0 30px;
+    --mo-neon-glow-xl: 0 0 40px;
+    
+    /* 渐变背景 */
+    --mo-neon-gradient-1: linear-gradient(120deg, var(--mud-palette-primary), var(--mud-palette-secondary));
+    --mo-neon-gradient-2: linear-gradient(135deg, var(--mud-palette-tertiary), var(--mud-palette-info));
+    --mo-neon-gradient-3: linear-gradient(90deg, var(--mud-palette-primary) 0%, var(--mud-palette-secondary) 50%, var(--mud-palette-tertiary) 100%);
+    
+    /* 动画时长 */
+    --mo-neon-pulse-duration: 2s;
+    --mo-neon-flow-duration: 3s;
+    --mo-neon-flash-duration: 4s;
+    
+    /* 边框和圆角 */
+    --mo-neon-border-radius: 16px;
+    --mo-neon-border-width: 2px;
+    
+    /* 特效透明度 */
+    --mo-neon-overlay-opacity: 0.1;
+    --mo-neon-border-opacity: 0.5;
+}
+
+:root[data-theme="neonpulse-dark"],
+.mo-theme-neonpulse-dark {
+    /* 霓虹效果变量 - 暗色模式增强 */
+    --mo-neon-glow-sm: 0 0 15px;
+    --mo-neon-glow-md: 0 0 30px;
+    --mo-neon-glow-lg: 0 0 45px;
+    --mo-neon-glow-xl: 0 0 60px;
+    
+    /* 渐变背景 */
+    --mo-neon-gradient-1: linear-gradient(120deg, var(--mud-palette-primary), var(--mud-palette-secondary));
+    --mo-neon-gradient-2: linear-gradient(135deg, var(--mud-palette-tertiary), var(--mud-palette-info));
+    --mo-neon-gradient-3: linear-gradient(90deg, var(--mud-palette-primary) 0%, var(--mud-palette-secondary) 50%, var(--mud-palette-tertiary) 100%);
+    
+    /* 动画时长 */
+    --mo-neon-pulse-duration: 2s;
+    --mo-neon-flow-duration: 3s;
+    --mo-neon-flash-duration: 4s;
+    
+    /* 边框和圆角 */
+    --mo-neon-border-radius: 16px;
+    --mo-neon-border-width: 2px;
+    
+    /* 特效透明度 */
+    --mo-neon-overlay-opacity: 0.2;
+    --mo-neon-border-opacity: 0.8;
+}
+
+/* 通用样式（明暗两种模式） */
+.mo-theme-neonpulse-light,
+.mo-theme-neonpulse-dark {
+    /* 按钮样式 */
+    .mud-button {
+        border-radius: var(--mo-neon-border-radius) !important;
+        padding: 10px 24px !important;
+        font-weight: 600 !important;
+        transition: all 0.3s ease !important;
+        position: relative !important;
+        overflow: hidden !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.05em !important;
+    }
+    
+    .mud-button::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        transition: left 0.6s ease;
+    }
+    
+    .mud-button:hover::before {
+        left: 100%;
+    }
+    
+    .mud-button-filled-primary {
+        background: var(--mo-neon-gradient-1) !important;
+        box-shadow: var(--mo-neon-glow-sm) var(--mud-palette-primary) !important;
+    }
+    
+    .mud-button-filled-primary:hover {
+        box-shadow: var(--mo-neon-glow-md) var(--mud-palette-primary) !important;
+        transform: translateY(-2px) scale(1.02) !important;
+        animation: neon-pulse var(--mo-neon-pulse-duration) ease-in-out infinite !important;
+    }
+    
+    .mud-button-filled-secondary {
+        background: linear-gradient(135deg, var(--mud-palette-secondary), var(--mud-palette-secondary-darken)) !important;
+        box-shadow: var(--mo-neon-glow-sm) var(--mud-palette-secondary) !important;
+    }
+    
+    .mud-button-filled-secondary:hover {
+        box-shadow: var(--mo-neon-glow-md) var(--mud-palette-secondary) !important;
+        transform: translateY(-2px) scale(1.02) !important;
+    }
+    
+    .mud-button-outlined {
+        border: var(--mo-neon-border-width) solid var(--mud-palette-primary) !important;
+        background: transparent !important;
+        position: relative !important;
+    }
+    
+    .mud-button-outlined:hover {
+        background: rgba(var(--mud-palette-primary-rgb), var(--mo-neon-overlay-opacity)) !important;
+        box-shadow: inset var(--mo-neon-glow-sm) var(--mud-palette-primary),
+                    var(--mo-neon-glow-sm) var(--mud-palette-primary) !important;
+    }
+    
+    /* 卡片样式 */
+    .mud-card {
+        border-radius: var(--mo-neon-border-radius) !important;
+        background: var(--mud-palette-surface) !important;
+        border: 1px solid transparent !important;
+        position: relative !important;
+        overflow: hidden !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    .mud-card::before {
+        content: '';
+        position: absolute;
+        top: -2px;
+        left: -2px;
+        right: -2px;
+        bottom: -2px;
+        background: var(--mo-neon-gradient-3);
+        border-radius: var(--mo-neon-border-radius);
+        opacity: 0;
+        z-index: -1;
+        transition: opacity 0.3s ease;
+    }
+    
+    .mud-card:hover::before {
+        opacity: var(--mo-neon-border-opacity);
+        animation: neon-flow var(--mo-neon-flow-duration) linear infinite;
+    }
+    
+    .mud-card:hover {
+        transform: translateY(-4px) !important;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2),
+                    var(--mo-neon-glow-md) var(--mud-palette-primary) !important;
+    }
+    
+    /* 输入框样式 */
+    .mud-input-outlined .mud-input-outlined-border {
+        border-radius: var(--mo-neon-border-radius) !important;
+        border-width: var(--mo-neon-border-width) !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    .mud-input-outlined:hover .mud-input-outlined-border {
+        border-color: var(--mud-palette-primary) !important;
+    }
+    
+    .mud-input-outlined.mud-input-focused .mud-input-outlined-border {
+        border-color: var(--mud-palette-primary) !important;
+        box-shadow: var(--mo-neon-glow-sm) var(--mud-palette-primary) !important;
+        animation: neon-pulse-subtle 2s ease-in-out infinite !important;
+    }
+    
+    /* 芯片样式 */
+    .mud-chip {
+        border-radius: 20px !important;
+        padding: 4px 16px !important;
+        transition: all 0.3s ease !important;
+        position: relative !important;
+        overflow: hidden !important;
+    }
+    
+    .mud-chip:hover {
+        transform: scale(1.05) !important;
+        box-shadow: var(--mo-neon-glow-sm) currentColor !important;
+    }
+    
+    /* 开关样式 */
+    .mud-switch-track {
+        background: var(--mud-palette-lines-inputs) !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    .mud-switch-checked .mud-switch-track {
+        background: var(--mo-neon-gradient-1) !important;
+        box-shadow: var(--mo-neon-glow-sm) var(--mud-palette-primary) !important;
+    }
+    
+    .mud-switch-thumb {
+        transition: all 0.3s ease !important;
+    }
+    
+    .mud-switch-checked .mud-switch-thumb {
+        box-shadow: var(--mo-neon-glow-sm) var(--mud-palette-primary) !important;
+    }
+    
+    /* 进度条样式 */
+    .mud-progress-linear .mud-progress-linear-bars {
+        background: var(--mo-neon-gradient-1) !important;
+        box-shadow: var(--mo-neon-glow-sm) var(--mud-palette-primary) !important;
+        animation: neon-flow var(--mo-neon-flow-duration) linear infinite !important;
+    }
+    
+    .mud-progress-circular svg circle:last-child {
+        stroke: var(--mud-palette-primary) !important;
+        filter: drop-shadow(var(--mo-neon-glow-sm) var(--mud-palette-primary));
+        animation: neon-pulse-subtle 2s ease-in-out infinite !important;
+    }
+    
+    /* 标签页样式 */
+    .mud-tabs-tabbar {
+        border-bottom: 2px solid var(--mud-palette-lines-default) !important;
+    }
+    
+    .mud-tab {
+        transition: all 0.3s ease !important;
+        position: relative !important;
+    }
+    
+    .mud-tab.mud-tab-active {
+        color: var(--mud-palette-primary) !important;
+    }
+    
+    .mud-tab.mud-tab-active::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: var(--mo-neon-gradient-1);
+        box-shadow: var(--mo-neon-glow-sm) var(--mud-palette-primary);
+        animation: neon-flash var(--mo-neon-flash-duration) ease-in-out infinite;
+    }
+    
+    /* 对话框样式 */
+    .mud-dialog {
+        border-radius: var(--mo-neon-border-radius) !important;
+        border: 1px solid transparent !important;
+        position: relative !important;
+        overflow: hidden !important;
+    }
+    
+    .mud-dialog::before {
+        content: '';
+        position: absolute;
+        top: -1px;
+        left: -1px;
+        right: -1px;
+        bottom: -1px;
+        background: var(--mo-neon-gradient-1);
+        opacity: var(--mo-neon-border-opacity);
+        z-index: -1;
+        animation: neon-flow var(--mo-neon-flow-duration) linear infinite;
+    }
+    
+    /* 表格样式 */
+    .mud-table {
+        border-radius: var(--mo-neon-border-radius) !important;
+        overflow: hidden !important;
+    }
+    
+    .mud-table-head {
+        background: rgba(var(--mud-palette-primary-rgb), 0.05) !important;
+    }
+    
+    .mud-table-row:hover {
+        background: rgba(var(--mud-palette-primary-rgb), 0.1) !important;
+        transition: background 0.3s ease !important;
+    }
+    
+    /* 工具提示样式 */
+    .mud-tooltip {
+        background: var(--mud-palette-surface) !important;
+        border: 1px solid var(--mud-palette-primary) !important;
+        border-radius: 12px !important;
+        box-shadow: var(--mo-neon-glow-sm) var(--mud-palette-primary) !important;
+    }
+    
+    /* 抽屉样式 */
+    .mud-drawer .mud-drawer-content {
+        border-right: 1px solid transparent !important;
+        position: relative !important;
+    }
+    
+    .mud-drawer .mud-drawer-content::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 1px;
+        background: var(--mo-neon-gradient-2);
+        opacity: var(--mo-neon-border-opacity);
+    }
+}
+
+/* 明亮模式特定样式 */
+.mo-theme-neonpulse-light {
+    background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 100%) !important;
+    
+    .mud-card {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+    }
+    
+    .mud-appbar {
+        background: rgba(255,255,255,0.8) !important;
+        backdrop-filter: blur(10px) !important;
+        -webkit-backdrop-filter: blur(10px) !important;
+        border-bottom: 1px solid var(--mud-palette-lines-default) !important;
+    }
+}
+
+/* 暗色模式特定样式 */
+.mo-theme-neonpulse-dark {
+    background: linear-gradient(135deg, #0f1419 0%, #0a0e27 100%) !important;
+    
+    .mud-card {
+        background: rgba(21, 25, 34, 0.8) !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important;
+    }
+    
+    .mud-appbar {
+        background: rgba(10, 14, 39, 0.9) !important;
+        backdrop-filter: blur(10px) !important;
+        -webkit-backdrop-filter: blur(10px) !important;
+        border-bottom: 1px solid var(--mud-palette-lines-default) !important;
+    }
+    
+    /* 增强的霓虹效果 */
+    .mud-button-filled-primary:hover,
+    .mud-button-filled-secondary:hover {
+        filter: brightness(1.2) !important;
+    }
+    
+    /* 暗色模式下的文字发光 */
+    .mud-typography-h1,
+    .mud-typography-h2,
+    .mud-typography-h3 {
+        text-shadow: 0 0 20px rgba(var(--mud-palette-primary-rgb), 0.3);
+    }
+}
+
+/* 动画定义 */
+@keyframes neon-pulse {
+    0%, 100% {
+        box-shadow: var(--mo-neon-glow-md) var(--mud-palette-primary);
+        transform: translateY(-2px) scale(1.02);
+    }
+    50% {
+        box-shadow: var(--mo-neon-glow-lg) var(--mud-palette-primary);
+        transform: translateY(-2px) scale(1.05);
+    }
+}
+
+@keyframes neon-pulse-subtle {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.8;
+    }
+}
+
+@keyframes neon-flow {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+@keyframes neon-flash {
+    0%, 100% {
+        opacity: 1;
+    }
+    25% {
+        opacity: 0.6;
+    }
+    50% {
+        opacity: 1;
+    }
+    75% {
+        opacity: 0.8;
+    }
+}
+
+/* 特殊效果类 */
+.mo-neon-border {
+    position: relative !important;
+    border: 2px solid transparent !important;
+    background: linear-gradient(var(--mud-palette-surface), var(--mud-palette-surface)) padding-box,
+                var(--mo-neon-gradient-1) border-box !important;
+    border-radius: var(--mo-neon-border-radius) !important;
+}
+
+.mo-neon-text {
+    background: var(--mo-neon-gradient-1);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-fill-color: transparent;
+}
+
+.mo-neon-glow-text {
+    text-shadow: var(--mo-neon-glow-md) currentColor !important;
+}
+
+/* 响应式调整 */
+@media (max-width: 960px) {
+    .mo-theme-neonpulse-light,
+    .mo-theme-neonpulse-dark {
+        --mo-neon-border-radius: 12px;
+        --mo-neon-glow-sm: 0 0 8px;
+        --mo-neon-glow-md: 0 0 16px;
+        --mo-neon-glow-lg: 0 0 24px;
+        --mo-neon-glow-xl: 0 0 32px;
+    }
+}
+
+/* 减少动画模式 */
+@media (prefers-reduced-motion: reduce) {
+    .mo-theme-neonpulse-light *,
+    .mo-theme-neonpulse-dark * {
+        animation: none !important;
+        transition: none !important;
+    }
+    
+    .mo-theme-neonpulse-light .mud-button::before,
+    .mo-theme-neonpulse-dark .mud-button::before {
+        display: none !important;
+    }
+}
