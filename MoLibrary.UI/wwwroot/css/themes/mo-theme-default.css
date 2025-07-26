@@ -28,7 +28,8 @@
     
     /* Chip Styles */
     --mo-chip-border-radius: 16px;
-    --mo-chip-padding: 4px 12px;
+    --mo-chip-padding: 6px 12px;
+    --mo-chip-height: 32px;
     
     /* Table Styles */
     --mo-table-border-radius: 8px;
@@ -104,6 +105,29 @@
     .mud-chip {
         border-radius: var(--mo-chip-border-radius) !important;
         padding: var(--mo-chip-padding) !important;
+        height: var(--mo-chip-height) !important;
+        max-width: 100% !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        box-sizing: border-box !important;
+        transition: all var(--mo-transition-normal) !important;
+        overflow: hidden !important;
+        white-space: nowrap !important;
+        text-overflow: ellipsis !important;
+    }
+    
+    .mud-chip:hover {
+        transform: translateY(-1px);
+        border-radius: var(--mo-chip-border-radius) !important;
+    }
+    
+    /* 修复chip在容器中的换行显示 */
+    .mud-chip-group,
+    .mud-card .mud-chip-group {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: var(--mo-spacing-xs) !important;
+        overflow: hidden !important;
     }
     
     .mud-dialog {
@@ -136,7 +160,35 @@
     .mud-chip,
     .mud-list-item,
     .mud-input-control {
-        transition-duration: var(--mo-transition-normal) !important;
+        transition: all var(--mo-transition-normal) ease !important;
+    }
+    
+    /* Tab styles fix */
+    .mud-tabs-toolbar {
+        background-color: var(--mud-palette-surface) !important;
+    }
+    
+    .mud-tab {
+        border-radius: var(--mo-button-border-radius) !important;
+        transition: all var(--mo-transition-normal) ease !important;
+        color: var(--mud-palette-text-secondary) !important;
+    }
+    
+    .mud-tab.mud-tab-active {
+        background-color: var(--mud-palette-primary) !important;
+        color: var(--mud-palette-primary-text) !important;
+        border-radius: var(--mo-button-border-radius) !important;
+    }
+    
+    .mud-tab:hover {
+        background-color: var(--mud-palette-action-default-hover) !important;
+        border-radius: var(--mo-button-border-radius) !important;
+        transform: none !important;
+    }
+    
+    .mud-tab.mud-tab-active:hover {
+        background-color: var(--mud-palette-primary-lighten) !important;
+        border-radius: var(--mo-button-border-radius) !important;
     }
 }
 
