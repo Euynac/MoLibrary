@@ -7,7 +7,7 @@
         <CardHeaderContent>
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                 <MudIcon Icon="@GetChannelIcon()" Color="@GetChannelColor()" />
-                <MudText Typo="Typo.h6" Class="mo-section-title">@Channel.Id</MudText>
+                <MudText Typo="Typo.h6" Class="channel-title">@Channel.Id</MudText>
                 @if (Channel.HasExceptions)
                 {
                     <MudChip T="string" Color="Color.Error" Size="Size.Small" Label="true">
@@ -48,12 +48,12 @@
         @if (_isReInitializing)
         {
             <!-- Loading遮罩 -->
-            <MudStack AlignItems="AlignItems.Center" Spacing="3" Class="mo-loading-container">
+            <MudStack AlignItems="AlignItems.Center" Spacing="3" Class="loading-container">
                 <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
-                <MudText Typo="Typo.h6" Color="Color.Primary" Class="mo-loading-title">
+                <MudText Typo="Typo.h6" Color="Color.Primary" Class="loading-title">
                     正在重新初始化...
                 </MudText>
-                <MudText Typo="Typo.body2" Class="mo-loading-subtitle">
+                <MudText Typo="Typo.body2" Class="loading-subtitle">
                     请稍候，这可能需要几秒钟
                 </MudText>
             </MudStack>
@@ -83,7 +83,7 @@
 
                 <!-- 端点信息 -->
                 <MudStack Spacing="2">
-                    <MudText Typo="Typo.subtitle2" Class="mo-section-title">端点信息</MudText>
+                    <MudText Typo="Typo.subtitle2" Class="endpoint-section-title">端点信息</MudText>
                     
                     <!-- 内部端点 -->
                     <MudExpansionPanels Elevation="0" Dense="true">
@@ -120,7 +120,7 @@
                 @if (Channel.Middlewares.Any())
                 {
                     <MudStack Spacing="2">
-                        <MudText Typo="Typo.subtitle2" Class="mo-section-title">中间件 (@Channel.Middlewares.Count)</MudText>
+                        <MudText Typo="Typo.subtitle2" Class="middleware-section-title">中间件 (@Channel.Middlewares.Count)</MudText>
                         <MudExpansionPanels Elevation="0" Dense="true">
                             @foreach (var middleware in Channel.Middlewares)
                             {
@@ -157,7 +157,7 @@
                                                         <MudIcon Icon="@Icons.Material.Filled.QueryStats" Size="Size.Small" Class="mr-1" />
                                                         统计信息
                                                     </MudText>
-                                                    <MudPaper Class="mo-stats-container">
+                                                    <MudPaper Class="stats-container">
                                                         <MudGrid Spacing="2">
                                                             @foreach (var kvp in middleware.InfoDictionary)
                                                             {
@@ -165,8 +165,8 @@
                                                                     <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
                                                                         <MudIcon Icon="@GetInfoIcon(kvp.Value)" Size="Size.Small" Color="@GetInfoColor(kvp.Value)" />
                                                                         <MudStack Spacing="0" Class="stats-item-container">
-                                                                            <MudText Typo="Typo.caption" Class="mo-stats-item-key">@kvp.Key</MudText>
-                                                                            <MudText Typo="Typo.body2" Class="mo-stats-item-value">@FormatInfoValue(kvp.Value)</MudText>
+                                                                            <MudText Typo="Typo.caption" Class="stats-item-key">@kvp.Key</MudText>
+                                                                            <MudText Typo="Typo.body2" Class="stats-item-value">@FormatInfoValue(kvp.Value)</MudText>
                                                                         </MudStack>
                                                                     </MudStack>
                                                                 </MudItem>
@@ -278,11 +278,11 @@
         var classes = new List<string> { "channel-card" };
         
         if (Channel.HasExceptions)
-            classes.Add("mo-card-status-error");
+            classes.Add("has-exceptions");
         else if (Channel.IsNotAvailable)
-            classes.Add("mo-card-status-warning");
+            classes.Add("not-available");
         else if (Channel.IsInitialized)
-            classes.Add("mo-card-status-success");
+            classes.Add("initialized");
             
         return string.Join(" ", classes);
     }

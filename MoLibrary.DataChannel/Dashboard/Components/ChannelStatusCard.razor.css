@@ -1,5 +1,4 @@
-/* Channel Status Card Component Styles */
-/* 使用统一主题系统中的样式类 */
+/* Channel状态卡片样式 */
 
 /* 卡片容器 */
 .channel-card {
@@ -8,34 +7,86 @@
     flex-direction: column;
 }
 
-/* 特定组件样式 - 不在统一主题中的样式 */
+/* 卡片标题样式 */
+.channel-title {
+    font-weight: 500;
+}
+
+/* 卡片内容样式 */
+.channel-content {
+    flex: 1;
+    padding-top: 8px;
+}
+
+/* 加载状态样式 */
+.loading-container {
+    padding: 2rem;
+}
+
+.loading-title {
+    font-weight: 500;
+}
+
+.loading-subtitle {
+    color: var(--mud-palette-text-secondary);
+}
+
+/* 端点信息样式 */
+.endpoint-section-title {
+    font-weight: 500;
+}
+
 .endpoint-text {
     color: var(--mud-palette-text-primary);
+}
+
+/* 中间件信息样式 */
+.middleware-section-title {
+    font-weight: 500;
 }
 
 .middleware-name {
     color: var(--mud-palette-text-primary);
 }
 
+/* 信息展示中间件样式 */
 .info-display-section-title {
+    font-weight: 500;
     color: var(--mud-palette-primary);
 }
 
 .stats-section-title {
+    font-weight: 500;
     color: var(--mud-palette-info);
+}
+
+.stats-container {
+    padding: 12px;
+    background-color: var(--mud-palette-background-grey);
+    border: 1px solid var(--mud-palette-info);
 }
 
 .stats-item-container {
     flex: 1;
 }
 
+.stats-item-key {
+    color: var(--mud-palette-text-secondary);
+}
+
+.stats-item-value {
+    font-weight: 500;
+    color: var(--mud-palette-text-primary);
+}
+
 /* 异常信息样式 */
 .exception-section-title {
-    color: var(--mud-palette-error);
+    font-weight: 500;
+    color: #f44336;
 }
 
 .exception-text {
-    color: var(--mud-palette-text-secondary);
+    color: #666;
 }
 
 /* 响应式设计 */
@@ -117,4 +168,21 @@
     background-color: var(--mud-palette-action-hover);
 }
 
-/* 使用统一主题中的状态样式 */
+/* 卡片阴影效果 */
+.channel-card:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+    transition: box-shadow 0.3s ease;
+}
+
+/* 异常状态特殊样式 */
+.channel-card.has-exceptions {
+    border-left: 4px solid var(--mud-palette-error);
+}
+
+.channel-card.not-available {
+    border-left: 4px solid var(--mud-palette-warning);
+}
+
+.channel-card.initialized {
+    border-left: 4px solid var(--mud-palette-success);
+}
