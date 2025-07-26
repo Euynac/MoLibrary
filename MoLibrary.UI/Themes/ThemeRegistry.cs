@@ -21,6 +21,7 @@ public static class ThemeRegistry
         RegisterTheme(new ThemeMoLibraryDefault());
         RegisterTheme(new ThemeGlassmorphic());
         RegisterTheme(new ThemeNeonPulse());
+        RegisterTheme(new ThemeFresh());
     }
 
     /// <summary>

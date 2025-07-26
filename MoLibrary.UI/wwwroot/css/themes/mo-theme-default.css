@@ -1,7 +1,11 @@
 /* MoLibrary Default Theme - 合并的日间/夜间模式主题 */
 /* 只包含组件样式，颜色由 MudBlazor 主题系统管理 */
 
-:root {
+/* Default Theme CSS Variables - 明暗模式通用 */
+:root[data-theme="default-light"],
+:root[data-theme="default-dark"],
+.mo-theme-default-light,
+.mo-theme-default-dark {
     /* 共享组件样式变量 */
     /* Button Styles */
     --mo-button-border-radius: 6px;
