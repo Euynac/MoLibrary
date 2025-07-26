@@ -32,7 +32,8 @@
     --mo-dialog-padding: 32px;
     
     --mo-chip-border-radius: 16px;
-    --mo-chip-padding: 4px 12px;
+    --mo-chip-padding: 6px 12px;
+    --mo-chip-height: 32px;
     
     --mo-table-border-radius: 12px;
     
@@ -256,12 +257,17 @@
         border: var(--mo-glass-border-width) solid var(--mo-glass-border) !important;
         border-radius: var(--mo-chip-border-radius) !important;
         padding: var(--mo-chip-padding) !important;
+        height: var(--mo-chip-height) !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        box-sizing: border-box !important;
         transition: all var(--mo-animation-smooth) !important;
         color: var(--mud-palette-text-primary) !important;
     }
     
     .mud-chip:hover {
-        transform: scale(1.05);
+        transform: translateY(-1px);
+        border-radius: var(--mo-chip-border-radius) !important;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
     }
     
@@ -351,6 +357,43 @@
         background: linear-gradient(var(--mud-palette-primary), var(--mud-palette-secondary)) !important;
         border-radius: 10px !important;
         backdrop-filter: blur(5px);
+    }
+    
+    /* Tab styles for glassmorphic theme */
+    .mud-tabs-toolbar {
+        background: var(--mo-background-glass) !important;
+        backdrop-filter: blur(var(--mo-glass-blur));
+        -webkit-backdrop-filter: blur(var(--mo-glass-blur));
+        border-bottom: var(--mo-glass-border-width) solid var(--mo-glass-border) !important;
+    }
+    
+    .mud-tab {
+        background: var(--mo-surface-light) !important;
+        backdrop-filter: blur(var(--mo-glass-blur));
+        -webkit-backdrop-filter: blur(var(--mo-glass-blur));
+        border: var(--mo-glass-border-width) solid var(--mo-glass-border) !important;
+        border-radius: var(--mo-button-border-radius) !important;
+        margin: 4px !important;
+        transition: all var(--mo-animation-smooth) !important;
+        color: var(--mud-palette-text-secondary) !important;
+    }
+    
+    .mud-tab.mud-tab-active {
+        background: var(--mo-button-gradient) !important;
+        color: var(--mud-palette-primary-text) !important;
+        border-radius: var(--mo-button-border-radius) !important;
+        box-shadow: 0 0 10px var(--mud-palette-primary) !important;
+    }
+    
+    .mud-tab:hover {
+        background: var(--mo-hover-overlay) !important;
+        border-radius: var(--mo-button-border-radius) !important;
+        transform: translateY(-1px);
+    }
+    
+    .mud-tab.mud-tab-active:hover {
+        border-radius: var(--mo-button-border-radius) !important;
+        box-shadow: var(--mo-hover-glow) !important;
     }
     
     /* Glow Effects for Focus States */

@@ -28,6 +28,7 @@ public class ThemeMudBlazorDefault : IThemeProvider
         DrawerBackground = "#ffffff",
         GrayLight = "#e8e8e8",
         GrayLighter = "#f9f9f9",
+
     };
 
     private readonly PaletteDark _darkPalette = new()
