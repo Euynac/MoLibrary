@@ -1,0 +1,530 @@
+/* ============================================
+   MoLibrary Fresh Theme - 小清新主题样式
+   清爽、简洁、柔和的视觉体验
+   ============================================ */
+
+/* 主题特定 CSS 变量 */
+:root[data-theme="fresh-light"],
+.mo-theme-fresh-light {
+    /* 圆角设计 - 柔和圆润 */
+    --mo-button-border-radius: 16px;
+    --mo-button-padding-x: 20px;
+    --mo-button-padding-y: 10px;
+    --mo-button-font-weight: 500;
+    --mo-button-box-shadow: 0 2px 8px rgba(0, 200, 150, 0.1);
+    --mo-button-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    --mo-card-border-radius: 20px;
+    --mo-card-padding: 28px;
+    --mo-card-box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+    
+    --mo-input-border-radius: 12px;
+    --mo-input-padding: 14px 18px;
+    --mo-input-border-width: 2px;
+    
+    --mo-dialog-border-radius: 24px;
+    --mo-dialog-padding: 32px;
+    
+    --mo-chip-border-radius: 20px;
+    --mo-chip-padding: 6px 16px;
+    
+    /* 过渡动画 - 轻柔流畅 */
+    --mo-transition-fast: 200ms;
+    --mo-transition-normal: 350ms;
+    --mo-transition-slow: 500ms;
+    --mo-animation-smooth: 450ms;
+    --mo-animation-bounce: 650ms;
+    
+    /* 间距系统 */
+    --mo-spacing-xs: 4px;
+    --mo-spacing-sm: 8px;
+    --mo-spacing-md: 16px;
+    --mo-spacing-lg: 24px;
+    --mo-spacing-xl: 32px;
+    
+    /* 清新特效 */
+    --mo-fresh-hover-scale: 1.02;
+    --mo-fresh-hover-shadow: 0 6px 20px rgba(0, 200, 150, 0.15);
+    --mo-fresh-focus-shadow: 0 0 0 3px rgba(0, 200, 150, 0.2);
+    --mo-fresh-gradient: linear-gradient(135deg, var(--mud-palette-primary) 0%, #00e5a0 100%);
+    --mo-fresh-gradient-secondary: linear-gradient(135deg, var(--mud-palette-secondary) 0%, #ffb3ba 100%);
+}
+
+:root[data-theme="fresh-dark"],
+.mo-theme-fresh-dark {
+    /* 暗色模式调整 */
+    --mo-button-border-radius: 16px;
+    --mo-button-padding-x: 20px;
+    --mo-button-padding-y: 10px;
+    --mo-button-font-weight: 500;
+    --mo-button-box-shadow: 0 2px 8px rgba(0, 229, 160, 0.2);
+    --mo-button-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    --mo-card-border-radius: 20px;
+    --mo-card-padding: 28px;
+    --mo-card-box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    
+    --mo-input-border-radius: 12px;
+    --mo-input-padding: 14px 18px;
+    --mo-input-border-width: 2px;
+    
+    --mo-dialog-border-radius: 24px;
+    --mo-dialog-padding: 32px;
+    
+    --mo-chip-border-radius: 20px;
+    --mo-chip-padding: 6px 16px;
+    
+    /* 过渡动画 */
+    --mo-transition-fast: 200ms;
+    --mo-transition-normal: 350ms;
+    --mo-transition-slow: 500ms;
+    --mo-animation-smooth: 450ms;
+    --mo-animation-bounce: 650ms;
+    
+    /* 间距系统 */
+    --mo-spacing-xs: 4px;
+    --mo-spacing-sm: 8px;
+    --mo-spacing-md: 16px;
+    --mo-spacing-lg: 24px;
+    --mo-spacing-xl: 32px;
+    
+    /* 暗色清新特效 */
+    --mo-fresh-hover-scale: 1.02;
+    --mo-fresh-hover-shadow: 0 6px 20px rgba(0, 229, 160, 0.25);
+    --mo-fresh-focus-shadow: 0 0 0 3px rgba(0, 229, 160, 0.3);
+    --mo-fresh-gradient: linear-gradient(135deg, var(--mud-palette-primary) 0%, #00ffa8 100%);
+    --mo-fresh-gradient-secondary: linear-gradient(135deg, var(--mud-palette-secondary) 0%, #ffc4ca 100%);
+}
+
+/* 通用样式（明暗模式共享） */
+.mo-theme-fresh-light,
+.mo-theme-fresh-dark {
+    /* 全局过渡效果 */
+    transition: background-color var(--mo-transition-normal) ease,
+                color var(--mo-transition-normal) ease;
+}
+
+/* 背景装饰 */
+.mo-theme-fresh-light::before {
+    content: '';
+    position: fixed;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at 20% 80%, rgba(0, 200, 150, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 80% 20%, rgba(255, 138, 149, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 40% 40%, rgba(133, 215, 255, 0.05) 0%, transparent 40%);
+    pointer-events: none;
+    z-index: -1;
+}
+
+.mo-theme-fresh-dark::before {
+    content: '';
+    position: fixed;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at 20% 80%, rgba(0, 229, 160, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 80% 20%, rgba(255, 159, 168, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 40% 40%, rgba(154, 227, 255, 0.08) 0%, transparent 40%);
+    pointer-events: none;
+    z-index: -1;
+}
+
+/* 按钮样式 */
+.mo-theme-fresh-light .mud-button,
+.mo-theme-fresh-dark .mud-button {
+    border-radius: var(--mo-button-border-radius) !important;
+    padding: var(--mo-button-padding-y) var(--mo-button-padding-x) !important;
+    font-weight: var(--mo-button-font-weight) !important;
+    transition: var(--mo-button-transition) !important;
+    text-transform: none !important;
+}
+
+.mo-theme-fresh-light .mud-button:hover,
+.mo-theme-fresh-dark .mud-button:hover {
+    transform: translateY(-2px) scale(var(--mo-fresh-hover-scale));
+    box-shadow: var(--mo-fresh-hover-shadow) !important;
+}
+
+.mo-theme-fresh-light .mud-button:active,
+.mo-theme-fresh-dark .mud-button:active {
+    transform: translateY(0) scale(0.98);
+}
+
+/* 主要按钮渐变效果 */
+.mo-theme-fresh-light .mud-button-filled-primary,
+.mo-theme-fresh-dark .mud-button-filled-primary {
+    background: var(--mo-fresh-gradient) !important;
+    box-shadow: var(--mo-button-box-shadow) !important;
+}
+
+.mo-theme-fresh-light .mud-button-filled-secondary,
+.mo-theme-fresh-dark .mud-button-filled-secondary {
+    background: var(--mo-fresh-gradient-secondary) !important;
+}
+
+/* 轮廓按钮 */
+.mo-theme-fresh-light .mud-button-outlined,
+.mo-theme-fresh-dark .mud-button-outlined {
+    border-width: 2px !important;
+    backdrop-filter: blur(10px);
+}
+
+.mo-theme-fresh-light .mud-button-outlined:hover,
+.mo-theme-fresh-dark .mud-button-outlined:hover {
+    background-color: var(--mud-palette-action-default-hover) !important;
+}
+
+/* 文本按钮 */
+.mo-theme-fresh-light .mud-button-text:hover,
+.mo-theme-fresh-dark .mud-button-text:hover {
+    background-color: transparent !important;
+    color: var(--mud-palette-primary) !important;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+}
+
+/* 卡片样式 */
+.mo-theme-fresh-light .mud-card,
+.mo-theme-fresh-dark .mud-card {
+    border-radius: var(--mo-card-border-radius) !important;
+    box-shadow: var(--mo-card-box-shadow) !important;
+    transition: all var(--mo-transition-normal) cubic-bezier(0.4, 0, 0.2, 1) !important;
+    overflow: hidden;
+}
+
+.mo-theme-fresh-light .mud-card {
+    border: 1px solid rgba(0, 200, 150, 0.1);
+}
+
+.mo-theme-fresh-dark .mud-card {
+    border: 1px solid rgba(0, 229, 160, 0.15);
+}
+
+.mo-theme-fresh-light .mud-card:hover,
+.mo-theme-fresh-dark .mud-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+}
+
+.mo-theme-fresh-light .mud-card-content,
+.mo-theme-fresh-dark .mud-card-content {
+    padding: var(--mo-card-padding) !important;
+}
+
+/* 输入框样式 */
+.mo-theme-fresh-light .mud-input-outlined .mud-input-outlined-border,
+.mo-theme-fresh-dark .mud-input-outlined .mud-input-outlined-border {
+    border-radius: var(--mo-input-border-radius) !important;
+    border-width: var(--mo-input-border-width) !important;
+    transition: all var(--mo-transition-fast) ease !important;
+}
+
+.mo-theme-fresh-light .mud-input-outlined:hover .mud-input-outlined-border,
+.mo-theme-fresh-dark .mud-input-outlined:hover .mud-input-outlined-border {
+    border-color: var(--mud-palette-primary) !important;
+}
+
+.mo-theme-fresh-light .mud-input-outlined.mud-input-focused .mud-input-outlined-border,
+.mo-theme-fresh-dark .mud-input-outlined.mud-input-focused .mud-input-outlined-border {
+    border-color: var(--mud-palette-primary) !important;
+    box-shadow: var(--mo-fresh-focus-shadow) !important;
+}
+
+/* 选择框样式 */
+.mo-theme-fresh-light .mud-select,
+.mo-theme-fresh-dark .mud-select {
+    border-radius: var(--mo-input-border-radius) !important;
+}
+
+.mo-theme-fresh-light .mud-select .mud-input-outlined-border,
+.mo-theme-fresh-dark .mud-select .mud-input-outlined-border {
+    border-radius: var(--mo-input-border-radius) !important;
+}
+
+/* 芯片样式 */
+.mo-theme-fresh-light .mud-chip,
+.mo-theme-fresh-dark .mud-chip {
+    border-radius: var(--mo-chip-border-radius) !important;
+    padding: var(--mo-chip-padding) !important;
+    transition: all var(--mo-transition-fast) ease !important;
+}
+
+.mo-theme-fresh-light .mud-chip:hover,
+.mo-theme-fresh-dark .mud-chip:hover {
+    transform: scale(1.05);
+}
+
+/* 对话框样式 */
+.mo-theme-fresh-light .mud-dialog,
+.mo-theme-fresh-dark .mud-dialog {
+    border-radius: var(--mo-dialog-border-radius) !important;
+    overflow: hidden;
+}
+
+.mo-theme-fresh-light .mud-dialog-content,
+.mo-theme-fresh-dark .mud-dialog-content {
+    padding: var(--mo-dialog-padding) !important;
+}
+
+/* 表格样式 */
+.mo-theme-fresh-light .mud-table,
+.mo-theme-fresh-dark .mud-table {
+    border-radius: var(--mo-card-border-radius) !important;
+    overflow: hidden;
+}
+
+.mo-theme-fresh-light .mud-table-container,
+.mo-theme-fresh-dark .mud-table-container {
+    border-radius: var(--mo-card-border-radius) !important;
+}
+
+.mo-theme-fresh-light .mud-table-row:hover,
+.mo-theme-fresh-dark .mud-table-row:hover {
+    background-color: var(--mud-palette-table-hover) !important;
+}
+
+/* 进度条样式 */
+.mo-theme-fresh-light .mud-progress-linear,
+.mo-theme-fresh-dark .mud-progress-linear {
+    height: 6px !important;
+    border-radius: 3px !important;
+    overflow: hidden;
+}
+
+.mo-theme-fresh-light .mud-progress-linear .mud-progress-linear-bar,
+.mo-theme-fresh-dark .mud-progress-linear .mud-progress-linear-bar {
+    background: var(--mo-fresh-gradient) !important;
+}
+
+/* 圆形进度条 */
+.mo-theme-fresh-light .mud-progress-circular circle,
+.mo-theme-fresh-dark .mud-progress-circular circle {
+    stroke-linecap: round !important;
+}
+
+/* 开关样式 */
+.mo-theme-fresh-light .mud-switch-track,
+.mo-theme-fresh-dark .mud-switch-track {
+    border-radius: 20px !important;
+}
+
+.mo-theme-fresh-light .mud-switch-button,
+.mo-theme-fresh-dark .mud-switch-button {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+.mo-theme-fresh-light .mud-switch.mud-checked .mud-switch-track,
+.mo-theme-fresh-dark .mud-switch.mud-checked .mud-switch-track {
+    background: var(--mo-fresh-gradient) !important;
+}
+
+/* 标签页样式 */
+.mo-theme-fresh-light .mud-tabs,
+.mo-theme-fresh-dark .mud-tabs {
+    border-radius: var(--mo-input-border-radius) !important;
+}
+
+.mo-theme-fresh-light .mud-tab,
+.mo-theme-fresh-dark .mud-tab {
+    border-radius: var(--mo-input-border-radius) var(--mo-input-border-radius) 0 0 !important;
+    transition: all var(--mo-transition-fast) ease !important;
+}
+
+.mo-theme-fresh-light .mud-tab:hover,
+.mo-theme-fresh-dark .mud-tab:hover {
+    background-color: var(--mud-palette-action-default-hover) !important;
+}
+
+.mo-theme-fresh-light .mud-tab.mud-tab-active,
+.mo-theme-fresh-dark .mud-tab.mud-tab-active {
+    background-color: var(--mud-palette-primary) !important;
+    color: var(--mud-palette-primary-text) !important;
+}
+
+/* 工具提示样式 */
+.mo-theme-fresh-light .mud-tooltip,
+.mo-theme-fresh-dark .mud-tooltip {
+    border-radius: var(--mo-input-border-radius) !important;
+    padding: 8px 12px !important;
+    font-size: 0.875rem !important;
+}
+
+/* 快餐栏样式 */
+.mo-theme-fresh-light .mud-snackbar,
+.mo-theme-fresh-dark .mud-snackbar {
+    border-radius: var(--mo-button-border-radius) !important;
+}
+
+/* 导航抽屉样式 */
+.mo-theme-fresh-light .mud-drawer .mud-drawer-content,
+.mo-theme-fresh-dark .mud-drawer .mud-drawer-content {
+    padding: var(--mo-spacing-lg) !important;
+}
+
+.mo-theme-fresh-light .mud-navmenu .mud-nav-item,
+.mo-theme-fresh-dark .mud-navmenu .mud-nav-item {
+    border-radius: var(--mo-input-border-radius) !important;
+    margin: var(--mo-spacing-xs) var(--mo-spacing-sm) !important;
+    transition: all var(--mo-transition-fast) ease !important;
+}
+
+.mo-theme-fresh-light .mud-navmenu .mud-nav-item:hover,
+.mo-theme-fresh-dark .mud-navmenu .mud-nav-item:hover {
+    background-color: var(--mud-palette-action-default-hover) !important;
+    transform: translateX(4px);
+}
+
+/* 应用栏样式 */
+.mo-theme-fresh-light .mud-appbar,
+.mo-theme-fresh-dark .mud-appbar {
+    backdrop-filter: blur(10px);
+    background-color: rgba(var(--mud-palette-appbar-background-rgb), 0.9) !important;
+}
+
+/* 浮动动作按钮 */
+.mo-theme-fresh-light .mud-fab,
+.mo-theme-fresh-dark .mud-fab {
+    border-radius: 50% !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
+    transition: all var(--mo-transition-normal) cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.mo-theme-fresh-light .mud-fab:hover,
+.mo-theme-fresh-dark .mud-fab:hover {
+    transform: scale(1.1) rotate(15deg);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* 图标样式 */
+.mo-theme-fresh-light .mud-icon-button:hover,
+.mo-theme-fresh-dark .mud-icon-button:hover {
+    background-color: var(--mud-palette-action-default-hover) !important;
+    transform: scale(1.1);
+}
+
+/* 分割线样式 */
+.mo-theme-fresh-light .mud-divider,
+.mo-theme-fresh-dark .mud-divider {
+    background: linear-gradient(to right, transparent, var(--mud-palette-divider), transparent) !important;
+}
+
+/* 面包屑样式 */
+.mo-theme-fresh-light .mud-breadcrumbs li:not(:last-child)::after,
+.mo-theme-fresh-dark .mud-breadcrumbs li:not(:last-child)::after {
+    content: "›";
+    margin: 0 var(--mo-spacing-sm);
+    color: var(--mud-palette-text-secondary);
+}
+
+/* 滚动条样式 */
+.mo-theme-fresh-light ::-webkit-scrollbar,
+.mo-theme-fresh-dark ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.mo-theme-fresh-light ::-webkit-scrollbar-track {
+    background: rgba(0, 200, 150, 0.05);
+    border-radius: 5px;
+}
+
+.mo-theme-fresh-dark ::-webkit-scrollbar-track {
+    background: rgba(0, 229, 160, 0.1);
+    border-radius: 5px;
+}
+
+.mo-theme-fresh-light ::-webkit-scrollbar-thumb {
+    background: rgba(0, 200, 150, 0.3);
+    border-radius: 5px;
+    transition: background var(--mo-transition-fast) ease;
+}
+
+.mo-theme-fresh-dark ::-webkit-scrollbar-thumb {
+    background: rgba(0, 229, 160, 0.4);
+    border-radius: 5px;
+    transition: background var(--mo-transition-fast) ease;
+}
+
+.mo-theme-fresh-light ::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 200, 150, 0.5);
+}
+
+.mo-theme-fresh-dark ::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 229, 160, 0.6);
+}
+
+/* 动画效果 */
+@keyframes mo-fresh-pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(0, 200, 150, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(0, 200, 150, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(0, 200, 150, 0);
+    }
+}
+
+@keyframes mo-fresh-float {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+/* 响应式调整 */
+@media (max-width: 960px) {
+    .mo-theme-fresh-light,
+    .mo-theme-fresh-dark {
+        --mo-card-padding: 20px;
+        --mo-dialog-padding: 24px;
+        --mo-button-padding-x: 16px;
+        --mo-button-padding-y: 8px;
+    }
+}
+
+/* 无障碍支持 */
+@media (prefers-reduced-motion: reduce) {
+    .mo-theme-fresh-light *,
+    .mo-theme-fresh-dark * {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+/* 性能优化 */
+.mo-theme-fresh-light .mud-table *,
+.mo-theme-fresh-light .mud-data-grid *,
+.mo-theme-fresh-light .mud-treeview *,
+.mo-theme-fresh-dark .mud-table *,
+.mo-theme-fresh-dark .mud-data-grid *,
+.mo-theme-fresh-dark .mud-treeview * {
+    transition: none !important;
+}
+
+/* 实用工具类 */
+.mo-fresh-gradient-text {
+    background: var(--mo-fresh-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.mo-fresh-shadow {
+    box-shadow: var(--mo-fresh-hover-shadow) !important;
+}
+
+.mo-fresh-pulse {
+    animation: mo-fresh-pulse 2s infinite;
+}
+
+.mo-fresh-float {
+    animation: mo-fresh-float 3s ease-in-out infinite;
+}

@@ -1,7 +1,11 @@
 /* MoLibrary Glassmorphic Theme - 现代化毛玻璃效果 */
 /* 只包含组件样式，颜色由 MudBlazor 主题系统管理 */
 
-:root {
+/* Glassmorphic Theme CSS Variables - 明暗模式通用 */
+:root[data-theme="glassmorphic-light"],
+:root[data-theme="glassmorphic-dark"],
+.mo-theme-glassmorphic-light,
+.mo-theme-glassmorphic-dark {
     /* 毛玻璃效果变量 */
     --mo-glass-blur: 16px;
     --mo-glass-blur-heavy: 24px;
