@@ -20,6 +20,7 @@ public static class ThemeRegistry
         RegisterTheme(new ThemeMudBlazorDefault());
         RegisterTheme(new ThemeMoLibraryDefault());
         RegisterTheme(new ThemeGlassmorphic());
+        RegisterTheme(new ThemeNeonPulse());
     }
 
     /// <summary>
