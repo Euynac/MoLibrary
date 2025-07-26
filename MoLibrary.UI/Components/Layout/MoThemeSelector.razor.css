@@ -1,0 +1,43 @@
+/* Theme Selector Component Styles */
+
+::deep .theme-card {
+    border-radius: 8px !important;
+    transition: all 0.3s ease !important;
+    border: 2px solid transparent !important;
+}
+
+::deep .theme-card:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+::deep .theme-card.selected {
+    border-color: var(--mud-palette-primary) !important;
+    background-color: rgba(25, 118, 210, 0.04) !important;
+}
+
+::deep .theme-card.selected:hover {
+    background-color: rgba(25, 118, 210, 0.08) !important;
+}
+
+/* Dark mode adjustments */
+::deep .mo-theme-default-dark .theme-card.selected,
+::deep .mo-theme-glassmorphic-dark .theme-card.selected,
+::deep .mo-theme-mudblazor-dark .theme-card.selected {
+    background-color: rgba(144, 202, 249, 0.08) !important;
+}
+
+::deep .mo-theme-default-dark .theme-card.selected:hover,
+::deep .mo-theme-glassmorphic-dark .theme-card.selected:hover,
+::deep .mo-theme-mudblazor-dark .theme-card.selected:hover {
+    background-color: rgba(144, 202, 249, 0.12) !important;
+}
+
+/* Ensure proper spacing and alignment */
+::deep .mud-card-content {
+    padding: 12px !important;
+}
+
+::deep .flex-grow-1 {
+    flex-grow: 1 !important;
+}

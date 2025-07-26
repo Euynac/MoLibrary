@@ -2,23 +2,40 @@
 @inject MoThemeService ThemeService
 
 <MudMenu Icon="@Icons.Material.Filled.Palette" Color="Color.Inherit" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
-    <MudStack Spacing="2" Class="pa-4" Style="min-width: 280px;">
-        <MudText Typo="Typo.h6" Class="mb-2">主题设置</MudText>
+    <MudStack Spacing="3" Class="pa-4" Style="min-width: 320px;">
+        <MudText Typo="Typo.h6" Class="mb-2">
+            <MudIcon Icon="@Icons.Material.Filled.Palette" Class="mr-2" Size="Size.Small" />
+            主题设置
+        </MudText>
         
         <MudDivider Class="mb-2" />
         
-        <MudText Typo="Typo.subtitle2" Class="mb-1">选择主题</MudText>
-        <MudRadioGroup T="string" Value="@ThemeService.CurrentThemeName" ValueChanged="OnThemeChanged">
+        <MudText Typo="Typo.subtitle2" Class="mb-2">选择主题风格</MudText>
+        
+        <!-- 主题选择卡片式布局 -->
+        <MudStack Spacing="2">
             @foreach (var theme in MoThemeService.AvailableThemes)
             {
-                <MudRadio Value="@theme.Name" Color="Color.Primary">
-                    <MudStack Spacing="0">
-                        <MudText Typo="Typo.body2">@theme.DisplayName</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@theme.Description</MudText>
-                    </MudStack>
-                </MudRadio>
+                <MudCard Elevation="@(ThemeService.CurrentThemeName == theme.Name ? 4 : 1)" 
+                         Class="@GetThemeCardClass(theme.Name)" 
+                         Style="cursor: pointer; transition: all 0.3s ease;"
+                         @onclick="() => OnThemeChanged(theme.Name)">
+                    <MudCardContent Class="pa-3">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudRadio T="string" Value="@theme.Name" GroupValue="@ThemeService.CurrentThemeName" Color="Color.Primary" ReadOnly="true" />
+                            <MudStack Spacing="0" Class="flex-grow-1">
+                                <MudText Typo="Typo.body2" Style="font-weight: 500;">@theme.DisplayName</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@theme.Description</MudText>
+                            </MudStack>
+                            @if (ThemeService.CurrentThemeName == theme.Name)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" Size="Size.Small" />
+                            }
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
             }
-        </MudRadioGroup>
+        </MudStack>
         
         <MudDivider Class="my-2" />
 
@@ -46,5 +63,15 @@
         var current = MoThemeService.AvailableThemes.FirstOrDefault(t => t.Name == ThemeService.CurrentThemeName);
         var mode = ThemeService.IsDarkMode ? "深色" : "浅色";
         return $"{current.DisplayName} - {mode}";
+    }
+    
+    private string GetThemeCardClass(string themeName)
+    {
+        var baseClass = "theme-card";
+        if (ThemeService.CurrentThemeName == themeName)
+        {
+            baseClass += " selected";
+        }
+        return baseClass;
     }
 }
