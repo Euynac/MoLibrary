@@ -106,28 +106,15 @@
         border-radius: var(--mo-chip-border-radius) !important;
         padding: var(--mo-chip-padding) !important;
         height: var(--mo-chip-height) !important;
-        max-width: 100% !important;
         display: inline-flex !important;
         align-items: center !important;
         box-sizing: border-box !important;
         transition: all var(--mo-transition-normal) !important;
-        overflow: hidden !important;
-        white-space: nowrap !important;
-        text-overflow: ellipsis !important;
     }
     
     .mud-chip:hover {
         transform: translateY(-1px);
         border-radius: var(--mo-chip-border-radius) !important;
-    }
-    
-    /* 修复chip在容器中的换行显示 */
-    .mud-chip-group,
-    .mud-card .mud-chip-group {
-        display: flex !important;
-        flex-wrap: wrap !important;
-        gap: var(--mo-spacing-xs) !important;
-        overflow: hidden !important;
     }
     
     .mud-dialog {

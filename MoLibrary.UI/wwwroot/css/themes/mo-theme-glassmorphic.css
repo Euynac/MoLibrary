@@ -1,115 +1,90 @@
-/* MoLibrary Glassmorphic Theme - 真正的毛玻璃效果主题 */
-/* 只包含组件样式和毛玻璃效果，颜色由 MudBlazor 主题系统管理 */
+/* MoLibrary Glassmorphic Theme - 现代化毛玻璃效果 */
+/* 只包含组件样式，颜色由 MudBlazor 主题系统管理 */
 
 :root {
-    /* Glass Effect Variables */
-    --mo-glass-blur: 12px;
-    --mo-glass-blur-heavy: 20px;
+    /* 毛玻璃效果变量 */
+    --mo-glass-blur: 16px;
+    --mo-glass-blur-heavy: 24px;
+    --mo-glass-blur-light: 8px;
     --mo-glass-opacity: 0.85;
     --mo-glass-border-width: 1px;
     
-    /* Animation Durations */
-    --mo-animation-smooth: 400ms;
-    --mo-animation-bounce: 600ms;
-    --mo-animation-glow: 2s;
-    
-    /* 组件样式变量 */
-    --mo-button-border-radius: 12px;
-    --mo-button-padding-x: 16px;
-    --mo-button-padding-y: 8px;
+    /* 组件样式变量 - 圆润现代风格 */
+    --mo-button-border-radius: 16px;
+    --mo-button-padding-x: 24px;
+    --mo-button-padding-y: 12px;
     --mo-button-font-weight: 500;
     --mo-button-text-transform: none;
     --mo-button-transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     
-    --mo-card-border-radius: 16px;
-    --mo-card-padding: 24px;
+    --mo-card-border-radius: 24px;
+    --mo-card-padding: 32px;
     
-    --mo-input-border-radius: 12px;
-    --mo-input-padding: 12px 16px;
+    --mo-input-border-radius: 16px;
+    --mo-input-padding: 16px 20px;
     --mo-input-border-width: 2px;
     
-    --mo-dialog-border-radius: 20px;
-    --mo-dialog-padding: 32px;
+    --mo-dialog-border-radius: 32px;
+    --mo-dialog-padding: 40px;
     
-    --mo-chip-border-radius: 16px;
-    --mo-chip-padding: 6px 12px;
-    --mo-chip-height: 32px;
+    --mo-chip-border-radius: 20px;
+    --mo-chip-padding: 8px 16px;
+    --mo-chip-height: 36px;
     
-    --mo-table-border-radius: 12px;
+    --mo-table-border-radius: 20px;
     
-    /* 全局间距 */
-    --mo-spacing-xs: 4px;
-    --mo-spacing-sm: 8px;
-    --mo-spacing-md: 16px;
-    --mo-spacing-lg: 24px;
-    --mo-spacing-xl: 32px;
+    /* 间距变量 */
+    --mo-spacing-xs: 6px;
+    --mo-spacing-sm: 12px;
+    --mo-spacing-md: 20px;
+    --mo-spacing-lg: 32px;
+    --mo-spacing-xl: 48px;
+    
+    /* 动画变量 */
+    --mo-transition-fast: 200ms;
+    --mo-transition-normal: 400ms;
+    --mo-transition-slow: 600ms;
+    --mo-animation-smooth: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    --mo-animation-bounce: 600ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    
+    /* 阴影变量 */
+    --mo-shadow-glass-light: 0 8px 32px rgba(31, 38, 135, 0.37);
+    --mo-shadow-glass-hover: 0 12px 40px rgba(31, 38, 135, 0.5);
+    --mo-shadow-glow: 0 0 20px rgba(102, 126, 234, 0.3);
+    --mo-shadow-glow-intense: 0 0 30px rgba(102, 126, 234, 0.5);
 }
 
-/* Light Mode Glassmorphic Theme */
+/* Light Theme Variables */
 :root[data-theme="glassmorphic-light"],
 .mo-theme-glassmorphic-light {
-    /* 毛玻璃背景效果变量 */
     --mo-background-glass: rgba(255, 255, 255, 0.25);
-    --mo-background-overlay: rgba(255, 255, 255, 0.3);
-    
-    /* Glass Effects */
-    --mo-glass-border: rgba(255, 255, 255, 0.2);
-    --mo-glass-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
-    --mo-glass-inner-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3);
-    
-    /* Surface Colors */
-    --mo-surface-light: rgba(255, 255, 255, 0.2);
-    --mo-surface-medium: rgba(255, 255, 255, 0.3);
-    --mo-surface-heavy: rgba(255, 255, 255, 0.4);
-    
-    /* Hover States */
-    --mo-hover-overlay: rgba(255, 255, 255, 0.2);
-    --mo-hover-glow: 0 0 20px var(--mud-palette-primary);
-    
-    /* Component Specific */
-    --mo-button-gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1));
-    --mo-card-gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.1));
-    --mo-header-gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1));
+    --mo-background-glass-hover: rgba(255, 255, 255, 0.35);
+    --mo-background-glass-card: rgba(255, 255, 255, 0.2);
+    --mo-glass-border: rgba(255, 255, 255, 0.18);
+    --mo-glass-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+    --mo-button-gradient: linear-gradient(135deg, rgba(102, 126, 234, 0.8), rgba(240, 147, 251, 0.8));
+    --mo-button-gradient-hover: linear-gradient(135deg, rgba(102, 126, 234, 0.9), rgba(240, 147, 251, 0.9));
+    --mo-hover-glow: 0 0 20px rgba(102, 126, 234, 0.4);
+    --mo-text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
-/* Dark Mode Glassmorphic Theme */
+/* Dark Theme Variables */
 :root[data-theme="glassmorphic-dark"],
 .mo-theme-glassmorphic-dark {
-    /* 毛玻璃背景效果变量 */
-    --mo-background-glass: rgba(13, 17, 40, 0.4);
-    --mo-background-overlay: rgba(13, 17, 40, 0.6);
-    
-    /* Glass Effects */
-    --mo-glass-border: rgba(255, 255, 255, 0.1);
-    --mo-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
-    --mo-glass-inner-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
-    
-    /* Surface Colors */
-    --mo-surface-light: rgba(255, 255, 255, 0.05);
-    --mo-surface-medium: rgba(255, 255, 255, 0.1);
-    --mo-surface-heavy: rgba(255, 255, 255, 0.15);
-    
-    /* Hover States */
-    --mo-hover-overlay: rgba(0, 212, 255, 0.1);
-    --mo-hover-glow: 0 0 30px var(--mud-palette-primary);
-    
-    /* Component Specific */
-    --mo-button-gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
-    --mo-card-gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
-    --mo-header-gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
-    
-    /* Neon Effects */
-    --mo-neon-text-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
-    --mo-neon-box-shadow: 0 0 20px var(--mud-palette-primary), inset 0 0 20px rgba(0, 212, 255, 0.1);
+    --mo-background-glass: rgba(30, 41, 59, 0.3);
+    --mo-background-glass-hover: rgba(30, 41, 59, 0.4);
+    --mo-background-glass-card: rgba(30, 41, 59, 0.25);
+    --mo-glass-border: rgba(148, 163, 184, 0.2);
+    --mo-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    --mo-button-gradient: linear-gradient(135deg, rgba(0, 212, 255, 0.8), rgba(255, 0, 110, 0.8));
+    --mo-button-gradient-hover: linear-gradient(135deg, rgba(0, 212, 255, 0.9), rgba(255, 0, 110, 0.9));
+    --mo-hover-glow: 0 0 25px rgba(0, 212, 255, 0.5);
+    --mo-text-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+    --mo-neon-text-shadow: 0 0 10px currentColor, 0 0 20px currentColor, 0 0 40px currentColor;
+    --mo-neon-box-shadow: 0 0 20px var(--mud-palette-primary);
 }
 
-/* 设置渐变背景 */
-.mo-theme-glassmorphic-light,
-.mo-theme-glassmorphic-dark {
-    min-height: 100vh;
-}
-
-/* Light Mode 渐变背景 */
+/* 渐变背景 - Light Mode */
 .mo-theme-glassmorphic-light::before {
     content: '';
     position: fixed;
@@ -117,11 +92,13 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #f5576c 75%, #4facfe 100%);
+    background-size: 400% 400%;
+    animation: mo-gradient-shift 15s ease infinite;
     z-index: -10;
 }
 
-/* Dark Mode 渐变背景 */
+/* 渐变背景 - Dark Mode */
 .mo-theme-glassmorphic-dark::before {
     content: '';
     position: fixed;
@@ -129,352 +106,480 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 50%, #0f1419 100%);
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 20%, #15803d 40%, #7c3aed 60%, #e11d48 80%, #0ea5e9 100%);
+    background-size: 400% 400%;
+    animation: mo-gradient-shift 20s ease infinite;
     z-index: -10;
 }
 
-/* Glassmorphic Component Styles */
+/* 渐变动画 */
+@keyframes mo-gradient-shift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+/* 霓虹脉冲动画 */
+@keyframes mo-neon-pulse {
+    0%, 100% { 
+        box-shadow: var(--mo-neon-box-shadow);
+        text-shadow: var(--mo-neon-text-shadow);
+    }
+    50% { 
+        box-shadow: 0 0 40px var(--mud-palette-primary), 0 0 60px var(--mud-palette-primary);
+        text-shadow: 0 0 20px currentColor, 0 0 40px currentColor, 0 0 60px currentColor;
+    }
+}
+
+/* 浮动动画 */
+@keyframes mo-float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-8px); }
+}
+
+/* Light and Dark Theme Styles */
 .mo-theme-glassmorphic-light,
 .mo-theme-glassmorphic-dark {
-    /* Glass Card Effect */
-    .mud-card,
-    .mo-glass-card {
-        background: var(--mo-background-glass) !important;
-        backdrop-filter: blur(var(--mo-glass-blur));
-        -webkit-backdrop-filter: blur(var(--mo-glass-blur));
+    /* 全局毛玻璃效果 */
+    .mud-main-content {
+        backdrop-filter: blur(var(--mo-glass-blur-light));
+        -webkit-backdrop-filter: blur(var(--mo-glass-blur-light));
+    }
+    
+    /* Cards - 毛玻璃卡片 */
+    .mud-card {
+        background: var(--mo-background-glass-card) !important;
+        backdrop-filter: blur(var(--mo-glass-blur)) !important;
+        -webkit-backdrop-filter: blur(var(--mo-glass-blur)) !important;
         border: var(--mo-glass-border-width) solid var(--mo-glass-border) !important;
-        box-shadow: var(--mo-glass-shadow), var(--mo-glass-inner-shadow) !important;
         border-radius: var(--mo-card-border-radius) !important;
+        box-shadow: var(--mo-glass-shadow) !important;
+        transition: var(--mo-animation-smooth) !important;
         position: relative;
         overflow: hidden;
     }
     
-    .mud-card::before,
-    .mo-glass-card::before {
+    .mud-card::before {
         content: '';
         position: absolute;
         top: 0;
         left: 0;
         right: 0;
-        bottom: 0;
-        background: var(--mo-card-gradient);
-        z-index: -1;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+        opacity: 0.8;
     }
     
-    /* Glass Button Effect */
+    .mud-card:hover {
+        background: var(--mo-background-glass-hover) !important;
+        box-shadow: var(--mo-shadow-glass-hover), var(--mo-hover-glow) !important;
+        transform: translateY(-4px) scale(1.02);
+        border-color: var(--mud-palette-primary);
+    }
+    
+    /* Buttons - 渐变毛玻璃按钮 */
     .mud-button {
-        background: var(--mo-surface-light) !important;
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-        border: var(--mo-glass-border-width) solid var(--mo-glass-border) !important;
-        box-shadow: var(--mo-glass-inner-shadow) !important;
         border-radius: var(--mo-button-border-radius) !important;
         padding: var(--mo-button-padding-y) var(--mo-button-padding-x) !important;
         font-weight: var(--mo-button-font-weight) !important;
         text-transform: var(--mo-button-text-transform) !important;
+        transition: var(--mo-button-transition) !important;
+        backdrop-filter: blur(var(--mo-glass-blur-light)) !important;
+        -webkit-backdrop-filter: blur(var(--mo-glass-blur-light)) !important;
         position: relative;
         overflow: hidden;
-        transition: all var(--mo-animation-smooth) cubic-bezier(0.4, 0, 0.2, 1) !important;
-        color: var(--mud-palette-text-primary) !important;
     }
     
     .mud-button-filled {
         background: var(--mo-button-gradient) !important;
-        border: var(--mo-glass-border-width) solid var(--mo-glass-border) !important;
-        box-shadow: 0 4px 15px rgba(103, 126, 234, 0.3), var(--mo-glass-inner-shadow) !important;
-        color: var(--mud-palette-primary-text) !important;
+        border: 1px solid var(--mo-glass-border) !important;
+        box-shadow: var(--mo-glass-shadow), var(--mo-hover-glow) !important;
+        color: white !important;
     }
     
-    .mud-button:hover {
-        transform: translateY(-2px);
-        box-shadow: var(--mo-hover-glow), var(--mo-glass-inner-shadow) !important;
-        background: var(--mo-hover-overlay) !important;
+    .mud-button-filled::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        transition: left 0.5s ease;
     }
     
-    /* Futuristic Input Fields */
-    .mud-input-control {
-        background: var(--mo-surface-light) !important;
-        backdrop-filter: blur(var(--mo-glass-blur));
-        -webkit-backdrop-filter: blur(var(--mo-glass-blur));
-        border-radius: var(--mo-input-border-radius) !important;
-        position: relative;
-        overflow: hidden;
+    .mud-button-filled:hover {
+        background: var(--mo-button-gradient-hover) !important;
+        box-shadow: var(--mo-shadow-glass-hover), var(--mo-hover-glow) !important;
+        transform: translateY(-2px) scale(1.05);
+    }
+    
+    .mud-button-filled:hover::before {
+        left: 100%;
+    }
+    
+    .mud-button-outlined {
+        background: var(--mo-background-glass) !important;
+        border: 2px solid var(--mo-glass-border) !important;
+        backdrop-filter: blur(var(--mo-glass-blur-light)) !important;
+        -webkit-backdrop-filter: blur(var(--mo-glass-blur-light)) !important;
+    }
+    
+    .mud-button-outlined:hover {
+        background: var(--mo-background-glass-hover) !important;
+        border-color: var(--mud-palette-primary) !important;
+        box-shadow: var(--mo-hover-glow) !important;
+        transform: translateY(-1px);
+    }
+    
+    .mud-button-text {
+        backdrop-filter: blur(var(--mo-glass-blur-light)) !important;
+        -webkit-backdrop-filter: blur(var(--mo-glass-blur-light)) !important;
+    }
+    
+    .mud-button-text:hover {
+        background: var(--mo-background-glass) !important;
+        border-radius: var(--mo-button-border-radius) !important;
+    }
+    
+    /* Inputs - 毛玻璃输入框 */
+    .mud-input-outlined {
+        backdrop-filter: blur(var(--mo-glass-blur-light)) !important;
+        -webkit-backdrop-filter: blur(var(--mo-glass-blur-light)) !important;
     }
     
     .mud-input-outlined .mud-input-outlined-border {
-        border: var(--mo-glass-border-width) solid var(--mo-glass-border) !important;
+        border-color: var(--mo-glass-border) !important;
         border-radius: var(--mo-input-border-radius) !important;
-        transition: all var(--mo-animation-smooth) !important;
+        border-width: var(--mo-input-border-width) !important;
+        background: var(--mo-background-glass) !important;
+        backdrop-filter: blur(var(--mo-glass-blur-light)) !important;
+        -webkit-backdrop-filter: blur(var(--mo-glass-blur-light)) !important;
     }
     
     .mud-input-outlined:hover .mud-input-outlined-border {
         border-color: var(--mud-palette-primary) !important;
-        box-shadow: 0 0 0 2px rgba(103, 126, 234, 0.2) !important;
+        box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2) !important;
     }
     
     .mud-input-outlined.mud-input-focused .mud-input-outlined-border {
-        border-width: 2px !important;
         border-color: var(--mud-palette-primary) !important;
-        box-shadow: 0 0 0 4px rgba(103, 126, 234, 0.2) !important;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3) !important;
+        background: var(--mo-background-glass-hover) !important;
     }
     
-    /* Glass Dialog */
+    /* AppBar - 毛玻璃导航栏 */
+    .mud-app-bar {
+        background: var(--mo-background-glass) !important;
+        backdrop-filter: blur(var(--mo-glass-blur)) !important;
+        -webkit-backdrop-filter: blur(var(--mo-glass-blur)) !important;
+        border-bottom: 1px solid var(--mo-glass-border) !important;
+        box-shadow: var(--mo-glass-shadow) !important;
+    }
+    
+    /* Drawer - 毛玻璃侧边栏 */
+    .mud-drawer .mud-drawer-content {
+        background: var(--mo-background-glass) !important;
+        backdrop-filter: blur(var(--mo-glass-blur)) !important;
+        -webkit-backdrop-filter: blur(var(--mo-glass-blur)) !important;
+        border-right: 1px solid var(--mo-glass-border) !important;
+    }
+    
+    /* Dialog - 毛玻璃对话框 */
     .mud-dialog {
-        background: var(--mo-background-overlay) !important;
-        backdrop-filter: blur(var(--mo-glass-blur-heavy));
-        -webkit-backdrop-filter: blur(var(--mo-glass-blur-heavy));
+        background: var(--mo-background-glass-card) !important;
+        backdrop-filter: blur(var(--mo-glass-blur-heavy)) !important;
+        -webkit-backdrop-filter: blur(var(--mo-glass-blur-heavy)) !important;
         border: var(--mo-glass-border-width) solid var(--mo-glass-border) !important;
         border-radius: var(--mo-dialog-border-radius) !important;
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+        box-shadow: var(--mo-shadow-glass-hover) !important;
     }
     
     .mud-dialog-content {
         padding: var(--mo-dialog-padding) !important;
     }
     
-    /* Glass AppBar */
-    .mud-app-bar {
-        background: var(--mo-header-gradient) !important;
-        backdrop-filter: blur(var(--mo-glass-blur-heavy));
-        -webkit-backdrop-filter: blur(var(--mo-glass-blur-heavy));
-        border-bottom: var(--mo-glass-border-width) solid var(--mo-glass-border) !important;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1) !important;
-    }
-    
-    /* Glass Navigation Drawer */
-    .mud-drawer .mud-drawer-content {
-        background: var(--mo-background-glass) !important;
-        backdrop-filter: blur(var(--mo-glass-blur-heavy));
-        -webkit-backdrop-filter: blur(var(--mo-glass-blur-heavy));
-        border-right: var(--mo-glass-border-width) solid var(--mo-glass-border) !important;
-    }
-    
-    /* Modern Chips */
-    .mud-chip {
-        background: var(--mo-surface-medium) !important;
-        backdrop-filter: blur(var(--mo-glass-blur));
-        -webkit-backdrop-filter: blur(var(--mo-glass-blur));
-        border: var(--mo-glass-border-width) solid var(--mo-glass-border) !important;
-        border-radius: var(--mo-chip-border-radius) !important;
-        padding: var(--mo-chip-padding) !important;
-        height: var(--mo-chip-height) !important;
-        display: inline-flex !important;
-        align-items: center !important;
-        box-sizing: border-box !important;
-        transition: all var(--mo-animation-smooth) !important;
-        color: var(--mud-palette-text-primary) !important;
-    }
-    
-    .mud-chip:hover {
-        transform: translateY(-1px);
-        border-radius: var(--mo-chip-border-radius) !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-    }
-    
-    /* Futuristic Tables */
+    /* Tables - 毛玻璃表格 */
     .mud-table {
-        background: var(--mo-background-glass) !important;
-        backdrop-filter: blur(var(--mo-glass-blur));
-        -webkit-backdrop-filter: blur(var(--mo-glass-blur));
-        border: var(--mo-glass-border-width) solid var(--mo-glass-border) !important;
+        background: var(--mo-background-glass-card) !important;
+        backdrop-filter: blur(var(--mo-glass-blur)) !important;
+        -webkit-backdrop-filter: blur(var(--mo-glass-blur)) !important;
         border-radius: var(--mo-table-border-radius) !important;
+        box-shadow: var(--mo-glass-shadow) !important;
+        border: 1px solid var(--mo-glass-border) !important;
+    }
+    
+    .mud-table-row:nth-child(even) {
+        background-color: rgba(255, 255, 255, 0.05) !important;
     }
     
     .mud-table-row:hover {
-        background: var(--mo-hover-overlay) !important;
-    }
-
-    /* Glass Expansion Panels */
-    .mud-expansion-panel {
-        background: var(--mo-surface-light) !important;
-        backdrop-filter: blur(var(--mo-glass-blur));
-        -webkit-backdrop-filter: blur(var(--mo-glass-blur));
-        border: var(--mo-glass-border-width) solid var(--mo-glass-border) !important;
-        margin-bottom: 12px !important;
-        transition: all var(--mo-animation-smooth) !important;
+        background-color: var(--mo-background-glass-hover) !important;
     }
     
-    .mud-expansion-panel:hover {
-        transform: translateX(4px);
+    /* Chips - 毛玻璃标签 */
+    .mud-chip {
+        background: var(--mo-background-glass) !important;
+        backdrop-filter: blur(var(--mo-glass-blur-light)) !important;
+        -webkit-backdrop-filter: blur(var(--mo-glass-blur-light)) !important;
+        border: 1px solid var(--mo-glass-border) !important;
+        border-radius: var(--mo-chip-border-radius) !important;
+        padding: var(--mo-chip-padding) !important;
+        height: var(--mo-chip-height) !important;
+        transition: var(--mo-animation-smooth) !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+    }
+    
+    .mud-chip:hover {
+        background: var(--mo-background-glass-hover) !important;
+        transform: translateY(-2px) scale(1.05);
         box-shadow: var(--mo-glass-shadow) !important;
     }
     
-    /* Modern Progress Indicators */
-    .mud-progress-linear {
-        background: var(--mo-surface-light) !important;
-        backdrop-filter: blur(var(--mo-glass-blur));
-        -webkit-backdrop-filter: blur(var(--mo-glass-blur));
-        border-radius: 8px !important;
-        overflow: hidden;
-    }
-    
-    .mud-progress-linear .mud-progress-linear-bar {
-        background: var(--mo-button-gradient) !important;
-        box-shadow: 0 0 10px var(--mud-palette-primary) !important;
-    }
-    
-    /* Glass Tooltips */
-    .mud-tooltip {
-        background: var(--mo-background-overlay) !important;
-        backdrop-filter: blur(var(--mo-glass-blur-heavy));
-        -webkit-backdrop-filter: blur(var(--mo-glass-blur-heavy));
-        border: var(--mo-glass-border-width) solid var(--mo-glass-border) !important;
-        border-radius: var(--mo-button-border-radius) !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-        color: var(--mud-palette-text-primary) !important;
-    }
-    
-    /* Modern Snackbar */
-    .mud-snackbar {
-        background: var(--mo-background-overlay) !important;
-        backdrop-filter: blur(var(--mo-glass-blur-heavy));
-        -webkit-backdrop-filter: blur(var(--mo-glass-blur-heavy));
-        border: var(--mo-glass-border-width) solid var(--mo-glass-border) !important;
-        border-radius: var(--mo-button-border-radius) !important;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2) !important;
-        color: var(--mud-palette-text-primary) !important;
-    }
-    
-    /* Glass Popover */
-    .mud-popover {
-        background: var(--mo-background-overlay) !important;
-        backdrop-filter: blur(var(--mo-glass-blur-heavy));
-        -webkit-backdrop-filter: blur(var(--mo-glass-blur-heavy));
-        border: var(--mo-glass-border-width) solid var(--mo-glass-border) !important;
-        border-radius: var(--mo-card-border-radius) !important;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.15) !important;
-    }
-    
+    /* Popovers and Menus - 毛玻璃弹出框 */
+    .mud-popover,
     .mud-menu {
-        background: var(--mo-background-overlay) !important;
-        backdrop-filter: blur(var(--mo-glass-blur-heavy));
-        -webkit-backdrop-filter: blur(var(--mo-glass-blur-heavy));
+        background: var(--mo-background-glass-card) !important;
+        backdrop-filter: blur(var(--mo-glass-blur-heavy)) !important;
+        -webkit-backdrop-filter: blur(var(--mo-glass-blur-heavy)) !important;
+        border: 1px solid var(--mo-glass-border) !important;
         border-radius: var(--mo-card-border-radius) !important;
+        box-shadow: var(--mo-shadow-glass-hover) !important;
     }
     
-    /* Futuristic Scrollbar */
-    ::-webkit-scrollbar-thumb {
-        background: linear-gradient(var(--mud-palette-primary), var(--mud-palette-secondary)) !important;
-        border-radius: 10px !important;
-        backdrop-filter: blur(5px);
+    /* Tooltips - 毛玻璃提示框 */
+    .mud-tooltip {
+        background: var(--mo-background-glass-card) !important;
+        backdrop-filter: blur(var(--mo-glass-blur)) !important;
+        -webkit-backdrop-filter: blur(var(--mo-glass-blur)) !important;
+        border: 1px solid var(--mo-glass-border) !important;
+        border-radius: var(--mo-button-border-radius) !important;
+        box-shadow: var(--mo-glass-shadow) !important;
     }
     
-    /* Tab styles for glassmorphic theme */
+    /* Snackbars - 毛玻璃通知栏 */
+    .mud-snackbar {
+        background: var(--mo-background-glass-card) !important;
+        backdrop-filter: blur(var(--mo-glass-blur-heavy)) !important;
+        -webkit-backdrop-filter: blur(var(--mo-glass-blur-heavy)) !important;
+        border: 1px solid var(--mo-glass-border) !important;
+        border-radius: var(--mo-button-border-radius) !important;
+        box-shadow: var(--mo-shadow-glass-hover) !important;
+    }
+    
+    /* Tabs - 毛玻璃标签页 */
     .mud-tabs-toolbar {
         background: var(--mo-background-glass) !important;
-        backdrop-filter: blur(var(--mo-glass-blur));
-        -webkit-backdrop-filter: blur(var(--mo-glass-blur));
-        border-bottom: var(--mo-glass-border-width) solid var(--mo-glass-border) !important;
+        backdrop-filter: blur(var(--mo-glass-blur)) !important;
+        -webkit-backdrop-filter: blur(var(--mo-glass-blur)) !important;
+        border-bottom: 1px solid var(--mo-glass-border) !important;
     }
     
     .mud-tab {
-        background: var(--mo-surface-light) !important;
-        backdrop-filter: blur(var(--mo-glass-blur));
-        -webkit-backdrop-filter: blur(var(--mo-glass-blur));
-        border: var(--mo-glass-border-width) solid var(--mo-glass-border) !important;
         border-radius: var(--mo-button-border-radius) !important;
-        margin: 4px !important;
-        transition: all var(--mo-animation-smooth) !important;
-        color: var(--mud-palette-text-secondary) !important;
+        transition: var(--mo-animation-smooth) !important;
+        backdrop-filter: blur(var(--mo-glass-blur-light)) !important;
+        -webkit-backdrop-filter: blur(var(--mo-glass-blur-light)) !important;
     }
     
     .mud-tab.mud-tab-active {
         background: var(--mo-button-gradient) !important;
-        color: var(--mud-palette-primary-text) !important;
-        border-radius: var(--mo-button-border-radius) !important;
-        box-shadow: 0 0 10px var(--mud-palette-primary) !important;
+        border: 1px solid var(--mo-glass-border) !important;
+        box-shadow: var(--mo-hover-glow) !important;
+        color: white !important;
     }
     
     .mud-tab:hover {
-        background: var(--mo-hover-overlay) !important;
-        border-radius: var(--mo-button-border-radius) !important;
+        background: var(--mo-background-glass-hover) !important;
         transform: translateY(-1px);
     }
     
-    .mud-tab.mud-tab-active:hover {
+    /* List Items - 毛玻璃列表项 */
+    .mud-list-item {
         border-radius: var(--mo-button-border-radius) !important;
+        margin: var(--mo-spacing-xs) var(--mo-spacing-sm) !important;
+        transition: var(--mo-animation-smooth) !important;
+        backdrop-filter: blur(var(--mo-glass-blur-light)) !important;
+        -webkit-backdrop-filter: blur(var(--mo-glass-blur-light)) !important;
+    }
+    
+    .mud-list-item:hover {
+        background: var(--mo-background-glass-hover) !important;
+        transform: translateX(4px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    }
+    
+    /* 统一过渡效果 */
+    .mud-button,
+    .mud-card,
+    .mud-chip,
+    .mud-list-item,
+    .mud-input-control,
+    .mud-tab {
+        transition: all var(--mo-animation-smooth) !important;
+    }
+    
+    /* 工具类 */
+    .mo-glass-heavy {
+        backdrop-filter: blur(var(--mo-glass-blur-heavy)) !important;
+        -webkit-backdrop-filter: blur(var(--mo-glass-blur-heavy)) !important;
+    }
+    
+    .mo-glass-light {
+        backdrop-filter: blur(var(--mo-glass-blur-light)) !important;
+        -webkit-backdrop-filter: blur(var(--mo-glass-blur-light)) !important;
+    }
+    
+    .mo-gradient-bg {
+        background: var(--mo-button-gradient) !important;
+    }
+    
+    .mo-glow {
         box-shadow: var(--mo-hover-glow) !important;
     }
     
-    /* Glow Effects for Focus States */
-    *:focus {
-        outline: none !important;
-        box-shadow: 0 0 0 3px rgba(103, 126, 234, 0.3) !important;
+    .mo-float {
+        animation: mo-float 3s ease-in-out infinite;
     }
 }
 
-/* Dark Mode Specific Neon Effects */
+/* Light Theme Specific Styles */
+.mo-theme-glassmorphic-light {
+    /* 明亮模式特殊效果 */
+    .mud-elevation-1,
+    .mud-elevation-2,
+    .mud-elevation-4,
+    .mud-elevation-8 {
+        background: var(--mo-background-glass-card) !important;
+        backdrop-filter: blur(var(--mo-glass-blur)) !important;
+        -webkit-backdrop-filter: blur(var(--mo-glass-blur)) !important;
+        border: 1px solid var(--mo-glass-border) !important;
+    }
+    
+    .mud-elevation-1 {
+        box-shadow: 0 2px 8px rgba(31, 38, 135, 0.2) !important;
+    }
+    
+    .mud-elevation-2 {
+        box-shadow: 0 4px 12px rgba(31, 38, 135, 0.25) !important;
+    }
+    
+    .mud-elevation-4 {
+        box-shadow: 0 8px 20px rgba(31, 38, 135, 0.3) !important;
+    }
+    
+    .mud-elevation-8 {
+        box-shadow: 0 16px 32px rgba(31, 38, 135, 0.35) !important;
+    }
+}
+
+/* Dark Theme Specific Styles - 霓虹发光效果 */
 .mo-theme-glassmorphic-dark {
-    /* Neon Buttons */
-    .mud-button-filled-primary {
-        background: var(--mud-palette-primary) !important;
-        color: var(--mud-palette-primary-text) !important;
-        box-shadow: var(--mo-neon-box-shadow) !important;
-        text-shadow: 0 0 5px rgba(255, 255, 255, 0.5) !important;
+    /* 暗色模式特殊效果 */
+    .mud-elevation-1,
+    .mud-elevation-2,
+    .mud-elevation-4,
+    .mud-elevation-8 {
+        background: var(--mo-background-glass-card) !important;
+        backdrop-filter: blur(var(--mo-glass-blur)) !important;
+        -webkit-backdrop-filter: blur(var(--mo-glass-blur)) !important;
+        border: 1px solid var(--mo-glass-border) !important;
     }
     
+    .mud-elevation-1 {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(148, 163, 184, 0.1) !important;
+    }
+    
+    .mud-elevation-2 {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(148, 163, 184, 0.1) !important;
+    }
+    
+    .mud-elevation-4 {
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(148, 163, 184, 0.1) !important;
+    }
+    
+    .mud-elevation-8 {
+        box-shadow: 0 16px 32px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(148, 163, 184, 0.1) !important;
+    }
+    
+    /* 霓虹按钮效果 */
     .mud-button-filled-primary:hover {
-        animation: mo-neon-pulse var(--mo-animation-glow) ease-in-out infinite;
+        animation: mo-neon-pulse 2s ease-in-out infinite;
+        text-shadow: var(--mo-neon-text-shadow);
     }
     
-    /* Neon Text */
-    .mo-neon-text {
-        color: var(--mud-palette-primary) !important;
-        text-shadow: var(--mo-neon-text-shadow) !important;
+    /* 霓虹文本效果 */
+    .mud-typography-h1,
+    .mud-typography-h2,
+    .mud-typography-h3 {
+        text-shadow: var(--mo-text-shadow);
     }
     
-    /* Glowing Borders */
-    .mo-glow-border {
-        border: 2px solid var(--mud-palette-primary) !important;
-        box-shadow: 0 0 10px var(--mud-palette-primary), inset 0 0 10px rgba(0, 212, 255, 0.2) !important;
+    /* 导航链接霓虹悬停效果 */
+    .mud-nav-link:hover {
+        background: var(--mo-background-glass-hover) !important;
+        border-radius: var(--mo-button-border-radius) !important;
+        box-shadow: inset 0 0 10px rgba(0, 212, 255, 0.2) !important;
+        text-shadow: 0 0 10px currentColor;
+    }
+    
+    /* 表格行霓虹悬停 */
+    .mud-table-row:hover {
+        background: var(--mo-background-glass-hover) !important;
+        box-shadow: inset 0 0 20px rgba(0, 212, 255, 0.1) !important;
     }
 }
 
-/* Animations */
-@keyframes mo-neon-pulse {
-    0%, 100% { 
-        box-shadow: 0 0 20px var(--mud-palette-primary), 
-                    inset 0 0 20px rgba(0, 212, 255, 0.1);
-    }
-    50% { 
-        box-shadow: 0 0 40px var(--mud-palette-primary), 
-                    inset 0 0 30px rgba(0, 212, 255, 0.2);
-    }
-}
-
-/* Responsive Adjustments */
+/* 响应式设计 */
 @media (max-width: 960px) {
     .mo-theme-glassmorphic-light,
     .mo-theme-glassmorphic-dark {
-        --mo-glass-blur: 8px;
-        --mo-glass-blur-heavy: 15px;
+        --mo-glass-blur: 12px;
+        --mo-glass-blur-heavy: 18px;
+        --mo-card-padding: 20px;
+        --mo-dialog-padding: 24px;
+        --mo-button-padding-x: 20px;
+        --mo-button-padding-y: 10px;
     }
 }
 
-/* Performance Optimizations */
+@media (max-width: 600px) {
+    .mo-theme-glassmorphic-light,
+    .mo-theme-glassmorphic-dark {
+        --mo-glass-blur: 10px;
+        --mo-glass-blur-heavy: 15px;
+        --mo-card-padding: 16px;
+        --mo-dialog-padding: 20px;
+        --mo-button-padding-x: 16px;
+        --mo-button-padding-y: 8px;
+        --mo-card-border-radius: 16px;
+        --mo-dialog-border-radius: 20px;
+    }
+}
+
+/* 无障碍支持 */
 @media (prefers-reduced-motion: reduce) {
     .mo-theme-glassmorphic-light *,
     .mo-theme-glassmorphic-dark * {
         animation: none !important;
         transition: none !important;
     }
+    
+    .mo-theme-glassmorphic-light::before,
+    .mo-theme-glassmorphic-dark::before {
+        animation: none !important;
+    }
 }
 
-/* Utility Classes */
-.mo-glass-heavy {
-    backdrop-filter: blur(var(--mo-glass-blur-heavy)) !important;
-    -webkit-backdrop-filter: blur(var(--mo-glass-blur-heavy)) !important;
-}
-
-.mo-glass-light {
-    backdrop-filter: blur(5px) !important;
-    -webkit-backdrop-filter: blur(5px) !important;
-}
-
-.mo-gradient-bg {
-    background: var(--mo-button-gradient) !important;
-}
-
-.mo-glow {
-    box-shadow: var(--mo-hover-glow) !important;
+/* 性能优化 - 避免过渡动画影响性能的元素 */
+.mo-theme-glassmorphic-light .mud-table *,
+.mo-theme-glassmorphic-light .mud-data-grid *,
+.mo-theme-glassmorphic-light .mud-treeview *,
+.mo-theme-glassmorphic-dark .mud-table *,
+.mo-theme-glassmorphic-dark .mud-data-grid *,
+.mo-theme-glassmorphic-dark .mud-treeview *,
+.no-transition,
+.no-transition * {
+    transition: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
 }
