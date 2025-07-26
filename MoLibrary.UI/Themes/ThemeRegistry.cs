@@ -17,9 +17,9 @@ public static class ThemeRegistry
     /// </summary>
     private static void RegisterDefaultThemes()
     {
-        RegisterTheme(new MudBlazorDefaultTheme());
-        RegisterTheme(new MoLibraryDefaultTheme());
-        RegisterTheme(new GlassmorphicTheme());
+        RegisterTheme(new ThemeMudBlazorDefault());
+        RegisterTheme(new ThemeMoLibraryDefault());
+        RegisterTheme(new ThemeGlassmorphic());
     }
 
     /// <summary>

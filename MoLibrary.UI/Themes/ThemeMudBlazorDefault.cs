@@ -5,7 +5,7 @@ namespace MoLibrary.UI.Themes;
 /// <summary>
 /// MudBlazor默认主题 - 完全保持原始MudBlazor风格
 /// </summary>
-public class MudBlazorDefaultTheme : IThemeProvider
+public class ThemeMudBlazorDefault : IThemeProvider
 {
     public string Name => "mudblazor";
     public string DisplayName => "MudBlazor默认主题";

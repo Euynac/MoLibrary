@@ -5,7 +5,7 @@ namespace MoLibrary.UI.Themes;
 /// <summary>
 /// 毛玻璃主题 - 现代化的毛玻璃效果，具有未来感和科技感
 /// </summary>
-public class GlassmorphicTheme : IThemeProvider
+public class ThemeGlassmorphic : IThemeProvider
 {
     public string Name => "glassmorphic";
     public string DisplayName => "毛玻璃主题";

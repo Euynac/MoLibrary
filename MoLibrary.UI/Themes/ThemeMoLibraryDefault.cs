@@ -5,7 +5,7 @@ namespace MoLibrary.UI.Themes;
 /// <summary>
 /// MoLibrary默认主题 - 经典的Material Design风格
 /// </summary>
-public class MoLibraryDefaultTheme : IThemeProvider
+public class ThemeMoLibraryDefault : IThemeProvider
 {
     public string Name => "default";
     public string DisplayName => "默认主题";
