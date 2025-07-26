@@ -6,7 +6,8 @@
       "mcp__microsoft-docs__microsoft_docs_search",
       "Bash(dotnet build)",
       "Bash(dotnet build:*)",
-      "mcp__microsoft_docs_mcp__microsoft_docs_search"
+      "mcp__microsoft_docs_mcp__microsoft_docs_search",
+      "Bash(ls:*)"
     ],
     "deny": []
   }
