@@ -1,157 +1,77 @@
 /* MoLibrary Dark Theme - 深邃紫色风格夜间主题 */
+/* 只包含组件样式，颜色由 MudBlazor 主题系统管理 */
+
 :root[data-theme="default-dark"],
 .mo-theme-default-dark {
-    /* Dark Mode Color Palette - 深邃紫色基调 */
-    --mo-background-default: #0f0f1a;
-    --mo-background-paper: #1a1a2e;
-    --mo-surface: #16213e;
+    /* 组件样式变量 */
+    /* Button Styles */
+    --mo-button-border-radius: 6px;
+    --mo-button-padding-x: 16px;
+    --mo-button-padding-y: 8px;
+    --mo-button-font-weight: 500;
+    --mo-button-text-transform: none;
+    --mo-button-box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    --mo-button-transition: all 0.3s ease;
     
-    /* Text Colors - 增强对比度 */
-    --mo-text-primary: rgba(255, 255, 255, 0.95);
-    --mo-text-secondary: rgba(186, 174, 217, 0.8);
-    --mo-text-disabled: rgba(138, 126, 169, 0.5);
+    /* Card Styles */
+    --mo-card-border-radius: 12px;
+    --mo-card-padding: 24px;
+    --mo-card-box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    --mo-card-border: 1px solid rgba(138, 126, 169, 0.15);
     
-    /* Divider - 紫色调 */
-    --mo-divider: rgba(138, 126, 169, 0.2);
+    /* Input Styles */
+    --mo-input-border-radius: 8px;
+    --mo-input-padding: 12px 16px;
+    --mo-input-border-width: 2px;
     
-    /* Action Colors - 紫色调交互 */
-    --mo-action-hover: rgba(138, 126, 169, 0.12);
-    --mo-action-selected: rgba(138, 126, 169, 0.24);
-    --mo-action-disabled: rgba(138, 126, 169, 0.3);
-    --mo-action-disabled-background: rgba(138, 126, 169, 0.08);
+    /* Dialog Styles */
+    --mo-dialog-border-radius: 16px;
+    --mo-dialog-padding: 32px;
     
-    /* Primary & Secondary - 神秘紫色系 */
-    --mo-primary-main: #b794f6;
-    --mo-primary-light: #d6bcfa;
-    --mo-primary-dark: #9f7aea;
+    /* Chip Styles */
+    --mo-chip-border-radius: 16px;
+    --mo-chip-padding: 4px 12px;
     
-    --mo-secondary-main: #ed64a6;
-    --mo-secondary-light: #f687b3;
-    --mo-secondary-dark: #d53f8c;
+    /* Table Styles */
+    --mo-table-border-radius: 8px;
     
-    /* State Colors - 暗色神秘风格 */
-    --mo-success-main: #68d391;
-    --mo-success-light: #9ae6b4;
-    --mo-success-dark: #48bb78;
+    /* 全局间距 */
+    --mo-spacing-xs: 4px;
+    --mo-spacing-sm: 8px;
+    --mo-spacing-md: 16px;
+    --mo-spacing-lg: 24px;
+    --mo-spacing-xl: 32px;
     
-    --mo-error-main: #fc8181;
-    --mo-error-light: #feb2b2;
-    --mo-error-dark: #e53e3e;
+    /* 动画时长 */
+    --mo-transition-fast: 150ms;
+    --mo-transition-normal: 300ms;
+    --mo-transition-slow: 450ms;
     
-    --mo-warning-main: #f6ad55;
-    --mo-warning-light: #fbd38d;
-    --mo-warning-dark: #ed8936;
-    
-    --mo-info-main: #63b3ed;
-    --mo-info-light: #90cdf4;
-    --mo-info-dark: #4299e1;
-    
-    /* Component Specific - 深邃紫色风格 */
-    --mo-appbar-background: #1a1a2e;
-    --mo-appbar-text: rgba(255, 255, 255, 0.95);
-    
-    --mo-drawer-background: #16213e;
-    --mo-drawer-text: rgba(255, 255, 255, 0.95);
-    
-    --mo-table-hover: rgba(138, 126, 169, 0.12);
-    --mo-table-striped: rgba(138, 126, 169, 0.04);
-    
-    /* Input Field Colors - 紫色调 */
-    --mo-input-border: rgba(138, 126, 169, 0.6);
-    --mo-input-border-hover: rgba(183, 148, 246, 0.8);
-    --mo-input-background: rgba(138, 126, 169, 0.08);
-    
-    /* Elevation - 层次分明的紫色调 */
-    --mo-elevation-1-bg: #1a1a2e;
-    --mo-elevation-2-bg: #1f1f3a;
-    --mo-elevation-4-bg: #252548;
-    --mo-elevation-8-bg: #2a2a56;
-    
-    /* 神秘光晕效果 */
+    /* 神秘光晕效果 - 使用 MudBlazor 变量 */
     --mo-glow-primary: 0 0 20px rgba(183, 148, 246, 0.3);
     --mo-glow-secondary: 0 0 15px rgba(237, 100, 166, 0.25);
     --mo-shadow-mystical: 0 8px 32px rgba(15, 15, 26, 0.6), 0 0 0 1px rgba(138, 126, 169, 0.1);
 }
 
-/* 应用到MudBlazor Dark模式 */
-.mo-theme-default-dark .mud-theme-provider {
-    /* Background */
-    --mud-palette-background: var(--mo-background-default);
-    --mud-palette-surface: var(--mo-surface);
-    --mud-palette-background-gray: var(--mo-background-paper);
-    
-    /* Text */
-    --mud-palette-text-primary: var(--mo-text-primary);
-    --mud-palette-text-secondary: var(--mo-text-secondary);
-    --mud-palette-text-disabled: var(--mo-text-disabled);
-    
-    /* Dividers */
-    --mud-palette-divider: var(--mo-divider);
-    --mud-palette-divider-light: rgba(255, 255, 255, 0.06);
-    
-    /* Actions */
-    --mud-palette-action-default: var(--mo-text-primary);
-    --mud-palette-action-default-hover: var(--mo-action-hover);
-    --mud-palette-action-disabled: var(--mo-action-disabled);
-    --mud-palette-action-disabled-background: var(--mo-action-disabled-background);
-    
-    /* Primary & Secondary */
-    --mud-palette-primary: var(--mo-primary-main);
-    --mud-palette-primary-lighten: var(--mo-primary-light);
-    --mud-palette-primary-darken: var(--mo-primary-dark);
-    
-    --mud-palette-secondary: var(--mo-secondary-main);
-    --mud-palette-secondary-lighten: var(--mo-secondary-light);
-    --mud-palette-secondary-darken: var(--mo-secondary-dark);
-    
-    /* States */
-    --mud-palette-success: var(--mo-success-main);
-    --mud-palette-success-lighten: var(--mo-success-light);
-    --mud-palette-success-darken: var(--mo-success-dark);
-    
-    --mud-palette-error: var(--mo-error-main);
-    --mud-palette-error-lighten: var(--mo-error-light);
-    --mud-palette-error-darken: var(--mo-error-dark);
-    
-    --mud-palette-warning: var(--mo-warning-main);
-    --mud-palette-warning-lighten: var(--mo-warning-light);
-    --mud-palette-warning-darken: var(--mo-warning-dark);
-    
-    --mud-palette-info: var(--mo-info-main);
-    --mud-palette-info-lighten: var(--mo-info-light);
-    --mud-palette-info-darken: var(--mo-info-dark);
-    
-    /* Components */
-    --mud-palette-appbar-background: var(--mo-appbar-background);
-    --mud-palette-appbar-text: var(--mo-appbar-text);
-    
-    --mud-palette-drawer-background: var(--mo-drawer-background);
-    --mud-palette-drawer-text: var(--mo-drawer-text);
-    
-    --mud-palette-table-hover: var(--mo-table-hover);
-    --mud-palette-table-striped: var(--mo-table-striped);
-    
-    /* Lines */
-    --mud-palette-lines-default: var(--mo-divider);
-    --mud-palette-lines-inputs: var(--mo-input-border);
-}
-
 /* Dark Mode特定样式 - 深邃紫色风格 */
 .mo-theme-default-dark .mud-card {
-    background: linear-gradient(145deg, var(--mo-background-paper), rgba(26, 26, 46, 0.9));
-    border: 1px solid rgba(138, 126, 169, 0.15);
+    background: linear-gradient(145deg, var(--mud-palette-surface), rgba(26, 26, 46, 0.9));
+    border: var(--mo-card-border);
     box-shadow: var(--mo-shadow-mystical);
+    border-radius: var(--mo-card-border-radius) !important;
 }
 
 .mo-theme-default-dark .mud-button-outlined {
     border-color: rgba(183, 148, 246, 0.4);
-    color: var(--mo-primary-main);
+    color: var(--mud-palette-primary);
+    border-radius: var(--mo-button-border-radius) !important;
 }
 
 .mo-theme-default-dark .mud-button-filled {
-    background: linear-gradient(135deg, var(--mo-primary-main), var(--mo-primary-dark));
+    background: linear-gradient(135deg, var(--mud-palette-primary), var(--mud-palette-primary-darken));
     box-shadow: var(--mo-glow-primary), 0 4px 12px rgba(0, 0, 0, 0.4);
     border: none;
+    border-radius: var(--mo-button-border-radius) !important;
 }
 
 .mo-theme-default-dark .mud-button-filled:hover {
@@ -160,39 +80,41 @@
 }
 
 .mo-theme-default-dark .mud-input-outlined .mud-input-outlined-border {
-    border-color: var(--mo-input-border);
+    border-color: var(--mud-palette-lines-inputs);
+    border-radius: var(--mo-input-border-radius) !important;
 }
 
 .mo-theme-default-dark .mud-input-outlined:hover .mud-input-outlined-border {
-    border-color: var(--mo-input-border-hover);
+    border-color: rgba(183, 148, 246, 0.8);
 }
 
 .mo-theme-default-dark .mud-table {
-    background-color: var(--mo-background-paper);
+    background-color: var(--mud-palette-surface);
+    border-radius: var(--mo-table-border-radius) !important;
 }
 
 .mo-theme-default-dark .mud-table-row:nth-child(even) {
-    background-color: var(--mo-table-striped);
+    background-color: var(--mud-palette-table-striped);
 }
 
 /* 特殊效果 - Dark Mode */
 .mo-theme-default-dark .mud-elevation-1 {
-    background: linear-gradient(145deg, var(--mo-elevation-1-bg), rgba(26, 26, 46, 0.95));
+    background: linear-gradient(145deg, rgba(26, 26, 46, 0.95), rgba(26, 26, 46, 0.95));
     box-shadow: 0 2px 8px rgba(15, 15, 26, 0.4), inset 0 1px 0 rgba(138, 126, 169, 0.1);
 }
 
 .mo-theme-default-dark .mud-elevation-2 {
-    background: linear-gradient(145deg, var(--mo-elevation-2-bg), rgba(31, 31, 58, 0.95));
+    background: linear-gradient(145deg, rgba(31, 31, 58, 0.95), rgba(31, 31, 58, 0.95));
     box-shadow: 0 4px 12px rgba(15, 15, 26, 0.5), inset 0 1px 0 rgba(138, 126, 169, 0.1);
 }
 
 .mo-theme-default-dark .mud-elevation-4 {
-    background: linear-gradient(145deg, var(--mo-elevation-4-bg), rgba(37, 37, 72, 0.95));
+    background: linear-gradient(145deg, rgba(37, 37, 72, 0.95), rgba(37, 37, 72, 0.95));
     box-shadow: 0 8px 20px rgba(15, 15, 26, 0.6), inset 0 1px 0 rgba(138, 126, 169, 0.1);
 }
 
 .mo-theme-default-dark .mud-elevation-8 {
-    background: linear-gradient(145deg, var(--mo-elevation-8-bg), rgba(42, 42, 86, 0.95));
+    background: linear-gradient(145deg, rgba(42, 42, 86, 0.95), rgba(42, 42, 86, 0.95));
     box-shadow: 0 16px 40px rgba(15, 15, 26, 0.7), inset 0 1px 0 rgba(138, 126, 169, 0.1);
 }
 
@@ -205,12 +127,12 @@
 
 /* Dark Mode按钮悬停效果 */
 .mo-theme-default-dark .mud-button:hover {
-    background-color: var(--mo-action-hover);
+    background-color: var(--mud-palette-action-default-hover);
 }
 
 /* AppBar 深邃效果 */
 .mo-theme-default-dark .mud-app-bar {
-    background: linear-gradient(135deg, var(--mo-appbar-background), rgba(22, 33, 62, 0.95));
+    background: linear-gradient(135deg, var(--mud-palette-appbar-background), rgba(22, 33, 62, 0.95));
     backdrop-filter: blur(10px);
     border-bottom: 1px solid rgba(138, 126, 169, 0.2);
     box-shadow: 0 2px 10px rgba(15, 15, 26, 0.3);
@@ -218,7 +140,7 @@
 
 /* Drawer 神秘风格 */
 .mo-theme-default-dark .mud-drawer .mud-drawer-content {
-    background: linear-gradient(180deg, var(--mo-drawer-background), rgba(22, 33, 62, 0.98));
+    background: linear-gradient(180deg, var(--mud-palette-drawer-background), rgba(22, 33, 62, 0.98));
     border-right: 1px solid rgba(138, 126, 169, 0.2);
 }
 
@@ -231,13 +153,53 @@
 
 /* 输入框聚焦效果 */
 .mo-theme-default-dark .mud-input-outlined.mud-input-focused .mud-input-outlined-border {
-    border-color: var(--mo-primary-main);
+    border-color: var(--mud-palette-primary);
     box-shadow: 0 0 0 2px rgba(183, 148, 246, 0.2);
 }
 
 /* 选择器和下拉框 */
 .mo-theme-default-dark .mud-popover {
-    background: var(--mo-elevation-4-bg);
+    background: rgba(37, 37, 72, 0.95);
     border: 1px solid rgba(138, 126, 169, 0.2);
     box-shadow: var(--mo-shadow-mystical);
+    border-radius: var(--mo-card-border-radius) !important;
+}
+
+/* 通用组件样式 */
+.mo-theme-default-dark .mud-button {
+    border-radius: var(--mo-button-border-radius) !important;
+    padding: var(--mo-button-padding-y) var(--mo-button-padding-x) !important;
+    font-weight: var(--mo-button-font-weight) !important;
+    text-transform: var(--mo-button-text-transform) !important;
+    transition: var(--mo-button-transition) !important;
+}
+
+.mo-theme-default-dark .mud-chip {
+    border-radius: var(--mo-chip-border-radius) !important;
+    padding: var(--mo-chip-padding) !important;
+}
+
+.mo-theme-default-dark .mud-dialog {
+    border-radius: var(--mo-dialog-border-radius) !important;
+}
+
+.mo-theme-default-dark .mud-dialog-content {
+    padding: var(--mo-dialog-padding) !important;
+}
+
+.mo-theme-default-dark .mud-tooltip {
+    border-radius: var(--mo-button-border-radius) !important;
+}
+
+.mo-theme-default-dark .mud-snackbar {
+    border-radius: var(--mo-button-border-radius) !important;
+}
+
+/* 统一过渡效果 */
+.mo-theme-default-dark .mud-button,
+.mo-theme-default-dark .mud-card,
+.mo-theme-default-dark .mud-chip,
+.mo-theme-default-dark .mud-list-item,
+.mo-theme-default-dark .mud-input-control {
+    transition-duration: var(--mo-transition-normal) !important;
 }

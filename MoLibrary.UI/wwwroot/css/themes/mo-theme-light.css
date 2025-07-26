@@ -1,136 +1,86 @@
 /* MoLibrary Light Theme - 日间模式主题 */
+/* 只包含组件样式，颜色由 MudBlazor 主题系统管理 */
+
 :root[data-theme="default-light"],
 .mo-theme-default-light {
-    /* Light Mode Color Palette */
-    --mo-background-default: #fafafa;
-    --mo-background-paper: #ffffff;
-    --mo-surface: #ffffff;
+    /* 组件样式变量 */
+    /* Button Styles */
+    --mo-button-border-radius: 6px;
+    --mo-button-padding-x: 16px;
+    --mo-button-padding-y: 8px;
+    --mo-button-font-weight: 500;
+    --mo-button-text-transform: none;
+    --mo-button-box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    --mo-button-transition: all 0.3s ease;
     
-    /* Text Colors */
-    --mo-text-primary: rgba(0, 0, 0, 0.87);
-    --mo-text-secondary: rgba(0, 0, 0, 0.6);
-    --mo-text-disabled: rgba(0, 0, 0, 0.38);
+    /* Card Styles */
+    --mo-card-border-radius: 12px;
+    --mo-card-padding: 24px;
+    --mo-card-box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    --mo-card-border: 1px solid rgba(0, 0, 0, 0.08);
     
-    /* Divider */
-    --mo-divider: rgba(0, 0, 0, 0.12);
+    /* Input Styles */
+    --mo-input-border-radius: 8px;
+    --mo-input-padding: 12px 16px;
+    --mo-input-border-width: 2px;
     
-    /* Action Colors */
-    --mo-action-hover: rgba(0, 0, 0, 0.04);
-    --mo-action-selected: rgba(0, 0, 0, 0.08);
-    --mo-action-disabled: rgba(0, 0, 0, 0.26);
-    --mo-action-disabled-background: rgba(0, 0, 0, 0.12);
+    /* Dialog Styles */
+    --mo-dialog-border-radius: 16px;
+    --mo-dialog-padding: 32px;
     
-    /* State Colors */
-    --mo-success-main: #4caf50;
-    --mo-success-light: #81c784;
-    --mo-success-dark: #388e3c;
+    /* Chip Styles */
+    --mo-chip-border-radius: 16px;
+    --mo-chip-padding: 4px 12px;
     
-    --mo-error-main: #f44336;
-    --mo-error-light: #e57373;
-    --mo-error-dark: #d32f2f;
+    /* Table Styles */
+    --mo-table-border-radius: 8px;
     
-    --mo-warning-main: #ff9800;
-    --mo-warning-light: #ffb74d;
-    --mo-warning-dark: #f57c00;
+    /* 全局间距 */
+    --mo-spacing-xs: 4px;
+    --mo-spacing-sm: 8px;
+    --mo-spacing-md: 16px;
+    --mo-spacing-lg: 24px;
+    --mo-spacing-xl: 32px;
     
-    --mo-info-main: #2196f3;
-    --mo-info-light: #64b5f6;
-    --mo-info-dark: #1976d2;
-    
-    /* Component Specific - Light Mode */
-    --mo-appbar-background: #ffffff;
-    --mo-appbar-text: rgba(0, 0, 0, 0.87);
-    
-    --mo-drawer-background: #ffffff;
-    --mo-drawer-text: rgba(0, 0, 0, 0.87);
-    
-    --mo-table-hover: rgba(0, 0, 0, 0.04);
-    --mo-table-striped: rgba(0, 0, 0, 0.02);
-    
-    /* Input Field Colors */
-    --mo-input-border: rgba(0, 0, 0, 0.42);
-    --mo-input-border-hover: rgba(0, 0, 0, 0.87);
-    --mo-input-background: rgba(0, 0, 0, 0.04);
-}
-
-/* 应用到MudBlazor Light模式 */
-.mo-theme-default-light .mud-theme-provider {
-    /* Background */
-    --mud-palette-background: var(--mo-background-default);
-    --mud-palette-surface: var(--mo-surface);
-    --mud-palette-background-gray: var(--mo-background-paper);
-    
-    /* Text */
-    --mud-palette-text-primary: var(--mo-text-primary);
-    --mud-palette-text-secondary: var(--mo-text-secondary);
-    --mud-palette-text-disabled: var(--mo-text-disabled);
-    
-    /* Dividers */
-    --mud-palette-divider: var(--mo-divider);
-    --mud-palette-divider-light: rgba(0, 0, 0, 0.06);
-    
-    /* Actions */
-    --mud-palette-action-default: var(--mo-text-primary);
-    --mud-palette-action-default-hover: var(--mo-action-hover);
-    --mud-palette-action-disabled: var(--mo-action-disabled);
-    --mud-palette-action-disabled-background: var(--mo-action-disabled-background);
-    
-    /* States */
-    --mud-palette-success: var(--mo-success-main);
-    --mud-palette-success-lighten: var(--mo-success-light);
-    --mud-palette-success-darken: var(--mo-success-dark);
-    
-    --mud-palette-error: var(--mo-error-main);
-    --mud-palette-error-lighten: var(--mo-error-light);
-    --mud-palette-error-darken: var(--mo-error-dark);
-    
-    --mud-palette-warning: var(--mo-warning-main);
-    --mud-palette-warning-lighten: var(--mo-warning-light);
-    --mud-palette-warning-darken: var(--mo-warning-dark);
-    
-    --mud-palette-info: var(--mo-info-main);
-    --mud-palette-info-lighten: var(--mo-info-light);
-    --mud-palette-info-darken: var(--mo-info-dark);
-    
-    /* Components */
-    --mud-palette-appbar-background: var(--mo-appbar-background);
-    --mud-palette-appbar-text: var(--mo-appbar-text);
-    
-    --mud-palette-drawer-background: var(--mo-drawer-background);
-    --mud-palette-drawer-text: var(--mo-drawer-text);
-    
-    --mud-palette-table-hover: var(--mo-table-hover);
-    --mud-palette-table-striped: var(--mo-table-striped);
-    
-    /* Lines */
-    --mud-palette-lines-default: var(--mo-divider);
-    --mud-palette-lines-inputs: var(--mo-input-border);
+    /* 动画时长 */
+    --mo-transition-fast: 150ms;
+    --mo-transition-normal: 300ms;
+    --mo-transition-slow: 450ms;
 }
 
 /* Light Mode特定样式 */
 .mo-theme-default-light .mud-card {
-    background-color: var(--mo-background-paper);
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    background-color: var(--mud-palette-surface);
+    border: var(--mo-card-border);
+    border-radius: var(--mo-card-border-radius) !important;
+    box-shadow: var(--mo-card-box-shadow) !important;
 }
 
 .mo-theme-default-light .mud-button-outlined {
     border-color: rgba(0, 0, 0, 0.23);
+    border-radius: var(--mo-button-border-radius) !important;
 }
 
 .mo-theme-default-light .mud-input-outlined .mud-input-outlined-border {
-    border-color: var(--mo-input-border);
+    border-color: var(--mud-palette-lines-inputs);
+    border-radius: var(--mo-input-border-radius) !important;
 }
 
 .mo-theme-default-light .mud-input-outlined:hover .mud-input-outlined-border {
-    border-color: var(--mo-input-border-hover);
+    border-color: var(--mud-palette-text-primary);
 }
 
 .mo-theme-default-light .mud-table {
-    background-color: var(--mo-background-paper);
+    background-color: var(--mud-palette-surface);
+    border-radius: var(--mo-table-border-radius) !important;
 }
 
 .mo-theme-default-light .mud-table-row:nth-child(even) {
-    background-color: var(--mo-table-striped);
+    background-color: var(--mud-palette-table-striped);
+}
+
+.mo-theme-default-light .mud-table-row:hover {
+    background-color: var(--mud-palette-table-hover) !important;
 }
 
 /* 特殊效果 - Light Mode */
@@ -138,5 +88,94 @@
 .mo-theme-default-light .mud-elevation-2,
 .mo-theme-default-light .mud-elevation-4,
 .mo-theme-default-light .mud-elevation-8 {
-    background-color: var(--mo-background-paper);
+    background-color: var(--mud-palette-surface);
+}
+
+.mo-theme-default-light .mud-card:hover {
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15) !important;
+    transform: translateY(-1px);
+}
+
+.mo-theme-default-light .mud-button:hover {
+    background-color: var(--mud-palette-action-default-hover);
+}
+
+/* 通用组件样式 */
+.mo-theme-default-light .mud-button {
+    border-radius: var(--mo-button-border-radius) !important;
+    padding: var(--mo-button-padding-y) var(--mo-button-padding-x) !important;
+    font-weight: var(--mo-button-font-weight) !important;
+    text-transform: var(--mo-button-text-transform) !important;
+    transition: var(--mo-button-transition) !important;
+}
+
+.mo-theme-default-light .mud-button-filled {
+    box-shadow: var(--mo-button-box-shadow) !important;
+}
+
+.mo-theme-default-light .mud-button-filled:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
+    transform: translateY(-1px);
+}
+
+.mo-theme-default-light .mud-chip {
+    border-radius: var(--mo-chip-border-radius) !important;
+    padding: var(--mo-chip-padding) !important;
+}
+
+.mo-theme-default-light .mud-dialog {
+    border-radius: var(--mo-dialog-border-radius) !important;
+}
+
+.mo-theme-default-light .mud-dialog-content {
+    padding: var(--mo-dialog-padding) !important;
+}
+
+.mo-theme-default-light .mud-tooltip {
+    border-radius: var(--mo-button-border-radius) !important;
+}
+
+.mo-theme-default-light .mud-snackbar {
+    border-radius: var(--mo-button-border-radius) !important;
+}
+
+.mo-theme-default-light .mud-popover {
+    border-radius: var(--mo-card-border-radius) !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15) !important;
+}
+
+.mo-theme-default-light .mud-menu {
+    border-radius: var(--mo-card-border-radius) !important;
+}
+
+.mo-theme-default-light .mud-list-item {
+    border-radius: var(--mo-button-border-radius) !important;
+    margin: var(--mo-spacing-xs) var(--mo-spacing-sm) !important;
+    transition: background-color var(--mo-transition-fast) !important;
+}
+
+/* 统一过渡效果 */
+.mo-theme-default-light .mud-button,
+.mo-theme-default-light .mud-card,
+.mo-theme-default-light .mud-chip,
+.mo-theme-default-light .mud-list-item,
+.mo-theme-default-light .mud-input-control {
+    transition-duration: var(--mo-transition-normal) !important;
+}
+
+/* 统一阴影效果 */
+.mo-theme-default-light .mud-elevation-1 {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08) !important;
+}
+
+.mo-theme-default-light .mud-elevation-2 {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+}
+
+.mo-theme-default-light .mud-elevation-4 {
+    box-shadow: 0 8px 16px rgba(0,0,0,0.12) !important;
+}
+
+.mo-theme-default-light .mud-elevation-8 {
+    box-shadow: 0 16px 32px rgba(0,0,0,0.14) !important;
 }
