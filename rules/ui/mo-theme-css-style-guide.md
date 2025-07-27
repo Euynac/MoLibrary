@@ -439,6 +439,193 @@ private static void RegisterDefaultThemes()
 ### 4. 性能测试
 监控 CSS 动画对页面性能的影响。
 
+## MudBlazor 8.9.0 兼容性问题解决
+
+### MudBlazor 版本迁移问题分析
+
+从 MudBlazor 7.x 升级到 8.9.0 时，主题系统发生了重大变化，主要影响以下几个方面：
+
+#### 1. Typography 类型定义变更
+
+**❌ 错误用法 (MudBlazor 7.x)**
+```csharp
+Typography = new Typography()
+{
+    Default = new Default()
+    {
+        FontFamily = new[] { "Inter", "Roboto", "Arial", "sans-serif" },
+        FontSize = "0.875rem",
+        FontWeight = 400,           // ❌ 数字类型
+        LineHeight = 1.43,          // ❌ 数字类型
+        LetterSpacing = "0.01071em"
+    },
+    H1 = new H1() { ... },          // ❌ 类不存在
+    Button = new Button() { ... }   // ❌ 类不存在
+}
+```
+
+**✅ 正确用法 (MudBlazor 8.9.0)**
+```csharp
+Typography = new Typography()
+{
+    Default = new DefaultTypography()
+    {
+        FontFamily = new[] { "Inter", "Roboto", "Arial", "sans-serif" },
+        FontSize = "0.875rem",
+        FontWeight = "400",         // ✅ 字符串类型
+        LineHeight = "1.43",        // ✅ 字符串类型
+        LetterSpacing = "0.01071em"
+    },
+    H1 = new H1Typography() { ... },    // ✅ 正确类名
+    Button = new ButtonTypography() { ... } // ✅ 正确类名
+}
+```
+
+#### 2. Palette 属性变更
+
+**❌ 已移除的属性**
+```csharp
+PaletteLight = new PaletteLight()
+{
+    BackgroundGrey = "#f7fafc",     // ❌ 应为 BackgroundGray
+    ActionHover = "#553c9a",        // ❌ 属性不存在
+    ActionSelected = "#667eea",     // ❌ 属性不存在
+    ActionSelectedHover = "#553c9a" // ❌ 属性不存在
+}
+```
+
+**✅ 正确的属性名称**
+```csharp
+PaletteLight = new PaletteLight()
+{
+    BackgroundGray = "#f7fafc",     // ✅ 正确拼写
+    ActionDefault = "#667eea",      // ✅ 可用属性
+    ActionDisabled = "#e2e8f0",     // ✅ 可用属性
+    ActionDisabledBackground = "#f7fafc" // ✅ 可用属性
+}
+```
+
+#### 3. 完整的可用 Palette 属性列表
+
+**基础颜色属性**
+```csharp
+// 主要颜色
+Primary, Secondary, Tertiary, Info, Success, Warning, Error, Dark
+Black, White
+
+// 文字颜色
+TextPrimary, TextSecondary, TextDisabled
+
+// 操作颜色
+ActionDefault, ActionDisabled, ActionDisabledBackground
+
+// 背景颜色
+Background, BackgroundGray, Surface
+DrawerBackground, DrawerText, DrawerIcon
+AppbarBackground, AppbarText
+
+// 线条和分隔符
+LinesDefault, LinesInputs, Divider, DividerLight
+TableLines, TableStriped, TableHover
+
+// 灰度系统
+GrayDefault, GrayLight, GrayLighter, GrayDark, GrayDarker
+
+// 遮罩
+OverlayDark, OverlayLight
+```
+
+#### 4. Typography 类名映射表
+
+| MudBlazor 7.x | MudBlazor 8.9.0 |
+|---------------|-----------------|
+| `new Default()` | `new DefaultTypography()` |
+| `new H1()` | `new H1Typography()` |
+| `new H2()` | `new H2Typography()` |
+| `new H3()` | `new H3Typography()` |
+| `new H4()` | `new H4Typography()` |
+| `new H5()` | `new H5Typography()` |
+| `new H6()` | `new H6Typography()` |
+| `new Button()` | `new ButtonTypography()` |
+| `new Body1()` | `new Body1Typography()` |
+| `new Body2()` | `new Body2Typography()` |
+| `new Caption()` | `new CaptionTypography()` |
+| `new Subtitle1()` | `new Subtitle1Typography()` |
+| `new Subtitle2()` | `new Subtitle2Typography()` |
+| `new Overline()` | `new OverlineTypography()` |
+
+#### 5. 数据类型变更要求
+
+**字体权重 (FontWeight)**
+- ❌ `FontWeight = 400` (int)
+- ✅ `FontWeight = "400"` (string)
+
+**行高 (LineHeight)**
+- ❌ `LineHeight = 1.43` (double)
+- ✅ `LineHeight = "1.43"` (string)
+
+**字符间距 (LetterSpacing)**
+- ✅ `LetterSpacing = "0.01071em"` (保持字符串类型)
+
+#### 6. Shadow Elevation 数组要求
+
+**重要**: MudBlazor 8.9.0 要求 Shadow.Elevation 数组必须包含 **26个元素** (索引 0-25)
+
+**❌ 错误 (25个元素)**
+```csharp
+Shadows = new Shadow()
+{
+    Elevation = new string[]
+    {
+        "none",                                    // 索引 0
+        "0 2px 4px rgba(...)",                    // 索引 1
+        // ... 23个更多定义 ...
+        "0 48px 96px rgba(...)"                   // 索引 24 (缺少索引25)
+    }
+}
+```
+
+**✅ 正确 (26个元素)**
+```csharp
+Shadows = new Shadow()
+{
+    Elevation = new string[]
+    {
+        "none",                                    // 索引 0
+        "0 2px 4px rgba(...)",                    // 索引 1
+        // ... 23个更多定义 ...
+        "0 48px 96px rgba(...)",                  // 索引 24
+        "0 50px 100px rgba(...)"                  // 索引 25 (必须)
+    }
+}
+```
+
+**错误原因**: MudThemeProvider 会访问索引 0-25 来生成 CSS 变量，缺少任何索引会导致运行时错误。
+
+#### 7. 主题迁移检查清单
+
+创建或更新主题时，请确保：
+
+- [ ] Typography 使用正确的类名 (`DefaultTypography`, `H1Typography` 等)
+- [ ] 所有 FontWeight 值使用字符串格式 (`"400"` 而非 `400`)
+- [ ] 所有 LineHeight 值使用字符串格式 (`"1.43"` 而非 `1.43`)
+- [ ] Palette 属性名称正确 (`BackgroundGray` 而非 `BackgroundGrey`)
+- [ ] 移除不存在的 Palette 属性 (`ActionHover`, `ActionSelected` 等)
+- [ ] Shadow.Elevation 数组包含 26个元素 (索引 0-25)
+- [ ] ZIndex 和 LayoutProperties 结构保持不变
+- [ ] Shadows 属性使用 `new Shadow()` 初始化
+
+#### 8. 常见编译错误修复
+
+**错误信息**: `'Default' could not be found`
+**解决方案**: 使用 `DefaultTypography`
+
+**错误信息**: `Cannot implicitly convert type 'int' to 'string'`
+**解决方案**: 将数字值转换为字符串 (`FontWeight = "400"`)
+
+**错误信息**: `'BackgroundGrey' does not exist`
+**解决方案**: 使用正确拼写 `BackgroundGray`
+
 ---
 
 *此规范确保 MoLibrary 主题系统的一致性、可维护性和可扩展性。所有新增主题都应遵循此规范进行开发。*

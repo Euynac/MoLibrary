@@ -14,7 +14,14 @@
 /* 4. 引入小清新主题 */
 @import url('./themes/mo-theme-fresh.css');
 
-/* 5. 自定义主题样式示例 */
+/* 5. 引入新增的精美主题 */
+@import url('./themes/mo-theme-aurora-flow.css');        /* 极光流彩主题 */
+@import url('./themes/mo-theme-ink-landscape.css');      /* 墨韵山水主题 */
+@import url('./themes/mo-theme-macaron-sweet.css');      /* 马卡龙甜心主题 */
+@import url('./themes/mo-theme-deep-ocean.css');         /* 深海静谧主题 */
+@import url('./themes/mo-theme-vintage-press.css');      /* 复古印刷主题 */
+
+/* 6. 自定义主题样式示例 */
 /* 如需创建新主题，可以创建新的CSS文件并在此引入 */
 /* @import url('./themes/mo-theme-custom.css'); */
 

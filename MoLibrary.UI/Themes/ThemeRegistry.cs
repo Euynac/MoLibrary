@@ -22,6 +22,13 @@ public static class ThemeRegistry
         RegisterTheme(new ThemeGlassmorphic());
         RegisterTheme(new ThemeNeonPulse());
         RegisterTheme(new ThemeFresh());
+        
+        // 新增的主题
+        RegisterTheme(new ThemeAuroraFlow());
+        RegisterTheme(new ThemeInkLandscape());
+        RegisterTheme(new ThemeMacaronSweet());
+        RegisterTheme(new ThemeDeepOcean());
+        RegisterTheme(new ThemeVintagePress());
     }
 
     /// <summary>
