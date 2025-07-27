@@ -52,7 +52,7 @@
     overflow: hidden;
 }
 
-.mo-toggle-btn {
+.mo-toggle-btn.mud-icon-button {
     position: absolute;
     top: 16px;
     right: 8px;
@@ -64,20 +64,19 @@
     height: 32px !important;
     transition: all 0.2s ease;
     min-width: 32px !important;
+    padding: 6px !important;
 }
 
-.mo-toggle-btn:hover {
+.mo-toggle-btn.mud-icon-button:hover {
     background: var(--mud-palette-action-hover);
     border-color: var(--mud-palette-primary);
     box-shadow: 0 2px 8px rgba(var(--mud-palette-primary-rgb), 0.2);
     border-radius: 8px !important;
 }
 
-.mo-toggle-btn .mud-button-root {
-    border-radius: 8px !important;
-    min-width: 32px !important;
-    width: 32px !important;
-    height: 32px !important;
+/* 确保图标大小合适 */
+.mo-toggle-btn.mud-icon-button .mud-icon-root {
+    font-size: 1.25rem;
 }
 
 .mo-navigation {
@@ -95,33 +94,50 @@
     gap: 4px;
 }
 
+/* 导航项外层容器 */
 .mo-nav-item {
-    border-radius: 12px;
-    margin: 2px 0;
-    transition: all 0.2s ease;
     position: relative;
-    overflow: hidden;
+    margin: 4px 0;
 }
 
-.mo-nav-item:hover {
+/* MudNavLink的样式覆盖 */
+.mo-nav-item .mud-nav-link {
+    border-radius: 12px;
+    transition: all 0.2s ease;
+    position: relative;
+    padding-left: 16px;
+    margin-left: 8px;
+}
+
+.mo-nav-item .mud-nav-link:hover {
     background: var(--mud-palette-action-hover);
     transform: translateX(4px);
 }
 
-.mo-nav-item.active {
-    background: var(--mud-palette-primary);
-    color: var(--mud-palette-primary-text);
+/* 选中状态样式 */
+.mo-nav-item .mud-nav-link.active {
+    background: rgba(var(--mud-palette-primary-rgb), 0.12);
+    color: var(--mud-palette-primary);
+    font-weight: 500;
 }
 
-.mo-nav-item.active::before {
+/* 左侧指示线 */
+.mo-nav-item::before {
     content: '';
     position: absolute;
     left: 0;
-    top: 0;
-    bottom: 0;
+    top: 50%;
+    transform: translateY(-50%);
     width: 4px;
+    height: 0;
     background: var(--mud-palette-primary);
     border-radius: 0 4px 4px 0;
+    transition: height 0.2s ease;
+}
+
+/* 选中时显示指示线 */
+.mo-nav-item:has(.mud-nav-link.active)::before {
+    height: 70%;
 }
 
 .mo-sidebar-footer {

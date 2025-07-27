@@ -35,15 +35,16 @@
         <MudNavMenu Class="mo-nav-menu">
             @foreach (var navItem in UIRegistry.GetNavItems())
             {
-                <MudNavLink Href="@navItem.Href" 
-                           Icon="@navItem.Icon" 
-                           Disabled="@navItem.Disabled"
-                           Class="mo-nav-item">
-                    @if (IsExpanded)
-                    {
-                        @navItem.Text
-                    }
-                </MudNavLink>
+                <div class="mo-nav-item">
+                    <MudNavLink Href="@navItem.Href" 
+                               Icon="@navItem.Icon" 
+                               Disabled="@navItem.Disabled">
+                        @if (IsExpanded)
+                        {
+                            @navItem.Text
+                        }
+                    </MudNavLink>
+                </div>
             }
         </MudNavMenu>
     </div>
