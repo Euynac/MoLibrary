@@ -1,13 +1,9 @@
-.mo-theme-selector-menu {
-    border-radius: 8px;
-}
-
-.mo-theme-selector-menu .mud-menu-activator {
+.mo-theme-selector-btn {
     border-radius: 8px;
     transition: all 0.2s ease;
 }
 
-.mo-theme-selector-menu .mud-menu-activator:hover {
+.mo-theme-selector-btn:hover {
     transform: scale(1.05);
     box-shadow: 0 4px 12px rgba(var(--mud-palette-primary-rgb), 0.3);
 }
@@ -34,21 +30,12 @@
     background: rgba(var(--mud-palette-primary-rgb), 0.1);
 }
 
-/* 菜单内容样式 */
-.mo-theme-selector-menu .mud-popover-paper {
-    border-radius: 16px;
-    backdrop-filter: blur(20px);
-    background: rgba(var(--mud-palette-surface-rgb), 0.95);
-    border: 1px solid rgba(var(--mud-palette-divider-rgb), 0.2);
-    box-shadow: 
-        0 12px 48px rgba(0, 0, 0, 0.15),
-        0 6px 24px rgba(0, 0, 0, 0.08);
+/* 对话框样式优化 */
+.mud-dialog .mud-dialog-content {
+    padding: 0;
 }
 
-/* 深色模式适配 */
-@media (prefers-color-scheme: dark) {
-    .mo-theme-selector-menu .mud-popover-paper {
-        background: rgba(var(--mud-palette-dark-surface-rgb), 0.95);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-    }
+.mud-dialog .mud-dialog-actions {
+    padding: 16px 24px;
+    border-top: 1px solid var(--mud-palette-divider);
 }

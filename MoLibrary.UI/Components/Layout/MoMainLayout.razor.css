@@ -1,20 +1,32 @@
 .mo-main-container {
-    display: flex;
     min-height: 100vh;
     background: linear-gradient(135deg, 
         var(--mud-palette-background) 0%, 
         var(--mud-palette-surface) 100%);
-    padding: 16px;
-    gap: 16px;
+    padding: 0;
 }
 
 .mo-sidebar-container {
-    flex-shrink: 0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
     z-index: 100;
+    padding: 16px;
+    padding-right: 8px;
+}
+
+/* 根据侧边栏状态调整内容区域边距 */
+.mo-main-container.sidebar-expanded .mo-content-container {
+    margin-left: 312px; /* 280px 侧边栏宽度 + 32px 间距 */
+}
+
+.mo-main-container.sidebar-collapsed .mo-content-container {
+    margin-left: 104px; /* 72px 侧边栏宽度 + 32px 间距 */
 }
 
 .mo-sidebar-card {
-    height: calc(100vh - 32px);
+    height: 100%;
     border-radius: 16px;
     background: rgba(var(--mud-palette-surface-rgb), 0.95);
     backdrop-filter: blur(20px);
@@ -34,8 +46,9 @@
 }
 
 .mo-content-container {
-    flex: 1;
     min-width: 0;
+    padding: 16px;
+    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .mo-content-card {

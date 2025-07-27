@@ -15,8 +15,8 @@
     <MudDialogProvider />
     <MudSnackbarProvider />
     
-    <div class="mo-main-container">
-        <!-- 左侧导航栏卡片 -->
+    <div class="mo-main-container @GetMainContainerClass()">
+        <!-- 左侧固定导航栏卡片 -->
         <div class="mo-sidebar-container">
             <MudPaper Class="mo-sidebar-card" Elevation="3">
                 <MoSidebar @bind-IsExpanded="_sidebarExpanded" />
@@ -24,7 +24,7 @@
         </div>
         
         <!-- 右侧内容卡片 -->
-        <div class="mo-content-container">
+        <div class="mo-content-container @GetContentContainerClass()">
             <MudPaper Class="mo-content-card" Elevation="2">
                 @Body
             </MudPaper>
@@ -51,6 +51,16 @@
     public void Dispose()
     {
         ThemeService.OnThemeChanged -= StateHasChanged;
+    }
+
+    private string GetMainContainerClass()
+    {
+        return _sidebarExpanded ? "sidebar-expanded" : "sidebar-collapsed";
+    }
+
+    private string GetContentContainerClass()
+    {
+        return _sidebarExpanded ? "content-with-expanded-sidebar" : "content-with-collapsed-sidebar";
     }
 }
 
