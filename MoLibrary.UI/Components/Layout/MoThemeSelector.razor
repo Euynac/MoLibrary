@@ -1,7 +1,13 @@
 @using MoLibrary.UI.Services
 @inject MoThemeService ThemeService
 
-<MudMenu Icon="@Icons.Material.Filled.Palette" Color="Color.Inherit" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+<MudMenu Icon="@Icons.Material.Filled.Palette" 
+         Color="Color.Primary" 
+         AnchorOrigin="Origin.BottomRight" 
+         TransformOrigin="Origin.TopRight"
+         Class="mo-theme-selector-menu"
+         Variant="Variant.Filled"
+         Size="Size.Small">
     <MudStack Spacing="3" Class="pa-4" Style="min-width: 320px;">
         <MudText Typo="Typo.h6" Class="mb-2">
             <MudIcon Icon="@Icons.Material.Filled.Palette" Class="mr-2" Size="Size.Small" />

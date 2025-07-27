@@ -1,0 +1,83 @@
+@using Microsoft.Extensions.Options
+@using MoLibrary.UI.Modules
+@using MoLibrary.UI.UICore.Interfaces
+@using MoLibrary.UI.Services
+@inject IUIComponentRegistry UIRegistry
+@inject IOptions<ModuleUICoreOption> Options
+@inject MoThemeService ThemeService
+
+<div class="mo-sidebar @GetSidebarClass()">
+    <!-- Logo 和标题区域 -->
+    <div class="mo-sidebar-header">
+        <div class="mo-logo-container">
+            <MudIconButton Icon="@Icons.Material.Filled.Dashboard" 
+                          Color="Color.Primary" 
+                          Size="Size.Large"
+                          Class="mo-logo-icon" />
+            @if (IsExpanded)
+            {
+                <MudText Typo="Typo.h6" Class="mo-app-title">
+                    @Options.Value.UIAppBarName
+                </MudText>
+            }
+        </div>
+        
+        <!-- 展开/收缩按钮 -->
+        <MudIconButton Icon="@(IsExpanded ? Icons.Material.Filled.ChevronLeft : Icons.Material.Filled.ChevronRight)"
+                      Color="Color.Default"
+                      Size="Size.Small"
+                      Class="mo-toggle-btn"
+                      OnClick="ToggleSidebar" />
+    </div>
+    
+    <!-- 导航菜单 -->
+    <div class="mo-navigation">
+        <MudNavMenu Class="mo-nav-menu">
+            @foreach (var navItem in UIRegistry.GetNavItems())
+            {
+                <MudNavLink Href="@navItem.Href" 
+                           Icon="@navItem.Icon" 
+                           Disabled="@navItem.Disabled"
+                           Class="mo-nav-item">
+                    @if (IsExpanded)
+                    {
+                        @navItem.Text
+                    }
+                </MudNavLink>
+            }
+        </MudNavMenu>
+    </div>
+    
+    <!-- 底部工具区域 -->
+    <div class="mo-sidebar-footer">
+        @if (IsExpanded)
+        {
+            <div class="mo-theme-section">
+                <MudText Typo="Typo.caption" Class="mo-section-title">主题设置</MudText>
+                <MoThemeSelector />
+            </div>
+        }
+        else
+        {
+            <div class="mo-theme-compact">
+                <MoThemeSelector />
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public bool IsExpanded { get; set; } = true;
+    [Parameter] public EventCallback<bool> IsExpandedChanged { get; set; }
+
+    private async Task ToggleSidebar()
+    {
+        IsExpanded = !IsExpanded;
+        await IsExpandedChanged.InvokeAsync(IsExpanded);
+    }
+
+    private string GetSidebarClass()
+    {
+        return IsExpanded ? "expanded" : "collapsed";
+    }
+}

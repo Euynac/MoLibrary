@@ -1,0 +1,148 @@
+/* MoLibrary 主布局全局样式 */
+
+/* 全局容器重置 */
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+#app {
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* 主容器基础样式 */
+.mo-main-container {
+    --mo-sidebar-width-expanded: 280px;
+    --mo-sidebar-width-collapsed: 72px;
+    --mo-layout-gap: 16px;
+    --mo-border-radius: 16px;
+    --mo-transition-duration: 0.3s;
+    --mo-transition-easing: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 侧边栏过渡效果 */
+.mo-sidebar-container {
+    transition: all var(--mo-transition-duration) var(--mo-transition-easing);
+}
+
+/* 滚动条全局样式 */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(var(--mud-palette-text-secondary-rgb), 0.3);
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(var(--mud-palette-text-secondary-rgb), 0.5);
+}
+
+::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
+/* Firefox 滚动条样式 */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(var(--mud-palette-text-secondary-rgb), 0.3) transparent;
+}
+
+/* 主题切换动画 */
+* {
+    transition: 
+        background-color var(--mo-transition-duration) var(--mo-transition-easing),
+        border-color var(--mo-transition-duration) var(--mo-transition-easing),
+        color var(--mo-transition-duration) var(--mo-transition-easing);
+}
+
+/* 焦点样式优化 */
+.mud-button:focus,
+.mud-icon-button:focus,
+.mud-nav-link:focus {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(var(--mud-palette-primary-rgb), 0.2);
+}
+
+/* 卡片阴影层级定义 */
+.mo-elevation-low {
+    box-shadow: 
+        0 2px 8px rgba(0, 0, 0, 0.05),
+        0 1px 4px rgba(0, 0, 0, 0.03);
+}
+
+.mo-elevation-medium {
+    box-shadow: 
+        0 4px 16px rgba(0, 0, 0, 0.08),
+        0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.mo-elevation-high {
+    box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.12),
+        0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.mo-elevation-highest {
+    box-shadow: 
+        0 16px 64px rgba(0, 0, 0, 0.15),
+        0 8px 32px rgba(0, 0, 0, 0.08);
+}
+
+/* 动画关键帧 */
+@keyframes mo-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes mo-slide-in-left {
+    from {
+        opacity: 0;
+        transform: translateX(-16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes mo-slide-in-right {
+    from {
+        opacity: 0;
+        transform: translateX(16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* 实用类 */
+.mo-fade-in {
+    animation: mo-fade-in 0.5s var(--mo-transition-easing);
+}
+
+.mo-slide-in-left {
+    animation: mo-slide-in-left 0.5s var(--mo-transition-easing);
+}
+
+.mo-slide-in-right {
+    animation: mo-slide-in-right 0.5s var(--mo-transition-easing);
+}
