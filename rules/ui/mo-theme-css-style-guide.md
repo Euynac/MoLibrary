@@ -602,7 +602,16 @@ Shadows = new Shadow()
 
 **错误原因**: MudThemeProvider 会访问索引 0-25 来生成 CSS 变量，缺少任何索引会导致运行时错误。
 
-#### 7. 主题迁移检查清单
+#### 7. MudBlazor 8.9.0 新增属性
+
+**Palette 新增属性**:
+- `BorderOpacity`, `HoverOpacity`, `RippleOpacity`, `RippleOpacitySecondary` - 透明度控制
+
+
+**LayoutProperties 新增属性**:
+- `DrawerMiniWidthLeft`, `DrawerMiniWidthRight` - Mini抽屉宽度
+
+#### 8. 主题迁移检查清单
 
 创建或更新主题时，请确保：
 
@@ -612,10 +621,10 @@ Shadows = new Shadow()
 - [ ] Palette 属性名称正确 (`BackgroundGray` 而非 `BackgroundGrey`)
 - [ ] 移除不存在的 Palette 属性 (`ActionHover`, `ActionSelected` 等)
 - [ ] Shadow.Elevation 数组包含 26个元素 (索引 0-25)
-- [ ] ZIndex 和 LayoutProperties 结构保持不变
+- [ ] ZIndex 和其他 LayoutProperties 结构保持正确
 - [ ] Shadows 属性使用 `new Shadow()` 初始化
 
-#### 8. 常见编译错误修复
+#### 9. 常见编译错误修复
 
 **错误信息**: `'Default' could not be found`
 **解决方案**: 使用 `DefaultTypography`
