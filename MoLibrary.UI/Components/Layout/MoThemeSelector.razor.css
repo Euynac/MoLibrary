@@ -1,43 +1,54 @@
-/* Theme Selector Component Styles */
-
-::deep .theme-card {
-    border-radius: 8px !important;
-    transition: all 0.3s ease !important;
-    border: 2px solid transparent !important;
+.mo-theme-selector-menu {
+    border-radius: 8px;
 }
 
-::deep .theme-card:hover {
-    transform: translateY(-2px) !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+.mo-theme-selector-menu .mud-menu-activator {
+    border-radius: 8px;
+    transition: all 0.2s ease;
 }
 
-::deep .theme-card.selected {
-    border-color: var(--mud-palette-primary) !important;
-    background-color: rgba(25, 118, 210, 0.04) !important;
+.mo-theme-selector-menu .mud-menu-activator:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(var(--mud-palette-primary-rgb), 0.3);
 }
 
-::deep .theme-card.selected:hover {
-    background-color: rgba(25, 118, 210, 0.08) !important;
+/* 主题卡片样式 */
+.theme-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    border-radius: 12px;
+    overflow: hidden;
 }
 
-/* Dark mode adjustments */
-::deep .mo-theme-default-dark .theme-card.selected,
-::deep .mo-theme-glassmorphic-dark .theme-card.selected,
-::deep .mo-theme-mudblazor-dark .theme-card.selected {
-    background-color: rgba(144, 202, 249, 0.08) !important;
+.theme-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
 }
 
-::deep .mo-theme-default-dark .theme-card.selected:hover,
-::deep .mo-theme-glassmorphic-dark .theme-card.selected:hover,
-::deep .mo-theme-mudblazor-dark .theme-card.selected:hover {
-    background-color: rgba(144, 202, 249, 0.12) !important;
+.theme-card.selected {
+    border: 2px solid var(--mud-palette-primary);
+    background: rgba(var(--mud-palette-primary-rgb), 0.05);
 }
 
-/* Ensure proper spacing and alignment */
-::deep .mud-card-content {
-    padding: 12px !important;
+.theme-card.selected:hover {
+    background: rgba(var(--mud-palette-primary-rgb), 0.1);
 }
 
-::deep .flex-grow-1 {
-    flex-grow: 1 !important;
+/* 菜单内容样式 */
+.mo-theme-selector-menu .mud-popover-paper {
+    border-radius: 16px;
+    backdrop-filter: blur(20px);
+    background: rgba(var(--mud-palette-surface-rgb), 0.95);
+    border: 1px solid rgba(var(--mud-palette-divider-rgb), 0.2);
+    box-shadow: 
+        0 12px 48px rgba(0, 0, 0, 0.15),
+        0 6px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* 深色模式适配 */
+@media (prefers-color-scheme: dark) {
+    .mo-theme-selector-menu .mud-popover-paper {
+        background: rgba(var(--mud-palette-dark-surface-rgb), 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
 }

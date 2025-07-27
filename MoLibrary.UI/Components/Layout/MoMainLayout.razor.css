@@ -1,0 +1,143 @@
+.mo-main-container {
+    display: flex;
+    min-height: 100vh;
+    background: linear-gradient(135deg, 
+        var(--mud-palette-background) 0%, 
+        var(--mud-palette-surface) 100%);
+    padding: 16px;
+    gap: 16px;
+}
+
+.mo-sidebar-container {
+    flex-shrink: 0;
+    z-index: 100;
+}
+
+.mo-sidebar-card {
+    height: calc(100vh - 32px);
+    border-radius: 16px;
+    background: rgba(var(--mud-palette-surface-rgb), 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(var(--mud-palette-divider-rgb), 0.2);
+    box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.1),
+        0 4px 16px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+}
+
+.mo-sidebar-card:hover {
+    box-shadow: 
+        0 12px 48px rgba(0, 0, 0, 0.15),
+        0 6px 24px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+}
+
+.mo-content-container {
+    flex: 1;
+    min-width: 0;
+}
+
+.mo-content-card {
+    height: calc(100vh - 32px);
+    border-radius: 16px;
+    background: rgba(var(--mud-palette-surface-rgb), 0.98);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(var(--mud-palette-divider-rgb), 0.1);
+    box-shadow: 
+        0 4px 24px rgba(0, 0, 0, 0.08),
+        0 2px 12px rgba(0, 0, 0, 0.04);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: auto;
+    padding: 24px;
+}
+
+.mo-content-card:hover {
+    box-shadow: 
+        0 6px 32px rgba(0, 0, 0, 0.12),
+        0 3px 16px rgba(0, 0, 0, 0.06);
+}
+
+/* 深色模式适配 */
+@media (prefers-color-scheme: dark) {
+    .mo-main-container {
+        background: linear-gradient(135deg, 
+            var(--mud-palette-dark-background) 0%, 
+            var(--mud-palette-dark-surface) 100%);
+    }
+    
+    .mo-sidebar-card,
+    .mo-content-card {
+        background: rgba(var(--mud-palette-dark-surface-rgb), 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+}
+
+/* 毛玻璃主题特殊样式 */
+.mo-theme-glassmorphic .mo-sidebar-card,
+.mo-theme-glassmorphic .mo-content-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.mo-theme-glassmorphic.dark .mo-sidebar-card,
+.mo-theme-glassmorphic.dark .mo-content-card {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* 小清新主题适配 */
+.mo-theme-fresh .mo-main-container {
+    background: linear-gradient(135deg, 
+        #f0f9ff 0%, 
+        #e0f2fe 50%, 
+        #f0fdf4 100%);
+}
+
+.mo-theme-fresh .mo-sidebar-card,
+.mo-theme-fresh .mo-content-card {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(134, 239, 172, 0.3);
+}
+
+/* 响应式设计 - 只在移动设备上使用上下布局 */
+@media (max-width: 480px) {
+    .mo-main-container {
+        flex-direction: column;
+        padding: 8px;
+        gap: 8px;
+    }
+    
+    .mo-sidebar-card,
+    .mo-content-card {
+        height: auto;
+        min-height: 200px;
+    }
+    
+    .mo-content-card {
+        flex: 1;
+        min-height: calc(100vh - 240px);
+    }
+}
+
+/* 自定义滚动条 */
+.mo-content-card::-webkit-scrollbar {
+    width: 8px;
+}
+
+.mo-content-card::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 4px;
+}
+
+.mo-content-card::-webkit-scrollbar-thumb {
+    background: rgba(var(--mud-palette-text-secondary-rgb), 0.3);
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+
+.mo-content-card::-webkit-scrollbar-thumb:hover {
+    background: rgba(var(--mud-palette-text-secondary-rgb), 0.5);
+}

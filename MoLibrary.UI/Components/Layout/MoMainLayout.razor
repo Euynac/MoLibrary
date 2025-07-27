@@ -14,29 +14,22 @@
     <MudPopoverProvider />
     <MudDialogProvider />
     <MudSnackbarProvider />
-    <MudLayout>
-    <MudAppBar Elevation="1">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
-        <MudText Typo="Typo.h5" Class="ml-3">@Options.Value.UIAppBarName</MudText>
-        <MudSpacer />
-        <MoThemeSelector />
-    </MudAppBar>
-    <MudDrawer id="nav-drawer" @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
-        <MudNavMenu>
-            @foreach (var navItem in UIRegistry.GetNavItems())
-            {
-                <MudNavLink Href="@navItem.Href" 
-                            Icon="@navItem.Icon" 
-                            Disabled="@navItem.Disabled">
-                    @navItem.Text
-                </MudNavLink>
-            }
-        </MudNavMenu>
-    </MudDrawer>
-    <MudMainContent Class="pt-16 pa-4">
-        @Body
-    </MudMainContent>
-    </MudLayout>
+    
+    <div class="mo-main-container">
+        <!-- 左侧导航栏卡片 -->
+        <div class="mo-sidebar-container">
+            <MudPaper Class="mo-sidebar-card" Elevation="3">
+                <MoSidebar @bind-IsExpanded="_sidebarExpanded" />
+            </MudPaper>
+        </div>
+        
+        <!-- 右侧内容卡片 -->
+        <div class="mo-content-container">
+            <MudPaper Class="mo-content-card" Elevation="2">
+                @Body
+            </MudPaper>
+        </div>
+    </div>
 </MoThemeProvider>
 
 
@@ -47,17 +40,12 @@
 </div>
 
 @code {
-    private bool _drawerOpen = false;
+    private bool _sidebarExpanded = true;
 
     protected override void OnInitialized()
     {
         base.OnInitialized();
         ThemeService.OnThemeChanged += StateHasChanged;
-    }
-
-    private void DrawerToggle()
-    {
-        _drawerOpen = !_drawerOpen;
     }
 
     public void Dispose()
