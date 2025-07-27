@@ -1,0 +1,873 @@
+/* MoLibrary Vintage Press Theme - 复古印刷主题 */
+/* 怀旧报纸风格，使用打字机字体和网格布局 */
+
+/* 导入复古字体 */
+@import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Playfair+Display:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+/* Vintage Press Theme CSS Variables - 明暗模式通用 */
+:root[data-theme="vintage-press-light"],
+:root[data-theme="vintage-press-dark"],
+.mo-theme-vintage-press-light,
+.mo-theme-vintage-press-dark {
+    /* 复古色彩变量 */
+    --mo-vintage-brown: #8b4513;
+    --mo-vintage-coffee: #654321;
+    --mo-vintage-gold: #daa520;
+    --mo-vintage-sepia: #704214;
+    --mo-vintage-cream: #faf5e6;
+    --mo-vintage-parchment: #f5deb3;
+    --mo-vintage-ink: #2f1b14;
+    
+    /* 组件样式变量 - 复古印刷风格 */
+    --mo-button-border-radius: 4px;
+    --mo-button-padding-x: 16px;
+    --mo-button-padding-y: 8px;
+    --mo-button-font-weight: 600;
+    --mo-button-text-transform: uppercase;
+    --mo-button-transition: all 0.3s ease;
+    
+    --mo-card-border-radius: 6px;
+    --mo-card-padding: 24px;
+    
+    --mo-input-border-radius: 4px;
+    --mo-input-padding: 12px 16px;
+    --mo-input-border-width: 2px;
+    
+    --mo-dialog-border-radius: 8px;
+    --mo-dialog-padding: 32px;
+    
+    --mo-chip-border-radius: 4px;
+    --mo-chip-padding: 4px 8px;
+    --mo-chip-height: 28px;
+    
+    --mo-table-border-radius: 6px;
+    
+    /* 间距变量 - 网格系统 */
+    --mo-spacing-xs: 4px;
+    --mo-spacing-sm: 8px;
+    --mo-spacing-md: 16px;
+    --mo-spacing-lg: 24px;
+    --mo-spacing-xl: 32px;
+    
+    /* 动画变量 - 缓慢复古 */
+    --mo-transition-fast: 200ms;
+    --mo-transition-normal: 350ms;
+    --mo-transition-slow: 500ms;
+    --mo-animation-smooth: 350ms ease;
+    --mo-animation-typewriter: 800ms steps(40, end);
+    --mo-animation-vintage: 600ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    
+    /* 复古纹理变量 */
+    --mo-paper-texture: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23704214' fill-opacity='0.03'%3E%3Cpath d='M11 18c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zm48 25c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zm-6-3c0-.55.45-1 1-1s1 .45 1 1-.45 1-1 1-1-.45-1-1zm-13 1c0-.55.45-1 1-1s1 .45 1 1-.45 1-1 1-1-.45-1-1zm8 5c0-.55.45-1 1-1s1 .45 1 1-.45 1-1 1-1-.45-1-1zm-4 15c0-.55.45-1 1-1s1 .45 1 1-.45 1-1 1-1-.45-1-1zm-4 3c0-.55.45-1 1-1s1 .45 1 1-.45 1-1 1-1-.45-1-1zm14-7c0-.55.45-1 1-1s1 .45 1 1-.45 1-1 1-1-.45-1-1zm6-3c0-.55.45-1 1-1s1 .45 1 1-.45 1-1 1-1-.45-1-1zm-16 5c0-.55.45-1 1-1s1 .45 1 1-.45 1-1 1-1-.45-1-1zm-5-13c0-.55.45-1 1-1s1 .45 1 1-.45 1-1 1-1-.45-1-1zm13 13c0-.55.45-1 1-1s1 .45 1 1-.45 1-1 1-1-.45-1-1zm5-2c0-.55.45-1 1-1s1 .45 1 1-.45 1-1 1-1-.45-1-1zm3-6c0-.55.45-1 1-1s1 .45 1 1-.45 1-1 1-1-.45-1-1zm-7 12c0-.55.45-1 1-1s1 .45 1 1-.45 1-1 1-1-.45-1-1zm-3 7c0-.55.45-1 1-1s1 .45 1 1-.45 1-1 1-1-.45-1-1zm7-5c0-.55.45-1 1-1s1 .45 1 1-.45 1-1 1-1-.45-1-1z'/%3E%3C/g%3E%3C/svg%3E");
+    --mo-aged-texture: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%238b4513' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    --mo-ink-stain: radial-gradient(ellipse at center, rgba(139, 69, 19, 0.15) 0%, transparent 70%);
+    --mo-typewriter-pattern: linear-gradient(90deg, transparent 98%, rgba(139, 69, 19, 0.1) 100%);
+    
+    /* 印刷阴影效果 */
+    --mo-print-shadow: 0 2px 4px rgba(139, 69, 19, 0.2), inset 0 1px 0 rgba(250, 245, 230, 0.5);
+    --mo-letterpress: inset 0 1px 2px rgba(139, 69, 19, 0.3);
+    --mo-emboss: 0 1px 0 rgba(250, 245, 230, 0.8), inset 0 1px 2px rgba(139, 69, 19, 0.2);
+}
+
+/* Light Theme Variables */
+:root[data-theme="vintage-press-light"],
+.mo-theme-vintage-press-light {
+    --mo-background-paper: #faf5e6;
+    --mo-background-parchment: rgba(245, 222, 179, 0.3);
+    --mo-background-article: #fffef7;
+    --mo-surface-aged: rgba(139, 69, 19, 0.03);
+    --mo-surface-hover: rgba(139, 69, 19, 0.08);
+    --mo-border-ink: rgba(139, 69, 19, 0.2);
+    --mo-border-print: rgba(139, 69, 19, 0.4);
+    --mo-shadow-vintage: 0 4px 8px rgba(139, 69, 19, 0.15);
+    --mo-shadow-vintage-hover: 0 6px 12px rgba(139, 69, 19, 0.25);
+    --mo-text-typewriter: #2f1b14;
+}
+
+/* Dark Theme Variables */
+:root[data-theme="vintage-press-dark"],
+.mo-theme-vintage-press-dark {
+    --mo-background-paper: #1a1008;
+    --mo-background-parchment: rgba(218, 165, 32, 0.1);
+    --mo-background-article: #2f1b14;
+    --mo-surface-aged: rgba(218, 165, 32, 0.05);
+    --mo-surface-hover: rgba(218, 165, 32, 0.12);
+    --mo-border-ink: rgba(218, 165, 32, 0.3);
+    --mo-border-print: rgba(218, 165, 32, 0.5);
+    --mo-shadow-vintage: 0 4px 8px rgba(0, 0, 0, 0.4);
+    --mo-shadow-vintage-hover: 0 6px 12px rgba(0, 0, 0, 0.6);
+    --mo-text-typewriter: #f5deb3;
+    --mo-amber-glow: 0 0 10px rgba(218, 165, 32, 0.3);
+}
+
+/* 复古纸张背景 - Light Mode */
+.mo-theme-vintage-press-light {
+    background: var(--mo-background-paper) var(--mo-paper-texture);
+    background-attachment: fixed;
+    position: relative;
+}
+
+.mo-theme-vintage-press-light::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--mo-aged-texture);
+    opacity: 0.4;
+    z-index: -20;
+    pointer-events: none;
+}
+
+.mo-theme-vintage-press-light::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: 
+        radial-gradient(ellipse at 20% 80%, rgba(139, 69, 19, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(112, 66, 20, 0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 40% 40%, rgba(101, 67, 33, 0.04) 0%, transparent 50%);
+    z-index: -19;
+    pointer-events: none;
+}
+
+/* 复古纸张背景 - Dark Mode */
+.mo-theme-vintage-press-dark {
+    background: var(--mo-background-paper) var(--mo-paper-texture);
+    background-attachment: fixed;
+    position: relative;
+}
+
+.mo-theme-vintage-press-dark::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--mo-aged-texture);
+    opacity: 0.3;
+    z-index: -20;
+    pointer-events: none;
+}
+
+.mo-theme-vintage-press-dark::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: 
+        radial-gradient(ellipse at 30% 70%, rgba(218, 165, 32, 0.1) 0%, transparent 60%),
+        radial-gradient(ellipse at 70% 30%, rgba(205, 133, 63, 0.08) 0%, transparent 60%),
+        radial-gradient(ellipse at 50% 50%, rgba(160, 82, 45, 0.06) 0%, transparent 60%);
+    z-index: -19;
+    pointer-events: none;
+}
+
+/* 打字机效果动画 */
+@keyframes mo-typewriter {
+    0% { width: 0; }
+    100% { width: 100%; }
+}
+
+/* 光标闪烁 */
+@keyframes mo-cursor-blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+}
+
+/* 墨水晕染效果 */
+@keyframes mo-ink-bleed {
+    0% { 
+        transform: scale(1);
+        opacity: 0.8;
+    }
+    50% { 
+        transform: scale(1.05);
+        opacity: 0.9;
+    }
+    100% { 
+        transform: scale(1);
+        opacity: 0.8;
+    }
+}
+
+/* 纸张摇摆 */
+@keyframes mo-paper-sway {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(0.2deg); }
+    75% { transform: rotate(-0.2deg); }
+}
+
+/* 打印机滚动 */
+@keyframes mo-printer-roll {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-2px); }
+}
+
+/* 老化淡入 */
+@keyframes mo-vintage-fade {
+    0% { 
+        opacity: 0;
+        transform: translateY(5px);
+        filter: sepia(0%);
+    }
+    100% { 
+        opacity: 1;
+        transform: translateY(0);
+        filter: sepia(20%);
+    }
+}
+
+/* Light and Dark Theme Styles */
+.mo-theme-vintage-press-light,
+.mo-theme-vintage-press-dark {
+    /* Global Typography */
+    font-family: 'Times New Roman', Georgia, serif !important;
+    line-height: 1.7 !important;
+    
+    /* Cards - 复古卡片 */
+    .mud-card {
+        background: var(--mo-background-article) !important;
+        border: 2px solid var(--mo-border-ink) !important;
+        border-radius: var(--mo-card-border-radius) !important;
+        box-shadow: var(--mo-shadow-vintage), var(--mo-print-shadow) !important;
+        transition: var(--mo-animation-vintage) !important;
+        position: relative;
+        overflow: hidden;
+        filter: sepia(10%);
+    }
+    
+    .mud-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--mo-typewriter-pattern);
+        opacity: 0.5;
+        pointer-events: none;
+    }
+    
+    .mud-card::after {
+        content: '';
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 20px;
+        height: 20px;
+        background: var(--mo-ink-stain);
+        border-radius: 50%;
+        opacity: 0.3;
+    }
+    
+    .mud-card:hover {
+        box-shadow: var(--mo-shadow-vintage-hover), var(--mo-print-shadow) !important;
+        transform: translateY(-2px) rotate(0.2deg);
+        border-color: var(--mo-border-print);
+        animation: mo-paper-sway 3s ease-in-out infinite;
+    }
+    
+    /* Buttons - 复古按钮 */
+    .mud-button {
+        border-radius: var(--mo-button-border-radius) !important;
+        padding: var(--mo-button-padding-y) var(--mo-button-padding-x) !important;
+        font-weight: var(--mo-button-font-weight) !important;
+        text-transform: var(--mo-button-text-transform) !important;
+        transition: var(--mo-button-transition) !important;
+        font-family: 'Courier Prime', 'Courier New', monospace !important;
+        letter-spacing: 0.05em !important;
+        position: relative;
+        filter: sepia(15%);
+    }
+    
+    .mud-button-filled {
+        background: var(--mo-vintage-brown) !important;
+        border: 2px solid var(--mo-border-print) !important;
+        box-shadow: var(--mo-letterpress) !important;
+        color: var(--mo-vintage-cream) !important;
+        text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.3);
+    }
+    
+    .mud-button-filled::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--mo-typewriter-pattern);
+        opacity: 0.6;
+        pointer-events: none;
+    }
+    
+    .mud-button-filled:hover {
+        box-shadow: var(--mo-emboss) !important;
+        transform: translateY(-1px);
+        background: var(--mo-vintage-coffee) !important;
+        animation: mo-printer-roll 0.3s ease-out;
+    }
+    
+    .mud-button-outlined {
+        background: transparent !important;
+        border: 3px solid var(--mo-border-print) !important;
+        color: var(--mo-vintage-brown) !important;
+    }
+    
+    .mud-button-outlined:hover {
+        background: var(--mo-surface-hover) !important;
+        border-color: var(--mud-palette-primary) !important;
+        box-shadow: var(--mo-letterpress) !important;
+    }
+    
+    .mud-button-text:hover {
+        background: var(--mo-surface-hover) !important;
+        border-radius: var(--mo-button-border-radius) !important;
+    }
+    
+    /* Inputs - 复古输入框 */
+    .mud-input-outlined .mud-input-outlined-border {
+        border-color: var(--mo-border-ink) !important;
+        border-radius: var(--mo-input-border-radius) !important;
+        border-width: var(--mo-input-border-width) !important;
+        background: var(--mo-background-article) !important;
+        transition: var(--mo-animation-vintage) !important;
+        box-shadow: var(--mo-letterpress) !important;
+    }
+    
+    .mud-input-outlined:hover .mud-input-outlined-border {
+        border-color: var(--mo-border-print) !important;
+    }
+    
+    .mud-input-outlined.mud-input-focused .mud-input-outlined-border {
+        border-color: var(--mud-palette-primary) !important;
+        border-width: 3px !important;
+        box-shadow: 0 0 0 1px var(--mud-palette-primary), var(--mo-letterpress) !important;
+    }
+    
+    .mud-input-control input,
+    .mud-input-control textarea {
+        font-family: 'Courier Prime', 'Courier New', monospace !important;
+        letter-spacing: 0.02em !important;
+        color: var(--mo-text-typewriter) !important;
+    }
+    
+    /* AppBar - 复古导航栏 */
+    .mud-app-bar {
+        background: var(--mo-vintage-brown) !important;
+        border-bottom: 3px solid var(--mo-border-print) !important;
+        box-shadow: var(--mo-shadow-vintage), var(--mo-print-shadow) !important;
+        position: relative;
+        filter: sepia(20%);
+    }
+    
+    .mud-app-bar::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--mo-typewriter-pattern);
+        opacity: 0.4;
+    }
+    
+    .mud-app-bar::after {
+        content: 'PRESS';
+        position: absolute;
+        top: 50%;
+        right: 20px;
+        transform: translateY(-50%);
+        font-family: 'Courier Prime', 'Courier New', monospace;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        color: rgba(250, 245, 230, 0.6);
+        text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.3);
+    }
+    
+    /* Drawer - 复古侧边栏 */
+    .mud-drawer .mud-drawer-content {
+        background: var(--mo-background-article) !important;
+        border-right: 3px solid var(--mo-border-print) !important;
+        position: relative;
+        filter: sepia(10%);
+    }
+    
+    .mud-drawer .mud-drawer-content::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 20px;
+        background: var(--mo-typewriter-pattern);
+        opacity: 0.3;
+    }
+    
+    /* Dialog - 复古对话框 */
+    .mud-dialog {
+        background: var(--mo-background-article) !important;
+        border: 3px solid var(--mo-border-print) !important;
+        border-radius: var(--mo-dialog-border-radius) !important;
+        box-shadow: var(--mo-shadow-vintage-hover), var(--mo-print-shadow) !important;
+        position: relative;
+        overflow: hidden;
+        filter: sepia(15%);
+        animation: mo-vintage-fade 0.5s ease-out;
+    }
+    
+    .mud-dialog::before {
+        content: '';
+        position: absolute;
+        top: -3px;
+        left: -3px;
+        right: -3px;
+        height: 8px;
+        background: var(--mo-vintage-brown);
+        background-image: var(--mo-typewriter-pattern);
+    }
+    
+    .mud-dialog::after {
+        content: 'EDITION';
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        font-family: 'Courier Prime', 'Courier New', monospace;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        color: var(--mo-vintage-brown);
+        opacity: 0.6;
+        transform: rotate(-5deg);
+    }
+    
+    .mud-dialog-content {
+        padding: var(--mo-dialog-padding) !important;
+        font-family: 'Times New Roman', Georgia, serif !important;
+    }
+    
+    /* Tables - 复古表格 */
+    .mud-table {
+        background: var(--mo-background-article) !important;
+        border-radius: var(--mo-table-border-radius) !important;
+        box-shadow: var(--mo-shadow-vintage), var(--mo-print-shadow) !important;
+        border: 2px solid var(--mo-border-ink) !important;
+        overflow: hidden;
+        font-family: 'Times New Roman', Georgia, serif !important;
+        filter: sepia(10%);
+    }
+    
+    .mud-table-head .mud-table-row {
+        background: var(--mo-vintage-brown) !important;
+        border-bottom: 3px solid var(--mo-border-print) !important;
+        position: relative;
+    }
+    
+    .mud-table-head .mud-table-row::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--mo-typewriter-pattern);
+        opacity: 0.4;
+    }
+    
+    .mud-table-head .mud-table-cell {
+        font-weight: 700 !important;
+        color: var(--mo-vintage-cream) !important;
+        text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.3);
+        font-family: 'Courier Prime', 'Courier New', monospace !important;
+        letter-spacing: 0.05em !important;
+        text-transform: uppercase !important;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .mud-table-row:nth-child(even) {
+        background: var(--mo-surface-aged) !important;
+    }
+    
+    .mud-table-row:hover {
+        background: var(--mo-surface-hover) !important;
+        position: relative;
+    }
+    
+    .mud-table-row:hover::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: var(--mo-vintage-brown);
+        animation: mo-typewriter 0.3s ease-out;
+    }
+    
+    /* Chips - 复古标签 */
+    .mud-chip {
+        background: var(--mo-surface-aged) !important;
+        border: 2px solid var(--mo-border-ink) !important;
+        border-radius: var(--mo-chip-border-radius) !important;
+        padding: var(--mo-chip-padding) !important;
+        height: var(--mo-chip-height) !important;
+        transition: var(--mo-animation-vintage) !important;
+        box-shadow: var(--mo-letterpress) !important;
+        font-family: 'Courier Prime', 'Courier New', monospace !important;
+        font-weight: 600 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.05em !important;
+        color: var(--mo-vintage-brown) !important;
+        filter: sepia(10%);
+    }
+    
+    .mud-chip:hover {
+        background: var(--mo-surface-hover) !important;
+        transform: translateY(-1px) rotate(0.5deg);
+        box-shadow: var(--mo-shadow-vintage), var(--mo-emboss) !important;
+        border-color: var(--mo-border-print);
+    }
+    
+    /* Typography - 复古字体 */
+    .mud-typography-h1,
+    .mud-typography-h2,
+    .mud-typography-h3,
+    .mud-typography-h4,
+    .mud-typography-h5,
+    .mud-typography-h6 {
+        font-family: 'Playfair Display', 'Times New Roman', Georgia, serif !important;
+        font-weight: 700 !important;
+        color: var(--mo-text-typewriter) !important;
+        position: relative;
+        filter: sepia(20%);
+    }
+    
+    .mud-typography-h1::after,
+    .mud-typography-h2::after,
+    .mud-typography-h3::after {
+        content: '';
+        position: absolute;
+        bottom: -4px;
+        left: 0;
+        width: 100px;
+        height: 3px;
+        background: var(--mo-vintage-brown);
+        background-image: var(--mo-typewriter-pattern);
+    }
+    
+    /* 报纸列标题样式 */
+    .mud-typography-h1 {
+        text-align: center !important;
+        border-top: 3px solid var(--mo-vintage-brown) !important;
+        border-bottom: 3px solid var(--mo-vintage-brown) !important;
+        padding: 16px 0 !important;
+        margin: 24px 0 !important;
+        letter-spacing: 0.1em !important;
+        text-transform: uppercase !important;
+    }
+    
+    /* Popovers and Menus - 复古弹出框 */
+    .mud-popover,
+    .mud-menu {
+        background: var(--mo-background-article) !important;
+        border: 2px solid var(--mo-border-print) !important;
+        border-radius: var(--mo-card-border-radius) !important;
+        box-shadow: var(--mo-shadow-vintage-hover), var(--mo-print-shadow) !important;
+        font-family: 'Times New Roman', Georgia, serif !important;
+        filter: sepia(10%);
+    }
+    
+    /* Tooltips - 复古提示框 */
+    .mud-tooltip {
+        background: var(--mo-vintage-brown) !important;
+        border: 2px solid var(--mo-border-ink) !important;
+        border-radius: var(--mo-button-border-radius) !important;
+        box-shadow: var(--mo-shadow-vintage), var(--mo-letterpress) !important;
+        font-family: 'Courier Prime', 'Courier New', monospace !important;
+        color: var(--mo-vintage-cream) !important;
+        text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.3);
+        font-weight: 600;
+        letter-spacing: 0.02em;
+    }
+    
+    /* Snackbars - 复古通知栏 */
+    .mud-snackbar {
+        background: var(--mo-vintage-coffee) !important;
+        border: 2px solid var(--mo-border-print) !important;
+        border-radius: var(--mo-button-border-radius) !important;
+        box-shadow: var(--mo-shadow-vintage-hover), var(--mo-print-shadow) !important;
+        font-family: 'Courier Prime', 'Courier New', monospace !important;
+        color: var(--mo-vintage-cream) !important;
+        text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.3);
+        animation: mo-vintage-fade 0.4s ease-out;
+    }
+    
+    /* Tabs - 复古标签页 */
+    .mud-tabs-toolbar {
+        background: var(--mo-background-article) !important;
+        border-bottom: 3px solid var(--mo-border-print) !important;
+        position: relative;
+        filter: sepia(10%);
+    }
+    
+    .mud-tabs-toolbar::before {
+        content: '';
+        position: absolute;
+        bottom: -3px;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: var(--mo-vintage-brown);
+        background-image: var(--mo-typewriter-pattern);
+    }
+    
+    .mud-tab {
+        border-radius: var(--mo-button-border-radius) var(--mo-button-border-radius) 0 0 !important;
+        transition: var(--mo-animation-vintage) !important;
+        font-family: 'Courier Prime', 'Courier New', monospace !important;
+        font-weight: 600 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.05em !important;
+        margin: 0 2px;
+        position: relative;
+    }
+    
+    .mud-tab.mud-tab-active {
+        background: var(--mo-vintage-brown) !important;
+        border: 2px solid var(--mo-border-print) !important;
+        border-bottom: none !important;
+        color: var(--mo-vintage-cream) !important;
+        text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.3);
+        box-shadow: var(--mo-letterpress) !important;
+    }
+    
+    .mud-tab.mud-tab-active::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--mo-typewriter-pattern);
+        opacity: 0.4;
+    }
+    
+    .mud-tab:hover {
+        background: var(--mo-surface-hover) !important;
+        transform: translateY(-1px);
+    }
+    
+    /* List Items - 复古列表项 */
+    .mud-list-item {
+        border-radius: var(--mo-button-border-radius) !important;
+        margin: var(--mo-spacing-xs) var(--mo-spacing-sm) !important;
+        transition: var(--mo-animation-vintage) !important;
+        font-family: 'Times New Roman', Georgia, serif !important;
+        position: relative;
+        border-left: 3px solid transparent;
+    }
+    
+    .mud-list-item::before {
+        content: '◦';
+        position: absolute;
+        left: -15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--mo-vintage-brown);
+        font-weight: bold;
+        opacity: 0;
+        transition: opacity var(--mo-animation-vintage);
+    }
+    
+    .mud-list-item:hover {
+        background: var(--mo-surface-hover) !important;
+        border-left-color: var(--mo-vintage-brown);
+        transform: translateX(4px);
+        box-shadow: var(--mo-letterpress) !important;
+    }
+    
+    .mud-list-item:hover::before {
+        opacity: 1;
+        animation: mo-typewriter 0.2s ease-out;
+    }
+    
+    /* 工具类 */
+    .mo-vintage-bg {
+        background: var(--mo-vintage-brown) !important;
+        color: var(--mo-vintage-cream) !important;
+        filter: sepia(20%);
+    }
+    
+    .mo-letterpress {
+        box-shadow: var(--mo-letterpress) !important;
+    }
+    
+    .mo-emboss {
+        box-shadow: var(--mo-emboss) !important;
+    }
+    
+    .mo-typewriter {
+        font-family: 'Courier Prime', 'Courier New', monospace !important;
+        letter-spacing: 0.05em !important;
+    }
+    
+    .mo-serif {
+        font-family: 'Playfair Display', 'Times New Roman', Georgia, serif !important;
+    }
+    
+    .mo-vintage-fade {
+        animation: mo-vintage-fade 0.6s ease-out;
+    }
+    
+    .mo-paper-texture {
+        background-image: var(--mo-paper-texture) !important;
+    }
+    
+    .mo-ink-stain {
+        position: relative;
+    }
+    
+    .mo-ink-stain::after {
+        content: '';
+        position: absolute;
+        top: 10%;
+        right: 10%;
+        width: 20px;
+        height: 20px;
+        background: var(--mo-ink-stain);
+        border-radius: 50%;
+        opacity: 0.3;
+        animation: mo-ink-bleed 3s ease-in-out infinite;
+    }
+}
+
+/* Light Theme Specific Styles */
+.mo-theme-vintage-press-light {
+    /* 明亮模式特殊效果 */
+    .mud-elevation-1,
+    .mud-elevation-2,
+    .mud-elevation-4,
+    .mud-elevation-8 {
+        background: var(--mo-background-article) !important;
+        border: 2px solid var(--mo-border-ink) !important;
+        filter: sepia(10%);
+    }
+    
+    .mud-elevation-1 {
+        box-shadow: 0 1px 3px rgba(139, 69, 19, 0.2), var(--mo-letterpress) !important;
+    }
+    
+    .mud-elevation-2 {
+        box-shadow: 0 2px 6px rgba(139, 69, 19, 0.25), var(--mo-letterpress) !important;
+    }
+    
+    .mud-elevation-4 {
+        box-shadow: 0 4px 12px rgba(139, 69, 19, 0.3), var(--mo-letterpress) !important;
+    }
+    
+    .mud-elevation-8 {
+        box-shadow: 0 8px 24px rgba(139, 69, 19, 0.35), var(--mo-letterpress) !important;
+    }
+}
+
+/* Dark Theme Specific Styles */
+.mo-theme-vintage-press-dark {
+    /* 暗色模式特殊效果 */
+    .mud-elevation-1,
+    .mud-elevation-2,
+    .mud-elevation-4,
+    .mud-elevation-8 {
+        background: var(--mo-background-article) !important;
+        border: 2px solid var(--mo-border-ink) !important;
+        filter: sepia(15%);
+    }
+    
+    .mud-elevation-1 {
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(218, 165, 32, 0.1) !important;
+    }
+    
+    .mud-elevation-2 {
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(218, 165, 32, 0.1) !important;
+    }
+    
+    .mud-elevation-4 {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(218, 165, 32, 0.1) !important;
+    }
+    
+    .mud-elevation-8 {
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(218, 165, 32, 0.1) !important;
+    }
+    
+    /* 暗色模式特殊发光效果 */
+    .mud-button-filled-primary:hover,
+    .mud-tab.mud-tab-active {
+        box-shadow: var(--mo-amber-glow) !important;
+    }
+    
+    /* 复古标题发光 */
+    .mud-typography-h1,
+    .mud-typography-h2,
+    .mud-typography-h3 {
+        text-shadow: 0 0 8px rgba(218, 165, 32, 0.3);
+    }
+}
+
+/* 响应式设计 */
+@media (max-width: 960px) {
+    .mo-theme-vintage-press-light,
+    .mo-theme-vintage-press-dark {
+        --mo-card-padding: 20px;
+        --mo-dialog-padding: 24px;
+        --mo-button-padding-x: 14px;
+        --mo-button-padding-y: 7px;
+    }
+}
+
+@media (max-width: 600px) {
+    .mo-theme-vintage-press-light,
+    .mo-theme-vintage-press-dark {
+        --mo-card-padding: 16px;
+        --mo-dialog-padding: 20px;
+        --mo-button-padding-x: 12px;
+        --mo-button-padding-y: 6px;
+        --mo-card-border-radius: 4px;
+        --mo-dialog-border-radius: 6px;
+    }
+    
+    .mud-typography-h1 {
+        font-size: 2rem !important;
+        letter-spacing: 0.05em !important;
+    }
+}
+
+/* 无障碍支持 */
+@media (prefers-reduced-motion: reduce) {
+    .mo-theme-vintage-press-light *,
+    .mo-theme-vintage-press-dark * {
+        animation: none !important;
+        transition: color 0.2s ease, background-color 0.2s ease !important;
+    }
+}
+
+/* 性能优化 */
+.mo-theme-vintage-press-light .mud-table *,
+.mo-theme-vintage-press-light .mud-data-grid *,
+.mo-theme-vintage-press-light .mud-treeview *,
+.mo-theme-vintage-press-dark .mud-table *,
+.mo-theme-vintage-press-dark .mud-data-grid *,
+.mo-theme-vintage-press-dark .mud-treeview *,
+.no-transition,
+.no-transition * {
+    transition: none !important;
+    animation: none !important;
+    filter: none !important;
+}

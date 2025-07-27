@@ -1,0 +1,874 @@
+/* MoLibrary Macaron Sweet Theme - 马卡龙甜心主题 */
+/* 柔和粉彩主题，使用马卡龙色系 */
+
+/* 导入可爱字体 */
+@import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@300;400;500;600;700&family=Nunito:wght@300;400;500;600;700&display=swap');
+
+/* Macaron Sweet Theme CSS Variables - 明暗模式通用 */
+:root[data-theme="macaron-sweet-light"],
+:root[data-theme="macaron-sweet-dark"],
+.mo-theme-macaron-sweet-light,
+.mo-theme-macaron-sweet-dark {
+    /* 马卡龙色彩变量 */
+    --mo-macaron-pink: #ff9aa2;
+    --mo-macaron-mint: #b5ead7;
+    --mo-macaron-lavender: #c7ceea;
+    --mo-macaron-peach: #ffd3a5;
+    --mo-macaron-lemon: #ffefba;
+    --mo-macaron-rose: #ffb3ba;
+    --mo-bounce-intensity: 0.15;
+    --mo-sweet-glow: 0.3;
+    
+    /* 组件样式变量 - 可爱圆润风格 */
+    --mo-button-border-radius: 25px;
+    --mo-button-padding-x: 24px;
+    --mo-button-padding-y: 12px;
+    --mo-button-font-weight: 500;
+    --mo-button-text-transform: none;
+    --mo-button-transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    
+    --mo-card-border-radius: 28px;
+    --mo-card-padding: 28px;
+    
+    --mo-input-border-radius: 20px;
+    --mo-input-padding: 16px 20px;
+    --mo-input-border-width: 2px;
+    
+    --mo-dialog-border-radius: 32px;
+    --mo-dialog-padding: 36px;
+    
+    --mo-chip-border-radius: 20px;
+    --mo-chip-padding: 8px 16px;
+    --mo-chip-height: 36px;
+    
+    --mo-table-border-radius: 24px;
+    
+    /* 间距变量 - 可爱比例 */
+    --mo-spacing-xs: 6px;
+    --mo-spacing-sm: 12px;
+    --mo-spacing-md: 20px;
+    --mo-spacing-lg: 28px;
+    --mo-spacing-xl: 36px;
+    
+    /* 动画变量 - 弹跳效果 */
+    --mo-transition-fast: 200ms;
+    --mo-transition-normal: 350ms;
+    --mo-transition-slow: 500ms;
+    --mo-animation-smooth: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+    --mo-animation-bounce: 500ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    --mo-animation-sweet: 600ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    
+    /* 马卡龙渐变变量 */
+    --mo-gradient-pink-mint: linear-gradient(135deg, #ff9aa2 0%, #b5ead7 100%);
+    --mo-gradient-lavender-peach: linear-gradient(135deg, #c7ceea 0%, #ffd3a5 100%);
+    --mo-gradient-rose-lemon: linear-gradient(135deg, #ffb3ba 0%, #ffefba 100%);
+    --mo-gradient-sweet-dream: linear-gradient(135deg, #ff9aa2 0%, #c7ceea 25%, #b5ead7 50%, #ffd3a5 75%, #ffefba 100%);
+    --mo-gradient-pastel-rainbow: linear-gradient(45deg, #ff9aa2 0%, #ffb3ba 20%, #ffd3a5 40%, #ffefba 60%, #b5ead7 80%, #c7ceea 100%);
+    
+    /* 可爱光晕变量 */
+    --mo-glow-pink: 0 0 20px rgba(255, 154, 162, var(--mo-sweet-glow));
+    --mo-glow-mint: 0 0 20px rgba(181, 234, 215, var(--mo-sweet-glow));
+    --mo-glow-lavender: 0 0 20px rgba(199, 206, 234, var(--mo-sweet-glow));
+    --mo-glow-sweet: 0 0 25px rgba(255, 154, 162, 0.4), 0 0 35px rgba(199, 206, 234, 0.3);
+}
+
+/* Light Theme Variables */
+:root[data-theme="macaron-sweet-light"],
+.mo-theme-macaron-sweet-light {
+    --mo-background-cream: #fefcfb;
+    --mo-background-sugar: rgba(255, 154, 162, 0.08);
+    --mo-background-candy: rgba(255, 255, 255, 0.95);
+    --mo-surface-sweet: rgba(255, 154, 162, 0.05);
+    --mo-surface-hover: rgba(255, 154, 162, 0.12);
+    --mo-border-sweet: rgba(255, 154, 162, 0.2);
+    --mo-border-candy: rgba(255, 154, 162, 0.3);
+    --mo-shadow-sweet: 0 8px 32px rgba(255, 154, 162, 0.2);
+    --mo-shadow-sweet-hover: 0 12px 40px rgba(255, 154, 162, 0.3);
+    --mo-text-candy: #5d4e75;
+}
+
+/* Dark Theme Variables */
+:root[data-theme="macaron-sweet-dark"],
+.mo-theme-macaron-sweet-dark {
+    --mo-background-cream: #2d1b69;
+    --mo-background-sugar: rgba(255, 138, 149, 0.12);
+    --mo-background-candy: rgba(74, 44, 122, 0.95);
+    --mo-surface-sweet: rgba(255, 138, 149, 0.08);
+    --mo-surface-hover: rgba(255, 138, 149, 0.15);
+    --mo-border-sweet: rgba(255, 138, 149, 0.25);
+    --mo-border-candy: rgba(255, 138, 149, 0.35);
+    --mo-shadow-sweet: 0 8px 32px rgba(0, 0, 0, 0.4);
+    --mo-shadow-sweet-hover: 0 12px 40px rgba(0, 0, 0, 0.6);
+    --mo-text-candy: #fef7ff;
+    --mo-sweet-glow-dark: 0 0 15px rgba(255, 138, 149, 0.4);
+}
+
+/* 甜美背景 - Light Mode */
+.mo-theme-macaron-sweet-light {
+    background: var(--mo-background-cream);
+    position: relative;
+}
+
+.mo-theme-macaron-sweet-light::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--mo-gradient-sweet-dream);
+    opacity: 0.05;
+    z-index: -20;
+    animation: mo-sweet-flow 20s ease-in-out infinite;
+}
+
+.mo-theme-macaron-sweet-light::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at 30% 70%, rgba(255, 154, 162, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 70% 30%, rgba(199, 206, 234, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(181, 234, 215, 0.1) 0%, transparent 50%);
+    z-index: -19;
+    animation: mo-bubble-float 15s ease-in-out infinite;
+}
+
+/* 甜美背景 - Dark Mode */
+.mo-theme-macaron-sweet-dark {
+    background: var(--mo-background-cream);
+    position: relative;
+}
+
+.mo-theme-macaron-sweet-dark::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #2d1b69 0%, #4a2c7a 25%, #6b5b95 50%, #5d4e75 75%, #4a2c7a 100%);
+    opacity: 0.8;
+    z-index: -20;
+    animation: mo-sweet-flow 25s ease-in-out infinite;
+}
+
+.mo-theme-macaron-sweet-dark::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at 20% 80%, rgba(255, 138, 149, 0.15) 0%, transparent 60%),
+                radial-gradient(circle at 80% 20%, rgba(152, 150, 241, 0.15) 0%, transparent 60%),
+                radial-gradient(circle at 40% 40%, rgba(127, 205, 205, 0.15) 0%, transparent 60%);
+    z-index: -19;
+    animation: mo-bubble-float 18s ease-in-out infinite;
+}
+
+/* 甜美流动动画 */
+@keyframes mo-sweet-flow {
+    0%, 100% { 
+        background-position: 0% 50%; 
+        transform: rotate(0deg) scale(1);
+    }
+    25% { 
+        background-position: 100% 25%; 
+        transform: rotate(1deg) scale(1.02);
+    }
+    50% { 
+        background-position: 100% 75%; 
+        transform: rotate(-0.5deg) scale(1.01);
+    }
+    75% { 
+        background-position: 0% 100%; 
+        transform: rotate(0.5deg) scale(1.015);
+    }
+}
+
+/* 气泡浮动动画 */
+@keyframes mo-bubble-float {
+    0%, 100% { 
+        transform: translateY(0px) scale(1);
+        opacity: 0.8;
+    }
+    33% { 
+        transform: translateY(-10px) scale(1.05);
+        opacity: 1;
+    }
+    66% { 
+        transform: translateY(5px) scale(0.95);
+        opacity: 0.9;
+    }
+}
+
+/* 弹跳动画 */
+@keyframes mo-bounce {
+    0%, 100% { 
+        transform: translateY(0) scale(1);
+    }
+    50% { 
+        transform: translateY(-8px) scale(1.05);
+    }
+}
+
+/* 甜美脉冲动画 */
+@keyframes mo-sweet-pulse {
+    0%, 100% { 
+        box-shadow: var(--mo-glow-pink);
+        transform: scale(1);
+    }
+    50% { 
+        box-shadow: var(--mo-glow-sweet);
+        transform: scale(1.03);
+    }
+}
+
+/* 摇摆动画 */
+@keyframes mo-sweet-wiggle {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(2deg); }
+    75% { transform: rotate(-2deg); }
+}
+
+/* 闪烁动画 */
+@keyframes mo-sweet-sparkle {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; }
+}
+
+/* Light and Dark Theme Styles */
+.mo-theme-macaron-sweet-light,
+.mo-theme-macaron-sweet-dark {
+    /* Global Typography */
+    font-family: 'Comfortaa', 'Nunito', Arial, sans-serif !important;
+    
+    /* Cards - 马卡龙卡片 */
+    .mud-card {
+        background: var(--mo-background-candy) !important;
+        border: 2px solid var(--mo-border-sweet) !important;
+        border-radius: var(--mo-card-border-radius) !important;
+        box-shadow: var(--mo-shadow-sweet) !important;
+        transition: var(--mo-animation-bounce) !important;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .mud-card::before {
+        content: '';
+        position: absolute;
+        top: -2px;
+        left: -2px;
+        right: -2px;
+        bottom: -2px;
+        background: var(--mo-gradient-pastel-rainbow);
+        border-radius: var(--mo-card-border-radius);
+        z-index: -1;
+        opacity: 0;
+        transition: opacity var(--mo-animation-sweet);
+    }
+    
+    .mud-card::after {
+        content: '✨';
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        font-size: 16px;
+        opacity: 0;
+        animation: mo-sweet-sparkle 2s ease-in-out infinite;
+        transition: opacity var(--mo-animation-smooth);
+    }
+    
+    .mud-card:hover {
+        box-shadow: var(--mo-shadow-sweet-hover), var(--mo-glow-sweet) !important;
+        transform: translateY(-6px) scale(1.02);
+        border-color: var(--mo-border-candy);
+        animation: mo-bounce 1s ease-in-out infinite;
+    }
+    
+    .mud-card:hover::before {
+        opacity: 0.3;
+    }
+    
+    .mud-card:hover::after {
+        opacity: 1;
+        animation: mo-sweet-wiggle 0.5s ease-in-out infinite;
+    }
+    
+    /* Buttons - 马卡龙按钮 */
+    .mud-button {
+        border-radius: var(--mo-button-border-radius) !important;
+        padding: var(--mo-button-padding-y) var(--mo-button-padding-x) !important;
+        font-weight: var(--mo-button-font-weight) !important;
+        text-transform: var(--mo-button-text-transform) !important;
+        transition: var(--mo-button-transition) !important;
+        font-family: 'Comfortaa', 'Nunito', Arial, sans-serif !important;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .mud-button-filled {
+        background: var(--mo-gradient-pink-mint) !important;
+        border: 2px solid var(--mo-border-sweet) !important;
+        box-shadow: var(--mo-shadow-sweet) !important;
+        color: white !important;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+    
+    .mud-button-filled::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+        transition: left var(--mo-animation-sweet);
+    }
+    
+    .mud-button-filled::after {
+        content: '♡';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 14px;
+        opacity: 0;
+        transition: opacity var(--mo-animation-smooth);
+        color: rgba(255, 255, 255, 0.8);
+    }
+    
+    .mud-button-filled:hover {
+        box-shadow: var(--mo-shadow-sweet-hover), var(--mo-glow-sweet) !important;
+        transform: translateY(-3px) scale(1.05);
+        background: var(--mo-gradient-lavender-peach) !important;
+        animation: mo-sweet-pulse 1.5s ease-in-out infinite;
+    }
+    
+    .mud-button-filled:hover::before {
+        left: 100%;
+    }
+    
+    .mud-button-filled:hover::after {
+        opacity: 1;
+        animation: mo-sweet-sparkle 1s ease-in-out infinite;
+    }
+    
+    .mud-button-outlined {
+        background: transparent !important;
+        border: 3px solid var(--mo-border-candy) !important;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .mud-button-outlined::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--mo-gradient-rose-lemon);
+        opacity: 0;
+        transition: opacity var(--mo-animation-bounce);
+    }
+    
+    .mud-button-outlined:hover {
+        border-color: var(--mud-palette-primary) !important;
+        box-shadow: var(--mo-glow-sweet) !important;
+        transform: translateY(-2px) scale(1.03);
+        animation: mo-bounce 0.8s ease-in-out infinite;
+    }
+    
+    .mud-button-outlined:hover::before {
+        opacity: 0.2;
+    }
+    
+    .mud-button-text:hover {
+        background: var(--mo-surface-hover) !important;
+        border-radius: var(--mo-button-border-radius) !important;
+        box-shadow: var(--mo-glow-pink) !important;
+        transform: scale(1.05);
+    }
+    
+    /* Inputs - 马卡龙输入框 */
+    .mud-input-outlined .mud-input-outlined-border {
+        border-color: var(--mo-border-sweet) !important;
+        border-radius: var(--mo-input-border-radius) !important;
+        border-width: var(--mo-input-border-width) !important;
+        background: var(--mo-background-candy) !important;
+        transition: var(--mo-animation-bounce) !important;
+    }
+    
+    .mud-input-outlined:hover .mud-input-outlined-border {
+        border-color: var(--mo-border-candy) !important;
+        box-shadow: 0 0 0 3px rgba(255, 154, 162, 0.15) !important;
+        transform: scale(1.02);
+    }
+    
+    .mud-input-outlined.mud-input-focused .mud-input-outlined-border {
+        border-color: var(--mud-palette-primary) !important;
+        box-shadow: 0 0 0 4px rgba(255, 154, 162, 0.25), var(--mo-glow-pink) !important;
+        background: var(--mo-background-candy) !important;
+        animation: mo-sweet-pulse 2s ease-in-out infinite;
+    }
+    
+    .mud-input-control input,
+    .mud-input-control textarea {
+        font-family: 'Comfortaa', 'Nunito', Arial, sans-serif !important;
+    }
+    
+    /* AppBar - 马卡龙导航栏 */
+    .mud-app-bar {
+        background: var(--mo-gradient-pink-mint) !important;
+        border-bottom: 3px solid var(--mo-border-candy) !important;
+        box-shadow: var(--mo-shadow-sweet) !important;
+        position: relative;
+    }
+    
+    .mud-app-bar::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--mo-gradient-pastel-rainbow);
+        animation: mo-sweet-flow 15s ease-in-out infinite;
+    }
+    
+    .mud-app-bar::after {
+        content: '🌸';
+        position: absolute;
+        top: 50%;
+        right: 20px;
+        transform: translateY(-50%);
+        font-size: 20px;
+        animation: mo-sweet-sparkle 3s ease-in-out infinite;
+    }
+    
+    /* Drawer - 马卡龙侧边栏 */
+    .mud-drawer .mud-drawer-content {
+        background: var(--mo-background-candy) !important;
+        border-right: 3px solid var(--mo-border-candy) !important;
+        position: relative;
+    }
+    
+    .mud-drawer .mud-drawer-content::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 3px;
+        background: var(--mo-gradient-sweet-dream);
+        animation: mo-sweet-flow 20s ease-in-out infinite;
+    }
+    
+    /* Dialog - 马卡龙对话框 */
+    .mud-dialog {
+        background: var(--mo-background-candy) !important;
+        border: 3px solid var(--mo-border-candy) !important;
+        border-radius: var(--mo-dialog-border-radius) !important;
+        box-shadow: var(--mo-shadow-sweet-hover), var(--mo-glow-sweet) !important;
+        position: relative;
+        overflow: hidden;
+        animation: mo-bounce 0.6s ease-out;
+    }
+    
+    .mud-dialog::before {
+        content: '';
+        position: absolute;
+        top: -3px;
+        left: -3px;
+        right: -3px;
+        height: 6px;
+        background: var(--mo-gradient-pastel-rainbow);
+        border-radius: var(--mo-dialog-border-radius) var(--mo-dialog-border-radius) 0 0;
+        animation: mo-sweet-flow 12s ease-in-out infinite;
+    }
+    
+    .mud-dialog::after {
+        content: '💕';
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        font-size: 18px;
+        animation: mo-sweet-wiggle 2s ease-in-out infinite;
+    }
+    
+    .mud-dialog-content {
+        padding: var(--mo-dialog-padding) !important;
+        font-family: 'Comfortaa', 'Nunito', Arial, sans-serif !important;
+    }
+    
+    /* Tables - 马卡龙表格 */
+    .mud-table {
+        background: var(--mo-background-candy) !important;
+        border-radius: var(--mo-table-border-radius) !important;
+        box-shadow: var(--mo-shadow-sweet) !important;
+        border: 2px solid var(--mo-border-sweet) !important;
+        overflow: hidden;
+        font-family: 'Comfortaa', 'Nunito', Arial, sans-serif !important;
+    }
+    
+    .mud-table-head .mud-table-row {
+        background: var(--mo-gradient-lavender-peach) !important;
+        border-bottom: 3px solid var(--mo-border-candy) !important;
+        position: relative;
+    }
+    
+    .mud-table-head .mud-table-row::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 100%;
+        background: var(--mo-gradient-pastel-rainbow);
+        opacity: 0.3;
+        animation: mo-sweet-flow 25s ease-in-out infinite;
+    }
+    
+    .mud-table-head .mud-table-cell {
+        font-weight: 600 !important;
+        color: white !important;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        position: relative;
+        z-index: 1;
+    }
+    
+    .mud-table-row:nth-child(even) {
+        background: var(--mo-surface-sweet) !important;
+    }
+    
+    .mud-table-row:hover {
+        background: var(--mo-surface-hover) !important;
+        transform: scale(1.01);
+        animation: mo-sweet-pulse 1s ease-in-out;
+    }
+    
+    /* Chips - 马卡龙标签 */
+    .mud-chip {
+        background: var(--mo-gradient-rose-lemon) !important;
+        border: 2px solid var(--mo-border-sweet) !important;
+        border-radius: var(--mo-chip-border-radius) !important;
+        padding: var(--mo-chip-padding) !important;
+        height: var(--mo-chip-height) !important;
+        transition: var(--mo-animation-bounce) !important;
+        box-shadow: var(--mo-shadow-sweet) !important;
+        font-family: 'Comfortaa', 'Nunito', Arial, sans-serif !important;
+        position: relative;
+        overflow: hidden;
+        color: white !important;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+    
+    .mud-chip::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, transparent 70%);
+        transform: scale(0);
+        transition: transform var(--mo-animation-bounce);
+    }
+    
+    .mud-chip:hover {
+        background: var(--mo-gradient-lavender-peach) !important;
+        transform: translateY(-3px) scale(1.08);
+        box-shadow: var(--mo-shadow-sweet-hover), var(--mo-glow-sweet) !important;
+        border-color: var(--mud-palette-primary);
+        animation: mo-bounce 0.8s ease-in-out infinite;
+    }
+    
+    .mud-chip:hover::before {
+        transform: scale(1);
+        animation: mo-sweet-sparkle 1s ease-in-out infinite;
+    }
+    
+    /* Typography - 马卡龙字体 */
+    .mud-typography-h1,
+    .mud-typography-h2,
+    .mud-typography-h3,
+    .mud-typography-h4,
+    .mud-typography-h5,
+    .mud-typography-h6 {
+        font-family: 'Comfortaa', 'Nunito', Arial, sans-serif !important;
+        font-weight: 500 !important;
+        color: var(--mo-text-candy) !important;
+        position: relative;
+    }
+    
+    .mud-typography-h1::after,
+    .mud-typography-h2::after,
+    .mud-typography-h3::after {
+        content: '🌈';
+        position: absolute;
+        top: 0;
+        right: -40px;
+        font-size: 0.6em;
+        animation: mo-sweet-sparkle 4s ease-in-out infinite;
+    }
+    
+    /* Popovers and Menus - 马卡龙弹出框 */
+    .mud-popover,
+    .mud-menu {
+        background: var(--mo-background-candy) !important;
+        border: 2px solid var(--mo-border-candy) !important;
+        border-radius: var(--mo-card-border-radius) !important;
+        box-shadow: var(--mo-shadow-sweet-hover), var(--mo-glow-sweet) !important;
+        font-family: 'Comfortaa', 'Nunito', Arial, sans-serif !important;
+        animation: mo-bounce 0.4s ease-out;
+    }
+    
+    /* Tooltips - 马卡龙提示框 */
+    .mud-tooltip {
+        background: var(--mo-gradient-pink-mint) !important;
+        border: 2px solid var(--mo-border-sweet) !important;
+        border-radius: var(--mo-button-border-radius) !important;
+        box-shadow: var(--mo-shadow-sweet), var(--mo-glow-pink) !important;
+        font-family: 'Comfortaa', 'Nunito', Arial, sans-serif !important;
+        color: white !important;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Snackbars - 马卡龙通知栏 */
+    .mud-snackbar {
+        background: var(--mo-gradient-lavender-peach) !important;
+        border: 2px solid var(--mo-border-candy) !important;
+        border-radius: var(--mo-button-border-radius) !important;
+        box-shadow: var(--mo-shadow-sweet-hover), var(--mo-glow-sweet) !important;
+        font-family: 'Comfortaa', 'Nunito', Arial, sans-serif !important;
+        color: white !important;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        animation: mo-bounce 0.6s ease-out;
+    }
+    
+    /* Tabs - 马卡龙标签页 */
+    .mud-tabs-toolbar {
+        background: var(--mo-background-candy) !important;
+        border-bottom: 3px solid var(--mo-border-candy) !important;
+        position: relative;
+    }
+    
+    .mud-tabs-toolbar::after {
+        content: '';
+        position: absolute;
+        bottom: -3px;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: var(--mo-gradient-pastel-rainbow);
+        animation: mo-sweet-flow 18s ease-in-out infinite;
+    }
+    
+    .mud-tab {
+        border-radius: var(--mo-button-border-radius) !important;
+        transition: var(--mo-animation-bounce) !important;
+        font-family: 'Comfortaa', 'Nunito', Arial, sans-serif !important;
+        position: relative;
+        margin: 4px 2px;
+    }
+    
+    .mud-tab.mud-tab-active {
+        background: var(--mo-gradient-pink-mint) !important;
+        border: 2px solid var(--mo-border-sweet) !important;
+        box-shadow: var(--mo-glow-pink) !important;
+        color: white !important;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        transform: scale(1.05);
+        animation: mo-sweet-pulse 2s ease-in-out infinite;
+    }
+    
+    .mud-tab:hover {
+        background: var(--mo-surface-hover) !important;
+        transform: translateY(-2px) scale(1.03);
+        box-shadow: var(--mo-glow-pink) !important;
+        animation: mo-bounce 0.6s ease-in-out;
+    }
+    
+    /* List Items - 马卡龙列表项 */
+    .mud-list-item {
+        border-radius: var(--mo-button-border-radius) !important;
+        margin: var(--mo-spacing-xs) var(--mo-spacing-sm) !important;
+        transition: var(--mo-animation-bounce) !important;
+        font-family: 'Comfortaa', 'Nunito', Arial, sans-serif !important;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .mud-list-item::before {
+        content: '💖';
+        position: absolute;
+        left: -30px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 14px;
+        transition: left var(--mo-animation-bounce);
+        opacity: 0;
+    }
+    
+    .mud-list-item:hover {
+        background: var(--mo-surface-hover) !important;
+        transform: translateX(8px) scale(1.02);
+        box-shadow: 0 4px 12px rgba(255, 154, 162, 0.2) !important;
+        border-radius: var(--mo-button-border-radius) !important;
+        animation: mo-bounce 0.8s ease-in-out;
+    }
+    
+    .mud-list-item:hover::before {
+        left: 8px;
+        opacity: 1;
+        animation: mo-sweet-sparkle 1s ease-in-out infinite;
+    }
+    
+    /* 工具类 */
+    .mo-sweet-bg {
+        background: var(--mo-gradient-sweet-dream) !important;
+        animation: mo-sweet-flow 20s ease-in-out infinite;
+    }
+    
+    .mo-sweet-glow {
+        box-shadow: var(--mo-glow-sweet) !important;
+    }
+    
+    .mo-sweet-bounce {
+        animation: mo-bounce 1s ease-in-out infinite;
+    }
+    
+    .mo-sweet-wiggle {
+        animation: mo-sweet-wiggle 0.5s ease-in-out infinite;
+    }
+    
+    .mo-sweet-sparkle {
+        animation: mo-sweet-sparkle 2s ease-in-out infinite;
+    }
+    
+    .mo-sweet-pulse {
+        animation: mo-sweet-pulse 1.5s ease-in-out infinite;
+    }
+}
+
+/* Light Theme Specific Styles */
+.mo-theme-macaron-sweet-light {
+    /* 明亮模式特殊效果 */
+    .mud-elevation-1,
+    .mud-elevation-2,
+    .mud-elevation-4,
+    .mud-elevation-8 {
+        background: var(--mo-background-candy) !important;
+        border: 2px solid var(--mo-border-sweet) !important;
+    }
+    
+    .mud-elevation-1 {
+        box-shadow: 0 2px 8px rgba(255, 154, 162, 0.2) !important;
+    }
+    
+    .mud-elevation-2 {
+        box-shadow: 0 4px 12px rgba(255, 154, 162, 0.25) !important;
+    }
+    
+    .mud-elevation-4 {
+        box-shadow: 0 8px 20px rgba(255, 154, 162, 0.3) !important;
+    }
+    
+    .mud-elevation-8 {
+        box-shadow: 0 16px 32px rgba(255, 154, 162, 0.35) !important;
+    }
+}
+
+/* Dark Theme Specific Styles */
+.mo-theme-macaron-sweet-dark {
+    /* 暗色模式特殊效果 */
+    .mud-elevation-1,
+    .mud-elevation-2,
+    .mud-elevation-4,
+    .mud-elevation-8 {
+        background: var(--mo-background-candy) !important;
+        border: 2px solid var(--mo-border-sweet) !important;
+    }
+    
+    .mud-elevation-1 {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+    }
+    
+    .mud-elevation-2 {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+    }
+    
+    .mud-elevation-4 {
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6) !important;
+    }
+    
+    .mud-elevation-8 {
+        box-shadow: 0 16px 32px rgba(0, 0, 0, 0.7) !important;
+    }
+    
+    /* 暗色模式下的特殊发光效果 */
+    .mud-button-filled-primary:hover,
+    .mud-chip:hover,
+    .mud-tab.mud-tab-active {
+        box-shadow: var(--mo-sweet-glow-dark) !important;
+    }
+}
+
+/* 响应式设计 */
+@media (max-width: 960px) {
+    .mo-theme-macaron-sweet-light,
+    .mo-theme-macaron-sweet-dark {
+        --mo-card-padding: 24px;
+        --mo-dialog-padding: 28px;
+        --mo-button-padding-x: 20px;
+        --mo-button-padding-y: 10px;
+        --mo-card-border-radius: 24px;
+        --mo-dialog-border-radius: 28px;
+    }
+}
+
+@media (max-width: 600px) {
+    .mo-theme-macaron-sweet-light,
+    .mo-theme-macaron-sweet-dark {
+        --mo-card-padding: 20px;
+        --mo-dialog-padding: 24px;
+        --mo-button-padding-x: 16px;
+        --mo-button-padding-y: 8px;
+        --mo-card-border-radius: 20px;
+        --mo-dialog-border-radius: 24px;
+        --mo-button-border-radius: 20px;
+    }
+}
+
+/* 无障碍支持 */
+@media (prefers-reduced-motion: reduce) {
+    .mo-theme-macaron-sweet-light *,
+    .mo-theme-macaron-sweet-dark * {
+        animation: none !important;
+        transition: color 0.2s ease, background-color 0.2s ease, transform 0.2s ease !important;
+    }
+    
+    .mo-theme-macaron-sweet-light::before,
+    .mo-theme-macaron-sweet-light::after,
+    .mo-theme-macaron-sweet-dark::before,
+    .mo-theme-macaron-sweet-dark::after {
+        animation: none !important;
+    }
+}
+
+/* 性能优化 */
+.mo-theme-macaron-sweet-light .mud-table *,
+.mo-theme-macaron-sweet-light .mud-data-grid *,
+.mo-theme-macaron-sweet-light .mud-treeview *,
+.mo-theme-macaron-sweet-dark .mud-table *,
+.mo-theme-macaron-sweet-dark .mud-data-grid *,
+.mo-theme-macaron-sweet-dark .mud-treeview *,
+.no-transition,
+.no-transition * {
+    transition: none !important;
+    animation: none !important;
+}

@@ -1,0 +1,891 @@
+/* MoLibrary Deep Ocean Theme - 深海静谧主题 */
+/* 深海主题，配合水波纹动画效果和生物发光元素 */
+
+/* 导入现代字体 */
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;500;600;700&family=Open+Sans:wght@300;400;500;600;700&display=swap');
+
+/* Deep Ocean Theme CSS Variables - 明暗模式通用 */
+:root[data-theme="deep-ocean-light"],
+:root[data-theme="deep-ocean-dark"],
+.mo-theme-deep-ocean-light,
+.mo-theme-deep-ocean-dark {
+    /* 深海效果变量 */
+    --mo-ocean-deep: #1e3a8a;
+    --mo-ocean-medium: #0369a1;
+    --mo-ocean-light: #0891b2;
+    --mo-bioluminescence: #22d3ee;
+    --mo-sea-green: #10b981;
+    --mo-coral: #f87171;
+    --mo-wave-speed: 6s;
+    --mo-current-speed: 12s;
+    --mo-glow-intensity: 0.4;
+    
+    /* 组件样式变量 - 流体设计 */
+    --mo-button-border-radius: 8px;
+    --mo-button-padding-x: 20px;
+    --mo-button-padding-y: 10px;
+    --mo-button-font-weight: 500;
+    --mo-button-text-transform: none;
+    --mo-button-transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    
+    --mo-card-border-radius: 12px;
+    --mo-card-padding: 24px;
+    
+    --mo-input-border-radius: 8px;
+    --mo-input-padding: 14px 16px;
+    --mo-input-border-width: 2px;
+    
+    --mo-dialog-border-radius: 16px;
+    --mo-dialog-padding: 32px;
+    
+    --mo-chip-border-radius: 16px;
+    --mo-chip-padding: 6px 14px;
+    --mo-chip-height: 32px;
+    
+    --mo-table-border-radius: 12px;
+    
+    /* 间距变量 - 流体比例 */
+    --mo-spacing-xs: 4px;
+    --mo-spacing-sm: 8px;
+    --mo-spacing-md: 16px;
+    --mo-spacing-lg: 24px;
+    --mo-spacing-xl: 32px;
+    
+    /* 动画变量 - 深海节奏 */
+    --mo-transition-fast: 300ms;
+    --mo-transition-normal: 400ms;
+    --mo-transition-slow: 600ms;
+    --mo-animation-smooth: 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    --mo-animation-wave: 600ms cubic-bezier(0.4, 0, 0.6, 1);
+    --mo-animation-float: 800ms ease-in-out;
+    
+    /* 深海渐变变量 */
+    --mo-gradient-deep-ocean: linear-gradient(135deg, #1e3a8a 0%, #0c4a6e 25%, #065f46 50%, #134e4a 75%, #0f172a 100%);
+    --mo-gradient-ocean-surface: linear-gradient(135deg, #0891b2 0%, #0369a1 25%, #1e3a8a 50%, #1e40af 75%, #3730a3 100%);
+    --mo-gradient-bioluminescence: linear-gradient(135deg, #22d3ee 0%, #06b6d4 25%, #0891b2 50%, #0284c7 75%, #0369a1 100%);
+    --mo-gradient-sea-coral: linear-gradient(135deg, #10b981 0%, #059669 25%, #047857 50%, #f87171 75%, #ef4444 100%);
+    
+    /* 水波纹变量 */
+    --mo-ripple-primary: radial-gradient(circle, rgba(34, 211, 238, 0.3) 0%, transparent 70%);
+    --mo-ripple-secondary: radial-gradient(circle, rgba(16, 185, 129, 0.3) 0%, transparent 70%);
+    --mo-water-texture: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2322d3ee' fill-opacity='0.02'%3E%3Cpath d='M30 30c0-11.046-8.954-20-20-20s-20 8.954-20 20 8.954 20 20 20 20-8.954 20-20zm0 0c0 11.046 8.954 20 20 20s20-8.954 20-20-8.954-20-20-20-20 8.954-20 20z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    
+    /* 生物发光效果 */
+    --mo-glow-bio-primary: 0 0 20px rgba(34, 211, 238, var(--mo-glow-intensity));
+    --mo-glow-bio-secondary: 0 0 20px rgba(16, 185, 129, var(--mo-glow-intensity));
+    --mo-glow-bio-coral: 0 0 20px rgba(248, 113, 113, var(--mo-glow-intensity));
+    --mo-glow-deep: 0 0 30px rgba(34, 211, 238, 0.6), 0 0 50px rgba(16, 185, 129, 0.4);
+}
+
+/* Light Theme Variables */
+:root[data-theme="deep-ocean-light"],
+.mo-theme-deep-ocean-light {
+    --mo-background-surface: #f0f9ff;
+    --mo-background-shallow: rgba(30, 58, 138, 0.05);
+    --mo-background-wave: rgba(255, 255, 255, 0.95);
+    --mo-surface-ripple: rgba(30, 58, 138, 0.03);
+    --mo-surface-hover: rgba(30, 58, 138, 0.08);
+    --mo-border-tide: rgba(30, 58, 138, 0.15);
+    --mo-border-deep: rgba(30, 58, 138, 0.25);
+    --mo-shadow-ocean: 0 8px 32px rgba(30, 58, 138, 0.15);
+    --mo-shadow-ocean-hover: 0 12px 40px rgba(30, 58, 138, 0.25);
+    --mo-text-depth: #0c4a6e;
+}
+
+/* Dark Theme Variables */
+:root[data-theme="deep-ocean-dark"],
+.mo-theme-deep-ocean-dark {
+    --mo-background-surface: #0f172a;
+    --mo-background-shallow: rgba(34, 211, 238, 0.08);
+    --mo-background-wave: rgba(30, 41, 59, 0.95);
+    --mo-surface-ripple: rgba(34, 211, 238, 0.05);
+    --mo-surface-hover: rgba(34, 211, 238, 0.12);
+    --mo-border-tide: rgba(34, 211, 238, 0.2);
+    --mo-border-deep: rgba(34, 211, 238, 0.3);
+    --mo-shadow-ocean: 0 8px 32px rgba(0, 0, 0, 0.4);
+    --mo-shadow-ocean-hover: 0 12px 40px rgba(0, 0, 0, 0.6);
+    --mo-text-depth: #f1f5f9;
+    --mo-bio-glow-dark: 0 0 25px rgba(34, 211, 238, 0.5);
+    --mo-current-glow: 0 0 15px rgba(16, 185, 129, 0.4);
+}
+
+/* 深海背景 - Light Mode */
+.mo-theme-deep-ocean-light {
+    background: var(--mo-background-surface) var(--mo-water-texture);
+    background-attachment: fixed;
+    position: relative;
+}
+
+.mo-theme-deep-ocean-light::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--mo-gradient-ocean-surface);
+    opacity: 0.06;
+    z-index: -20;
+    animation: mo-ocean-current var(--mo-current-speed) ease-in-out infinite;
+}
+
+.mo-theme-deep-ocean-light::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(ellipse at 20% 80%, rgba(30, 58, 138, 0.1) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(8, 145, 178, 0.08) 0%, transparent 60%),
+                radial-gradient(ellipse at 40% 40%, rgba(6, 95, 70, 0.06) 0%, transparent 60%);
+    z-index: -19;
+    animation: mo-tidal-flow calc(var(--mo-current-speed) * 1.5) ease-in-out infinite;
+}
+
+/* 深海背景 - Dark Mode */
+.mo-theme-deep-ocean-dark {
+    background: var(--mo-background-surface) var(--mo-water-texture);
+    background-attachment: fixed;
+    position: relative;
+}
+
+.mo-theme-deep-ocean-dark::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--mo-gradient-deep-ocean);
+    opacity: 0.9;
+    z-index: -20;
+    animation: mo-ocean-current calc(var(--mo-current-speed) * 1.2) ease-in-out infinite;
+}
+
+.mo-theme-deep-ocean-dark::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(ellipse at 30% 70%, rgba(34, 211, 238, 0.15) 0%, transparent 70%),
+                radial-gradient(ellipse at 70% 30%, rgba(16, 185, 129, 0.12) 0%, transparent 70%),
+                radial-gradient(ellipse at 50% 90%, rgba(248, 113, 113, 0.08) 0%, transparent 70%);
+    z-index: -19;
+    animation: mo-tidal-flow calc(var(--mo-current-speed) * 1.8) ease-in-out infinite;
+}
+
+/* 海洋流动动画 */
+@keyframes mo-ocean-current {
+    0%, 100% { 
+        background-position: 0% 50%; 
+        transform: scale(1) rotate(0deg);
+        opacity: 0.9;
+    }
+    25% { 
+        background-position: 100% 25%; 
+        transform: scale(1.02) rotate(0.2deg);
+        opacity: 0.95;
+    }
+    50% { 
+        background-position: 100% 75%; 
+        transform: scale(1.01) rotate(-0.1deg);
+        opacity: 1;
+    }
+    75% { 
+        background-position: 0% 100%; 
+        transform: scale(1.015) rotate(0.1deg);
+        opacity: 0.85;
+    }
+}
+
+/* 潮汐流动动画 */
+@keyframes mo-tidal-flow {
+    0%, 100% { 
+        transform: translateX(0) translateY(0) scale(1);
+        opacity: 0.8;
+    }
+    33% { 
+        transform: translateX(-10px) translateY(-5px) scale(1.05);
+        opacity: 1;
+    }
+    66% { 
+        transform: translateX(5px) translateY(10px) scale(0.95);
+        opacity: 0.9;
+    }
+}
+
+/* 水波动画 */
+@keyframes mo-wave-ripple {
+    0% { 
+        transform: scale(0);
+        opacity: 1;
+    }
+    100% { 
+        transform: scale(4);
+        opacity: 0;
+    }
+}
+
+/* 生物发光脉冲 */
+@keyframes mo-bio-pulse {
+    0%, 100% { 
+        box-shadow: var(--mo-glow-bio-primary);
+        transform: scale(1);
+    }
+    50% { 
+        box-shadow: var(--mo-glow-deep);
+        transform: scale(1.02);
+    }
+}
+
+/* 深海浮动 */
+@keyframes mo-deep-float {
+    0%, 100% { 
+        transform: translateY(0) rotateX(0deg) rotateY(0deg);
+    }
+    25% { 
+        transform: translateY(-8px) rotateX(2deg) rotateY(1deg);
+    }
+    50% { 
+        transform: translateY(-4px) rotateX(-1deg) rotateY(-0.5deg);
+    }
+    75% { 
+        transform: translateY(-12px) rotateX(1deg) rotateY(1.5deg);
+    }
+}
+
+/* 洋流摆动 */
+@keyframes mo-current-sway {
+    0%, 100% { transform: rotateZ(0deg) translateX(0); }
+    25% { transform: rotateZ(0.5deg) translateX(2px); }
+    75% { transform: rotateZ(-0.5deg) translateX(-2px); }
+}
+
+/* 闪烁发光 */
+@keyframes mo-bio-shimmer {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; }
+}
+
+/* Light and Dark Theme Styles */
+.mo-theme-deep-ocean-light,
+.mo-theme-deep-ocean-dark {
+    /* Global Typography */
+    font-family: 'Source Sans Pro', 'Open Sans', Arial, sans-serif !important;
+    
+    /* Cards - 深海卡片 */
+    .mud-card {
+        background: var(--mo-background-wave) !important;
+        backdrop-filter: blur(20px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+        border: 1px solid var(--mo-border-tide) !important;
+        border-radius: var(--mo-card-border-radius) !important;
+        box-shadow: var(--mo-shadow-ocean) !important;
+        transition: var(--mo-animation-wave) !important;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .mud-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--mo-ripple-primary);
+        transform: scale(0);
+        opacity: 0;
+        transition: all var(--mo-animation-wave);
+        pointer-events: none;
+    }
+    
+    .mud-card::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: var(--mo-gradient-bioluminescence);
+        opacity: 0.3;
+        animation: mo-current-sway calc(var(--mo-wave-speed) * 2) ease-in-out infinite;
+    }
+    
+    .mud-card:hover {
+        box-shadow: var(--mo-shadow-ocean-hover), var(--mo-glow-bio-primary) !important;
+        transform: translateY(-4px) scale(1.01);
+        border-color: var(--mo-border-deep);
+        animation: mo-deep-float 4s ease-in-out infinite;
+    }
+    
+    .mud-card:hover::before {
+        transform: scale(1);
+        opacity: 0.3;
+        animation: mo-wave-ripple 1.5s ease-out;
+    }
+    
+    /* Buttons - 深海按钮 */
+    .mud-button {
+        border-radius: var(--mo-button-border-radius) !important;
+        padding: var(--mo-button-padding-y) var(--mo-button-padding-x) !important;
+        font-weight: var(--mo-button-font-weight) !important;
+        text-transform: var(--mo-button-text-transform) !important;
+        transition: var(--mo-button-transition) !important;
+        font-family: 'Source Sans Pro', 'Open Sans', Arial, sans-serif !important;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .mud-button-filled {
+        background: var(--mo-gradient-bioluminescence) !important;
+        border: 1px solid var(--mo-border-tide) !important;
+        box-shadow: var(--mo-shadow-ocean) !important;
+        color: white !important;
+        text-shadow: 0 0 8px rgba(34, 211, 238, 0.5);
+    }
+    
+    .mud-button-filled::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.4) 0%, transparent 70%);
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        transition: width 0.6s ease, height 0.6s ease;
+    }
+    
+    .mud-button-filled:hover {
+        box-shadow: var(--mo-shadow-ocean-hover), var(--mo-glow-bio-primary) !important;
+        transform: translateY(-2px) scale(1.03);
+        background: var(--mo-gradient-sea-coral) !important;
+        animation: mo-bio-pulse 2s ease-in-out infinite;
+    }
+    
+    .mud-button-filled:hover::before {
+        width: 120%;
+        height: 120%;
+        animation: mo-wave-ripple 1s ease-out;
+    }
+    
+    .mud-button-outlined {
+        background: var(--mo-surface-ripple) !important;
+        backdrop-filter: blur(10px) !important;
+        -webkit-backdrop-filter: blur(10px) !important;
+        border: 2px solid var(--mo-border-deep) !important;
+    }
+    
+    .mud-button-outlined:hover {
+        background: var(--mo-surface-hover) !important;
+        border-color: var(--mud-palette-primary) !important;
+        box-shadow: var(--mo-glow-bio-primary) !important;
+        transform: translateY(-1px);
+        animation: mo-current-sway 1s ease-in-out infinite;
+    }
+    
+    .mud-button-text:hover {
+        background: var(--mo-surface-hover) !important;
+        border-radius: var(--mo-button-border-radius) !important;
+        box-shadow: var(--mo-glow-bio-secondary) !important;
+    }
+    
+    /* Inputs - 深海输入框 */
+    .mud-input-outlined .mud-input-outlined-border {
+        border-color: var(--mo-border-tide) !important;
+        border-radius: var(--mo-input-border-radius) !important;
+        border-width: var(--mo-input-border-width) !important;
+        background: var(--mo-background-wave) !important;
+        backdrop-filter: blur(10px) !important;
+        -webkit-backdrop-filter: blur(10px) !important;
+        transition: var(--mo-animation-wave) !important;
+    }
+    
+    .mud-input-outlined:hover .mud-input-outlined-border {
+        border-color: var(--mo-border-deep) !important;
+        box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.15) !important;
+    }
+    
+    .mud-input-outlined.mud-input-focused .mud-input-outlined-border {
+        border-color: var(--mud-palette-primary) !important;
+        box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.25), var(--mo-glow-bio-primary) !important;
+        background: var(--mo-background-wave) !important;
+        animation: mo-bio-pulse 3s ease-in-out infinite;
+    }
+    
+    /* AppBar - 深海导航栏 */
+    .mud-app-bar {
+        background: var(--mo-background-wave) !important;
+        backdrop-filter: blur(30px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(30px) saturate(180%) !important;
+        border-bottom: 1px solid var(--mo-border-tide) !important;
+        box-shadow: var(--mo-shadow-ocean) !important;
+        position: relative;
+    }
+    
+    .mud-app-bar::before {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: var(--mo-gradient-bioluminescence);
+        opacity: 0.6;
+        animation: mo-ocean-current calc(var(--mo-wave-speed) * 3) ease-in-out infinite;
+    }
+    
+    /* Drawer - 深海侧边栏 */
+    .mud-drawer .mud-drawer-content {
+        background: var(--mo-background-wave) !important;
+        backdrop-filter: blur(30px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(30px) saturate(180%) !important;
+        border-right: 1px solid var(--mo-border-tide) !important;
+        position: relative;
+    }
+    
+    .mud-drawer .mud-drawer-content::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 3px;
+        background: var(--mo-gradient-sea-coral);
+        opacity: 0.4;
+        animation: mo-tidal-flow calc(var(--mo-current-speed) * 2) ease-in-out infinite;
+    }
+    
+    /* Dialog - 深海对话框 */
+    .mud-dialog {
+        background: var(--mo-background-wave) !important;
+        backdrop-filter: blur(40px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(40px) saturate(180%) !important;
+        border: 2px solid var(--mo-border-deep) !important;
+        border-radius: var(--mo-dialog-border-radius) !important;
+        box-shadow: var(--mo-shadow-ocean-hover), var(--mo-glow-deep) !important;
+        position: relative;
+        overflow: hidden;
+        animation: mo-deep-float 0.8s ease-out;
+    }
+    
+    .mud-dialog::before {
+        content: '';
+        position: absolute;
+        top: -2px;
+        left: -2px;
+        right: -2px;
+        height: 4px;
+        background: var(--mo-gradient-bioluminescence);
+        border-radius: var(--mo-dialog-border-radius) var(--mo-dialog-border-radius) 0 0;
+        animation: mo-ocean-current calc(var(--mo-wave-speed) * 2) ease-in-out infinite;
+    }
+    
+    .mud-dialog-content {
+        padding: var(--mo-dialog-padding) !important;
+    }
+    
+    /* Tables - 深海表格 */
+    .mud-table {
+        background: var(--mo-background-wave) !important;
+        backdrop-filter: blur(20px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+        border-radius: var(--mo-table-border-radius) !important;
+        box-shadow: var(--mo-shadow-ocean) !important;
+        border: 1px solid var(--mo-border-tide) !important;
+        overflow: hidden;
+    }
+    
+    .mud-table-head .mud-table-row {
+        background: var(--mo-gradient-bioluminescence) !important;
+        position: relative;
+    }
+    
+    .mud-table-head .mud-table-row::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 100%;
+        background: var(--mo-gradient-sea-coral);
+        opacity: 0.3;
+        animation: mo-ocean-current calc(var(--mo-wave-speed) * 4) ease-in-out infinite;
+    }
+    
+    .mud-table-head .mud-table-cell {
+        font-weight: 600 !important;
+        color: white !important;
+        text-shadow: 0 0 8px rgba(34, 211, 238, 0.5);
+        position: relative;
+        z-index: 1;
+    }
+    
+    .mud-table-row:nth-child(even) {
+        background: var(--mo-surface-ripple) !important;
+    }
+    
+    .mud-table-row:hover {
+        background: var(--mo-surface-hover) !important;
+        transform: scale(1.01);
+        box-shadow: inset 0 0 20px rgba(34, 211, 238, 0.1) !important;
+        animation: mo-bio-shimmer 1s ease-in-out;
+    }
+    
+    /* Chips - 深海标签 */
+    .mud-chip {
+        background: var(--mo-gradient-sea-coral) !important;
+        backdrop-filter: blur(10px) !important;
+        -webkit-backdrop-filter: blur(10px) !important;
+        border: 1px solid var(--mo-border-tide) !important;
+        border-radius: var(--mo-chip-border-radius) !important;
+        padding: var(--mo-chip-padding) !important;
+        height: var(--mo-chip-height) !important;
+        transition: var(--mo-animation-wave) !important;
+        box-shadow: var(--mo-shadow-ocean) !important;
+        position: relative;
+        overflow: hidden;
+        color: white !important;
+        text-shadow: 0 0 6px rgba(16, 185, 129, 0.4);
+    }
+    
+    .mud-chip::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(34, 211, 238, 0.4), transparent);
+        transition: left var(--mo-animation-wave);
+    }
+    
+    .mud-chip:hover {
+        background: var(--mo-gradient-bioluminescence) !important;
+        transform: translateY(-2px) scale(1.05);
+        box-shadow: var(--mo-shadow-ocean-hover), var(--mo-glow-bio-primary) !important;
+        border-color: var(--mud-palette-primary);
+        animation: mo-deep-float 2s ease-in-out infinite;
+    }
+    
+    .mud-chip:hover::before {
+        left: 100%;
+        animation: mo-current-sway 1s ease-in-out infinite;
+    }
+    
+    /* Typography - 深海字体 */
+    .mud-typography-h1,
+    .mud-typography-h2,
+    .mud-typography-h3,
+    .mud-typography-h4,
+    .mud-typography-h5,
+    .mud-typography-h6 {
+        font-family: 'Source Sans Pro', 'Open Sans', Arial, sans-serif !important;
+        color: var(--mo-text-depth) !important;
+        position: relative;
+    }
+    
+    /* Popovers and Menus - 深海弹出框 */
+    .mud-popover,
+    .mud-menu {
+        background: var(--mo-background-wave) !important;
+        backdrop-filter: blur(40px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(40px) saturate(180%) !important;
+        border: 1px solid var(--mo-border-deep) !important;
+        border-radius: var(--mo-card-border-radius) !important;
+        box-shadow: var(--mo-shadow-ocean-hover), var(--mo-glow-bio-primary) !important;
+        animation: mo-deep-float 0.4s ease-out;
+    }
+    
+    /* Tooltips - 深海提示框 */
+    .mud-tooltip {
+        background: var(--mo-gradient-bioluminescence) !important;
+        border: 1px solid var(--mo-border-tide) !important;
+        border-radius: var(--mo-button-border-radius) !important;
+        box-shadow: var(--mo-shadow-ocean), var(--mo-glow-bio-primary) !important;
+        color: white !important;
+        text-shadow: 0 0 6px rgba(34, 211, 238, 0.5);
+    }
+    
+    /* Snackbars - 深海通知栏 */
+    .mud-snackbar {
+        background: var(--mo-gradient-sea-coral) !important;
+        backdrop-filter: blur(30px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(30px) saturate(180%) !important;
+        border: 1px solid var(--mo-border-deep) !important;
+        border-radius: var(--mo-button-border-radius) !important;
+        box-shadow: var(--mo-shadow-ocean-hover), var(--mo-glow-bio-secondary) !important;
+        color: white !important;
+        text-shadow: 0 0 6px rgba(16, 185, 129, 0.4);
+        animation: mo-deep-float 0.6s ease-out;
+    }
+    
+    /* Tabs - 深海标签页 */
+    .mud-tabs-toolbar {
+        background: var(--mo-background-wave) !important;
+        backdrop-filter: blur(20px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+        border-bottom: 1px solid var(--mo-border-tide) !important;
+        position: relative;
+    }
+    
+    .mud-tabs-toolbar::after {
+        content: '';
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: var(--mo-gradient-bioluminescence);
+        opacity: 0.6;
+        animation: mo-ocean-current calc(var(--mo-wave-speed) * 3) ease-in-out infinite;
+    }
+    
+    .mud-tab {
+        border-radius: var(--mo-button-border-radius) !important;
+        transition: var(--mo-animation-wave) !important;
+        position: relative;
+        margin: 4px 2px;
+    }
+    
+    .mud-tab.mud-tab-active {
+        background: var(--mo-gradient-bioluminescence) !important;
+        border: 1px solid var(--mo-border-tide) !important;
+        box-shadow: var(--mo-glow-bio-primary) !important;
+        color: white !important;
+        text-shadow: 0 0 8px rgba(34, 211, 238, 0.5);
+        animation: mo-bio-pulse 3s ease-in-out infinite;
+    }
+    
+    .mud-tab:hover {
+        background: var(--mo-surface-hover) !important;
+        transform: translateY(-1px);
+        box-shadow: var(--mo-glow-bio-secondary) !important;
+        animation: mo-current-sway 1s ease-in-out;
+    }
+    
+    /* List Items - 深海列表项 */
+    .mud-list-item {
+        border-radius: var(--mo-button-border-radius) !important;
+        margin: var(--mo-spacing-xs) var(--mo-spacing-sm) !important;
+        transition: var(--mo-animation-wave) !important;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .mud-list-item::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 0;
+        background: var(--mo-gradient-bioluminescence);
+        transition: width var(--mo-animation-wave);
+    }
+    
+    .mud-list-item:hover {
+        background: var(--mo-surface-hover) !important;
+        transform: translateX(4px);
+        box-shadow: 0 4px 12px rgba(34, 211, 238, 0.2) !important;
+        animation: mo-current-sway 2s ease-in-out infinite;
+    }
+    
+    .mud-list-item:hover::before {
+        width: 3px;
+        animation: mo-bio-shimmer 1s ease-in-out infinite;
+    }
+    
+    /* 工具类 */
+    .mo-ocean-bg {
+        background: var(--mo-gradient-deep-ocean) !important;
+        animation: mo-ocean-current var(--mo-current-speed) ease-in-out infinite;
+    }
+    
+    .mo-bio-glow {
+        box-shadow: var(--mo-glow-deep) !important;
+    }
+    
+    .mo-deep-float {
+        animation: mo-deep-float 4s ease-in-out infinite;
+    }
+    
+    .mo-current-sway {
+        animation: mo-current-sway 2s ease-in-out infinite;
+    }
+    
+    .mo-bio-pulse {
+        animation: mo-bio-pulse 2s ease-in-out infinite;
+    }
+    
+    .mo-wave-ripple {
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .mo-wave-ripple::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        background: var(--mo-ripple-primary);
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        animation: mo-wave-ripple 2s ease-out infinite;
+    }
+}
+
+/* Light Theme Specific Styles */
+.mo-theme-deep-ocean-light {
+    /* 明亮模式特殊效果 */
+    .mud-elevation-1,
+    .mud-elevation-2,
+    .mud-elevation-4,
+    .mud-elevation-8 {
+        background: var(--mo-background-wave) !important;
+        backdrop-filter: blur(20px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+        border: 1px solid var(--mo-border-tide) !important;
+    }
+    
+    .mud-elevation-1 {
+        box-shadow: 0 2px 8px rgba(30, 58, 138, 0.1) !important;
+    }
+    
+    .mud-elevation-2 {
+        box-shadow: 0 4px 12px rgba(30, 58, 138, 0.15) !important;
+    }
+    
+    .mud-elevation-4 {
+        box-shadow: 0 8px 20px rgba(30, 58, 138, 0.2) !important;
+    }
+    
+    .mud-elevation-8 {
+        box-shadow: 0 16px 32px rgba(30, 58, 138, 0.25) !important;
+    }
+}
+
+/* Dark Theme Specific Styles - 生物发光效果 */
+.mo-theme-deep-ocean-dark {
+    /* 暗色模式特殊效果 */
+    .mud-elevation-1,
+    .mud-elevation-2,
+    .mud-elevation-4,
+    .mud-elevation-8 {
+        background: var(--mo-background-wave) !important;
+        backdrop-filter: blur(20px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+        border: 1px solid var(--mo-border-tide) !important;
+    }
+    
+    .mud-elevation-1 {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(34, 211, 238, 0.1) !important;
+    }
+    
+    .mud-elevation-2 {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(34, 211, 238, 0.1) !important;
+    }
+    
+    .mud-elevation-4 {
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(34, 211, 238, 0.1) !important;
+    }
+    
+    .mud-elevation-8 {
+        box-shadow: 0 16px 32px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(34, 211, 238, 0.1) !important;
+    }
+    
+    /* 深海生物发光按钮效果 */
+    .mud-button-filled-primary:hover {
+        animation: mo-bio-pulse 2s ease-in-out infinite;
+        text-shadow: 0 0 12px currentColor;
+        box-shadow: var(--mo-bio-glow-dark) !important;
+    }
+    
+    /* 深海标题发光效果 */
+    .mud-typography-h1,
+    .mud-typography-h2,
+    .mud-typography-h3 {
+        text-shadow: 0 0 8px rgba(34, 211, 238, 0.3);
+    }
+    
+    /* 导航链接生物发光悬停效果 */
+    .mud-nav-link:hover {
+        background: var(--mo-surface-hover) !important;
+        border-radius: var(--mo-button-border-radius) !important;
+        box-shadow: inset 0 0 15px rgba(34, 211, 238, 0.2), var(--mo-bio-glow-dark) !important;
+        text-shadow: 0 0 8px currentColor;
+        animation: mo-current-sway 1s ease-in-out infinite;
+    }
+    
+    /* 表格行深海悬停 */
+    .mud-table-row:hover {
+        background: var(--mo-surface-hover) !important;
+        box-shadow: inset 0 0 20px rgba(34, 211, 238, 0.15) !important;
+        animation: mo-bio-shimmer 1s ease-in-out;
+    }
+}
+
+/* 响应式设计 */
+@media (max-width: 960px) {
+    .mo-theme-deep-ocean-light,
+    .mo-theme-deep-ocean-dark {
+        --mo-card-padding: 20px;
+        --mo-dialog-padding: 24px;
+        --mo-button-padding-x: 16px;
+        --mo-button-padding-y: 8px;
+        --mo-wave-speed: 8s;
+        --mo-current-speed: 15s;
+    }
+}
+
+@media (max-width: 600px) {
+    .mo-theme-deep-ocean-light,
+    .mo-theme-deep-ocean-dark {
+        --mo-card-padding: 16px;
+        --mo-dialog-padding: 20px;
+        --mo-button-padding-x: 14px;
+        --mo-button-padding-y: 7px;
+        --mo-card-border-radius: 10px;
+        --mo-dialog-border-radius: 12px;
+        --mo-wave-speed: 10s;
+        --mo-current-speed: 18s;
+    }
+}
+
+/* 无障碍支持 */
+@media (prefers-reduced-motion: reduce) {
+    .mo-theme-deep-ocean-light *,
+    .mo-theme-deep-ocean-dark * {
+        animation: none !important;
+        transition: color 0.2s ease, background-color 0.2s ease, transform 0.2s ease !important;
+    }
+    
+    .mo-theme-deep-ocean-light::before,
+    .mo-theme-deep-ocean-light::after,
+    .mo-theme-deep-ocean-dark::before,
+    .mo-theme-deep-ocean-dark::after {
+        animation: none !important;
+    }
+}
+
+/* 性能优化 */
+.mo-theme-deep-ocean-light .mud-table *,
+.mo-theme-deep-ocean-light .mud-data-grid *,
+.mo-theme-deep-ocean-light .mud-treeview *,
+.mo-theme-deep-ocean-dark .mud-table *,
+.mo-theme-deep-ocean-dark .mud-data-grid *,
+.mo-theme-deep-ocean-dark .mud-treeview *,
+.no-transition,
+.no-transition * {
+    transition: none !important;
+    animation: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}

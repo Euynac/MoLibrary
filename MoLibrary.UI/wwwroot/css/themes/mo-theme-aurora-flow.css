@@ -1,0 +1,729 @@
+/* MoLibrary Aurora Flow Theme - 极光流彩主题 */
+/* 现代渐变主题，灵感来自北极光 */
+
+/* Aurora Flow Theme CSS Variables - 明暗模式通用 */
+:root[data-theme="aurora-flow-light"],
+:root[data-theme="aurora-flow-dark"],
+.mo-theme-aurora-flow-light,
+.mo-theme-aurora-flow-dark {
+    /* 极光效果变量 */
+    --mo-aurora-primary: #667eea;
+    --mo-aurora-secondary: #00d4ff;
+    --mo-aurora-accent: #f093fb;
+    --mo-aurora-flow-speed: 8s;
+    --mo-aurora-shimmer-speed: 3s;
+    --mo-aurora-glow-intensity: 0.6;
+    
+    /* 组件样式变量 - 现代流畅风格 */
+    --mo-button-border-radius: 12px;
+    --mo-button-padding-x: 20px;
+    --mo-button-padding-y: 10px;
+    --mo-button-font-weight: 500;
+    --mo-button-text-transform: none;
+    --mo-button-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    --mo-card-border-radius: 16px;
+    --mo-card-padding: 24px;
+    
+    --mo-input-border-radius: 10px;
+    --mo-input-padding: 14px 16px;
+    --mo-input-border-width: 2px;
+    
+    --mo-dialog-border-radius: 20px;
+    --mo-dialog-padding: 32px;
+    
+    --mo-chip-border-radius: 16px;
+    --mo-chip-padding: 6px 12px;
+    --mo-chip-height: 32px;
+    
+    --mo-table-border-radius: 12px;
+    
+    /* 间距变量 */
+    --mo-spacing-xs: 4px;
+    --mo-spacing-sm: 8px;
+    --mo-spacing-md: 16px;
+    --mo-spacing-lg: 24px;
+    --mo-spacing-xl: 32px;
+    
+    /* 动画变量 */
+    --mo-transition-fast: 150ms;
+    --mo-transition-normal: 300ms;
+    --mo-transition-slow: 450ms;
+    --mo-animation-smooth: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    --mo-animation-bounce: 400ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    
+    /* 极光渐变变量 */
+    --mo-aurora-gradient-1: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #f5576c 75%, #4facfe 100%);
+    --mo-aurora-gradient-2: linear-gradient(225deg, #00d4ff 0%, #667eea 25%, #8b5cf6 50%, #f093fb 75%, #ff006e 100%);
+    --mo-aurora-gradient-3: linear-gradient(45deg, #4facfe 0%, #00f2fe 25%, #667eea 50%, #764ba2 75%, #f093fb 100%);
+    
+    /* 光晕变量 */
+    --mo-glow-primary: 0 0 20px rgba(102, 126, 234, var(--mo-aurora-glow-intensity));
+    --mo-glow-secondary: 0 0 20px rgba(0, 212, 255, var(--mo-aurora-glow-intensity));
+    --mo-glow-accent: 0 0 20px rgba(240, 147, 251, var(--mo-aurora-glow-intensity));
+}
+
+/* Light Theme Variables */
+:root[data-theme="aurora-flow-light"],
+.mo-theme-aurora-flow-light {
+    --mo-background-primary: rgba(255, 255, 255, 0.95);
+    --mo-background-secondary: rgba(250, 251, 252, 0.9);
+    --mo-background-elevated: rgba(255, 255, 255, 0.98);
+    --mo-surface-glass: rgba(255, 255, 255, 0.3);
+    --mo-surface-hover: rgba(102, 126, 234, 0.08);
+    --mo-border-light: rgba(102, 126, 234, 0.15);
+    --mo-border-medium: rgba(102, 126, 234, 0.25);
+    --mo-text-glow: 0 0 8px rgba(102, 126, 234, 0.3);
+    --mo-shadow-aurora: 0 8px 32px rgba(102, 126, 234, 0.2);
+    --mo-shadow-aurora-hover: 0 12px 40px rgba(102, 126, 234, 0.3);
+}
+
+/* Dark Theme Variables */
+:root[data-theme="aurora-flow-dark"],
+.mo-theme-aurora-flow-dark {
+    --mo-background-primary: rgba(15, 23, 42, 0.95);
+    --mo-background-secondary: rgba(30, 41, 59, 0.9);
+    --mo-background-elevated: rgba(30, 41, 59, 0.98);
+    --mo-surface-glass: rgba(30, 41, 59, 0.4);
+    --mo-surface-hover: rgba(0, 212, 255, 0.12);
+    --mo-border-light: rgba(0, 212, 255, 0.2);
+    --mo-border-medium: rgba(0, 212, 255, 0.3);
+    --mo-text-glow: 0 0 10px rgba(0, 212, 255, 0.4);
+    --mo-shadow-aurora: 0 8px 32px rgba(0, 0, 0, 0.5);
+    --mo-shadow-aurora-hover: 0 12px 40px rgba(0, 0, 0, 0.7);
+    --mo-neon-text-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
+    --mo-neon-box-shadow: 0 0 20px var(--mud-palette-primary);
+}
+
+/* 动态极光背景 - Light Mode */
+.mo-theme-aurora-flow-light::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--mo-aurora-gradient-1);
+    background-size: 400% 400%;
+    animation: mo-aurora-flow var(--mo-aurora-flow-speed) ease infinite;
+    z-index: -20;
+}
+
+.mo-theme-aurora-flow-light::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--mo-aurora-gradient-2);
+    background-size: 400% 400%;
+    animation: mo-aurora-flow-reverse calc(var(--mo-aurora-flow-speed) * 1.5) ease infinite;
+    opacity: 0.7;
+    z-index: -19;
+}
+
+/* 动态极光背景 - Dark Mode */
+.mo-theme-aurora-flow-dark::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 20%, #0ea5e9 40%, #8b5cf6 60%, #e11d48 80%, #00d4ff 100%);
+    background-size: 400% 400%;
+    animation: mo-aurora-flow var(--mo-aurora-flow-speed) ease infinite;
+    z-index: -20;
+}
+
+.mo-theme-aurora-flow-dark::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(225deg, #1e293b 0%, #334155 20%, #7c3aed 40%, #ff006e 60%, #00d4ff 80%, #667eea 100%);
+    background-size: 400% 400%;
+    animation: mo-aurora-flow-reverse calc(var(--mo-aurora-flow-speed) * 1.3) ease infinite;
+    opacity: 0.8;
+    z-index: -19;
+}
+
+/* 极光流动动画 */
+@keyframes mo-aurora-flow {
+    0%, 100% { 
+        background-position: 0% 50%; 
+        transform: scale(1) rotate(0deg);
+    }
+    25% { 
+        background-position: 100% 25%; 
+        transform: scale(1.05) rotate(0.5deg);
+    }
+    50% { 
+        background-position: 100% 75%; 
+        transform: scale(1.02) rotate(-0.3deg);
+    }
+    75% { 
+        background-position: 0% 100%; 
+        transform: scale(1.03) rotate(0.2deg);
+    }
+}
+
+@keyframes mo-aurora-flow-reverse {
+    0%, 100% { 
+        background-position: 100% 50%; 
+        transform: scale(1) rotate(0deg);
+    }
+    25% { 
+        background-position: 0% 75%; 
+        transform: scale(1.03) rotate(-0.4deg);
+    }
+    50% { 
+        background-position: 0% 25%; 
+        transform: scale(1.04) rotate(0.6deg);
+    }
+    75% { 
+        background-position: 100% 0%; 
+        transform: scale(1.02) rotate(-0.2deg);
+    }
+}
+
+/* 微光闪烁动画 */
+@keyframes mo-aurora-shimmer {
+    0%, 100% { opacity: 0.8; }
+    50% { opacity: 1; }
+}
+
+/* 极光脉冲动画 */
+@keyframes mo-aurora-pulse {
+    0%, 100% { 
+        box-shadow: var(--mo-glow-primary);
+        transform: scale(1);
+    }
+    50% { 
+        box-shadow: var(--mo-glow-primary), var(--mo-glow-secondary);
+        transform: scale(1.02);
+    }
+}
+
+/* 浮动动画 */
+@keyframes mo-aurora-float {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    33% { transform: translateY(-6px) rotate(0.5deg); }
+    66% { transform: translateY(3px) rotate(-0.3deg); }
+}
+
+/* Light and Dark Theme Styles */
+.mo-theme-aurora-flow-light,
+.mo-theme-aurora-flow-dark {
+    /* Cards - 极光玻璃卡片 */
+    .mud-card {
+        background: var(--mo-background-elevated) !important;
+        backdrop-filter: blur(20px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+        border: 1px solid var(--mo-border-light) !important;
+        border-radius: var(--mo-card-border-radius) !important;
+        box-shadow: var(--mo-shadow-aurora) !important;
+        transition: var(--mo-animation-smooth) !important;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .mud-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.1), transparent);
+        animation: mo-aurora-shimmer var(--mo-aurora-shimmer-speed) ease infinite;
+        transition: left 0.6s ease;
+    }
+    
+    .mud-card:hover {
+        box-shadow: var(--mo-shadow-aurora-hover), var(--mo-glow-primary) !important;
+        transform: translateY(-4px) scale(1.02);
+        border-color: var(--mo-border-medium);
+        animation: mo-aurora-float 4s ease-in-out infinite;
+    }
+    
+    .mud-card:hover::before {
+        left: 100%;
+    }
+    
+    /* Buttons - 极光渐变按钮 */
+    .mud-button {
+        border-radius: var(--mo-button-border-radius) !important;
+        padding: var(--mo-button-padding-y) var(--mo-button-padding-x) !important;
+        font-weight: var(--mo-button-font-weight) !important;
+        text-transform: var(--mo-button-text-transform) !important;
+        transition: var(--mo-button-transition) !important;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .mud-button-filled {
+        background: var(--mo-aurora-gradient-1) !important;
+        background-size: 200% 200% !important;
+        border: 1px solid var(--mo-border-light) !important;
+        box-shadow: var(--mo-shadow-aurora) !important;
+        color: white !important;
+        animation: mo-aurora-flow calc(var(--mo-aurora-flow-speed) * 2) ease infinite;
+    }
+    
+    .mud-button-filled::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        transition: left 0.5s ease;
+    }
+    
+    .mud-button-filled:hover {
+        box-shadow: var(--mo-shadow-aurora-hover), var(--mo-glow-primary) !important;
+        transform: translateY(-2px) scale(1.05);
+        animation: mo-aurora-pulse 2s ease-in-out infinite;
+    }
+    
+    .mud-button-filled:hover::before {
+        left: 100%;
+    }
+    
+    .mud-button-outlined {
+        background: var(--mo-surface-glass) !important;
+        backdrop-filter: blur(10px) !important;
+        -webkit-backdrop-filter: blur(10px) !important;
+        border: 2px solid var(--mo-border-medium) !important;
+    }
+    
+    .mud-button-outlined:hover {
+        background: var(--mo-surface-hover) !important;
+        border-color: var(--mud-palette-primary) !important;
+        box-shadow: var(--mo-glow-primary) !important;
+        transform: translateY(-1px);
+    }
+    
+    .mud-button-text:hover {
+        background: var(--mo-surface-hover) !important;
+        border-radius: var(--mo-button-border-radius) !important;
+        box-shadow: var(--mo-glow-primary) !important;
+    }
+    
+    /* Inputs - 极光输入框 */
+    .mud-input-outlined .mud-input-outlined-border {
+        border-color: var(--mo-border-light) !important;
+        border-radius: var(--mo-input-border-radius) !important;
+        border-width: var(--mo-input-border-width) !important;
+        background: var(--mo-surface-glass) !important;
+        backdrop-filter: blur(10px) !important;
+        -webkit-backdrop-filter: blur(10px) !important;
+        transition: var(--mo-animation-smooth) !important;
+    }
+    
+    .mud-input-outlined:hover .mud-input-outlined-border {
+        border-color: var(--mo-border-medium) !important;
+        box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.15) !important;
+    }
+    
+    .mud-input-outlined.mud-input-focused .mud-input-outlined-border {
+        border-color: var(--mud-palette-primary) !important;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.25), var(--mo-glow-primary) !important;
+        background: var(--mo-background-elevated) !important;
+    }
+    
+    /* AppBar - 极光导航栏 */
+    .mud-app-bar {
+        background: var(--mo-background-primary) !important;
+        backdrop-filter: blur(20px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+        border-bottom: 1px solid var(--mo-border-light) !important;
+        box-shadow: var(--mo-shadow-aurora) !important;
+        position: relative;
+    }
+    
+    .mud-app-bar::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: var(--mo-aurora-gradient-1);
+        background-size: 200% 200%;
+        animation: mo-aurora-flow calc(var(--mo-aurora-flow-speed) * 3) ease infinite;
+    }
+    
+    /* Drawer - 极光侧边栏 */
+    .mud-drawer .mud-drawer-content {
+        background: var(--mo-background-primary) !important;
+        backdrop-filter: blur(20px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+        border-right: 1px solid var(--mo-border-light) !important;
+    }
+    
+    /* Dialog - 极光对话框 */
+    .mud-dialog {
+        background: var(--mo-background-elevated) !important;
+        backdrop-filter: blur(30px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(30px) saturate(180%) !important;
+        border: 1px solid var(--mo-border-medium) !important;
+        border-radius: var(--mo-dialog-border-radius) !important;
+        box-shadow: var(--mo-shadow-aurora-hover), var(--mo-glow-primary) !important;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .mud-dialog::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: var(--mo-aurora-gradient-2);
+        background-size: 200% 200%;
+        animation: mo-aurora-flow calc(var(--mo-aurora-flow-speed) * 2) ease infinite;
+    }
+    
+    .mud-dialog-content {
+        padding: var(--mo-dialog-padding) !important;
+    }
+    
+    /* Tables - 极光表格 */
+    .mud-table {
+        background: var(--mo-background-elevated) !important;
+        backdrop-filter: blur(20px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+        border-radius: var(--mo-table-border-radius) !important;
+        box-shadow: var(--mo-shadow-aurora) !important;
+        border: 1px solid var(--mo-border-light) !important;
+        overflow: hidden;
+    }
+    
+    .mud-table-head .mud-table-row {
+        background: var(--mo-aurora-gradient-3) !important;
+        background-size: 200% 200% !important;
+        animation: mo-aurora-flow calc(var(--mo-aurora-flow-speed) * 4) ease infinite;
+    }
+    
+    .mud-table-head .mud-table-cell {
+        color: white !important;
+        font-weight: 600 !important;
+        text-shadow: var(--mo-text-glow);
+    }
+    
+    .mud-table-row:nth-child(even) {
+        background: var(--mo-surface-glass) !important;
+    }
+    
+    .mud-table-row:hover {
+        background: var(--mo-surface-hover) !important;
+        box-shadow: inset 0 0 20px rgba(102, 126, 234, 0.1) !important;
+        animation: mo-aurora-shimmer var(--mo-aurora-shimmer-speed) ease infinite;
+    }
+    
+    /* Chips - 极光标签 */
+    .mud-chip {
+        background: var(--mo-surface-glass) !important;
+        backdrop-filter: blur(10px) !important;
+        -webkit-backdrop-filter: blur(10px) !important;
+        border: 1px solid var(--mo-border-light) !important;
+        border-radius: var(--mo-chip-border-radius) !important;
+        padding: var(--mo-chip-padding) !important;
+        height: var(--mo-chip-height) !important;
+        transition: var(--mo-animation-smooth) !important;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1) !important;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .mud-chip::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: var(--mo-aurora-gradient-1);
+        opacity: 0.7;
+        transition: left 0.6s ease;
+    }
+    
+    .mud-chip:hover {
+        background: var(--mo-surface-hover) !important;
+        transform: translateY(-2px) scale(1.05);
+        box-shadow: var(--mo-shadow-aurora), var(--mo-glow-primary) !important;
+        border-color: var(--mud-palette-primary);
+    }
+    
+    .mud-chip:hover::before {
+        left: 100%;
+    }
+    
+    /* Popovers and Menus - 极光弹出框 */
+    .mud-popover,
+    .mud-menu {
+        background: var(--mo-background-elevated) !important;
+        backdrop-filter: blur(30px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(30px) saturate(180%) !important;
+        border: 1px solid var(--mo-border-medium) !important;
+        border-radius: var(--mo-card-border-radius) !important;
+        box-shadow: var(--mo-shadow-aurora-hover), var(--mo-glow-primary) !important;
+    }
+    
+    /* Tooltips - 极光提示框 */
+    .mud-tooltip {
+        background: var(--mo-background-elevated) !important;
+        backdrop-filter: blur(20px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+        border: 1px solid var(--mo-border-light) !important;
+        border-radius: var(--mo-button-border-radius) !important;
+        box-shadow: var(--mo-shadow-aurora), var(--mo-glow-primary) !important;
+    }
+    
+    /* Snackbars - 极光通知栏 */
+    .mud-snackbar {
+        background: var(--mo-background-elevated) !important;
+        backdrop-filter: blur(30px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(30px) saturate(180%) !important;
+        border: 1px solid var(--mo-border-medium) !important;
+        border-radius: var(--mo-button-border-radius) !important;
+        box-shadow: var(--mo-shadow-aurora-hover), var(--mo-glow-primary) !important;
+    }
+    
+    /* Tabs - 极光标签页 */
+    .mud-tabs-toolbar {
+        background: var(--mo-background-primary) !important;
+        backdrop-filter: blur(20px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+        border-bottom: 1px solid var(--mo-border-light) !important;
+    }
+    
+    .mud-tab {
+        border-radius: var(--mo-button-border-radius) !important;
+        transition: var(--mo-animation-smooth) !important;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .mud-tab.mud-tab-active {
+        background: var(--mo-aurora-gradient-1) !important;
+        background-size: 200% 200% !important;
+        border: 1px solid var(--mo-border-light) !important;
+        box-shadow: var(--mo-glow-primary) !important;
+        color: white !important;
+        animation: mo-aurora-flow calc(var(--mo-aurora-flow-speed) * 3) ease infinite;
+    }
+    
+    .mud-tab:hover {
+        background: var(--mo-surface-hover) !important;
+        transform: translateY(-1px);
+        box-shadow: var(--mo-glow-primary) !important;
+    }
+    
+    /* List Items - 极光列表项 */
+    .mud-list-item {
+        border-radius: var(--mo-button-border-radius) !important;
+        margin: var(--mo-spacing-xs) var(--mo-spacing-sm) !important;
+        transition: var(--mo-animation-smooth) !important;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .mud-list-item::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 0;
+        background: var(--mo-aurora-gradient-1);
+        transition: width 0.3s ease;
+    }
+    
+    .mud-list-item:hover {
+        background: var(--mo-surface-hover) !important;
+        transform: translateX(4px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2) !important;
+    }
+    
+    .mud-list-item:hover::before {
+        width: 3px;
+    }
+    
+    /* 工具类 */
+    .mo-aurora-bg {
+        background: var(--mo-aurora-gradient-1) !important;
+        background-size: 200% 200% !important;
+        animation: mo-aurora-flow var(--mo-aurora-flow-speed) ease infinite;
+    }
+    
+    .mo-aurora-glow {
+        box-shadow: var(--mo-glow-primary) !important;
+    }
+    
+    .mo-aurora-float {
+        animation: mo-aurora-float 4s ease-in-out infinite;
+    }
+    
+    .mo-aurora-shimmer {
+        animation: mo-aurora-shimmer var(--mo-aurora-shimmer-speed) ease infinite;
+    }
+    
+    .mo-aurora-pulse {
+        animation: mo-aurora-pulse 2s ease-in-out infinite;
+    }
+}
+
+/* Light Theme Specific Styles */
+.mo-theme-aurora-flow-light {
+    /* 明亮模式特殊效果 */
+    .mud-elevation-1,
+    .mud-elevation-2,
+    .mud-elevation-4,
+    .mud-elevation-8 {
+        background: var(--mo-background-elevated) !important;
+        backdrop-filter: blur(20px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+        border: 1px solid var(--mo-border-light) !important;
+    }
+    
+    .mud-elevation-1 {
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15) !important;
+    }
+    
+    .mud-elevation-2 {
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2) !important;
+    }
+    
+    .mud-elevation-4 {
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.25) !important;
+    }
+    
+    .mud-elevation-8 {
+        box-shadow: 0 16px 32px rgba(102, 126, 234, 0.3) !important;
+    }
+}
+
+/* Dark Theme Specific Styles - 极光霓虹效果 */
+.mo-theme-aurora-flow-dark {
+    /* 暗色模式特殊效果 */
+    .mud-elevation-1,
+    .mud-elevation-2,
+    .mud-elevation-4,
+    .mud-elevation-8 {
+        background: var(--mo-background-elevated) !important;
+        backdrop-filter: blur(20px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+        border: 1px solid var(--mo-border-light) !important;
+    }
+    
+    .mud-elevation-1 {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(0, 212, 255, 0.1) !important;
+    }
+    
+    .mud-elevation-2 {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(0, 212, 255, 0.1) !important;
+    }
+    
+    .mud-elevation-4 {
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(0, 212, 255, 0.1) !important;
+    }
+    
+    .mud-elevation-8 {
+        box-shadow: 0 16px 32px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(0, 212, 255, 0.1) !important;
+    }
+    
+    /* 霓虹按钮效果 */
+    .mud-button-filled-primary:hover {
+        animation: mo-aurora-pulse 2s ease-in-out infinite;
+        text-shadow: var(--mo-neon-text-shadow);
+    }
+    
+    /* 霓虹标题效果 */
+    .mud-typography-h1,
+    .mud-typography-h2,
+    .mud-typography-h3 {
+        text-shadow: var(--mo-text-glow);
+    }
+    
+    /* 导航链接霓虹悬停效果 */
+    .mud-nav-link:hover {
+        background: var(--mo-surface-hover) !important;
+        border-radius: var(--mo-button-border-radius) !important;
+        box-shadow: inset 0 0 15px rgba(0, 212, 255, 0.2), var(--mo-glow-secondary) !important;
+        text-shadow: var(--mo-text-glow);
+    }
+}
+
+/* 响应式设计 */
+@media (max-width: 960px) {
+    .mo-theme-aurora-flow-light,
+    .mo-theme-aurora-flow-dark {
+        --mo-card-padding: 20px;
+        --mo-dialog-padding: 24px;
+        --mo-button-padding-x: 16px;
+        --mo-button-padding-y: 8px;
+        --mo-aurora-flow-speed: 12s;
+        --mo-aurora-shimmer-speed: 4s;
+    }
+    
+    .mo-theme-aurora-flow-light::before,
+    .mo-theme-aurora-flow-light::after,
+    .mo-theme-aurora-flow-dark::before,
+    .mo-theme-aurora-flow-dark::after {
+        background-size: 300% 300%;
+    }
+}
+
+@media (max-width: 600px) {
+    .mo-theme-aurora-flow-light,
+    .mo-theme-aurora-flow-dark {
+        --mo-card-padding: 16px;
+        --mo-dialog-padding: 20px;
+        --mo-button-padding-x: 14px;
+        --mo-button-padding-y: 7px;
+        --mo-card-border-radius: 12px;
+        --mo-dialog-border-radius: 16px;
+        --mo-aurora-flow-speed: 15s;
+        --mo-aurora-shimmer-speed: 5s;
+    }
+}
+
+/* 无障碍支持 */
+@media (prefers-reduced-motion: reduce) {
+    .mo-theme-aurora-flow-light *,
+    .mo-theme-aurora-flow-dark * {
+        animation: none !important;
+        transition: none !important;
+    }
+    
+    .mo-theme-aurora-flow-light::before,
+    .mo-theme-aurora-flow-light::after,
+    .mo-theme-aurora-flow-dark::before,
+    .mo-theme-aurora-flow-dark::after {
+        animation: none !important;
+        background-size: 100% 100% !important;
+    }
+}
+
+/* 性能优化 */
+.mo-theme-aurora-flow-light .mud-table *,
+.mo-theme-aurora-flow-light .mud-data-grid *,
+.mo-theme-aurora-flow-light .mud-treeview *,
+.mo-theme-aurora-flow-dark .mud-table *,
+.mo-theme-aurora-flow-dark .mud-data-grid *,
+.mo-theme-aurora-flow-dark .mud-treeview *,
+.no-transition,
+.no-transition * {
+    transition: none !important;
+    animation: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
