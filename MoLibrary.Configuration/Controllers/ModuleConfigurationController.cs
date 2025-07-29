@@ -9,7 +9,6 @@ namespace MoLibrary.Configuration.Controllers;
 /// 配置模块控制器，提供基础配置管理API
 /// </summary>
 [ApiController]
-[Route("api/[controller]")]
 public class ModuleConfigurationController(ModuleConfigurationService moduleConfigurationService) : MoModuleControllerBase
 {
 
@@ -18,7 +17,7 @@ public class ModuleConfigurationController(ModuleConfigurationService moduleConf
     /// </summary>
     /// <param name="onlyCurDomain">是否只获取当前域配置</param>
     /// <returns>配置状态信息</returns>
-    [HttpGet("status")]
+    [HttpGet("option/status")]
     public async Task<IActionResult> GetConfigStatus([FromQuery] bool? onlyCurDomain = null)
     {
         var result = await moduleConfigurationService.GetConfigStatusAsync(onlyCurDomain);
@@ -29,7 +28,7 @@ public class ModuleConfigurationController(ModuleConfigurationService moduleConf
     /// 获取配置调试视图
     /// </summary>
     /// <returns>配置调试信息</returns>
-    [HttpGet("debug")]
+    [HttpGet("option/debug")]
     public async Task<IActionResult> GetDebugView()
     {
         var result = await moduleConfigurationService.GetDebugViewAsync();
@@ -40,7 +39,7 @@ public class ModuleConfigurationController(ModuleConfigurationService moduleConf
     /// 获取配置提供者信息
     /// </summary>
     /// <returns>配置提供者列表</returns>
-    [HttpGet("providers")]
+    [HttpGet("option/providers")]
     public async Task<IActionResult> GetProviders()
     {
         var result = await moduleConfigurationService.GetProvidersAsync();

@@ -10,7 +10,6 @@ namespace MoLibrary.Configuration.Dashboard.Controllers;
 /// 配置客户端控制器，提供配置热更新API
 /// </summary>
 [ApiController]
-[Route("api/option")]
 public class ConfigurationClientController(ConfigurationClientService configurationClientService) : MoModuleControllerBase
 {
 
@@ -19,7 +18,7 @@ public class ConfigurationClientController(ConfigurationClientService configurat
     /// </summary>
     /// <param name="request">更新请求</param>
     /// <returns>更新结果</returns>
-    [HttpPost("update")]
+    [HttpPost("option/update")]
     public async Task<IActionResult> UpdateConfig([FromBody] DtoUpdateConfig request)
     {
         var result = await configurationClientService.UpdateConfigAsync(request);
