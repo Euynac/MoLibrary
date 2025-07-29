@@ -2,13 +2,16 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     background: transparent;
+    overflow: hidden;
 }
 
 .mo-sidebar.expanded {
     width: 280px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .mo-sidebar.collapsed {
@@ -29,10 +32,15 @@
     align-items: center;
     gap: 12px;
     min-height: 48px;
+    overflow: hidden;
 }
 
 .mo-sidebar.collapsed .mo-logo-container {
     justify-content: center;
+}
+
+.mo-sidebar.collapsed .mo-logo-icon {
+    margin: 0 auto;
 }
 
 .mo-logo-icon {
@@ -43,41 +51,11 @@
     font-weight: 600;
     white-space: nowrap;
     opacity: 1;
-    transition: opacity 0.2s ease;
-}
-
-.mo-sidebar.collapsed .mo-app-title {
-    opacity: 0;
-    width: 0;
+    transition: opacity 0.15s ease-in-out;
     overflow: hidden;
 }
 
-.mo-toggle-btn.mud-icon-button {
-    position: absolute;
-    top: 16px;
-    right: 8px;
-    background: var(--mud-palette-background);
-    border: 1px solid var(--mud-palette-divider);
-    border-radius: 8px !important;
-    z-index: 10;
-    width: 32px !important;
-    height: 32px !important;
-    transition: all 0.2s ease;
-    min-width: 32px !important;
-    padding: 6px !important;
-}
 
-.mo-toggle-btn.mud-icon-button:hover {
-    background: var(--mud-palette-action-hover);
-    border-color: var(--mud-palette-primary);
-    box-shadow: 0 2px 8px rgba(var(--mud-palette-primary-rgb), 0.2);
-    border-radius: 8px !important;
-}
-
-/* 确保图标大小合适 */
-.mo-toggle-btn.mud-icon-button .mud-icon-root {
-    font-size: 1.25rem;
-}
 
 .mo-navigation {
     flex: 1;
@@ -107,6 +85,18 @@
     position: relative;
     padding-left: 16px;
     margin-left: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.mo-sidebar.collapsed .mud-nav-link {
+    justify-content: center;
+    padding-left: 0;
+    margin-left: 0;
+}
+
+.mo-sidebar.collapsed .mud-nav-link .mud-nav-link-icon {
+    margin: 0;
 }
 
 .mo-nav-item .mud-nav-link:hover {
@@ -152,6 +142,8 @@
     align-items: center;
     justify-content: flex-start;
     gap: 16px;
+    opacity: 1;
+    transition: opacity 0.15s ease-in-out;
 }
 
 .mo-section-title {
@@ -159,11 +151,39 @@
     font-weight: 500;
     white-space: nowrap;
     font-size: 0.875rem;
+    overflow: hidden;
 }
 
 .mo-theme-compact {
     display: flex;
     justify-content: center;
+}
+
+/* Text animation handling */
+.mo-sidebar .mud-nav-link-text {
+    opacity: 0;
+    max-width: 0;
+    transition: opacity 0.15s ease-in-out, max-width 0.3s ease-in-out;
+    overflow: hidden;
+    display: inline-block;
+}
+
+.mo-sidebar.expanded .mud-nav-link-text {
+    opacity: 1;
+    max-width: 200px;
+
+}
+
+/* Ensure smooth content transitions */
+.mo-sidebar * {
+    transition-property: opacity, transform, max-width;
+    transition-duration: 0.15s;
+    transition-timing-function: ease-in-out;
+}
+
+/* Prevent layout shift during transition */
+.mo-navigation {
+    min-width: 72px;
 }
 
 /* 响应式设计 */
