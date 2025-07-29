@@ -6,7 +6,7 @@
 @inject IOptions<ModuleUICoreOption> Options
 @inject MoThemeService ThemeService
 
-<div class="mo-sidebar @GetSidebarClass()">
+<div class="mo-sidebar @GetSidebarClass()" @onmouseenter="HandleMouseEnter" @onmouseleave="HandleMouseLeave">
     <!-- Logo 和标题区域 -->
     <div class="mo-sidebar-header">
         <div class="mo-logo-container">
@@ -14,20 +14,13 @@
                           Color="Color.Primary" 
                           Size="Size.Large"
                           Class="mo-logo-icon" />
-            @if (IsExpanded)
+            @if (_actualExpanded)
             {
                 <MudText Typo="Typo.h6" Class="mo-app-title">
                     @Options.Value.UIAppBarName
                 </MudText>
             }
         </div>
-        
-        <!-- 展开/收缩按钮 -->
-        <MudIconButton Icon="@(IsExpanded ? Icons.Material.Filled.ChevronLeft : Icons.Material.Filled.ChevronRight)"
-                      Color="Color.Default"
-                      Size="Size.Small"
-                      Class="mo-toggle-btn"
-                      OnClick="ToggleSidebar" />
     </div>
     
     <!-- 导航菜单 -->
@@ -39,7 +32,7 @@
                     <MudNavLink Href="@navItem.Href" 
                                Icon="@navItem.Icon" 
                                Disabled="@navItem.Disabled">
-                        @if (IsExpanded)
+                        @if (_actualExpanded)
                         {
                             @navItem.Text
                         }
@@ -51,7 +44,7 @@
     
     <!-- 底部工具区域 -->
     <div class="mo-sidebar-footer">
-        @if (IsExpanded)
+        @if (_actualExpanded)
         {
             <div class="mo-theme-section-expanded">
                 <MoThemeSelector />
@@ -68,17 +61,33 @@
 </div>
 
 @code {
-    [Parameter] public bool IsExpanded { get; set; } = true;
+    [Parameter] public bool IsExpanded { get; set; } = false;
     [Parameter] public EventCallback<bool> IsExpandedChanged { get; set; }
+    
+    private bool _isHovering = false;
+    private bool _actualExpanded = false;
 
-    private async Task ToggleSidebar()
+    protected override void OnParametersSet()
     {
-        IsExpanded = !IsExpanded;
-        await IsExpandedChanged.InvokeAsync(IsExpanded);
+        _actualExpanded = IsExpanded || _isHovering;
+    }
+
+    private async Task HandleMouseEnter()
+    {
+        _isHovering = true;
+        _actualExpanded = true;
+        await IsExpandedChanged.InvokeAsync(true);
+    }
+
+    private async Task HandleMouseLeave()
+    {
+        _isHovering = false;
+        _actualExpanded = false;
+        await IsExpandedChanged.InvokeAsync(false);
     }
 
     private string GetSidebarClass()
     {
-        return IsExpanded ? "expanded" : "collapsed";
+        return _actualExpanded ? "expanded" : "collapsed";
     }
 }
