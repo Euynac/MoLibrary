@@ -31,7 +31,7 @@ public class ConfigurationDashboardController(ConfigurationDashboardService conf
     /// <param name="appid">应用ID</param>
     /// <param name="key">配置键</param>
     /// <returns>配置状态</returns>
-    [HttpGet("configuration/status")]
+    [HttpGet("configuration/option/status")]
     public async Task<IActionResult> GetOptionItemStatus([FromQuery] string? appid, [FromQuery] string key)
     {
         var result = await configurationDashboardService.GetOptionItemStatusAsync(appid, key);
