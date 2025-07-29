@@ -47,17 +47,12 @@ public static class ModuleErrorUtil
             }
 
         }
-        
+
         //// Check for missing dependencies
         //ValidateDependencies();
-        
-        
 
-        // If there are errors, throw an exception
-        if (ModuleRegisterErrors.Count > 0)
-        {
-            throw new ModuleRegisterException(BuildErrorMessage(ModuleRegisterErrors));
-        }
+
+        RaiseModuleErrors();
     }
     //// 1.1 Check for circular dependencies in the dependency graph
     //if (MoModuleAnalyser.HasCircularDependencies())

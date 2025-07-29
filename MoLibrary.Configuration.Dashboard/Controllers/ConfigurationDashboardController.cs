@@ -10,7 +10,6 @@ namespace MoLibrary.Configuration.Dashboard.Controllers;
 /// 配置仪表板控制器，提供配置中心管理API
 /// </summary>
 [ApiController]
-[Route("api/configuration")]
 public class ConfigurationDashboardController(ConfigurationDashboardService configurationDashboardService) : MoModuleControllerBase
 {
 
@@ -19,7 +18,7 @@ public class ConfigurationDashboardController(ConfigurationDashboardService conf
     /// </summary>
     /// <param name="mode">显示模式</param>
     /// <returns>配置状态列表</returns>
-    [HttpGet("status")]
+    [HttpGet("configuration/status")]
     public async Task<IActionResult> GetAllConfigStatus([FromQuery] string? mode = null)
     {
         var result = await configurationDashboardService.GetAllConfigStatusAsync(mode);
@@ -32,7 +31,7 @@ public class ConfigurationDashboardController(ConfigurationDashboardService conf
     /// <param name="appid">应用ID</param>
     /// <param name="key">配置键</param>
     /// <returns>配置状态</returns>
-    [HttpGet("option/status")]
+    [HttpGet("configuration/status")]
     public async Task<IActionResult> GetOptionItemStatus([FromQuery] string? appid, [FromQuery] string key)
     {
         var result = await configurationDashboardService.GetOptionItemStatusAsync(appid, key);
@@ -47,7 +46,7 @@ public class ConfigurationDashboardController(ConfigurationDashboardService conf
     /// <param name="start">开始时间</param>
     /// <param name="end">结束时间</param>
     /// <returns>配置历史</returns>
-    [HttpGet("history")]
+    [HttpGet("configuration/history")]
     public async Task<IActionResult> GetConfigHistory(
         [FromQuery] string? key, 
         [FromQuery] string? appid,
@@ -63,7 +62,7 @@ public class ConfigurationDashboardController(ConfigurationDashboardService conf
     /// </summary>
     /// <param name="request">更新请求</param>
     /// <returns>更新结果</returns>
-    [HttpPost("update")]
+    [HttpPost("configuration/update")]
     public async Task<IActionResult> UpdateConfig([FromBody] DtoUpdateConfig request)
     {
         var result = await configurationDashboardService.UpdateConfigAsync(request);
@@ -75,7 +74,7 @@ public class ConfigurationDashboardController(ConfigurationDashboardService conf
     /// </summary>
     /// <param name="request">回滚请求</param>
     /// <returns>回滚结果</returns>
-    [HttpPost("rollback")]
+    [HttpPost("configuration/rollback")]
     public async Task<IActionResult> RollbackConfig([FromBody] RollbackRequest request)
     {
         var result = await configurationDashboardService.RollbackConfigAsync(request.Key, request.AppId, request.Version);
