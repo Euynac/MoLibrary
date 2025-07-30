@@ -7,8 +7,9 @@
 @using Microsoft.Extensions.Options
 @using MudBlazor
 @using MoLibrary.Tool.MoResponse
+@using Microsoft.Extensions.DependencyInjection
 @inject IOptionsSnapshot<ModuleConfigurationDashboardOption> DashboardOptions
-@inject ConfigurationDashboardService ConfigurationDashboardService
+@inject IServiceProvider ServiceProvider
 @inject ISnackbar Snackbar
 
 <PageTitle>配置面板</PageTitle>
@@ -78,6 +79,7 @@
     
     private List<DtoDomainConfigs>? configStatus;
     private bool isLoading = false;
+    private ConfigurationDashboardService? configurationDashboardService;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -85,17 +87,23 @@
         {
             if (DashboardOptions.Value.ThisIsDashboard)
             {
-                await LoadConfigStatusAsync();
+				configurationDashboardService = ServiceProvider.GetService<ConfigurationDashboardService>();
+                if (configurationDashboardService != null)
+                {
+                    await LoadConfigStatusAsync();
+                }
             }
         }
     }
 
     private async Task LoadConfigStatusAsync()
     {
+        if (configurationDashboardService == null) return;
+        
         isLoading = true;
         StateHasChanged();
 
-        if ((await ConfigurationDashboardService.GetAllConfigStatusAsync()).IsFailed(out var error, out var data))
+        if ((await configurationDashboardService.GetAllConfigStatusAsync()).IsFailed(out var error, out var data))
         {
             Snackbar.Add($"加载配置状态失败: {error}", Severity.Error);
         }
@@ -110,7 +118,9 @@
 
     private async Task HandleConfigUpdate(DtoUpdateConfig updateRequest)
     {
-        if ((await ConfigurationDashboardService.UpdateConfigAsync(updateRequest)).IsFailed(out var error))
+        if (configurationDashboardService == null) return;
+        
+        if ((await configurationDashboardService.UpdateConfigAsync(updateRequest)).IsFailed(out var error))
         {
             Snackbar.Add($"配置更新失败: {error}", Severity.Error);
         }
