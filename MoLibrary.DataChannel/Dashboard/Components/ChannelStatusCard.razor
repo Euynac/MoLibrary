@@ -1,6 +1,12 @@
 @using MoLibrary.DataChannel.Dashboard.Models
+@using MoLibrary.DataChannel.Dashboard.Services
+@using MoLibrary.DataChannel.BuildInMiddlewares
 @using MudBlazor
 @using System.Text.Json
+@using MoLibrary.Tool.MoResponse
+@inject IDialogService DialogService
+@inject DataChannelService DataChannelService
+@inject ISnackbar Snackbar
 
 <MudCard Elevation="2" Class="@GetCardClass()">
     <MudCardHeader Class="pb-2">
@@ -137,6 +143,14 @@
                                                 <MudChip T="string" Color="Color.Info" Size="Size.Small" Icon="@Icons.Material.Filled.Info">
                                                     @middleware.InfoDictionary.Count 项信息
                                                 </MudChip>
+                                            }
+                                            @if (middleware.Name == nameof(MessageDebuggerMiddleware))
+                                            {
+                                                <MudIconButton Icon="@Icons.Material.Filled.BugReport" 
+                                                             Color="Color.Primary" 
+                                                             Size="Size.Small"
+                                                             OnClick="@(() => OpenMessageDebugger(Channel.Id, middleware))"
+                                                             Title="打开消息调试器" />
                                             }
                                         </MudStack>
                                     </TitleContent>
@@ -423,5 +437,55 @@
         };
     }
 
+    /// <summary>
+    /// 打开消息调试器对话框
+    /// </summary>
+    private async Task OpenMessageDebugger(string channelId, ComponentInfo middleware)
+    {
+        // 获取实际的中间件实例
+        var debuggerMiddleware = await GetMessageDebuggerMiddleware(channelId, middleware.Name);
+        if (debuggerMiddleware == null)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<MessageDebuggerDialog>
+        {
+            { x => x.Middleware, debuggerMiddleware }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            CloseButton = true,
+            BackdropClick = false
+        };
+
+        await DialogService.ShowAsync<MessageDebuggerDialog>($"消息调试器 - {channelId}", parameters, options);
+    }
+
+    /// <summary>
+    /// 获取MessageDebuggerMiddleware实例
+    /// </summary>
+    private async Task<MessageDebuggerMiddleware?> GetMessageDebuggerMiddleware(string channelId, string middlewareName)
+    {
+        try
+        {
+            var result = await DataChannelService.GetMiddlewareAsync<MessageDebuggerMiddleware>(channelId, middlewareName);
+            if (result.IsFailed(out var error, out var middleware))
+            {
+                Snackbar.Add($"获取调试器失败: {error}", Severity.Error);
+                return null;
+            }
+            
+            return middleware;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"获取调试器时发生错误: {ex.Message}", Severity.Error);
+            return null;
+        }
+    }
 
 } 
