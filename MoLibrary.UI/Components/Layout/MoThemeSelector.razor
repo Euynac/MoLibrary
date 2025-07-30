@@ -9,106 +9,17 @@
                Class="mo-theme-selector-btn"
                OnClick="OpenThemeDialog" />
 
-<MudDialog @bind-Visible="_isDialogOpen" Options="@_dialogOptions">
-    <DialogContent>
-        <MudContainer Style="max-width: 480px;">
-            <MudStack Spacing="4" Class="pa-2">
-                <MudText Typo="Typo.h5" Class="mb-2" Align="Align.Center">
-                    <MudIcon Icon="@Icons.Material.Filled.Palette" Class="mr-2" />
-                    主题设置
-                </MudText>
-                
-                <MudDivider />
-                
-                <div>
-                    <MudText Typo="Typo.subtitle1" Class="mb-3">选择主题风格</MudText>
-                    
-                    <MudStack Spacing="2">
-                        @foreach (var theme in MoThemeService.AvailableThemes)
-                        {
-                            <MudCard Elevation="@(ThemeService.CurrentThemeName == theme.Name ? 4 : 1)" 
-                                     Class="@GetThemeCardClass(theme.Name)" 
-                                     Style="cursor: pointer; transition: all 0.3s ease;"
-                                     @onclick="() => OnThemeChanged(theme.Name)">
-                                <MudCardContent Class="pa-3">
-                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
-                                        <MudRadio T="string" Value="@theme.Name" SelectedValue="@ThemeService.CurrentThemeName" Color="Color.Primary" ReadOnly="true" />
-                                        <MudStack Spacing="0" Class="flex-grow-1">
-                                            <MudText Typo="Typo.body1" Style="font-weight: 500;">@theme.DisplayName</MudText>
-                                            <MudText Typo="Typo.body2" Color="Color.Secondary">@theme.Description</MudText>
-                                        </MudStack>
-                                        @if (ThemeService.CurrentThemeName == theme.Name)
-                                        {
-                                            <MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" />
-                                        }
-                                    </MudStack>
-                                </MudCardContent>
-                            </MudCard>
-                        }
-                    </MudStack>
-                </div>
-                
-                <MudDivider />
-
-                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-                    <MudText Typo="Typo.subtitle1">深色模式</MudText>
-                    <MudSwitch @bind-Value="ThemeService.IsDarkMode" Color="Color.Primary" Size="Size.Large" />
-                </MudStack>
-                
-                <MudDivider />
-                
-                <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
-                    当前主题: @GetCurrentThemeDisplayName()
-                </MudText>
-            </MudStack>
-        </MudContainer>
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="CloseDialog" Color="Color.Primary" Variant="Variant.Filled">
-            关闭
-        </MudButton>
-    </DialogActions>
-</MudDialog>
-
 @code {
-    private bool _isDialogOpen = false;
-    private DialogOptions _dialogOptions = new()
+    private async Task OpenThemeDialog()
     {
-        CloseOnEscapeKey = true,
-        MaxWidth = MaxWidth.Small,
-        FullWidth = true,
-        CloseButton = true
-    };
-
-    private void OpenThemeDialog()
-    {
-        _isDialogOpen = true;
-    }
-
-    private void CloseDialog()
-    {
-        _isDialogOpen = false;
-    }
-
-    private void OnThemeChanged(string newTheme)
-    {
-        ThemeService.CurrentThemeName = newTheme;
-    }
-    
-    private string GetCurrentThemeDisplayName()
-    {
-        var current = MoThemeService.AvailableThemes.FirstOrDefault(t => t.Name == ThemeService.CurrentThemeName);
-        var mode = ThemeService.IsDarkMode ? "深色" : "浅色";
-        return $"{current.DisplayName} - {mode}";
-    }
-    
-    private string GetThemeCardClass(string themeName)
-    {
-        var baseClass = "theme-card";
-        if (ThemeService.CurrentThemeName == themeName)
+        var options = new DialogOptions
         {
-            baseClass += " selected";
-        }
-        return baseClass;
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true,
+            CloseButton = true
+        };
+        
+        await DialogService.ShowAsync<MoThemeDialog>("主题设置", options);
     }
 }
