@@ -15,7 +15,7 @@
 <MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
     <MudText Typo="Typo.h4" Class="mb-4">配置客户端</MudText>
     
-    <MudTabs Elevation="4" Rounded="true" Color="Color.Primary" @bind-ActivePanelIndex="activeTabIndex">
+    <MudTabs Elevation="4" Rounded="true" Color="Color.Primary" @bind-ActivePanelIndex="activeTabIndex" @bind-ActivePanelIndex:after="OnTabChangedAsync">
         <MudTabPanel Text="配置状态">
             <div class="pa-4">
                 <MudGrid>
@@ -51,7 +51,10 @@
                 <MudCard>
                     <MudCardHeader>
                         <CardHeaderContent>
-                            <MudText Typo="Typo.h6">配置调试视图</MudText>
+                            <MudText Typo="Typo.h6">
+                                <MudIcon Icon="@Icons.Material.Filled.BugReport" Class="mr-2" Style="vertical-align: text-bottom;" />
+                                配置调试视图
+                            </MudText>
                         </CardHeaderContent>
                         <CardHeaderActions>
                             <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadDebugViewAsync">刷新</MudButton>
@@ -60,11 +63,10 @@
                     <MudCardContent>
                         @if (debugView != null)
                         {
-                            <MudPaper Class="pa-4" Style="background-color: #1e1e1e; color: #d4d4d4; font-family: 'Consolas', monospace;">
-                                @foreach (var line in debugView)
-                                {
-                                    <div>@line</div>
-                                }
+                            <MudPaper Class="pa-4" Elevation="2">
+                                <pre style="white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word;">@foreach (var line in debugView)
+{<text>@line
+</text>}</pre>
                             </MudPaper>
                         }
                         else if (isLoadingDebug)
@@ -73,7 +75,7 @@
                         }
                         else
                         {
-                            <MudText Class="text-muted">点击刷新按钮加载调试视图数据</MudText>
+                            <MudText Class="text-muted">加载中...</MudText>
                         }
                     </MudCardContent>
                 </MudCard>
@@ -85,24 +87,20 @@
                 <MudCard>
                     <MudCardHeader>
                         <CardHeaderContent>
-                            <MudText Typo="Typo.h6">配置提供者</MudText>
+                            <MudText Typo="Typo.h6">
+                                <MudIcon Icon="@Icons.Material.Filled.Extension" Class="mr-2" Style="vertical-align: text-bottom;" />
+                                配置提供者
+                            </MudText>
                         </CardHeaderContent>
                         <CardHeaderActions>
                             <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadProvidersAsync">刷新</MudButton>
                         </CardHeaderActions>
                     </MudCardHeader>
                     <MudCardContent>
-                        @if (providers != null)
+                        @if (providerContent != null)
                         {
-                            <MudPaper Class="pa-4" Style="background-color: #f5f5f5; font-family: 'Consolas', monospace;">
-                                @if (providers.GetType().GetProperty("content")?.GetValue(providers) is string content)
-                                {
-                                    <pre>@content</pre>
-                                }
-                                else
-                                {
-                                    <pre>@JsonSerializer.Serialize(providers, new JsonSerializerOptions { WriteIndented = true })</pre>
-                                }
+                            <MudPaper Class="pa-4" Elevation="2">
+                                <pre style="white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word;">@providerContent</pre>
                             </MudPaper>
                         }
                         else if (isLoadingProviders)
@@ -111,7 +109,7 @@
                         }
                         else
                         {
-                            <MudText Class="text-muted">点击刷新按钮加载配置提供者数据</MudText>
+                            <MudText Class="text-muted">加载中...</MudText>
                         }
                     </MudCardContent>
                 </MudCard>
@@ -126,6 +124,7 @@
     private List<DtoDomainConfigs>? configStatus;
     private string[]? debugView;
     private object? providers;
+    private string? providerContent;
     private bool onlyCurDomain = false;
     private bool isLoading = false;
     private bool isLoadingDebug = false;
@@ -140,7 +139,7 @@
         }
     }
 
-    protected override async Task<Task> OnParametersSetAsync()
+    private async Task OnTabChangedAsync()
     {
         // 当切换到其他标签页时自动加载数据
         switch (activeTabIndex)
@@ -158,7 +157,6 @@
                 }
                 break;
         }
-        return Task.CompletedTask;
     }
 
     private async Task LoadConfigStatusAsync()
@@ -209,6 +207,23 @@
         else
         {
             providers = data;
+            // Extract content from the nested structure
+            if (data != null)
+            {
+                var dataType = data.GetType();
+                if (dataType.GetProperty("content")?.GetValue(data) is string content && !string.IsNullOrWhiteSpace(content))
+                {
+                    providerContent = content;
+                }
+                else if (dataType.GetProperty("message")?.GetValue(data) is string message)
+                {
+                    providerContent = message;
+                }
+                else
+                {
+                    providerContent = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
+                }
+            }
         }
 
         isLoadingProviders = false;
