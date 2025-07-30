@@ -131,9 +131,6 @@
             </MudPaper>
         </MudStack>
     </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="Cancel">关闭</MudButton>
-    </DialogActions>
 </MudDialog>
 
 @code {
@@ -242,11 +239,6 @@
         return firstLine;
     }
 
-    private void Cancel()
-    {
-        StopRefreshTimer();
-        MudDialog?.Close();
-    }
 
     public void Dispose()
     {
