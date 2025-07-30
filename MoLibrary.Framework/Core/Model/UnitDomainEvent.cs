@@ -49,9 +49,16 @@ public class UnitDomainEvent(Type type) : ProjectUnit(type, EProjectUnitType.Dom
         var properties = pocoType.GetProperties();
         foreach (var propertyInfo in properties)
         {
-            if (propertyInfo.PropertyType.IsClassObject())
+            if (propertyInfo.PropertyType.IsClassObject() && propertyInfo.CanWrite)
             {
-                propertyInfo.SetValue(newObj, GetDefaultPocoObject(propertyInfo.PropertyType));
+                try
+                {
+                    propertyInfo.SetValue(newObj, GetDefaultPocoObject(propertyInfo.PropertyType));
+                }
+                catch (Exception e)
+                {
+                    throw new Exception($"{pocoType.GetCleanFullName()}设置属性{propertyInfo.PropertyType.GetCleanFullName()}默认值出错", e);
+                }
             }
         }
 
