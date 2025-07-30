@@ -1,5 +1,6 @@
 using MoLibrary.DataChannel.Dashboard.Models;
 using MoLibrary.DataChannel.Interfaces;
+using MoLibrary.DataChannel.BuildInMiddlewares;
 using MoLibrary.Tool.MoResponse;
 using Microsoft.Extensions.Logging;
 
@@ -187,6 +188,39 @@ public class DataChannelService
         {
             _logger.LogError(ex, "清空DataChannel异常信息失败，ID: {Id}", id);
             return Res.Fail($"清空DataChannel异常信息失败: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 获取指定DataChannel中的特定中间件实例
+    /// </summary>
+    /// <param name="channelId">DataChannel ID</param>
+    /// <param name="middlewareName">中间件名称</param>
+    /// <returns>中间件实例</returns>
+    public async Task<Res<T?>> GetMiddlewareAsync<T>(string channelId, string middlewareName) where T : class
+    {
+        try
+        {
+            var channel = _manager.Fetch(channelId);
+            if (channel == null)
+            {
+                return Res.Fail("未找到指定的DataChannel");
+            }
+
+            var middleware = channel.Pipe.GetMiddlewares()
+                .FirstOrDefault(m => m.GetType().Name == middlewareName) as T;
+
+            if (middleware == null)
+            {
+                return Res.Fail($"未找到名为 {middlewareName} 的中间件");
+            }
+
+            return await Task.FromResult(Res.Ok<T?>(middleware));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "获取中间件实例失败，Channel ID: {ChannelId}, Middleware: {MiddlewareName}", channelId, middlewareName);
+            return Res.Fail($"获取中间件实例失败: {ex.Message}");
         }
     }
 } 
