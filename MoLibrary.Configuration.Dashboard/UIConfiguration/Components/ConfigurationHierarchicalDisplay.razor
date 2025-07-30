@@ -5,7 +5,7 @@
 @using System.Text.RegularExpressions
 
 <MudContainer MaxWidth="MaxWidth.False" Class="pa-0">
-    <!-- 搜索和控制区域 -->
+    <!-- 搜索区域 -->
     <MudGrid Class="mb-4">
         <MudItem xs="12" md="6">
             <MudTextField @bind-Value="searchKeyword" 
@@ -18,90 +18,129 @@
                          DebounceInterval="300"
                          OnDebounceIntervalElapsed="() => StateHasChanged()" />
         </MudItem>
-        <MudItem xs="12" md="6" Class="d-flex align-center justify-end">
-            <MudButtonGroup Variant="Variant.Outlined" Size="Size.Small">
-                <MudButton StartIcon="@Icons.Material.Filled.ExpandMore" OnClick="ExpandAll">全部展开</MudButton>
-                <MudButton StartIcon="@Icons.Material.Filled.ExpandLess" OnClick="CollapseAll">全部折叠</MudButton>
-            </MudButtonGroup>
-        </MudItem>
     </MudGrid>
     
-    @foreach (var domain in FilteredConfigs)
-    {
-        <MudCard Class="mb-4" Elevation="2">
-            <MudCardHeader>
-                <CardHeaderContent>
-                    <div class="d-flex align-center">
-                        <MudIcon Icon="@Icons.Material.Filled.Domain" Class="mr-2" />
-                        <MudText Typo="Typo.h6">@domain.Title</MudText>
-                    </div>
-                </CardHeaderContent>
-            </MudCardHeader>
-            <MudCardContent>
-                @foreach (var service in domain.Children)
-                {
-                    <MudExpansionPanels Class="mb-3">
-                        <MudExpansionPanel @bind-IsExpanded="expandedStates[GetPanelKey(domain.Title, service.Title)]">
-                            <TitleContent>
-                                <div class="d-flex align-center">
-                                    <MudIcon Icon="@Icons.Material.Filled.Apps" Class="mr-2" />
-                                    <MudText>@service.Title</MudText>
-                                </div>
-                            </TitleContent>
-                            <ChildContent>
-                                @foreach (var config in service.Children)
+    <!-- 三列布局 -->
+    <MudGrid Style="height: 70vh;">
+        <!-- 第一列：领域和服务导航 -->
+        <MudItem xs="3">
+            <MudPaper Class="pa-2" Style="height: 100%; overflow-y: auto;">
+                <MudText Typo="Typo.h6" Class="mb-3">配置导航</MudText>
+                <MudNavMenu>
+                    @foreach (var domain in FilteredConfigs)
+                    {
+                        <div class="mb-2">
+                            <MudNavGroup Text="@domain.Title" Icon="@Icons.Material.Filled.Domain" Expanded="true">
+                                @foreach (var service in domain.Children)
                                 {
-                                    <MudCard Class="mb-2" Elevation="1">
-                                        <MudCardHeader>
-                                            <CardHeaderContent>
-                                                <div class="d-flex align-center">
-                                                    <MudIcon Icon="@Icons.Material.Filled.Settings" Class="mr-2" />
-                                                    <MudText Typo="Typo.h6">@config.Title</MudText>
-                                                </div>
-                                            </CardHeaderContent>
-                                        </MudCardHeader>
-                                        <MudCardContent>
-                                            <MudList T="string" Dense="true">
-                                                @foreach (var item in config.Items)
-                                                {
-                                                    <MudListItem>
-                                                        <div class="d-flex align-center justify-space-between w-100">
-                                                            <div class="flex-grow-1">
-                                                                <div class="d-flex align-center">
-                                                                    <MudIcon Icon="@GetOptionIcon(item)" Size="Size.Small" Class="mr-2" />
-                                                                    <div>
-                                                                        <MudText Typo="Typo.body2">@item.Title</MudText>
-                                                                        <MudText Typo="Typo.caption" Class="text-muted">@item.Desc</MudText>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            <div class="d-flex align-center gap-2">
-                                                                @if (!item.IsOffline)
-                                                                {
-                                                                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Text="在线" />
-                                                                }
-                                                                else
-                                                                {
-                                                                    <MudChip T="string" Size="Size.Small" Color="Color.Warning" Text="离线" />
-                                                                }
-                                                                <ConfigurationValueDisplay OptionItem="item" />
-                                                                <MudButton Size="Size.Small" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Edit" 
-                                                                           OnClick="() => OpenEditDialog(item, config.AppId)">编辑</MudButton>
-                                                            </div>
-                                                        </div>
-                                                    </MudListItem>
-                                                }
-                                            </MudList>
-                                        </MudCardContent>
-                                    </MudCard>
+                                    <MudNavLink OnClick="() => SelectService(domain, service)" 
+                                               Icon="@Icons.Material.Filled.Apps" 
+                                               Class="@(selectedService == service ? "mud-nav-link-active" : "")">
+                                        @service.Title
+                                    </MudNavLink>
                                 }
-                            </ChildContent>
-                        </MudExpansionPanel>
-                    </MudExpansionPanels>
+                            </MudNavGroup>
+                        </div>
+                    }
+                </MudNavMenu>
+            </MudPaper>
+        </MudItem>
+        
+        <!-- 第二列：配置类表格 -->
+        <MudItem xs="4">
+            <MudPaper Class="pa-2" Style="height: 100%; overflow-y: auto;">
+                <MudText Typo="Typo.h6" Class="mb-3">配置类</MudText>
+                @if (selectedService != null)
+                {
+                    <MudTable T="DtoConfig" Items="selectedService.Children" Dense="true" Hover="true" 
+                             SelectedItemChanged="SelectConfig" RowClass="cursor-pointer">
+                        <HeaderContent>
+                            <MudTh>名称</MudTh>
+                            <MudTh>类型</MudTh>
+                            <MudTh>配置项数</MudTh>
+                            <MudTh>最后更新</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="名称">
+                                <div class="d-flex align-center">
+                                    <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" Class="mr-2" />
+                                    <div>
+                                        <MudText Typo="Typo.body2">@context.Title</MudText>
+                                        <MudText Typo="Typo.caption" Class="text-muted">@context.Desc</MudText>
+                                    </div>
+                                </div>
+                            </MudTd>
+                            <MudTd DataLabel="类型">
+                                <MudText Typo="Typo.caption">@context.Type</MudText>
+                            </MudTd>
+                            <MudTd DataLabel="配置项数">
+                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="@context.Items.Count.ToString()" />
+                            </MudTd>
+                            <MudTd DataLabel="最后更新">
+                                <MudText Typo="Typo.caption">
+                                    @(context.LastModificationTime?.ToString("MM-dd HH:mm") ?? "未知")
+                                </MudText>
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
                 }
-            </MudCardContent>
-        </MudCard>
-    }
+                else
+                {
+                    <MudText Color="Color.Secondary" Class="text-center pa-4">请选择一个服务</MudText>
+                }
+            </MudPaper>
+        </MudItem>
+        
+        <!-- 第三列：配置项表格 -->
+        <MudItem xs="5">
+            <MudPaper Class="pa-2" Style="height: 100%; overflow-y: auto;">
+                <MudText Typo="Typo.h6" Class="mb-3">配置项</MudText>
+                @if (selectedConfig != null)
+                {
+                    <MudTable T="DtoOptionItem" Items="selectedConfig.Items" Dense="true" Hover="true">
+                        <HeaderContent>
+                            <MudTh>名称</MudTh>
+                            <MudTh>值</MudTh>
+                            <MudTh>状态</MudTh>
+                            <MudTh>操作</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="名称">
+                                <div class="d-flex align-center">
+                                    <MudIcon Icon="@GetOptionIcon(context)" Size="Size.Small" Class="mr-2" />
+                                    <div>
+                                        <MudText Typo="Typo.body2">@context.Title</MudText>
+                                        <MudText Typo="Typo.caption" Class="text-muted">@context.Desc</MudText>
+                                    </div>
+                                </div>
+                            </MudTd>
+                            <MudTd DataLabel="值" Style="max-width: 200px;">
+                                <ConfigurationValueDisplay OptionItem="context" />
+                            </MudTd>
+                            <MudTd DataLabel="状态">
+                                @if (!context.IsOffline)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Text="在线" />
+                                }
+                                else
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Warning" Text="离线" />
+                                }
+                            </MudTd>
+                            <MudTd DataLabel="操作">
+                                <MudButton Size="Size.Small" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Edit" 
+                                           OnClick="() => OpenEditDialog(context, selectedConfig.AppId)">编辑</MudButton>
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
+                else
+                {
+                    <MudText Color="Color.Secondary" Class="text-center pa-4">请选择一个配置类</MudText>
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
 </MudContainer>
 
 <MudDialog Visible="isEditDialogOpen" VisibleChanged="OnDialogVisibilityChanged" Options="dialogOptions">
@@ -126,12 +165,27 @@
     </DialogActions>
 </MudDialog>
 
+<style>
+    .cursor-pointer {
+        cursor: pointer;
+    }
+    
+    .mud-nav-link-active {
+        background-color: var(--mud-palette-primary-lighten) !important;
+        color: var(--mud-palette-primary-text) !important;
+    }
+</style>
+
 @code {
     [Parameter] public List<DtoDomainConfigs> Configs { get; set; } = [];
     [Parameter] public EventCallback<DtoUpdateConfig> OnConfigUpdate { get; set; }
     
     private string searchKeyword = "";
-    private Dictionary<string, bool> expandedStates = new();
+    
+    // 选择状态
+    private DtoDomainConfigs? selectedDomain;
+    private DtoServiceConfigs? selectedService;
+    private DtoConfig? selectedConfig;
     
     private List<DtoDomainConfigs> FilteredConfigs => 
         string.IsNullOrWhiteSpace(searchKeyword) ? Configs : FilterConfigs();
@@ -143,23 +197,27 @@
     
     protected override void OnParametersSet()
     {
-        // 初始化展开状态
-        foreach (var domain in Configs)
+        // 如果配置数据发生变化，重置选择状态
+        if (selectedService != null && !Configs.Any(d => d.Children.Contains(selectedService)))
         {
-            foreach (var service in domain.Children)
-            {
-                var key = GetPanelKey(domain.Title, service.Title);
-                if (!expandedStates.ContainsKey(key))
-                {
-                    expandedStates[key] = false; // 默认折叠
-                }
-            }
+            selectedDomain = null;
+            selectedService = null;
+            selectedConfig = null;
         }
     }
     
-    private string GetPanelKey(string domainTitle, string serviceTitle)
+    private void SelectService(DtoDomainConfigs domain, DtoServiceConfigs service)
     {
-        return $"{domainTitle}_{serviceTitle}";
+        selectedDomain = domain;
+        selectedService = service;
+        selectedConfig = null; // 重置配置类选择
+        StateHasChanged();
+    }
+    
+    private void SelectConfig(DtoConfig config)
+    {
+        selectedConfig = config;
+        StateHasChanged();
     }
     
     private List<DtoDomainConfigs> FilterConfigs()
@@ -189,8 +247,15 @@
                         filteredConfigs.Add(new DtoConfig
                         {
                             Title = config.Title,
+                            Name = config.Name,
+                            Type = config.Type,
+                            Desc = config.Desc,
                             AppId = config.AppId,
-                            Items = filteredItems
+                            Items = filteredItems,
+                            Version = config.Version,
+                            LastModificationTime = config.LastModificationTime,
+                            LastModifierId = config.LastModifierId,
+                            Username = config.Username
                         });
                     }
                 }
@@ -200,6 +265,8 @@
                     filteredServices.Add(new DtoServiceConfigs
                     {
                         Title = service.Title,
+                        Name = service.Name,
+                        AppId = service.AppId,
                         Children = filteredConfigs
                     });
                 }
@@ -210,6 +277,7 @@
                 filtered.Add(new DtoDomainConfigs
                 {
                     Title = domain.Title,
+                    Name = domain.Name,
                     Children = filteredServices
                 });
             }
@@ -217,44 +285,12 @@
         
         return filtered;
     }
-    
-    private void ExpandAll()
-    {
-        foreach (var key in expandedStates.Keys.ToList())
-        {
-            expandedStates[key] = true;
-        }
-        StateHasChanged();
-    }
-    
-    private void CollapseAll()
-    {
-        foreach (var key in expandedStates.Keys.ToList())
-        {
-            expandedStates[key] = false;
-        }
-        StateHasChanged();
-    }
 
     private readonly DialogOptions dialogOptions = new()
     {
         MaxWidth = MaxWidth.Medium,
         FullWidth = true
     };
-
-    public class TreeNode
-    {
-        public NodeType Type { get; set; }
-        public object Data { get; set; } = null!;
-    }
-
-    public enum NodeType
-    {
-        Domain,
-        Service,
-        Config,
-        OptionItem
-    }
 
     private string GetOptionIcon(DtoOptionItem item)
     {
