@@ -30,7 +30,7 @@
                     @foreach (var domain in FilteredConfigs)
                     {
                         <div class="mb-2">
-                            <MudNavGroup Text="@domain.Title" Icon="@Icons.Material.Filled.Domain" Expanded="true">
+                            <MudNavGroup Title="@domain.Title" Icon="@Icons.Material.Filled.Domain" Expanded="true">
                                 @foreach (var service in domain.Children)
                                 {
                                     <MudNavLink OnClick="() => SelectService(domain, service)" 
@@ -65,8 +65,18 @@
                                 <div class="d-flex align-center">
                                     <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" Class="mr-2" />
                                     <div>
-                                        <MudText Typo="Typo.body2">@context.Title</MudText>
-                                        <MudText Typo="Typo.caption" Class="text-muted">@context.Desc</MudText>
+                                        <div class="d-flex align-center">
+                                            <MudText Typo="Typo.body2">@context.Title</MudText>
+                                            @if (!string.IsNullOrEmpty(context.Desc))
+                                            {
+                                                <MudTooltip Text="@context.Desc">
+                                                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" 
+                                                            Color="Color.Primary" Class="ml-1" 
+                                                            Style="font-size: 14px;" />
+                                                </MudTooltip>
+                                            }
+                                        </div>
+                                        <MudText Typo="Typo.caption" Class="text-muted">@context.Name</MudText>
                                     </div>
                                 </div>
                             </MudTd>
@@ -101,7 +111,7 @@
                         <HeaderContent>
                             <MudTh>名称</MudTh>
                             <MudTh>值</MudTh>
-                            <MudTh>状态</MudTh>
+                            <MudTh>类型</MudTh>
                             <MudTh>操作</MudTh>
                         </HeaderContent>
                         <RowTemplate>
@@ -109,15 +119,43 @@
                                 <div class="d-flex align-center">
                                     <MudIcon Icon="@GetOptionIcon(context)" Size="Size.Small" Class="mr-2" />
                                     <div>
-                                        <MudText Typo="Typo.body2">@context.Title</MudText>
-                                        <MudText Typo="Typo.caption" Class="text-muted">@context.Desc</MudText>
+                                        <div class="d-flex align-center">
+                                            <MudText Typo="Typo.body2">@context.Title</MudText>
+                                            @if (!string.IsNullOrEmpty(context.Desc))
+                                            {
+                                                <MudTooltip Text="@context.Desc">
+                                                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" 
+                                                            Color="Color.Primary" Class="ml-1" 
+                                                            Style="font-size: 14px;" />
+                                                </MudTooltip>
+                                            }
+                                        </div>
+                                        <MudText Typo="Typo.caption" Class="text-muted">@context.Name</MudText>
                                     </div>
                                 </div>
                             </MudTd>
                             <MudTd DataLabel="值" Style="max-width: 200px;">
-                                <ConfigurationValueDisplay OptionItem="context" />
+                                <div class="config-value-container">
+                                    @{
+                                        var valueDisplay = GetValueDisplay(context.Value);
+                                    }
+                                    @if (valueDisplay.Length > 30)
+                                    {
+                                        <MudTooltip Text="@valueDisplay">
+                                            <div class="config-value-truncated">
+                                                @(valueDisplay.Substring(0, 30))...
+                                            </div>
+                                        </MudTooltip>
+                                    }
+                                    else
+                                    {
+                                        <div class="config-value-normal">
+                                            @valueDisplay
+                                        </div>
+                                    }
+                                </div>
                             </MudTd>
-                            <MudTd DataLabel="状态">
+                            <MudTd DataLabel="类型">
                                 @if (!context.IsOffline)
                                 {
                                     <MudChip T="string" Size="Size.Small" Color="Color.Success" Text="在线" />
@@ -173,6 +211,27 @@
     .mud-nav-link-active {
         background-color: var(--mud-palette-primary-lighten) !important;
         color: var(--mud-palette-primary-text) !important;
+    }
+    
+    .config-value-container {
+        max-width: 200px;
+    }
+    
+    .config-value-truncated {
+        cursor: pointer;
+        color: var(--mud-palette-text-primary);
+        font-family: 'Consolas', 'Monaco', monospace;
+        font-size: 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .config-value-normal {
+        color: var(--mud-palette-text-primary);
+        font-family: 'Consolas', 'Monaco', monospace;
+        font-size: 12px;
+        word-break: break-all;
     }
 </style>
 
@@ -284,6 +343,25 @@
         }
         
         return filtered;
+    }
+    
+    private string GetValueDisplay(object? value)
+    {
+        if (value == null) return "null";
+        
+        if (value is string strValue)
+        {
+            return strValue;
+        }
+        
+        try
+        {
+            return JsonSerializer.Serialize(value);
+        }
+        catch
+        {
+            return value.ToString() ?? "null";
+        }
     }
 
     private readonly DialogOptions dialogOptions = new()
