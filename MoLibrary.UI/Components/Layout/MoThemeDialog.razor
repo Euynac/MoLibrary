@@ -1,0 +1,113 @@
+@using MoLibrary.UI.Services
+@using MudBlazor
+@inject MoThemeService ThemeService
+@implements IDisposable
+
+<MudDialog>
+    <DialogContent>
+        <MudContainer Style="max-width: 480px;">
+            <MudStack Spacing="4" Class="pa-2">
+                <MudText Typo="Typo.h5" Class="mb-2" Align="Align.Center">
+                    <MudIcon Icon="@Icons.Material.Filled.Palette" Class="mr-2" />
+                    主题设置
+                </MudText>
+                
+                <MudDivider />
+                
+                <div>
+                    <MudText Typo="Typo.subtitle1" Class="mb-3">选择主题风格</MudText>
+                    
+                    <MudStack Spacing="2">
+                        @foreach (var theme in MoThemeService.AvailableThemes)
+                        {
+                            <MudCard Elevation="@(ThemeService.CurrentThemeName == theme.Name ? 4 : 1)" 
+                                     Class="@GetThemeCardClass(theme.Name)" 
+                                     Style="cursor: pointer; transition: all 0.3s ease;"
+                                     @onclick="() => OnThemeChanged(theme.Name)">
+                                <MudCardContent Class="pa-3">
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                                        <MudRadio T="string" Value="@theme.Name" Color="Color.Primary" ReadOnly="true" />
+                                        <MudStack Spacing="0" Class="flex-grow-1">
+                                            <MudText Typo="Typo.body1" Style="font-weight: 500;">@theme.DisplayName</MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">@theme.Description</MudText>
+                                        </MudStack>
+                                        @if (ThemeService.CurrentThemeName == theme.Name)
+                                        {
+                                            <MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" />
+                                        }
+                                    </MudStack>
+                                </MudCardContent>
+                            </MudCard>
+                        }
+                    </MudStack>
+                </div>
+                
+                <MudDivider />
+
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                    <MudText Typo="Typo.subtitle1">深色模式</MudText>
+                    <MudSwitch T="bool" @bind-Value="ThemeService.IsDarkMode" Color="Color.Primary" Size="Size.Large" />
+                </MudStack>
+                
+                <MudDivider />
+                
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
+                    当前主题: @GetCurrentThemeDisplayName()
+                </MudText>
+            </MudStack>
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close" Color="Color.Primary" Variant="Variant.Filled">
+            关闭
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    protected override void OnInitialized()
+    {
+        ThemeService.OnThemeChanged += HandleThemeChanged;
+    }
+
+    public void Dispose()
+    {
+        ThemeService.OnThemeChanged -= HandleThemeChanged;
+    }
+
+    private void HandleThemeChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void Close()
+    {
+        MudDialog.Close();
+    }
+
+    private void OnThemeChanged(string newTheme)
+    {
+        ThemeService.CurrentThemeName = newTheme;
+        StateHasChanged();
+    }
+    
+    private string GetCurrentThemeDisplayName()
+    {
+        var current = MoThemeService.AvailableThemes.FirstOrDefault(t => t.Name == ThemeService.CurrentThemeName);
+        var mode = ThemeService.IsDarkMode ? "深色" : "浅色";
+        return $"{current.DisplayName} - {mode}";
+    }
+    
+    private string GetThemeCardClass(string themeName)
+    {
+        var baseClass = "theme-card";
+        if (ThemeService.CurrentThemeName == themeName)
+        {
+            baseClass += " selected";
+        }
+        return baseClass;
+    }
+}
