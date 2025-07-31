@@ -36,7 +36,7 @@
                                 <MudCardContent>
                                     @if (configStatus != null)
                                     {
-                                        <ConfigurationHierarchicalDisplay Configs="configStatus" OnConfigUpdate="HandleConfigUpdate" />
+                                        <ConfigurationExplorer Configs="configStatus" OnConfigUpdate="HandleConfigUpdate" />
                                     }
                                     else if (isLoading)
                                     {
@@ -54,10 +54,10 @@
                     <ConfigurationHistory />
                 </div>
             </MudTabPanel>
-            
-            <MudTabPanel Text="实时监控">
+
+			<MudTabPanel Text="配置概览">
                 <div class="pa-4">
-                    <ConfigurationStatus />
+                    <ConfigurationOverview />
                 </div>
             </MudTabPanel>
         </MudTabs>

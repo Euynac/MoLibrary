@@ -37,7 +37,7 @@ public class DtoUpdateConfigRes
     /// </summary>
     public required JsonNode? NewConfigValue { get; set; }
     /// <summary>
-    /// 最终配置类值
+    /// 原始配置类值
     /// </summary>
     public required JsonNode? OldConfigValue { get; set; }
    
