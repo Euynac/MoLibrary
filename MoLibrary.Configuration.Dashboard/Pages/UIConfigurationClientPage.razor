@@ -61,17 +61,26 @@
                         </CardHeaderActions>
                     </MudCardHeader>
                     <MudCardContent>
-                        @if (debugView != null)
+                        @if (debugView != null && debugView.Any())
                         {
-                            <MudPaper Class="pa-4" Elevation="2">
-                                <pre style="white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word;">@foreach (var line in debugView)
-{<text>@line
-</text>}</pre>
-                            </MudPaper>
+                            <MudTable T="string" Items="debugView" Dense="true" Hover="true" FixedHeader="true" Height="600px">
+                                <HeaderContent>
+                                    <MudTh>调试信息</MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    <MudTd DataLabel="调试信息">
+                                        <MudText Typo="Typo.body2" Style="font-family: monospace; white-space: pre-wrap;">@context</MudText>
+                                    </MudTd>
+                                </RowTemplate>
+                            </MudTable>
                         }
                         else if (isLoadingDebug)
                         {
                             <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                        }
+                        else if (debugView != null && !debugView.Any())
+                        {
+                            <MudAlert Severity="Severity.Info">暂无调试信息</MudAlert>
                         }
                         else
                         {
