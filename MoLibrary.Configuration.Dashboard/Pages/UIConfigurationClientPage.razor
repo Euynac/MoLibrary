@@ -63,13 +63,13 @@
                     <MudCardContent>
                         @if (debugView != null && debugView.Any())
                         {
-                            <MudTable T="string" Items="debugView" Dense="true" Hover="true" FixedHeader="true" Height="600px">
+                            <MudTable T="string" Items="debugView" Dense="true" Hover="true" FixedHeader="true" Height="90vh" Style="width: 100%;">
                                 <HeaderContent>
-                                    <MudTh>调试信息</MudTh>
+                                    <MudTh Style="width: 100%;">调试信息</MudTh>
                                 </HeaderContent>
                                 <RowTemplate>
-                                    <MudTd DataLabel="调试信息">
-                                        <MudText Typo="Typo.body2" Style="font-family: monospace; white-space: pre-wrap;">@context</MudText>
+                                    <MudTd DataLabel="调试信息" Style="width: 100%; word-break: break-all;">
+                                        <MudText Typo="Typo.body2" Style="font-family: monospace; white-space: pre-wrap; word-wrap: break-word;">@context</MudText>
                                     </MudTd>
                                 </RowTemplate>
                             </MudTable>
@@ -102,16 +102,19 @@
                             </MudText>
                         </CardHeaderContent>
                         <CardHeaderActions>
+                            <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ExpandMore" OnClick="ExpandAllProviders" Size="Size.Small">全部展开</MudButton>
+                            <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ExpandLess" OnClick="CollapseAllProviders" Size="Size.Small">全部折叠</MudButton>
                             <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadProvidersAsync">刷新</MudButton>
                         </CardHeaderActions>
                     </MudCardHeader>
                     <MudCardContent>
                         @if (providerGroups != null && providerGroups.Any())
                         {
-                            @foreach (var group in providerGroups)
-                            {
-                                <MudExpansionPanels Class="mb-4">
-                                    <MudExpansionPanel>
+                            <MudExpansionPanels @ref="expansionPanels" Class="mb-4" MultiExpansion="true">
+                                @for (int i = 0; i < providerGroups.Count; i++)
+                                {
+                                    var group = providerGroups[i];
+                                    <MudExpansionPanel @bind-Expanded="expandedStates[i]">
                                         <TitleContent>
                                             <div style="display: flex; align-items: center">
                                                 <MudIcon Icon="@Icons.Material.Filled.Extension" class="mr-3"></MudIcon>
@@ -155,8 +158,8 @@
                                             }
                                         </ChildContent>
                                     </MudExpansionPanel>
-                                </MudExpansionPanels>
-                            }
+                                }
+                            </MudExpansionPanels>
                         }
                         else if (isLoadingProviders)
                         {
@@ -188,6 +191,8 @@
     private bool isLoadingDebug = false;
     private bool isLoadingProviders = false;
     private int activeTabIndex = 0;
+    private MudExpansionPanels? expansionPanels;
+    private Dictionary<int, bool> expandedStates = new();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -265,6 +270,12 @@
         else
         {
             providerGroups = data;
+            // 初始化展开状态
+            expandedStates.Clear();
+            for (int i = 0; i < providerGroups.Count; i++)
+            {
+                expandedStates[i] = false;
+            }
         }
 
         isLoadingProviders = false;
@@ -281,6 +292,30 @@
         {
             Snackbar.Add("配置更新成功", Severity.Success);
             await LoadConfigStatusAsync();
+        }
+    }
+
+    private void ExpandAllProviders()
+    {
+        if (providerGroups != null)
+        {
+            for (int i = 0; i < providerGroups.Count; i++)
+            {
+                expandedStates[i] = true;
+            }
+            StateHasChanged();
+        }
+    }
+
+    private void CollapseAllProviders()
+    {
+        if (providerGroups != null)
+        {
+            for (int i = 0; i < providerGroups.Count; i++)
+            {
+                expandedStates[i] = false;
+            }
+            StateHasChanged();
         }
     }
 }
