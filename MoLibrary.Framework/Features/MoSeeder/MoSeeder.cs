@@ -1,41 +1,42 @@
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using MoLibrary.Repository.Transaction;
+using MoLibrary.Core.Features.MoLogProvider;
+using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.Framework.Features.MoSeeder;
 
 /// <summary>
 /// 指定该类是种子类，启动服务后将会自动执行一遍
 /// </summary>
-public abstract class MoSeeder(IServiceProvider serviceProvider) : IMoSeeder
+public abstract class MoSeeder : IMoSeeder
 {
-    public async Task SeedAsync()
+
+    /// <summary>
+    /// Lazy-loaded logger instance for this module guide.
+    /// </summary>
+    private readonly Lazy<ILogger> _loggerLazy;
+
+    /// <summary>
+    /// Gets the logger instance for this module guide.
+    /// </summary>
+    public ILogger Logger => _loggerLazy.Value;
+
+    protected MoSeeder()
     {
-        // TODO 优化不依赖UnitOfWork的种子方法
-        var manager = serviceProvider.GetRequiredService<IMoUnitOfWorkManager>();
-        var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
-        var logger = loggerFactory.CreateLogger(GetType());
+        _loggerLazy = new Lazy<ILogger>(() => LogProvider.For(GetType()));
+    }
+
+    public virtual async Task SeedAsync()
+    {
         try
         {
-            using var uow = manager.Begin();
             await SeedingAsync();
-            await uow.CompleteAsync();
         }
         catch (Exception e)
         {
-            logger.LogError(e, "Seeder出现异常");
+            Logger.LogError(e, $"Seeder:{GetType().GetCleanFullName()} 出现异常");
         }
-   
+
     }
 
     public abstract Task SeedingAsync();
-}
-
-public interface IMoSeeder
-{
-    /// <summary>
-    /// 执行种子方法
-    /// </summary>
-    /// <returns></returns>
-    public Task SeedAsync();
 }
