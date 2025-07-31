@@ -102,7 +102,7 @@ public class OptionItem
     /// <summary>
     /// 所有配置来源，越后优先级越高
     /// </summary>
-    public List<string> SourceList { get; set; } = [];
+    public HashSet<string> SourceList { get; set; } = [];
     public void SetSource(IConfigurationProvider provider, string? sourceInfo)
     {
         Provider = provider.GetType().Name;
