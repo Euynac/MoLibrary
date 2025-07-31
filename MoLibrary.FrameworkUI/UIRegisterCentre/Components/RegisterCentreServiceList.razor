@@ -1,4 +1,8 @@
 @using MoLibrary.RegisterCentre
+@using MoLibrary.RegisterCentre.Modules
+@using Microsoft.Extensions.Options
+@inject IOptionsSnapshot<ModuleRegisterCentreOption> RegisterCentreOptions
+@inject IDialogService DialogService
 
 <MudDataGrid T="RegisterServiceStatus" Items="@Services" Hover="true" Dense="true" RowClick="OnRowClick">
     <Columns>
@@ -13,10 +17,31 @@
         <TemplateColumn Title="状态" CellClass="d-flex justify-end">
             <CellTemplate>
                 @{
-                    var isOnline = (DateTime.Now - context.Item.UpdateTime).TotalSeconds < 60;
+                    var timeSinceUpdate = DateTime.Now - context.Item.UpdateTime;
+                    var heartbeatDuration = RegisterCentreOptions.Value.HeartbeatDuration;
+                    var heartbeatSeconds = heartbeatDuration / 1000.0;
+                    
+                    Color statusColor;
+                    string statusText;
+                    
+                    if (timeSinceUpdate.TotalSeconds < heartbeatSeconds * 2)
+                    {
+                        statusColor = Color.Success;
+                        statusText = "在线";
+                    }
+                    else if (timeSinceUpdate.TotalSeconds < heartbeatSeconds * 3)
+                    {
+                        statusColor = Color.Warning;
+                        statusText = "不健康";
+                    }
+                    else
+                    {
+                        statusColor = Color.Error;
+                        statusText = "异常";
+                    }
                 }
-                <MudChip T="string" Color="@(isOnline ? Color.Success : Color.Error)" Size="Size.Small">
-                    @(isOnline ? "在线" : "离线")
+                <MudChip T="string" Color="@statusColor" Size="Size.Small">
+                    @statusText
                 </MudChip>
             </CellTemplate>
         </TemplateColumn>
@@ -29,36 +54,31 @@
     </Columns>
 </MudDataGrid>
 
-@if (_showDetail && _selectedService != null)
-{
-    <MudDialog Visible="true" Options="@(new DialogOptions { CloseOnEscapeKey = true })">
-        <TitleContent>
-            <MudText Typo="Typo.h6">服务详情</MudText>
-        </TitleContent>
-        <DialogContent>
-            <RegisterCentreServiceDetail Service="_selectedService" />
-        </DialogContent>
-        <DialogActions>
-            <MudButton OnClick="@(() => _showDetail = false)">关闭</MudButton>
-        </DialogActions>
-    </MudDialog>
-}
 
 @code {
     [Parameter] public List<RegisterServiceStatus> Services { get; set; } = new();
     [Parameter] public EventCallback OnRefresh { get; set; }
-
-    private bool _showDetail = false;
-    private RegisterServiceStatus? _selectedService;
 
     private void OnRowClick(DataGridRowClickEventArgs<RegisterServiceStatus> args)
     {
         ShowServiceDetail(args.Item);
     }
 
-    private void ShowServiceDetail(RegisterServiceStatus service)
+    private async void ShowServiceDetail(RegisterServiceStatus service)
     {
-        _selectedService = service;
-        _showDetail = true;
+        var parameters = new DialogParameters<RegisterCentreServiceDetailDialog>
+        {
+            { x => x.Service, service }
+        };
+        
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true,
+            Position = DialogPosition.Center,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        };
+        
+        await DialogService.ShowAsync<RegisterCentreServiceDetailDialog>("服务详情", parameters, options);
     }
 }
