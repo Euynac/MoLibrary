@@ -1,0 +1,64 @@
+@using MoLibrary.RegisterCentre
+
+<MudDataGrid T="RegisterServiceStatus" Items="@Services" Hover="true" Dense="true" RowClick="OnRowClick">
+    <Columns>
+        <PropertyColumn Property="x => x.AppId" Title="App ID" />
+        <PropertyColumn Property="x => x.Name" Title="服务名称" />
+        <PropertyColumn Property="x => x.DomainName" Title="领域" />
+        <PropertyColumn Property="x => x.ProjectName" Title="项目名" />
+        <PropertyColumn Property="x => x.UpdateTime" Title="更新时间" Format="yyyy-MM-dd HH:mm:ss" />
+        <PropertyColumn Property="x => x.BuildTime" Title="构建时间" Format="yyyy-MM-dd HH:mm:ss" />
+        <PropertyColumn Property="x => x.AssemblyVersion" Title="程序集版本" />
+        <PropertyColumn Property="x => x.ReleaseVersion" Title="发布版本" />
+        <TemplateColumn Title="状态" CellClass="d-flex justify-end">
+            <CellTemplate>
+                @{
+                    var isOnline = (DateTime.Now - context.Item.UpdateTime).TotalSeconds < 60;
+                }
+                <MudChip T="string" Color="@(isOnline ? Color.Success : Color.Error)" Size="Size.Small">
+                    @(isOnline ? "在线" : "离线")
+                </MudChip>
+            </CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn CellClass="d-flex justify-end">
+            <CellTemplate>
+                <MudIconButton Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Primary" 
+                               OnClick="@(() => ShowServiceDetail(context.Item))" />
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
+
+@if (_showDetail && _selectedService != null)
+{
+    <MudDialog Visible="true" Options="@(new DialogOptions { CloseOnEscapeKey = true })">
+        <TitleContent>
+            <MudText Typo="Typo.h6">服务详情</MudText>
+        </TitleContent>
+        <DialogContent>
+            <RegisterCentreServiceDetail Service="_selectedService" />
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="@(() => _showDetail = false)">关闭</MudButton>
+        </DialogActions>
+    </MudDialog>
+}
+
+@code {
+    [Parameter] public List<RegisterServiceStatus> Services { get; set; } = new();
+    [Parameter] public EventCallback OnRefresh { get; set; }
+
+    private bool _showDetail = false;
+    private RegisterServiceStatus? _selectedService;
+
+    private void OnRowClick(DataGridRowClickEventArgs<RegisterServiceStatus> args)
+    {
+        ShowServiceDetail(args.Item);
+    }
+
+    private void ShowServiceDetail(RegisterServiceStatus service)
+    {
+        _selectedService = service;
+        _showDetail = true;
+    }
+}

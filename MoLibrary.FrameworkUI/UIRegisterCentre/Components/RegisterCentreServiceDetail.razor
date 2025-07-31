@@ -1,0 +1,57 @@
+@using MoLibrary.RegisterCentre
+
+<MudGrid>
+    <MudItem xs="12">
+        <MudTextField T="string" Label="App ID" Value="@Service.AppId" ReadOnly="true" />
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudTextField T="string" Label="服务名称" Value="@Service.Name" ReadOnly="true" />
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudTextField T="string" Label="项目名称" Value="@Service.ProjectName" ReadOnly="true" />
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudTextField T="string" Label="领域名" Value="@Service.DomainName" ReadOnly="true" />
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudTextField T="string" Label="客户端信息" Value="@Service.FromClient" ReadOnly="true" />
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudTextField T="string" Label="程序集版本" Value="@Service.AssemblyVersion" ReadOnly="true" />
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudTextField T="string" Label="发布版本" Value="@Service.ReleaseVersion" ReadOnly="true" />
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudDatePicker Label="更新时间" Date="@Service.UpdateTime" ReadOnly="true" />
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudDatePicker Label="构建时间" Date="@Service.BuildTime" ReadOnly="true" />
+    </MudItem>
+    <MudItem xs="12">
+        <MudAlert Severity="@(IsOnline ? Severity.Success : Severity.Error)" Variant="Variant.Filled" Dense="true">
+            服务状态: @(IsOnline ? "在线" : "离线") (@LastUpdateTime)
+        </MudAlert>
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter] public RegisterServiceStatus Service { get; set; } = null!;
+
+    private bool IsOnline => (DateTime.Now - Service.UpdateTime).TotalSeconds < 60;
+    
+    private string LastUpdateTime
+    {
+        get
+        {
+            var timeSpan = DateTime.Now - Service.UpdateTime;
+            if (timeSpan.TotalSeconds < 60)
+                return $"{(int)timeSpan.TotalSeconds} 秒前更新";
+            if (timeSpan.TotalMinutes < 60)
+                return $"{(int)timeSpan.TotalMinutes} 分钟前更新";
+            if (timeSpan.TotalHours < 24)
+                return $"{(int)timeSpan.TotalHours} 小时前更新";
+            return $"{(int)timeSpan.TotalDays} 天前更新";
+        }
+    }
+}

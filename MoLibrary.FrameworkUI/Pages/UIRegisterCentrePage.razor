@@ -1,0 +1,105 @@
+@attribute [Route(REGISTERCENTRE_DEBUG_URL)]
+@using MoLibrary.FrameworkUI.UIRegisterCentre.Components
+@using MoLibrary.FrameworkUI.UIRegisterCentre.Services
+@using MoLibrary.RegisterCentre
+@using MoLibrary.Tool.MoResponse
+@inject RegisterCentreService RegisterCentreService
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h4" Class="mb-4">注册中心管理</MudText>
+    
+    <MudGrid>
+        <MudItem xs="12">
+            <MudPaper Class="pa-4">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                    <MudText Typo="Typo.h6">已注册服务列表</MudText>
+                    <MudStack Row="true" Spacing="2">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="RefreshServicesAsync" Disabled="@_isLoading">
+                            刷新
+                        </MudButton>
+                        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="UnregisterAllAsync" Disabled="@_isLoading">
+                            清空所有注册
+                        </MudButton>
+                    </MudStack>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+        
+        <MudItem xs="12">
+            @if (_isLoading)
+            {
+                <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+            }
+            else if (_services.Any())
+            {
+                <RegisterCentreServiceList Services="_services" OnRefresh="RefreshServicesAsync" />
+            }
+            else
+            {
+                <MudPaper Class="pa-4">
+                    <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary">
+                        暂无已注册的服务
+                    </MudText>
+                </MudPaper>
+            }
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code {
+    public const string REGISTERCENTRE_DEBUG_URL = "/register-centre-manage";
+    
+    private bool _isLoading = false;
+    private List<RegisterServiceStatus> _services = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await RefreshServicesAsync();
+        }
+    }
+
+    private async Task RefreshServicesAsync()
+    {
+        _isLoading = true;
+        StateHasChanged();
+
+        if ((await RegisterCentreService.GetServicesStatusAsync()).IsFailed(out var error, out var data))
+        {
+            Snackbar.Add($"获取服务列表失败: {error.Message}", Severity.Error);
+            _services = new List<RegisterServiceStatus>();
+        }
+        else
+        {
+            _services = data ?? new List<RegisterServiceStatus>();
+            Snackbar.Add("服务列表已刷新", Severity.Success);
+        }
+
+        _isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task UnregisterAllAsync()
+    {
+        // TODO: 添加确认对话框
+        // 暂时直接执行操作
+
+        _isLoading = true;
+        StateHasChanged();
+
+        if ((await RegisterCentreService.UnregisterAllAsync()).IsFailed(out var error))
+        {
+            Snackbar.Add($"清空注册失败: {error.Message}", Severity.Error);
+        }
+        else
+        {
+            Snackbar.Add("已清空所有注册", Severity.Success);
+            await RefreshServicesAsync();
+        }
+
+        _isLoading = false;
+        StateHasChanged();
+    }
+}
