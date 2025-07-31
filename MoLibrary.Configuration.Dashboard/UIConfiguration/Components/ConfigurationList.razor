@@ -3,7 +3,7 @@
 @using MoLibrary.Configuration.Dashboard.UIConfiguration.Services
 @using MoLibrary.Tool.MoResponse
 @using MudBlazor
-@inject ConfigurationService ConfigurationService
+@inject ConfigurationDashboardService ConfigurationDashboardService
 @inject ISnackbar Snackbar
 
 <MudCard>
@@ -178,17 +178,30 @@
 
         try
         {
-            if ((await ConfigurationService.GetAllConfigsAsync()).IsFailed(out var error, out var data))
+            if ((await ConfigurationDashboardService.GetAllConfigStatusAsync()).IsFailed(out var error, out var domainConfigs))
             {
                 Snackbar.Add($"加载配置失败: {error}", Severity.Error);
                 return;
             }
 
-            _configurations = data;
-            _totalCount = data.Count;
+            // 从领域配置中提取所有配置项
+            var allItems = new List<DtoOptionItem>();
+            foreach (var domain in domainConfigs)
+            {
+                foreach (var service in domain.Children)
+                {
+                    foreach (var config in service.Children)
+                    {
+                        allItems.AddRange(config.Items);
+                    }
+                }
+            }
+
+            _configurations = allItems;
+            _totalCount = allItems.Count;
 
             // 提取来源列表作为AppId替代
-            _appIds = data.Where(c => !string.IsNullOrEmpty(c.Source))
+            _appIds = allItems.Where(c => !string.IsNullOrEmpty(c.Source))
                          .Select(c => c.Source!)
                          .Distinct()
                          .OrderBy(x => x)

@@ -196,7 +196,7 @@
                                 <div class="d-flex gap-1">
                                     <MudButton Size="Size.Small" Variant="Variant.Text" 
                                               StartIcon="@Icons.Material.Filled.Edit" 
-                                              OnClick="() => OpenEditDialog(context, selectedConfig.AppId)">
+                                              OnClick="async () => await OpenEditDialog(context, selectedConfig.AppId)">
                                         编辑
                                     </MudButton>
                                     @if (IsItemModified(context))
@@ -222,27 +222,7 @@
     </MudGrid>
 </MudContainer>
 
-<MudDialog Visible="isEditDialogOpen" VisibleChanged="OnDialogVisibilityChanged" Options="editDialogOptions">
-    <TitleContent>
-        <MudText Typo="Typo.h6">编辑配置项</MudText>
-    </TitleContent>
-    <DialogContent>
-        @if (editingItem != null)
-        {
-            <div class="mb-4">
-                <MudText Typo="Typo.body2" Class="mb-2"><strong>配置项:</strong> @editingItem.Title</MudText>
-                <MudText Typo="Typo.caption" Class="mb-2">@editingItem.Desc</MudText>
-                <MudText Typo="Typo.caption" Class="mb-2"><strong>Key:</strong> @editingItem.Key</MudText>
-                <MudText Typo="Typo.caption" Class="mb-2"><strong>当前值:</strong> @JsonSerializer.Serialize(editingItem.Value)</MudText>
-            </div>
-            <ConfigurationValueEditor OptionItem="editingItem" @bind-Value="editValue" />
-        }
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="CloseEditDialog">取消</MudButton>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveConfiguration">应用修改</MudButton>
-    </DialogActions>
-</MudDialog>
+<!-- ConfigurationEditor is now opened via IDialogService -->
 
 
 
@@ -267,10 +247,8 @@
     private List<DtoDomainConfigs> FilteredConfigs => 
         string.IsNullOrWhiteSpace(searchKeyword) ? Configs : FilterConfigs();
 
-    private bool isEditDialogOpen = false;
     private DtoOptionItem? editingItem;
     private string? editingAppId;
-    private object? editValue;
     
     protected override void OnParametersSet()
     {
@@ -410,11 +388,6 @@
         }
     }
 
-    private readonly DialogOptions editDialogOptions = new()
-    {
-        MaxWidth = MaxWidth.ExtraLarge,
-        FullWidth = true
-    };
     
     private readonly DialogOptions saveConfirmationDialogOptions = new()
     {
@@ -437,15 +410,35 @@
         };
     }
 
-    private void OpenEditDialog(DtoOptionItem item, string appId)
+    private async Task OpenEditDialog(DtoOptionItem item, string appId)
     {
         try
         {
             editingItem = item;
             editingAppId = appId;
-            editValue = item.Value;
-            isEditDialogOpen = true;
-            StateHasChanged();
+            
+            // 使用 IDialogService 打开编辑对话框
+            var parameters = new DialogParameters<ConfigurationEditor>
+            {
+                { x => x.OnConfigurationUpdated, EventCallback.Factory.Create<DtoOptionItem>(this, OnConfigurationUpdated) },
+                { x => x.ConfigItem, item }
+            };
+            
+            var options = new DialogOptions()
+            {
+                MaxWidth = MaxWidth.Medium,
+                FullWidth = true,
+                CloseButton = true,
+                BackdropClick = false
+            };
+            
+            var dialog = await DialogService.ShowAsync<ConfigurationEditor>("编辑配置", parameters, options);
+            var result = await dialog.Result;
+            
+            if (result != null && !result.Canceled && result.Data is DtoOptionItem updatedItem)
+            {
+                OnConfigurationUpdated(updatedItem);
+            }
         }
         catch (Exception ex)
         {
@@ -453,27 +446,11 @@
         }
     }
 
-    private void CloseEditDialog()
-    {
-        isEditDialogOpen = false;
-        editingItem = null;
-        editingAppId = null;
-        editValue = null;
-        StateHasChanged();
-    }
-    
-    private void OnDialogVisibilityChanged(bool isVisible)
-    {
-        isEditDialogOpen = isVisible;
-        if (!isVisible)
-        {
-            CloseEditDialog();
-        }
-    }
 
-    private async Task SaveConfiguration()
+    private void OnConfigurationUpdated(DtoOptionItem updatedItem)
     {
-        if (editingItem != null && editingAppId != null && selectedConfig != null)
+        // 当 ConfigurationEditor 更新配置后的回调
+        if (selectedConfig != null && editingAppId != null)
         {
             // 确保原始配置已初始化
             if (!changeTracker.OriginalConfigs.ContainsKey(selectedConfig.Name))
@@ -483,22 +460,14 @@
             
             // 获取原始配置项
             var originalConfig = changeTracker.OriginalConfigs[selectedConfig.Name];
-            var originalItem = originalConfig.Items.FirstOrDefault(i => i.Key == editingItem.Key);
+            var originalItem = originalConfig.Items.FirstOrDefault(i => i.Key == updatedItem.Key);
             
             if (originalItem != null)
             {
-                // 创建修改后的配置项
-                var modifiedItem = DeepCloneOptionItem(editingItem);
-                modifiedItem.Value = editValue;
-                
                 // 跟踪修改
-                changeTracker.TrackChange(selectedConfig.Name, originalItem, modifiedItem, editingAppId);
-                
-                // 更新当前显示的配置项值
-                editingItem.Value = editValue;
+                changeTracker.TrackChange(selectedConfig.Name, originalItem, updatedItem, editingAppId);
             }
             
-            CloseEditDialog();
             StateHasChanged();
         }
     }

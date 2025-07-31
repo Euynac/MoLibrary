@@ -3,7 +3,7 @@
 @using MoLibrary.Configuration.Dashboard.UIConfiguration.Services
 @using MoLibrary.Tool.MoResponse
 @using MudBlazor
-@inject ConfigurationService ConfigurationService
+@inject ConfigurationDashboardService ConfigurationDashboardService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 
@@ -184,7 +184,7 @@
             DateTime? startDate = _dateRange?.Start;
             DateTime? endDate = _dateRange?.End;
 
-            var result = await ConfigurationService.GetConfigHistoryAsync(
+            var result = await ConfigurationDashboardService.GetConfigHistoryAsync(
                 string.IsNullOrWhiteSpace(_filterKey) ? null : _filterKey,
                 string.IsNullOrWhiteSpace(_filterAppId) ? null : _filterAppId,
                 startDate,
@@ -292,7 +292,7 @@
     {
         try
         {
-            if ((await ConfigurationService.RollbackConfigAsync(history.Key, history.AppId, history.Version)).IsFailed(out var error))
+            if ((await ConfigurationDashboardService.RollbackConfigAsync(history.Key, history.AppId, history.Version)).IsFailed(out var error))
             {
                 Snackbar.Add($"回滚失败: {error}", Severity.Error);
                 return;

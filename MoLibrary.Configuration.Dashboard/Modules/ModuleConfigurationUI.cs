@@ -23,7 +23,6 @@ public class ModuleConfigurationUI(ModuleConfigurationUIOption option)
     public override void ConfigureServices(IServiceCollection services)
     {
         // 注册配置服务
-        services.AddScoped<ConfigurationService>();
         services.AddScoped<ConfigurationClientService>();
         services.AddScoped<ConfigurationDashboardService>();
     }
