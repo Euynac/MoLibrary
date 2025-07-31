@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MoLibrary.Configuration.Modules;
+using MoLibrary.Configuration.Model;
 
 namespace MoLibrary.Configuration;
 
@@ -55,27 +56,48 @@ public static class MoConfigurationManager
 
     #region 调试
 
+
     /// <summary>
-    /// Gets the configuration providers information for the specified configuration.
+    /// Gets the configuration providers information for the specified configuration as grouped strong-typed result.
     /// </summary>
     /// <param name="configuration">The configuration.</param>
-    /// <returns>A string containing the configuration providers information.</returns>
-    public static string GetProviders(this IConfiguration configuration)
+    /// <returns>A list of grouped configuration provider information.</returns>
+    public static List<DtoConfigurationProviderGroup> GetProvidersGrouped(this IConfiguration configuration)
     {
-        var sb = new StringBuilder();
-        foreach (var provider in ((IConfigurationRoot)configuration).Providers)
-        {
-            sb.AppendLine($"Provider: {provider.ToString()}");
+        var providers = ((IConfigurationRoot)configuration).Providers;
+        var groupedProviders = new Dictionary<string, List<DtoConfigurationProvider>>();
 
-            //显示所有的键值对
+        foreach (var provider in providers)
+        {
+            var providerType = provider.GetType().Name;
+            var providerName = provider.ToString() ?? providerType;
+            
+            var configData = new Dictionary<string, string?>();
             foreach (var key in GetConfigurationFullKeys(provider, null))
             {
                 provider.TryGet(key, out var value);
-                sb.AppendLine($"- {key} : {value}");
+                configData[key] = value;
             }
+
+            var providerDto = new DtoConfigurationProvider
+            {
+                Name = providerName,
+                Type = providerType,
+                ConfigurationData = configData
+            };
+
+            if (!groupedProviders.ContainsKey(providerType))
+            {
+                groupedProviders[providerType] = new List<DtoConfigurationProvider>();
+            }
+            groupedProviders[providerType].Add(providerDto);
         }
 
-        return sb.ToString();
+        return groupedProviders.Select(group => new DtoConfigurationProviderGroup
+        {
+            GroupName = group.Key,
+            Providers = group.Value
+        }).ToList();
     }
 
     /// <summary>
@@ -100,11 +122,12 @@ public static class MoConfigurationManager
         return keys;
     }
 
+
     /// <summary>
-    /// Gets the application configuration providers information.
+    /// Gets the application configuration providers information as grouped strong-typed result.
     /// </summary>
-    /// <returns>A string containing the application configuration providers information.</returns>
-    public static string GetProviders() => GetProviders(AppConfiguration);
+    /// <returns>A list of grouped configuration provider information.</returns>
+    public static List<DtoConfigurationProviderGroup> GetProvidersGrouped() => GetProvidersGrouped(AppConfiguration);
 
     /// <summary>
     /// Gets the debug view of the application configuration.

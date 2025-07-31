@@ -106,13 +106,13 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
 
             endpoints.MapGet("/option/providers", async (HttpResponse response, HttpContext context) =>
             {
-                var res = MoConfigurationManager.GetProviders();
-                return res;
+                var res = MoConfigurationManager.GetProvidersGrouped();
+                return Res.Ok(res).GetResponse();
             }).WithName("获取配置提供者")
                 .WithOpenApi(operation =>
                 {
                     operation.Summary = "获取配置提供者";
-                    operation.Description = "获取配置提供者";
+                    operation.Description = "获取配置提供者分组信息";
                     operation.Tags = tagGroup;
                     return operation;
                 });
