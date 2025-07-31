@@ -46,7 +46,7 @@ public class ModuleSeeder(ModuleSeederOption option) : MoModule<ModuleSeeder, Mo
             //    });
             //}
 
-            if (type.IsSubclassOf(typeof(MoSeeder)))
+            if (type is { IsClass: true, IsAbstract: false} && type.IsSubclassOf(typeof(MoSeeder)))
             {
                 _seedTypes.Add(type);
             }
