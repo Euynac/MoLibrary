@@ -21,24 +21,24 @@ public class DtoUpdateConfig
 public class DtoUpdateConfigRes
 {
     /// <summary>
-    /// 相应配置类AppID
+    /// 相应配置项/配置类所对应AppID
     /// </summary>
     public string? AppId { get; set; }
     /// <summary>
-    /// 相应配置类Key
+    /// 相应配置项/配置类Key
     /// </summary>
-    public required string ConfigKey { get; set; }
+    public required string Key { get; set; }
     /// <summary>
     /// 配置类标题
     /// </summary>
-    public required string ConfigTitle { get; set; }
+    public required string Title { get; set; }
     /// <summary>
-    /// 最终配置类值
+    /// 最终配置类/配置项值
     /// </summary>
-    public required JsonNode? NewConfigValue { get; set; }
+    public required JsonNode? NewValue { get; set; }
     /// <summary>
-    /// 原始配置类值
+    /// 原始配置类/配置项值
     /// </summary>
-    public required JsonNode? OldConfigValue { get; set; }
+    public required JsonNode? OldValue { get; set; }
    
 }

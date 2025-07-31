@@ -1,0 +1,33 @@
+.config-value-display {
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 12px;
+    word-break: break-all;
+    max-height: 60px;
+    overflow-y: auto;
+}
+
+.modified-value {
+    background-color: var(--mud-palette-warning-lighten);
+    padding: 4px;
+    border-radius: 4px;
+}
+
+.diff-original {
+    border-left: 4px solid var(--mud-palette-error);
+}
+
+.diff-modified {
+    border-left: 4px solid var(--mud-palette-success);
+}
+
+.json-code-block {
+    background-color: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 4px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    padding: 8px;
+    margin: 4px 0;
+    font-size: 12px;
+    white-space: pre-wrap;
+    overflow-x: auto;
+}
