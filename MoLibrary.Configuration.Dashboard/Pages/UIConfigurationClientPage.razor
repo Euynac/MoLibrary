@@ -33,7 +33,7 @@
                             <MudCardContent>
                                 @if (configStatus != null)
                                 {
-                                    <ConfigurationHierarchicalDisplay Configs="configStatus" OnConfigUpdate="HandleConfigUpdate" />
+                                    <ConfigurationExplorer Configs="configStatus" OnConfigUpdate="HandleConfigUpdate" />
                                 }
                                 else if (isLoading)
                                 {

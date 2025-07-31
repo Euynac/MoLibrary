@@ -8,7 +8,8 @@
       "Bash(dotnet build:*)",
       "mcp__microsoft_docs_mcp__microsoft_docs_search",
       "Bash(ls:*)",
-      "Bash(touch:*)"
+      "Bash(touch:*)",
+      "Bash(mv:*)"
     ],
     "deny": []
   }
