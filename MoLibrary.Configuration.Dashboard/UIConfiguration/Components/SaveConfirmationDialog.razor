@@ -1,0 +1,343 @@
+@using MoLibrary.Configuration.Model
+@using MoLibrary.Configuration.Dashboard.Model
+@using MudBlazor
+@using System.Text.Json
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h5">
+            <MudIcon Icon="@Icons.Material.Filled.Save" Class="mr-3" />
+            保存配置确认
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudContainer MaxWidth="MaxWidth.False" Class="pa-0">
+            <MudAlert Severity="Severity.Info" Class="mb-4">
+                <MudText Typo="Typo.body2">
+                    即将保存 <strong>@ModifiedConfigs.Count</strong> 个配置类的修改，共计 <strong>@TotalModifiedItems</strong> 个配置项。
+                </MudText>
+                @if (ModifiedConfigs.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Warning">
+                        未检测到任何修改项，请确认是否有进行配置修改。
+                    </MudText>
+                }
+            </MudAlert>
+            
+            <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" Class="mt-3">
+                <MudTabPanel Text="修改概览">
+                    <div class="pa-4">
+                        <MudTable T="ModifiedConfigSummary" Items="@configSummaries" Dense="true" Hover="true">
+                            <HeaderContent>
+                                <MudTh>配置类</MudTh>
+                                <MudTh>应用ID</MudTh>
+                                <MudTh>修改项数</MudTh>
+                                <MudTh>操作</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="配置类">
+                                    <div class="d-flex align-center">
+                                        <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" Class="mr-2" />
+                                        <MudText Typo="Typo.body2">@context.ConfigTitle</MudText>
+                                    </div>
+                                </MudTd>
+                                <MudTd DataLabel="应用ID">
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="@context.AppId" />
+                                </MudTd>
+                                <MudTd DataLabel="修改项数">
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Warning" Text="@context.ModifiedCount.ToString()" />
+                                </MudTd>
+                                <MudTd DataLabel="操作">
+                                    <MudButton Size="Size.Small" Variant="Variant.Text" 
+                                              StartIcon="@Icons.Material.Filled.Visibility"
+                                              OnClick="() => ViewConfigDetails(context.ConfigKey)">
+                                        查看详情
+                                    </MudButton>
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </div>
+                </MudTabPanel>
+                
+                <MudTabPanel Text="详细变更">
+                    <div class="pa-4">
+                        @if (!string.IsNullOrEmpty(selectedConfigKey))
+                        {
+                            <MudText Typo="Typo.h6" Class="mb-3">@GetConfigTitle(selectedConfigKey) 变更详情</MudText>
+                            
+                            <MudTable T="ModifiedConfigItem" Items="@GetModifiedItemsForConfig(selectedConfigKey)" Dense="true" Hover="true">
+                                <HeaderContent>
+                                    <MudTh>配置项</MudTh>
+                                    <MudTh>原始值</MudTh>
+                                    <MudTh>新值</MudTh>
+                                    <MudTh>操作</MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    <MudTd DataLabel="配置项">
+                                        <div class="d-flex align-center">
+                                            <MudIcon Icon="@GetOptionIcon(context.ModifiedItem)" Size="Size.Small" Class="mr-2" />
+                                            <div>
+                                                <MudText Typo="Typo.body2">@context.ModifiedItem.Title</MudText>
+                                                <MudText Typo="Typo.caption" Class="text-muted">@context.ModifiedItem.Key</MudText>
+                                            </div>
+                                        </div>
+                                    </MudTd>
+                                    <MudTd DataLabel="原始值" Style="max-width: 200px;">
+                                        <div class="config-value-display">
+                                            @GetValueDisplay(context.OriginalItem.Value)
+                                        </div>
+                                    </MudTd>
+                                    <MudTd DataLabel="新值" Style="max-width: 200px;">
+                                        <div class="config-value-display modified-value">
+                                            @GetValueDisplay(context.ModifiedItem.Value)
+                                        </div>
+                                    </MudTd>
+                                    <MudTd DataLabel="操作">
+                                        <MudButton Size="Size.Small" Variant="Variant.Text" 
+                                                  StartIcon="@Icons.Material.Filled.Code"
+                                                  OnClick="() => ViewJsonDiff(context)">
+                                            JSON对比
+                                        </MudButton>
+                                    </MudTd>
+                                </RowTemplate>
+                            </MudTable>
+                        }
+                        else
+                        {
+                            <MudText Color="Color.Secondary" Class="text-center pa-4">
+                                请在"修改概览"中选择一个配置类查看详情
+                            </MudText>
+                        }
+                    </div>
+                </MudTabPanel>
+                
+                <MudTabPanel Text="保存预览">
+                    <div class="pa-4">
+                        <MudText Typo="Typo.h6" Class="mb-3">API调用预览</MudText>
+                        
+                        @foreach (var configKey in ModifiedConfigs.Keys)
+                        {
+                            var items = ModifiedConfigs[configKey];
+                            var appId = items.First().AppId;
+                            
+                            <MudExpansionPanels>
+                                <MudExpansionPanel Text="@($"{GetConfigTitle(configKey)} ({appId})")">
+                                    <div class="pa-2">
+                                        <MudText Typo="Typo.subtitle2" Class="mb-2">请求信息：</MudText>
+                                        <pre class="json-code-block mb-3">@GetApiCallPreview(configKey, appId, items)</pre>
+                                        
+                                        <MudText Typo="Typo.subtitle2" Class="mb-2">变更值：</MudText>
+                                        @foreach (var item in items)
+                                        {
+                                            <MudCard Class="mb-2" Elevation="1">
+                                                <MudCardContent Class="pa-2">
+                                                    <MudText Typo="Typo.body2"><strong>@item.ModifiedItem.Key:</strong></MudText>
+                                                    <pre class="json-code-block mt-1">@JsonSerializer.Serialize(item.ModifiedItem.Value, new JsonSerializerOptions { WriteIndented = true })</pre>
+                                                </MudCardContent>
+                                            </MudCard>
+                                        }
+                                    </div>
+                                </MudExpansionPanel>
+                            </MudExpansionPanels>
+                        }
+                    </div>
+                </MudTabPanel>
+            </MudTabs>
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="OnCancel">取消</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" 
+                   StartIcon="@Icons.Material.Filled.Save"
+                   OnClick="OnSaveClicked" Disabled="@IsSaving">
+            @if (IsSaving)
+            {
+                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                <MudText Class="ms-2">保存中...</MudText>
+            }
+            else
+            {
+                <MudText>确认保存</MudText>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+<!-- JSON差异对话框 -->
+<MudDialog Visible="@isJsonDiffDialogOpen" VisibleChanged="OnJsonDiffDialogChanged" Options="@jsonDiffDialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Code" Class="mr-3" />
+            JSON差异对比
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (selectedDiffItem != null)
+        {
+            <MudContainer MaxWidth="MaxWidth.False" Class="pa-0">
+                <MudText Typo="Typo.subtitle1" Class="mb-3">
+                    @selectedDiffItem.ModifiedItem.Title (@selectedDiffItem.ModifiedItem.Key)
+                </MudText>
+                
+                <MudGrid>
+                    <MudItem xs="6">
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">原始值：</MudText>
+                        <pre class="json-code-block diff-original" style="max-height: 400px; overflow-y: auto;">@selectedDiffItem.GetDifference().OriginalJson</pre>
+                    </MudItem>
+                    <MudItem xs="6">
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">修改后：</MudText>
+                        <pre class="json-code-block diff-modified" style="max-height: 400px; overflow-y: auto;">@selectedDiffItem.GetDifference().ModifiedJson</pre>
+                    </MudItem>
+                </MudGrid>
+            </MudContainer>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseJsonDiffDialog">关闭</MudButton>
+    </DialogActions>
+</MudDialog>
+
+
+@code {
+    [Parameter] public Dictionary<string, List<ModifiedConfigItem>> ModifiedConfigs { get; set; } = new();
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback<Dictionary<string, List<ModifiedConfigItem>>> OnSave { get; set; }
+    [Parameter] public bool IsSaving { get; set; }
+    
+    private List<ModifiedConfigSummary> configSummaries = [];
+    private string selectedConfigKey = "";
+    private int TotalModifiedItems => ModifiedConfigs.Values.Sum(items => items.Count);
+    
+    // JSON差异对话框相关
+    private bool isJsonDiffDialogOpen = false;
+    private ModifiedConfigItem? selectedDiffItem;
+    private readonly DialogOptions jsonDiffDialogOptions = new()
+    {
+        MaxWidth = MaxWidth.Large,
+        FullWidth = true,
+        FullScreen = false
+    };
+    
+    protected override void OnParametersSet()
+    {
+        BuildConfigSummaries();
+        if (configSummaries.Any())
+        {
+            selectedConfigKey = configSummaries.First().ConfigKey;
+        }
+    }
+    
+    private void BuildConfigSummaries()
+    {
+        configSummaries = ModifiedConfigs.Select(kvp => new ModifiedConfigSummary
+        {
+            ConfigKey = kvp.Key,
+            ConfigTitle = GetConfigTitle(kvp.Key),
+            AppId = kvp.Value.First().AppId,
+            ModifiedCount = kvp.Value.Count
+        }).ToList();
+    }
+    
+    private void ViewConfigDetails(string configKey)
+    {
+        selectedConfigKey = configKey;
+        StateHasChanged();
+    }
+    
+    private List<ModifiedConfigItem> GetModifiedItemsForConfig(string configKey)
+    {
+        return ModifiedConfigs.TryGetValue(configKey, out var items) ? items : [];
+    }
+    
+    private string GetConfigTitle(string configKey)
+    {
+        if (ModifiedConfigs.TryGetValue(configKey, out var items) && items.Any())
+        {
+            return configKey; // 可以根据需要从其他地方获取标题
+        }
+        return configKey;
+    }
+    
+    private string GetValueDisplay(object? value)
+    {
+        if (value == null) return "null";
+        
+        if (value is string strValue && strValue.Length <= 50)
+        {
+            return strValue;
+        }
+        
+        try
+        {
+            var json = JsonSerializer.Serialize(value);
+            return json.Length <= 50 ? json : json.Substring(0, 47) + "...";
+        }
+        catch
+        {
+            var str = value.ToString() ?? "null";
+            return str.Length <= 50 ? str : str.Substring(0, 47) + "...";
+        }
+    }
+    
+    private string GetOptionIcon(DtoOptionItem item)
+    {
+        return item.Type switch
+        {
+            EOptionItemValueBasicType.Boolean => Icons.Material.Filled.ToggleOn,
+            EOptionItemValueBasicType.Numeric => Icons.Material.Filled.Numbers,
+            EOptionItemValueBasicType.String => Icons.Material.Filled.TextFields,
+            EOptionItemValueBasicType.DateTime => Icons.Material.Filled.Schedule,
+            EOptionItemValueBasicType.TimeSpan => Icons.Material.Filled.Timer,
+            EOptionItemValueBasicType.Enum => Icons.Material.Filled.List,
+            EOptionItemValueBasicType.Object => Icons.Material.Filled.DataObject,
+            _ => Icons.Material.Filled.Settings
+        };
+    }
+    
+    private void ViewJsonDiff(ModifiedConfigItem item)
+    {
+        selectedDiffItem = item;
+        isJsonDiffDialogOpen = true;
+    }
+    
+    private void CloseJsonDiffDialog()
+    {
+        isJsonDiffDialogOpen = false;
+        selectedDiffItem = null;
+    }
+    
+    private void OnJsonDiffDialogChanged(bool isVisible)
+    {
+        isJsonDiffDialogOpen = isVisible;
+        if (!isVisible)
+        {
+            selectedDiffItem = null;
+        }
+    }
+    
+    private string GetApiCallPreview(string configKey, string appId, List<ModifiedConfigItem> items)
+    {
+        var preview = new
+        {
+            Method = "POST",
+            Endpoint = "/api/configuration/update",
+            Headers = new { ContentType = "application/json" },
+            Body = new
+            {
+                AppId = appId,
+                Key = configKey,
+                Value = items.ToDictionary(
+                    item => item.ModifiedItem.Key,
+                    item => item.ModifiedItem.Value
+                )
+            }
+        };
+        
+        return JsonSerializer.Serialize(preview, new JsonSerializerOptions { WriteIndented = true });
+    }
+    
+    private async Task OnSaveClicked()
+    {
+        await OnSave.InvokeAsync(ModifiedConfigs);
+    }
+}

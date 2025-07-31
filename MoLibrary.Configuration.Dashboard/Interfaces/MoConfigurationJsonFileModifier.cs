@@ -57,10 +57,10 @@ public class MoConfigurationJsonFileModifier(ILogger<MoConfigurationJsonFileModi
             
             return new DtoUpdateConfigRes()
             {
-                ConfigTitle = config.Info.Title ?? config.Name,
-                ConfigKey = configKey,
-                NewConfigValue = newValue,
-                OldConfigValue = oldValue,
+                Title = config.Info.Title ?? config.Name,
+                Key = configKey,
+                NewValue = newValue,
+                OldValue = oldValue,
             };
         }
         catch (Exception e)
@@ -116,10 +116,10 @@ public class MoConfigurationJsonFileModifier(ILogger<MoConfigurationJsonFileModi
             var newValue = doc[key];
             return new DtoUpdateConfigRes()
             {
-                ConfigTitle = config.Info.Title ?? config.Name,
-                ConfigKey = key,
-                NewConfigValue = newValue,
-                OldConfigValue = oldValue
+                Title = config.Info.Title ?? config.Name,
+                Key = key,
+                NewValue = newValue,
+                OldValue = oldValue
             };
         }
         catch (Exception e)

@@ -1,0 +1,29 @@
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.mud-nav-link-active {
+    background-color: var(--mud-palette-primary-lighten) !important;
+    color: var(--mud-palette-primary-text) !important;
+}
+
+.config-value-container {
+    max-width: 200px;
+}
+
+.config-value-truncated {
+    cursor: pointer;
+    color: var(--mud-palette-text-primary);
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.config-value-normal {
+    color: var(--mud-palette-text-primary);
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 12px;
+    word-break: break-all;
+}
