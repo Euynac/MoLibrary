@@ -97,15 +97,65 @@
                         </CardHeaderActions>
                     </MudCardHeader>
                     <MudCardContent>
-                        @if (providerContent != null)
+                        @if (providerGroups != null && providerGroups.Any())
                         {
-                            <MudPaper Class="pa-4" Elevation="2">
-                                <pre style="white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word;">@providerContent</pre>
-                            </MudPaper>
+                            @foreach (var group in providerGroups)
+                            {
+                                <MudExpansionPanels Class="mb-4">
+                                    <MudExpansionPanel>
+                                        <TitleContent>
+                                            <div style="display: flex; align-items: center">
+                                                <MudIcon Icon="@Icons.Material.Filled.Extension" class="mr-3"></MudIcon>
+                                                <MudText>@group.GroupName (@group.Providers.Count 个提供者)</MudText>
+                                            </div>
+                                        </TitleContent>
+                                        <ChildContent>
+                                            @foreach (var provider in group.Providers)
+                                            {
+                                                <MudCard Class="mb-3" Elevation="1">
+                                                    <MudCardHeader>
+                                                        <CardHeaderContent>
+                                                            <MudText Typo="Typo.h6">@provider.Name</MudText>
+                                                            <MudChip T="string" Size="Size.Small" Color="Color.Info">@provider.Type</MudChip>
+                                                        </CardHeaderContent>
+                                                    </MudCardHeader>
+                                                    <MudCardContent>
+                                                        @if (provider.ConfigurationData.Any())
+                                                        {
+                                                            <MudTable T="KeyValuePair<string, string?>" Items="provider.ConfigurationData" Dense="true" Hover="true">
+                                                                <HeaderContent>
+                                                                    <MudTh>配置键</MudTh>
+                                                                    <MudTh>配置值</MudTh>
+                                                                </HeaderContent>
+                                                                <RowTemplate>
+                                                                    <MudTd DataLabel="配置键">
+                                                                        <MudText Typo="Typo.body2" Style="font-family: monospace;">@context.Key</MudText>
+                                                                    </MudTd>
+                                                                    <MudTd DataLabel="配置值">
+                                                                        <MudText Typo="Typo.body2" Style="font-family: monospace;">@(context.Value ?? "null")</MudText>
+                                                                    </MudTd>
+                                                                </RowTemplate>
+                                                            </MudTable>
+                                                        }
+                                                        else
+                                                        {
+                                                            <MudText Class="text-muted">该提供者暂无配置数据</MudText>
+                                                        }
+                                                    </MudCardContent>
+                                                </MudCard>
+                                            }
+                                        </ChildContent>
+                                    </MudExpansionPanel>
+                                </MudExpansionPanels>
+                            }
                         }
                         else if (isLoadingProviders)
                         {
                             <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                        }
+                        else if (providerGroups != null && !providerGroups.Any())
+                        {
+                            <MudAlert Severity="Severity.Info">暂无配置提供者数据，请检查配置模块是否正确初始化</MudAlert>
                         }
                         else
                         {
@@ -123,8 +173,7 @@
     
     private List<DtoDomainConfigs>? configStatus;
     private string[]? debugView;
-    private object? providers;
-    private string? providerContent;
+    private List<DtoConfigurationProviderGroup>? providerGroups;
     private bool onlyCurDomain = false;
     private bool isLoading = false;
     private bool isLoadingDebug = false;
@@ -151,7 +200,7 @@
                 }
                 break;
             case 2: // 配置提供者
-                if (providers == null && !isLoadingProviders)
+                if (providerGroups == null && !isLoadingProviders)
                 {
                     await LoadProvidersAsync();
                 }
@@ -206,24 +255,7 @@
         }
         else
         {
-            providers = data;
-            // Extract content from the nested structure
-            if (data != null)
-            {
-                var dataType = data.GetType();
-                if (dataType.GetProperty("content")?.GetValue(data) is string content && !string.IsNullOrWhiteSpace(content))
-                {
-                    providerContent = content;
-                }
-                else if (dataType.GetProperty("message")?.GetValue(data) is string message)
-                {
-                    providerContent = message;
-                }
-                else
-                {
-                    providerContent = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
-                }
-            }
+            providerGroups = data;
         }
 
         isLoadingProviders = false;

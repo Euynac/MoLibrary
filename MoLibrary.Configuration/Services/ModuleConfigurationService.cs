@@ -53,17 +53,17 @@ public class ModuleConfigurationService(
     /// 获取配置提供者信息
     /// </summary>
     /// <returns>配置提供者列表</returns>
-    public async Task<Res<object>> GetProvidersAsync()
+    public async Task<Res<List<DtoConfigurationProviderGroup>>> GetProvidersAsync()
     {
         try
         {
-            var providers = MoConfigurationManager.GetProviders();
-            // 如果providers为空或只包含空白字符，返回友好提示
-            if (string.IsNullOrWhiteSpace(providers))
+            var providers = MoConfigurationManager.GetProvidersGrouped();
+            // 如果providers为空，返回空列表
+            if (providers == null || providers.Count == 0)
             {
-                return Res.Ok(new { message = "暂无配置提供者数据，请检查配置模块是否正确初始化" });
+                return Res.Ok(new List<DtoConfigurationProviderGroup>());
             }
-            return Res.Ok(new { content = providers });
+            return Res.Ok(providers);
         }
         catch (Exception ex)
         {
