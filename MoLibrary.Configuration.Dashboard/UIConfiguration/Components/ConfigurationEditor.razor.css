@@ -1,0 +1,81 @@
+.config-editor-header {
+    border-bottom: 1px solid var(--mud-palette-divider);
+    padding-bottom: 16px;
+    margin-bottom: 24px;
+}
+
+.config-info-item {
+    margin-bottom: 16px;
+}
+
+.config-label {
+    color: var(--mud-palette-text-secondary);
+    font-weight: 500;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.config-value {
+    font-family: 'Roboto Mono', monospace;
+    background-color: var(--mud-palette-background-grey);
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--mud-palette-divider);
+}
+
+.config-description {
+    color: var(--mud-palette-text-secondary);
+    font-style: italic;
+    line-height: 1.4;
+}
+
+.configuration-value-editor {
+    width: 100%;
+}
+
+/* Card styling enhancements */
+.mud-card {
+    border-radius: 8px;
+    transition: box-shadow 0.2s ease-in-out;
+}
+
+.mud-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.mud-card-header {
+    background-color: var(--mud-palette-background-grey);
+    border-bottom: 1px solid var(--mud-palette-divider);
+}
+
+/* Chip styling */
+.mud-chip {
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+/* Alert styling */
+.mud-alert {
+    border-radius: 6px;
+    border-left: 4px solid;
+}
+
+.mud-alert.mud-alert-filled-warning {
+    border-left-color: var(--mud-palette-warning);
+}
+
+.mud-alert.mud-alert-filled-error {
+    border-left-color: var(--mud-palette-error);
+}
+
+/* Responsive adjustments */
+@media (max-width: 960px) {
+    .config-info-item {
+        margin-bottom: 12px;
+    }
+    
+    .config-value {
+        font-size: 0.875rem;
+    }
+}

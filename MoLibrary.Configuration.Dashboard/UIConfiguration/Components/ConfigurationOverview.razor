@@ -3,7 +3,7 @@
 @using MoLibrary.Configuration.Dashboard.UIConfiguration.Services
 @using MoLibrary.Tool.MoResponse
 @using MudBlazor
-@inject ConfigurationService ConfigurationService
+@inject ConfigurationDashboardService ConfigurationDashboardService
 @inject ISnackbar Snackbar
 @implements IDisposable
 
@@ -215,13 +215,26 @@
 
         try
         {
-            if ((await ConfigurationService.GetAllConfigsAsync()).IsFailed(out var error, out var data))
+            if ((await ConfigurationDashboardService.GetAllConfigStatusAsync()).IsFailed(out var error, out var domainConfigs))
             {
                 Snackbar.Add($"加载配置状态失败: {error}", Severity.Error);
                 return;
             }
 
-            _configurations = data;
+            // 从领域配置中提取所有配置项
+            var allItems = new List<DtoOptionItem>();
+            foreach (var domain in domainConfigs)
+            {
+                foreach (var service in domain.Children)
+                {
+                    foreach (var config in service.Children)
+                    {
+                        allItems.AddRange(config.Items);
+                    }
+                }
+            }
+
+            _configurations = allItems;
             _lastUpdateTime = DateTime.Now;
 
             // 计算统计数据
