@@ -1,117 +1,103 @@
 @using MoLibrary.Configuration.Model
 @using MoLibrary.Configuration.Dashboard.Model
-@using MoLibrary.Configuration.Dashboard.UIConfiguration.Services
-@using MoLibrary.Configuration.Dashboard.Modules
-@using MoLibrary.Tool.MoResponse
 @using MudBlazor
-@using Microsoft.Extensions.Options
-@using Microsoft.Extensions.DependencyInjection
-@inject IOptionsSnapshot<ModuleConfigurationDashboardOption> DashboardOptions
-@inject IServiceProvider ServiceProvider
-@inject ISnackbar Snackbar
 
 <MudDialog Options="@_dialogOptions">
     <DialogContent>
-        <MudContainer Style="max-width: 700px;">
-            <!-- Header Section -->
-            <div class="config-editor-header">
-                <MudText Typo="Typo.h5" Class="mb-2">
-                    <MudIcon Icon="@Icons.Material.Filled.Edit" Class="me-2" />
-                    编辑配置项
-                </MudText>
-                <MudDivider Class="mb-4" />
-            </div>
+        <MudContainer Style="max-width: 900px; padding: 0;">
             
-            <!-- Configuration Info Card -->
-            <MudCard Class="mb-4" Elevation="2">
-                <MudCardContent>
-                    <MudGrid>
-                        <MudItem xs="12" md="6">
-                            <div class="config-info-item">
-                                <MudText Typo="Typo.caption" Class="config-label">配置键</MudText>
-                                <MudText Typo="Typo.body2" Class="config-value text-truncate">@_configKey</MudText>
-                            </div>
-                        </MudItem>
-                        <MudItem xs="12" md="6">
-                            <div class="config-info-item">
-                                <MudText Typo="Typo.caption" Class="config-label">配置类型</MudText>
-                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Text">
-                                    @_configType
-                                </MudChip>
-                            </div>
-                        </MudItem>
-                        <MudItem xs="12" md="6">
-                            <div class="config-info-item">
-                                <MudText Typo="Typo.caption" Class="config-label">配置提供者</MudText>
-                                <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Text" Icon="@Icons.Material.Filled.Source">
-                                    @(_configProvider ?? "Unknown")
-                                </MudChip>
-                            </div>
-                        </MudItem>
-                        <MudItem xs="12" md="6">
-                            <div class="config-info-item">
-                                <MudText Typo="Typo.caption" Class="config-label">状态</MudText>
-                                <MudChip T="string" Size="Size.Small" 
-                                        Color="@(_isOffline ? Color.Warning : Color.Success)" 
-                                        Variant="Variant.Text" 
-                                        Icon="@(_isOffline ? Icons.Material.Filled.CloudOff : Icons.Material.Filled.CloudDone)">
-                                    @(_isOffline ? "离线参数" : "在线参数")
-                                </MudChip>
-                            </div>
-                        </MudItem>
-                        @if (!string.IsNullOrEmpty(_configDescription))
-                        {
-                            <MudItem xs="12">
-                                <div class="config-info-item">
-                                    <MudText Typo="Typo.caption" Class="config-label">描述信息</MudText>
-                                    <MudText Typo="Typo.body2" Class="config-description">@_configDescription</MudText>
+            <!-- Simplified Configuration Info -->
+            <MudGrid Class="mb-4">
+                <!-- Provider Info -->
+                <MudItem xs="12">
+                    <MudPaper Class="pa-3" Elevation="1">
+                        <MudText Typo="Typo.caption" Class="text-muted mb-2">
+                            <MudIcon Icon="@Icons.Material.Filled.Source" Size="Size.Small" Class="me-1" />
+                            配置提供者信息
+                        </MudText>
+                        <MudGrid>
+                            <MudItem xs="12" md="6">
+                                <div Class="d-flex align-center mb-2">
+                                    <MudText Typo="Typo.caption" Class="text-muted me-2" Style="min-width: 60px;">类型：</MudText>
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Text">
+                                        @(_configProvider ?? "Unknown")
+                                    </MudChip>
                                 </div>
                             </MudItem>
-                        }
-                    </MudGrid>
-                </MudCardContent>
-            </MudCard>
+                            @if (!string.IsNullOrEmpty(_configSource))
+                            {
+                                <MudItem xs="12" md="6">
+                                    <div Class="d-flex align-center mb-2">
+                                        <MudText Typo="Typo.caption" Class="text-muted me-2" Style="min-width: 60px;">来源：</MudText>
+                                        <MudText Typo="Typo.caption" Style="font-family: monospace; word-break: break-all;" Class="text-truncate">
+                                            @_configSource
+                                        </MudText>
+                                    </div>
+                                </MudItem>
+                            }
+                        </MudGrid>
+                    </MudPaper>
+                </MudItem>
+                
+                <!-- Configuration Key -->
+                @if (!string.IsNullOrEmpty(_configKey))
+                {
+                    <MudItem xs="12">
+                        <MudPaper Class="pa-3" Elevation="1">
+                            <MudText Typo="Typo.caption" Class="text-muted mb-1">
+                                <MudIcon Icon="@Icons.Material.Filled.Key" Size="Size.Small" Class="me-1" />
+                                配置键
+                            </MudText>
+                            <MudText Typo="Typo.body2" Style="font-family: monospace; word-break: break-all; background-color: rgba(0,0,0,0.04); padding: 8px; border-radius: 4px;">
+                                @_configKey
+                            </MudText>
+                        </MudPaper>
+                    </MudItem>
+                }
+                
+                <!-- Description -->
+                @if (!string.IsNullOrEmpty(_configDescription))
+                {
+                    <MudItem xs="12">
+                        <MudPaper Class="pa-3" Elevation="1">
+                            <MudText Typo="Typo.caption" Class="text-muted mb-1">
+                                <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="me-1" />
+                                描述
+                            </MudText>
+                            <MudText Typo="Typo.body2">@_configDescription</MudText>
+                        </MudPaper>
+                    </MudItem>
+                }
+            </MudGrid>
             
-            <!-- Configuration Value Editor -->
-            <MudCard Class="mb-4" Elevation="2">
-                <MudCardHeader>
-                    <CardHeaderContent>
-                        <MudText Typo="Typo.h6">
-                            <MudIcon Icon="@Icons.Material.Filled.Settings" Class="me-2" />
-                            @_configTitle
-                        </MudText>
-                    </CardHeaderContent>
-                </MudCardHeader>
-                <MudCardContent>
-                    <ConfigurationValueEditor OptionItem="_currentConfig" 
-                                             Value="_editValue" 
-                                             ValueChanged="OnValueChanged" />
-                </MudCardContent>
-            </MudCard>
-            
-            @if (_isOffline)
-            {
-                <MudAlert Severity="Severity.Warning" Class="mb-4">
-                    <MudText Typo="Typo.body2">
-                        <MudIcon Icon="@Icons.Material.Filled.Warning" Class="me-2" />
-                        此配置为离线参数，修改后需要重启服务才能生效。
-                    </MudText>
-                </MudAlert>
-            }
-            
-            <!-- Update Reason -->
-            <MudCard Elevation="2">
-                <MudCardContent>
-                    <MudTextField @bind-Value="_updateReason" 
-                                 Label="更新说明" 
-                                 Placeholder="请说明本次更新的原因..."
-                                 Lines="3"
-                                 Variant="Variant.Outlined"
-                                 Required="true"
-                                 RequiredError="请填写更新说明" />
-                </MudCardContent>
-            </MudCard>
-            
+            <!-- Configuration Value Editor with Type Badge -->
+            <MudPaper Class="pa-4 mb-4" Elevation="2" Style="position: relative;">
+                <!-- Type and Status Badge in top-right corner -->
+                <div Style="position: absolute; top: 12px; right: 12px;">
+                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Text" 
+                            Icon="@Icons.Material.Filled.Category">
+                        @_configType
+                    </MudChip>
+                    @if (_isOffline)
+                    {
+                        <MudTooltip Text="离线参数，修改后需要重启服务才能生效">
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Text" 
+                                    Icon="@Icons.Material.Filled.CloudOff" Class="ml-2">
+                                离线
+                            </MudChip>
+                        </MudTooltip>
+                    }
+                </div>
+                
+                <MudText Typo="Typo.h6" Class="mb-3 mr-16">
+                    <MudIcon Icon="@Icons.Material.Filled.Edit" Class="me-2" />
+                    编辑配置值
+                </MudText>
+                <ConfigurationValueEditor OptionItem="_currentConfig" 
+                                         Value="_editValue" 
+                                         ValueChanged="OnValueChanged" />
+            </MudPaper>
+
             @if (!string.IsNullOrEmpty(_validationMessage))
             {
                 <MudAlert Severity="Severity.Error" Class="mt-3">
@@ -122,20 +108,11 @@
     </DialogContent>
     
     <DialogActions>
-        <MudButton OnClick="Cancel">取消</MudButton>
+        <MudButton OnClick="Cancel" Class="mr-2">取消</MudButton>
         <MudButton Color="Color.Primary" 
                   Variant="Variant.Filled"
-                  OnClick="SaveChanges"
-                  Disabled="_saving">
-            @if (_saving)
-            {
-                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true"/>
-                <MudText Class="ms-2">保存中...</MudText>
-            }
-            else
-            {
-                <MudText>保存</MudText>
-            }
+                  OnClick="ApplyChanges">
+            应用修改
         </MudButton>
     </DialogActions>
 </MudDialog>
@@ -151,15 +128,14 @@
     private string _configType = string.Empty;
     private string _configDescription = string.Empty;
     private string _configProvider = string.Empty;
-    private string _updateReason = string.Empty;
+    private string _configSource = string.Empty;
     private string _validationMessage = string.Empty;
-    private bool _saving = false;
     private bool _isOffline = false;
     private object? _editValue;
     
     private readonly DialogOptions _dialogOptions = new()
     {
-        MaxWidth = MaxWidth.Medium,
+        MaxWidth = MaxWidth.Large,
         FullWidth = true,
         CloseButton = true,
         BackdropClick = false
@@ -186,9 +162,9 @@
         _configType = config.Type.ToString();
         _configDescription = config.Desc ?? string.Empty;
         _configProvider = config.Provider ?? "Unknown";
+        _configSource = config.Source ?? string.Empty;
         _isOffline = config.IsOffline;
         _editValue = config.Value;
-        _updateReason = string.Empty;
         _validationMessage = string.Empty;
         
         StateHasChanged();
@@ -205,80 +181,25 @@
         MudDialog.Cancel();
     }
 
-    private async Task SaveChanges()
+    private async Task ApplyChanges()
     {
-        if (string.IsNullOrWhiteSpace(_updateReason))
-        {
-            _validationMessage = "请填写更新说明";
-            return;
-        }
-
-        _saving = true;
         _validationMessage = string.Empty;
-        StateHasChanged();
-
+        
         try
         {
-            var updateRequest = new DtoUpdateConfig
-            {
-                Key = _configKey,
-                Value = System.Text.Json.JsonSerializer.SerializeToNode(_editValue),
-                AppId = null // TODO: 如果需要AppId，可以从配置项中获取
-            };
-
-            Res updateResult;
-            
-            // 根据配置判断使用哪个服务
-            if (DashboardOptions.Value.ThisIsDashboard)
-            {
-                // 使用仪表板服务
-                var dashboardService = ServiceProvider.GetService<ConfigurationDashboardService>();
-                if (dashboardService == null)
-                {
-                    _validationMessage = "配置仪表板服务未注册";
-                    return;
-                }
-                
-                updateResult = await dashboardService.UpdateConfigAsync(updateRequest);
-            }
-            else
-            {
-                // 使用客户端服务
-                var clientService = ServiceProvider.GetService<ConfigurationClientService>();
-                if (clientService == null)
-                {
-                    _validationMessage = "配置客户端服务未注册";
-                    return;
-                }
-                
-                updateResult = await clientService.UpdateConfigAsync(updateRequest);
-            }
-
-            if (updateResult.IsFailed(out var error))
-            {
-                _validationMessage = $"更新失败: {error}";
-                return;
-            }
-
-            // 更新当前配置对象
+            // 更新当前配置对象的值
             if (_currentConfig != null)
             {
                 _currentConfig.Value = _editValue;
                 await OnConfigurationUpdated.InvokeAsync(_currentConfig);
             }
 
-            var successMessage = _isOffline ? "配置更新成功，需要重启服务才能生效" : "配置更新成功";
-            Snackbar.Add(successMessage, _isOffline ? Severity.Warning : Severity.Success);
-            MudDialog.Close(DialogResult.Ok(true));
+            // 关闭对话框，返回修改的配置项
+            MudDialog.Close(DialogResult.Ok(_currentConfig));
         }
         catch (Exception ex)
         {
-            _validationMessage = $"更新失败: {ex.Message}";
-            Snackbar.Add($"配置更新失败: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            _saving = false;
+            _validationMessage = $"应用修改失败: {ex.Message}";
             StateHasChanged();
         }
     }
