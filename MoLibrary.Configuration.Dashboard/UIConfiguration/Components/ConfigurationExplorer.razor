@@ -432,7 +432,7 @@
                 BackdropClick = false
             };
             
-            var dialog = await DialogService.ShowAsync<ConfigurationEditor>("编辑配置", parameters, options);
+            var dialog = await DialogService.ShowAsync<ConfigurationEditor>($"编辑配置 - {item.Title}", parameters, options);
             var result = await dialog.Result;
             
             if (result != null && !result.Canceled && result.Data is DtoOptionItem updatedItem)
