@@ -3,6 +3,7 @@
 @using MudBlazor
 @using System.Text.Json
 @using System.Text.RegularExpressions
+@inject IDialogService DialogService
 
 <MudContainer MaxWidth="MaxWidth.False" Class="pa-0">
     <!-- 搜索区域和操作按钮 -->
@@ -243,13 +244,6 @@
     </DialogActions>
 </MudDialog>
 
-<!-- 保存确认对话框 -->
-<MudDialog Visible="@isSaveConfirmationDialogOpen" VisibleChanged="OnSaveConfirmationDialogChanged" Options="@saveConfirmationDialogOptions">
-    <SaveConfirmationDialog ModifiedConfigs="@GetModifiedConfigsGrouped()"
-                           OnCancel="CloseSaveConfirmationDialog"
-                           OnSave="SaveAllChanges"
-                           IsSaving="@isSaving" />
-</MudDialog>
 
 
 @code {
@@ -546,12 +540,33 @@
         StateHasChanged();
     }
     
-    private void OpenSaveConfirmationDialog()
+    private async void OpenSaveConfirmationDialog()
     {
         // 确保有修改项时才打开对话框
         if (changeTracker.ModifiedItems.Any())
         {
-            isSaveConfirmationDialogOpen = true;
+            var parameters = new DialogParameters
+            {
+                ["ModifiedConfigs"] = GetModifiedConfigsGrouped(),
+                ["IsSaving"] = isSaving
+            };
+            
+            var options = new DialogOptions
+            {
+                MaxWidth = MaxWidth.ExtraLarge,
+                FullWidth = true,
+                CloseOnEscapeKey = false,
+                BackdropClick = false,
+                CloseButton = false
+            };
+            
+            var dialog = await DialogService.ShowAsync<SaveConfirmationDialog>("保存配置确认", parameters, options);
+            var result = await dialog.Result;
+            
+            if (!result.Canceled)
+            {
+                await SaveAllChanges(GetModifiedConfigsGrouped());
+            }
         }
     }
     

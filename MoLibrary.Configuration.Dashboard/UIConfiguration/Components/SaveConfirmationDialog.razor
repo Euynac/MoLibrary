@@ -3,30 +3,23 @@
 @using MudBlazor
 @using System.Text.Json
 
-<MudDialog>
-    <TitleContent>
-        <MudText Typo="Typo.h5">
-            <MudIcon Icon="@Icons.Material.Filled.Save" Class="mr-3" />
-            保存配置确认
-        </MudText>
-    </TitleContent>
-    <DialogContent>
-        <MudContainer MaxWidth="MaxWidth.False" Class="pa-0">
-            <MudAlert Severity="Severity.Info" Class="mb-4">
+<MudContainer MaxWidth="MaxWidth.False" Class="pa-0">
+    <MudAlert Severity="Severity.Info" Class="mb-4">
                 <MudText Typo="Typo.body2">
                     即将保存 <strong>@ModifiedConfigs.Count</strong> 个配置类的修改，共计 <strong>@TotalModifiedItems</strong> 个配置项。
                 </MudText>
-                @if (ModifiedConfigs.Count == 0)
-                {
-                    <MudText Typo="Typo.body2" Color="Color.Warning">
-                        未检测到任何修改项，请确认是否有进行配置修改。
-                    </MudText>
-                }
-            </MudAlert>
-            
-            <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" Class="mt-3">
+        @if (ModifiedConfigs.Count == 0)
+        {
+            <MudText Typo="Typo.body2" Color="Color.Warning">
+                未检测到任何修改项，请确认是否有进行配置修改。
+            </MudText>
+        }
+    </MudAlert>
+    
+    <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" Class="mt-3">
                 <MudTabPanel Text="修改概览">
                     <div class="pa-4">
+                        <!-- 修改概览表格 -->
                         <MudTable T="ModifiedConfigSummary" Items="@configSummaries" Dense="true" Hover="true">
                             <HeaderContent>
                                 <MudTh>配置类</MudTh>
@@ -56,13 +49,11 @@
                                 </MudTd>
                             </RowTemplate>
                         </MudTable>
-                    </div>
-                </MudTabPanel>
-                
-                <MudTabPanel Text="详细变更">
-                    <div class="pa-4">
+                        
+                        <!-- 详细变更内容 -->
                         @if (!string.IsNullOrEmpty(selectedConfigKey))
                         {
+                            <MudDivider Class="my-4" />
                             <MudText Typo="Typo.h6" Class="mb-3">@GetConfigTitle(selectedConfigKey) 变更详情</MudText>
                             
                             <MudTable T="ModifiedConfigItem" Items="@GetModifiedItemsForConfig(selectedConfigKey)" Dense="true" Hover="true">
@@ -102,12 +93,6 @@
                                 </RowTemplate>
                             </MudTable>
                         }
-                        else
-                        {
-                            <MudText Color="Color.Secondary" Class="text-center pa-4">
-                                请在"修改概览"中选择一个配置类查看详情
-                            </MudText>
-                        }
                     </div>
                 </MudTabPanel>
                 
@@ -142,14 +127,13 @@
                         }
                     </div>
                 </MudTabPanel>
-            </MudTabs>
-        </MudContainer>
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="OnCancel">取消</MudButton>
+    </MudTabs>
+    
+    <div class="d-flex justify-end gap-2 mt-4 me-3">
+        <MudButton OnClick="Cancel">取消</MudButton>
         <MudButton Color="Color.Primary" Variant="Variant.Filled" 
                    StartIcon="@Icons.Material.Filled.Save"
-                   OnClick="OnSaveClicked" Disabled="@IsSaving">
+                   OnClick="Submit" Disabled="@IsSaving">
             @if (IsSaving)
             {
                 <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
@@ -160,8 +144,8 @@
                 <MudText>确认保存</MudText>
             }
         </MudButton>
-    </DialogActions>
-</MudDialog>
+    </div>
+</MudContainer>
 
 <!-- JSON差异对话框 -->
 <MudDialog Visible="@isJsonDiffDialogOpen" VisibleChanged="OnJsonDiffDialogChanged" Options="@jsonDiffDialogOptions">
@@ -192,21 +176,29 @@
             </MudContainer>
         }
     </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="CloseJsonDiffDialog">关闭</MudButton>
-    </DialogActions>
+
 </MudDialog>
 
 
 @code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    
     [Parameter] public Dictionary<string, List<ModifiedConfigItem>> ModifiedConfigs { get; set; } = new();
-    [Parameter] public EventCallback OnCancel { get; set; }
-    [Parameter] public EventCallback<Dictionary<string, List<ModifiedConfigItem>>> OnSave { get; set; }
     [Parameter] public bool IsSaving { get; set; }
     
     private List<ModifiedConfigSummary> configSummaries = [];
     private string selectedConfigKey = "";
     private int TotalModifiedItems => ModifiedConfigs.Values.Sum(items => items.Count);
+    
+    // 主对话框选项
+    private readonly DialogOptions dialogOptions = new()
+    {
+        MaxWidth = MaxWidth.ExtraLarge,
+        FullWidth = true,
+        CloseOnEscapeKey = false,
+        BackdropClick = false,
+        CloseButton = true
+    };
     
     // JSON差异对话框相关
     private bool isJsonDiffDialogOpen = false;
@@ -215,7 +207,10 @@
     {
         MaxWidth = MaxWidth.Large,
         FullWidth = true,
-        FullScreen = false
+        FullScreen = false,
+        CloseButton = true,
+        BackdropClick = true,
+        CloseOnEscapeKey = true
     };
     
     protected override void OnParametersSet()
@@ -336,8 +331,7 @@
         return JsonSerializer.Serialize(preview, new JsonSerializerOptions { WriteIndented = true });
     }
     
-    private async Task OnSaveClicked()
-    {
-        await OnSave.InvokeAsync(ModifiedConfigs);
-    }
+    private void Cancel() => MudDialog.Cancel();
+    
+    private void Submit() => MudDialog.Close(DialogResult.Ok(ModifiedConfigs));
 }

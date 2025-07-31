@@ -69,29 +69,29 @@ Static web assets (wwwroot) are handled through:
 ## Dependency Injection Guidelines
 - Always use primary constructor when creating a class with single constructor using dependency injection
   - More details can be read in @rules\primary-constructor.mdc
-- 定义Module{Name}Option后，要使用模块Option，直接注入IOption<TModuleOption>或IOptionSnapshot<TModuleOption>使用即可。
+- After defining `Module{Name}Option`, to use the module options, simply inject `IOptions<TModuleOption>` or `IOptionsSnapshot<TModuleOption>` for usage.  
 
 ## Blazor and MudBlazor Notes
 - When using the MudBlazor Icon property in Blazor, you must reference it with an "@" prefix, for example, Icon="@Icons.Material.Filled.Info", instead of Icon="Icons.Material.Filled.Info". Omitting the "@" prefix will cause the Icon not to work.
 - In Blazor, JavaScript interop calls cannot be made in OnInitializedAsync because, during static rendering, JavaScript interop calls can only be executed in OnAfterRenderAsync lifecycle method. Additionally, most time-consuming interface initialization tasks should not be placed in OnInitializedAsync, as this can cause page blocking and blank waiting. The correct approach is to perform JavaScript interop and time-consuming initialization in OnAfterRenderAsync(bool firstRender), using the firstRender parameter to ensure execution only during the first render.
-- 使用 MudBlazor 的泛型组件（如 MudSwitch、MudChip、MudTextField）时，必须显式指定 T 类型参数，否则会出现类型推断错误或者是无法从"方法组"转换为"Microsoft.AspNetCore.Components.EventCallback"的错误。
+- When using MudBlazor's generic components (such as MudSwitch, MudChip, MudTextField), you must explicitly specify the type parameter `T`. Otherwise, type inference errors may occur, or you may encounter the "cannot convert from 'method group' to 'Microsoft.AspNetCore.Components.EventCallback'" error.  
 
-- 当前项目UI模块使用的框架是MudBlazor 8.9.0
-- 不要用`<style>`标签，必须用CSS isolation。
+- The current UI module of the project uses MudBlazor **8.9.0**.  
+- Do not use `<style>` tags; **CSS isolation** must be used instead.  
 
-## Interface Return Value Guidelines
-- 对于前端(Controller以及Blazor使用的)的接口的返回值定义，请使用 @统一返回模型Res，使用方式详见 @rules\mo-framework-res-type.mdc 
+## **Interface Return Value Guidelines**  
+- For the return value definitions of frontend APIs (used by Controllers and Blazor), always use the **unified response model `Res`**. Refer to `@rules\mo-framework-res-type.mdc` for usage details.  
 
-## MudBlazor Development Notes
-- 编写MudBlazor相关代码时，参考迁移文档掌握最新API，且目前提供了引导文档以及源码，能够检索实现。
-  - 迁移文档参考路径：
-    - @rules\mudblazor\CLAUDE_MUDBLAZOR_OFFICIAL_MIGRATION.md
-    - @rules\mudblazor\CLAUDE_MIGRATION_GUIDE.md
-    - @rules\mudblazor\CLAUDE_COMPONENT_REFERENCE.md
-  - 源码路径：@rules\mudblazor\src
+## **MudBlazor Development Notes**  
+- When writing MudBlazor-related code, you must refer to the migration documentation to stay updated on the latest APIs. Currently, guidance documents and source code are available for reference.  
+  - **Migration documentation reference paths:**  
+    - `@rules\mudblazor\CLAUDE_MUDBLAZOR_OFFICIAL_MIGRATION.md`  
+    - `@rules\mudblazor\CLAUDE_MIGRATION_GUIDE.md`  
+    - `@rules\mudblazor\CLAUDE_COMPONENT_REFERENCE.md`  
+  - **Source code path:** `@rules\mudblazor\src`
 
 ## Available MCP Servers
 - **mcp__microsoft-docs__microsoft_docs_search**: MCP Server for searching Microsoft/Azure official documentation. This is particularly useful for finding ASP.NET Core, Blazor, and related documentation and best practices.
 
 ## Code Modernization Guidelines
-- 除非是特别嘱咐要兼容旧版本，所有重构或改动都不需要考虑旧版本兼容性。
+- Unless explicitly instructed to maintain backward compatibility, all refactoring or modifications ​​do not need​​ to consider compatibility with older versions.
