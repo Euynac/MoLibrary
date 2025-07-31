@@ -106,7 +106,7 @@ public static class MoConfigurationManager
     /// <param name="provider">The configuration provider.</param>
     /// <param name="parentPath">The parent path.</param>
     /// <returns>A list of full keys.</returns>
-    private static IEnumerable<string> GetConfigurationFullKeys(IConfigurationProvider provider, string? parentPath)
+    public static IEnumerable<string> GetConfigurationFullKeys(IConfigurationProvider provider, string? parentPath)
     {
         var keys = new List<string>();
         var children = provider.GetChildKeys([], parentPath).Distinct().ToList();

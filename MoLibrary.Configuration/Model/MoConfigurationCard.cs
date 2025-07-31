@@ -150,13 +150,9 @@ public class MoConfigurationCard
 
         static void SetProvider(IConfigurationProvider provider, string? sourceInfo)
         {
-            foreach (var key in provider.GetChildKeys([], null).Distinct())
+            foreach (var key in MoConfigurationManager.GetConfigurationFullKeys(provider, null))
             {
-                if (Cards.TryGetValue(key, out var card))
-                {
-                    card.Configuration.SetOptionSource(provider, sourceInfo);
-                }
-                else if (OptionsWithoutSectionName.TryGetValue(key, out var option))
+                if (TryGetOptionItem(key, out var option))
                 {
                     option.SetSource(provider, sourceInfo);
                 }
