@@ -93,5 +93,24 @@ Static web assets (wwwroot) are handled through:
 ## Available MCP Servers
 - **mcp__microsoft-docs__microsoft_docs_search**: MCP Server for searching Microsoft/Azure official documentation. This is particularly useful for finding ASP.NET Core, Blazor, and related documentation and best practices.
 
+## Offline Runtime Requirements
+**All UI modules and components MUST support offline/intranet environments:**
+
+### Font Management
+- **禁止使用在线字体CDN**：不得直接引用 Google Fonts、Adobe Fonts 等在线字体服务
+- **本地字体优先**：所有字体文件必须存储在 `wwwroot/fonts/` 目录下
+- **字体回退策略**：必须配置系统字体作为fallback，确保在字体文件缺失时仍能正常显示
+- **字体工具使用**：使用 `@scripts/font-downloader/` 中的工具下载和管理字体文件
+
+### 其他离线要求
+- 所有静态资源（CSS、JS、图片等）必须本地化
+- 不得依赖任何外部CDN或在线服务
+- 必须考虑内网环境下的可用性
+
+### 字体更新流程
+1. 使用字体下载器：`python @scripts/font-downloader/font_downloader.py`
+2. 将下载的字体文件复制到对应UI模块的 `wwwroot/fonts/` 目录
+3. 在主题CSS中配置 `@font-face` 规则引用本地字体文件
+
 ## Code Modernization Guidelines
 - Unless explicitly instructed to maintain backward compatibility, all refactoring or modifications ​​do not need​​ to consider compatibility with older versions.

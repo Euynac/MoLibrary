@@ -5,13 +5,16 @@ namespace MoLibrary.UI.Themes;
 /// <summary>
 /// 毛玻璃主题 - 现代化透明玻璃效果
 /// </summary>
-public class ThemeGlassmorphic : IThemeProvider
+public class ThemeGlassmorphic : ThemeBase
 {
-    public string Name => "glassmorphic";
-    public string DisplayName => "毛玻璃主题";
-    public string Description => "现代化透明玻璃效果，支持模糊背景和渐变色彩";
+    public override string Name => "glassmorphic";
+    public override string DisplayName => "毛玻璃主题";
+    public override string Description => "现代化透明玻璃效果，支持模糊背景和渐变色彩";
+    
+    public override CodeBlockTheme LightCodeBlockTheme => CodeBlockTheme.Github;
+    public override CodeBlockTheme DarkCodeBlockTheme => CodeBlockTheme.MonokaiSublime;
 
-    public MudTheme CreateTheme()
+    public override MudTheme CreateTheme()
     {
         return new MudTheme()
         {

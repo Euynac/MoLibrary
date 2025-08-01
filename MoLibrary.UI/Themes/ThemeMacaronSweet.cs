@@ -5,13 +5,16 @@ namespace MoLibrary.UI.Themes;
 /// <summary>
 /// 马卡龙甜心主题 - 柔和粉彩主题
 /// </summary>
-public class ThemeMacaronSweet : IThemeProvider
+public class ThemeMacaronSweet : ThemeBase
 {
-    public string Name => "macaron-sweet";
-    public string DisplayName => "马卡龙甜心";
-    public string Description => "柔和粉彩主题。使用马卡龙色系（薄荷绿、樱花粉、奶油黄、薰衣草紫），圆润的设计语言，配合可爱的弹跳动画。适合女性向和生活类应用。";
+    public override string Name => "macaron-sweet";
+    public override string DisplayName => "马卡龙甜心";
+    public override string Description => "柔和粉彩主题。使用马卡龙色系（薄荷绿、樱花粉、奶油黄、薰衣草紫），圆润的设计语言，配合可爱的弹跳动画。适合女性向和生活类应用。";
+    
+    public override CodeBlockTheme LightCodeBlockTheme => CodeBlockTheme.AtomOneLight;
+    public override CodeBlockTheme DarkCodeBlockTheme => CodeBlockTheme.Rainbow;
 
-    public MudTheme CreateTheme()
+    public override MudTheme CreateTheme()
     {
         return new MudTheme()
         {

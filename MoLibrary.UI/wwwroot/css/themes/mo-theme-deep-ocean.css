@@ -1,8 +1,23 @@
 /* MoLibrary Deep Ocean Theme - 深海静谧主题 */
 /* 深海主题，配合水波纹动画效果和生物发光元素 */
 
-/* 导入现代字体 */
-@import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;500;600;700&family=Open+Sans:wght@300;400;500;600;700&display=swap');
+/* 导入现代字体 - 离线模式 */
+/* @import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;500;600;700&family=Open+Sans:wght@300;400;500;600;700&display=swap'); */
+
+/* 本地字体定义 */
+@font-face {
+    font-family: 'Source Sans Pro';
+    src: url('../../fonts/SourceSansPro-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Open Sans';
+    src: url('../../fonts/OpenSans-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-display: swap;
+}
 
 /* Deep Ocean Theme CSS Variables - 明暗模式通用 */
 :root[data-theme="deep-ocean-light"],
@@ -274,7 +289,7 @@
 .mo-theme-deep-ocean-light,
 .mo-theme-deep-ocean-dark {
     /* Global Typography */
-    font-family: 'Source Sans Pro', 'Open Sans', Arial, sans-serif !important;
+    font-family: 'Source Sans Pro', 'Open Sans', Arial, 'Microsoft YaHei', sans-serif !important;
     
     /* Cards - 深海卡片 */
     .mud-card {
@@ -335,7 +350,7 @@
         font-weight: var(--mo-button-font-weight) !important;
         text-transform: var(--mo-button-text-transform) !important;
         transition: var(--mo-button-transition) !important;
-        font-family: 'Source Sans Pro', 'Open Sans', Arial, sans-serif !important;
+        font-family: 'Source Sans Pro', 'Open Sans', Arial, 'Microsoft YaHei', sans-serif !important;
         position: relative;
         overflow: hidden;
     }
@@ -585,7 +600,7 @@
     .mud-typography-h4,
     .mud-typography-h5,
     .mud-typography-h6 {
-        font-family: 'Source Sans Pro', 'Open Sans', Arial, sans-serif !important;
+        font-family: 'Source Sans Pro', 'Open Sans', Arial, 'Microsoft YaHei', sans-serif !important;
         color: var(--mo-text-depth) !important;
         position: relative;
     }

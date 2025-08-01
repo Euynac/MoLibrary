@@ -5,13 +5,16 @@ namespace MoLibrary.UI.Themes;
 /// <summary>
 /// 极光流彩主题 - 现代渐变主题，灵感来自北极光
 /// </summary>
-public class ThemeAuroraFlow : IThemeProvider
+public class ThemeAuroraFlow : ThemeBase
 {
-    public string Name => "aurora-flow";
-    public string DisplayName => "极光流彩";
-    public string Description => "现代渐变主题，灵感来自北极光。使用流动的渐变色彩，主色调为深紫到青绿的过渡，配合玻璃态效果和微妙的光晕动画。适合科技产品和创意应用。";
+    public override string Name => "aurora-flow";
+    public override string DisplayName => "极光流彩";
+    public override string Description => "现代渐变主题，灵感来自北极光。使用流动的渐变色彩，主色调为深紫到青绿的过渡，配合玻璃态效果和微妙的光晕动画。适合科技产品和创意应用。";
+    
+    public override CodeBlockTheme LightCodeBlockTheme => CodeBlockTheme.Github;
+    public override CodeBlockTheme DarkCodeBlockTheme => CodeBlockTheme.MonokaiSublime;
 
-    public MudTheme CreateTheme()
+    public override MudTheme CreateTheme()
     {
         return new MudTheme()
         {

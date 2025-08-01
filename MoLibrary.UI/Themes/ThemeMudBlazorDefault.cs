@@ -5,13 +5,16 @@ namespace MoLibrary.UI.Themes;
 /// <summary>
 /// MudBlazor默认主题 - 完全保持原始MudBlazor风格
 /// </summary>
-public class ThemeMudBlazorDefault : IThemeProvider
+public class ThemeMudBlazorDefault : ThemeBase
 {
-    public string Name => "mudblazor";
-    public string DisplayName => "MudBlazor默认主题";
-    public string Description => "完全保持MudBlazor原始风格，无自定义样式";
+    public override string Name => "mudblazor";
+    public override string DisplayName => "MudBlazor默认主题";
+    public override string Description => "完全保持MudBlazor原始风格，无自定义样式";
+    
+    public override CodeBlockTheme LightCodeBlockTheme => CodeBlockTheme.Default;
+    public override CodeBlockTheme DarkCodeBlockTheme => CodeBlockTheme.Dark;
 
-    public MudTheme CreateTheme()
+    public override MudTheme CreateTheme()
     {
         return new MudTheme
         {

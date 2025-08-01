@@ -84,7 +84,6 @@ public class ModuleUICore(ModuleUICoreOption option)
         {
             services.AddMudMarkdownServices();   
         }
-        services.AddMudMarkdownServices();
 
         // 添加Razor组件和交互式服务器组件服务
         services.AddRazorComponents()
@@ -171,6 +170,10 @@ public class ModuleUICoreGuide : MoModuleGuide<ModuleUICore, ModuleUICoreOption,
             {
                 registry.RegisterComponent<ModuleSystemDashboard>(ModuleSystemDashboard.MODULE_SYSTEM_DASHBOARD_URL, "模块系统概览", Icons.Material.Filled.Dashboard, "模块系统", true);
             }
+
+            // 初始化主题服务
+            var themeService = builder.ApplicationBuilder.ApplicationServices.GetRequiredService<MoThemeService>();
+            themeService.Initialize();
 
             builder.WebApplication.MapRazorComponents<MoApp>()
                 .AddInteractiveServerRenderMode().AddAdditionalAssemblies(registry.GetAdditionalAssemblies());

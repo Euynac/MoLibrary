@@ -5,15 +5,18 @@ namespace MoLibrary.UI.Themes;
 /// <summary>
 /// 霓虹脉冲主题 - 具有现代科技感的动态主题
 /// </summary>
-public class ThemeNeonPulse : IThemeProvider
+public class ThemeNeonPulse : ThemeBase
 {
-    public string Name => "neonpulse";
+    public override string Name => "neonpulse";
     
-    public string DisplayName => "霓虹脉冲";
+    public override string DisplayName => "霓虹脉冲";
     
-    public string Description => "充满活力的霓虹灯效果，带有动态脉冲动画和赛博朋克风格";
+    public override string Description => "充满活力的霓虹灯效果，带有动态脉冲动画和赛博朋克风格";
+    
+    public override CodeBlockTheme LightCodeBlockTheme => CodeBlockTheme.SynthMidnightTerminalLightBase16;
+    public override CodeBlockTheme DarkCodeBlockTheme => CodeBlockTheme.SynthMidnightTerminalDarkBase16;
 
-    public MudTheme CreateTheme()
+    public override MudTheme CreateTheme()
     {
         return new MudTheme()
         {
