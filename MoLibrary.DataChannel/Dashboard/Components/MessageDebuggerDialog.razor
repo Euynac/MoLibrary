@@ -87,22 +87,44 @@
                                 <MudCard Elevation="1">
                                     <MudCardContent Class="pa-3">
                                         <MudStack Spacing="2">
-                                            <MudStack Row="true" AlignItems="AlignItems.Center">
-                                                <MudChip T="string" 
-                                                         Size="Size.Small" 
-                                                         Color="@(msg.Source == MoLibrary.DataChannel.Pipeline.EDataSource.Inner ? Color.Info : Color.Success)">
-                                                    @msg.Source
-                                                </MudChip>
-                                                <MudText Typo="Typo.caption">@msg.Timestamp.ToString("HH:mm:ss.fff")</MudText>
-                                                <MudSpacer />
-                                                <MudIconButton Icon="@Icons.Material.Filled.ExpandMore" 
-                                                               Size="Size.Small"
-                                                               OnClick="() => ToggleMessageExpansion(msg)" />
+                                            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                                    <MudChip T="string" 
+                                                             Size="Size.Small" 
+                                                             Color="@(msg.Source == MoLibrary.DataChannel.Pipeline.EDataSource.Inner ? Color.Info : Color.Success)">
+                                                        @msg.Source
+                                                    </MudChip>
+                                                    <MudChip T="string" 
+                                                             Size="Size.Small" 
+                                                             Color="Color.Primary" 
+                                                             Variant="Variant.Outlined">
+                                                        @msg.MessageType
+                                                    </MudChip>
+                                                    <MudText Typo="Typo.caption" Color="Color.Default">
+                                                        @msg.Timestamp.ToString("HH:mm:ss.fff")
+                                                    </MudText>
+                                                </MudStack>
+                                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                                    @if (msg.Metadata?.Any() == true)
+                                                    {
+                                                        <MudTooltip Text="包含元数据">
+                                                            <MudIcon Icon="@Icons.Material.Filled.Info" 
+                                                                     Size="Size.Small" 
+                                                                     Color="Color.Info" />
+                                                        </MudTooltip>
+                                                    }
+                                                    <MudIconButton Icon="@(_expandedMessages.Contains(msg) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" 
+                                                                   Size="Size.Small"
+                                                                   OnClick="() => ToggleMessageExpansion(msg)" />
+                                                </MudStack>
                                             </MudStack>
 
-                                            <MudText Typo="Typo.body2" Style="word-break: break-all;">
-                                                @GetMessagePreview(msg.FormattedContent)
-                                            </MudText>
+                                            @if (!_expandedMessages.Contains(msg))
+                                            {
+                                                <MudText Typo="Typo.body2" Style="word-break: break-all; color: var(--mud-palette-text-secondary);">
+                                                    @GetMessagePreview(msg.FormattedContent)
+                                                </MudText>
+                                            }
 
                                             @if (_expandedMessages.Contains(msg))
                                             {

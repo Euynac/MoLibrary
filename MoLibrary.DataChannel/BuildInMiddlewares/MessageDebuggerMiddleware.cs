@@ -1,6 +1,9 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
+using MoLibrary.Core.Extensions;
 using MoLibrary.DataChannel.Pipeline;
+using MoLibrary.Tool.Extensions;
+using MoLibrary.Tool.General;
 
 namespace MoLibrary.DataChannel.BuildInMiddlewares;
 
@@ -18,6 +21,7 @@ public class MessageDebuggerMiddleware : PipeInfoDisplayMiddlewareBase
         public DateTime Timestamp { get; set; }
         public EDataSource Source { get; set; }
         public string FormattedContent { get; set; } = string.Empty;
+        public string MessageType { get; set; } = string.Empty;
         public object? RawData { get; set; }
         public Dictionary<string, object>? Metadata { get; set; }
     }
@@ -133,8 +137,9 @@ public class MessageDebuggerMiddleware : PipeInfoDisplayMiddlewareBase
                     Timestamp = DateTime.Now,
                     Source = context.Source,
                     FormattedContent = formattedContent,
+                    MessageType = context.Data?.GetType().GetCleanFullName() ?? "null",
                     RawData = context.Data,
-                    Metadata = context.Metadata?.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
+                    Metadata = context.Metadata.ToDictionary(kvp => kvp.Key, kvp => kvp.Value ?? "")
                 };
 
                 AddDebugMessage(debugMessage);
@@ -171,15 +176,11 @@ public class MessageDebuggerMiddleware : PipeInfoDisplayMiddlewareBase
 
         try
         {
-            return JsonSerializer.Serialize(data, new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                MaxDepth = 5
-            });
+            return data.ToJsonStringForce()!;
         }
-        catch
+        catch(Exception e)
         {
-            return data.ToString() ?? "无法格式化";
+            return $"{data.GetCleanFullName()}格式化出现异常：{e.GetMessageRecursively()}";
         }
     }
 
