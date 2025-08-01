@@ -80,6 +80,11 @@ public class ModuleUICore(ModuleUICoreOption option)
 
         // 添加MudBlazor服务
         services.AddMudServices();
+        if(Option.EnableMarkdown)
+        {
+            services.AddMudMarkdownServices();   
+        }
+        services.AddMudMarkdownServices();
 
         // 添加Razor组件和交互式服务器组件服务
         services.AddRazorComponents()
@@ -195,5 +200,10 @@ public class ModuleUICoreOption : MoModuleOption<ModuleUICore>
     /// 开启Debug模式
     /// </summary>
     public bool EnableDebug { get; set; }
+
+    /// <summary>
+    /// 启用Markdown支持
+    /// </summary>
+    public bool EnableMarkdown { get; set; }
 
 }
