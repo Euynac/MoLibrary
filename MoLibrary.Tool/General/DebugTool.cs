@@ -191,18 +191,24 @@ namespace MoLibrary.Tool.General
 
         public override void Write(Utf8JsonWriter writer, TAnyType value, JsonSerializerOptions options)
         {
+            if (value is JsonElement json)
+            {
+                json.WriteTo(writer);
+                return;
+            }
+
             var properties = value!.GetType()
                 .GetProperties()
-                .Select(p =>
+                .Where(p=>p.CanRead).Select(p =>
                 {
-                    object valueObj;
+                    object? valueObj;
                     try
                     {
                         valueObj = p.GetValue(value);
                     }
                     catch (Exception)
                     {
-                        valueObj = value.ToString();
+                        valueObj = $"[FORCE]{value.ToString()}";
                     }
 
                     return new {p.Name, Value = valueObj};
@@ -238,7 +244,7 @@ namespace MoLibrary.Tool.General
                 }
                 catch (Exception)
                 {
-                    serializedPropValue = prop.Value.ToString();
+                    serializedPropValue = $"[FORCE]{prop.Value}";
                 }
                 writer.WriteString(prop.Name, serializedPropValue);
             }
