@@ -37,8 +37,8 @@ public class MemoryProviderForConfigCentre(
     {
         if (_cache != null) return _cache;
  
-        //这里通过版本号排序，来保证最新版本的微服务配置优先读取。在最后Distinct的时候优先被选择。
-        var list =  Dict.Values.OrderByDescending(p => p.Version).Select(p => p.AppId).ToList();
+        //这里通过构建时间排序，来保证最新版本的微服务配置优先读取。在最后Distinct的时候优先被选择。
+        var list =  Dict.Values.OrderByDescending(p => p.BuildTime).Select(p => p.AppId).ToList();
 
         var res = await _connector.GetAsync<Res<List<DtoDomainConfigs>>>(list,
             $"{MoConfigurationConventions.GetConfigStatus}?onlyCurDomain=true");

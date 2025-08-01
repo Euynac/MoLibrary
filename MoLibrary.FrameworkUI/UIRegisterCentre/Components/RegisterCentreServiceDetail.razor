@@ -1,0 +1,91 @@
+@using MoLibrary.RegisterCentre
+@using MoLibrary.RegisterCentre.Modules
+@using Microsoft.Extensions.Options
+@inject IOptionsSnapshot<ModuleRegisterCentreOption> RegisterCentreOptions
+
+<MudGrid>
+    <MudItem xs="12">
+        <MudTextField T="string" Label="App ID" Value="@Service.AppId" ReadOnly="true" />
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudTextField T="string" Label="服务名称" Value="@Service.Name" ReadOnly="true" />
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudTextField T="string" Label="项目名称" Value="@Service.ProjectName" ReadOnly="true" />
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudTextField T="string" Label="领域名" Value="@Service.DomainName" ReadOnly="true" />
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudTextField T="string" Label="客户端信息" Value="@Service.FromClient" ReadOnly="true" />
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudTextField T="string" Label="程序集版本" Value="@Service.AssemblyVersion" ReadOnly="true" />
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudTextField T="string" Label="发布版本" Value="@Service.ReleaseVersion" ReadOnly="true" />
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudDatePicker Label="更新时间" Date="@Service.UpdateTime" ReadOnly="true" />
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudDatePicker Label="构建时间" Date="@Service.BuildTime" ReadOnly="true" />
+    </MudItem>
+    <MudItem xs="12">
+        <MudPaper Class="pa-3">
+            <MudText Typo="Typo.subtitle2" Class="mb-2">客户端配置信息</MudText>
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.body2">心跳频率: @(RegisterCentreOptions.Value.HeartbeatDuration / 1000) 秒</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.body2">重试次数: @RegisterCentreOptions.Value.ClientRetryTimes</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.body2">重试频率: @(RegisterCentreOptions.Value.RetryDuration / 1000) 秒</MudText>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12">
+        <MudAlert Severity="@StatusSeverity" Variant="Variant.Filled" Dense="true">
+            服务状态: @StatusText (@LastUpdateTime)
+        </MudAlert>
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter] public RegisterServiceStatus Service { get; set; } = null!;
+
+    private (Severity Severity, string Text) GetStatus()
+    {
+        var timeSinceUpdate = DateTime.Now - Service.UpdateTime;
+        var heartbeatDuration = RegisterCentreOptions.Value.HeartbeatDuration;
+        var heartbeatSeconds = heartbeatDuration / 1000.0;
+        
+        if (timeSinceUpdate.TotalSeconds < heartbeatSeconds * 2)
+            return (Severity.Success, "在线");
+        else if (timeSinceUpdate.TotalSeconds < heartbeatSeconds * 3)
+            return (Severity.Warning, "不健康");
+        else
+            return (Severity.Error, "异常");
+    }
+    
+    private Severity StatusSeverity => GetStatus().Severity;
+    private string StatusText => GetStatus().Text;
+    
+    private string LastUpdateTime
+    {
+        get
+        {
+            var timeSpan = DateTime.Now - Service.UpdateTime;
+            if (timeSpan.TotalSeconds < 60)
+                return $"{(int)timeSpan.TotalSeconds} 秒前更新";
+            if (timeSpan.TotalMinutes < 60)
+                return $"{(int)timeSpan.TotalMinutes} 分钟前更新";
+            if (timeSpan.TotalHours < 24)
+                return $"{(int)timeSpan.TotalHours} 小时前更新";
+            return $"{(int)timeSpan.TotalDays} 天前更新";
+        }
+    }
+}

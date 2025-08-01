@@ -22,9 +22,13 @@ public class RegisterServiceStatus
     /// </summary>
     public DateTime UpdateTime { get; set; } = DateTime.Now;
     /// <summary>
-    /// 微服务版本
+    /// 微服务构建时间
     /// </summary>
-    public long Version { get; set; }
+    public DateTime BuildTime { get; set; }
+    /// <summary>
+    /// 微服务程序集版本号
+    /// </summary>
+    public string? AssemblyVersion { get; set; }
     /// <summary>
     /// 微服务发布版本号
     /// </summary>
