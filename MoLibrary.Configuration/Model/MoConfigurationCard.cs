@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration.EnvironmentVariables;
 using Microsoft.Extensions.Configuration.Json;
 using Microsoft.Extensions.Configuration.Memory;
 using MoLibrary.Configuration.Annotations;
+using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.Configuration.Model;
 
@@ -94,7 +95,8 @@ public class MoConfigurationCard
         if (node == null) return false;
         if (TryGetConfig(node, out var card))
         {
-            option = card.OptionItems.FirstOrDefault(p => p.Key.Equals(key));
+            var configKey = key.Split(":").Take(2).StringJoin(":");
+            option = card.OptionItems.FirstOrDefault(p => p.Key.Equals(configKey));
         }
 
         if (option == null && OptionsWithoutSectionName.TryGetValue(key, out option))

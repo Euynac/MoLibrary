@@ -66,6 +66,14 @@ public class SystemInfoService(ILogger<SystemInfoService> logger)
             else
             {
                 response.ProductVersion = fileInfo.ProductVersion;
+                // .NET 8 or later will automatically include the git commit source revision in the informational version
+                // 
+                // The described behavior can be disabled by adding
+                // 
+                // <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+                // to the project file.
+                // 
+                // It seems to be introduced by SourceLink related changes in the SDK 8 version. I found an existing github issue as well: https://github.com/dotnet/sdk/issues/34568
             }
 
             logger.LogDebug("成功获取系统信息，简化模式: {Simple}", simple ?? false);

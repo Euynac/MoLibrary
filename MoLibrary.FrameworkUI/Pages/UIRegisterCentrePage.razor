@@ -1,0 +1,150 @@
+@attribute [Route(REGISTERCENTRE_DEBUG_URL)]
+@using MoLibrary.FrameworkUI.UIRegisterCentre.Components
+@using MoLibrary.FrameworkUI.UIRegisterCentre.Services
+@using MoLibrary.RegisterCentre
+@using MoLibrary.Tool.MoResponse
+@inject RegisterCentreService RegisterCentreService
+@inject ISnackbar Snackbar
+@implements IDisposable
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h4" Class="mb-4">注册中心管理</MudText>
+    
+    <MudGrid>
+        <MudItem xs="12">
+            <MudPaper Class="pa-4">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                        <MudText Typo="Typo.h6">已注册服务列表</MudText>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                            <MudSwitch T="bool" @bind-Value="_autoRefreshEnabled" @bind-Value:after="OnAutoRefreshToggled" Color="Color.Primary" Label="自动刷新" />
+                            <MudNumericField T="int" @bind-Value="_refreshInterval" @bind-Value:after="OnRefreshIntervalChanged" Label="刷新间隔(秒)" Min="1" Max="60" 
+                                           Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 120px" 
+                                           Disabled="!_autoRefreshEnabled" Immediate="true" />
+                        </MudStack>
+                    </MudStack>
+                    <MudStack Row="true" Spacing="2">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="RefreshServicesAsync" Disabled="@_isLoading">
+                            <MudIcon Icon="@Icons.Material.Filled.Refresh" Class="mr-1" />
+                            刷新
+                        </MudButton>
+                        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="UnregisterAllAsync" Disabled="@_isLoading">
+                            <MudIcon Icon="@Icons.Material.Filled.DeleteForever" Class="mr-1" />
+                            清空所有注册
+                        </MudButton>
+                    </MudStack>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+        
+        <MudItem xs="12">
+            @if (_isLoading)
+            {
+                <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+            }
+            else if (_services.Any())
+            {
+                <RegisterCentreServiceList Services="_services" OnRefresh="RefreshServicesAsync" />
+            }
+            else
+            {
+                <MudPaper Class="pa-4">
+                    <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary">
+                        暂无已注册的服务
+                    </MudText>
+                </MudPaper>
+            }
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code {
+    public const string REGISTERCENTRE_DEBUG_URL = "/register-centre-manage";
+    
+    private bool _isLoading = false;
+    private List<RegisterServiceStatus> _services = new();
+    private bool _autoRefreshEnabled = true;
+    private int _refreshInterval = 3;
+    private Timer? _refreshTimer;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await RefreshServicesAsync();
+            SetupAutoRefresh();
+        }
+    }
+    
+    private void SetupAutoRefresh()
+    {
+        _refreshTimer?.Dispose();
+        if (_autoRefreshEnabled)
+        {
+            _refreshTimer = new Timer(async _ => await InvokeAsync(() => RefreshServicesAsync(false)), null, 
+                TimeSpan.FromSeconds(_refreshInterval), TimeSpan.FromSeconds(_refreshInterval));
+        }
+    }
+    
+    private void OnAutoRefreshToggled()
+    {
+        SetupAutoRefresh();
+    }
+    
+    private void OnRefreshIntervalChanged()
+    {
+        if (_autoRefreshEnabled)
+        {
+            SetupAutoRefresh();
+        }
+    }
+
+    private async Task RefreshServicesAsync(bool showNotification = true)
+    {
+        _isLoading = true;
+        StateHasChanged();
+
+        if ((await RegisterCentreService.GetServicesStatusAsync()).IsFailed(out var error, out var data))
+        {
+            if (showNotification)
+                Snackbar.Add($"获取服务列表失败: {error.Message}", Severity.Error);
+            _services = new List<RegisterServiceStatus>();
+        }
+        else
+        {
+            _services = data ?? new List<RegisterServiceStatus>();
+            if (showNotification)
+                Snackbar.Add("服务列表已刷新", Severity.Success);
+        }
+
+        _isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task UnregisterAllAsync()
+    {
+        // TODO: 添加确认对话框
+        // 暂时直接执行操作
+
+        _isLoading = true;
+        StateHasChanged();
+
+        if ((await RegisterCentreService.UnregisterAllAsync()).IsFailed(out var error))
+        {
+            Snackbar.Add($"清空注册失败: {error.Message}", Severity.Error);
+        }
+        else
+        {
+            Snackbar.Add("已清空所有注册", Severity.Success);
+            await RefreshServicesAsync();
+        }
+
+        _isLoading = false;
+        StateHasChanged();
+    }
+    
+    public void Dispose()
+    {
+        _refreshTimer?.Dispose();
+    }
+}
