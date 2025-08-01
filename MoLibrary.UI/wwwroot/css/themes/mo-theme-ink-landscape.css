@@ -1,8 +1,30 @@
 /* MoLibrary Ink Landscape Theme - 墨韵山水主题 */
 /* 中国水墨画风格主题 */
 
-/* 导入中文字体 */
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500;600;700&display=swap');
+/* 导入中文字体 - 离线模式 */
+/* @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500;600;700&display=swap'); */
+
+/* 本地字体定义 */
+@font-face {
+    font-family: 'Noto Serif SC';
+    src: url('../../fonts/NotoSerifSC-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Noto Serif SC';
+    src: url('../../fonts/NotoSerifSC-Medium.woff2') format('woff2');
+    font-weight: 500;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Noto Serif SC';
+    src: url('../../fonts/NotoSerifSC-SemiBold.woff2') format('woff2');
+    font-weight: 600;
+    font-display: swap;
+}
 
 /* Ink Landscape Theme CSS Variables - 明暗模式通用 */
 :root[data-theme="ink-landscape-light"],
@@ -197,7 +219,7 @@
 .mo-theme-ink-landscape-light,
 .mo-theme-ink-landscape-dark {
     /* Global Typography */
-    font-family: 'Noto Serif SC', 'Source Han Serif SC', serif !important;
+    font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Microsoft YaHei', serif !important;
     line-height: 1.7 !important;
     
     /* Cards - 墨韵卡片 */
@@ -254,7 +276,7 @@
         font-weight: var(--mo-button-font-weight) !important;
         text-transform: var(--mo-button-text-transform) !important;
         transition: var(--mo-button-transition) !important;
-        font-family: 'Noto Serif SC', 'Source Han Serif SC', serif !important;
+        font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Microsoft YaHei', serif !important;
         position: relative;
         overflow: hidden;
     }
@@ -342,7 +364,7 @@
     
     .mud-input-control input,
     .mud-input-control textarea {
-        font-family: 'Noto Serif SC', 'Source Han Serif SC', serif !important;
+        font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Microsoft YaHei', serif !important;
     }
     
     /* AppBar - 墨韵导航栏 */
@@ -405,7 +427,7 @@
     
     .mud-dialog-content {
         padding: var(--mo-dialog-padding) !important;
-        font-family: 'Noto Serif SC', 'Source Han Serif SC', serif !important;
+        font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Microsoft YaHei', serif !important;
     }
     
     /* Tables - 墨韵表格 */
@@ -415,7 +437,7 @@
         box-shadow: var(--mo-shadow-ink) !important;
         border: 1px solid var(--mo-border-ink) !important;
         overflow: hidden;
-        font-family: 'Noto Serif SC', 'Source Han Serif SC', serif !important;
+        font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Microsoft YaHei', serif !important;
     }
     
     .mud-table-head .mud-table-row {
@@ -469,7 +491,7 @@
         height: var(--mo-chip-height) !important;
         transition: var(--mo-animation-smooth) !important;
         box-shadow: var(--mo-shadow-ink) !important;
-        font-family: 'Noto Serif SC', 'Source Han Serif SC', serif !important;
+        font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Microsoft YaHei', serif !important;
         position: relative;
     }
     
@@ -487,7 +509,7 @@
     .mud-typography-h4,
     .mud-typography-h5,
     .mud-typography-h6 {
-        font-family: 'Noto Serif SC', 'Source Han Serif SC', serif !important;
+        font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Microsoft YaHei', serif !important;
         font-weight: 400 !important;
         line-height: 1.4 !important;
         letter-spacing: 0.02em !important;
@@ -514,7 +536,7 @@
         border: 1px solid var(--mo-border-medium) !important;
         border-radius: var(--mo-card-border-radius) !important;
         box-shadow: var(--mo-shadow-ink-hover) !important;
-        font-family: 'Noto Serif SC', 'Source Han Serif SC', serif !important;
+        font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Microsoft YaHei', serif !important;
     }
     
     /* Tooltips - 墨韵提示框 */
@@ -523,7 +545,7 @@
         border: 1px solid var(--mo-border-ink) !important;
         border-radius: var(--mo-button-border-radius) !important;
         box-shadow: var(--mo-shadow-ink) !important;
-        font-family: 'Noto Serif SC', 'Source Han Serif SC', serif !important;
+        font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Microsoft YaHei', serif !important;
     }
     
     /* Snackbars - 墨韵通知栏 */
@@ -532,7 +554,7 @@
         border: 1px solid var(--mo-border-medium) !important;
         border-radius: var(--mo-button-border-radius) !important;
         box-shadow: var(--mo-shadow-ink-hover) !important;
-        font-family: 'Noto Serif SC', 'Source Han Serif SC', serif !important;
+        font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Microsoft YaHei', serif !important;
     }
     
     /* Tabs - 墨韵标签页 */
@@ -556,7 +578,7 @@
     .mud-tab {
         border-radius: var(--mo-button-border-radius) !important;
         transition: var(--mo-animation-smooth) !important;
-        font-family: 'Noto Serif SC', 'Source Han Serif SC', serif !important;
+        font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Microsoft YaHei', serif !important;
         position: relative;
     }
     
@@ -588,7 +610,7 @@
         border-radius: var(--mo-button-border-radius) !important;
         margin: var(--mo-spacing-xs) var(--mo-spacing-sm) !important;
         transition: var(--mo-animation-smooth) !important;
-        font-family: 'Noto Serif SC', 'Source Han Serif SC', serif !important;
+        font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Microsoft YaHei', serif !important;
         position: relative;
     }
     

@@ -5,13 +5,15 @@ namespace MoLibrary.UI.Themes;
 /// <summary>
 /// MoLibrary默认主题 - 经典的Material Design风格
 /// </summary>
-public class ThemeMoLibraryDefault : IThemeProvider
+public class ThemeMoLibraryDefault : ThemeBase
 {
-    public string Name => "default";
-    public string DisplayName => "默认主题";
-    public string Description => "经典的Material Design风格";
+    public override string Name => "default";
+    public override string DisplayName => "默认主题";
+    public override string Description => "经典的Material Design风格";
+    
+    // 使用基类的默认CodeBlockTheme (Github/GithubDark)
 
-    public MudTheme CreateTheme()
+    public override MudTheme CreateTheme()
     {
         return new MudTheme()
         {
