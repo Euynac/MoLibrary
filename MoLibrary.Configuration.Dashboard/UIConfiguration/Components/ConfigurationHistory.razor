@@ -114,11 +114,11 @@
                                     <MudButtonGroup Size="Size.Small" Variant="Variant.Text">
                                         <MudIconButton Icon="@Icons.Material.Filled.Restore" 
                                                       Color="Color.Warning"
-                                                      Title="回滚到此版本"
+                                                      Tooltip="回滚到此版本"
                                                       OnClick="() => ShowRollbackDialog(history)" />
                                         <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" 
                                                       Color="Color.Info"
-                                                      Title="复制新值"
+                                                      Tooltip="复制新值"
                                                       OnClick="() => CopyToClipboard(history.NewValue?.ToString())" />
                                     </MudButtonGroup>
                                 </div>
@@ -279,7 +279,7 @@
             { x => x.YesText, "回滚" }
         };
 
-        var dialog = DialogService.Show<MudMessageBox>("", parameters);
+        var dialog = await DialogService.ShowAsync<MudMessageBox>("", parameters);
         var result = await dialog.Result;
 
         if (result != null && !result.Canceled)

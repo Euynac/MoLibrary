@@ -13,10 +13,9 @@
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <MudText Typo="Typo.h6">配置概览</MudText>
                 <div>
-                    <MudSwitch T="bool" @bind-Checked="_autoRefresh" 
+                    <MudSwitch T="bool" @bind-Value="_autoRefresh" 
                               Label="自动刷新" 
-                              Color="Color.Primary"
-                              LabelPosition="LabelPosition.Start" />
+                              Color="Color.Primary" />
                     <MudText Typo="Typo.caption" Class="ml-2">
                         @($"更新时间: {_lastUpdateTime:HH:mm:ss}")
                     </MudText>
