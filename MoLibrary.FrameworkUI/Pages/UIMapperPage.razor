@@ -1,0 +1,152 @@
+@using MoLibrary.Core.Modules
+@using MoLibrary.Tool.MoResponse
+@inject MapperService MapperService
+@inject ISnackbar Snackbar
+
+@attribute [Route(MAPPER_DEBUG_URL)]
+
+<PageTitle>Mapper调试</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
+    <MudStack>
+        <MudCard>
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <div style="display: flex; align-items: center;">
+                        <MudIcon Icon="@Icons.Material.Filled.Code" Class="mr-3" />
+                        <MudText Typo="Typo.h5">Mapper映射调试</MudText>
+                    </div>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    查看和调试所有已注册的Mapper映射表达式
+                </MudText>
+                
+                <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
+                    <MudButton Variant="Variant.Filled" 
+                              Color="Color.Primary" 
+                              StartIcon="@Icons.Material.Filled.Refresh"
+                              OnClick="LoadDataAsync"
+                              Disabled="@_loading">
+                        @if (_loading)
+                        {
+                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true"/>
+                            <MudText Class="ms-2">加载中...</MudText>
+                        }
+                        else
+                        {
+                            <MudText>刷新数据</MudText>
+                        }
+                    </MudButton>
+                    
+                    @if (_mapperData is not null)
+                    {
+                        <MudChip T="string" Color="Color.Info" Size="Size.Small">
+                            总计: @_mapperData.Count 个映射
+                        </MudChip>
+                    }
+                </MudStack>
+            </MudCardContent>
+        </MudCard>
+
+        @if (_mapperData?.MapperInfos is not null && _mapperData.MapperInfos.Any())
+        {
+            <MudGrid>
+                @foreach (var mapper in _mapperData.MapperInfos)
+                {
+                    <MudItem xs="12" md="6" lg="4">
+                        <MudCard Class="mb-4" Elevation="3">
+                            <MudCardHeader>
+                                <CardHeaderContent>
+                                    <MudText Typo="Typo.h6" Class="mb-2">
+                                        <MudIcon Icon="@Icons.Material.Filled.SwapHoriz" Class="mr-2" />
+                                        映射关系
+                                    </MudText>
+                                </CardHeaderContent>
+                            </MudCardHeader>
+                            <MudCardContent>
+                                <MudStack Spacing="2">
+                                    <MudPaper Class="pa-3" Elevation="1">
+                                        <MudText Typo="Typo.subtitle2" Color="Color.Primary">源类型:</MudText>
+                                        <MudText Typo="Typo.body2" Class="font-monospace">@mapper.SourceType</MudText>
+                                    </MudPaper>
+                                    
+                                    <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Style="align-self: center;" />
+                                    
+                                    <MudPaper Class="pa-3" Elevation="1">
+                                        <MudText Typo="Typo.subtitle2" Color="Color.Secondary">目标类型:</MudText>
+                                        <MudText Typo="Typo.body2" Class="font-monospace">@mapper.DestinationType</MudText>
+                                    </MudPaper>
+                                    
+                                    <MudExpansionPanels MultiExpansion="true" Class="mt-3">
+                                        <MudExpansionPanel Text="映射表达式代码">
+                                            <div class="pa-3">
+                                                @if (!string.IsNullOrEmpty(mapper.MapExpression))
+                                                {
+                                                    <MudMarkdown Value="@($"```csharp\n{mapper.MapExpression}\n```")" />
+                                                }
+                                                else
+                                                {
+                                                    <MudText Typo="Typo.body2" Color="Color.Warning">无映射表达式</MudText>
+                                                }
+                                            </div>
+                                        </MudExpansionPanel>
+                                    </MudExpansionPanels>
+                                </MudStack>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+                }
+            </MudGrid>
+        }
+        else if (!_loading && _mapperData is not null)
+        {
+            <MudAlert Severity="Severity.Info" Class="mt-4">
+                <MudText>没有找到任何Mapper映射配置</MudText>
+            </MudAlert>
+        }
+    </MudStack>
+</MudContainer>
+
+@code {
+    public const string MAPPER_DEBUG_URL = "/mapper-debug";
+    
+    private bool _loading = false;
+    private MapperStatusResponse? _mapperData;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadDataAsync();
+        }
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        try
+        {
+            if ((await MapperService.GetMapperStatusAsync()).IsFailed(out var error, out var data))
+            {
+                Snackbar.Add($"加载Mapper数据失败: {error}", Severity.Error);
+                return;
+            }
+
+            _mapperData = data;
+            Snackbar.Add($"成功加载 {data.Count} 个映射配置", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"加载数据时发生异常: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+}
