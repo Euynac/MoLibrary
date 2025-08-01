@@ -24,7 +24,7 @@
                         </MudStack>
                     </MudStack>
                     <MudStack Row="true" Spacing="2">
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="RefreshServicesAsync" Disabled="@_isLoading">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => RefreshServicesAsync())" Disabled="@_isLoading">
                             <MudIcon Icon="@Icons.Material.Filled.Refresh" Class="mr-1" />
                             刷新
                         </MudButton>
@@ -44,7 +44,7 @@
             }
             else if (_services.Any())
             {
-                <RegisterCentreServiceList Services="_services" OnRefresh="RefreshServicesAsync" />
+                <RegisterCentreServiceList Services="_services" OnRefresh="@(() => RefreshServicesAsync())" />
             }
             else
             {

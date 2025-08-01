@@ -71,7 +71,7 @@
             <ToolBarContent>
                 <MudText Typo="Typo.h6">配置项 (@_configurations.Count)</MudText>
                 <MudSpacer />
-                <MudSwitch T="bool" @bind-Checked="@_dense" Label="紧凑模式" Color="Color.Primary" />
+                <MudSwitch T="bool" @bind-Value="@_dense" Label="紧凑模式" Color="Color.Primary" />
             </ToolBarContent>
             <HeaderContent>
                 <MudTh><MudTableSortLabel SortBy="new Func<DtoOptionItem, object>(x => x.Key)">配置键</MudTableSortLabel></MudTh>
@@ -110,15 +110,15 @@
                     <MudButtonGroup Size="Size.Small" Variant="Variant.Text">
                         <MudIconButton Icon="@Icons.Material.Filled.Edit" 
                                       Color="Color.Primary"
-                                      Title="编辑"
+                                      Tooltip="编辑"
                                       OnClick="() => OnEditRequested.InvokeAsync(context)" />
                         <MudIconButton Icon="@Icons.Material.Filled.History" 
                                       Color="Color.Info"
-                                      Title="历史"
+                                      Tooltip="历史"
                                       OnClick="() => OnHistoryRequested.InvokeAsync(context)" />
                         <MudIconButton Icon="@Icons.Material.Filled.Delete" 
                                       Color="Color.Error"
-                                      Title="删除"
+                                      Tooltip="删除"
                                       OnClick="() => OnDeleteRequested.InvokeAsync(context)" />
                     </MudButtonGroup>
                 </MudTd>
