@@ -242,15 +242,12 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
           
             if (remoteRes.ExtraInfo is { } expando)
             {
-                var node = new MoChainNode();
                 if (expando.GetOrDefault(jsonOption.UsingJsonNamePolicy(MoChainContext.CHAIN_KEY)) is JsonElement
-                    jsonElement && jsonElement.Deserialize<MoChainNode>(jsonOption.GlobalOptions) is {} chainNode)
+                        jsonElement && jsonElement.Deserialize<MoChainNode>(jsonOption.GlobalOptions) is {} chainNode)
                 {
-                    node = chainNode;
+                    chainNode.EndExtraInfo = expando.Unfold().Where(p => p.Key != MoChainContext.CHAIN_KEY).ToDictionary();
+                    success = context.MergeRemoteChain(traceId, chainNode, _options.MaxChainDepth);
                 }
-
-                node.EndExtraInfo = expando.Unfold().Where(p => p.Key != MoChainContext.CHAIN_KEY).ToDictionary();
-                success = context.MergeRemoteChain(traceId, node, _options.MaxChainDepth);
             }
 
             if (success) return;
