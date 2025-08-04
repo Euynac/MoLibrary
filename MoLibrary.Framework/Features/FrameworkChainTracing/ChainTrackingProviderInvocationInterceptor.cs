@@ -145,18 +145,19 @@ public class ChainTrackingProviderInvocationInterceptor(
             // 记录异常到调用链
             scope.EndWithException(ex, $"执行方法 {invocation.Method.DeclaringType?.Name}.{invocation.Method.Name} 异常");
 
-            if (CreateRes(invocation.Method.ReturnType) is IMoResponse exRes)
-            {
-                var res = await exceptionHandler.TryHandleWithCurrentHttpContextAsync(ex, CancellationToken.None);
-                exRes.ExtraInfo = res.ExtraInfo;
-                exRes.Message = res.Message;
-                exRes.Code = res.Code;
-                invocation.ReturnValue = exRes;
-            }
-            else
-            {
-                throw;
-            }
+            throw;
+            //if (CreateRes(invocation.Method.ReturnType) is IMoResponse exRes)
+            //{
+            //    var res = await exceptionHandler.TryHandleWithCurrentHttpContextAsync(ex, CancellationToken.None);
+            //    exRes.ExtraInfo = res.ExtraInfo;
+            //    exRes.Message = res.Message;
+            //    exRes.Code = res.Code;
+            //    invocation.ReturnValue = exRes;
+            //}
+            //else
+            //{
+            //    throw;
+            //}
         }
     }
 
