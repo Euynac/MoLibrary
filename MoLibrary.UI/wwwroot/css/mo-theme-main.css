@@ -71,6 +71,12 @@ html {
     scrollbar-color: var(--mud-palette-action-disabled) transparent;
 }
 
+/* Container 全局内边距 */
+.mud-container {
+    padding-top: 24px;
+    padding-bottom: 24px;
+}
+
 /* 打印样式优化 */
 @media print {
     .mud-app-bar,
