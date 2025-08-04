@@ -3,6 +3,7 @@ using ExpressionDebugger;
 using Mapster;
 using MapsterMapper;
 using Microsoft.Extensions.Logging;
+using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.Core.Features.MoMapper;
 
@@ -74,8 +75,8 @@ public static class MapperExtensions
             var code = (string)ExpressionTranslatorExtensions.ToScript(expressionResult);
             var card = new MapperInfoCard
             {
-                SourceType = sourceType.FullName,
-                DestinationType = destinationType.FullName,
+                SourceType = sourceType.GetCleanFullName(),
+                DestinationType = destinationType.GetCleanFullName(),
                 MapExpression = code
             };
             list.Add(card);

@@ -99,7 +99,6 @@ Static web assets (wwwroot) are handled through:
 ### Font Management
 - **禁止使用在线字体CDN**：不得直接引用 Google Fonts、Adobe Fonts 等在线字体服务
 - **本地字体优先**：所有字体文件必须存储在 `wwwroot/fonts/` 目录下
-- **字体回退策略**：必须配置系统字体作为fallback，确保在字体文件缺失时仍能正常显示
 - **字体工具使用**：使用 `@scripts/font-downloader/` 中的工具下载和管理字体文件
 
 ### 其他离线要求
