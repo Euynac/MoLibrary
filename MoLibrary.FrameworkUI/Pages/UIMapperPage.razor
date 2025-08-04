@@ -8,7 +8,6 @@
 
 <PageTitle>Mapper调试</PageTitle>
 
-
 <MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
     <MudStack>
         <MudCard>
@@ -54,53 +53,34 @@
 
         @if (_mapperData?.MapperInfos is not null && _mapperData.MapperInfos.Any())
         {
-            <MudGrid>
-                @foreach (var mapper in _mapperData.MapperInfos)
-                {
-                    <MudItem xs="12" md="6" lg="4">
-                        <MudCard Class="mb-4" Elevation="3">
-                            <MudCardHeader>
-                                <CardHeaderContent>
-                                    <MudText Typo="Typo.h6" Class="mb-2">
-                                        <MudIcon Icon="@Icons.Material.Filled.SwapHoriz" Class="mr-2" />
-                                        映射关系
-                                    </MudText>
-                                </CardHeaderContent>
-                            </MudCardHeader>
-                            <MudCardContent>
-                                <MudStack Spacing="2">
-                                    <MudPaper Class="pa-3" Elevation="1">
-                                        <MudText Typo="Typo.subtitle2" Color="Color.Primary">源类型:</MudText>
-                                        <MudText Typo="Typo.body2" Class="font-monospace">@mapper.SourceType</MudText>
-                                    </MudPaper>
-                                    
-                                    <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Style="align-self: center;" />
-                                    
-                                    <MudPaper Class="pa-3" Elevation="1">
-                                        <MudText Typo="Typo.subtitle2" Color="Color.Secondary">目标类型:</MudText>
-                                        <MudText Typo="Typo.body2" Class="font-monospace">@mapper.DestinationType</MudText>
-                                    </MudPaper>
-                                    
-                                    <MudExpansionPanels MultiExpansion="true" Class="mt-3">
-                                        <MudExpansionPanel Text="映射表达式代码">
-                                            <div class="pa-3">
-                                                @if (!string.IsNullOrEmpty(mapper.MapExpression))
-                                                {
-													<MudMarkdown Value="@($"```csharp\n{mapper.MapExpression}\n```")" />
-                                                }
-                                                else
-                                                {
-                                                    <MudText Typo="Typo.body2" Color="Color.Warning">无映射表达式</MudText>
-                                                }
-                                            </div>
-                                        </MudExpansionPanel>
-                                    </MudExpansionPanels>
-                                </MudStack>
-                            </MudCardContent>
-                        </MudCard>
-                    </MudItem>
-                }
-            </MudGrid>
+            <MudCard>
+                <MudCardContent>
+                    <MudTable T="MapperInfo" Items="@_mapperData.MapperInfos" Hover="true" Striped="true" Dense="true">
+                        <HeaderContent>
+                            <MudTh>源类型</MudTh>
+                            <MudTh>目标类型</MudTh>
+                            <MudTh Style="width: 150px;">操作</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="源类型">
+                                <MudText Typo="Typo.body2" Class="font-monospace">@context.SourceType</MudText>
+                            </MudTd>
+                            <MudTd DataLabel="目标类型">
+                                <MudText Typo="Typo.body2" Class="font-monospace">@context.DestinationType</MudText>
+                            </MudTd>
+                            <MudTd DataLabel="操作">
+                                <MudButton Variant="Variant.Text" 
+                                          Color="Color.Primary" 
+                                          Size="Size.Small"
+                                          StartIcon="@Icons.Material.Filled.Code"
+                                          OnClick="@(() => ShowMapperCode(context))">
+                                    查看代码
+                                </MudButton>
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </MudCardContent>
+            </MudCard>
         }
         else if (!_loading && _mapperData is not null)
         {
@@ -111,6 +91,47 @@
     </MudStack>
 </MudContainer>
 
+<MudDialog @bind-Visible="@_showCodeDialog" Options="@(new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true })">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Code" Class="mr-2" />
+            映射表达式代码
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_selectedMapper is not null)
+        {
+            <MudStack Spacing="3">
+                <MudPaper Class="pa-3" Elevation="1">
+                    <MudText Typo="Typo.subtitle2" Color="Color.Primary">源类型:</MudText>
+                    <MudText Typo="Typo.body2" Class="font-monospace">@_selectedMapper.SourceType</MudText>
+                </MudPaper>
+                
+                <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Style="align-self: center;" />
+                
+                <MudPaper Class="pa-3" Elevation="1">
+                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">目标类型:</MudText>
+                    <MudText Typo="Typo.body2" Class="font-monospace">@_selectedMapper.DestinationType</MudText>
+                </MudPaper>
+                
+                <MudDivider />
+                
+                @if (!string.IsNullOrEmpty(_selectedMapper.MapExpression))
+                {
+                    <MudMarkdown Value="@($"```csharp\n{_selectedMapper.MapExpression}\n```")" />
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Warning">无映射表达式</MudAlert>
+                }
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showCodeDialog = false)">关闭</MudButton>
+    </DialogActions>
+</MudDialog>
+
 <MoMarkdownThemeManager />
 
 @code {
@@ -118,6 +139,8 @@
     
     private bool _loading = false;
     private MapperStatusResponse? _mapperData;
+    private bool _showCodeDialog = false;
+    private MapperInfo? _selectedMapper;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -126,6 +149,7 @@
             await LoadDataAsync();
         }
     }
+    
     private async Task LoadDataAsync()
     {
         _loading = true;
@@ -151,5 +175,11 @@
             _loading = false;
             StateHasChanged();
         }
+    }
+    
+    private void ShowMapperCode(MapperInfo mapper)
+    {
+        _selectedMapper = mapper;
+        _showCodeDialog = true;
     }
 }
