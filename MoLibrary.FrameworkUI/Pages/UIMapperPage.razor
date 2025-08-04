@@ -2,6 +2,7 @@
 @using MoLibrary.Tool.MoResponse
 @inject MapperService MapperService
 @inject ISnackbar Snackbar
+@inject IMudMarkdownThemeService Theme
 
 @attribute [Route(MAPPER_DEBUG_URL)]
 
@@ -84,7 +85,7 @@
                                             <div class="pa-3">
                                                 @if (!string.IsNullOrEmpty(mapper.MapExpression))
                                                 {
-                                                    <MudMarkdown Value="@($"```csharp\n{mapper.MapExpression}\n```")" />
+													<MudMarkdown Styling="Styling" Value="@($"```csharp\n{mapper.MapExpression}\n```")" />
                                                 }
                                                 else
                                                 {
@@ -122,7 +123,13 @@
             await LoadDataAsync();
         }
     }
-
+    private static readonly MudMarkdownStyling Styling = new()
+    {
+        CodeBlock =
+        {
+            Theme = CodeBlockTheme.DraculaBase16
+        }
+    };
     private async Task LoadDataAsync()
     {
         _loading = true;
