@@ -2,14 +2,13 @@ using MudBlazor;
 using MoLibrary.UI.Themes;
 using Microsoft.Extensions.Options;
 using MoLibrary.UI.Modules;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace MoLibrary.UI.Services;
 
 /// <summary>
 /// MoLibrary主题服务 - 管理主题切换和自定义样式
 /// </summary>
-public class MoThemeService(IServiceProvider serviceProvider, IOptionsSnapshot<ModuleUICoreOption> options)
+public class MoThemeService(IOptionsSnapshot<ModuleUICoreOption> options)
 {
     private bool _isDarkMode = false;
     private MudTheme _currentTheme = new();
@@ -26,7 +25,6 @@ public class MoThemeService(IServiceProvider serviceProvider, IOptionsSnapshot<M
             if (_isDarkMode != value)
             {
                 _isDarkMode = value;
-                UpdateCodeBlockTheme();
                 OnThemeChanged?.Invoke();
             }
         }
@@ -43,7 +41,6 @@ public class MoThemeService(IServiceProvider serviceProvider, IOptionsSnapshot<M
             {
                 _currentThemeName = value;
                 _currentTheme = CreateThemeByName(value);
-                UpdateCodeBlockTheme();
                 OnThemeChanged?.Invoke();
             }
         }
@@ -55,7 +52,6 @@ public class MoThemeService(IServiceProvider serviceProvider, IOptionsSnapshot<M
     public void Initialize()
     {
         _currentTheme = ThemeRegistry.GetTheme("default").CreateTheme();
-        UpdateCodeBlockTheme();
     }
     
     /// <summary>
@@ -99,26 +95,4 @@ public class MoThemeService(IServiceProvider serviceProvider, IOptionsSnapshot<M
         return $"{_currentThemeName}-{mode}";
     }
     
-    /// <summary>
-    /// 更新代码块主题
-    /// </summary>
-    private void UpdateCodeBlockTheme()
-    {
-        if (!_options.EnableMarkdown) return;
-        
-        try
-        {
-            var markdownThemeService = serviceProvider.GetService<IMudMarkdownThemeService>();
-            if (markdownThemeService != null)
-            {
-                var themeProvider = ThemeRegistry.GetTheme(_currentThemeName);
-                var codeBlockTheme = _isDarkMode ? themeProvider.DarkCodeBlockTheme : themeProvider.LightCodeBlockTheme;
-                markdownThemeService.SetCodeBlockTheme(codeBlockTheme);
-            }
-        }
-        catch
-        {
-            // 如果Markdown服务不可用，静默忽略
-        }
-    }
 }

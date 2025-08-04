@@ -1,0 +1,40 @@
+@using MoLibrary.UI.Services
+@using MoLibrary.UI.Themes
+@implements IDisposable
+@inject MoThemeService ThemeService
+@inject IMudMarkdownThemeService MarkdownThemeService
+
+@code {
+	protected override void OnInitialized()
+	{
+		// 订阅主题变更事件
+		ThemeService.OnThemeChanged += OnThemeChanged;
+	}
+
+	protected override void OnAfterRender(bool firstRender)
+	{
+		if (firstRender)
+		{
+            // 初始设置主题
+            UpdateMarkdownTheme();
+		}
+	}
+
+    private void OnThemeChanged()
+    {
+        UpdateMarkdownTheme();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void UpdateMarkdownTheme()
+    {
+        var themeProvider = ThemeRegistry.GetTheme(ThemeService.CurrentThemeName);
+        var codeBlockTheme = ThemeService.IsDarkMode ? themeProvider.DarkCodeBlockTheme : themeProvider.LightCodeBlockTheme;
+        MarkdownThemeService.SetCodeBlockTheme(codeBlockTheme);
+    }
+
+    public void Dispose()
+    {
+        ThemeService.OnThemeChanged -= OnThemeChanged;
+    }
+}
