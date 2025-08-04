@@ -99,6 +99,8 @@
         </MudText>
     </TitleContent>
     <DialogContent>
+   
+        <MoMarkdownThemeManager />
         @if (_selectedMapper is not null)
         {
             <MudStack Spacing="3">
@@ -132,7 +134,6 @@
     </DialogActions>
 </MudDialog>
 
-<MoMarkdownThemeManager />
 
 @code {
     public const string MAPPER_DEBUG_URL = "/mapper-debug";
