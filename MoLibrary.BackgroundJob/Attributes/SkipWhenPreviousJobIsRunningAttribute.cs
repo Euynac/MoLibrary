@@ -16,7 +16,7 @@ namespace MoLibrary.BackgroundJob.Attributes;
 /// </summary>
 public class SkipWhenPreviousJobIsRunningAttribute : JobFilterAttribute, IClientFilter, IApplyStateFilter
 {
-    private readonly ILogger _logger = LogProvider.For<AutomaticRetryAttribute>(); //TODO 学习此类的用法用于GlobalLog
+    private readonly ILogger _logger = LogProvider.For<SkipWhenPreviousJobIsRunningAttribute>();
     protected static string GetJobId(Type jobArgsType)
     {
         return $"single-job:{WebTool.StringHash(jobArgsType.FullName!, HashAlgorithmName.MD5)}";
