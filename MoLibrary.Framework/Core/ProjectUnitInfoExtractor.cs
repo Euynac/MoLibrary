@@ -1,12 +1,15 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using MoLibrary.Core.Features.MoLogProvider;
 using MoLibrary.Framework.Core.Model;
-using MoLibrary.Logging;
 using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.Framework.Core;
 
 public static class ProjectUnitInfoExtractor
 {
+    private static readonly ILogger _logger = LogProvider.For(typeof(ProjectUnitInfoExtractor));
+
     internal static IEnumerable<Type> ExtractUnitInfo(this IEnumerable<Type> types, IServiceCollection services)
     {
         foreach (var type in types)
@@ -24,7 +27,7 @@ public static class ProjectUnitInfoExtractor
                     ProjectUnitStores.ProjectUnitsByFullName.Add(unit.Key, unit);
                     if (!ProjectUnitStores.ProjectUnitsByName.TryAdd(unit.Type.Name, unit))
                     {
-                        GlobalLog.LogError(
+                        _logger.LogError(
                             $"重复的项目单元名，请注意！{unit.Key}与{ProjectUnitStores.ProjectUnitsByName[unit.Type.Name].Type.FullName}重复");
                     }
                 }
@@ -45,7 +48,7 @@ public static class ProjectUnitInfoExtractor
         foreach (var type in types)
         {
             // 只处理具体的枚举类型，排除开放泛型类型(放在泛型类下的枚举类型)
-            if (type.IsEnum && !type.IsGenericTypeDefinition && !type.ContainsGenericParameters)
+            if (type.IsEnum && type is { IsGenericTypeDefinition: false, ContainsGenericParameters: false})
             {
                 ProjectUnitStores.EnumTypes.AddOrIgnore(type.Name, type);
             }

@@ -2,7 +2,8 @@ using System.Text.Json;
 using MediatR;
 using Microsoft.AspNetCore.Http.Extensions;
 using MoLibrary.Core.GlobalJson;
-using MoLibrary.Logging;
+using Microsoft.Extensions.Logging;
+using MoLibrary.Core.Features.MoLogProvider;
 using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.General;
 using MoLibrary.Tool.MoResponse;
@@ -11,6 +12,7 @@ namespace MoLibrary.Framework.Extensions;
 
 public static class HttpApiExtensions
 {
+    private static readonly ILogger _logger = LogProvider.For(typeof(HttpApiExtensions));
     /// <summary>
     /// 统一获取内部微服务调用API响应
     /// </summary>
@@ -90,7 +92,7 @@ public static class HttpApiExtensions
             errorRes.AppendExtraInfo("request", await FormatSource(httpResponse));
         }
 
-        GlobalLog.LogError($"{httpResponse?.RequestMessage?.RequestUri}接口响应出错：{errorRes.ToJsonStringForce()}");
+        _logger.LogError($"{httpResponse?.RequestMessage?.RequestUri}接口响应出错：{errorRes.ToJsonStringForce()}");
 
         return errorRes;
 
@@ -197,7 +199,7 @@ public static class HttpApiExtensions
             errorRes.AppendExtraInfo("request", await FormatSource(httpResponse));
         }
 
-        GlobalLog.LogError($"{httpResponse?.RequestMessage?.RequestUri}接口响应出错：{errorRes.ToJsonStringForce()}");
+        _logger.LogError($"{httpResponse?.RequestMessage?.RequestUri}接口响应出错：{errorRes.ToJsonStringForce()}");
 
         return errorRes;
 
