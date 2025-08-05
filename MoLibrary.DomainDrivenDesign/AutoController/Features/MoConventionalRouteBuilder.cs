@@ -17,7 +17,9 @@ public class MoConventionalRouteBuilder
         string httpMethod,
         ConventionalControllerSetting? configuration)
     {
-        var url = $"{rootPath}/{NormalizeControllerNameCase(controllerName, configuration)}";
+
+        //如果rootPath为空，说明存在自定义Route特性。则要使用相对路径，以自动拼接Route。
+        var url = rootPath.IsNullOrEmpty() ? $"{NormalizeControllerNameCase(controllerName, configuration)}" : $"{rootPath}/{NormalizeControllerNameCase(controllerName, configuration)}";
 
         //Add {id} path if needed
         var idParameterModel = action.Parameters.FirstOrDefault(p => p.ParameterName == "id");
