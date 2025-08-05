@@ -17,7 +17,9 @@ public class MoConventionalRouteBuilder
         string httpMethod,
         ConventionalControllerSetting? configuration)
     {
-        var url = $"{rootPath}/{NormalizeControllerNameCase(controllerName, configuration)}";
+
+       
+        var url = rootPath.IsNullOrEmpty() ? $"{NormalizeControllerNameCase(controllerName, configuration)}" : $"{rootPath}/{NormalizeControllerNameCase(controllerName, configuration)}";
 
         //Add {id} path if needed
         var idParameterModel = action.Parameters.FirstOrDefault(p => p.ParameterName == "id");

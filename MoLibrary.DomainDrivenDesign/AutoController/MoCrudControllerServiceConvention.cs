@@ -115,8 +115,6 @@ public class MoCrudControllerServiceConvention(
         var removeList = new List<ActionModel>();
         foreach (var grouping in actionModels.GroupBy(p => p.ActionName).Where(p => p.Count() > 1))
         {
-            //var methods = grouping.ToList();
-            //methods.RemoveAll(p => p.ActionMethod.IsOverride());
 
             removeList.AddRange(grouping.OrderByDescending(p =>
                 ((OverrideServiceAttribute?) p.Attributes.FirstOrDefault(a =>
@@ -128,16 +126,7 @@ public class MoCrudControllerServiceConvention(
             actionModels.Remove(actionModel);
         }
 
-        //var hashSet = actionModels.GroupBy(action => action.ActionName).Where(p => p.Count() > 1).Select(p => p.Key)
-        //    .ToHashSet();
-        //if (hashSet.Count > 0)
-        //{
-        //    actionModels.RemoveAll(actionModel =>
-        //        hashSet.Contains(actionModel.ActionName) &&
-        //        actionModel.Attributes.All(p => p.GetType() != typeof(OverrideServiceAttribute))
-        //    );
-        //}
-
+     
     }
 
     #endregion
@@ -211,15 +200,12 @@ public class MoCrudControllerServiceConvention(
         RemoveEmptySelectors(controller.Selectors);
 
 
-        //TODO 支持原生Route设置进行拼接
-        //这部分是过滤掉不需要自动生成的Controller基类的，ASP.NET Core会添加AttributeRouteModel 即打上了[Route]标签的
-        if (controller.Selectors.Any(selector => selector.AttributeRouteModel != null))
-        {
-            return;
-        }
+        // 检查Controller级别是否有RouteAttribute，如果有则使用其路径覆盖全局RootPath
+        var controllerRouteAttribute = controller.Attributes.OfType<RouteAttribute>().FirstOrDefault();
+        // 当Controller有[Route]属性时，创建相对路径
 
         //配置接口route前缀path
-        var rootPath = options.Value.RoutePath;
+        var rootPath = controllerRouteAttribute == null ? options.Value.RoutePath : "";
 
         foreach (var action in controller.Actions)
         {
