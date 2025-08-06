@@ -15,5 +15,10 @@
       "Bash(python:*)"
     ],
     "deny": []
-  }
+  },
+  "enabledMcpjsonServers": [
+    "context7",
+    "puppeteer",
+    "microsoft_docs_mcp"
+  ]
 }
