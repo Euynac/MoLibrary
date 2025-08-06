@@ -98,6 +98,11 @@ public class HttpApiControllerSourceGenerator : IIncrementalGenerator
         var requestType = method.ParameterList.Parameters.FirstOrDefault()?.Type?.ToString();
         if (string.IsNullOrEmpty(requestType)) return null;
 
+        // Check if the method parameter has FromForm attribute
+        var hasFromFormAttribute = method.ParameterList.Parameters.FirstOrDefault()
+            ?.AttributeLists.SelectMany(al => al.Attributes)
+            .Any(attr => attr.Name.ToString() == "FromForm") ?? false;
+
         // Extract the documentation comment from the class instead of the method.
         var docComment = GetDocumentationComment(cls);
 
@@ -123,7 +128,8 @@ public class HttpApiControllerSourceGenerator : IIncrementalGenerator
             responseType: responseType,
             documentationComment: docComment,
             originalUsings: originalUsings,
-            candidateNamespace: candidateNamespace
+            candidateNamespace: candidateNamespace,
+            hasFromFormAttribute: hasFromFormAttribute
         );
     }
 
@@ -223,6 +229,9 @@ public class HttpApiControllerSourceGenerator : IIncrementalGenerator
             //TODO 返回值是否影响ActionResult？
             foreach (var candidate in group)
             {
+                var bindingAttribute = candidate.HttpMethodAttribute == "HttpGet" ? "FromQuery" 
+                    : candidate.HasFromFormAttribute ? "FromForm" : "FromBody";
+                    
                 methodsCode += $$"""
                     {{candidate.DocumentationComment}}
                     [{{candidate.HttpMethodAttribute}}("{{candidate.HttpMethodRoute}}")]
@@ -230,7 +239,7 @@ public class HttpApiControllerSourceGenerator : IIncrementalGenerator
                     [ProducesResponseType((int) HttpStatusCode.BadRequest)]
                     [ProducesResponseType(typeof(Res<{{candidate.ResponseType}}>), (int) HttpStatusCode.OK)]
                     public async Task<object> {{candidate.MethodName}}(
-                        [{{(candidate.HttpMethodAttribute == "HttpGet" ? "FromQuery" : "FromBody")}}] {{candidate.RequestType}} dto)
+                        [{{bindingAttribute}}] {{candidate.RequestType}} dto)
                     {
                         return await mediator.Send(dto).GetResponse(this);
                     }
@@ -292,6 +301,7 @@ internal class HandlerCandidate
     public string DocumentationComment { get; }
     public IEnumerable<string> OriginalUsings { get; }
     public string CandidateNamespace { get; }
+    public bool HasFromFormAttribute { get; }
 
     /// <summary>
     /// A record to store all the relevant info for a candidate handler.
@@ -305,7 +315,9 @@ internal class HandlerCandidate
         string requestType,
         string responseType,
         string documentationComment,
-        IEnumerable<string> originalUsings, string candidateNamespace)
+        IEnumerable<string> originalUsings, 
+        string candidateNamespace,
+        bool hasFromFormAttribute = false)
     {
         ClassRoute = classRoute;
         Tags = tags;
@@ -318,5 +330,6 @@ internal class HandlerCandidate
         DocumentationComment = documentationComment;
         OriginalUsings = originalUsings;
         CandidateNamespace = candidateNamespace;
+        HasFromFormAttribute = hasFromFormAttribute;
     }
 }
