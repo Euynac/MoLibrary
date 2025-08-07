@@ -151,7 +151,7 @@ public class Module$ModuleUIName$(Module$ModuleUIName$Option option)
   }
   ```
 
-## 5. 服务和Controller集成模式
+## 5. 服务层和Minimal API集成模式
 
 ### 5.1 服务层开发规范
 服务层是业务逻辑的核心实现，直接提供功能给Blazor页面使用：
@@ -202,61 +202,86 @@ public class $ModuleName$Service
 }
 ```
 
-### 5.2 Controller开发规范（可选）
-当需要为其他系统提供API接口时，Controller依赖服务层实现：
+### 5.2 Minimal API重构规范
 
-#### 5.2.1 Controller位置和命名
-- Controller文件位置：`$UIFolderName$/Controllers/Module$ModuleName$Controller.cs`
-- Controller命名：`Module$ModuleName$Controller`
-- 继承：`MoModuleControllerBase`
-- 特性：`[ApiController]`
+当目标模块中包含Minimal API定义时，需要按以下规范重构为Service层模式：
 
-#### 5.2.2 Controller实现示例
+#### 5.2.1 Minimal API重构原则
+- **Service类必须定义在源模块**：Service类要定义在目标源模块而不是UI模块，此时非必要无需再定义UI模块层服务。
+- **业务逻辑迁移**：将Minimal API中的业务逻辑完全迁移到Service类中
+- **接口抽象**：为Service类定义接口，支持依赖注入和测试
+- **模型复用**：尽可能复用源模块的数据模型，避免重复定义
+
+#### 5.2.2 重构示例
+
+**重构前的Minimal API：**
 ```csharp
-[ApiController]
-public class Module$ModuleName$Controller : MoModuleControllerBase
+endpoints.MapPost("/framework/units/domain-event/{eventKey}/publish", 
+    async ([FromRoute] string eventKey, 
+          [FromServices] IMoDistributedEventBus eventBus, 
+          [FromServices] IGlobalJsonOption jsonOption, 
+          [FromBody] JsonNode eventContent, 
+          HttpResponse response, 
+          HttpContext context) =>
 {
-    private readonly $ModuleName$Service _service;
-
-    public Module$ModuleName$Controller($ModuleName$Service service)
+    if (ProjectUnitStores.GetUnit<UnitDomainEvent>(eventKey) is { } e)
     {
-        _service = service;
+        var json = eventContent.ToString();
+        var eventToPublish = JsonSerializer.Deserialize(json, e.Type, jsonOption.GlobalOptions)!;
+        await eventBus.PublishAsync(e.Type, eventToPublish);
+        return Res.Ok(eventToPublish).AppendMsg($"已发布{eventKey}信息").GetResponse();
     }
 
-    [HttpGet("endpoint")]
-    public async Task<IActionResult> GetData([FromQuery] TRequest parameter)
+    return Res.Fail($"获取{eventKey}相关单元信息失败").GetResponse();
+});
+```
+
+**重构后的Minimal API：**
+```csharp
+// 映射POST端点
+endpoints.MapPost("/framework/units/domain-event/{eventKey}/publish", 
+    async ([FromRoute] string eventKey, 
+          [FromServices] IDomainEventService domainEventService,
+          [FromBody] JsonNode eventContent) =>
     {
-        // 调用服务层实现
-        var result = await _service.GetDataAsync(parameter);
-        return result.GetResponse(this);
-    }
-}
+        // 直接调用Service处理业务逻辑并返回结果
+        return await domainEventService.PublishDomainEventAsync(eventKey, eventContent);
+    })
 ```
 
-#### 5.2.3 模块选项配置
-UI模块选项必须继承`MoModuleControllerOption`：
+**对应的Service接口和实现（定义在源模块中）：**
 ```csharp
-public class Module$ModuleName$UIOption : MoModuleControllerOption<Module$ModuleName$UI>
-{ 
-    public bool DisableUI$ModuleName$Page { get; set; }
-}
-```
-
-#### 5.2.4 Controller注册
-在模块的`ClaimDependencies`方法中注册Controller：
-```csharp
-public override void ClaimDependencies()
+// 接口定义
+public interface IDomainEventService
 {
-    if (!Option.DisableUI$ModuleName$Page)
+    Task<object> PublishDomainEventAsync(string eventKey, JsonNode eventContent);
+}
+
+// 实现类（必须定义在源模块中）
+public class DomainEventService(IMoDistributedEventBus eventBus, IGlobalJsonOption jsonOption) : IDomainEventService
+{
+    public async Task<object> PublishDomainEventAsync(string eventKey, JsonNode eventContent)
     {
-        // 注册Controller依赖（可选）
-        DependsOnModule<ModuleControllersGuide>().Register()
-            .RegisterMoControllers<Module$ModuleName$Controller>(Option);
-        
-        // 其他依赖注册...
+        // 检查是否能获取到对应的事件单元
+        if (ProjectUnitStores.GetUnit<UnitDomainEvent>(eventKey) is { } unitEvent)
+        {
+            var json = eventContent.ToString();
+            var eventToPublish = JsonSerializer.Deserialize(json, unitEvent.Type, jsonOption.GlobalOptions)!;
+            
+            await eventBus.PublishAsync(unitEvent.Type, eventToPublish);
+            
+            return Res.Ok(eventToPublish)
+                      .AppendMsg($"已发布{eventKey}信息");
+        }
+        return Res.Fail($"获取{eventKey}相关单元信息失败");
     }
 }
 ```
+
+#### 5.2.3 数据模型管理原则
+- **优先复用源模块模型**：尽可能使用源模块已定义的数据模型
+- **组合而非重定义**：如需新模型，采用组合方式组合源模块模型
+- **最小化模型创建**：仅在必要时创建新的数据传输对象
 
 ### 5.3 Blazor页面调用服务规范
 
