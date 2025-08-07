@@ -59,6 +59,5 @@ public class UnitRepository(Type type) : ProjectUnit(type, EProjectUnitType.Repo
         }
 
         AddDependency(unit);
-        unit.AddDependency(this);
     }
 }
