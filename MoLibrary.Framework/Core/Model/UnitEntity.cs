@@ -40,12 +40,13 @@ public class UnitEntity(Type type) : ProjectUnit(type, EProjectUnitType.Entity),
         var unit = new UnitEntity(context.Type);
         return unit.VerifyType() ? unit : null;
     }
-    public override void AddDependency(ProjectUnit unit)
+    public override void AddDependency(ProjectUnit unit, bool isTowWayDependency = true)
     {
         if (unit is UnitRepository {IsHistoryRepo: false} repo)
         {
             RepoUnit = repo;
         }
-        base.AddDependency(unit);
+
+        base.AddDependency(unit, isTowWayDependency);
     }
 }

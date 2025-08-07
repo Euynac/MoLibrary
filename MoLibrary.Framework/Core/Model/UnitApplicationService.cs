@@ -81,6 +81,5 @@ public class UnitApplicationService(Type type) : ProjectUnit(type, EProjectUnitT
         }
 
         AddDependency(unit);
-        unit.AddDependency(this);
     }
 }

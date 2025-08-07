@@ -208,9 +208,11 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     /// 增加所依赖的单元
     /// </summary>
     /// <param name="unit"></param>
-    public virtual void AddDependency(ProjectUnit unit)
+    /// <param name="isTowWayDependency"></param>
+    public virtual void AddDependency(ProjectUnit unit, bool isTowWayDependency = true)
     {
         DependencyUnits.Add(unit);
+        if(isTowWayDependency) unit.AddDependency(this);
     }
 
     /// <summary>
@@ -236,12 +238,12 @@ public class DtoProjectUnit
     /// <summary>
     /// 项目单元键值，也即项目单元FullName名
     /// </summary>
-    public string Key { get; set; }
+    public required string Key { get; set; }
 
     /// <summary>
     /// 项目单元显示名
     /// </summary>
-    public string Title { get; set; }
+    public required string Title { get; set; }
 
     /// <summary>
     /// 项目单元类型
@@ -265,12 +267,12 @@ public class DtoProjectUnitDependency
     /// <summary>
     /// 项目单元键值，也即项目单元FullName名
     /// </summary>
-    public string Key { get; set; }
+    public required string Key { get; set; }
 
     /// <summary>
     /// 项目单元显示名
     /// </summary>
-    public string Title { get; set; }
+    public required string Title { get; set; }
 
     /// <summary>
     /// 项目单元类型

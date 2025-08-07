@@ -55,6 +55,5 @@ public class UnitDomainEventHandler(Type type) : ProjectUnit(type, EProjectUnitT
         }
 
         AddDependency(unit);
-        unit.AddDependency(this);
     }
 }
