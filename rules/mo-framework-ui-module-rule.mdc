@@ -116,6 +116,7 @@ public class Module$ModuleUIName$(Module$ModuleUIName$Option option)
 - 页面相关的数据模型放在 `$UIFolderName$/Models/` 目录下
 - 使用强类型模型，避免动态类型
 - 模型命名要清晰表达其用途
+- （重要！）目标模块中已经有模型定义的，直接复用而不是重新创建模型类，减少重复管理，仅创建必要的模型类。
 
 ## 4. 开发最佳实践
 
