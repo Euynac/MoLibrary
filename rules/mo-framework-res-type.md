@@ -62,8 +62,6 @@ public record Res : IServiceResponse
     public static Res Ok([StringSyntax("CompositeFormat")] string format, params object?[] args) => new Res(string.Format(format, args), ResponseCode.Ok);
     public static Res Fail(ResponseCode code, [StringSyntax("CompositeFormat")] string format, params object?[] args) => new Res(string.Format(format, args), code);
     public static Res Fail(string failDesc, ResponseCode code = ResponseCode.BadRequest) => new Res(failDesc, code);
-    public static Res<T> Ok<T>(T data) => new Res<T>(data);
-    public static Res<T> Create<T>(T data, ResponseCode code) => new Res<T>(data) { Code = code };
 }
 
 public static class ServiceResponseHelper

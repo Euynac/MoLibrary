@@ -207,10 +207,12 @@ public class $ModuleName$Service
 当目标模块中包含Minimal API定义时，需要按以下规范重构为Service层模式：
 
 #### 5.2.1 Minimal API重构原则
-- **Service类必须定义在源模块**：Service类要定义在目标源模块而不是UI模块，此时非必要无需再定义UI模块层服务。
+- **Service类必须定义在源模块**：Service类要定义在目标源模块而不是UI模块，此时无需再定义UI模块层服务，直接使用源模块的Service类。
 - **业务逻辑迁移**：将Minimal API中的业务逻辑完全迁移到Service类中
 - **接口抽象**：为Service类定义接口，支持依赖注入和测试
 - **模型复用**：尽可能复用源模块的数据模型，避免重复定义
+- 如果源模块的minimal API使用了匿名类返回的，Service类中实现要定义新的Dto类并返回，不能直接返回匿名类。
+
 
 #### 5.2.2 重构示例
 
@@ -315,7 +317,8 @@ public class DomainEventService(IMoDistributedEventBus eventBus, IGlobalJsonOpti
 
 #### 5.3.2 重要规则
 - 所有服务方法的返回值必须不为空
-- 成功时返回`Res.Ok(data)`，失败时返回`Res.Fail(errorMessage)`
+- 成功时返回`Res.Ok(data)`，失败时返回`Res.Fail(errorMessage)`，没有泛型类型的`Res.Fail<T>`以及`OK<T>`这种方法，因为本身有隐式转换！
+- 记得必须引用using MoLibrary.Tool.MoResponse，否则会报错
 - 异常情况必须捕获并返回`Res.Fail`
 - 调用方使用`IsFailed(out var error, out var data)`模式检查结果
 - 成功时`data`保证不为null，失败时`error`包含错误信息
