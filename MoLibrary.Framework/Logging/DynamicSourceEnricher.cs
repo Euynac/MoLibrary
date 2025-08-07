@@ -39,7 +39,7 @@ public sealed class DynamicSourceEnricher : ILogEventEnricher
             var unitInfoAttribute =
                 ProjectUnitStores.GetUnitAttributeByFullName<UnitInfoAttribute>(propertyValue.ToString().Trim('\"'));
 
-            var name = unitInfoAttribute?.Group ?? unitInfoAttribute?.Name;
+            var name = unitInfoAttribute?.Name;
                 
             if (name != null)
             {

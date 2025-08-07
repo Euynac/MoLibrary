@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -197,7 +198,7 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     /// <summary>
     /// 所依赖的项目单元
     /// </summary>
-    public List<ProjectUnit> DependencyUnits { get; protected set; } = [];
+    public HashSet<ProjectUnit> DependencyUnits { get; protected set; } = [];
 
     /// <summary>
     /// 项目单元特性
@@ -212,7 +213,7 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     public virtual void AddDependency(ProjectUnit unit, bool isTowWayDependency = true)
     {
         DependencyUnits.Add(unit);
-        if(isTowWayDependency) unit.AddDependency(this);
+        if (isTowWayDependency) unit.AddDependency(this, false);
     }
 
     /// <summary>
@@ -224,6 +225,69 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     {
         return DependencyUnits.OfType<TProjectUnit>().ToList();
     }
+
+    #region 检测依赖
+
+    /// <summary>
+    /// 检测构造函数中的工作单元依赖
+    /// </summary>
+    protected void DetectConstructorUnitDependencies()
+    {
+        var constructors = Type.GetConstructors();
+
+        foreach (var constructor in constructors)
+        {
+            var parameters = constructor.GetParameters();
+
+            foreach (var parameter in parameters)
+            {
+                var parameterType = parameter.ParameterType;
+
+                // 检查参数类型是否是一个已注册的工作单元
+                if (TryFindUnitForType(parameterType, out var dependentUnit))
+                {
+                    AddDependency(dependentUnit, false);
+                    Logger.LogDebug($"{this}检测到构造函数依赖：{dependentUnit}");
+                    continue;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 尝试根据类型找到对应的工作单元
+    /// </summary>
+    /// <param name="type">要查找的类型</param>
+    /// <param name="unit">找到的工作单元</param>
+    /// <returns>是否找到对应的工作单元</returns>
+    private static bool TryFindUnitForType(Type type, [NotNullWhen(true)] out ProjectUnit? unit)
+    {
+        unit = null;
+
+        if (type.FullName == null) return false;
+
+        // 直接通过类型全名查找
+        if (ProjectUnitStores.ProjectUnitsByFullName.TryGetValue(type.FullName, out unit))
+        {
+            return true;
+        }
+
+        //// 如果是泛型类型，尝试通过泛型定义查找
+        //if (type.IsGenericType)
+        //{
+        //    var genericTypeDefinition = type.GetGenericTypeDefinition();
+        //    if (genericTypeDefinition.FullName != null &&
+        //        ProjectUnitStores.ProjectUnitsByFullName.TryGetValue(genericTypeDefinition.FullName, out unit))
+        //    {
+        //        return true;
+        //    }
+        //}
+
+        return false;
+    }
+
+    #endregion
+
 
     public override string ToString()
     {
