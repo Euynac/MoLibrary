@@ -30,20 +30,13 @@
                     }
                     else if (_enumGroups.Any())
                     {
-                        <MudList T="string">
+                        <MudList T="string" Clickable="true">
                             @foreach (var group in _enumGroups)
                             {
-                                <MudListItem T="string">
+                                <MudListItem T="string" OnClick="@(() => SelectAssembly(group))">
                                     <div style="width: 100%;">
                                         <MudText Typo="Typo.subtitle2">@GetShortAssemblyName(group.From)</MudText>
                                         <MudText Typo="Typo.body2" Color="Color.Secondary">@group.Enums.Count 个枚举</MudText>
-                                        <MudButton Size="Size.Small" 
-                                                  Variant="Variant.Text" 
-                                                  Color="Color.Primary"
-                                                  OnClick="@(() => SelectAssembly(group))"
-                                                  Class="mt-1">
-                                            查看
-                                        </MudButton>
                                     </div>
                                 </MudListItem>
                                 <MudDivider />
@@ -64,20 +57,13 @@
                     <MudText Typo="Typo.h6" Class="mb-3">枚举列表</MudText>
                     @if (_selectedAssembly != null)
                     {
-                        <MudList T="string">
+                        <MudList T="string" Clickable="true">
                             @foreach (var enumInfo in _selectedAssembly.Enums)
                             {
-                                <MudListItem T="string">
+                                <MudListItem T="string" OnClick="@(() => SelectEnum(enumInfo))">
                                     <div style="width: 100%;">
                                         <MudText Typo="Typo.subtitle2">@enumInfo.Name</MudText>
                                         <MudText Typo="Typo.body2" Color="Color.Secondary">@enumInfo.Values.Count 个值</MudText>
-                                        <MudButton Size="Size.Small" 
-                                                  Variant="Variant.Text" 
-                                                  Color="Color.Primary"
-                                                  OnClick="@(() => SelectEnum(enumInfo))"
-                                                  Class="mt-1">
-                                            查看值
-                                        </MudButton>
                                     </div>
                                 </MudListItem>
                                 <MudDivider />

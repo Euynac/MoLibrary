@@ -51,6 +51,13 @@ public static class MoGlobalJsonExtensions
         //允许注释
         //options.ReadCommentHandling = JsonCommentHandling.Skip;
     }
+    public static JsonSerializerOptions Clone(this JsonSerializerOptions target, Action<JsonSerializerOptions> optionAction)
+    {
+        var cloned = new JsonSerializerOptions();
+        cloned.CloneFrom(target);
+        optionAction(cloned);
+        return cloned;
+    }
     public static JsonSerializerOptions Clone(this JsonSerializerOptions target)
     {
         var cloned = new JsonSerializerOptions();

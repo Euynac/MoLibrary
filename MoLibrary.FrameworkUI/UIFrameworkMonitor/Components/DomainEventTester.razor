@@ -1,6 +1,12 @@
 @using MoLibrary.Framework.Services
+@using MoLibrary.Framework.Core.Model
 @using MoLibrary.Tool.MoResponse
+@using MoLibrary.Core.GlobalJson.Interfaces
+@using System.Text.Json
+@using MoLibrary.Core.GlobalJson
 @inject IFrameworkMonitorService FrameworkMonitorService
+
+@inject IGlobalJsonOption JsonOption
 @inject ISnackbar Snackbar
 
 <MudCard>
@@ -29,28 +35,13 @@
                     }
                     else if (_domainEvents.Any())
                     {
-                        <MudList T="string">
+                        <MudList T="string" Clickable="true">
                             @foreach (var eventItem in _domainEvents)
                             {
-                                <MudListItem T="string">
+                                <MudListItem T="string" OnClick="@(() => SelectEvent(eventItem))">
                                     <div style="width: 100%;">
-                                        <MudText Typo="Typo.subtitle1">@eventItem.EventName</MudText>
-                                        <MudText Typo="Typo.body2" Color="Color.Secondary">@eventItem.FullName</MudText>
-                                        <div class="mt-2">
-                                            <MudButton Size="Size.Small" 
-                                                      Variant="Variant.Outlined" 
-                                                      Color="Color.Primary"
-                                                      OnClick="@(() => SelectEvent(eventItem))">
-                                                选择测试
-                                            </MudButton>
-                                            <MudButton Size="Size.Small" 
-                                                      Variant="Variant.Text" 
-                                                      Color="Color.Info"
-                                                      OnClick="@(() => ViewEventStructure(eventItem))"
-                                                      Class="ml-2">
-                                                查看结构
-                                            </MudButton>
-                                        </div>
+                                        <MudText Typo="Typo.subtitle1">@eventItem.Info.Title</MudText>
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">@eventItem.Info.Key</MudText>
                                     </div>
                                 </MudListItem>
                                 <MudDivider />
@@ -72,7 +63,7 @@
                     @if (_selectedEvent != null)
                     {
                         <MudStack Spacing="3">
-                            <MudTextField @bind-Value="_selectedEvent.EventName" 
+                            <MudTextField @bind-Value="_selectedEvent.Info.Title" 
                                          Label="事件名称" 
                                          Variant="Variant.Outlined"
                                          ReadOnly="true" />
@@ -80,7 +71,9 @@
                             <MudTextField @bind-Value="_eventContent" 
                                          Label="事件内容 (JSON)" 
                                          Variant="Variant.Outlined"
-                                         Lines="10"
+                                         Lines="@GetJsonLines()"
+                                         AutoGrow="true"
+                                         MaxLines="30"
                                          Placeholder="请输入事件的JSON数据..." />
                             
                             <MudButton Variant="Variant.Filled" 
@@ -108,36 +101,17 @@
                         </MudAlert>
                     }
                 </MudPaper>
-            </MudItem>
+            </MudItem>	
         </MudGrid>
     </MudCardContent>
 </MudCard>
 
-<MudDialog @bind-IsVisible="_structureDialogVisible" Options="_dialogOptions">
-    <TitleContent>
-        <MudText Typo="Typo.h6">
-            <MudIcon Icon="@Icons.Material.Filled.Code" Class="mr-3" />
-            事件结构
-        </MudText>
-    </TitleContent>
-    <DialogContent>
-        @if (_selectedEventStructure != null)
-        {
-            <MudPaper Class="pa-3" Elevation="0" Style="background-color: var(--mud-palette-surface-variant);">
-                <pre style="white-space: pre-wrap; font-family: 'Courier New', monospace; font-size: 0.875rem;">@_selectedEventStructure</pre>
-            </MudPaper>
-        }
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="CloseStructureDialog">关闭</MudButton>
-    </DialogActions>
-</MudDialog>
 
 @code {
-    private List<DomainEventInfo> _domainEvents = new();
+    private List<DtoDomainEventInfo> _domainEvents = [];
     private bool _loading = false;
     private bool _publishing = false;
-    private DomainEventInfo? _selectedEvent;
+    private DtoDomainEventInfo? _selectedEvent;
     private string _eventContent = string.Empty;
     private bool _structureDialogVisible = false;
     private string? _selectedEventStructure;
@@ -170,24 +144,7 @@
                 return;
             }
 
-            _domainEvents.Clear();
-            foreach (dynamic item in data)
-            {
-                try
-                {
-                    var eventInfo = new DomainEventInfo
-                    {
-                        EventName = item.info?.Name?.ToString() ?? "Unknown",
-                        FullName = item.info?.FullName?.ToString() ?? "Unknown",
-                        Structure = item.structure?.ToString() ?? ""
-                    };
-                    _domainEvents.Add(eventInfo);
-                }
-                catch
-                {
-                    // 忽略解析失败的项
-                }
-            }
+            _domainEvents = data ?? [];
         }
         catch (Exception ex)
         {
@@ -200,16 +157,10 @@
         }
     }
 
-    private void SelectEvent(DomainEventInfo eventInfo)
+    private void SelectEvent(DtoDomainEventInfo eventInfo)
     {
         _selectedEvent = eventInfo;
-        _eventContent = !string.IsNullOrEmpty(eventInfo.Structure) ? eventInfo.Structure : "{}";
-    }
-
-    private void ViewEventStructure(DomainEventInfo eventInfo)
-    {
-        _selectedEventStructure = eventInfo.Structure;
-        _structureDialogVisible = true;
+        _eventContent = JsonSerializer.Serialize(eventInfo.Structure, JsonOption.GlobalOptions.Clone(o => o.WriteIndented = true)) ?? "{}";
     }
 
     private async Task PublishEventAsync()
@@ -225,7 +176,7 @@
 
         try
         {
-            var result = await FrameworkMonitorService.PublishDomainEventAsync(_selectedEvent.EventName, _eventContent);
+            var result = await FrameworkMonitorService.PublishDomainEventAsync(_selectedEvent.Info.Title, _eventContent);
             if (result.IsFailed(out var error))
             {
                 Snackbar.Add($"发布失败: {error}", Severity.Error);
@@ -251,10 +202,13 @@
         _selectedEventStructure = null;
     }
 
-    private class DomainEventInfo
+    private int GetJsonLines()
     {
-        public string EventName { get; set; } = string.Empty;
-        public string FullName { get; set; } = string.Empty;
-        public string Structure { get; set; } = string.Empty;
+        if (string.IsNullOrEmpty(_eventContent))
+            return 5;
+            
+        var lines = _eventContent.Split('\n').Length;
+        return Math.Max(5, Math.Min(lines + 2, 30));
     }
+
 }
