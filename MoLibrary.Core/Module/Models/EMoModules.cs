@@ -70,5 +70,6 @@ public enum EMoModules
     DataChannelUI,
     ConfigurationUI,
 MapperUI,
-    RegisterCentreUI
+    RegisterCentreUI,
+    FrameworkMonitorUI
 }

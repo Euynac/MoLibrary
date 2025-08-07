@@ -324,7 +324,6 @@ public class DtoProjectUnit
     /// 项目单元特性
     /// </summary>
     public List<IUnitCachedAttribute> Attributes { get; set; } = [];
-
 }
 public class DtoProjectUnitDependency
 {

@@ -31,8 +31,6 @@ if ((await userManger.FillUserInfo(user)).IsFailed(out var error, out var data))
 ```
 
 
-
-
 ## `Res<T>`的基本定义
 
 ```csharp
