@@ -73,13 +73,20 @@ public class UnitApplicationService(Type type) : ProjectUnit(type, EProjectUnitT
 
     public override void DoingConnect()
     {
-        if (RequestType is null) return;
-        if (!ProjectUnitStores.ProjectUnitsByFullName.TryGetValue(RequestType.FullName!, out var unit))
+        // 处理现有的请求类型依赖
+        if (RequestType is not null)
         {
-            Logger.LogWarning($"{this}无法关联其请求{RequestType.FullName},可能未继承{nameof(IMoRequest)}相关接口");
-            return;
+            if (!ProjectUnitStores.ProjectUnitsByFullName.TryGetValue(RequestType.FullName!, out var unit))
+            {
+                Logger.LogWarning($"{this}无法关联其请求{RequestType.FullName},可能未继承{nameof(IMoRequest)}相关接口");
+            }
+            else
+            {
+                AddDependency(unit);
+            }
         }
 
-        AddDependency(unit);
+        // 检测构造函数中的工作单元依赖
+        DetectConstructorUnitDependencies();
     }
 }
