@@ -50,7 +50,6 @@ public static class ProjectUnitStores
     /// <summary>
     /// 获取所有项目单元
     /// </summary>
-    /// <typeparam name="T"></typeparam>
     /// <returns></returns>
     public static List<ProjectUnit> GetAllUnits()
     {
