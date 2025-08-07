@@ -1,0 +1,318 @@
+@using MoLibrary.Framework.Services
+@using MoLibrary.Tool.MoResponse
+@inject IFrameworkMonitorService FrameworkMonitorService
+@inject ISnackbar Snackbar
+
+<MudCard>
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">请求过滤管理</MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            <MudButton Variant="Variant.Filled" 
+                      Color="Color.Primary" 
+                      OnClick="LoadDisabledUrlsAsync"
+                      StartIcon="@Icons.Material.Filled.Refresh"
+                      Disabled="@_loading">
+                刷新状态
+            </MudButton>
+        </CardHeaderActions>
+    </MudCardHeader>
+    <MudCardContent>
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudPaper Class="pa-4" Elevation="1">
+                    <MudText Typo="Typo.h6" Class="mb-3">URL管理</MudText>
+                    <MudStack Spacing="3">
+                        <MudTextField @bind-Value="_newUrl" 
+                                     Label="URL路径" 
+                                     Variant="Variant.Outlined"
+                                     Placeholder="例如: /api/test" />
+                        
+                        <MudStack Row="true" Spacing="2">
+                            <MudButton Variant="Variant.Filled" 
+                                      Color="Color.Error" 
+                                      OnClick="@(() => ManageUrlAsync(true))"
+                                      StartIcon="@Icons.Material.Filled.Block"
+                                      Disabled="@_managing">
+                                禁用
+                            </MudButton>
+                            <MudButton Variant="Variant.Filled" 
+                                      Color="Color.Success" 
+                                      OnClick="@(() => ManageUrlAsync(false))"
+                                      StartIcon="@Icons.Material.Filled.CheckCircle"
+                                      Disabled="@_managing">
+                                启用
+                            </MudButton>
+                        </MudStack>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+            
+            <MudItem xs="12" md="6">
+                <MudPaper Class="pa-4" Elevation="1">
+                    <MudText Typo="Typo.h6" Class="mb-3">批量管理</MudText>
+                    <MudStack Spacing="3">
+                        <MudTextField @bind-Value="_batchUrls" 
+                                     Label="批量URL (每行一个)" 
+                                     Variant="Variant.Outlined"
+                                     Lines="5"
+                                     Placeholder="例如:&#10;/api/test1&#10;/api/test2&#10;/api/test3" />
+                        
+                        <MudStack Row="true" Spacing="2">
+                            <MudButton Variant="Variant.Outlined" 
+                                      Color="Color.Error" 
+                                      OnClick="@(() => BatchManageUrlsAsync(true))"
+                                      StartIcon="@Icons.Material.Filled.Block"
+                                      Disabled="@_managing">
+                                批量禁用
+                            </MudButton>
+                            <MudButton Variant="Variant.Outlined" 
+                                      Color="Color.Success" 
+                                      OnClick="@(() => BatchManageUrlsAsync(false))"
+                                      StartIcon="@Icons.Material.Filled.CheckCircle"
+                                      Disabled="@_managing">
+                                批量启用
+                            </MudButton>
+                        </MudStack>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+            
+            <MudItem xs="12">
+                <MudPaper Class="pa-4" Elevation="1">
+                    <MudText Typo="Typo.h6" Class="mb-3">当前被禁用的URL</MudText>
+                    @if (_loading)
+                    {
+                        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
+                    }
+                    else if (_disabledUrls.Any())
+                    {
+                        <MudStack Spacing="2">
+                            @foreach (var url in _disabledUrls)
+                            {
+                                <MudChip T="string" Size="Size.Medium" 
+                                        Color="Color.Error" 
+                                        Icon="@Icons.Material.Filled.Block"
+                                        OnClose="@(() => EnableSingleUrlAsync(url))">
+                                    @url
+                                </MudChip>
+                            }
+                        </MudStack>
+                        
+                        <MudDivider Class="my-4" />
+                        
+                        <MudButton Variant="Variant.Outlined" 
+                                  Color="Color.Success" 
+                                  OnClick="EnableAllUrlsAsync"
+                                  StartIcon="@Icons.Material.Filled.CheckCircle"
+                                  Disabled="@_managing">
+                            启用所有URL
+                        </MudButton>
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Success">
+                            当前没有被禁用的URL，所有请求都可以正常访问。
+                        </MudAlert>
+                    }
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    private List<string> _disabledUrls = new();
+    private bool _loading = false;
+    private bool _managing = false;
+    private string _newUrl = string.Empty;
+    private string _batchUrls = string.Empty;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadDisabledUrlsAsync();
+        }
+    }
+
+    private async Task LoadDisabledUrlsAsync()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await FrameworkMonitorService.ManageRequestFilterAsync(null, null);
+            if (result.IsFailed(out var error, out var data))
+            {
+                Snackbar.Add($"加载失败: {error}", Severity.Error);
+                return;
+            }
+
+            _disabledUrls = data;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"加载异常: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ManageUrlAsync(bool disable)
+    {
+        if (string.IsNullOrWhiteSpace(_newUrl))
+        {
+            Snackbar.Add("请输入URL路径", Severity.Warning);
+            return;
+        }
+
+        _managing = true;
+        StateHasChanged();
+
+        try
+        {
+            var urls = new List<string> { _newUrl.Trim() };
+            var result = await FrameworkMonitorService.ManageRequestFilterAsync(urls, disable);
+            
+            if (result.IsFailed(out var error, out var data))
+            {
+                Snackbar.Add($"操作失败: {error}", Severity.Error);
+                return;
+            }
+
+            _disabledUrls = data;
+            _newUrl = string.Empty;
+            
+            var action = disable ? "禁用" : "启用";
+            Snackbar.Add($"URL {action}成功", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"操作异常: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _managing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task BatchManageUrlsAsync(bool disable)
+    {
+        if (string.IsNullOrWhiteSpace(_batchUrls))
+        {
+            Snackbar.Add("请输入要管理的URL列表", Severity.Warning);
+            return;
+        }
+
+        var urls = _batchUrls.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+                            .Select(u => u.Trim())
+                            .Where(u => !string.IsNullOrWhiteSpace(u))
+                            .ToList();
+
+        if (!urls.Any())
+        {
+            Snackbar.Add("没有有效的URL", Severity.Warning);
+            return;
+        }
+
+        _managing = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await FrameworkMonitorService.ManageRequestFilterAsync(urls, disable);
+            
+            if (result.IsFailed(out var error, out var data))
+            {
+                Snackbar.Add($"批量操作失败: {error}", Severity.Error);
+                return;
+            }
+
+            _disabledUrls = data;
+            _batchUrls = string.Empty;
+            
+            var action = disable ? "禁用" : "启用";
+            Snackbar.Add($"批量{action}成功，共处理 {urls.Count} 个URL", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"批量操作异常: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _managing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task EnableSingleUrlAsync(string url)
+    {
+        _managing = true;
+        StateHasChanged();
+
+        try
+        {
+            var urls = new List<string> { url };
+            var result = await FrameworkMonitorService.ManageRequestFilterAsync(urls, false);
+            
+            if (result.IsFailed(out var error, out var data))
+            {
+                Snackbar.Add($"启用失败: {error}", Severity.Error);
+                return;
+            }
+
+            _disabledUrls = data;
+            Snackbar.Add($"URL {url} 启用成功", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"启用异常: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _managing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task EnableAllUrlsAsync()
+    {
+        if (!_disabledUrls.Any())
+        {
+            return;
+        }
+
+        _managing = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await FrameworkMonitorService.ManageRequestFilterAsync(_disabledUrls.ToList(), false);
+            
+            if (result.IsFailed(out var error, out var data))
+            {
+                Snackbar.Add($"启用所有URL失败: {error}", Severity.Error);
+                return;
+            }
+
+            _disabledUrls = data;
+            Snackbar.Add("所有URL启用成功", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"启用所有URL异常: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _managing = false;
+            StateHasChanged();
+        }
+    }
+}
