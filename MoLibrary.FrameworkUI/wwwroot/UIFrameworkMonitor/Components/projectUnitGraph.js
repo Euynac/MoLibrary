@@ -1,330 +1,628 @@
-let graphInstance = null;
+/**
+ * 项目单元架构可视化图表
+ * 使用模块化的 D3.js 组件
+ * 
+ * @module projectUnitGraph
+ */
 
-export function initializeGraph(containerId, isDarkMode, dotNetRef) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
+import { GraphBase } from '../../lib/d3js/d3-graph-base.js';
+import { ForceLayoutManager } from '../../lib/d3js/d3-force-layout.js';
+import { NodeInteractionHandler, createStaticDragBehavior } from '../../lib/d3js/d3-node-interaction.js';
 
-    // Clear existing content
-    container.innerHTML = '';
+// ==================== 配置 ====================
+
+/**
+ * 节点类型配置
+ */
+const NODE_TYPE_CONFIG = {
+    // 复杂类型（使用矩形）
+    complexTypes: [
+        'ApplicationService',
+        'DomainService', 
+        'BackgroundWorker',
+        'BackgroundJob',
+        'HttpApi',
+        'GrpcApi'
+    ],
     
-    const width = container.clientWidth;
-    const height = container.clientHeight;
+    // 颜色映射
+    colors: {
+        'ApplicationService': '#2196F3',
+        'DomainService': '#4CAF50',
+        'Repository': '#FF9800',
+        'DomainEvent': '#9C27B0',
+        'DomainEventHandler': '#673AB7',
+        'LocalEventHandler': '#3F51B5',
+        'BackgroundWorker': '#00BCD4',
+        'BackgroundJob': '#009688',
+        'HttpApi': '#F44336',
+        'GrpcApi': '#E91E63',
+        'Entity': '#795548',
+        'RequestDto': '#607D8B',
+        'Seeder': '#8BC34A',
+        'StateStore': '#FF5722',
+        'EventBus': '#3F51B5',
+        'Actor': '#00ACC1',
+        'None': '#9E9E9E'
+    }
+};
 
-    // Create SVG
-    const svg = d3.select(`#${containerId}`)
-        .append('svg')
-        .attr('width', width)
-        .attr('height', height);
+/**
+ * 节点尺寸配置
+ */
+const NODE_SIZE = {
+    circle: { radius: 35 },
+    rect: { width: 160, height: 80 }
+};
 
-    // Add container groups
-    const g = svg.append('g');
-    
-    // Add zoom behavior
-    const zoom = d3.zoom()
-        .scaleExtent([0.1, 4])
-        .on('zoom', (event) => {
-            g.attr('transform', event.transform);
+/**
+ * 布局类型
+ */
+const LAYOUT_TYPES = {
+    FORCE: 'force',
+    HIERARCHY: 'hierarchy',
+    CIRCULAR: 'circular'
+};
+
+// ==================== 主类 ====================
+
+/**
+ * 项目单元图表类
+ */
+class ProjectUnitGraph {
+    constructor(containerId, isDarkMode, dotNetRef) {
+        this.containerId = containerId;
+        this.isDarkMode = isDarkMode;
+        this.dotNetRef = dotNetRef;
+        this.currentLayout = LAYOUT_TYPES.FORCE;
+        this.nodes = [];
+        this.links = [];
+        
+        // 初始化基础图形
+        this.graphBase = new GraphBase(containerId, {
+            isDarkMode,
+            showArrows: true,
+            onBackgroundClick: () => this.handleBackgroundClick()
         });
+        
+        // 初始化力导向布局管理器
+        this.forceManager = new ForceLayoutManager(
+            this.graphBase.width,
+            this.graphBase.height,
+            {
+                linkDistance: 150,
+                chargeStrength: -300,
+                keepFixed: false // 默认不保持固定，支持双击释放
+            }
+        );
+        
+        // 初始化交互处理器
+        this.interactionHandler = new NodeInteractionHandler({
+            onClick: (event, d) => this.handleNodeClick(d),
+            onRightClick: (event, d, position) => this.handleNodeRightClick(d, position),
+            onDoubleClick: (event, d) => this.handleNodeDoubleClick(d),
+            highlightOptions: {
+                fadeOpacity: 0.2,
+                normalOpacity: 1
+            }
+        });
+        
+        // 静态布局拖拽行为
+        this.staticDragBehavior = null;
+    }
     
-    svg.call(zoom);
-
-    // Define arrow markers
-    const defs = svg.append('defs');
+    /**
+     * 更新图表数据
+     */
+    updateGraph(data) {
+        this.nodes = data.nodes;
+        this.links = data.links;
+        
+        // 清空现有内容
+        this.graphBase.mainGroup.selectAll('.links').remove();
+        this.graphBase.mainGroup.selectAll('.nodes').remove();
+        
+        // 创建连接线组
+        const linkGroup = this.graphBase.mainGroup.append('g')
+            .attr('class', 'links');
+        
+        // 创建节点组
+        const nodeGroup = this.graphBase.mainGroup.append('g')
+            .attr('class', 'nodes');
+        
+        // 绘制连接线
+        this.linkSelection = linkGroup.selectAll('line')
+            .data(this.links)
+            .enter().append('line')
+            .attr('class', 'link')
+            .attr('stroke', this.isDarkMode ? '#666' : '#999')
+            .attr('stroke-opacity', 0.6)
+            .attr('stroke-width', 2)
+            .attr('marker-end', 'url(#arrowhead)');
+        
+        // 创建节点
+        this.nodeSelection = nodeGroup.selectAll('g')
+            .data(this.nodes)
+            .enter().append('g')
+            .attr('class', 'node');
+        
+        // 绘制节点图形
+        this.nodeSelection.each((d, i, nodes) => {
+            const nodeElement = d3.select(nodes[i]);
+            this.drawNode(nodeElement, d);
+        });
+        
+        // 绑定交互事件
+        this.interactionHandler.bindNodeEvents(this.nodeSelection, {
+            nodes: this.nodes,
+            links: this.links,
+            linkSelection: this.linkSelection
+        });
+        
+        // 添加工具提示
+        this.nodeSelection.append('title')
+            .text(d => `${d.title}\n类型: ${d.type}\n依赖数: ${d.dependencyCount}`);
+        
+        // 应用当前布局
+        this.applyLayout(this.currentLayout);
+    }
     
-    defs.append('marker')
-        .attr('id', 'arrowhead')
-        .attr('viewBox', '-0 -5 10 10')
-        .attr('refX', 20)
-        .attr('refY', 0)
-        .attr('orient', 'auto')
-        .attr('markerWidth', 8)
-        .attr('markerHeight', 8)
-        .append('path')
-        .attr('d', 'M 0,-5 L 10 ,0 L 0,5')
-        .attr('fill', isDarkMode ? '#999' : '#666');
-
-    // Create force simulation
-    const simulation = d3.forceSimulation()
-        .force('link', d3.forceLink().id(d => d.id).distance(100))
-        .force('charge', d3.forceManyBody().strength(-300))
-        .force('center', d3.forceCenter(width / 2, height / 2))
-        .force('collision', d3.forceCollide().radius(30));
-
-    graphInstance = {
-        svg,
-        g,
-        simulation,
-        zoom,
-        width,
-        height,
-        isDarkMode,
-        dotNetRef,
-        container
-    };
-}
-
-export function updateGraph(data) {
-    if (!graphInstance) return;
-    
-    const { g, simulation, isDarkMode, dotNetRef } = graphInstance;
-    
-    // Clear existing elements
-    g.selectAll('.link').remove();
-    g.selectAll('.node').remove();
-
-    // Prepare data
-    const nodes = data.nodes;
-    const links = data.links;
-
-    // Create links
-    const link = g.append('g')
-        .attr('class', 'links')
-        .selectAll('line')
-        .data(links)
-        .enter().append('line')
-        .attr('class', 'link')
-        .attr('stroke', isDarkMode ? '#666' : '#999')
-        .attr('stroke-opacity', 0.6)
-        .attr('stroke-width', 2)
-        .attr('marker-end', 'url(#arrowhead)');
-
-    // Create node groups
-    const node = g.append('g')
-        .attr('class', 'nodes')
-        .selectAll('g')
-        .data(nodes)
-        .enter().append('g')
-        .attr('class', 'node')
-        .call(d3.drag()
-            .on('start', dragstarted)
-            .on('drag', dragged)
-            .on('end', dragended));
-
-    // Add shapes based on node type
-    node.each(function(d) {
-        const nodeGroup = d3.select(this);
-        const isComplex = isComplexUnit(d.typeValue);
-        const color = getUnitColor(d.typeValue, isDarkMode);
+    /**
+     * 绘制节点
+     */
+    drawNode(nodeElement, nodeData) {
+        const isComplex = NODE_TYPE_CONFIG.complexTypes.includes(nodeData.type);
+        const color = this.getUnitColor(nodeData.type);
         
         if (isComplex) {
-            // Rectangle for complex units
-            const rect = nodeGroup.append('rect')
-                .attr('width', 120)
-                .attr('height', 60)
-                .attr('x', -60)
-                .attr('y', -30)
-                .attr('rx', 5)
-                .attr('ry', 5)
-                .attr('fill', color)
-                .attr('stroke', isDarkMode ? '#fff' : '#333')
-                .attr('stroke-width', 2)
-                .style('cursor', 'pointer');
-            
-            // Add title text
-            nodeGroup.append('text')
-                .attr('dy', -5)
-                .attr('text-anchor', 'middle')
-                .attr('fill', '#fff')
-                .style('font-size', '12px')
-                .style('font-weight', 'bold')
-                .style('pointer-events', 'none')
-                .text(d.title);
-            
-            // Add type text
-            nodeGroup.append('text')
-                .attr('dy', 10)
-                .attr('text-anchor', 'middle')
-                .attr('fill', '#fff')
-                .style('font-size', '10px')
-                .style('pointer-events', 'none')
-                .text(d.type);
-            
-            // Add dependency count if any
-            if (d.dependencyCount > 0) {
-                nodeGroup.append('text')
-                    .attr('dy', 25)
-                    .attr('text-anchor', 'middle')
-                    .attr('fill', '#fff')
-                    .style('font-size', '10px')
-                    .style('pointer-events', 'none')
-                    .text(`依赖: ${d.dependencyCount}`);
-            }
+            this.drawRectNode(nodeElement, nodeData, color);
         } else {
-            // Circle for simple units
-            nodeGroup.append('circle')
-                .attr('r', 25)
-                .attr('fill', color)
-                .attr('stroke', isDarkMode ? '#fff' : '#333')
-                .attr('stroke-width', 2)
-                .style('cursor', 'pointer');
-            
-            // Add text
-            nodeGroup.append('text')
-                .attr('dy', 4)
+            this.drawCircleNode(nodeElement, nodeData, color);
+        }
+    }
+    
+    /**
+     * 绘制矩形节点
+     */
+    drawRectNode(nodeElement, nodeData, color) {
+        const { width, height } = NODE_SIZE.rect;
+        
+        nodeElement.append('rect')
+            .attr('width', width)
+            .attr('height', height)
+            .attr('x', -width / 2)
+            .attr('y', -height / 2)
+            .attr('rx', 8)
+            .attr('ry', 8)
+            .attr('fill', color)
+            .attr('stroke', this.isDarkMode ? '#fff' : '#333')
+            .attr('stroke-width', 2)
+            .style('cursor', 'pointer');
+        
+        nodeElement.append('text')
+            .attr('dy', -10)
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#fff')
+            .style('font-size', '14px')
+            .style('font-weight', 'bold')
+            .style('pointer-events', 'none')
+            .text(nodeData.title);
+        
+        nodeElement.append('text')
+            .attr('dy', 10)
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#fff')
+            .style('font-size', '12px')
+            .style('pointer-events', 'none')
+            .text(nodeData.type);
+        
+        if (nodeData.dependencyCount > 0) {
+            nodeElement.append('text')
+                .attr('dy', 30)
                 .attr('text-anchor', 'middle')
                 .attr('fill', '#fff')
                 .style('font-size', '11px')
-                .style('font-weight', 'bold')
                 .style('pointer-events', 'none')
-                .text(d.title.length > 10 ? d.title.substring(0, 10) + '...' : d.title);
+                .text(`依赖: ${nodeData.dependencyCount}`);
+        }
+    }
+    
+    /**
+     * 绘制圆形节点
+     */
+    drawCircleNode(nodeElement, nodeData, color) {
+        const radius = NODE_SIZE.circle.radius;
+        
+        nodeElement.append('circle')
+            .attr('r', radius)
+            .attr('fill', color)
+            .attr('stroke', this.isDarkMode ? '#fff' : '#333')
+            .attr('stroke-width', 2)
+            .style('cursor', 'pointer');
+        
+        const maxLength = 12;
+        const displayText = nodeData.title.length > maxLength 
+            ? nodeData.title.substring(0, maxLength) + '...' 
+            : nodeData.title;
+        
+        nodeElement.append('text')
+            .attr('dy', 5)
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#fff')
+            .style('font-size', '13px')
+            .style('font-weight', 'bold')
+            .style('pointer-events', 'none')
+            .text(displayText);
+    }
+    
+    /**
+     * 应用布局
+     */
+    applyLayout(layoutType) {
+        this.currentLayout = layoutType;
+        
+        // 移除之前的拖拽行为
+        this.nodeSelection.on('.drag', null);
+        
+        switch (layoutType) {
+            case LAYOUT_TYPES.FORCE:
+                this.applyForceLayout();
+                break;
+            case LAYOUT_TYPES.HIERARCHY:
+                this.applyHierarchyLayout();
+                break;
+            case LAYOUT_TYPES.CIRCULAR:
+                this.applyCircularLayout();
+                break;
+        }
+    }
+    
+    /**
+     * 应用力导向布局
+     */
+    applyForceLayout() {
+        // 释放所有固定节点
+        this.forceManager.releaseAllFixed(this.nodes);
+        
+        // 设置数据
+        this.forceManager.setData(this.nodes, this.links);
+        
+        // 应用拖拽行为
+        this.nodeSelection.call(this.forceManager.getDragBehavior());
+        
+        // 启动模拟
+        this.forceManager.start(() => {
+            this.linkSelection
+                .attr('x1', d => d.source.x)
+                .attr('y1', d => d.source.y)
+                .attr('x2', d => d.target.x)
+                .attr('y2', d => d.target.y);
+            
+            this.nodeSelection
+                .attr('transform', d => `translate(${d.x},${d.y})`);
+        });
+    }
+    
+    /**
+     * 应用层次布局
+     */
+    applyHierarchyLayout() {
+        this.forceManager.stop();
+        
+        // 计算层次布局
+        this.calculateHierarchyLayout();
+        
+        // 应用静态拖拽
+        this.applyStaticDrag();
+        
+        // 更新位置
+        this.updateStaticPositions();
+    }
+    
+    /**
+     * 应用环形布局
+     */
+    applyCircularLayout() {
+        this.forceManager.stop();
+        
+        // 计算环形布局
+        this.calculateCircularLayout();
+        
+        // 应用静态拖拽
+        this.applyStaticDrag();
+        
+        // 更新位置
+        this.updateStaticPositions();
+    }
+    
+    /**
+     * 计算层次布局
+     */
+    calculateHierarchyLayout() {
+        const width = this.graphBase.width;
+        const height = this.graphBase.height;
+        
+        // 构建层次结构
+        const nodeMap = new Map(this.nodes.map(n => [n.id, { ...n }]));
+        const root = { id: 'root', children: [] };
+        
+        const targetIds = new Set(this.links.map(l => l.target));
+        const rootNodes = this.nodes.filter(n => !targetIds.has(n.id));
+        
+        function buildTree(nodeId, visited = new Set()) {
+            if (visited.has(nodeId)) return null;
+            visited.add(nodeId);
+            
+            const node = nodeMap.get(nodeId);
+            if (!node) return null;
+            
+            const children = this.links
+                .filter(l => l.source === nodeId)
+                .map(l => buildTree.call(this, l.target, visited))
+                .filter(n => n !== null);
+            
+            return { ...node, children };
         }
         
-        // Add hover effect
-        nodeGroup.on('mouseover', function() {
-            d3.select(this).select('circle, rect').attr('opacity', 0.8);
-        }).on('mouseout', function() {
-            d3.select(this).select('circle, rect').attr('opacity', 1);
+        root.children = rootNodes.map(n => buildTree.call(this, n.id));
+        
+        const treeLayout = d3.tree().size([width - 100, height - 100]);
+        const hierarchy = d3.hierarchy(root);
+        const treeNodes = treeLayout(hierarchy);
+        
+        treeNodes.descendants().forEach(d => {
+            if (d.data.id !== 'root') {
+                const node = this.nodes.find(n => n.id === d.data.id);
+                if (node) {
+                    node.x = d.x + 50;
+                    node.y = d.y + 50;
+                }
+            }
+        });
+    }
+    
+    /**
+     * 计算环形布局
+     */
+    calculateCircularLayout() {
+        const centerX = this.graphBase.width / 2;
+        const centerY = this.graphBase.height / 2;
+        const radius = Math.min(this.graphBase.width, this.graphBase.height) / 3;
+        const angleStep = (2 * Math.PI) / this.nodes.length;
+        
+        this.nodes.forEach((node, i) => {
+            const angle = i * angleStep - Math.PI / 2;
+            node.x = centerX + radius * Math.cos(angle);
+            node.y = centerY + radius * Math.sin(angle);
+        });
+    }
+    
+    /**
+     * 应用静态拖拽
+     */
+    applyStaticDrag() {
+        const self = this;
+        
+        this.staticDragBehavior = createStaticDragBehavior({
+            updateLinks: (draggedNode) => {
+                // 实时更新连接线
+                self.linkSelection
+                    .attr('x1', d => {
+                        const source = d.source.id === draggedNode.id ? draggedNode : 
+                                       self.nodes.find(n => n.id === d.source.id) || d.source;
+                        return source.x;
+                    })
+                    .attr('y1', d => {
+                        const source = d.source.id === draggedNode.id ? draggedNode : 
+                                       self.nodes.find(n => n.id === d.source.id) || d.source;
+                        return source.y;
+                    })
+                    .attr('x2', d => {
+                        const target = d.target.id === draggedNode.id ? draggedNode : 
+                                       self.nodes.find(n => n.id === d.target.id) || d.target;
+                        return target.x;
+                    })
+                    .attr('y2', d => {
+                        const target = d.target.id === draggedNode.id ? draggedNode : 
+                                       self.nodes.find(n => n.id === d.target.id) || d.target;
+                        return target.y;
+                    });
+            }
         });
         
-        // Add click handler
-        nodeGroup.on('click', function(event) {
-            event.stopPropagation();
-            dotNetRef.invokeMethodAsync('OnNodeClick', d.id);
-        });
+        this.nodeSelection.call(this.staticDragBehavior);
+    }
+    
+    /**
+     * 更新静态位置
+     */
+    updateStaticPositions() {
+        this.nodeSelection
+            .transition()
+            .duration(750)
+            .attr('transform', d => `translate(${d.x},${d.y})`);
         
-        // Add right-click handler
-        nodeGroup.on('contextmenu', function(event) {
-            event.preventDefault();
-            event.stopPropagation();
-            dotNetRef.invokeMethodAsync('OnNodeRightClick', d.id, event.pageX, event.pageY);
-        });
-    });
-
-    // Add tooltips
-    node.append('title')
-        .text(d => `${d.title}\n类型: ${d.type}\n依赖数: ${d.dependencyCount}`);
-
-    // Update simulation
-    simulation.nodes(nodes);
-    simulation.force('link').links(links);
-    simulation.alpha(1).restart();
-
-    simulation.on('tick', () => {
-        link
-            .attr('x1', d => d.source.x)
-            .attr('y1', d => d.source.y)
-            .attr('x2', d => d.target.x)
-            .attr('y2', d => d.target.y);
-
-        node.attr('transform', d => `translate(${d.x},${d.y})`);
-    });
-
-    function dragstarted(event, d) {
-        if (!event.active) simulation.alphaTarget(0.3).restart();
-        d.fx = d.x;
-        d.fy = d.y;
+        this.linkSelection
+            .transition()
+            .duration(750)
+            .attr('x1', d => {
+                const source = this.nodes.find(n => n.id === (d.source.id || d.source));
+                return source ? source.x : 0;
+            })
+            .attr('y1', d => {
+                const source = this.nodes.find(n => n.id === (d.source.id || d.source));
+                return source ? source.y : 0;
+            })
+            .attr('x2', d => {
+                const target = this.nodes.find(n => n.id === (d.target.id || d.target));
+                return target ? target.x : 0;
+            })
+            .attr('y2', d => {
+                const target = this.nodes.find(n => n.id === (d.target.id || d.target));
+                return target ? target.y : 0;
+            });
     }
-
-    function dragged(event, d) {
-        d.fx = event.x;
-        d.fy = event.y;
+    
+    /**
+     * 设置布局
+     */
+    setLayout(layoutType) {
+        this.applyLayout(layoutType);
     }
+    
+    /**
+     * 设置力导向距离
+     */
+    setForceDistance(distance) {
+        this.forceManager.updateLinkDistance(distance);
+    }
+    
+    /**
+     * 设置斥力强度
+     */
+    setForceStrength(strength) {
+        this.forceManager.updateChargeStrength(strength);
+    }
+    
+    /**
+     * 重置视图
+     */
+    resetView() {
+        this.graphBase.resetView();
+    }
+    
+    /**
+     * 聚焦节点
+     */
+    focusOnNode(nodeId) {
+        const node = this.nodes.find(n => n.id === nodeId);
+        if (node) {
+            this.graphBase.focusOnPosition({ x: node.x, y: node.y });
+            
+            // 高亮节点
+            const nodeElement = this.nodeSelection.filter(d => d.id === nodeId);
+            nodeElement.select('circle, rect')
+                .transition()
+                .duration(300)
+                .attr('stroke-width', 4)
+                .transition()
+                .delay(300)
+                .duration(300)
+                .attr('stroke-width', 2);
+        }
+    }
+    
+    /**
+     * 获取单元颜色
+     */
+    getUnitColor(type) {
+        let color = NODE_TYPE_CONFIG.colors[type] || NODE_TYPE_CONFIG.colors['None'];
+        if (this.isDarkMode) {
+            color = d3.color(color).brighter(0.3).toString();
+        }
+        return color;
+    }
+    
+    /**
+     * 处理节点点击
+     */
+    handleNodeClick(nodeData) {
+        if (this.dotNetRef) {
+            this.dotNetRef.invokeMethodAsync('OnNodeClick', nodeData.id);
+        }
+    }
+    
+    /**
+     * 处理节点右键
+     */
+    handleNodeRightClick(nodeData, position) {
+        if (this.dotNetRef) {
+            this.dotNetRef.invokeMethodAsync('OnNodeRightClick', 
+                nodeData.id, position.pageX, position.pageY);
+        }
+    }
+    
+    /**
+     * 处理节点双击（释放固定）
+     */
+    handleNodeDoubleClick(nodeData) {
+        if (this.currentLayout === LAYOUT_TYPES.FORCE) {
+            nodeData.fx = null;
+            nodeData.fy = null;
+            this.forceManager.simulation.alpha(0.3).restart();
+        }
+    }
+    
+    /**
+     * 处理背景点击
+     */
+    handleBackgroundClick() {
+        // 关闭右键菜单
+        if (this.dotNetRef) {
+            this.dotNetRef.invokeMethodAsync('OnBackgroundClick');
+        }
+    }
+    
+    /**
+     * 销毁
+     */
+    dispose() {
+        if (this.forceManager) {
+            this.forceManager.dispose();
+        }
+        if (this.graphBase) {
+            this.graphBase.dispose();
+        }
+    }
+}
 
-    function dragended(event, d) {
-        if (!event.active) simulation.alphaTarget(0);
-        d.fx = null;
-        d.fy = null;
+// ==================== 导出函数 ====================
+
+let graphInstance = null;
+
+export function initializeGraph(containerId, isDarkMode, dotNetRef) {
+    graphInstance = new ProjectUnitGraph(containerId, isDarkMode, dotNetRef);
+}
+
+export function updateGraph(data) {
+    if (graphInstance) {
+        graphInstance.updateGraph(data);
+    }
+}
+
+export function setLayout(layoutType) {
+    if (graphInstance) {
+        graphInstance.setLayout(layoutType);
+    }
+}
+
+export function setForceDistance(distance) {
+    if (graphInstance) {
+        graphInstance.setForceDistance(distance);
+    }
+}
+
+export function setForceStrength(strength) {
+    if (graphInstance) {
+        graphInstance.setForceStrength(strength);
     }
 }
 
 export function resetView() {
-    if (!graphInstance) return;
-    
-    const { svg, width, height } = graphInstance;
-    
-    svg.transition()
-        .duration(750)
-        .call(graphInstance.zoom.transform, d3.zoomIdentity);
+    if (graphInstance) {
+        graphInstance.resetView();
+    }
 }
 
 export function focusOnNode(nodeId) {
-    if (!graphInstance) return;
-    
-    const { svg, g, width, height, zoom } = graphInstance;
-    
-    const node = g.selectAll('.node').filter(d => d.id === nodeId);
-    if (node.empty()) return;
-    
-    const nodeData = node.datum();
-    const scale = 1.5;
-    
-    svg.transition()
-        .duration(750)
-        .call(
-            zoom.transform,
-            d3.zoomIdentity
-                .translate(width / 2, height / 2)
-                .scale(scale)
-                .translate(-nodeData.x, -nodeData.y)
-        );
-    
-    // Highlight the focused node
-    node.select('circle, rect')
-        .transition()
-        .duration(300)
-        .attr('stroke-width', 4)
-        .transition()
-        .delay(300)
-        .duration(300)
-        .attr('stroke-width', 2);
+    if (graphInstance) {
+        graphInstance.focusOnNode(nodeId);
+    }
 }
 
 export function dispose() {
     if (graphInstance) {
-        graphInstance.simulation.stop();
+        graphInstance.dispose();
         graphInstance = null;
     }
-}
-
-// Helper functions
-function isComplexUnit(typeValue) {
-    // Complex types that need rectangle display
-    const complexTypes = [
-        9,  // ApplicationService
-        11, // DomainService
-        18, // BackgroundWorker
-        19, // BackgroundJob
-        45, // HttpApi
-        49, // GrpcApi
-    ];
-    return complexTypes.includes(typeValue);
-}
-
-function getUnitColor(typeValue, isDarkMode) {
-    const colors = {
-        // Core domain types
-        9: '#2196F3',   // ApplicationService - Blue
-        11: '#4CAF50',  // DomainService - Green
-        16: '#FF9800',  // Repository - Orange
-        
-        // Event types
-        20: '#9C27B0',  // DomainEvent - Purple
-        23: '#673AB7',  // DomainEventHandler - Deep Purple
-        28: '#3F51B5',  // LocalEventHandler - Indigo
-        
-        // Background types
-        37: '#00BCD4',  // BackgroundWorker - Cyan
-        39: '#009688',  // BackgroundJob - Teal
-        
-        // API types
-        45: '#F44336',  // HttpApi - Red
-        49: '#E91E63',  // GrpcApi - Pink
-        
-        // Other types
-        65: '#795548',  // Entity - Brown
-        69: '#607D8B',  // RequestDto - Blue Grey
-        
-        // Default
-        0: '#9E9E9E'    // None/Unknown - Grey
-    };
-    
-    let color = colors[typeValue] || colors[0];
-    
-    // Adjust for dark mode
-    if (isDarkMode) {
-        // Lighten colors for dark mode
-        color = d3.color(color).brighter(0.3).toString();
-    }
-    
-    return color;
 }
