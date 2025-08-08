@@ -5,9 +5,10 @@
  * @module projectUnitGraph
  */
 
-import { GraphBase } from '../../lib/d3js/d3-graph-base.js';
-import { ForceLayoutManager } from '../../lib/d3js/d3-force-layout.js';
-import { NodeInteractionHandler, createStaticDragBehavior } from '../../lib/d3js/d3-node-interaction.js';
+
+import { GraphBase } from '../../../MoLibrary.UI/js/d3js/d3-graph-base.js';
+import { ForceLayoutManager } from '../../../MoLibrary.UI/js/d3js/d3-force-layout.js';
+import { NodeInteractionHandler, createStaticDragBehavior } from '../../../MoLibrary.UI/js/d3js/d3-node-interaction.js';
 
 // ==================== 配置 ====================
 
