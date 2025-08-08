@@ -127,7 +127,7 @@
                     <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
                 </MudOverlay>
             }
-            <div id="project-unit-graph" style="width: 100%; height: 100%;"></div>
+            <div id="project-unit-graph" style="width: 100%; height: 100%;" @onclick="OnBackgroundClick" @oncontextmenu:preventDefault="true"></div>
         </MudPaper>
 
         <MudPaper Class="mt-4 pa-2" Elevation="0" Outlined="true">
@@ -203,24 +203,32 @@
     </DialogActions>
 </MudDialog>
 
-<MudPopover Open="@_contextMenuOpen" Fixed="true" AnchorOrigin="Origin.TopLeft" TransformOrigin="Origin.TopLeft"
-            Style="@($"left: {_contextMenuX}px; top: {_contextMenuY}px;")" Class="pa-0">
-    <MudList T="string" Dense="true" Clickable="true">
-        <MudListItem T="string" Icon="@Icons.Material.Filled.Info" OnClick="ShowContextDetails">
-            查看详情
-        </MudListItem>
-        <MudListItem T="string" Icon="@Icons.Material.Filled.CenterFocusStrong" OnClick="FocusOnNode">
-            聚焦此节点
-        </MudListItem>
-        <MudListItem T="string" Icon="@Icons.Material.Filled.FilterAlt" OnClick="FilterByType">
-            筛选同类型
-        </MudListItem>
-        <MudDivider />
-        <MudListItem T="string" Icon="@Icons.Material.Filled.ContentCopy" OnClick="CopyFullName">
-            复制完整名称
-        </MudListItem>
-    </MudList>
-</MudPopover>
+@* 右键菜单 - 使用固定定位在页面上 *@
+@if (_contextMenuOpen)
+{
+    @* 透明覆盖层，用于捕获点击事件来关闭菜单 *@
+    <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999;" @onclick="CloseContextMenu"></div>
+    
+    <div style="position: fixed; left: @(_contextMenuX)px; top: @(_contextMenuY)px; z-index: 10000;" @onclick:stopPropagation="true">
+        <MudPaper Elevation="8" Class="pa-0">
+            <MudList T="string" Dense="true" Clickable="true">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Info" OnClick="ShowContextDetails">
+                    查看详情
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.CenterFocusStrong" OnClick="FocusOnNode">
+                    聚焦此节点
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.FilterAlt" OnClick="FilterByType">
+                    筛选同类型
+                </MudListItem>
+                <MudDivider />
+                <MudListItem T="string" Icon="@Icons.Material.Filled.ContentCopy" OnClick="CopyFullName">
+                    复制完整名称
+                </MudListItem>
+            </MudList>
+        </MudPaper>
+    </div>
+}
 
 @code {
     private IJSObjectReference? _jsModule;
@@ -451,8 +459,17 @@
         }
     }
     
+    private void OnBackgroundClick()
+    {
+        if (_contextMenuOpen)
+        {
+            _contextMenuOpen = false;
+            StateHasChanged();
+        }
+    }
+    
     [JSInvokable]
-    public void OnBackgroundClick()
+    public void OnSvgBackgroundClick()
     {
         if (_contextMenuOpen)
         {
@@ -461,6 +478,11 @@
         }
     }
 
+    private void CloseContextMenu()
+    {
+        _contextMenuOpen = false;
+    }
+    
     private void ShowContextDetails()
     {
         _selectedUnit = _contextMenuUnit;

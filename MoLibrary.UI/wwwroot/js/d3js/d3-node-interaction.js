@@ -172,11 +172,16 @@ export class NodeInteractionHandler {
                     pt.y = d.y || 0;
                     const screenPt = pt.matrixTransform(matrix);
                     
+                    // 使用原生事件对象或D3事件对象
+                    const nativeEvent = event.sourceEvent || event;
+                    
                     self.onRightClick.call(this, event, d, {
                         x: screenPt.x,
                         y: screenPt.y,
-                        pageX: event.pageX,
-                        pageY: event.pageY
+                        pageX: nativeEvent.pageX,
+                        pageY: nativeEvent.pageY,
+                        clientX: nativeEvent.clientX,
+                        clientY: nativeEvent.clientY
                     });
                 }
             })

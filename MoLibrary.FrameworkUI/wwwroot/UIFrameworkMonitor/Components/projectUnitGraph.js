@@ -538,8 +538,11 @@ class ProjectUnitGraph {
      */
     handleNodeRightClick(nodeData, position) {
         if (this.dotNetRef) {
-            this.dotNetRef.invokeMethodAsync('OnNodeRightClick', 
-                nodeData.id, position.pageX, position.pageY);
+            // 优先使用 clientX/clientY（相对于视口），如果不存在则使用 pageX/pageY
+            const x = position.clientX !== undefined ? position.clientX : position.pageX;
+            const y = position.clientY !== undefined ? position.clientY : position.pageY;
+            
+            this.dotNetRef.invokeMethodAsync('OnNodeRightClick', nodeData.id, x, y);
         }
     }
     
@@ -560,7 +563,7 @@ class ProjectUnitGraph {
     handleBackgroundClick() {
         // 关闭右键菜单
         if (this.dotNetRef) {
-            this.dotNetRef.invokeMethodAsync('OnBackgroundClick');
+            this.dotNetRef.invokeMethodAsync('OnSvgBackgroundClick');
         }
     }
     
