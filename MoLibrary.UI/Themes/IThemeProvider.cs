@@ -27,4 +27,14 @@ public interface IThemeProvider
     /// </summary>
     /// <returns>配置好的MudTheme实例</returns>
     MudTheme CreateTheme();
+    
+    /// <summary>
+    /// 获取明亮模式下的代码块主题
+    /// </summary>
+    CodeBlockTheme LightCodeBlockTheme { get; }
+    
+    /// <summary>
+    /// 获取暗黑模式下的代码块主题
+    /// </summary>
+    CodeBlockTheme DarkCodeBlockTheme { get; }
 }

@@ -1,4 +1,8 @@
 @using System.Reflection
+@using Microsoft.Extensions.Options
+@using MoLibrary.UI.Modules
+@inject IOptions<ModuleUICoreOption> Options
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -6,9 +10,14 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />  
-    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
+    @* <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" /> *@
     @* <link href=@Assets["_content/MudBlazor/MudBlazor.min.css"] rel="stylesheet" /> *@
     <link href="_content/MudBlazor/MudBlazor.min.css?v=@(Metadata.Version)" rel="stylesheet" />
+
+    @if(Options.Value.EnableMarkdown)
+    {
+        <link href="_content/MudBlazor.Markdown/MudBlazor.Markdown.min.css" rel="stylesheet" />
+    }
     
     <!-- MoLibrary 主题 CSS -->
     <link href="_content/MoLibrary.UI/css/mo-theme-main.css" rel="stylesheet" />
@@ -25,6 +34,10 @@
     <script src="_framework/blazor.web.js"></script>
     @* <script src=@Assets["_content/MudBlazor/MudBlazor.min.js"]></script> *@
     <script src="_content/MudBlazor/MudBlazor.min.js?v=@Metadata.Version"></script>
+    @if(Options.Value.EnableMarkdown)
+    {
+        <script src="_content/MudBlazor.Markdown/MudBlazor.Markdown.min.js"></script>
+    }
 </body>
 
 </html>

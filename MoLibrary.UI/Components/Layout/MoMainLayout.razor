@@ -1,9 +1,7 @@
 @using Microsoft.Extensions.Options
 @using MoLibrary.UI.Modules
-@using MoLibrary.UI.UICore
 @using MoLibrary.UI.UICore.Interfaces
 @using MoLibrary.UI.Services
-@using MoLibrary.UI.Components.Layout
 @inherits LayoutComponentBase
 @inject IUIComponentRegistry UIRegistry
 @inject IOptions<ModuleUICoreOption> Options
@@ -14,7 +12,6 @@
     <MudPopoverProvider />
     <MudDialogProvider />
     <MudSnackbarProvider />
-    
     <div class="mo-main-container @GetMainContainerClass()">
         <!-- 左侧固定导航栏卡片 -->
         <div class="mo-sidebar-container">
@@ -45,12 +42,17 @@
     protected override void OnInitialized()
     {
         base.OnInitialized();
-        ThemeService.OnThemeChanged += StateHasChanged;
+        ThemeService.OnThemeChanged += HandleThemeChanged;
     }
 
     public void Dispose()
     {
-        ThemeService.OnThemeChanged -= StateHasChanged;
+        ThemeService.OnThemeChanged -= HandleThemeChanged;
+    }
+
+    private void HandleThemeChanged()
+    {
+        InvokeAsync(StateHasChanged);
     }
 
     private string GetMainContainerClass()

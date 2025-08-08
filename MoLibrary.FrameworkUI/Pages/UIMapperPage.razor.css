@@ -1,0 +1,24 @@
+.font-monospace {
+    font-family: 'Cascadia Code', 'Consolas', 'Courier New', monospace;
+    font-size: 0.875rem;
+}
+
+
+::deep .mud-table {
+    overflow-x: auto;
+}
+
+::deep .mud-table-cell {
+    vertical-align: middle;
+}
+
+::deep .mud-markdown pre {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+::deep .mud-markdown code {
+    background-color: var(--mud-palette-background-grey);
+    border-radius: 4px;
+    padding: 16px;
+}

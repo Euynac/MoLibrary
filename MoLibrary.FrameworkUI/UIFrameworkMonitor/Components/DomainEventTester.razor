@@ -1,0 +1,214 @@
+@using MoLibrary.Framework.Services
+@using MoLibrary.Framework.Core.Model
+@using MoLibrary.Tool.MoResponse
+@using MoLibrary.Core.GlobalJson.Interfaces
+@using System.Text.Json
+@using MoLibrary.Core.GlobalJson
+@inject IFrameworkMonitorService FrameworkMonitorService
+
+@inject IGlobalJsonOption JsonOption
+@inject ISnackbar Snackbar
+
+<MudCard>
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">领域事件测试</MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            <MudButton Variant="Variant.Filled" 
+                      Color="Color.Primary" 
+                      OnClick="LoadDomainEventsAsync"
+                      StartIcon="@Icons.Material.Filled.Refresh"
+                      Disabled="@_loading">
+                刷新事件列表
+            </MudButton>
+        </CardHeaderActions>
+    </MudCardHeader>
+    <MudCardContent>
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudPaper Class="pa-4" Elevation="1">
+                    <MudText Typo="Typo.h6" Class="mb-3">事件列表</MudText>
+                    @if (_loading)
+                    {
+                        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
+                    }
+                    else if (_domainEvents.Any())
+                    {
+                        <MudList T="string" Clickable="true">
+                            @foreach (var eventItem in _domainEvents)
+                            {
+                                <MudListItem T="string" OnClick="@(() => SelectEvent(eventItem))">
+                                    <div style="width: 100%;">
+                                        <MudText Typo="Typo.subtitle1">@eventItem.Info.Title</MudText>
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">@eventItem.Info.Key</MudText>
+                                    </div>
+                                </MudListItem>
+                                <MudDivider />
+                            }
+                        </MudList>
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Info">
+                            暂无领域事件数据，请点击刷新按钮加载数据。
+                        </MudAlert>
+                    }
+                </MudPaper>
+            </MudItem>
+            
+            <MudItem xs="12" md="6">
+                <MudPaper Class="pa-4" Elevation="1">
+                    <MudText Typo="Typo.h6" Class="mb-3">事件测试</MudText>
+                    @if (_selectedEvent != null)
+                    {
+                        <MudStack Spacing="3">
+                            <MudTextField @bind-Value="_selectedEvent.Info.Title" 
+                                         Label="事件名称" 
+                                         Variant="Variant.Outlined"
+                                         ReadOnly="true" />
+                            
+                            <MudTextField @bind-Value="_eventContent" 
+                                         Label="事件内容 (JSON)" 
+                                         Variant="Variant.Outlined"
+                                         Lines="@GetJsonLines()"
+                                         AutoGrow="true"
+                                         MaxLines="30"
+                                         Placeholder="请输入事件的JSON数据..." />
+                            
+                            <MudButton Variant="Variant.Filled" 
+                                      Color="Color.Primary" 
+                                      OnClick="PublishEventAsync"
+                                      StartIcon="@Icons.Material.Filled.Send"
+                                      Disabled="@_publishing"
+                                      FullWidth="true">
+                                @if (_publishing)
+                                {
+                                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                    <MudText Class="ms-2">发布中...</MudText>
+                                }
+                                else
+                                {
+                                    <MudText>发布事件</MudText>
+                                }
+                            </MudButton>
+                        </MudStack>
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Info">
+                            请先从左侧列表选择要测试的领域事件。
+                        </MudAlert>
+                    }
+                </MudPaper>
+            </MudItem>	
+        </MudGrid>
+    </MudCardContent>
+</MudCard>
+
+
+@code {
+    private List<DtoDomainEventInfo> _domainEvents = [];
+    private bool _loading = false;
+    private bool _publishing = false;
+    private DtoDomainEventInfo? _selectedEvent;
+    private string _eventContent = string.Empty;
+    private bool _structureDialogVisible = false;
+    private string? _selectedEventStructure;
+
+    private readonly DialogOptions _dialogOptions = new()
+    {
+        MaxWidth = MaxWidth.Medium,
+        FullWidth = true
+    };
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadDomainEventsAsync();
+        }
+    }
+
+    private async Task LoadDomainEventsAsync()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await FrameworkMonitorService.GetDomainEventsAsync();
+            if (result.IsFailed(out var error, out var data))
+            {
+                Snackbar.Add($"加载失败: {error}", Severity.Error);
+                return;
+            }
+
+            _domainEvents = data ?? [];
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"加载异常: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void SelectEvent(DtoDomainEventInfo eventInfo)
+    {
+        _selectedEvent = eventInfo;
+        _eventContent = JsonSerializer.Serialize(eventInfo.Structure, JsonOption.GlobalOptions.Clone(o => o.WriteIndented = true)) ?? "{}";
+    }
+
+    private async Task PublishEventAsync()
+    {
+        if (_selectedEvent == null || string.IsNullOrWhiteSpace(_eventContent))
+        {
+            Snackbar.Add("请选择事件并填入事件内容", Severity.Warning);
+            return;
+        }
+
+        _publishing = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await FrameworkMonitorService.PublishDomainEventAsync(_selectedEvent.Info.Title, _eventContent);
+            if (result.IsFailed(out var error))
+            {
+                Snackbar.Add($"发布失败: {error}", Severity.Error);
+                return;
+            }
+
+            Snackbar.Add("发布成功", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"发布异常: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _publishing = false;
+            StateHasChanged();
+        }
+    }
+
+    private void CloseStructureDialog()
+    {
+        _structureDialogVisible = false;
+        _selectedEventStructure = null;
+    }
+
+    private int GetJsonLines()
+    {
+        if (string.IsNullOrEmpty(_eventContent))
+            return 5;
+            
+        var lines = _eventContent.Split('\n').Length;
+        return Math.Max(5, Math.Min(lines + 2, 30));
+    }
+
+}

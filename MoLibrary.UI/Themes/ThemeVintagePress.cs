@@ -5,13 +5,16 @@ namespace MoLibrary.UI.Themes;
 /// <summary>
 /// 复古印刷主题 - 怀旧报纸风格
 /// </summary>
-public class ThemeVintagePress : IThemeProvider
+public class ThemeVintagePress : ThemeBase
 {
-    public string Name => "vintage-press";
-    public string DisplayName => "复古印刷";
-    public string Description => "怀旧报纸风格。米黄色背景，深褐色文字，使用打字机字体和网格布局。配合做旧纹理和墨水污渍效果。适合阅读、写作类应用。";
+    public override string Name => "vintage-press";
+    public override string DisplayName => "复古印刷";
+    public override string Description => "怀旧报纸风格。米黄色背景，深褐色文字，使用打字机字体和网格布局。配合做旧纹理和墨水污渍效果。适合阅读、写作类应用。";
+    
+    public override CodeBlockTheme LightCodeBlockTheme => CodeBlockTheme.Default;
+    public override CodeBlockTheme DarkCodeBlockTheme => CodeBlockTheme.Monokai;
 
-    public MudTheme CreateTheme()
+    public override MudTheme CreateTheme()
     {
         return new MudTheme()
         {

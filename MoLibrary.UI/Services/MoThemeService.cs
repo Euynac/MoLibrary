@@ -1,16 +1,19 @@
 using MudBlazor;
 using MoLibrary.UI.Themes;
+using Microsoft.Extensions.Options;
+using MoLibrary.UI.Modules;
 
 namespace MoLibrary.UI.Services;
 
 /// <summary>
 /// MoLibrary主题服务 - 管理主题切换和自定义样式
 /// </summary>
-public class MoThemeService
+public class MoThemeService(IOptionsSnapshot<ModuleUICoreOption> options)
 {
     private bool _isDarkMode = false;
-    private MudTheme _currentTheme;
+    private MudTheme _currentTheme = new();
     private string _currentThemeName = "default";
+    private readonly ModuleUICoreOption _options = options.Value;
 
     public event Action? OnThemeChanged;
 
@@ -43,7 +46,10 @@ public class MoThemeService
         }
     }
 
-    public MoThemeService()
+    /// <summary>
+    /// 初始化主题服务
+    /// </summary>
+    public void Initialize()
     {
         _currentTheme = ThemeRegistry.GetTheme("default").CreateTheme();
     }
@@ -88,4 +94,5 @@ public class MoThemeService
         var mode = IsDarkMode ? "dark" : "light";
         return $"{_currentThemeName}-{mode}";
     }
+    
 }
