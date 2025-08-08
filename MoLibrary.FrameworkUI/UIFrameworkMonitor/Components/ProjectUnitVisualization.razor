@@ -25,6 +25,11 @@
                                OnClick="ResetView"
                                Disabled="@_loading" />
             </MudTooltip>
+            <MudTooltip Text="布局设置">
+                <MudIconButton Icon="@Icons.Material.Filled.Dashboard"
+                               Color="Color.Info"
+                               OnClick="ToggleLayoutPanel" />
+            </MudTooltip>
             <MudTooltip Text="筛选设置">
                 <MudIconButton Icon="@Icons.Material.Filled.FilterAlt"
                                Color="Color.Tertiary"
@@ -33,6 +38,48 @@
         </CardHeaderActions>
     </MudCardHeader>
     <MudCardContent>
+        @if (_showLayoutPanel)
+        {
+            <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+                <MudGrid>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">布局类型</MudText>
+                        <MudButtonGroup Color="Color.Primary" Variant="Variant.Outlined">
+                            <MudButton OnClick="@(() => SetLayout(LayoutType.Force))" 
+                                       Variant="@(_currentLayout == LayoutType.Force ? Variant.Filled : Variant.Outlined)">
+                                力导向
+                            </MudButton>
+                            <MudButton OnClick="@(() => SetLayout(LayoutType.Hierarchy))" 
+                                       Variant="@(_currentLayout == LayoutType.Hierarchy ? Variant.Filled : Variant.Outlined)">
+                                层次
+                            </MudButton>
+                            <MudButton OnClick="@(() => SetLayout(LayoutType.Circular))" 
+                                       Variant="@(_currentLayout == LayoutType.Circular ? Variant.Filled : Variant.Outlined)">
+                                环形
+                            </MudButton>
+                        </MudButtonGroup>
+                    </MudItem>
+                    @if (_currentLayout == LayoutType.Force)
+                    {
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudText Typo="Typo.subtitle2" Class="mb-2">节点间距: @_forceDistance</MudText>
+                            <MudSlider T="int" Value="_forceDistance" 
+                                       Min="50" Max="300" Step="10"
+                                       Color="Color.Primary"
+                                       ValueChanged="OnForceDistanceChanged" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudText Typo="Typo.subtitle2" Class="mb-2">斥力强度: @_forceStrength</MudText>
+                            <MudSlider T="int" Value="_forceStrength" 
+                                       Min="-1000" Max="-100" Step="50"
+                                       Color="Color.Secondary"
+                                       ValueChanged="OnForceStrengthChanged" />
+                        </MudItem>
+                    }
+                </MudGrid>
+            </MudPaper>
+        }
+        
         @if (_showFilterPanel)
         {
             <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
@@ -184,12 +231,23 @@
     private DtoProjectUnit? _selectedUnit;
     private DtoProjectUnit? _contextMenuUnit;
     private bool _showFilterPanel = false;
+    private bool _showLayoutPanel = false;
     private string _filterText = string.Empty;
     private EProjectUnitType? _selectedUnitType;
     private bool _showOnlyWithDependencies = false;
     private bool _contextMenuOpen = false;
     private double _contextMenuX = 0;
     private double _contextMenuY = 0;
+    private LayoutType _currentLayout = LayoutType.Force;
+    private int _forceDistance = 150;
+    private int _forceStrength = -300;
+    
+    private enum LayoutType
+    {
+        Force,
+        Hierarchy,
+        Circular
+    }
 
     private readonly DialogOptions _dialogOptions = new()
     {
@@ -256,6 +314,13 @@
         {
             var graphData = PrepareGraphData();
             await _jsModule.InvokeVoidAsync("updateGraph", graphData);
+            // 应用当前布局设置
+            await SetLayout(_currentLayout);
+            if (_currentLayout == LayoutType.Force)
+            {
+                await _jsModule.InvokeVoidAsync("setForceDistance", _forceDistance);
+                await _jsModule.InvokeVoidAsync("setForceStrength", _forceStrength);
+            }
         }
     }
 
@@ -293,6 +358,47 @@
     private void ToggleFilterPanel()
     {
         _showFilterPanel = !_showFilterPanel;
+        if (_showFilterPanel) _showLayoutPanel = false;
+    }
+    
+    private void ToggleLayoutPanel()
+    {
+        _showLayoutPanel = !_showLayoutPanel;
+        if (_showLayoutPanel) _showFilterPanel = false;
+    }
+    
+    private async Task SetLayout(LayoutType layoutType)
+    {
+        _currentLayout = layoutType;
+        if (_jsModule != null)
+        {
+            var layoutName = layoutType switch
+            {
+                LayoutType.Force => "force",
+                LayoutType.Hierarchy => "hierarchy",
+                LayoutType.Circular => "circular",
+                _ => "force"
+            };
+            await _jsModule.InvokeVoidAsync("setLayout", layoutName);
+        }
+    }
+    
+    private async Task OnForceDistanceChanged(int value)
+    {
+        _forceDistance = value;
+        if (_jsModule != null)
+        {
+            await _jsModule.InvokeVoidAsync("setForceDistance", value);
+        }
+    }
+    
+    private async Task OnForceStrengthChanged(int value)
+    {
+        _forceStrength = value;
+        if (_jsModule != null)
+        {
+            await _jsModule.InvokeVoidAsync("setForceStrength", value);
+        }
     }
 
     private async Task ApplyFilters()
@@ -341,6 +447,16 @@
             _contextMenuX = x;
             _contextMenuY = y;
             _contextMenuOpen = true;
+            StateHasChanged();
+        }
+    }
+    
+    [JSInvokable]
+    public void OnBackgroundClick()
+    {
+        if (_contextMenuOpen)
+        {
+            _contextMenuOpen = false;
             StateHasChanged();
         }
     }
