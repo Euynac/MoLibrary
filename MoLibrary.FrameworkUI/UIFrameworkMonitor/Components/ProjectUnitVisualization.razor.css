@@ -1,0 +1,40 @@
+.visualization-container {
+    border-radius: 4px;
+    background: var(--mud-palette-background);
+}
+
+::deep #project-unit-graph {
+    background: var(--mud-palette-surface);
+    border-radius: 4px;
+}
+
+::deep .node {
+    transition: opacity 0.3s ease;
+}
+
+::deep .node:hover {
+    opacity: 0.8;
+}
+
+::deep .link {
+    transition: stroke-opacity 0.3s ease;
+}
+
+::deep .links {
+    pointer-events: none;
+}
+
+.filter-panel {
+    border-radius: 4px;
+    margin-bottom: 16px;
+}
+
+.legend-chip {
+    margin-right: 8px;
+}
+
+@media (max-width: 600px) {
+    .visualization-container {
+        height: 400px !important;
+    }
+}
