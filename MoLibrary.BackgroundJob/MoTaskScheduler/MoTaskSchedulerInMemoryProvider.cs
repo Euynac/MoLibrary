@@ -19,8 +19,9 @@ public class MoTaskSchedulerInMemoryProvider : IMoTaskScheduler
     public int CurrentRunningCount => _maxConcurrentTasks - _threadPoolSemaphore.CurrentCount;
     /// <summary>
     /// 最大并发任务数
+    /// PS: 修改为CPU逻辑核心数*2=48*2=96
     /// </summary>
-    private readonly int _maxConcurrentTasks = 30;
+    private readonly int _maxConcurrentTasks = 96;
     /// <summary>
     /// 信号量超时时间
     /// </summary>
