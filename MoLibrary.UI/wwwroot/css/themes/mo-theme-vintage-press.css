@@ -1,8 +1,30 @@
 /* MoLibrary Vintage Press Theme - 复古印刷主题 */
 /* 怀旧报纸风格，使用打字机字体和网格布局 */
 
-/* 导入复古字体 */
-@import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Playfair+Display:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+/* 导入复古字体 - 离线模式 */
+/* @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Playfair+Display:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap'); */
+
+/* 本地字体定义 */
+@font-face {
+    font-family: 'Courier Prime';
+    src: url('../../fonts/CourierPrime-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Playfair Display';
+    src: url('../../fonts/PlayfairDisplay-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'IBM Plex Mono';
+    src: url('../../fonts/IBMPlexMono-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-display: swap;
+}
 
 /* Vintage Press Theme CSS Variables - 明暗模式通用 */
 :root[data-theme="vintage-press-light"],
@@ -282,7 +304,7 @@
         font-weight: var(--mo-button-font-weight) !important;
         text-transform: var(--mo-button-text-transform) !important;
         transition: var(--mo-button-transition) !important;
-        font-family: 'Courier Prime', 'Courier New', monospace !important;
+        font-family: 'Courier Prime', 'Courier New', 'Consolas', monospace !important;
         letter-spacing: 0.05em !important;
         position: relative;
         filter: sepia(15%);
@@ -354,7 +376,7 @@
     
     .mud-input-control input,
     .mud-input-control textarea {
-        font-family: 'Courier Prime', 'Courier New', monospace !important;
+        font-family: 'Courier Prime', 'Courier New', 'Consolas', monospace !important;
         letter-spacing: 0.02em !important;
         color: var(--mo-text-typewriter) !important;
     }
@@ -385,7 +407,7 @@
         top: 50%;
         right: 20px;
         transform: translateY(-50%);
-        font-family: 'Courier Prime', 'Courier New', monospace;
+        font-family: 'Courier Prime', 'Courier New', 'Consolas', monospace;
         font-size: 12px;
         font-weight: 700;
         letter-spacing: 0.1em;
@@ -440,7 +462,7 @@
         position: absolute;
         top: 12px;
         right: 12px;
-        font-family: 'Courier Prime', 'Courier New', monospace;
+        font-family: 'Courier Prime', 'Courier New', 'Consolas', monospace;
         font-size: 10px;
         font-weight: 700;
         letter-spacing: 0.1em;
@@ -486,7 +508,7 @@
         font-weight: 700 !important;
         color: var(--mo-vintage-cream) !important;
         text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.3);
-        font-family: 'Courier Prime', 'Courier New', monospace !important;
+        font-family: 'Courier Prime', 'Courier New', 'Consolas', monospace !important;
         letter-spacing: 0.05em !important;
         text-transform: uppercase !important;
         position: relative;
@@ -522,7 +544,7 @@
         height: var(--mo-chip-height) !important;
         transition: var(--mo-animation-vintage) !important;
         box-shadow: var(--mo-letterpress) !important;
-        font-family: 'Courier Prime', 'Courier New', monospace !important;
+        font-family: 'Courier Prime', 'Courier New', 'Consolas', monospace !important;
         font-weight: 600 !important;
         text-transform: uppercase !important;
         letter-spacing: 0.05em !important;
@@ -544,7 +566,7 @@
     .mud-typography-h4,
     .mud-typography-h5,
     .mud-typography-h6 {
-        font-family: 'Playfair Display', 'Times New Roman', Georgia, serif !important;
+        font-family: 'Playfair Display', 'Times New Roman', Georgia, 'Microsoft YaHei', serif !important;
         font-weight: 700 !important;
         color: var(--mo-text-typewriter) !important;
         position: relative;
@@ -592,7 +614,7 @@
         border: 2px solid var(--mo-border-ink) !important;
         border-radius: var(--mo-button-border-radius) !important;
         box-shadow: var(--mo-shadow-vintage), var(--mo-letterpress) !important;
-        font-family: 'Courier Prime', 'Courier New', monospace !important;
+        font-family: 'Courier Prime', 'Courier New', 'Consolas', monospace !important;
         color: var(--mo-vintage-cream) !important;
         text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.3);
         font-weight: 600;
@@ -605,7 +627,7 @@
         border: 2px solid var(--mo-border-print) !important;
         border-radius: var(--mo-button-border-radius) !important;
         box-shadow: var(--mo-shadow-vintage-hover), var(--mo-print-shadow) !important;
-        font-family: 'Courier Prime', 'Courier New', monospace !important;
+        font-family: 'Courier Prime', 'Courier New', 'Consolas', monospace !important;
         color: var(--mo-vintage-cream) !important;
         text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.3);
         animation: mo-vintage-fade 0.4s ease-out;
@@ -633,7 +655,7 @@
     .mud-tab {
         border-radius: var(--mo-button-border-radius) var(--mo-button-border-radius) 0 0 !important;
         transition: var(--mo-animation-vintage) !important;
-        font-family: 'Courier Prime', 'Courier New', monospace !important;
+        font-family: 'Courier Prime', 'Courier New', 'Consolas', monospace !important;
         font-weight: 600 !important;
         text-transform: uppercase !important;
         letter-spacing: 0.05em !important;
@@ -716,12 +738,12 @@
     }
     
     .mo-typewriter {
-        font-family: 'Courier Prime', 'Courier New', monospace !important;
+        font-family: 'Courier Prime', 'Courier New', 'Consolas', monospace !important;
         letter-spacing: 0.05em !important;
     }
     
     .mo-serif {
-        font-family: 'Playfair Display', 'Times New Roman', Georgia, serif !important;
+        font-family: 'Playfair Display', 'Times New Roman', Georgia, 'Microsoft YaHei', serif !important;
     }
     
     .mo-vintage-fade {

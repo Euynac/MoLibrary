@@ -1,8 +1,23 @@
 /* MoLibrary Macaron Sweet Theme - 马卡龙甜心主题 */
 /* 柔和粉彩主题，使用马卡龙色系 */
 
-/* 导入可爱字体 */
-@import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@300;400;500;600;700&family=Nunito:wght@300;400;500;600;700&display=swap');
+/* 导入可爱字体 - 离线模式 */
+/* @import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@300;400;500;600;700&family=Nunito:wght@300;400;500;600;700&display=swap'); */
+
+/* 本地字体定义 */
+@font-face {
+    font-family: 'Comfortaa';
+    src: url('../../fonts/Comfortaa-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Nunito';
+    src: url('../../fonts/Nunito-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-display: swap;
+}
 
 /* Macaron Sweet Theme CSS Variables - 明暗模式通用 */
 :root[data-theme="macaron-sweet-light"],
@@ -244,7 +259,7 @@
 .mo-theme-macaron-sweet-light,
 .mo-theme-macaron-sweet-dark {
     /* Global Typography */
-    font-family: 'Comfortaa', 'Nunito', Arial, sans-serif !important;
+    font-family: 'Comfortaa', 'Nunito', Arial, 'Microsoft YaHei', sans-serif !important;
     
     /* Cards - 马卡龙卡片 */
     .mud-card {
@@ -305,7 +320,7 @@
         font-weight: var(--mo-button-font-weight) !important;
         text-transform: var(--mo-button-text-transform) !important;
         transition: var(--mo-button-transition) !important;
-        font-family: 'Comfortaa', 'Nunito', Arial, sans-serif !important;
+        font-family: 'Comfortaa', 'Nunito', Arial, 'Microsoft YaHei', sans-serif !important;
         position: relative;
         overflow: hidden;
     }
@@ -418,7 +433,7 @@
     
     .mud-input-control input,
     .mud-input-control textarea {
-        font-family: 'Comfortaa', 'Nunito', Arial, sans-serif !important;
+        font-family: 'Comfortaa', 'Nunito', Arial, 'Microsoft YaHei', sans-serif !important;
     }
     
     /* AppBar - 马卡龙导航栏 */
@@ -502,7 +517,7 @@
     
     .mud-dialog-content {
         padding: var(--mo-dialog-padding) !important;
-        font-family: 'Comfortaa', 'Nunito', Arial, sans-serif !important;
+        font-family: 'Comfortaa', 'Nunito', Arial, 'Microsoft YaHei', sans-serif !important;
     }
     
     /* Tables - 马卡龙表格 */
@@ -512,7 +527,7 @@
         box-shadow: var(--mo-shadow-sweet) !important;
         border: 2px solid var(--mo-border-sweet) !important;
         overflow: hidden;
-        font-family: 'Comfortaa', 'Nunito', Arial, sans-serif !important;
+        font-family: 'Comfortaa', 'Nunito', Arial, 'Microsoft YaHei', sans-serif !important;
     }
     
     .mud-table-head .mud-table-row {
@@ -560,7 +575,7 @@
         height: var(--mo-chip-height) !important;
         transition: var(--mo-animation-bounce) !important;
         box-shadow: var(--mo-shadow-sweet) !important;
-        font-family: 'Comfortaa', 'Nunito', Arial, sans-serif !important;
+        font-family: 'Comfortaa', 'Nunito', Arial, 'Microsoft YaHei', sans-serif !important;
         position: relative;
         overflow: hidden;
         color: white !important;
@@ -599,7 +614,7 @@
     .mud-typography-h4,
     .mud-typography-h5,
     .mud-typography-h6 {
-        font-family: 'Comfortaa', 'Nunito', Arial, sans-serif !important;
+        font-family: 'Comfortaa', 'Nunito', Arial, 'Microsoft YaHei', sans-serif !important;
         font-weight: 500 !important;
         color: var(--mo-text-candy) !important;
         position: relative;
@@ -623,7 +638,7 @@
         border: 2px solid var(--mo-border-candy) !important;
         border-radius: var(--mo-card-border-radius) !important;
         box-shadow: var(--mo-shadow-sweet-hover), var(--mo-glow-sweet) !important;
-        font-family: 'Comfortaa', 'Nunito', Arial, sans-serif !important;
+        font-family: 'Comfortaa', 'Nunito', Arial, 'Microsoft YaHei', sans-serif !important;
         animation: mo-bounce 0.4s ease-out;
     }
     
@@ -633,7 +648,7 @@
         border: 2px solid var(--mo-border-sweet) !important;
         border-radius: var(--mo-button-border-radius) !important;
         box-shadow: var(--mo-shadow-sweet), var(--mo-glow-pink) !important;
-        font-family: 'Comfortaa', 'Nunito', Arial, sans-serif !important;
+        font-family: 'Comfortaa', 'Nunito', Arial, 'Microsoft YaHei', sans-serif !important;
         color: white !important;
         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     }
@@ -644,7 +659,7 @@
         border: 2px solid var(--mo-border-candy) !important;
         border-radius: var(--mo-button-border-radius) !important;
         box-shadow: var(--mo-shadow-sweet-hover), var(--mo-glow-sweet) !important;
-        font-family: 'Comfortaa', 'Nunito', Arial, sans-serif !important;
+        font-family: 'Comfortaa', 'Nunito', Arial, 'Microsoft YaHei', sans-serif !important;
         color: white !important;
         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
         animation: mo-bounce 0.6s ease-out;
@@ -671,7 +686,7 @@
     .mud-tab {
         border-radius: var(--mo-button-border-radius) !important;
         transition: var(--mo-animation-bounce) !important;
-        font-family: 'Comfortaa', 'Nunito', Arial, sans-serif !important;
+        font-family: 'Comfortaa', 'Nunito', Arial, 'Microsoft YaHei', sans-serif !important;
         position: relative;
         margin: 4px 2px;
     }
@@ -698,7 +713,7 @@
         border-radius: var(--mo-button-border-radius) !important;
         margin: var(--mo-spacing-xs) var(--mo-spacing-sm) !important;
         transition: var(--mo-animation-bounce) !important;
-        font-family: 'Comfortaa', 'Nunito', Arial, sans-serif !important;
+        font-family: 'Comfortaa', 'Nunito', Arial, 'Microsoft YaHei', sans-serif !important;
         position: relative;
         overflow: hidden;
     }

@@ -5,13 +5,16 @@ namespace MoLibrary.UI.Themes;
 /// <summary>
 /// 墨韵山水主题 - 中国水墨画风格主题
 /// </summary>
-public class ThemeInkLandscape : IThemeProvider
+public class ThemeInkLandscape : ThemeBase
 {
-    public string Name => "ink-landscape";
-    public string DisplayName => "墨韵山水";
-    public string Description => "中国水墨画风格主题。以黑白灰为主调，点缀淡雅的青绿或赭石色。使用留白设计，配合毛笔笔触效果的分割线和按钮。适合文化类、阅读类应用。";
+    public override string Name => "ink-landscape";
+    public override string DisplayName => "墨韵山水";
+    public override string Description => "中国水墨画风格主题。以黑白灰为主调，点缀淡雅的青绿或赭石色。使用留白设计，配合毛笔笔触效果的分割线和按钮。适合文化类、阅读类应用。";
+    
+    public override CodeBlockTheme LightCodeBlockTheme => CodeBlockTheme.Ascetic;
+    public override CodeBlockTheme DarkCodeBlockTheme => CodeBlockTheme.AtomOneDark;
 
-    public MudTheme CreateTheme()
+    public override MudTheme CreateTheme()
     {
         return new MudTheme()
         {

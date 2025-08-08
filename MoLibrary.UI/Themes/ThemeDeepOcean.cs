@@ -5,13 +5,16 @@ namespace MoLibrary.UI.Themes;
 /// <summary>
 /// 深海静谧主题 - 深海主题
 /// </summary>
-public class ThemeDeepOcean : IThemeProvider
+public class ThemeDeepOcean : ThemeBase
 {
-    public string Name => "deep-ocean";
-    public string DisplayName => "深海静谧";
-    public string Description => "深海主题。深蓝到墨绿的渐变背景，配合水波纹动画效果。使用生物发光元素作为强调色，营造神秘宁静的氛围。适合冥想、睡眠类应用。";
+    public override string Name => "deep-ocean";
+    public override string DisplayName => "深海静谧";
+    public override string Description => "深海主题。深蓝到墨绿的渐变背景，配合水波纹动画效果。使用生物发光元素作为强调色，营造神秘宁静的氛围。适合冥想、睡眠类应用。";
+    
+    public override CodeBlockTheme LightCodeBlockTheme => CodeBlockTheme.MonokaiSublime;
+    public override CodeBlockTheme DarkCodeBlockTheme => CodeBlockTheme.Monokai;
 
-    public MudTheme CreateTheme()
+    public override MudTheme CreateTheme()
     {
         return new MudTheme()
         {

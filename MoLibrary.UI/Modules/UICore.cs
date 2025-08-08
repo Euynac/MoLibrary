@@ -80,6 +80,10 @@ public class ModuleUICore(ModuleUICoreOption option)
 
         // 添加MudBlazor服务
         services.AddMudServices();
+        if(Option.EnableMarkdown)
+        {
+            services.AddMudMarkdownServices();   
+        }
 
         // 添加Razor组件和交互式服务器组件服务
         services.AddRazorComponents()
@@ -167,6 +171,10 @@ public class ModuleUICoreGuide : MoModuleGuide<ModuleUICore, ModuleUICoreOption,
                 registry.RegisterComponent<ModuleSystemDashboard>(ModuleSystemDashboard.MODULE_SYSTEM_DASHBOARD_URL, "模块系统概览", Icons.Material.Filled.Dashboard, "模块系统", true);
             }
 
+            // 初始化主题服务
+            var themeService = builder.ApplicationBuilder.ApplicationServices.GetRequiredService<MoThemeService>();
+            themeService.Initialize();
+
             builder.WebApplication.MapRazorComponents<MoApp>()
                 .AddInteractiveServerRenderMode().AddAdditionalAssemblies(registry.GetAdditionalAssemblies());
             //巨坑：如果缺少中间件中的AddAdditionalAssemblies，那么通过F5刷新将会导致404。但通过Router中访问却不会404。
@@ -195,5 +203,10 @@ public class ModuleUICoreOption : MoModuleOption<ModuleUICore>
     /// 开启Debug模式
     /// </summary>
     public bool EnableDebug { get; set; }
+
+    /// <summary>
+    /// 启用Markdown支持
+    /// </summary>
+    public bool EnableMarkdown { get; set; }
 
 }

@@ -69,5 +69,7 @@ public enum EMoModules
     TimekeeperUI,
     DataChannelUI,
     ConfigurationUI,
-    RegisterCentreUI
+MapperUI,
+    RegisterCentreUI,
+    FrameworkMonitorUI
 }

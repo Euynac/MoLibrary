@@ -6,13 +6,16 @@ namespace MoLibrary.UI.Themes;
 /// 小清新主题：清爽、简洁、柔和的色彩搭配
 /// 灵感来源于春天的自然色彩和现代简约设计
 /// </summary>
-public class ThemeFresh : IThemeProvider
+public class ThemeFresh : ThemeBase
 {
-    public string Name => "fresh";
-    public string DisplayName => "小清新";
-    public string Description => "清爽柔和的主题，给人以舒适宁静的感觉";
+    public override string Name => "fresh";
+    public override string DisplayName => "小清新";
+    public override string Description => "清爽柔和的主题，给人以舒适宁静的感觉";
+    
+    public override CodeBlockTheme LightCodeBlockTheme => CodeBlockTheme.Googlecode;
+    public override CodeBlockTheme DarkCodeBlockTheme => CodeBlockTheme.AtomOneDark;
 
-    public MudTheme CreateTheme()
+    public override MudTheme CreateTheme()
     {
         return new MudTheme()
         {

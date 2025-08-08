@@ -1,0 +1,182 @@
+@using MoLibrary.Framework.Services
+@using MoLibrary.Framework.Core.Model
+@using MoLibrary.Tool.MoResponse
+@inject IFrameworkMonitorService FrameworkMonitorService
+@inject ISnackbar Snackbar
+
+<MudCard>
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">枚举信息查看器</MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            <MudButton Variant="Variant.Filled" 
+                      Color="Color.Primary" 
+                      OnClick="LoadAllEnumsAsync"
+                      StartIcon="@Icons.Material.Filled.Refresh"
+                      Disabled="@_loading">
+                刷新
+            </MudButton>
+        </CardHeaderActions>
+    </MudCardHeader>
+    <MudCardContent>
+        <MudGrid>
+            <MudItem xs="12" md="4">
+                <MudPaper Class="pa-4" Elevation="1">
+                    <MudText Typo="Typo.h6" Class="mb-3">程序集</MudText>
+                    @if (_loading)
+                    {
+                        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
+                    }
+                    else if (_enumGroups.Any())
+                    {
+                        <MudList T="string" Clickable="true">
+                            @foreach (var group in _enumGroups)
+                            {
+                                <MudListItem T="string" OnClick="@(() => SelectAssembly(group))">
+                                    <div style="width: 100%;">
+                                        <MudText Typo="Typo.subtitle2">@GetShortAssemblyName(group.From)</MudText>
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">@group.Enums.Count 个枚举</MudText>
+                                    </div>
+                                </MudListItem>
+                                <MudDivider />
+                            }
+                        </MudList>
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Info">
+                            暂无枚举数据，请点击刷新按钮加载数据。
+                        </MudAlert>
+                    }
+                </MudPaper>
+            </MudItem>
+            
+            <MudItem xs="12" md="4">
+                <MudPaper Class="pa-4" Elevation="1">
+                    <MudText Typo="Typo.h6" Class="mb-3">枚举列表</MudText>
+                    @if (_selectedAssembly != null)
+                    {
+                        <MudList T="string" Clickable="true">
+                            @foreach (var enumInfo in _selectedAssembly.Enums)
+                            {
+                                <MudListItem T="string" OnClick="@(() => SelectEnum(enumInfo))">
+                                    <div style="width: 100%;">
+                                        <MudText Typo="Typo.subtitle2">@enumInfo.Name</MudText>
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">@enumInfo.Values.Count 个值</MudText>
+                                    </div>
+                                </MudListItem>
+                                <MudDivider />
+                            }
+                        </MudList>
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Info">
+                            请先从左侧选择一个程序集。
+                        </MudAlert>
+                    }
+                </MudPaper>
+            </MudItem>
+            
+            <MudItem xs="12" md="4">
+                <MudPaper Class="pa-4" Elevation="1">
+                    <MudText Typo="Typo.h6" Class="mb-3">枚举值</MudText>
+                    @if (_selectedEnum != null)
+                    {
+                        <MudStack Spacing="2">
+                            <MudText Typo="Typo.subtitle1" Class="mb-2">@_selectedEnum.Name</MudText>
+                            @foreach (var value in _selectedEnum.Values)
+                            {
+                                <MudCard Elevation="0" Style="background-color: var(--mud-palette-surface-variant);">
+                                    <MudCardContent Class="pa-2">
+                                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                            <div>
+                                                <MudText Typo="Typo.subtitle2">@value.Name</MudText>
+                                                @if (!string.IsNullOrEmpty(value.Description))
+                                                {
+                                                    <MudText Typo="Typo.body2" Color="Color.Secondary">@value.Description</MudText>
+                                                }
+                                            </div>
+                                            <MudChip T="int" Size="Size.Small" Color="Color.Primary">@value.Index</MudChip>
+                                        </MudStack>
+                                    </MudCardContent>
+                                </MudCard>
+                            }
+                        </MudStack>
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Info">
+                            请先从中间列表选择一个枚举。
+                        </MudAlert>
+                    }
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    private List<DtoAssemblyEnumInfo> _enumGroups = new();
+    private bool _loading = false;
+    private DtoAssemblyEnumInfo? _selectedAssembly;
+    private DtoEnumInfo? _selectedEnum;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadAllEnumsAsync();
+        }
+    }
+
+    private async Task LoadAllEnumsAsync()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await FrameworkMonitorService.GetEnumInfoAsync();
+            if (result.IsFailed(out var error, out var data))
+            {
+                Snackbar.Add($"加载失败: {error}", Severity.Error);
+                return;
+            }
+
+            _enumGroups = data ?? new List<DtoAssemblyEnumInfo>();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"加载异常: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+
+    private void SelectAssembly(DtoAssemblyEnumInfo group)
+    {
+        _selectedAssembly = group;
+        _selectedEnum = null;
+    }
+
+    private void SelectEnum(DtoEnumInfo enumInfo)
+    {
+        _selectedEnum = enumInfo;
+    }
+
+    private string GetShortAssemblyName(string? fullName)
+    {
+        if (string.IsNullOrEmpty(fullName))
+            return "Unknown";
+            
+        var parts = fullName.Split(',');
+        return parts.Length > 0 ? parts[0] : fullName;
+    }
+
+}

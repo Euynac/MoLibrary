@@ -1,11 +1,9 @@
-﻿using System.Net.Sockets;
+using System;
+using System.Net.Sockets;
+using System.Threading;
+using System.Threading.Tasks;
 
-namespace MoLibrary.Framework.Extensions;
-
-public class NetworkExtensions
-{
-    
-}
+namespace MoLibrary.Tool.Web;
 
 public class NetworkHelper
 {
