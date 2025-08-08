@@ -12,9 +12,7 @@
     transition: opacity 0.3s ease;
 }
 
-::deep .node:hover {
-    opacity: 0.8;
-}
+/* 移除hover opacity，由JavaScript控制 */
 
 ::deep .link {
     transition: stroke-opacity 0.3s ease;

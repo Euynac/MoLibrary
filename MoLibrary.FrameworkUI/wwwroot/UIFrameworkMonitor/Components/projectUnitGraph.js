@@ -105,7 +105,8 @@ class ProjectUnitGraph {
             highlightOptions: {
                 fadeOpacity: 0.2,
                 normalOpacity: 1
-            }
+            },
+            isDarkMode: isDarkMode
         });
         
         // 静态布局拖拽行为
@@ -131,15 +132,17 @@ class ProjectUnitGraph {
         const nodeGroup = this.graphBase.mainGroup.append('g')
             .attr('class', 'nodes');
         
-        // 绘制连接线
-        this.linkSelection = linkGroup.selectAll('line')
+        // 绘制连接线 - 使用path而不是line，以便更好地控制箭头偏移
+        this.linkSelection = linkGroup.selectAll('path')
             .data(this.links)
-            .enter().append('line')
+            .enter().append('path')
             .attr('class', 'link')
             .attr('stroke', this.isDarkMode ? '#666' : '#999')
             .attr('stroke-opacity', 0.6)
             .attr('stroke-width', 2)
-            .attr('marker-end', 'url(#arrowhead)');
+            .attr('fill', 'none')  // path需要设置fill为none
+            .attr('marker-end', 'url(#arrowhead)')
+            .style('pointer-events', 'none');  // 防止线条阻挡箭头的交互
         
         // 创建节点
         this.nodeSelection = nodeGroup.selectAll('g')
@@ -198,6 +201,7 @@ class ProjectUnitGraph {
             .attr('fill', color)
             .attr('stroke', this.isDarkMode ? '#fff' : '#333')
             .attr('stroke-width', 2)
+            .attr('opacity', 1)  // 确保初始状态是完全不透明
             .style('cursor', 'pointer');
         
         nodeElement.append('text')
@@ -239,6 +243,7 @@ class ProjectUnitGraph {
             .attr('fill', color)
             .attr('stroke', this.isDarkMode ? '#fff' : '#333')
             .attr('stroke-width', 2)
+            .attr('opacity', 1)  // 确保初始状态是完全不透明
             .style('cursor', 'pointer');
         
         const maxLength = 12;
@@ -294,10 +299,18 @@ class ProjectUnitGraph {
         // 启动模拟
         this.forceManager.start(() => {
             this.linkSelection
-                .attr('x1', d => d.source.x)
-                .attr('y1', d => d.source.y)
-                .attr('x2', d => d.target.x)
-                .attr('y2', d => d.target.y);
+                .attr('d', d => {
+                    // 计算从源到目标的路径，稍微缩短以避免覆盖箭头
+                    const dx = d.target.x - d.source.x;
+                    const dy = d.target.y - d.source.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    const normX = dx / distance;
+                    const normY = dy / distance;
+                    // 缩短路径末端，为箭头留出空间
+                    const endX = d.target.x - normX * 35;
+                    const endY = d.target.y - normY * 35;
+                    return `M${d.source.x},${d.source.y} L${endX},${endY}`;
+                });
             
             this.nodeSelection
                 .attr('transform', d => `translate(${d.x},${d.y})`);
@@ -446,21 +459,25 @@ class ProjectUnitGraph {
         this.linkSelection
             .transition()
             .duration(750)
-            .attr('x1', d => {
+            .attr('d', d => {
                 const source = this.nodes.find(n => n.id === (d.source.id || d.source));
-                return source ? source.x : 0;
-            })
-            .attr('y1', d => {
-                const source = this.nodes.find(n => n.id === (d.source.id || d.source));
-                return source ? source.y : 0;
-            })
-            .attr('x2', d => {
                 const target = this.nodes.find(n => n.id === (d.target.id || d.target));
-                return target ? target.x : 0;
-            })
-            .attr('y2', d => {
-                const target = this.nodes.find(n => n.id === (d.target.id || d.target));
-                return target ? target.y : 0;
+                
+                if (!source || !target) return '';
+                
+                // 计算从源到目标的路径，稍微缩短以避免覆盖箭头
+                const dx = target.x - source.x;
+                const dy = target.y - source.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance === 0) return '';
+                
+                const normX = dx / distance;
+                const normY = dy / distance;
+                // 缩短路径末端，为箭头留出空间
+                const endX = target.x - normX * 35;
+                const endY = target.y - normY * 35;
+                return `M${source.x},${source.y} L${endX},${endY}`;
             });
     }
     

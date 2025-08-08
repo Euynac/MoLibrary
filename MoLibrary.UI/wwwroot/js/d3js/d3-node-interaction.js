@@ -16,6 +16,9 @@ export class NodeHighlightManager {
         this.normalOpacity = options.normalOpacity || 1;
         this.highlightStrokeWidth = options.highlightStrokeWidth || 3;
         this.normalStrokeWidth = options.normalStrokeWidth || 2;
+        this.isDarkMode = options.isDarkMode || false;
+        // 根据主题设置默认连接颜色
+        this.defaultLinkColor = this.isDarkMode ? '#666' : '#999';
     }
     
     /**
@@ -31,7 +34,7 @@ export class NodeHighlightManager {
         this.clearHighlight(nodeSelection, linkSelection);
         
         // 找到相关的节点和连接
-        const relatedNodes = new Set([nodeId]);
+        const relatedNodes = new Set([nodeId]);  // 包含当前节点
         const relatedLinks = new Set();
         
         links.forEach(link => {
@@ -57,15 +60,16 @@ export class NodeHighlightManager {
     applyHighlight(relatedNodes, relatedLinks, nodeSelection, linkSelection) {
         const self = this;
         
-        // 高亮节点
+        // 高亮节点 - 所有相关节点使用相同的不透明度
         nodeSelection.each(function(d) {
             const node = d3.select(this);
             const isRelated = relatedNodes.has(d.id);
             
+            // 统一所有相关节点的不透明度为1（完全不透明）
             node.select('circle, rect')
                 .transition()
                 .duration(200)
-                .attr('opacity', isRelated ? self.normalOpacity : self.fadeOpacity)
+                .attr('opacity', isRelated ? 1 : self.fadeOpacity)
                 .attr('stroke-width', isRelated ? self.highlightStrokeWidth : self.normalStrokeWidth);
             
             node.select('text')
@@ -74,7 +78,7 @@ export class NodeHighlightManager {
                 .attr('opacity', isRelated ? 1 : self.fadeOpacity);
         });
         
-        // 高亮连接
+        // 高亮连接 - 改变粗细、颜色和箭头
         linkSelection.each(function(d) {
             const link = d3.select(this);
             const isRelated = relatedLinks.has(d);
@@ -83,6 +87,7 @@ export class NodeHighlightManager {
                 .duration(200)
                 .attr('opacity', isRelated ? 1 : self.fadeOpacity)
                 .attr('stroke-width', isRelated ? 3 : 2)
+                .attr('stroke', isRelated ? '#2196F3' : self.defaultLinkColor)
                 .attr('marker-end', isRelated ? 'url(#arrowhead-highlight)' : 'url(#arrowhead)');
         });
         
@@ -96,14 +101,14 @@ export class NodeHighlightManager {
     clearHighlight(nodeSelection, linkSelection) {
         const self = this;
         
-        // 恢复节点
+        // 恢复节点 - 确保所有节点恢复为完全不透明
         nodeSelection.each(function() {
             const node = d3.select(this);
             
             node.select('circle, rect')
                 .transition()
                 .duration(200)
-                .attr('opacity', self.normalOpacity)
+                .attr('opacity', 1)  // 恢复为完全不透明
                 .attr('stroke-width', self.normalStrokeWidth);
             
             node.select('text')
@@ -112,13 +117,14 @@ export class NodeHighlightManager {
                 .attr('opacity', 1);
         });
         
-        // 恢复连接
+        // 恢复连接 - 恢复颜色、粗细和箭头
         linkSelection
             .transition()
             .duration(200)
-            .attr('opacity', self.normalOpacity)
+            .attr('opacity', 0.6)  // 恢复为原始的半透明状态
             .attr('stroke-width', 2)
-            .attr('marker-end', 'url(#arrowhead)');
+            .attr('stroke', self.defaultLinkColor)  // 使用主题相关的默认颜色
+            .attr('marker-end', 'url(#arrowhead)');  // 恢复默认箭头
         
         this.highlightedNodes.clear();
         this.highlightedLinks.clear();
@@ -135,7 +141,10 @@ export class NodeInteractionHandler {
         this.onHover = options.onHover;
         this.onHoverOut = options.onHoverOut;
         this.onDoubleClick = options.onDoubleClick;
-        this.highlightManager = new NodeHighlightManager(options.highlightOptions || {});
+        // 传递 isDarkMode 给 highlightManager
+        const highlightOptions = options.highlightOptions || {};
+        highlightOptions.isDarkMode = options.isDarkMode;
+        this.highlightManager = new NodeHighlightManager(highlightOptions);
     }
     
     /**

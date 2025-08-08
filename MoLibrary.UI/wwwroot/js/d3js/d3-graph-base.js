@@ -80,10 +80,11 @@ export function createArrowMarker(svg, id = 'arrowhead', options = {}) {
         ? svg.append('defs') 
         : svg.select('defs');
     
+    // 创建正常状态的箭头
     const marker = defs.append('marker')
         .attr('id', id)
         .attr('viewBox', '-0 -5 10 10')
-        .attr('refX', options.refX || 25)
+        .attr('refX', options.refX || 9)  // 因为路径已经缩短，箭头不需要太多偏移
         .attr('refY', 0)
         .attr('orient', 'auto')
         .attr('markerWidth', options.size || 10)
@@ -91,22 +92,22 @@ export function createArrowMarker(svg, id = 'arrowhead', options = {}) {
     
     marker.append('path')
         .attr('d', 'M 0,-5 L 10 ,0 L 0,5')
-        .attr('fill', options.color || '#666')
+        .attr('fill', options.color || '#999')
         .attr('class', 'arrow-marker');
     
-    // 创建高亮版本
+    // 创建高亮状态的箭头（相同大小和位置）
     const highlightMarker = defs.append('marker')
         .attr('id', `${id}-highlight`)
         .attr('viewBox', '-0 -5 10 10')
-        .attr('refX', options.refX || 25)
+        .attr('refX', options.refX || 9)  // 保持相同位置
         .attr('refY', 0)
         .attr('orient', 'auto')
-        .attr('markerWidth', options.size || 10)
+        .attr('markerWidth', options.size || 10)  // 保持相同大小
         .attr('markerHeight', options.size || 10);
     
     highlightMarker.append('path')
         .attr('d', 'M 0,-5 L 10 ,0 L 0,5')
-        .attr('fill', options.highlightColor || '#2196F3')
+        .attr('fill', '#2196F3')
         .attr('class', 'arrow-marker-highlight');
     
     return { marker, highlightMarker };
