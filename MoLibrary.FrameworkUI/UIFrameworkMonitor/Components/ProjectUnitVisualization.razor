@@ -1,0 +1,410 @@
+@using MoLibrary.Framework.Core.Model
+@using MoLibrary.Framework.Services
+@using MoLibrary.Tool.MoResponse
+@using Microsoft.JSInterop
+@inject IFrameworkMonitorService FrameworkMonitorService
+@inject ISnackbar Snackbar
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+
+<MudCard>
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">项目架构可视化</MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            <MudTooltip Text="刷新数据">
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                               Color="Color.Primary"
+                               OnClick="LoadProjectUnitsAsync"
+                               Disabled="@_loading" />
+            </MudTooltip>
+            <MudTooltip Text="重置视图">
+                <MudIconButton Icon="@Icons.Material.Filled.RestartAlt"
+                               Color="Color.Secondary"
+                               OnClick="ResetView"
+                               Disabled="@_loading" />
+            </MudTooltip>
+            <MudTooltip Text="筛选设置">
+                <MudIconButton Icon="@Icons.Material.Filled.FilterAlt"
+                               Color="Color.Tertiary"
+                               OnClick="ToggleFilterPanel" />
+            </MudTooltip>
+        </CardHeaderActions>
+    </MudCardHeader>
+    <MudCardContent>
+        @if (_showFilterPanel)
+        {
+            <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+                <MudGrid>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudTextField @bind-Value="_filterText"
+                                      Label="搜索项目单元"
+                                      Variant="Variant.Outlined"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Search"
+                                      Immediate="true"
+                                      DebounceInterval="300"
+                                      OnDebounceIntervalElapsed="ApplyFilters" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudSelect T="EProjectUnitType?" Value="_selectedUnitType"
+                                   Label="单元类型"
+                                   Variant="Variant.Outlined"
+                                   AnchorOrigin="Origin.BottomCenter"
+                                   ValueChanged="OnUnitTypeChanged">
+                            <MudSelectItem T="EProjectUnitType?" Value="null">全部</MudSelectItem>
+                            @foreach (var unitType in Enum.GetValues<EProjectUnitType>())
+                            {
+                                @if (unitType != EProjectUnitType.None)
+                                {
+                                    <MudSelectItem T="EProjectUnitType?" Value="unitType">@unitType.ToString()</MudSelectItem>
+                                }
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudSwitch T="bool" Value="_showOnlyWithDependencies"
+                                   Label="仅显示有依赖关系"
+                                   Color="Color.Primary"
+                                   ValueChanged="OnShowDependenciesChanged" />
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+        }
+
+        <MudPaper Class="visualization-container" Style="position: relative; height: 600px; overflow: hidden;">
+            @if (_loading)
+            {
+                <MudOverlay Visible="true" DarkBackground="false" Absolute="true">
+                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+                </MudOverlay>
+            }
+            <div id="project-unit-graph" style="width: 100%; height: 100%;"></div>
+        </MudPaper>
+
+        <MudPaper Class="mt-4 pa-2" Elevation="0" Outlined="true">
+            <MudGrid AlignItems="Center">
+                <MudItem xs="12" sm="8">
+                    <MudText Typo="Typo.caption">
+                        显示 @_filteredUnits.Count / @_allProjectUnits.Count 个项目单元
+                    </MudText>
+                </MudItem>
+                <MudItem xs="12" sm="4" Class="d-flex justify-end">
+                    <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Circle" Color="Color.Info">圆形: 简单单元</MudChip>
+                    <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Square" Color="Color.Warning">矩形: 复杂单元</MudChip>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+    </MudCardContent>
+</MudCard>
+
+<MudDialog @bind-Visible="_detailDialogVisible" Options="_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Info" Class="mr-3" />
+            项目单元详情
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_selectedUnit != null)
+        {
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField Label="单元名称" Value="@_selectedUnit.Title" ReadOnly="true" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField Label="完整名称" Value="@_selectedUnit.Key" ReadOnly="true" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField Label="单元类型" Value="@_selectedUnit.UnitType.ToString()" ReadOnly="true" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField Label="依赖数量" Value="@_selectedUnit.DependencyUnits.Count.ToString()" ReadOnly="true" Variant="Variant.Outlined" />
+                </MudItem>
+                @if (_selectedUnit.DependencyUnits.Any())
+                {
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">依赖单元:</MudText>
+                        <MudChipSet T="string">
+                            @foreach (var dep in _selectedUnit.DependencyUnits)
+                            {
+                                <MudChip T="string" Color="Color.Secondary" Size="Size.Small">
+                                    @dep.Title (@dep.UnitType)
+                                </MudChip>
+                            }
+                        </MudChipSet>
+                    </MudItem>
+                }
+                @if (_selectedUnit.Attributes.Any())
+                {
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">特性:</MudText>
+                        <MudList T="string" Dense="true">
+                            @foreach (var attr in _selectedUnit.Attributes)
+                            {
+                                <MudListItem T="string">@attr.GetType().Name</MudListItem>
+                            }
+                        </MudList>
+                    </MudItem>
+                }
+            </MudGrid>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseDetailDialog">关闭</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<MudPopover Open="@_contextMenuOpen" Fixed="true" AnchorOrigin="Origin.TopLeft" TransformOrigin="Origin.TopLeft"
+            Style="@($"left: {_contextMenuX}px; top: {_contextMenuY}px;")" Class="pa-0">
+    <MudList T="string" Dense="true" Clickable="true">
+        <MudListItem T="string" Icon="@Icons.Material.Filled.Info" OnClick="ShowContextDetails">
+            查看详情
+        </MudListItem>
+        <MudListItem T="string" Icon="@Icons.Material.Filled.CenterFocusStrong" OnClick="FocusOnNode">
+            聚焦此节点
+        </MudListItem>
+        <MudListItem T="string" Icon="@Icons.Material.Filled.FilterAlt" OnClick="FilterByType">
+            筛选同类型
+        </MudListItem>
+        <MudDivider />
+        <MudListItem T="string" Icon="@Icons.Material.Filled.ContentCopy" OnClick="CopyFullName">
+            复制完整名称
+        </MudListItem>
+    </MudList>
+</MudPopover>
+
+@code {
+    private IJSObjectReference? _jsModule;
+    private List<DtoProjectUnit> _allProjectUnits = new();
+    private List<DtoProjectUnit> _filteredUnits = new();
+    private bool _loading = false;
+    private bool _detailDialogVisible = false;
+    private DtoProjectUnit? _selectedUnit;
+    private DtoProjectUnit? _contextMenuUnit;
+    private bool _showFilterPanel = false;
+    private string _filterText = string.Empty;
+    private EProjectUnitType? _selectedUnitType;
+    private bool _showOnlyWithDependencies = false;
+    private bool _contextMenuOpen = false;
+    private double _contextMenuX = 0;
+    private double _contextMenuY = 0;
+
+    private readonly DialogOptions _dialogOptions = new()
+    {
+        MaxWidth = MaxWidth.Medium,
+        FullWidth = true
+    };
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", 
+				"./_content/MoLibrary.FrameworkUI/UIFrameworkMonitor/Components/projectUnitGraph.js");
+            
+            await InitializeGraph();
+            await LoadProjectUnitsAsync();
+        }
+    }
+
+    private async Task InitializeGraph()
+    {
+        if (_jsModule != null)
+        {
+            var isDarkMode = await JSRuntime.InvokeAsync<bool>("eval", 
+                "document.documentElement.classList.contains('dark')");
+            
+            await _jsModule.InvokeVoidAsync("initializeGraph", "project-unit-graph", isDarkMode,
+                DotNetObjectReference.Create(this));
+        }
+    }
+
+    private async Task LoadProjectUnitsAsync()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await FrameworkMonitorService.GetAllProjectUnitsAsync();
+            if (result.IsFailed(out var error, out var data))
+            {
+                Snackbar.Add($"加载失败: {error}", Severity.Error);
+                return;
+            }
+
+            _allProjectUnits = data;
+            _filteredUnits = new List<DtoProjectUnit>(_allProjectUnits);
+            await UpdateGraph();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"加载异常: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task UpdateGraph()
+    {
+        if (_jsModule != null)
+        {
+            var graphData = PrepareGraphData();
+            await _jsModule.InvokeVoidAsync("updateGraph", graphData);
+        }
+    }
+
+    private object PrepareGraphData()
+    {
+        var nodes = _filteredUnits.Select(unit => new
+        {
+            id = unit.Key,
+            title = unit.Title,
+            type = unit.UnitType.ToString(),
+            typeValue = (int)unit.UnitType,
+            dependencyCount = unit.DependencyUnits.Count,
+            hasAttributes = unit.Attributes.Any()
+        }).ToList();
+
+        var links = new List<object>();
+        foreach (var unit in _filteredUnits)
+        {
+            foreach (var dep in unit.DependencyUnits)
+            {
+                if (_filteredUnits.Any(u => u.Key == dep.Key))
+                {
+                    links.Add(new
+                    {
+                        source = unit.Key,
+                        target = dep.Key
+                    });
+                }
+            }
+        }
+
+        return new { nodes, links };
+    }
+
+    private void ToggleFilterPanel()
+    {
+        _showFilterPanel = !_showFilterPanel;
+    }
+
+    private async Task ApplyFilters()
+    {
+        _filteredUnits = _allProjectUnits.Where(unit =>
+        {
+            var matchesText = string.IsNullOrWhiteSpace(_filterText) ||
+                unit.Title.Contains(_filterText, StringComparison.OrdinalIgnoreCase) ||
+                unit.Key.Contains(_filterText, StringComparison.OrdinalIgnoreCase);
+
+            var matchesType = !_selectedUnitType.HasValue || unit.UnitType == _selectedUnitType.Value;
+
+            var matchesDependencies = !_showOnlyWithDependencies || unit.DependencyUnits.Any();
+
+            return matchesText && matchesType && matchesDependencies;
+        }).ToList();
+
+        await UpdateGraph();
+    }
+
+    private async Task ResetView()
+    {
+        if (_jsModule != null)
+        {
+            await _jsModule.InvokeVoidAsync("resetView");
+        }
+    }
+
+    [JSInvokable]
+    public void OnNodeClick(string nodeId)
+    {
+        _selectedUnit = _allProjectUnits.FirstOrDefault(u => u.Key == nodeId);
+        if (_selectedUnit != null)
+        {
+            _detailDialogVisible = true;
+            StateHasChanged();
+        }
+    }
+
+    [JSInvokable]
+    public void OnNodeRightClick(string nodeId, double x, double y)
+    {
+        _contextMenuUnit = _allProjectUnits.FirstOrDefault(u => u.Key == nodeId);
+        if (_contextMenuUnit != null)
+        {
+            _contextMenuX = x;
+            _contextMenuY = y;
+            _contextMenuOpen = true;
+            StateHasChanged();
+        }
+    }
+
+    private void ShowContextDetails()
+    {
+        _selectedUnit = _contextMenuUnit;
+        _detailDialogVisible = true;
+        _contextMenuOpen = false;
+    }
+
+    private async Task FocusOnNode()
+    {
+        if (_jsModule != null && _contextMenuUnit != null)
+        {
+            await _jsModule.InvokeVoidAsync("focusOnNode", _contextMenuUnit.Key);
+        }
+        _contextMenuOpen = false;
+    }
+
+    private async Task OnUnitTypeChanged(EProjectUnitType? value)
+    {
+        _selectedUnitType = value;
+        await ApplyFilters();
+    }
+
+    private async Task OnShowDependenciesChanged(bool value)
+    {
+        _showOnlyWithDependencies = value;
+        await ApplyFilters();
+    }
+
+    private async Task FilterByType()
+    {
+        if (_contextMenuUnit != null)
+        {
+            _selectedUnitType = _contextMenuUnit.UnitType;
+            await ApplyFilters();
+        }
+        _contextMenuOpen = false;
+    }
+
+    private async Task CopyFullName()
+    {
+        if (_contextMenuUnit != null)
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", _contextMenuUnit.Key);
+            Snackbar.Add("已复制到剪贴板", Severity.Success);
+        }
+        _contextMenuOpen = false;
+    }
+
+    private void CloseDetailDialog()
+    {
+        _detailDialogVisible = false;
+        _selectedUnit = null;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_jsModule != null)
+        {
+            await _jsModule.InvokeVoidAsync("dispose");
+            await _jsModule.DisposeAsync();
+        }
+    }
+}
