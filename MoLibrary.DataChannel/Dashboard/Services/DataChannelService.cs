@@ -109,7 +109,7 @@ public class DataChannelService(IDataChannelManager manager, ILogger<DataChannel
                     Description = ex.Description ?? string.Empty,
                     ExceptionType = ex.Exception.GetType().Name,
                     Message = ex.Exception.GetMessageRecursively(),
-                    StackTrace = ex.ToString() ?? string.Empty
+                    StackTrace = ex.Exception.ToString()
                 }).ToList()
             };
 

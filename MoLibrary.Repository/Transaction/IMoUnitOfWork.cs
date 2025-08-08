@@ -13,6 +13,11 @@ public interface IMoUnitOfWork : IDisposable, IMoServiceProviderAccessor
     public IMoUnitOfWork? Outer { get; }
     void Initialize(MoUnitOfWorkOptions options);
 
+    /// <summary>
+    /// 如果开启了事务，必须调用这个方法才会提交事务。如果没有使用autoSave，调用此方法会自动SaveChanges。
+    /// </summary>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     Task CompleteAsync(CancellationToken cancellationToken = default);
     Task RollbackAsync(CancellationToken cancellationToken = default);
     Task SaveChangesAsync(CancellationToken cancellationToken = default);

@@ -83,6 +83,7 @@ public static class MoResponseHelper
     /// </summary>
     public static bool IsNotValidResponse(this IMoResponse res)
     {
+        //TODO 需要判断 Res<T> 当OK的情况 Data = null时有规范问题
         return res.Code == null;
     }
     /// <summary>
