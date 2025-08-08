@@ -20,12 +20,6 @@ public class ModuleConfigurationUI(ModuleConfigurationUIOption option)
         return EMoModules.ConfigurationUI;
     }
 
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        // 注册配置服务
-        services.AddScoped<ConfigurationClientService>();
-        services.AddScoped<ConfigurationDashboardService>();
-    }
 
     public override void ClaimDependencies()
     {
