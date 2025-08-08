@@ -17,7 +17,7 @@ public class ConfigurationClientService(
     /// </summary>
     /// <param name="request">更新请求</param>
     /// <returns>更新结果</returns>
-    public async Task<Res> UpdateConfigAsync(DtoUpdateConfig request)
+    public async Task<Res<DtoUpdateConfigRes>> UpdateConfigAsync(DtoUpdateConfig request)
     {
         try
         {
