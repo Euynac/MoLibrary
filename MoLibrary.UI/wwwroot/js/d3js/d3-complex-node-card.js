@@ -61,7 +61,7 @@ export class ComplexNodeCardRenderer {
         const contentItems = nodeData.metadata || [];
         
         // 计算宽度 - 基于标题长度和内容宽度
-        const titleWidth = this.estimateTextWidth(nodeData.title, config.header.fontSize, config.header.fontWeight);
+        const titleWidth = this.estimateTextWidth(nodeData.title, config.header.fontSize, config.header.fontWeight) + 50;
         const maxContentWidth = Math.max(
             ...contentItems.map(item => this.estimateTextWidth(`${item.key}: ${item.value}`, config.content.fontSize))
         );
@@ -77,22 +77,77 @@ export class ComplexNodeCardRenderer {
               )
             : config.content.minHeight; // 没有数据时使用最小高度
         
-        const height = config.header.height + contentHeight + config.footer.height;
+        // 计算状态栏高度（基于chips数量和换行）
+        const footerHeight = this.calculateFooterHeight(nodeData, width);
+        const height = config.header.height + contentHeight + footerHeight;
         
         return { width, height };
     }
     
     /**
-     * 估算文本宽度（近似值）
+     * 估算文本宽度（使用Canvas精确测量）
      * @param {string} text - 文本内容
      * @param {string} fontSize - 字体大小
      * @param {string} fontWeight - 字体粗细
      * @returns {number} 估算宽度
      */
     estimateTextWidth(text, fontSize, fontWeight = 'normal') {
-        const baseWidth = parseFloat(fontSize) * 0.6; // 近似比例
-        const weightMultiplier = fontWeight === '600' || fontWeight === 'bold' ? 1.1 : 1;
-        return text.length * baseWidth * weightMultiplier;
+        // 创建或复用Canvas上下文进行精确测量
+        if (!this._measureCanvas) {
+            this._measureCanvas = document.createElement('canvas');
+            this._measureContext = this._measureCanvas.getContext('2d');
+        }
+        
+        // 设置字体样式 - 使用系统字体堆栈
+        this._measureContext.font = `${fontWeight} ${fontSize} -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
+        
+        // 测量文本宽度
+        const metrics = this._measureContext.measureText(text);
+        return metrics.width;
+    }
+    
+    /**
+     * 计算状态栏高度（支持多行chips）
+     * @param {Object} nodeData - 节点数据
+     * @param {number} width - 卡片宽度
+     * @returns {number} 状态栏高度
+     */
+    calculateFooterHeight(nodeData, width) {
+        const { config } = this;
+        const chips = nodeData.chips || [];
+        
+        if (chips.length === 0) {
+            return config.footer.height; // 最小高度
+        }
+        
+        // 模拟chips布局，计算需要多少行
+        const availableWidth = width - config.footer.padding * 2;
+        let currentRowWidth = 0;
+        let rowCount = 1;
+        const chipSpacing = 6; // chips之间的间距
+        
+        chips.forEach((chip, index) => {
+            const hasIcon = chip.icon && chip.icon.trim() !== '';
+            const chipWidth = this.estimateChipWidth(chip.text, hasIcon);
+            
+            if (index > 0) {
+                currentRowWidth += chipSpacing;
+            }
+            
+            if (currentRowWidth + chipWidth > availableWidth && index > 0) {
+                // 换行
+                rowCount++;
+                currentRowWidth = chipWidth;
+            } else {
+                currentRowWidth += chipWidth;
+            }
+        });
+        
+        // 计算总高度：基础高度 + (行数-1) * (chip高度 + 行间距)
+        const baseHeight = config.footer.height;
+        const extraHeight = (rowCount - 1) * (config.footer.chipHeight + 6);
+        
+        return baseHeight + extraHeight;
     }
     
     /**
@@ -135,9 +190,10 @@ export class ComplexNodeCardRenderer {
         const contentStartY = -height / 2 + config.header.height; // 内容区从标题栏下方开始
         this.drawContent(card, contentItems, width, contentHeight, contentStartY);
         
-        // 绘制状态栏
-        const footerY = height / 2 - config.footer.height;
-        this.drawFooter(card, nodeData, width, config.footer.height, footerY);
+        // 绘制状态栏 - 使用动态计算的高度
+        const footerHeight = this.calculateFooterHeight(nodeData, width);
+        const footerY = height / 2 - footerHeight;
+        this.drawFooter(card, nodeData, width, footerHeight, footerY);
         
         // 存储尺寸信息供其他模块使用
         nodeData._cardSize = { width, height };
@@ -176,17 +232,8 @@ export class ComplexNodeCardRenderer {
             .attr('y', headerY + headerHeight - config.borderRadius)
             .attr('fill', style.headerColor);
         
-        // 标题文字
-        card.append('text')
-            .attr('class', 'card-title')
-            .attr('x', 0)
-            .attr('y', headerY + headerHeight / 2 + 5)
-            .attr('text-anchor', 'middle')
-            .attr('fill', style.headerTextColor)
-            .style('font-size', config.header.fontSize)
-            .style('font-weight', config.header.fontWeight)
-            .style('pointer-events', 'none')
-            .text(nodeData.title);
+        // 绘制Icon+标题（居左对齐）
+        this.drawHeaderContent(card, nodeData, width, headerY, headerHeight);
     }
     
     /**
@@ -253,17 +300,17 @@ export class ComplexNodeCardRenderer {
      * @param {Object} card - 卡片容器
      * @param {Object} nodeData - 节点数据
      * @param {number} width - 卡片宽度
-     * @param {number} height - 状态栏高度
+     * @param {number} footerHeight - 状态栏高度（动态计算的实际高度）
      * @param {number} y - Y坐标位置
      */
-    drawFooter(card, nodeData, width, height, y) {
+    drawFooter(card, nodeData, width, footerHeight, y) {
         const { config, style } = this;
         
-        // 状态栏背景
+        // 状态栏背景 - 使用计算的实际高度
         card.append('rect')
             .attr('class', 'card-footer')
             .attr('width', width)
-            .attr('height', height)
+            .attr('height', footerHeight)
             .attr('x', -width / 2)
             .attr('y', y)
             .attr('rx', config.borderRadius)
@@ -278,103 +325,365 @@ export class ComplexNodeCardRenderer {
             .attr('y', y)
             .attr('fill', style.footerColor);
         
-        // 绘制类型Chip
-        this.drawTypeChip(card, nodeData.type, -width / 2 + config.footer.padding, y + height / 2);
+        // 绘制chips（支持多行布局）
+        this.drawChipsLayout(card, nodeData.chips || [], width, footerHeight, y);
+    }
+    
+    /**
+     * 计算chips的行分组
+     * @param {Array} chips - chips数组
+     * @param {number} availableWidth - 可用宽度
+     * @param {number} chipSpacing - chip间距
+     * @returns {Array<Array>} 每行的chips数组
+     */
+    calculateChipRows(chips, availableWidth, chipSpacing) {
+        const rows = [];
+        let currentRow = [];
+        let currentRowWidth = 0;
         
-        // 如果有依赖数量，绘制依赖Chip
-        if (nodeData.dependencyCount > 0) {
-            const chipWidth = this.estimateChipWidth(`依赖 ${nodeData.dependencyCount}`);
-            const chipX = width / 2 - config.footer.padding - chipWidth / 2;
-            this.drawDependencyChip(card, nodeData.dependencyCount, chipX, y + height / 2);
+        chips.forEach((chip, index) => {
+            const hasIcon = chip.icon && chip.icon.trim() !== '';
+            const chipWidth = this.estimateChipWidth(chip.text, hasIcon);
+            const needSpacing = currentRow.length > 0 ? chipSpacing : 0;
+            
+            if (currentRow.length > 0 && currentRowWidth + needSpacing + chipWidth > availableWidth) {
+                // 需要换行，保存当前行并开始新行
+                rows.push(currentRow);
+                currentRow = [chip];
+                currentRowWidth = chipWidth;
+            } else {
+                // 可以放在当前行
+                currentRow.push(chip);
+                currentRowWidth += needSpacing + chipWidth;
+            }
+        });
+        
+        // 添加最后一行
+        if (currentRow.length > 0) {
+            rows.push(currentRow);
+        }
+        
+        return rows;
+    }
+    
+    /**
+     * 绘制chips布局（支持多行、居右对齐）
+     * @param {Object} container - 容器元素
+     * @param {Array} chips - chips数组
+     * @param {number} width - 容器宽度
+     * @param {number} height - 容器高度
+     * @param {number} startY - 起始Y坐标
+     */
+    drawChipsLayout(container, chips, width, height, startY) {
+        const { config } = this;
+        
+        if (!chips || chips.length === 0) return;
+        
+        const availableWidth = width - config.footer.padding * 2;
+        const chipSpacing = 6; // chips之间的间距
+        const rowSpacing = 6; // 行间距
+        
+        // 计算每行的chips分组
+        const rows = this.calculateChipRows(chips, availableWidth, chipSpacing);
+        
+        // 从上往下绘制每一行
+        rows.forEach((row, rowIndex) => {
+            const rowY = startY + config.footer.padding + config.footer.chipHeight / 2 + 
+                        rowIndex * (config.footer.chipHeight + rowSpacing);
+            
+            // 计算该行的总宽度以实现右对齐
+            const rowTotalWidth = row.reduce((total, chip, index) => {
+                const hasIcon = chip.icon && chip.icon.trim() !== '';
+                return total + this.estimateChipWidth(chip.text, hasIcon) + (index > 0 ? chipSpacing : 0);
+            }, 0);
+            
+            // 从右边开始绘制（居右对齐）
+            let currentX = width / 2 - config.footer.padding - rowTotalWidth;
+            
+            row.forEach((chip, chipIndex) => {
+                const hasIcon = chip.icon && chip.icon.trim() !== '';
+                const chipWidth = this.estimateChipWidth(chip.text, hasIcon);
+                
+                if (chipIndex > 0) {
+                    currentX += chipSpacing;
+                }
+                
+                // 绘制单个chip
+                this.drawChip(container, chip, currentX, rowY);
+                
+                currentX += chipWidth;
+            });
+        });
+    }
+    
+    /**
+     * 绘制单个Chip - 模仿MudBlazor Chip样式
+     * @param {Object} container - 容器元素
+     * @param {Object} chipData - chip数据 {text, color, icon}
+     * @param {number} x - X坐标
+     * @param {number} y - Y坐标（中心点）
+     */
+    drawChip(container, chipData, x, y) {
+        const { config } = this;
+        const hasIcon = chipData.icon && chipData.icon.trim() !== '';
+        const iconSize = 14; // chip icon 尺寸
+        const iconPadding = hasIcon ? 4 : 0; // icon 和文字之间的间距
+        
+        const chipWidth = this.estimateChipWidth(chipData.text, hasIcon);
+        
+        // 获取chip颜色
+        const colors = this.getChipColors(chipData.color);
+        
+        // Chip背景
+        container.append('rect')
+            .attr('class', `chip chip-${chipData.color}`)
+            .attr('width', chipWidth)
+            .attr('height', config.footer.chipHeight)
+            .attr('x', x)
+            .attr('y', y - config.footer.chipHeight / 2)
+            .attr('rx', config.footer.chipBorderRadius)
+            .attr('ry', config.footer.chipBorderRadius)
+            .attr('fill', colors.background)
+            .attr('stroke', colors.border)
+            .attr('stroke-width', 1)
+            .style('opacity', 0.9);
+        
+        let textX = x + chipWidth / 2; // 默认居中
+        
+        // 绘制图标（如果有）
+        if (hasIcon) {
+            const iconX = x + config.footer.chipPadding;
+            this.drawChipIcon(container, chipData.icon, iconX, y, iconSize, colors.text);
+            
+            // 调整文字位置，紧跟在图标后面
+            textX = iconX + iconSize + iconPadding;
+        }
+        
+        // Chip文字
+        container.append('text')
+            .attr('class', 'chip-text')
+            .attr('x', textX)
+            .attr('y', y + 3)
+            .attr('text-anchor', hasIcon ? 'start' : 'middle')
+            .attr('fill', colors.text)
+            .style('font-size', config.footer.chipFontSize)
+            .style('font-weight', '500')
+            .style('pointer-events', 'none')
+            .text(chipData.text);
+    }
+    
+    /**
+     * 获取chip颜色配置
+     * @param {string} colorName - 颜色名称
+     * @returns {Object} 颜色配置
+     */
+    getChipColors(colorName) {
+        const isDark = this.isDarkMode;
+        
+        switch (colorName) {
+            case 'primary':
+                return {
+                    background: isDark ? 'var(--mud-palette-primary-darken, #4a44bc)' : 'var(--mud-palette-primary-lighten, #a394f7)',
+                    border: 'var(--mud-palette-primary, #594ae2)',
+                    text: 'var(--mud-palette-primary-text, #ffffff)'
+                };
+            case 'info':
+                return {
+                    background: isDark ? 'var(--mud-palette-info-darken, #0c80df)' : 'var(--mud-palette-info-lighten, #47a7f5)',
+                    border: 'var(--mud-palette-info, #2196f3)',
+                    text: 'var(--mud-palette-info-text, #ffffff)'
+                };
+            case 'secondary':
+                return {
+                    background: isDark ? 'var(--mud-palette-secondary-darken, #ff1f69)' : 'var(--mud-palette-secondary-lighten, #ff66a1)',
+                    border: 'var(--mud-palette-secondary, #ff4081)',
+                    text: 'var(--mud-palette-secondary-text, #ffffff)'
+                };
+            case 'success':
+                return {
+                    background: isDark ? 'var(--mud-palette-success-darken, #00a343)' : 'var(--mud-palette-success-lighten, #00eb62)',
+                    border: 'var(--mud-palette-success, #00c853)',
+                    text: 'var(--mud-palette-success-text, #ffffff)'
+                };
+            case 'warning':
+                return {
+                    background: isDark ? 'var(--mud-palette-warning-darken, #d68100)' : 'var(--mud-palette-warning-lighten, #ffa724)',
+                    border: 'var(--mud-palette-warning, #ff9800)',
+                    text: 'var(--mud-palette-warning-text, #ffffff)'
+                };
+            case 'error':
+                return {
+                    background: isDark ? 'var(--mud-palette-error-darken, #f21c0d)' : 'var(--mud-palette-error-lighten, #f66055)',
+                    border: 'var(--mud-palette-error, #f44336)',
+                    text: 'var(--mud-palette-error-text, #ffffff)'
+                };
+            default:
+                return {
+                    background: isDark ? 'var(--mud-palette-dark-darken, #2e2e38)' : 'var(--mud-palette-dark-lighten, #575743)',
+                    border: 'var(--mud-palette-dark, #424242)',
+                    text: 'var(--mud-palette-dark-text, #ffffff)'
+                };
         }
     }
     
     /**
-     * 绘制类型Chip - 模仿MudBlazor Chip样式
+     * 绘制Chip图标
      * @param {Object} container - 容器元素
-     * @param {string} type - 类型文本
+     * @param {string} iconSvg - MudBlazor Icon SVG内容
      * @param {number} x - X坐标
-     * @param {number} y - Y坐标
+     * @param {number} y - Y坐标（中心）
+     * @param {number} size - 图标尺寸
+     * @param {string} color - 图标颜色
      */
-    drawTypeChip(container, type, x, y) {
-        const { config } = this;
-        const chipWidth = this.estimateChipWidth(type);
+    drawChipIcon(container, iconSvg, x, y, size, color) {
+        // 创建Icon容器
+        const iconGroup = container.append('g')
+            .attr('class', 'chip-icon')
+            .attr('transform', `translate(${x + size/2}, ${y}) scale(${size/24}) translate(-12, -12)`);
         
-        // Chip背景
-        container.append('rect')
-            .attr('class', 'type-chip')
-            .attr('width', chipWidth)
-            .attr('height', config.footer.chipHeight)
-            .attr('x', x)
-            .attr('y', y - config.footer.chipHeight / 2)
-            .attr('rx', config.footer.chipBorderRadius)
-            .attr('ry', config.footer.chipBorderRadius)
-            .attr('fill', this.isDarkMode ? 'var(--mud-palette-primary-darken, #4a44bc)' : 'var(--mud-palette-primary-lighten, #a394f7)')
-            .attr('stroke', 'var(--mud-palette-primary, #594ae2)')
-            .attr('stroke-width', 1)
-            .style('opacity', 0.9);
-        
-        // Chip文字
-        container.append('text')
-            .attr('class', 'type-chip-text')
-            .attr('x', x + chipWidth / 2)
-            .attr('y', y + 3)
-            .attr('text-anchor', 'middle')
-            .attr('fill', 'var(--mud-palette-primary-text, #ffffff)')
-            .style('font-size', config.footer.chipFontSize)
-            .style('font-weight', '500')
-            .style('pointer-events', 'none')
-            .text(type);
-    }
-    
-    /**
-     * 绘制依赖数量Chip
-     * @param {Object} container - 容器元素
-     * @param {number} count - 依赖数量
-     * @param {number} x - X坐标
-     * @param {number} y - Y坐标
-     */
-    drawDependencyChip(container, count, x, y) {
-        const { config } = this;
-        const text = `依赖 ${count}`;
-        const chipWidth = this.estimateChipWidth(text);
-        
-        // Chip背景
-        container.append('rect')
-            .attr('class', 'dependency-chip')
-            .attr('width', chipWidth)
-            .attr('height', config.footer.chipHeight)
-            .attr('x', x - chipWidth / 2)
-            .attr('y', y - config.footer.chipHeight / 2)
-            .attr('rx', config.footer.chipBorderRadius)
-            .attr('ry', config.footer.chipBorderRadius)
-            .attr('fill', this.isDarkMode ? 'var(--mud-palette-info-darken, #0c80df)' : 'var(--mud-palette-info-lighten, #47a7f5)')
-            .attr('stroke', 'var(--mud-palette-info, #2196f3)')
-            .attr('stroke-width', 1)
-            .style('opacity', 0.9);
-        
-        // Chip文字
-        container.append('text')
-            .attr('class', 'dependency-chip-text')
-            .attr('x', x)
-            .attr('y', y + 3)
-            .attr('text-anchor', 'middle')
-            .attr('fill', 'var(--mud-palette-info-text, #ffffff)')
-            .style('font-size', config.footer.chipFontSize)
-            .style('font-weight', '500')
-            .style('pointer-events', 'none')
-            .text(text);
+        // 解析并绘制MudBlazor SVG图标
+        this.renderMudBlazorIcon(iconGroup, iconSvg, color);
     }
     
     /**
      * 估算Chip宽度
      * @param {string} text - Chip文本
+     * @param {boolean} hasIcon - 是否有图标
      * @returns {number} 估算宽度
      */
-    estimateChipWidth(text) {
+    estimateChipWidth(text, hasIcon = false) {
         const { config } = this;
         const textWidth = this.estimateTextWidth(text, config.footer.chipFontSize, '500');
-        return textWidth + config.footer.chipPadding * 2;
+        
+        // 基础宽度计算
+        let width = config.footer.chipPadding; // 左边距
+        
+        // 如果有图标，增加图标占用的宽度
+        if (hasIcon) {
+            width += 14 + 4; // iconSize + iconPadding
+        }
+        
+        // 添加文字宽度
+        width += textWidth;
+        
+        // 添加右边距
+        width += config.footer.chipPadding;
+        
+        return width;
+    }
+    
+    /**
+     * 绘制标题栏内容（Icon + 标题，居左对齐）
+     * @param {Object} container - 容器元素
+     * @param {Object} nodeData - 节点数据
+     * @param {number} width - 标题栏宽度
+     * @param {number} headerY - 标题栏Y坐标
+     * @param {number} headerHeight - 标题栏高度
+     */
+    drawHeaderContent(container, nodeData, width, headerY, headerHeight) {
+        const { config, style } = this;
+        const leftPadding = config.header.padding;
+        const iconSize = 16; // Icon尺寸
+        const iconTextSpacing = 8; // Icon和文字之间的间距
+        
+        let currentX = -width / 2 + leftPadding;
+        const centerY = headerY + headerHeight / 2;
+        
+        // 绘制Icon（如果有）
+        if (nodeData.icon) {
+            this.drawHeaderIcon(container, nodeData.icon, currentX, centerY, iconSize);
+            currentX += iconSize + iconTextSpacing;
+        }
+        
+        // 绘制标题文字
+        container.append('text')
+            .attr('class', 'card-title')
+            .attr('x', currentX)
+            .attr('y', centerY + 4) // 微调垂直居中
+            .attr('text-anchor', 'start') // 左对齐
+            .attr('fill', style.headerTextColor)
+            .style('font-size', config.header.fontSize)
+            .style('font-weight', config.header.fontWeight)
+            .style('pointer-events', 'none')
+            .text(nodeData.title);
+    }
+    
+    /**
+     * 绘制标题栏图标
+     * @param {Object} container - 容器元素
+     * @param {string} iconSvg - MudBlazor Icon SVG内容
+     * @param {number} x - X坐标
+     * @param {number} y - Y坐标（中心）
+     * @param {number} size - 图标尺寸
+     */
+    drawHeaderIcon(container, iconSvg, x, y, size) {
+        const { style } = this;
+        
+        // 创建Icon容器
+        const iconGroup = container.append('g')
+            .attr('class', 'header-icon')
+            .attr('transform', `translate(${x + size/2}, ${y}) scale(${size/24}) translate(-12, -12)`);
+        
+        // 解析并绘制MudBlazor SVG图标
+        this.renderMudBlazorIcon(iconGroup, iconSvg, style.headerTextColor);
+    }
+    
+    /**
+     * 渲染MudBlazor SVG图标
+     * @param {Object} container - 容器元素
+     * @param {string} iconSvg - MudBlazor Icon SVG内容字符串
+     * @param {string} color - 图标颜色
+     */
+    renderMudBlazorIcon(container, iconSvg, color) {
+        if (!iconSvg || iconSvg.trim() === '') {
+            // 如果没有图标，显示默认圆点
+            container.append('circle')
+                .attr('cx', 12)
+                .attr('cy', 12)
+                .attr('r', 2)
+                .attr('fill', color)
+                .style('pointer-events', 'none');
+            return;
+        }
+        
+        try {
+            // MudBlazor Icons包含完整的SVG内容，需要解析
+            const parser = new DOMParser();
+            const svgDoc = parser.parseFromString(`<svg xmlns="http://www.w3.org/2000/svg">${iconSvg}</svg>`, 'image/svg+xml');
+            
+            // 查找所有path元素，但跳过fill="none"的占位path
+            const paths = svgDoc.querySelectorAll('path:not([fill="none"])');
+            
+            paths.forEach(path => {
+                const pathData = path.getAttribute('d');
+                if (pathData) {
+                    container.append('path')
+                        .attr('d', pathData)
+                        .attr('fill', color)
+                        .style('pointer-events', 'none');
+                }
+            });
+            
+            // 如果没有找到有效的path，显示默认图标
+            if (paths.length === 0) {
+                container.append('circle')
+                    .attr('cx', 12)
+                    .attr('cy', 12)
+                    .attr('r', 3)
+                    .attr('fill', color)
+                    .style('pointer-events', 'none');
+            }
+            
+        } catch (error) {
+            console.warn('Failed to parse MudBlazor icon:', error);
+            // 解析失败时显示默认圆点
+            container.append('circle')
+                .attr('cx', 12)
+                .attr('cy', 12)
+                .attr('r', 3)
+                .attr('fill', color)
+                .style('pointer-events', 'none');
+        }
     }
     
     /**
