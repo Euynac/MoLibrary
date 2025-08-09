@@ -11,14 +11,14 @@ import { getModernNodeStyle } from './d3-graph-base.js';
  * 复杂节点卡片绘制器
  */
 export class ComplexNodeCardRenderer {
-    constructor(isDarkMode = false) {
+    constructor(isDarkMode = false, sizeConfig = null) {
         this.isDarkMode = isDarkMode;
         this.style = getModernNodeStyle(isDarkMode, 'complex');
         
-        // 卡片布局配置
+        // 卡片布局配置 - 使用传入的配置或默认值
         this.config = {
-            minWidth: 180,
-            maxWidth: 280,
+            minWidth: sizeConfig?.minWidth || 180,
+            maxWidth: sizeConfig?.maxWidth || 280
             padding: 12,
             borderRadius: 0,  // 改为直角
             
@@ -143,11 +143,12 @@ export class ComplexNodeCardRenderer {
             }
         });
         
-        // 计算总高度：基础高度 + (行数-1) * (chip高度 + 行间距)
-        const baseHeight = config.footer.height;
-        const extraHeight = (rowCount - 1) * (config.footer.chipHeight + 6);
+        // 计算总高度，确保上下margin相等
+        // 基础padding(上下各8px) + chip总高度
+        const chipsTotalHeight = rowCount * config.footer.chipHeight + (rowCount - 1) * 6;
+        const verticalPadding = config.footer.padding * 2; // 上下padding
         
-        return baseHeight + extraHeight;
+        return Math.max(config.footer.height, chipsTotalHeight + verticalPadding);
     }
     
     /**
@@ -381,9 +382,16 @@ export class ComplexNodeCardRenderer {
         // 计算每行的chips分组
         const rows = this.calculateChipRows(chips, availableWidth, chipSpacing);
         
+        // 计算所有行的总高度
+        const totalRowsHeight = rows.length * config.footer.chipHeight + (rows.length - 1) * rowSpacing;
+        
+        // 计算垂直居中的起始位置
+        const verticalCenterOffset = (height - totalRowsHeight) / 2;
+        
         // 从上往下绘制每一行
         rows.forEach((row, rowIndex) => {
-            const rowY = startY + config.footer.padding + config.footer.chipHeight / 2 + 
+            // 垂直居中计算：使用居中偏移量
+            const rowY = startY + verticalCenterOffset + config.footer.chipHeight / 2 + 
                         rowIndex * (config.footer.chipHeight + rowSpacing);
             
             // 计算该行的总宽度以实现右对齐
@@ -696,8 +704,9 @@ export class ComplexNodeCardRenderer {
 /**
  * 创建复杂节点卡片渲染器实例
  * @param {boolean} isDarkMode - 是否为暗色模式
+ * @param {Object} sizeConfig - 尺寸配置 {minWidth, maxWidth, minHeight}
  * @returns {ComplexNodeCardRenderer} 渲染器实例
  */
-export function createComplexNodeCardRenderer(isDarkMode = false) {
-    return new ComplexNodeCardRenderer(isDarkMode);
+export function createComplexNodeCardRenderer(isDarkMode = false, sizeConfig = null) {
+    return new ComplexNodeCardRenderer(isDarkMode, sizeConfig);
 }

@@ -26,8 +26,7 @@ const NODE_SIZE = {
     // 复杂节点尺寸现在由卡片渲染器动态计算
     complex: {
         minWidth: 200,
-        maxWidth: 350,
-        minHeight: 220
+        maxWidth: 500
     }
 };
 
@@ -84,8 +83,8 @@ class ProjectUnitGraph {
             isDarkMode: isDarkMode
         });
         
-        // 初始化复杂节点卡片渲染器
-        this.cardRenderer = createComplexNodeCardRenderer(isDarkMode);
+        // 初始化复杂节点卡片渲染器 - 传递尺寸配置
+        this.cardRenderer = createComplexNodeCardRenderer(isDarkMode, NODE_SIZE.complex);
         
         // 获取现代化节点样式
         this.nodeStyle = getModernNodeStyle(isDarkMode, 'simple');

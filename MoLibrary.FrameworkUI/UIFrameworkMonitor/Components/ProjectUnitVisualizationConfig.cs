@@ -118,6 +118,44 @@ public static class ProjectUnitVisualizationConfig
                 icon = Icons.Material.Filled.Label
             });
         }
+        
+        // 告警Chips - 根据不同级别分别显示
+        if (unit.Alerts.Any())
+        {
+            var errorCount = unit.Alerts.Count(a => a.Level == EAlertLevel.Error);
+            var warningCount = unit.Alerts.Count(a => a.Level == EAlertLevel.Warning);
+            var infoCount = unit.Alerts.Count(a => a.Level == EAlertLevel.Info);
+            
+            if (errorCount > 0)
+            {
+                chips.Add(new
+                {
+                    text = $"错误 {errorCount}",
+                    color = "error",
+                    icon = Icons.Material.Filled.Error
+                });
+            }
+            
+            if (warningCount > 0)
+            {
+                chips.Add(new
+                {
+                    text = $"警告 {warningCount}",
+                    color = "warning",
+                    icon = Icons.Material.Filled.Warning
+                });
+            }
+            
+            if (infoCount > 0)
+            {
+                chips.Add(new
+                {
+                    text = $"信息 {infoCount}",
+                    color = "info",
+                    icon = Icons.Material.Filled.Info
+                });
+            }
+        }
 
         return chips.ToArray();
     }
@@ -138,21 +176,6 @@ public static class ProjectUnitVisualizationConfig
         if (unit.DependencyUnits.Any())
         {
             metadata.Add(new { key = "依赖数量", value = unit.DependencyUnits.Count.ToString() });
-        }
-        
-        // 添加告警统计
-        if (unit.Alerts.Any())
-        {
-            var errorCount = unit.Alerts.Count(a => a.Level == EAlertLevel.Error);
-            var warningCount = unit.Alerts.Count(a => a.Level == EAlertLevel.Warning);
-            var infoCount = unit.Alerts.Count(a => a.Level == EAlertLevel.Info);
-            
-            if (errorCount > 0)
-                metadata.Add(new { key = "错误", value = errorCount.ToString() });
-            if (warningCount > 0)
-                metadata.Add(new { key = "警告", value = warningCount.ToString() });
-            if (infoCount > 0)
-                metadata.Add(new { key = "信息", value = infoCount.ToString() });
         }
 
         return metadata.ToArray();
