@@ -5,6 +5,8 @@
  * @module d3-node-interaction
  */
 
+import { getModernLinkStyle } from './d3-graph-base.js';
+
 /**
  * 节点高亮管理器
  */
@@ -17,8 +19,10 @@ export class NodeHighlightManager {
         this.highlightStrokeWidth = options.highlightStrokeWidth || 3;
         this.normalStrokeWidth = options.normalStrokeWidth || 2;
         this.isDarkMode = options.isDarkMode || false;
-        // 根据主题设置默认连接颜色
-        this.defaultLinkColor = this.isDarkMode ? '#666' : '#999';
+        
+        // 获取现代化样式配置
+        this.normalLinkStyle = getModernLinkStyle(this.isDarkMode, false);
+        this.highlightLinkStyle = getModernLinkStyle(this.isDarkMode, true);
     }
     
     /**
@@ -78,17 +82,19 @@ export class NodeHighlightManager {
                 .attr('opacity', isRelated ? 1 : self.fadeOpacity);
         });
         
-        // 高亮连接 - 改变粗细、颜色和箭头
+        // 高亮连接 - 使用现代化样式
         linkSelection.each(function(d) {
             const link = d3.select(this);
             const isRelated = relatedLinks.has(d);
+            const style = isRelated ? self.highlightLinkStyle : self.normalLinkStyle;
             
             link.transition()
                 .duration(200)
-                .attr('opacity', isRelated ? 1 : self.fadeOpacity)
-                .attr('stroke-width', isRelated ? 3 : 2)
-                .attr('stroke', isRelated ? '#2196F3' : self.defaultLinkColor)
-                .attr('marker-end', isRelated ? 'url(#arrowhead-highlight)' : 'url(#arrowhead)');
+                .attr('opacity', isRelated ? style.strokeOpacity : self.fadeOpacity)
+                .attr('stroke-width', style.strokeWidth)
+                .attr('stroke', style.stroke)
+                .attr('marker-end', style.markerEnd)
+                .style('filter', isRelated ? style.filter : self.normalLinkStyle.filter);
         });
         
         this.highlightedNodes = relatedNodes;
@@ -117,14 +123,15 @@ export class NodeHighlightManager {
                 .attr('opacity', 1);
         });
         
-        // 恢复连接 - 恢复颜色、粗细和箭头
+        // 恢复连接 - 使用现代化样式恢复
         linkSelection
             .transition()
             .duration(200)
-            .attr('opacity', 0.6)  // 恢复为原始的半透明状态
-            .attr('stroke-width', 2)
-            .attr('stroke', self.defaultLinkColor)  // 使用主题相关的默认颜色
-            .attr('marker-end', 'url(#arrowhead)');  // 恢复默认箭头
+            .attr('opacity', self.normalLinkStyle.strokeOpacity)
+            .attr('stroke-width', self.normalLinkStyle.strokeWidth)
+            .attr('stroke', self.normalLinkStyle.stroke)
+            .attr('marker-end', self.normalLinkStyle.markerEnd)
+            .style('filter', self.normalLinkStyle.filter);
         
         this.highlightedNodes.clear();
         this.highlightedLinks.clear();

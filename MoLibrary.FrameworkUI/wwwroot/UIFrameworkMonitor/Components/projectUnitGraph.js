@@ -6,7 +6,7 @@
  */
 
 
-import { GraphBase } from '../../../MoLibrary.UI/js/d3js/d3-graph-base.js';
+import { GraphBase, getModernLinkStyle } from '../../../MoLibrary.UI/js/d3js/d3-graph-base.js';
 import { ForceLayoutManager } from '../../../MoLibrary.UI/js/d3js/d3-force-layout.js';
 import { NodeInteractionHandler, createStaticDragBehavior } from '../../../MoLibrary.UI/js/d3js/d3-node-interaction.js';
 
@@ -132,17 +132,21 @@ class ProjectUnitGraph {
         const nodeGroup = this.graphBase.mainGroup.append('g')
             .attr('class', 'nodes');
         
-        // 绘制连接线 - 使用path而不是line，以便更好地控制箭头偏移
+        // 绘制现代化连接线 - 使用MudBlazor颜色系统和圆润样式
+        const linkStyle = getModernLinkStyle(this.isDarkMode, false);
         this.linkSelection = linkGroup.selectAll('path')
             .data(this.links)
             .enter().append('path')
-            .attr('class', 'link')
-            .attr('stroke', this.isDarkMode ? '#666' : '#999')
-            .attr('stroke-opacity', 0.6)
-            .attr('stroke-width', 2)
-            .attr('fill', 'none')  // path需要设置fill为none
-            .attr('marker-end', 'url(#arrowhead)')
-            .style('pointer-events', 'none');  // 防止线条阻挡箭头的交互
+            .attr('class', 'link modern-link')
+            .attr('stroke', linkStyle.stroke)
+            .attr('stroke-opacity', linkStyle.strokeOpacity)
+            .attr('stroke-width', linkStyle.strokeWidth)
+            .attr('stroke-linecap', linkStyle.strokeLinecap)
+            .attr('stroke-linejoin', linkStyle.strokeLinejoin)
+            .attr('fill', 'none')
+            .attr('marker-end', linkStyle.markerEnd)
+            .style('filter', linkStyle.filter)
+            .style('pointer-events', 'none'); // 现代化过渡动画
         
         // 创建节点
         this.nodeSelection = nodeGroup.selectAll('g')
