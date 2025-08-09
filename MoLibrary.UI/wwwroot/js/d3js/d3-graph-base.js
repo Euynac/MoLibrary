@@ -183,6 +183,59 @@ export function getModernLinkStyle(isDarkMode, isHighlight = false) {
 }
 
 /**
+ * 获取现代化节点样式配置 - 使用MudBlazor颜色系统
+ * @param {boolean} isDarkMode - 是否为暗色模式
+ * @param {string} nodeType - 节点类型
+ * @returns {Object} 节点样式配置
+ */
+export function getModernNodeStyle(isDarkMode, nodeType = 'simple') {
+    const baseStyle = {
+        // 文本颜色 - 使用主题文本颜色
+        textColor: isDarkMode 
+            ? 'var(--mud-palette-text-primary, rgba(255,255,255,0.7))' 
+            : 'var(--mud-palette-text-primary, rgba(66,66,66,1))',
+        
+        // 边框颜色
+        strokeColor: isDarkMode 
+            ? 'var(--mud-palette-lines-default, rgba(255,255,255,0.12))' 
+            : 'var(--mud-palette-lines-default, rgba(0,0,0,0.12))',
+            
+        strokeWidth: 2,
+        
+        // 阴影效果
+        filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.1))'
+    };
+    
+    if (nodeType === 'complex') {
+        return {
+            ...baseStyle,
+            // 复杂节点统一使用Surface色作为背景
+            backgroundColor: isDarkMode 
+                ? 'var(--mud-palette-surface, rgba(55,55,64,1))' 
+                : 'var(--mud-palette-surface, rgba(255,255,255,1))',
+            
+            // 标题栏使用Primary色
+            headerColor: isDarkMode 
+                ? 'var(--mud-palette-primary, rgba(119,107,231,1))' 
+                : 'var(--mud-palette-primary, rgba(89,74,226,1))',
+                
+            headerTextColor: 'var(--mud-palette-primary-text, rgba(255,255,255,1))',
+            
+            // 内容区文本颜色
+            contentTextColor: baseStyle.textColor,
+            
+            // 状态栏背景
+            footerColor: isDarkMode 
+                ? 'var(--mud-palette-background-gray, rgba(39,39,47,1))' 
+                : 'var(--mud-palette-background-gray, rgba(245,245,245,1))'
+        };
+    }
+    
+    // 简单节点样式 - 使用类型相关颜色但调整亮度适应主题
+    return baseStyle;
+}
+
+/**
  * 重置视图
  * @param {Object} svg - SVG 元素
  * @param {Object} zoom - zoom 行为对象

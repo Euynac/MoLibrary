@@ -6,9 +6,10 @@
  */
 
 
-import { GraphBase, getModernLinkStyle } from '../../../MoLibrary.UI/js/d3js/d3-graph-base.js';
+import { GraphBase, getModernLinkStyle, getModernNodeStyle } from '../../../MoLibrary.UI/js/d3js/d3-graph-base.js';
 import { ForceLayoutManager } from '../../../MoLibrary.UI/js/d3js/d3-force-layout.js';
 import { NodeInteractionHandler, createStaticDragBehavior } from '../../../MoLibrary.UI/js/d3js/d3-node-interaction.js';
+import { createComplexNodeCardRenderer } from '../../../MoLibrary.UI/js/d3js/d3-complex-node-card.js';
 
 // ==================== 配置 ====================
 
@@ -52,8 +53,16 @@ const NODE_TYPE_CONFIG = {
  * 节点尺寸配置
  */
 const NODE_SIZE = {
-    circle: { radius: 35 },
-    rect: { width: 160, height: 80 }
+    circle: { 
+        radius: 32,
+        textOffset: 45  // 文字在圆形下方的偏移距离
+    },
+    // 复杂节点尺寸现在由卡片渲染器动态计算
+    complex: {
+        minWidth: 180,
+        maxWidth: 280,
+        minHeight: 120
+    }
 };
 
 /**
@@ -108,6 +117,12 @@ class ProjectUnitGraph {
             },
             isDarkMode: isDarkMode
         });
+        
+        // 初始化复杂节点卡片渲染器
+        this.cardRenderer = createComplexNodeCardRenderer(isDarkMode);
+        
+        // 获取现代化节点样式
+        this.nodeStyle = getModernNodeStyle(isDarkMode, 'simple');
         
         // 静态布局拖拽行为
         this.staticDragBehavior = null;
@@ -180,89 +195,60 @@ class ProjectUnitGraph {
      */
     drawNode(nodeElement, nodeData) {
         const isComplex = NODE_TYPE_CONFIG.complexTypes.includes(nodeData.type);
-        const color = this.getUnitColor(nodeData.type);
         
         if (isComplex) {
-            this.drawRectNode(nodeElement, nodeData, color);
+            this.drawComplexNode(nodeElement, nodeData);
         } else {
-            this.drawCircleNode(nodeElement, nodeData, color);
+            this.drawSimpleNode(nodeElement, nodeData);
         }
     }
     
     /**
-     * 绘制矩形节点
+     * 绘制复杂节点（卡片式）
      */
-    drawRectNode(nodeElement, nodeData, color) {
-        const { width, height } = NODE_SIZE.rect;
-        
-        nodeElement.append('rect')
-            .attr('width', width)
-            .attr('height', height)
-            .attr('x', -width / 2)
-            .attr('y', -height / 2)
-            .attr('rx', 8)
-            .attr('ry', 8)
-            .attr('fill', color)
-            .attr('stroke', this.isDarkMode ? '#fff' : '#333')
-            .attr('stroke-width', 2)
-            .attr('opacity', 1)  // 确保初始状态是完全不透明
-            .style('cursor', 'pointer');
-        
-        nodeElement.append('text')
-            .attr('dy', -10)
-            .attr('text-anchor', 'middle')
-            .attr('fill', '#fff')
-            .style('font-size', '14px')
-            .style('font-weight', 'bold')
-            .style('pointer-events', 'none')
-            .text(nodeData.title);
-        
-        nodeElement.append('text')
-            .attr('dy', 10)
-            .attr('text-anchor', 'middle')
-            .attr('fill', '#fff')
-            .style('font-size', '12px')
-            .style('pointer-events', 'none')
-            .text(nodeData.type);
-        
-        if (nodeData.dependencyCount > 0) {
-            nodeElement.append('text')
-                .attr('dy', 30)
-                .attr('text-anchor', 'middle')
-                .attr('fill', '#fff')
-                .style('font-size', '11px')
-                .style('pointer-events', 'none')
-                .text(`依赖: ${nodeData.dependencyCount}`);
-        }
+    drawComplexNode(nodeElement, nodeData) {
+        // 使用卡片渲染器绘制
+        this.cardRenderer.drawCard(nodeElement, nodeData);
     }
     
     /**
-     * 绘制圆形节点
+     * 绘制简单节点（圆形，文字在下方）
      */
-    drawCircleNode(nodeElement, nodeData, color) {
-        const radius = NODE_SIZE.circle.radius;
+    drawSimpleNode(nodeElement, nodeData) {
+        const { radius, textOffset } = NODE_SIZE.circle;
+        const color = this.getUnitColor(nodeData.type);
         
+        // 绘制圆形
         nodeElement.append('circle')
             .attr('r', radius)
             .attr('fill', color)
-            .attr('stroke', this.isDarkMode ? '#fff' : '#333')
-            .attr('stroke-width', 2)
-            .attr('opacity', 1)  // 确保初始状态是完全不透明
+            .attr('stroke', this.nodeStyle.strokeColor)
+            .attr('stroke-width', this.nodeStyle.strokeWidth)
+            .attr('opacity', 1)
+            .style('filter', this.nodeStyle.filter)
             .style('cursor', 'pointer');
         
-        const maxLength = 12;
-        const displayText = nodeData.title.length > maxLength 
-            ? nodeData.title.substring(0, maxLength) + '...' 
-            : nodeData.title;
-        
+        // 在圆形下方绘制文字 - 不截断，完整显示
         nodeElement.append('text')
-            .attr('dy', 5)
+            .attr('y', textOffset)
             .attr('text-anchor', 'middle')
-            .attr('fill', '#fff')
+            .attr('fill', this.nodeStyle.textColor)
             .style('font-size', '13px')
-            .style('font-weight', 'bold')
+            .style('font-weight', '500')
             .style('pointer-events', 'none')
-            .text(displayText);
+            .text(nodeData.title);
+        
+        // 如果有依赖数量，在文字下方显示
+        if (nodeData.dependencyCount > 0) {
+            nodeElement.append('text')
+                .attr('y', textOffset + 16)
+                .attr('text-anchor', 'middle')
+                .attr('fill', this.nodeStyle.textColor)
+                .style('font-size', '11px')
+                .style('opacity', 0.7)
+                .style('pointer-events', 'none')
+                .text(`依赖: ${nodeData.dependencyCount}`);
+        }
     }
     
     /**
