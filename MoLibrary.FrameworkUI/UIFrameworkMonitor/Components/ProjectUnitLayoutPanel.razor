@@ -17,6 +17,10 @@
                            Variant="@(CurrentLayout == LayoutType.Circular ? Variant.Filled : Variant.Outlined)">
                     环形
                 </MudButton>
+                <MudButton OnClick="@(() => SetLayout(LayoutType.MultiCircular))" 
+                           Variant="@(CurrentLayout == LayoutType.MultiCircular ? Variant.Filled : Variant.Outlined)">
+                    多层环形
+                </MudButton>
             </MudButtonGroup>
         </MudItem>
         @if (CurrentLayout == LayoutType.Force)
@@ -51,7 +55,8 @@
     {
         Force,
         Hierarchy,
-        Circular
+        Circular,
+        MultiCircular
     }
     
     private async Task SetLayout(LayoutType layoutType)

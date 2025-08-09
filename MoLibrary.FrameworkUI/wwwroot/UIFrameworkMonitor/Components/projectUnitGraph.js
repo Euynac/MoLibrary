@@ -36,7 +36,8 @@ const NODE_SIZE = {
 const LAYOUT_TYPES = {
     FORCE: 'force',
     HIERARCHY: 'hierarchy',
-    CIRCULAR: 'circular'
+    CIRCULAR: 'circular',
+    MULTI_CIRCULAR: 'multi_circular'
 };
 
 // ==================== 主类 ====================
@@ -361,6 +362,9 @@ class ProjectUnitGraph {
             case LAYOUT_TYPES.CIRCULAR:
                 this.applyCircularLayout();
                 break;
+            case LAYOUT_TYPES.MULTI_CIRCULAR:
+                this.applyMultiCircularLayout();
+                break;
         }
     }
     
@@ -476,65 +480,170 @@ class ProjectUnitGraph {
     }
     
     /**
-     * 计算层次布局
+     * 计算层次布局 - 基于节点的连通度（度数）
      */
     calculateHierarchyLayout() {
-        const width = this.graphBase.width;
-        const height = this.graphBase.height;
+        // 使用更大的虚拟画布尺寸，避免节点过于密集
+        const width = Math.max(this.graphBase.width * 2, 2000);
+        const height = Math.max(this.graphBase.height * 2, 1500);
         
-        // 构建层次结构
-        const nodeMap = new Map(this.nodes.map(n => [n.id, { ...n }]));
-        const root = { id: 'root', children: [] };
+        // 计算每个节点的度数（入度 + 出度）
+        const nodeDegrees = new Map();
         
-        const targetIds = new Set(this.links.map(l => l.target));
-        const rootNodes = this.nodes.filter(n => !targetIds.has(n.id));
+        // 初始化所有节点的度数为0
+        this.nodes.forEach(node => {
+            nodeDegrees.set(node.id, 0);
+        });
         
-        function buildTree(nodeId, visited = new Set()) {
-            if (visited.has(nodeId)) return null;
-            visited.add(nodeId);
+        // 计算出度和入度
+        this.links.forEach(link => {
+            const sourceId = link.source.id || link.source;
+            const targetId = link.target.id || link.target;
             
-            const node = nodeMap.get(nodeId);
-            if (!node) return null;
+            // 增加源节点的出度
+            if (nodeDegrees.has(sourceId)) {
+                nodeDegrees.set(sourceId, nodeDegrees.get(sourceId) + 1);
+            }
             
-            const children = this.links
-                .filter(l => l.source === nodeId)
-                .map(l => buildTree.call(this, l.target, visited))
-                .filter(n => n !== null);
-            
-            return { ...node, children };
+            // 增加目标节点的入度
+            if (nodeDegrees.has(targetId)) {
+                nodeDegrees.set(targetId, nodeDegrees.get(targetId) + 1);
+            }
+        });
+        
+        // 根据度数对节点进行分层
+        const layers = [];
+        const maxDegree = Math.max(...nodeDegrees.values());
+        
+        // 创建层次，度数高的节点在中心层
+        for (let i = 0; i <= maxDegree; i++) {
+            layers[i] = [];
         }
         
-        root.children = rootNodes.map(n => buildTree.call(this, n.id));
+        // 将节点分配到对应的层
+        this.nodes.forEach(node => {
+            const degree = nodeDegrees.get(node.id);
+            layers[degree].push(node);
+        });
         
-        const treeLayout = d3.tree().size([width - 100, height - 100]);
-        const hierarchy = d3.hierarchy(root);
-        const treeNodes = treeLayout(hierarchy);
+        // 过滤空层并反转（度数高的在上层）
+        const nonEmptyLayers = layers.filter(layer => layer.length > 0).reverse();
         
-        treeNodes.descendants().forEach(d => {
-            if (d.data.id !== 'root') {
-                const node = this.nodes.find(n => n.id === d.data.id);
-                if (node) {
-                    node.x = d.x + 50;
-                    node.y = d.y + 50;
+        // 计算布局 - 增加层间距和节点间距
+        const layerHeight = (height - 200) / Math.max(nonEmptyLayers.length, 1);
+        const padding = 100;
+        const minNodeSpacing = 120; // 最小节点间距
+        
+        nonEmptyLayers.forEach((layer, layerIndex) => {
+            const y = padding + layerIndex * layerHeight + layerHeight / 2;
+            const layerWidth = width - 2 * padding;
+            // 确保节点间距不会太小
+            const nodeSpacing = Math.max(minNodeSpacing, layerWidth / Math.max(layer.length, 1));
+            
+            // 如果节点需要的总宽度超过画布宽度，则水平居中排列
+            const totalWidth = nodeSpacing * layer.length;
+            const startX = totalWidth <= layerWidth 
+                ? padding 
+                : (this.graphBase.width / 2) - (totalWidth / 2); // 居中对齐
+            
+            layer.forEach((node, nodeIndex) => {
+                // 均匀分布节点
+                node.x = startX + nodeSpacing * nodeIndex + nodeSpacing / 2;
+                node.y = y;
+                
+                // 如果节点太多，使用之字形布局避免重叠
+                if (layer.length > 10) {
+                    // 偶数索引的节点稍微上移，奇数索引的节点稍微下移
+                    node.y += (nodeIndex % 2 === 0 ? -30 : 30);
                 }
-            }
+            });
         });
     }
     
     /**
-     * 计算环形布局
+     * 计算环形布局 - 动态调整半径以减少重叠
      */
     calculateCircularLayout() {
         const centerX = this.graphBase.width / 2;
         const centerY = this.graphBase.height / 2;
-        const radius = Math.min(this.graphBase.width, this.graphBase.height) / 3;
-        const angleStep = (2 * Math.PI) / this.nodes.length;
+        
+        // 根据节点数量动态计算半径
+        const nodeCount = this.nodes.length;
+        const minRadius = 100; // 最小半径
+        const maxRadius = 2500; // 最大半径
+        
+        // 计算节点的平均尺寸（考虑复杂节点的大小）
+        let avgNodeSize = 60; // 默认尺寸
+        const complexNodeCount = this.nodes.filter(n => n.isComplex).length;
+        if (complexNodeCount > 0) {
+            // 如果有复杂节点，增加平均尺寸估算
+            avgNodeSize = 80 + complexNodeCount * 10;
+        }
+        
+        // 根据节点数量和大小计算所需的周长
+        const requiredCircumference = nodeCount * avgNodeSize * 1.5; // 1.5倍间距
+        const calculatedRadius = requiredCircumference / (2 * Math.PI);
+        
+        // 限制在最小和最大半径之间
+        const radius = Math.max(minRadius, Math.min(calculatedRadius, maxRadius));
+        
+        // 单环布局
+        const angleStep = (2 * Math.PI) / nodeCount;
         
         this.nodes.forEach((node, i) => {
             const angle = i * angleStep - Math.PI / 2;
             node.x = centerX + radius * Math.cos(angle);
             node.y = centerY + radius * Math.sin(angle);
         });
+    }
+    
+    /**
+     * 计算多层环形布局
+     */
+    calculateMultiCircularLayout() {
+        const centerX = this.graphBase.width / 2;
+        const centerY = this.graphBase.height / 2;
+        const nodeCount = this.nodes.length;
+        
+        if (nodeCount === 0) return;
+        
+        // 配置参数
+        const minRadius = 100;
+        const maxRadius = 2500;
+        const nodesPerRing = 15; // 每环最多节点数
+        
+        // 计算需要的环数
+        const ringsNeeded = Math.ceil(nodeCount / nodesPerRing);
+        const ringSpacing = ringsNeeded > 1 ? (maxRadius - minRadius) / (ringsNeeded - 1) : 0;
+        
+        // 分配节点到各环
+        this.nodes.forEach((node, i) => {
+            const ringIndex = Math.floor(i / nodesPerRing);
+            const positionInRing = i % nodesPerRing;
+            const nodesInThisRing = Math.min(nodesPerRing, nodeCount - ringIndex * nodesPerRing);
+            const angleStep = (2 * Math.PI) / nodesInThisRing;
+            const angle = positionInRing * angleStep - Math.PI / 2;
+            const ringRadius = minRadius + ringIndex * ringSpacing;
+            
+            node.x = centerX + ringRadius * Math.cos(angle);
+            node.y = centerY + ringRadius * Math.sin(angle);
+        });
+    }
+    
+    /**
+     * 应用多层环形布局
+     */
+    applyMultiCircularLayout() {
+        this.forceManager.stop();
+        
+        // 计算多层环形布局
+        this.calculateMultiCircularLayout();
+        
+        // 应用静态拖拽
+        this.applyStaticDrag();
+        
+        // 更新位置
+        this.updateStaticPositions();
     }
     
     /**
@@ -545,27 +654,71 @@ class ProjectUnitGraph {
         
         this.staticDragBehavior = createStaticDragBehavior({
             updateLinks: (draggedNode) => {
-                // 实时更新连接线
+                // 实时更新连接线 - 使用path的d属性而不是x1,y1,x2,y2
                 self.linkSelection
-                    .attr('x1', d => {
-                        const source = d.source.id === draggedNode.id ? draggedNode : 
-                                       self.nodes.find(n => n.id === d.source.id) || d.source;
-                        return source.x;
-                    })
-                    .attr('y1', d => {
-                        const source = d.source.id === draggedNode.id ? draggedNode : 
-                                       self.nodes.find(n => n.id === d.source.id) || d.source;
-                        return source.y;
-                    })
-                    .attr('x2', d => {
-                        const target = d.target.id === draggedNode.id ? draggedNode : 
-                                       self.nodes.find(n => n.id === d.target.id) || d.target;
-                        return target.x;
-                    })
-                    .attr('y2', d => {
-                        const target = d.target.id === draggedNode.id ? draggedNode : 
-                                       self.nodes.find(n => n.id === d.target.id) || d.target;
-                        return target.y;
+                    .attr('d', d => {
+                        const sourceId = d.source.id || d.source;
+                        const targetId = d.target.id || d.target;
+                        
+                        const source = sourceId === draggedNode.id ? draggedNode : 
+                                       self.nodes.find(n => n.id === sourceId);
+                        const target = targetId === draggedNode.id ? draggedNode : 
+                                       self.nodes.find(n => n.id === targetId);
+                        
+                        if (!source || !target) return '';
+                        
+                        // 计算从源到目标的路径
+                        const dx = target.x - source.x;
+                        const dy = target.y - source.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (distance === 0) return '';
+                        
+                        const normX = dx / distance;
+                        const normY = dy / distance;
+                        
+                        // 根据目标节点类型计算箭头终点
+                        let arrowOffset = 35; // 默认圆形节点的偏移量
+                        
+                        if (target.isComplex && target._cardSize) {
+                            // 复杂节点：计算到矩形边界的距离
+                            const halfWidth = target._cardSize.width / 2;
+                            const halfHeight = target._cardSize.height / 2;
+                            
+                            const angle = Math.atan2(dy, dx);
+                            const cos = Math.cos(angle);
+                            const sin = Math.sin(angle);
+                            
+                            let t = Infinity;
+                            
+                            // 检查与垂直边的交点
+                            if (Math.abs(cos) > 0.001) {
+                                const signX = cos > 0 ? 1 : -1;
+                                const tVertical = (signX * halfWidth) / cos;
+                                if (Math.abs(tVertical * sin) <= halfHeight) {
+                                    t = Math.min(t, Math.abs(tVertical));
+                                }
+                            }
+                            
+                            // 检查与水平边的交点
+                            if (Math.abs(sin) > 0.001) {
+                                const signY = sin > 0 ? 1 : -1;
+                                const tHorizontal = (signY * halfHeight) / sin;
+                                if (Math.abs(tHorizontal * cos) <= halfWidth) {
+                                    t = Math.min(t, Math.abs(tHorizontal));
+                                }
+                            }
+                            
+                            arrowOffset = t + 10;
+                            
+                            if (!isFinite(arrowOffset) || arrowOffset > 200) {
+                                arrowOffset = halfWidth + halfHeight + 10;
+                            }
+                        }
+                        
+                        const endX = target.x - normX * arrowOffset;
+                        const endY = target.y - normY * arrowOffset;
+                        return `M${source.x},${source.y} L${endX},${endY}`;
                     });
             }
         });

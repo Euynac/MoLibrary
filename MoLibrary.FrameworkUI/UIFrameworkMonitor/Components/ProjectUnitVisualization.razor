@@ -52,6 +52,14 @@
         
         @if (_showFilterPanel)
         {
+            @if (!string.IsNullOrEmpty(_relatedToNodeId))
+            {
+                var relatedUnit = _allProjectUnits.FirstOrDefault(u => u.Key == _relatedToNodeId);
+                <MudAlert Severity="Severity.Info" Class="mb-2" CloseIconClicked="() => ClearRelatedFilter()">
+                    正在显示与 <strong>@(relatedUnit?.Title ?? _relatedToNodeId)</strong> 连通的所有节点
+                </MudAlert>
+            }
+            
             <ProjectUnitFilterPanel @bind-FilterText="_filterText"
                                     @bind-SelectedUnitTypes="_selectedUnitTypes"
                                     @bind-ShowOnlyWithDependencies="_showOnlyWithDependencies"
@@ -106,6 +114,27 @@
                 <MudListItem T="string" Icon="@Icons.Material.Filled.FilterAlt" OnClick="FilterByType">
                     筛选同类型
                 </MudListItem>
+                @if (!string.IsNullOrEmpty(_relatedToNodeId))
+                {
+                    @if (_relatedToNodeId == _contextMenuUnit?.Key)
+                    {
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Clear" OnClick="ClearRelatedFilter">
+                            取消连通节点筛选
+                        </MudListItem>
+                    }
+                    else
+                    {
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.AccountTree" OnClick="ShowRelatedNodes">
+                            显示其他连通节点
+                        </MudListItem>
+                    }
+                }
+                else
+                {
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.AccountTree" OnClick="ShowRelatedNodes">
+                        显示连通节点
+                    </MudListItem>
+                }
                 <MudListItem T="string" Icon="@Icons.Material.Filled.ClearAll" OnClick="ClearAllFilters">
                     清除所有筛选
                 </MudListItem>
@@ -132,6 +161,7 @@
     private IReadOnlyCollection<EProjectUnitType> _selectedUnitTypes = new HashSet<EProjectUnitType>();
     private bool _showOnlyWithDependencies = false;
     private bool _showOnlyWithAlerts = false;
+    private string? _relatedToNodeId = null;
     private bool _contextMenuOpen = false;
     private double _contextMenuX = 0;
     private double _contextMenuY = 0;
@@ -278,6 +308,7 @@
                 LayoutType.Force => "force",
                 LayoutType.Hierarchy => "hierarchy",
                 LayoutType.Circular => "circular",
+                LayoutType.MultiCircular => "multi_circular",
                 _ => "force"
             };
             await _jsModule.InvokeVoidAsync("setLayout", layoutName);
@@ -306,6 +337,13 @@
     {
         _filteredUnits = _allProjectUnits.Where(unit =>
         {
+            // 如果设置了相关节点筛选，则只显示相关节点
+            if (!string.IsNullOrEmpty(_relatedToNodeId))
+            {
+                var relatedNodes = GetAllRelatedNodes(_relatedToNodeId);
+                return relatedNodes.Contains(unit.Key);
+            }
+
             var matchesText = string.IsNullOrWhiteSpace(_filterText) ||
                 unit.Title.Contains(_filterText, StringComparison.OrdinalIgnoreCase) ||
                 unit.Key.Contains(_filterText, StringComparison.OrdinalIgnoreCase);
@@ -419,6 +457,69 @@
         );
         _showOnlyWithDependencies = false;
         _showOnlyWithAlerts = false;
+        _relatedToNodeId = null;
+        await ApplyFilters();
+        _contextMenuOpen = false;
+    }
+
+    private async Task ShowRelatedNodes()
+    {
+        if (_contextMenuUnit != null)
+        {
+            _relatedToNodeId = _contextMenuUnit.Key;
+            _showFilterPanel = true;
+            await ApplyFilters();
+            Snackbar.Add($"显示与 {_contextMenuUnit.Title} 连通的所有节点", Severity.Info);
+        }
+        _contextMenuOpen = false;
+    }
+    
+    private HashSet<string> GetAllRelatedNodes(string nodeId)
+    {
+        var related = new HashSet<string>();
+        var queue = new Queue<string>();
+        
+        // 从起始节点开始
+        queue.Enqueue(nodeId);
+        related.Add(nodeId);
+        
+        // 使用广度优先搜索找到整个连通图
+        while (queue.Count > 0)
+        {
+            var currentId = queue.Dequeue();
+            var currentUnit = _allProjectUnits.FirstOrDefault(u => u.Key == currentId);
+            
+            if (currentUnit != null)
+            {
+                // 查找当前节点的所有依赖（出边）
+                foreach (var dep in currentUnit.DependencyUnits)
+                {
+                    if (related.Add(dep.Key))
+                    {
+                        queue.Enqueue(dep.Key);
+                    }
+                }
+            }
+            
+            // 查找依赖当前节点的所有节点（入边）
+            var dependents = _allProjectUnits.Where(u => 
+                u.DependencyUnits.Any(d => d.Key == currentId));
+            
+            foreach (var dependent in dependents)
+            {
+                if (related.Add(dependent.Key))
+                {
+                    queue.Enqueue(dependent.Key);
+                }
+            }
+        }
+        
+        return related;
+    }
+
+    private async Task ClearRelatedFilter()
+    {
+        _relatedToNodeId = null;
         await ApplyFilters();
         _contextMenuOpen = false;
     }
