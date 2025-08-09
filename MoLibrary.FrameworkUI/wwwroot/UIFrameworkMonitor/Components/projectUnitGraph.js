@@ -160,12 +160,18 @@ class ProjectUnitGraph {
      * 绘制节点
      */
     drawNode(nodeElement, nodeData) {
+        // 添加告警级别属性
+        nodeElement.attr('data-alert-level', nodeData.alertLevel || 'none');
+        
         // 使用来自C#层的配置判断节点类型
         if (nodeData.isComplex) {
             this.drawComplexNode(nodeElement, nodeData);
         } else {
             this.drawSimpleNode(nodeElement, nodeData);
         }
+        
+        // 添加告警视觉效果
+        this.addAlertEffects(nodeElement, nodeData);
     }
     
     /**
@@ -186,6 +192,7 @@ class ProjectUnitGraph {
         
         // 绘制圆形
         nodeElement.append('circle')
+            .attr('class', 'node-circle')
             .attr('r', radius)
             .attr('fill', color)
             .attr('stroke', this.nodeStyle.strokeColor)
@@ -215,6 +222,117 @@ class ProjectUnitGraph {
                 .style('pointer-events', 'none')
                 .text(`依赖: ${nodeData.dependencyCount}`);
         }
+    }
+    
+    /**
+     * 添加告警视觉效果
+     */
+    addAlertEffects(nodeElement, nodeData) {
+        if (!nodeData.alertLevel || nodeData.alertLevel === 'none') {
+            return;
+        }
+        
+        // 为节点添加告警发光效果
+        const alertId = `alert-${nodeData.id || Math.random().toString(36).substr(2, 9)}`;
+        
+        // 创建告警滤镜
+        const defs = this.graphBase.svg.select('defs').empty() 
+            ? this.graphBase.svg.append('defs') 
+            : this.graphBase.svg.select('defs');
+        
+        // 移除旧的告警滤镜（如果存在）
+        defs.select(`#${alertId}`).remove();
+        
+        const filter = defs.append('filter')
+            .attr('id', alertId)
+            .attr('x', '-100%')
+            .attr('y', '-100%')
+            .attr('width', '300%')
+            .attr('height', '300%');
+        
+        // 根据告警级别设置不同的发光效果
+        let glowColor, glowStdDeviation, animationClass;
+        
+        switch (nodeData.alertLevel) {
+            case 'error':
+                glowColor = '#ff0000';
+                glowStdDeviation = 8;
+                animationClass = 'alert-glow-error';
+                break;
+            case 'warning':
+                glowColor = '#ffaa00';
+                glowStdDeviation = 6;
+                animationClass = 'alert-glow-warning';
+                break;
+            case 'info':
+                glowColor = '#0088ff';
+                glowStdDeviation = 4;
+                animationClass = 'alert-glow-info';
+                break;
+            default:
+                return;
+        }
+        
+        // 添加高斯模糊
+        const gaussianBlur = filter.append('feGaussianBlur')
+            .attr('stdDeviation', glowStdDeviation)
+            .attr('result', 'coloredBlur');
+        
+        // 添加发光颜色
+        filter.append('feFlood')
+            .attr('flood-color', glowColor)
+            .attr('flood-opacity', 0.6)
+            .attr('result', 'glowColor');
+        
+        filter.append('feComposite')
+            .attr('in', 'glowColor')
+            .attr('in2', 'coloredBlur')
+            .attr('operator', 'in')
+            .attr('result', 'softGlow');
+        
+        // 合并原图和发光
+        const merge = filter.append('feMerge');
+        merge.append('feMergeNode')
+            .attr('in', 'softGlow');
+        merge.append('feMergeNode')
+            .attr('in', 'SourceGraphic');
+        
+        // 应用滤镜到节点的主要元素
+        const mainElement = nodeData.isComplex 
+            ? nodeElement.select('.card-background')
+            : nodeElement.select('.node-circle');
+            
+        if (!mainElement.empty()) {
+            mainElement.style('filter', `url(#${alertId})`);
+            
+            // 为warning和error级别添加闪烁动画
+            if (nodeData.alertLevel === 'warning' || nodeData.alertLevel === 'error') {
+                this.addPulseAnimation(gaussianBlur, nodeData.alertLevel);
+            }
+        }
+    }
+    
+    /**
+     * 添加脉冲动画
+     */
+    addPulseAnimation(element, alertLevel) {
+        const duration = alertLevel === 'error' ? 800 : 1200; // error闪烁更快
+        const minStd = alertLevel === 'error' ? 6 : 4;
+        const maxStd = alertLevel === 'error' ? 12 : 8;
+        
+        // 创建动画
+        const animate = () => {
+            element
+                .transition()
+                .duration(duration / 2)
+                .attr('stdDeviation', maxStd)
+                .transition()
+                .duration(duration / 2)
+                .attr('stdDeviation', minStd)
+                .on('end', animate);
+        };
+        
+        animate();
     }
     
     /**

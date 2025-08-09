@@ -164,7 +164,8 @@ export class ComplexNodeCardRenderer {
         
         // 创建卡片主容器
         const card = nodeElement.append('g')
-            .attr('class', 'complex-node-card');
+            .attr('class', 'complex-node-card')
+            .attr('data-alert-level', nodeData.alertLevel || 'none');
         
         // 添加阴影效果（使用filter而不是drop-shadow以获得更好的性能）
         const shadowFilter = card.append('filter')

@@ -7,6 +7,7 @@ using MoLibrary.Framework.Core.Attributes;
 using MoLibrary.Framework.Core.Interfaces;
 using MoLibrary.Framework.Modules;
 using MoLibrary.Tool.Extensions;
+using MoLibrary.Tool.General;
 
 namespace MoLibrary.Framework.Core.Model;
 
@@ -100,15 +101,32 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     /// <exception cref="ArgumentOutOfRangeException"></exception>
     protected virtual void CheckNameConventionMode()
     {
-        if(VerifyNameConvention()) return;
+        if (VerifyNameConvention()) return;
         var option = ConventionOption;
         if(option == null) return;
+        
+        var alertMessage = $"{Type.GetCleanFullName()}需满足命名限制：{option}";
+        
         switch (option.NameConventionMode ?? Option.ConventionOptions.NameConventionMode)
         {
             case ENameConventionMode.Strict:
-                throw new InvalidOperationException($"{Type.GetCleanFullName()}需满足命名限制：{option}");
+                // 添加错误级别告警
+                Alerts.Add(new ProjectUnitAlert
+                {
+                    Level = EAlertLevel.Error,
+                    Message = alertMessage,
+                    Source = "NamingConvention"
+                });
+                throw new InvalidOperationException(alertMessage);
             case ENameConventionMode.Warning:
-                Logger.Log(LogLevel.Error, $"{Type.GetCleanFullName()}需满足命名限制：{option}");
+                // 添加警告级别告警
+                Alerts.Add(new ProjectUnitAlert
+                {
+                    Level = EAlertLevel.Warning,
+                    Message = alertMessage,
+                    Source = "NamingConvention"
+                });
+                Logger.Log(LogLevel.Error, alertMessage);
                 break;
             case ENameConventionMode.Disable:
                 break;
@@ -204,6 +222,11 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     /// 项目单元特性
     /// </summary>
     public List<IUnitCachedAttribute> Attributes { get; protected set; } = [];
+    
+    /// <summary>
+    /// 告警信息列表
+    /// </summary>
+    public List<ProjectUnitAlert> Alerts { get; protected set; } = [];
 
     /// <summary>
     /// 增加所依赖的单元
@@ -324,6 +347,11 @@ public class DtoProjectUnit
     /// 项目单元特性
     /// </summary>
     public List<IUnitCachedAttribute> Attributes { get; set; } = [];
+    
+    /// <summary>
+    /// 告警信息列表
+    /// </summary>
+    public List<ProjectUnitAlert> Alerts { get; set; } = [];
 }
 public class DtoProjectUnitDependency
 {

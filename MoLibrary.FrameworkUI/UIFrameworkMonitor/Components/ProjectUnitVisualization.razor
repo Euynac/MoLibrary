@@ -2,6 +2,7 @@
 @using MoLibrary.Framework.Services
 @using MoLibrary.Tool.MoResponse
 @using Microsoft.JSInterop
+@using System.Linq
 @inject IFrameworkMonitorService FrameworkMonitorService
 @inject ISnackbar Snackbar
 @inject IJSRuntime JSRuntime
@@ -195,6 +196,43 @@
                         </MudList>
                     </MudItem>
                 }
+                @if (_selectedUnit.Alerts.Any())
+                {
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">告警信息:</MudText>
+                        <MudList T="string" Dense="true">
+                            @foreach (var alert in _selectedUnit.Alerts.OrderByDescending(a => a.Level))
+                            {
+                                var alertColor = alert.Level switch
+                                {
+                                    EAlertLevel.Error => Color.Error,
+                                    EAlertLevel.Warning => Color.Warning,
+                                    EAlertLevel.Info => Color.Info,
+                                    _ => Color.Default
+                                };
+                                var alertIcon = alert.Level switch
+                                {
+                                    EAlertLevel.Error => Icons.Material.Filled.Error,
+                                    EAlertLevel.Warning => Icons.Material.Filled.Warning,
+                                    EAlertLevel.Info => Icons.Material.Filled.Info,
+                                    _ => Icons.Material.Filled.Info
+                                };
+                                <MudListItem T="string">
+                                    <div class="d-flex align-center">
+                                        <MudIcon Icon="@alertIcon" Color="@alertColor" Size="Size.Small" Class="mr-2" />
+                                        <MudText>
+                                            <strong>[@alert.Level]</strong> @alert.Message
+                                            @if (!string.IsNullOrEmpty(alert.Source))
+                                            {
+                                                <MudText Typo="Typo.caption" Class="ml-2" Style="display: inline;">(@alert.Source)</MudText>
+                                            }
+                                        </MudText>
+                                    </div>
+                                </MudListItem>
+                            }
+                        </MudList>
+                    </MudItem>
+                }
             </MudGrid>
         }
     </DialogContent>
@@ -347,7 +385,10 @@
             color = ProjectUnitVisualizationConfig.GetUnitTypeColor(unit.UnitType),
             icon = ProjectUnitVisualizationConfig.GetUnitTypeIcon(unit.UnitType),
             chips = ProjectUnitVisualizationConfig.GetUnitTypeChips(unit),
-            metadata = ProjectUnitVisualizationConfig.GetUnitMetadata(unit)
+            metadata = ProjectUnitVisualizationConfig.GetUnitMetadata(unit),
+            // 添加告警信息
+            alertLevel = ProjectUnitVisualizationConfig.GetHighestAlertLevel(unit),
+            alertCount = unit.Alerts.Count
         }).ToList();
 
         var links = new List<object>();

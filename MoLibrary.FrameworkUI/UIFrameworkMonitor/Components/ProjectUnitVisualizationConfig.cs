@@ -1,5 +1,6 @@
 using MoLibrary.Framework.Core.Model;
 using MudBlazor;
+using System.Linq;
 
 namespace MoLibrary.FrameworkUI.UIFrameworkMonitor.Components;
 
@@ -138,7 +139,40 @@ public static class ProjectUnitVisualizationConfig
         {
             metadata.Add(new { key = "依赖数量", value = unit.DependencyUnits.Count.ToString() });
         }
+        
+        // 添加告警统计
+        if (unit.Alerts.Any())
+        {
+            var errorCount = unit.Alerts.Count(a => a.Level == EAlertLevel.Error);
+            var warningCount = unit.Alerts.Count(a => a.Level == EAlertLevel.Warning);
+            var infoCount = unit.Alerts.Count(a => a.Level == EAlertLevel.Info);
+            
+            if (errorCount > 0)
+                metadata.Add(new { key = "错误", value = errorCount.ToString() });
+            if (warningCount > 0)
+                metadata.Add(new { key = "警告", value = warningCount.ToString() });
+            if (infoCount > 0)
+                metadata.Add(new { key = "信息", value = infoCount.ToString() });
+        }
 
         return metadata.ToArray();
+    }
+    
+    /// <summary>
+    /// 获取节点的最高告警级别
+    /// </summary>
+    public static string? GetHighestAlertLevel(DtoProjectUnit unit)
+    {
+        if (!unit.Alerts.Any())
+            return null;
+            
+        if (unit.Alerts.Any(a => a.Level == EAlertLevel.Error))
+            return "error";
+        if (unit.Alerts.Any(a => a.Level == EAlertLevel.Warning))
+            return "warning";
+        if (unit.Alerts.Any(a => a.Level == EAlertLevel.Info))
+            return "info";
+            
+        return null;
     }
 }
