@@ -11,102 +11,172 @@
     <DialogContent>
         @if (SelectedUnit != null)
         {
-            <MudGrid>
-                <MudItem xs="12">
-                    <MudTextField Label="单元名称" Value="@SelectedUnit.Title" ReadOnly="true" Variant="Variant.Outlined" />
-                </MudItem>
-                <MudItem xs="12">
-                    <MudTextField Label="完整名称" Value="@SelectedUnit.Key" ReadOnly="true" Variant="Variant.Outlined" />
-                </MudItem>
-                <MudItem xs="12" sm="4">
-                    <MudTextField Label="单元类型" Value="@SelectedUnit.UnitType.ToString()" ReadOnly="true" Variant="Variant.Outlined" />
-                </MudItem>
-                <MudItem xs="12" sm="4">
-                    <MudTextField Label="依赖数量" Value="@SelectedUnit.DependencyUnits.Count.ToString()" ReadOnly="true" Variant="Variant.Outlined" />
-                </MudItem>
-                <MudItem xs="12" sm="4">
-                    <MudTextField Label="被依赖数量" Value="@SelectedUnit.DependedByCount.ToString()" ReadOnly="true" Variant="Variant.Outlined" />
-                </MudItem>
-                @if (SelectedUnit.DependencyUnits.Any())
-                {
-                    <MudItem xs="12">
-                        <MudText Typo="Typo.subtitle2" Class="mb-2">依赖单元 (出边):</MudText>
-                        <MudChipSet T="string">
-                            @foreach (var dep in SelectedUnit.DependencyUnits)
-                            {
-                                <MudChip T="string" Color="Color.Secondary" Size="Size.Small" 
-                                         OnClick="@(() => OnChipClick(dep.Key))">
-                                    @dep.Title (@dep.UnitType)
-                                </MudChip>
-                            }
-                        </MudChipSet>
-                    </MudItem>
-                }
-                @if (DependedByUnits != null && DependedByUnits.Any())
-                {
-                    <MudItem xs="12">
-                        <MudText Typo="Typo.subtitle2" Class="mb-2">被依赖单元 (入边):</MudText>
-                        <MudChipSet T="string">
-                            @foreach (var dep in DependedByUnits)
-                            {
-                                <MudChip T="string" Color="Color.Primary" Size="Size.Small"
-                                         OnClick="@(() => OnChipClick(dep.Key))">
-                                    @dep.Title (@dep.UnitType)
-                                </MudChip>
-                            }
-                        </MudChipSet>
-                    </MudItem>
-                }
-                @if (SelectedUnit.Attributes.Any())
-                {
-                    <MudItem xs="12">
-                        <MudText Typo="Typo.subtitle2" Class="mb-2">特性:</MudText>
-                        <MudList T="string" Dense="true">
-                            @foreach (var attr in SelectedUnit.Attributes)
-                            {
-                                <MudListItem T="string">@attr.GetType().Name</MudListItem>
-                            }
-                        </MudList>
-                    </MudItem>
-                }
-                @if (SelectedUnit.Alerts.Any())
-                {
-                    <MudItem xs="12">
-                        <MudText Typo="Typo.subtitle2" Class="mb-2">告警信息:</MudText>
-                        <MudList T="string" Dense="true">
-                            @foreach (var alert in SelectedUnit.Alerts.OrderByDescending(a => a.Level))
-                            {
-                                var alertColor = alert.Level switch
+            <MudSimpleTable Style="overflow-x: auto;" Elevation="0">
+                <tbody>
+                    <tr>
+                        <td style="min-width: 120px;"><MudText Typo="Typo.subtitle2">单元名称</MudText></td>
+                        <td><MudText>@SelectedUnit.Title</MudText></td>
+                    </tr>
+                    <tr>
+                        <td><MudText Typo="Typo.subtitle2">完整名称</MudText></td>
+                        <td><MudText>@SelectedUnit.Key</MudText></td>
+                    </tr>
+                    <tr>
+                        <td><MudText Typo="Typo.subtitle2">单元类型</MudText></td>
+                        <td>
+                            <MudChip T="string" Size="Size.Small" 
+                                     Style="@($"background-color: {GetUnitTypeColor(SelectedUnit.UnitType)}; color: white;")">
+                                @SelectedUnit.UnitType.ToString()
+                            </MudChip>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><MudText Typo="Typo.subtitle2">统计信息</MudText></td>
+                        <td>
+                            <MudChipSet T="string">
+                                @if (SelectedUnit.DependencyUnits.Count > 0)
                                 {
-                                    EAlertLevel.Error => Color.Error,
-                                    EAlertLevel.Warning => Color.Warning,
-                                    EAlertLevel.Info => Color.Info,
-                                    _ => Color.Default
-                                };
-                                var alertIcon = alert.Level switch
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Info" 
+                                             Icon="@Icons.Material.Filled.Link">
+                                        依赖 @SelectedUnit.DependencyUnits.Count
+                                    </MudChip>
+                                }
+                                @if (SelectedUnit.DependedByCount > 0)
                                 {
-                                    EAlertLevel.Error => Icons.Material.Filled.Error,
-                                    EAlertLevel.Warning => Icons.Material.Filled.Warning,
-                                    EAlertLevel.Info => Icons.Material.Filled.Info,
-                                    _ => Icons.Material.Filled.Info
-                                };
-                                <MudListItem T="string">
-                                    <div class="d-flex align-center">
-                                        <MudIcon Icon="@alertIcon" Color="@alertColor" Size="Size.Small" Class="mr-2" />
-                                        <MudText>
-                                            <strong>[@alert.Level]</strong> @alert.Message
-                                            @if (!string.IsNullOrEmpty(alert.Source))
-                                            {
-                                                <MudText Typo="Typo.caption" Class="ml-2" Style="display: inline;">(@alert.Source)</MudText>
-                                            }
-                                        </MudText>
-                                    </div>
-                                </MudListItem>
-                            }
-                        </MudList>
-                    </MudItem>
-                }
-            </MudGrid>
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Success"
+                                             Icon="@Icons.Material.Filled.CallReceived">
+                                        被依赖 @SelectedUnit.DependedByCount
+                                    </MudChip>
+                                }
+                                @if (SelectedUnit.Attributes.Any())
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary"
+                                             Icon="@Icons.Material.Filled.Label">
+                                        特性 @SelectedUnit.Attributes.Count
+                                    </MudChip>
+                                }
+                                @if (SelectedUnit.Alerts.Any())
+                                {
+                                    var errorCount = SelectedUnit.Alerts.Count(a => a.Level == EAlertLevel.Error);
+                                    var warningCount = SelectedUnit.Alerts.Count(a => a.Level == EAlertLevel.Warning);
+                                    var infoCount = SelectedUnit.Alerts.Count(a => a.Level == EAlertLevel.Info);
+                                    
+                                    @if (errorCount > 0)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Error"
+                                                 Icon="@Icons.Material.Filled.Error">
+                                            错误 @errorCount
+                                        </MudChip>
+                                    }
+                                    @if (warningCount > 0)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Warning"
+                                                 Icon="@Icons.Material.Filled.Warning">
+                                            警告 @warningCount
+                                        </MudChip>
+                                    }
+                                    @if (infoCount > 0)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Info"
+                                                 Icon="@Icons.Material.Filled.Info">
+                                            信息 @infoCount
+                                        </MudChip>
+                                    }
+                                }
+                            </MudChipSet>
+                        </td>
+                    </tr>
+                    @if (SelectedUnit.DependencyUnits.Any())
+                    {
+                        <tr>
+                            <td style="vertical-align: top;"><MudText Typo="Typo.subtitle2">依赖单元</MudText></td>
+                            <td>
+                                <MudChipSet T="string">
+                                    @foreach (var dep in SelectedUnit.DependencyUnits)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" 
+                                                 Style="@($"background-color: {GetUnitTypeColor(dep.UnitType)}; color: white;")"
+                                                 OnClick="@(() => OnChipClick(dep.Key))">
+                                            @dep.Title
+                                        </MudChip>
+                                    }
+                                </MudChipSet>
+                            </td>
+                        </tr>
+                    }
+                    @if (DependedByUnits != null && DependedByUnits.Any())
+                    {
+                        <tr>
+                            <td style="vertical-align: top;"><MudText Typo="Typo.subtitle2">被依赖单元</MudText></td>
+                            <td>
+                                <MudChipSet T="string">
+                                    @foreach (var dep in DependedByUnits)
+                                    {
+                                        <MudChip T="string" Size="Size.Small"
+                                                 Style="@($"background-color: {GetUnitTypeColor(dep.UnitType)}; color: white;")"
+                                                 OnClick="@(() => OnChipClick(dep.Key))">
+                                            @dep.Title
+                                        </MudChip>
+                                    }
+                                </MudChipSet>
+                            </td>
+                        </tr>
+                    }
+                    @if (SelectedUnit.Attributes.Any())
+                    {
+                        <tr>
+                            <td style="vertical-align: top;"><MudText Typo="Typo.subtitle2">特性</MudText></td>
+                            <td>
+                                <MudChipSet T="string">
+                                    @foreach (var attr in SelectedUnit.Attributes)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Secondary">
+                                            @attr.GetType().Name
+                                        </MudChip>
+                                    }
+                                </MudChipSet>
+                            </td>
+                        </tr>
+                    }
+                    @if (SelectedUnit.Alerts.Any())
+                    {
+                        <tr>
+                            <td style="vertical-align: top;"><MudText Typo="Typo.subtitle2">告警信息</MudText></td>
+                            <td>
+                                <MudStack Spacing="1">
+                                    @foreach (var alert in SelectedUnit.Alerts.OrderByDescending(a => a.Level))
+                                    {
+                                        var alertColor = alert.Level switch
+                                        {
+                                            EAlertLevel.Error => Color.Error,
+                                            EAlertLevel.Warning => Color.Warning,
+                                            EAlertLevel.Info => Color.Info,
+                                            _ => Color.Default
+                                        };
+                                        var alertIcon = alert.Level switch
+                                        {
+                                            EAlertLevel.Error => Icons.Material.Filled.Error,
+                                            EAlertLevel.Warning => Icons.Material.Filled.Warning,
+                                            EAlertLevel.Info => Icons.Material.Filled.Info,
+                                            _ => Icons.Material.Filled.Info
+                                        };
+                                        <div class="d-flex align-center">
+                                            <MudIcon Icon="@alertIcon" Color="@alertColor" Size="Size.Small" Class="mr-2" />
+                                            <MudText>
+                                                <strong>[@alert.Level]</strong> @alert.Message
+                                                @if (!string.IsNullOrEmpty(alert.Source))
+                                                {
+                                                    <MudText Typo="Typo.caption" Class="ml-2" Style="display: inline;">(@alert.Source)</MudText>
+                                                }
+                                            </MudText>
+                                        </div>
+                                    }
+                                </MudStack>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
         }
     </DialogContent>
     <DialogActions>
@@ -158,5 +228,10 @@
     {
         Visible = false;
         await VisibleChanged.InvokeAsync(false);
+    }
+    
+    private string GetUnitTypeColor(EProjectUnitType unitType)
+    {
+        return ProjectUnitVisualizationConfig.GetUnitTypeColor(unitType);
     }
 }
