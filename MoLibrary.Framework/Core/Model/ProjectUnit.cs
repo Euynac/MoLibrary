@@ -352,6 +352,11 @@ public class DtoProjectUnit
     /// 告警信息列表
     /// </summary>
     public List<ProjectUnitAlert> Alerts { get; set; } = [];
+    
+    /// <summary>
+    /// 被依赖的数量（在数据传输时计算）
+    /// </summary>
+    public int DependedByCount { get; set; } = 0;
 }
 public class DtoProjectUnitDependency
 {

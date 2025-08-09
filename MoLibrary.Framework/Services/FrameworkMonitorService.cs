@@ -32,6 +32,28 @@ public class FrameworkMonitorService(
         {
             var units = ProjectUnitStores.GetAllUnits();
             var result = mapper.Map<List<DtoProjectUnit>>(units);
+            
+            // 计算每个单元被依赖的数量
+            var dependencyCountMap = new Dictionary<string, int>();
+            foreach (var unit in result)
+            {
+                foreach (var dep in unit.DependencyUnits)
+                {
+                    if (!dependencyCountMap.ContainsKey(dep.Key))
+                        dependencyCountMap[dep.Key] = 0;
+                    dependencyCountMap[dep.Key]++;
+                }
+            }
+            
+            // 更新每个单元的被依赖数量
+            foreach (var unit in result)
+            {
+                if (dependencyCountMap.TryGetValue(unit.Key, out var count))
+                {
+                    unit.DependedByCount = count;
+                }
+            }
+            
             return Res.Ok(result);
         }
         catch (Exception ex)

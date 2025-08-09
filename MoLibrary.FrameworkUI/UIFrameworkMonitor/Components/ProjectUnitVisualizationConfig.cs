@@ -88,12 +88,12 @@ public static class ProjectUnitVisualizationConfig
     {
         var chips = new List<object>
         {
-            // 类型Chip
+            // 类型Chip - 不带图标，使用对应类型的颜色
             new
             {
                 text = unit.UnitType.ToString(),
-                color = "primary",
-                icon = GetUnitTypeIcon(unit.UnitType)
+                color = GetUnitTypeColor(unit.UnitType),
+                icon = "" // 不带图标
             }
         };
 
@@ -105,6 +105,17 @@ public static class ProjectUnitVisualizationConfig
                 text = $"依赖 {unit.DependencyUnits.Count}",
                 color = "info",
                 icon = Icons.Material.Filled.Link
+            });
+        }
+        
+        // 被依赖Chip
+        if (unit.DependedByCount > 0)
+        {
+            chips.Add(new
+            {
+                text = $"被依赖 {unit.DependedByCount}",
+                color = "success",
+                icon = Icons.Material.Filled.CallReceived
             });
         }
 
