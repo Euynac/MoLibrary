@@ -1,0 +1,118 @@
+@using MoLibrary.Framework.Core.Model
+@using System.Linq
+
+<MudDialog @bind-Visible="Visible" Options="DialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Info" Class="mr-3" />
+            项目单元详情
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (SelectedUnit != null)
+        {
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField Label="单元名称" Value="@SelectedUnit.Title" ReadOnly="true" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField Label="完整名称" Value="@SelectedUnit.Key" ReadOnly="true" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudTextField Label="单元类型" Value="@SelectedUnit.UnitType.ToString()" ReadOnly="true" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudTextField Label="依赖数量" Value="@SelectedUnit.DependencyUnits.Count.ToString()" ReadOnly="true" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudTextField Label="被依赖数量" Value="@SelectedUnit.DependedByCount.ToString()" ReadOnly="true" Variant="Variant.Outlined" />
+                </MudItem>
+                @if (SelectedUnit.DependencyUnits.Any())
+                {
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">依赖单元:</MudText>
+                        <MudChipSet T="string">
+                            @foreach (var dep in SelectedUnit.DependencyUnits)
+                            {
+                                <MudChip T="string" Color="Color.Secondary" Size="Size.Small">
+                                    @dep.Title (@dep.UnitType)
+                                </MudChip>
+                            }
+                        </MudChipSet>
+                    </MudItem>
+                }
+                @if (SelectedUnit.Attributes.Any())
+                {
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">特性:</MudText>
+                        <MudList T="string" Dense="true">
+                            @foreach (var attr in SelectedUnit.Attributes)
+                            {
+                                <MudListItem T="string">@attr.GetType().Name</MudListItem>
+                            }
+                        </MudList>
+                    </MudItem>
+                }
+                @if (SelectedUnit.Alerts.Any())
+                {
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">告警信息:</MudText>
+                        <MudList T="string" Dense="true">
+                            @foreach (var alert in SelectedUnit.Alerts.OrderByDescending(a => a.Level))
+                            {
+                                var alertColor = alert.Level switch
+                                {
+                                    EAlertLevel.Error => Color.Error,
+                                    EAlertLevel.Warning => Color.Warning,
+                                    EAlertLevel.Info => Color.Info,
+                                    _ => Color.Default
+                                };
+                                var alertIcon = alert.Level switch
+                                {
+                                    EAlertLevel.Error => Icons.Material.Filled.Error,
+                                    EAlertLevel.Warning => Icons.Material.Filled.Warning,
+                                    EAlertLevel.Info => Icons.Material.Filled.Info,
+                                    _ => Icons.Material.Filled.Info
+                                };
+                                <MudListItem T="string">
+                                    <div class="d-flex align-center">
+                                        <MudIcon Icon="@alertIcon" Color="@alertColor" Size="Size.Small" Class="mr-2" />
+                                        <MudText>
+                                            <strong>[@alert.Level]</strong> @alert.Message
+                                            @if (!string.IsNullOrEmpty(alert.Source))
+                                            {
+                                                <MudText Typo="Typo.caption" Class="ml-2" Style="display: inline;">(@alert.Source)</MudText>
+                                            }
+                                        </MudText>
+                                    </div>
+                                </MudListItem>
+                            }
+                        </MudList>
+                    </MudItem>
+                }
+            </MudGrid>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">关闭</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+    
+    [Parameter] public DtoProjectUnit? SelectedUnit { get; set; }
+    
+    private readonly DialogOptions DialogOptions = new()
+    {
+        MaxWidth = MaxWidth.Medium,
+        FullWidth = true
+    };
+    
+    private async Task Close()
+    {
+        Visible = false;
+        await VisibleChanged.InvokeAsync(false);
+    }
+}

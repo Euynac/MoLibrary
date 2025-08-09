@@ -18,7 +18,7 @@ export class ComplexNodeCardRenderer {
         // 卡片布局配置 - 使用传入的配置或默认值
         this.config = {
             minWidth: sizeConfig?.minWidth || 180,
-            maxWidth: sizeConfig?.maxWidth || 280
+            maxWidth: sizeConfig?.maxWidth || 280,
             padding: 12,
             borderRadius: 0,  // 改为直角
             
@@ -477,11 +477,20 @@ export class ComplexNodeCardRenderer {
     
     /**
      * 获取chip颜色配置
-     * @param {string} colorName - 颜色名称
+     * @param {string} colorName - 颜色名称或十六进制颜色
      * @returns {Object} 颜色配置
      */
     getChipColors(colorName) {
         const isDark = this.isDarkMode;
+        
+        // 如果是十六进制颜色，直接使用
+        if (colorName && colorName.startsWith('#')) {
+            return {
+                background: colorName + '20', // 20% opacity for background
+                border: colorName,
+                text: colorName
+            };
+        }
         
         switch (colorName) {
             case 'primary':

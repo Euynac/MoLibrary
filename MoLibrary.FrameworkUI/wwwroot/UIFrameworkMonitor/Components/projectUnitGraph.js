@@ -149,7 +149,7 @@ class ProjectUnitGraph {
         
         // 添加工具提示
         this.nodeSelection.append('title')
-            .text(d => `${d.title}\n类型: ${d.type}\n依赖数: ${d.dependencyCount}`);
+            .text(d => `${d.title}\n类型: ${d.type}\n依赖数: ${d.dependencyCount}\n被依赖数: ${d.dependedByCount || 0}`);
         
         // 应用当前布局
         this.applyLayout(this.currentLayout);
@@ -210,8 +210,16 @@ class ProjectUnitGraph {
             .style('pointer-events', 'none')
             .text(nodeData.title);
         
-        // 如果有依赖数量，在文字下方显示
+        // 显示依赖和被依赖数量
+        const counts = [];
         if (nodeData.dependencyCount > 0) {
+            counts.push(`依赖: ${nodeData.dependencyCount}`);
+        }
+        if (nodeData.dependedByCount > 0) {
+            counts.push(`被依赖: ${nodeData.dependedByCount}`);
+        }
+        
+        if (counts.length > 0) {
             nodeElement.append('text')
                 .attr('y', textOffset + 16)
                 .attr('text-anchor', 'middle')
@@ -219,7 +227,7 @@ class ProjectUnitGraph {
                 .style('font-size', '11px')
                 .style('opacity', 0.7)
                 .style('pointer-events', 'none')
-                .text(`依赖: ${nodeData.dependencyCount}`);
+                .text(counts.join(' | '));
         }
     }
     

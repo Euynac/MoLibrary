@@ -3,6 +3,7 @@
 @using MoLibrary.Tool.MoResponse
 @using Microsoft.JSInterop
 @using System.Linq
+@using static MoLibrary.FrameworkUI.UIFrameworkMonitor.Components.ProjectUnitLayoutPanel
 @inject IFrameworkMonitorService FrameworkMonitorService
 @inject ISnackbar Snackbar
 @inject IJSRuntime JSRuntime
@@ -41,84 +42,21 @@
     <MudCardContent>
         @if (_showLayoutPanel)
         {
-            <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
-                <MudGrid>
-                    <MudItem xs="12" sm="6" md="4">
-                        <MudText Typo="Typo.subtitle2" Class="mb-2">布局类型</MudText>
-                        <MudButtonGroup Color="Color.Primary" Variant="Variant.Outlined">
-                            <MudButton OnClick="@(() => SetLayout(LayoutType.Force))" 
-                                       Variant="@(_currentLayout == LayoutType.Force ? Variant.Filled : Variant.Outlined)">
-                                力导向
-                            </MudButton>
-                            <MudButton OnClick="@(() => SetLayout(LayoutType.Hierarchy))" 
-                                       Variant="@(_currentLayout == LayoutType.Hierarchy ? Variant.Filled : Variant.Outlined)">
-                                层次
-                            </MudButton>
-                            <MudButton OnClick="@(() => SetLayout(LayoutType.Circular))" 
-                                       Variant="@(_currentLayout == LayoutType.Circular ? Variant.Filled : Variant.Outlined)">
-                                环形
-                            </MudButton>
-                        </MudButtonGroup>
-                    </MudItem>
-                    @if (_currentLayout == LayoutType.Force)
-                    {
-                        <MudItem xs="12" sm="6" md="3">
-                            <MudText Typo="Typo.subtitle2" Class="mb-2">节点间距: @_forceDistance</MudText>
-                            <MudSlider T="int" Value="_forceDistance" 
-                                       Min="50" Max="1000" Step="10"
-                                       Color="Color.Primary"
-                                       ValueChanged="OnForceDistanceChanged" />
-                        </MudItem>
-                        <MudItem xs="12" sm="6" md="3">
-                            <MudText Typo="Typo.subtitle2" Class="mb-2">斥力强度: @_forceStrength</MudText>
-                            <MudSlider T="int" Value="_forceStrength" 
-                                       Min="-1000" Max="-100" Step="50"
-                                       Color="Color.Secondary"
-                                       ValueChanged="OnForceStrengthChanged" />
-                        </MudItem>
-                    }
-                </MudGrid>
-            </MudPaper>
+            <ProjectUnitLayoutPanel CurrentLayout="_currentLayout"
+                                    ForceDistance="_forceDistance"
+                                    ForceStrength="_forceStrength"
+                                    CurrentLayoutChanged="OnLayoutChanged"
+                                    ForceDistanceChanged="OnForceDistanceChanged"
+                                    ForceStrengthChanged="OnForceStrengthChanged" />
         }
         
         @if (_showFilterPanel)
         {
-            <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
-                <MudGrid>
-                    <MudItem xs="12" sm="6" md="4">
-                        <MudTextField @bind-Value="_filterText"
-                                      Label="搜索项目单元"
-                                      Variant="Variant.Outlined"
-                                      Adornment="Adornment.Start"
-                                      AdornmentIcon="@Icons.Material.Filled.Search"
-                                      Immediate="true"
-                                      DebounceInterval="300"
-                                      OnDebounceIntervalElapsed="ApplyFilters" />
-                    </MudItem>
-                    <MudItem xs="12" sm="6" md="4">
-                        <MudSelect T="EProjectUnitType?" Value="_selectedUnitType"
-                                   Label="单元类型"
-                                   Variant="Variant.Outlined"
-                                   AnchorOrigin="Origin.BottomCenter"
-                                   ValueChanged="OnUnitTypeChanged">
-                            <MudSelectItem T="EProjectUnitType?" Value="null">全部</MudSelectItem>
-                            @foreach (var unitType in Enum.GetValues<EProjectUnitType>())
-                            {
-                                @if (unitType != EProjectUnitType.None)
-                                {
-                                    <MudSelectItem T="EProjectUnitType?" Value="unitType">@unitType.ToString()</MudSelectItem>
-                                }
-                            }
-                        </MudSelect>
-                    </MudItem>
-                    <MudItem xs="12" sm="6" md="4">
-                        <MudSwitch T="bool" Value="_showOnlyWithDependencies"
-                                   Label="仅显示有依赖关系"
-                                   Color="Color.Primary"
-                                   ValueChanged="OnShowDependenciesChanged" />
-                    </MudItem>
-                </MudGrid>
-            </MudPaper>
+            <ProjectUnitFilterPanel @bind-FilterText="_filterText"
+                                    @bind-SelectedUnitTypes="_selectedUnitTypes"
+                                    @bind-ShowOnlyWithDependencies="_showOnlyWithDependencies"
+                                    @bind-ShowOnlyWithAlerts="_showOnlyWithAlerts"
+                                    OnFiltersChanged="ApplyFilters" />
         }
 
         <MudPaper Class="visualization-container" Style="position: relative; height: 600px; overflow: hidden;">
@@ -147,99 +85,8 @@
     </MudCardContent>
 </MudCard>
 
-<MudDialog @bind-Visible="_detailDialogVisible" Options="_dialogOptions">
-    <TitleContent>
-        <MudText Typo="Typo.h6">
-            <MudIcon Icon="@Icons.Material.Filled.Info" Class="mr-3" />
-            项目单元详情
-        </MudText>
-    </TitleContent>
-    <DialogContent>
-        @if (_selectedUnit != null)
-        {
-            <MudGrid>
-                <MudItem xs="12">
-                    <MudTextField Label="单元名称" Value="@_selectedUnit.Title" ReadOnly="true" Variant="Variant.Outlined" />
-                </MudItem>
-                <MudItem xs="12">
-                    <MudTextField Label="完整名称" Value="@_selectedUnit.Key" ReadOnly="true" Variant="Variant.Outlined" />
-                </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudTextField Label="单元类型" Value="@_selectedUnit.UnitType.ToString()" ReadOnly="true" Variant="Variant.Outlined" />
-                </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudTextField Label="依赖数量" Value="@_selectedUnit.DependencyUnits.Count.ToString()" ReadOnly="true" Variant="Variant.Outlined" />
-                </MudItem>
-                @if (_selectedUnit.DependencyUnits.Any())
-                {
-                    <MudItem xs="12">
-                        <MudText Typo="Typo.subtitle2" Class="mb-2">依赖单元:</MudText>
-                        <MudChipSet T="string">
-                            @foreach (var dep in _selectedUnit.DependencyUnits)
-                            {
-                                <MudChip T="string" Color="Color.Secondary" Size="Size.Small">
-                                    @dep.Title (@dep.UnitType)
-                                </MudChip>
-                            }
-                        </MudChipSet>
-                    </MudItem>
-                }
-                @if (_selectedUnit.Attributes.Any())
-                {
-                    <MudItem xs="12">
-                        <MudText Typo="Typo.subtitle2" Class="mb-2">特性:</MudText>
-                        <MudList T="string" Dense="true">
-                            @foreach (var attr in _selectedUnit.Attributes)
-                            {
-                                <MudListItem T="string">@attr.GetType().Name</MudListItem>
-                            }
-                        </MudList>
-                    </MudItem>
-                }
-                @if (_selectedUnit.Alerts.Any())
-                {
-                    <MudItem xs="12">
-                        <MudText Typo="Typo.subtitle2" Class="mb-2">告警信息:</MudText>
-                        <MudList T="string" Dense="true">
-                            @foreach (var alert in _selectedUnit.Alerts.OrderByDescending(a => a.Level))
-                            {
-                                var alertColor = alert.Level switch
-                                {
-                                    EAlertLevel.Error => Color.Error,
-                                    EAlertLevel.Warning => Color.Warning,
-                                    EAlertLevel.Info => Color.Info,
-                                    _ => Color.Default
-                                };
-                                var alertIcon = alert.Level switch
-                                {
-                                    EAlertLevel.Error => Icons.Material.Filled.Error,
-                                    EAlertLevel.Warning => Icons.Material.Filled.Warning,
-                                    EAlertLevel.Info => Icons.Material.Filled.Info,
-                                    _ => Icons.Material.Filled.Info
-                                };
-                                <MudListItem T="string">
-                                    <div class="d-flex align-center">
-                                        <MudIcon Icon="@alertIcon" Color="@alertColor" Size="Size.Small" Class="mr-2" />
-                                        <MudText>
-                                            <strong>[@alert.Level]</strong> @alert.Message
-                                            @if (!string.IsNullOrEmpty(alert.Source))
-                                            {
-                                                <MudText Typo="Typo.caption" Class="ml-2" Style="display: inline;">(@alert.Source)</MudText>
-                                            }
-                                        </MudText>
-                                    </div>
-                                </MudListItem>
-                            }
-                        </MudList>
-                    </MudItem>
-                }
-            </MudGrid>
-        }
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="CloseDetailDialog">关闭</MudButton>
-    </DialogActions>
-</MudDialog>
+<ProjectUnitDetailDialog @bind-Visible="_detailDialogVisible" 
+                         SelectedUnit="_selectedUnit" />
 
 @* 右键菜单 - 使用固定定位在页面上 *@
 @if (_contextMenuOpen)
@@ -258,6 +105,9 @@
                 </MudListItem>
                 <MudListItem T="string" Icon="@Icons.Material.Filled.FilterAlt" OnClick="FilterByType">
                     筛选同类型
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.ClearAll" OnClick="ClearAllFilters">
+                    清除所有筛选
                 </MudListItem>
                 <MudDivider />
                 <MudListItem T="string" Icon="@Icons.Material.Filled.ContentCopy" OnClick="CopyFullName">
@@ -279,27 +129,15 @@
     private bool _showFilterPanel = false;
     private bool _showLayoutPanel = false;
     private string _filterText = string.Empty;
-    private EProjectUnitType? _selectedUnitType;
+    private IReadOnlyCollection<EProjectUnitType> _selectedUnitTypes = new HashSet<EProjectUnitType>();
     private bool _showOnlyWithDependencies = false;
+    private bool _showOnlyWithAlerts = false;
     private bool _contextMenuOpen = false;
     private double _contextMenuX = 0;
     private double _contextMenuY = 0;
     private LayoutType _currentLayout = LayoutType.Force;
     private int _forceDistance = 300;
     private int _forceStrength = -300;
-    
-    private enum LayoutType
-    {
-        Force,
-        Hierarchy,
-        Circular
-    }
-
-    private readonly DialogOptions _dialogOptions = new()
-    {
-        MaxWidth = MaxWidth.Medium,
-        FullWidth = true
-    };
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -340,6 +178,13 @@
             }
 
             _allProjectUnits = data;
+            // Initialize selected types to all types if empty
+            if (!_selectedUnitTypes.Any())
+            {
+                _selectedUnitTypes = new HashSet<EProjectUnitType>(
+                    Enum.GetValues<EProjectUnitType>().Where(t => t != EProjectUnitType.None)
+                );
+            }
             _filteredUnits = new List<DtoProjectUnit>(_allProjectUnits);
             await UpdateGraph();
         }
@@ -379,6 +224,7 @@
             type = unit.UnitType.ToString(),
             typeValue = (int)unit.UnitType,
             dependencyCount = unit.DependencyUnits.Count,
+            dependedByCount = unit.DependedByCount,
             hasAttributes = unit.Attributes.Any(),
             // 添加节点配置信息
             isComplex = ProjectUnitVisualizationConfig.IsComplexUnitType(unit.UnitType),
@@ -464,11 +310,13 @@
                 unit.Title.Contains(_filterText, StringComparison.OrdinalIgnoreCase) ||
                 unit.Key.Contains(_filterText, StringComparison.OrdinalIgnoreCase);
 
-            var matchesType = !_selectedUnitType.HasValue || unit.UnitType == _selectedUnitType.Value;
+            var matchesType = !_selectedUnitTypes.Any() || _selectedUnitTypes.Contains(unit.UnitType);
 
-            var matchesDependencies = !_showOnlyWithDependencies || unit.DependencyUnits.Any();
+            var matchesDependencies = !_showOnlyWithDependencies || unit.DependencyUnits.Any() || unit.DependedByCount > 0;
 
-            return matchesText && matchesType && matchesDependencies;
+            var matchesAlerts = !_showOnlyWithAlerts || unit.Alerts.Any();
+
+            return matchesText && matchesType && matchesDependencies && matchesAlerts;
         }).ToList();
 
         await UpdateGraph();
@@ -546,25 +394,32 @@
         _contextMenuOpen = false;
     }
 
-    private async Task OnUnitTypeChanged(EProjectUnitType? value)
+    private async Task OnLayoutChanged(LayoutType layoutType)
     {
-        _selectedUnitType = value;
-        await ApplyFilters();
-    }
-
-    private async Task OnShowDependenciesChanged(bool value)
-    {
-        _showOnlyWithDependencies = value;
-        await ApplyFilters();
+        _currentLayout = layoutType;
+        await SetLayout(layoutType);
     }
 
     private async Task FilterByType()
     {
         if (_contextMenuUnit != null)
         {
-            _selectedUnitType = _contextMenuUnit.UnitType;
+            _selectedUnitTypes = new HashSet<EProjectUnitType> { _contextMenuUnit.UnitType };
+            _showFilterPanel = true;
             await ApplyFilters();
         }
+        _contextMenuOpen = false;
+    }
+    
+    private async Task ClearAllFilters()
+    {
+        _filterText = string.Empty;
+        _selectedUnitTypes = new HashSet<EProjectUnitType>(
+            Enum.GetValues<EProjectUnitType>().Where(t => t != EProjectUnitType.None)
+        );
+        _showOnlyWithDependencies = false;
+        _showOnlyWithAlerts = false;
+        await ApplyFilters();
         _contextMenuOpen = false;
     }
 
@@ -576,12 +431,6 @@
             Snackbar.Add("已复制到剪贴板", Severity.Success);
         }
         _contextMenuOpen = false;
-    }
-
-    private void CloseDetailDialog()
-    {
-        _detailDialogVisible = false;
-        _selectedUnit = null;
     }
 
     public async ValueTask DisposeAsync()

@@ -1,0 +1,62 @@
+@using MoLibrary.Framework.Core.Model
+
+<MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+    <MudGrid>
+        <MudItem xs="12" sm="6" md="4">
+            <MudText Typo="Typo.subtitle2" Class="mb-2">布局类型</MudText>
+            <MudButtonGroup Color="Color.Primary" Variant="Variant.Outlined">
+                <MudButton OnClick="@(() => SetLayout(LayoutType.Force))" 
+                           Variant="@(CurrentLayout == LayoutType.Force ? Variant.Filled : Variant.Outlined)">
+                    力导向
+                </MudButton>
+                <MudButton OnClick="@(() => SetLayout(LayoutType.Hierarchy))" 
+                           Variant="@(CurrentLayout == LayoutType.Hierarchy ? Variant.Filled : Variant.Outlined)">
+                    层次
+                </MudButton>
+                <MudButton OnClick="@(() => SetLayout(LayoutType.Circular))" 
+                           Variant="@(CurrentLayout == LayoutType.Circular ? Variant.Filled : Variant.Outlined)">
+                    环形
+                </MudButton>
+            </MudButtonGroup>
+        </MudItem>
+        @if (CurrentLayout == LayoutType.Force)
+        {
+            <MudItem xs="12" sm="6" md="3">
+                <MudText Typo="Typo.subtitle2" Class="mb-2">节点间距: @ForceDistance</MudText>
+                <MudSlider T="int" @bind-Value="ForceDistance" 
+                           Min="50" Max="1000" Step="10"
+                           Color="Color.Primary" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudText Typo="Typo.subtitle2" Class="mb-2">斥力强度: @ForceStrength</MudText>
+                <MudSlider T="int" @bind-Value="ForceStrength" 
+                           Min="-1000" Max="-100" Step="50"
+                           Color="Color.Secondary" />
+            </MudItem>
+        }
+    </MudGrid>
+</MudPaper>
+
+@code {
+    [Parameter] public LayoutType CurrentLayout { get; set; } = LayoutType.Force;
+    [Parameter] public EventCallback<LayoutType> CurrentLayoutChanged { get; set; }
+    
+    [Parameter] public int ForceDistance { get; set; } = 300;
+    [Parameter] public EventCallback<int> ForceDistanceChanged { get; set; }
+    
+    [Parameter] public int ForceStrength { get; set; } = -300;
+    [Parameter] public EventCallback<int> ForceStrengthChanged { get; set; }
+    
+    public enum LayoutType
+    {
+        Force,
+        Hierarchy,
+        Circular
+    }
+    
+    private async Task SetLayout(LayoutType layoutType)
+    {
+        CurrentLayout = layoutType;
+        await CurrentLayoutChanged.InvokeAsync(layoutType);
+    }
+}
