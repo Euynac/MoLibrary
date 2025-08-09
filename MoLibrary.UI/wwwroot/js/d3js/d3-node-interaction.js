@@ -69,12 +69,24 @@ export class NodeHighlightManager {
             const node = d3.select(this);
             const isRelated = relatedNodes.has(d.id);
             
-            // 控制节点主体元素透明度
-            node.select('circle, rect')
+            // 控制节点主体元素透明度和边框
+            node.select('circle, rect.card-background')
                 .transition()
                 .duration(200)
                 .attr('opacity', isRelated ? 1 : self.fadeOpacity)
                 .attr('stroke-width', isRelated ? self.highlightStrokeWidth : self.normalStrokeWidth);
+            
+            // 对于复杂节点，增强阴影效果
+            if (isRelated && d.isComplex) {
+                const shadowFilter = node.select('filter feDropShadow');
+                if (!shadowFilter.empty()) {
+                    shadowFilter
+                        .transition()
+                        .duration(200)
+                        .attr('stdDeviation', 5)
+                        .attr('flood-opacity', 0.25);
+                }
+            }
             
             // 控制所有文本元素透明度（包括标题、依赖数量、chip文字等）
             node.selectAll('text')
@@ -115,14 +127,26 @@ export class NodeHighlightManager {
         const self = this;
         
         // 恢复节点 - 确保所有节点恢复为完全不透明
-        nodeSelection.each(function() {
+        nodeSelection.each(function(d) {
             const node = d3.select(this);
             
-            node.select('circle, rect')
+            node.select('circle, rect.card-background')
                 .transition()
                 .duration(200)
                 .attr('opacity', 1)  // 恢复为完全不透明
                 .attr('stroke-width', self.normalStrokeWidth);
+            
+            // 对于复杂节点，恢复正常阴影
+            if (d && d.isComplex) {
+                const shadowFilter = node.select('filter feDropShadow');
+                if (!shadowFilter.empty()) {
+                    shadowFilter
+                        .transition()
+                        .duration(200)
+                        .attr('stdDeviation', 3)
+                        .attr('flood-opacity', 0.15);
+                }
+            }
             
             // 恢复所有文本元素透明度
             node.selectAll('text')
