@@ -20,7 +20,7 @@ export class ComplexNodeCardRenderer {
             minWidth: 180,
             maxWidth: 280,
             padding: 12,
-            borderRadius: 8,
+            borderRadius: 0,  // 改为直角
             
             // 标题栏配置
             header: {
@@ -166,7 +166,21 @@ export class ComplexNodeCardRenderer {
         const card = nodeElement.append('g')
             .attr('class', 'complex-node-card');
         
-        // 绘制主卡片背景
+        // 添加阴影效果（使用filter而不是drop-shadow以获得更好的性能）
+        const shadowFilter = card.append('filter')
+            .attr('id', `shadow-${nodeData.id || Math.random().toString(36).substr(2, 9)}`)
+            .attr('x', '-50%')
+            .attr('y', '-50%')
+            .attr('width', '200%')
+            .attr('height', '200%');
+        
+        shadowFilter.append('feDropShadow')
+            .attr('dx', 0)
+            .attr('dy', 2)
+            .attr('stdDeviation', 3)
+            .attr('flood-opacity', 0.15);
+        
+        // 绘制主卡片背景（作为整体边框）
         const cardBackground = card.append('rect')
             .attr('class', 'card-background')
             .attr('width', width)
@@ -178,7 +192,7 @@ export class ComplexNodeCardRenderer {
             .attr('fill', style.backgroundColor)
             .attr('stroke', style.strokeColor)
             .attr('stroke-width', style.strokeWidth)
-            .style('filter', style.filter)
+            .style('filter', `url(#shadow-${nodeData.id || Math.random().toString(36).substr(2, 9)})`)
             .style('cursor', 'pointer');
         
         // 绘制标题栏
@@ -213,23 +227,13 @@ export class ComplexNodeCardRenderer {
         const { config, style } = this;
         const headerY = -cardHeight / 2; // 标题栏在卡片顶部
         
-        // 标题栏背景
+        // 标题栏背景（内部填充，不覆盖边框）
         card.append('rect')
             .attr('class', 'card-header')
-            .attr('width', width)
+            .attr('width', width - style.strokeWidth * 2)  // 减去边框宽度
             .attr('height', headerHeight)
-            .attr('x', -width / 2)
-            .attr('y', headerY)
-            .attr('rx', config.borderRadius)
-            .attr('ry', config.borderRadius)
-            .attr('fill', style.headerColor);
-        
-        // 隐藏标题栏下方的圆角（只保留上方圆角）
-        card.append('rect')
-            .attr('width', width)
-            .attr('height', config.borderRadius)
-            .attr('x', -width / 2)
-            .attr('y', headerY + headerHeight - config.borderRadius)
+            .attr('x', -width / 2 + style.strokeWidth)  // 内缩边框宽度
+            .attr('y', headerY + style.strokeWidth)  // 内缩边框宽度
             .attr('fill', style.headerColor);
         
         // 绘制Icon+标题（居左对齐）
@@ -306,22 +310,12 @@ export class ComplexNodeCardRenderer {
     drawFooter(card, nodeData, width, footerHeight, y) {
         const { config, style } = this;
         
-        // 状态栏背景 - 使用计算的实际高度
+        // 状态栏背景（内部填充，不覆盖边框）
         card.append('rect')
             .attr('class', 'card-footer')
-            .attr('width', width)
-            .attr('height', footerHeight)
-            .attr('x', -width / 2)
-            .attr('y', y)
-            .attr('rx', config.borderRadius)
-            .attr('ry', config.borderRadius)
-            .attr('fill', style.footerColor);
-        
-        // 隐藏状态栏上方的圆角（只保留下方圆角）
-        card.append('rect')
-            .attr('width', width)
-            .attr('height', config.borderRadius)
-            .attr('x', -width / 2)
+            .attr('width', width - style.strokeWidth * 2)  // 减去边框宽度
+            .attr('height', footerHeight - style.strokeWidth)  // 减去底部边框宽度
+            .attr('x', -width / 2 + style.strokeWidth)  // 内缩边框宽度
             .attr('y', y)
             .attr('fill', style.footerColor);
         
@@ -587,7 +581,8 @@ export class ComplexNodeCardRenderer {
         const iconTextSpacing = 8; // Icon和文字之间的间距
         
         let currentX = -width / 2 + leftPadding;
-        const centerY = headerY + headerHeight / 2;
+        // 考虑边框内缩，准确计算中心Y坐标
+        const centerY = headerY + style.strokeWidth + headerHeight / 2;
         
         // 绘制Icon（如果有）
         if (nodeData.icon) {
@@ -595,12 +590,13 @@ export class ComplexNodeCardRenderer {
             currentX += iconSize + iconTextSpacing;
         }
         
-        // 绘制标题文字
+        // 绘制标题文字 - 使用dominant-baseline配合微调实现视觉居中
         container.append('text')
             .attr('class', 'card-title')
             .attr('x', currentX)
-            .attr('y', centerY + 4) // 微调垂直居中
+            .attr('y', centerY + 1) // 微调1px补偿字体基线
             .attr('text-anchor', 'start') // 左对齐
+            .attr('dominant-baseline', 'middle') // 垂直居中
             .attr('fill', style.headerTextColor)
             .style('font-size', config.header.fontSize)
             .style('font-weight', config.header.fontWeight)
