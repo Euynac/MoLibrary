@@ -20,9 +20,12 @@ export class NodeHighlightManager {
         this.normalStrokeWidth = options.normalStrokeWidth || 2;
         this.isDarkMode = options.isDarkMode || false;
         
-        // 获取现代化样式配置
-        this.normalLinkStyle = getModernLinkStyle(this.isDarkMode, false);
-        this.highlightLinkStyle = getModernLinkStyle(this.isDarkMode, true);
+        // 保存marker IDs
+        this.markerIds = options.markerIds || null;
+        
+        // 获取现代化样式配置，传入marker IDs
+        this.normalLinkStyle = getModernLinkStyle(this.isDarkMode, false, this.markerIds);
+        this.highlightLinkStyle = getModernLinkStyle(this.isDarkMode, true, this.markerIds);
     }
     
     /**
@@ -37,9 +40,10 @@ export class NodeHighlightManager {
         // 清除之前的高亮
         this.clearHighlight(nodeSelection, linkSelection);
         
-        // 找到相关的节点和连接
+        // 找到相关的节点和连接，并记录方向
         const relatedNodes = new Set([nodeId]);  // 包含当前节点
-        const relatedLinks = new Set();
+        const outgoingLinks = new Set(); // 出边（当前节点 -> 其他节点）
+        const incomingLinks = new Set(); // 入边（其他节点 -> 当前节点）
         
         links.forEach(link => {
             const sourceId = link.source.id || link.source;
@@ -47,21 +51,21 @@ export class NodeHighlightManager {
             
             if (sourceId === nodeId) {
                 relatedNodes.add(targetId);
-                relatedLinks.add(link);
+                outgoingLinks.add(link); // 出边
             } else if (targetId === nodeId) {
                 relatedNodes.add(sourceId);
-                relatedLinks.add(link);
+                incomingLinks.add(link); // 入边
             }
         });
         
-        // 应用高亮效果
-        this.applyHighlight(relatedNodes, relatedLinks, nodeSelection, linkSelection);
+        // 应用高亮效果，传递方向信息
+        this.applyHighlight(relatedNodes, outgoingLinks, incomingLinks, nodeSelection, linkSelection);
     }
     
     /**
      * 应用高亮效果
      */
-    applyHighlight(relatedNodes, relatedLinks, nodeSelection, linkSelection) {
+    applyHighlight(relatedNodes, outgoingLinks, incomingLinks, nodeSelection, linkSelection) {
         const self = this;
         
         // 高亮节点 - 所有相关节点使用相同的不透明度
@@ -101,23 +105,45 @@ export class NodeHighlightManager {
                 .attr('opacity', isRelated ? 1 : self.fadeOpacity);
         });
         
-        // 高亮连接 - 使用现代化样式
+        // 高亮连接 - 根据方向使用不同颜色
         linkSelection.each(function(d) {
             const link = d3.select(this);
-            const isRelated = relatedLinks.has(d);
-            const style = isRelated ? self.highlightLinkStyle : self.normalLinkStyle;
+            const isOutgoing = outgoingLinks.has(d);
+            const isIncoming = incomingLinks.has(d);
+            const isRelated = isOutgoing || isIncoming;
             
-            link.transition()
-                .duration(200)
-                .attr('opacity', isRelated ? style.strokeOpacity : self.fadeOpacity)
-                .attr('stroke-width', style.strokeWidth)
-                .attr('stroke', style.stroke)
-                .attr('marker-end', style.markerEnd)
-                .style('filter', isRelated ? style.filter : self.normalLinkStyle.filter);
+            if (isRelated) {
+                const style = self.highlightLinkStyle;
+                // 使用 MudBlazor 颜色系统变量
+                // 出边使用 Info 色系，入边使用 Success 色系
+                const strokeColor = isOutgoing ? 
+                    (self.isDarkMode ? 'var(--mud-palette-info-lighten, #29B6F6)' : 'var(--mud-palette-info, #1976D2)') : // 出边：Info色
+                    (self.isDarkMode ? 'var(--mud-palette-success-lighten, #66BB6A)' : 'var(--mud-palette-success, #43A047)');  // 入边：Success色
+                
+                link.transition()
+                    .duration(200)
+                    .attr('opacity', style.strokeOpacity)
+                    .attr('stroke-width', style.strokeWidth)
+                    .attr('stroke', strokeColor)
+                    .attr('marker-end', isOutgoing ? 
+                        `url(#${self.markerIds?.outgoingMarkerId || 'arrow-highlight-outgoing'})` : 
+                        `url(#${self.markerIds?.incomingMarkerId || 'arrow-highlight-incoming'})`)
+                    .style('filter', style.filter);
+            } else {
+                link.transition()
+                    .duration(200)
+                    .attr('opacity', self.fadeOpacity)
+                    .attr('stroke-width', self.normalLinkStyle.strokeWidth)
+                    .attr('stroke', self.normalLinkStyle.stroke)
+                    .attr('marker-end', self.normalLinkStyle.markerEnd)
+                    .style('filter', self.normalLinkStyle.filter);
+            }
         });
         
+        // 合并出边和入边
+        const allRelatedLinks = new Set([...outgoingLinks, ...incomingLinks]);
         this.highlightedNodes = relatedNodes;
-        this.highlightedLinks = relatedLinks;
+        this.highlightedLinks = allRelatedLinks;
     }
     
     /**
@@ -186,9 +212,10 @@ export class NodeInteractionHandler {
         this.onHover = options.onHover;
         this.onHoverOut = options.onHoverOut;
         this.onDoubleClick = options.onDoubleClick;
-        // 传递 isDarkMode 给 highlightManager
+        // 传递 isDarkMode 和 markerIds 给 highlightManager
         const highlightOptions = options.highlightOptions || {};
         highlightOptions.isDarkMode = options.isDarkMode;
+        highlightOptions.markerIds = options.markerIds; // 传递marker IDs
         this.highlightManager = new NodeHighlightManager(highlightOptions);
     }
     

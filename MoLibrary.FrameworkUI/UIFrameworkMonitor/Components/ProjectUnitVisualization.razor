@@ -94,7 +94,9 @@
 </MudCard>
 
 <ProjectUnitDetailDialog @bind-Visible="_detailDialogVisible" 
-                         SelectedUnit="_selectedUnit" />
+                         SelectedUnit="_selectedUnit"
+                         AllProjectUnits="_allProjectUnits"
+                         OnNodeFocus="HandleNodeFocusFromDialog" />
 
 @* 右键菜单 - 使用固定定位在页面上 *@
 @if (_contextMenuOpen)
@@ -532,6 +534,14 @@
             Snackbar.Add("已复制到剪贴板", Severity.Success);
         }
         _contextMenuOpen = false;
+    }
+    
+    private async Task HandleNodeFocusFromDialog(string nodeKey)
+    {
+        if (_jsModule != null)
+        {
+            await _jsModule.InvokeVoidAsync("focusOnNode", nodeKey);
+        }
     }
 
     public async ValueTask DisposeAsync()

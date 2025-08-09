@@ -80,8 +80,13 @@ export function createArrowMarker(svg, id = 'arrowhead', options = {}) {
         ? svg.append('defs') 
         : svg.select('defs');
     
-    // 移除已存在的标记（避免重复）
-    defs.selectAll(`#${id}, #${id}-highlight`).remove();
+    // 为每个图表实例生成唯一的marker ID前缀
+    const uniqueId = options.uniqueId || id;
+    const outgoingId = `${uniqueId}-highlight-outgoing`;
+    const incomingId = `${uniqueId}-highlight-incoming`;
+    
+    // 移除已存在的标记（只移除当前实例的）
+    defs.selectAll(`#${uniqueId}, #${uniqueId}-highlight, #${outgoingId}, #${incomingId}`).remove();
     
     // 现代化箭头设计参数
     const arrowSize = options.size || 12;
@@ -89,7 +94,7 @@ export function createArrowMarker(svg, id = 'arrowhead', options = {}) {
     
     // 创建正常状态的箭头
     const marker = defs.append('marker')
-        .attr('id', id)
+        .attr('id', uniqueId)
         .attr('viewBox', `0 0 ${viewBoxSize} ${viewBoxSize}`)
         .attr('refX', options.refX || (arrowSize * 0.8))
         .attr('refY', viewBoxSize / 2)
@@ -114,7 +119,7 @@ export function createArrowMarker(svg, id = 'arrowhead', options = {}) {
     
     // 创建高亮状态的箭头（保持相同大小和位置）
     const highlightMarker = defs.append('marker')
-        .attr('id', `${id}-highlight`)
+        .attr('id', `${uniqueId}-highlight`)
         .attr('viewBox', `0 0 ${viewBoxSize} ${viewBoxSize}`)
         .attr('refX', options.refX || (arrowSize * 0.8))
         .attr('refY', viewBoxSize / 2)
@@ -129,7 +134,62 @@ export function createArrowMarker(svg, id = 'arrowhead', options = {}) {
         .attr('class', 'arrow-marker-highlight modern-arrow')
         .style('filter', 'drop-shadow(0 2px 4px rgba(33,150,243,0.3))'); // 高亮时的蓝色阴影
     
-    return { marker, highlightMarker };
+    // 创建出边高亮箭头（Info色系）
+    const outgoingMarker = defs.append('marker')
+        .attr('id', outgoingId)
+        .attr('viewBox', `0 0 ${viewBoxSize} ${viewBoxSize}`)
+        .attr('refX', options.refX || (arrowSize * 0.8))
+        .attr('refY', viewBoxSize / 2)
+        .attr('orient', 'auto')
+        .attr('markerWidth', arrowSize)
+        .attr('markerHeight', arrowSize)
+        .attr('markerUnits', 'strokeWidth');
+    
+    // 创建一个容器组来应用CSS变量
+    const outgoingPath = outgoingMarker.append('path')
+        .attr('d', arrowPath)
+        .attr('class', 'arrow-marker-outgoing modern-arrow')
+        .style('filter', 'drop-shadow(0 2px 4px rgba(25,118,210,0.3))');
+    
+    // 使用JavaScript获取计算后的CSS变量值（trim去除空格）
+    const outgoingColor = options.isDarkMode ? 
+        (getComputedStyle(document.documentElement).getPropertyValue('--mud-palette-info-lighten').trim() || '#29B6F6') :
+        (getComputedStyle(document.documentElement).getPropertyValue('--mud-palette-info').trim() || '#1976D2');
+    outgoingPath.attr('fill', outgoingColor);
+    
+    // 创建入边高亮箭头（Success色系）
+    const incomingMarker = defs.append('marker')
+        .attr('id', incomingId)
+        .attr('viewBox', `0 0 ${viewBoxSize} ${viewBoxSize}`)
+        .attr('refX', options.refX || (arrowSize * 0.8))
+        .attr('refY', viewBoxSize / 2)
+        .attr('orient', 'auto')
+        .attr('markerWidth', arrowSize)
+        .attr('markerHeight', arrowSize)
+        .attr('markerUnits', 'strokeWidth');
+    
+    const incomingPath = incomingMarker.append('path')
+        .attr('d', arrowPath)
+        .attr('class', 'arrow-marker-incoming modern-arrow')
+        .style('filter', 'drop-shadow(0 2px 4px rgba(56,142,60,0.3))');
+    
+    // 使用JavaScript获取计算后的CSS变量值（trim去除空格）
+    const incomingColor = options.isDarkMode ? 
+        (getComputedStyle(document.documentElement).getPropertyValue('--mud-palette-success-lighten').trim() || '#66BB6A') :
+        (getComputedStyle(document.documentElement).getPropertyValue('--mud-palette-success').trim() || '#43A047');
+    incomingPath.attr('fill', incomingColor);
+    
+    return { 
+        marker, 
+        highlightMarker, 
+        outgoingMarker, 
+        incomingMarker,
+        // 返回ID供其他模块使用
+        markerId: uniqueId,
+        highlightMarkerId: `${uniqueId}-highlight`,
+        outgoingMarkerId: outgoingId,
+        incomingMarkerId: incomingId
+    };
 }
 
 /**
@@ -154,9 +214,13 @@ function getArrowColor(isDarkMode, isHighlight) {
  * 获取现代化连接线样式配置 - 使用MudBlazor颜色系统
  * @param {boolean} isDarkMode - 是否为暗色模式
  * @param {boolean} isHighlight - 是否为高亮状态
+ * @param {Object} markerIds - 自定义marker IDs
  * @returns {Object} 样式配置对象
  */
-export function getModernLinkStyle(isDarkMode, isHighlight = false) {
+export function getModernLinkStyle(isDarkMode, isHighlight = false, markerIds = null) {
+    const normalMarkerId = markerIds?.markerId || 'arrowhead';
+    const highlightMarkerId = markerIds?.highlightMarkerId || 'arrowhead-highlight';
+    
     if (isHighlight) {
         return {
             stroke: isDarkMode ? 'var(--mud-palette-primary-lighten, #9d7df7)' : 'var(--mud-palette-primary, #594ae2)',
@@ -165,7 +229,7 @@ export function getModernLinkStyle(isDarkMode, isHighlight = false) {
             filter: 'drop-shadow(0 2px 6px rgba(33,150,243,0.25))',
             strokeLinecap: 'round',
             strokeLinejoin: 'round',
-            markerEnd: 'url(#arrowhead-highlight)'
+            markerEnd: `url(#${highlightMarkerId})`
         };
     } else {
         return {
@@ -177,7 +241,7 @@ export function getModernLinkStyle(isDarkMode, isHighlight = false) {
             filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.1))',
             strokeLinecap: 'round',
             strokeLinejoin: 'round',
-            markerEnd: 'url(#arrowhead)'
+            markerEnd: `url(#${normalMarkerId})`
         };
     }
 }
@@ -316,12 +380,17 @@ export class GraphBase {
             onBackgroundClick: options.onBackgroundClick
         });
         
-        // 创建箭头标记
+        // 创建箭头标记（包括所有方向性箭头）
         if (options.showArrows) {
-            createArrowMarker(svg, 'arrowhead', {
+            // 为每个图表实例生成唯一ID
+            const instanceId = `graph-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            this.arrowMarkers = createArrowMarker(svg, 'arrowhead', {
                 isDarkMode: this.isDarkMode,
-                size: options.arrowSize || 12
+                size: options.arrowSize || 12,
+                uniqueId: instanceId
             });
+            // 保存marker IDs供其他模块使用
+            this.markerIds = this.arrowMarkers;
         }
     }
     

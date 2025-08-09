@@ -81,7 +81,8 @@ class ProjectUnitGraph {
                 fadeOpacity: 0.2,
                 normalOpacity: 1
             },
-            isDarkMode: isDarkMode
+            isDarkMode: isDarkMode,
+            markerIds: this.graphBase.markerIds // 传递marker IDs
         });
         
         // 初始化复杂节点卡片渲染器 - 传递尺寸配置
@@ -114,7 +115,7 @@ class ProjectUnitGraph {
             .attr('class', 'nodes');
         
         // 绘制现代化连接线 - 使用MudBlazor颜色系统和圆润样式
-        const linkStyle = getModernLinkStyle(this.isDarkMode, false);
+        const linkStyle = getModernLinkStyle(this.isDarkMode, false, this.graphBase.markerIds);
         this.linkSelection = linkGroup.selectAll('path')
             .data(this.links)
             .enter().append('path')

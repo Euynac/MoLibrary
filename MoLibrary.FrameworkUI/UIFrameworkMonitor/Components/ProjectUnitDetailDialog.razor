@@ -30,11 +30,27 @@
                 @if (SelectedUnit.DependencyUnits.Any())
                 {
                     <MudItem xs="12">
-                        <MudText Typo="Typo.subtitle2" Class="mb-2">依赖单元:</MudText>
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">依赖单元 (出边):</MudText>
                         <MudChipSet T="string">
                             @foreach (var dep in SelectedUnit.DependencyUnits)
                             {
-                                <MudChip T="string" Color="Color.Secondary" Size="Size.Small">
+                                <MudChip T="string" Color="Color.Secondary" Size="Size.Small" 
+                                         OnClick="@(() => OnChipClick(dep.Key))">
+                                    @dep.Title (@dep.UnitType)
+                                </MudChip>
+                            }
+                        </MudChipSet>
+                    </MudItem>
+                }
+                @if (DependedByUnits != null && DependedByUnits.Any())
+                {
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">被依赖单元 (入边):</MudText>
+                        <MudChipSet T="string">
+                            @foreach (var dep in DependedByUnits)
+                            {
+                                <MudChip T="string" Color="Color.Primary" Size="Size.Small"
+                                         OnClick="@(() => OnChipClick(dep.Key))">
                                     @dep.Title (@dep.UnitType)
                                 </MudChip>
                             }
@@ -103,12 +119,40 @@
     [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
     
     [Parameter] public DtoProjectUnit? SelectedUnit { get; set; }
+    [Parameter] public List<DtoProjectUnit>? AllProjectUnits { get; set; }
+    [Parameter] public EventCallback<string> OnNodeFocus { get; set; }
+    
+    private List<DtoProjectUnit>? DependedByUnits { get; set; }
     
     private readonly DialogOptions DialogOptions = new()
     {
         MaxWidth = MaxWidth.Medium,
         FullWidth = true
     };
+    
+    protected override void OnParametersSet()
+    {
+        if (SelectedUnit != null && AllProjectUnits != null)
+        {
+            // 计算被依赖的单元（哪些单元依赖了当前单元）
+            DependedByUnits = AllProjectUnits
+                .Where(u => u.DependencyUnits.Any(d => d.Key == SelectedUnit.Key))
+                .ToList();
+        }
+    }
+    
+    private async Task OnChipClick(string nodeKey)
+    {
+        // 关闭对话框
+        Visible = false;
+        await VisibleChanged.InvokeAsync(false);
+        
+        // 触发聚焦事件
+        if (OnNodeFocus.HasDelegate)
+        {
+            await OnNodeFocus.InvokeAsync(nodeKey);
+        }
+    }
     
     private async Task Close()
     {
