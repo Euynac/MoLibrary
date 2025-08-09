@@ -27,13 +27,15 @@
         {
             <MudItem xs="12" sm="6" md="3">
                 <MudText Typo="Typo.subtitle2" Class="mb-2">节点间距: @ForceDistance</MudText>
-                <MudSlider T="int" @bind-Value="ForceDistance" 
+                <MudSlider T="int" Value="@ForceDistance" 
+                           ValueChanged="@OnForceDistanceChanged"
                            Min="50" Max="1000" Step="10"
                            Color="Color.Primary" />
             </MudItem>
             <MudItem xs="12" sm="6" md="3">
                 <MudText Typo="Typo.subtitle2" Class="mb-2">斥力强度: @ForceStrength</MudText>
-                <MudSlider T="int" @bind-Value="ForceStrength" 
+                <MudSlider T="int" Value="@ForceStrength" 
+                           ValueChanged="@OnForceStrengthChanged"
                            Min="-1000" Max="-100" Step="50"
                            Color="Color.Secondary" />
             </MudItem>
@@ -63,5 +65,17 @@
     {
         CurrentLayout = layoutType;
         await CurrentLayoutChanged.InvokeAsync(layoutType);
+    }
+    
+    private async Task OnForceDistanceChanged(int value)
+    {
+        ForceDistance = value;
+        await ForceDistanceChanged.InvokeAsync(value);
+    }
+    
+    private async Task OnForceStrengthChanged(int value)
+    {
+        ForceStrength = value;
+        await ForceStrengthChanged.InvokeAsync(value);
     }
 }
