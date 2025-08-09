@@ -64,7 +64,7 @@
                         <MudItem xs="12" sm="6" md="3">
                             <MudText Typo="Typo.subtitle2" Class="mb-2">节点间距: @_forceDistance</MudText>
                             <MudSlider T="int" Value="_forceDistance" 
-                                       Min="50" Max="300" Step="10"
+                                       Min="50" Max="1000" Step="10"
                                        Color="Color.Primary"
                                        ValueChanged="OnForceDistanceChanged" />
                         </MudItem>
@@ -247,7 +247,7 @@
     private double _contextMenuX = 0;
     private double _contextMenuY = 0;
     private LayoutType _currentLayout = LayoutType.Force;
-    private int _forceDistance = 150;
+    private int _forceDistance = 300;
     private int _forceStrength = -300;
     
     private enum LayoutType
@@ -341,7 +341,13 @@
             type = unit.UnitType.ToString(),
             typeValue = (int)unit.UnitType,
             dependencyCount = unit.DependencyUnits.Count,
-            hasAttributes = unit.Attributes.Any()
+            hasAttributes = unit.Attributes.Any(),
+            // 添加节点配置信息
+            isComplex = ProjectUnitVisualizationConfig.IsComplexUnitType(unit.UnitType),
+            color = ProjectUnitVisualizationConfig.GetUnitTypeColor(unit.UnitType),
+            icon = ProjectUnitVisualizationConfig.GetUnitTypeIcon(unit.UnitType),
+            chips = ProjectUnitVisualizationConfig.GetUnitTypeChips(unit),
+            metadata = ProjectUnitVisualizationConfig.GetUnitMetadata(unit)
         }).ToList();
 
         var links = new List<object>();
@@ -545,4 +551,5 @@
             await _jsModule.DisposeAsync();
         }
     }
+
 }

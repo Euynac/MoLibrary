@@ -69,14 +69,21 @@ export class NodeHighlightManager {
             const node = d3.select(this);
             const isRelated = relatedNodes.has(d.id);
             
-            // 统一所有相关节点的不透明度为1（完全不透明）
+            // 控制节点主体元素透明度
             node.select('circle, rect')
                 .transition()
                 .duration(200)
                 .attr('opacity', isRelated ? 1 : self.fadeOpacity)
                 .attr('stroke-width', isRelated ? self.highlightStrokeWidth : self.normalStrokeWidth);
             
-            node.select('text')
+            // 控制所有文本元素透明度（包括标题、依赖数量、chip文字等）
+            node.selectAll('text')
+                .transition()
+                .duration(200)
+                .attr('opacity', isRelated ? 1 : self.fadeOpacity);
+                
+            // 控制复杂节点内所有矩形元素透明度（包括卡片背景、标题栏、状态栏、chip背景等）
+            node.selectAll('rect')
                 .transition()
                 .duration(200)
                 .attr('opacity', isRelated ? 1 : self.fadeOpacity);
@@ -117,7 +124,14 @@ export class NodeHighlightManager {
                 .attr('opacity', 1)  // 恢复为完全不透明
                 .attr('stroke-width', self.normalStrokeWidth);
             
-            node.select('text')
+            // 恢复所有文本元素透明度
+            node.selectAll('text')
+                .transition()
+                .duration(200)
+                .attr('opacity', 1);
+                
+            // 恢复复杂节点内所有矩形元素透明度
+            node.selectAll('rect')
                 .transition()
                 .duration(200)
                 .attr('opacity', 1);

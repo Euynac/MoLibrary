@@ -13,41 +13,7 @@ import { createComplexNodeCardRenderer } from '../../../MoLibrary.UI/js/d3js/d3-
 
 // ==================== 配置 ====================
 
-/**
- * 节点类型配置
- */
-const NODE_TYPE_CONFIG = {
-    // 复杂类型（使用矩形）
-    complexTypes: [
-        'ApplicationService',
-        'DomainService', 
-        'BackgroundWorker',
-        'BackgroundJob',
-        'HttpApi',
-        'GrpcApi'
-    ],
-    
-    // 颜色映射
-    colors: {
-        'ApplicationService': '#2196F3',
-        'DomainService': '#4CAF50',
-        'Repository': '#FF9800',
-        'DomainEvent': '#9C27B0',
-        'DomainEventHandler': '#673AB7',
-        'LocalEventHandler': '#3F51B5',
-        'BackgroundWorker': '#00BCD4',
-        'BackgroundJob': '#009688',
-        'HttpApi': '#F44336',
-        'GrpcApi': '#E91E63',
-        'Entity': '#795548',
-        'RequestDto': '#607D8B',
-        'Seeder': '#8BC34A',
-        'StateStore': '#FF5722',
-        'EventBus': '#3F51B5',
-        'Actor': '#00ACC1',
-        'None': '#9E9E9E'
-    }
-};
+// 节点配置现在由C#层提供，不再在JS层硬编码
 
 /**
  * 节点尺寸配置
@@ -59,9 +25,9 @@ const NODE_SIZE = {
     },
     // 复杂节点尺寸现在由卡片渲染器动态计算
     complex: {
-        minWidth: 180,
-        maxWidth: 280,
-        minHeight: 120
+        minWidth: 200,
+        maxWidth: 350,
+        minHeight: 220
     }
 };
 
@@ -194,9 +160,8 @@ class ProjectUnitGraph {
      * 绘制节点
      */
     drawNode(nodeElement, nodeData) {
-        const isComplex = NODE_TYPE_CONFIG.complexTypes.includes(nodeData.type);
-        
-        if (isComplex) {
+        // 使用来自C#层的配置判断节点类型
+        if (nodeData.isComplex) {
             this.drawComplexNode(nodeElement, nodeData);
         } else {
             this.drawSimpleNode(nodeElement, nodeData);
@@ -216,7 +181,8 @@ class ProjectUnitGraph {
      */
     drawSimpleNode(nodeElement, nodeData) {
         const { radius, textOffset } = NODE_SIZE.circle;
-        const color = this.getUnitColor(nodeData.type);
+        // 使用来自C#层的颜色配置
+        const color = nodeData.color || '#9E9E9E';
         
         // 绘制圆形
         nodeElement.append('circle')
@@ -290,15 +256,60 @@ class ProjectUnitGraph {
         this.forceManager.start(() => {
             this.linkSelection
                 .attr('d', d => {
-                    // 计算从源到目标的路径，稍微缩短以避免覆盖箭头
+                    // 计算从源到目标的路径，根据目标节点类型调整终点
                     const dx = d.target.x - d.source.x;
                     const dy = d.target.y - d.source.y;
                     const distance = Math.sqrt(dx * dx + dy * dy);
                     const normX = dx / distance;
                     const normY = dy / distance;
+                    
+                    // 根据目标节点类型计算箭头终点
+                    const targetNode = this.nodes.find(n => n.id === d.target.id);
+                    let arrowOffset = 35; // 默认圆形节点的偏移量
+                    
+                    if (targetNode && targetNode.isComplex && targetNode._cardSize) {
+                        // 复杂节点：计算到矩形边界的距离
+                        const halfWidth = targetNode._cardSize.width / 2;
+                        const halfHeight = targetNode._cardSize.height / 2;
+                        
+                        // 使用更稳定的算法计算矩形边界交点
+                        const angle = Math.atan2(dy, dx);
+                        const cos = Math.cos(angle);
+                        const sin = Math.sin(angle);
+                        
+                        // 计算射线与矩形四条边的交点，选择最近的
+                        let t = Infinity;
+                        
+                        // 检查与垂直边的交点
+                        if (Math.abs(cos) > 0.001) {
+                            const signX = cos > 0 ? 1 : -1;
+                            const tVertical = (signX * halfWidth) / cos;
+                            if (Math.abs(tVertical * sin) <= halfHeight) {
+                                t = Math.min(t, Math.abs(tVertical));
+                            }
+                        }
+                        
+                        // 检查与水平边的交点
+                        if (Math.abs(sin) > 0.001) {
+                            const signY = sin > 0 ? 1 : -1;
+                            const tHorizontal = (signY * halfHeight) / sin;
+                            if (Math.abs(tHorizontal * cos) <= halfWidth) {
+                                t = Math.min(t, Math.abs(tHorizontal));
+                            }
+                        }
+                        
+                        // 添加额外间距
+                        arrowOffset = t + 10;
+                        
+                        // 防止无限大的值
+                        if (!isFinite(arrowOffset) || arrowOffset > 200) {
+                            arrowOffset = halfWidth + halfHeight + 10; // 使用合理的默认值
+                        }
+                    }
+                    
                     // 缩短路径末端，为箭头留出空间
-                    const endX = d.target.x - normX * 35;
-                    const endY = d.target.y - normY * 35;
+                    const endX = d.target.x - normX * arrowOffset;
+                    const endY = d.target.y - normY * arrowOffset;
                     return `M${d.source.x},${d.source.y} L${endX},${endY}`;
                 });
             
@@ -455,7 +466,7 @@ class ProjectUnitGraph {
                 
                 if (!source || !target) return '';
                 
-                // 计算从源到目标的路径，稍微缩短以避免覆盖箭头
+                // 计算从源到目标的路径，根据目标节点类型调整终点
                 const dx = target.x - source.x;
                 const dy = target.y - source.y;
                 const distance = Math.sqrt(dx * dx + dy * dy);
@@ -464,9 +475,53 @@ class ProjectUnitGraph {
                 
                 const normX = dx / distance;
                 const normY = dy / distance;
+                
+                // 根据目标节点类型计算箭头终点
+                let arrowOffset = 35; // 默认圆形节点的偏移量
+                
+                if (target.isComplex && target._cardSize) {
+                    // 复杂节点：计算到矩形边界的距离
+                    const halfWidth = target._cardSize.width / 2;
+                    const halfHeight = target._cardSize.height / 2;
+                    
+                    // 使用更稳定的算法计算矩形边界交点
+                    const angle = Math.atan2(dy, dx);
+                    const cos = Math.cos(angle);
+                    const sin = Math.sin(angle);
+                    
+                    // 计算射线与矩形四条边的交点，选择最近的
+                    let t = Infinity;
+                    
+                    // 检查与垂直边的交点
+                    if (Math.abs(cos) > 0.001) {
+                        const signX = cos > 0 ? 1 : -1;
+                        const tVertical = (signX * halfWidth) / cos;
+                        if (Math.abs(tVertical * sin) <= halfHeight) {
+                            t = Math.min(t, Math.abs(tVertical));
+                        }
+                    }
+                    
+                    // 检查与水平边的交点
+                    if (Math.abs(sin) > 0.001) {
+                        const signY = sin > 0 ? 1 : -1;
+                        const tHorizontal = (signY * halfHeight) / sin;
+                        if (Math.abs(tHorizontal * cos) <= halfWidth) {
+                            t = Math.min(t, Math.abs(tHorizontal));
+                        }
+                    }
+                    
+                    // 添加额外间距
+                    arrowOffset = t + 10;
+                    
+                    // 防止无限大的值
+                    if (!isFinite(arrowOffset) || arrowOffset > 200) {
+                        arrowOffset = halfWidth + halfHeight + 10; // 使用合理的默认值
+                    }
+                }
+                
                 // 缩短路径末端，为箭头留出空间
-                const endX = target.x - normX * 35;
-                const endY = target.y - normY * 35;
+                const endX = target.x - normX * arrowOffset;
+                const endY = target.y - normY * arrowOffset;
                 return `M${source.x},${source.y} L${endX},${endY}`;
             });
     }
@@ -520,16 +575,7 @@ class ProjectUnitGraph {
         }
     }
     
-    /**
-     * 获取单元颜色
-     */
-    getUnitColor(type) {
-        let color = NODE_TYPE_CONFIG.colors[type] || NODE_TYPE_CONFIG.colors['None'];
-        if (this.isDarkMode) {
-            color = d3.color(color).brighter(0.3).toString();
-        }
-        return color;
-    }
+    // 获取单元颜色的方法已移除 - 现在由C#层提供颜色配置
     
     /**
      * 处理节点点击
