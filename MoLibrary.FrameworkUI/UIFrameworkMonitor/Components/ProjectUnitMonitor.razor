@@ -32,11 +32,27 @@
                 <Columns>
                     <PropertyColumn Property="x => x.Title" Title="单元名称" />
                     <PropertyColumn Property="x => x.Key" Title="完整名称" />
-                    <PropertyColumn Property="x => x.UnitType.ToString()" Title="单元类型" />
+                    <TemplateColumn Title="单元类型">
+                        <CellTemplate>
+                            <MudChip T="string" Size="Size.Small" 
+                                     Style="@($"background-color: {ProjectUnitVisualizationConfig.GetUnitTypeColor(context.Item.UnitType)}; color: white;")">
+                                @context.Item.UnitType.ToString()
+                            </MudChip>
+                        </CellTemplate>
+                    </TemplateColumn>
                     <TemplateColumn Title="依赖数量" Sortable="false">
                         <CellTemplate>
-                            <MudChip T="int" Size="Size.Small" Color="Color.Info">
+                            <MudChip T="int" Size="Size.Small" Color="Color.Info" 
+                                     Icon="@Icons.Material.Filled.Link">
                                 @context.Item.DependencyUnits.Count
+                            </MudChip>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="被依赖数量" Sortable="false">
+                        <CellTemplate>
+                            <MudChip T="int" Size="Size.Small" Color="Color.Success"
+                                     Icon="@Icons.Material.Filled.CallReceived">
+                                @context.Item.DependedByCount
                             </MudChip>
                         </CellTemplate>
                     </TemplateColumn>
@@ -62,62 +78,9 @@
     </MudCardContent>
 </MudCard>
 
-<MudDialog @bind-Visible="_detailDialogVisible" Options="_dialogOptions">
-    <TitleContent>
-        <MudText Typo="Typo.h6">
-            <MudIcon Icon="@Icons.Material.Filled.Info" Class="mr-3" />
-            项目单元详情
-        </MudText>
-    </TitleContent>
-    <DialogContent>
-        @if (_selectedUnit != null)
-        {
-            <MudSimpleTable Style="overflow-x: auto;">
-                <tbody>
-                    <tr>
-                        <td><MudText Typo="Typo.subtitle2">单元名称</MudText></td>
-                        <td>@_selectedUnit.Title</td>
-                    </tr>
-                    <tr>
-                        <td><MudText Typo="Typo.subtitle2">完整名称</MudText></td>
-                        <td>@_selectedUnit.Key</td>
-                    </tr>
-                    <tr>
-                        <td><MudText Typo="Typo.subtitle2">单元类型</MudText></td>
-                        <td>
-                            <MudChip T="string" Size="Size.Small" Color="Color.Primary">
-                                @_selectedUnit.UnitType.ToString()
-                            </MudChip>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><MudText Typo="Typo.subtitle2">依赖单元</MudText></td>
-                        <td>
-                            @if (_selectedUnit.DependencyUnits.Any())
-                            {
-                                <MudStack>
-                                    @foreach (var dep in _selectedUnit.DependencyUnits)
-                                    {
-                                        <MudChip T="string" Size="Size.Small" Color="Color.Secondary">
-											@dep.Title (@dep.UnitType)
-                                        </MudChip>
-                                    }
-                                </MudStack>
-                            }
-                            else
-                            {
-                                <MudText Color="Color.Secondary">无依赖单元</MudText>
-                            }
-                        </td>
-                    </tr>
-                </tbody>
-            </MudSimpleTable>
-        }
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="CloseDetailDialog">关闭</MudButton>
-    </DialogActions>
-</MudDialog>
+<ProjectUnitDetailDialog @bind-Visible="_detailDialogVisible" 
+                         SelectedUnit="_selectedUnit"
+                         AllProjectUnits="_projectUnits" />
 
 @code {
     private MudDataGrid<DtoProjectUnit>? _dataGrid;
@@ -125,12 +88,6 @@
     private bool _loading = false;
     private bool _detailDialogVisible = false;
     private DtoProjectUnit? _selectedUnit;
-
-    private readonly DialogOptions _dialogOptions = new()
-    {
-        MaxWidth = MaxWidth.Medium,
-        FullWidth = true
-    };
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -171,11 +128,5 @@
     {
         _selectedUnit = unit;
         _detailDialogVisible = true;
-    }
-
-    private void CloseDetailDialog()
-    {
-        _detailDialogVisible = false;
-        _selectedUnit = null;
     }
 }
