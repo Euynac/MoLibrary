@@ -29,6 +29,10 @@ public class UnitDomainService(Type type) : ProjectUnit(type, EProjectUnitType.D
     public static ProjectUnit? Factory(FactoryContext context)
     {
         var unit = new UnitDomainService(context.Type);
-        return unit.VerifyType() ? unit : null;
+        if (!unit.VerifyType()) return null;
+        
+        // 初始化方法元数据
+        unit.InitializeMethods<MoDomainService>();
+        return unit;
     }
 }
