@@ -14,14 +14,14 @@ public class UnitInfoAttribute(string name) : Attribute, IUnitCachedAttribute
     public string Name { get; set; } = name;
 
     /// <summary>
-    /// 相关业务组，用于绑定一个或多个需求
+    /// 项目单元作者，通常用于标识该单元的创建者或维护者或责任人。
     /// </summary>
-    public List<string>? Group { get; set; }
+    public string? Author { get; set; }
 
     /// <summary>
-    /// 功能介绍文档，使用markdown语法。
+    /// 相关业务组、或需求ID、模块ID等，用于UI界面相关项目单元。
     /// </summary>
-    public string? MarkdownDescription { get; set; }
+    public string[]? Group { get; set; }
 
     /// <summary>
     /// 项目单元描述，通常用于简要说明该单元的功能或用途。如该属性为空，则读取XML注释中的summary内容。

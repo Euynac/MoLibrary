@@ -22,6 +22,27 @@
                         <td><MudText Typo="Typo.subtitle2">完整名称</MudText></td>
                         <td><MudText>@SelectedUnit.Key</MudText></td>
                     </tr>
+                    @if (!string.IsNullOrEmpty(SelectedUnit.Author))
+                    {
+                        <tr>
+                            <td><MudText Typo="Typo.subtitle2">作者</MudText></td>
+                            <td><MudText>@SelectedUnit.Author</MudText></td>
+                        </tr>
+                    }
+                    @if (SelectedUnit.Group?.Any() == true)
+                    {
+                        <tr>
+                            <td><MudText Typo="Typo.subtitle2">分组</MudText></td>
+                            <td><MudText>@string.Join(", ", SelectedUnit.Group)</MudText></td>
+                        </tr>
+                    }
+                    @if (!string.IsNullOrEmpty(SelectedUnit.Description))
+                    {
+                        <tr>
+                            <td><MudText Typo="Typo.subtitle2">描述</MudText></td>
+                            <td><MudText>@SelectedUnit.Description</MudText></td>
+                        </tr>
+                    }
                     <tr>
                         <td><MudText Typo="Typo.subtitle2">单元类型</MudText></td>
                         <td>

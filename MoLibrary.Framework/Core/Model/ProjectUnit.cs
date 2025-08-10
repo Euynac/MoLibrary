@@ -188,6 +188,8 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
         {
             Title = info.Name;
             Description = info.Description;
+            Author = info.Author;
+            Group = info.Group?.ToList();
         }
     }
 
@@ -205,6 +207,16 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     /// 项目单元描述
     /// </summary>
     public string? Description { get; set; }
+
+    /// <summary>
+    /// 项目单元作者
+    /// </summary>
+    public string? Author { get; set; }
+
+    /// <summary>
+    /// 项目单元分组信息
+    /// </summary>
+    public List<string>? Group { get; set; }
 
     /// <summary>
     /// 系统类型

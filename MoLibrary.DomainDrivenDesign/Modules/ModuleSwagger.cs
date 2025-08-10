@@ -8,7 +8,6 @@ using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.Core.Module.TypeFinder;
-using MoLibrary.Core.Modules;
 using MoLibrary.DomainDrivenDesign.Swagger;
 using MoLibrary.Tool.Extensions;
 using Swashbuckle.AspNetCore.SwaggerGen;
@@ -16,7 +15,7 @@ using Unchase.Swashbuckle.AspNetCore.Extensions.Extensions;
 
 namespace MoLibrary.DomainDrivenDesign.Modules;
 
-public class ModuleSwagger(ModuleSwaggerOption option) : MoModuleWithDependencies<ModuleSwagger, ModuleSwaggerOption, ModuleSwaggerGuide>(option)
+public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger, ModuleSwaggerOption, ModuleSwaggerGuide>(option)
 {
     public override EMoModules CurModuleEnum()
     {
@@ -73,9 +72,8 @@ public class ModuleSwagger(ModuleSwaggerOption option) : MoModuleWithDependencie
 
 
             if(!Option.DisableXmlDocumentation)
-            {  
+            {
                 //巨坑：要显示swagger文档，需要设置项目<GenerateDocumentationFile>True</GenerateDocumentationFile> XML文档用于生成swagger api注释。另外还要在设置中指定xml文档地址
-
                 var documentAssemblies = (Option.DocumentAssemblies ?? []).ToList();
                 if (!Option.DisableAutoIncludeModuleSystemRelatedAsDocumentAssembly)
                 {
@@ -127,13 +125,6 @@ public class ModuleSwagger(ModuleSwaggerOption option) : MoModuleWithDependencie
         }); //https://github.com/domaindrivendev/Swashbuckle.AspNetCore#include-descriptions-from-xml-comments
     }
 
-    public override void ClaimDependencies()
-    {
-        if (!Option.DisableXmlDocumentation)
-        {
-            DependsOnModule<ModuleXmlDocumentationGuide>().Register();
-        }
-    }
 }
 
 public static class ModuleSwaggerBuilderExtensions
@@ -172,7 +163,7 @@ public class ModuleSwaggerOption : MoModuleOption<ModuleSwagger>
     public string? Description { get; set; }
 
     /// <summary>
-    /// 是否禁用Swagger 读取XML文档生成。
+    /// 是否禁用Swagger模块自动读取XML文档生成。
     /// </summary>
     public bool DisableXmlDocumentation { get; set; }
 
