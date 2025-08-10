@@ -1,12 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using MoLibrary.DomainDrivenDesign;
 using MoLibrary.Framework.Core.Attributes;
 using MoLibrary.Framework.Core.Interfaces;
 using MoLibrary.Framework.Modules;
 using MoLibrary.Tool.Extensions;
-using MoLibrary.Tool.General;
 
 namespace MoLibrary.Framework.Core.Model;
 
@@ -19,6 +17,13 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     internal static ILogger Logger => Option.Logger ?? NullLogger.Instance;
     internal static ModuleFrameworkMonitorOption Option { get; set; } = null!;
 
+    /// <summary>
+    /// 初始化类元数据
+    /// </summary>
+    private void InitializeClassInfo()
+    {
+        //TODO
+    }
     /// <summary>
     /// 初始化方法元数据
     /// </summary>
@@ -178,9 +183,11 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
             Attributes.AddRange(attributes);
         }
 
+        InitializeClassInfo();
         if (attributes.OfType<UnitInfoAttribute>().FirstOrDefault() is { } info)
         {
             Title = info.Name;
+            Description = info.Description;
         }
     }
 
@@ -193,6 +200,11 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     /// 项目单元显示名
     /// </summary>
     public string Title { get; set; } = type.Name;
+
+    /// <summary>
+    /// 项目单元描述
+    /// </summary>
+    public string? Description { get; set; }
 
     /// <summary>
     /// 系统类型

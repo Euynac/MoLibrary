@@ -29,13 +29,13 @@ public static class ProjectUnitMethodHelper
     {
         var methods = type.GetMethods(bindingFlags)
             .Where(m => !m.IsSpecialName && // 排除属性的get/set方法等特殊方法
-                       m.DeclaringType != typeof(object)) // 排除从Object继承的方法
-            .ToList();
+                        m.DeclaringType != typeof(object)); // 排除从Object继承的方法
+            
 
         // 如果指定了基类类型，也排除基类的方法
         if (baseType != null)
         {
-            methods = methods.Where(m => m.DeclaringType != baseType).ToList();
+            methods = methods.Where(m => m.DeclaringType != baseType);
         }
 
         var unitMethods = new List<ProjectUnitMethod>();
