@@ -5,15 +5,18 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using MoLibrary.Core.Module;
+using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.Core.Module.TypeFinder;
+using MoLibrary.Core.Modules;
 using MoLibrary.DomainDrivenDesign.Swagger;
 using MoLibrary.Tool.Extensions;
+using Swashbuckle.AspNetCore.SwaggerGen;
 using Unchase.Swashbuckle.AspNetCore.Extensions.Extensions;
 
 namespace MoLibrary.DomainDrivenDesign.Modules;
 
-public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger, ModuleSwaggerOption, ModuleSwaggerGuide>(option)
+public class ModuleSwagger(ModuleSwaggerOption option) : MoModuleWithDependencies<ModuleSwagger, ModuleSwaggerOption, ModuleSwaggerGuide>(option)
 {
     public override EMoModules CurModuleEnum()
     {
@@ -25,9 +28,9 @@ public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger,
         app.UseSwagger();
         app.UseSwaggerUI(c =>
         {
-            c.SwaggerEndpoint($"/swagger/{option.Version}/swagger.json",
-                $"{option.AppName ?? "Unknown"} {option.Version}");
-            c.DocumentTitle = option.AppName ?? "Swagger UI";
+            c.SwaggerEndpoint($"/swagger/{Option.Version}/swagger.json",
+                $"{Option.AppName ?? "Unknown"} {Option.Version}");
+            c.DocumentTitle = Option.AppName ?? "Swagger UI";
             //c.RoutePrefix = string.Empty; // 设置根路径访问Swagger UI
             //c.InjectStylesheet("/swagger-ui/custom.css"); // 可选：自定义样式表
             //c.InjectJavascript("/swagger-ui/custom.js"); // 可选：自定义JavaScript
@@ -49,11 +52,11 @@ public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger,
             // 添加GroupName到Tags的转换过滤器
             options.OperationFilter<GroupNameToTagsOperationFilter>();
             
-            options.SwaggerDoc(option.Version, new OpenApiInfo
+            options.SwaggerDoc(Option.Version, new OpenApiInfo
             {
-                Title = option.AppName,
-                Version = option.Version,
-                Description = option.Description ?? ""
+                Title = Option.AppName,
+                Version = Option.Version,
+                Description = Option.Description ?? ""
             });
             options.AddEnumsWithValuesFixFilters();//扩展支持Enum
 
@@ -68,30 +71,35 @@ public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger,
             //最佳的方案当然是返回值均采用显式DTO类型
             options.CustomSchemaIds(type => type.GetCleanFullName());
 
-            //巨坑：要显示swagger文档，需要设置项目<GenerateDocumentationFile>True</GenerateDocumentationFile> XML文档用于生成swagger api注释。另外还要在设置中指定xml文档地址
 
-            var documentAssemblies = (option.DocumentAssemblies ?? []).ToList();
-            if (!option.DisableAutoIncludeModuleSystemRelatedAsDocumentAssembly)
-            {
-                documentAssemblies.AddRange(services.GetOrCreateMoModuleSystemTypeFinder().GetAssemblies().Select(p => p.GetName().Name!));
-            }
+            if(!Option.DisableXmlDocumentation)
+            {  
+                //巨坑：要显示swagger文档，需要设置项目<GenerateDocumentationFile>True</GenerateDocumentationFile> XML文档用于生成swagger api注释。另外还要在设置中指定xml文档地址
 
-            foreach (var name in documentAssemblies.Distinct())
-            {
-                var filePath = Path.Combine(AppContext.BaseDirectory, $"{name}.xml");
-                if (File.Exists(filePath))
+                var documentAssemblies = (Option.DocumentAssemblies ?? []).ToList();
+                if (!Option.DisableAutoIncludeModuleSystemRelatedAsDocumentAssembly)
                 {
-                    options.IncludeXmlComments(filePath);
+                    documentAssemblies.AddRange(services.GetOrCreateMoModuleSystemTypeFinder().GetAssemblies().Select(p => p.GetName().Name!));
                 }
-                else if(!name.StartsWith(nameof(MoLibrary)))
-                {
-                    Logger.LogWarning($"Swagger XML file not found: {filePath}, you need to add <GenerateDocumentationFile>True</GenerateDocumentationFile> into your .csproj file to generate swagger documents");
-                }
-            }
-            //似乎必须写在IncludeXmlComments下面，而且只支持/// <inheritdoc /> 一行
-            options.IncludeXmlCommentsFromInheritDocs(includeRemarks: true, excludedTypes: typeof(string));//扩展支持inherit doc
 
-            if (option.UseAuth)
+                foreach (var name in documentAssemblies.Distinct())
+                {
+                    var filePath = Path.Combine(AppContext.BaseDirectory, $"{name}.xml");
+                    if (File.Exists(filePath))
+                    {
+                        options.IncludeXmlComments(filePath);
+                    }
+                    else if (!name.StartsWith(nameof(MoLibrary)))
+                    {
+                        Logger.LogWarning($"Swagger XML file not found: {filePath}, you need to add <GenerateDocumentationFile>True</GenerateDocumentationFile> into your .csproj file to generate swagger documents");
+                    }
+                }
+                //似乎必须写在IncludeXmlComments下面，而且只支持/// <inheritdoc /> 一行
+                options.IncludeXmlCommentsFromInheritDocs(includeRemarks: true, excludedTypes: typeof(string));//扩展支持inherit doc
+            }
+          
+
+            if (Option.UseAuth)
             {
                 var securityScheme = new OpenApiSecurityScheme
                 {
@@ -114,8 +122,73 @@ public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger,
                 });
             }
 
-            option.ExtendSwaggerGenAction?.Invoke(options);
+            Option.ExtendSwaggerGenAction?.Invoke(options);
 
         }); //https://github.com/domaindrivendev/Swashbuckle.AspNetCore#include-descriptions-from-xml-comments
     }
+
+    public override void ClaimDependencies()
+    {
+        if (!Option.DisableXmlDocumentation)
+        {
+            DependsOnModule<ModuleXmlDocumentationGuide>().Register();
+        }
+    }
+}
+
+public static class ModuleSwaggerBuilderExtensions
+{
+    public static ModuleSwaggerGuide ConfigModuleSwagger(this WebApplicationBuilder builder,
+        Action<ModuleSwaggerOption>? action = null)
+    {
+        return new ModuleSwaggerGuide().Register(action);
+    }
+}
+
+public class ModuleSwaggerGuide : MoModuleGuide<ModuleSwagger, ModuleSwaggerOption, ModuleSwaggerGuide>
+{
+
+
+}
+
+
+public class ModuleSwaggerOption : MoModuleOption<ModuleSwagger>
+{
+    public Action<SwaggerGenOptions>? ExtendSwaggerGenAction { get; set; }
+
+    /// <summary>
+    /// 应用名
+    /// </summary>
+    public string? AppName { get; set; } = "ApplicationName";
+
+    /// <summary>
+    /// 接口版本
+    /// </summary>
+    public string? Version { get; set; } = "v1";
+
+    /// <summary>
+    /// 文档描述
+    /// </summary>
+    public string? Description { get; set; }
+
+    /// <summary>
+    /// 是否禁用Swagger 读取XML文档生成。
+    /// </summary>
+    public bool DisableXmlDocumentation { get; set; }
+
+    /// <summary>
+    /// 服务项目名，用于Swagger文档生成。注意需要设置项目&lt;GenerateDocumentationFile&gt;True&lt;/GenerateDocumentationFile&gt; XML文档用于生成注释
+    /// </summary>
+    public string[]? DocumentAssemblies { get; set; }
+
+    /// <summary>
+    /// 是否禁用自动使用模块系统加载的相关程序集作为Swagger文档生成的入口。
+    /// </summary>
+    public bool DisableAutoIncludeModuleSystemRelatedAsDocumentAssembly { get; set; }
+
+    /// <summary>
+    /// 是否使用认证
+    /// </summary>
+    public bool UseAuth { get; set; }
+
 }

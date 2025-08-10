@@ -14,7 +14,7 @@ namespace MoLibrary.Framework.Core.Model;
 public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
 {
     private static Func<FactoryContext, ProjectUnit?>? _factories;
-    internal static ILogger Logger => Option.Logger ?? NullLogger.Instance;
+    internal static ILogger Logger => Option.Logger;
     internal static ModuleFrameworkMonitorOption Option { get; set; } = null!;
 
     /// <summary>
@@ -22,21 +22,21 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     /// </summary>
     private void InitializeClassInfo()
     {
-        //TODO
+        Description = ProjectUnitXmlDocHelper.ExtractTypeDescription(Type);
     }
     /// <summary>
     /// 初始化方法元数据
     /// </summary>
     protected void InitializeMethods()
     {
-        Methods = ProjectUnitMethodHelper.GetPublicMethods(Type);
+        Methods = ProjectUnitXmlDocHelper.GetPublicMethods(Type);
     }
     /// <summary>
     /// 初始化方法元数据
     /// </summary>
     protected void InitializeMethods<T>()
     {
-        Methods = ProjectUnitMethodHelper.GetPublicMethods(Type, typeof(T));
+        Methods = ProjectUnitXmlDocHelper.GetPublicMethods(Type, typeof(T));
     }
 
     /// <summary>

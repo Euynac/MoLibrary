@@ -15,6 +15,11 @@ public class ModuleFrameworkMonitorOption : MoModuleControllerOption<ModuleFrame
     /// 开启请求过滤器
     /// </summary>
     public bool EnableRequestFilter { get; set; }
+
+    /// <summary>
+    /// 是否解析项目单元具体信息（如XML文档注释等）
+    /// </summary>
+    public bool ParseUnitDetails { get; set; } = true;
 }
 
 

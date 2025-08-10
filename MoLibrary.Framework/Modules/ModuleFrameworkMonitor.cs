@@ -8,6 +8,7 @@ using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
+using MoLibrary.Core.Modules;
 using MoLibrary.Framework.Core;
 using MoLibrary.Framework.Core.Extensions;
 using MoLibrary.Framework.Core.Model;
@@ -18,8 +19,16 @@ using MoLibrary.Tool.MoResponse;
 namespace MoLibrary.Framework.Modules;
 
 public class ModuleFrameworkMonitor(ModuleFrameworkMonitorOption option)
-    : MoModule<ModuleFrameworkMonitor, ModuleFrameworkMonitorOption, ModuleFrameworkMonitorGuide>(option), IWantIterateBusinessTypes
+    : MoModuleWithDependencies<ModuleFrameworkMonitor, ModuleFrameworkMonitorOption, ModuleFrameworkMonitorGuide>(option), IWantIterateBusinessTypes
 {
+
+    public override void ClaimDependencies()
+    {
+        if (Option.ParseUnitDetails)
+        {
+            DependsOnModule<ModuleXmlDocumentationGuide>().Register();
+        }
+    }
     private static void InitProjectUnitFactories()
     {
         var type = typeof(ProjectUnit);
