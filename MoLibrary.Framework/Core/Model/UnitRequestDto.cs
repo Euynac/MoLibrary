@@ -1,4 +1,5 @@
 using MoLibrary.DomainDrivenDesign.Interfaces;
+using MoLibrary.Framework.Core.Interfaces;
 using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.Framework.Core.Model;

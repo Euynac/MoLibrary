@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using MoLibrary.DomainDrivenDesign;
 using MoLibrary.DomainDrivenDesign.Interfaces;
+using MoLibrary.Framework.Core.Interfaces;
 using MoLibrary.Framework.Modules;
 using MoLibrary.Tool.Extensions;
 
