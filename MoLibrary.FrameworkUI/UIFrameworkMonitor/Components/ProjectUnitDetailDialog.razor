@@ -295,7 +295,9 @@
     private readonly DialogOptions DialogOptions = new()
     {
         MaxWidth = MaxWidth.Medium,
-        FullWidth = true
+        FullWidth = true,
+        BackdropClick = true, 
+        CloseOnEscapeKey = true 
     };
     
     protected override void OnParametersSet()
