@@ -1,6 +1,7 @@
 using MoLibrary.Framework.Core.Model;
 using MudBlazor;
 using System.Linq;
+using System.Reflection;
 
 namespace MoLibrary.FrameworkUI.UIFrameworkMonitor.Components;
 
@@ -130,6 +131,17 @@ public static class ProjectUnitVisualizationConfig
             });
         }
         
+        // 方法Chip
+        if (unit.Methods.Any())
+        {
+            chips.Add(new
+            {
+                text = $"方法 {unit.Methods.Count}",
+                color = "primary",
+                icon = Icons.Material.Filled.Functions
+            });
+        }
+        
         // 告警Chips - 根据不同级别分别显示
         if (unit.Alerts.Any())
         {
@@ -188,6 +200,23 @@ public static class ProjectUnitVisualizationConfig
         {
             metadata.Add(new { key = "依赖数量", value = unit.DependencyUnits.Count.ToString() });
         }
+        
+        // 显示方法名和注释（最多显示5个主要方法）
+        if (unit.Methods.Any())
+        {
+            foreach (var method in unit.Methods.Take(5))
+            {
+                var methodInfo = !string.IsNullOrEmpty(method.Description) 
+                    ? $"{method.MethodName}: {method.Description}" 
+                    : method.MethodName;
+                metadata.Add(new { key = "方法", value = methodInfo });
+            }
+            
+            if (unit.Methods.Count > 5)
+            {
+                metadata.Add(new { key = "...", value = $"还有 {unit.Methods.Count - 5} 个方法" });
+            }
+        }
 
         return metadata.ToArray();
     }
@@ -208,5 +237,15 @@ public static class ProjectUnitVisualizationConfig
             return "info";
             
         return null;
+    }
+    
+    /// <summary>
+    /// 判断方法是否为异步方法
+    /// </summary>
+    private static bool IsAsyncMethod(MethodInfo method)
+    {
+        return method.ReturnType.IsGenericType && 
+               (method.ReturnType.GetGenericTypeDefinition() == typeof(Task<>) || 
+                method.ReturnType == typeof(Task));
     }
 }

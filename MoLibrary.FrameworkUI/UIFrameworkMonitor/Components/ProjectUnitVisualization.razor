@@ -258,6 +258,8 @@
             dependencyCount = unit.DependencyUnits.Count,
             dependedByCount = unit.DependedByCount,
             hasAttributes = unit.Attributes.Any(),
+            methodCount = unit.Methods.Count,
+            hasMethod = unit.Methods.Any(),
             // 添加节点配置信息
             isComplex = ProjectUnitVisualizationConfig.IsComplexUnitType(unit.UnitType),
             color = ProjectUnitVisualizationConfig.GetUnitTypeColor(unit.UnitType),

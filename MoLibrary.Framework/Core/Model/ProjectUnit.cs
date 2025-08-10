@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using MoLibrary.DomainDrivenDesign;
 using MoLibrary.Framework.Core.Attributes;
 using MoLibrary.Framework.Core.Interfaces;
 using MoLibrary.Framework.Modules;
@@ -42,6 +43,21 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     private static Func<FactoryContext, ProjectUnit?>? _factories;
     internal static ILogger Logger => Option.Logger ?? NullLogger.Instance;
     internal static ModuleFrameworkMonitorOption Option { get; set; } = null!;
+
+    /// <summary>
+    /// 初始化方法元数据
+    /// </summary>
+    protected void InitializeMethods()
+    {
+        Methods = ProjectUnitMethodHelper.GetPublicMethods(Type);
+    }
+    /// <summary>
+    /// 初始化方法元数据
+    /// </summary>
+    protected void InitializeMethods<T>()
+    {
+        Methods = ProjectUnitMethodHelper.GetPublicMethods(Type, typeof(T));
+    }
 
     /// <summary>
     /// 默认命名惯例规则
@@ -227,6 +243,11 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     /// 告警信息列表
     /// </summary>
     public List<ProjectUnitAlert> Alerts { get; protected set; } = [];
+    
+    /// <summary>
+    /// 项目单元方法列表
+    /// </summary>
+    public List<ProjectUnitMethod> Methods { get; protected set; } = [];
 
     /// <summary>
     /// 增加所依赖的单元
@@ -352,6 +373,12 @@ public class DtoProjectUnit
     /// 告警信息列表
     /// </summary>
     public List<ProjectUnitAlert> Alerts { get; set; } = [];
+
+    /// <summary>
+    /// 项目单元方法列表
+    /// </summary>
+    [JsonIgnore]
+    public List<ProjectUnitMethod> Methods { get; set; } = [];
     
     /// <summary>
     /// 被依赖的数量（在数据传输时计算）

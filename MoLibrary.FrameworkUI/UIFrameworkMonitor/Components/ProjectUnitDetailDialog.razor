@@ -1,5 +1,6 @@
 @using MoLibrary.Framework.Core.Model
 @using System.Linq
+@using System.Reflection
 
 <MudDialog @bind-Visible="Visible" Options="DialogOptions">
     <TitleContent>
@@ -53,6 +54,13 @@
                                     <MudChip T="string" Size="Size.Small" Color="Color.Secondary"
                                              Icon="@Icons.Material.Filled.Label">
                                         特性 @SelectedUnit.Attributes.Count
+                                    </MudChip>
+                                }
+                                @if (SelectedUnit.Methods.Any())
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary"
+                                             Icon="@Icons.Material.Filled.Functions">
+                                        方法 @SelectedUnit.Methods.Count
                                     </MudChip>
                                 }
                                 @if (SelectedUnit.Alerts.Any())
@@ -135,6 +143,75 @@
                                         </MudChip>
                                     }
                                 </MudChipSet>
+                            </td>
+                        </tr>
+                    }
+                    @if (SelectedUnit.Methods.Any())
+                    {
+                        <tr>
+                            <td style="vertical-align: top;"><MudText Typo="Typo.subtitle2">方法信息</MudText></td>
+                            <td>
+                                <MudExpansionPanels>
+                                    <MudExpansionPanel>
+                                        <TitleContent>
+                                            <div style="display: flex; align-items: center">
+                                                <MudIcon Icon="@Icons.Material.Filled.Functions" class="mr-3" />
+                                                <MudText>公共方法 (@SelectedUnit.Methods.Count)</MudText>
+                                            </div>
+                                        </TitleContent>
+                                        <ChildContent>
+                                            <MudStack Spacing="2">
+                                                @foreach (var method in SelectedUnit.Methods)
+                                                {
+                                                    <MudCard Outlined="true" Style="border-left: 3px solid var(--mud-palette-primary);">
+                                                        <MudCardContent Class="pa-2">
+                                                            <div class="d-flex align-center justify-space-between">
+                                                                <MudText Typo="Typo.caption" Style="font-family: 'Cascadia Code', 'JetBrains Mono', monospace; background-color: var(--mud-palette-background-grey); padding: 6px 10px; border-radius: 4px; flex-grow: 1;">
+                                                                    @method.MethodSignature
+                                                                </MudText>
+                                                                <MudChipSet T="string" Class="ml-2">
+                                                                    @if (method.MethodInfo.IsStatic)
+                                                                    {
+                                                                        <MudChip T="string" Size="Size.Small" Color="Color.Secondary" 
+                                                                                 Icon="@Icons.Material.Filled.Public">
+                                                                            Static
+                                                                        </MudChip>
+                                                                    }
+                                                                    @if (method.MethodInfo.IsVirtual && !method.MethodInfo.IsAbstract)
+                                                                    {
+                                                                        <MudChip T="string" Size="Size.Small" Color="Color.Tertiary">
+                                                                            Virtual
+                                                                        </MudChip>
+                                                                    }
+                                                                    @if (method.MethodInfo.IsAbstract)
+                                                                    {
+                                                                        <MudChip T="string" Size="Size.Small" Color="Color.Warning">
+                                                                            Abstract
+                                                                        </MudChip>
+                                                                    }
+                                                                    @if (IsAsyncMethod(method.MethodInfo))
+                                                                    {
+                                                                        <MudChip T="string" Size="Size.Small" Color="Color.Info" 
+                                                                                 Icon="@Icons.Material.Filled.Sync">
+                                                                            Async
+                                                                        </MudChip>
+                                                                    }
+                                                                </MudChipSet>
+                                                            </div>
+                                                            
+                                                            @if (!string.IsNullOrEmpty(method.Description))
+                                                            {
+                                                                <MudText Typo="Typo.body2" Class="mt-2 ml-2" Style="color: var(--mud-palette-text-secondary); font-style: italic;">
+                                                                    // @method.Description
+                                                                </MudText>
+                                                            }
+                                                        </MudCardContent>
+                                                    </MudCard>
+                                                }
+                                            </MudStack>
+                                        </ChildContent>
+                                    </MudExpansionPanel>
+                                </MudExpansionPanels>
                             </td>
                         </tr>
                     }
@@ -233,5 +310,12 @@
     private string GetUnitTypeColor(EProjectUnitType unitType)
     {
         return ProjectUnitVisualizationConfig.GetUnitTypeColor(unitType);
+    }
+    
+    private bool IsAsyncMethod(MethodInfo method)
+    {
+        return method.ReturnType.IsGenericType && 
+               (method.ReturnType.GetGenericTypeDefinition() == typeof(Task<>) || 
+                method.ReturnType == typeof(Task));
     }
 }
