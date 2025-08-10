@@ -47,6 +47,10 @@ public enum EMoModules
     ProgressBar,
     Profiling,
     /// <summary>
+    /// XML文档服务模块
+    /// </summary>
+    XmlDocumentation,
+    /// <summary>
     /// 临时设置数据
     /// </summary>
     ScopedData,

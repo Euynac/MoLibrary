@@ -1,11 +1,13 @@
 using System.Reflection;
+using MoLibrary.Core.Modules;
+using MoLibrary.Framework.Modules;
 
 namespace MoLibrary.Framework.Core.Model;
 
 /// <summary>
 /// 项目单元方法元数据辅助类
 /// </summary>
-public static class ProjectUnitMethodHelper
+public static class ProjectUnitXmlDocHelper
 {
     /// <summary>
     /// 获取指定类型的公共方法元数据
@@ -52,14 +54,24 @@ public static class ProjectUnitMethodHelper
 
         return unitMethods;
     }
-
+    /// <summary>
+    /// 获取类型的XML文档信息
+    /// </summary>
+    /// <param name="type">指定类型</param>
+    /// <returns>类型描述，如果没有则返回null</returns>
+    public static string? ExtractTypeDescription(Type type)
+    {
+        var xmlService = ModuleXmlDocumentation.Singleton;
+        return xmlService?.GetTypeDocumentation(type);
+    }
     /// <summary>
     /// 提取方法描述（从XML注释中获取）
     /// </summary>
     /// <param name="method">方法信息</param>
     /// <returns>方法描述，如果没有则返回null</returns>
-    private static string? ExtractMethodDescription(MethodInfo method)
+    public static string? ExtractMethodDescription(MethodInfo method)
     {
-        return XmlDocumentationReader.GetMethodDescription(method);
+        var xmlService = ModuleXmlDocumentation.Singleton;
+        return xmlService?.GetMethodDocumentation(method)?.Summary;
     }
 }
