@@ -350,7 +350,10 @@
 
             var matchesText = string.IsNullOrWhiteSpace(_filterText) ||
                 unit.Title.Contains(_filterText, StringComparison.OrdinalIgnoreCase) ||
-                unit.Key.Contains(_filterText, StringComparison.OrdinalIgnoreCase);
+                unit.Key.Contains(_filterText, StringComparison.OrdinalIgnoreCase) ||
+                (!string.IsNullOrEmpty(unit.Author) && unit.Author.Contains(_filterText, StringComparison.OrdinalIgnoreCase)) ||
+                (unit.Group?.Any(g => g.Contains(_filterText, StringComparison.OrdinalIgnoreCase)) == true) ||
+                (!string.IsNullOrEmpty(unit.Description) && unit.Description.Contains(_filterText, StringComparison.OrdinalIgnoreCase));
 
             var matchesType = !_selectedUnitTypes.Any() || _selectedUnitTypes.Contains(unit.UnitType);
 

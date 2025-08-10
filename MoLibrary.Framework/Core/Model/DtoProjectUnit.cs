@@ -21,6 +21,16 @@ public class DtoProjectUnit
     public string? Description { get; set; }
 
     /// <summary>
+    /// 项目单元作者
+    /// </summary>
+    public string? Author { get; set; }
+
+    /// <summary>
+    /// 项目单元分组信息
+    /// </summary>
+    public List<string>? Group { get; set; }
+
+    /// <summary>
     /// 项目单元类型
     /// </summary>
     [JsonConverter(typeof(JsonStringEnumConverter))]

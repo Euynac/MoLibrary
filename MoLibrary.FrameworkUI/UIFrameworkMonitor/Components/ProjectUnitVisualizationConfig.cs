@@ -98,6 +98,17 @@ public static class ProjectUnitVisualizationConfig
             }
         };
 
+        // Author Chip
+        if (!string.IsNullOrEmpty(unit.Author))
+        {
+            chips.Add(new
+            {
+                text = unit.Author,
+                color = "dark",
+                icon = Icons.Material.Filled.Person
+            });
+        }
+
         // 依赖Chip
         if (unit.DependencyUnits.Count > 0)
         {
@@ -189,6 +200,18 @@ public static class ProjectUnitVisualizationConfig
     public static object[] GetUnitMetadata(DtoProjectUnit unit)
     {
         var metadata = new List<object>();
+
+        // Group信息
+        if (unit.Group?.Any() == true)
+        {
+            metadata.Add(new { key = "分组", value = string.Join(", ", unit.Group) });
+        }
+
+        // Description信息
+        if (!string.IsNullOrEmpty(unit.Description))
+        {
+            metadata.Add(new { key = "描述", value = unit.Description });
+        }
 
         // 可以根据需要添加更多元数据
         if (unit.Attributes.Any())
