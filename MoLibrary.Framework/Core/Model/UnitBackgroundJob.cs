@@ -1,4 +1,5 @@
 using MoLibrary.BackgroundJob.Abstract.Jobs;
+using MoLibrary.Framework.Core.Interfaces;
 using MoLibrary.Framework.Modules;
 using MoLibrary.Tool.Extensions;
 

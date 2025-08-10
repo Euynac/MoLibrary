@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.EventBus.Abstractions;
+using MoLibrary.Framework.Core.Interfaces;
 using MoLibrary.Framework.Modules;
 using MoLibrary.Tool.Extensions;
 

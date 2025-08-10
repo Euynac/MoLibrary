@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.EventBus.Events;
+using MoLibrary.Framework.Core.Interfaces;
 using MoLibrary.Framework.Modules;
 using MoLibrary.Tool.Extensions;
 

@@ -1,6 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Text.Json.Serialization;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using MoLibrary.DomainDrivenDesign;
@@ -11,29 +9,6 @@ using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.General;
 
 namespace MoLibrary.Framework.Core.Model;
-
-public interface IHasProjectUnitFactory
-{
-    /// <summary>
-    /// 当前项目单元信息建造工厂
-    /// </summary>
-    /// <param name="context"></param>
-    /// <returns></returns>
-    public static abstract ProjectUnit? Factory(FactoryContext context);
-}
-
-public class FactoryContext
-{
-    /// <summary>
-    /// 当前类型
-    /// </summary>
-    public required Type Type { get; set; }
-
-    /// <summary>
-    /// 服务注册容器
-    /// </summary>
-    public required IServiceCollection ServiceCollection { get; set; }
-}
 
 /// <summary>
 /// 项目单元信息
@@ -337,69 +312,4 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     {
         return $"ProjectUnit[{UnitType}] - {Title}({Key})";
     }
-}
-
-
-
-public class DtoProjectUnit
-{
-    /// <summary>
-    /// 项目单元键值，也即项目单元FullName名
-    /// </summary>
-    public required string Key { get; set; }
-
-    /// <summary>
-    /// 项目单元显示名
-    /// </summary>
-    public required string Title { get; set; }
-
-    /// <summary>
-    /// 项目单元类型
-    /// </summary>
-    [JsonConverter(typeof(JsonStringEnumConverter))]
-    public EProjectUnitType UnitType { get; set; }
-
-    /// <summary>
-    /// 所依赖的项目单元
-    /// </summary>
-    public List<DtoProjectUnitDependency> DependencyUnits { get; set; } = [];
-
-    /// <summary>
-    /// 项目单元特性
-    /// </summary>
-    public List<IUnitCachedAttribute> Attributes { get; set; } = [];
-    
-    /// <summary>
-    /// 告警信息列表
-    /// </summary>
-    public List<ProjectUnitAlert> Alerts { get; set; } = [];
-
-    /// <summary>
-    /// 项目单元方法列表
-    /// </summary>
-    [JsonIgnore]
-    public List<ProjectUnitMethod> Methods { get; set; } = [];
-    
-    /// <summary>
-    /// 被依赖的数量（在数据传输时计算）
-    /// </summary>
-    public int DependedByCount { get; set; } = 0;
-}
-public class DtoProjectUnitDependency
-{
-    /// <summary>
-    /// 项目单元键值，也即项目单元FullName名
-    /// </summary>
-    public required string Key { get; set; }
-
-    /// <summary>
-    /// 项目单元显示名
-    /// </summary>
-    public required string Title { get; set; }
-
-    /// <summary>
-    /// 项目单元类型
-    /// </summary>
-    [JsonConverter(typeof(JsonStringEnumConverter))]
-    public EProjectUnitType UnitType { get; set; }
 }
