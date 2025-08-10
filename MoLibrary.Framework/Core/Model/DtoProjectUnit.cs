@@ -16,6 +16,11 @@ public class DtoProjectUnit
     public required string Title { get; set; }
 
     /// <summary>
+    /// 项目单元描述
+    /// </summary>
+    public string? Description { get; set; }
+
+    /// <summary>
     /// 项目单元类型
     /// </summary>
     [JsonConverter(typeof(JsonStringEnumConverter))]
