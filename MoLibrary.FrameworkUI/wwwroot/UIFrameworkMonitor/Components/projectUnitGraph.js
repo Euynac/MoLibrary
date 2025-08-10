@@ -5,11 +5,14 @@
  * @module projectUnitGraph
  */
 
-
+// 导入通用的D3.js模块
 import { GraphBase, getModernLinkStyle, getModernNodeStyle } from '../../../MoLibrary.UI/js/d3js/d3-graph-base.js';
 import { ForceLayoutManager } from '../../../MoLibrary.UI/js/d3js/d3-force-layout.js';
 import { NodeInteractionHandler, createStaticDragBehavior } from '../../../MoLibrary.UI/js/d3js/d3-node-interaction.js';
-import { createComplexNodeCardRenderer } from '../../../MoLibrary.UI/js/d3js/d3-complex-node-card.js';
+import { createLayoutAlgorithms } from '../../../MoLibrary.UI/js/d3js/d3-layout-algorithms.js';
+
+// 导入项目单元特定的模块
+import { createProjectUnitCardRenderer } from './projectUnitCardRenderer.js';
 
 // ==================== 配置 ====================
 
@@ -85,11 +88,17 @@ class ProjectUnitGraph {
             markerIds: this.graphBase.markerIds // 传递marker IDs
         });
         
-        // 初始化复杂节点卡片渲染器 - 传递尺寸配置
-        this.cardRenderer = createComplexNodeCardRenderer(isDarkMode, NODE_SIZE.complex);
+        // 初始化项目单元卡片渲染器 - 传递尺寸配置
+        this.cardRenderer = createProjectUnitCardRenderer(isDarkMode, NODE_SIZE.complex);
         
         // 获取现代化节点样式
         this.nodeStyle = getModernNodeStyle(isDarkMode, 'simple');
+        
+        // 初始化布局算法管理器
+        this.layoutAlgorithms = createLayoutAlgorithms(
+            this.graphBase.width,
+            this.graphBase.height
+        );
         
         // 静态布局拖拽行为
         this.staticDragBehavior = null;
@@ -481,153 +490,29 @@ class ProjectUnitGraph {
     }
     
     /**
-     * 计算层次布局 - 基于节点的连通度（度数）
+     * 计算层次布局 - 使用通用布局算法
      */
     calculateHierarchyLayout() {
-        // 使用更大的虚拟画布尺寸，避免节点过于密集
-        const width = Math.max(this.graphBase.width * 2, 2000);
-        const height = Math.max(this.graphBase.height * 2, 1500);
-        
-        // 计算每个节点的度数（入度 + 出度）
-        const nodeDegrees = new Map();
-        
-        // 初始化所有节点的度数为0
-        this.nodes.forEach(node => {
-            nodeDegrees.set(node.id, 0);
-        });
-        
-        // 计算出度和入度
-        this.links.forEach(link => {
-            const sourceId = link.source.id || link.source;
-            const targetId = link.target.id || link.target;
-            
-            // 增加源节点的出度
-            if (nodeDegrees.has(sourceId)) {
-                nodeDegrees.set(sourceId, nodeDegrees.get(sourceId) + 1);
-            }
-            
-            // 增加目标节点的入度
-            if (nodeDegrees.has(targetId)) {
-                nodeDegrees.set(targetId, nodeDegrees.get(targetId) + 1);
-            }
-        });
-        
-        // 根据度数对节点进行分层
-        const layers = [];
-        const maxDegree = Math.max(...nodeDegrees.values());
-        
-        // 创建层次，度数高的节点在中心层
-        for (let i = 0; i <= maxDegree; i++) {
-            layers[i] = [];
-        }
-        
-        // 将节点分配到对应的层
-        this.nodes.forEach(node => {
-            const degree = nodeDegrees.get(node.id);
-            layers[degree].push(node);
-        });
-        
-        // 过滤空层并反转（度数高的在上层）
-        const nonEmptyLayers = layers.filter(layer => layer.length > 0).reverse();
-        
-        // 计算布局 - 增加层间距和节点间距
-        const layerHeight = (height - 200) / Math.max(nonEmptyLayers.length, 1);
-        const padding = 100;
-        const minNodeSpacing = 120; // 最小节点间距
-        
-        nonEmptyLayers.forEach((layer, layerIndex) => {
-            const y = padding + layerIndex * layerHeight + layerHeight / 2;
-            const layerWidth = width - 2 * padding;
-            // 确保节点间距不会太小
-            const nodeSpacing = Math.max(minNodeSpacing, layerWidth / Math.max(layer.length, 1));
-            
-            // 如果节点需要的总宽度超过画布宽度，则水平居中排列
-            const totalWidth = nodeSpacing * layer.length;
-            const startX = totalWidth <= layerWidth 
-                ? padding 
-                : (this.graphBase.width / 2) - (totalWidth / 2); // 居中对齐
-            
-            layer.forEach((node, nodeIndex) => {
-                // 均匀分布节点
-                node.x = startX + nodeSpacing * nodeIndex + nodeSpacing / 2;
-                node.y = y;
-                
-                // 如果节点太多，使用之字形布局避免重叠
-                if (layer.length > 10) {
-                    // 偶数索引的节点稍微上移，奇数索引的节点稍微下移
-                    node.y += (nodeIndex % 2 === 0 ? -30 : 30);
-                }
-            });
-        });
+        this.layoutAlgorithms.hierarchicalLayout(this.nodes, this.links);
     }
     
     /**
-     * 计算环形布局 - 动态调整半径以减少重叠
+     * 计算环形布局 - 使用通用布局算法
      */
     calculateCircularLayout() {
-        const centerX = this.graphBase.width / 2;
-        const centerY = this.graphBase.height / 2;
-        
-        // 根据节点数量动态计算半径
-        const nodeCount = this.nodes.length;
-        const minRadius = 100; // 最小半径
-        const maxRadius = 2500; // 最大半径
-        
-        // 计算节点的平均尺寸（考虑复杂节点的大小）
-        let avgNodeSize = 60; // 默认尺寸
         const complexNodeCount = this.nodes.filter(n => n.isComplex).length;
-        if (complexNodeCount > 0) {
-            // 如果有复杂节点，增加平均尺寸估算
-            avgNodeSize = 80 + complexNodeCount * 10;
-        }
-        
-        // 根据节点数量和大小计算所需的周长
-        const requiredCircumference = nodeCount * avgNodeSize * 1.5; // 1.5倍间距
-        const calculatedRadius = requiredCircumference / (2 * Math.PI);
-        
-        // 限制在最小和最大半径之间
-        const radius = Math.max(minRadius, Math.min(calculatedRadius, maxRadius));
-        
-        // 单环布局
-        const angleStep = (2 * Math.PI) / nodeCount;
-        
-        this.nodes.forEach((node, i) => {
-            const angle = i * angleStep - Math.PI / 2;
-            node.x = centerX + radius * Math.cos(angle);
-            node.y = centerY + radius * Math.sin(angle);
+        this.layoutAlgorithms.circularLayout(this.nodes, {
+            avgNodeSize: 60,
+            complexNodeCount: complexNodeCount
         });
     }
     
     /**
-     * 计算多层环形布局
+     * 计算多层环形布局 - 使用通用布局算法
      */
     calculateMultiCircularLayout() {
-        const centerX = this.graphBase.width / 2;
-        const centerY = this.graphBase.height / 2;
-        const nodeCount = this.nodes.length;
-        
-        if (nodeCount === 0) return;
-        
-        // 配置参数
-        const minRadius = 100;
-        const maxRadius = 2500;
-        const nodesPerRing = 15; // 每环最多节点数
-        
-        // 计算需要的环数
-        const ringsNeeded = Math.ceil(nodeCount / nodesPerRing);
-        const ringSpacing = ringsNeeded > 1 ? (maxRadius - minRadius) / (ringsNeeded - 1) : 0;
-        
-        // 分配节点到各环
-        this.nodes.forEach((node, i) => {
-            const ringIndex = Math.floor(i / nodesPerRing);
-            const positionInRing = i % nodesPerRing;
-            const nodesInThisRing = Math.min(nodesPerRing, nodeCount - ringIndex * nodesPerRing);
-            const angleStep = (2 * Math.PI) / nodesInThisRing;
-            const angle = positionInRing * angleStep - Math.PI / 2;
-            const ringRadius = minRadius + ringIndex * ringSpacing;
-            
-            node.x = centerX + ringRadius * Math.cos(angle);
-            node.y = centerY + ringRadius * Math.sin(angle);
+        this.layoutAlgorithms.multiCircularLayout(this.nodes, {
+            nodesPerRing: 15
         });
     }
     

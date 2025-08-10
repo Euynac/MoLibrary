@@ -310,7 +310,7 @@
     {
         if (firstRender && DependencyGraphData != null)
         {
-            jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "/_content/MoLibrary.UI/js/dependency-graph.js");
+			jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "/_content/MoLibrary.UI/js/module-dependency-graph.js");
             await InitializeGraph();
         }
     }
