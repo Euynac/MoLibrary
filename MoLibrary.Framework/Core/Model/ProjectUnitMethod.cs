@@ -1,4 +1,5 @@
 using System.Reflection;
+using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.Framework.Core.Model;
 
@@ -54,8 +55,8 @@ public class ProjectUnitMethod
     private string GetMethodSignature()
     {
         var parameters = Parameters;
-        var parameterStrings = parameters.Select(p => $"{p.ParameterType.Name} {p.Name}");
-        return $"{ReturnType.Name} {MethodName}({string.Join(", ", parameterStrings)})";
+        var parameterStrings = parameters.Select(p => $"{p.ParameterType.GetCleanName()} {p.Name}");
+        return $"{ReturnType.GetCleanName()} {MethodName}({string.Join(", ", parameterStrings)})";
     }
     
     public override string ToString()

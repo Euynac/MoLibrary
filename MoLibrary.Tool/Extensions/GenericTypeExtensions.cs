@@ -52,6 +52,54 @@ public static class GenericTypeExtensions
         }
     }
 
+    /// <summary>
+    /// 获取类型的简洁名称（不包含命名空间），处理泛型、嵌套类和匿名类型
+    /// </summary>
+    public static string GetCleanName(this Type type)
+    {
+        if (type == null) throw new ArgumentNullException(nameof(type));
+        return InnerGetCleanName(type);
+        
+        string InnerGetCleanName(Type curType, bool jumpDeclareType = false)
+        {
+            // 处理嵌套类（优先级最高）
+            if (curType.DeclaringType != null && !jumpDeclareType)
+            {
+                var parentName = curType.DeclaringType.GetCleanName();
+                var currentName = InnerGetCleanName(curType, true);
+                return $"{parentName}.{currentName}";
+            }
+
+            // 处理匿名类型
+            if (curType.Name.Contains("AnonymousType", StringComparison.Ordinal))
+            {
+                var signature = string.Join("-", curType.GetProperties()
+                    .Select(p => $"{p.Name}[{p.PropertyType.GetCleanName()}]"));
+                return $"AnonymousType_{signature}";
+            }
+
+            // 处理泛型类型
+            if (curType.IsGenericType)
+            {
+                var genericTypeDef = curType.GetGenericTypeDefinition();
+                var genericArgs = curType.GetGenericArguments().Select(t => InnerGetCleanName(t, true)).ToArray();
+
+                // 获取不含命名空间的类型名称
+                var typeName = genericTypeDef.Name;
+                var index = typeName.IndexOf('`');
+                if (index != -1) typeName = typeName[..index];
+                return typeName + $"<{string.Join(",", genericArgs)}>";
+            }
+
+            return curType.Name;
+        }
+    }
+
+    public static string GetCleanName(this object @object)
+    {
+        return @object.GetType().GetCleanName();
+    }
+
     public static string GetCleanFullName(this object @object)
     {
         return @object.GetType().GetCleanFullName();
