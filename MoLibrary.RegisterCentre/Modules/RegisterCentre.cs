@@ -47,10 +47,23 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModuleW
                 {
                     if ((await centre.Register(req)).IsFailed(out var error)) return error;
                     return Res.Ok("注册成功");
-                }).WithName("微服务注册热配置中心").WithOpenApi(operation =>
+                }).WithName("微服务注册").WithOpenApi(operation =>
                 {
-                    operation.Summary = "微服务注册配置中心";
-                    operation.Description = "微服务注册配置中心";
+                    operation.Summary = "微服务注册";
+                    operation.Description = "注册微服务到注册中心";
+                    operation.Tags = tagGroup;
+                    return operation;
+                });
+                
+                endpoints.MapPost(MoRegisterCentreConventions.ServerCentreHeartbeat, async (ServiceHeartbeat req, [FromServices] IRegisterCentreServer centre) =>
+                {
+                    if ((await centre.Heartbeat(req)).IsFailed(out var error, out var data)) 
+                        return error.GetResponse();
+                    return Res.Create(data, ResponseCode.Ok).GetResponse();
+                }).WithName("微服务心跳").WithOpenApi(operation =>
+                {
+                    operation.Summary = "微服务心跳";
+                    operation.Description = "发送心跳到注册中心";
                     operation.Tags = tagGroup;
                     return operation;
                 });
@@ -191,4 +204,14 @@ public class ModuleRegisterCentreOption : MoModuleControllerOption<ModuleRegiste
     /// 客户端重试频率（单位：ms）
     /// </summary>
     public int RetryDuration { get; set; } = 5000;
+    
+    /// <summary>
+    /// 服务端心跳超时时间（单位：ms）
+    /// </summary>
+    public int ServerHeartbeatTimeout { get; set; } = 60000;
+    
+    /// <summary>
+    /// 服务端心跳检查间隔（单位：ms）
+    /// </summary>
+    public int ServerHeartbeatCheckInterval { get; set; } = 30000;
 }

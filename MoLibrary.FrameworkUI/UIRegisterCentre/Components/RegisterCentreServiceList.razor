@@ -5,45 +5,111 @@
 @inject IOptionsSnapshot<ModuleRegisterCentreOption> RegisterCentreOptions
 @inject IDialogService DialogService
 
-<MudDataGrid T="ServiceRegisterInfo" Items="@Services" Hover="true" Dense="true" RowClick="OnRowClick" Loading="@IsLoading">
+<MudDataGrid T="RegisteredServiceStatus" Items="@Services" Hover="true" Dense="true" RowClick="OnRowClick" Loading="@IsLoading">
     <Columns>
         <PropertyColumn Property="x => x.AppId" Title="App ID" />
-        <PropertyColumn Property="x => x.Name" Title="服务名称" />
+        <PropertyColumn Property="x => x.ServiceName" Title="服务名称" />
         <PropertyColumn Property="x => x.DomainName" Title="领域" />
         <PropertyColumn Property="x => x.ProjectName" Title="项目名" />
-        <PropertyColumn Property="x => x.UpdateTime" Title="更新时间" Format="yyyy-MM-dd HH:mm:ss" />
-        <PropertyColumn Property="x => x.BuildTime" Title="构建时间" Format="yyyy-MM-dd HH:mm:ss" />
-        <PropertyColumn Property="x => x.AssemblyVersion" Title="程序集版本" />
-        <PropertyColumn Property="x => x.ReleaseVersion" Title="发布版本" />
-        <TemplateColumn Title="状态" CellClass="d-flex justify-end">
+        <TemplateColumn Title="实例数">
+            <CellTemplate>
+                <MudText>@($"{context.Item.RunningInstanceCount}/{context.Item.TotalInstanceCount}")</MudText>
+            </CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="整体状态">
             <CellTemplate>
                 @{
-                    var timeSinceUpdate = DateTime.Now - context.Item.UpdateTime;
-                    var heartbeatDuration = RegisterCentreOptions.Value.HeartbeatDuration;
-                    var heartbeatSeconds = heartbeatDuration / 1000.0;
-                    
+                    var status = context.Item.OverallStatus;
                     Color statusColor;
                     string statusText;
+                    string statusIcon;
                     
-                    if (timeSinceUpdate.TotalSeconds < heartbeatSeconds * 2)
+                    switch (status)
                     {
-                        statusColor = Color.Success;
-                        statusText = "在线";
-                    }
-                    else if (timeSinceUpdate.TotalSeconds < heartbeatSeconds * 3)
-                    {
-                        statusColor = Color.Warning;
-                        statusText = "不健康";
-                    }
-                    else
-                    {
-                        statusColor = Color.Error;
-                        statusText = "异常";
+                        case ServiceStatus.Running:
+                            statusColor = Color.Success;
+                            statusText = "运行中";
+                            statusIcon = Icons.Material.Filled.CheckCircle;
+                            break;
+                        case ServiceStatus.Updating:
+                            statusColor = Color.Info;
+                            statusText = "更新中";
+                            statusIcon = Icons.Material.Filled.Update;
+                            break;
+                        case ServiceStatus.Offline:
+                            statusColor = Color.Default;
+                            statusText = "离线";
+                            statusIcon = Icons.Material.Filled.CloudOff;
+                            break;
+                        case ServiceStatus.Error:
+                            statusColor = Color.Error;
+                            statusText = "异常";
+                            statusIcon = Icons.Material.Filled.Error;
+                            break;
+                        default:
+                            statusColor = Color.Default;
+                            statusText = "未知";
+                            statusIcon = Icons.Material.Filled.Help;
+                            break;
                     }
                 }
-                <MudChip T="string" Color="@statusColor" Size="Size.Small">
+                <MudChip T="string" Color="@statusColor" Size="Size.Small" Icon="@statusIcon">
                     @statusText
                 </MudChip>
+            </CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="程序集版本">
+            <CellTemplate>
+                @{
+                    var runningInstance = context.Item.GetRunningInstanceInfo();
+                }
+                <MudText Typo="Typo.body2">
+                    @(runningInstance?.RegisterInfo.AssemblyVersion ?? "N/A")
+                </MudText>
+            </CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="构建时间">
+            <CellTemplate>
+                @{
+                    var runningInstance = context.Item.GetRunningInstanceInfo();
+                }
+                <MudText Typo="Typo.body2">
+                    @(runningInstance?.RegisterInfo.BuildTime.ToString("MM-dd HH:mm") ?? "N/A")
+                </MudText>
+            </CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="最后心跳">
+            <CellTemplate>
+                @{
+                    var runningInstance = context.Item.GetRunningInstanceInfo();
+                }
+                <MudText Typo="Typo.body2">
+                    @(runningInstance?.LastHeartbeatTime.ToString("MM-dd HH:mm:ss") ?? "N/A")
+                </MudText>
+            </CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="实例状态">
+            <CellTemplate>
+                <MudStack Row="true" Spacing="1">
+                    @foreach (var instance in context.Item.Instances.Values.Take(3))
+                    {
+                        var instanceColor = instance.Status switch
+                        {
+                            ServiceStatus.Running => Color.Success,
+                            ServiceStatus.Updating => Color.Info,
+                            ServiceStatus.Offline => Color.Default,
+                            ServiceStatus.Error => Color.Error,
+                            _ => Color.Default
+                        };
+                        <MudTooltip Text="@($"{instance.InstanceId}: {instance.Status}")">
+                            <MudIcon Icon="@Icons.Material.Filled.Circle" Color="@instanceColor" Size="Size.Small" />
+                        </MudTooltip>
+                    }
+                    @if (context.Item.Instances.Count > 3)
+                    {
+                        <MudText Typo="Typo.caption">+@(context.Item.Instances.Count - 3)</MudText>
+                    }
+                </MudStack>
             </CellTemplate>
         </TemplateColumn>
         <TemplateColumn CellClass="d-flex justify-end">
@@ -57,16 +123,16 @@
 
 
 @code {
-    [Parameter] public List<ServiceRegisterInfo> Services { get; set; } = new();
+    [Parameter] public List<RegisteredServiceStatus> Services { get; set; } = new();
     [Parameter] public EventCallback OnRefresh { get; set; }
     [Parameter] public bool IsLoading { get; set; } = false;
 
-    private void OnRowClick(DataGridRowClickEventArgs<ServiceRegisterInfo> args)
+    private void OnRowClick(DataGridRowClickEventArgs<RegisteredServiceStatus> args)
     {
         ShowServiceDetail(args.Item);
     }
 
-    private async void ShowServiceDetail(ServiceRegisterInfo service)
+    private async void ShowServiceDetail(RegisteredServiceStatus service)
     {
         var parameters = new DialogParameters<RegisterCentreServiceDetailDialog>
         {
@@ -77,7 +143,7 @@
         { 
             CloseOnEscapeKey = true,
             Position = DialogPosition.Center,
-            MaxWidth = MaxWidth.Medium,
+            MaxWidth = MaxWidth.Large,
             FullWidth = true
         };
         

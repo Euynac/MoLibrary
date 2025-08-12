@@ -5,7 +5,7 @@
     <TitleContent>
         <MudText Typo="Typo.h6">
             <MudIcon Icon="@Icons.Material.Filled.Info" Class="mr-3 mb-n1" />
-            服务详情
+            服务详情 - @Service?.ServiceName
         </MudText>
     </TitleContent>
     <DialogContent>
@@ -19,7 +19,7 @@
 @code {
     [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
     
-    [Parameter] public ServiceRegisterInfo Service { get; set; } = null!;
+    [Parameter] public RegisteredServiceStatus Service { get; set; } = null!;
     
     private void Cancel() => MudDialog.Cancel();
 }

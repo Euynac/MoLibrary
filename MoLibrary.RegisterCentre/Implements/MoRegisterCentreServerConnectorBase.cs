@@ -7,65 +7,115 @@ using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.RegisterCentre.Implements;
 
-public abstract class MoRegisterCentreServerConnectorBase(IRegisterCentreClient client, ILogger<MoRegisterCentreServerConnectorBase> logger, IOptions<ModuleRegisterCentreOption> option) : IRegisterCentreServerConnector
+public abstract class MoRegisterCentreServerConnectorBase(
+    IRegisterCentreClient client, 
+    ILogger<MoRegisterCentreServerConnectorBase> logger, 
+    IOptions<ModuleRegisterCentreOption> option) : IRegisterCentreServerConnector
 {
+    protected readonly ModuleRegisterCentreOption Option = option.Value;
+    protected readonly IRegisterCentreClient Client = client;
+    protected readonly ILogger<MoRegisterCentreServerConnectorBase> Logger = logger;
+    
+    private CancellationTokenSource? _heartbeatCts;
+    
     public abstract Task<Res> Register(ServiceRegisterInfo req);
-
-    public virtual Task<Res> Heartbeat(ServiceRegisterInfo req)
-    {
-        return Register(req);
-    }
+    public abstract Task<Res<ServiceHeartbeatResponse>> Heartbeat(ServiceHeartbeat req);
+    
     public virtual async Task DoingRegister()
     {
         await Task.Delay(3000);
-        var retryTimes = option.Value.ClientRetryTimes;
+        var retryTimes = Option.ClientRetryTimes;
+        
         while (retryTimes > 0)
         {
             try
             {
-                var res = await Register(client.GetServiceStatus());
-                if (!res.IsOk())
+                var serviceInfo = Client.GetServiceStatus();
+                var res = await Register(serviceInfo);
+                
+                if (res.IsFailed(out var error))
                 {
-                    logger?.LogError(res);
+                    Logger?.LogError("注册失败: {Message}", error.Message);
                 }
                 else
                 {
-                    DoingHeartbeat();
+                    Logger?.LogInformation("成功注册到注册中心: {AppId}", serviceInfo.AppId);
+                    StartHeartbeat();
                     break;
                 }
             }
             catch (Exception e)
             {
-                //logger?.LogError(e, "注册配置中心出现异常");
+                Logger?.LogError(e, "注册配置中心出现异常");
             }
             finally
             {
-                await Task.Delay(option.Value.RetryDuration);
+                await Task.Delay(Option.RetryDuration);
                 retryTimes--;
             }
         }
+        
+        if (retryTimes == 0)
+        {
+            Logger?.LogError("注册中心注册失败，已达到最大重试次数");
+        }
     }
-
-    public virtual async void DoingHeartbeat()
+    
+    protected virtual void StartHeartbeat()
     {
-        await Task.Delay(3000);
-        while (true)
+        // 取消之前的心跳任务
+        _heartbeatCts?.Cancel();
+        _heartbeatCts = new CancellationTokenSource();
+        
+        Task.Run(async () => await DoingHeartbeat(_heartbeatCts.Token));
+    }
+    
+    protected virtual async Task DoingHeartbeat(CancellationToken cancellationToken)
+    {
+        await Task.Delay(3000, cancellationToken);
+        
+        while (!cancellationToken.IsCancellationRequested)
         {
             try
             {
-                var res = await Heartbeat(client.GetServiceStatus());
-                if (!res.IsOk())
+                var serviceInfo = Client.GetServiceStatus();
+                var heartbeat = new ServiceHeartbeat
                 {
-                    logger?.LogError(res);
+                    AppId = serviceInfo.AppId,
+                    BuildTime = serviceInfo.BuildTime,
+                    AssemblyVersion = serviceInfo.AssemblyVersion,
+                    ReleaseVersion = serviceInfo.ReleaseVersion,
+                    FromClient = serviceInfo.FromClient
+                };
+                
+                var res = await Heartbeat(heartbeat);
+                
+                if (res.IsFailed(out var heartbeatError, out var heartbeatData))
+                {
+                    Logger?.LogError("心跳失败: {Message}", heartbeatError.Message);
+                }
+                else if (heartbeatData.RequireReRegister)
+                {
+                    Logger?.LogInformation("需要重新注册: {Message}", heartbeatData.Message);
+                    // 重新注册
+                    var registerRes = await Register(serviceInfo);
+                    if (registerRes.IsFailed(out var registerError))
+                    {
+                        Logger?.LogError("重新注册失败: {Message}", registerError.Message);
+                    }
+                    else
+                    {
+                        Logger?.LogInformation("重新注册成功");
+                    }
                 }
             }
             catch (Exception e)
             {
-                //logger?.LogError(e, "向配置中心发送心跳出现异常");
+                Logger?.LogError(e, "向配置中心发送心跳出现异常");
             }
             finally
             {
-                await Task.Delay(option.Value.HeartbeatDuration);
+                await Task.Delay(Option.HeartbeatDuration, cancellationToken);
             }
         }
     }
