@@ -21,6 +21,10 @@
     "microsoft_docs_mcp": {
       "type": "http",
       "url": "https://learn.microsoft.com/api/mcp"
+    },
+    "grapiti-memory": {
+      "type": "sse",
+      "url": "http://localhost:8000/sse"
     }
   }
 }
