@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MoLibrary.Configuration.Dashboard.Interfaces;
 using MoLibrary.Core.Module.Interfaces;
-using MoLibrary.RegisterCentre;
+using MoLibrary.RegisterCentre.Interfaces;
 using MoLibrary.RegisterCentre.Modules;
 
 namespace MoLibrary.Configuration.Dashboard.Modules;

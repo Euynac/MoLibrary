@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using MoLibrary.RegisterCentre;
+using MoLibrary.RegisterCentre.Interfaces;
+using MoLibrary.RegisterCentre.Models;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.FrameworkUI.UIRegisterCentre.Services;

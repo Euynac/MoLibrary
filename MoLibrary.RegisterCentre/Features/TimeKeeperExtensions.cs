@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi.Models;
+using MoLibrary.RegisterCentre.Interfaces;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.RegisterCentre.Features;

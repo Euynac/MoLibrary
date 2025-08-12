@@ -8,6 +8,9 @@ using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.Dapr.Modules;
+using MoLibrary.RegisterCentre.Implements;
+using MoLibrary.RegisterCentre.Interfaces;
+using MoLibrary.RegisterCentre.Models;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.RegisterCentre.Modules;

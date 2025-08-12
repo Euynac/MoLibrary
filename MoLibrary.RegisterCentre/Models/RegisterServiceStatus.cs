@@ -1,4 +1,4 @@
-namespace MoLibrary.RegisterCentre;
+namespace MoLibrary.RegisterCentre.Models;
 
 /// <summary>
 /// 微服务注册状态
