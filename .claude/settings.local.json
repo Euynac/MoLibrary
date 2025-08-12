@@ -20,7 +20,6 @@
   "enabledMcpjsonServers": [
     "context7",
     "puppeteer",
-    "microsoft_docs_mcp",
-    "grapiti-memory"
+    "microsoft_docs_mcp"
   ]
 }
