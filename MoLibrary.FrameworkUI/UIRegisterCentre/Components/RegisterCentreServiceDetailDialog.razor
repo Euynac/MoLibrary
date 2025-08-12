@@ -19,7 +19,7 @@
 @code {
     [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
     
-    [Parameter] public RegisterServiceStatus Service { get; set; } = null!;
+    [Parameter] public ServiceRegisterInfo Service { get; set; } = null!;
     
     private void Cancel() => MudDialog.Cancel();
 }

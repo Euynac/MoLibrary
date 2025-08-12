@@ -9,9 +9,9 @@ namespace MoLibrary.RegisterCentre.Implements;
 
 public abstract class MoRegisterCentreServerConnectorBase(IRegisterCentreClient client, ILogger<MoRegisterCentreServerConnectorBase> logger, IOptions<ModuleRegisterCentreOption> option) : IRegisterCentreServerConnector
 {
-    public abstract Task<Res> Register(RegisterServiceStatus req);
+    public abstract Task<Res> Register(ServiceRegisterInfo req);
 
-    public virtual Task<Res> Heartbeat(RegisterServiceStatus req)
+    public virtual Task<Res> Heartbeat(ServiceRegisterInfo req)
     {
         return Register(req);
     }

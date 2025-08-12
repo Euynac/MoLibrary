@@ -12,7 +12,7 @@ public interface IRegisterCentreServer : IRegisterCentreApiForClient
     /// 获取所有已注册微服务的状态
     /// </summary>
     /// <returns></returns>
-    Task<Res<List<RegisterServiceStatus>>> GetServicesStatus();
+    Task<Res<List<ServiceRegisterInfo>>> GetServicesStatus();
     /// <summary>
     /// 解除所有微服务注册
     /// </summary>
@@ -23,11 +23,11 @@ public interface IRegisterCentreServer : IRegisterCentreApiForClient
     /// Get 方法批量执行调用所有已注册的服务
     /// </summary>
     /// <returns></returns>
-    Task<Dictionary<RegisterServiceStatus, Res<TResponse>>> GetAsync<TResponse>(string callbackUrl);
+    Task<Dictionary<ServiceRegisterInfo, Res<TResponse>>> GetAsync<TResponse>(string callbackUrl);
 
     /// <summary>
     /// POST 方法批量执行调用所有已注册的服务
     /// </summary>
     /// <returns></returns>
-    Task<Dictionary<RegisterServiceStatus, Res<TResponse>>> PostAsync<TRequest, TResponse>(string callbackUrl, TRequest req);
+    Task<Dictionary<ServiceRegisterInfo, Res<TResponse>>> PostAsync<TRequest, TResponse>(string callbackUrl, TRequest req);
 }

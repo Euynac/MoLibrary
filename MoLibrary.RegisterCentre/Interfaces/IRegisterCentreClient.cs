@@ -11,5 +11,5 @@ public interface IRegisterCentreClient
     /// 获取当前微服务状态
     /// </summary>
     /// <returns></returns>
-    public RegisterServiceStatus GetServiceStatus();
+    public ServiceRegisterInfo GetServiceStatus();
 }

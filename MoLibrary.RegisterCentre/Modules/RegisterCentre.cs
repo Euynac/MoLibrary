@@ -43,7 +43,7 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModuleW
             app.UseEndpoints(endpoints =>
             {
                 var tagGroup = new List<OpenApiTag> { new() { Name = option.GetApiGroupName(), Description = "注册中心" } };
-                endpoints.MapPost(MoRegisterCentreConventions.ServerCentreRegister, async (RegisterServiceStatus req, [FromServices] IRegisterCentreServer centre) =>
+                endpoints.MapPost(MoRegisterCentreConventions.ServerCentreRegister, async (ServiceRegisterInfo req, [FromServices] IRegisterCentreServer centre) =>
                 {
                     if ((await centre.Register(req)).IsFailed(out var error)) return error;
                     return Res.Ok("注册成功");

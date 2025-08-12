@@ -10,7 +10,7 @@ public class RegisterCentreService(
     ILogger<RegisterCentreService> logger,
     IServiceProvider serviceProvider)
 {
-    public async Task<Res<List<RegisterServiceStatus>>> GetServicesStatusAsync()
+    public async Task<Res<List<ServiceRegisterInfo>>> GetServicesStatusAsync()
     {
         try
         {
@@ -48,7 +48,7 @@ public class RegisterCentreService(
         }
     }
 
-    public async Task<Res> RegisterServiceAsync(RegisterServiceStatus serviceStatus)
+    public async Task<Res> RegisterServiceAsync(ServiceRegisterInfo info)
     {
         try
         {
@@ -58,7 +58,7 @@ public class RegisterCentreService(
                 return Res.Fail("当前服务未配置为注册中心服务端");
             }
 
-            return await registerCentreServer.Register(serviceStatus);
+            return await registerCentreServer.Register(info);
         }
         catch (Exception ex)
         {
