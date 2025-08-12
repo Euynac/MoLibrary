@@ -4,89 +4,194 @@
 @using MoLibrary.RegisterCentre.Modules
 @inject IOptionsSnapshot<ModuleRegisterCentreOption> RegisterCentreOptions
 
-<MudGrid>
-    <MudItem xs="12">
-        <MudTextField T="string" Label="App ID" Value="@Service.AppId" ReadOnly="true" />
-    </MudItem>
-    <MudItem xs="12" sm="6">
-        <MudTextField T="string" Label="服务名称" Value="@Service.Name" ReadOnly="true" />
-    </MudItem>
-    <MudItem xs="12" sm="6">
-        <MudTextField T="string" Label="项目名称" Value="@Service.ProjectName" ReadOnly="true" />
-    </MudItem>
-    <MudItem xs="12" sm="6">
-        <MudTextField T="string" Label="领域名" Value="@Service.DomainName" ReadOnly="true" />
-    </MudItem>
-    <MudItem xs="12" sm="6">
-        <MudTextField T="string" Label="客户端信息" Value="@Service.FromClient" ReadOnly="true" />
-    </MudItem>
-    <MudItem xs="12" sm="6">
-        <MudTextField T="string" Label="程序集版本" Value="@Service.AssemblyVersion" ReadOnly="true" />
-    </MudItem>
-    <MudItem xs="12" sm="6">
-        <MudTextField T="string" Label="发布版本" Value="@Service.ReleaseVersion" ReadOnly="true" />
-    </MudItem>
-    <MudItem xs="12" sm="6">
-        <MudDatePicker Label="更新时间" Date="@Service.UpdateTime" ReadOnly="true" />
-    </MudItem>
-    <MudItem xs="12" sm="6">
-        <MudDatePicker Label="构建时间" Date="@Service.BuildTime" ReadOnly="true" />
-    </MudItem>
-    <MudItem xs="12">
-        <MudPaper Class="pa-3">
-            <MudText Typo="Typo.subtitle2" Class="mb-2">客户端配置信息</MudText>
+@if (Service != null)
+{
+    <MudTabs Elevation="0" Rounded="true" Centered="false" ApplyEffectsToContainer="true" PanelClass="pa-6">
+        <MudTabPanel Text="服务概览">
             <MudGrid>
-                <MudItem xs="12" sm="6">
-                    <MudText Typo="Typo.body2">心跳频率: @(RegisterCentreOptions.Value.HeartbeatDuration / 1000) 秒</MudText>
+                <MudItem xs="12">
+                    <MudPaper Class="pa-4" Elevation="0">
+                        <MudGrid>
+                            <MudItem xs="12" sm="6">
+                                <MudTextField T="string" Label="App ID" Value="@Service.AppId" ReadOnly="true" />
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudTextField T="string" Label="服务名称" Value="@Service.ServiceName" ReadOnly="true" />
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudTextField T="string" Label="项目名称" Value="@Service.ProjectName" ReadOnly="true" />
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudTextField T="string" Label="领域名" Value="@Service.DomainName" ReadOnly="true" />
+                            </MudItem>
+                        </MudGrid>
+                    </MudPaper>
                 </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudText Typo="Typo.body2">重试次数: @RegisterCentreOptions.Value.ClientRetryTimes</MudText>
-                </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudText Typo="Typo.body2">重试频率: @(RegisterCentreOptions.Value.RetryDuration / 1000) 秒</MudText>
+                
+                <MudItem xs="12">
+                    <MudPaper Class="pa-4" Elevation="0">
+                        <MudText Typo="Typo.h6" Class="mb-3">服务状态</MudText>
+                        <MudGrid>
+                            <MudItem xs="12" sm="4">
+                                <MudChip T="string" Color="@GetOverallStatusColor()" Icon="@GetOverallStatusIcon()" Size="Size.Large">
+                                    @GetOverallStatusText()
+                                </MudChip>
+                            </MudItem>
+                            <MudItem xs="12" sm="4">
+                                <MudText Typo="Typo.body1">运行实例: @Service.RunningInstanceCount</MudText>
+                            </MudItem>
+                            <MudItem xs="12" sm="4">
+                                <MudText Typo="Typo.body1">总实例数: @Service.TotalInstanceCount</MudText>
+                            </MudItem>
+                        </MudGrid>
+                    </MudPaper>
                 </MudItem>
             </MudGrid>
-        </MudPaper>
-    </MudItem>
-    <MudItem xs="12">
-        <MudAlert Severity="@StatusSeverity" Variant="Variant.Filled" Dense="true">
-            服务状态: @StatusText (@LastUpdateTime)
-        </MudAlert>
-    </MudItem>
-</MudGrid>
+        </MudTabPanel>
+        
+        <MudTabPanel Text="@($"实例列表 ({Service.TotalInstanceCount})")">
+            <MudDataGrid T="ServiceInstance" Items="@Service.Instances.Values" Hover="true" Dense="true">
+                <Columns>
+                    <TemplateColumn Title="实例ID">
+                        <CellTemplate>
+                            <MudTooltip Text="@context.Item.InstanceId">
+                                <MudText Typo="Typo.body2" Class="text-truncate" Style="max-width: 200px;">
+                                    @context.Item.InstanceId
+                                </MudText>
+                            </MudTooltip>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="状态">
+                        <CellTemplate>
+                            @{
+                                var (color, text, icon) = GetInstanceStatusInfo(context.Item.Status);
+                            }
+                            <MudChip T="string" Color="@color" Size="Size.Small" Icon="@icon">
+                                @text
+                            </MudChip>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <PropertyColumn Property="x => x.RegisterInfo.AssemblyVersion" Title="程序集版本" />
+                    <PropertyColumn Property="x => x.RegisterInfo.ReleaseVersion" Title="发布版本" />
+                    <PropertyColumn Property="x => x.RegisterInfo.BuildTime" Title="构建时间" Format="yyyy-MM-dd HH:mm:ss" />
+                    <PropertyColumn Property="x => x.LastHeartbeatTime" Title="最后心跳" Format="yyyy-MM-dd HH:mm:ss" />
+                    <PropertyColumn Property="x => x.RegistrationTime" Title="注册时间" Format="yyyy-MM-dd HH:mm:ss" />
+                    <PropertyColumn Property="x => x.HeartbeatCount" Title="心跳次数" />
+                    <TemplateColumn Title="心跳健康度">
+                        <CellTemplate>
+                            @{
+                                var timeSinceHeartbeat = DateTime.Now - context.Item.LastHeartbeatTime;
+                                var healthText = GetHeartbeatHealthText(timeSinceHeartbeat);
+                                var healthColor = GetHeartbeatHealthColor(timeSinceHeartbeat);
+                            }
+                            <MudText Typo="Typo.body2" Color="@healthColor">@healthText</MudText>
+                        </CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+            </MudDataGrid>
+        </MudTabPanel>
+        
+        <MudTabPanel Text="配置信息">
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudPaper Class="pa-4" Elevation="0">
+                        <MudText Typo="Typo.h6" Class="mb-3">客户端配置</MudText>
+                        <MudGrid>
+                            <MudItem xs="12" sm="4">
+                                <MudTextField T="int" Label="心跳频率 (秒)" 
+                                            Value="@(RegisterCentreOptions.Value.HeartbeatDuration / 1000)" 
+                                            ReadOnly="true" />
+                            </MudItem>
+                            <MudItem xs="12" sm="4">
+                                <MudTextField T="int" Label="重试次数" 
+                                            Value="@RegisterCentreOptions.Value.ClientRetryTimes" 
+                                            ReadOnly="true" />
+                            </MudItem>
+                            <MudItem xs="12" sm="4">
+                                <MudTextField T="int" Label="重试频率 (秒)" 
+                                            Value="@(RegisterCentreOptions.Value.RetryDuration / 1000)" 
+                                            ReadOnly="true" />
+                            </MudItem>
+                        </MudGrid>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+        </MudTabPanel>
+    </MudTabs>
+}
 
 @code {
-    [Parameter] public ServiceRegisterInfo Service { get; set; } = null!;
-
-    private (Severity Severity, string Text) GetStatus()
+    [Parameter] public RegisteredServiceStatus Service { get; set; } = null!;
+    
+    private Color GetOverallStatusColor()
     {
-        var timeSinceUpdate = DateTime.Now - Service.UpdateTime;
-        var heartbeatDuration = RegisterCentreOptions.Value.HeartbeatDuration;
-        var heartbeatSeconds = heartbeatDuration / 1000.0;
-        
-        if (timeSinceUpdate.TotalSeconds < heartbeatSeconds * 2)
-            return (Severity.Success, "在线");
-        else if (timeSinceUpdate.TotalSeconds < heartbeatSeconds * 3)
-            return (Severity.Warning, "不健康");
-        else
-            return (Severity.Error, "异常");
+        return Service.OverallStatus switch
+        {
+            ServiceStatus.Running => Color.Success,
+            ServiceStatus.Updating => Color.Info,
+            ServiceStatus.Offline => Color.Default,
+            ServiceStatus.Error => Color.Error,
+            _ => Color.Default
+        };
     }
     
-    private Severity StatusSeverity => GetStatus().Severity;
-    private string StatusText => GetStatus().Text;
-    
-    private string LastUpdateTime
+    private string GetOverallStatusIcon()
     {
-        get
+        return Service.OverallStatus switch
         {
-            var timeSpan = DateTime.Now - Service.UpdateTime;
-            if (timeSpan.TotalSeconds < 60)
-                return $"{(int)timeSpan.TotalSeconds} 秒前更新";
-            if (timeSpan.TotalMinutes < 60)
-                return $"{(int)timeSpan.TotalMinutes} 分钟前更新";
-            if (timeSpan.TotalHours < 24)
-                return $"{(int)timeSpan.TotalHours} 小时前更新";
-            return $"{(int)timeSpan.TotalDays} 天前更新";
-        }
+            ServiceStatus.Running => Icons.Material.Filled.CheckCircle,
+            ServiceStatus.Updating => Icons.Material.Filled.Update,
+            ServiceStatus.Offline => Icons.Material.Filled.CloudOff,
+            ServiceStatus.Error => Icons.Material.Filled.Error,
+            _ => Icons.Material.Filled.Help
+        };
+    }
+    
+    private string GetOverallStatusText()
+    {
+        return Service.OverallStatus switch
+        {
+            ServiceStatus.Running => "运行中",
+            ServiceStatus.Updating => "更新中",
+            ServiceStatus.Offline => "离线",
+            ServiceStatus.Error => "异常",
+            _ => "未知"
+        };
+    }
+    
+    private (Color color, string text, string icon) GetInstanceStatusInfo(ServiceStatus status)
+    {
+        return status switch
+        {
+            ServiceStatus.Running => (Color.Success, "运行中", Icons.Material.Filled.CheckCircle),
+            ServiceStatus.Updating => (Color.Info, "更新中", Icons.Material.Filled.Update),
+            ServiceStatus.Offline => (Color.Default, "离线", Icons.Material.Filled.CloudOff),
+            ServiceStatus.Error => (Color.Error, "异常", Icons.Material.Filled.Error),
+            _ => (Color.Default, "未知", Icons.Material.Filled.Help)
+        };
+    }
+    
+    private string GetHeartbeatHealthText(TimeSpan timeSinceHeartbeat)
+    {
+        if (timeSinceHeartbeat.TotalSeconds < 30)
+            return "健康";
+        else if (timeSinceHeartbeat.TotalSeconds < 60)
+            return "良好";
+        else if (timeSinceHeartbeat.TotalMinutes < 5)
+            return "警告";
+        else
+            return "超时";
+    }
+    
+    private Color GetHeartbeatHealthColor(TimeSpan timeSinceHeartbeat)
+    {
+        if (timeSinceHeartbeat.TotalSeconds < 30)
+            return Color.Success;
+        else if (timeSinceHeartbeat.TotalSeconds < 60)
+            return Color.Info;
+        else if (timeSinceHeartbeat.TotalMinutes < 5)
+            return Color.Warning;
+        else
+            return Color.Error;
     }
 }

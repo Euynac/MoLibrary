@@ -17,6 +17,7 @@
     ],
     "deny": []
   },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "context7",
     "puppeteer",

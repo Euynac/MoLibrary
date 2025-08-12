@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Options;
 using MoLibrary.Configuration.Dashboard.Interfaces;
 using MoLibrary.Configuration.Dashboard.Model;
 using MoLibrary.Configuration.Interfaces;
@@ -6,6 +7,7 @@ using MoLibrary.Configuration.Model;
 using MoLibrary.RegisterCentre.Implements;
 using MoLibrary.RegisterCentre.Interfaces;
 using MoLibrary.RegisterCentre.Models;
+using MoLibrary.RegisterCentre.Modules;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Configuration.Dashboard;
@@ -22,8 +24,9 @@ namespace MoLibrary.Configuration.Dashboard;
 /// <seealso cref="MemoryProviderForRegisterCentre"/>
 /// <seealso cref="IMoConfigurationCentre"/>
 public class MemoryProviderForConfigCentre(
-    IHttpContextAccessor accessor, IMoConfigurationModifier modifier, 
-    IMoConfigurationStores stores, IMoConfigurationCardManager manager, IRegisterCentreClientConnector connector) : MemoryProviderForRegisterCentre(accessor, connector),  IMoConfigurationCentre
+    IHttpContextAccessor accessor, IMoConfigurationModifier modifier,
+    IMoConfigurationStores stores, IMoConfigurationCardManager manager, IRegisterCentreClientConnector connector,
+    IOptions<ModuleRegisterCentreOption> options) : MemoryProviderForRegisterCentre(accessor, connector, options), IMoConfigurationCentre
 {
     private static List<DtoDomainConfigs>? _cache;
     private readonly IRegisterCentreClientConnector _connector = connector;
@@ -38,14 +41,14 @@ public class MemoryProviderForConfigCentre(
     public async Task<Res<List<DtoDomainConfigs>>> GetRegisteredServicesConfigsAsync()
     {
         if (_cache != null) return _cache;
- 
+
         //这里通过构建时间排序，来保证最新版本的微服务配置优先读取。在最后Distinct的时候优先被选择。
-        var list =  Dict.Values.OrderByDescending(p => p.BuildTime).Select(p => p.AppId).ToList();
+        var list = Services.Values.Select(p => p.GetRunningInstanceInfo()).Where(p => p != null).OrderByDescending(p => p!.RegisterInfo.BuildTime).Select(p => p.RegisterInfo.AppId).ToList();
 
         var res = await _connector.GetAsync<Res<List<DtoDomainConfigs>>>(list,
             $"{MoConfigurationConventions.GetConfigStatus}?onlyCurDomain=true");
 
-        var statusList = res.Values.Where(p => p.IsOk() && p.Data != null && p.Data.IsOk() && p.Data.Data != null).SelectMany(p=>p.Data!.Data!).ToList();
+        var statusList = res.Values.Where(p => p.IsOk() && p.Data != null && p.Data.IsOk() && p.Data.Data != null).SelectMany(p => p.Data!.Data!).ToList();
         statusList.AddRange(manager.GetDomainConfigs());
         if ((await WashDomainConfigs(statusList)).IsFailed(out var error, out var configs)) return error;
         _cache = configs;
@@ -56,7 +59,7 @@ public class MemoryProviderForConfigCentre(
     {
         if ((await GetRegisteredServicesConfigsAsync()).IsFailed(out var error, out var data)) return error;
 
-        var dtoConfig = data.SelectMany(p => p.Children).SelectMany(p => p.Children).Where(p=>appid == null || appid == p.AppId).SelectMany(p=>p.Items)
+        var dtoConfig = data.SelectMany(p => p.Children).SelectMany(p => p.Children).Where(p => appid == null || appid == p.AppId).SelectMany(p => p.Items)
             .FirstOrDefault(p => p.Key == key);
         if (dtoConfig != null) return dtoConfig;
 
@@ -101,22 +104,27 @@ public class MemoryProviderForConfigCentre(
         //如果中心节点有配置项，直接通过本地修改
         if ((await modifier.IsOptionExist(req.Key)).IsOk(out var option))
         {
-             if ((await SaveHistory(await modifier.UpdateOption(option, req.Value), req.AppId)).IsFailed(out var error)) return error;
-             return Res.Ok("路由到中心节点保存成功");
+            if ((await SaveHistory(await modifier.UpdateOption(option, req.Value), req.AppId)).IsFailed(out var error))
+                return error;
+            return Res.Ok("路由到中心节点保存成功");
         }
 
         if ((await modifier.IsConfigExist(req.Key)).IsOk(out var config))
         {
-            if ((await SaveHistory(await modifier.UpdateConfig(config, req.Value), req.AppId)).IsFailed(out var error)) return error;
+            if ((await SaveHistory(await modifier.UpdateConfig(config, req.Value), req.AppId)).IsFailed(out var error))
+                return error;
             return Res.Ok("路由到中心节点保存成功");
 
         }
 
 
         //否则调用相应服务修改
-        if (Dict.Values.FirstOrDefault(p => p.AppId.Equals(req.AppId)) is {} service)
+        if (Services.Values.Select(p => p.GetRunningInstanceInfo()).Where(p => p != null).Select(p => p!.RegisterInfo)
+                .FirstOrDefault(p => p.AppId.Equals(req.AppId)) is { } service)
         {
-            if ((await _connector.PostAsync<DtoUpdateConfig, Res<DtoUpdateConfigRes>>(service.AppId, $"{MoConfigurationConventions.DashboardClientConfigUpdate}", req)).IsFailed(out var error, out var data)) return error;
+            if ((await _connector.PostAsync<DtoUpdateConfig, Res<DtoUpdateConfigRes>>(service.AppId,
+                    $"{MoConfigurationConventions.DashboardClientConfigUpdate}", req))
+                .IsFailed(out var error, out var data)) return error;
 
             if ((await SaveHistory(data, req.AppId)).IsFailed(out error)) return error;
             return Res.Ok($"路由到{service.AppId}节点保存成功");

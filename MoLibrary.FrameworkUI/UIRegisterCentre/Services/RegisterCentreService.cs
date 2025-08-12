@@ -10,7 +10,7 @@ public class RegisterCentreService(
     ILogger<RegisterCentreService> logger,
     IServiceProvider serviceProvider)
 {
-    public async Task<Res<List<ServiceRegisterInfo>>> GetServicesStatusAsync()
+    public async Task<Res<List<RegisteredServiceStatus>>> GetServicesStatusAsync()
     {
         try
         {

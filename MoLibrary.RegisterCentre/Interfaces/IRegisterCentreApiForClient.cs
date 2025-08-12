@@ -4,21 +4,17 @@ using MoLibrary.Tool.MoResponse;
 namespace MoLibrary.RegisterCentre.Interfaces;
 
 /// <summary>
-/// 注册中心服务端提供给客户端连接接口
+/// 客户端调用的API接口
 /// </summary>
 public interface IRegisterCentreApiForClient
 {
     /// <summary>
     /// 注册微服务
     /// </summary>
-    /// <param name="req"></param>
-    /// <returns></returns>
     Task<Res> Register(ServiceRegisterInfo req);
 
     /// <summary>
-    /// 心跳
+    /// 发送心跳
     /// </summary>
-    /// <param name="req"></param>
-    /// <returns></returns>
-    Task<Res> Heartbeat(ServiceRegisterInfo req);
+    Task<Res<ServiceHeartbeatResponse>> Heartbeat(ServiceHeartbeat req);
 }
