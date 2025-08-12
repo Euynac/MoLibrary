@@ -38,17 +38,11 @@
         </MudItem>
         
         <MudItem xs="12">
-            @if (_isLoading)
+            <RegisterCentreServiceList Services="_services" OnRefresh="@(() => RefreshServicesAsync())" IsLoading="_isLoading" />
+            
+            @if (!_isLoading && !_services.Any())
             {
-                <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
-            }
-            else if (_services.Any())
-            {
-                <RegisterCentreServiceList Services="_services" OnRefresh="@(() => RefreshServicesAsync())" />
-            }
-            else
-            {
-                <MudPaper Class="pa-4">
+                <MudPaper Class="pa-4 mt-2">
                     <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary">
                         暂无已注册的服务
                     </MudText>
@@ -81,7 +75,7 @@
         _refreshTimer?.Dispose();
         if (_autoRefreshEnabled)
         {
-            _refreshTimer = new Timer(async _ => await InvokeAsync(() => RefreshServicesAsync(false)), null, 
+            _refreshTimer = new Timer(async _ => await InvokeAsync(() => RefreshServicesAsync(false, false)), null, 
                 TimeSpan.FromSeconds(_refreshInterval), TimeSpan.FromSeconds(_refreshInterval));
         }
     }
@@ -99,10 +93,13 @@
         }
     }
 
-    private async Task RefreshServicesAsync(bool showNotification = true)
+    private async Task RefreshServicesAsync(bool showNotification = true, bool showLoading = true)
     {
-        _isLoading = true;
-        StateHasChanged();
+        if (showLoading)
+        {
+            _isLoading = true;
+            StateHasChanged();
+        }
 
         if ((await RegisterCentreService.GetServicesStatusAsync()).IsFailed(out var error, out var data))
         {
@@ -117,7 +114,10 @@
                 Snackbar.Add("服务列表已刷新", Severity.Success);
         }
 
-        _isLoading = false;
+        if (showLoading)
+        {
+            _isLoading = false;
+        }
         StateHasChanged();
     }
 

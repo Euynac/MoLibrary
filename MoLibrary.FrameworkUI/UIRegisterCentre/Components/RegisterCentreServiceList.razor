@@ -4,7 +4,7 @@
 @inject IOptionsSnapshot<ModuleRegisterCentreOption> RegisterCentreOptions
 @inject IDialogService DialogService
 
-<MudDataGrid T="RegisterServiceStatus" Items="@Services" Hover="true" Dense="true" RowClick="OnRowClick">
+<MudDataGrid T="RegisterServiceStatus" Items="@Services" Hover="true" Dense="true" RowClick="OnRowClick" Loading="@IsLoading">
     <Columns>
         <PropertyColumn Property="x => x.AppId" Title="App ID" />
         <PropertyColumn Property="x => x.Name" Title="服务名称" />
@@ -58,6 +58,7 @@
 @code {
     [Parameter] public List<RegisterServiceStatus> Services { get; set; } = new();
     [Parameter] public EventCallback OnRefresh { get; set; }
+    [Parameter] public bool IsLoading { get; set; } = false;
 
     private void OnRowClick(DataGridRowClickEventArgs<RegisterServiceStatus> args)
     {

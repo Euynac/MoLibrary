@@ -29,7 +29,7 @@
                 <MudText Typo="Typo.subtitle2" Class="mb-2">节点间距: @ForceDistance</MudText>
                 <MudSlider T="int" Value="@ForceDistance" 
                            ValueChanged="@OnForceDistanceChanged"
-                           Min="50" Max="1000" Step="10"
+                           Min="50" Max="2000" Step="10"
                            Color="Color.Primary" />
             </MudItem>
             <MudItem xs="12" sm="6" md="3">
@@ -47,7 +47,7 @@
     [Parameter] public LayoutType CurrentLayout { get; set; } = LayoutType.Force;
     [Parameter] public EventCallback<LayoutType> CurrentLayoutChanged { get; set; }
     
-    [Parameter] public int ForceDistance { get; set; } = 300;
+    [Parameter] public int ForceDistance { get; set; } = 550;
     [Parameter] public EventCallback<int> ForceDistanceChanged { get; set; }
     
     [Parameter] public int ForceStrength { get; set; } = -300;
