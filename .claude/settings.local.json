@@ -12,7 +12,8 @@
       "Bash(touch:*)",
       "Bash(mv:*)",
       "Bash(pip install:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(rm:*)"
     ],
     "deny": []
   },
@@ -21,6 +22,5 @@
     "puppeteer",
     "microsoft_docs_mcp",
     "grapiti-memory"
-
   ]
 }
