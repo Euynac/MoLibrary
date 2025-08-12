@@ -1,7 +1,7 @@
 @attribute [Route(REGISTERCENTRE_DEBUG_URL)]
 @using MoLibrary.FrameworkUI.UIRegisterCentre.Components
 @using MoLibrary.FrameworkUI.UIRegisterCentre.Services
-@using MoLibrary.RegisterCentre
+@using MoLibrary.RegisterCentre.Models
 @using MoLibrary.Tool.MoResponse
 @inject RegisterCentreService RegisterCentreService
 @inject ISnackbar Snackbar
@@ -56,7 +56,7 @@
     public const string REGISTERCENTRE_DEBUG_URL = "/register-centre-manage";
     
     private bool _isLoading = false;
-    private List<RegisterServiceStatus> _services = new();
+    private List<ServiceRegisterInfo> _services = new();
     private bool _autoRefreshEnabled = true;
     private int _refreshInterval = 3;
     private Timer? _refreshTimer;
@@ -105,11 +105,11 @@
         {
             if (showNotification)
                 Snackbar.Add($"获取服务列表失败: {error.Message}", Severity.Error);
-            _services = new List<RegisterServiceStatus>();
+            _services = new List<ServiceRegisterInfo>();
         }
         else
         {
-            _services = data ?? new List<RegisterServiceStatus>();
+            _services = data ?? new List<ServiceRegisterInfo>();
             if (showNotification)
                 Snackbar.Add("服务列表已刷新", Severity.Success);
         }

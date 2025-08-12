@@ -14,9 +14,9 @@ namespace MoLibrary.RegisterCentre.Implements;
 /// <param name="accessor"></param>
 public class MemoryProviderForRegisterCentre(IHttpContextAccessor accessor, IRegisterCentreClientConnector connector) : IRegisterCentreServer
 {
-    public static ConcurrentDictionary<string, RegisterServiceStatus> Dict { get; protected set; } = new();
+    public static ConcurrentDictionary<string, ServiceRegisterInfo> Dict { get; protected set; } = new();
 
-    public virtual async Task<Res<List<RegisterServiceStatus>>> GetServicesStatus()
+    public virtual async Task<Res<List<ServiceRegisterInfo>>> GetServicesStatus()
     {
         return Dict.Values.ToList();
     }
@@ -27,20 +27,20 @@ public class MemoryProviderForRegisterCentre(IHttpContextAccessor accessor, IReg
         return Res.Ok();
     }
 
-    public virtual async Task<Dictionary<RegisterServiceStatus, Res<TResponse>>> GetAsync<TResponse>(string callbackUrl)
+    public virtual async Task<Dictionary<ServiceRegisterInfo, Res<TResponse>>> GetAsync<TResponse>(string callbackUrl)
     {
         var dict = await connector.GetAsync<TResponse>(Dict.Keys.ToList(), callbackUrl);
         return dict.ToDictionary(p => Dict[p.Key], p => p.Value);
     }
 
-    public virtual async Task<Dictionary<RegisterServiceStatus, Res<TResponse>>> PostAsync<TRequest, TResponse>(string callbackUrl, TRequest req)
+    public virtual async Task<Dictionary<ServiceRegisterInfo, Res<TResponse>>> PostAsync<TRequest, TResponse>(string callbackUrl, TRequest req)
     {
         var dict = await connector.PostAsync<TRequest, TResponse>(Dict.Keys.ToList(), callbackUrl, req);
         return dict.ToDictionary(p => Dict[p.Key], p => p.Value);
     }
 
 
-    public virtual async Task<Res> Register(RegisterServiceStatus req)
+    public virtual async Task<Res> Register(ServiceRegisterInfo req)
     {
         var status = req;
 
@@ -57,7 +57,7 @@ public class MemoryProviderForRegisterCentre(IHttpContextAccessor accessor, IReg
         return Res.Ok();
     }
 
-    public virtual Task<Res> Heartbeat(RegisterServiceStatus req)
+    public virtual Task<Res> Heartbeat(ServiceRegisterInfo req)
     {
         return Register(req);
     }

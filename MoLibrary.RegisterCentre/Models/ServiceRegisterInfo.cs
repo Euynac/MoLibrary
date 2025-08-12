@@ -1,9 +1,9 @@
 namespace MoLibrary.RegisterCentre.Models;
 
 /// <summary>
-/// 微服务注册状态
+/// 微服务注册信息
 /// </summary>
-public class RegisterServiceStatus
+public class ServiceRegisterInfo
 {
     /// <summary>
     /// 领域名

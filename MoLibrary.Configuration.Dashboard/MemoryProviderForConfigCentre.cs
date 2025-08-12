@@ -29,7 +29,7 @@ public class MemoryProviderForConfigCentre(
     private readonly IRegisterCentreClientConnector _connector = connector;
 
 
-    public override Task<Res> Register(RegisterServiceStatus req)
+    public override Task<Res> Register(ServiceRegisterInfo req)
     {
         _cache = null;
         return base.Register(req);

@@ -56,7 +56,7 @@
 </MudGrid>
 
 @code {
-    [Parameter] public RegisterServiceStatus Service { get; set; } = null!;
+    [Parameter] public ServiceRegisterInfo Service { get; set; } = null!;
 
     private (Severity Severity, string Text) GetStatus()
     {

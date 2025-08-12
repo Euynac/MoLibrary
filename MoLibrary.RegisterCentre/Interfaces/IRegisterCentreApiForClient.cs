@@ -13,12 +13,12 @@ public interface IRegisterCentreApiForClient
     /// </summary>
     /// <param name="req"></param>
     /// <returns></returns>
-    Task<Res> Register(RegisterServiceStatus req);
+    Task<Res> Register(ServiceRegisterInfo req);
 
     /// <summary>
     /// 心跳
     /// </summary>
     /// <param name="req"></param>
     /// <returns></returns>
-    Task<Res> Heartbeat(RegisterServiceStatus req);
+    Task<Res> Heartbeat(ServiceRegisterInfo req);
 }
