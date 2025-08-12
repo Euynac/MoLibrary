@@ -1,4 +1,4 @@
-namespace MoLibrary.RegisterCentre;
+namespace MoLibrary.RegisterCentre.Models;
 
 public static class MoRegisterCentreConventions
 {

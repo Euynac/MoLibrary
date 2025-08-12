@@ -3,7 +3,9 @@ using MoLibrary.Configuration.Dashboard.Interfaces;
 using MoLibrary.Configuration.Dashboard.Model;
 using MoLibrary.Configuration.Interfaces;
 using MoLibrary.Configuration.Model;
-using MoLibrary.RegisterCentre;
+using MoLibrary.RegisterCentre.Implements;
+using MoLibrary.RegisterCentre.Interfaces;
+using MoLibrary.RegisterCentre.Models;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Configuration.Dashboard;
