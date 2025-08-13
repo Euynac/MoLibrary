@@ -46,8 +46,8 @@ public class MoConfigurationCardManager(IServiceProvider serviceProvider, IMoCon
             var serviceConfig = new DtoServiceConfigs()
             {
                 AppId = serviceInfo.AppId,
-                Name = serviceInfo.ServiceName,
-                Title = serviceInfo.ServiceTitle,
+                Name = serviceInfo.ProjectName,
+                Title = serviceInfo.AppName,
                 Children = cards.Select(c => new DtoConfig()
                 {
                     Name = c.Key,

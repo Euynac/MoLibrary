@@ -8,7 +8,7 @@
 <MudDataGrid T="RegisteredServiceStatus" Items="@Services" Hover="true" Dense="true" RowClick="OnRowClick" Loading="@IsLoading">
     <Columns>
         <PropertyColumn Property="x => x.AppId" Title="App ID" />
-        <PropertyColumn Property="x => x.ServiceName" Title="服务名称" />
+        <PropertyColumn Property="x => x.AppName" Title="服务名称" />
         <PropertyColumn Property="x => x.DomainName" Title="领域" />
         <PropertyColumn Property="x => x.ProjectName" Title="项目名" />
         <TemplateColumn Title="实例数">

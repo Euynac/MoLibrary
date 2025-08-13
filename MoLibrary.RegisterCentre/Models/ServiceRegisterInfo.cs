@@ -6,7 +6,7 @@ namespace MoLibrary.RegisterCentre.Models;
 public class ServiceRegisterInfo
 {
     /// <summary>
-    /// 领域名
+    /// 子域名
     /// </summary>
     public string? DomainName { get; set; }
     /// <summary>
@@ -16,7 +16,7 @@ public class ServiceRegisterInfo
     /// <summary>
     /// 微服务显示名
     /// </summary>
-    public required string Name { get; set; }
+    public required string AppName { get; set; }
     /// <summary>
     /// 更新时间
     /// </summary>

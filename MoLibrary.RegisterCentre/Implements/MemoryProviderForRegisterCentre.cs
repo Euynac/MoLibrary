@@ -67,13 +67,13 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
         var service = Services.GetOrAdd(req.AppId, _ => new RegisteredServiceStatus
         {
             AppId = req.AppId,
-            ServiceName = req.Name,
+            AppName = req.AppName,
             DomainName = req.DomainName,
             ProjectName = req.ProjectName
         });
         
         // 更新服务基本信息
-        service.ServiceName = req.Name;
+        service.AppName = req.AppName;
         service.DomainName = req.DomainName;
         service.ProjectName = req.ProjectName;
         
