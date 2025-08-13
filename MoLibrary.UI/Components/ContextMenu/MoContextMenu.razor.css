@@ -1,0 +1,123 @@
+/* 右键菜单容器样式 */
+.mo-context-menu {
+    width: auto;
+    min-width: 200px;
+    max-width: 400px;
+    border-radius: 6px;
+    background-color: var(--mud-palette-surface);
+    box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+}
+
+/* 菜单项样式 */
+::deep .mo-context-menu-item {
+    padding: 10px 16px !important;
+    min-height: 40px;
+    transition: background-color 0.2s ease;
+    cursor: pointer;
+    white-space: nowrap;
+    position: relative;
+}
+
+/* 菜单项悬停效果 */
+::deep .mo-context-menu-item:hover:not(.disabled) {
+    background-color: var(--mud-palette-action-default-hover);
+}
+
+/* 禁用的菜单项 */
+::deep .mo-context-menu-item.disabled {
+    opacity: 0.5;
+    cursor: not-allowed !important;
+    pointer-events: none;
+}
+
+/* 图标样式 */
+::deep .mo-menu-icon {
+    width: 18px;
+    height: 18px;
+    margin-right: 16px;
+    flex-shrink: 0;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* 图标占位符（当没有图标时保持对齐） */
+::deep .mo-menu-icon-placeholder {
+    width: 18px;
+    height: 18px;
+    margin-right: 16px;
+    flex-shrink: 0;
+}
+
+/* 菜单文字样式 */
+::deep .mo-menu-text {
+    flex-grow: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--mud-palette-text-primary);
+    font-size: 0.875rem;
+    line-height: 20px;
+}
+
+/* 分隔线样式 */
+::deep .mud-divider {
+    margin: 4px 0 !important;
+    opacity: 0.5;
+}
+
+/* 列表容器移除默认padding */
+::deep .mud-list {
+    padding: 4px 0 !important;
+}
+
+/* 确保菜单项内容不换行 */
+::deep .mud-list-item-text {
+    display: flex !important;
+    align-items: center;
+    width: 100%;
+    padding: 0 !important;
+}
+
+/* 暗色主题调整 */
+@media (prefers-color-scheme: dark) {
+    .mo-context-menu {
+        box-shadow: 0px 5px 20px rgba(0, 0, 0, 0.5);
+    }
+    
+    ::deep .mo-menu-icon {
+        color: var(--mud-palette-text-secondary);
+    }
+}
+
+/* 快捷键提示（如果需要） */
+::deep .mo-menu-shortcut {
+    margin-left: auto;
+    color: var(--mud-palette-text-disabled);
+    font-size: 0.75rem;
+    line-height: 20px;
+    flex-shrink: 0;
+    text-align: right;
+    min-width: 50px;
+}
+
+/* 子菜单箭头样式 */
+::deep .mo-menu-arrow {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    color: var(--mud-palette-text-secondary);
+    flex-shrink: 0;
+}
+
+/* 悬停项高亮 */
+::deep .mo-context-menu-item.hovered {
+    background-color: var(--mud-palette-action-default-hover);
+}
+
+/* 子菜单特殊样式 */
+.mo-context-menu[style*="z-index: 1301"] {
+    border: 1px solid var(--mud-palette-divider);
+}
