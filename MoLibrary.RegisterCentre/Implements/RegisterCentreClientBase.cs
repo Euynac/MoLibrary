@@ -67,7 +67,7 @@ public abstract class RegisterCentreClientBase(IOptions<ModuleRegisterCentreOpti
             serverAddressesFeature.Addresses.Any())
         {
             var addresses = string.Join(";", serverAddressesFeature.Addresses);
-            serviceInfo.Metadata["ListeningAddresses"] = addresses;
+            serviceInfo.Metadata[IRegisterCentreClient.ListeningAddressMetadataKey] = addresses;
         }
     }
 }

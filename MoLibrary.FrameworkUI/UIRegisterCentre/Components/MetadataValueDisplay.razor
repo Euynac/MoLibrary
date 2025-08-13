@@ -1,11 +1,81 @@
 @using System.Text.RegularExpressions
+@inject IJSRuntime JSRuntime
 
-@if (IsUrl(Value))
+<script>
+    window.getElementWidth = (element) => {
+        return element ? element.offsetWidth : 0;
+    };
+</script>
+
+@{
+    var urlItems = GetUrlItems(Value);
+}
+
+@if (urlItems.Any())
 {
-    <MudLink Href="@Value" Target="_blank" Color="Color.Primary" Typo="Typo.body2">
-        @GetDisplayText(Value)
-        <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" Class="ml-1" />
-    </MudLink>
+    <div @ref="containerRef" class="d-flex flex-wrap align-center">
+        @if (IsCompactMode)
+        {
+            @* 紧凑模式：根据容器宽度动态判断是否折叠 *@
+            @if (_shouldCollapse)
+            {
+                @* 显示部分URL和折叠按钮 *@
+                @for (int i = 0; i < _visibleItemCount; i++)
+                {
+                    var url = urlItems[i];
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Class="ma-1" OnClick="@(async () => await OpenUrl(url))">
+                        @GetDisplayText(url)
+                        <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" Class="ml-1" />
+                    </MudChip>
+                }
+                
+                @if (urlItems.Count > _visibleItemCount)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="ma-1" OnClick="@(() => _isExpanded = !_isExpanded)">
+                        +@(urlItems.Count - _visibleItemCount)
+                        <MudIcon Icon="@(_isExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" 
+                                 Size="Size.Small" Class="ml-1" />
+                    </MudChip>
+                }
+                
+                @if (_isExpanded && urlItems.Count > _visibleItemCount)
+                {
+                    <div class="w-100">
+                        @for (int i = _visibleItemCount; i < urlItems.Count; i++)
+                        {
+                            var url = urlItems[i];
+                            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Class="ma-1" OnClick="@(async () => await OpenUrl(url))">
+                                @GetDisplayText(url)
+                                <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" Class="ml-1" />
+                            </MudChip>
+                        }
+                    </div>
+                }
+            }
+            else
+            {
+                @* 显示所有URL *@
+                @foreach (var url in urlItems)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Class="ma-1" OnClick="@(async () => await OpenUrl(url))">
+                        @GetDisplayText(url)
+                        <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" Class="ml-1" />
+                    </MudChip>
+                }
+            }
+        }
+        else
+        {
+            @* 详细模式：显示所有URL *@
+            @foreach (var url in urlItems)
+            {
+                <MudLink Href="@url" Target="_blank" Color="Color.Primary" Typo="Typo.body2" Class="ma-1">
+                    @GetDisplayText(url)
+                    <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" Class="ml-1" />
+                </MudLink>
+            }
+        }
+    </div>
 }
 else
 {
@@ -14,6 +84,30 @@ else
 
 @code {
     [Parameter] public string Value { get; set; } = string.Empty;
+    [Parameter] public bool IsCompactMode { get; set; } = false;
+    
+    private bool _isExpanded = false;
+    private bool _shouldCollapse = false;
+    private int _visibleItemCount = 2;
+    private ElementReference containerRef;
+    
+    private List<string> GetUrlItems(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return new List<string>();
+        
+        // 使用分号和逗号分割
+        var items = value.Split(new char[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(item => item.Trim())
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .ToList();
+        
+        // 检查是否所有项都是URL
+        var urlItems = items.Where(IsUrl).ToList();
+        
+        // 如果所有项都是URL，返回URL列表；否则返回空列表（作为普通文本处理）
+        return urlItems.Count == items.Count ? urlItems : new List<string>();
+    }
     
     private bool IsUrl(string value)
     {
@@ -36,13 +130,60 @@ else
             // 如果URL太长，只显示主机和路径的简化版本
             if (url.Length > 50)
             {
-                return $"{uri.Host}{uri.PathAndQuery}";
+                return $"{uri.Host}:{uri.Port}";
             }
             return url;
         }
         catch
         {
             return url;
+        }
+    }
+    
+    private async Task OpenUrl(string url)
+    {
+        // 使用JavaScript打开新窗口
+        await JSRuntime.InvokeVoidAsync("open", url, "_blank");
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && IsCompactMode)
+        {
+            await CalculateVisibleItems();
+        }
+        await base.OnAfterRenderAsync(firstRender);
+    }
+    
+    private async Task CalculateVisibleItems()
+    {
+        try
+        {
+            var urlItems = GetUrlItems(Value);
+            if (!urlItems.Any()) return;
+            
+            // 获取容器宽度
+            var containerWidth = await JSRuntime.InvokeAsync<double>("getElementWidth", containerRef);
+            
+            // 估算每个chip的宽度（包括间距）
+            var estimatedChipWidth = 120; // 根据实际情况调整
+            var expandButtonWidth = 60;
+            
+            // 计算可见的item数量
+            var availableWidth = containerWidth - expandButtonWidth;
+            var maxVisibleItems = Math.Max(1, (int)(availableWidth / estimatedChipWidth));
+            
+            _visibleItemCount = Math.Min(maxVisibleItems, urlItems.Count);
+            _shouldCollapse = urlItems.Count > _visibleItemCount;
+            
+            StateHasChanged();
+        }
+        catch
+        {
+            // 如果获取宽度失败，使用默认值
+            _visibleItemCount = 2;
+            _shouldCollapse = GetUrlItems(Value).Count > 2;
+            StateHasChanged();
         }
     }
 }

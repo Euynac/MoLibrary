@@ -59,7 +59,7 @@ public class UnitRepository(Type type) : ProjectUnit(type, EProjectUnitType.Repo
             return;
         }
 
-        DeclareRelevance(entityUnit);
+        DeclareRelevance(entityUnit, true);
         entityUnit.DeclareRelevance(this);
     }
 }
