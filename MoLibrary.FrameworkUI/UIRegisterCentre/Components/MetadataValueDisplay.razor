@@ -1,0 +1,48 @@
+@using System.Text.RegularExpressions
+
+@if (IsUrl(Value))
+{
+    <MudLink Href="@Value" Target="_blank" Color="Color.Primary" Typo="Typo.body2">
+        @GetDisplayText(Value)
+        <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" Class="ml-1" />
+    </MudLink>
+}
+else
+{
+    <MudText Typo="Typo.body2">@Value</MudText>
+}
+
+@code {
+    [Parameter] public string Value { get; set; } = string.Empty;
+    
+    private bool IsUrl(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return false;
+        
+        // 检查是否为有效的URL格式
+        return Uri.TryCreate(value, UriKind.Absolute, out var uri) && 
+               (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
+    }
+    
+    private string GetDisplayText(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return url;
+        
+        try
+        {
+            var uri = new Uri(url);
+            // 如果URL太长，只显示主机和路径的简化版本
+            if (url.Length > 50)
+            {
+                return $"{uri.Host}{uri.PathAndQuery}";
+            }
+            return url;
+        }
+        catch
+        {
+            return url;
+        }
+    }
+}

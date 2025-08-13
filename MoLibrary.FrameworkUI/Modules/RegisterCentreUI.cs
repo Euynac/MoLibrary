@@ -57,4 +57,9 @@ public static class ModuleRegisterCentreUIBuilderExtensions
 public class ModuleRegisterCentreUIOption : MoModuleOption<ModuleRegisterCentreUI>
 { 
     public bool DisableRegisterCentrePage { get; set; }
+    
+    /// <summary>
+    /// 需要在列表界面直接展示的元数据Key列表
+    /// </summary>
+    public List<string> DisplayMetadataKeys { get; set; } = new();
 }
