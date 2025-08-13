@@ -53,12 +53,13 @@ public class UnitRepository(Type type) : ProjectUnit(type, EProjectUnitType.Repo
 
     public override void DoingConnect()
     {
-        if(!ProjectUnitStores.ProjectUnitsByFullName.TryGetValue(EntityType.FullName!, out var unit))
+        if(!ProjectUnitStores.ProjectUnitsByFullName.TryGetValue(EntityType.FullName!, out var entityUnit))
         {
             Logger.LogWarning($"{this}无法关联其实体{EntityType.FullName},可能未继承{nameof(MoEntity)}相关基类");
             return;
         }
 
-        AddDependency(unit);
+        DeclareRelevance(entityUnit);
+        entityUnit.DeclareRelevance(this);
     }
 }

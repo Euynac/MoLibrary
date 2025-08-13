@@ -49,12 +49,13 @@ public class UnitDomainEventHandler(Type type) : ProjectUnit(type, EProjectUnitT
 
     public override void DoingConnect()
     {
-        if (!ProjectUnitStores.ProjectUnitsByFullName.TryGetValue(EventType.FullName!, out var unit))
+        if (!ProjectUnitStores.ProjectUnitsByFullName.TryGetValue(EventType.FullName!, out var eventUnit))
         {
             Logger.LogWarning($"{this}无法关联其领域事件基类{EventType.FullName}，可能未继承{nameof(MoDomainEvent)}");
             return;
         }
 
-        AddDependency(unit);
+        DeclareRelevance(eventUnit, true);
+        eventUnit.DeclareRelevance(this);
     }
 }

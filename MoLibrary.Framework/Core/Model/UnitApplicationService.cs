@@ -77,13 +77,14 @@ public class UnitApplicationService(Type type) : ProjectUnit(type, EProjectUnitT
         // 处理现有的请求类型依赖
         if (RequestType is not null)
         {
-            if (!ProjectUnitStores.ProjectUnitsByFullName.TryGetValue(RequestType.FullName!, out var unit))
+            if (!ProjectUnitStores.ProjectUnitsByFullName.TryGetValue(RequestType.FullName!, out var requestUnit))
             {
                 Logger.LogWarning($"{this}无法关联其请求{RequestType.FullName},可能未继承{nameof(IMoRequest)}相关接口");
             }
             else
             {
-                AddDependency(unit);
+                DeclareRelevance(requestUnit);
+                requestUnit.DeclareRelevance(this);
             }
         }
 
