@@ -83,7 +83,7 @@ public class UnitApplicationService(Type type) : ProjectUnit(type, EProjectUnitT
             }
             else
             {
-                DeclareRelevance(requestUnit);
+                DeclareRelevance(requestUnit, true);
                 requestUnit.DeclareRelevance(this);
             }
         }

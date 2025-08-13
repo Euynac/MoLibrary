@@ -61,5 +61,10 @@ public class ModuleRegisterCentreUIOption : MoModuleOption<ModuleRegisterCentreU
     /// <summary>
     /// 需要在列表界面直接展示的元数据Key列表
     /// </summary>
-    public List<string> DisplayMetadataKeys { get; set; } = new();
+    public List<string> DisplayMetadataKeys { get; set; } = [];
+
+    /// <summary>
+    /// 是否禁用列表界面展示监听地址
+    /// </summary>
+    public bool DisableListeningAddressDisplay { get; set; }
 }

@@ -8,6 +8,10 @@ namespace MoLibrary.RegisterCentre.Interfaces;
 public interface IRegisterCentreClient
 {
     /// <summary>
+    /// 用于展示客户端监听地址元数据
+    /// </summary>
+    public static string ListeningAddressMetadataKey = "ListeningAddresses";
+    /// <summary>
     /// 获取当前微服务状态
     /// </summary>
     /// <param name="isHeartbeatInfo"></param>
