@@ -4,11 +4,14 @@
 @using MoLibrary.RegisterCentre.Modules
 @using MoLibrary.FrameworkUI.Modules
 @using MoLibrary.RegisterCentre.Interfaces
+@using MoLibrary.UI.Components.ContextMenu
 @inject IOptionsSnapshot<ModuleRegisterCentreOption> RegisterCentreOptions
 @inject IOptionsSnapshot<ModuleRegisterCentreUIOption> RegisterCentreUIOptions
 @inject IDialogService DialogService
 
-<MudDataGrid T="RegisteredServiceStatus" Items="@Services" Hover="true" Dense="true" RowClick="OnRowClick" Loading="@IsLoading">
+<MoDataGridContextMenu TItem="RegisteredServiceStatus" @ref="_contextMenuWrapper" MenuItemsProvider="GetContextMenuItems">
+    <MudDataGrid T="RegisteredServiceStatus" Items="@Services" Hover="true" Dense="true" Loading="@IsLoading" 
+                 RowContextMenuClick="OnRowContextMenuClick">
 	<Columns>
 		<PropertyColumn Property="x => x.AppId" Title="App ID" />
 		<PropertyColumn Property="x => x.AppName" Title="服务名称" />
@@ -76,19 +79,11 @@
 				@{
 					var runningInstance = context.Item.GetRunningInstanceInfo();
 				}
-				<MudText Typo="Typo.body2">
-					@(runningInstance?.RegisterInfo.BuildTime.ToString("MM-dd HH:mm") ?? "N/A")
-				</MudText>
-			</CellTemplate>
-		</TemplateColumn>
-		<TemplateColumn Title="最后心跳">
-			<CellTemplate>
-				@{
-					var runningInstance = context.Item.GetRunningInstanceInfo();
-				}
-				<MudText Typo="Typo.body2">
-					@(runningInstance?.LastHeartbeatTime.ToString("MM-dd HH:mm:ss") ?? "N/A")
-				</MudText>
+				<MudTooltip Text="@(runningInstance?.RegisterInfo.BuildTime.ToString("yyyy-MM-dd HH:mm:ss") ?? "N/A")">
+					<MudText Typo="Typo.body2">
+						@(runningInstance?.RegisterInfo.BuildTime.ToString("MM-dd HH:mm") ?? "N/A")
+					</MudText>
+				</MudTooltip>
 			</CellTemplate>
 		</TemplateColumn>
 		@foreach (var metadataKey in GetDisplayMetadataKeys())
@@ -103,6 +98,18 @@
 				</CellTemplate>
 			</TemplateColumn>
 		}
+		<TemplateColumn Title="最后心跳">
+			<CellTemplate>
+				@{
+					var runningInstance = context.Item.GetRunningInstanceInfo();
+				}
+				<MudTooltip Text="@(runningInstance?.LastHeartbeatTime.ToString("yyyy-MM-dd HH:mm:ss") ?? "N/A")">
+					<MudText Typo="Typo.body2">
+						@(runningInstance?.LastHeartbeatTime.ToString("MM-dd HH:mm:ss") ?? "N/A")
+					</MudText>
+				</MudTooltip>
+			</CellTemplate>
+		</TemplateColumn>
 		<TemplateColumn Title="实例状态">
 			<CellTemplate>
 				<MudStack Row="true" Spacing="1">
@@ -127,14 +134,9 @@
 				</MudStack>
 			</CellTemplate>
 		</TemplateColumn>
-		<TemplateColumn CellClass="d-flex justify-end">
-			<CellTemplate>
-				<MudIconButton Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Primary" 
-				OnClick="@(() => ShowServiceDetail(context.Item))" />
-			</CellTemplate>
-		</TemplateColumn>
 	</Columns>
-</MudDataGrid>
+    </MudDataGrid>
+</MoDataGridContextMenu>
 
 
 @code {
@@ -142,12 +144,53 @@
 	[Parameter] public EventCallback OnRefresh { get; set; }
 	[Parameter] public bool IsLoading { get; set; } = false;
 
-	private void OnRowClick(DataGridRowClickEventArgs<RegisteredServiceStatus> args)
+	private MoDataGridContextMenu<RegisteredServiceStatus> _contextMenuWrapper = null!;
+
+	private async Task OnRowContextMenuClick(DataGridRowClickEventArgs<RegisteredServiceStatus> args)
 	{
-		ShowServiceDetail(args.Item);
+		// 打开右键菜单
+		await _contextMenuWrapper.OpenContextMenu(args.MouseEventArgs, args.Item);
 	}
 
-	private async void ShowServiceDetail(RegisteredServiceStatus service)
+	private List<ContextMenuItem<RegisteredServiceStatus>> GetContextMenuItems(RegisteredServiceStatus service)
+	{
+		return ContextMenuBuilder<RegisteredServiceStatus>.Create()
+			.AddItem("查看详情", Icons.Material.Filled.Info, async (item) =>
+			{
+				if (item != null)
+					await ShowServiceDetailAsync(item);
+			}, "Enter")
+			.AddSubMenu("管理操作", Icons.Material.Filled.Settings, subMenu =>
+			{
+				subMenu.AddItem("重启服务", Icons.Material.Filled.Refresh)
+				       .AddItem("停止服务", Icons.Material.Filled.Stop)
+				       .AddDivider()
+				       .AddItem("查看日志", Icons.Material.Filled.Article);
+			})
+			.AddItem("复制服务ID", Icons.Material.Filled.ContentCopy, async (item) =>
+			{
+				if (item != null)
+				{
+					// 这里可以实现复制到剪贴板的功能
+					// 暂时只是示例
+					await Task.CompletedTask;
+				}
+			}, "Ctrl+C")
+			.AddDivider()
+			.AddItem("刷新列表", Icons.Material.Filled.Refresh, async (item) =>
+			{
+				await OnRefresh.InvokeAsync();
+			}, "F5")
+			.AddSubMenu("导出", Icons.Material.Filled.Download, exportMenu =>
+			{
+				exportMenu.AddItem("导出为JSON", Icons.Material.Filled.Code)
+				         .AddItem("导出为CSV", Icons.Material.Filled.TableChart)
+				         .AddItem("导出为Excel", Icons.Material.Filled.GridOn);
+			})
+			.Build();
+	}
+
+	private async Task ShowServiceDetailAsync(RegisteredServiceStatus service)
 	{
 		var parameters = new DialogParameters<RegisterCentreServiceDetailDialog>
         {
