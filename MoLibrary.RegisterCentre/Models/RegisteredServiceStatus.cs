@@ -8,7 +8,7 @@ public class RegisteredServiceStatus
     public required string AppId { get; set; }
     
     /// <summary>服务名称</summary>
-    public required string ServiceName { get; set; }
+    public required string AppName { get; set; }
     
     /// <summary>领域名</summary>
     public string? DomainName { get; set; }

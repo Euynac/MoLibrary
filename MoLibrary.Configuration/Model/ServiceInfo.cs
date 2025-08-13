@@ -14,12 +14,12 @@ public class ServiceInfo
     /// <summary>
     /// 微服务项目名
     /// </summary>
-    public string ServiceName { get; set; } = "UnknownService";
+    public string ProjectName { get; set; } = "UnknownService";
 
     /// <summary>
     /// 微服务显示名
     /// </summary>
-    public string ServiceTitle { get; set; } = "UnknownService";
+    public string AppName { get; set; } = "UnknownService";
     /// <summary>
     /// 微服务APPID
     /// </summary>
