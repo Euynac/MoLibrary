@@ -41,13 +41,13 @@ public class UnitEntity(Type type) : ProjectUnit(type, EProjectUnitType.Entity),
         var unit = new UnitEntity(context.Type);
         return unit.VerifyType() ? unit : null;
     }
-    public override void AddDependency(ProjectUnit unit, bool isTowWayDependency = true)
+    public override void DeclareRelevance(ProjectUnit unit, bool isDependent = false)
     {
         if (unit is UnitRepository {IsHistoryRepo: false} repo)
         {
             RepoUnit = repo;
         }
 
-        base.AddDependency(unit, isTowWayDependency);
+        base.DeclareRelevance(unit, isDependent);
     }
 }

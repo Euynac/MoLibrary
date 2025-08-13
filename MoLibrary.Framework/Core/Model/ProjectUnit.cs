@@ -249,14 +249,17 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     public List<ProjectUnitMethod> Methods { get; protected set; } = [];
 
     /// <summary>
-    /// 增加所依赖的单元
+    /// 声明项目单元相关性
     /// </summary>
     /// <param name="unit"></param>
-    /// <param name="isTowWayDependency"></param>
-    public virtual void AddDependency(ProjectUnit unit, bool isTowWayDependency = true)
+    /// <param name="isDependent"></param>
+    public virtual void DeclareRelevance(ProjectUnit unit, bool isDependent = false)
     {
-        DependencyUnits.Add(unit);
-        if (isTowWayDependency) unit.AddDependency(this, false);
+        if (isDependent)
+        {
+            DependencyUnits.Add(unit);
+        }
+        
     }
 
     /// <summary>
@@ -289,7 +292,7 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
                 // 检查参数类型是否是一个已注册的工作单元
                 if (TryFindUnitForType(parameterType, out var dependentUnit))
                 {
-                    AddDependency(dependentUnit, false);
+                    DeclareRelevance(dependentUnit, true);
                     Logger.LogDebug($"{this}检测到构造函数依赖：{dependentUnit}");
                     continue;
                 }
