@@ -1,3 +1,6 @@
+using System.Text.Json.Serialization;
+using MoLibrary.Core.GlobalJson.Converters;
+
 namespace MoLibrary.RegisterCentre.Models;
 
 /// <summary>
@@ -41,4 +44,9 @@ public class ServiceRegisterInfo
     /// 来源IP端口等信息
     /// </summary>
     public string? FromClient { get; set; }
+    /// <summary>
+    /// 服务实例元数据
+    /// </summary>
+    [JsonConverter(typeof(PreserveOriginalConverter<Dictionary<string, string>>))]
+    public Dictionary<string, string> Metadata { get; set; } = new();
 }

@@ -78,7 +78,7 @@ public abstract class MoRegisterCentreServerConnectorBase(
         {
             try
             {
-                var serviceInfo = Client.GetServiceStatus();
+                var serviceInfo = Client.GetServiceStatus(true);
                 var heartbeat = new ServiceHeartbeat
                 {
                     AppId = serviceInfo.AppId,

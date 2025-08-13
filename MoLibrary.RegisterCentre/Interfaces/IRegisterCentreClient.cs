@@ -10,6 +10,7 @@ public interface IRegisterCentreClient
     /// <summary>
     /// 获取当前微服务状态
     /// </summary>
+    /// <param name="isHeartbeatInfo"></param>
     /// <returns></returns>
-    public ServiceRegisterInfo GetServiceStatus();
+    public ServiceRegisterInfo GetServiceStatus(bool isHeartbeatInfo = false);
 }

@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.OpenApi.Models;
 using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module;
@@ -20,6 +23,20 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModuleW
     public override EMoModules CurModuleEnum()
     {
         return EMoModules.RegisterCentre;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        if (option is { IncludeListeningAddresses: true})
+        {
+            // 注册 IServerAddressesFeature 以获取监听地址
+            services.TryAddSingleton(provider =>
+            {
+                var server = provider.GetService<IServer>();
+                return server?.Features.Get<IServerAddressesFeature>() 
+                       ?? new ServerAddressesFeature();
+            });
+        }
     }
 
     public override void ConfigureApplicationBuilder(IApplicationBuilder app)
@@ -214,4 +231,14 @@ public class ModuleRegisterCentreOption : MoModuleControllerOption<ModuleRegiste
     /// 服务端心跳检查间隔（单位：ms）
     /// </summary>
     public int ServerHeartbeatCheckInterval { get; set; } = 30000;
+    
+    /// <summary>
+    /// 需要读取作为元数据的环境变量Key列表
+    /// </summary>
+    public List<string> MetadataEnvironmentVariables { get; set; } = new();
+    
+    /// <summary>
+    /// 是否获取监听地址作为元数据
+    /// </summary>
+    public bool IncludeListeningAddresses { get; set; } = true;
 }

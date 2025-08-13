@@ -117,6 +117,50 @@
                 </MudItem>
             </MudGrid>
         </MudTabPanel>
+        
+        <MudTabPanel Text="元数据信息">
+            <MudGrid>
+                @foreach (var instance in Service.Instances.Values)
+                {
+                    <MudItem xs="12">
+                        <MudPaper Class="pa-4" Elevation="0">
+                            <MudText Typo="Typo.h6" Class="mb-3">
+                                实例 @instance.InstanceId 元数据
+                                @{
+                                    var (color, text, icon) = GetInstanceStatusInfo(instance.Status);
+                                }
+                                <MudChip T="string" Color="@color" Size="Size.Small" Icon="@icon" Class="ml-2">
+                                    @text
+                                </MudChip>
+                            </MudText>
+                            @if (instance.RegisterInfo.Metadata.Any())
+                            {
+                                <MudDataGrid T="KeyValuePair<string, string>" Items="@instance.RegisterInfo.Metadata" Dense="true" Hover="true">
+                                    <Columns>
+                                        <PropertyColumn Property="x => x.Key" Title="键" />
+                                        <TemplateColumn Title="值">
+                                            <CellTemplate>
+                                                <MetadataValueDisplay Value="@context.Item.Value" />
+                                            </CellTemplate>
+                                        </TemplateColumn>
+                                    </Columns>
+                                </MudDataGrid>
+                            }
+                            else
+                            {
+                                <MudAlert Severity="Severity.Info">该实例没有元数据信息</MudAlert>
+                            }
+                        </MudPaper>
+                    </MudItem>
+                }
+                @if (!Service.Instances.Any())
+                {
+                    <MudItem xs="12">
+                        <MudAlert Severity="Severity.Warning">没有可显示的实例信息</MudAlert>
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudTabPanel>
     </MudTabs>
 }
 

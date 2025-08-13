@@ -2,7 +2,9 @@
 @using MoLibrary.RegisterCentre
 @using MoLibrary.RegisterCentre.Models
 @using MoLibrary.RegisterCentre.Modules
+@using MoLibrary.FrameworkUI.Modules
 @inject IOptionsSnapshot<ModuleRegisterCentreOption> RegisterCentreOptions
+@inject IOptionsSnapshot<ModuleRegisterCentreUIOption> RegisterCentreUIOptions
 @inject IDialogService DialogService
 
 <MudDataGrid T="RegisteredServiceStatus" Items="@Services" Hover="true" Dense="true" RowClick="OnRowClick" Loading="@IsLoading">
@@ -88,6 +90,18 @@
                 </MudText>
             </CellTemplate>
         </TemplateColumn>
+        @foreach (var metadataKey in GetDisplayMetadataKeys())
+        {
+            <TemplateColumn Title="@metadataKey">
+                <CellTemplate>
+                    @{
+                        var runningInstance = context.Item.GetRunningInstanceInfo();
+                        var metadataValue = runningInstance?.RegisterInfo.Metadata.GetValueOrDefault(metadataKey) ?? "N/A";
+                    }
+                    <MetadataValueDisplay Value="@metadataValue" />
+                </CellTemplate>
+            </TemplateColumn>
+        }
         <TemplateColumn Title="实例状态">
             <CellTemplate>
                 <MudStack Row="true" Spacing="1">
@@ -148,5 +162,22 @@
         };
         
         await DialogService.ShowAsync<RegisterCentreServiceDetailDialog>("服务详情", parameters, options);
+    }
+
+    private List<string> GetDisplayMetadataKeys()
+    {
+        var configuredKeys = RegisterCentreUIOptions.Value.DisplayMetadataKeys;
+        if (!configuredKeys.Any())
+            return new List<string>();
+
+        // 检查是否有任何服务包含配置的元数据键
+        var hasMetadata = Services.Any(service =>
+        {
+            var runningInstance = service.GetRunningInstanceInfo();
+            return runningInstance?.RegisterInfo.Metadata != null &&
+                   configuredKeys.Any(key => runningInstance.RegisterInfo.Metadata.ContainsKey(key));
+        });
+
+        return hasMetadata ? configuredKeys : new List<string>();
     }
 }
