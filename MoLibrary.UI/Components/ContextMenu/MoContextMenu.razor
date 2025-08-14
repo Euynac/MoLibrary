@@ -9,10 +9,10 @@
 }
 
 <div @ref="_contextMenuRef" style="position: fixed; z-index: @ZIndex; display: @(Visible ? "block" : "none"); left: @(_x)px; top: @(_y)px;">
-    @if (Visible && Items != null && Items.Any())
+    @if (_positionCalculated && Visible && Items != null && Items.Any())
     {
-        <MudPaper Elevation="8" Class="mo-context-menu">
-            <MudList T="string" Dense="true" Class="pa-1">
+        <MudPaper Width="@(_menuWidth+"px")" Elevation="8" Class="mo-context-menu">
+            <MudList T="string" Dense="true" Class="pa-1" Style="width: 100%">
                 @foreach (var item in Items)
                 {
                     @if (item.IsDivider)
@@ -23,6 +23,7 @@
                     {
                         <MudListItem T="string" 
                                      Class="@($"mo-context-menu-item {(item.Disabled ? "disabled" : "")} {(item == _hoveredItem ? "hovered" : "")}")"
+                                     Style="width: 100%"
                                      Disabled="@item.Disabled"
                                      OnClick="@(() => HandleItemClick(item))"
                                      @onmouseenter="@((MouseEventArgs e) => OnItemMouseEnter(item, e))"
@@ -98,18 +99,28 @@
     private double _menuWidth = 220;
     private double _x = 0;
     private double _y = 0;
+    private bool _positionCalculated = false;
     private Timer? _hideSubMenuTimer;
     private Timer? _showSubMenuTimer;
 
     protected override async Task OnParametersSetAsync()
     {
-        _x = InitialX;
-        _y = InitialY;
-        
-        if (Visible && IsRootMenu)
+        if (!_positionCalculated)
         {
-            await CalculateMenuWidth();
-            await AdjustPosition();
+            _x = InitialX;
+            _y = InitialY;
+            
+            if (Visible)
+            {
+                await CalculateMenuWidth();
+                await AdjustPosition();
+                _positionCalculated = true;
+            }
+        }
+        else if (!Visible)
+        {
+            // Reset position calculation flag when menu is hidden
+            _positionCalculated = false;
         }
     }
 
@@ -201,7 +212,7 @@
         if (item.HasSubMenu && item.SubItems?.Any() == true)
         {
             // 计算子菜单位置
-            _subMenuX = _x + _menuWidth - 5;
+            _subMenuX = _x + _menuWidth;
             _subMenuY = _y + e.OffsetY - 10;
             
             _subMenuVisible = true;
@@ -244,8 +255,6 @@
 
     private async Task AdjustPosition()
     {
-        if (!IsRootMenu) return;
-        
         try
         {
             var windowSize = await JSRuntime.InvokeAsync<WindowSize>("MoContextMenu.getWindowSize");
