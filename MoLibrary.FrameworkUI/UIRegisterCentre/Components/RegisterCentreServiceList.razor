@@ -9,7 +9,7 @@
 @inject IOptionsSnapshot<ModuleRegisterCentreUIOption> RegisterCentreUIOptions
 @inject IDialogService DialogService
 
-<MoDataGridContextMenu TItem="RegisteredServiceStatus" @ref="_contextMenuWrapper" MenuItemsProvider="GetContextMenuItems">
+<div>
     <MudDataGrid T="RegisteredServiceStatus" Items="@Services" Hover="true" Dense="true" Loading="@IsLoading" 
                  RowContextMenuClick="OnRowContextMenuClick">
 	<Columns>
@@ -136,7 +136,17 @@
 		</TemplateColumn>
 	</Columns>
     </MudDataGrid>
-</MoDataGridContextMenu>
+    
+    <!-- 右键菜单 -->
+    <MoContextMenu TItem="RegisteredServiceStatus"
+                   Items="@_contextMenuItems"
+                   Visible="@_isContextMenuVisible"
+                   InitialX="@_contextMenuX"
+                   InitialY="@_contextMenuY"
+                   ContextItem="@_contextMenuItem"
+                   OnItemClick="@OnContextMenuItemClick"
+                   OnClose="@CloseContextMenu" />
+</div>
 
 
 @code {
@@ -144,12 +154,38 @@
 	[Parameter] public EventCallback OnRefresh { get; set; }
 	[Parameter] public bool IsLoading { get; set; } = false;
 
-	private MoDataGridContextMenu<RegisteredServiceStatus> _contextMenuWrapper = null!;
+	// 右键菜单状态
+	private bool _isContextMenuVisible = false;
+	private double _contextMenuX = 0;
+	private double _contextMenuY = 0;
+	private RegisteredServiceStatus? _contextMenuItem;
+	private List<ContextMenuItem<RegisteredServiceStatus>> _contextMenuItems = [];
 
-	private async Task OnRowContextMenuClick(DataGridRowClickEventArgs<RegisteredServiceStatus> args)
+	private Task OnRowContextMenuClick(DataGridRowClickEventArgs<RegisteredServiceStatus> args)
 	{
-		// 打开右键菜单
-		await _contextMenuWrapper.OpenContextMenu(args.MouseEventArgs, args.Item);
+		// 生成菜单项
+		_contextMenuItems = GetContextMenuItems(args.Item);
+		_contextMenuItem = args.Item;
+		_contextMenuX = args.MouseEventArgs.ClientX;
+		_contextMenuY = args.MouseEventArgs.ClientY;
+		_isContextMenuVisible = true;
+		
+		StateHasChanged();
+		return Task.CompletedTask;
+	}
+	
+	private Task OnContextMenuItemClick(ContextMenuItem<RegisteredServiceStatus> item)
+	{
+		// 菜单项点击后菜单会自动关闭
+		return Task.CompletedTask;
+	}
+	
+	private Task CloseContextMenu()
+	{
+		_isContextMenuVisible = false;
+		_contextMenuItem = null;
+		StateHasChanged();
+		return Task.CompletedTask;
 	}
 
 	private List<ContextMenuItem<RegisteredServiceStatus>> GetContextMenuItems(RegisteredServiceStatus service)

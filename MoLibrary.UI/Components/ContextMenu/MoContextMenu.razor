@@ -3,8 +3,13 @@
 @typeparam TItem
 @inject IJSRuntime JSRuntime
 
-<div @ref="_contextMenuRef" style="position: fixed; z-index: 1300; display: @(_isOpen ? "block" : "none"); left: @(_x)px; top: @(_y)px;">
-    @if (_isOpen && Items != null && Items.Any())
+@if (IsRootMenu)
+{
+    <script src="_content/MoLibrary.UI/js/context-menu.js"></script>
+}
+
+<div @ref="_contextMenuRef" style="position: fixed; z-index: @ZIndex; display: @(Visible ? "block" : "none"); left: @(_x)px; top: @(_y)px;">
+    @if (Visible && Items != null && Items.Any())
     {
         <MudPaper Elevation="8" Class="mo-context-menu">
             <MudList T="string" Dense="true" Class="pa-1">
@@ -16,11 +21,12 @@
                     }
                     else
                     {
-                        <MudListItem T="string" Class="@($"mo-context-menu-item {(item.Disabled ? "disabled" : "")} {(item == _hoveredItem ? "hovered" : "")}")"
+                        <MudListItem T="string" 
+                                     Class="@($"mo-context-menu-item {(item.Disabled ? "disabled" : "")} {(item == _hoveredItem ? "hovered" : "")}")"
                                      Disabled="@item.Disabled"
-                                     OnClick="@(async () => await OnItemClick(item))"
-                                     @onmouseenter="@(async (MouseEventArgs e) => await OnItemMouseEnter(item, e))"
-                                     @onmouseleave="@(async () => await OnItemMouseLeave(item))">
+                                     OnClick="@(() => HandleItemClick(item))"
+                                     @onmouseenter="@((MouseEventArgs e) => OnItemMouseEnter(item, e))"
+                                     @onmouseleave="@(() => OnItemMouseLeave(item))">
                             <div class="d-flex align-center" style="width: 100%; position: relative;">
                                 @if (!string.IsNullOrEmpty(item.Icon))
                                 {
@@ -49,83 +55,103 @@
 </div>
 
 <!-- 子菜单 -->
-@if (_isSubMenuOpen && _hoveredItem?.HasSubMenu == true)
+@if (_subMenuVisible && _hoveredItem?.HasSubMenu == true && _hoveredItem.SubItems?.Any() == true)
 {
-    <div style="position: fixed; z-index: 1301; left: @(_subMenuX)px; top: @(_subMenuY)px;">
-        <MoContextMenu TItem="TItem" Items="@_hoveredItem.SubItems" 
-                       @ref="_subMenu"
-                       OnMenuItemClick="@OnSubMenuItemClick" />
-    </div>
+    <MoContextMenu TItem="TItem" 
+                   Items="@_hoveredItem.SubItems" 
+                   Visible="_subMenuVisible"
+                   InitialX="_subMenuX" 
+                   InitialY="_subMenuY"
+                   ZIndex="@(ZIndex + 1)"
+                   ContextItem="@ContextItem"
+                   IsRootMenu="false"
+                   OnItemClick="@OnSubItemClick"
+                   OnClose="@OnSubMenuClose" />
 }
 
-<!-- 全屏透明遮罩，用于点击外部关闭菜单 -->
-@if (_isOpen)
+<!-- 只有根菜单才渲染透明遮罩 -->
+@if (IsRootMenu && Visible)
 {
-    <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1299;" 
-         @onclick="Close"></div>
+    <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: @(ZIndex - 1);" 
+         @onclick="CloseMenu"
+         @oncontextmenu:preventDefault="true"></div>
 }
+
+@implements IDisposable
 
 @code {
     [Parameter] public List<ContextMenuItem<TItem>> Items { get; set; } = new();
-    [Parameter] public EventCallback<ContextMenuItem<TItem>> OnMenuItemClick { get; set; }
-    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public bool Visible { get; set; } = false;
+    [Parameter] public double InitialX { get; set; } = 0;
+    [Parameter] public double InitialY { get; set; } = 0;
+    [Parameter] public int ZIndex { get; set; } = 1300;
+    [Parameter] public bool IsRootMenu { get; set; } = true;
+    [Parameter] public TItem? ContextItem { get; set; }
+    [Parameter] public EventCallback<ContextMenuItem<TItem>> OnItemClick { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
     
     private ElementReference _contextMenuRef;
-    private bool _isOpen = false;
-    private double _x = 0;
-    private double _y = 0;
-    private TItem? _contextItem;
     private ContextMenuItem<TItem>? _hoveredItem;
-    private MoContextMenu<TItem>? _subMenu;
-    private bool _isSubMenuOpen = false;
+    private bool _subMenuVisible = false;
     private double _subMenuX = 0;
     private double _subMenuY = 0;
-    private double _menuWidth = 220; // 默认宽度
+    private double _menuWidth = 220;
+    private double _x = 0;
+    private double _y = 0;
+    private Timer? _hideSubMenuTimer;
+    private Timer? _showSubMenuTimer;
 
-    public async Task Open(MouseEventArgs args, TItem? item = default)
+    protected override async Task OnParametersSetAsync()
     {
-        _contextItem = item;
-        _x = args.ClientX;
-        _y = args.ClientY;
+        _x = InitialX;
+        _y = InitialY;
         
-        // 计算菜单宽度
-        await CalculateMenuWidth();
-        
-        _isOpen = true;
-        StateHasChanged();
-        
-        // 确保菜单不会超出视窗
-        await AdjustPosition(args);
+        if (Visible && IsRootMenu)
+        {
+            await CalculateMenuWidth();
+            await AdjustPosition();
+        }
     }
 
-    public void Close()
-    {
-        _isOpen = false;
-        _contextItem = default;
-        _hoveredItem = null;
-        _isSubMenuOpen = false;
-        StateHasChanged();
-    }
-
-    private async Task OnItemClick(ContextMenuItem<TItem> item)
+    private async Task HandleItemClick(ContextMenuItem<TItem> item)
     {
         if (item.Disabled || item.HasSubMenu) return;
         
-        // 保存当前的contextItem，因为Close()会清空它
-        var currentContextItem = _contextItem;
-        
-        Close();
-        
+        // 执行项目的点击事件
         if (item.OnClick != null)
         {
-            await item.OnClick.Invoke(currentContextItem);
+            await item.OnClick.Invoke(ContextItem);
         }
         
-        await OnMenuItemClick.InvokeAsync(item);
+        // 触发外部点击事件
+        await OnItemClick.InvokeAsync(item);
+        
+        // 关闭菜单
+        await CloseMenu();
     }
     
-    private async Task OnItemMouseEnter(ContextMenuItem<TItem> item, MouseEventArgs e)
+    private async Task OnSubItemClick(ContextMenuItem<TItem> item)
     {
+        if (item.Disabled || item.HasSubMenu) return;
+        
+        // 执行项目的点击事件
+        if (item.OnClick != null)
+        {
+            await item.OnClick.Invoke(ContextItem);
+        }
+        
+        // 触发外部点击事件
+        await OnItemClick.InvokeAsync(item);
+        
+        // 关闭所有菜单
+        await CloseMenu();
+    }
+    
+    private void OnItemMouseEnter(ContextMenuItem<TItem> item, MouseEventArgs e)
+    {
+        // 取消所有定时器
+        _hideSubMenuTimer?.Dispose();
+        _showSubMenuTimer?.Dispose();
         
         if (_hoveredItem != item)
         {
@@ -134,59 +160,70 @@
             
             if (item.HasSubMenu)
             {
-                // 直接显示子菜单
-                await ShowSubMenu(item, e.OffsetY);
+                // 延迟显示子菜单
+                _showSubMenuTimer = new Timer(_ => 
+                {
+                    if (_hoveredItem == item)
+                    {
+                        InvokeAsync(() => ShowSubMenu(item, e));
+                    }
+                }, null, 150, Timeout.Infinite);
             }
             else
             {
                 // 隐藏子菜单
-                await HideSubMenu();
+                _subMenuVisible = false;
+                StateHasChanged();
             }
         }
     }
     
-    private async Task OnItemMouseLeave(ContextMenuItem<TItem> item)
+    private void OnItemMouseLeave(ContextMenuItem<TItem> item)
     {
-        // 如果不是子菜单项，隐藏子菜单
-        if (!item.HasSubMenu)
+        _showSubMenuTimer?.Dispose();
+        
+        if (item.HasSubMenu)
         {
-            await HideSubMenu();
+            // 延迟隐藏子菜单
+            _hideSubMenuTimer = new Timer(_ => 
+            {
+                InvokeAsync(() => 
+                {
+                    _subMenuVisible = false;
+                    StateHasChanged();
+                });
+            }, null, 200, Timeout.Infinite);
         }
     }
     
-    private async Task ShowSubMenu(ContextMenuItem<TItem> item, double offsetY)
+    private void ShowSubMenu(ContextMenuItem<TItem> item, MouseEventArgs e)
     {
         if (item.HasSubMenu && item.SubItems?.Any() == true)
         {
-            // 计算子菜单位置 - 使用计算出的宽度
-            _subMenuX = _x + _menuWidth - 5; // 稍微重叠一点
-            _subMenuY = _y + (offsetY - 10); // 对齐到当前项
+            // 计算子菜单位置
+            _subMenuX = _x + _menuWidth - 5;
+            _subMenuY = _y + e.OffsetY - 10;
             
-            _isSubMenuOpen = true;
+            _subMenuVisible = true;
             StateHasChanged();
         }
     }
     
-    private async Task HideSubMenu()
+    private void OnSubMenuClose()
     {
-        if (_isSubMenuOpen)
-        {
-            _isSubMenuOpen = false;
-            StateHasChanged();
-        }
+        _subMenuVisible = false;
+        StateHasChanged();
     }
     
-    private async Task OnSubMenuItemClick(ContextMenuItem<TItem> item)
+    private async Task CloseMenu()
     {
-        // 关闭所有菜单
-        Close();
-        
-        // 触发主菜单的点击事件
-        await OnMenuItemClick.InvokeAsync(item);
+        await OnClose.InvokeAsync();
     }
     
     private async Task CalculateMenuWidth()
     {
+        if (!IsRootMenu) return;
+        
         try
         {
             var menuItems = Items.Select(item => new 
@@ -197,53 +234,43 @@
                 isDivider = item.IsDivider
             }).ToArray();
             
-            _menuWidth = await JSRuntime.InvokeAsync<double>("calculateMenuWidth", (object)menuItems);
+            _menuWidth = await JSRuntime.InvokeAsync<double>("MoContextMenu.calculateMenuWidth", (object)menuItems);
         }
         catch
         {
-            _menuWidth = 220; // 默认宽度
+            _menuWidth = 220;
         }
     }
 
-    private async Task AdjustPosition(MouseEventArgs args)
+    private async Task AdjustPosition()
     {
+        if (!IsRootMenu) return;
+        
         try
         {
-            // 通过JavaScript获取实际的视窗尺寸
-            var windowSize = await JSRuntime.InvokeAsync<WindowSize>("getWindowSize");
+            var windowSize = await JSRuntime.InvokeAsync<WindowSize>("MoContextMenu.getWindowSize");
+            var menuHeight = Items.Count(i => !i.IsDivider) * 40 + Items.Count(i => i.IsDivider) * 12 + 20;
+            var margin = 10;
             
-            // 使用计算出的菜单宽度
-            var menuHeight = Items.Count(i => !i.IsDivider) * 40 + Items.Count(i => i.IsDivider) * 12 + 20; // 菜单项40px，分隔线12px，padding 20px
-            
-            var margin = 10; // 边界边距
-            
-            // 水平位置调整
+            // 调整位置确保菜单在视窗内
             if (_x + _menuWidth > windowSize.Width)
             {
                 _x = Math.Max(margin, windowSize.Width - _menuWidth - margin);
             }
             
-            // 垂直位置调整
             if (_y + menuHeight > windowSize.Height)
             {
                 _y = Math.Max(margin, windowSize.Height - menuHeight - margin);
             }
             
-            // 确保菜单不会超出左边界和上边界
             _x = Math.Max(margin, _x);
             _y = Math.Max(margin, _y);
+            
+            StateHasChanged();
         }
         catch
         {
-            // 如果JavaScript调用失败，使用默认逻辑
-            var menuHeight = Items.Count(i => !i.IsDivider) * 40 + Items.Count(i => i.IsDivider) * 12 + 20;
-            var defaultWidth = 1920;
-            var defaultHeight = 1080;
-            
-            if (_x + _menuWidth > defaultWidth) _x = defaultWidth - _menuWidth - 10;
-            if (_y + menuHeight > defaultHeight) _y = defaultHeight - menuHeight - 10;
-            _x = Math.Max(10, _x);
-            _y = Math.Max(10, _y);
+            // 忽略JS调用失败
         }
     }
     
@@ -253,91 +280,9 @@
         public int Height { get; set; }
     }
     
-    private class ElementBounds
+    public void Dispose()
     {
-        public double Width { get; set; }
-        public double Height { get; set; }
-        public double X { get; set; }
-        public double Y { get; set; }
-    }
-    
-    private async Task<ElementBounds> GetElementBounds(ElementReference element)
-    {
-        try
-        {
-            return await JSRuntime.InvokeAsync<ElementBounds>("getElementBounds", element);
-        }
-        catch
-        {
-            return new ElementBounds { Width = 220, Height = 40 }; // 默认值
-        }
+        _hideSubMenuTimer?.Dispose();
+        _showSubMenuTimer?.Dispose();
     }
 }
-
-<script>
-    window.getWindowSize = function() {
-        return {
-            width: window.innerWidth,
-            height: window.innerHeight
-        };
-    };
-    
-    window.getElementBounds = function(element) {
-        if (!element) return { width: 0, height: 0, x: 0, y: 0 };
-        
-        var rect = element.getBoundingClientRect();
-        return {
-            width: rect.width,
-            height: rect.height,
-            x: rect.left,
-            y: rect.top
-        };
-    };
-    
-    window.calculateMenuWidth = function(menuItems) {
-        // 创建一个临时的隐藏元素来测量文字宽度
-        var tempDiv = document.createElement('div');
-        tempDiv.style.position = 'absolute';
-        tempDiv.style.visibility = 'hidden';
-        tempDiv.style.whiteSpace = 'nowrap';
-        tempDiv.style.fontSize = '0.875rem'; // 与菜单文字相同的字体大小
-        tempDiv.style.fontFamily = getComputedStyle(document.body).fontFamily;
-        document.body.appendChild(tempDiv);
-        
-        var maxWidth = 0;
-        
-        for (var i = 0; i < menuItems.length; i++) {
-            var item = menuItems[i];
-            if (item.isDivider) continue;
-            
-            // 计算图标宽度 (18px + 16px margin)
-            var iconWidth = 34;
-            
-            // 测量文字宽度
-            tempDiv.textContent = item.text || '';
-            var textWidth = tempDiv.offsetWidth;
-            
-            // 计算快捷键或箭头宽度
-            var rightContentWidth = 0;
-            if (item.hasSubMenu) {
-                rightContentWidth = 16; // 箭头图标宽度
-            } else if (item.shortcutText) {
-                tempDiv.textContent = item.shortcutText;
-                rightContentWidth = tempDiv.offsetWidth;
-            }
-            
-            // 总宽度 = 图标宽度 + 文字宽度 + 右侧内容宽度 + 内边距 + 5rem(80px)
-            var totalWidth = iconWidth + textWidth + rightContentWidth + 32 + 80; // 32px是左右内边距
-            
-            if (totalWidth > maxWidth) {
-                maxWidth = totalWidth;
-            }
-        }
-        
-        document.body.removeChild(tempDiv);
-        
-        // 确保在最小和最大宽度范围内
-        return Math.max(200, Math.min(400, maxWidth));
-    };
-</script>
-
