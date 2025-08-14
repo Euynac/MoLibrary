@@ -45,6 +45,11 @@ public class ServiceRegisterInfo
     /// </summary>
     public string? FromClient { get; set; }
     /// <summary>
+    /// 依赖子域列表
+    /// </summary>
+    public List<string>? DependentSubDomains { get; set; }
+    
+    /// <summary>
     /// 服务实例元数据
     /// </summary>
     [JsonConverter(typeof(PreserveOriginalConverter<Dictionary<string, string>>))]

@@ -37,6 +37,9 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModuleW
                        ?? new ServerAddressesFeature();
             });
         }
+        
+        // 注册默认信息提供者实现
+        services.TryAddSingleton<IRegisterCentreInfoProvider, DefaultRegisterCentreInfoProvider>();
     }
 
     public override void ConfigureApplicationBuilder(IApplicationBuilder app)
@@ -181,6 +184,21 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
             context.Services.AddSingleton<IRegisterCentreServerConnector, TServer>();
             context.Services.AddSingleton<IRegisterCentreClient, TClient>();
         }, key: SET_CENTRE_TYPE);
+        return this;
+    }
+    
+    /// <summary>
+    /// 设置信息提供者服务
+    /// </summary>
+    /// <typeparam name="TInfoProvider">信息提供者服务实现类型</typeparam>
+    /// <returns></returns>
+    public ModuleRegisterCentreGuide SetInfoProvider<TInfoProvider>()
+        where TInfoProvider : class, IRegisterCentreInfoProvider
+    {
+        ConfigureServices(context =>
+        {
+            context.Services.AddSingleton<IRegisterCentreInfoProvider, TInfoProvider>();
+        });
         return this;
     }
 }

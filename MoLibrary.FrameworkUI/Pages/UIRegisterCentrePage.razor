@@ -15,7 +15,7 @@
             <MudPaper Class="pa-4">
                 <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
-                        <MudText Typo="Typo.h6">已注册服务列表</MudText>
+                        <MudText Typo="Typo.h6">服务列表（包含预定义服务）</MudText>
                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                             <MudSwitch T="bool" @bind-Value="_autoRefreshEnabled" @bind-Value:after="OnAutoRefreshToggled" Color="Color.Primary" Label="自动刷新" />
                             <MudNumericField T="int" @bind-Value="_refreshInterval" @bind-Value:after="OnRefreshIntervalChanged" Label="刷新间隔(秒)" Min="1" Max="60" 
@@ -44,7 +44,7 @@
             {
                 <MudPaper Class="pa-4 mt-2">
                     <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary">
-                        暂无已注册的服务
+                        暂无服务信息
                     </MudText>
                 </MudPaper>
             }
@@ -101,7 +101,7 @@
             StateHasChanged();
         }
 
-        if ((await RegisterCentreService.GetServicesStatusAsync()).IsFailed(out var error, out var data))
+        if ((await RegisterCentreService.GetMergedServicesStatusAsync()).IsFailed(out var error, out var data))
         {
             if (showNotification)
                 Snackbar.Add($"获取服务列表失败: {error.Message}", Severity.Error);
