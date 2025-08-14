@@ -47,9 +47,9 @@ public class DefaultRegisterCentreInfoProvider(IRegisterCentreServer? registerCe
     /// 获取所有预加载的服务信息（默认实现返回空列表）
     /// </summary>
     /// <returns>所有预加载的服务信息列表</returns>
-    public virtual Task<List<ServiceInfo>> GetPreloadedServicesAsync()
+    public virtual Task<List<PredefinedServiceInfo>> GetPreloadedServicesAsync()
     {
-        return Task.FromResult(new List<ServiceInfo>());
+        return Task.FromResult(new List<PredefinedServiceInfo>());
     }
 
     /// <summary>

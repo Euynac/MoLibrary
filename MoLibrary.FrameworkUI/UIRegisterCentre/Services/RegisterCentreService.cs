@@ -10,6 +10,8 @@ public class RegisterCentreService(
     ILogger<RegisterCentreService> logger,
     IServiceProvider serviceProvider)
 {
+    private static readonly Dictionary<string, string> _domainColors = new();
+    private static List<DomainInfo> _cachedDomains = [];
     public async Task<Res<List<RegisteredServiceStatus>>> GetServicesStatusAsync()
     {
         try
@@ -110,7 +112,7 @@ public class RegisterCentreService(
             }
 
             // 获取预定义的服务信息
-            List<ServiceInfo> preloadedServices = [];
+            List<PredefinedServiceInfo> preloadedServices = [];
             if (infoProvider != null)
             {
                 preloadedServices = await infoProvider.GetPreloadedServicesAsync();
@@ -142,5 +144,103 @@ public class RegisterCentreService(
             logger.LogError(ex, "获取合并服务状态失败");
             return $"获取合并服务状态失败: {ex.Message}";
         }
+    }
+
+    /// <summary>
+    /// 获取域信息并初始化颜色分配
+    /// </summary>
+    /// <returns>域信息列表</returns>
+    public async Task<Res<List<DomainInfo>>> GetDomainsWithColorsAsync()
+    {
+        try
+        {
+            var infoProvider = serviceProvider.GetService<IRegisterCentreInfoProvider>();
+            if (infoProvider == null)
+            {
+                return "当前服务未配置IRegisterCentreInfoProvider";
+            }
+
+            var domains = await infoProvider.GetAllDomainsAsync();
+           
+            // 检查是否需要重新初始化颜色分配
+            if (_cachedDomains.Count != domains.Count || 
+                !domains.All(d => _cachedDomains.Any(c => c.Name == d.Name)))
+            {
+                _cachedDomains = domains.ToList();
+                InitializeDomainColors(_cachedDomains);
+                logger.LogInformation("重新初始化域颜色分配，共 {Count} 个域", domains.Count);
+            }
+
+            return domains.ToList();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "获取域信息失败");
+            return $"获取域信息失败: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// 获取指定域的颜色
+    /// </summary>
+    /// <param name="domainName">域名称</param>
+    /// <returns>域对应的颜色，如果域不存在则返回默认颜色</returns>
+    public string GetDomainColor(string domainName)
+    {
+        if (string.IsNullOrEmpty(domainName))
+        {
+            return "#666666"; // 默认灰色
+        }
+
+        return _domainColors.GetValueOrDefault(domainName, "#666666");
+    }
+
+    /// <summary>
+    /// 获取所有域颜色映射
+    /// </summary>
+    /// <returns>域名到颜色的映射字典</returns>
+    public Dictionary<string, string> GetAllDomainColors()
+    {
+        return _domainColors;
+    }
+
+    /// <summary>
+    /// 初始化域颜色分配
+    /// </summary>
+    /// <param name="domains">域信息列表</param>
+    private static void InitializeDomainColors(List<DomainInfo> domains)
+    {
+        _domainColors.Clear();
+
+        if (!domains.Any()) return;
+
+        var colors = GenerateDistinctColors(domains.Count);
+        for (var i = 0; i < domains.Count; i++)
+        {
+            _domainColors[domains[i].Name] = colors[i];
+        }
+    }
+
+    /// <summary>
+    /// 生成视觉上区分度高的颜色
+    /// </summary>
+    /// <param name="count">需要生成的颜色数量</param>
+    /// <returns>颜色列表</returns>
+    private static List<string> GenerateDistinctColors(int count)
+    {
+        var colors = new List<string>();
+        if (count <= 0) return colors;
+
+        var hueStep = 360.0 / count;
+
+        for (var i = 0; i < count; i++)
+        {
+            var hue = (i * hueStep) % 360;
+            var saturation = 65 + (i % 3) * 15; // 65-95%
+            var lightness = 50 + (i % 2) * 10; // 50-60%
+            colors.Add($"hsl({hue:F0}, {saturation}%, {lightness}%)");
+        }
+
+        return colors;
     }
 }

@@ -1,0 +1,217 @@
+@using Microsoft.Extensions.DependencyInjection
+@using MoLibrary.RegisterCentre.Interfaces
+@using MoLibrary.RegisterCentre.Models
+@using MoLibrary.FrameworkUI.UIRegisterCentre.Services
+@using MoLibrary.Tool.MoResponse
+@using Microsoft.JSInterop
+@inject RegisterCentreService RegisterCentreService
+@inject IServiceProvider ServiceProvider
+@inject ISnackbar Snackbar
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+
+<MudCard>
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">子域依赖关系图</MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            <MudTooltip Text="刷新数据">
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                               Color="Color.Primary"
+                               OnClick="LoadDomainDataAsync"
+                               Disabled="@_loading" />
+            </MudTooltip>
+            <MudTooltip Text="重置视图">
+                <MudIconButton Icon="@Icons.Material.Filled.RestartAlt"
+                               Color="Color.Secondary"
+                               OnClick="ResetView"
+                               Disabled="@_loading" />
+            </MudTooltip>
+        </CardHeaderActions>
+    </MudCardHeader>
+    <MudCardContent>
+        <MudPaper Class="visualization-container" Style="position: relative; height: 500px; overflow: hidden;">
+            @if (_loading)
+            {
+                <MudOverlay Visible="true" DarkBackground="false" Absolute="true">
+                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+                </MudOverlay>
+            }
+            <div id="domain-dependency-graph" style="width: 100%; height: 100%;"></div>
+        </MudPaper>
+        
+        <MudPaper Class="mt-4 pa-2" Elevation="0" Outlined="true">
+            <MudGrid AlignItems="Center">
+                <MudItem xs="12" sm="8">
+                    <MudText Typo="Typo.caption">
+                        显示 @_domains.Count 个子域，@_dependencies.Count 个依赖关系
+                    </MudText>
+                </MudItem>
+                <MudItem xs="12" sm="4" Class="d-flex justify-end">
+                    <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Circle" Color="Color.Info">节点：子域</MudChip>
+                    <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.ArrowForward" Color="Color.Primary">箭头：依赖</MudChip>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    private IJSObjectReference? _jsModule;
+    private List<DomainInfo> _domains = [];
+    private List<DomainDependency> _dependencies = [];
+    private Dictionary<string, string> _domainColors = new();
+    private bool _loading = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", 
+                "./_content/MoLibrary.FrameworkUI/UIRegisterCentre/Components/domainDependencyGraph.js");
+            
+            await InitializeGraph();
+            await LoadDomainDataAsync();
+        }
+    }
+
+    private async Task InitializeGraph()
+    {
+        if (_jsModule != null)
+        {
+            var isDarkMode = await JSRuntime.InvokeAsync<bool>("eval", 
+                "document.documentElement.classList.contains('dark')");
+            
+            await _jsModule.InvokeVoidAsync("initializeGraph", "domain-dependency-graph", isDarkMode);
+        }
+    }
+
+    private async Task LoadDomainDataAsync()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        try
+        {
+            // 使用RegisterCentreService获取域信息和颜色分配
+            if (!(await RegisterCentreService.GetDomainsWithColorsAsync()).IsFailed(out var error, out var domains))
+            {
+                _domains = domains ?? [];
+
+                // 获取颜色映射
+                _domainColors = RegisterCentreService.GetAllDomainColors();
+
+                // 获取合并的服务状态来构建依赖关系
+                if (!(await RegisterCentreService.GetMergedServicesStatusAsync()).IsFailed(out var servicesError, out var services))
+                {
+                    BuildDomainDependencies(services ?? []);
+                }
+                else
+                {
+                    Snackbar.Add($"获取服务状态失败: {servicesError.Message}", Severity.Warning);
+                }
+
+                await UpdateGraph();
+            }
+            else
+            {
+                Snackbar.Add($"获取域信息失败: {error.Message}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"加载域数据失败: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void BuildDomainDependencies(List<RegisteredServiceStatus> services)
+    {
+        _dependencies.Clear();
+        var dependencySet = new HashSet<(string, string)>();
+
+        foreach (var service in services)
+        {
+            if (service.DependentSubDomains?.Any() == true)
+            {
+                var sourceDomain = service.DomainName ?? "未知";
+                
+                foreach (var dependentDomain in service.DependentSubDomains)
+                {
+                    if (sourceDomain != dependentDomain && 
+                        dependencySet.Add((sourceDomain, dependentDomain)))
+                    {
+                        _dependencies.Add(new DomainDependency
+                        {
+                            SourceDomain = sourceDomain,
+                            TargetDomain = dependentDomain,
+                            ServiceCount = services.Count(s => 
+                                (s.DomainName ?? "未知") == sourceDomain && 
+                                s.DependentSubDomains?.Contains(dependentDomain) == true)
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+
+    private async Task UpdateGraph()
+    {
+        if (_jsModule != null)
+        {
+            var graphData = PrepareGraphData();
+            await _jsModule.InvokeVoidAsync("updateGraph", graphData);
+        }
+    }
+
+    private object PrepareGraphData()
+    {
+        var nodes = _domains.Select(domain => new
+        {
+            id = domain.Name,
+            name = domain.DisplayName ?? domain.Name,
+            description = domain.Description,
+            color = RegisterCentreService.GetDomainColor(domain.Name)
+        }).ToList();
+
+        var links = _dependencies.Select(dep => new
+        {
+            source = dep.SourceDomain,
+            target = dep.TargetDomain,
+            serviceCount = dep.ServiceCount,
+            color = RegisterCentreService.GetDomainColor(dep.SourceDomain)
+        }).ToList();
+
+        return new { nodes, links };
+    }
+
+    private async Task ResetView()
+    {
+        if (_jsModule != null)
+        {
+            await _jsModule.InvokeVoidAsync("resetView");
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_jsModule != null)
+        {
+            await _jsModule.InvokeVoidAsync("dispose");
+            await _jsModule.DisposeAsync();
+        }
+    }
+
+    private class DomainDependency
+    {
+        public required string SourceDomain { get; set; }
+        public required string TargetDomain { get; set; }
+        public int ServiceCount { get; set; }
+    }
+}

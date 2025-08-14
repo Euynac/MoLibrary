@@ -15,7 +15,10 @@ public class RegisteredServiceStatus
     
     /// <summary>项目名</summary>
     public string? ProjectName { get; set; }
-    
+    /// <summary>
+    /// 依赖子域列表
+    /// </summary>
+    public List<string>? DependentSubDomains { get; set; }
     /// <summary>服务实例字典（Key: FromClient, Value: ServiceInstance）</summary>
     public Dictionary<string, ServiceInstance> Instances { get; set; } = new();
     
