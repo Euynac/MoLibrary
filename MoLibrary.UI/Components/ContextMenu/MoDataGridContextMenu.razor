@@ -1,47 +1,18 @@
-@typeparam TItem
-@using Microsoft.AspNetCore.Components.Web
+@* 
+此组件已废弃，请直接使用 MoContextMenu 组件。
 
-<CascadingValue Value="this" IsFixed="true">
-    @ChildContent
-</CascadingValue>
+使用示例：
+<MoContextMenu TItem="YourType"
+               Items="@menuItems"
+               Visible="@isVisible"
+               InitialX="@x"
+               InitialY="@y"
+               ContextItem="@item"
+               OnItemClick="@OnMenuItemClick"
+               OnClose="@OnMenuClose" />
+*@
 
-<MoContextMenu @ref="_contextMenu" TItem="TItem" Items="@_menuItems" />
-
-@code {
-    [Parameter] public RenderFragment ChildContent { get; set; } = null!;
-    [Parameter] public Func<TItem, List<ContextMenuItem<TItem>>>? MenuItemsProvider { get; set; }
-    [Parameter] public List<ContextMenuItem<TItem>>? DefaultMenuItems { get; set; }
-
-    private MoContextMenu<TItem> _contextMenu = null!;
-    private List<ContextMenuItem<TItem>> _menuItems = new();
-
-    /// <summary>
-    /// 打开右键菜单
-    /// </summary>
-    public async Task OpenContextMenu(MouseEventArgs args, TItem item)
-    {
-        // 根据项目动态生成菜单项
-        if (MenuItemsProvider != null)
-        {
-            _menuItems = MenuItemsProvider(item);
-        }
-        else if (DefaultMenuItems != null)
-        {
-            _menuItems = DefaultMenuItems;
-        }
-        else
-        {
-            _menuItems = new List<ContextMenuItem<TItem>>();
-        }
-
-        await _contextMenu.Open(args, item);
-    }
-
-    /// <summary>
-    /// 关闭右键菜单
-    /// </summary>
-    public void CloseContextMenu()
-    {
-        _contextMenu.Close();
-    }
+@{
+    // 这个组件已被废弃，不再提供任何功能
+    // 请更新您的代码以使用新的 MoContextMenu API
 }

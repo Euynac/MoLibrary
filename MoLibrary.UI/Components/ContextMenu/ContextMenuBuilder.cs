@@ -1,9 +1,7 @@
-using MudBlazor;
-
 namespace MoLibrary.UI.Components.ContextMenu;
 
 /// <summary>
-/// 右键菜单构建器
+/// 右键菜单构建器 - 简化版本
 /// </summary>
 public class ContextMenuBuilder<TItem>
 {
@@ -14,23 +12,31 @@ public class ContextMenuBuilder<TItem>
     /// </summary>
     public ContextMenuBuilder<TItem> AddItem(string text, string? icon = null, Func<TItem?, Task>? onClick = null, string? shortcut = null)
     {
-        var item = ContextMenuItem<TItem>.Create(text, icon, onClick);
-        item.ShortcutText = shortcut;
+        var item = new ContextMenuItem<TItem>
+        {
+            Text = text,
+            Icon = icon,
+            OnClick = onClick,
+            ShortcutText = shortcut
+        };
         _items.Add(item);
         return this;
     }
 
     /// <summary>
-    /// 添加菜单项（同步方法）
+    /// 添加子菜单项
     /// </summary>
-    public ContextMenuBuilder<TItem> AddItem(string text, string? icon, Action<TItem?> onClick, string? shortcut = null)
+    public ContextMenuBuilder<TItem> AddSubMenu(string text, string? icon, Action<ContextMenuBuilder<TItem>> configureSubMenu)
     {
-        var item = ContextMenuItem<TItem>.Create(text, icon, item =>
+        var subMenuBuilder = new ContextMenuBuilder<TItem>();
+        configureSubMenu(subMenuBuilder);
+        
+        var item = new ContextMenuItem<TItem>
         {
-            onClick?.Invoke(item);
-            return Task.CompletedTask;
-        });
-        item.ShortcutText = shortcut;
+            Text = text,
+            Icon = icon,
+            SubItems = subMenuBuilder.Build()
+        };
         _items.Add(item);
         return this;
     }
@@ -40,18 +46,7 @@ public class ContextMenuBuilder<TItem>
     /// </summary>
     public ContextMenuBuilder<TItem> AddDivider()
     {
-        _items.Add(ContextMenuItem<TItem>.Divider());
-        return this;
-    }
-
-    /// <summary>
-    /// 添加禁用的菜单项
-    /// </summary>
-    public ContextMenuBuilder<TItem> AddDisabledItem(string text, string? icon = null)
-    {
-        var item = ContextMenuItem<TItem>.Create(text, icon);
-        item.Disabled = true;
-        _items.Add(item);
+        _items.Add(new ContextMenuItem<TItem> { IsDivider = true });
         return this;
     }
 
@@ -68,32 +63,12 @@ public class ContextMenuBuilder<TItem>
     }
 
     /// <summary>
-    /// 添加子菜单项
-    /// </summary>
-    public ContextMenuBuilder<TItem> AddSubMenu(string text, string? icon, Action<ContextMenuBuilder<TItem>> configureSubMenu)
-    {
-        var subMenuBuilder = new ContextMenuBuilder<TItem>();
-        configureSubMenu(subMenuBuilder);
-        
-        var item = ContextMenuItem<TItem>.Create(text, icon);
-        item.SubItems = subMenuBuilder.Build();
-        _items.Add(item);
-        return this;
-    }
-
-    /// <summary>
     /// 构建菜单项列表
     /// </summary>
-    public List<ContextMenuItem<TItem>> Build()
-    {
-        return _items;
-    }
+    public List<ContextMenuItem<TItem>> Build() => _items;
 
     /// <summary>
     /// 创建一个新的构建器
     /// </summary>
-    public static ContextMenuBuilder<TItem> Create()
-    {
-        return new ContextMenuBuilder<TItem>();
-    }
+    public static ContextMenuBuilder<TItem> Create() => new();
 }

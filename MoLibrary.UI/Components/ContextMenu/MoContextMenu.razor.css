@@ -57,6 +57,7 @@
     color: var(--mud-palette-text-primary);
     font-size: 0.875rem;
     line-height: 20px;
+    margin-right: 32px; /* 为箭头或快捷键留出空间 */
 }
 
 /* 分隔线样式 */
@@ -110,6 +111,14 @@
     height: 16px;
     color: var(--mud-palette-text-secondary);
     flex-shrink: 0;
+    z-index: 10;
+}
+
+/* 确保箭头图标正确显示 */
+::deep .mo-menu-arrow .mud-icon-root {
+    width: 16px !important;
+    height: 16px !important;
+    font-size: 16px !important;
 }
 
 /* 悬停项高亮 */
