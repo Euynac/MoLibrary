@@ -72,12 +72,11 @@ public abstract class RegisterCentreClientBase(IOptions<ModuleRegisterCentreOpti
     }
     
     /// <summary>
-    /// 根据Flags枚举设置依赖子域
+    /// 根据Flags枚举获得依赖子域
     /// </summary>
     /// <typeparam name="TEnum">Flags枚举类型</typeparam>
-    /// <param name="serviceInfo">服务注册信息</param>
     /// <param name="domainFlags">领域标志枚举实例</param>
-    public void SetDependentSubDomains<TEnum>(ServiceRegisterInfo serviceInfo, TEnum domainFlags) 
+    public List<string> SetDependentSubDomains<TEnum>(TEnum domainFlags) 
         where TEnum : struct, Enum
     {
         if (!typeof(TEnum).IsDefined(typeof(FlagsAttribute), false))
@@ -85,8 +84,7 @@ public abstract class RegisterCentreClientBase(IOptions<ModuleRegisterCentreOpti
             throw new ArgumentException("枚举类型必须标记为Flags", nameof(domainFlags));
         }
 
-        serviceInfo.DependentSubDomains ??= new List<string>();
-        serviceInfo.DependentSubDomains.Clear();
+        var domains = new List<string>();
 
         var flagValues = Enum.GetValues<TEnum>();
         
@@ -98,8 +96,10 @@ public abstract class RegisterCentreClientBase(IOptions<ModuleRegisterCentreOpti
             // 检查是否包含该标志
             if (domainFlags.HasFlag(flagValue))
             {
-                serviceInfo.DependentSubDomains.Add(flagValue.ToString());
+                domains.Add(flagValue.ToString());
             }
         }
+
+        return domains;
     }
 }

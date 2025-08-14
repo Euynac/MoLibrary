@@ -1,0 +1,231 @@
+@using Microsoft.Extensions.DependencyInjection
+@using MoLibrary.RegisterCentre.Interfaces
+@using MoLibrary.RegisterCentre.Models
+@using MoLibrary.FrameworkUI.UIRegisterCentre.Services
+@using MoLibrary.Tool.MoResponse
+@using Microsoft.JSInterop
+@inject RegisterCentreService RegisterCentreService
+@inject IServiceProvider ServiceProvider
+@inject ISnackbar Snackbar
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+
+<MudCard>
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">微服务架构图</MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            <MudTooltip Text="刷新数据">
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                               Color="Color.Primary"
+                               OnClick="LoadServiceDataAsync"
+                               Disabled="@_loading" />
+            </MudTooltip>
+            <MudTooltip Text="重置视图">
+                <MudIconButton Icon="@Icons.Material.Filled.RestartAlt"
+                               Color="Color.Secondary"
+                               OnClick="ResetView"
+                               Disabled="@_loading" />
+            </MudTooltip>
+            <MudSwitch T="bool" @bind-Value="_showOfflineServices" @bind-Value:after="UpdateGraph" 
+                       Color="Color.Primary" Label="显示离线服务" />
+        </CardHeaderActions>
+    </MudCardHeader>
+    <MudCardContent>
+        <MudPaper Class="visualization-container" Style="position: relative; height: 600px; overflow: hidden;">
+            @if (_loading)
+            {
+                <MudOverlay Visible="true" DarkBackground="false" Absolute="true">
+                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+                </MudOverlay>
+            }
+            <div id="service-graph" style="width: 100%; height: 100%;"></div>
+        </MudPaper>
+        
+        <MudPaper Class="mt-4 pa-2" Elevation="0" Outlined="true">
+            <MudGrid AlignItems="Center">
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.caption">
+                        显示 @_filteredServices.Count / @_allServices.Count 个微服务
+                    </MudText>
+                </MudItem>
+                <MudItem xs="12" sm="6" Class="d-flex justify-end flex-wrap">
+                    <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.CheckCircle" 
+                             Color="Color.Success" Class="mr-1 mb-1">运行中</MudChip>
+                    <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Update" 
+                             Color="Color.Info" Class="mr-1 mb-1">更新中</MudChip>
+                    <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.CloudOff" 
+                             Color="Color.Default" Class="mr-1 mb-1">离线</MudChip>
+                    <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Error" 
+                             Color="Color.Error" Class="mr-1 mb-1">异常</MudChip>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public EventCallback<RegisteredServiceStatus> OnServiceClick { get; set; }
+    
+    private IJSObjectReference? _jsModule;
+    private List<RegisteredServiceStatus> _allServices = new();
+    private List<RegisteredServiceStatus> _filteredServices = new();
+    private Dictionary<string, string> _domainColors = new();
+    private bool _loading = false;
+    private bool _showOfflineServices = true;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", 
+                "./_content/MoLibrary.FrameworkUI/UIRegisterCentre/Components/serviceGraph.js");
+            
+            await InitializeGraph();
+            await LoadServiceDataAsync();
+        }
+    }
+
+    private async Task InitializeGraph()
+    {
+        if (_jsModule != null)
+        {
+            var isDarkMode = await JSRuntime.InvokeAsync<bool>("eval", 
+                "document.documentElement.classList.contains('dark')");
+            
+            await _jsModule.InvokeVoidAsync("initializeGraph", "service-graph", isDarkMode,
+                DotNetObjectReference.Create(this));
+        }
+    }
+
+    private async Task LoadServiceDataAsync()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        try
+        {
+            // 获取合并的服务状态
+            if (!(await RegisterCentreService.GetMergedServicesStatusAsync()).IsFailed(out var error, out var services))
+            {
+                _allServices = services ?? new List<RegisteredServiceStatus>();
+                
+                // 获取域信息并分配颜色
+                await AssignDomainColors();
+                
+                // 应用过滤
+                ApplyFilters();
+                
+                await UpdateGraph();
+            }
+            else
+            {
+                Snackbar.Add($"加载服务数据失败: {error.Message}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"加载服务数据异常: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task AssignDomainColors()
+    {
+        try
+        {
+            // 使用RegisterCentreService获取域信息和颜色分配
+            if (!(await RegisterCentreService.GetDomainsWithColorsAsync()).IsFailed(out var error, out _))
+            {
+                // 获取统一的颜色映射
+                _domainColors = RegisterCentreService.GetAllDomainColors();
+            }
+            else
+            {
+                Snackbar.Add($"获取域颜色信息失败: {error.Message}", Severity.Warning);
+                // 使用空的颜色映射，后续会使用默认颜色
+                _domainColors = new Dictionary<string, string>();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"分配域颜色时发生异常: {ex.Message}", Severity.Warning);
+            _domainColors = new Dictionary<string, string>();
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        _filteredServices = _allServices.Where(service =>
+        {
+            if (!_showOfflineServices && service.OverallStatus == ServiceStatus.Offline)
+                return false;
+            
+            return true;
+        }).ToList();
+    }
+
+    private async Task UpdateGraph()
+    {
+        if (_jsModule != null)
+        {
+            ApplyFilters();
+            var graphData = PrepareGraphData();
+            await _jsModule.InvokeVoidAsync("updateGraph", graphData);
+        }
+    }
+
+    private object PrepareGraphData()
+    {
+        var nodes = _filteredServices.Select(service => new
+        {
+            id = service.AppId,
+            name = service.AppName,
+            domain = service.DomainName ?? "未知",
+            project = service.ProjectName,
+            status = service.OverallStatus.ToString(),
+            runningInstances = service.RunningInstanceCount,
+            totalInstances = service.TotalInstanceCount,
+            color = RegisterCentreService.GetDomainColor(service.DomainName ?? "未知"),
+            // 获取运行实例的详细信息
+            instanceInfo = service.GetRunningInstanceInfo()
+        }).ToList();
+
+        // 暂时不构建服务间的依赖关系，因为当前模型中没有这个信息
+        var links = new List<object>();
+
+        return new { nodes, links };
+    }
+
+    [JSInvokable]
+    public async Task OnNodeClick(string nodeId)
+    {
+        var service = _allServices.FirstOrDefault(s => s.AppId == nodeId);
+        if (service != null && OnServiceClick.HasDelegate)
+        {
+            await OnServiceClick.InvokeAsync(service);
+        }
+    }
+
+    private async Task ResetView()
+    {
+        if (_jsModule != null)
+        {
+            await _jsModule.InvokeVoidAsync("resetView");
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_jsModule != null)
+        {
+            await _jsModule.InvokeVoidAsync("dispose");
+            await _jsModule.DisposeAsync();
+        }
+    }
+}

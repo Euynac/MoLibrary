@@ -15,7 +15,7 @@ public interface IRegisterCentreInfoProvider
     /// 获取所有预加载的服务信息
     /// </summary>
     /// <returns>所有预加载的服务信息列表</returns>
-    Task<List<ServiceInfo>> GetPreloadedServicesAsync();
+    Task<List<PredefinedServiceInfo>> GetPreloadedServicesAsync();
 }
 
 /// <summary>
@@ -42,7 +42,7 @@ public class DomainInfo
 /// <summary>
 /// 服务信息
 /// </summary>
-public class ServiceInfo
+public class PredefinedServiceInfo
 {
     /// <summary>
     /// 应用ID

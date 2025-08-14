@@ -69,13 +69,15 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
             AppId = req.AppId,
             AppName = req.AppName,
             DomainName = req.DomainName,
-            ProjectName = req.ProjectName
+            ProjectName = req.ProjectName,
+            DependentSubDomains = req.DependentSubDomains
         });
         
         // 更新服务基本信息
         service.AppName = req.AppName;
         service.DomainName = req.DomainName;
         service.ProjectName = req.ProjectName;
+        service.DependentSubDomains = req.DependentSubDomains;
         
         // 添加或更新实例
         var instanceId = req.FromClient!;

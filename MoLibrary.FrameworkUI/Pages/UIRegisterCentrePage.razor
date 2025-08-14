@@ -10,46 +10,58 @@
 <MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
     <MudText Typo="Typo.h4" Class="mb-4">注册中心管理</MudText>
     
-    <MudGrid>
-        <MudItem xs="12">
-            <MudPaper Class="pa-4">
-                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
-                        <MudText Typo="Typo.h6">服务列表（包含预定义服务）</MudText>
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                            <MudSwitch T="bool" @bind-Value="_autoRefreshEnabled" @bind-Value:after="OnAutoRefreshToggled" Color="Color.Primary" Label="自动刷新" />
-                            <MudNumericField T="int" @bind-Value="_refreshInterval" @bind-Value:after="OnRefreshIntervalChanged" Label="刷新间隔(秒)" Min="1" Max="60" 
-                                           Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 120px" 
-                                           Disabled="!_autoRefreshEnabled" Immediate="true" />
+    <MudTabs Elevation="4" Rounded="true" Color="Color.Primary" PanelClass="pa-4">
+        <MudTabPanel Text="服务列表" Icon="@Icons.Material.Filled.List">
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudPaper Class="pa-4">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                                <MudText Typo="Typo.h6">服务列表（包含预定义服务）</MudText>
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                    <MudSwitch T="bool" @bind-Value="_autoRefreshEnabled" @bind-Value:after="OnAutoRefreshToggled" Color="Color.Primary" Label="自动刷新" />
+                                    <MudNumericField T="int" @bind-Value="_refreshInterval" @bind-Value:after="OnRefreshIntervalChanged" Label="刷新间隔(秒)" Min="1" Max="60" 
+                                                   Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 120px" 
+                                                   Disabled="!_autoRefreshEnabled" Immediate="true" />
+                                </MudStack>
+                            </MudStack>
+                            <MudStack Row="true" Spacing="2">
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => RefreshServicesAsync())" Disabled="@_isLoading">
+                                    <MudIcon Icon="@Icons.Material.Filled.Refresh" Class="mr-1" />
+                                    刷新
+                                </MudButton>
+                                <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="UnregisterAllAsync" Disabled="@_isLoading">
+                                    <MudIcon Icon="@Icons.Material.Filled.DeleteForever" Class="mr-1" />
+                                    清空所有注册
+                                </MudButton>
+                            </MudStack>
                         </MudStack>
-                    </MudStack>
-                    <MudStack Row="true" Spacing="2">
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => RefreshServicesAsync())" Disabled="@_isLoading">
-                            <MudIcon Icon="@Icons.Material.Filled.Refresh" Class="mr-1" />
-                            刷新
-                        </MudButton>
-                        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="UnregisterAllAsync" Disabled="@_isLoading">
-                            <MudIcon Icon="@Icons.Material.Filled.DeleteForever" Class="mr-1" />
-                            清空所有注册
-                        </MudButton>
-                    </MudStack>
-                </MudStack>
-            </MudPaper>
-        </MudItem>
+                    </MudPaper>
+                </MudItem>
+                
+                <MudItem xs="12">
+                    <RegisterCentreServiceList Services="_services" OnRefresh="@(() => RefreshServicesAsync())" IsLoading="_isLoading" />
+                    
+                    @if (!_isLoading && !_services.Any())
+                    {
+                        <MudPaper Class="pa-4 mt-2">
+                            <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary">
+                                暂无服务信息
+                            </MudText>
+                        </MudPaper>
+                    }
+                </MudItem>
+            </MudGrid>
+        </MudTabPanel>
         
-        <MudItem xs="12">
-            <RegisterCentreServiceList Services="_services" OnRefresh="@(() => RefreshServicesAsync())" IsLoading="_isLoading" />
-            
-            @if (!_isLoading && !_services.Any())
-            {
-                <MudPaper Class="pa-4 mt-2">
-                    <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary">
-                        暂无服务信息
-                    </MudText>
-                </MudPaper>
-            }
-        </MudItem>
-    </MudGrid>
+        <MudTabPanel Text="微服务架构图" Icon="@Icons.Material.Filled.AccountTree">
+            <ServiceVisualization OnServiceClick="OnServiceClickFromVisualization" />
+        </MudTabPanel>
+        
+        <MudTabPanel Text="子域依赖图" Icon="@Icons.Material.Filled.Hub">
+            <DomainDependencyVisualization />
+        </MudTabPanel>
+    </MudTabs>
 </MudContainer>
 
 @code {
@@ -141,6 +153,18 @@
 
         _isLoading = false;
         StateHasChanged();
+    }
+    
+    private async Task OnServiceClickFromVisualization(RegisteredServiceStatus service)
+    {
+        // 当从可视化图表点击服务时，可以显示详情或执行其他操作
+        Snackbar.Add($"选中服务: {service.AppName}", Severity.Info);
+        
+        // 这里可以添加更多交互逻辑，比如：
+        // - 打开服务详情对话框
+        // - 切换到服务列表标签页并高亮该服务
+        // - 显示服务的详细信息等
+        await Task.CompletedTask;
     }
     
     public void Dispose()

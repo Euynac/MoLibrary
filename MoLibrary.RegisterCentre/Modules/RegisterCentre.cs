@@ -188,7 +188,7 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
     }
     
     /// <summary>
-    /// 设置信息提供者服务
+    /// 设置信息提供者服务(仅注册中心服务端需要)
     /// </summary>
     /// <typeparam name="TInfoProvider">信息提供者服务实现类型</typeparam>
     /// <returns></returns>
