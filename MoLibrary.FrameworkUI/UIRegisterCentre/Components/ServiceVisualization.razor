@@ -5,6 +5,7 @@
 @using MoLibrary.FrameworkUI.UIRegisterCentre.Models
 @using MoLibrary.Tool.MoResponse
 @using Microsoft.JSInterop
+@using MoLibrary.UI.Components.ContextMenu
 @inject RegisterCentreService RegisterCentreService
 @inject IServiceProvider ServiceProvider
 @inject ISnackbar Snackbar
@@ -69,7 +70,7 @@
                     <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
                 </MudOverlay>
             }
-            <div id="service-graph" style="width: 100%; height: 100%;"></div>
+            <div id="service-graph" style="width: 100%; height: 100%;" @onclick="OnBackgroundClick" @oncontextmenu:preventDefault="true"></div>
         </MudPaper>
         
         <MudPaper Class="mt-4 pa-2" Elevation="0" Outlined="true">
@@ -94,6 +95,16 @@
     </MudCardContent>
 </MudCard>
 
+@* 右键菜单 *@
+<MoContextMenu TItem="RegisteredServiceStatus" 
+               Items="@_contextMenuItems" 
+               Visible="@_contextMenuOpen"
+               InitialX="@_contextMenuX" 
+               InitialY="@_contextMenuY"
+               ContextItem="@_contextMenuService"
+               OnItemClick="@OnContextMenuItemClick"
+               OnClose="@CloseContextMenu" />
+
 @code {
     [Parameter] public EventCallback<RegisteredServiceStatus> OnServiceClick { get; set; }
     
@@ -116,6 +127,13 @@
     private ServiceLayoutType _currentLayout = ServiceLayoutType.Force;
     private int _forceDistance = 150;
     private int _forceStrength = -500;
+    
+    // 右键菜单相关字段
+    private bool _contextMenuOpen = false;
+    private double _contextMenuX = 0;
+    private double _contextMenuY = 0;
+    private RegisteredServiceStatus? _contextMenuService;
+    private List<ContextMenuItem<RegisteredServiceStatus>> _contextMenuItems = new();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -359,6 +377,146 @@
         if (service != null && OnServiceClick.HasDelegate)
         {
             await OnServiceClick.InvokeAsync(service);
+        }
+    }
+    
+    [JSInvokable]
+    public void OnNodeRightClick(string nodeId, double x, double y)
+    {
+        _contextMenuService = _allServices.FirstOrDefault(s => s.AppId == nodeId);
+        if (_contextMenuService != null)
+        {
+            _contextMenuX = x;
+            _contextMenuY = y;
+            _contextMenuItems = BuildContextMenuItems(_contextMenuService);
+            _contextMenuOpen = true;
+            StateHasChanged();
+        }
+    }
+    
+    private void OnBackgroundClick()
+    {
+        if (_contextMenuOpen)
+        {
+            _contextMenuOpen = false;
+            StateHasChanged();
+        }
+    }
+    
+    [JSInvokable]
+    public void OnSvgBackgroundClick()
+    {
+        if (_contextMenuOpen)
+        {
+            _contextMenuOpen = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void CloseContextMenu()
+    {
+        _contextMenuOpen = false;
+    }
+    
+    private List<ContextMenuItem<RegisteredServiceStatus>> BuildContextMenuItems(RegisteredServiceStatus service)
+    {
+        var builder = ContextMenuBuilder<RegisteredServiceStatus>.Create()
+            .AddItem("查看服务详情", Icons.Material.Filled.Info, ViewServiceDetailsAsync)
+            .AddItem("聚焦此服务", Icons.Material.Filled.CenterFocusStrong, FocusOnServiceAsync)
+            .AddDivider()
+            .AddItem("筛选同状态", Icons.Material.Filled.FilterAlt, FilterByStatusAsync)
+            .AddItem("筛选同域", Icons.Material.Filled.Domain, FilterByDomainAsync)
+            .AddItemIf(!string.IsNullOrEmpty(service.ProjectName), "筛选同项目", Icons.Material.Filled.Folder, FilterByProjectAsync)
+            .AddItem("清除所有筛选", Icons.Material.Filled.ClearAll, ClearAllFiltersAsync)
+            .AddDivider()
+            .AddItem("复制服务ID", Icons.Material.Filled.ContentCopy, CopyServiceIdAsync)
+            .AddItem("复制服务名", Icons.Material.Filled.ContentCopy, CopyServiceNameAsync);
+        
+        return builder.Build();
+    }
+    
+    private async Task OnContextMenuItemClick(ContextMenuItem<RegisteredServiceStatus> item)
+    {
+        _contextMenuOpen = false;
+        StateHasChanged();
+    }
+    
+    private async Task ViewServiceDetailsAsync(RegisteredServiceStatus? service)
+    {
+        if (service != null && OnServiceClick.HasDelegate)
+        {
+            await OnServiceClick.InvokeAsync(service);
+        }
+    }
+    
+    private async Task FocusOnServiceAsync(RegisteredServiceStatus? service)
+    {
+        if (_jsModule != null && service != null)
+        {
+            await _jsModule.InvokeVoidAsync("focusOnNode", service.AppId);
+        }
+    }
+    
+    private async Task FilterByStatusAsync(RegisteredServiceStatus? service)
+    {
+        if (service != null)
+        {
+            _selectedStatuses = new HashSet<ServiceStatus> { service.OverallStatus };
+            _showFilterPanel = true;
+            await ApplyFilters();
+            Snackbar.Add($"已筛选状态: {service.OverallStatus}", Severity.Info);
+        }
+    }
+    
+    private async Task FilterByDomainAsync(RegisteredServiceStatus? service)
+    {
+        if (service != null)
+        {
+            var domainName = service.DomainName ?? "未知";
+            _selectedDomains = new HashSet<string> { domainName };
+            _showFilterPanel = true;
+            await ApplyFilters();
+            Snackbar.Add($"已筛选域: {domainName}", Severity.Info);
+        }
+    }
+    
+    private async Task FilterByProjectAsync(RegisteredServiceStatus? service)
+    {
+        if (service != null && !string.IsNullOrEmpty(service.ProjectName))
+        {
+            _filterText = service.ProjectName;
+            _showFilterPanel = true;
+            await ApplyFilters();
+            Snackbar.Add($"已筛选项目: {service.ProjectName}", Severity.Info);
+        }
+    }
+    
+    private async Task ClearAllFiltersAsync(RegisteredServiceStatus? service)
+    {
+        _filterText = string.Empty;
+        _selectedStatuses = new HashSet<ServiceStatus>(Enum.GetValues<ServiceStatus>());
+        var allDomains = _allServices.Select(s => s.DomainName ?? "未知").Distinct().ToList();
+        _selectedDomains = new HashSet<string>(allDomains);
+        _showOnlyWithInstances = false;
+        await ApplyFilters();
+        Snackbar.Add("已清除所有筛选", Severity.Info);
+    }
+    
+    private async Task CopyServiceIdAsync(RegisteredServiceStatus? service)
+    {
+        if (service != null)
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", service.AppId);
+            Snackbar.Add("已复制服务ID到剪贴板", Severity.Success);
+        }
+    }
+    
+    private async Task CopyServiceNameAsync(RegisteredServiceStatus? service)
+    {
+        if (service != null)
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", service.AppName);
+            Snackbar.Add("已复制服务名到剪贴板", Severity.Success);
         }
     }
 

@@ -3,7 +3,7 @@ using MoLibrary.DataChannel.Interfaces;
 namespace MoLibrary.DataChannel.Pipeline;
 
 /// <summary>
-/// 管道中间件基础接口
+/// （中间件是单例生命周期，或通过 <see cref="IComponentTransient"/> 声明为Transient生命周期的中间件）管道中间件基础接口
 /// 所有管道中间件的基本接口，表示可以参与数据管道处理链的组件
 /// 中间件可以拦截、修改或转换数据流
 /// </summary>

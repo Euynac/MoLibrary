@@ -51,8 +51,12 @@
                                 <MudText Typo="Typo.body2">@(_domainDetail.Domain.DisplayName ?? "未设置")</MudText>
                             </MudStack>
                             <MudStack Row="true" Justify="Justify.SpaceBetween">
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">相关服务数:</MudText>
-                                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Text="@($"{_domainDetail.RelatedServices.Count} 个")" />
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">本域服务:</MudText>
+                                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Text="@($"{GetOwnedServicesCount()} 个")" />
+                            </MudStack>
+                            <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">依赖本域服务:</MudText>
+                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="@($"{GetDependentServicesCount()} 个")" />
                             </MudStack>
                             <MudStack Row="true" Justify="Justify.SpaceBetween">
                                 <MudText Typo="Typo.body2" Color="Color.Secondary">运行中服务:</MudText>
@@ -66,67 +70,64 @@
             <MudItem xs="12" md="8">
                 <MudPaper Class="pa-4">
                     <MudStack Spacing="3">
-                        <MudText Typo="Typo.h6">相关微服务列表</MudText>
-                        <MudDivider />
-                        
-                        @if (_isLoading)
-                        {
-                            <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
-                            <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-2">正在加载服务信息...</MudText>
-                        }
-                        else if (!_domainDetail.RelatedServices.Any())
-                        {
-                            <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary">
-                                该域暂无相关微服务
-                            </MudText>
-                        }
-                        else
-                        {
-                            <MudStack Spacing="2">
-                                @foreach (var service in _domainDetail.RelatedServices)
-                                {
-                                    <MudCard Elevation="2" Class="service-card">
-                                        <MudCardContent Class="pa-3">
-                                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                                                <MudStack Spacing="1">
-                                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                                        <MudText Typo="Typo.h6">@service.AppName</MudText>
-                                                        <MudChip T="string" Size="Size.Small" Color="@GetServiceStatusColor(service.OverallStatus)" Text="@GetServiceStatusText(service.OverallStatus)" />
-                                                    </MudStack>
-                                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                                        ID: @service.AppId
-                                                    </MudText>
-                                                    @if (!string.IsNullOrEmpty(service.ProjectName))
-                                                    {
-                                                        <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                                            项目: @service.ProjectName
-                                                        </MudText>
-                                                    }
-                                                    @if (service.DependentSubDomains?.Any() == true)
-                                                    {
-                                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">依赖子域:</MudText>
-                                                            @foreach (var subDomain in service.DependentSubDomains)
-                                                            {
-                                                                <MudChip T="string" Size="Size.Small" Color="Color.Surface" Text="@subDomain" />
-                                                            }
-                                                        </MudStack>
-                                                    }
-                                                </MudStack>
-                                                <MudStack AlignItems="AlignItems.End" Spacing="1">
-                                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                                        @service.RunningInstanceCount/@service.TotalInstanceCount 实例运行中
-                                                    </MudText>
-                                                    <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="() => HandleServiceDetailClick(service)">
-                                                        查看详情
-                                                    </MudButton>
-                                                </MudStack>
+                        <MudTabs Elevation="0" Rounded="true" PanelClass="pa-0">
+                            <MudTabPanel Text="@($"本域服务 ({GetOwnedServicesCount()})")">
+                                <MudStack Spacing="3" Class="mt-3">
+                                    @if (_isLoading)
+                                    {
+                                        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+                                        <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-2">正在加载服务信息...</MudText>
+                                    }
+                                    else
+                                    {
+                                        var ownedServices = GetOwnedServices();
+                                        @if (!ownedServices.Any())
+                                        {
+                                            <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary">
+                                                该域暂无归属微服务
+                                            </MudText>
+                                        }
+                                        else
+                                        {
+                                            <MudStack Spacing="2">
+                                                @foreach (var service in ownedServices)
+                                                {
+                                                    @RenderServiceCard(service, true)
+                                                }
                                             </MudStack>
-                                        </MudCardContent>
-                                    </MudCard>
-                                }
-                            </MudStack>
-                        }
+                                        }
+                                    }
+                                </MudStack>
+                            </MudTabPanel>
+                            <MudTabPanel Text="@($"依赖服务 ({GetDependentServicesCount()})")">
+                                <MudStack Spacing="3" Class="mt-3">
+                                    @if (_isLoading)
+                                    {
+                                        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+                                        <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-2">正在加载服务信息...</MudText>
+                                    }
+                                    else
+                                    {
+                                        var dependentServices = GetDependentServices();
+                                        @if (!dependentServices.Any())
+                                        {
+                                            <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary">
+                                                暂无其他服务依赖此域
+                                            </MudText>
+                                        }
+                                        else
+                                        {
+                                            <MudStack Spacing="2">
+                                                @foreach (var service in dependentServices)
+                                                {
+                                                    @RenderServiceCard(service, false)
+                                                }
+                                            </MudStack>
+                                        }
+                                    }
+                                </MudStack>
+                            </MudTabPanel>
+                        </MudTabs>
                     </MudStack>
                 </MudPaper>
             </MudItem>
@@ -218,10 +219,92 @@ else
         return $"background-color: {color}; color: white;";
     }
 
+    private int GetOwnedServicesCount()
+    {
+        return _domainDetail?.RelatedServices.Count(s => 
+            string.Equals(s.DomainName, DomainName, StringComparison.OrdinalIgnoreCase)) ?? 0;
+    }
+    
+    private int GetDependentServicesCount()
+    {
+        return _domainDetail?.RelatedServices.Count(s => 
+            !string.Equals(s.DomainName, DomainName, StringComparison.OrdinalIgnoreCase) &&
+            s.DependentSubDomains?.Contains(DomainName, StringComparer.OrdinalIgnoreCase) == true) ?? 0;
+    }
+    
     private int GetRunningServicesCount()
     {
-        return _domainDetail?.RelatedServices.Count(s => s.OverallStatus == ServiceStatus.Running) ?? 0;
+        var ownedRunning = GetOwnedServices().Count(s => s.OverallStatus == ServiceStatus.Running);
+        var dependentRunning = GetDependentServices().Count(s => s.OverallStatus == ServiceStatus.Running);
+        return ownedRunning + dependentRunning;
     }
+    
+    private List<RegisteredServiceStatus> GetOwnedServices()
+    {
+        return _domainDetail?.RelatedServices
+            .Where(s => string.Equals(s.DomainName, DomainName, StringComparison.OrdinalIgnoreCase))
+            .ToList() ?? [];
+    }
+    
+    private List<RegisteredServiceStatus> GetDependentServices()
+    {
+        return _domainDetail?.RelatedServices
+            .Where(s => !string.Equals(s.DomainName, DomainName, StringComparison.OrdinalIgnoreCase) &&
+                       s.DependentSubDomains?.Contains(DomainName, StringComparer.OrdinalIgnoreCase) == true)
+            .ToList() ?? [];
+    }
+    
+    private RenderFragment RenderServiceCard(RegisteredServiceStatus service, bool isOwnedService) => @<MudCard Elevation="2" Class="service-card">
+        <MudCardContent Class="pa-3">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                <MudStack Spacing="1">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudText Typo="Typo.h6">@service.AppName</MudText>
+                        <MudChip T="string" Size="Size.Small" Color="@GetServiceStatusColor(service.OverallStatus)" Text="@GetServiceStatusText(service.OverallStatus)" />
+                        @if (!isOwnedService)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="外部依赖" />
+                        }
+                    </MudStack>
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            ID: @service.AppId
+                        </MudText>
+                        @if (!string.IsNullOrEmpty(service.DomainName))
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                所属域: @service.DomainName
+                            </MudText>
+                        }
+                        @if (!string.IsNullOrEmpty(service.ProjectName))
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                项目: @service.ProjectName
+                            </MudText>
+                        }
+                    </MudStack>
+                    @if (service.DependentSubDomains?.Any() == true)
+                    {
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">依赖子域:</MudText>
+                            @foreach (var subDomain in service.DependentSubDomains)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="@(subDomain == DomainName ? Color.Warning : Color.Surface)" Text="@subDomain" />
+                            }
+                        </MudStack>
+                    }
+                </MudStack>
+                <MudStack AlignItems="AlignItems.End" Spacing="1">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        @service.RunningInstanceCount/@service.TotalInstanceCount 实例运行中
+                    </MudText>
+                    <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="() => HandleServiceDetailClick(service)">
+                        查看详情
+                    </MudButton>
+                </MudStack>
+            </MudStack>
+        </MudCardContent>
+    </MudCard>;
 
     private Color GetServiceStatusColor(ServiceStatus status)
     {

@@ -145,6 +145,24 @@ class DomainDependencyGraph extends GraphBase {
         window.addEventListener('resize', () => {
             this.handleResize();
         });
+        
+        // 添加背景点击事件处理
+        this.svg.on('click', (event) => {
+            // 只有当点击的是背景（svg本身）时才处理
+            if (event.target === this.svg.node()) {
+                this.handleBackgroundClick();
+            }
+        });
+    }
+    
+    /**
+     * 处理背景点击事件
+     */
+    handleBackgroundClick() {
+        // 如果有.NET回调对象，通知背景被点击
+        if (this.dotNetHelper && typeof this.dotNetHelper.invokeMethodAsync === 'function') {
+            this.dotNetHelper.invokeMethodAsync('OnSvgBackgroundClick');
+        }
     }
 
     updateData(data) {
@@ -282,7 +300,13 @@ class DomainDependencyGraph extends GraphBase {
                 this.hideTooltip();
             })
             .on('click', (event, d) => {
+                event.stopPropagation();
                 this.handleNodeClick(d);
+            })
+            .on('contextmenu', (event, d) => {
+                event.preventDefault();
+                event.stopPropagation();
+                this.handleNodeRightClick(d, event);
             });
     }
 
@@ -398,6 +422,25 @@ class DomainDependencyGraph extends GraphBase {
         // 如果有.NET回调对象，调用域详情显示方法
         if (this.dotNetHelper && typeof this.dotNetHelper.invokeMethodAsync === 'function') {
             this.dotNetHelper.invokeMethodAsync('OnDomainClickFromJS', node.id || node.name);
+        }
+    }
+    
+    /**
+     * 处理节点右键事件
+     * @param {Object} node - 被右键点击的节点数据
+     * @param {Event} event - 原始事件对象
+     */
+    handleNodeRightClick(node, event) {
+        // 隐藏工具提示
+        this.hideTooltip();
+        
+        // 如果有.NET回调对象，调用右键菜单显示方法
+        if (this.dotNetHelper && typeof this.dotNetHelper.invokeMethodAsync === 'function') {
+            // 获取相对于视口的坐标
+            const x = event.clientX;
+            const y = event.clientY;
+            
+            this.dotNetHelper.invokeMethodAsync('OnDomainRightClick', node.id || node.name, x, y);
         }
     }
 
