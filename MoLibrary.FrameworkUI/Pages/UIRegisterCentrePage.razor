@@ -2,6 +2,7 @@
 @using MoLibrary.FrameworkUI.UIRegisterCentre.Components
 @using MoLibrary.FrameworkUI.UIRegisterCentre.Services
 @using MoLibrary.RegisterCentre.Models
+@using MoLibrary.RegisterCentre.Interfaces
 @using MoLibrary.Tool.MoResponse
 @inject RegisterCentreService RegisterCentreService
 @inject ISnackbar Snackbar
@@ -61,6 +62,17 @@
         <MudTabPanel Text="子域依赖图" Icon="@Icons.Material.Filled.Hub">
             <DomainDependencyVisualization />
         </MudTabPanel>
+        
+        <MudTabPanel Text="子域管理" Icon="@Icons.Material.Filled.Domain">
+            @if (_selectedDomain == null)
+            {
+                <DomainList OnDomainSelected="OnDomainSelected" />
+            }
+            else
+            {
+                <DomainDetail DomainName="@_selectedDomain.Name" OnBackClick="OnBackToDomainList" OnServiceDetailClick="OnServiceDetailFromDomain" />
+            }
+        </MudTabPanel>
     </MudTabs>
 </MudContainer>
 
@@ -72,6 +84,7 @@
     private bool _autoRefreshEnabled = true;
     private int _refreshInterval = 3;
     private Timer? _refreshTimer;
+    private DomainInfo? _selectedDomain;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -164,6 +177,27 @@
         // - 打开服务详情对话框
         // - 切换到服务列表标签页并高亮该服务
         // - 显示服务的详细信息等
+        await Task.CompletedTask;
+    }
+    
+    private async Task OnDomainSelected(DomainInfo domain)
+    {
+        _selectedDomain = domain;
+        StateHasChanged();
+        await Task.CompletedTask;
+    }
+    
+    private async Task OnBackToDomainList()
+    {
+        _selectedDomain = null;
+        StateHasChanged();
+        await Task.CompletedTask;
+    }
+    
+    private async Task OnServiceDetailFromDomain(RegisteredServiceStatus service)
+    {
+        // 可以打开服务详情对话框或切换到服务列表标签页
+        Snackbar.Add($"查看服务详情: {service.AppName}", Severity.Info);
         await Task.CompletedTask;
     }
     
