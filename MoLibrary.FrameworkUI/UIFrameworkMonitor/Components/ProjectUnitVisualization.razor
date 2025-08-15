@@ -4,6 +4,7 @@
 @using Microsoft.JSInterop
 @using System.Linq
 @using static MoLibrary.FrameworkUI.UIFrameworkMonitor.Components.ProjectUnitLayoutPanel
+@using MoLibrary.UI.Components.ContextMenu
 @inject IFrameworkMonitorService FrameworkMonitorService
 @inject ISnackbar Snackbar
 @inject IJSRuntime JSRuntime
@@ -55,7 +56,7 @@
             @if (!string.IsNullOrEmpty(_relatedToNodeId))
             {
                 var relatedUnit = _allProjectUnits.FirstOrDefault(u => u.Key == _relatedToNodeId);
-                <MudAlert Severity="Severity.Info" Class="mb-2" CloseIconClicked="() => ClearRelatedFilter()">
+                <MudAlert Severity="Severity.Info" Class="mb-2" CloseIconClicked="ClearRelatedFilterClick">
                     正在显示与 <strong>@(relatedUnit?.Title ?? _relatedToNodeId)</strong> 连通的所有节点
                 </MudAlert>
             }
@@ -98,56 +99,15 @@
                          AllProjectUnits="_allProjectUnits"
                          OnNodeFocus="HandleNodeFocusFromDialog" />
 
-@* 右键菜单 - 使用固定定位在页面上 *@
-@if (_contextMenuOpen)
-{
-    @* 透明覆盖层，用于捕获点击事件来关闭菜单 *@
-    <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999;" @onclick="CloseContextMenu"></div>
-    
-    <div style="position: fixed; left: @(_contextMenuX)px; top: @(_contextMenuY)px; z-index: 10000;" @onclick:stopPropagation="true">
-        <MudPaper Elevation="8" Class="pa-0">
-            <MudList T="string" Dense="true" Clickable="true">
-                <MudListItem T="string" Icon="@Icons.Material.Filled.Info" OnClick="ShowContextDetails">
-                    查看详情
-                </MudListItem>
-                <MudListItem T="string" Icon="@Icons.Material.Filled.CenterFocusStrong" OnClick="FocusOnNode">
-                    聚焦此节点
-                </MudListItem>
-                <MudListItem T="string" Icon="@Icons.Material.Filled.FilterAlt" OnClick="FilterByType">
-                    筛选同类型
-                </MudListItem>
-                @if (!string.IsNullOrEmpty(_relatedToNodeId))
-                {
-                    @if (_relatedToNodeId == _contextMenuUnit?.Key)
-                    {
-                        <MudListItem T="string" Icon="@Icons.Material.Filled.Clear" OnClick="ClearRelatedFilter">
-                            取消连通节点筛选
-                        </MudListItem>
-                    }
-                    else
-                    {
-                        <MudListItem T="string" Icon="@Icons.Material.Filled.AccountTree" OnClick="ShowRelatedNodes">
-                            显示其他连通节点
-                        </MudListItem>
-                    }
-                }
-                else
-                {
-                    <MudListItem T="string" Icon="@Icons.Material.Filled.AccountTree" OnClick="ShowRelatedNodes">
-                        显示连通节点
-                    </MudListItem>
-                }
-                <MudListItem T="string" Icon="@Icons.Material.Filled.ClearAll" OnClick="ClearAllFilters">
-                    清除所有筛选
-                </MudListItem>
-                <MudDivider />
-                <MudListItem T="string" Icon="@Icons.Material.Filled.ContentCopy" OnClick="CopyFullName">
-                    复制完整名称
-                </MudListItem>
-            </MudList>
-        </MudPaper>
-    </div>
-}
+@* 右键菜单 *@
+<MoContextMenu TItem="DtoProjectUnit" 
+               Items="@_contextMenuItems" 
+               Visible="@_contextMenuOpen"
+               InitialX="@_contextMenuX" 
+               InitialY="@_contextMenuY"
+               ContextItem="@_contextMenuUnit"
+               OnItemClick="@OnContextMenuItemClick"
+               OnClose="@CloseContextMenu" />
 
 @code {
     private IJSObjectReference? _jsModule;
@@ -170,6 +130,7 @@
     private LayoutType _currentLayout = LayoutType.Force;
     private int _forceDistance = 300;
     private int _forceStrength = -300;
+    private List<ContextMenuItem<DtoProjectUnit>> _contextMenuItems = new();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -394,6 +355,7 @@
         {
             _contextMenuX = x;
             _contextMenuY = y;
+            _contextMenuItems = BuildContextMenuItems(_contextMenuUnit);
             _contextMenuOpen = true;
             StateHasChanged();
         }
@@ -424,20 +386,58 @@
         _contextMenuOpen = false;
     }
     
-    private void ShowContextDetails()
+    private List<ContextMenuItem<DtoProjectUnit>> BuildContextMenuItems(DtoProjectUnit unit)
     {
-        _selectedUnit = _contextMenuUnit;
-        _detailDialogVisible = true;
+        var builder = ContextMenuBuilder<DtoProjectUnit>.Create()
+            .AddItem("查看详情", Icons.Material.Filled.Info, ShowContextDetailsAsync)
+            .AddItem("聚焦此节点", Icons.Material.Filled.CenterFocusStrong, FocusOnNodeAsync)
+            .AddItem("筛选同类型", Icons.Material.Filled.FilterAlt, FilterByTypeAsync);
+
+        // 根据当前状态决定显示哪个连通节点选项
+        if (!string.IsNullOrEmpty(_relatedToNodeId))
+        {
+            if (_relatedToNodeId == unit.Key)
+            {
+                builder.AddItem("取消连通节点筛选", Icons.Material.Filled.Clear, ClearRelatedFilterAsync);
+            }
+            else
+            {
+                builder.AddItem("显示其他连通节点", Icons.Material.Filled.AccountTree, ShowRelatedNodesAsync);
+            }
+        }
+        else
+        {
+            builder.AddItem("显示连通节点", Icons.Material.Filled.AccountTree, ShowRelatedNodesAsync);
+        }
+
+        builder.AddItem("清除所有筛选", Icons.Material.Filled.ClearAll, ClearAllFiltersAsync)
+               .AddDivider()
+               .AddItem("复制完整名称", Icons.Material.Filled.ContentCopy, CopyFullNameAsync);
+
+        return builder.Build();
+    }
+    
+    private async Task OnContextMenuItemClick(ContextMenuItem<DtoProjectUnit> item)
+    {
+        // 菜单项点击事件由各自的OnClick处理函数处理
+        // 这里可以添加通用的处理逻辑，比如关闭菜单
         _contextMenuOpen = false;
+        StateHasChanged();
+    }
+    
+    private async Task ShowContextDetailsAsync(DtoProjectUnit? unit)
+    {
+        _selectedUnit = unit ?? _contextMenuUnit;
+        _detailDialogVisible = true;
     }
 
-    private async Task FocusOnNode()
+    private async Task FocusOnNodeAsync(DtoProjectUnit? unit)
     {
-        if (_jsModule != null && _contextMenuUnit != null)
+        var targetUnit = unit ?? _contextMenuUnit;
+        if (_jsModule != null && targetUnit != null)
         {
-            await _jsModule.InvokeVoidAsync("focusOnNode", _contextMenuUnit.Key);
+            await _jsModule.InvokeVoidAsync("focusOnNode", targetUnit.Key);
         }
-        _contextMenuOpen = false;
     }
 
     private async Task OnLayoutChanged(LayoutType layoutType)
@@ -446,18 +446,18 @@
         await SetLayout(layoutType);
     }
 
-    private async Task FilterByType()
+    private async Task FilterByTypeAsync(DtoProjectUnit? unit)
     {
-        if (_contextMenuUnit != null)
+        var targetUnit = unit ?? _contextMenuUnit;
+        if (targetUnit != null)
         {
-            _selectedUnitTypes = new HashSet<EProjectUnitType> { _contextMenuUnit.UnitType };
+            _selectedUnitTypes = new HashSet<EProjectUnitType> { targetUnit.UnitType };
             _showFilterPanel = true;
             await ApplyFilters();
         }
-        _contextMenuOpen = false;
     }
     
-    private async Task ClearAllFilters()
+    private async Task ClearAllFiltersAsync(DtoProjectUnit? unit)
     {
         _filterText = string.Empty;
         _selectedUnitTypes = new HashSet<EProjectUnitType>(
@@ -467,19 +467,40 @@
         _showOnlyWithAlerts = false;
         _relatedToNodeId = null;
         await ApplyFilters();
-        _contextMenuOpen = false;
     }
 
-    private async Task ShowRelatedNodes()
+    private async Task ShowRelatedNodesAsync(DtoProjectUnit? unit)
     {
-        if (_contextMenuUnit != null)
+        var targetUnit = unit ?? _contextMenuUnit;
+        if (targetUnit != null)
         {
-            _relatedToNodeId = _contextMenuUnit.Key;
+            _relatedToNodeId = targetUnit.Key;
             _showFilterPanel = true;
             await ApplyFilters();
-            Snackbar.Add($"显示与 {_contextMenuUnit.Title} 连通的所有节点", Severity.Info);
+            Snackbar.Add($"显示与 {targetUnit.Title} 连通的所有节点", Severity.Info);
         }
-        _contextMenuOpen = false;
+    }
+    
+    private async Task ClearRelatedFilterAsync(DtoProjectUnit? unit)
+    {
+        _relatedToNodeId = null;
+        await ApplyFilters();
+    }
+    
+    private async Task ClearRelatedFilterClick()
+    {
+        _relatedToNodeId = null;
+        await ApplyFilters();
+    }
+    
+    private async Task CopyFullNameAsync(DtoProjectUnit? unit)
+    {
+        var targetUnit = unit ?? _contextMenuUnit;
+        if (targetUnit != null)
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", targetUnit.Key);
+            Snackbar.Add("已复制到剪贴板", Severity.Success);
+        }
     }
     
     private HashSet<string> GetAllRelatedNodes(string nodeId)
@@ -525,22 +546,6 @@
         return related;
     }
 
-    private async Task ClearRelatedFilter()
-    {
-        _relatedToNodeId = null;
-        await ApplyFilters();
-        _contextMenuOpen = false;
-    }
-
-    private async Task CopyFullName()
-    {
-        if (_contextMenuUnit != null)
-        {
-            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", _contextMenuUnit.Key);
-            Snackbar.Add("已复制到剪贴板", Severity.Success);
-        }
-        _contextMenuOpen = false;
-    }
     
     private async Task HandleNodeFocusFromDialog(string nodeKey)
     {
