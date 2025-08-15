@@ -74,7 +74,7 @@
         </MudPaper>
         
         <MudPaper Class="mt-4 pa-2" Elevation="0" Outlined="true">
-            <MudGrid AlignItems="Center">
+            <MudGrid>
                 <MudItem xs="12" sm="6">
                     <MudText Typo="Typo.caption">
                         显示 @_filteredServices.Count / @_allServices.Count 个微服务
@@ -178,9 +178,7 @@
                 await AssignDomainColors();
                 
                 // 应用过滤
-                ApplyFilters();
-                
-                await UpdateGraph();
+                await ApplyFilters();
             }
             else
             {

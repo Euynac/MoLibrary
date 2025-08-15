@@ -74,7 +74,7 @@
         </MudPaper>
         
         <MudPaper Class="mt-4 pa-2" Elevation="0" Outlined="true">
-            <MudGrid AlignItems="Center">
+            <MudGrid>
                 <MudItem xs="12" sm="8">
                     <MudText Typo="Typo.caption">
                         显示 @_filteredDomains.Count / @_domains.Count 个子域，@_filteredDependencies.Count / @_dependencies.Count 个依赖关系
@@ -185,9 +185,7 @@
                 InitializeFilters();
                 
                 // 应用筛选
-                ApplyFilters();
-
-                await UpdateGraph();
+                await ApplyFilters();
             }
             else
             {

@@ -35,7 +35,7 @@
                     }
                     else if (_domainEvents.Any())
                     {
-                        <MudList T="string" Clickable="true">
+                        <MudList T="string">
                             @foreach (var eventItem in _domainEvents)
                             {
                                 <MudListItem T="string" OnClick="@(() => SelectEvent(eventItem))">
@@ -113,8 +113,6 @@
     private bool _publishing = false;
     private DtoDomainEventInfo? _selectedEvent;
     private string _eventContent = string.Empty;
-    private bool _structureDialogVisible = false;
-    private string? _selectedEventStructure;
 
     private readonly DialogOptions _dialogOptions = new()
     {
@@ -196,11 +194,6 @@
         }
     }
 
-    private void CloseStructureDialog()
-    {
-        _structureDialogVisible = false;
-        _selectedEventStructure = null;
-    }
 
     private int GetJsonLines()
     {
