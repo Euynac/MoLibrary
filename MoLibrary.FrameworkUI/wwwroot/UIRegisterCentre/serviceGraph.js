@@ -7,6 +7,8 @@
 
 import { GraphBase, getModernLinkStyle, getModernNodeStyle, focusOnPosition } from '../../MoLibrary.UI/js/d3js/d3-graph-base.js';
 import { ForceLayoutManager } from '../../MoLibrary.UI/js/d3js/d3-force-layout.js';
+import { createLayoutAlgorithms } from '../../MoLibrary.UI/js/d3js/d3-layout-algorithms.js';
+import { createStaticDragBehavior } from '../../MoLibrary.UI/js/d3js/d3-node-interaction.js';
 
 let graphInstance = null;
 
@@ -51,6 +53,36 @@ export function focusOnNode(nodeId) {
 }
 
 /**
+ * 设置布局类型
+ * @param {string} layoutType - 布局类型
+ */
+export function setLayout(layoutType) {
+    if (graphInstance) {
+        graphInstance.setLayout(layoutType);
+    }
+}
+
+/**
+ * 设置力导向距离
+ * @param {number} distance - 距离值
+ */
+export function setForceDistance(distance) {
+    if (graphInstance) {
+        graphInstance.setForceDistance(distance);
+    }
+}
+
+/**
+ * 设置力导向强度
+ * @param {number} strength - 强度值
+ */
+export function setForceStrength(strength) {
+    if (graphInstance) {
+        graphInstance.setForceStrength(strength);
+    }
+}
+
+/**
  * 销毁图表实例
  */
 export function dispose() {
@@ -76,6 +108,7 @@ class ServiceGraph extends GraphBase {
         this.linkElements = null;
         this.dotNetRef = options.dotNetRef;
         this.animations = new Map(); // 存储动画定时器
+        this.currentLayout = 'force';
         
         // 创建力导向布局管理器
         this.forceLayout = new ForceLayoutManager(this.width, this.height, {
@@ -83,6 +116,12 @@ class ServiceGraph extends GraphBase {
             chargeStrength: -500,
             collisionRadius: 50
         });
+
+        // 初始化布局算法管理器
+        this.layoutAlgorithms = createLayoutAlgorithms(this.width, this.height);
+        
+        // 静态布局拖拽行为
+        this.staticDragBehavior = null;
 
         // 创建图层
         this.createLayers();
@@ -486,6 +525,199 @@ class ServiceGraph extends GraphBase {
                 this.forceLayout.simulation.alpha(0.3).restart();
             }
         }
+    }
+
+    /**
+     * 设置布局
+     */
+    setLayout(layoutType) {
+        this.currentLayout = layoutType;
+        
+        // 移除之前的拖拽行为
+        if (this.nodeElements) {
+            this.nodeElements.on('.drag', null);
+        }
+        
+        switch (layoutType) {
+            case 'force':
+                this.applyForceLayout();
+                break;
+            case 'hierarchy':
+                this.applyHierarchyLayout();
+                break;
+            case 'circular':
+                this.applyCircularLayout();
+                break;
+            case 'grid':
+                this.applyGridLayout();
+                break;
+            default:
+                this.applyForceLayout();
+        }
+    }
+    
+    /**
+     * 应用力导向布局
+     */
+    applyForceLayout() {
+        // 释放所有固定节点
+        this.forceLayout.releaseAllFixed(this.nodes);
+        
+        // 设置数据
+        this.forceLayout.setData(this.nodes, this.links);
+        
+        // 应用拖拽行为
+        if (this.nodeElements) {
+            this.nodeElements.call(this.forceLayout.getDragBehavior());
+        }
+        
+        // 启动模拟
+        this.forceLayout.start(() => {
+            this.updatePositions();
+        });
+    }
+    
+    /**
+     * 应用层次布局
+     */
+    applyHierarchyLayout() {
+        this.forceLayout.stop();
+        
+        // 计算层次布局 - 微服务通常没有明确的层次关系，按域分层
+        this.layoutAlgorithms.hierarchicalLayout(this.nodes, this.links);
+        
+        // 应用静态拖拽
+        this.applyStaticDrag();
+        
+        // 更新位置
+        this.updateStaticPositions();
+    }
+    
+    /**
+     * 应用环形布局
+     */
+    applyCircularLayout() {
+        this.forceLayout.stop();
+        
+        // 计算环形布局
+        this.layoutAlgorithms.circularLayout(this.nodes, {
+            avgNodeSize: 60,
+            complexNodeCount: 0
+        });
+        
+        // 应用静态拖拽
+        this.applyStaticDrag();
+        
+        // 更新位置
+        this.updateStaticPositions();
+    }
+    
+    /**
+     * 应用网格布局
+     */
+    applyGridLayout() {
+        this.forceLayout.stop();
+        
+        // 计算网格布局
+        this.layoutAlgorithms.gridLayout(this.nodes, {
+            padding: 50,
+            nodeSpacing: 120
+        });
+        
+        // 应用静态拖拽
+        this.applyStaticDrag();
+        
+        // 更新位置
+        this.updateStaticPositions();
+    }
+    
+    /**
+     * 应用静态拖拽
+     */
+    applyStaticDrag() {
+        const self = this;
+        
+        this.staticDragBehavior = createStaticDragBehavior({
+            updateLinks: (draggedNode) => {
+                // 微服务图目前没有连接线，但为了兼容性保留此方法
+                if (self.linkElements) {
+                    self.linkElements
+                        .attr('x1', d => {
+                            const sourceId = d.source.id || d.source;
+                            return sourceId === draggedNode.id ? draggedNode.x : 
+                                   self.nodes.find(n => n.id === sourceId)?.x || 0;
+                        })
+                        .attr('y1', d => {
+                            const sourceId = d.source.id || d.source;
+                            return sourceId === draggedNode.id ? draggedNode.y : 
+                                   self.nodes.find(n => n.id === sourceId)?.y || 0;
+                        })
+                        .attr('x2', d => {
+                            const targetId = d.target.id || d.target;
+                            return targetId === draggedNode.id ? draggedNode.x : 
+                                   self.nodes.find(n => n.id === targetId)?.x || 0;
+                        })
+                        .attr('y2', d => {
+                            const targetId = d.target.id || d.target;
+                            return targetId === draggedNode.id ? draggedNode.y : 
+                                   self.nodes.find(n => n.id === targetId)?.y || 0;
+                        });
+                }
+            }
+        });
+        
+        if (this.nodeElements) {
+            this.nodeElements.call(this.staticDragBehavior);
+        }
+    }
+    
+    /**
+     * 更新静态位置
+     */
+    updateStaticPositions() {
+        if (this.nodeElements) {
+            this.nodeElements
+                .transition()
+                .duration(750)
+                .attr('transform', d => `translate(${d.x},${d.y})`);
+        }
+        
+        // 微服务图目前没有连接线，但为了兼容性保留此方法
+        if (this.linkElements) {
+            this.linkElements
+                .transition()
+                .duration(750)
+                .attr('x1', d => {
+                    const source = this.nodes.find(n => n.id === (d.source.id || d.source));
+                    return source ? source.x : 0;
+                })
+                .attr('y1', d => {
+                    const source = this.nodes.find(n => n.id === (d.source.id || d.source));
+                    return source ? source.y : 0;
+                })
+                .attr('x2', d => {
+                    const target = this.nodes.find(n => n.id === (d.target.id || d.target));
+                    return target ? target.x : 0;
+                })
+                .attr('y2', d => {
+                    const target = this.nodes.find(n => n.id === (d.target.id || d.target));
+                    return target ? target.y : 0;
+                });
+        }
+    }
+    
+    /**
+     * 设置力导向距离
+     */
+    setForceDistance(distance) {
+        this.forceLayout.updateLinkDistance(distance);
+    }
+    
+    /**
+     * 设置力导向强度
+     */
+    setForceStrength(strength) {
+        this.forceLayout.updateChargeStrength(strength);
     }
 
     dispose() {

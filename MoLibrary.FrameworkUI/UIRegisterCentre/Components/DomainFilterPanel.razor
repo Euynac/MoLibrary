@@ -1,0 +1,134 @@
+@using MoLibrary.RegisterCentre.Models
+@using MoLibrary.RegisterCentre.Interfaces
+@using System.Linq
+
+<MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+    <MudGrid>
+        <MudItem xs="12" sm="6" md="4">
+            <MudTextField @bind-Value="FilterText"
+                          Label="搜索域"
+                          HelperText="支持搜索：域名、显示名称、描述"
+                          Variant="Variant.Outlined"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          Immediate="true"
+                          DebounceInterval="300"
+                          OnDebounceIntervalElapsed="OnFilterTextChanged" />
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <MudText Typo="Typo.subtitle2" Class="mb-2">域筛选:</MudText>
+            <div class="d-flex flex-wrap gap-1 mb-2">
+                <MudButton Size="Size.Small" 
+                           Variant="Variant.Text" 
+                           Color="Color.Primary"
+                           OnClick="SelectAllDomains">
+                    全选
+                </MudButton>
+                <MudButton Size="Size.Small" 
+                           Variant="Variant.Text" 
+                           Color="Color.Secondary"
+                           OnClick="ClearAllDomains">
+                    清除
+                </MudButton>
+            </div>
+            <MudChipSet T="string" 
+                        SelectionMode="SelectionMode.MultiSelection"
+                        SelectedValues="SelectedDomains"
+                        SelectedValuesChanged="OnSelectedDomainsChanged">
+                @foreach (var domain in AllDomainNames)
+                {
+                    var isSelected = SelectedDomains.Contains(domain);
+                    <MudChip T="string" 
+                             Value="domain"
+                             Color="@(isSelected ? Color.Info : Color.Default)"
+                             Size="Size.Small">
+                        @domain
+                    </MudChip>
+                }
+            </MudChipSet>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="2">
+            <MudStack>
+                <MudSwitch T="bool" Value="ShowOnlyWithServices"
+                           ValueChanged="OnShowOnlyWithServicesChanged"
+                           Label="仅显示有服务"
+                           Color="Color.Primary" />
+                <MudSwitch T="bool" Value="ShowOnlyWithDependencies"
+                           ValueChanged="OnShowOnlyWithDependenciesChanged"
+                           Label="仅显示有依赖"
+                           Color="Color.Warning" />
+            </MudStack>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@code {
+    [Parameter] public string FilterText { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> FilterTextChanged { get; set; }
+    
+    [Parameter] public IReadOnlyCollection<string> SelectedDomains { get; set; } = new HashSet<string>();
+    [Parameter] public EventCallback<IReadOnlyCollection<string>> SelectedDomainsChanged { get; set; }
+    
+    [Parameter] public bool ShowOnlyWithServices { get; set; }
+    [Parameter] public EventCallback<bool> ShowOnlyWithServicesChanged { get; set; }
+    
+    [Parameter] public bool ShowOnlyWithDependencies { get; set; }
+    [Parameter] public EventCallback<bool> ShowOnlyWithDependenciesChanged { get; set; }
+    
+    [Parameter] public EventCallback OnFiltersChanged { get; set; }
+    [Parameter] public List<DomainInfo> AllDomains { get; set; } = new();
+    
+    private List<string> AllDomainNames { get; set; } = new();
+    
+    protected override void OnParametersSet()
+    {
+        // 获取所有域名
+        AllDomainNames = AllDomains.Select(d => d.Name).OrderBy(n => n).ToList();
+        
+        // 默认全选
+        if (!SelectedDomains.Any())
+        {
+            var allDomains = new HashSet<string>(AllDomainNames);
+            SelectedDomains = allDomains;
+            SelectedDomainsChanged.InvokeAsync(allDomains);
+        }
+    }
+    
+    private async Task OnFilterTextChanged()
+    {
+        await FilterTextChanged.InvokeAsync(FilterText);
+        await OnFiltersChanged.InvokeAsync();
+    }
+    
+    private async Task OnSelectedDomainsChanged(IReadOnlyCollection<string> values)
+    {
+        SelectedDomains = values;
+        await SelectedDomainsChanged.InvokeAsync(values);
+        await OnFiltersChanged.InvokeAsync();
+    }
+    
+    private async Task SelectAllDomains()
+    {
+        var allDomains = new HashSet<string>(AllDomainNames);
+        await OnSelectedDomainsChanged(allDomains);
+    }
+    
+    private async Task ClearAllDomains()
+    {
+        await OnSelectedDomainsChanged(new HashSet<string>());
+    }
+    
+    private async Task OnShowOnlyWithServicesChanged(bool value)
+    {
+        ShowOnlyWithServices = value;
+        await ShowOnlyWithServicesChanged.InvokeAsync(value);
+        await OnFiltersChanged.InvokeAsync();
+    }
+    
+    private async Task OnShowOnlyWithDependenciesChanged(bool value)
+    {
+        ShowOnlyWithDependencies = value;
+        await ShowOnlyWithDependenciesChanged.InvokeAsync(value);
+        await OnFiltersChanged.InvokeAsync();
+    }
+}

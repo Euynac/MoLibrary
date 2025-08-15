@@ -1,0 +1,208 @@
+@using MoLibrary.RegisterCentre.Models
+@using System.Linq
+
+<MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+    <MudGrid>
+        <MudItem xs="12" sm="6" md="4">
+            <MudTextField @bind-Value="FilterText"
+                          Label="搜索微服务"
+                          HelperText="支持搜索：服务名、AppId、项目名、域名"
+                          Variant="Variant.Outlined"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          Immediate="true"
+                          DebounceInterval="300"
+                          OnDebounceIntervalElapsed="OnFilterTextChanged" />
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudText Typo="Typo.subtitle2" Class="mb-2">服务状态筛选:</MudText>
+            <div class="d-flex flex-wrap gap-1 mb-2">
+                <MudButton Size="Size.Small" 
+                           Variant="Variant.Text" 
+                           Color="Color.Primary"
+                           OnClick="SelectAllStatuses">
+                    全选
+                </MudButton>
+                <MudButton Size="Size.Small" 
+                           Variant="Variant.Text" 
+                           Color="Color.Secondary"
+                           OnClick="ClearAllStatuses">
+                    清除
+                </MudButton>
+            </div>
+            <MudChipSet T="ServiceStatus" 
+                        SelectionMode="SelectionMode.MultiSelection"
+                        SelectedValues="SelectedStatuses"
+                        SelectedValuesChanged="OnSelectedStatusesChanged">
+                @foreach (var status in AllStatuses)
+                {
+                    var color = GetStatusColor(status);
+                    var isSelected = SelectedStatuses.Contains(status);
+                    <MudChip T="ServiceStatus" 
+                             Value="status"
+                             Style="@(isSelected 
+                                 ? $"background-color: {color}; border-color: {color}; color: white" 
+                                 : $"background-color: {color}20; border-color: {color}; color: {color}")"
+                             Size="Size.Small">
+                        @GetStatusText(status)
+                    </MudChip>
+                }
+            </MudChipSet>
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudText Typo="Typo.subtitle2" Class="mb-2">域筛选:</MudText>
+            <div class="d-flex flex-wrap gap-1 mb-2">
+                <MudButton Size="Size.Small" 
+                           Variant="Variant.Text" 
+                           Color="Color.Primary"
+                           OnClick="SelectAllDomains">
+                    全选
+                </MudButton>
+                <MudButton Size="Size.Small" 
+                           Variant="Variant.Text" 
+                           Color="Color.Secondary"
+                           OnClick="ClearAllDomains">
+                    清除
+                </MudButton>
+            </div>
+            <MudChipSet T="string" 
+                        SelectionMode="SelectionMode.MultiSelection"
+                        SelectedValues="SelectedDomains"
+                        SelectedValuesChanged="OnSelectedDomainsChanged">
+                @foreach (var domain in AllDomains)
+                {
+                    var isSelected = SelectedDomains.Contains(domain);
+                    <MudChip T="string" 
+                             Value="domain"
+                             Color="@(isSelected ? Color.Info : Color.Default)"
+                             Size="Size.Small">
+                        @domain
+                    </MudChip>
+                }
+            </MudChipSet>
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudSwitch T="bool" Value="ShowOnlyWithInstances"
+                       ValueChanged="OnShowOnlyWithInstancesChanged"
+                       Label="仅显示有实例的服务"
+                       Color="Color.Primary" />
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@code {
+    [Parameter] public string FilterText { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> FilterTextChanged { get; set; }
+    
+    [Parameter] public IReadOnlyCollection<ServiceStatus> SelectedStatuses { get; set; } = new HashSet<ServiceStatus>();
+    [Parameter] public EventCallback<IReadOnlyCollection<ServiceStatus>> SelectedStatusesChanged { get; set; }
+    
+    [Parameter] public IReadOnlyCollection<string> SelectedDomains { get; set; } = new HashSet<string>();
+    [Parameter] public EventCallback<IReadOnlyCollection<string>> SelectedDomainsChanged { get; set; }
+    
+    [Parameter] public bool ShowOnlyWithInstances { get; set; }
+    [Parameter] public EventCallback<bool> ShowOnlyWithInstancesChanged { get; set; }
+    
+    [Parameter] public EventCallback OnFiltersChanged { get; set; }
+    [Parameter] public List<RegisteredServiceStatus> AllServices { get; set; } = new();
+    
+    private List<ServiceStatus> AllStatuses { get; set; } = new();
+    private List<string> AllDomains { get; set; } = new();
+    
+    protected override void OnParametersSet()
+    {
+        // 获取所有状态
+        AllStatuses = Enum.GetValues<ServiceStatus>().ToList();
+        
+        // 获取所有域
+        AllDomains = AllServices.Select(s => s.DomainName ?? "未知").Distinct().OrderBy(d => d).ToList();
+        
+        // 默认全选
+        if (!SelectedStatuses.Any())
+        {
+            var allStatuses = new HashSet<ServiceStatus>(AllStatuses);
+            SelectedStatuses = allStatuses;
+            SelectedStatusesChanged.InvokeAsync(allStatuses);
+        }
+        
+        if (!SelectedDomains.Any())
+        {
+            var allDomains = new HashSet<string>(AllDomains);
+            SelectedDomains = allDomains;
+            SelectedDomainsChanged.InvokeAsync(allDomains);
+        }
+    }
+    
+    private async Task OnFilterTextChanged()
+    {
+        await FilterTextChanged.InvokeAsync(FilterText);
+        await OnFiltersChanged.InvokeAsync();
+    }
+    
+    private async Task OnSelectedStatusesChanged(IReadOnlyCollection<ServiceStatus> values)
+    {
+        SelectedStatuses = values;
+        await SelectedStatusesChanged.InvokeAsync(values);
+        await OnFiltersChanged.InvokeAsync();
+    }
+    
+    private async Task OnSelectedDomainsChanged(IReadOnlyCollection<string> values)
+    {
+        SelectedDomains = values;
+        await SelectedDomainsChanged.InvokeAsync(values);
+        await OnFiltersChanged.InvokeAsync();
+    }
+    
+    private async Task SelectAllStatuses()
+    {
+        var allStatuses = new HashSet<ServiceStatus>(AllStatuses);
+        await OnSelectedStatusesChanged(allStatuses);
+    }
+    
+    private async Task ClearAllStatuses()
+    {
+        await OnSelectedStatusesChanged(new HashSet<ServiceStatus>());
+    }
+    
+    private async Task SelectAllDomains()
+    {
+        var allDomains = new HashSet<string>(AllDomains);
+        await OnSelectedDomainsChanged(allDomains);
+    }
+    
+    private async Task ClearAllDomains()
+    {
+        await OnSelectedDomainsChanged(new HashSet<string>());
+    }
+    
+    private async Task OnShowOnlyWithInstancesChanged(bool value)
+    {
+        ShowOnlyWithInstances = value;
+        await ShowOnlyWithInstancesChanged.InvokeAsync(value);
+        await OnFiltersChanged.InvokeAsync();
+    }
+    
+    private string GetStatusColor(ServiceStatus status)
+    {
+        return status switch
+        {
+            ServiceStatus.Running => "#4caf50",
+            ServiceStatus.Error => "#f44336",
+            ServiceStatus.Updating => "#ff9800",
+            ServiceStatus.Offline => "#9e9e9e",
+            _ => "#757575"
+        };
+    }
+    
+    private string GetStatusText(ServiceStatus status)
+    {
+        return status switch
+        {
+            ServiceStatus.Running => "运行中",
+            ServiceStatus.Error => "错误",
+            ServiceStatus.Updating => "更新中",
+            ServiceStatus.Offline => "离线",
+            _ => "未知"
+        };
+    }
+}
