@@ -69,7 +69,7 @@
         if (firstRender)
         {
             _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", 
-                "./_content/MoLibrary.FrameworkUI/UIRegisterCentre/Components/domainDependencyGraph.js");
+                "./_content/MoLibrary.FrameworkUI/UIRegisterCentre/domainDependencyGraph.js");
             
             await InitializeGraph();
             await LoadDomainDataAsync();

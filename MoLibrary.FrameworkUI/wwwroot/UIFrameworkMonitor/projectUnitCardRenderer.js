@@ -5,7 +5,7 @@
  * @module projectUnitCardRenderer
  */
 
-import { getModernNodeStyle } from '../../../MoLibrary.UI/js/d3js/d3-graph-base.js';
+import { getModernNodeStyle } from '../../MoLibrary.UI/js/d3js/d3-graph-base.js';
 
 /**
  * 项目单元卡片渲染器类
