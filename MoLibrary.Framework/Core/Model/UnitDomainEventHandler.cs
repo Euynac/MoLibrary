@@ -51,7 +51,15 @@ public class UnitDomainEventHandler(Type type) : ProjectUnit(type, EProjectUnitT
     {
         if (!ProjectUnitStores.ProjectUnitsByFullName.TryGetValue(EventType.FullName!, out var eventUnit))
         {
-            Logger.LogWarning($"{this}无法关联其领域事件基类{EventType.FullName}，可能未继承{nameof(MoDomainEvent)}");
+            var alertMessage = $"{this}无法关联其领域事件基类{EventType.GetCleanFullName()}，可能未继承{nameof(MoDomainEvent)}";
+            // 添加警告级别告警
+            Alerts.Add(new ProjectUnitAlert
+            {
+                Level = EAlertLevel.Warning,
+                Message = alertMessage,
+                Source = "EventTypeAssociation"
+            });
+            Logger.LogWarning(alertMessage);
             return;
         }
 

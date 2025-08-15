@@ -55,7 +55,15 @@ public class UnitRepository(Type type) : ProjectUnit(type, EProjectUnitType.Repo
     {
         if(!ProjectUnitStores.ProjectUnitsByFullName.TryGetValue(EntityType.FullName!, out var entityUnit))
         {
-            Logger.LogWarning($"{this}无法关联其实体{EntityType.FullName},可能未继承{nameof(MoEntity)}相关基类");
+            var alertMessage = $"{this}无法关联其实体{EntityType.GetCleanFullName()},可能未继承{nameof(MoEntity)}相关基类";
+            // 添加警告级别告警
+            Alerts.Add(new ProjectUnitAlert
+            {
+                Level = EAlertLevel.Warning,
+                Message = alertMessage,
+                Source = "EntityTypeAssociation"
+            });
+            Logger.LogWarning(alertMessage);
             return;
         }
 
