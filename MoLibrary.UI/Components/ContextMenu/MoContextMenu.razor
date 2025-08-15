@@ -58,16 +58,18 @@
 <!-- 子菜单 -->
 @if (_subMenuVisible && _hoveredItem?.HasSubMenu == true && _hoveredItem.SubItems?.Any() == true)
 {
-    <MoContextMenu TItem="TItem" 
-                   Items="@_hoveredItem.SubItems" 
-                   Visible="_subMenuVisible"
-                   InitialX="_subMenuX" 
-                   InitialY="_subMenuY"
-                   ZIndex="@(ZIndex + 1)"
-                   ContextItem="@ContextItem"
-                   IsRootMenu="false"
-                   OnItemClick="@OnSubItemClick"
-                   OnClose="@OnSubMenuClose" />
+    <div @onmouseenter="@OnSubMenuMouseEnter" @onmouseleave="@OnSubMenuMouseLeave">
+        <MoContextMenu TItem="TItem" 
+                       Items="@_hoveredItem.SubItems" 
+                       Visible="_subMenuVisible"
+                       InitialX="_subMenuX" 
+                       InitialY="_subMenuY"
+                       ZIndex="@(ZIndex + 1)"
+                       ContextItem="@ContextItem"
+                       IsRootMenu="false"
+                       OnItemClick="@OnSubItemClick"
+                       OnClose="@OnSubMenuClose" />
+    </div>
 }
 
 <!-- 只有根菜单才渲染透明遮罩 -->
@@ -195,7 +197,7 @@
         
         if (item.HasSubMenu)
         {
-            // 延迟隐藏子菜单
+            // 延迟隐藏子菜单，给用户时间移动到子菜单
             _hideSubMenuTimer = new Timer(_ => 
             {
                 InvokeAsync(() => 
@@ -203,7 +205,7 @@
                     _subMenuVisible = false;
                     StateHasChanged();
                 });
-            }, null, 200, Timeout.Infinite);
+            }, null, 300, Timeout.Infinite);
         }
     }
     
@@ -212,8 +214,20 @@
         if (item.HasSubMenu && item.SubItems?.Any() == true)
         {
             // 计算子菜单位置
-            _subMenuX = _x + _menuWidth;
-            _subMenuY = _y + e.OffsetY - 10;
+            _subMenuX = _x + _menuWidth + 1;
+            
+            // 计算当前项目在菜单中的索引位置
+            var itemIndex = Items.Where(i => !i.IsDivider).ToList().IndexOf(item);
+            if (itemIndex >= 0)
+            {
+                // 每个菜单项高度约40px，分割线12px，顶部padding 8px
+                var dividersBefore = Items.Take(Items.IndexOf(item)).Count(i => i.IsDivider);
+                _subMenuY = _y + 8 + (itemIndex * 40) + (dividersBefore * 12);
+            }
+            else
+            {
+                _subMenuY = _y + e.OffsetY - 10;
+            }
             
             _subMenuVisible = true;
             StateHasChanged();
@@ -287,6 +301,25 @@
     {
         public int Width { get; set; }
         public int Height { get; set; }
+    }
+    
+    private void OnSubMenuMouseEnter()
+    {
+        // 取消隐藏子菜单的定时器
+        _hideSubMenuTimer?.Dispose();
+    }
+    
+    private void OnSubMenuMouseLeave()
+    {
+        // 当离开子菜单区域时，延迟隐藏
+        _hideSubMenuTimer = new Timer(_ => 
+        {
+            InvokeAsync(() => 
+            {
+                _subMenuVisible = false;
+                StateHasChanged();
+            });
+        }, null, 200, Timeout.Infinite);
     }
     
     public void Dispose()
