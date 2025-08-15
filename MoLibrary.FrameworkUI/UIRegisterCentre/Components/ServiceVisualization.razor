@@ -2,6 +2,7 @@
 @using MoLibrary.RegisterCentre.Interfaces
 @using MoLibrary.RegisterCentre.Models
 @using MoLibrary.FrameworkUI.UIRegisterCentre.Services
+@using MoLibrary.FrameworkUI.UIRegisterCentre.Models
 @using MoLibrary.Tool.MoResponse
 @using Microsoft.JSInterop
 @inject RegisterCentreService RegisterCentreService
@@ -28,11 +29,39 @@
                                OnClick="ResetView"
                                Disabled="@_loading" />
             </MudTooltip>
-            <MudSwitch T="bool" @bind-Value="_showOfflineServices" @bind-Value:after="UpdateGraph" 
-                       Color="Color.Primary" Label="显示离线服务" />
+            <MudTooltip Text="布局设置">
+                <MudIconButton Icon="@Icons.Material.Filled.Dashboard"
+                               Color="Color.Info"
+                               OnClick="ToggleLayoutPanel" />
+            </MudTooltip>
+            <MudTooltip Text="筛选设置">
+                <MudIconButton Icon="@Icons.Material.Filled.FilterAlt"
+                               Color="Color.Tertiary"
+                               OnClick="ToggleFilterPanel" />
+            </MudTooltip>
         </CardHeaderActions>
     </MudCardHeader>
     <MudCardContent>
+        @if (_showLayoutPanel)
+        {
+            <ServiceLayoutPanel CurrentLayout="_currentLayout"
+                                ForceDistance="_forceDistance"
+                                ForceStrength="_forceStrength"
+                                CurrentLayoutChanged="OnLayoutChanged"
+                                ForceDistanceChanged="OnForceDistanceChanged"
+                                ForceStrengthChanged="OnForceStrengthChanged" />
+        }
+        
+        @if (_showFilterPanel)
+        {
+            <ServiceFilterPanel @bind-FilterText="_filterText"
+                                @bind-SelectedStatuses="_selectedStatuses"
+                                @bind-SelectedDomains="_selectedDomains"
+                                @bind-ShowOnlyWithInstances="_showOnlyWithInstances"
+                                OnFiltersChanged="ApplyFilters"
+                                AllServices="_allServices" />
+        }
+
         <MudPaper Class="visualization-container" Style="position: relative; height: 600px; overflow: hidden;">
             @if (_loading)
             {
@@ -74,6 +103,19 @@
     private Dictionary<string, string> _domainColors = new();
     private bool _loading = false;
     private bool _showOfflineServices = true;
+    
+    // 筛选相关字段
+    private bool _showFilterPanel = false;
+    private bool _showLayoutPanel = false;
+    private string _filterText = string.Empty;
+    private IReadOnlyCollection<ServiceStatus> _selectedStatuses = new HashSet<ServiceStatus>();
+    private IReadOnlyCollection<string> _selectedDomains = new HashSet<string>();
+    private bool _showOnlyWithInstances = false;
+    
+    // 布局相关字段
+    private ServiceLayoutType _currentLayout = ServiceLayoutType.Force;
+    private int _forceDistance = 150;
+    private int _forceStrength = -500;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -110,6 +152,9 @@
             if (!(await RegisterCentreService.GetMergedServicesStatusAsync()).IsFailed(out var error, out var services))
             {
                 _allServices = services ?? new List<RegisteredServiceStatus>();
+                
+                // 初始化筛选状态
+                InitializeFilters();
                 
                 // 获取域信息并分配颜色
                 await AssignDomainColors();
@@ -159,24 +204,129 @@
         }
     }
 
-    private void ApplyFilters()
+    private void InitializeFilters()
+    {
+        // 初始化选择的状态
+        if (!_selectedStatuses.Any())
+        {
+            _selectedStatuses = new HashSet<ServiceStatus>(
+                Enum.GetValues<ServiceStatus>()
+            );
+        }
+        
+        // 初始化选择的域
+        if (!_selectedDomains.Any())
+        {
+            var allDomains = _allServices.Select(s => s.DomainName ?? "未知").Distinct().ToList();
+            _selectedDomains = new HashSet<string>(allDomains);
+        }
+    }
+    
+    private void ToggleFilterPanel()
+    {
+        _showFilterPanel = !_showFilterPanel;
+        if (_showFilterPanel) _showLayoutPanel = false;
+    }
+    
+    private void ToggleLayoutPanel()
+    {
+        _showLayoutPanel = !_showLayoutPanel;
+        if (_showLayoutPanel) _showFilterPanel = false;
+    }
+
+    private async Task ApplyFilters()
     {
         _filteredServices = _allServices.Where(service =>
         {
+            // 状态筛选
+            if (!_selectedStatuses.Contains(service.OverallStatus))
+                return false;
+                
+            // 域筛选
+            var serviceDomain = service.DomainName ?? "未知";
+            if (!_selectedDomains.Contains(serviceDomain))
+                return false;
+                
+            // 文本筛选
+            if (!string.IsNullOrWhiteSpace(_filterText))
+            {
+                var matchesText = service.AppName.Contains(_filterText, StringComparison.OrdinalIgnoreCase) ||
+                                  service.AppId.Contains(_filterText, StringComparison.OrdinalIgnoreCase) ||
+                                  (!string.IsNullOrEmpty(service.ProjectName) && service.ProjectName.Contains(_filterText, StringComparison.OrdinalIgnoreCase)) ||
+                                  serviceDomain.Contains(_filterText, StringComparison.OrdinalIgnoreCase);
+                
+                if (!matchesText)
+                    return false;
+            }
+            
+            // 实例筛选
+            if (_showOnlyWithInstances && service.TotalInstanceCount == 0)
+                return false;
+            
+            // 兼容原有的离线服务筛选
             if (!_showOfflineServices && service.OverallStatus == ServiceStatus.Offline)
                 return false;
             
             return true;
         }).ToList();
+        
+        await UpdateGraph();
     }
 
     private async Task UpdateGraph()
     {
         if (_jsModule != null)
         {
-            ApplyFilters();
             var graphData = PrepareGraphData();
             await _jsModule.InvokeVoidAsync("updateGraph", graphData);
+            
+            // 应用当前布局设置
+            await SetLayout(_currentLayout);
+            if (_currentLayout == ServiceLayoutType.Force)
+            {
+                await _jsModule.InvokeVoidAsync("setForceDistance", _forceDistance);
+                await _jsModule.InvokeVoidAsync("setForceStrength", _forceStrength);
+            }
+        }
+    }
+    
+    private async Task SetLayout(ServiceLayoutType layoutType)
+    {
+        _currentLayout = layoutType;
+        if (_jsModule != null)
+        {
+            var layoutName = layoutType switch
+            {
+                ServiceLayoutType.Force => "force",
+                ServiceLayoutType.Hierarchy => "hierarchy", 
+                ServiceLayoutType.Circular => "circular",
+                ServiceLayoutType.Grid => "grid",
+                _ => "force"
+            };
+            await _jsModule.InvokeVoidAsync("setLayout", layoutName);
+        }
+    }
+    
+    private async Task OnLayoutChanged(ServiceLayoutType layoutType)
+    {
+        await SetLayout(layoutType);
+    }
+    
+    private async Task OnForceDistanceChanged(int value)
+    {
+        _forceDistance = value;
+        if (_jsModule != null)
+        {
+            await _jsModule.InvokeVoidAsync("setForceDistance", value);
+        }
+    }
+    
+    private async Task OnForceStrengthChanged(int value)
+    {
+        _forceStrength = value;
+        if (_jsModule != null)
+        {
+            await _jsModule.InvokeVoidAsync("setForceStrength", value);
         }
     }
 

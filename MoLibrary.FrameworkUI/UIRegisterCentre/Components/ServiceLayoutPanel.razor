@@ -1,0 +1,73 @@
+@using MoLibrary.FrameworkUI.UIRegisterCentre.Models
+
+<MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+    <MudGrid>
+        <MudItem xs="12" sm="6" md="4">
+            <MudText Typo="Typo.subtitle2" Class="mb-2">布局类型</MudText>
+            <MudButtonGroup Color="Color.Primary" Variant="Variant.Outlined">
+                <MudButton OnClick="@(() => SetLayout(ServiceLayoutType.Force))" 
+                           Variant="@(CurrentLayout == ServiceLayoutType.Force ? Variant.Filled : Variant.Outlined)">
+                    力导向
+                </MudButton>
+                <MudButton OnClick="@(() => SetLayout(ServiceLayoutType.Hierarchy))" 
+                           Variant="@(CurrentLayout == ServiceLayoutType.Hierarchy ? Variant.Filled : Variant.Outlined)">
+                    层次
+                </MudButton>
+                <MudButton OnClick="@(() => SetLayout(ServiceLayoutType.Circular))" 
+                           Variant="@(CurrentLayout == ServiceLayoutType.Circular ? Variant.Filled : Variant.Outlined)">
+                    环形
+                </MudButton>
+                <MudButton OnClick="@(() => SetLayout(ServiceLayoutType.Grid))" 
+                           Variant="@(CurrentLayout == ServiceLayoutType.Grid ? Variant.Filled : Variant.Outlined)">
+                    网格
+                </MudButton>
+            </MudButtonGroup>
+        </MudItem>
+        @if (CurrentLayout == ServiceLayoutType.Force)
+        {
+            <MudItem xs="12" sm="6" md="3">
+                <MudText Typo="Typo.subtitle2" Class="mb-2">节点间距: @ForceDistance</MudText>
+                <MudSlider T="int" Value="@ForceDistance" 
+                           ValueChanged="@OnForceDistanceChanged"
+                           Min="50" Max="500" Step="10"
+                           Color="Color.Primary" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudText Typo="Typo.subtitle2" Class="mb-2">斥力强度: @ForceStrength</MudText>
+                <MudSlider T="int" Value="@ForceStrength" 
+                           ValueChanged="@OnForceStrengthChanged"
+                           Min="-1000" Max="-100" Step="50"
+                           Color="Color.Secondary" />
+            </MudItem>
+        }
+    </MudGrid>
+</MudPaper>
+
+@code {
+    [Parameter] public ServiceLayoutType CurrentLayout { get; set; } = ServiceLayoutType.Force;
+    [Parameter] public EventCallback<ServiceLayoutType> CurrentLayoutChanged { get; set; }
+    
+    [Parameter] public int ForceDistance { get; set; } = 150;
+    [Parameter] public EventCallback<int> ForceDistanceChanged { get; set; }
+    
+    [Parameter] public int ForceStrength { get; set; } = -500;
+    [Parameter] public EventCallback<int> ForceStrengthChanged { get; set; }
+    
+    private async Task SetLayout(ServiceLayoutType layoutType)
+    {
+        CurrentLayout = layoutType;
+        await CurrentLayoutChanged.InvokeAsync(layoutType);
+    }
+    
+    private async Task OnForceDistanceChanged(int value)
+    {
+        ForceDistance = value;
+        await ForceDistanceChanged.InvokeAsync(value);
+    }
+    
+    private async Task OnForceStrengthChanged(int value)
+    {
+        ForceStrength = value;
+        await ForceStrengthChanged.InvokeAsync(value);
+    }
+}

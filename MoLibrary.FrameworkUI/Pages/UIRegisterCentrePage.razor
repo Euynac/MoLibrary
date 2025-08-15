@@ -6,6 +6,7 @@
 @using MoLibrary.Tool.MoResponse
 @inject RegisterCentreService RegisterCentreService
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 @implements IDisposable
 
 <MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
@@ -171,14 +172,21 @@
     
     private async Task OnServiceClickFromVisualization(RegisteredServiceStatus service)
     {
-        // 当从可视化图表点击服务时，可以显示详情或执行其他操作
-        Snackbar.Add($"选中服务: {service.AppName}", Severity.Info);
-        
-        // 这里可以添加更多交互逻辑，比如：
-        // - 打开服务详情对话框
-        // - 切换到服务列表标签页并高亮该服务
-        // - 显示服务的详细信息等
-        await Task.CompletedTask;
+        // 使用现有的服务详情对话框组件
+        var parameters = new DialogParameters
+        {
+            ["Service"] = service
+        };
+
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            Position = DialogPosition.Center,
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true
+        };
+
+        await DialogService.ShowAsync<RegisterCentreServiceDetailDialog>($"服务详情 - {service.AppName}", parameters, options);
     }
     
     private async Task OnDomainSelected(DomainInfo domain)
@@ -197,9 +205,21 @@
     
     private async Task OnServiceDetailFromDomain(RegisteredServiceStatus service)
     {
-        // 可以打开服务详情对话框或切换到服务列表标签页
-        Snackbar.Add($"查看服务详情: {service.AppName}", Severity.Info);
-        await Task.CompletedTask;
+        // 使用相同的服务详情对话框组件
+        var parameters = new DialogParameters
+        {
+            ["Service"] = service
+        };
+
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            Position = DialogPosition.Center,
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true
+        };
+
+        await DialogService.ShowAsync<RegisterCentreServiceDetailDialog>($"服务详情 - {service.AppName}", parameters, options);
     }
     
     private async Task OnDomainClickFromVisualization(string domainName)

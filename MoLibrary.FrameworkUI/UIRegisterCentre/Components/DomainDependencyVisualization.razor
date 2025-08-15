@@ -2,6 +2,7 @@
 @using MoLibrary.RegisterCentre.Interfaces
 @using MoLibrary.RegisterCentre.Models
 @using MoLibrary.FrameworkUI.UIRegisterCentre.Services
+@using MoLibrary.FrameworkUI.UIRegisterCentre.Models
 @using MoLibrary.Tool.MoResponse
 @using Microsoft.JSInterop
 @inject RegisterCentreService RegisterCentreService
@@ -28,9 +29,39 @@
                                OnClick="ResetView"
                                Disabled="@_loading" />
             </MudTooltip>
+            <MudTooltip Text="布局设置">
+                <MudIconButton Icon="@Icons.Material.Filled.Dashboard"
+                               Color="Color.Info"
+                               OnClick="ToggleLayoutPanel" />
+            </MudTooltip>
+            <MudTooltip Text="筛选设置">
+                <MudIconButton Icon="@Icons.Material.Filled.FilterAlt"
+                               Color="Color.Tertiary"
+                               OnClick="ToggleFilterPanel" />
+            </MudTooltip>
         </CardHeaderActions>
     </MudCardHeader>
     <MudCardContent>
+        @if (_showLayoutPanel)
+        {
+            <DomainLayoutPanel CurrentLayout="_currentLayout"
+                               ForceDistance="_forceDistance"
+                               ForceStrength="_forceStrength"
+                               CurrentLayoutChanged="OnLayoutChanged"
+                               ForceDistanceChanged="OnForceDistanceChanged"
+                               ForceStrengthChanged="OnForceStrengthChanged" />
+        }
+        
+        @if (_showFilterPanel)
+        {
+            <DomainFilterPanel @bind-FilterText="_filterText"
+                               @bind-SelectedDomains="_selectedDomainsFilter"
+                               @bind-ShowOnlyWithServices="_showOnlyWithServices"
+                               @bind-ShowOnlyWithDependencies="_showOnlyWithDependencies"
+                               OnFiltersChanged="ApplyFilters"
+                               AllDomains="_domains" />
+        }
+
         <MudPaper Class="visualization-container" Style="position: relative; height: 500px; overflow: hidden;">
             @if (_loading)
             {
@@ -45,7 +76,7 @@
             <MudGrid AlignItems="Center">
                 <MudItem xs="12" sm="8">
                     <MudText Typo="Typo.caption">
-                        显示 @_domains.Count 个子域，@_dependencies.Count 个依赖关系
+                        显示 @_filteredDomains.Count / @_domains.Count 个子域，@_filteredDependencies.Count / @_dependencies.Count 个依赖关系
                     </MudText>
                 </MudItem>
                 <MudItem xs="12" sm="4" Class="d-flex justify-end">
@@ -62,10 +93,25 @@
     
     private IJSObjectReference? _jsModule;
     private List<DomainInfo> _domains = [];
+    private List<DomainInfo> _filteredDomains = [];
     private List<DomainDependency> _dependencies = [];
+    private List<DomainDependency> _filteredDependencies = [];
     private Dictionary<string, string> _domainColors = new();
     private Dictionary<string, List<RegisteredServiceStatus>> _domainServicesMap = new();
     private bool _loading = false;
+    
+    // 筛选相关字段
+    private bool _showFilterPanel = false;
+    private bool _showLayoutPanel = false;
+    private string _filterText = string.Empty;
+    private IReadOnlyCollection<string> _selectedDomainsFilter = new HashSet<string>();
+    private bool _showOnlyWithServices = false;
+    private bool _showOnlyWithDependencies = false;
+    
+    // 布局相关字段
+    private DomainLayoutType _currentLayout = DomainLayoutType.Force;
+    private int _forceDistance = 200;
+    private int _forceStrength = -800;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -116,6 +162,12 @@
                 {
                     Snackbar.Add($"获取服务状态失败: {servicesError.Message}", Severity.Warning);
                 }
+
+                // 初始化筛选
+                InitializeFilters();
+                
+                // 应用筛选
+                ApplyFilters();
 
                 await UpdateGraph();
             }
@@ -189,18 +241,149 @@
         }
     }
 
+    private void InitializeFilters()
+    {
+        // 初始化选择的域
+        if (!_selectedDomainsFilter.Any())
+        {
+            var allDomainNames = _domains.Select(d => d.Name).ToList();
+            _selectedDomainsFilter = new HashSet<string>(allDomainNames);
+        }
+    }
+    
+    private void ToggleFilterPanel()
+    {
+        _showFilterPanel = !_showFilterPanel;
+        if (_showFilterPanel) _showLayoutPanel = false;
+    }
+    
+    private void ToggleLayoutPanel()
+    {
+        _showLayoutPanel = !_showLayoutPanel;
+        if (_showLayoutPanel) _showFilterPanel = false;
+    }
+
+    private async Task ApplyFilters()
+    {
+        _filteredDomains = _domains.Where(domain =>
+        {
+            // 域名筛选
+            if (!_selectedDomainsFilter.Contains(domain.Name))
+                return false;
+                
+            // 文本筛选
+            if (!string.IsNullOrWhiteSpace(_filterText))
+            {
+                var matchesText = domain.Name.Contains(_filterText, StringComparison.OrdinalIgnoreCase) ||
+                                  (!string.IsNullOrEmpty(domain.DisplayName) && domain.DisplayName.Contains(_filterText, StringComparison.OrdinalIgnoreCase)) ||
+                                  (!string.IsNullOrEmpty(domain.Description) && domain.Description.Contains(_filterText, StringComparison.OrdinalIgnoreCase));
+                
+                if (!matchesText)
+                    return false;
+            }
+            
+            // 仅显示有服务的域
+            if (_showOnlyWithServices)
+            {
+                var hasServices = _domainServicesMap.ContainsKey(domain.Name) && _domainServicesMap[domain.Name].Any();
+                if (!hasServices)
+                    return false;
+            }
+            
+            return true;
+        }).ToList();
+        
+        // 筛选依赖关系 - 只保留两端都在筛选后域列表中的依赖
+        _filteredDependencies = _dependencies.Where(dep =>
+        {
+            var hasSource = _filteredDomains.Any(d => d.Name == dep.SourceDomain);
+            var hasTarget = _filteredDomains.Any(d => d.Name == dep.TargetDomain);
+            
+            // 如果仅显示有依赖的域，则需要确保依赖关系两端都存在
+            if (_showOnlyWithDependencies)
+            {
+                return hasSource && hasTarget;
+            }
+            
+            return hasSource && hasTarget;
+        }).ToList();
+        
+        // 如果仅显示有依赖的域，进一步过滤域列表
+        if (_showOnlyWithDependencies)
+        {
+            var domainsWithDependencies = new HashSet<string>();
+            foreach (var dep in _filteredDependencies)
+            {
+                domainsWithDependencies.Add(dep.SourceDomain);
+                domainsWithDependencies.Add(dep.TargetDomain);
+            }
+            
+            _filteredDomains = _filteredDomains.Where(d => domainsWithDependencies.Contains(d.Name)).ToList();
+        }
+        
+        await UpdateGraph();
+    }
+
     private async Task UpdateGraph()
     {
         if (_jsModule != null)
         {
             var graphData = PrepareGraphData();
             await _jsModule.InvokeVoidAsync("updateGraph", graphData);
+            
+            // 应用当前布局设置
+            await SetLayout(_currentLayout);
+            if (_currentLayout == DomainLayoutType.Force)
+            {
+                await _jsModule.InvokeVoidAsync("setForceDistance", _forceDistance);
+                await _jsModule.InvokeVoidAsync("setForceStrength", _forceStrength);
+            }
+        }
+    }
+    
+    private async Task SetLayout(DomainLayoutType layoutType)
+    {
+        _currentLayout = layoutType;
+        if (_jsModule != null)
+        {
+            var layoutName = layoutType switch
+            {
+                DomainLayoutType.Force => "force",
+                DomainLayoutType.Hierarchy => "hierarchy",
+                DomainLayoutType.Circular => "circular",
+                DomainLayoutType.RadialTree => "radial_tree",
+                _ => "force"
+            };
+            await _jsModule.InvokeVoidAsync("setLayout", layoutName);
+        }
+    }
+    
+    private async Task OnLayoutChanged(DomainLayoutType layoutType)
+    {
+        await SetLayout(layoutType);
+    }
+    
+    private async Task OnForceDistanceChanged(int value)
+    {
+        _forceDistance = value;
+        if (_jsModule != null)
+        {
+            await _jsModule.InvokeVoidAsync("setForceDistance", value);
+        }
+    }
+    
+    private async Task OnForceStrengthChanged(int value)
+    {
+        _forceStrength = value;
+        if (_jsModule != null)
+        {
+            await _jsModule.InvokeVoidAsync("setForceStrength", value);
         }
     }
 
     private object PrepareGraphData()
     {
-        var nodes = _domains.Select(domain => new
+        var nodes = _filteredDomains.Select(domain => new
         {
             id = domain.Name,
             name = domain.DisplayName ?? domain.Name,
@@ -216,7 +399,7 @@
                 }).ToList()
         }).ToList();
 
-        var links = _dependencies.Select(dep => new
+        var links = _filteredDependencies.Select(dep => new
         {
             source = dep.SourceDomain,
             target = dep.TargetDomain,
