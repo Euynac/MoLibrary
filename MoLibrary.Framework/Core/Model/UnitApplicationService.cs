@@ -79,7 +79,15 @@ public class UnitApplicationService(Type type) : ProjectUnit(type, EProjectUnitT
         {
             if (!ProjectUnitStores.ProjectUnitsByFullName.TryGetValue(RequestType.FullName!, out var requestUnit))
             {
-                Logger.LogWarning($"{this}无法关联其请求{RequestType.FullName},可能未继承{nameof(IMoRequest)}相关接口");
+                var alertMessage = $"{this}无法关联其请求{RequestType.GetCleanFullName()},可能未继承{nameof(IMoRequest)}相关接口";
+                // 添加警告级别告警
+                Alerts.Add(new ProjectUnitAlert
+                {
+                    Level = EAlertLevel.Warning,
+                    Message = alertMessage,
+                    Source = "RequestTypeAssociation"
+                });
+                Logger.LogWarning(alertMessage);
             }
             else
             {
