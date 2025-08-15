@@ -1,0 +1,254 @@
+@using MoLibrary.FrameworkUI.UIRegisterCentre.Services
+@using MoLibrary.RegisterCentre.Interfaces
+@using MoLibrary.RegisterCentre.Models
+@using MoLibrary.Tool.MoResponse
+@inject RegisterCentreService RegisterCentreService
+@inject ISnackbar Snackbar
+
+@if (_domainDetail != null)
+{
+    <MudStack Spacing="4">
+        <MudPaper Class="pa-4">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="OnBackClick">
+                        返回域列表
+                    </MudButton>
+                    <MudDivider Vertical="true" FlexItem="false" />
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudAvatar Style="@GetDomainAvatarStyle()">
+                            <MudIcon Icon="@Icons.Material.Filled.Domain" />
+                        </MudAvatar>
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.h5">@(_domainDetail.Domain.DisplayName ?? _domainDetail.Domain.Name)</MudText>
+                            @if (!string.IsNullOrEmpty(_domainDetail.Domain.Description))
+                            {
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@_domainDetail.Domain.Description</MudText>
+                            }
+                        </MudStack>
+                    </MudStack>
+                </MudStack>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="RefreshDomainDetailAsync" Disabled="@_isLoading">
+                    <MudIcon Icon="@Icons.Material.Filled.Refresh" Class="mr-1" />
+                    刷新
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+
+        <MudGrid>
+            <MudItem xs="12" md="4">
+                <MudPaper Class="pa-4">
+                    <MudStack Spacing="3">
+                        <MudText Typo="Typo.h6">域基本信息</MudText>
+                        <MudDivider />
+                        <MudStack Spacing="2">
+                            <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">域名称:</MudText>
+                                <MudText Typo="Typo.body2">@_domainDetail.Domain.Name</MudText>
+                            </MudStack>
+                            <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">显示名称:</MudText>
+                                <MudText Typo="Typo.body2">@(_domainDetail.Domain.DisplayName ?? "未设置")</MudText>
+                            </MudStack>
+                            <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">相关服务数:</MudText>
+                                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Text="@($"{_domainDetail.RelatedServices.Count} 个")" />
+                            </MudStack>
+                            <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">运行中服务:</MudText>
+                                <MudChip T="string" Size="Size.Small" Color="Color.Success" Text="@($"{GetRunningServicesCount()} 个")" />
+                            </MudStack>
+                        </MudStack>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" md="8">
+                <MudPaper Class="pa-4">
+                    <MudStack Spacing="3">
+                        <MudText Typo="Typo.h6">相关微服务列表</MudText>
+                        <MudDivider />
+                        
+                        @if (_isLoading)
+                        {
+                            <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+                            <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-2">正在加载服务信息...</MudText>
+                        }
+                        else if (!_domainDetail.RelatedServices.Any())
+                        {
+                            <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary">
+                                该域暂无相关微服务
+                            </MudText>
+                        }
+                        else
+                        {
+                            <MudStack Spacing="2">
+                                @foreach (var service in _domainDetail.RelatedServices)
+                                {
+                                    <MudCard Elevation="2" Class="service-card">
+                                        <MudCardContent Class="pa-3">
+                                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                                <MudStack Spacing="1">
+                                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                                        <MudText Typo="Typo.h6">@service.AppName</MudText>
+                                                        <MudChip T="string" Size="Size.Small" Color="@GetServiceStatusColor(service.OverallStatus)" Text="@GetServiceStatusText(service.OverallStatus)" />
+                                                    </MudStack>
+                                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                                        ID: @service.AppId
+                                                    </MudText>
+                                                    @if (!string.IsNullOrEmpty(service.ProjectName))
+                                                    {
+                                                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                                            项目: @service.ProjectName
+                                                        </MudText>
+                                                    }
+                                                    @if (service.DependentSubDomains?.Any() == true)
+                                                    {
+                                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">依赖子域:</MudText>
+                                                            @foreach (var subDomain in service.DependentSubDomains)
+                                                            {
+                                                                <MudChip T="string" Size="Size.Small" Color="Color.Surface" Text="@subDomain" />
+                                                            }
+                                                        </MudStack>
+                                                    }
+                                                </MudStack>
+                                                <MudStack AlignItems="AlignItems.End" Spacing="1">
+                                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                                        @service.RunningInstanceCount/@service.TotalInstanceCount 实例运行中
+                                                    </MudText>
+                                                    <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="() => HandleServiceDetailClick(service)">
+                                                        查看详情
+                                                    </MudButton>
+                                                </MudStack>
+                                            </MudStack>
+                                        </MudCardContent>
+                                    </MudCard>
+                                }
+                            </MudStack>
+                        }
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    </MudStack>
+}
+else if (_isLoading)
+{
+    <MudPaper Class="pa-4">
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+        <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-2">正在加载域详情...</MudText>
+    </MudPaper>
+}
+else
+{
+    <MudPaper Class="pa-4">
+        <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Error">
+            加载域详情失败
+        </MudText>
+    </MudPaper>
+}
+
+<style>
+    .service-card {
+        transition: transform 0.1s, box-shadow 0.1s;
+    }
+    
+    .service-card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+    }
+</style>
+
+@code {
+    [Parameter] public required string DomainName { get; set; }
+    [Parameter] public EventCallback OnBackClick { get; set; }
+    [Parameter] public EventCallback<RegisteredServiceStatus> OnServiceDetailClick { get; set; }
+
+    private bool _isLoading = false;
+    private DomainDetailInfo? _domainDetail;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrEmpty(DomainName))
+        {
+            await LoadDomainDetailAsync();
+        }
+    }
+
+    private async Task LoadDomainDetailAsync()
+    {
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await RegisterCentreService.GetDomainDetailAsync(DomainName);
+            if (result.IsFailed(out var error, out var domainDetail))
+            {
+                Snackbar.Add($"获取域详情失败: {error.Message}", Severity.Error);
+                _domainDetail = null;
+            }
+            else
+            {
+                _domainDetail = domainDetail;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"加载域详情失败: {ex.Message}", Severity.Error);
+            _domainDetail = null;
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefreshDomainDetailAsync()
+    {
+        await LoadDomainDetailAsync();
+        Snackbar.Add("域详情已刷新", Severity.Success);
+    }
+
+    private string GetDomainAvatarStyle()
+    {
+        var color = _domainDetail?.Color ?? "#666666";
+        return $"background-color: {color}; color: white;";
+    }
+
+    private int GetRunningServicesCount()
+    {
+        return _domainDetail?.RelatedServices.Count(s => s.OverallStatus == ServiceStatus.Running) ?? 0;
+    }
+
+    private Color GetServiceStatusColor(ServiceStatus status)
+    {
+        return status switch
+        {
+            ServiceStatus.Running => Color.Success,
+            ServiceStatus.Error => Color.Error,
+            ServiceStatus.Updating => Color.Warning,
+            ServiceStatus.Offline => Color.Default,
+            _ => Color.Default
+        };
+    }
+
+    private string GetServiceStatusText(ServiceStatus status)
+    {
+        return status switch
+        {
+            ServiceStatus.Running => "运行中",
+            ServiceStatus.Error => "错误",
+            ServiceStatus.Updating => "更新中",
+            ServiceStatus.Offline => "离线",
+            _ => "未知"
+        };
+    }
+
+    private async Task HandleServiceDetailClick(RegisteredServiceStatus service)
+    {
+        await OnServiceDetailClick.InvokeAsync(service);
+    }
+}

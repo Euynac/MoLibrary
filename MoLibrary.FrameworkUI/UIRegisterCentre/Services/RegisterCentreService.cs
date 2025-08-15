@@ -243,4 +243,107 @@ public class RegisterCentreService(
 
         return colors;
     }
+
+    /// <summary>
+    /// 获取指定域的相关微服务列表
+    /// </summary>
+    /// <param name="domainName">域名称</param>
+    /// <returns>该域相关的微服务列表</returns>
+    public async Task<Res<List<RegisteredServiceStatus>>> GetDomainRelatedServicesAsync(string domainName)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(domainName))
+            {
+                return "域名称不能为空";
+            }
+
+            var servicesResult = await GetMergedServicesStatusAsync();
+            if (servicesResult.IsFailed(out var error, out var services))
+            {
+                return error;
+            }
+
+            var domainServices = services
+                .Where(s => string.Equals(s.DomainName, domainName, StringComparison.OrdinalIgnoreCase) ||
+                           (s.DependentSubDomains?.Contains(domainName, StringComparer.OrdinalIgnoreCase) == true))
+                .ToList();
+
+            return domainServices;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "获取域相关服务失败");
+            return $"获取域相关服务失败: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// 获取域详细信息（包含相关微服务）
+    /// </summary>
+    /// <param name="domainName">域名称</param>
+    /// <returns>域详细信息</returns>
+    public async Task<Res<DomainDetailInfo>> GetDomainDetailAsync(string domainName)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(domainName))
+            {
+                return "域名称不能为空";
+            }
+
+            var domainsResult = await GetDomainsWithColorsAsync();
+            if (domainsResult.IsFailed(out var error, out var domains))
+            {
+                return error;
+            }
+
+            var domain = domains.FirstOrDefault(d => string.Equals(d.Name, domainName, StringComparison.OrdinalIgnoreCase));
+            if (domain == null)
+            {
+                return $"未找到域: {domainName}";
+            }
+
+            var servicesResult = await GetDomainRelatedServicesAsync(domainName);
+            if (servicesResult.IsFailed(out var servicesError, out var services))
+            {
+                return servicesError;
+            }
+
+            var domainDetail = new DomainDetailInfo
+            {
+                Domain = domain,
+                RelatedServices = services,
+                Color = GetDomainColor(domainName)
+            };
+
+            return domainDetail;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "获取域详细信息失败");
+            return $"获取域详细信息失败: {ex.Message}";
+        }
+    }
+}
+
+/// <summary>
+/// 域详细信息
+/// </summary>
+public class DomainDetailInfo
+{
+    /// <summary>
+    /// 域信息
+    /// </summary>
+    public required DomainInfo Domain { get; set; }
+
+    /// <summary>
+    /// 相关微服务列表
+    /// </summary>
+    public List<RegisteredServiceStatus> RelatedServices { get; set; } = [];
+
+    /// <summary>
+    /// 域颜色
+    /// </summary>
+    public string Color { get; set; } = "#666666";
 }
