@@ -58,10 +58,13 @@
 </MudCard>
 
 @code {
+    [Parameter] public EventCallback<string> OnDomainClick { get; set; }
+    
     private IJSObjectReference? _jsModule;
     private List<DomainInfo> _domains = [];
     private List<DomainDependency> _dependencies = [];
     private Dictionary<string, string> _domainColors = new();
+    private Dictionary<string, List<RegisteredServiceStatus>> _domainServicesMap = new();
     private bool _loading = false;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -83,7 +86,8 @@
             var isDarkMode = await JSRuntime.InvokeAsync<bool>("eval", 
                 "document.documentElement.classList.contains('dark')");
             
-            await _jsModule.InvokeVoidAsync("initializeGraph", "domain-dependency-graph", isDarkMode);
+            await _jsModule.InvokeVoidAsync("initializeGraph", "domain-dependency-graph", isDarkMode,
+                DotNetObjectReference.Create(this));
         }
     }
 
@@ -106,6 +110,7 @@
                 if (!(await RegisterCentreService.GetMergedServicesStatusAsync()).IsFailed(out var servicesError, out var services))
                 {
                     BuildDomainDependencies(services ?? []);
+                    BuildDomainServicesMap(services ?? []);
                 }
                 else
                 {
@@ -160,6 +165,29 @@
         }
     }
 
+    private void BuildDomainServicesMap(List<RegisteredServiceStatus> services)
+    {
+        _domainServicesMap.Clear();
+        
+        foreach (var service in services)
+        {
+            var domainName = service.DomainName ?? "未知";
+            if (!_domainServicesMap.ContainsKey(domainName))
+            {
+                _domainServicesMap[domainName] = new List<RegisteredServiceStatus>();
+            }
+            _domainServicesMap[domainName].Add(service);
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnDomainClickFromJS(string domainName)
+    {
+        if (OnDomainClick.HasDelegate)
+        {
+            await OnDomainClick.InvokeAsync(domainName);
+        }
+    }
 
     private async Task UpdateGraph()
     {
@@ -177,7 +205,15 @@
             id = domain.Name,
             name = domain.DisplayName ?? domain.Name,
             description = domain.Description,
-            color = RegisterCentreService.GetDomainColor(domain.Name)
+            color = RegisterCentreService.GetDomainColor(domain.Name),
+            services = _domainServicesMap.GetValueOrDefault(domain.Name, new List<RegisteredServiceStatus>())
+                .Select(s => new
+                {
+                    name = s.AppName,
+                    appName = s.AppName,
+                    status = s.OverallStatus.ToString(),
+                    overallStatus = s.OverallStatus.ToString()
+                }).ToList()
         }).ToList();
 
         var links = _dependencies.Select(dep => new
