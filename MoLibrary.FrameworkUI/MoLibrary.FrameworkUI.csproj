@@ -7,6 +7,8 @@
     <!-- 确保生成静态Web资源清单 -->
     <GenerateStaticWebAssetsManifest>true</GenerateStaticWebAssetsManifest>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <!-- 忽略异步方法缺少await的警告 -->
+    <NoWarn>$(NoWarn);CS1998</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\MoLibrary.Framework\MoLibrary.Framework.csproj" />

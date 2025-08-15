@@ -30,7 +30,7 @@
                     }
                     else if (_enumGroups.Any())
                     {
-                        <MudList T="string" Clickable="true">
+                        <MudList T="string">
                             @foreach (var group in _enumGroups)
                             {
                                 <MudListItem T="string" OnClick="@(() => SelectAssembly(group))">
@@ -57,7 +57,7 @@
                     <MudText Typo="Typo.h6" Class="mb-3">枚举列表</MudText>
                     @if (_selectedAssembly != null)
                     {
-                        <MudList T="string" Clickable="true">
+                        <MudList T="string">
                             @foreach (var enumInfo in _selectedAssembly.Enums)
                             {
                                 <MudListItem T="string" OnClick="@(() => SelectEnum(enumInfo))">

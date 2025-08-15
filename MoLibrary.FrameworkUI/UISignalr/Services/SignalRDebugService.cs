@@ -291,7 +291,7 @@ namespace MoLibrary.FrameworkUI.UISignalr.Services
 
                     // 根据参数类型转换值
                     var convertedValue = ConvertParameterValue(value, arg.Type);
-                    args.Add(convertedValue);
+                    args.Add(convertedValue ?? string.Empty);
                     
                     if (IsVerboseLoggingEnabled)
                     {
@@ -328,7 +328,7 @@ namespace MoLibrary.FrameworkUI.UISignalr.Services
         /// <param name="value">字符串值</param>
         /// <param name="type">目标类型</param>
         /// <returns>转换后的值</returns>
-        private object ConvertParameterValue(string value, string type)
+        private object? ConvertParameterValue(string value, string type)
         {
             if (string.IsNullOrEmpty(value))
             {

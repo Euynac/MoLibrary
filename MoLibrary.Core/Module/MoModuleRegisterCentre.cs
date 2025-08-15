@@ -318,11 +318,15 @@ public static class MoModuleRegisterCentre
         ModuleProfiler.StopPhase(nameof(EMoModuleConfigMethods.ConfigureEndpoints));
         ModuleProfiler.StopModuleSystem();
 
-        // Log performance summary details
-        Logger.LogInformation("Module system performance summary:\n{PerformanceSummary}",
-            ModuleProfiler.GetPerformanceSummary());
-        Logger.LogInformation("Module system register order summary:\n{Order}",
-            ModuleAnalyser.GetModuleRegistrationSummary());
+        if (ModuleCoreOption.EnableLoggingModuleSummary)
+        {
+            // Log performance summary details
+            Logger.LogInformation("Module system performance summary:\n{PerformanceSummary}",
+                ModuleProfiler.GetPerformanceSummary());
+            Logger.LogInformation("Module system register order summary:\n{Order}",
+                ModuleAnalyser.GetModuleRegistrationSummary());
+        }
+       
 
         ModuleErrorUtil.RaiseModuleErrors();
     }
