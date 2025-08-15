@@ -5,6 +5,7 @@
 @using MoLibrary.FrameworkUI.UIRegisterCentre.Models
 @using MoLibrary.Tool.MoResponse
 @using Microsoft.JSInterop
+@using MoLibrary.UI.Components.ContextMenu
 @inject RegisterCentreService RegisterCentreService
 @inject IServiceProvider ServiceProvider
 @inject ISnackbar Snackbar
@@ -69,7 +70,7 @@
                     <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
                 </MudOverlay>
             }
-            <div id="domain-dependency-graph" style="width: 100%; height: 100%;"></div>
+            <div id="domain-dependency-graph" style="width: 100%; height: 100%;" @onclick="OnBackgroundClick" @oncontextmenu:preventDefault="true"></div>
         </MudPaper>
         
         <MudPaper Class="mt-4 pa-2" Elevation="0" Outlined="true">
@@ -87,6 +88,16 @@
         </MudPaper>
     </MudCardContent>
 </MudCard>
+
+@* 右键菜单 *@
+<MoContextMenu TItem="string" 
+               Items="@_contextMenuItems" 
+               Visible="@_contextMenuOpen"
+               InitialX="@_contextMenuX" 
+               InitialY="@_contextMenuY"
+               ContextItem="@_contextMenuDomainName"
+               OnItemClick="@OnContextMenuItemClick"
+               OnClose="@CloseContextMenu" />
 
 @code {
     [Parameter] public EventCallback<string> OnDomainClick { get; set; }
@@ -112,6 +123,13 @@
     private DomainLayoutType _currentLayout = DomainLayoutType.Force;
     private int _forceDistance = 200;
     private int _forceStrength = -800;
+    
+    // 右键菜单相关字段
+    private bool _contextMenuOpen = false;
+    private double _contextMenuX = 0;
+    private double _contextMenuY = 0;
+    private string? _contextMenuDomainName;
+    private List<ContextMenuItem<string>> _contextMenuItems = new();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -238,6 +256,137 @@
         if (OnDomainClick.HasDelegate)
         {
             await OnDomainClick.InvokeAsync(domainName);
+        }
+    }
+    
+    [JSInvokable]
+    public void OnDomainRightClick(string domainName, double x, double y)
+    {
+        _contextMenuDomainName = domainName;
+        _contextMenuX = x;
+        _contextMenuY = y;
+        _contextMenuItems = BuildContextMenuItems(domainName);
+        _contextMenuOpen = true;
+        StateHasChanged();
+    }
+    
+    private void OnBackgroundClick()
+    {
+        if (_contextMenuOpen)
+        {
+            _contextMenuOpen = false;
+            StateHasChanged();
+        }
+    }
+    
+    [JSInvokable]
+    public void OnSvgBackgroundClick()
+    {
+        if (_contextMenuOpen)
+        {
+            _contextMenuOpen = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void CloseContextMenu()
+    {
+        _contextMenuOpen = false;
+    }
+    
+    private List<ContextMenuItem<string>> BuildContextMenuItems(string domainName)
+    {
+        var domain = _domains.FirstOrDefault(d => d.Name == domainName);
+        var hasServices = _domainServicesMap.ContainsKey(domainName) && _domainServicesMap[domainName].Any();
+        var hasDependencies = _dependencies.Any(d => d.SourceDomain == domainName || d.TargetDomain == domainName);
+        
+        var builder = ContextMenuBuilder<string>.Create()
+            .AddItem("查看域详情", Icons.Material.Filled.Info, ViewDomainDetailsAsync)
+            .AddItem("聚焦此域", Icons.Material.Filled.CenterFocusStrong, FocusOnDomainAsync)
+            .AddDivider()
+            .AddItemIf(hasServices, "筛选此域服务", Icons.Material.Filled.FilterAlt, FilterByDomainAsync)
+            .AddItemIf(hasDependencies, "显示依赖关系", Icons.Material.Filled.AccountTree, ShowDependenciesAsync)
+            .AddItem("清除所有筛选", Icons.Material.Filled.ClearAll, ClearAllFiltersAsync)
+            .AddDivider()
+            .AddItem("复制域名", Icons.Material.Filled.ContentCopy, CopyDomainNameAsync);
+        
+        return builder.Build();
+    }
+    
+    private async Task OnContextMenuItemClick(ContextMenuItem<string> item)
+    {
+        _contextMenuOpen = false;
+        StateHasChanged();
+    }
+    
+    private async Task ViewDomainDetailsAsync(string? domainName)
+    {
+        var domain = _domains.FirstOrDefault(d => d.Name == domainName);
+        if (domain != null)
+        {
+            var serviceCount = _domainServicesMap.GetValueOrDefault(domainName ?? "", new List<RegisteredServiceStatus>()).Count;
+            var dependencyCount = _dependencies.Count(d => d.SourceDomain == domainName || d.TargetDomain == domainName);
+            
+            Snackbar.Add($"域: {domain.DisplayName ?? domain.Name}\n服务数: {serviceCount}\n依赖关系: {dependencyCount}", Severity.Info);
+        }
+    }
+    
+    private async Task FocusOnDomainAsync(string? domainName)
+    {
+        if (_jsModule != null && !string.IsNullOrEmpty(domainName))
+        {
+            await _jsModule.InvokeVoidAsync("focusOnNode", domainName);
+        }
+    }
+    
+    private async Task FilterByDomainAsync(string? domainName)
+    {
+        if (!string.IsNullOrEmpty(domainName))
+        {
+            _selectedDomainsFilter = new HashSet<string> { domainName };
+            _showFilterPanel = true;
+            await ApplyFilters();
+            Snackbar.Add($"已筛选域: {domainName}", Severity.Info);
+        }
+    }
+    
+    private async Task ShowDependenciesAsync(string? domainName)
+    {
+        if (!string.IsNullOrEmpty(domainName))
+        {
+            var relatedDomains = new HashSet<string> { domainName };
+            var domainDeps = _dependencies.Where(d => d.SourceDomain == domainName || d.TargetDomain == domainName);
+            
+            foreach (var dep in domainDeps)
+            {
+                relatedDomains.Add(dep.SourceDomain);
+                relatedDomains.Add(dep.TargetDomain);
+            }
+            
+            _selectedDomainsFilter = relatedDomains;
+            _showOnlyWithDependencies = true;
+            _showFilterPanel = true;
+            await ApplyFilters();
+            Snackbar.Add($"显示与 {domainName} 相关的依赖关系", Severity.Info);
+        }
+    }
+    
+    private async Task ClearAllFiltersAsync(string? domainName)
+    {
+        _filterText = string.Empty;
+        _selectedDomainsFilter = new HashSet<string>(_domains.Select(d => d.Name));
+        _showOnlyWithServices = false;
+        _showOnlyWithDependencies = false;
+        await ApplyFilters();
+        Snackbar.Add("已清除所有筛选", Severity.Info);
+    }
+    
+    private async Task CopyDomainNameAsync(string? domainName)
+    {
+        if (!string.IsNullOrEmpty(domainName))
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", domainName);
+            Snackbar.Add("已复制到剪贴板", Severity.Success);
         }
     }
 

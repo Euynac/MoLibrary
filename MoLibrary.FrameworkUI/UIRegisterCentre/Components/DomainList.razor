@@ -44,7 +44,13 @@
                                     <MudText Typo="Typo.h6" Style="color: white; font-weight: bold;">
                                         @(domain.DisplayName ?? domain.Name)
                                     </MudText>
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Surface" Text="@GetDomainServiceCount(domain.Name)" />
+                                    <MudStack AlignItems="AlignItems.End" Spacing="1">
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Surface" Text="@GetOwnedServiceCount(domain.Name)" />
+                                        @if (GetRelatedServiceCount(domain.Name) > 0)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="@GetRelatedServiceCountText(domain.Name)" />
+                                        }
+                                    </MudStack>
                                 </MudStack>
                                 
                                 @if (!string.IsNullOrEmpty(domain.Description))
@@ -54,9 +60,22 @@
                                     </MudText>
                                 }
                                 
-                                <MudText Typo="Typo.caption" Style="color: rgba(255, 255, 255, 0.7);">
-                                    域名: @domain.Name
-                                </MudText>
+                                <MudStack Spacing="1">
+                                    <MudText Typo="Typo.caption" Style="color: rgba(255, 255, 255, 0.7);">
+                                        域名: @domain.Name
+                                    </MudText>
+                                    @{
+                                        var ownedCount = GetOwnedServiceCount(domain.Name);
+                                        var relatedCount = GetRelatedServiceCount(domain.Name);
+                                    }
+                                    <MudText Typo="Typo.caption" Style="color: rgba(255, 255, 255, 0.8);">
+                                        本域服务: @ownedCount.Replace(" 个服务", "个")
+                                        @if (relatedCount > 0)
+                                        {
+                                            <span> • 被依赖: @(relatedCount)个</span>
+                                        }
+                                    </MudText>
+                                </MudStack>
                             </MudStack>
                         </MudCardContent>
                     </MudCard>
@@ -138,12 +157,24 @@
         return $"background: linear-gradient(135deg, {color} 0%, {color}dd 100%); border: none;";
     }
 
-    private string GetDomainServiceCount(string domainName)
+    private string GetOwnedServiceCount(string domainName)
     {
         var count = _allServices.Count(s => 
-            string.Equals(s.DomainName, domainName, StringComparison.OrdinalIgnoreCase) ||
-            (s.DependentSubDomains?.Contains(domainName, StringComparer.OrdinalIgnoreCase) == true));
+            string.Equals(s.DomainName, domainName, StringComparison.OrdinalIgnoreCase));
         return $"{count} 个服务";
+    }
+    
+    private int GetRelatedServiceCount(string domainName)
+    {
+        return _allServices.Count(s => 
+            !string.Equals(s.DomainName, domainName, StringComparison.OrdinalIgnoreCase) &&
+            (s.DependentSubDomains?.Contains(domainName, StringComparer.OrdinalIgnoreCase) == true));
+    }
+    
+    private string GetRelatedServiceCountText(string domainName)
+    {
+        var count = GetRelatedServiceCount(domainName);
+        return $"+{count} 依赖";
     }
 
     private async Task HandleDomainClick(DomainInfo domain)

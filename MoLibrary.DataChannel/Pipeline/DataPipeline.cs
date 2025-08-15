@@ -10,6 +10,47 @@ using MoLibrary.Tool.MoResponse;
 namespace MoLibrary.DataChannel.Pipeline;
 
 /// <summary>
+/// 异常收集事件参数
+/// </summary>
+public class ExceptionCollectedEventArgs : EventArgs
+{
+    /// <summary>
+    /// 发生的异常
+    /// </summary>
+    public Exception Exception { get; }
+    
+    /// <summary>
+    /// 异常来源对象
+    /// </summary>
+    public object Source { get; }
+    
+    /// <summary>
+    /// 异常描述信息
+    /// </summary>
+    public string? Description { get; }
+    
+    /// <summary>
+    /// 管道ID
+    /// </summary>
+    public string PipelineId { get; }
+
+    /// <summary>
+    /// 初始化异常收集事件参数
+    /// </summary>
+    /// <param name="exception">发生的异常</param>
+    /// <param name="source">异常来源对象</param>
+    /// <param name="description">异常描述信息</param>
+    /// <param name="pipelineId">管道ID</param>
+    public ExceptionCollectedEventArgs(Exception exception, object source, string? description, string pipelineId)
+    {
+        Exception = exception;
+        Source = source;
+        Description = description;
+        PipelineId = pipelineId;
+    }
+}
+
+/// <summary>
 /// 数据管道类
 /// 作为数据通道的核心组件，负责数据的传输、转换和处理
 /// 管理数据端点和中间件的连接和协作
@@ -64,6 +105,11 @@ public class DataPipeline
     /// 是否存在异常
     /// </summary>
     public bool HasExceptions => ExceptionPool?.HasExceptions ?? false;
+
+    /// <summary>
+    /// 异常收集事件，当异常被添加到ExceptionPool时触发
+    /// </summary>
+    public event EventHandler<ExceptionCollectedEventArgs>? ExceptionCollected;
 
     /// <summary>
     /// 初始化数据管道的新实例
@@ -165,6 +211,10 @@ public class DataPipeline
     public void CollectException(Exception exception, object source, string? description = null)
     {
         ExceptionPool.AddException(exception, source, description);
+        
+        // 触发异常收集事件
+        var eventArgs = new ExceptionCollectedEventArgs(exception, source, description, Id);
+        ExceptionCollected?.Invoke(this, eventArgs);
     }
 
     /// <summary>

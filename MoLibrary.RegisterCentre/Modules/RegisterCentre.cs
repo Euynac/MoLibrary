@@ -239,16 +239,16 @@ public class ModuleRegisterCentreOption : MoModuleControllerOption<ModuleRegiste
     /// 客户端重试频率（单位：ms）
     /// </summary>
     public int RetryDuration { get; set; } = 5000;
-    
+
     /// <summary>
     /// 服务端心跳超时时间（单位：ms）
     /// </summary>
-    public int ServerHeartbeatTimeout { get; set; } = 60000;
-    
+    public int ServerHeartbeatTimeout { get; set; } = 11000;
+
     /// <summary>
     /// 服务端心跳检查间隔（单位：ms）
     /// </summary>
-    public int ServerHeartbeatCheckInterval { get; set; } = 30000;
+    public int ServerHeartbeatCheckInterval { get; set; } = 5000;
     
     /// <summary>
     /// 需要读取作为元数据的环境变量Key列表
