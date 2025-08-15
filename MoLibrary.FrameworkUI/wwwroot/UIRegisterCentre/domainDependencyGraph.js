@@ -14,10 +14,11 @@ let graphInstance = null;
  * 初始化域依赖关系图
  * @param {string} containerId - 容器ID
  * @param {boolean} isDarkMode - 是否为暗色模式
+ * @param {Object} dotNetHelper - .NET回调对象
  */
-export function initializeGraph(containerId, isDarkMode = false) {
+export function initializeGraph(containerId, isDarkMode = false, dotNetHelper = null) {
     dispose();
-    graphInstance = new DomainDependencyGraph(containerId, { isDarkMode });
+    graphInstance = new DomainDependencyGraph(containerId, { isDarkMode, dotNetHelper });
 }
 
 /**
@@ -74,12 +75,13 @@ class DomainDependencyGraph extends GraphBase {
         this.links = [];
         this.nodeElements = null;
         this.linkElements = null;
+        this.dotNetHelper = options.dotNetHelper || null;
         
         // 创建力导向布局管理器
         this.forceLayout = new ForceLayoutManager(this.width, this.height, {
             linkDistance: 200,
             chargeStrength: -800,
-            collisionRadius: 60
+            collisionRadius: 80  // 增加碰撞半径以为下方文本留出空间
         });
 
         // 创建图层
@@ -190,10 +192,10 @@ class DomainDependencyGraph extends GraphBase {
             .attr('class', 'node-circle')
             .attr('r', 0);
 
-        // 添加文本标签
+        // 添加文本标签（移动到节点下方）
         nodeEnter.append('text')
             .attr('class', 'node-text')
-            .attr('dy', '0.35em')
+            .attr('dy', '50px')
             .attr('text-anchor', 'middle')
             .style('font-size', '0px');
 
@@ -220,9 +222,11 @@ class DomainDependencyGraph extends GraphBase {
         this.nodeElements.select('.node-text')
             .transition()
             .duration(500)
-            .style('font-size', '12px')
+            .style('font-size', '14px')
+            .style('font-weight', '500')
+            .style('text-shadow', '0 1px 3px rgba(0,0,0,0.3)')
             .attr('fill', getModernNodeStyle(this.isDarkMode).textColor)
-            .text(d => this.truncateText(d.name, 12));
+            .text(d => this.truncateText(d.name, 15));
 
         // 添加拖拽行为
         this.nodeElements.call(this.forceLayout.getDragBehavior());
@@ -232,14 +236,14 @@ class DomainDependencyGraph extends GraphBase {
             .style('cursor', 'pointer')
             .on('mouseenter', (event, d) => {
                 this.highlightNode(d, true);
-                this.showTooltip(event, `<strong>${d.name}</strong><br/>${d.description}`);
+                this.showTooltip(event, this.buildDomainTooltipContent(d));
             })
             .on('mouseleave', (event, d) => {
                 this.highlightNode(d, false);
                 this.hideTooltip();
             })
             .on('click', (event, d) => {
-                this.focusOnNode(d.id);
+                this.handleNodeClick(d);
             });
     }
 
@@ -342,6 +346,109 @@ class DomainDependencyGraph extends GraphBase {
     truncateText(text, maxLength) {
         if (!text) return '';
         return text.length > maxLength ? text.substring(0, maxLength - 3) + '...' : text;
+    }
+
+    /**
+     * 处理节点点击事件
+     * @param {Object} node - 被点击的节点数据
+     */
+    handleNodeClick(node) {
+        // 先聚焦到节点
+        this.focusOnNode(node.id);
+        
+        // 如果有.NET回调对象，调用域详情显示方法
+        if (this.dotNetHelper && typeof this.dotNetHelper.invokeMethodAsync === 'function') {
+            this.dotNetHelper.invokeMethodAsync('OnDomainClickFromJS', node.id || node.name);
+        }
+    }
+
+    /**
+     * 构建领域节点的tooltip内容
+     * @param {Object} domain - 领域节点数据
+     * @returns {string} HTML格式的tooltip内容
+     */
+    buildDomainTooltipContent(domain) {
+        let content = `<strong>${domain.name}</strong>`;
+        
+        if (domain.description) {
+            content += `<br/><span style="color: #ccc;">${domain.description}</span>`;
+        }
+
+        // 显示相关微服务信息
+        if (domain.services && domain.services.length > 0) {
+            content += `<br/><br/><strong>相关微服务 (${domain.services.length}个):</strong>`;
+            
+            // 按状态分组显示服务
+            const servicesByStatus = this.groupServicesByStatus(domain.services);
+            
+            Object.entries(servicesByStatus).forEach(([status, services]) => {
+                const statusText = this.getServiceStatusText(status);
+                const statusColor = this.getServiceStatusColor(status);
+                content += `<br/><span style="color: ${statusColor};">• ${statusText}: ${services.length}个</span>`;
+                
+                // 显示前3个服务名称
+                if (services.length > 0) {
+                    const serviceNames = services.slice(0, 3).map(s => s.name || s.appName).join(', ');
+                    content += `<br/><span style="font-size: 11px; color: #aaa; margin-left: 12px;">${serviceNames}`;
+                    if (services.length > 3) {
+                        content += ` 等${services.length}个`;
+                    }
+                    content += `</span>`;
+                }
+            });
+        } else {
+            content += `<br/><span style="color: #999;">暂无相关微服务</span>`;
+        }
+
+        content += `<br/><br/><span style="font-size: 11px; color: #888;">点击查看详情</span>`;
+        return content;
+    }
+
+    /**
+     * 按状态分组服务
+     * @param {Array} services - 服务列表
+     * @returns {Object} 按状态分组的服务
+     */
+    groupServicesByStatus(services) {
+        const groups = {};
+        services.forEach(service => {
+            const status = service.status || service.overallStatus || 'Unknown';
+            if (!groups[status]) {
+                groups[status] = [];
+            }
+            groups[status].push(service);
+        });
+        return groups;
+    }
+
+    /**
+     * 获取服务状态显示文本
+     * @param {string} status - 服务状态
+     * @returns {string} 状态显示文本
+     */
+    getServiceStatusText(status) {
+        switch (status) {
+            case 'Running': return '运行中';
+            case 'Error': return '错误';
+            case 'Updating': return '更新中';
+            case 'Offline': return '离线';
+            default: return '未知';
+        }
+    }
+
+    /**
+     * 获取服务状态颜色
+     * @param {string} status - 服务状态
+     * @returns {string} 状态颜色
+     */
+    getServiceStatusColor(status) {
+        switch (status) {
+            case 'Running': return '#4caf50';
+            case 'Error': return '#f44336';
+            case 'Updating': return '#ff9800';
+            case 'Offline': return '#9e9e9e';
+            default: return '#757575';
+        }
     }
 
     handleResize() {

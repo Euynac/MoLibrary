@@ -11,7 +11,7 @@
 <MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
     <MudText Typo="Typo.h4" Class="mb-4">注册中心管理</MudText>
     
-    <MudTabs Elevation="4" Rounded="true" Color="Color.Primary" PanelClass="pa-4">
+    <MudTabs @bind-ActivePanelIndex="_activeTabIndex" Elevation="4" Rounded="true" Color="Color.Primary" PanelClass="pa-4">
         <MudTabPanel Text="服务列表" Icon="@Icons.Material.Filled.List">
             <MudGrid>
                 <MudItem xs="12">
@@ -60,7 +60,7 @@
         </MudTabPanel>
         
         <MudTabPanel Text="子域依赖图" Icon="@Icons.Material.Filled.Hub">
-            <DomainDependencyVisualization />
+            <DomainDependencyVisualization OnDomainClick="OnDomainClickFromVisualization" />
         </MudTabPanel>
         
         <MudTabPanel Text="子域管理" Icon="@Icons.Material.Filled.Domain">
@@ -85,6 +85,7 @@
     private int _refreshInterval = 3;
     private Timer? _refreshTimer;
     private DomainInfo? _selectedDomain;
+    private int _activeTabIndex = 0;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -198,6 +199,32 @@
     {
         // 可以打开服务详情对话框或切换到服务列表标签页
         Snackbar.Add($"查看服务详情: {service.AppName}", Severity.Info);
+        await Task.CompletedTask;
+    }
+    
+    private async Task OnDomainClickFromVisualization(string domainName)
+    {
+        // 从可视化图表点击领域时，切换到领域详情页面
+        // 首先需要获取完整的领域信息
+        if (!(await RegisterCentreService.GetDomainsWithColorsAsync()).IsFailed(out var error, out var domains))
+        {
+            var domain = domains?.FirstOrDefault(d => d.Name == domainName);
+            if (domain != null)
+            {
+                _selectedDomain = domain;
+                _activeTabIndex = 3; // 切换到子域管理标签页（索引从0开始，第4个标签页）
+                StateHasChanged();
+                Snackbar.Add($"切换到领域详情: {domain.DisplayName ?? domain.Name}", Severity.Info);
+            }
+            else
+            {
+                Snackbar.Add($"未找到领域: {domainName}", Severity.Warning);
+            }
+        }
+        else
+        {
+            Snackbar.Add($"获取领域信息失败: {error.Message}", Severity.Error);
+        }
         await Task.CompletedTask;
     }
     
