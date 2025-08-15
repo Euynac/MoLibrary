@@ -2,7 +2,7 @@
 @using System.Linq
 @using System.Reflection
 
-<MudDialog @bind-Visible="Visible" Options="DialogOptions">
+<MudDialog @bind-Visible="Visible" Options="DialogOptions" OnBackdropClick="HandleBackdropClick">
     <TitleContent>
         <MudText Typo="Typo.h6">
             <MudIcon Icon="@Icons.Material.Filled.Info" Class="mr-3" />
@@ -314,7 +314,6 @@
     private async Task OnChipClick(string nodeKey)
     {
         // 关闭对话框
-        Visible = false;
         await VisibleChanged.InvokeAsync(false);
         
         // 触发聚焦事件
@@ -326,7 +325,12 @@
     
     private async Task Close()
     {
-        Visible = false;
+        await VisibleChanged.InvokeAsync(false);
+    }
+    
+    private async Task HandleBackdropClick()
+    {
+        // 手动处理背景点击，确保状态正确同步
         await VisibleChanged.InvokeAsync(false);
     }
     
