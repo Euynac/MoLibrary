@@ -6,10 +6,10 @@
  */
 
 // 导入通用的D3.js模块
-import { GraphBase, getModernLinkStyle, getModernNodeStyle } from '../../../MoLibrary.UI/js/d3js/d3-graph-base.js';
-import { ForceLayoutManager } from '../../../MoLibrary.UI/js/d3js/d3-force-layout.js';
-import { NodeInteractionHandler, createStaticDragBehavior } from '../../../MoLibrary.UI/js/d3js/d3-node-interaction.js';
-import { createLayoutAlgorithms } from '../../../MoLibrary.UI/js/d3js/d3-layout-algorithms.js';
+import { GraphBase, getModernLinkStyle, getModernNodeStyle } from '../../MoLibrary.UI/js/d3js/d3-graph-base.js';
+import { ForceLayoutManager } from '../../MoLibrary.UI/js/d3js/d3-force-layout.js';
+import { NodeInteractionHandler, createStaticDragBehavior } from '../../MoLibrary.UI/js/d3js/d3-node-interaction.js';
+import { createLayoutAlgorithms } from '../../MoLibrary.UI/js/d3js/d3-layout-algorithms.js';
 
 // 导入项目单元特定的模块
 import { createProjectUnitCardRenderer } from './projectUnitCardRenderer.js';

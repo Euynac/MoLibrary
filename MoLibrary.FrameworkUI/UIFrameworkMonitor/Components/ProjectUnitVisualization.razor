@@ -137,7 +137,7 @@
         if (firstRender)
         {
             _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", 
-				"./_content/MoLibrary.FrameworkUI/UIFrameworkMonitor/Components/projectUnitGraph.js");
+				"./_content/MoLibrary.FrameworkUI/UIFrameworkMonitor/projectUnitGraph.js");
             
             await InitializeGraph();
             await LoadProjectUnitsAsync();

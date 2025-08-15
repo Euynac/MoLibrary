@@ -80,7 +80,7 @@
         if (firstRender)
         {
             _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", 
-                "./_content/MoLibrary.FrameworkUI/UIRegisterCentre/Components/serviceGraph.js");
+                "./_content/MoLibrary.FrameworkUI/UIRegisterCentre/serviceGraph.js");
             
             await InitializeGraph();
             await LoadServiceDataAsync();
