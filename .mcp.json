@@ -9,6 +9,10 @@
       ],
       "env": {}
     },
+"browsermcp": {
+      "command": "npx",
+      "args": ["@browsermcp/mcp@latest"]
+    },
     "puppeteer": {
       "type": "stdio",
       "command": "npx",
