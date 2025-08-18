@@ -15,7 +15,11 @@
       "Bash(python:*)",
       "Bash(rm:*)",
       "mcp__context7__resolve-library-id",
-      "mcp__context7__get-library-docs"
+      "mcp__context7__get-library-docs",
+      "WebSearch",
+      "mcp__browsermcp__browser_navigate",
+      "mcp__browsermcp__browser_type",
+      "mcp__browsermcp__browser_screenshot"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"
