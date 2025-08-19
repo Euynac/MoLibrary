@@ -45,6 +45,10 @@ public enum EMoModules
     Excel,
     CancellationManager,
     ProgressBar,
+    /// <summary>
+    /// 作业调度模块
+    /// </summary>
+    MoScheduler,
     Profiling,
     /// <summary>
     /// XML文档服务模块
@@ -75,5 +79,5 @@ public enum EMoModules
     ConfigurationUI,
 MapperUI,
     RegisterCentreUI,
-    FrameworkMonitorUI
+    FrameworkMonitorUI,
 }
