@@ -1,4 +1,6 @@
 @using MoLibrary.Framework.Core.Model
+@using MoLibrary.Framework.Core.Attributes
+@using MoLibrary.UI.Components
 @using System.Linq
 @using System.Reflection
 
@@ -273,6 +275,33 @@
                             </td>
                         </tr>
                     }
+                    @{
+                        var unitInfoAttribute = GetUnitInfoAttribute();
+                    }
+                    @if (unitInfoAttribute?.MarkdownDocs != null)
+                    {
+                        <tr>
+                            <td style="vertical-align: top;"><MudText Typo="Typo.subtitle2">文档</MudText></td>
+                            <td>
+                                <MudExpansionPanels>
+                                    <MudExpansionPanel>
+                                        <TitleContent>
+                                            <div style="display: flex; align-items: center">
+                                                <MudIcon Icon="@Icons.Material.Filled.Description" class="mr-3" />
+                                                <MudText>Markdown文档</MudText>
+                                            </div>
+                                        </TitleContent>
+                                        <ChildContent>
+                                            <MoMarkdownThemeManager />
+                                            <div style="max-height: 400px; overflow-y: auto;">
+                                                <MudMarkdown Value="@unitInfoAttribute.MarkdownDocs" />
+                                            </div>
+                                        </ChildContent>
+                                    </MudExpansionPanel>
+                                </MudExpansionPanels>
+                            </td>
+                        </tr>
+                    }
                 </tbody>
             </MudSimpleTable>
         }
@@ -344,5 +373,10 @@
         return method.ReturnType.IsGenericType && 
                (method.ReturnType.GetGenericTypeDefinition() == typeof(Task<>) || 
                 method.ReturnType == typeof(Task));
+    }
+    
+    private UnitInfoAttribute? GetUnitInfoAttribute()
+    {
+        return SelectedUnit?.Attributes.OfType<UnitInfoAttribute>().FirstOrDefault();
     }
 }
