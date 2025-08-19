@@ -27,4 +27,10 @@ public class UnitInfoAttribute(string name) : Attribute, IUnitCachedAttribute
     /// 项目单元描述，通常用于简要说明该单元的功能或用途。如该属性为空，则读取XML注释中的summary内容。
     /// </summary>
     public string? Description { get; set; }
+
+    /// <summary>
+    /// Markdown文档描述，链接或路径，通常用于提供更详细的文档说明。
+    /// </summary>
+    /// <remarks>自定义语法：@用户管理.md#权限控制 可以生成相应配置的文档服务的超链接地址（暂未实现）</remarks>
+    public string? MarkdownDocs { get; set; }
 }
