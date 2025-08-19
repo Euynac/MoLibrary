@@ -20,97 +20,97 @@ public class ThemeInkLandscape : ThemeBase
         {
             PaletteLight = new PaletteLight()
             {
-                Primary = "#2d3748",           // 墨黑
-                Secondary = "#4a5568",         // 深灰墨
-                Tertiary = "#718096",          // 中灰墨
-                Info = "#2c7a7b",              // 青绿
-                Success = "#38a169",           // 翠绿
-                Warning = "#d69e2e",           // 赭石
-                Error = "#e53e3e",             // 朱红
-                Dark = "#1a202c",              // 浓墨
+                Primary = "#1a1d23",           // 浓墨（更深邃的主色）
+                Secondary = "#374151",         // 深灰墨（更有层次）
+                Tertiary = "#6b7280",          // 中灰墨（平衡过渡）
+                Info = "#0f766e",              // 墨绿（传统青绿，更沉稳）
+                Success = "#059669",           // 竹绿（象征生机）
+                Warning = "#ca8a04",           // 赭黄（传统矿物色）
+                Error = "#dc2626",             // 朱砂红（传统颜料色）
+                Dark = "#0f172a",              // 极浓墨
                 
-                Background = "#fefefe",        // 宣纸白
-                BackgroundGray = "#f9f9f9",    // 淡灰白
+                Background = "#faf9f7",        // 宣纸白（微黄调，更自然）
+                BackgroundGray = "#f3f4f6",    // 淡灰（更柔和）
                 Surface = "#ffffff",           // 纯白
-                AppbarBackground = "#2d3748",  // 墨黑导航
-                AppbarText = "#f7fafc",        // 淡墨文字
-                DrawerBackground = "#fefefe",  // 宣纸白抽屉
-                DrawerText = "#2d3748",        // 墨黑文字
-                DrawerIcon = "#4a5568",        // 深灰墨图标
+                AppbarBackground = "#1a1d23",  // 浓墨导航
+                AppbarText = "#f9fafb",        // 素白文字
+                DrawerBackground = "#faf9f7",  // 宣纸白抽屉
+                DrawerText = "#1a1d23",        // 浓墨文字
+                DrawerIcon = "#374151",        // 深灰墨图标
                 
-                TextPrimary = "#1a202c",       // 浓墨文字
-                TextSecondary = "#4a5568",     // 深灰墨文字
-                TextDisabled = "#a0aec0",      // 浅灰墨文字
+                TextPrimary = "#0f172a",       // 极浓墨文字（增强对比）
+                TextSecondary = "#374151",     // 深灰墨文字
+                TextDisabled = "#9ca3af",      // 浅灰墨文字（更柔和）
                 
-                ActionDefault = "#2d3748",     // 墨黑
-                ActionDisabled = "#e2e8f0",    // 极浅灰
-                ActionDisabledBackground = "#f7fafc", // 淡背景
+                ActionDefault = "#f3f4f6",     // 淡灰（更适合默认行为）
+                ActionDisabled = "#e5e7eb",    // 极浅灰
+                ActionDisabledBackground = "#f9fafb", // 淡背景
                 
-                Divider = "#e2e8f0",           // 淡墨线
-                DividerLight = "#f1f5f9",      // 极淡墨线
+                Divider = "#d1d5db",           // 淡墨线（更自然）
+                DividerLight = "#e5e7eb",      // 极淡墨线
                 
-                TableLines = "#e2e8f0",        // 表格墨线
-                TableStriped = "#f8fafc",      // 表格条纹
-                TableHover = "#edf2f7",        // 表格悬停
+                TableLines = "#d1d5db",        // 表格墨线
+                TableStriped = "#f9fafb",      // 表格条纹（更淡雅）
+                TableHover = "#f3f4f6",        // 表格悬停
                 
-                LinesDefault = "#e2e8f0",      // 默认墨线
-                LinesInputs = "#cbd5e0",       // 输入框墨线
+                LinesDefault = "#d1d5db",      // 默认墨线
+                LinesInputs = "#9ca3af",       // 输入框墨线（更清晰）
                 
-                GrayDefault = "#718096",       // 默认灰墨
-                GrayLight = "#a0aec0",         // 浅灰墨
-                GrayLighter = "#e2e8f0",       // 更浅灰墨
-                GrayDark = "#4a5568",          // 深灰墨
-                GrayDarker = "#2d3748",        // 更深灰墨
+                GrayDefault = "#6b7280",       // 默认灰墨
+                GrayLight = "#9ca3af",         // 浅灰墨
+                GrayLighter = "#d1d5db",       // 更浅灰墨
+                GrayDark = "#374151",          // 深灰墨
+                GrayDarker = "#1a1d23",        // 更深灰墨
                 
-                OverlayDark = "rgba(45,55,72,0.3)",    // 深墨遮罩
-                OverlayLight = "rgba(255,255,255,0.8)"  // 浅色遮罩
+                OverlayDark = "rgba(15,23,42,0.4)",    // 深墨遮罩（更柔和）
+                OverlayLight = "rgba(255,255,255,0.85)"  // 浅色遮罩
             },
             PaletteDark = new PaletteDark()
             {
-                Primary = "#e2e8f0",           // 淡墨
-                Secondary = "#cbd5e0",         // 浅灰墨
-                Tertiary = "#a0aec0",          // 中浅灰墨
-                Info = "#4fd1c7",              // 青绿
-                Success = "#68d391",           // 翠绿
-                Warning = "#fbd38d",           // 赭石
-                Error = "#fc8181",             // 朱红
-                Dark = "#f7fafc",              // 淡色
+                Primary = "#06b6d4",           // 青蓝（传统青绿色调，暗色下有足够对比度）
+                Secondary = "#64748b",         // 中灰墨（更有层次）
+                Tertiary = "#475569",          // 深灰墨
+                Info = "#14b8a6",              // 青绿（暗色下更亮）
+                Success = "#10b981",           // 翠绿（保持生机）
+                Warning = "#f59e0b",           // 赭黄（暗色下更温暖）
+                Error = "#ef4444",             // 朱红（暗色下保持警示）
+                Dark = "#f9fafb",              // 素白
                 
-                Background = "#1a202c",        // 浓墨背景
-                BackgroundGray = "#2d3748",    // 深墨背景
-                Surface = "#2d3748",           // 深墨表面
-                AppbarBackground = "#2d3748",  // 深墨导航
-                AppbarText = "#e2e8f0",        // 淡墨文字
-                DrawerBackground = "#2d3748",  // 深墨抽屉
-                DrawerText = "#e2e8f0",        // 淡墨文字
-                DrawerIcon = "#cbd5e0",        // 浅灰墨图标
+                Background = "#0f172a",        // 极深墨背景（更深邃）
+                BackgroundGray = "#1e293b",    // 深墨背景
+                Surface = "#1e293b",           // 深墨表面
+                AppbarBackground = "#0f172a",  // 极深墨导航
+                AppbarText = "#f1f5f9",        // 素白文字
+                DrawerBackground = "#1e293b",  // 深墨抽屉
+                DrawerText = "#f1f5f9",        // 素白文字
+                DrawerIcon = "#94a3b8",        // 中灰图标
                 
-                TextPrimary = "#f7fafc",       // 淡色文字
-                TextSecondary = "#e2e8f0",     // 淡墨文字
-                TextDisabled = "#718096",      // 中灰墨文字
+                TextPrimary = "#f8fafc",       // 纯白文字（增强对比）
+                TextSecondary = "#cbd5e1",     // 淡灰文字
+                TextDisabled = "#64748b",      // 中灰墨文字
                 
-                ActionDefault = "#e2e8f0",     // 淡墨
-                ActionDisabled = "#4a5568",    // 深灰墨
-                ActionDisabledBackground = "#2d3748", // 深背景
+                ActionDefault = "#475569",     // 中灰（适合暗色默认行为）
+                ActionDisabled = "#64748b",    // 浅灰
+                ActionDisabledBackground = "#1e293b", // 深背景
                 
-                Divider = "#4a5568",           // 深灰墨分隔线
-                DividerLight = "#718096",      // 中灰墨分隔线
+                Divider = "#475569",           // 深灰墨分隔线（更清晰）
+                DividerLight = "#64748b",      // 中灰墨分隔线
                 
-                TableLines = "#4a5568",        // 表格墨线
-                TableStriped = "#2d3748",      // 表格条纹
-                TableHover = "#4a5568",        // 表格悬停
+                TableLines = "#475569",        // 表格墨线
+                TableStriped = "#1e293b",      // 表格条纹
+                TableHover = "#334155",        // 表格悬停（更明显）
                 
-                LinesDefault = "#4a5568",      // 默认墨线
-                LinesInputs = "#718096",       // 输入框墨线
+                LinesDefault = "#475569",      // 默认墨线
+                LinesInputs = "#64748b",       // 输入框墨线（更清晰）
                 
-                GrayDefault = "#718096",       // 默认灰墨
-                GrayLight = "#a0aec0",         // 浅灰墨
-                GrayLighter = "#cbd5e0",       // 更浅灰墨
-                GrayDark = "#4a5568",          // 深灰墨
-                GrayDarker = "#2d3748",        // 更深灰墨
+                GrayDefault = "#64748b",       // 默认灰墨
+                GrayLight = "#94a3b8",         // 浅灰墨
+                GrayLighter = "#cbd5e1",       // 更浅灰墨
+                GrayDark = "#475569",          // 深灰墨
+                GrayDarker = "#334155",        // 更深灰墨
                 
-                OverlayDark = "rgba(26,32,44,0.8)",    // 浓墨遮罩
-                OverlayLight = "rgba(45,55,72,0.6)"    // 深墨遮罩
+                OverlayDark = "rgba(15,23,42,0.8)",    // 极深墨遮罩
+                OverlayLight = "rgba(30,41,59,0.6)"    // 深墨遮罩
             },
             LayoutProperties = new LayoutProperties()
             {
@@ -240,32 +240,32 @@ public class ThemeInkLandscape : ThemeBase
             {
                 Elevation = new string[]
                 {
-                    "none",
-                    "0 1px 3px rgba(45, 55, 72, 0.1)",
-                    "0 2px 6px rgba(45, 55, 72, 0.15)",
-                    "0 3px 9px rgba(45, 55, 72, 0.2)",
-                    "0 4px 12px rgba(45, 55, 72, 0.25)",
-                    "0 5px 15px rgba(45, 55, 72, 0.3)",
-                    "0 6px 18px rgba(45, 55, 72, 0.35)",
-                    "0 7px 21px rgba(45, 55, 72, 0.4)",
-                    "0 8px 24px rgba(45, 55, 72, 0.45)",
-                    "0 9px 27px rgba(45, 55, 72, 0.5)",
-                    "0 10px 30px rgba(45, 55, 72, 0.55)",
-                    "0 11px 33px rgba(45, 55, 72, 0.6)",
-                    "0 12px 36px rgba(45, 55, 72, 0.65)",
-                    "0 13px 39px rgba(45, 55, 72, 0.7)",
-                    "0 14px 42px rgba(45, 55, 72, 0.75)",
-                    "0 15px 45px rgba(45, 55, 72, 0.8)",
-                    "0 16px 48px rgba(45, 55, 72, 0.85)",
-                    "0 17px 51px rgba(45, 55, 72, 0.9)",
-                    "0 18px 54px rgba(45, 55, 72, 0.95)",
-                    "0 19px 57px rgba(45, 55, 72, 1.0)",
-                    "0 20px 60px rgba(45, 55, 72, 1.0)",
-                    "0 21px 63px rgba(45, 55, 72, 1.0)",
-                    "0 22px 66px rgba(45, 55, 72, 1.0)",
-                    "0 23px 69px rgba(45, 55, 72, 1.0)",
-                    "0 24px 72px rgba(45, 55, 72, 1.0)",
-                    "0 25px 75px rgba(45, 55, 72, 1.0)"
+                    "none",                                                    // 0: 无阴影
+                    "0 1px 2px rgba(15, 23, 42, 0.08)",                      // 1: 微妙墨迹
+                    "0 1px 3px rgba(15, 23, 42, 0.1), 0 1px 2px rgba(15, 23, 42, 0.06)", // 2: 轻微层次
+                    "0 2px 4px rgba(15, 23, 42, 0.1), 0 2px 3px rgba(15, 23, 42, 0.06)", // 3: 淡墨阴影
+                    "0 2px 6px rgba(15, 23, 42, 0.12), 0 2px 4px rgba(15, 23, 42, 0.08)", // 4: 标准墨影
+                    "0 4px 8px rgba(15, 23, 42, 0.12), 0 2px 4px rgba(15, 23, 42, 0.08)", // 5: 明显层次
+                    "0 6px 12px rgba(15, 23, 42, 0.15), 0 2px 4px rgba(15, 23, 42, 0.08)", // 6: 卡片阴影
+                    "0 8px 16px rgba(15, 23, 42, 0.15), 0 2px 6px rgba(15, 23, 42, 0.08)", // 7: 浮起效果
+                    "0 10px 20px rgba(15, 23, 42, 0.15), 0 4px 8px rgba(15, 23, 42, 0.08)", // 8: 对话框
+                    "0 12px 24px rgba(15, 23, 42, 0.15), 0 4px 8px rgba(15, 23, 42, 0.08)", // 9: 深度层次
+                    "0 16px 32px rgba(15, 23, 42, 0.15), 0 4px 8px rgba(15, 23, 42, 0.08)", // 10: 重要内容
+                    "0 20px 40px rgba(15, 23, 42, 0.15), 0 4px 8px rgba(15, 23, 42, 0.08)", // 11: 抽屉效果
+                    "0 24px 48px rgba(15, 23, 42, 0.15), 0 6px 12px rgba(15, 23, 42, 0.08)", // 12: 模态框
+                    "0 28px 56px rgba(15, 23, 42, 0.15), 0 6px 12px rgba(15, 23, 42, 0.08)", // 13: 悬浮面板
+                    "0 32px 64px rgba(15, 23, 42, 0.15), 0 8px 16px rgba(15, 23, 42, 0.08)", // 14: 最高层级
+                    "0 36px 72px rgba(15, 23, 42, 0.15), 0 8px 16px rgba(15, 23, 42, 0.08)", // 15: 极高层级
+                    "0 40px 80px rgba(15, 23, 42, 0.15), 0 8px 16px rgba(15, 23, 42, 0.08)", // 16: 特殊效果
+                    "0 44px 88px rgba(15, 23, 42, 0.15), 0 8px 16px rgba(15, 23, 42, 0.08)", // 17: 超高层级
+                    "0 48px 96px rgba(15, 23, 42, 0.15), 0 8px 16px rgba(15, 23, 42, 0.08)", // 18: 最大层级
+                    "0 52px 104px rgba(15, 23, 42, 0.15), 0 8px 16px rgba(15, 23, 42, 0.08)", // 19: 扩展层级
+                    "0 56px 112px rgba(15, 23, 42, 0.15), 0 8px 16px rgba(15, 23, 42, 0.08)", // 20: 特殊用途
+                    "0 60px 120px rgba(15, 23, 42, 0.15), 0 8px 16px rgba(15, 23, 42, 0.08)", // 21: 自定义1
+                    "0 64px 128px rgba(15, 23, 42, 0.15), 0 8px 16px rgba(15, 23, 42, 0.08)", // 22: 自定义2
+                    "0 68px 136px rgba(15, 23, 42, 0.15), 0 8px 16px rgba(15, 23, 42, 0.08)", // 23: 自定义3
+                    "0 72px 144px rgba(15, 23, 42, 0.15), 0 8px 16px rgba(15, 23, 42, 0.08)", // 24: 自定义4
+                    "0 76px 152px rgba(15, 23, 42, 0.15), 0 8px 16px rgba(15, 23, 42, 0.08)"  // 25: 自定义5
                 }
             },
             ZIndex = new ZIndex()
