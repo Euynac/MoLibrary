@@ -15,8 +15,9 @@ MoLibrary UI 模块采用分离式主题架构，将颜色管理与样式管理�
 - 设置字体、间距等布局属性
 
 **CSS 样式层 (Theme CSS)**
-- 负责组件样式、动画、圆角、阴影等视觉效果
-- 使用 MudBlazor CSS 变量引用颜色
+- 负责组件样式、动画、圆角、阴影等视觉效果。
+- 使用 MudBlazor CSS 变量引用颜色，除非必要，不要使用自定义的颜色值。
+- 除非必要，不需要在重写的 MudBlazor 组件中覆盖设置颜色样式，因为已经在C#主题颜色中定义了。
 - 定义组件的交互效果和布局
 
 ### 2. 颜色管理规范
@@ -46,7 +47,10 @@ public class ThemeExample : IThemeProvider
 }
 ```
 
-#### CSS 层颜色引用
+> 注意暗色模式下的--mud-palette-primary 和 --mud-palette-primary-text 对比度问题。
+
+
+#### CSS 层颜色引用（仅供参考，实际可能不需要再次覆盖颜色，要专注于其他效果的重写）
 ```css
 .mud-button {
     background-color: var(--mud-palette-primary);
@@ -176,12 +180,9 @@ MoLibrary.UI/
     padding: var(--mo-button-padding-y) var(--mo-button-padding-x) !important;
     font-weight: var(--mo-button-font-weight) !important;
     transition: var(--mo-button-transition) !important;
-    background-color: var(--mud-palette-surface);
-    color: var(--mud-palette-text-primary);
 }
 
 .mud-button:hover {
-    background-color: var(--mud-palette-action-default-hover);
     transform: translateY(-1px);
 }
 ```

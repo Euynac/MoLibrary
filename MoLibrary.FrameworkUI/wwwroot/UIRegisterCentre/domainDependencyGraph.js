@@ -8,7 +8,7 @@
 import { GraphBase, getModernLinkStyle, getModernNodeStyle, focusOnPosition } from '../../MoLibrary.UI/js/d3js/d3-graph-base.js';
 import { ForceLayoutManager } from '../../MoLibrary.UI/js/d3js/d3-force-layout.js';
 import { createLayoutAlgorithms } from '../../MoLibrary.UI/js/d3js/d3-layout-algorithms.js';
-import { createStaticDragBehavior } from '../../MoLibrary.UI/js/d3js/d3-node-interaction.js';
+import { NodeInteractionHandler, createStaticDragBehavior } from '../../MoLibrary.UI/js/d3js/d3-node-interaction.js';
 
 let graphInstance = null;
 
@@ -120,6 +120,20 @@ class DomainDependencyGraph extends GraphBase {
         // 初始化布局算法管理器
         this.layoutAlgorithms = createLayoutAlgorithms(this.width, this.height);
         
+        // 初始化交互处理器
+        this.interactionHandler = new NodeInteractionHandler({
+            onClick: (event, d) => this.handleNodeClick(d),
+            onRightClick: (event, d, position) => this.handleNodeRightClick(d, position.clientX, position.clientY),
+            onHover: (event, d) => this.showTooltip(event, this.buildDomainTooltipContent(d)),
+            onHoverOut: (event, d) => this.hideTooltip(),
+            highlightOptions: {
+                fadeOpacity: 0.2,
+                normalOpacity: 1
+            },
+            isDarkMode: this.isDarkMode,
+            markerIds: this.markerIds // 传递marker IDs
+        });
+        
         // 静态布局拖拽行为
         this.staticDragBehavior = null;
 
@@ -195,36 +209,38 @@ class DomainDependencyGraph extends GraphBase {
         // 移除旧元素
         this.linkElements.exit().remove();
 
-        // 创建新元素
+        // 创建新元素 - 使用path而不是line以支持更好的箭头显示
         const linkEnter = this.linkElements.enter()
-            .append('line')
-            .attr('class', 'domain-link')
+            .append('path')
+            .attr('class', 'domain-link modern-link')
             .style('opacity', 0);
 
         // 合并选择
         this.linkElements = linkEnter.merge(this.linkElements);
 
-        // 设置样式
+        // 设置现代化样式 - 完全参考ProjectUnit实现，不使用域颜色
         const linkStyle = getModernLinkStyle(this.isDarkMode, false, this.markerIds);
         this.linkElements
             .transition()
             .duration(300)
             .style('opacity', 1)
-            .attr('stroke', d => d.color || linkStyle.stroke)
-            .attr('stroke-width', d => Math.max(2, Math.min(6, d.serviceCount || 1)))
+            .attr('stroke', linkStyle.stroke)
+            .attr('stroke-width', linkStyle.strokeWidth)
             .attr('stroke-opacity', linkStyle.strokeOpacity)
+            .attr('stroke-linecap', linkStyle.strokeLinecap)
+            .attr('stroke-linejoin', linkStyle.strokeLinejoin)
+            .attr('fill', 'none')
             .attr('marker-end', linkStyle.markerEnd)
-            .style('filter', linkStyle.filter);
+            .style('filter', linkStyle.filter)
+            .style('pointer-events', 'stroke'); // 允许path元素响应鼠标事件
 
-        // 添加交互
+        // 添加交互 - 只保留tooltip显示
         this.linkElements
             .style('cursor', 'pointer')
             .on('mouseenter', (event, d) => {
-                this.highlightLink(d, true);
                 this.showTooltip(event, `${d.source.name || d.source} → ${d.target.name || d.target}<br/>服务数: ${d.serviceCount || 1}`);
             })
             .on('mouseleave', (event, d) => {
-                this.highlightLink(d, false);
                 this.hideTooltip();
             });
     }
@@ -288,26 +304,15 @@ class DomainDependencyGraph extends GraphBase {
         // 添加拖拽行为
         this.nodeElements.call(this.forceLayout.getDragBehavior());
 
-        // 添加交互事件
-        this.nodeElements
-            .style('cursor', 'pointer')
-            .on('mouseenter', (event, d) => {
-                this.highlightNode(d, true);
-                this.showTooltip(event, this.buildDomainTooltipContent(d));
-            })
-            .on('mouseleave', (event, d) => {
-                this.highlightNode(d, false);
-                this.hideTooltip();
-            })
-            .on('click', (event, d) => {
-                event.stopPropagation();
-                this.handleNodeClick(d);
-            })
-            .on('contextmenu', (event, d) => {
-                event.preventDefault();
-                event.stopPropagation();
-                this.handleNodeRightClick(d, event);
-            });
+        // 绑定交互事件 - 使用NodeInteractionHandler
+        this.interactionHandler.bindNodeEvents(this.nodeElements, {
+            nodes: this.nodes,
+            links: this.links,
+            linkSelection: this.linkElements
+        });
+
+        // 设置鼠标样式
+        this.nodeElements.style('cursor', 'pointer');
     }
 
     updatePositions() {
@@ -318,52 +323,29 @@ class DomainDependencyGraph extends GraphBase {
 
         if (this.linkElements) {
             this.linkElements
-                .attr('x1', d => d.source.x)
-                .attr('y1', d => d.source.y)
-                .attr('x2', d => d.target.x)
-                .attr('y2', d => d.target.y);
+                .attr('d', d => {
+                    // 计算从源到目标的路径，根据目标节点调整终点以避免箭头覆盖节点
+                    const dx = d.target.x - d.source.x;
+                    const dy = d.target.y - d.source.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance === 0) return '';
+                    
+                    const normX = dx / distance;
+                    const normY = dy / distance;
+                    
+                    // 为箭头留出空间，圆形节点半径30 + 一些间距
+                    const arrowOffset = 35;
+                    
+                    // 缩短路径末端，为箭头留出空间
+                    const endX = d.target.x - normX * arrowOffset;
+                    const endY = d.target.y - normY * arrowOffset;
+                    
+                    return `M${d.source.x},${d.source.y} L${endX},${endY}`;
+                });
         }
     }
 
-    highlightNode(node, highlight) {
-        const nodeElement = this.nodeElements.filter(d => d.id === node.id);
-        const circle = nodeElement.select('.node-circle');
-        
-        if (highlight) {
-            circle
-                .transition()
-                .duration(200)
-                .attr('r', 35)
-                .style('filter', 'drop-shadow(0 4px 12px rgba(0,0,0,0.25))');
-        } else {
-            circle
-                .transition()
-                .duration(200)
-                .attr('r', 30)
-                .style('filter', 'drop-shadow(0 2px 8px rgba(0,0,0,0.15))');
-        }
-    }
-
-    highlightLink(link, highlight) {
-        const linkElement = this.linkElements.filter(d => 
-            (d.source.id || d.source) === (link.source.id || link.source) && 
-            (d.target.id || d.target) === (link.target.id || link.target)
-        );
-        
-        if (highlight) {
-            linkElement
-                .transition()
-                .duration(200)
-                .attr('stroke-width', d => Math.max(4, Math.min(8, (d.serviceCount || 1) + 2)))
-                .attr('stroke-opacity', 1);
-        } else {
-            linkElement
-                .transition()
-                .duration(200)
-                .attr('stroke-width', d => Math.max(2, Math.min(6, d.serviceCount || 1)))
-                .attr('stroke-opacity', getModernLinkStyle(this.isDarkMode).strokeOpacity);
-        }
-    }
 
     showTooltip(event, content) {
         // 创建或更新tooltip
@@ -428,18 +410,15 @@ class DomainDependencyGraph extends GraphBase {
     /**
      * 处理节点右键事件
      * @param {Object} node - 被右键点击的节点数据
-     * @param {Event} event - 原始事件对象
+     * @param {number} x - 客户端X坐标
+     * @param {number} y - 客户端Y坐标
      */
-    handleNodeRightClick(node, event) {
+    handleNodeRightClick(node, x, y) {
         // 隐藏工具提示
         this.hideTooltip();
         
         // 如果有.NET回调对象，调用右键菜单显示方法
         if (this.dotNetHelper && typeof this.dotNetHelper.invokeMethodAsync === 'function') {
-            // 获取相对于视口的坐标
-            const x = event.clientX;
-            const y = event.clientY;
-            
             this.dotNetHelper.invokeMethodAsync('OnDomainRightClick', node.id || node.name, x, y);
         }
     }
@@ -597,6 +576,16 @@ class DomainDependencyGraph extends GraphBase {
         // 应用拖拽行为
         if (this.nodeElements) {
             this.nodeElements.call(this.forceLayout.getDragBehavior());
+            
+            // 重新绑定交互事件 - 使用NodeInteractionHandler
+            this.interactionHandler.bindNodeEvents(this.nodeElements, {
+                nodes: this.nodes,
+                links: this.links,
+                linkSelection: this.linkElements
+            });
+            
+            // 设置鼠标样式
+            this.nodeElements.style('cursor', 'pointer');
         }
         
         // 启动模拟
@@ -666,28 +655,36 @@ class DomainDependencyGraph extends GraphBase {
         
         this.staticDragBehavior = createStaticDragBehavior({
             updateLinks: (draggedNode) => {
-                // 实时更新连接线
+                // 实时更新连接线 - 使用path的d属性而不是x1,y1,x2,y2
                 if (self.linkElements) {
                     self.linkElements
-                        .attr('x1', d => {
+                        .attr('d', d => {
                             const sourceId = d.source.id || d.source;
-                            return sourceId === draggedNode.id ? draggedNode.x : 
-                                   self.nodes.find(n => n.id === sourceId)?.x || 0;
-                        })
-                        .attr('y1', d => {
-                            const sourceId = d.source.id || d.source;
-                            return sourceId === draggedNode.id ? draggedNode.y : 
-                                   self.nodes.find(n => n.id === sourceId)?.y || 0;
-                        })
-                        .attr('x2', d => {
                             const targetId = d.target.id || d.target;
-                            return targetId === draggedNode.id ? draggedNode.x : 
-                                   self.nodes.find(n => n.id === targetId)?.x || 0;
-                        })
-                        .attr('y2', d => {
-                            const targetId = d.target.id || d.target;
-                            return targetId === draggedNode.id ? draggedNode.y : 
-                                   self.nodes.find(n => n.id === targetId)?.y || 0;
+                            
+                            const source = sourceId === draggedNode.id ? draggedNode : 
+                                           self.nodes.find(n => n.id === sourceId);
+                            const target = targetId === draggedNode.id ? draggedNode : 
+                                           self.nodes.find(n => n.id === targetId);
+                            
+                            if (!source || !target) return '';
+                            
+                            // 计算从源到目标的路径
+                            const dx = target.x - source.x;
+                            const dy = target.y - source.y;
+                            const distance = Math.sqrt(dx * dx + dy * dy);
+                            
+                            if (distance === 0) return '';
+                            
+                            const normX = dx / distance;
+                            const normY = dy / distance;
+                            
+                            // 为箭头留出空间，圆形节点半径30 + 一些间距
+                            const arrowOffset = 35;
+                            
+                            const endX = target.x - normX * arrowOffset;
+                            const endY = target.y - normY * arrowOffset;
+                            return `M${source.x},${source.y} L${endX},${endY}`;
                         });
                 }
             }
@@ -695,6 +692,16 @@ class DomainDependencyGraph extends GraphBase {
         
         if (this.nodeElements) {
             this.nodeElements.call(this.staticDragBehavior);
+            
+            // 重新绑定交互事件 - 使用NodeInteractionHandler
+            this.interactionHandler.bindNodeEvents(this.nodeElements, {
+                nodes: this.nodes,
+                links: this.links,
+                linkSelection: this.linkElements
+            });
+            
+            // 设置鼠标样式
+            this.nodeElements.style('cursor', 'pointer');
         }
     }
     
@@ -713,21 +720,30 @@ class DomainDependencyGraph extends GraphBase {
             this.linkElements
                 .transition()
                 .duration(750)
-                .attr('x1', d => {
+                .attr('d', d => {
                     const source = this.nodes.find(n => n.id === (d.source.id || d.source));
-                    return source ? source.x : 0;
-                })
-                .attr('y1', d => {
-                    const source = this.nodes.find(n => n.id === (d.source.id || d.source));
-                    return source ? source.y : 0;
-                })
-                .attr('x2', d => {
                     const target = this.nodes.find(n => n.id === (d.target.id || d.target));
-                    return target ? target.x : 0;
-                })
-                .attr('y2', d => {
-                    const target = this.nodes.find(n => n.id === (d.target.id || d.target));
-                    return target ? target.y : 0;
+                    
+                    if (!source || !target) return '';
+                    
+                    // 计算从源到目标的路径，根据目标节点调整终点以避免箭头覆盖节点
+                    const dx = target.x - source.x;
+                    const dy = target.y - source.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance === 0) return '';
+                    
+                    const normX = dx / distance;
+                    const normY = dy / distance;
+                    
+                    // 为箭头留出空间，圆形节点半径30 + 一些间距
+                    const arrowOffset = 35;
+                    
+                    // 缩短路径末端，为箭头留出空间
+                    const endX = target.x - normX * arrowOffset;
+                    const endY = target.y - normY * arrowOffset;
+                    
+                    return `M${source.x},${source.y} L${endX},${endY}`;
                 });
         }
     }

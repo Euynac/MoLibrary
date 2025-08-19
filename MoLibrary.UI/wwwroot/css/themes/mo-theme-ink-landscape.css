@@ -1,10 +1,7 @@
 /* MoLibrary Ink Landscape Theme - 墨韵山水主题 */
-/* 中国水墨画风格主题 */
+/* 中国水墨画风格主题 - 遵循 MoLibrary 主题规范 */
 
 /* 导入中文字体 - 离线模式 */
-/* @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500;600;700&display=swap'); */
-
-/* 本地字体定义 */
 @font-face {
     font-family: 'Noto Serif SC';
     src: url('../../fonts/NotoSerifSC-Regular.woff2') format('woff2');
@@ -26,19 +23,19 @@
     font-display: swap;
 }
 
-/* Ink Landscape Theme CSS Variables - 明暗模式通用 */
+/* ==============================================
+   CSS 变量定义 - 按规范分类
+   ============================================== */
+
+/* 主题通用变量 - 适用于明暗两种模式 */
 :root[data-theme="ink-landscape-light"],
 :root[data-theme="ink-landscape-dark"],
 .mo-theme-ink-landscape-light,
 .mo-theme-ink-landscape-dark {
-    /* 水墨效果变量 */
-    --mo-ink-primary: #2d3748;
-    --mo-ink-secondary: #4a5568;
-    --mo-ink-accent: #2c7a7b;
-    --mo-ink-wash-opacity: 0.05;
-    --mo-ink-border-opacity: 0.15;
     
-    /* 组件样式变量 - 传统书法风格 */
+    /* ========== 组件样式变量 ========== */
+    
+    /* 按钮样式 */
     --mo-button-border-radius: 2px;
     --mo-button-padding-x: 16px;
     --mo-button-padding-y: 8px;
@@ -46,114 +43,69 @@
     --mo-button-text-transform: none;
     --mo-button-transition: all 0.3s ease;
     
+    /* 卡片样式 */
     --mo-card-border-radius: 4px;
     --mo-card-padding: 24px;
     
+    /* 输入框样式 */
     --mo-input-border-radius: 2px;
     --mo-input-padding: 12px 16px;
     --mo-input-border-width: 1px;
     
+    /* 对话框样式 */
     --mo-dialog-border-radius: 8px;
     --mo-dialog-padding: 32px;
     
+    /* 标签样式 */
     --mo-chip-border-radius: 12px;
     --mo-chip-padding: 4px 12px;
     --mo-chip-height: 28px;
     
+    /* 表格样式 */
     --mo-table-border-radius: 4px;
     
-    /* 间距变量 - 传统比例 */
+    /* ========== 间距变量 ========== */
     --mo-spacing-xs: 4px;
     --mo-spacing-sm: 8px;
     --mo-spacing-md: 16px;
     --mo-spacing-lg: 24px;
     --mo-spacing-xl: 32px;
     
-    /* 动画变量 - 缓慢优雅 */
+    /* ========== 动画和过渡变量 ========== */
     --mo-transition-fast: 200ms;
     --mo-transition-normal: 400ms;
     --mo-transition-slow: 600ms;
     --mo-animation-smooth: 400ms ease;
     --mo-animation-ink: 800ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
     
-    /* 水墨纹理变量 */
+    /* ========== 水墨特效变量 ========== */
+    --mo-ink-wash-opacity: 0.05;
+    --mo-ink-border-opacity: 0.15;
+    
+    /* 水墨纹理 */
     --mo-ink-texture: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.03'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
     --mo-paper-texture: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23000000' fill-opacity='0.01' fill-rule='evenodd'%3E%3Cpath d='m0 40l40-40h-40v40zm40 0v-40h-40l40 40z'/%3E%3C/g%3E%3C/svg%3E");
-    
-    /* 毛笔笔触效果 */
-    --mo-brush-stroke: linear-gradient(135deg, transparent 30%, rgba(45, 55, 72, 0.8) 50%, transparent 70%);
-    --mo-ink-wash: radial-gradient(circle, rgba(45, 55, 72, 0.1) 0%, transparent 70%);
 }
 
-/* Light Theme Variables */
+/* ==============================================
+   明亮模式特定变量
+   ============================================== */
 :root[data-theme="ink-landscape-light"],
 .mo-theme-ink-landscape-light {
-    --mo-background-paper: #fefefe;
-    --mo-background-wash: rgba(45, 55, 72, var(--mo-ink-wash-opacity));
-    --mo-background-elevated: #ffffff;
-    --mo-surface-ink: rgba(45, 55, 72, 0.03);
-    --mo-surface-hover: rgba(45, 55, 72, 0.05);
-    --mo-border-ink: rgba(45, 55, 72, var(--mo-ink-border-opacity));
-    --mo-border-medium: rgba(45, 55, 72, 0.25);
-    --mo-shadow-ink: 0 2px 8px rgba(45, 55, 72, 0.1);
-    --mo-shadow-ink-hover: 0 4px 16px rgba(45, 55, 72, 0.15);
-    --mo-accent-green: #2c7a7b;
-    --mo-accent-ochre: #d69e2e;
+    /* 使用 MudBlazor 变量系统，不定义自定义颜色 */
 }
 
-/* Dark Theme Variables */
+/* ==============================================
+   暗色模式特定变量  
+   ============================================== */
 :root[data-theme="ink-landscape-dark"],
 .mo-theme-ink-landscape-dark {
-    --mo-background-paper: #1a202c;
-    --mo-background-wash: rgba(226, 232, 240, 0.08);
-    --mo-background-elevated: #2d3748;
-    --mo-surface-ink: rgba(226, 232, 240, 0.05);
-    --mo-surface-hover: rgba(226, 232, 240, 0.08);
-    --mo-border-ink: rgba(226, 232, 240, 0.2);
-    --mo-border-medium: rgba(226, 232, 240, 0.3);
-    --mo-shadow-ink: 0 2px 8px rgba(0, 0, 0, 0.3);
-    --mo-shadow-ink-hover: 0 4px 16px rgba(0, 0, 0, 0.5);
-    --mo-accent-green: #4fd1c7;
-    --mo-accent-ochre: #fbd38d;
+    /* 使用 MudBlazor 变量系统，不定义自定义颜色 */
 }
 
-/* 宣纸背景纹理 - Light Mode */
-.mo-theme-ink-landscape-light {
-    background: var(--mo-background-paper) var(--mo-paper-texture);
-    background-attachment: fixed;
-}
-
-.mo-theme-ink-landscape-light::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: var(--mo-ink-texture);
-    opacity: 0.3;
-    z-index: -10;
-    pointer-events: none;
-}
-
-/* 深色宣纸背景 - Dark Mode */
-.mo-theme-ink-landscape-dark {
-    background: var(--mo-background-paper) var(--mo-paper-texture);
-    background-attachment: fixed;
-}
-
-.mo-theme-ink-landscape-dark::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: var(--mo-ink-texture);
-    opacity: 0.2;
-    z-index: -10;
-    pointer-events: none;
-}
+/* ==============================================
+   动画定义
+   ============================================== */
 
 /* 水墨渲染动画 */
 @keyframes mo-ink-wash {
@@ -190,15 +142,15 @@
 /* 墨迹扩散动画 */
 @keyframes mo-ink-spread {
     0% { 
-        box-shadow: 0 0 0 0 rgba(45, 55, 72, 0.3);
+        box-shadow: 0 0 0 0 var(--mud-palette-primary);
         opacity: 1;
     }
     70% { 
-        box-shadow: 0 0 0 10px rgba(45, 55, 72, 0);
+        box-shadow: 0 0 0 10px transparent;
         opacity: 0.7;
     }
     100% { 
-        box-shadow: 0 0 0 0 rgba(45, 55, 72, 0);
+        box-shadow: 0 0 0 0 transparent;
         opacity: 0.7;
     }
 }
@@ -215,19 +167,82 @@
     }
 }
 
-/* Light and Dark Theme Styles */
+/* ==============================================
+   主题样式实现 - 通用样式（明暗模式共用）
+   ============================================== */
+
 .mo-theme-ink-landscape-light,
 .mo-theme-ink-landscape-dark {
-    /* Global Typography */
+    
+    /* ========== 全局字体设置 ========== */
     font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Microsoft YaHei', serif !important;
     line-height: 1.7 !important;
     
-    /* Cards - 墨韵卡片 */
+    /* ========== 背景纹理 ========== */
+    background: var(--mud-palette-background) var(--mo-paper-texture);
+    background-attachment: fixed;
+    
+    /* ========== 按钮组件 ========== */
+    .mud-button {
+        border-radius: var(--mo-button-border-radius) !important;
+        padding: var(--mo-button-padding-y) var(--mo-button-padding-x) !important;
+        font-weight: var(--mo-button-font-weight) !important;
+        text-transform: var(--mo-button-text-transform) !important;
+        transition: var(--mo-button-transition) !important;
+        font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Microsoft YaHei', serif !important;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .mud-button-filled::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, transparent 30%, var(--mud-palette-primary) 50%, transparent 70%);
+        transition: left var(--mo-animation-ink);
+        z-index: 0;
+    }
+    
+    .mud-button-filled:hover {
+        transform: translateY(-1px);
+        animation: mo-ink-spread 1s ease-out;
+    }
+    
+    .mud-button-filled:hover::before {
+        left: 100%;
+        animation: mo-brush-stroke 0.6s ease-out;
+    }
+    
+    .mud-button-outlined {
+        position: relative;
+    }
+    
+    .mud-button-outlined::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--mud-palette-action-default);
+        opacity: 0;
+        transition: opacity var(--mo-animation-smooth);
+    }
+    
+    .mud-button-outlined:hover::after {
+        opacity: 1;
+    }
+    
+    .mud-button-text:hover {
+        border-radius: var(--mo-button-border-radius) !important;
+    }
+    
+    /* ========== 卡片组件 ========== */
     .mud-card {
-        background: var(--mo-background-elevated) !important;
-        border: 1px solid var(--mo-border-ink) !important;
         border-radius: var(--mo-card-border-radius) !important;
-        box-shadow: var(--mo-shadow-ink) !important;
         transition: var(--mo-animation-smooth) !important;
         position: relative;
         overflow: hidden;
@@ -240,7 +255,7 @@
         left: -1px;
         right: -1px;
         bottom: -1px;
-        background: var(--mo-ink-wash);
+        background: radial-gradient(circle, var(--mud-palette-primary) 0%, transparent 70%);
         opacity: 0;
         transition: opacity var(--mo-animation-ink);
         z-index: -1;
@@ -253,113 +268,30 @@
         left: 0;
         right: 0;
         height: 1px;
-        background: var(--mo-brush-stroke);
+        background: linear-gradient(135deg, transparent 30%, var(--mud-palette-primary) 50%, transparent 70%);
         opacity: 0.6;
     }
     
     .mud-card:hover {
-        box-shadow: var(--mo-shadow-ink-hover) !important;
         transform: translateY(-2px);
-        border-color: var(--mo-border-medium);
         animation: mo-ink-spread 1.5s ease-out;
     }
     
     .mud-card:hover::before {
-        opacity: 1;
+        opacity: var(--mo-ink-wash-opacity);
         animation: mo-ink-wash 1s ease-out;
     }
     
-    /* Buttons - 墨韵按钮 */
-    .mud-button {
-        border-radius: var(--mo-button-border-radius) !important;
-        padding: var(--mo-button-padding-y) var(--mo-button-padding-x) !important;
-        font-weight: var(--mo-button-font-weight) !important;
-        text-transform: var(--mo-button-text-transform) !important;
-        transition: var(--mo-button-transition) !important;
-        font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Microsoft YaHei', serif !important;
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .mud-button-filled {
-        background: var(--mo-ink-primary) !important;
-        border: 1px solid var(--mo-border-ink) !important;
-        box-shadow: var(--mo-shadow-ink) !important;
-        color: var(--mo-background-elevated) !important;
-    }
-    
-    .mud-button-filled::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: var(--mo-brush-stroke);
-        transition: left var(--mo-animation-ink);
-        z-index: 0;
-    }
-    
-    .mud-button-filled:hover {
-        box-shadow: var(--mo-shadow-ink-hover) !important;
-        transform: translateY(-1px);
-        animation: mo-ink-spread 1s ease-out;
-    }
-    
-    .mud-button-filled:hover::before {
-        left: 100%;
-        animation: mo-brush-stroke 0.6s ease-out;
-    }
-    
-    .mud-button-outlined {
-        background: transparent !important;
-        border: 2px solid var(--mo-border-medium) !important;
-        position: relative;
-    }
-    
-    .mud-button-outlined::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: var(--mo-surface-ink);
-        opacity: 0;
-        transition: opacity var(--mo-animation-smooth);
-    }
-    
-    .mud-button-outlined:hover {
-        border-color: var(--mo-ink-primary) !important;
-        box-shadow: var(--mo-shadow-ink) !important;
-    }
-    
-    .mud-button-outlined:hover::after {
-        opacity: 1;
-    }
-    
-    .mud-button-text:hover {
-        background: var(--mo-surface-hover) !important;
-        border-radius: var(--mo-button-border-radius) !important;
-    }
-    
-    /* Inputs - 墨韵输入框 */
+    /* ========== 输入框组件 ========== */
     .mud-input-outlined .mud-input-outlined-border {
-        border-color: var(--mo-border-ink) !important;
         border-radius: var(--mo-input-border-radius) !important;
         border-width: var(--mo-input-border-width) !important;
-        background: var(--mo-background-elevated) !important;
         transition: var(--mo-animation-smooth) !important;
     }
     
-    .mud-input-outlined:hover .mud-input-outlined-border {
-        border-color: var(--mo-border-medium) !important;
-    }
-    
     .mud-input-outlined.mud-input-focused .mud-input-outlined-border {
-        border-color: var(--mo-ink-primary) !important;
         border-width: 2px !important;
-        box-shadow: 0 0 0 1px var(--mo-ink-primary) !important;
+        box-shadow: 0 0 0 1px var(--mud-palette-primary) !important;
     }
     
     .mud-input-control input,
@@ -367,11 +299,8 @@
         font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Microsoft YaHei', serif !important;
     }
     
-    /* AppBar - 墨韵导航栏 */
+    /* ========== 导航栏组件 ========== */
     .mud-app-bar {
-        background: var(--mo-background-elevated) !important;
-        border-bottom: 2px solid var(--mo-border-medium) !important;
-        box-shadow: var(--mo-shadow-ink) !important;
         position: relative;
     }
     
@@ -382,14 +311,12 @@
         left: 0;
         right: 0;
         height: 2px;
-        background: var(--mo-brush-stroke);
+        background: linear-gradient(135deg, transparent 30%, var(--mud-palette-primary) 50%, transparent 70%);
         opacity: 0.8;
     }
     
-    /* Drawer - 墨韵侧边栏 */
+    /* ========== 侧边栏组件 ========== */
     .mud-drawer .mud-drawer-content {
-        background: var(--mo-background-elevated) !important;
-        border-right: 2px solid var(--mo-border-medium) !important;
         position: relative;
     }
     
@@ -400,16 +327,13 @@
         right: -2px;
         bottom: 0;
         width: 2px;
-        background: var(--mo-brush-stroke);
+        background: linear-gradient(135deg, transparent 30%, var(--mud-palette-primary) 50%, transparent 70%);
         opacity: 0.6;
     }
     
-    /* Dialog - 墨韵对话框 */
+    /* ========== 对话框组件 ========== */
     .mud-dialog {
-        background: var(--mo-background-elevated) !important;
-        border: 2px solid var(--mo-border-medium) !important;
         border-radius: var(--mo-dialog-border-radius) !important;
-        box-shadow: var(--mo-shadow-ink-hover) !important;
         position: relative;
         overflow: hidden;
     }
@@ -421,7 +345,7 @@
         left: -2px;
         right: -2px;
         height: 4px;
-        background: var(--mo-brush-stroke);
+        background: linear-gradient(135deg, transparent 30%, var(--mud-palette-primary) 50%, transparent 70%);
         opacity: 0.8;
     }
     
@@ -430,19 +354,14 @@
         font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Microsoft YaHei', serif !important;
     }
     
-    /* Tables - 墨韵表格 */
+    /* ========== 表格组件 ========== */
     .mud-table {
-        background: var(--mo-background-elevated) !important;
         border-radius: var(--mo-table-border-radius) !important;
-        box-shadow: var(--mo-shadow-ink) !important;
-        border: 1px solid var(--mo-border-ink) !important;
         overflow: hidden;
         font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Microsoft YaHei', serif !important;
     }
     
     .mud-table-head .mud-table-row {
-        background: var(--mo-surface-ink) !important;
-        border-bottom: 2px solid var(--mo-border-medium) !important;
         position: relative;
     }
     
@@ -453,56 +372,53 @@
         left: 0;
         right: 0;
         height: 2px;
-        background: var(--mo-brush-stroke);
+        background: linear-gradient(135deg, transparent 30%, var(--mud-palette-primary) 50%, transparent 70%);
         opacity: 0.6;
     }
     
     .mud-table-head .mud-table-cell {
         font-weight: 600 !important;
-        color: var(--mo-ink-primary) !important;
     }
     
-    .mud-table-row:nth-child(even) {
-        background: var(--mo-surface-ink) !important;
-    }
-    
-    .mud-table-row:hover {
-        background: var(--mo-surface-hover) !important;
+    /* 表格行 - 基础样式 */
+    .mud-table-row {
         position: relative;
+        transition: all var(--mo-transition-normal) ease;
     }
     
-    .mud-table-row:hover::before {
+    /* 表格行左侧指示条 */
+    .mud-table-row::before {
         content: '';
         position: absolute;
         left: 0;
         top: 0;
         bottom: 0;
-        width: 3px;
-        background: var(--mo-ink-primary);
-        animation: mo-brush-stroke 0.3s ease-out;
+        width: 0;
+        background: var(--mud-palette-primary);
+        transition: width var(--mo-transition-normal) ease;
+        z-index: 1;
     }
     
-    /* Chips - 墨韵标签 */
+    /* 表格行hover效果 */
+    .mud-table-row:hover::before {
+        width: 2px;
+    }
+    
+    /* ========== 标签组件 ========== */
     .mud-chip {
-        background: var(--mo-surface-ink) !important;
-        border: 1px solid var(--mo-border-ink) !important;
         border-radius: var(--mo-chip-border-radius) !important;
         padding: var(--mo-chip-padding) !important;
         height: var(--mo-chip-height) !important;
         transition: var(--mo-animation-smooth) !important;
-        box-shadow: var(--mo-shadow-ink) !important;
         font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Microsoft YaHei', serif !important;
         position: relative;
     }
     
     .mud-chip:hover {
-        background: var(--mo-surface-hover) !important;
         transform: translateY(-1px);
-        box-shadow: var(--mo-shadow-ink-hover) !important;
-        border-color: var(--mo-border-medium);
     }
     
-    /* Typography - 墨韵字体 */
+    /* ========== 排版组件 ========== */
     .mud-typography-h1,
     .mud-typography-h2,
     .mud-typography-h3,
@@ -525,42 +441,31 @@
         left: 0;
         width: 60px;
         height: 2px;
-        background: var(--mo-brush-stroke);
+        background: linear-gradient(135deg, transparent 30%, var(--mud-palette-primary) 50%, transparent 70%);
         opacity: 0.6;
     }
     
-    /* Popovers and Menus - 墨韵弹出框 */
+    /* ========== 弹出框和菜单 ========== */
     .mud-popover,
     .mud-menu {
-        background: var(--mo-background-elevated) !important;
-        border: 1px solid var(--mo-border-medium) !important;
         border-radius: var(--mo-card-border-radius) !important;
-        box-shadow: var(--mo-shadow-ink-hover) !important;
         font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Microsoft YaHei', serif !important;
     }
     
-    /* Tooltips - 墨韵提示框 */
+    /* ========== 提示框 ========== */
     .mud-tooltip {
-        background: var(--mo-background-elevated) !important;
-        border: 1px solid var(--mo-border-ink) !important;
         border-radius: var(--mo-button-border-radius) !important;
-        box-shadow: var(--mo-shadow-ink) !important;
         font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Microsoft YaHei', serif !important;
     }
     
-    /* Snackbars - 墨韵通知栏 */
+    /* ========== 通知栏 ========== */
     .mud-snackbar {
-        background: var(--mo-background-elevated) !important;
-        border: 1px solid var(--mo-border-medium) !important;
         border-radius: var(--mo-button-border-radius) !important;
-        box-shadow: var(--mo-shadow-ink-hover) !important;
         font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Microsoft YaHei', serif !important;
     }
     
-    /* Tabs - 墨韵标签页 */
+    /* ========== 标签页 ========== */
     .mud-tabs-toolbar {
-        background: var(--mo-background-elevated) !important;
-        border-bottom: 2px solid var(--mo-border-medium) !important;
         position: relative;
     }
     
@@ -571,7 +476,7 @@
         left: 0;
         right: 0;
         height: 2px;
-        background: var(--mo-brush-stroke);
+        background: linear-gradient(135deg, transparent 30%, var(--mud-palette-primary) 50%, transparent 70%);
         opacity: 0.6;
     }
     
@@ -583,10 +488,7 @@
     }
     
     .mud-tab.mud-tab-active {
-        background: var(--mo-surface-ink) !important;
-        border: 1px solid var(--mo-border-medium) !important;
         border-bottom: none !important;
-        color: var(--mo-ink-primary) !important;
         font-weight: 500 !important;
     }
     
@@ -598,14 +500,10 @@
         transform: translateX(-50%);
         width: 20px;
         height: 2px;
-        background: var(--mo-ink-primary);
+        background: var(--mud-palette-primary);
     }
     
-    .mud-tab:hover {
-        background: var(--mo-surface-hover) !important;
-    }
-    
-    /* List Items - 墨韵列表项 */
+    /* ========== 列表项 ========== */
     .mud-list-item {
         border-radius: var(--mo-button-border-radius) !important;
         margin: var(--mo-spacing-xs) var(--mo-spacing-sm) !important;
@@ -621,12 +519,11 @@
         top: 0;
         bottom: 0;
         width: 0;
-        background: var(--mo-ink-primary);
+        background: var(--mud-palette-primary);
         transition: width var(--mo-animation-ink);
     }
     
     .mud-list-item:hover {
-        background: var(--mo-surface-hover) !important;
         transform: translateX(2px);
     }
     
@@ -634,134 +531,113 @@
         width: 2px;
         animation: mo-brush-stroke 0.4s ease-out;
     }
+}
+
+/* ==============================================
+   明亮模式特定样式
+   ============================================== */
+.mo-theme-ink-landscape-light {
     
-    /* 工具类 */
-    .mo-ink-wash {
-        background: var(--mo-ink-wash) !important;
-        animation: mo-ink-wash 1s ease-out;
-    }
-    
-    .mo-brush-effect {
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .mo-brush-effect::before {
+    /* 背景纹理覆盖 */
+    &::before {
         content: '';
-        position: absolute;
+        position: fixed;
         top: 0;
-        left: -100%;
+        left: 0;
         width: 100%;
         height: 100%;
-        background: var(--mo-brush-stroke);
-        animation: mo-brush-stroke 0.8s ease-out;
+        background: var(--mo-ink-texture);
+        opacity: 0.3;
+        z-index: -10;
+        pointer-events: none;
     }
     
-    .mo-traditional-border {
-        border: 1px solid var(--mo-border-medium) !important;
-        position: relative;
-    }
-    
-    .mo-traditional-border::before {
-        content: '';
-        position: absolute;
-        top: -1px;
-        left: -1px;
-        right: -1px;
-        bottom: -1px;
-        border: 1px solid var(--mo-border-ink);
-        opacity: 0.5;
-    }
-    
-    .mo-fade-in {
-        animation: mo-fade-in 0.6s ease-out;
-    }
-}
-
-/* Light Theme Specific Styles */
-.mo-theme-ink-landscape-light {
-    /* 明亮模式特殊效果 */
+    /* 高度组件样式 - 仅添加边框效果 */
     .mud-elevation-1,
     .mud-elevation-2,
     .mud-elevation-4,
     .mud-elevation-8 {
-        background: var(--mo-background-elevated) !important;
-        border: 1px solid var(--mo-border-ink) !important;
-    }
-    
-    .mud-elevation-1 {
-        box-shadow: 0 1px 3px rgba(45, 55, 72, 0.1) !important;
-    }
-    
-    .mud-elevation-2 {
-        box-shadow: 0 2px 6px rgba(45, 55, 72, 0.15) !important;
-    }
-    
-    .mud-elevation-4 {
-        box-shadow: 0 4px 12px rgba(45, 55, 72, 0.2) !important;
-    }
-    
-    .mud-elevation-8 {
-        box-shadow: 0 8px 24px rgba(45, 55, 72, 0.25) !important;
-    }
-    
-    /* 青绿点缀 */
-    .mud-button-filled-info,
-    .mud-button-filled-success {
-        background: var(--mo-accent-green) !important;
-    }
-    
-    .mud-button-filled-warning {
-        background: var(--mo-accent-ochre) !important;
+        border: 1px solid var(--mud-palette-lines-default) !important;
     }
 }
 
-/* Dark Theme Specific Styles */
+/* ==============================================
+   暗色模式特定样式
+   ============================================== */
 .mo-theme-ink-landscape-dark {
-    /* 暗色模式特殊效果 */
+    
+    /* 背景纹理覆盖 */
+    &::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: var(--mo-ink-texture);
+        opacity: 0.2;
+        z-index: -10;
+        pointer-events: none;
+    }
+    
+    /* 高度组件样式 - 仅添加边框效果 */
     .mud-elevation-1,
     .mud-elevation-2,
     .mud-elevation-4,
     .mud-elevation-8 {
-        background: var(--mo-background-elevated) !important;
-        border: 1px solid var(--mo-border-ink) !important;
-    }
-    
-    .mud-elevation-1 {
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
-    }
-    
-    .mud-elevation-2 {
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) !important;
-    }
-    
-    .mud-elevation-4 {
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
-    }
-    
-    .mud-elevation-8 {
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6) !important;
-    }
-    
-    /* 青绿和赭石点缀 */
-    .mud-button-filled-info,
-    .mud-button-filled-success {
-        background: var(--mo-accent-green) !important;
-    }
-    
-    .mud-button-filled-warning {
-        background: var(--mo-accent-ochre) !important;
-    }
-    
-    /* 暗色模式下的墨迹效果 */
-    .mud-typography-h1,
-    .mud-typography-h2,
-    .mud-typography-h3 {
-        color: var(--mud-palette-text-primary) !important;
+        border: 1px solid var(--mud-palette-lines-default) !important;
     }
 }
 
-/* 响应式设计 */
+/* ==============================================
+   工具类
+   ============================================== */
+
+.mo-ink-wash {
+    background: radial-gradient(circle, var(--mud-palette-primary) 0%, transparent 70%) !important;
+    animation: mo-ink-wash 1s ease-out;
+}
+
+.mo-brush-effect {
+    position: relative;
+    overflow: hidden;
+}
+
+.mo-brush-effect::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, transparent 30%, var(--mud-palette-primary) 50%, transparent 70%);
+    animation: mo-brush-stroke 0.8s ease-out;
+}
+
+.mo-traditional-border {
+    border: 1px solid var(--mud-palette-lines-default) !important;
+    position: relative;
+}
+
+.mo-traditional-border::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: -1px;
+    right: -1px;
+    bottom: -1px;
+    border: 1px solid var(--mud-palette-lines-inputs);
+    opacity: 0.5;
+}
+
+.mo-fade-in {
+    animation: mo-fade-in 0.6s ease-out;
+}
+
+/* ==============================================
+   响应式设计
+   ============================================== */
+
 @media (max-width: 960px) {
     .mo-theme-ink-landscape-light,
     .mo-theme-ink-landscape-dark {
@@ -784,7 +660,10 @@
     }
 }
 
-/* 无障碍支持 */
+/* ==============================================
+   无障碍支持
+   ============================================== */
+
 @media (prefers-reduced-motion: reduce) {
     .mo-theme-ink-landscape-light *,
     .mo-theme-ink-landscape-dark * {
@@ -793,7 +672,10 @@
     }
 }
 
-/* 性能优化 */
+/* ==============================================
+   性能优化
+   ============================================== */
+
 .mo-theme-ink-landscape-light .mud-table *,
 .mo-theme-ink-landscape-light .mud-data-grid *,
 .mo-theme-ink-landscape-light .mud-treeview *,

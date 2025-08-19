@@ -67,9 +67,9 @@ public class ThemeDeepOcean : ThemeBase
             },
             PaletteDark = new PaletteDark()
             {
-                Primary = "#22d3ee",           // 生物发光青
+                Primary = "#0891b2",           // 深海蓝光 - 提高对比度
                 Secondary = "#10b981",         // 生物发光绿
-                Tertiary = "#06b6d4",          // 青绿发光
+                Tertiary = "#22d3ee",          // 青绿发光
                 Info = "#3b82f6",              // 深海蓝光
                 Success = "#059669",           // 海藻绿光
                 Warning = "#f59e0b",           // 深海琥珀
