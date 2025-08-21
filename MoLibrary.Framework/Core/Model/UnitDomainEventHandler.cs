@@ -16,7 +16,7 @@ public class UnitDomainEventHandler(Type type) : ProjectUnit(type, EProjectUnitT
 {
     static UnitDomainEventHandler()
     {
-        AddFactory(Factory);
+        AddUnitRegisterFactory(Factory);
     }
 
     /// <summary>

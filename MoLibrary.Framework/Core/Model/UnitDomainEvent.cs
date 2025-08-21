@@ -13,7 +13,7 @@ public class UnitDomainEvent(Type type) : ProjectUnit(type, EProjectUnitType.Dom
 {
     static UnitDomainEvent()
     {
-        AddFactory(Factory);
+        AddUnitRegisterFactory(Factory);
     }
     protected override bool VerifyTypeConstrain()
     {

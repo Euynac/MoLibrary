@@ -12,7 +12,7 @@ public class UnitDomainService(Type type) : ProjectUnit(type, EProjectUnitType.D
 {
     static UnitDomainService()
     {
-        AddFactory(Factory);
+        AddUnitRegisterFactory(Factory);
     }
     protected override bool VerifyTypeConstrain()
     {

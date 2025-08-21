@@ -12,7 +12,7 @@ public class UnitRequestDto(Type type) : ProjectUnit(type, EProjectUnitType.Requ
 {
     static UnitRequestDto()
     {
-        AddFactory(Factory);
+        AddUnitRegisterFactory(Factory);
     }
    
     public static ProjectUnit? Factory(FactoryContext context)
