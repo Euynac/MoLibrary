@@ -13,7 +13,22 @@ namespace MoLibrary.Framework.Core.Model;
 /// </summary>
 public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
 {
-    private static Func<FactoryContext, ProjectUnit?>? _factories;
+    private static Func<FactoryContext, ProjectUnit?>? _unitRegisterFactories;
+    private static Func<ConstructorAnalysisContext, ProjectUnit?> _constructorAnalyzerFactories = ConstructorDefaultAnalyzerFactory;
+
+    /// <summary>
+    /// 默认通过类型全名查找项目单元
+    /// </summary>
+    /// <param name="context"></param>
+    /// <returns></returns>
+    private static ProjectUnit? ConstructorDefaultAnalyzerFactory(ConstructorAnalysisContext context)
+    {
+        if (context.ParameterType.FullName == null) return null;
+
+        // 直接通过类型全名查找
+        return ProjectUnitStores.ProjectUnitsByFullName.TryGetValue(context.ParameterType.FullName, out var unit) ? unit : null;
+    }
+   
     internal static ILogger Logger => Option.Logger;
     internal static ModuleFrameworkMonitorOption Option { get; set; } = null!;
 
@@ -23,6 +38,24 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     private void InitializeClassInfo()
     {
         Description = ProjectUnitXmlDocHelper.ExtractTypeDescription(Type);
+        InitializeConstructorParameterTypes();
+    }
+
+    /// <summary>
+    /// 初始化构造函数参数类型信息
+    /// </summary>
+    private void InitializeConstructorParameterTypes()
+    {
+        var constructors = Type.GetConstructors();
+        
+        // 选择参数最多的构造函数（通常是主构造函数）
+        var mainConstructor = constructors.OrderByDescending(c => c.GetParameters().Length).FirstOrDefault();
+        
+        if (mainConstructor != null)
+        {
+            var parameters = mainConstructor.GetParameters();
+            ConstructorParameterTypes = parameters.Select(p => p.ParameterType).ToList();
+        }
     }
     /// <summary>
     /// 初始化方法元数据
@@ -52,7 +85,7 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
         Option.ConventionOptions.Dict.TryGetValue(UnitType, out var option) ? option : DefaultConventionOption();
 
     /// <summary>
-    /// 验证类型
+    /// 验证类型：类型限制和命名惯例
     /// </summary>
     /// <returns></returns>
     protected virtual bool VerifyType()
@@ -140,17 +173,36 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     {
 
     }
-
     /// <summary>
-    /// 添加工厂
+    /// 添加单元构造函数依赖解析工厂
     /// </summary>
     /// <param name="func"></param>
-    public static void AddFactory(Func<FactoryContext, ProjectUnit?> func)
+    public static void AddConstructorAnalyzerFactory(Func<ConstructorAnalysisContext, ProjectUnit?> func)
     {
-        if (_factories != null)
+        if (_constructorAnalyzerFactories != null)
         {
-            var oldFunc = _factories;
-            _factories = (context) =>
+            var oldFunc = _constructorAnalyzerFactories;
+            _constructorAnalyzerFactories = (context) =>
+            {
+                var unit = oldFunc.Invoke(context);
+                return unit ?? func(context);
+            };
+        }
+        else
+        {
+            _constructorAnalyzerFactories = func;
+        }
+    }
+    /// <summary>
+    /// 添加单元注册工厂
+    /// </summary>
+    /// <param name="func"></param>
+    public static void AddUnitRegisterFactory(Func<FactoryContext, ProjectUnit?> func)
+    {
+        if (_unitRegisterFactories != null)
+        {
+            var oldFunc = _unitRegisterFactories;
+            _unitRegisterFactories = (context) =>
             {
                 var unit = func.Invoke(context);
                 return unit ?? oldFunc(context);
@@ -158,7 +210,7 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
         }
         else
         {
-            _factories = func;
+            _unitRegisterFactories = func;
         }
     }
 
@@ -169,7 +221,7 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     /// <returns></returns>
     public static ProjectUnit? CreateUnit(FactoryContext context)
     {
-        return _factories?.Invoke(context);
+        return _unitRegisterFactories?.Invoke(context);
     }
 
     /// <summary>
@@ -249,6 +301,11 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     public List<ProjectUnitMethod> Methods { get; protected set; } = [];
 
     /// <summary>
+    /// 构造函数参数信息列表
+    /// </summary>
+    public List<Type> ConstructorParameterTypes { get; protected set; } = [];
+
+    /// <summary>
     /// 声明项目单元相关性
     /// </summary>
     /// <param name="unit"></param>
@@ -275,7 +332,7 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     #region 检测依赖
 
     /// <summary>
-    /// 检测构造函数中的工作单元依赖
+    /// 检测构造函数中的项目单元依赖
     /// </summary>
     protected void DetectConstructorUnitDependencies()
     {
@@ -288,49 +345,20 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
             foreach (var parameter in parameters)
             {
                 var parameterType = parameter.ParameterType;
+                var context = new ConstructorAnalysisContext(parameterType, this);
 
-                // 检查参数类型是否是一个已注册的工作单元
-                if (TryFindUnitForType(parameterType, out var dependentUnit))
+                // 检查参数类型是否是一个已注册的项目单元
+                if (_constructorAnalyzerFactories(context) is {} dependentUnit)
                 {
                     DeclareRelevance(dependentUnit, true);
+                    dependentUnit.DeclareRelevance(this);
                     Logger.LogDebug($"{this}检测到构造函数依赖：{dependentUnit}");
-                    continue;
                 }
             }
         }
     }
 
-    /// <summary>
-    /// 尝试根据类型找到对应的工作单元
-    /// </summary>
-    /// <param name="type">要查找的类型</param>
-    /// <param name="unit">找到的工作单元</param>
-    /// <returns>是否找到对应的工作单元</returns>
-    private static bool TryFindUnitForType(Type type, [NotNullWhen(true)] out ProjectUnit? unit)
-    {
-        unit = null;
-
-        if (type.FullName == null) return false;
-
-        // 直接通过类型全名查找
-        if (ProjectUnitStores.ProjectUnitsByFullName.TryGetValue(type.FullName, out unit))
-        {
-            return true;
-        }
-
-        //// 如果是泛型类型，尝试通过泛型定义查找
-        //if (type.IsGenericType)
-        //{
-        //    var genericTypeDefinition = type.GetGenericTypeDefinition();
-        //    if (genericTypeDefinition.FullName != null &&
-        //        ProjectUnitStores.ProjectUnitsByFullName.TryGetValue(genericTypeDefinition.FullName, out unit))
-        //    {
-        //        return true;
-        //    }
-        //}
-
-        return false;
-    }
+  
 
     #endregion
 

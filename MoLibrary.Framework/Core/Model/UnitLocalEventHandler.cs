@@ -14,7 +14,7 @@ public class UnitLocalEventHandler(Type type) : ProjectUnit(type, EProjectUnitTy
 {
     static UnitLocalEventHandler()
     {
-        AddFactory(Factory);
+        AddUnitRegisterFactory(Factory);
     }
 
     /// <summary>

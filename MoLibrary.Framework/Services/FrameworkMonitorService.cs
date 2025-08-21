@@ -220,4 +220,14 @@ public class FrameworkMonitorService(
             return Res.Fail($"获取枚举信息失败: {ex.Message}");
         }
     }
+
+    /// <summary>
+    /// 通过键值获取项目单元
+    /// </summary>
+    /// <param name="key">项目单元键值</param>
+    /// <returns>项目单元</returns>
+    public ProjectUnit? GetProjectUnitByKey(string key)
+    {
+        return ProjectUnitStores.ProjectUnitsByFullName.TryGetValue(key, out var unit) ? unit : null;
+    }
 }
