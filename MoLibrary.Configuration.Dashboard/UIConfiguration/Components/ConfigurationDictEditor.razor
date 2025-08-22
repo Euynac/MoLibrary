@@ -1,4 +1,5 @@
 @using MoLibrary.Configuration.Model
+@using MoLibrary.Configuration.Providers
 @using MudBlazor
 @using System.Text.Json
 
@@ -19,7 +20,22 @@
                 var index = i; // Capture for closure
                 <div class="d-flex align-center gap-2 mb-2">
                     <MudTextField @bind-Value="items[index].Key" Label="Key" Variant="Variant.Outlined" Style="min-width: 150px;" />
-                    <MudTextField @bind-Value="items[index].Value" Label="Value" Variant="Variant.Outlined" Class="flex-grow-1" />
+                    <div class="flex-grow-1">
+                        @if (GetDictValueType() == EOptionItemValueBasicType.Object)
+                        {
+                            <ConfigurationObjectEditor Value="@items[index].Value"
+                                                       ValueChanged="@((object? v) => SetItemValue(index, v))"
+                                                       SubStructure="@OptionItem?.SubStructure" />
+                        }
+                        else
+                        {
+                            <ConfigurationBasicTypeEditor Type="@GetDictValueType()"
+                                                          Value="@items[index].Value"
+                                                          ValueChanged="@((object? v) => SetItemValue(index, v))"
+                                                          Label="Value"
+                                                          IsNullable="@(OptionItem?.IsNullable ?? false)" />
+                        }
+                    </div>
                     <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="() => RemoveItem(index)" />
                 </div>
             }
@@ -33,28 +49,38 @@
 
 @code {
     [Parameter] public DtoOptionItem? OptionItem { get; set; }
-    [Parameter] public Dictionary<string, object>? Value { get; set; }
-    [Parameter] public EventCallback<Dictionary<string, object>> ValueChanged { get; set; }
+    [Parameter] public object? Value { get; set; }
+    [Parameter] public EventCallback<object?> ValueChanged { get; set; }
 
     private List<DictItem> items = [];
 
     public class DictItem
     {
         public string Key { get; set; } = "";
-        public string Value { get; set; } = "";
+        public object Value { get; set; } = "";
     }
 
     protected override void OnParametersSet()
     {
-        if (Value != null)
+        if (Value is JsonElement element && element.ValueKind == JsonValueKind.Object)
         {
-            items = Value.Select(kvp => new DictItem { Key = kvp.Key, Value = kvp.Value?.ToString() ?? "" }).ToList();
+            items = element.EnumerateObject().Select(prop => new DictItem { Key = prop.Name, Value = prop.Value }).ToList();
         }
+        else
+        {
+            items = [];
+        }
+    }
+
+    private EOptionItemValueBasicType GetDictValueType()
+    {
+        return OptionItem?.Type ?? EOptionItemValueBasicType.String;
     }
 
     private async Task AddItem()
     {
-        items.Add(new DictItem());
+        var defaultValue = GetDefaultValueForType(GetDictValueType());
+        items.Add(new DictItem { Value = defaultValue });
         await NotifyValueChanged();
     }
 
@@ -67,10 +93,38 @@
         }
     }
 
+    private async Task SetItemValue(int index, object? value)
+    {
+        if (index >= 0 && index < items.Count)
+        {
+            items[index].Value = value ?? "";
+            await NotifyValueChanged();
+        }
+    }
+
     private async Task NotifyValueChanged()
     {
         var dict = items.Where(x => !string.IsNullOrEmpty(x.Key))
-                       .ToDictionary(x => x.Key, x => (object)x.Value);
-        await ValueChanged.InvokeAsync(dict);
+                       .ToDictionary(x => x.Key, x => x.Value);
+        
+        // 将Dictionary转换为JsonElement
+        var result = JsonFileProviderConventions.ToJsonElement(dict);
+        await ValueChanged.InvokeAsync(result);
+    }
+
+    private object GetDefaultValueForType(EOptionItemValueBasicType type)
+    {
+        object defaultValue = type switch
+        {
+            EOptionItemValueBasicType.Boolean => false,
+            EOptionItemValueBasicType.Numeric => 0,
+            EOptionItemValueBasicType.DateTime => DateTime.Now,
+            EOptionItemValueBasicType.TimeSpan => TimeSpan.Zero,
+            EOptionItemValueBasicType.Object => new Dictionary<string, object>(),
+            _ => ""
+        };
+        
+        // 将默认值转换为JsonElement
+        return JsonFileProviderConventions.ToJsonElement(defaultValue);
     }
 }

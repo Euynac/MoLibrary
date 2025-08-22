@@ -1,0 +1,260 @@
+@using MoLibrary.Configuration.Model
+@using MudBlazor
+@using System.Text.Json
+
+<div class="configuration-basic-type-editor">
+    @switch (Type)
+    {
+        case EOptionItemValueBasicType.Boolean:
+            <MudSwitch T="bool" 
+                       Value="GetBoolValue()" 
+                       ValueChanged="OnBoolValueChanged" 
+                       Label="@Label" 
+                       Color="Color.Primary"
+                       HelperText="@HelperText" />
+            break;
+
+        case EOptionItemValueBasicType.Numeric:
+            <MudNumericField T="decimal?" 
+                             Value="GetDecimalValue()" 
+                             ValueChanged="OnDecimalValueChanged" 
+                             Label="@Label" 
+                             HelperText="@HelperText"
+                             Variant="Variant.Outlined"
+                             Clearable="@IsNullable" />
+            break;
+
+        case EOptionItemValueBasicType.String:
+            <MudTextField T="string" 
+                          Value="GetStringValue()" 
+                          ValueChanged="OnStringValueChanged" 
+                          Label="@Label" 
+                          HelperText="@HelperText"
+                          Variant="Variant.Outlined"
+                          Lines="@(IsMultiline ? 3 : 1)"
+                          Clearable="@IsNullable"
+                          Validation="@(string.IsNullOrEmpty(RegexPattern) ? null : new Func<string, string?>(ValidateRegex))" />
+            break;
+
+        case EOptionItemValueBasicType.DateTime:
+            <MudDatePicker Date="GetDateTimeValue()" 
+                           DateChanged="OnDateTimeValueChanged" 
+                           Label="@Label" 
+                           HelperText="@HelperText"
+                           Variant="Variant.Outlined"
+                           Clearable="@IsNullable" />
+            break;
+
+        case EOptionItemValueBasicType.TimeSpan:
+            <MudTimePicker Time="GetTimeSpanValue()" 
+                           TimeChanged="OnTimeSpanValueChanged" 
+                           Label="@Label" 
+                           HelperText="@HelperText"
+                           Variant="Variant.Outlined"
+                           Clearable="@IsNullable" />
+            break;
+
+        case EOptionItemValueBasicType.Enum:
+            @if (HasEnumOptions)
+            {
+                <MudSelect T="string" 
+                           Value="GetStringValue()" 
+                           ValueChanged="OnStringValueChanged" 
+                           Label="@Label" 
+                           HelperText="@HelperText"
+                           Variant="Variant.Outlined"
+                           Clearable="@IsNullable">
+                    @foreach (var option in EnumOptions)
+                    {
+                        <MudSelectItem T="string" Value="@option">@option</MudSelectItem>
+                    }
+                </MudSelect>
+            }
+            else
+            {
+                <MudTextField T="string" 
+                              Value="GetStringValue()" 
+                              ValueChanged="OnStringValueChanged" 
+                              Label="@Label" 
+                              HelperText="@HelperText"
+                              Variant="Variant.Outlined"
+                              Clearable="@IsNullable" />
+            }
+            break;
+
+        default:
+            <MudTextField T="string" 
+                          Value="GetStringValue()" 
+                          ValueChanged="OnStringValueChanged" 
+                          Label="@Label" 
+                          HelperText="@HelperText"
+                          Variant="Variant.Outlined"
+                          Clearable="@IsNullable" />
+            break;
+    }
+</div>
+
+@code {
+    [Parameter] public EOptionItemValueBasicType Type { get; set; }
+    [Parameter] public object? Value { get; set; }
+    [Parameter] public EventCallback<object?> ValueChanged { get; set; }
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public string? HelperText { get; set; }
+    [Parameter] public string? RegexPattern { get; set; }
+    [Parameter] public bool IsNullable { get; set; }
+    [Parameter] public bool IsMultiline { get; set; }
+
+    private List<string> EnumOptions => GetEnumOptionsFromRegex() ?? new List<string>();
+    private bool HasEnumOptions => GetEnumOptionsFromRegex()?.Any() == true;
+
+    private bool GetBoolValue()
+    {
+        if (Value is JsonElement element)
+        {
+            return element.ValueKind switch
+            {
+                JsonValueKind.True => true,
+                JsonValueKind.False => false,
+                _ => false
+            };
+        }
+        return false;
+    }
+
+    private decimal? GetDecimalValue()
+    {
+        if (Value is null && IsNullable) return null;
+        if (Value is JsonElement element)
+        {
+            return element.ValueKind switch
+            {
+                JsonValueKind.Number => element.GetDecimal(),
+                JsonValueKind.Null when IsNullable => null,
+                _ => IsNullable ? null : 0
+            };
+        }
+        return IsNullable ? null : 0;
+    }
+
+    private string GetStringValue()
+    {
+        if (Value is null) return "";
+        if (Value is JsonElement element)
+        {
+            return element.ValueKind switch
+            {
+                JsonValueKind.String => element.GetString() ?? "",
+                JsonValueKind.Null => "",
+                _ => element.ToString()
+            };
+        }
+        return Value.ToString() ?? "";
+    }
+
+    private DateTime? GetDateTimeValue()
+    {
+        if (Value is null && IsNullable) return null;
+        if (Value is JsonElement element)
+        {
+            return element.ValueKind switch
+            {
+                JsonValueKind.String when DateTime.TryParse(element.GetString(), out var parsed) => parsed,
+                JsonValueKind.Null when IsNullable => null,
+                _ => IsNullable ? null : DateTime.Now
+            };
+        }
+        return IsNullable ? null : DateTime.Now;
+    }
+
+    private TimeSpan? GetTimeSpanValue()
+    {
+        if (Value is null && IsNullable) return null;
+        if (Value is JsonElement element)
+        {
+            return element.ValueKind switch
+            {
+                JsonValueKind.String when TimeSpan.TryParse(element.GetString(), out var parsed) => parsed,
+                JsonValueKind.Null when IsNullable => null,
+                _ => IsNullable ? null : TimeSpan.Zero
+            };
+        }
+        return IsNullable ? null : TimeSpan.Zero;
+    }
+
+
+    private async Task OnBoolValueChanged(bool newValue)
+    {
+        await ValueChanged.InvokeAsync(newValue);
+    }
+
+    private async Task OnDecimalValueChanged(decimal? newValue)
+    {
+        await ValueChanged.InvokeAsync(newValue);
+    }
+
+    private async Task OnStringValueChanged(string newValue)
+    {
+        if (string.IsNullOrEmpty(newValue) && IsNullable)
+        {
+            await ValueChanged.InvokeAsync(null);
+        }
+        else
+        {
+            await ValueChanged.InvokeAsync(newValue);
+        }
+    }
+
+    private async Task OnDateTimeValueChanged(DateTime? newValue)
+    {
+        await ValueChanged.InvokeAsync(newValue);
+    }
+
+    private async Task OnTimeSpanValueChanged(TimeSpan? newValue)
+    {
+        await ValueChanged.InvokeAsync(newValue);
+    }
+
+
+    private string? ValidateRegex(string value)
+    {
+        if (string.IsNullOrEmpty(RegexPattern)) return null;
+        if (string.IsNullOrEmpty(value) && IsNullable) return null;
+        
+        try
+        {
+            var regex = new System.Text.RegularExpressions.Regex(RegexPattern);
+            if (!regex.IsMatch(value ?? ""))
+            {
+                return "输入格式不正确";
+            }
+        }
+        catch
+        {
+            return "正则表达式模式无效";
+        }
+        
+        return null;
+    }
+
+    private List<string>? GetEnumOptionsFromRegex()
+    {
+        if (string.IsNullOrEmpty(RegexPattern)) return null;
+
+        try
+        {
+            // 解析形如 "^(option1|option2|option3)$" 的正则表达式
+            var match = System.Text.RegularExpressions.Regex.Match(RegexPattern, @"^\^\(([^)]+)\)\$$");
+            if (match.Success)
+            {
+                var options = match.Groups[1].Value.Split('|');
+                return options.ToList();
+            }
+        }
+        catch
+        {
+            // 忽略解析错误，返回null使用文本框
+        }
+
+        return null;
+    }
+}

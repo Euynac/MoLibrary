@@ -63,7 +63,6 @@ public class DtoOptionItem
     /// </summary>
     public DtoConfig? SubStructure { get; set; }
 
-
     /// <summary>
     /// 配置Provider
     /// </summary>
