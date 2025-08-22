@@ -1,7 +1,9 @@
 @using MoLibrary.Configuration.Model
 @using MoLibrary.Configuration.Dashboard.Model
+@using MoLibrary.Configuration.Providers
 @using MudBlazor
 @using System.Text.Json
+@using Microsoft.AspNetCore.Components
 
 <MudContainer MaxWidth="MaxWidth.False" Class="pa-0">
     <MudAlert Severity="Severity.Info" Class="mb-4">
@@ -74,14 +76,18 @@
                                         </div>
                                     </MudTd>
                                     <MudTd DataLabel="原始值" Style="max-width: 200px;">
-                                        <div class="config-value-display">
-                                            @GetValueDisplay(context.OriginalItem.Value)
-                                        </div>
+                                        <MudTooltip Text="@GetFullValueDisplay(context.OriginalItem.Value)">
+                                            <div class="config-value-display">
+                                                @GetValueDisplay(context.OriginalItem.Value)
+                                            </div>
+                                        </MudTooltip>
                                     </MudTd>
                                     <MudTd DataLabel="新值" Style="max-width: 200px;">
-                                        <div class="config-value-display modified-value">
-                                            @GetValueDisplay(context.ModifiedItem.Value)
-                                        </div>
+                                        <MudTooltip Text="@GetFullValueDisplay(context.ModifiedItem.Value)">
+                                            <div class="config-value-display modified-value">
+                                                @GetValueDisplay(context.ModifiedItem.Value)
+                                            </div>
+                                        </MudTooltip>
                                     </MudTd>
                                     <MudTd DataLabel="操作">
                                         <MudButton Size="Size.Small" Variant="Variant.Text" 
@@ -117,7 +123,7 @@
                                             <MudCard Class="mb-2" Elevation="1">
                                                 <MudCardContent Class="pa-2">
                                                     <MudText Typo="Typo.body2"><strong>@item.ModifiedItem.Key:</strong></MudText>
-                                                    <pre class="json-code-block mt-1">@JsonSerializer.Serialize(item.ModifiedItem.Value, new JsonSerializerOptions { WriteIndented = true })</pre>
+                                                    <pre class="json-code-block mt-1">@JsonSerializer.Serialize(item.ModifiedItem.Value, JsonFileProviderConventions.JsonSerializerOptions)</pre>
                                                 </MudCardContent>
                                             </MudCard>
                                         }
@@ -163,14 +169,21 @@
                     @selectedDiffItem.ModifiedItem.Title (@selectedDiffItem.ModifiedItem.Key)
                 </MudText>
                 
+                @{
+                    var diffResult = selectedDiffItem.GetDifference();
+                }
                 <MudGrid>
                     <MudItem xs="6">
                         <MudText Typo="Typo.subtitle2" Class="mb-2">原始值：</MudText>
-                        <pre class="json-code-block diff-original" style="max-height: 400px; overflow-y: auto;">@selectedDiffItem.GetDifference().OriginalJson</pre>
+                        <pre class="json-code-block json-diff" style="max-height: 400px; overflow-y: auto;">
+                            @((MarkupString)diffResult.OriginalJsonHighlighted)
+                        </pre>
                     </MudItem>
                     <MudItem xs="6">
                         <MudText Typo="Typo.subtitle2" Class="mb-2">修改后：</MudText>
-                        <pre class="json-code-block diff-modified" style="max-height: 400px; overflow-y: auto;">@selectedDiffItem.GetDifference().ModifiedJson</pre>
+                        <pre class="json-code-block json-diff" style="max-height: 400px; overflow-y: auto;">
+                            @((MarkupString)diffResult.ModifiedJsonHighlighted)
+                        </pre>
                     </MudItem>
                 </MudGrid>
             </MudContainer>
@@ -264,13 +277,32 @@
         
         try
         {
-            var json = JsonSerializer.Serialize(value);
+            var json = JsonSerializer.Serialize(value, JsonFileProviderConventions.JsonSerializerOptions);
             return json.Length <= 50 ? json : json.Substring(0, 47) + "...";
         }
         catch
         {
             var str = value.ToString() ?? "null";
             return str.Length <= 50 ? str : str.Substring(0, 47) + "...";
+        }
+    }
+    
+    private string GetFullValueDisplay(object? value)
+    {
+        if (value == null) return "null";
+        
+        if (value is string strValue)
+        {
+            return strValue;
+        }
+        
+        try
+        {
+            return JsonSerializer.Serialize(value, JsonFileProviderConventions.JsonSerializerOptions);
+        }
+        catch
+        {
+            return value.ToString() ?? "null";
         }
     }
     
@@ -328,7 +360,7 @@
             }
         };
         
-        return JsonSerializer.Serialize(preview, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(preview, JsonFileProviderConventions.JsonSerializerOptions);
     }
     
     private void Cancel() => MudDialog.Cancel();

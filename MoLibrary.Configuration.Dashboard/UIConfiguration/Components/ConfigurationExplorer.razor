@@ -44,10 +44,10 @@
     </MudGrid>
     
     <!-- 三列布局 -->
-    <MudGrid Style="height: 70vh;">
+    <MudGrid Class="config-explorer-grid">
         <!-- 第一列：领域和服务导航 -->
         <MudItem xs="3">
-            <MudPaper Class="pa-2" Style="height: 100%; overflow-y: auto;">
+            <MudPaper Class="pa-2 config-navigation-panel">
                 <MudText Typo="Typo.h6" Class="mb-3">配置导航</MudText>
                 <MudNavMenu>
                     @foreach (var domain in FilteredConfigs)
@@ -71,7 +71,7 @@
         
         <!-- 第二列：配置类表格 -->
         <MudItem xs="4">
-            <MudPaper Class="pa-2" Style="height: 100%; overflow-y: auto;">
+            <MudPaper Class="pa-2 config-class-panel">
                 <MudText Typo="Typo.h6" Class="mb-3">配置类</MudText>
                 @if (selectedService != null)
                 {
@@ -126,7 +126,7 @@
         
         <!-- 第三列：配置项表格 -->
         <MudItem xs="5">
-            <MudPaper Class="pa-2" Style="height: 100%; overflow-y: auto;">
+            <MudPaper Class="pa-2 config-item-panel">
                 <MudText Typo="Typo.h6" Class="mb-3">配置项</MudText>
                 @if (selectedConfig != null)
                 {

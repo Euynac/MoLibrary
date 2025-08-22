@@ -208,7 +208,7 @@ public class OptionItem
             if (generic == typeof(Dictionary<,>))
             {
                 SpecialType = EOptionItemValueSpecialType.Dict;
-                UnderlyingType = type.GetGenericArguments().First();
+                UnderlyingType = type.GetGenericArguments().ElementAt(1);
             }
         }
 

@@ -30,4 +30,33 @@
     font-size: 12px;
     white-space: pre-wrap;
     overflow-x: auto;
+    line-height: 1.5;
 }
+
+/* JSON差异高亮样式 */
+.json-diff {
+    position: relative;
+}
+
+/* 使用::deep穿透CSS隔离，确保动态生成的HTML标签能被样式化 */
+.json-diff ::deep .diff-removed {
+    background-color: var(--mud-palette-error-lighten) !important;
+    color: var(--mud-palette-error) !important;
+    text-decoration: line-through !important;
+    display: inline !important;
+    padding: 2px 4px !important;
+    border-radius: 3px !important;
+    margin: 0 1px !important;
+    border: 1px solid var(--mud-palette-error-darken) !important;
+}
+
+.json-diff ::deep .diff-added {
+    background-color: var(--mud-palette-success-lighten) !important;
+    color: var(--mud-palette-success) !important;
+    display: inline !important;
+    padding: 2px 4px !important;
+    border-radius: 3px !important;
+    margin: 0 1px !important;
+    border: 1px solid var(--mud-palette-success-darken) !important;
+}
+

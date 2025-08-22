@@ -15,12 +15,6 @@
             @foreach (var item in SubStructure.Items)
             {
                 <div class="mb-3">
-                    <MudText Typo="Typo.subtitle2" Class="mb-1">@item.Title</MudText>
-                    @if (!string.IsNullOrEmpty(item.Desc))
-                    {
-                        <MudText Typo="Typo.caption" Class="mb-2 text-muted">@item.Desc</MudText>
-                    }
-                    
                     <ConfigurationBasicTypeEditor Type="@item.Type"
                                                   Value="@GetValue(item.Name)"
                                                   ValueChanged="@((object? v) => SetValue(item.Name, v))"
