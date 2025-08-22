@@ -1,0 +1,19 @@
+.configuration-basic-type-editor {
+    width: 100%;
+}
+
+.configuration-basic-type-editor .mud-input-root {
+    margin-bottom: 8px;
+}
+
+.configuration-basic-type-editor .mud-switch {
+    margin: 8px 0;
+}
+
+.configuration-basic-type-editor .mud-select {
+    min-width: 200px;
+}
+
+.configuration-basic-type-editor .mud-picker {
+    width: 100%;
+}

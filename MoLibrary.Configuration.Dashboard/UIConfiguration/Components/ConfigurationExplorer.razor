@@ -1,5 +1,6 @@
 @using MoLibrary.Configuration.Model
 @using MoLibrary.Configuration.Dashboard.Model
+@using MoLibrary.Configuration.Providers
 @using MudBlazor
 @using System.Text.Json
 @using System.Text.RegularExpressions
@@ -285,8 +286,8 @@
     
     private DtoConfig DeepCloneConfig(DtoConfig original)
     {
-        var json = JsonSerializer.Serialize(original);
-        return JsonSerializer.Deserialize<DtoConfig>(json)!;
+        var json = JsonSerializer.Serialize(original, JsonFileProviderConventions.JsonSerializerOptions);
+        return JsonSerializer.Deserialize<DtoConfig>(json, JsonFileProviderConventions.JsonSerializerOptions)!;
     }
     
     private void SelectService(DtoDomainConfigs domain, DtoServiceConfigs service)
@@ -380,7 +381,7 @@
         
         try
         {
-            return JsonSerializer.Serialize(value);
+            return JsonSerializer.Serialize(value, JsonFileProviderConventions.JsonSerializerOptions);
         }
         catch
         {
@@ -474,8 +475,8 @@
     
     private DtoOptionItem DeepCloneOptionItem(DtoOptionItem original)
     {
-        var json = JsonSerializer.Serialize(original);
-        return JsonSerializer.Deserialize<DtoOptionItem>(json)!;
+        var json = JsonSerializer.Serialize(original, JsonFileProviderConventions.JsonSerializerOptions);
+        return JsonSerializer.Deserialize<DtoOptionItem>(json, JsonFileProviderConventions.JsonSerializerOptions)!;
     }
     
     private bool IsItemModified(DtoOptionItem item)

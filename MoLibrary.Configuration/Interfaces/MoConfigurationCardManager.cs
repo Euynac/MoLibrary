@@ -1,6 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Configuration.Model;
+using MoLibrary.Configuration.Providers;
 using MoLibrary.Tool.Extensions;
+using System.Text.Json;
 
 namespace MoLibrary.Configuration.Interfaces;
 
@@ -78,7 +80,7 @@ public static class MoConfigurationExtensions
             IsOffline = i.Info?._IsOffline ?? c.Info._IsOffline ?? false,
             Name = i.Name,
             Title = i.Title,
-            Value = i.Value,
+            Value = ConvertValueForDto(i),
             Type = i.BasicType,
             SpecialType = i.SpecialType,
             IsNullable = i.PropertyInfo.IsMarkedAsNullable(),
@@ -91,6 +93,12 @@ public static class MoConfigurationExtensions
 
         return dto;
     }
+
+    private static object? ConvertValueForDto(OptionItem i)
+    {
+        return JsonFileProviderConventions.ToJsonElement(i.Value);
+    }
+
     public static DtoConfig? ToDtoConfig(this MoConfiguration? c)
     {
         if (c == null) return null;

@@ -1,5 +1,7 @@
 @using MoLibrary.Configuration.Model
 @using MoLibrary.Configuration.Dashboard.Model
+@using MoLibrary.Configuration.Providers
+@using System.Text.Json
 @using MudBlazor
 
 <MudDialog Options="@_dialogOptions">
@@ -164,9 +166,10 @@
         _configProvider = config.Provider ?? "Unknown";
         _configSource = config.Source ?? string.Empty;
         _isOffline = config.IsOffline;
+        // 将配置值转换为JsonElement
         _editValue = config.Value;
-        _validationMessage = string.Empty;
         
+        _validationMessage = string.Empty;
         StateHasChanged();
     }
     
@@ -187,11 +190,21 @@
         
         try
         {
-            // 更新当前配置对象的值
+            // 将JsonElement转换回配置值
             if (_currentConfig != null)
             {
-                _currentConfig.Value = _editValue;
-                await OnConfigurationUpdated.InvokeAsync(_currentConfig);
+                try
+                {
+                    // 直接使用编辑后的值
+                    _currentConfig.Value = _editValue;
+                    await OnConfigurationUpdated.InvokeAsync(_currentConfig);
+                }
+                catch (Exception ex)
+                {
+                    _validationMessage = $"应用配置失败: {ex.Message}";
+                    StateHasChanged();
+                    return;
+                }
             }
 
             // 关闭对话框，返回修改的配置项
