@@ -2,7 +2,6 @@ using Microsoft.Extensions.Logging;
 using MoLibrary.Configuration.Dashboard.Interfaces;
 using MoLibrary.Configuration.Dashboard.Model;
 using MoLibrary.Configuration.Model;
-using MoLibrary.Repository.Transaction;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Configuration.Dashboard.UIConfiguration.Services;
@@ -14,7 +13,6 @@ public class ConfigurationDashboardService(
     IMoConfigurationCentre configCentre,
     IMoConfigurationDashboard dashboard,
     IMoConfigurationStores stores,
-    IMoUnitOfWorkManager uowManager,
     ILogger<ConfigurationDashboardService> logger)
 {
     /// <summary>
@@ -79,8 +77,6 @@ public class ConfigurationDashboardService(
     {
         try
         {
-            using var uow = uowManager.Begin();
-
             if (appid != null && key != null)
             {
                 var result = await stores.GetHistory(key, appid);
@@ -112,7 +108,6 @@ public class ConfigurationDashboardService(
     {
         try
         {
-            using var uow = uowManager.Begin();
             var result = await configCentre.UpdateConfig(request);
             return result;
         }
@@ -134,7 +129,6 @@ public class ConfigurationDashboardService(
     {
         try
         {
-            using var uow = uowManager.Begin();
             var result = await configCentre.RollbackConfig(key, appId, version);
             return result;
         }
