@@ -7,16 +7,16 @@ public class DtoOptionHistory
     /// <summary>
     /// 记录标题
     /// </summary>
-    public string Title { get; set; }
+    public required string Title { get; set; }
     /// <summary>
     /// 项目Id
     /// </summary>
-    public string AppId { get; set; }
+    public required string AppId { get; set; }
 
     /// <summary>
     /// {配置类Key}:{配置项Key}
     /// </summary>
-    public string Key { get; set; }
+    public required string Key { get; set; }
     /// <summary>
     /// 配置值 Value
     /// </summary>
@@ -41,5 +41,5 @@ public class DtoOptionHistory
     /// <summary>
     /// 配置版本
     /// </summary>
-    public string Version { get; set; }
+    public required string Version { get; set; }
 }
