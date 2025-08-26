@@ -3,6 +3,7 @@ using MoLibrary.Configuration.Providers;
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace MoLibrary.Configuration.Dashboard.Model;
 
@@ -81,6 +82,105 @@ public class ConfigurationChangeTracker
     public void Clear()
     {
         ModifiedItems.Clear();
+    }
+
+    /// <summary>
+    /// 获取指定配置类的修改项并按配置类组织为Dictionary结构
+    /// </summary>
+    public Dictionary<string, List<ModifiedConfigItem>> GetModifiedItemsByConfig()
+    {
+        return ModifiedItems.Values
+            .GroupBy(item => item.ConfigKey)
+            .ToDictionary(group => group.Key, group => group.ToList());
+    }
+
+    /// <summary>
+    /// 为指定配置类生成API调用请求的JSON数据
+    /// </summary>
+    /// <param name="configKey">配置类Key</param>
+    /// <returns>DtoUpdateConfig对象，用于API调用</returns>
+    public DtoUpdateConfig BuildUpdateConfigRequest(string configKey)
+    {
+        if (!OriginalConfigs.TryGetValue(configKey, out var originalConfig))
+            throw new ArgumentException($"未找到配置类 {configKey} 的原始数据", nameof(configKey));
+
+        var modifiedItems = GetModifiedItemsForConfig(configKey);
+        if (!modifiedItems.Any())
+            throw new ArgumentException($"配置类 {configKey} 没有修改项", nameof(configKey));
+
+        var appId = modifiedItems.First().AppId;
+
+        // 验证所有修改项都属于同一个AppId
+        if (modifiedItems.Any(item => item.AppId != appId))
+        {
+            throw new ArgumentException("所有修改项必须属于同一AppId");
+        }
+
+        // 构建完整的配置类JSON，包含所有配置项（修改的和未修改的）
+        var configJson = new Dictionary<string, object?>();
+        
+        // 创建修改项的字典以便快速查找
+        var modifiedDict = modifiedItems.ToDictionary(item => item.ModifiedItem.Name, item => item.ModifiedItem);
+
+        // 遍历原始配置的所有配置项
+        foreach (var originalItem in originalConfig.Items)
+        {
+            if (modifiedDict.TryGetValue(originalItem.Name, out var modifiedItem))
+            {
+                // 如果有修改，使用修改后的值
+                configJson[originalItem.Name] = modifiedItem.Value;
+            }
+            else
+            {
+                // 如果没有修改，保留原值
+                configJson[originalItem.Name] = originalItem.Value;
+            }
+        }
+
+        return new DtoUpdateConfig
+        {
+            AppId = appId,
+            Key = configKey,
+            Value = JsonSerializer.SerializeToNode(configJson, JsonFileProviderConventions.JsonSerializerOptions)
+        };
+    }
+
+    /// <summary>
+    /// 为所有修改的配置类生成API调用请求列表
+    /// </summary>
+    /// <returns>DtoUpdateConfig对象列表，每个对应一个配置类的修改</returns>
+    public List<DtoUpdateConfig> BuildAllUpdateConfigRequests()
+    {
+        var modifiedConfigKeys = GetModifiedConfigKeys();
+        var requests = new List<DtoUpdateConfig>();
+
+        foreach (var configKey in modifiedConfigKeys)
+        {
+            requests.Add(BuildUpdateConfigRequest(configKey));
+        }
+
+        return requests;
+    }
+
+    /// <summary>
+    /// 获取指定配置类的API调用预览JSON字符串
+    /// </summary>
+    /// <param name="configKey">配置类Key</param>
+    /// <param name="modifiedItems">该配置类的修改项列表（参数保留用于兼容性，实际使用内部数据）</param>
+    /// <returns>格式化的JSON字符串，用于预览</returns>
+    public string GetApiCallPreviewJson(string configKey, List<ModifiedConfigItem> modifiedItems)
+    {
+        var request = BuildUpdateConfigRequest(configKey);
+        
+        var preview = new
+        {
+            Method = "POST",
+            Endpoint = "/api/configuration/update",
+            Headers = new { ContentType = "application/json" },
+            Body = request
+        };
+
+        return JsonSerializer.Serialize(preview, JsonFileProviderConventions.JsonSerializerOptions);
     }
 }
 

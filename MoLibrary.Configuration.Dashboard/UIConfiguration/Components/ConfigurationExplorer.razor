@@ -518,7 +518,8 @@
             var parameters = new DialogParameters
             {
                 ["ModifiedConfigs"] = GetModifiedConfigsGrouped(),
-                ["IsSaving"] = isSaving
+                ["IsSaving"] = isSaving,
+                ["ChangeTracker"] = changeTracker
             };
             
             var options = new DialogOptions
@@ -526,16 +527,16 @@
                 MaxWidth = MaxWidth.ExtraLarge,
                 FullWidth = true,
                 CloseOnEscapeKey = false,
-                BackdropClick = false,
+                BackdropClick = true,
                 CloseButton = false
             };
             
             var dialog = await DialogService.ShowAsync<SaveConfirmationDialog>("保存配置确认", parameters, options);
             var result = await dialog.Result;
             
-            if (!result.Canceled)
+            if (result is { Canceled: false, Data: List<DtoUpdateConfig> updateRequests})
             {
-                await SaveAllChanges(GetModifiedConfigsGrouped());
+                await SaveAllChanges(updateRequests);
             }
         }
     }
@@ -566,34 +567,16 @@
         return grouped;
     }
     
-    private async Task SaveAllChanges(Dictionary<string, List<ModifiedConfigItem>> modifiedConfigs)
+    private async Task SaveAllChanges(List<DtoUpdateConfig> updateRequests)
     {
         isSaving = true;
         StateHasChanged();
         
         try
         {
-            // 按配置类分组保存
-            foreach (var configGroup in modifiedConfigs)
+            // 逐个执行配置类级别的更新请求
+            foreach (var updateRequest in updateRequests)
             {
-                var configKey = configGroup.Key;
-                var items = configGroup.Value;
-                var appId = items.First().AppId;
-                
-                // 构建配置类级别的更新请求
-                var configValue = new Dictionary<string, object?>();
-                foreach (var item in items)
-                {
-                    configValue[item.ModifiedItem.Key] = item.ModifiedItem.Value;
-                }
-                
-                var updateRequest = new DtoUpdateConfig
-                {
-                    AppId = appId,
-                    Key = configKey,
-                    Value = JsonSerializer.SerializeToNode(configValue)
-                };
-                
                 await OnConfigUpdate.InvokeAsync(updateRequest);
             }
             
