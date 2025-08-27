@@ -121,8 +121,10 @@
 
 @code {
 	[CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
-    [Parameter] public EventCallback<DtoOptionItem> OnConfigurationUpdated { get; set; }
+    [Parameter] public EventCallback OnConfigurationUpdated { get; set; }
     [Parameter] public DtoOptionItem? ConfigItem { get; set; }
+    [Parameter] public ConfigurationStateManager? StateManager { get; set; }
+    [Parameter] public string ConfigName { get; set; } = string.Empty;
 
     private DtoOptionItem? _currentConfig;
     private string _configKey = string.Empty;
@@ -190,25 +192,17 @@
         
         try
         {
-            // 将JsonElement转换回配置值
-            if (_currentConfig != null)
+            if (_currentConfig != null && StateManager != null && !string.IsNullOrEmpty(ConfigName))
             {
-                try
-                {
-                    // 直接使用编辑后的值
-                    _currentConfig.Value = _editValue;
-                    await OnConfigurationUpdated.InvokeAsync(_currentConfig);
-                }
-                catch (Exception ex)
-                {
-                    _validationMessage = $"应用配置失败: {ex.Message}";
-                    StateHasChanged();
-                    return;
-                }
+                // 直接使用 StateManager 更新配置项
+                StateManager.UpdateItem(ConfigName, _currentConfig.Key, _editValue);
+                
+                // 通知父组件配置已更新
+                await OnConfigurationUpdated.InvokeAsync();
             }
 
-            // 关闭对话框，返回修改的配置项
-            MudDialog.Close(DialogResult.Ok(_currentConfig));
+            // 关闭对话框
+            MudDialog.Close(DialogResult.Ok(true));
         }
         catch (Exception ex)
         {
