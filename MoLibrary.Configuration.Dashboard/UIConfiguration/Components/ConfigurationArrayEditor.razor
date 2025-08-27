@@ -23,6 +23,7 @@
                         @if (GetArrayItemType() == EOptionItemValueBasicType.Object)
                         {
                             <ConfigurationObjectEditor Value="@items[index]"
+                                                       OriginalValue="@GetOriginalArrayItem(index)"
                                                        ValueChanged="@((object? v) => SetItemValue(index, v))"
                                                        SubStructure="@OptionItem?.SubStructure" />
                         }
@@ -30,6 +31,7 @@
                         {
                             <ConfigurationBasicTypeEditor Type="@GetArrayItemType()"
                                                           Value="@items[index]"
+                                                          OriginalValue="@GetOriginalArrayItem(index)"
                                                           ValueChanged="@((object? v) => SetItemValue(index, v))"
                                                           Label="@($"项 {index + 1}")"
                                                           IsNullable="@(OptionItem?.IsNullable ?? false)" />
@@ -49,6 +51,7 @@
 @code {
     [Parameter] public DtoOptionItem? OptionItem { get; set; }
     [Parameter] public object? Value { get; set; }
+    [Parameter] public object? OriginalValue { get; set; }
     [Parameter] public EventCallback<object?> ValueChanged { get; set; }
 
     private List<object> items = [];
@@ -116,5 +119,18 @@
         
         // 将默认值转换为JsonElement
         return JsonFileProviderConventions.ToJsonElement(defaultValue);
+    }
+    
+    private object? GetOriginalArrayItem(int index)
+    {
+        if (OriginalValue is JsonElement element && element.ValueKind == JsonValueKind.Array)
+        {
+            var array = element.EnumerateArray().ToArray();
+            if (index >= 0 && index < array.Length)
+            {
+                return array[index];
+            }
+        }
+        return null;
     }
 }

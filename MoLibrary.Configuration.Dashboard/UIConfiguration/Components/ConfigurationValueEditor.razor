@@ -7,12 +7,14 @@
     @if (OptionItem?.SpecialType == EOptionItemValueSpecialType.Array)
     {
         <ConfigurationArrayEditor Value="@Value" 
+                                  OriginalValue="@OriginalValue"
                                   ValueChanged="@OnValueChanged" 
                                   OptionItem="@OptionItem" />
     }
     else if (OptionItem?.SpecialType == EOptionItemValueSpecialType.Dict)
     {
         <ConfigurationDictEditor Value="@Value" 
+                                 OriginalValue="@OriginalValue"
                                  ValueChanged="@OnValueChanged" 
                                  OptionItem="@OptionItem" />
     }
@@ -20,6 +22,7 @@
     else if (OptionItem?.Type == EOptionItemValueBasicType.Object && OptionItem.SubStructure != null)
     {
         <ConfigurationObjectEditor Value="@Value" 
+                                   OriginalValue="@OriginalValue"
                                    ValueChanged="@OnValueChanged" 
                                    SubStructure="@OptionItem.SubStructure" />
     }
@@ -27,6 +30,7 @@
     {
         <ConfigurationBasicTypeEditor Type="@(OptionItem?.Type ?? EOptionItemValueBasicType.String)"
                                       Value="@Value"
+                                      OriginalValue="@OriginalValue"
                                       ValueChanged="@OnValueChanged"
                                       Label="@(OptionItem?.Title ?? "")"
                                       HelperText="@OptionItem?.Desc"
@@ -46,6 +50,7 @@
 @code {
     [Parameter] public DtoOptionItem? OptionItem { get; set; }
     [Parameter] public object? Value { get; set; }
+    [Parameter] public object? OriginalValue { get; set; }
     [Parameter] public EventCallback<object?> ValueChanged { get; set; }
 
     private async Task OnValueChanged(object? newValue)

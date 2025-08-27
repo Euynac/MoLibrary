@@ -24,6 +24,7 @@
                         @if (GetDictValueType() == EOptionItemValueBasicType.Object)
                         {
                             <ConfigurationObjectEditor Value="@items[index].Value"
+                                                       OriginalValue="@GetOriginalDictValue(items[index].Key)"
                                                        ValueChanged="@((object? v) => SetItemValue(index, v))"
                                                        SubStructure="@OptionItem?.SubStructure" />
                         }
@@ -31,6 +32,7 @@
                         {
                             <ConfigurationBasicTypeEditor Type="@GetDictValueType()"
                                                           Value="@items[index].Value"
+                                                          OriginalValue="@GetOriginalDictValue(items[index].Key)"
                                                           ValueChanged="@((object? v) => SetItemValue(index, v))"
                                                           Label="Value"
                                                           IsNullable="@(OptionItem?.IsNullable ?? false)" />
@@ -50,6 +52,7 @@
 @code {
     [Parameter] public DtoOptionItem? OptionItem { get; set; }
     [Parameter] public object? Value { get; set; }
+    [Parameter] public object? OriginalValue { get; set; }
     [Parameter] public EventCallback<object?> ValueChanged { get; set; }
 
     private List<DictItem> items = [];
@@ -126,5 +129,19 @@
         
         // 将默认值转换为JsonElement
         return JsonFileProviderConventions.ToJsonElement(defaultValue);
+    }
+    
+    private object? GetOriginalDictValue(string key)
+    {
+        if (string.IsNullOrEmpty(key)) return null;
+        
+        if (OriginalValue is JsonElement element && element.ValueKind == JsonValueKind.Object)
+        {
+            if (element.TryGetProperty(key, out var property))
+            {
+                return property;
+            }
+        }
+        return null;
     }
 }

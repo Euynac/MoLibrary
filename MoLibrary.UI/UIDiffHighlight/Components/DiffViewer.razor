@@ -74,7 +74,7 @@
 @code {
     [Parameter] public string OriginText { get; set; } = string.Empty;
     [Parameter] public string NewText { get; set; } = string.Empty;
-    [Parameter] public DiffHighlightOptions? Options { get; set; }
+    [Parameter] public DiffHighlightOptions? Options { get; set; } = new() {Mode = EDiffHighlightMode.Mixed};
     [Parameter] public bool AutoRefresh { get; set; } = true;
 
     private DiffHighlightResult? DiffResult { get; set; }

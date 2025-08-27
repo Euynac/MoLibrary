@@ -1,102 +1,128 @@
 @using MoLibrary.Configuration.Model
+@using MoLibrary.Configuration.Providers
 @using MudBlazor
 @using System.Text.Json
 
 <div class="configuration-basic-type-editor">
-    @switch (Type)
-    {
-        case EOptionItemValueBasicType.Boolean:
-            <MudSwitch T="bool" 
-                       Value="GetBoolValue()" 
-                       ValueChanged="OnBoolValueChanged" 
-                       Label="@Label" 
-                       Color="Color.Primary"
-                       HelperText="@HelperText" />
-            break;
-
-        case EOptionItemValueBasicType.Numeric:
-            <MudNumericField T="decimal?" 
-                             Value="GetDecimalValue()" 
-                             ValueChanged="OnDecimalValueChanged" 
-                             Label="@Label" 
-                             HelperText="@HelperText"
-                             Variant="Variant.Outlined"
-                             Clearable="@IsNullable" />
-            break;
-
-        case EOptionItemValueBasicType.String:
-            <MudTextField T="string" 
-                          Value="GetStringValue()" 
-                          ValueChanged="OnStringValueChanged" 
-                          Label="@Label" 
-                          HelperText="@HelperText"
-                          Variant="Variant.Outlined"
-                          Lines="@(IsMultiline ? 3 : 1)"
-                          Clearable="@IsNullable"
-                          Validation="@(string.IsNullOrEmpty(RegexPattern) ? null : new Func<string, string?>(ValidateRegex))" />
-            break;
-
-        case EOptionItemValueBasicType.DateTime:
-            <MudDatePicker Date="GetDateTimeValue()" 
-                           DateChanged="OnDateTimeValueChanged" 
-                           Label="@Label" 
-                           HelperText="@HelperText"
-                           Variant="Variant.Outlined"
-                           Clearable="@IsNullable" />
-            break;
-
-        case EOptionItemValueBasicType.TimeSpan:
-            <MudTimePicker Time="GetTimeSpanValue()" 
-                           TimeChanged="OnTimeSpanValueChanged" 
-                           Label="@Label" 
-                           HelperText="@HelperText"
-                           Variant="Variant.Outlined"
-                           Clearable="@IsNullable" />
-            break;
-
-        case EOptionItemValueBasicType.Enum:
-            @if (HasEnumOptions)
+    <div class="input-with-indicator">
+        <div class="input-field-wrapper">
+            @switch (Type)
             {
-                <MudSelect T="string" 
-                           Value="GetStringValue()" 
-                           ValueChanged="OnStringValueChanged" 
-                           Label="@Label" 
-                           HelperText="@HelperText"
-                           Variant="Variant.Outlined"
-                           Clearable="@IsNullable">
-                    @foreach (var option in EnumOptions)
+                case EOptionItemValueBasicType.Boolean:
+
+                    <MudSwitch T="bool"
+                               Value="GetBoolValue()"
+                               ValueChanged="OnBoolValueChanged"
+                               Label="@Label"
+                               Color="Color.Primary"
+                               Class="@GetModifiedClass()"
+                               HelperText="@HelperText" />
+                    break;
+
+                case EOptionItemValueBasicType.Numeric:
+                    <MudNumericField T="decimal?"
+                                     Value="GetDecimalValue()"
+                                     ValueChanged="OnDecimalValueChanged"
+                                     Label="@Label"
+                                     HelperText="@HelperText"
+                                     Variant="Variant.Outlined"
+                                     Class="@GetModifiedClass()"
+                                     Clearable="@IsNullable" />
+                    break;
+
+                case EOptionItemValueBasicType.String:
+                    <MudTextField T="string"
+                                  Value="GetStringValue()"
+                                  ValueChanged="OnStringValueChanged"
+                                  Label="@Label"
+                                  HelperText="@HelperText"
+                                  Variant="Variant.Outlined"
+                                  Lines="@(IsMultiline ? 3 : 1)"
+                                  Class="@GetModifiedClass()"
+                                  Clearable="@IsNullable"
+                                  Validation="@(string.IsNullOrEmpty(RegexPattern) ? null : new Func<string, string?>(ValidateRegex))" />
+                    break;
+
+                case EOptionItemValueBasicType.DateTime:
+                    <MudDatePicker Date="GetDateTimeValue()"
+                                   DateChanged="OnDateTimeValueChanged"
+                                   Label="@Label"
+                                   HelperText="@HelperText"
+                                   Variant="Variant.Outlined"
+                                   Class="@GetModifiedClass()"
+                                   Clearable="@IsNullable" />
+                    break;
+
+                case EOptionItemValueBasicType.TimeSpan:
+                    <MudTimePicker Time="GetTimeSpanValue()"
+                                   TimeChanged="OnTimeSpanValueChanged"
+                                   Label="@Label"
+                                   HelperText="@HelperText"
+                                   Variant="Variant.Outlined"
+                                   Class="@GetModifiedClass()"
+                                   Clearable="@IsNullable" />
+                    break;
+
+                case EOptionItemValueBasicType.Enum:
+                    @if (HasEnumOptions)
                     {
-                        <MudSelectItem T="string" Value="@option">@option</MudSelectItem>
+                        <MudSelect T="string"
+                                   Value="GetStringValue()"
+                                   ValueChanged="OnStringValueChanged"
+                                   Label="@Label"
+                                   HelperText="@HelperText"
+                                   Variant="Variant.Outlined"
+                                   Class="@GetModifiedClass()"
+                                   Clearable="@IsNullable">
+                            @foreach (var option in EnumOptions)
+                            {
+                                <MudSelectItem T="string" Value="@option">@option</MudSelectItem>
+                            }
+                        </MudSelect>
                     }
-                </MudSelect>
-            }
-            else
-            {
-                <MudTextField T="string" 
-                              Value="GetStringValue()" 
-                              ValueChanged="OnStringValueChanged" 
-                              Label="@Label" 
-                              HelperText="@HelperText"
-                              Variant="Variant.Outlined"
-                              Clearable="@IsNullable" />
-            }
-            break;
+                    else
+                    {
+                        <MudTextField T="string"
+                                      Value="GetStringValue()"
+                                      ValueChanged="OnStringValueChanged"
+                                      Label="@Label"
+                                      HelperText="@HelperText"
+                                      Variant="Variant.Outlined"
+                                      Class="@GetModifiedClass()"
+                                      Clearable="@IsNullable" />
+                    }
+                    break;
 
-        default:
-            <MudTextField T="string" 
-                          Value="GetStringValue()" 
-                          ValueChanged="OnStringValueChanged" 
-                          Label="@Label" 
-                          HelperText="@HelperText"
-                          Variant="Variant.Outlined"
-                          Clearable="@IsNullable" />
-            break;
-    }
+                default:
+                    <MudTextField T="string"
+                                  Value="GetStringValue()"
+                                  ValueChanged="OnStringValueChanged"
+                                  Label="@Label"
+                                  HelperText="@HelperText"
+                                  Variant="Variant.Outlined"
+                                  Class="@GetModifiedClass()"
+                                  Clearable="@IsNullable" />
+                    break;
+            }
+        </div>
+        @if (IsModified)
+        {
+            <div class="modification-indicator">
+                <MudTooltip Text="@($"原始值: {GetOriginalValueDisplay()}")">
+                    <MudIconButton Icon="@Icons.Material.Filled.Undo"
+                                   Size="Size.Small"
+                                   Color="Color.Warning"
+                                   OnClick="RestoreOriginalValue" />
+                </MudTooltip>
+            </div>
+        }
+    </div>
 </div>
 
 @code {
     [Parameter] public EOptionItemValueBasicType Type { get; set; }
     [Parameter] public object? Value { get; set; }
+    [Parameter] public object? OriginalValue { get; set; }
     [Parameter] public EventCallback<object?> ValueChanged { get; set; }
     [Parameter] public string? Label { get; set; }
     [Parameter] public string? HelperText { get; set; }
@@ -106,9 +132,34 @@
 
     private List<string> EnumOptions => GetEnumOptionsFromRegex() ?? new List<string>();
     private bool HasEnumOptions => GetEnumOptionsFromRegex()?.Any() == true;
+    private bool IsModified => !ValuesEqual(Value, OriginalValue);
+
+    private string GetModifiedClass() => IsModified ? "modified-input" : "";
+
+    private string GetOriginalValueDisplay()
+    {
+        if (OriginalValue == null) return "null";
+
+        if (OriginalValue is JsonElement element)
+        {
+            return element.ValueKind switch
+            {
+                JsonValueKind.String => element.GetString() ?? "",
+                JsonValueKind.True => "true",
+                JsonValueKind.False => "false",
+                JsonValueKind.Number => element.ToString(),
+                JsonValueKind.Null => "null",
+                _ => element.ToString()
+            };
+        }
+
+        return OriginalValue.ToString() ?? "null";
+    }
 
     private bool GetBoolValue()
     {
+        if (Type != EOptionItemValueBasicType.Boolean) return false;
+        
         if (Value is JsonElement element)
         {
             return element.ValueKind switch
@@ -118,11 +169,17 @@
                 _ => false
             };
         }
+        if (Value is bool boolValue)
+        {
+            return boolValue;
+        }
         return false;
     }
 
     private decimal? GetDecimalValue()
     {
+        if (Type != EOptionItemValueBasicType.Numeric) return IsNullable ? null : 0;
+        
         if (Value is null && IsNullable) return null;
         if (Value is JsonElement element)
         {
@@ -133,11 +190,25 @@
                 _ => IsNullable ? null : 0
             };
         }
+        if (Value is decimal decimalValue)
+        {
+            return decimalValue;
+        }
+        if (Value is int intValue)
+        {
+            return intValue;
+        }
+        if (Value is double doubleValue)
+        {
+            return (decimal)doubleValue;
+        }
         return IsNullable ? null : 0;
     }
 
     private string GetStringValue()
     {
+        if (Type != EOptionItemValueBasicType.String && Type != EOptionItemValueBasicType.Enum) return "";
+        
         if (Value is null) return "";
         if (Value is JsonElement element)
         {
@@ -153,6 +224,8 @@
 
     private DateTime? GetDateTimeValue()
     {
+        if (Type != EOptionItemValueBasicType.DateTime) return IsNullable ? null : DateTime.Now;
+        
         if (Value is null && IsNullable) return null;
         if (Value is JsonElement element)
         {
@@ -163,11 +236,17 @@
                 _ => IsNullable ? null : DateTime.Now
             };
         }
+        if (Value is DateTime dateTimeValue)
+        {
+            return dateTimeValue;
+        }
         return IsNullable ? null : DateTime.Now;
     }
 
     private TimeSpan? GetTimeSpanValue()
     {
+        if (Type != EOptionItemValueBasicType.TimeSpan) return IsNullable ? null : TimeSpan.Zero;
+        
         if (Value is null && IsNullable) return null;
         if (Value is JsonElement element)
         {
@@ -177,6 +256,10 @@
                 JsonValueKind.Null when IsNullable => null,
                 _ => IsNullable ? null : TimeSpan.Zero
             };
+        }
+        if (Value is TimeSpan timeSpanValue)
+        {
+            return timeSpanValue;
         }
         return IsNullable ? null : TimeSpan.Zero;
     }
@@ -219,7 +302,7 @@
     {
         if (string.IsNullOrEmpty(RegexPattern)) return null;
         if (string.IsNullOrEmpty(value) && IsNullable) return null;
-        
+
         try
         {
             var regex = new System.Text.RegularExpressions.Regex(RegexPattern);
@@ -232,7 +315,7 @@
         {
             return "正则表达式模式无效";
         }
-        
+
         return null;
     }
 
@@ -256,5 +339,28 @@
         }
 
         return null;
+    }
+
+    private async Task RestoreOriginalValue()
+    {
+        await ValueChanged.InvokeAsync(OriginalValue);
+    }
+
+    private static bool ValuesEqual(object? value1, object? value2)
+    {
+        if (value1 == null && value2 == null) return true;
+        if (value1 == null || value2 == null) return false;
+
+        // 使用JSON序列化进行深度比较
+        try
+        {
+            var json1 = JsonSerializer.Serialize(value1, JsonFileProviderConventions.JsonSerializerOptions);
+            var json2 = JsonSerializer.Serialize(value2, JsonFileProviderConventions.JsonSerializerOptions);
+            return json1 == json2;
+        }
+        catch
+        {
+            return value1.Equals(value2);
+        }
     }
 }

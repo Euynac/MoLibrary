@@ -17,6 +17,7 @@
                 <div class="mb-3">
                     <ConfigurationBasicTypeEditor Type="@item.Type"
                                                   Value="@GetValue(item.Name)"
+                                                  OriginalValue="@GetOriginalValue(item.Name)"
                                                   ValueChanged="@((object? v) => SetValue(item.Name, v))"
                                                   Label="@item.Title"
                                                   HelperText="@item.Desc"
@@ -35,6 +36,7 @@
 @code {
     [Parameter] public DtoConfig? SubStructure { get; set; }
     [Parameter] public object? Value { get; set; }
+    [Parameter] public object? OriginalValue { get; set; }
     [Parameter] public EventCallback<object?> ValueChanged { get; set; }
 
     private Dictionary<string, object> currentValue = [];
@@ -98,6 +100,18 @@
         // 将更新后的Dictionary转换为JsonElement并通知父组件
         var result = JsonFileProviderConventions.ToJsonElement(currentValue);
         await ValueChanged.InvokeAsync(result);
+    }
+    
+    private object? GetOriginalValue(string propertyName)
+    {
+        if (OriginalValue is JsonElement element && element.ValueKind == JsonValueKind.Object)
+        {
+            if (element.TryGetProperty(propertyName, out var property))
+            {
+                return property;
+            }
+        }
+        return null;
     }
 
 }
