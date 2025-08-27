@@ -1,0 +1,209 @@
+@using System.Web
+@using MoLibrary.Core.Features.MoDiffHighlight
+@using MoLibrary.Core.Features.MoDiffHighlight.Models
+@using MoLibrary.Tool.MoResponse
+@using MudBlazor
+@inject DiffHighlightService DiffHighlightService
+@inject ISnackbar Snackbar
+
+<MudPaper Class="diff-viewer" Elevation="2">
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <MudAlert Severity="Severity.Error" Class="diff-error">
+            @ErrorMessage
+        </MudAlert>
+    }
+
+    @if (DiffResult != null)
+    {
+        <div class="diff-header">
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                @($"变更: {DiffResult.Statistics.TotalChanges}")
+            </MudChip>
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="Color.Success">
+                @($"+ {DiffResult.Statistics.AddedLines}")
+            </MudChip>
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="Color.Error">
+                @($"- {DiffResult.Statistics.DeletedLines}")
+            </MudChip>
+            @if (DiffResult.Statistics.ModifiedLines > 0)
+            {
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="Color.Warning">
+                    @($"~ {DiffResult.Statistics.ModifiedLines}")
+                </MudChip>
+            }
+            <MudSpacer />
+            <MudText Typo="Typo.caption">
+                耗时: @($"{DiffResult.ProcessingTimeMs}ms")
+            </MudText>
+        </div>
+
+        <div class="diff-content">
+            @if (DiffResult.Lines?.Any() == true)
+            {
+                @foreach (var line in DiffResult.Lines)
+                {
+                    <div class="line @GetLineClass(line.Type)">
+                        <div class="line-numbers">
+                            <span class="line-old-number">
+                                @(line.OldLineNumber > 0 ? line.OldLineNumber.ToString() : "")
+                            </span>
+                            <span class="line-new-number">
+                                @(line.NewLineNumber > 0 ? line.NewLineNumber.ToString() : "")
+                            </span>
+                        </div>
+                        <div class="line-marker">
+                            @GetLineMarker(line.Type)
+                        </div>
+                        <div class="line-content">
+                            @((MarkupString)GetLineContent(line))
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Info">
+                    <MudText>文本无差异</MudText>
+                </MudAlert>
+            }
+        </div>
+    }
+</MudPaper>
+
+@code {
+    [Parameter] public string OriginText { get; set; } = string.Empty;
+    [Parameter] public string NewText { get; set; } = string.Empty;
+    [Parameter] public DiffHighlightOptions? Options { get; set; }
+    [Parameter] public bool AutoRefresh { get; set; } = true;
+
+    private DiffHighlightResult? DiffResult { get; set; }
+    private string ErrorMessage { get; set; } = string.Empty;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (AutoRefresh)
+        {
+            await RefreshDiffAsync();
+        }
+    }
+
+    public async Task RefreshDiffAsync()
+    {
+        if (string.IsNullOrEmpty(OriginText) && string.IsNullOrEmpty(NewText))
+        {
+            DiffResult = null;
+            return;
+        }
+
+        ErrorMessage = string.Empty;
+
+        try
+        {
+            var result = await DiffHighlightService.HighlightAsync(OriginText, NewText, Options);
+            
+            if (result.IsFailed(out var error, out var data))
+            {
+                ErrorMessage = error;
+                Snackbar.Add($"差异对比失败: {error}", Severity.Error);
+            }
+            else
+            {
+                DiffResult = data;
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+            Snackbar.Add($"差异对比出错: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private string GetLineClass(EDiffLineType type)
+    {
+        return type switch
+        {
+            EDiffLineType.Added => "line-added",
+            EDiffLineType.Deleted => "line-deleted",
+            EDiffLineType.Modified => "line-modified",
+            _ => "line-unchanged"
+        };
+    }
+
+    private string GetLineMarker(EDiffLineType type)
+    {
+        return type switch
+        {
+            EDiffLineType.Added => "+",
+            EDiffLineType.Deleted => "-",
+            EDiffLineType.Modified => "~",
+            _ => " "
+        };
+    }
+
+    private string GetLineContent(DiffLine line)
+    {
+        var content = line.Type switch
+        {
+            EDiffLineType.Added => line.NewContent,
+            EDiffLineType.Deleted => line.OldContent,
+            EDiffLineType.Modified => line.NewContent,
+            _ => line.OldContent ?? line.NewContent
+        };
+
+        // 如果启用了字符级对比且有字符级差异信息
+        if ((Options?.Mode == EDiffHighlightMode.Character || Options?.Mode == EDiffHighlightMode.Mixed) 
+            && line.CharacterDiffs?.Any() == true)
+        {
+            return RenderCharacterDiffs(content, line.CharacterDiffs);
+        }
+
+        return HttpUtility.HtmlEncode(content);
+    }
+
+    private string RenderCharacterDiffs(string content, List<DiffCharacterRange> characterDiffs)
+    {
+        if (string.IsNullOrEmpty(content)) return string.Empty;
+        
+        var result = new System.Text.StringBuilder();
+        var lastIndex = 0;
+
+        foreach (var diff in characterDiffs.OrderBy(d => d.Start))
+        {
+            // 添加未变化的部分
+            if (diff.Start > lastIndex)
+            {
+                result.Append(HttpUtility.HtmlEncode(content.Substring(lastIndex, diff.Start - lastIndex)));
+            }
+
+            // 添加有差异的部分
+            var diffClass = diff.Type switch
+            {
+                EDiffLineType.Added => "char-added",
+                EDiffLineType.Deleted => "char-deleted",
+                _ => ""
+            };
+
+            if (!string.IsNullOrEmpty(diffClass))
+            {
+                result.Append($"<span class=\"{diffClass}\">");
+                result.Append(HttpUtility.HtmlEncode(diff.Content));
+                result.Append("</span>");
+            }
+            else
+            {
+                result.Append(HttpUtility.HtmlEncode(diff.Content));
+            }
+
+            lastIndex = diff.Start + diff.Length;
+        }
+
+        // 添加剩余部分
+        if (lastIndex < content.Length)
+        {
+            result.Append(HttpUtility.HtmlEncode(content.Substring(lastIndex)));
+        }
+
+        return result.ToString();
+    }
+}

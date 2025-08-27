@@ -1,0 +1,361 @@
+@attribute [Route(DIFF_HIGHLIGHT_URL)]
+
+@using MoLibrary.Core.Features.MoDiffHighlight
+@using MoLibrary.Core.Features.MoDiffHighlight.Models
+@using MoLibrary.Tool.MoResponse
+@using MoLibrary.UI.UIDiffHighlight.Components
+
+@inject DiffHighlightService DiffHighlightService
+@inject ISnackbar Snackbar
+
+<PageTitle>文本差异对比</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
+    <MudPaper Elevation="1" Class="pa-4 mb-4">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
+            <MudIcon Icon="@Icons.Material.Filled.Compare" Size="Size.Large" />
+            <div>
+                <MudText Typo="Typo.h4">文本差异对比</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    比较两个文本文件的差异，提供可视化的对比结果
+                </MudText>
+            </div>
+        </MudStack>
+
+        <MudExpansionPanels>
+            <MudExpansionPanel Text="配置选项" Icon="@Icons.Material.Filled.Settings">
+                <div class="pa-2">
+                    <MudGrid>
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudSelect T="EDiffHighlightMode" @bind-Value="Options.Mode" Label="对比模式">
+                                <MudSelectItem T="EDiffHighlightMode" Value="EDiffHighlightMode.Line">行级对比</MudSelectItem>
+                                <MudSelectItem T="EDiffHighlightMode" Value="EDiffHighlightMode.Character">字符级对比</MudSelectItem>
+                                <MudSelectItem T="EDiffHighlightMode" Value="EDiffHighlightMode.Mixed">混合对比</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudSelect T="EDiffOutputFormat" @bind-Value="Options.OutputFormat" Label="输出格式">
+                                <MudSelectItem T="EDiffOutputFormat" Value="EDiffOutputFormat.Html">HTML</MudSelectItem>
+                                <MudSelectItem T="EDiffOutputFormat" Value="EDiffOutputFormat.Markdown">Markdown</MudSelectItem>
+                                <MudSelectItem T="EDiffOutputFormat" Value="EDiffOutputFormat.PlainText">纯文本</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudNumericField T="int" @bind-Value="Options.ContextLines" Label="上下文行数" Min="0" Max="20" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudNumericField T="int" @bind-Value="Options.MaxCharacterDiffLength" Label="最大字符差异长度" Min="100" Max="10000" />
+                        </MudItem>
+                    </MudGrid>
+                    <MudGrid Class="mt-2">
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudSwitch T="bool" @bind-Value="Options.IgnoreWhitespace" Label="忽略空白字符" Color="Color.Primary" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudSwitch T="bool" @bind-Value="Options.IgnoreCase" Label="忽略大小写" Color="Color.Primary" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudSwitch T="bool" @bind-Value="AutoRefresh" Label="自动刷新" Color="Color.Primary" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudButton Variant="Variant.Outlined" 
+                                      StartIcon="@Icons.Material.Filled.Refresh" 
+                                      OnClick="LoadSampleDataAsync"
+                                      Size="Size.Small">
+                                加载示例
+                            </MudButton>
+                        </MudItem>
+                    </MudGrid>
+                </div>
+            </MudExpansionPanel>
+        </MudExpansionPanels>
+    </MudPaper>
+
+    <MudGrid>
+        <MudItem xs="12" lg="6">
+            <MudPaper Elevation="2" Class="pa-4" Style="height: 500px;">
+                <MudStack>
+                    <MudText Typo="Typo.h6" Class="mb-2">
+                        <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" Class="mr-2" />
+                        原始文本
+                    </MudText>
+                    <MudTextField T="string" 
+                                 Value="@OriginText"
+                                 ValueChanged="@OnOriginTextChanged"
+                                 Lines="18"
+                                 Variant="Variant.Outlined"
+                                 Class="diff-text-input"
+                                 Placeholder="请输入原始文本..."
+                                 Immediate="true" />
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" lg="6">
+            <MudPaper Elevation="2" Class="pa-4" Style="height: 500px;">
+                <MudStack>
+                    <MudText Typo="Typo.h6" Class="mb-2">
+                        <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Class="mr-2" />
+                        新文本
+                    </MudText>
+                    <MudTextField T="string" 
+                                 Value="@NewText"
+                                 ValueChanged="@OnNewTextChanged"
+                                 Lines="18"
+                                 Variant="Variant.Outlined"
+                                 Class="diff-text-input"
+                                 Placeholder="请输入新文本..."
+                                 Immediate="true" />
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <MudPaper Elevation="2" Class="mt-4">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Class="pa-4 pb-2">
+            <MudText Typo="Typo.h6">
+                <MudIcon Icon="@Icons.Material.Filled.Compare" Size="Size.Small" Class="mr-2" />
+                差异对比结果
+            </MudText>
+            <MudSpacer />
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" 
+                    Color="@GetFormatChipColor()" Icon="@GetFormatIcon()">
+                @Options.OutputFormat
+            </MudChip>
+            <MudButton Variant="Variant.Filled" 
+                      Color="Color.Primary"
+                      StartIcon="@Icons.Material.Filled.Refresh"
+                      OnClick="RefreshDiffAsync"
+                      Disabled="IsManualRefreshing">
+                @if (IsManualRefreshing)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    <text>对比中...</text>
+                }
+                else
+                {
+                    <text>手动刷新</text>
+                }
+            </MudButton>
+        </MudStack>
+        
+        @if (Options.OutputFormat == EDiffOutputFormat.Html)
+        {
+            <DiffViewer @ref="DiffViewerRef"
+                       OriginText="@OriginText" 
+                       NewText="@NewText" 
+                       Options="@Options"
+                       AutoRefresh="@AutoRefresh" />
+        }
+        else
+        {
+            <div class="pa-4">
+                @if (DiffResult != null)
+                {
+                    @if (Options.OutputFormat == EDiffOutputFormat.Markdown)
+                    {
+                        <MudPaper Elevation="1" Class="pa-3 markdown-viewer">
+                            <pre style="white-space: pre-wrap; font-family: 'Cascadia Code', monospace;">@DiffResult.HighlightedContent</pre>
+                        </MudPaper>
+                    }
+                    else if (Options.OutputFormat == EDiffOutputFormat.PlainText)
+                    {
+                        <MudPaper Elevation="1" Class="pa-3 plaintext-viewer">
+                            <pre style="white-space: pre-wrap; font-family: 'Cascadia Code', monospace;">@DiffResult.HighlightedContent</pre>
+                        </MudPaper>
+                    }
+                }
+                else if (IsManualRefreshing)
+                {
+                    <MudProgressLinear Indeterminate="true" />
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Info">请输入文本并点击刷新按钮</MudAlert>
+                }
+            </div>
+        }
+    </MudPaper>
+</MudContainer>
+
+@code {
+    public const string DIFF_HIGHLIGHT_URL = "/diff-highlight-debug";
+
+    private string OriginText { get; set; } = string.Empty;
+    private string NewText { get; set; } = string.Empty;
+    private bool AutoRefresh { get; set; } = true;
+    private bool IsManualRefreshing { get; set; }
+    private DiffHighlightResult? DiffResult { get; set; }
+
+    private DiffHighlightOptions Options { get; set; } = new()
+    {
+        Mode = EDiffHighlightMode.Character,
+        OutputFormat = EDiffOutputFormat.Html,
+        ContextLines = 3,
+        MaxCharacterDiffLength = 1000,
+        IgnoreWhitespace = false,
+        IgnoreCase = false
+    };
+
+    private DiffViewer? DiffViewerRef { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadSampleDataAsync();
+        }
+    }
+
+    private CancellationTokenSource? _debounceTokenSource;
+
+    private async Task OnOriginTextChanged(string value)
+    {
+        OriginText = value;
+        await OnTextChanged();
+    }
+
+    private async Task OnNewTextChanged(string value)
+    {
+        NewText = value;
+        await OnTextChanged();
+    }
+
+    private async Task OnTextChanged()
+    {
+        if (!AutoRefresh) return;
+        
+        // 取消之前的防抖任务
+        _debounceTokenSource?.Cancel();
+        _debounceTokenSource = new CancellationTokenSource();
+        
+        try
+        {
+            // 计算总字符数
+            var totalChars = (OriginText?.Length ?? 0) + (NewText?.Length ?? 0);
+            
+            // 100000字符以上才延迟300ms，否则不延迟
+            if (totalChars > 100000)
+            {
+                await Task.Delay(300, _debounceTokenSource.Token);
+            }
+            
+            // 触发自动刷新
+            await RefreshDiffAsync();
+        }
+        catch (OperationCanceledException)
+        {
+            // 防抖被取消，忽略
+        }
+    }
+
+    private async Task RefreshDiffAsync()
+    {
+        IsManualRefreshing = true;
+        StateHasChanged();
+
+        try
+        {
+            if (Options.OutputFormat == EDiffOutputFormat.Html && DiffViewerRef != null)
+            {
+                await DiffViewerRef.RefreshDiffAsync();
+            }
+            else
+            {
+                // 非HTML格式直接调用服务
+                var result = await DiffHighlightService.HighlightAsync(OriginText, NewText, Options);
+                
+                if (result.IsFailed(out var error, out var data))
+                {
+                    Snackbar.Add($"差异对比失败: {error}", Severity.Error);
+                }
+                else
+                {
+                    DiffResult = data;
+                }
+            }
+        }
+        finally
+        {
+            IsManualRefreshing = false;
+            StateHasChanged();
+        }
+    }
+
+    private Color GetFormatChipColor()
+    {
+        return Options.OutputFormat switch
+        {
+            EDiffOutputFormat.Html => Color.Primary,
+            EDiffOutputFormat.Markdown => Color.Secondary,
+            EDiffOutputFormat.PlainText => Color.Tertiary,
+            _ => Color.Default
+        };
+    }
+
+    private string GetFormatIcon()
+    {
+        return Options.OutputFormat switch
+        {
+            EDiffOutputFormat.Html => Icons.Material.Filled.Code,
+            EDiffOutputFormat.Markdown => Icons.Material.Filled.Notes,
+            EDiffOutputFormat.PlainText => Icons.Material.Filled.TextFields,
+            _ => Icons.Material.Filled.Help
+        };
+    }
+
+    private async Task LoadSampleDataAsync()
+    {
+        OriginText = @"public class Calculator
+{
+    public int Add(int a, int b)
+    {
+        return a + b;
+    }
+
+    public int Subtract(int a, int b)
+    {
+        return a - b;
+    }
+
+    public double Divide(int a, int b)
+    {
+        return (double)a / b;
+    }
+}";
+
+        NewText = @"public class Calculator
+{
+    public int Add(int a, int b)
+    {
+        // 添加输入验证
+        return a + b;
+    }
+
+    public int Subtract(int a, int b)
+    {
+        return a - b;
+    }
+
+    public int Multiply(int a, int b)
+    {
+        return a * b;
+    }
+
+    public double Divide(int a, int b)
+    {
+        if (b == 0) throw new DivideByZeroException(""除数不能为零"");
+        return (double)a / b;
+    }
+
+    public double Power(double baseNum, double exponent)
+    {
+        return Math.Pow(baseNum, exponent);
+    }
+}";
+
+        StateHasChanged();
+        await Task.Delay(100);
+        
+        await RefreshDiffAsync();
+    }
+}

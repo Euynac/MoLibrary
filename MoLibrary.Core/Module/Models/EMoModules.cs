@@ -68,6 +68,10 @@ public enum EMoModules
     /// </summary>
     FrameworkChainTracing,
     /// <summary>
+    /// 文本差异对比高亮模块
+    /// </summary>
+    DiffHighlight,
+    /// <summary>
     /// UI 核心模块，用于界面基础构建
     /// </summary>
     UICore,
@@ -80,4 +84,8 @@ public enum EMoModules
 MapperUI,
     RegisterCentreUI,
     FrameworkMonitorUI,
+    /// <summary>
+    /// 文本差异对比高亮UI模块
+    /// </summary>
+    DiffHighlightUI,
 }
