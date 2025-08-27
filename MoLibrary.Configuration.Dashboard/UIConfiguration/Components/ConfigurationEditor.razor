@@ -97,6 +97,7 @@
                 </MudText>
                 <ConfigurationValueEditor OptionItem="_currentConfig" 
                                          Value="_editValue" 
+                                         OriginalValue="_currentConfig?.Value"
                                          ValueChanged="OnValueChanged" />
             </MudPaper>
 
@@ -168,8 +169,11 @@
         _configProvider = config.Provider ?? "Unknown";
         _configSource = config.Source ?? string.Empty;
         _isOffline = config.IsOffline;
-        // 将配置值转换为JsonElement
-        _editValue = config.Value;
+        
+        // 从StateManager获取当前值，如果没有修改则使用原始值
+        var configViewModel = StateManager?.GetConfiguration(ConfigName);
+        var itemViewModel = configViewModel?.Items.FirstOrDefault(i => i.OriginalItem.Key == config.Key);
+        _editValue = itemViewModel?.CurrentValue ?? config.Value;
         
         _validationMessage = string.Empty;
         StateHasChanged();

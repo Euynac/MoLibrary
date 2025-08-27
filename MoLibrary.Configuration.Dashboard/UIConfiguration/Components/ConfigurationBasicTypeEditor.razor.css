@@ -1,5 +1,23 @@
 .configuration-basic-type-editor {
     width: 100%;
+    position: relative;
+}
+
+.input-with-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.input-field-wrapper {
+    flex: 1;
+}
+
+.modification-indicator {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .configuration-basic-type-editor .mud-input-root {
@@ -16,4 +34,17 @@
 
 .configuration-basic-type-editor .mud-picker {
     width: 100%;
+}
+
+
+.modified-input {
+    background-color: rgba(255, 193, 7, 0.1);
+}
+
+.modified-input .mud-input-control {
+    background-color: rgba(255, 193, 7, 0.1);
+}
+
+.original-value-tooltip {
+    cursor: help;
 }

@@ -258,18 +258,24 @@
     private DtoOptionItem? editingItem;
     private string? editingAppId;
     
+    private List<DtoDomainConfigs>? _lastConfigs;
+    
     protected override void OnParametersSet()
     {
-        // 如果配置数据发生变化，重置选择状态
-        if (selectedService != null && !Configs.Any(d => d.Children.Contains(selectedService)))
+        // 只有在配置数据真正发生变化时才重新初始化状态管理器
+        if (_lastConfigs != Configs) 
         {
-            selectedDomain = null;
-            selectedService = null;
-            selectedConfig = null;
+            _lastConfigs = Configs;
+            stateManager.Initialize(Configs);
+            
+            // 如果配置数据发生变化，重置选择状态
+            if (selectedService != null && !Configs.Any(d => d.Children.Contains(selectedService)))
+            {
+                selectedDomain = null;
+                selectedService = null;
+                selectedConfig = null;
+            }
         }
-        
-        // 初始化状态管理器
-        stateManager.Initialize(Configs);
     }
     
     
