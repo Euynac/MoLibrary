@@ -12,7 +12,11 @@
     "browsermcp": {
       "type": "stdio",
       "command": "npx",
-      "args": [ "@browsermcp/mcp@latest" ]
+      "args": [
+        "-y",
+        "@browsermcp/mcp@latest"
+       ],
+      "env": {}
     },
     "puppeteer": {
       "type": "stdio",
