@@ -12,7 +12,7 @@ public class UnitBackgroundWorker(Type type) : ProjectUnit(type, EProjectUnitTyp
 {
     static UnitBackgroundWorker()
     {
-        AddFactory(Factory);
+        AddUnitRegisterFactory(Factory);
     }
     protected override bool VerifyTypeConstrain()
     {

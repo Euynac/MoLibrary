@@ -3,6 +3,9 @@
 @using MoLibrary.UI.Components
 @using System.Linq
 @using System.Reflection
+@using MoLibrary.Framework.Services
+@using MoLibrary.Tool.Extensions
+@inject IFrameworkMonitorService FrameworkMonitorService
 
 <MudDialog @bind-Visible="Visible" Options="DialogOptions" OnBackdropClick="HandleBackdropClick">
     <TitleContent>
@@ -132,6 +135,141 @@
                                         </MudChip>
                                     }
                                 </MudChipSet>
+                            </td>
+                        </tr>
+                    }
+                    @* Configuration单元的IsOffline信息 *@
+                    @if (SelectedUnit.UnitType == EProjectUnitType.Configuration && _originalProjectUnit is UnitConfiguration configUnit)
+                    {
+                        <tr>
+                            <td><MudText Typo="Typo.subtitle2">配置模式</MudText></td>
+                            <td>
+                                @{
+                                    var modeText = configUnit.IsOffline switch
+                                    {
+                                        true => "离线配置",
+                                        false => "在线配置", 
+                                        null => "未知模式"
+                                    };
+                                    var modeColor = configUnit.IsOffline switch
+                                    {
+                                        true => Color.Success,
+                                        false => Color.Warning,
+                                        null => Color.Default
+                                    };
+                                    var modeIcon = configUnit.IsOffline switch
+                                    {
+                                        true => Icons.Material.Filled.CloudOff,
+                                        false => Icons.Material.Filled.Cloud,
+                                        null => Icons.Material.Filled.QuestionMark
+                                    };
+                                }
+                                <MudChip T="string" Size="Size.Small" Color="@modeColor" Icon="@modeIcon">
+                                    @modeText
+                                </MudChip>
+                            </td>
+                        </tr>
+                        @* Configuration依赖详情 *@
+                        @if (configUnit.ConfigurationDependencies.Any())
+                        {
+                            <tr>
+                                <td style="vertical-align: top;"><MudText Typo="Typo.subtitle2">使用方式</MudText></td>
+                                <td>
+                                    <MudExpansionPanels>
+                                        <MudExpansionPanel>
+                                            <TitleContent>
+                                                <div style="display: flex; align-items: center">
+                                                    <MudIcon Icon="@Icons.Material.Filled.Link" class="mr-3" />
+                                                    <MudText>配置使用详情 (@configUnit.ConfigurationDependencies.Count)</MudText>
+                                                </div>
+                                            </TitleContent>
+                                            <ChildContent>
+                                                <MudStack Spacing="1">
+                                                    @foreach (var dependency in configUnit.ConfigurationDependencies)
+                                                    {
+                                                        var unit = dependency.Key;
+                                                        var usage = dependency.Value;
+                                                        var usageText = usage switch
+                                                        {
+                                                            EConfigurationUsageType.Offline => "IOptions (离线)",
+                                                            EConfigurationUsageType.OnlineSnapshot => "IOptionsSnapshot (在线)",
+                                                            EConfigurationUsageType.OnlineMonitor => "IOptionsMonitor (在线)",
+                                                            EConfigurationUsageType.Unknown => "未知方式",
+                                                            _ => "未知方式"
+                                                        };
+                                                        var usageColor = usage switch
+                                                        {
+                                                            EConfigurationUsageType.Offline => Color.Success,
+                                                            EConfigurationUsageType.OnlineSnapshot => Color.Warning,
+                                                            EConfigurationUsageType.OnlineMonitor => Color.Info,
+                                                            EConfigurationUsageType.Unknown => Color.Default,
+                                                            _ => Color.Default
+                                                        };
+                                                        var usageIcon = usage switch
+                                                        {
+                                                            EConfigurationUsageType.Offline => Icons.Material.Filled.CloudOff,
+                                                            EConfigurationUsageType.OnlineSnapshot => Icons.Material.Filled.Cloud,
+                                                            EConfigurationUsageType.OnlineMonitor => Icons.Material.Filled.Refresh,
+                                                            EConfigurationUsageType.Unknown => Icons.Material.Filled.QuestionMark,
+                                                            _ => Icons.Material.Filled.QuestionMark
+                                                        };
+                                                        
+                                                        <div class="d-flex align-center justify-space-between">
+                                                            <div class="d-flex align-center">
+                                                                <MudChip T="string" Size="Size.Small" 
+                                                                         Style="@($"background-color: {GetUnitTypeColor(unit.UnitType)}; color: white;")"
+                                                                         OnClick="@(() => OnChipClick(unit.Key))">
+                                                                    @unit.Title
+                                                                </MudChip>
+                                                                <MudText Typo="Typo.caption" Class="ml-2" Style="color: var(--mud-palette-text-secondary);">
+                                                                    (@unit.UnitType.ToString())
+                                                                </MudText>
+                                                            </div>
+                                                            <MudChip T="string" Size="Size.Small" Color="@usageColor" Icon="@usageIcon">
+                                                                @usageText
+                                                            </MudChip>
+                                                        </div>
+                                                    }
+                                                </MudStack>
+                                            </ChildContent>
+                                        </MudExpansionPanel>
+                                    </MudExpansionPanels>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    @* 构造函数参数信息 *@
+                    @if (_originalProjectUnit?.ConstructorParameterTypes.Any() == true)
+                    {
+                        <tr>
+                            <td style="vertical-align: top;"><MudText Typo="Typo.subtitle2">构造参数</MudText></td>
+                            <td>
+                                <MudExpansionPanels>
+                                    <MudExpansionPanel>
+                                        <TitleContent>
+                                            <div style="display: flex; align-items: center">
+                                                <MudIcon Icon="@Icons.Material.Filled.Construction" class="mr-3" />
+                                                <MudText>构造函数参数 (@_originalProjectUnit.ConstructorParameterTypes.Count)</MudText>
+                                            </div>
+                                        </TitleContent>
+                                        <ChildContent>
+                                            <MudStack Spacing="1">
+                                                @foreach (var paramType in _originalProjectUnit.ConstructorParameterTypes)
+                                                {
+                                                    <div class="d-flex align-center">
+                                                        <MudIcon Icon="@Icons.Material.Filled.Code" Size="Size.Small" Class="mr-2" />
+                                                        <MudText Style="font-family: 'Cascadia Code', 'JetBrains Mono', monospace; background-color: var(--mud-palette-background-grey); padding: 4px 8px; border-radius: 4px;">
+                                                            @paramType.GetCleanName()
+                                                        </MudText>
+                                                        <MudText Typo="Typo.caption" Class="ml-2" Style="color: var(--mud-palette-text-secondary);">
+                                                            (@paramType.GetCleanFullName())
+                                                        </MudText>
+                                                    </div>
+                                                }
+                                            </MudStack>
+                                        </ChildContent>
+                                    </MudExpansionPanel>
+                                </MudExpansionPanels>
                             </td>
                         </tr>
                     }
@@ -320,6 +458,7 @@
     [Parameter] public EventCallback<string> OnNodeFocus { get; set; }
     
     private List<DtoProjectUnit>? DependedByUnits { get; set; }
+    private ProjectUnit? _originalProjectUnit;
     
     private readonly DialogOptions DialogOptions = new()
     {
@@ -337,6 +476,9 @@
             DependedByUnits = AllProjectUnits
                 .Where(u => u.DependencyUnits.Any(d => d.Key == SelectedUnit.Key))
                 .ToList();
+            
+            // 尝试获取原始ProjectUnit实例
+            _originalProjectUnit = FrameworkMonitorService.GetProjectUnitByKey(SelectedUnit.Key);
         }
     }
     

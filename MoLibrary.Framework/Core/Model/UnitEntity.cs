@@ -13,7 +13,7 @@ public class UnitEntity(Type type) : ProjectUnit(type, EProjectUnitType.Entity),
 {
     static UnitEntity()
     {
-        AddFactory(Factory);
+        AddUnitRegisterFactory(Factory);
     }
 
     public bool IsAggregate { get; set; }

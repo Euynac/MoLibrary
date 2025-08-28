@@ -1,0 +1,194 @@
+@using System.Web
+@using MoLibrary.Core.Features.MoDiffHighlight
+@using MoLibrary.Core.Features.MoDiffHighlight.Models
+@using MoLibrary.Tool.MoResponse
+@using MudBlazor
+@inject DiffHighlightService DiffHighlightService
+@inject ISnackbar Snackbar
+
+<MudPaper Class="diff-viewer" Elevation="2">
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <MudAlert Severity="Severity.Error" Class="diff-error">
+            @ErrorMessage
+        </MudAlert>
+    }
+
+    @if (DiffResult != null)
+    {
+        <div class="diff-header">
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                @($"变更: {DiffResult.Statistics.TotalChanges}")
+            </MudChip>
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="Color.Success">
+                @($"+ {DiffResult.Statistics.AddedLines}")
+            </MudChip>
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="Color.Error">
+                @($"- {DiffResult.Statistics.DeletedLines}")
+            </MudChip>
+            @if (DiffResult.Statistics.ModifiedLines > 0)
+            {
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="Color.Warning">
+                    @($"~ {DiffResult.Statistics.ModifiedLines}")
+                </MudChip>
+            }
+            <MudSpacer />
+            
+           
+            
+            @* 显示模式切换按钮（仅统一模式显示） *@
+            @if (ViewMode == EDiffViewMode.Unified)
+            {
+                <MudButton Variant="Variant.Outlined" 
+                          Size="Size.Small" 
+                          StartIcon="@GetDisplayModeIcon()" 
+                          OnClick="ToggleDisplayMode"
+                          Class="display-mode-toggle">
+                    @GetDisplayModeText()
+                </MudButton>
+            }
+            @* 视图模式切换按钮 *@
+            <MudButton Variant="Variant.Outlined" 
+                       Size="Size.Small" 
+                       StartIcon="@GetViewModeIcon()" 
+                       OnClick="ToggleViewMode"
+                       Class="view-mode-toggle">
+                @GetViewModeText()
+            </MudButton>
+            <MudText Typo="Typo.caption">
+                耗时: @($"{DiffResult.ProcessingTimeMs}ms")
+            </MudText>
+        </div>
+
+        <div class="diff-content">
+            <DiffContent DiffResult="DiffResult" 
+                        Options="Options" 
+                        ViewMode="ViewMode" 
+                        DisplayMode="DisplayMode" />
+        </div>
+    }
+</MudPaper>
+
+@code {
+    [Parameter] public string OriginText { get; set; } = string.Empty;
+    [Parameter] public string NewText { get; set; } = string.Empty;
+    [Parameter] public DiffHighlightOptions? Options { get; set; } = new() {Mode = EDiffHighlightMode.Line};
+    [Parameter] public bool AutoRefresh { get; set; } = true;
+    [Parameter] public EDiffViewMode ViewMode { get; set; } = EDiffViewMode.Unified;
+
+    private DiffHighlightResult? DiffResult { get; set; }
+    private string ErrorMessage { get; set; } = string.Empty;
+    private EDiffDisplayMode DisplayMode { get; set; } = EDiffDisplayMode.Compare;
+
+    private bool _isRefreshing = false;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (AutoRefresh)
+        {
+            await RefreshDiffInternalAsync();
+        }
+    }
+
+    private void ToggleViewMode()
+    {
+        ViewMode = ViewMode == EDiffViewMode.Unified ? EDiffViewMode.Split : EDiffViewMode.Unified;
+    }
+
+    private void ToggleDisplayMode()
+    {
+        DisplayMode = DisplayMode switch
+        {
+            EDiffDisplayMode.Compare => EDiffDisplayMode.NewOnly,
+            EDiffDisplayMode.NewOnly => EDiffDisplayMode.OldOnly,
+            EDiffDisplayMode.OldOnly => EDiffDisplayMode.Compare,
+            _ => EDiffDisplayMode.Compare
+        };
+    }
+
+    private string GetViewModeText()
+    {
+        return ViewMode switch
+        {
+            EDiffViewMode.Split => "分割",
+            EDiffViewMode.Unified => "统一",
+            _ => "统一"
+        };
+    }
+
+    private string GetViewModeIcon()
+    {
+        return ViewMode switch
+        {
+            EDiffViewMode.Split => Icons.Material.Outlined.ViewColumn,
+            EDiffViewMode.Unified => Icons.Material.Outlined.ViewAgenda,
+            _ => Icons.Material.Outlined.ViewAgenda
+        };
+    }
+
+    private string GetDisplayModeText()
+    {
+        return DisplayMode switch
+        {
+            EDiffDisplayMode.Compare => "比较",
+            EDiffDisplayMode.NewOnly => "新值",
+            EDiffDisplayMode.OldOnly => "旧值",
+            _ => "比较"
+        };
+    }
+
+    private string GetDisplayModeIcon()
+    {
+        return DisplayMode switch
+        {
+            EDiffDisplayMode.Compare => Icons.Material.Outlined.Compare,
+            EDiffDisplayMode.NewOnly => Icons.Material.Outlined.Add,
+            EDiffDisplayMode.OldOnly => Icons.Material.Outlined.Remove,
+            _ => Icons.Material.Outlined.Compare
+        };
+    }
+
+    public async Task RefreshDiffAsync()
+    {
+        await RefreshDiffInternalAsync();
+    }
+
+    private async Task RefreshDiffInternalAsync()
+    {
+        if (_isRefreshing) return;
+        _isRefreshing = true;
+
+        try
+        {
+            if (string.IsNullOrEmpty(OriginText) && string.IsNullOrEmpty(NewText))
+            {
+                DiffResult = null;
+                return;
+            }
+
+            ErrorMessage = string.Empty;
+
+            var result = await DiffHighlightService.HighlightAsync(OriginText, NewText, Options);
+            
+            if (result.IsFailed(out var error, out var data))
+            {
+                ErrorMessage = error;
+                Snackbar.Add($"差异对比失败: {error}", Severity.Error);
+            }
+            else
+            {
+                DiffResult = data;
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+            Snackbar.Add($"差异对比出错: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isRefreshing = false;
+        }
+    }
+
+}

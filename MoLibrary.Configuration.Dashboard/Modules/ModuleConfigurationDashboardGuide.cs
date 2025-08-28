@@ -45,7 +45,7 @@ public class ModuleConfigurationDashboardGuide : MoModuleGuide<ModuleConfigurati
             context.Services.AddSingleton(p =>
                 ((IMoConfigurationCentre?) p.GetService(typeof(MemoryProviderForConfigCentre)))!);
             MoConfigurationManager.Setting.ThisIsDashboard = true;
-            context.Services.AddSingleton<IMoConfigurationStores, MoConfigurationDefaultStore>();
+            context.Services.AddSingleton<IMoConfigurationStores, MoConfigurationDefaultMemoryStore>();
             context.Services.AddSingleton<IMoConfigurationModifier, MoConfigurationJsonFileModifier>();
         });
         return this;

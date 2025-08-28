@@ -15,7 +15,7 @@ public class UnitRepository(Type type) : ProjectUnit(type, EProjectUnitType.Repo
 {
     static UnitRepository()
     {
-        AddFactory(Factory);
+        AddUnitRegisterFactory(Factory);
     }
 
     public bool IsHistoryRepo { get; set; }

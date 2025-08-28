@@ -15,7 +15,7 @@ public class UnitBackgroundJob(Type type) : ProjectUnit(type, EProjectUnitType.B
 
     static UnitBackgroundJob()
     {
-        AddFactory(Factory);
+        AddUnitRegisterFactory(Factory);
     }
     protected override bool VerifyTypeConstrain()
     {

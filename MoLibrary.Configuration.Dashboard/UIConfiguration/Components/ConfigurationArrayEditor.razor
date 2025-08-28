@@ -1,4 +1,5 @@
 @using MoLibrary.Configuration.Model
+@using MoLibrary.Configuration.Providers
 @using MudBlazor
 @using System.Text.Json
 
@@ -18,7 +19,24 @@
             {
                 var index = i; // Capture for closure
                 <div class="d-flex align-center gap-2 mb-2">
-                    <MudTextField @bind-Value="items[index]" Label="@($"项 {index + 1}")" Variant="Variant.Outlined" Class="flex-grow-1" />
+                    <div class="flex-grow-1">
+                        @if (GetArrayItemType() == EOptionItemValueBasicType.Object)
+                        {
+                            <ConfigurationObjectEditor Value="@items[index]"
+                                                       OriginalValue="@GetOriginalArrayItem(index)"
+                                                       ValueChanged="@((object? v) => SetItemValue(index, v))"
+                                                       SubStructure="@OptionItem?.SubStructure" />
+                        }
+                        else
+                        {
+                            <ConfigurationBasicTypeEditor Type="@GetArrayItemType()"
+                                                          Value="@items[index]"
+                                                          OriginalValue="@GetOriginalArrayItem(index)"
+                                                          ValueChanged="@((object? v) => SetItemValue(index, v))"
+                                                          Label="@($"项 {index + 1}")"
+                                                          IsNullable="@(OptionItem?.IsNullable ?? false)" />
+                        }
+                    </div>
                     <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="() => RemoveItem(index)" />
                 </div>
             }
@@ -32,22 +50,33 @@
 
 @code {
     [Parameter] public DtoOptionItem? OptionItem { get; set; }
-    [Parameter] public List<object>? Value { get; set; }
-    [Parameter] public EventCallback<List<object>> ValueChanged { get; set; }
+    [Parameter] public object? Value { get; set; }
+    [Parameter] public object? OriginalValue { get; set; }
+    [Parameter] public EventCallback<object?> ValueChanged { get; set; }
 
-    private List<string> items = [];
+    private List<object> items = [];
 
     protected override void OnParametersSet()
     {
-        if (Value != null)
+        if (Value is JsonElement element && element.ValueKind == JsonValueKind.Array)
         {
-            items = Value.Select(x => x?.ToString() ?? "").ToList();
+            items = element.EnumerateArray().Select(x => (object)x).ToList();
         }
+        else
+        {
+            items = [];
+        }
+    }
+
+    private EOptionItemValueBasicType GetArrayItemType()
+    {
+        return OptionItem?.Type ?? EOptionItemValueBasicType.String;
     }
 
     private async Task AddItem()
     {
-        items.Add("");
+        var defaultValue = GetDefaultValueForType(GetArrayItemType());
+        items.Add(defaultValue);
         await NotifyValueChanged();
     }
 
@@ -60,9 +89,48 @@
         }
     }
 
+    private async Task SetItemValue(int index, object? value)
+    {
+        if (index >= 0 && index < items.Count)
+        {
+            items[index] = value ?? "";
+            await NotifyValueChanged();
+        }
+    }
+
     private async Task NotifyValueChanged()
     {
-        var objectList = items.Cast<object>().ToList();
-        await ValueChanged.InvokeAsync(objectList);
+        // 将List转换为JsonElement
+        var result = JsonFileProviderConventions.ToJsonElement(items);
+        await ValueChanged.InvokeAsync(result);
+    }
+
+    private object GetDefaultValueForType(EOptionItemValueBasicType type)
+    {
+        object defaultValue = type switch
+        {
+            EOptionItemValueBasicType.Boolean => false,
+            EOptionItemValueBasicType.Numeric => 0,
+            EOptionItemValueBasicType.DateTime => DateTime.Now,
+            EOptionItemValueBasicType.TimeSpan => TimeSpan.Zero,
+            EOptionItemValueBasicType.Object => new Dictionary<string, object>(),
+            _ => ""
+        };
+        
+        // 将默认值转换为JsonElement
+        return JsonFileProviderConventions.ToJsonElement(defaultValue);
+    }
+    
+    private object? GetOriginalArrayItem(int index)
+    {
+        if (OriginalValue is JsonElement element && element.ValueKind == JsonValueKind.Array)
+        {
+            var array = element.EnumerateArray().ToArray();
+            if (index >= 0 && index < array.Length)
+            {
+                return array[index];
+            }
+        }
+        return null;
     }
 }

@@ -1,5 +1,7 @@
 @using MoLibrary.Configuration.Model
 @using MoLibrary.Configuration.Dashboard.Model
+@using MoLibrary.Configuration.Providers
+@using System.Text.Json
 @using MudBlazor
 
 <MudDialog Options="@_dialogOptions">
@@ -95,6 +97,7 @@
                 </MudText>
                 <ConfigurationValueEditor OptionItem="_currentConfig" 
                                          Value="_editValue" 
+                                         OriginalValue="_currentConfig?.Value"
                                          ValueChanged="OnValueChanged" />
             </MudPaper>
 
@@ -119,8 +122,10 @@
 
 @code {
 	[CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
-    [Parameter] public EventCallback<DtoOptionItem> OnConfigurationUpdated { get; set; }
+    [Parameter] public EventCallback OnConfigurationUpdated { get; set; }
     [Parameter] public DtoOptionItem? ConfigItem { get; set; }
+    [Parameter] public ConfigurationStateManager? StateManager { get; set; }
+    [Parameter] public string ConfigName { get; set; } = string.Empty;
 
     private DtoOptionItem? _currentConfig;
     private string _configKey = string.Empty;
@@ -164,9 +169,13 @@
         _configProvider = config.Provider ?? "Unknown";
         _configSource = config.Source ?? string.Empty;
         _isOffline = config.IsOffline;
-        _editValue = config.Value;
-        _validationMessage = string.Empty;
         
+        // 从StateManager获取当前值，如果没有修改则使用原始值
+        var configViewModel = StateManager?.GetConfiguration(ConfigName);
+        var itemViewModel = configViewModel?.Items.FirstOrDefault(i => i.OriginalItem.Key == config.Key);
+        _editValue = itemViewModel?.CurrentValue ?? config.Value;
+        
+        _validationMessage = string.Empty;
         StateHasChanged();
     }
     
@@ -187,15 +196,17 @@
         
         try
         {
-            // 更新当前配置对象的值
-            if (_currentConfig != null)
+            if (_currentConfig != null && StateManager != null && !string.IsNullOrEmpty(ConfigName))
             {
-                _currentConfig.Value = _editValue;
-                await OnConfigurationUpdated.InvokeAsync(_currentConfig);
+                // 直接使用 StateManager 更新配置项
+                StateManager.UpdateItem(ConfigName, _currentConfig.Key, _editValue);
+                
+                // 通知父组件配置已更新
+                await OnConfigurationUpdated.InvokeAsync();
             }
 
-            // 关闭对话框，返回修改的配置项
-            MudDialog.Close(DialogResult.Ok(_currentConfig));
+            // 关闭对话框
+            MudDialog.Close(DialogResult.Ok(true));
         }
         catch (Exception ex)
         {

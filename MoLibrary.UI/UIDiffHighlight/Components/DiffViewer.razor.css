@@ -1,0 +1,97 @@
+.diff-viewer {
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 8px;
+    overflow: hidden;
+    font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.4;
+    position: relative;
+}
+
+.diff-error {
+    margin: 16px;
+    border-radius: 4px;
+}
+
+.diff-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background-color: var(--mud-palette-background-grey);
+    border-bottom: 1px solid var(--mud-palette-divider);
+    flex-wrap: wrap;
+}
+
+.diff-content {
+    max-height: 600px;
+    overflow-y: auto;
+    background-color: var(--mud-palette-surface);
+}
+
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .diff-viewer {
+        font-size: 12px;
+    }
+}
+
+/* 滚动条样式 */
+.diff-content::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.diff-content::-webkit-scrollbar-track {
+    background: var(--mud-palette-background-grey);
+}
+
+.diff-content::-webkit-scrollbar-thumb {
+    background: var(--mud-palette-text-disabled);
+    border-radius: 4px;
+}
+
+.diff-content::-webkit-scrollbar-thumb:hover {
+    background: var(--mud-palette-text-secondary);
+}
+
+/* 空状态样式 */
+.diff-viewer .mud-alert {
+    margin: 16px;
+}
+
+
+/* 视图模式切换按钮样式 */
+.view-mode-toggle {
+    display: flex;
+    gap: 4px;
+}
+
+.view-mode-toggle .mud-chip {
+    transition: all 0.2s ease;
+}
+
+.display-mode-chips {
+    display: flex;
+    gap: 4px;
+    margin-right: 8px;
+}
+
+.display-mode-chips .mud-chip {
+    transition: all 0.2s ease;
+}
+
+
+/* 响应式设计 - 控制按钮 */
+@media (max-width: 768px) {
+    .display-mode-chips {
+        flex-wrap: wrap;
+        gap: 2px;
+    }
+    
+    .view-mode-toggle {
+        flex-wrap: wrap;
+        gap: 2px;
+    }
+}

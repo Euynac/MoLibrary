@@ -1,0 +1,17 @@
+.diff-text-input {
+    font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
+}
+
+/* 确保文本框能正确显示 */
+::deep .diff-text-input .mud-input-control .mud-input {
+    font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+/* 响应式调整 */
+@media (max-width: 960px) {
+    ::deep .diff-text-input .mud-input-control .mud-input {
+        font-size: 12px;
+    }
+}

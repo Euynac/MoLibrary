@@ -27,3 +27,36 @@
     font-size: 12px;
     word-break: break-all;
 }
+
+/* 配置浏览器网格布局 */
+.config-explorer-grid {
+    min-height: 70vh;
+    align-items: stretch;
+}
+
+/* 配置导航面板 */
+.config-navigation-panel {
+    min-height: 70vh;
+    max-height: 85vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 配置类面板 */
+.config-class-panel {
+    min-height: 70vh;
+    max-height: 85vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 配置项面板 */
+.config-item-panel {
+    min-height: 70vh;
+    max-height: 85vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}

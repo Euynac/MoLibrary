@@ -101,6 +101,7 @@ public class MemoryProviderForConfigCentre(
 
     public async Task<Res> UpdateConfig(DtoUpdateConfig req)
     {
+        _cache = null;
         //如果中心节点有配置项，直接通过本地修改
         if ((await modifier.IsOptionExist(req.Key)).IsOk(out var option))
         {
