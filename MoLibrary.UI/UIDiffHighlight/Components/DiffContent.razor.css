@@ -1,0 +1,327 @@
+/* 行级差异样式 */
+.line {
+    display: flex;
+    align-items: flex-start;
+    min-height: 20px;
+    border-bottom: 1px solid var(--mud-palette-table-lines);
+    position: relative;
+}
+
+.line:hover {
+    background-color: var(--mud-palette-action-hover);
+}
+
+.line-numbers {
+    display: flex;
+    min-width: 80px;
+    background-color: var(--mud-palette-background-grey);
+    border-right: 1px solid var(--mud-palette-divider);
+    user-select: none;
+}
+
+.line-old-number,
+.line-new-number {
+    width: 40px;
+    padding: 2px 8px;
+    text-align: right;
+    font-size: 12px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.line-old-number {
+    border-right: 1px solid var(--mud-palette-table-lines);
+}
+
+.line-marker {
+    width: 20px;
+    text-align: center;
+    padding: 2px 4px;
+    font-weight: bold;
+    user-select: none;
+    background-color: var(--mud-palette-background-grey);
+    border-right: 1px solid var(--mud-palette-divider);
+}
+
+.line-content {
+    flex: 1;
+    padding: 2px 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-x: auto;
+}
+
+/* 行级差异样式 */
+.line-added {
+    background-color: rgba(22, 163, 74, 0.1);
+}
+
+.line-added .line-marker {
+    color: var(--mud-palette-success);
+    background-color: rgba(22, 163, 74, 0.15);
+}
+
+.line-added .line-content {
+    background-color: rgba(22, 163, 74, 0.05);
+}
+
+.line-deleted {
+    background-color: rgba(239, 68, 68, 0.1);
+}
+
+.line-deleted .line-marker {
+    color: var(--mud-palette-error);
+    background-color: rgba(239, 68, 68, 0.15);
+}
+
+.line-deleted .line-content {
+    background-color: rgba(239, 68, 68, 0.05);
+}
+
+.line-modified {
+    background-color: rgba(245, 158, 11, 0.1);
+}
+
+.line-modified .line-marker {
+    color: var(--mud-palette-warning);
+    background-color: rgba(245, 158, 11, 0.15);
+}
+
+.line-modified .line-content {
+    background-color: rgba(245, 158, 11, 0.05);
+}
+
+/* 字符级差异样式 */
+::deep .char-added {
+    background-color: var(--mud-palette-success);
+    color: var(--mud-palette-success-text);
+    padding: 1px 2px;
+    border-radius: 2px;
+    font-weight: bold;
+    box-shadow: 0 0 0 1px rgba(22, 163, 74, 0.3);
+}
+
+::deep .char-deleted {
+    background-color: var(--mud-palette-error);
+    color: var(--mud-palette-error-text);
+    padding: 1px 2px;
+    border-radius: 2px;
+    font-weight: bold;
+    text-decoration: line-through;
+    text-decoration-thickness: 2px;
+    box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.3);
+}
+
+/* 分割视图容器 */
+.split-view-container {
+    display: flex;
+    height: 100%;
+    border-top: 1px solid var(--mud-palette-divider);
+}
+
+.split-view-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.split-view-panel-left {
+    border-right: 1px solid var(--mud-palette-divider);
+}
+
+.split-view-header {
+    padding: 8px 12px;
+    background-color: var(--mud-palette-background-grey);
+    border-bottom: 1px solid var(--mud-palette-divider);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.panel-title {
+    font-weight: 500;
+    color: var(--mud-palette-text-primary);
+}
+
+/* 分割视图行样式 */
+.split-view-panel .line {
+    display: flex;
+    align-items: flex-start;
+    min-height: 20px;
+    border-bottom: 1px solid var(--mud-palette-table-lines);
+    position: relative;
+}
+
+.split-view-panel .line:hover {
+    background-color: var(--mud-palette-action-hover);
+}
+
+.split-view-panel .line-number {
+    width: 50px;
+    padding: 2px 8px;
+    text-align: right;
+    font-size: 12px;
+    color: var(--mud-palette-text-secondary);
+    background-color: var(--mud-palette-background-grey);
+    border-right: 1px solid var(--mud-palette-divider);
+    user-select: none;
+}
+
+.split-line-content {
+    flex: 1;
+    padding: 2px 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-x: auto;
+}
+
+/* 分割视图行状态样式 */
+.split-line-added {
+    background-color: rgba(22, 163, 74, 0.1);
+}
+
+.split-line-added .split-line-content {
+    background-color: rgba(22, 163, 74, 0.05);
+}
+
+.split-line-deleted {
+    background-color: rgba(239, 68, 68, 0.1);
+}
+
+.split-line-deleted .split-line-content {
+    background-color: rgba(239, 68, 68, 0.05);
+}
+
+.split-line-modified-old {
+    background-color: rgba(239, 68, 68, 0.1);
+}
+
+.split-line-modified-old .split-line-content {
+    background-color: rgba(239, 68, 68, 0.05);
+}
+
+.split-line-modified-new {
+    background-color: rgba(22, 163, 74, 0.1);
+}
+
+.split-line-modified-new .split-line-content {
+    background-color: rgba(22, 163, 74, 0.05);
+}
+
+.split-line-unchanged {
+    background-color: transparent;
+}
+
+/* 分割视图字符级差异样式 */
+::deep .char-modified-old {
+    background-color: rgba(239, 68, 68, 0.2);
+    color: var(--mud-palette-error-text);
+    padding: 1px 2px;
+    border-radius: 2px;
+    font-weight: bold;
+    border: 1px solid rgba(239, 68, 68, 0.5);
+    box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.3);
+}
+
+::deep .char-modified-new {
+    background-color: rgba(22, 163, 74, 0.2);
+    color: var(--mud-palette-success-text);
+    padding: 1px 2px;
+    border-radius: 2px;
+    font-weight: bold;
+    border: 1px solid rgba(22, 163, 74, 0.5);
+    box-shadow: 0 0 0 1px rgba(22, 163, 74, 0.3);
+}
+
+/* 响应式设计 - 分割视图 */
+@media (max-width: 768px) {
+    .split-view-container {
+        flex-direction: column;
+    }
+    
+    .split-view-panel-left {
+        border-right: none;
+        border-bottom: 1px solid var(--mud-palette-divider);
+    }
+    
+    .split-view-panel .line-number {
+        width: 40px;
+        padding: 2px 4px;
+        font-size: 11px;
+    }
+    
+    .split-line-content {
+        padding: 2px 8px;
+        font-size: 11px;
+    }
+    
+    .line-numbers {
+        min-width: 60px;
+    }
+    
+    .line-old-number,
+    .line-new-number {
+        width: 30px;
+        padding: 2px 4px;
+        font-size: 11px;
+    }
+    
+    .line-marker {
+        width: 16px;
+        padding: 2px 2px;
+        font-size: 11px;
+    }
+    
+    .line-content {
+        padding: 2px 8px;
+        font-size: 11px;
+    }
+    
+    /* 移动端字符级差异样式调整 */
+    ::deep .char-added,
+    ::deep .char-deleted {
+        padding: 0 1px;
+        font-size: 11px;
+    }
+}
+
+/* 深色主题适配 - 分割视图 */
+@media (prefers-color-scheme: dark) {
+    ::deep .char-added {
+        background-color: rgba(22, 163, 74, 0.8);
+        box-shadow: 0 0 0 1px rgba(22, 163, 74, 0.6);
+    }
+    
+    ::deep .char-deleted {
+        background-color: rgba(239, 68, 68, 0.8);
+        box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.6);
+    }
+
+    ::deep .char-modified-old {
+        background-color: rgba(239, 68, 68, 0.8);
+        border-color: rgba(239, 68, 68, 0.8);
+        box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.6);
+    }
+    
+    ::deep .char-modified-new {
+        background-color: rgba(22, 163, 74, 0.8);
+        border-color: rgba(22, 163, 74, 0.8);
+        box-shadow: 0 0 0 1px rgba(22, 163, 74, 0.6);
+    }
+}
+
+/* 高对比度模式支持 - 分割视图 */
+@media (prefers-contrast: high) {
+    ::deep .char-added,
+    ::deep .char-deleted {
+        border: 2px solid currentColor;
+        padding: 0 1px;
+    }
+
+    ::deep .char-modified-old,
+    ::deep .char-modified-new {
+        border-width: 2px;
+        border-style: solid;
+        padding: 0 1px;
+    }
+}

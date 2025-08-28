@@ -1,0 +1,82 @@
+@using MoLibrary.Configuration.Dashboard.Model
+@using MoLibrary.UI.UIDiffHighlight.Components
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <MudContainer MaxWidth="MaxWidth.False" Class="pa-0">
+            <MudText Typo="Typo.h6" Class="mb-3">
+                确认回滚配置项 '@History.Key'
+            </MudText>
+            
+            <MudAlert Severity="Severity.Warning" Class="mb-3">
+                <MudText>您即将将配置项回滚到版本 @History.Version，以下是变更预览：</MudText>
+            </MudAlert>
+
+            <MudCard Outlined="true" Class="mb-3">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.subtitle1">变更预览</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            当前值 → 回滚后的值 (版本 @History.Version)
+                        </MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    @if (!string.IsNullOrEmpty(CurrentValue) || !string.IsNullOrEmpty(History.OldValue?.ToString()))
+                    {
+                        <!-- 显示从当前值回滚到历史目标值的变化 -->
+                        <DiffViewer OriginText="@(CurrentValue ?? string.Empty)" 
+                                   NewText="@(History.OldValue?.ToString() ?? string.Empty)" />
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Info">
+                            <MudText>无法显示变更差异</MudText>
+                        </MudAlert>
+                    }
+                </MudCardContent>
+            </MudCard>
+
+            <MudGrid>
+                <MudItem xs="6">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">配置键:</MudText>
+                    <MudText Typo="Typo.body2">@History.Key</MudText>
+                </MudItem>
+                <MudItem xs="6">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">应用ID:</MudText>
+                    <MudText Typo="Typo.body2">@History.AppId</MudText>
+                </MudItem>
+                <MudItem xs="6">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">目标版本:</MudText>
+                    <MudText Typo="Typo.body2">@($"v{History.Version}")</MudText>
+                </MudItem>
+                <MudItem xs="6">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">原修改时间:</MudText>
+                    <MudText Typo="Typo.body2">@History.ModificationTime.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                </MudItem>
+            </MudGrid>
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">
+            取消
+        </MudButton>
+        <MudButton OnClick="Confirm" 
+                  Variant="Variant.Filled" 
+                  Color="Color.Warning"
+                  StartIcon="@Icons.Material.Filled.Restore">
+            确认回滚
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance? MudDialog { get; set; }
+    [Parameter] public DtoOptionHistory History { get; set; } = null!;
+    [Parameter] public string? CurrentValue { get; set; }
+
+    private void Cancel() => MudDialog?.Cancel();
+    
+    private void Confirm() => MudDialog?.Close(DialogResult.Ok(true));
+}

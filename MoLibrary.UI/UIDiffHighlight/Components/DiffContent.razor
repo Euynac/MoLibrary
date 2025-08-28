@@ -1,0 +1,426 @@
+@using System.Web
+@using MoLibrary.Core.Features.MoDiffHighlight.Models
+@using MudBlazor
+
+@if (DiffResult?.Lines?.Any() == true)
+{
+    @if (ViewMode == EDiffViewMode.Split)
+    {
+        @* 分割视图 *@
+        <div class="split-view-container">
+            <div class="split-view-panel split-view-panel-left">
+                <div class="split-view-header">
+                    <MudText Typo="Typo.subtitle2" Class="panel-title">原始内容</MudText>
+                </div>
+                @foreach (var line in GetSplitViewLines(true))
+                {
+                    <div class="line @GetSplitLineClass(line, true)">
+                        <div class="line-number">
+                            @(line.OldLineNumber > 0 ? line.OldLineNumber.ToString() : "")
+                        </div>
+                        <div class="split-line-content">
+                            @((MarkupString)GetSplitLineContent(line, true))
+                        </div>
+                    </div>
+                }
+            </div>
+            <div class="split-view-panel split-view-panel-right">
+                <div class="split-view-header">
+                    <MudText Typo="Typo.subtitle2" Class="panel-title">新内容</MudText>
+                </div>
+                @foreach (var line in GetSplitViewLines(false))
+                {
+                    <div class="line @GetSplitLineClass(line, false)">
+                        <div class="line-number">
+                            @(line.NewLineNumber > 0 ? line.NewLineNumber.ToString() : "")
+                        </div>
+                        <div class="split-line-content">
+                            @((MarkupString)GetSplitLineContent(line, false))
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+    else
+    {
+        @* 统一视图 *@
+        @foreach (var line in GetUnifiedViewLines())
+        {
+            <div class="line @GetLineClass(line.Type)">
+                <div class="line-numbers">
+                    <span class="line-old-number">
+                        @(line.OldLineNumber > 0 ? line.OldLineNumber.ToString() : "")
+                    </span>
+                    <span class="line-new-number">
+                        @(line.NewLineNumber > 0 ? line.NewLineNumber.ToString() : "")
+                    </span>
+                </div>
+                <div class="line-marker">
+                    @GetLineMarker(line.Type)
+                </div>
+                <div class="line-content">
+                    @((MarkupString)GetUnifiedLineContent(line))
+                </div>
+            </div>
+        }
+    }
+}
+else
+{
+    <MudAlert Severity="Severity.Info">
+        <MudText>文本无差异</MudText>
+    </MudAlert>
+}
+
+@code {
+    [Parameter] public DiffHighlightResult? DiffResult { get; set; }
+    [Parameter] public DiffHighlightOptions? Options { get; set; }
+    [Parameter] public EDiffViewMode ViewMode { get; set; } = EDiffViewMode.Unified;
+    [Parameter] public EDiffDisplayMode DisplayMode { get; set; } = EDiffDisplayMode.Compare;
+
+    // 获取分割视图的行数据
+    private IEnumerable<DiffLine> GetSplitViewLines(bool isOldSide)
+    {
+        if (DiffResult?.Lines == null) return Enumerable.Empty<DiffLine>();
+
+        return DiffResult.Lines.Select(line =>
+        {
+            // 为分割视图创建适合的行数据
+            return line.Type switch
+            {
+                EDiffLineType.Added when isOldSide => new DiffLine 
+                { 
+                    Type = EDiffLineType.Unchanged, 
+                    OldContent = "", 
+                    NewContent = "", 
+                    OldLineNumber = 0, 
+                    NewLineNumber = 0 
+                },
+                EDiffLineType.Deleted when !isOldSide => new DiffLine 
+                { 
+                    Type = EDiffLineType.Unchanged, 
+                    OldContent = "", 
+                    NewContent = "", 
+                    OldLineNumber = 0, 
+                    NewLineNumber = 0 
+                },
+                _ => line
+            };
+        });
+    }
+
+    // 获取分割视图行的样式类
+    private string GetSplitLineClass(DiffLine line, bool isOldSide)
+    {
+        return line.Type switch
+        {
+            EDiffLineType.Added when !isOldSide => "split-line-added",
+            EDiffLineType.Deleted when isOldSide => "split-line-deleted",
+            EDiffLineType.Modified => isOldSide ? "split-line-modified-old" : "split-line-modified-new",
+            _ => "split-line-unchanged"
+        };
+    }
+
+    // 获取分割视图行的内容
+    private string GetSplitLineContent(DiffLine line, bool isOldSide)
+    {
+        // 空行处理
+        if (line is { OldLineNumber: 0, NewLineNumber: 0})
+        {
+            return "&nbsp;";
+        }
+
+        var content = isOldSide ? line.OldContent : line.NewContent;
+        
+        // 如果启用了字符级对比且有字符级差异信息
+        if (Options?.Mode is EDiffHighlightMode.Character or EDiffHighlightMode.Mixed 
+            && line.CharacterDiffs?.Any() == true)
+        {
+            return RenderSplitCharacterDiffs(content, line.CharacterDiffs, isOldSide);
+        }
+
+        return HttpUtility.HtmlEncode(content);
+    }
+
+    // 渲染分割视图的字符级差异
+    private string RenderSplitCharacterDiffs(string content, List<DiffCharacterRange> characterDiffs, bool isOldSide)
+    {
+        if (string.IsNullOrEmpty(content)) return "&nbsp;";
+        if (!characterDiffs.Any()) return HttpUtility.HtmlEncode(content);
+
+        // 对于旧侧和新侧，我们需要不同的逻辑
+        if (isOldSide)
+        {
+            // 旧侧：只处理删除和修改的字符，添加的字符不影响旧内容的显示
+            return RenderOldSideCharacterDiffs(content, characterDiffs);
+        }
+        else
+        {
+            // 新侧：只处理添加和修改的字符，删除的字符不影响新内容的显示
+            return RenderNewSideCharacterDiffs(content, characterDiffs);
+        }
+    }
+
+    private string RenderOldSideCharacterDiffs(string content, List<DiffCharacterRange> characterDiffs)
+    {
+        var result = new System.Text.StringBuilder();
+        var lastIndex = 0;
+
+        // 只处理删除和修改类型的差异，并且这些差异实际存在于旧内容中
+        var relevantDiffs = characterDiffs
+            .Where(d => d.Type == EDiffLineType.Deleted || d.Type == EDiffLineType.Modified)
+            .Where(d => d.Start >= 0 && d.Start < content.Length)
+            .OrderBy(d => d.Start)
+            .ToList();
+
+        foreach (var diff in relevantDiffs)
+        {
+            // 添加未变化的部分
+            if (diff.Start > lastIndex && lastIndex < content.Length)
+            {
+                var length = Math.Min(diff.Start - lastIndex, content.Length - lastIndex);
+                if (length > 0)
+                {
+                    result.Append(HttpUtility.HtmlEncode(content.Substring(lastIndex, length)));
+                }
+            }
+
+            // 计算实际的差异范围
+            var diffEnd = Math.Min(diff.Start + diff.Length, content.Length);
+            if (diffEnd > diff.Start)
+            {
+                var actualContent = content.Substring(diff.Start, diffEnd - diff.Start);
+                result.Append($"<span class=\"char-modified-old\">");
+                result.Append(HttpUtility.HtmlEncode(actualContent));
+                result.Append("</span>");
+            }
+
+            lastIndex = diffEnd;
+        }
+
+        // 添加剩余部分
+        if (lastIndex < content.Length)
+        {
+            result.Append(HttpUtility.HtmlEncode(content[lastIndex..]));
+        }
+
+        return result.ToString();
+    }
+
+    private string RenderNewSideCharacterDiffs(string content, List<DiffCharacterRange> characterDiffs)
+    {
+        var result = new System.Text.StringBuilder();
+        var lastIndex = 0;
+
+        // 只处理添加和修改类型的差异，并且这些差异实际存在于新内容中
+        var relevantDiffs = characterDiffs
+            .Where(d => d.Type == EDiffLineType.Added || d.Type == EDiffLineType.Modified)
+            .Where(d => d.Start >= 0 && d.Start < content.Length)
+            .OrderBy(d => d.Start)
+            .ToList();
+
+        foreach (var diff in relevantDiffs)
+        {
+            // 添加未变化的部分
+            if (diff.Start > lastIndex && lastIndex < content.Length)
+            {
+                var length = Math.Min(diff.Start - lastIndex, content.Length - lastIndex);
+                if (length > 0)
+                {
+                    result.Append(HttpUtility.HtmlEncode(content.Substring(lastIndex, length)));
+                }
+            }
+
+            // 计算实际的差异范围
+            var diffEnd = Math.Min(diff.Start + diff.Length, content.Length);
+            if (diffEnd > diff.Start)
+            {
+                var actualContent = content.Substring(diff.Start, diffEnd - diff.Start);
+                result.Append($"<span class=\"char-modified-new\">");
+                result.Append(HttpUtility.HtmlEncode(actualContent));
+                result.Append("</span>");
+            }
+
+            lastIndex = diffEnd;
+        }
+
+        // 添加剩余部分
+        if (lastIndex < content.Length)
+        {
+            result.Append(HttpUtility.HtmlEncode(content[lastIndex..]));
+        }
+
+        return result.ToString();
+    }
+
+    // 获取统一视图的行数据（根据DisplayMode过滤）
+    private IEnumerable<DiffLine> GetUnifiedViewLines()
+    {
+        if (DiffResult?.Lines == null) return Enumerable.Empty<DiffLine>();
+
+        return DisplayMode switch
+        {
+            EDiffDisplayMode.NewOnly => DiffResult.Lines.Where(line => 
+                line.Type is EDiffLineType.Added or EDiffLineType.Modified or EDiffLineType.Unchanged),
+            EDiffDisplayMode.OldOnly => DiffResult.Lines.Where(line => 
+                line.Type is EDiffLineType.Deleted or EDiffLineType.Modified or EDiffLineType.Unchanged),
+            _ => DiffResult.Lines
+        };
+    }
+
+    // 获取统一视图行的内容（根据DisplayMode调整内容）
+    private string GetUnifiedLineContent(DiffLine line)
+    {
+        var content =
+            // 根据DisplayMode选择显示的内容
+            DisplayMode switch
+        {
+            EDiffDisplayMode.NewOnly => line.NewContent,
+            EDiffDisplayMode.OldOnly => line.OldContent,
+            _ => line.Type switch
+            {
+                EDiffLineType.Added => line.NewContent,
+                EDiffLineType.Deleted => line.OldContent,
+                EDiffLineType.Modified => line.NewContent,
+                _ => line.OldContent
+            }
+        };
+
+        // 如果启用了字符级对比且有字符级差异信息，并且是比较模式
+        if (DisplayMode == EDiffDisplayMode.Compare && 
+            Options?.Mode is EDiffHighlightMode.Character or EDiffHighlightMode.Mixed 
+            && line.CharacterDiffs?.Any() == true)
+        {
+            return RenderCharacterDiffs(content, line.CharacterDiffs);
+        }
+        
+        // 对于新值/旧值模式，如果有字符级差异，使用特殊渲染
+        if (DisplayMode is EDiffDisplayMode.NewOnly or EDiffDisplayMode.OldOnly &&
+            line.CharacterDiffs?.Any() == true)
+        {
+            var isNewOnly = DisplayMode == EDiffDisplayMode.NewOnly;
+            return RenderSplitCharacterDiffs(content, line.CharacterDiffs, !isNewOnly);
+        }
+
+        return HttpUtility.HtmlEncode(content);
+    }
+
+    private string RenderCharacterDiffs(string content, List<DiffCharacterRange> characterDiffs)
+    {
+        if (string.IsNullOrEmpty(content)) return string.Empty;
+        if (!characterDiffs.Any()) return HttpUtility.HtmlEncode(content);
+        
+        var result = new System.Text.StringBuilder();
+        var contentIndex = 0;
+
+        // 按照开始位置排序，但需要特别处理删除和添加的相对位置
+        var sortedDiffs = characterDiffs.OrderBy(d => d.Start).ThenBy(d => d.Type == EDiffLineType.Deleted ? 0 : 1).ToList();
+
+        foreach (var diff in sortedDiffs)
+        {
+            // 对于删除类型的差异，显示删除的内容
+            if (diff.Type == EDiffLineType.Deleted)
+            {
+                // 添加删除位置之前的未变化内容
+                if (diff.Start > contentIndex && contentIndex < content.Length)
+                {
+                    var length = Math.Min(diff.Start - contentIndex, content.Length - contentIndex);
+                    if (length > 0)
+                    {
+                        result.Append(HttpUtility.HtmlEncode(content.Substring(contentIndex, length)));
+                        contentIndex += length;
+                    }
+                }
+
+                // 显示被删除的内容
+                var diffContent = diff.Content ?? "";
+                if (!string.IsNullOrEmpty(diffContent))
+                {
+                    result.Append($"<span class=\"char-deleted\">");
+                    result.Append(HttpUtility.HtmlEncode(diffContent));
+                    result.Append("</span>");
+                }
+                // 删除类型不移动contentIndex，因为删除的内容不在新内容中
+            }
+            // 对于添加类型的差异，显示添加的内容
+            else if (diff.Type == EDiffLineType.Added)
+            {
+                // 添加添加位置之前的未变化内容
+                if (diff.Start > contentIndex && contentIndex < content.Length)
+                {
+                    var length = Math.Min(diff.Start - contentIndex, content.Length - contentIndex);
+                    if (length > 0)
+                    {
+                        result.Append(HttpUtility.HtmlEncode(content.Substring(contentIndex, length)));
+                        contentIndex += length;
+                    }
+                }
+
+                // 显示添加的内容
+                var diffContent = diff.Content ?? "";
+                result.Append($"<span class=\"char-added\">");
+                result.Append(HttpUtility.HtmlEncode(diffContent));
+                result.Append("</span>");
+
+                // 添加类型需要跳过新内容中对应的部分
+                var diffEnd = Math.Min(diff.Start + diff.Length, content.Length);
+                contentIndex = Math.Max(contentIndex, diffEnd);
+            }
+            // 对于修改类型的差异
+            else if (diff.Type == EDiffLineType.Modified)
+            {
+                // 添加修改位置之前的未变化内容
+                if (diff.Start > contentIndex && contentIndex < content.Length)
+                {
+                    var length = Math.Min(diff.Start - contentIndex, content.Length - contentIndex);
+                    if (length > 0)
+                    {
+                        result.Append(HttpUtility.HtmlEncode(content.Substring(contentIndex, length)));
+                        contentIndex += length;
+                    }
+                }
+
+                // 显示修改后的内容
+                var diffContent = diff.Content ?? "";
+                result.Append($"<span class=\"char-added\">");
+                result.Append(HttpUtility.HtmlEncode(diffContent));
+                result.Append("</span>");
+
+                // 跳过新内容中被修改的部分
+                var diffEnd = Math.Min(diff.Start + diff.Length, content.Length);
+                contentIndex = Math.Max(contentIndex, diffEnd);
+            }
+        }
+
+        // 添加剩余的未变化内容
+        if (contentIndex < content.Length)
+        {
+            result.Append(HttpUtility.HtmlEncode(content[contentIndex..]));
+        }
+
+        return result.ToString();
+    }
+
+    private string GetLineClass(EDiffLineType type)
+    {
+        return type switch
+        {
+            EDiffLineType.Added => "line-added",
+            EDiffLineType.Deleted => "line-deleted",
+            EDiffLineType.Modified => "line-modified",
+            _ => "line-unchanged"
+        };
+    }
+
+    private string GetLineMarker(EDiffLineType type)
+    {
+        return type switch
+        {
+            EDiffLineType.Added => "+",
+            EDiffLineType.Deleted => "-",
+            EDiffLineType.Modified => "~",
+            _ => " "
+        };
+    }
+}

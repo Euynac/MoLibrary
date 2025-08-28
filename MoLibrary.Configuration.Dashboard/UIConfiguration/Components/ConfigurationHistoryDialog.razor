@@ -1,0 +1,43 @@
+@using MoLibrary.Configuration.Dashboard.Model
+@using MoLibrary.Configuration.Dashboard.UIConfiguration.Services
+@using MoLibrary.Tool.MoResponse
+@using MudBlazor
+@inject ConfigurationDashboardService ConfigurationDashboardService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudContainer MaxWidth="MaxWidth.False" Class="pa-0">
+            <div style="min-height: 400px; max-height: 600px;">
+                <ConfigurationHistory @ref="_historyComponent" />
+            </div>
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close" Variant="Variant.Text">
+            关闭
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance? MudDialog { get; set; }
+    [Parameter] public string? ConfigKey { get; set; }
+    [Parameter] public string? AppId { get; set; }
+    [Parameter] public string DialogTitle { get; set; } = "配置历史记录";
+
+    private ConfigurationHistory? _historyComponent;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _historyComponent != null)
+        {
+            if (!string.IsNullOrEmpty(ConfigKey) && !string.IsNullOrEmpty(AppId))
+            {
+                await _historyComponent.LoadHistoryForConfigAsync(ConfigKey, AppId);
+            }
+        }
+    }
+
+    private void Close() => MudDialog?.Close();
+}
