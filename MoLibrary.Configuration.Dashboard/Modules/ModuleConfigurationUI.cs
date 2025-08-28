@@ -4,6 +4,7 @@ using MoLibrary.Configuration.Dashboard.UIConfiguration.Services;
 using MoLibrary.Configuration.Modules;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Models;
+using MoLibrary.Core.Modules;
 using MoLibrary.UI.Modules;
 using MudBlazor;
 
@@ -27,7 +28,10 @@ public class ModuleConfigurationUI(ModuleConfigurationUIOption option)
         {
             // 依赖配置模块
             DependsOnModule<ModuleConfigurationGuide>().Register();
-            
+
+            // 依赖差异对比模块
+            DependsOnModule<ModuleDiffHighlightGuide>().Register();
+
             // 依赖配置仪表板模块
             DependsOnModule<ModuleConfigurationDashboardGuide>().Register();
 

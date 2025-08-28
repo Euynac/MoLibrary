@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration.Json;
 using Microsoft.Extensions.Logging;
 using MoLibrary.Configuration.Dashboard.Model;
 using MoLibrary.Configuration.Model;
+using MoLibrary.Core.Extensions;
 using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.MoResponse;
 
@@ -65,7 +66,7 @@ public class MoConfigurationJsonFileModifier(ILogger<MoConfigurationJsonFileModi
         }
         catch (Exception e)
         {
-            var error = $"配置更新失败：{e.Message}。更新操作：{key} => {value}";
+            var error = $"配置更新失败：{e.GetMessageRecursively()}。更新操作：{key} => {value}";
             logger.LogError(error);
             return error;
         }
@@ -124,7 +125,7 @@ public class MoConfigurationJsonFileModifier(ILogger<MoConfigurationJsonFileModi
         }
         catch (Exception e)
         {
-            var error = $"配置更新失败：{e.Message}。更新操作：{key} => {value}";
+            var error = $"配置更新失败：{e.GetMessageRecursively()}。更新操作：{key} => {value}";
             logger.LogError(error);
             return error;
         }

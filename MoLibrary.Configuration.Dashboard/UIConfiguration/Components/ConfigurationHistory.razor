@@ -3,9 +3,12 @@
 @using MoLibrary.Configuration.Dashboard.UIConfiguration.Services
 @using MoLibrary.Tool.MoResponse
 @using MudBlazor
+@using MoLibrary.UI.UIDiffHighlight.Components
+@using Microsoft.JSInterop
 @inject ConfigurationDashboardService ConfigurationDashboardService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject IJSRuntime JSRuntime
 
 <MudCard>
     <MudCardHeader>
@@ -24,21 +27,24 @@
         <!-- 筛选选项 -->
         <MudGrid Class="mb-4">
             <MudItem xs="12" md="3">
-                <MudTextField @bind-Value="_filterKey" 
+                <MudTextField T="string" @bind-Value="_filterKey" 
                              Label="配置键" 
                              Variant="Variant.Outlined"
-                             Clearable="true" />
+                             Clearable="true"
+                             HelperText="可选，与应用ID同时使用查询特定配置" />
             </MudItem>
             <MudItem xs="12" md="3">
-                <MudTextField @bind-Value="_filterAppId" 
+                <MudTextField T="string" @bind-Value="_filterAppId" 
                              Label="应用ID" 
                              Variant="Variant.Outlined"
-                             Clearable="true" />
+                             Clearable="true"
+                             HelperText="可选，与配置键同时使用查询特定配置" />
             </MudItem>
             <MudItem xs="12" md="4">
                 <MudDateRangePicker @bind-DateRange="_dateRange" 
                                    Label="时间范围" 
-                                   Variant="Variant.Outlined" />
+                                   Variant="Variant.Outlined"
+                                   HelperText="留空则查询近180天记录" />
             </MudItem>
             <MudItem xs="12" md="2">
                 <MudButton Variant="Variant.Filled" 
@@ -77,7 +83,7 @@
                                             <MudChip T="string" Text="@GetOperationText("Update")" 
                                                     Size="Size.Small" 
                                                     Color="@GetOperationColor("Update")" />
-                                            <MudText Typo="Typo.caption">v@history.Version</MudText>
+                                            <MudText Typo="Typo.caption">@($"v{history.Version}")</MudText>
                                         </div>
                                     </div>
                                 </CardHeaderContent>
@@ -85,26 +91,8 @@
                             <MudCardContent Class="pt-0">
 								@if (!string.IsNullOrEmpty(history.OldValue?.ToString()) || !string.IsNullOrEmpty(history.NewValue?.ToString()))
                                 {
-                                    <MudGrid>
-                                        @if (history.OldValue != null)
-                                        {
-                                            <MudItem xs="6">
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">旧值:</MudText>
-                                                <MudText Typo="Typo.body2" Class="text-break">
-                                                    @GetDisplayValue(history.OldValue?.ToString())
-                                                </MudText>
-                                            </MudItem>
-                                        }
-                                        @if (history.NewValue != null)
-                                        {
-                                            <MudItem xs="6">
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">新值:</MudText>
-                                                <MudText Typo="Typo.body2" Class="text-break">
-                                                    @GetDisplayValue(history.NewValue?.ToString())
-                                                </MudText>
-                                            </MudItem>
-                                        }
-                                    </MudGrid>
+                                    <DiffViewer OriginText="@(history.OldValue?.ToString() ?? string.Empty)" 
+                                               NewText="@(history.NewValue?.ToString() ?? string.Empty)" />
                                 }
                                 
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
@@ -112,14 +100,16 @@
                                         操作者: @(history.Username ?? "System")
                                     </MudText>
                                     <MudButtonGroup Size="Size.Small" Variant="Variant.Text">
-                                        <MudIconButton Icon="@Icons.Material.Filled.Restore" 
-                                                      Color="Color.Warning"
-                                                      Tooltip="回滚到此版本"
-                                                      OnClick="() => ShowRollbackDialog(history)" />
-                                        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" 
-                                                      Color="Color.Info"
-                                                      Tooltip="复制新值"
-                                                      OnClick="() => CopyToClipboard(history.NewValue?.ToString())" />
+                                        <MudTooltip Text="回滚到此版本">
+                                            <MudIconButton Icon="@Icons.Material.Filled.Restore" 
+                                                          Color="Color.Warning"
+                                                          OnClick="() => ShowRollbackDialog(history)" />
+                                        </MudTooltip>
+                                        <MudTooltip Text="复制新值">
+                                            <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" 
+                                                          Color="Color.Info"
+                                                          OnClick="() => CopyToClipboard(history.NewValue?.ToString())" />
+                                        </MudTooltip>
                                     </MudButtonGroup>
                                 </div>
                             </MudCardContent>
@@ -159,7 +149,7 @@
     // 筛选参数
     private string _filterKey = string.Empty;
     private string _filterAppId = string.Empty;
-    private DateRange? _dateRange = new DateRange(DateTime.Now.AddDays(-30), DateTime.Now);
+    private DateRange? _dateRange;
 
     protected override async Task OnInitializedAsync()
     {
@@ -181,12 +171,18 @@
 
         try
         {
+            // 根据API逻辑决定查询参数
+            string? key = string.IsNullOrWhiteSpace(_filterKey) ? null : _filterKey;
+            string? appId = string.IsNullOrWhiteSpace(_filterAppId) ? null : _filterAppId;
             DateTime? startDate = _dateRange?.Start;
             DateTime? endDate = _dateRange?.End;
 
+            // 如果同时提供了key和appId，则查询特定配置
+            // 如果只提供了时间范围，则按时间范围查询
+            // 否则查询近180天的默认记录
             var result = await ConfigurationDashboardService.GetConfigHistoryAsync(
-                string.IsNullOrWhiteSpace(_filterKey) ? null : _filterKey,
-                string.IsNullOrWhiteSpace(_filterAppId) ? null : _filterAppId,
+                key,
+                appId,
                 startDate,
                 endDate
             );
@@ -218,8 +214,13 @@
 
     private async Task ShowDateRangePicker()
     {
-        // 可以实现一个日期范围选择对话框
-        await LoadHistoryData();
+        // 触发日期范围选择器的显示（MudDateRangePicker会自动处理）
+        // 这里可以添加额外的逻辑，比如设置默认范围
+        if (_dateRange == null)
+        {
+            _dateRange = new DateRange(DateTime.Now.AddDays(-30), DateTime.Now);
+        }
+        StateHasChanged();
     }
 
     private Color GetTimelineColor(string operation)
@@ -258,31 +259,35 @@
         };
     }
 
-    private string GetDisplayValue(string? value)
-    {
-        if (string.IsNullOrEmpty(value))
-            return "(空值)";
-        
-        if (value.Length > 100)
-            return value.Substring(0, 100) + "...";
-        
-        return value;
-    }
 
     private async Task ShowRollbackDialog(DtoOptionHistory history)
     {
-        var parameters = new DialogParameters<MudMessageBox>
+        // 获取当前配置值
+        string? currentValue = null;
+        var currentConfigResult = await ConfigurationDashboardService.GetOptionItemStatusAsync(history.AppId, history.Key);
+        if (currentConfigResult.IsFailed(out var error, out var data))
         {
-            { x => x.Title, "确认回滚" },
-            { x => x.Message, $"确定要将配置项 '{history.Key}' 回滚到版本 {history.Version} 吗？" },
-            { x => x.CancelText, "取消" },
-            { x => x.YesText, "回滚" }
+            Snackbar.Add($"获取当前配置值失败: {error}", Severity.Warning);
+        }
+        else
+        {
+            currentValue = data.Value?.ToString();
+        }
+
+        var parameters = new DialogParameters<RollbackConfirmationDialog>
+        {
+            { x => x.History, history },
+            { x => x.CurrentValue, currentValue }
         };
 
-        var dialog = await DialogService.ShowAsync<MudMessageBox>("", parameters);
+        var dialog = await DialogService.ShowAsync<RollbackConfirmationDialog>("确认回滚", parameters, new DialogOptions
+        {
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true
+        });
         var result = await dialog.Result;
 
-        if (result != null && !result.Canceled)
+        if (result is {Canceled: false} && (bool?)result.Data is true)
         {
             await RollbackConfiguration(history);
         }
@@ -309,15 +314,22 @@
 
     private async Task CopyToClipboard(string? value)
     {
+        if (string.IsNullOrEmpty(value))
+        {
+            Snackbar.Add("没有内容可复制", Severity.Warning);
+            return;
+        }
+
         try
         {
-            // 这里应该使用JS互操作来复制到剪贴板
-            // 为了简化，我们只显示一个消息
+            // 使用现代的 Clipboard API
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", value);
             Snackbar.Add("值已复制到剪贴板", Severity.Success);
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"复制失败: {ex.Message}", Severity.Error);
+            Snackbar.Add("复制失败，请手动复制内容。可能是因为浏览器不支持或需要 HTTPS", Severity.Warning);
+            Console.WriteLine($"Copy to clipboard failed: {ex.Message}");
         }
     }
 }

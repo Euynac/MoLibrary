@@ -14,4 +14,7 @@
     <ProjectReference Include="..\MoLibrary.Framework\MoLibrary.Framework.csproj" />
     <ProjectReference Include="..\MoLibrary.UI\MoLibrary.UI.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="UIDiffHighlight\Components\" />
+  </ItemGroup>
 </Project>

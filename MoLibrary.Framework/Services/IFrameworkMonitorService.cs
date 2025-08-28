@@ -43,4 +43,11 @@ public interface IFrameworkMonitorService
     /// <param name="name">枚举名称</param>
     /// <returns>枚举信息</returns>
     Task<Res<List<DtoAssemblyEnumInfo>>> GetEnumInfoAsync(string? name = null);
+
+    /// <summary>
+    /// 通过键值获取项目单元
+    /// </summary>
+    /// <param name="key">项目单元键值</param>
+    /// <returns>项目单元</returns>
+    ProjectUnit? GetProjectUnitByKey(string key);
 }

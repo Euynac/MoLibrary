@@ -47,6 +47,7 @@ public static class ProjectUnitVisualizationConfig
             EProjectUnitType.GrpcApi => "#E91E63", // Pink
             EProjectUnitType.Entity => "#795548", // Brown
             EProjectUnitType.RequestDto => "#607D8B", // Blue Gray
+            EProjectUnitType.Configuration => "#FFD54F", // Amber
             EProjectUnitType.Seeder => "#8BC34A", // Light Green
             EProjectUnitType.StateStore => "#FF5722", // Deep Orange
             EProjectUnitType.EventBus => "#3F51B5", // Indigo
@@ -74,6 +75,7 @@ public static class ProjectUnitVisualizationConfig
             EProjectUnitType.GrpcApi => Icons.Material.Filled.Api,
             EProjectUnitType.Entity => Icons.Material.Filled.Dataset,
             EProjectUnitType.RequestDto => Icons.Material.Filled.DataObject,
+            EProjectUnitType.Configuration => Icons.Material.Filled.Settings,
             EProjectUnitType.Seeder => Icons.Material.Filled.Email,
             EProjectUnitType.StateStore => Icons.Material.Filled.Memory,
             EProjectUnitType.EventBus => Icons.Material.Filled.Hub,

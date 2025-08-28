@@ -1,4 +1,5 @@
 @using MoLibrary.Configuration.Model
+@using MoLibrary.Configuration.Providers
 @using MudBlazor
 @using System.Text.Json
 
@@ -48,7 +49,7 @@
                 break;
 
             default:
-                <MudChip T="string" Size="Size.Small" Color="Color.Default" Text="@JsonSerializer.Serialize(OptionItem.Value)" />
+                <MudChip T="string" Size="Size.Small" Color="Color.Default" Text="@GetJsonDisplay()" />
                 break;
         }
     </div>
@@ -89,8 +90,20 @@
             var value = element.GetString() ?? "";
             return value.Length > 20 ? value[..20] + "..." : value;
         }
-            
-        return JsonSerializer.Serialize(OptionItem?.Value);
+        
+        return GetJsonDisplay();
+    }
+    
+    private string GetJsonDisplay()
+    {
+        try
+        {
+            return JsonSerializer.Serialize(OptionItem?.Value, JsonFileProviderConventions.JsonSerializerOptions);
+        }
+        catch
+        {
+            return OptionItem?.Value?.ToString() ?? "null";
+        }
     }
 
     private DateTime GetDateTimeValue()
@@ -135,5 +148,20 @@
             return element.EnumerateObject().Count();
             
         return 0;
+    }
+    
+    /// <summary>
+    /// 获取统一格式化的JSON字符串显示
+    /// </summary>
+    private string GetJsonString(object? value)
+    {
+        try
+        {
+            return JsonSerializer.Serialize(value, JsonFileProviderConventions.JsonSerializerOptions);
+        }
+        catch
+        {
+            return value?.ToString() ?? "null";
+        }
     }
 }

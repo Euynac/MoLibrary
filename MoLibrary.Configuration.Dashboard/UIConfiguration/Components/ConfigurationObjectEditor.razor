@@ -1,4 +1,5 @@
 @using MoLibrary.Configuration.Model
+@using MoLibrary.Configuration.Providers
 @using MudBlazor
 @using System.Text.Json
 
@@ -14,36 +15,14 @@
             @foreach (var item in SubStructure.Items)
             {
                 <div class="mb-3">
-                    <MudText Typo="Typo.subtitle2" Class="mb-1">@item.Title</MudText>
-                    @if (!string.IsNullOrEmpty(item.Desc))
-                    {
-                        <MudText Typo="Typo.caption" Class="mb-2 text-muted">@item.Desc</MudText>
-                    }
-                    
-                    @switch (item.Type)
-                    {
-                        case EOptionItemValueBasicType.Boolean:
-                            <MudSwitch T="bool" Value="GetBoolValue(item.Key)" ValueChanged="(bool v) => SetValue(item.Key, v)" 
-                                       Label="@item.Title" Color="Color.Primary" />
-                            break;
-                        case EOptionItemValueBasicType.Numeric:
-                            <MudNumericField T="decimal" Value="GetDecimalValue(item.Key)" ValueChanged="(decimal v) => SetValue(item.Key, v)" 
-                                             Label="@item.Title" Variant="Variant.Outlined" />
-                            break;
-                        case EOptionItemValueBasicType.String:
-                        case EOptionItemValueBasicType.Enum:
-                            <MudTextField Value="GetStringValue(item.Key)" ValueChanged="(string v) => SetValue(item.Key, v)" 
-                                          Label="@item.Title" Variant="Variant.Outlined" />
-                            break;
-                        case EOptionItemValueBasicType.DateTime:
-                            <MudDatePicker Date="GetDateTimeValue(item.Key)" DateChanged="(DateTime? v) => SetValue(item.Key, v)" 
-                                           Label="@item.Title" Variant="Variant.Outlined" />
-                            break;
-                        default:
-                            <MudTextField Value="GetJsonValue(item.Key)" ValueChanged="(string v) => SetJsonValue(item.Key, v)" 
-                                          Label="@($"{item.Title} (JSON)")" Variant="Variant.Outlined" />
-                            break;
-                    }
+                    <ConfigurationBasicTypeEditor Type="@item.Type"
+                                                  Value="@GetValue(item.Name)"
+                                                  OriginalValue="@GetOriginalValue(item.Name)"
+                                                  ValueChanged="@((object? v) => SetValue(item.Name, v))"
+                                                  Label="@item.Title"
+                                                  HelperText="@item.Desc"
+                                                  RegexPattern="@item.RegexPattern"
+                                                  IsNullable="@item.IsNullable" />
                 </div>
             }
         }
@@ -56,86 +35,83 @@
 
 @code {
     [Parameter] public DtoConfig? SubStructure { get; set; }
-    [Parameter] public Dictionary<string, object>? Value { get; set; }
-    [Parameter] public EventCallback<Dictionary<string, object>> ValueChanged { get; set; }
+    [Parameter] public object? Value { get; set; }
+    [Parameter] public object? OriginalValue { get; set; }
+    [Parameter] public EventCallback<object?> ValueChanged { get; set; }
 
     private Dictionary<string, object> currentValue = [];
 
     protected override void OnParametersSet()
     {
-        if (Value != null)
+        // 从传入的Value参数中解析实际的对象值
+        if (Value is JsonElement element && element.ValueKind == JsonValueKind.Object)
         {
-            currentValue = new Dictionary<string, object>(Value);
+            currentValue = element.EnumerateObject().ToDictionary(x => x.Name, x => (object)x.Value);
+        }
+        else if (Value is JsonElement { ValueKind: JsonValueKind.Null } || Value is null)
+        {
+            // 如果Value为null，创建空字典，后续会根据SubStructure的结构填充默认值
+            currentValue = [];
+        }
+        else
+        {
+            // 其他情况也创建空字典
+            currentValue = [];
         }
     }
 
-    private bool GetBoolValue(string key)
+    private object? GetValue(string propertyName)
     {
-        if (currentValue.TryGetValue(key, out var value))
+        // 从解析出的实际值中获取指定属性的值（使用JSON对象的属性名）
+        if (currentValue.TryGetValue(propertyName, out var value))
         {
-            if (value is bool b) return b;
-            if (value is JsonElement { ValueKind: JsonValueKind.True }) return true;
+            return value;
         }
-        return false;
+        
+        // 如果当前值中没有该属性，返回null（BasicTypeEditor会处理默认值）
+        return null;
     }
 
-    private decimal GetDecimalValue(string key)
+    private async Task SetValue(string propertyName, object? value)
     {
-        if (currentValue.TryGetValue(key, out var value))
+        // 更新对象的指定属性值（使用JSON对象的属性名）
+        if (value == null)
         {
-            if (value is decimal d) return d;
-            if (value is JsonElement { ValueKind: JsonValueKind.Number } element) return element.GetDecimal();
+            // 如果值为null，检查对应的SubStructure项是否允许null
+            var structureItem = SubStructure?.Items?.FirstOrDefault(x => x.Name == propertyName);
+            if (structureItem?.IsNullable == true)
+            {
+                currentValue[propertyName] = null!;
+            }
+            else
+            {
+                // 如果不允许null，移除该属性
+                if (currentValue.ContainsKey(propertyName))
+                {
+                    currentValue.Remove(propertyName);
+                }
+            }
         }
-        return 0;
-    }
-
-    private string GetStringValue(string key)
-    {
-        if (currentValue.TryGetValue(key, out var value))
+        else
         {
-            if (value is string s) return s;
-            if (value is JsonElement { ValueKind: JsonValueKind.String } element) return element.GetString() ?? "";
+            currentValue[propertyName] = value;
         }
-        return "";
+        
+        // 将更新后的Dictionary转换为JsonElement并通知父组件
+        var result = JsonFileProviderConventions.ToJsonElement(currentValue);
+        await ValueChanged.InvokeAsync(result);
     }
-
-    private DateTime? GetDateTimeValue(string key)
+    
+    private object? GetOriginalValue(string propertyName)
     {
-        if (currentValue.TryGetValue(key, out var value))
+        if (OriginalValue is JsonElement element && element.ValueKind == JsonValueKind.Object)
         {
-            if (value is DateTime dt) return dt;
-            if (value is JsonElement { ValueKind: JsonValueKind.String } element && DateTime.TryParse(element.GetString(), out var parsed))
-                return parsed;
+            if (element.TryGetProperty(propertyName, out var property))
+            {
+                return property;
+            }
         }
         return null;
     }
 
-    private string GetJsonValue(string key)
-    {
-        if (currentValue.TryGetValue(key, out var value))
-        {
-            return JsonSerializer.Serialize(value, new JsonSerializerOptions { WriteIndented = true });
-        }
-        return "";
-    }
-
-    private async Task SetValue(string key, object? value)
-    {
-        currentValue[key] = value ?? "";
-        await ValueChanged.InvokeAsync(currentValue);
-    }
-
-    private async Task SetJsonValue(string key, string jsonValue)
-    {
-        try
-        {
-            var value = JsonSerializer.Deserialize<object>(jsonValue);
-            currentValue[key] = value ?? "";
-            await ValueChanged.InvokeAsync(currentValue);
-        }
-        catch
-        {
-            // 忽略无效的JSON，保持原值
-        }
-    }
 }

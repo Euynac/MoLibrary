@@ -67,4 +67,8 @@ public enum EProjectUnitType
     /// 请求类
     /// </summary>
     RequestDto,
+    /// <summary>
+    /// 配置类
+    /// </summary>
+    Configuration,
 }

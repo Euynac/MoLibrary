@@ -15,7 +15,7 @@ public class UnitApplicationService(Type type) : ProjectUnit(type, EProjectUnitT
 {
     static UnitApplicationService()
     {
-        AddFactory(Factory);
+        AddUnitRegisterFactory(Factory);
     }
 
     /// <summary>

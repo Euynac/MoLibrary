@@ -7,7 +7,7 @@
 }
 
 .modified-value {
-    background-color: var(--mud-palette-warning-lighten);
+    background-color: color-mix(in srgb, var(--mud-palette-warning) 20%, transparent);
     padding: 4px;
     border-radius: 4px;
 }
@@ -21,13 +21,43 @@
 }
 
 .json-code-block {
-    background-color: var(--mud-palette-surface);
-    border: 1px solid var(--mud-palette-divider);
-    border-radius: 4px;
+    background-color: color-mix(in srgb, var(--mud-palette-surface) 95%, var(--mud-palette-primary) 5%);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-divider) 80%, var(--mud-palette-primary) 20%);
+    border-radius: 6px;
     font-family: 'Consolas', 'Monaco', monospace;
-    padding: 8px;
-    margin: 4px 0;
-    font-size: 12px;
+    padding: 12px;
+    margin: 6px 0;
+    font-size: 13px;
     white-space: pre-wrap;
     overflow-x: auto;
+    line-height: 1.6;
+    box-shadow: 0 2px 4px color-mix(in srgb, var(--mud-palette-primary) 10%, transparent);
 }
+
+/* JSON差异高亮样式 */
+.json-diff {
+    position: relative;
+}
+
+/* 使用::deep穿透CSS隔离，确保动态生成的HTML标签能被样式化 */
+.json-diff ::deep .diff-removed {
+    background-color: color-mix(in srgb, var(--mud-palette-error-lighten) 40%, transparent) !important;
+    color: var(--mud-palette-error-darken) !important;
+    text-decoration: line-through !important;
+    display: inline !important;
+    padding: 2px 4px !important;
+    border-radius: 3px !important;
+    margin: 0 1px !important;
+    border: 1px solid color-mix(in srgb, var(--mud-palette-error) 50%, transparent) !important;
+}
+
+.json-diff ::deep .diff-added {
+    background-color: color-mix(in srgb, var(--mud-palette-success-lighten) 40%, transparent) !important;
+    color: var(--mud-palette-success-darken) !important;
+    display: inline !important;
+    padding: 2px 4px !important;
+    border-radius: 3px !important;
+    margin: 0 1px !important;
+    border: 1px solid color-mix(in srgb, var(--mud-palette-success) 50%, transparent) !important;
+}
+

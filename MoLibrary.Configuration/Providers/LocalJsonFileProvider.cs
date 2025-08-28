@@ -17,9 +17,6 @@ namespace MoLibrary.Configuration.Providers;
 /// <param name="card"></param>
 public class LocalJsonFileProvider(MoConfigurationCard card)
 {
-    public static JsonSerializerOptions JsonSerializerOptions { get; } =
-        new() { WriteIndented = true, ReadCommentHandling = JsonCommentHandling.Skip};
-
     private readonly HashSet<string> _skipCheckJsonPath = [];
 
     /// <summary>
@@ -57,7 +54,7 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
         // 创建默认配置的JSON节点
         var defaultJson = JsonSerializer.Serialize(
             new Dictionary<string, object> { { sectionName, defaultObj } },
-            JsonSerializerOptions);
+            JsonFileProviderConventions.JsonSerializerOptions);
         return defaultJson;
     }
 
@@ -156,7 +153,7 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
             {
                 // 不存在则添加
                 jsonObject[sectionName] = defaultJsonNode[sectionName]?.DeepClone();
-                File.WriteAllText(filePath, jsonObject.ToJsonString(JsonSerializerOptions), Encoding.UTF8);
+                File.WriteAllText(filePath, jsonObject.ToJsonString(JsonFileProviderConventions.JsonSerializerOptions), Encoding.UTF8);
                 MoConfigurationManager.Logger.LogInformation("配置文件添加了新节点: {SectionName}", sectionName);
                 return;
             }
@@ -186,7 +183,7 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
             if (fileChanged || removedProperties.Count > existingRemovedProperties.Count)
             {
                 // 序列化更新后的JSON对象
-                var updatedJson = jsonObject.ToJsonString(JsonSerializerOptions);
+                var updatedJson = jsonObject.ToJsonString(JsonFileProviderConventions.JsonSerializerOptions);
                 
                 // 处理被移除的属性注释（如果有）
                 if (removedPropertyHandling == RemovedPropertyHandling.Comment && removedProperties.Count > 0)

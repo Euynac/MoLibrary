@@ -1,5 +1,6 @@
 @using MoLibrary.Configuration.Model
 @using MoLibrary.Configuration.Dashboard.Model
+@using MoLibrary.Configuration.Providers
 @using MudBlazor
 @using System.Text.Json
 @using System.Text.RegularExpressions
@@ -20,9 +21,9 @@
                          OnDebounceIntervalElapsed="() => StateHasChanged()" />
         </MudItem>
         <MudItem xs="12" md="6" Class="d-flex justify-end align-center">
-            @if (changeTracker.ModifiedItems.Any())
+            @if (stateManager.GetModifiedConfigurations().Any())
             {
-                <MudBadge Content="@changeTracker.ModifiedItems.Count" Color="Color.Warning" Class="mr-2">
+                <MudBadge Content="@stateManager.GetModifiedConfigurations().Sum(c => c.ModificationCount)" Color="Color.Warning" Class="mr-2">
                     <MudButton Variant="Variant.Filled" 
                               Color="Color.Primary" 
                               StartIcon="@Icons.Material.Filled.Save"
@@ -43,10 +44,10 @@
     </MudGrid>
     
     <!-- 三列布局 -->
-    <MudGrid Style="height: 70vh;">
+    <MudGrid Class="config-explorer-grid">
         <!-- 第一列：领域和服务导航 -->
         <MudItem xs="3">
-            <MudPaper Class="pa-2" Style="height: 100%; overflow-y: auto;">
+            <MudPaper Class="pa-2 config-navigation-panel">
                 <MudText Typo="Typo.h6" Class="mb-3">配置导航</MudText>
                 <MudNavMenu>
                     @foreach (var domain in FilteredConfigs)
@@ -70,7 +71,7 @@
         
         <!-- 第二列：配置类表格 -->
         <MudItem xs="4">
-            <MudPaper Class="pa-2" Style="height: 100%; overflow-y: auto;">
+            <MudPaper Class="pa-2 config-class-panel">
                 <MudText Typo="Typo.h6" Class="mb-3">配置类</MudText>
                 @if (selectedService != null)
                 {
@@ -81,6 +82,7 @@
                             <MudTh>类型</MudTh>
                             <MudTh>配置项数</MudTh>
                             <MudTh>最后更新</MudTh>
+                            <MudTh>操作</MudTh>
                         </HeaderContent>
                         <RowTemplate>
                             <MudTd DataLabel="名称">
@@ -113,6 +115,14 @@
                                     @(context.LastModificationTime?.ToString("MM-dd HH:mm") ?? "未知")
                                 </MudText>
                             </MudTd>
+                            <MudTd DataLabel="操作">
+                                <MudTooltip Text="查看配置类历史记录">
+                                    <MudIconButton Icon="@Icons.Material.Filled.History" 
+                                                  Size="Size.Small"
+                                                  Color="Color.Info"
+                                                  OnClick="@(() => OpenConfigHistoryDialog(context))" />
+                                </MudTooltip>
+                            </MudTd>
                         </RowTemplate>
                     </MudTable>
                 }
@@ -125,7 +135,7 @@
         
         <!-- 第三列：配置项表格 -->
         <MudItem xs="5">
-            <MudPaper Class="pa-2" Style="height: 100%; overflow-y: auto;">
+            <MudPaper Class="pa-2 config-item-panel">
                 <MudText Typo="Typo.h6" Class="mb-3">配置项</MudText>
                 @if (selectedConfig != null)
                 {
@@ -143,7 +153,10 @@
                                     <div>
                                         <div class="d-flex align-center">
                                             <MudText Typo="Typo.body2">@context.Title</MudText>
-                                            @if (IsItemModified(context))
+                                            @{
+                                                var itemViewModel = GetItemViewModel(context);
+                                            }
+                                            @if (itemViewModel?.IsModified == true)
                                             {
                                                 <MudChip T="string" Size="Size.Small" Color="Color.Warning" 
                                                         Text="已修改" Class="ml-2" />
@@ -164,7 +177,8 @@
                             <MudTd DataLabel="值" Style="max-width: 200px;">
                                 <div class="config-value-container">
                                     @{
-                                        var valueDisplay = GetValueDisplay(context.Value);
+                                        var itemViewModel = GetItemViewModel(context);
+                                        var valueDisplay = GetValueDisplay(itemViewModel?.CurrentValue ?? context.Value);
                                     }
                                     @if (valueDisplay.Length > 30)
                                     {
@@ -199,7 +213,10 @@
                                               OnClick="async () => await OpenEditDialog(context, selectedConfig.AppId)">
                                         编辑
                                     </MudButton>
-                                    @if (IsItemModified(context))
+                                    @{
+                                        var itemViewModel = GetItemViewModel(context);
+                                    }
+                                    @if (itemViewModel?.IsModified == true)
                                     {
                                         <MudButton Size="Size.Small" Variant="Variant.Text"
                                                   StartIcon="@Icons.Material.Filled.Undo" 
@@ -237,8 +254,8 @@
     private DtoServiceConfigs? selectedService;
     private DtoConfig? selectedConfig;
     
-    // 修改跟踪
-    private ConfigurationChangeTracker changeTracker = new();
+    // 状态管理
+    private ConfigurationStateManager stateManager = new();
     
     // 保存确认对话框
     private bool isSaveConfirmationDialogOpen = false;
@@ -250,44 +267,26 @@
     private DtoOptionItem? editingItem;
     private string? editingAppId;
     
+    private List<DtoDomainConfigs>? _lastConfigs;
+    
     protected override void OnParametersSet()
     {
-        // 如果配置数据发生变化，重置选择状态
-        if (selectedService != null && !Configs.Any(d => d.Children.Contains(selectedService)))
+        // 只有在配置数据真正发生变化时才重新初始化状态管理器
+        if (_lastConfigs != Configs) 
         {
-            selectedDomain = null;
-            selectedService = null;
-            selectedConfig = null;
-        }
-        
-        // 只有在原始配置为空时才初始化（避免重复初始化丢失原始值）
-        if (!changeTracker.OriginalConfigs.Any())
-        {
-            InitializeOriginalConfigs();
-        }
-    }
-    
-    private void InitializeOriginalConfigs()
-    {
-        changeTracker.OriginalConfigs.Clear();
-        
-        foreach (var domain in Configs)
-        {
-            foreach (var service in domain.Children)
+            _lastConfigs = Configs;
+            stateManager.Initialize(Configs);
+            
+            // 如果配置数据发生变化，重置选择状态
+            if (selectedService != null && !Configs.Any(d => d.Children.Contains(selectedService)))
             {
-                foreach (var config in service.Children)
-                {
-                    changeTracker.OriginalConfigs[config.Name] = DeepCloneConfig(config);
-                }
+                selectedDomain = null;
+                selectedService = null;
+                selectedConfig = null;
             }
         }
     }
     
-    private DtoConfig DeepCloneConfig(DtoConfig original)
-    {
-        var json = JsonSerializer.Serialize(original);
-        return JsonSerializer.Deserialize<DtoConfig>(json)!;
-    }
     
     private void SelectService(DtoDomainConfigs domain, DtoServiceConfigs service)
     {
@@ -380,7 +379,7 @@
         
         try
         {
-            return JsonSerializer.Serialize(value);
+            return JsonSerializer.Serialize(value, JsonFileProviderConventions.JsonSerializerOptions);
         }
         catch
         {
@@ -420,8 +419,10 @@
             // 使用 IDialogService 打开编辑对话框
             var parameters = new DialogParameters<ConfigurationEditor>
             {
-                { x => x.OnConfigurationUpdated, EventCallback.Factory.Create<DtoOptionItem>(this, OnConfigurationUpdated) },
-                { x => x.ConfigItem, item }
+                { x => x.OnConfigurationUpdated, EventCallback.Factory.Create(this, OnConfigurationUpdated) },
+                { x => x.ConfigItem, item },
+                { x => x.StateManager, stateManager },
+                { x => x.ConfigName, selectedConfig?.Name ?? "" }
             };
             
             var options = new DialogOptions()
@@ -435,9 +436,10 @@
             var dialog = await DialogService.ShowAsync<ConfigurationEditor>($"编辑配置 - {item.Title}", parameters, options);
             var result = await dialog.Result;
             
-            if (result != null && !result.Canceled && result.Data is DtoOptionItem updatedItem)
+            if (result != null && !result.Canceled)
             {
-                OnConfigurationUpdated(updatedItem);
+                // 由于 StateManager 已经处理了更新，只需要刷新界面
+                StateHasChanged();
             }
         }
         catch (Exception ex)
@@ -447,76 +449,37 @@
     }
 
 
-    private void OnConfigurationUpdated(DtoOptionItem updatedItem)
+    private void OnConfigurationUpdated()
     {
-        // 当 ConfigurationEditor 更新配置后的回调
-        if (selectedConfig != null && editingAppId != null)
-        {
-            // 确保原始配置已初始化
-            if (!changeTracker.OriginalConfigs.ContainsKey(selectedConfig.Name))
-            {
-                InitializeOriginalConfigs();
-            }
-            
-            // 获取原始配置项
-            var originalConfig = changeTracker.OriginalConfigs[selectedConfig.Name];
-            var originalItem = originalConfig.Items.FirstOrDefault(i => i.Key == updatedItem.Key);
-            
-            if (originalItem != null)
-            {
-                // 跟踪修改
-                changeTracker.TrackChange(selectedConfig.Name, originalItem, updatedItem, editingAppId);
-            }
-            
-            StateHasChanged();
-        }
+        // 当 ConfigurationEditor 更新配置后的回调，只需要刷新界面
+        StateHasChanged();
     }
     
-    private DtoOptionItem DeepCloneOptionItem(DtoOptionItem original)
-    {
-        var json = JsonSerializer.Serialize(original);
-        return JsonSerializer.Deserialize<DtoOptionItem>(json)!;
-    }
     
-    private bool IsItemModified(DtoOptionItem item)
+    private ConfigurationItemViewModel? GetItemViewModel(DtoOptionItem item)
     {
-        if (selectedConfig == null) return false;
-        return changeTracker.IsItemModified(selectedConfig.Name, item.Key);
+        if (selectedConfig == null) return null;
+        var configViewModel = stateManager.GetConfiguration(selectedConfig.Name);
+        return configViewModel?.Items.FirstOrDefault(i => i.OriginalItem.Key == item.Key);
     }
     
     private void UndoItemChange(DtoOptionItem item)
     {
         if (selectedConfig == null) return;
         
-        // 确保原始配置存在
-        if (!changeTracker.OriginalConfigs.ContainsKey(selectedConfig.Name))
-        {
-            return;
-        }
-        
-        // 撤销修改
-        changeTracker.UndoChange(selectedConfig.Name, item.Key);
-        
-        // 恢复原始值
-        var originalConfig = changeTracker.OriginalConfigs[selectedConfig.Name];
-        var originalItem = originalConfig.Items.FirstOrDefault(i => i.Key == item.Key);
-        
-        if (originalItem != null)
-        {
-            item.Value = originalItem.Value;
-        }
-        
+        stateManager.UndoItem(selectedConfig.Name, item.Key);
         StateHasChanged();
     }
     
     private async void OpenSaveConfirmationDialog()
     {
         // 确保有修改项时才打开对话框
-        if (changeTracker.ModifiedItems.Any())
+        var modifiedConfigs = stateManager.GetModifiedConfigurations();
+        if (modifiedConfigs.Any())
         {
             var parameters = new DialogParameters
             {
-                ["ModifiedConfigs"] = GetModifiedConfigsGrouped(),
+                ["StateManager"] = stateManager,
                 ["IsSaving"] = isSaving
             };
             
@@ -525,16 +488,16 @@
                 MaxWidth = MaxWidth.ExtraLarge,
                 FullWidth = true,
                 CloseOnEscapeKey = false,
-                BackdropClick = false,
+                BackdropClick = true,
                 CloseButton = false
             };
             
             var dialog = await DialogService.ShowAsync<SaveConfirmationDialog>("保存配置确认", parameters, options);
             var result = await dialog.Result;
             
-            if (!result.Canceled)
+            if (result is { Canceled: false, Data: List<DtoUpdateConfig> updateRequests})
             {
-                await SaveAllChanges(GetModifiedConfigsGrouped());
+                await SaveAllChanges(updateRequests);
             }
         }
     }
@@ -549,55 +512,22 @@
         isSaveConfirmationDialogOpen = isVisible;
     }
     
-    private Dictionary<string, List<ModifiedConfigItem>> GetModifiedConfigsGrouped()
-    {
-        var grouped = new Dictionary<string, List<ModifiedConfigItem>>();
-        
-        foreach (var modifiedItem in changeTracker.ModifiedItems.Values)
-        {
-            if (!grouped.ContainsKey(modifiedItem.ConfigKey))
-            {
-                grouped[modifiedItem.ConfigKey] = new List<ModifiedConfigItem>();
-            }
-            grouped[modifiedItem.ConfigKey].Add(modifiedItem);
-        }
-        
-        return grouped;
-    }
     
-    private async Task SaveAllChanges(Dictionary<string, List<ModifiedConfigItem>> modifiedConfigs)
+    private async Task SaveAllChanges(List<DtoUpdateConfig> updateRequests)
     {
         isSaving = true;
         StateHasChanged();
         
         try
         {
-            // 按配置类分组保存
-            foreach (var configGroup in modifiedConfigs)
+            // 逐个执行配置类级别的更新请求
+            foreach (var updateRequest in updateRequests)
             {
-                var configKey = configGroup.Key;
-                var items = configGroup.Value;
-                var appId = items.First().AppId;
-                
-                // 构建配置类级别的更新请求
-                var configValue = new Dictionary<string, object?>();
-                foreach (var item in items)
-                {
-                    configValue[item.ModifiedItem.Key] = item.ModifiedItem.Value;
-                }
-                
-                var updateRequest = new DtoUpdateConfig
-                {
-                    AppId = appId,
-                    Key = configKey,
-                    Value = JsonSerializer.SerializeToNode(configValue)
-                };
-                
                 await OnConfigUpdate.InvokeAsync(updateRequest);
             }
             
             // 清空修改记录
-            changeTracker.Clear();
+            stateManager.ClearAllModifications();
             CloseSaveConfirmationDialog();
         }
         finally
@@ -609,19 +539,27 @@
     
     private void ClearAllChanges()
     {
-        // 恢复所有修改项的原始值
-        foreach (var modifiedItem in changeTracker.ModifiedItems.Values)
-        {
-            var config = Configs
-                .SelectMany(d => d.Children)
-                .SelectMany(s => s.Children)
-                .First(c => c.Name == modifiedItem.ConfigKey);
-                
-            var item = config.Items.First(i => i.Key == modifiedItem.ModifiedItem.Key);
-            item.Value = modifiedItem.OriginalItem.Value;
-        }
-        
-        changeTracker.Clear();
+        stateManager.ClearAllModifications();
         StateHasChanged();
+    }
+
+    private async Task OpenConfigHistoryDialog(DtoConfig config)
+    {
+        var parameters = new DialogParameters<ConfigurationHistoryDialog>
+        {
+            { x => x.ConfigKey, config.Name },
+            { x => x.AppId, config.AppId },
+            { x => x.DialogTitle, $"配置历史记录 - {config.Title}" }
+        };
+
+        var options = new DialogOptions()
+        {
+            MaxWidth = MaxWidth.ExtraLarge,
+            FullWidth = true,
+            CloseButton = true,
+            BackdropClick = false
+        };
+
+        await DialogService.ShowAsync<ConfigurationHistoryDialog>($"配置历史记录 - {config.Title}", parameters, options);
     }
 }
