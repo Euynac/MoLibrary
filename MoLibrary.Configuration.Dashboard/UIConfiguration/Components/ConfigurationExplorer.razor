@@ -82,6 +82,7 @@
                             <MudTh>类型</MudTh>
                             <MudTh>配置项数</MudTh>
                             <MudTh>最后更新</MudTh>
+                            <MudTh>操作</MudTh>
                         </HeaderContent>
                         <RowTemplate>
                             <MudTd DataLabel="名称">
@@ -113,6 +114,14 @@
                                 <MudText Typo="Typo.caption">
                                     @(context.LastModificationTime?.ToString("MM-dd HH:mm") ?? "未知")
                                 </MudText>
+                            </MudTd>
+                            <MudTd DataLabel="操作">
+                                <MudTooltip Text="查看配置类历史记录">
+                                    <MudIconButton Icon="@Icons.Material.Filled.History" 
+                                                  Size="Size.Small"
+                                                  Color="Color.Info"
+                                                  OnClick="@(() => OpenConfigHistoryDialog(context))" />
+                                </MudTooltip>
                             </MudTd>
                         </RowTemplate>
                     </MudTable>
@@ -532,5 +541,25 @@
     {
         stateManager.ClearAllModifications();
         StateHasChanged();
+    }
+
+    private async Task OpenConfigHistoryDialog(DtoConfig config)
+    {
+        var parameters = new DialogParameters<ConfigurationHistoryDialog>
+        {
+            { x => x.ConfigKey, config.Name },
+            { x => x.AppId, config.AppId },
+            { x => x.DialogTitle, $"配置历史记录 - {config.Title}" }
+        };
+
+        var options = new DialogOptions()
+        {
+            MaxWidth = MaxWidth.ExtraLarge,
+            FullWidth = true,
+            CloseButton = true,
+            BackdropClick = false
+        };
+
+        await DialogService.ShowAsync<ConfigurationHistoryDialog>($"配置历史记录 - {config.Title}", parameters, options);
     }
 }
