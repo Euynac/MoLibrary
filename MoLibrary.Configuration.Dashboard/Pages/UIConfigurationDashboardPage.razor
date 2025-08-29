@@ -19,7 +19,7 @@
     
     @if (DashboardOptions.Value.ThisIsDashboard)
     {
-        <MudTabs Elevation="4" Rounded="true" Color="Color.Primary">
+        <MudTabs Elevation="4" Rounded="true" Color="Color.Primary" ActivePanelIndexChanged="OnTabChanged">
             <MudTabPanel Text="配置状态">
                 <div class="pa-4">
                     <MudGrid>
@@ -129,5 +129,11 @@
             Snackbar.Add("配置更新成功", Severity.Success);
             await LoadConfigStatusAsync();
         }
+    }
+    
+    private void OnTabChanged(int activeTabIndex)
+    {
+        // Tab切换时不需要特殊处理，因为ConfigurationExplorer组件会保持状态
+        // 这个方法预留给未来可能的扩展需求
     }
 }

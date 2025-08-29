@@ -18,9 +18,16 @@
             @for (int i = 0; i < items.Count; i++)
             {
                 var index = i; // Capture for closure
-                <div class="d-flex align-center gap-2 mb-2">
-                    <MudTextField @bind-Value="items[index].Key" Label="Key" Variant="Variant.Outlined" Style="min-width: 150px;" />
-                    <div class="flex-grow-1">
+                               <div class="d-flex align-center gap-2 mb-2">
+                                   <MudTextField Value="items[index].Key"
+                                                 Label="Key"
+                                                 Variant="Variant.Outlined"
+                                                 Style="min-width: 150px;"
+                                                 ValueChanged="@(async (string value) => { items[index].Key = value; await NotifyValueChanged(); })"
+                                                 Required="true"
+                                                 Error="@(string.IsNullOrEmpty(items[index].Key) || GetKeyDuplicateCount(items[index].Key) > 1)"
+                                                 ErrorText="@GetKeyErrorText(items[index].Key)" />
+                                   <div class="flex-grow-1">
                         @if (GetDictValueType() == EOptionItemValueBasicType.Object)
                         {
                             <ConfigurationObjectEditor Value="@items[index].Value"
@@ -56,7 +63,7 @@
     [Parameter] public EventCallback<object?> ValueChanged { get; set; }
 
     private List<DictItem> items = [];
-
+    private bool isInit = false;
     public class DictItem
     {
         public string Key { get; set; } = "";
@@ -65,7 +72,9 @@
 
     protected override void OnParametersSet()
     {
-        if (Value is JsonElement element && element.ValueKind == JsonValueKind.Object)
+        if (isInit) return;
+        isInit = true;
+        if (Value is JsonElement {ValueKind: JsonValueKind.Object} element)
         {
             items = element.EnumerateObject().Select(prop => new DictItem { Key = prop.Name, Value = prop.Value }).ToList();
         }
@@ -107,12 +116,13 @@
 
     private async Task NotifyValueChanged()
     {
-        var dict = items.Where(x => !string.IsNullOrEmpty(x.Key))
+        var dict = items.Where(x => !string.IsNullOrEmpty(x.Key)).DistinctBy(p => p.Key)
                        .ToDictionary(x => x.Key, x => x.Value);
-        
+
         // 将Dictionary转换为JsonElement
         var result = JsonFileProviderConventions.ToJsonElement(dict);
         await ValueChanged.InvokeAsync(result);
+        StateHasChanged();
     }
 
     private object GetDefaultValueForType(EOptionItemValueBasicType type)
@@ -126,16 +136,16 @@
             EOptionItemValueBasicType.Object => new Dictionary<string, object>(),
             _ => ""
         };
-        
+
         // 将默认值转换为JsonElement
         return JsonFileProviderConventions.ToJsonElement(defaultValue);
     }
-    
+
     private object? GetOriginalDictValue(string key)
     {
         if (string.IsNullOrEmpty(key)) return null;
-        
-        if (OriginalValue is JsonElement element && element.ValueKind == JsonValueKind.Object)
+
+        if (OriginalValue is JsonElement { ValueKind: JsonValueKind.Object } element)
         {
             if (element.TryGetProperty(key, out var property))
             {
@@ -143,5 +153,41 @@
             }
         }
         return null;
+    }
+
+    /// <summary>
+    /// 检查是否有验证错误
+    /// </summary>
+    public bool HasValidationErrors()
+    {
+        return items.Any(x => string.IsNullOrEmpty(x.Key)) ||
+               items.GroupBy(x => x.Key).Any(g => !string.IsNullOrEmpty(g.Key) && g.Count() > 1);
+    }
+
+    /// <summary>
+    /// 获取指定Key的重复数量
+    /// </summary>
+    private int GetKeyDuplicateCount(string key)
+    {
+        if (string.IsNullOrEmpty(key)) return 1;
+        return items.Count(x => x.Key == key);
+    }
+
+    /// <summary>
+    /// 获取Key的错误文本
+    /// </summary>
+    private string GetKeyErrorText(string key)
+    {
+        if (string.IsNullOrEmpty(key))
+        {
+            return "Key不能为空";
+        }
+
+        if (GetKeyDuplicateCount(key) > 1)
+        {
+            return "Key不能重复";
+        }
+
+        return "";
     }
 }

@@ -58,7 +58,7 @@
                                 {
                                     <MudNavLink OnClick="() => SelectService(domain, service)" 
                                                Icon="@Icons.Material.Filled.Apps" 
-                                               Class="@(selectedService == service ? "mud-nav-link-active" : "")">
+                                               Class="@GetServiceNavLinkClass(service)">
                                         @service.Title
                                     </MudNavLink>
                                 }
@@ -75,9 +75,12 @@
                 <MudText Typo="Typo.h6" Class="mb-3">配置类</MudText>
                 @if (selectedService != null)
                 {
-                    <MudTable T="DtoConfig" Items="selectedService.Children" Dense="true" Hover="true" 
-                             SelectedItemChanged="SelectConfig" RowClass="cursor-pointer">
-                        <HeaderContent>
+                    <div class="config-table-wrapper">
+                        <MudTable T="DtoConfig" Items="selectedService.Children" Dense="true" Hover="true" 
+                                 SelectedItem="selectedConfig" SelectedItemChanged="SelectConfig" 
+                                 RowClassFunc="@GetConfigRowClass" 
+                                 SelectOnRowClick="true">
+                            <HeaderContent>
                             <MudTh>名称</MudTh>
                             <MudTh>类型</MudTh>
                             <MudTh>配置项数</MudTh>
@@ -124,7 +127,8 @@
                                 </MudTooltip>
                             </MudTd>
                         </RowTemplate>
-                    </MudTable>
+                        </MudTable>
+                    </div>
                 }
                 else
                 {
@@ -277,13 +281,8 @@
             _lastConfigs = Configs;
             stateManager.Initialize(Configs);
             
-            // 如果配置数据发生变化，重置选择状态
-            if (selectedService != null && !Configs.Any(d => d.Children.Contains(selectedService)))
-            {
-                selectedDomain = null;
-                selectedService = null;
-                selectedConfig = null;
-            }
+            // 从状态管理器恢复选择状态
+            RestoreSelectionFromStateManager();
         }
     }
     
@@ -293,12 +292,23 @@
         selectedDomain = domain;
         selectedService = service;
         selectedConfig = null; // 重置配置类选择
+        
+        // 更新状态管理器
+        stateManager.UpdateSelection(domainName: domain.Name, serviceName: service.Name, configName: null);
+        
         StateHasChanged();
     }
     
-    private void SelectConfig(DtoConfig config)
+    private void SelectConfig(DtoConfig? config)
     {
         selectedConfig = config;
+        
+        // 更新状态管理器，传递完整的选择状态
+        if (config != null && selectedDomain != null && selectedService != null)
+        {
+            stateManager.UpdateSelection(domainName: selectedDomain.Name, serviceName: selectedService.Name, configName: config.Name);
+        }
+        
         StateHasChanged();
     }
     
@@ -407,6 +417,21 @@
             EOptionItemValueBasicType.Object => Icons.Material.Filled.DataObject,
             _ => Icons.Material.Filled.Settings
         };
+    }
+
+    private string GetConfigRowClass(DtoConfig config, int rowNumber)
+    {
+        var baseClass = "cursor-pointer";
+        if (selectedConfig?.Name == config.Name)
+        {
+            baseClass += " config-selected-row mud-selected";
+        }
+        return baseClass;
+    }
+    
+    private string GetServiceNavLinkClass(DtoServiceConfigs service)
+    {
+        return selectedService?.Name == service.Name ? "mud-nav-link-active" : "";
     }
 
     private async Task OpenEditDialog(DtoOptionItem item, string appId)
@@ -561,5 +586,32 @@
         };
 
         await DialogService.ShowAsync<ConfigurationHistoryDialog>($"配置历史记录 - {config.Title}", parameters, options);
+    }
+    
+    /// <summary>
+    /// 从状态管理器恢复选择状态
+    /// </summary>
+    private void RestoreSelectionFromStateManager()
+    {
+        var selectionState = stateManager.GetSelectionState();
+        
+        selectedDomain = null;
+        selectedService = null;
+        selectedConfig = null;
+        
+        if (!string.IsNullOrEmpty(selectionState.SelectedDomainName))
+        {
+            selectedDomain = Configs.FirstOrDefault(d => d.Name == selectionState.SelectedDomainName);
+            
+            if (selectedDomain != null && !string.IsNullOrEmpty(selectionState.SelectedServiceName))
+            {
+                selectedService = selectedDomain.Children.FirstOrDefault(s => s.Name == selectionState.SelectedServiceName);
+                
+                if (selectedService != null && !string.IsNullOrEmpty(selectionState.SelectedConfigName))
+                {
+                    selectedConfig = selectedService.Children.FirstOrDefault(c => c.Name == selectionState.SelectedConfigName);
+                }
+            }
+        }
     }
 }

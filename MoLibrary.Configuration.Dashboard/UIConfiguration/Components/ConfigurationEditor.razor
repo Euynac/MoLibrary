@@ -95,7 +95,8 @@
                     <MudIcon Icon="@Icons.Material.Filled.Edit" Class="me-2" />
                     编辑配置值
                 </MudText>
-                <ConfigurationValueEditor OptionItem="_currentConfig" 
+                <ConfigurationValueEditor @ref="valueEditor" 
+                                         OptionItem="_currentConfig" 
                                          Value="_editValue" 
                                          OriginalValue="_currentConfig?.Value"
                                          ValueChanged="OnValueChanged" />
@@ -114,7 +115,8 @@
         <MudButton OnClick="Cancel" Class="mr-2">取消</MudButton>
         <MudButton Color="Color.Primary" 
                   Variant="Variant.Filled"
-                  OnClick="ApplyChanges">
+                  OnClick="ApplyChanges"
+                  Disabled="@HasValidationErrors()">
             应用修改
         </MudButton>
     </DialogActions>
@@ -137,6 +139,7 @@
     private string _validationMessage = string.Empty;
     private bool _isOffline = false;
     private object? _editValue;
+    private ConfigurationValueEditor? valueEditor;
     
     private readonly DialogOptions _dialogOptions = new()
     {
@@ -182,6 +185,7 @@
     private async Task OnValueChanged(object? newValue)
     {
         _editValue = newValue;
+        StateHasChanged(); // 刷新UI以更新按钮状态
         await Task.CompletedTask;
     }
 
@@ -213,6 +217,14 @@
             _validationMessage = $"应用修改失败: {ex.Message}";
             StateHasChanged();
         }
+    }
+
+    /// <summary>
+    /// 检查是否有验证错误
+    /// </summary>
+    private bool HasValidationErrors()
+    {
+        return valueEditor?.HasValidationErrors() ?? false;
     }
 
 }

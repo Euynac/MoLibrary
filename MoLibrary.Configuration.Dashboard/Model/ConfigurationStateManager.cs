@@ -12,11 +12,17 @@ public class ConfigurationStateManager
 {
     private readonly Dictionary<string, ConfigurationViewModel> _configurations = new();
     
+    // 选择状态管理
+    private SelectionState _selectionState = new();
+    
     /// <summary>
     /// 初始化配置数据
     /// </summary>
     public void Initialize(List<DtoDomainConfigs> domainConfigs)
     {
+        // 保存当前的选择状态
+        var previousSelection = _selectionState.Clone();
+        
         _configurations.Clear();
         
         foreach (var domain in domainConfigs)
@@ -30,6 +36,9 @@ public class ConfigurationStateManager
                 }
             }
         }
+        
+        // 尝试恢复选择状态
+        RestoreSelectionState(domainConfigs, previousSelection);
     }
     
     /// <summary>
@@ -140,6 +149,68 @@ public class ConfigurationStateManager
         
         return JsonSerializer.Serialize(preview, JsonFileProviderConventions.JsonSerializerOptions);
     }
+    
+    #region 选择状态管理
+    
+    /// <summary>
+    /// 获取当前选择状态
+    /// </summary>
+    public SelectionState GetSelectionState() => _selectionState;
+    
+    /// <summary>
+    /// 更新选择状态
+    /// </summary>
+    public void UpdateSelection(string? domainName = null, string? serviceName = null, string? configName = null)
+    {
+        if (domainName != null) _selectionState.SelectedDomainName = domainName;
+        if (serviceName != null) _selectionState.SelectedServiceName = serviceName;
+        if (configName != null) _selectionState.SelectedConfigName = configName;
+    }
+    
+    /// <summary>
+    /// 清空选择状态
+    /// </summary>
+    public void ClearSelection()
+    {
+        _selectionState = new SelectionState();
+    }
+    
+    /// <summary>
+    /// 恢复选择状态
+    /// </summary>
+    private void RestoreSelectionState(List<DtoDomainConfigs> domainConfigs, SelectionState previousSelection)
+    {
+        if (string.IsNullOrEmpty(previousSelection.SelectedDomainName)) 
+            return;
+            
+        // 尝试找到之前选择的域
+        var domain = domainConfigs.FirstOrDefault(d => d.Name == previousSelection.SelectedDomainName);
+        if (domain == null) return;
+        
+        _selectionState.SelectedDomainName = domain.Name;
+        
+        // 尝试恢复服务选择
+        if (!string.IsNullOrEmpty(previousSelection.SelectedServiceName))
+        {
+            var service = domain.Children.FirstOrDefault(s => s.Name == previousSelection.SelectedServiceName);
+            if (service != null)
+            {
+                _selectionState.SelectedServiceName = service.Name;
+                
+                // 尝试恢复配置类选择
+                if (!string.IsNullOrEmpty(previousSelection.SelectedConfigName))
+                {
+                    var config = service.Children.FirstOrDefault(c => c.Name == previousSelection.SelectedConfigName);
+                    if (config != null)
+                    {
+                        _selectionState.SelectedConfigName = config.Name;
+                    }
+                }
+            }
+        }
+    }
+    
+    #endregion
 }
 
 /// <summary>
@@ -255,5 +326,28 @@ public class ConfigurationItemViewModel
         {
             return value1.Equals(value2);
         }
+    }
+}
+
+/// <summary>
+/// 选择状态模型
+/// </summary>
+public class SelectionState
+{
+    public string? SelectedDomainName { get; set; }
+    public string? SelectedServiceName { get; set; }
+    public string? SelectedConfigName { get; set; }
+    
+    /// <summary>
+    /// 克隆选择状态
+    /// </summary>
+    public SelectionState Clone()
+    {
+        return new SelectionState
+        {
+            SelectedDomainName = SelectedDomainName,
+            SelectedServiceName = SelectedServiceName,
+            SelectedConfigName = SelectedConfigName
+        };
     }
 }
