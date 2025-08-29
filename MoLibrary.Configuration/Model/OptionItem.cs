@@ -208,6 +208,11 @@ public class OptionItem
             if (generic == typeof(Dictionary<,>))
             {
                 SpecialType = EOptionItemValueSpecialType.Dict;
+
+                if (type.GetGenericArguments().ElementAt(0) is { } keyType && keyType != typeof(string))
+                {
+                    throw new Exception($"暂不支持的字典类型：{type.GetCleanFullName()}，目前Key类型必须是string");
+                }
                 UnderlyingType = type.GetGenericArguments().ElementAt(1);
             }
         }

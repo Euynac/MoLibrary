@@ -178,11 +178,16 @@ internal class JsonSettingsDocument
         }
 
         var targetNode = obj[targetProperty];
-        //TODO 当修改配置类时，递归判断类型是否正确
-        //当jsonNode值为null时，获取到的是null。
-        if (!IsJsonNodeValueKindCompatible(targetNode, value))
+        
+        // 配置类（JsonObject）不能设置为null
+        if (targetNode is JsonObject && value == null)
         {
-            throw new InvalidOperationException($"{_filePath}中{key}的JsonNode类型{targetNode?.GetValueKind()}与将修改成为的类型{value?.GetValueKind()}不一致");
+            throw new InvalidOperationException($"{_filePath}中{key}是配置类，不能设置为null");
+        }
+        
+        if (!IsJsonNodeValueKindCompatible(targetNode, value, out var errorMessage))
+        {
+            throw new InvalidOperationException(errorMessage ?? $"{_filePath}中{key}的JsonNode类型{targetNode?.GetValueKind()}与将修改成为的类型{value?.GetValueKind()}不一致");
         }
         node[targetProperty] = value;
     }
@@ -192,8 +197,9 @@ internal class JsonSettingsDocument
         return JsonSerializer.Deserialize<JsonNode?>(JsonSerializer.Serialize(node));
     }
 
-    private bool IsJsonNodeValueKindCompatible(JsonNode? targetNode, JsonNode? newNode)
+    private bool IsJsonNodeValueKindCompatible(JsonNode? targetNode, JsonNode? newNode, out string? errorMessage)
     {
+        errorMessage = null;
         var targetKind = targetNode?.GetValueKind() ?? JsonValueKind.Null;
         var newKind = newNode?.GetValueKind() ?? JsonValueKind.Null;
         if (targetKind == JsonValueKind.Null || newKind == JsonValueKind.Null) return true;
@@ -204,8 +210,38 @@ internal class JsonSettingsDocument
             return true;
         }
 
+        // 如果都是JsonObject，进行递归类型检查
+        if (targetNode is JsonObject targetObj && newNode is JsonObject newObj)
+        {
+            return IsJsonObjectPropertiesCompatible(targetObj, newObj, out errorMessage);
+        }
 
-        return targetKind == newKind;
+        if (targetKind != newKind)
+        {
+            errorMessage = $"{_filePath}中JsonNode类型{targetKind}与将修改成为的类型{newKind}不一致";
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool IsJsonObjectPropertiesCompatible(JsonObject targetObj, JsonObject newObj, out string? errorMessage)
+    {
+        errorMessage = null;
+        // 检查新对象中的每个属性是否与目标对象中对应属性的类型兼容
+        foreach (var newProperty in newObj)
+        {
+            if (targetObj.TryGetPropertyValue(newProperty.Key, out var targetValue))
+            {
+                if (!IsJsonNodeValueKindCompatible(targetValue, newProperty.Value, out var propertyErrorMessage))
+                {
+                    errorMessage = $"{_filePath}中属性{newProperty.Key}的类型不兼容：{propertyErrorMessage}";
+                    return false;
+                }
+            }
+            // 如果目标对象中不存在该属性，则认为兼容（允许添加新属性）
+        }
+        return true;
     }
 
 
