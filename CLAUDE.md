@@ -77,12 +77,35 @@ Static web assets (wwwroot) are handled through:
 - When using MudBlazor's generic components (such as MudSwitch, MudChip, MudTextField), you must explicitly specify the type parameter `T`. Otherwise, type inference errors may occur, or you may encounter the "cannot convert from 'method group' to 'Microsoft.AspNetCore.Components.EventCallback'" error.  
 
 - The current UI module of the project uses MudBlazor **8.9.0**.  
-- Do not use `<style>` tags; **CSS isolation** must be used instead.  
+- Do not use `<style>` tags; **CSS isolation** must be used instead.
+
+### CSS Isolation and `::deep` Selector
+- **CSS isolation scope**: CSS isolation only applies to HTML elements, NOT to Razor components. This is a critical distinction.
+- **Using `::deep` with child components**: When applying styles to child components (especially MudBlazor components), you must:
+  1. Wrap the component with a container element (e.g., `<div class="wrapper">`)
+  2. Use the pattern: `.wrapper ::deep selector` in your `.razor.css` file
+  3. The `::deep` pseudo-element only works with descendant relationships
+- **How `::deep` works**: The selector `div ::deep > a` is transformed to `div[b-{STRING}] > a` where `{STRING}` is a unique identifier. Without the wrapper element, the descendant relationship is broken and styles won't apply.
+- **Example for MudTable styling**:
+  ```razor
+  <div class="config-table-wrapper">
+      <MudTable ...>
+      </MudTable>
+  </div>
+  ```
+  ```css
+  .config-table-wrapper ::deep tr.mud-selected {
+      background-color: var(--mud-palette-action-default-hover) !important;
+  }
+  ```  
 
 ## **Interface Return Value Guidelines**  
 - For the return value definitions of frontend APIs (used by Controllers and Blazor), always use the **unified response model `Res`**. Refer to `@rules\mo-framework-res-type.mdc` for usage details.  
 
 ## **MudBlazor Development Notes**  
+
+- 开发界面以及Component时，颜色尽量基于MudBlazor变量（@rules\ui\mudblazor-css-variables.md），需要自定义颜色的，则必须要考虑日夜间模式的切换
+
 - When writing MudBlazor-related code, you must refer to the migration documentation to stay updated on the latest APIs. Currently, guidance documents and source code are available for reference.  
   - **Migration documentation reference paths:**  
     - `@rules\mudblazor\CLAUDE_MUDBLAZOR_OFFICIAL_MIGRATION.md`  

@@ -41,7 +41,7 @@
                         <MudCardContent>
                             <MudStack Spacing="2">
                                 <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                                    <MudText Typo="Typo.h6" Style="color: white; font-weight: bold;">
+                                    <MudText Typo="Typo.h6" Style="color: var(--mud-palette-text-primary); font-weight: bold;">
                                         @(domain.DisplayName ?? domain.Name)
                                     </MudText>
                                     <MudStack AlignItems="AlignItems.End" Spacing="1">
@@ -55,20 +55,20 @@
                                 
                                 @if (!string.IsNullOrEmpty(domain.Description))
                                 {
-                                    <MudText Typo="Typo.body2" Style="color: rgba(255, 255, 255, 0.9);">
+                                    <MudText Typo="Typo.body2" Style="color: var(--mud-palette-text-primary);">
                                         @domain.Description
                                     </MudText>
                                 }
                                 
                                 <MudStack Spacing="1">
-                                    <MudText Typo="Typo.caption" Style="color: rgba(255, 255, 255, 0.7);">
+                                    <MudText Typo="Typo.caption" Style="color: var(--mud-palette-text-primary); opacity: 0.7;">
                                         域名: @domain.Name
                                     </MudText>
                                     @{
                                         var ownedCount = GetOwnedServiceCount(domain.Name);
                                         var relatedCount = GetRelatedServiceCount(domain.Name);
                                     }
-                                    <MudText Typo="Typo.caption" Style="color: rgba(255, 255, 255, 0.8);">
+                                    <MudText Typo="Typo.caption" Style="color: var(--mud-palette-text-primary); opacity: 0.8;">
                                         本域服务: @ownedCount.Replace(" 个服务", "个")
                                         @if (relatedCount > 0)
                                         {
@@ -92,7 +92,7 @@
     
     .domain-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2) !important;
+        box-shadow: var(--mud-elevation-8) !important;
     }
     
     .cursor-pointer {

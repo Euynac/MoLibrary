@@ -2,9 +2,15 @@
     cursor: pointer;
 }
 
-.mud-nav-link-active {
-    background-color: var(--mud-palette-primary-lighten) !important;
-    color: var(--mud-palette-primary-text) !important;
+/* 导航菜单选中状态 */
+::deep .mud-nav-link-active {
+    background-color: var(--mud-palette-action-default-hover) !important;
+    border-left: 3px solid var(--mud-palette-primary) !important;
+}
+
+/* 配置类表格选中行 - 使用包裹div穿透CSS隔离 */
+.config-table-wrapper ::deep tr.mud-selected {
+    background-color: var(--mud-palette-action-default-hover) !important;
 }
 
 .config-value-container {

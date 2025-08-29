@@ -13,7 +13,8 @@
     }
     else if (OptionItem?.SpecialType == EOptionItemValueSpecialType.Dict)
     {
-        <ConfigurationDictEditor Value="@Value" 
+        <ConfigurationDictEditor @ref="dictEditor" 
+                                 Value="@Value" 
                                  OriginalValue="@OriginalValue"
                                  ValueChanged="@OnValueChanged" 
                                  OptionItem="@OptionItem" />
@@ -53,8 +54,24 @@
     [Parameter] public object? OriginalValue { get; set; }
     [Parameter] public EventCallback<object?> ValueChanged { get; set; }
 
+    private ConfigurationDictEditor? dictEditor;
+
     private async Task OnValueChanged(object? newValue)
     {
         await ValueChanged.InvokeAsync(newValue);
+    }
+
+    /// <summary>
+    /// 检查是否有验证错误
+    /// </summary>
+    public bool HasValidationErrors()
+    {
+        // 只检查字典编辑器的验证错误，其他类型暂时不需要
+        if (OptionItem?.SpecialType == EOptionItemValueSpecialType.Dict)
+        {
+            return dictEditor?.HasValidationErrors() ?? false;
+        }
+        
+        return false;
     }
 }
