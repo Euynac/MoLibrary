@@ -355,13 +355,15 @@ public partial class AutoModelTokenExpressionGenDynamicLinqProvider(IOptions<Aut
 
         string GenElementExp(int start, int end)
         {
-            var input = exp[start..end].Trim();
+            //var input = exp[start..end].Trim();
+            var input = exp[start..end];
             if (!string.IsNullOrEmpty(input))
             {
                 var isNot = false;
                 if (input.StartsWith(ExpressionOptions.ExpLikeNot))
                 {
-                    input = input.Replace(ExpressionOptions.ExpLikeNot, "").Trim();
+                    //input = input.Replace(ExpressionOptions.ExpLikeNot, "").Trim();
+                    input = input.Replace(ExpressionOptions.ExpLikeNot, "");
                     isNot = true;
                 }
 
