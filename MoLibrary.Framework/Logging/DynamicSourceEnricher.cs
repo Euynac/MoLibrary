@@ -1,10 +1,10 @@
 using MoLibrary.Framework.Core;
 using MoLibrary.Framework.Core.Attributes;
+using MoLibrary.Tool.Extensions;
 using Serilog;
 using Serilog.Configuration;
 using Serilog.Core;
 using Serilog.Events;
-using ShardingCore.Extensions;
 
 namespace MoLibrary.Framework.Logging;
 public static class DynamicSourceContextLoggerConfigurationExtensions
@@ -31,10 +31,8 @@ public sealed class DynamicSourceEnricher : ILogEventEnricher
     /// <param name="propertyFactory">Factory for creating new properties to add to the event.</param>
     public void Enrich(LogEvent logEvent, ILogEventPropertyFactory propertyFactory)
     {
-            
-        var last = _lastValue;
-        var properties = (Dictionary<string, LogEventPropertyValue>) logEvent.GetPropertyValue(Properties);
-        if (properties.TryGetValue(SOURCE_CONTEXT_TEMPLATE_NAME, out var propertyValue))
+        var properties = (Dictionary<string, LogEventPropertyValue>?) logEvent.GetPropertyValue(Properties);
+        if (properties?.TryGetValue(SOURCE_CONTEXT_TEMPLATE_NAME, out var propertyValue) is true)
         {
             var unitInfoAttribute =
                 ProjectUnitStores.GetUnitAttributeByFullName<UnitInfoAttribute>(propertyValue.ToString().Trim('\"'));
@@ -45,7 +43,7 @@ public sealed class DynamicSourceEnricher : ILogEventEnricher
             {
                 properties[SOURCE_CONTEXT_TEMPLATE_NAME] = new ScalarValue(name);
                 properties.Add(TYPE_TEMPLATE_NAME, new ScalarValue("[T:B]"));
-                _lastValue = last = new LogEventProperty(Properties, new ScalarValue(properties));
+                _lastValue = new LogEventProperty(Properties, new ScalarValue(properties));
                 logEvent.AddOrUpdateProperty(_lastValue); 
             }
         }
