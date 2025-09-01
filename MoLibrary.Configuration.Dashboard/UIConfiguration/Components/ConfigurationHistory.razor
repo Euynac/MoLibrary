@@ -264,14 +264,14 @@
     {
         // 获取当前配置值
         string? currentValue = null;
-        var currentConfigResult = await ConfigurationDashboardService.GetOptionItemStatusAsync(history.AppId, history.Key);
+        var currentConfigResult = await ConfigurationDashboardService.GetConfigStatusAsync(history.AppId, history.Key);
         if (currentConfigResult.IsFailed(out var error, out var data))
         {
             Snackbar.Add($"获取当前配置值失败: {error}", Severity.Warning);
         }
         else
         {
-            currentValue = data.Value?.ToString();
+            currentValue = data.ToJsonValue();
         }
 
         var parameters = new DialogParameters<RollbackConfirmationDialog>
@@ -303,7 +303,7 @@
                 return;
             }
 
-            Snackbar.Add($"配置项 '{history.Key}' 已成功回滚到版本 {history.Version}", Severity.Success);
+            Snackbar.Add($"配置类 '{history.Key}' 已成功回滚到版本 {history.Version}", Severity.Success);
             await LoadHistoryData(); // 刷新历史记录
         }
         catch (Exception ex)

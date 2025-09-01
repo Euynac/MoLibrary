@@ -1,6 +1,7 @@
-using System.Text.Json.Serialization;
+using MoLibrary.Configuration.Providers;
 using MoLibrary.Core.GlobalJson.Converters;
 using MoLibrary.Tool.General;
+using System.Text.Json.Serialization;
 
 namespace MoLibrary.Configuration.Model;
 
@@ -150,7 +151,13 @@ public class DtoConfig
     /// <returns></returns>
     public string ToJsonValue()
     {
-        return Items.Select(p => p.Value).ToJsonString() ?? "";
+        var configJson = new Dictionary<string, object?>();
+        foreach (var item in Items)
+        {
+            configJson[item.Name] = item.Value;
+        }
+
+        return configJson.ToJsonString(customOptions: JsonFileProviderConventions.JsonSerializerOptions) ?? "{}";
     }
 }
 

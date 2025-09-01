@@ -60,7 +60,27 @@ public class ConfigurationDashboardService(
             return Res.Fail($"获取指定配置状态失败: {ex.Message}");
         }
     }
+    /// <summary>
+    /// 获取指定配置状态
+    /// </summary>
+    /// <param name="appid">应用ID</param>
+    /// <param name="key">配置键</param>
+    /// <returns>配置状态</returns>
+    public async Task<Res<DtoConfig>> GetConfigStatusAsync(string? appid, string key)
+    {
+        try
+        {
+            if ((await configCentre.GetSpecificConfigStatusAsync(key, appid)).IsFailed(out var error, out var data))
+                return Res.Fail(error);
 
+            return Res.Ok(data);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "获取指定配置状态失败");
+            return Res.Fail($"获取指定配置状态失败: {ex.Message}");
+        }
+    }
     /// <summary>
     /// 获取配置类历史
     /// </summary>
