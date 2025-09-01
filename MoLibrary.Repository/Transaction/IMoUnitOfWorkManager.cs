@@ -25,6 +25,7 @@ public interface IMoUnitOfWorkManager
     /// A boolean value indicating whether a new unit of work should be created 
     /// even if there is an existing one.
     /// </param>
+    /// <remarks>注意隔离级别的设置，否则autoSave以及SaveChanges在uow之外其他地方并未实际保存到数据库</remarks>
     /// <returns>
     /// An instance of <see cref="IMoUnitOfWork"/> representing the newly created unit of work.
     /// </returns>
