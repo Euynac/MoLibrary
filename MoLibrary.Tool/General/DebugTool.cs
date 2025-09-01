@@ -36,11 +36,16 @@ namespace MoLibrary.Tool.General
         public static string? ToJsonString(this object? s, bool writeIndented = true, bool includeFields = false, JsonSerializerOptions? customOptions = null)
         {
             if (s == null) return null;
+            if (customOptions is not null)
+            {
+                return JsonSerializer.Serialize(s, customOptions);
+            }
+            var options = new JsonSerializerOptions
+            {
+                WriteIndented = writeIndented,
+                IncludeFields = includeFields
+            };
 
-            var options = customOptions ?? new JsonSerializerOptions();
-            options.WriteIndented = writeIndented;
-            options.IncludeFields = includeFields;
-            
             if (writeIndented)
             {
                 options.Encoder = JavaScriptEncoder.Create(UnicodeRanges.All);
@@ -62,8 +67,14 @@ namespace MoLibrary.Tool.General
         public static string? ToJsonStringForce<T>(this T? s, bool writeIndented = true, JsonSerializerOptions? customOptions = null)
         {
             if (s == null) return null;
-            var options = customOptions ?? new JsonSerializerOptions();
-            options.WriteIndented = writeIndented;
+            if (customOptions is not null)
+            {
+                return JsonSerializer.Serialize(s, customOptions);
+            }
+            var options = new JsonSerializerOptions
+            {
+                WriteIndented = writeIndented
+            };
 
             if (writeIndented)
             {
@@ -132,7 +143,7 @@ namespace MoLibrary.Tool.General
         /// <param name="s"></param>
         public static void DebugPrintLn(this object? s)
         {
-            if(IsDebugging) PrintLn(s);
+            if (IsDebugging) PrintLn(s);
         }
 
         /// <summary>
@@ -199,7 +210,7 @@ namespace MoLibrary.Tool.General
 
             var properties = value!.GetType()
                 .GetProperties()
-                .Where(p=>p.CanRead).Select(p =>
+                .Where(p => p.CanRead).Select(p =>
                 {
                     object? valueObj;
                     try
@@ -211,9 +222,9 @@ namespace MoLibrary.Tool.General
                         valueObj = $"[FORCE]{value.ToString()}";
                     }
 
-                    return new {p.Name, Value = valueObj};
+                    return new { p.Name, Value = valueObj };
                 });
-            
+
             if (options.DefaultIgnoreCondition == JsonIgnoreCondition.WhenWritingNull)
             {
                 properties = properties.Where(p => p.Value != null);
