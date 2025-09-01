@@ -15,6 +15,7 @@ public interface IMoUnitOfWork : IDisposable, IMoServiceProviderAccessor
 
     /// <summary>
     /// 如果开启了事务，必须调用这个方法才会提交事务。如果没有使用autoSave，调用此方法会自动SaveChanges。
+    /// Complete 后 UnitOfWork 无法再次获取新的 DbContext，详见DbContextProvider中 GetCurrentByChecking
     /// </summary>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
