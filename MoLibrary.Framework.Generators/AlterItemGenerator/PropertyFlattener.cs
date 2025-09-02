@@ -1,0 +1,149 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
+
+namespace MoLibrary.Framework.Generators.AlterItemGenerator;
+
+/// <summary>
+/// 属性扁平化器，将嵌套对象的属性展平为单层结构
+/// </summary>
+internal class PropertyFlattener
+{
+    /// <summary>
+    /// 扁平化属性列表
+    /// </summary>
+    public FlattenedPropertyResult FlattenProperties(EntityAnalysisResult analysisResult)
+    {
+        var flattenedProperties = new List<FlattenedProperty>();
+        var navigationGroups = new Dictionary<string, NavigationPropertyGroup>();
+
+        foreach (var property in analysisResult.Properties)
+        {
+            if (property.IsOptionalNavigation)
+            {
+                // 可选导航属性需要分组处理
+                ProcessOptionalNavigationProperty(property, navigationGroups);
+            }
+            else
+            {
+                // 普通属性或从 Owned 类型扁平化的属性
+                var flattenedProperty = CreateFlattenedProperty(property);
+                flattenedProperties.Add(flattenedProperty);
+            }
+        }
+
+        return new FlattenedPropertyResult(
+            flattenedProperties.ToImmutableList(),
+            navigationGroups.Values.ToImmutableList()
+        );
+    }
+
+    /// <summary>
+    /// 处理可选导航属性
+    /// </summary>
+    private void ProcessOptionalNavigationProperty(PropertyInfo property, Dictionary<string, NavigationPropertyGroup> navigationGroups)
+    {
+        // 从属性路径中提取导航属性名称
+        var pathParts = property.PropertyPath.Split('.');
+        var navigationPropertyName = pathParts[0];
+
+        if (!navigationGroups.TryGetValue(navigationPropertyName, out var group))
+        {
+            group = new NavigationPropertyGroup(
+                navigationPropertyName,
+                new List<FlattenedProperty>()
+            );
+            navigationGroups[navigationPropertyName] = group;
+        }
+
+        var flattenedProperty = CreateFlattenedProperty(property);
+        group.Properties.Add(flattenedProperty);
+    }
+
+    /// <summary>
+    /// 创建扁平化属性
+    /// </summary>
+    private FlattenedProperty CreateFlattenedProperty(PropertyInfo property)
+    {
+        return new FlattenedProperty(
+            GetFlattenedPropertyName(property),
+            property.Type,
+            property.OriginalType,
+            property.PropertyPath,
+            property.PropertyPath.Contains('.') && !property.IsOptionalNavigation,
+            property.IsOptionalNavigation,
+            property.PropertySymbol,
+            property.XmlDocumentation
+        );
+    }
+
+    /// <summary>
+    /// 获取扁平化后的属性名称
+    /// </summary>
+    private string GetFlattenedPropertyName(PropertyInfo property)
+    {
+        // 对于嵌套属性，使用最后一段作为属性名
+        // 例如: Plan.Callsign -> Callsign
+        //      DepInfo.COBT -> COBT
+        var pathParts = property.PropertyPath.Split('.');
+        return pathParts[pathParts.Length - 1];
+    }
+}
+
+/// <summary>
+/// 扁平化属性结果
+/// </summary>
+internal class FlattenedPropertyResult
+{
+    public FlattenedPropertyResult(ImmutableList<FlattenedProperty> properties, ImmutableList<NavigationPropertyGroup> navigationGroups)
+    {
+        Properties = properties;
+        NavigationGroups = navigationGroups;
+    }
+    
+    public ImmutableList<FlattenedProperty> Properties { get; }
+    public ImmutableList<NavigationPropertyGroup> NavigationGroups { get; }
+}
+
+/// <summary>
+/// 扁平化的属性
+/// </summary>
+internal class FlattenedProperty
+{
+    public FlattenedProperty(string name, string type, string originalType, string propertyPath, bool isFromOwnedType, bool isOptionalNavigation, Microsoft.CodeAnalysis.IPropertySymbol originalPropertySymbol, string? xmlDocumentation = null)
+    {
+        Name = name;
+        Type = type;
+        OriginalType = originalType;
+        PropertyPath = propertyPath;
+        IsFromOwnedType = isFromOwnedType;
+        IsOptionalNavigation = isOptionalNavigation;
+        OriginalPropertySymbol = originalPropertySymbol;
+        XmlDocumentation = xmlDocumentation;
+    }
+    
+    public string Name { get; }
+    public string Type { get; }
+    public string OriginalType { get; }
+    public string PropertyPath { get; }
+    public string? XmlDocumentation { get; }
+    public bool IsFromOwnedType { get; }
+    public bool IsOptionalNavigation { get; }
+    public Microsoft.CodeAnalysis.IPropertySymbol OriginalPropertySymbol { get; }
+}
+
+/// <summary>
+/// 导航属性组
+/// </summary>
+internal class NavigationPropertyGroup
+{
+    public NavigationPropertyGroup(string navigationPropertyName, List<FlattenedProperty> properties)
+    {
+        NavigationPropertyName = navigationPropertyName;
+        Properties = properties;
+    }
+    
+    public string NavigationPropertyName { get; }
+    public List<FlattenedProperty> Properties { get; }
+}
