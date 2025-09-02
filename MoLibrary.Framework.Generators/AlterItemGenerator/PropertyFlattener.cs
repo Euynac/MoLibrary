@@ -23,7 +23,7 @@ internal class PropertyFlattener
             if (property.IsOptionalNavigation)
             {
                 // 可选导航属性需要分组处理
-                ProcessOptionalNavigationProperty(property, navigationGroups);
+                ProcessOptionalNavigationProperty(property, navigationGroups, analysisResult.EntitySymbol);
             }
             else
             {
@@ -42,7 +42,7 @@ internal class PropertyFlattener
     /// <summary>
     /// 处理可选导航属性
     /// </summary>
-    private void ProcessOptionalNavigationProperty(PropertyInfo property, Dictionary<string, NavigationPropertyGroup> navigationGroups)
+    private void ProcessOptionalNavigationProperty(PropertyInfo property, Dictionary<string, NavigationPropertyGroup> navigationGroups, Microsoft.CodeAnalysis.INamedTypeSymbol entitySymbol)
     {
         // 从属性路径中提取导航属性名称
         var pathParts = property.PropertyPath.Split('.');
@@ -52,7 +52,8 @@ internal class PropertyFlattener
         {
             group = new NavigationPropertyGroup(
                 navigationPropertyName,
-                new List<FlattenedProperty>()
+                new List<FlattenedProperty>(),
+                entitySymbol // 传入根实体符号用于类型解析
             );
             navigationGroups[navigationPropertyName] = group;
         }
@@ -138,12 +139,40 @@ internal class FlattenedProperty
 /// </summary>
 internal class NavigationPropertyGroup
 {
-    public NavigationPropertyGroup(string navigationPropertyName, List<FlattenedProperty> properties)
+    public NavigationPropertyGroup(string navigationPropertyName, List<FlattenedProperty> properties, Microsoft.CodeAnalysis.INamedTypeSymbol? entitySymbol = null)
     {
         NavigationPropertyName = navigationPropertyName;
         Properties = properties;
+        
+        // 直接从根实体类型中查找导航属性
+        if (entitySymbol != null)
+        {
+            var navProperty = entitySymbol.GetMembers().OfType<Microsoft.CodeAnalysis.IPropertySymbol>()
+                .FirstOrDefault(p => p.Name == navigationPropertyName);
+                
+            if (navProperty != null)
+            {
+                NavigationPropertyTypeName = GetNavigationPropertyTypeName(navProperty.Type);
+            }
+        }
+        
+        NavigationPropertyTypeName ??= $"Unknown{navigationPropertyName}";
     }
     
     public string NavigationPropertyName { get; }
     public List<FlattenedProperty> Properties { get; }
+    public string NavigationPropertyTypeName { get; private set; }
+    
+    private string GetNavigationPropertyTypeName(Microsoft.CodeAnalysis.ITypeSymbol type)
+    {
+        // 如果是可空类型，获取底层类型
+        if (type is Microsoft.CodeAnalysis.INamedTypeSymbol namedType && 
+            namedType.IsGenericType && 
+            namedType.OriginalDefinition.ToDisplayString() == "System.Nullable<T>")
+        {
+            return namedType.TypeArguments[0].Name;
+        }
+        
+        return type.Name;
+    }
 }

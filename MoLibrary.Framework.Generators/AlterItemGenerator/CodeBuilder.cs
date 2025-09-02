@@ -25,8 +25,8 @@ internal class CodeBuilder
         var entitySymbol = analysisResult.EntitySymbol;
         var entityName = entitySymbol.Name;
         var entityNamespace = entitySymbol.ContainingNamespace.ToDisplayString();
-        var className = customClassName ?? $"{entityName}AlterItemData";
-        var namespaceName = customNamespace ?? $"{entityNamespace}.ValueObjects";
+        var className = customClassName ?? $"{entityName}AlterItemDataGen";
+        var namespaceName = customNamespace ?? $"{entityNamespace}";
 
         var sb = new StringBuilder();
 
@@ -94,14 +94,14 @@ internal class CodeBuilder
         // 添加属性类型相关的命名空间
         foreach (var property in flattenedResult.Properties)
         {
-            AddNamespacesFromType(usings, property.OriginalType);
+            AddNamespacesFromProperty(usings, property);
         }
 
         foreach (var group in flattenedResult.NavigationGroups)
         {
             foreach (var property in group.Properties)
             {
-                AddNamespacesFromType(usings, property.OriginalType);
+                AddNamespacesFromProperty(usings, property);
             }
         }
 
@@ -115,25 +115,71 @@ internal class CodeBuilder
     }
 
     /// <summary>
-    /// 从类型中添加相关命名空间
+    /// 从FlattenedProperty中添加相关命名空间
     /// </summary>
-    private void AddNamespacesFromType(HashSet<string> usings, string typeName)
+    private void AddNamespacesFromProperty(HashSet<string> usings, FlattenedProperty property)
     {
-        // 提取常见的命名空间
-        if (typeName.Contains("ProtocolPlatform"))
+        // 从原始属性符号的类型中提取命名空间
+        var typeSymbol = property.OriginalPropertySymbol.Type;
+        AddNamespacesFromTypeSymbol(usings, typeSymbol);
+    }
+    
+    /// <summary>
+    /// 从类型符号中添加命名空间
+    /// </summary>
+    private void AddNamespacesFromTypeSymbol(HashSet<string> usings, Microsoft.CodeAnalysis.ITypeSymbol typeSymbol)
+    {
+        // 处理可空类型
+        if (typeSymbol is Microsoft.CodeAnalysis.INamedTypeSymbol namedType && 
+            namedType.IsGenericType && 
+            namedType.OriginalDefinition.ToDisplayString() == "System.Nullable<T>")
         {
-            usings.Add("ProtocolPlatform.Enums");
+            AddNamespacesFromTypeSymbol(usings, namedType.TypeArguments[0]);
+            return;
         }
         
-        if (typeName.Contains("System.DateTime"))
+        // 添加类型所在的命名空间
+        var namespaceName = typeSymbol.ContainingNamespace?.ToDisplayString();
+        if (!string.IsNullOrEmpty(namespaceName) && namespaceName != "<global namespace>")
         {
-            usings.Add("System");
+            usings.Add(namespaceName!);
         }
         
-        if (typeName.Contains("System.Collections.Generic"))
+        // 处理泛型类型参数
+        if (typeSymbol is Microsoft.CodeAnalysis.INamedTypeSymbol genericType && genericType.IsGenericType)
         {
-            usings.Add("System.Collections.Generic");
+            foreach (var typeArg in genericType.TypeArguments)
+            {
+                AddNamespacesFromTypeSymbol(usings, typeArg);
+            }
         }
+    }
+
+    /// <summary>
+    /// 获取简洁的类型显示字符串，不使用global::前缀
+    /// </summary>
+    private string GetConciseTypeString(Microsoft.CodeAnalysis.ITypeSymbol typeSymbol)
+    {
+        // 创建简洁的显示格式，不使用全限定名称
+        var format = new Microsoft.CodeAnalysis.SymbolDisplayFormat(
+            typeQualificationStyle: Microsoft.CodeAnalysis.SymbolDisplayTypeQualificationStyle.NameOnly,
+            genericsOptions: Microsoft.CodeAnalysis.SymbolDisplayGenericsOptions.IncludeTypeParameters,
+            miscellaneousOptions: Microsoft.CodeAnalysis.SymbolDisplayMiscellaneousOptions.UseSpecialTypes
+        );
+        
+        var typeName = typeSymbol.ToDisplayString(format);
+        
+        // 处理可空值类型
+        if (typeSymbol.CanBeReferencedByName && !typeSymbol.IsReferenceType)
+        {
+            if (!typeName.EndsWith("?") && typeSymbol is Microsoft.CodeAnalysis.INamedTypeSymbol namedType && 
+                !(namedType.IsGenericType && namedType.OriginalDefinition.ToDisplayString() == "System.Nullable<T>"))
+            {
+                return typeName + "?";
+            }
+        }
+        
+        return typeName;
     }
 
     /// <summary>
@@ -203,15 +249,27 @@ internal class CodeBuilder
     }
 
     /// <summary>
-    /// 构建 Apply 方法
+    /// 构建 Apply 方法和 GenedApply 方法
     /// </summary>
     private void BuildApplyMethod(StringBuilder sb, string entityName, FlattenedPropertyResult flattenedResult)
     {
+        // 生成 virtual Apply 方法
         sb.AppendLine("    /// <summary>");
-        sb.AppendLine("    /// 应用变更到目标实体");
+        sb.AppendLine("    /// 应用变更到目标实体 (可被重写以扩展功能)");
         sb.AppendLine("    /// </summary>");
         sb.AppendLine($"    /// <param name=\"entity\">目标 {entityName} 实体</param>");
-        sb.AppendLine($"    public void Apply({entityName} entity)");
+        sb.AppendLine($"    public virtual void Apply({entityName} entity)");
+        sb.AppendLine("    {");
+        sb.AppendLine("        GenedApply(entity);");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+
+        // 生成 GenedApply 方法
+        sb.AppendLine("    /// <summary>");
+        sb.AppendLine("    /// 生成的应用变更逻辑 (由Source Generator自动生成)");
+        sb.AppendLine("    /// </summary>");
+        sb.AppendLine($"    /// <param name=\"entity\">目标 {entityName} 实体</param>");
+        sb.AppendLine($"    protected void GenedApply({entityName} entity)");
         sb.AppendLine("    {");
 
         // 处理直接属性（从 Owned 类型扁平化的属性）
@@ -349,14 +407,8 @@ internal class CodeBuilder
     /// </summary>
     private string GetNavigationPropertyType(NavigationPropertyGroup group)
     {
-        // 从导航属性名称推断类型名称
-        return group.NavigationPropertyName switch
-        {
-            "DepInfo" => "FlightDepInfo",
-            "ArrInfo" => "FlightArrInfo",
-            "RteInfo" => "FlightRteInfo",
-            _ => $"Flight{group.NavigationPropertyName}"
-        };
+        // 使用从符号信息中获取的实际类型名称
+        return group.NavigationPropertyTypeName;
     }
 
     /// <summary>
@@ -430,8 +482,27 @@ internal class CodeBuilder
             sb.AppendLine("    /// </summary>");
         }
 
+        // 使用简洁的类型名称
+        var conciseType = GetConciseTypeString(property.OriginalPropertySymbol.Type);
+        
+        // 确保类型是可空的
+        if (!conciseType.EndsWith("?") && !IsReferenceType(property.OriginalPropertySymbol.Type))
+        {
+            conciseType += "?";
+        }
+        
         // 属性定义
-        sb.AppendLine($"    public {property.Type} {property.Name} {{ get; set; }}");
+        sb.AppendLine($"    public {conciseType} {property.Name} {{ get; set; }}");
         sb.AppendLine();
+    }
+    
+    /// <summary>
+    /// 检查是否是引用类型
+    /// </summary>
+    private bool IsReferenceType(Microsoft.CodeAnalysis.ITypeSymbol type)
+    {
+        return type.IsReferenceType || (type is Microsoft.CodeAnalysis.INamedTypeSymbol namedType && 
+                                       namedType.IsGenericType && 
+                                       namedType.OriginalDefinition.ToDisplayString().StartsWith("System.Collections.Generic.List<"));
     }
 }

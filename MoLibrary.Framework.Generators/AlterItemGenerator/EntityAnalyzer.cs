@@ -144,10 +144,23 @@ internal class EntityAnalyzer
     }
 
     /// <summary>
-    /// 提取 XML 文档注释
+    /// 提取 XML 文档注释，优先使用AlterItemPropertyAttribute中的Title
     /// </summary>
     private string? ExtractXmlDocumentation(IPropertySymbol property)
     {
+        // 首先检查AlterItemPropertyAttribute中的Title
+        var alterItemAttr = property.GetAttributes()
+            .FirstOrDefault(attr => attr.AttributeClass?.Name == "AlterItemPropertyAttribute" ||
+                                  attr.AttributeClass?.ToDisplayString().Contains("MoLibrary.Framework.Generators.Attributes.AlterItemPropertyAttribute") == true);
+        
+        if (alterItemAttr != null)
+        {
+            var title = GetAttributeArgumentValue<string>(alterItemAttr, "Title");
+            if (!string.IsNullOrWhiteSpace(title))
+                return title;
+        }
+        
+        // 如果没有Title，则使用XML文档注释
         var xmlDoc = property.GetDocumentationCommentXml();
         if (string.IsNullOrWhiteSpace(xmlDoc))
             return null;
@@ -285,6 +298,18 @@ internal class EntityAnalyzer
         if (property.IsIndexer)
             return true;
 
+        // 检查AlterItemPropertyAttribute的Ignore设置
+        var alterItemAttr = property.GetAttributes()
+            .FirstOrDefault(attr => attr.AttributeClass?.Name == "AlterItemPropertyAttribute" ||
+                                  attr.AttributeClass?.ToDisplayString().Contains("MoLibrary.Framework.Generators.Attributes.AlterItemPropertyAttribute") == true);
+        
+        if (alterItemAttr != null)
+        {
+            var ignoreValue = GetAttributeArgumentValue<bool>(alterItemAttr, "Ignore");
+            if (ignoreValue)
+                return true;
+        }
+
         // 忽略有 [NotMapped] 属性的属性
         if (property.GetAttributes().Any(attr => 
             attr.AttributeClass?.Name == "NotMappedAttribute" ||
@@ -303,6 +328,21 @@ internal class EntityAnalyzer
             return true;
 
         return false;
+    }
+    
+    /// <summary>
+    /// 获取属性参数值
+    /// </summary>
+    private static T GetAttributeArgumentValue<T>(AttributeData attribute, string parameterName)
+    {
+        // 查找命名参数
+        var namedArg = attribute.NamedArguments
+            .FirstOrDefault(kvp => kvp.Key == parameterName);
+
+        if (namedArg.Value.IsNull || namedArg.Value.Value == null)
+            return default(T)!;
+
+        return (T)namedArg.Value.Value;
     }
 }
 
