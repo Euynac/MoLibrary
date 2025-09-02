@@ -54,6 +54,14 @@ public static class MoConfigurationManager
         set => _setting = value;
     }
 
+    /// <summary>
+    /// Forces a reload of the application configuration from all providers.
+    /// </summary>
+    public static void Reload()
+    {
+        ((IConfigurationRoot)AppConfiguration).Reload();
+    }
+
     #region 调试
 
 

@@ -54,6 +54,10 @@ public class MoConfigurationJsonFileModifier(ILogger<MoConfigurationJsonFileModi
             var oldValue = JsonSettingsDocument.CloneJsonNode(doc[configKey]);
             doc[key] = value;
             doc.Save(option.Source);
+            
+            // Force configuration reload to ensure immediate availability of the new values
+            MoConfigurationManager.Reload();
+            
             var newValue = doc[configKey];
             
             return new DtoUpdateConfigRes()
@@ -114,6 +118,10 @@ public class MoConfigurationJsonFileModifier(ILogger<MoConfigurationJsonFileModi
             var oldValue = JsonSettingsDocument.CloneJsonNode(doc[key]);
             doc[key] = value;
             doc.Save(option.Source);
+            
+            // Force configuration reload to ensure immediate availability of the new values
+            MoConfigurationManager.Reload();
+            
             var newValue = doc[key];
             return new DtoUpdateConfigRes()
             {
