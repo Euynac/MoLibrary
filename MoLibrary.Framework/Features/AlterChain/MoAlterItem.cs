@@ -1,6 +1,8 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.Framework.Features.AlterChain;
 
@@ -13,7 +15,7 @@ public interface IMoAlterItem
     };
 }
 
-public class MoAlterItem<TTargetEntity, TAlterItemData, TEnumAlterSource> : IMoAlterItem where TAlterItemData : class, IMoTracingDataAlterItemData<TTargetEntity>, new() where TTargetEntity : IMoTracingDataEntity where TEnumAlterSource:Enum
+public class MoAlterItem<TTargetEntity, TAlterItemData, TEnumAlterSource> : IMoAlterItem where TAlterItemData : class, IMoTracingDataAlterItemData<TTargetEntity>, new() where TTargetEntity : class, IMoTracingDataEntity where TEnumAlterSource:Enum
 {
     /// <summary>
     /// 变更项ID
@@ -155,4 +157,123 @@ public class MoAlterItem<TTargetEntity, TAlterItemData, TEnumAlterSource> : IMoA
         Data.Apply(entity);
         return entity;
     }
+    
+    /// <summary>
+    /// 获取原状态到应用此变更的变更描述
+    /// </summary>
+    /// <param name="previousStatus"></param>
+    /// <returns></returns>
+    public List<AlterRecord> GetChangesFromPreviousStatus(TTargetEntity previousStatus)
+    {
+        var list = new List<AlterRecord>();
+        if (TargetRollbackIds is not null)
+        {
+            list.AddIfNotNull(new AlterRecord()
+            {
+                IsRollback = IsInvalid,
+                DisplayName = "回滚修改",
+                TargetRollbackIds = TargetRollbackIds
+            });
+        }
+        else
+        {
+            foreach (var propertyAlterData in Data.GetChanges(previousStatus))
+            {
+                list.AddIfNotNull(Format(propertyAlterData.DisplayName, propertyAlterData.OldValue, propertyAlterData.NewValue));
+            }
+            
+            static AlterRecord? Format(string displayName, object? oldValue, object? newValue)
+            {
+                if (newValue == null || oldValue == newValue)
+                {
+                    return null;
+                }
+
+                if (oldValue is not null)
+                {
+                    if (oldValue is string originStr && newValue is string newStr && originStr == newStr)
+                    {
+                        return null;
+                    }
+                    if (oldValue is DateTime originDateTime && newValue is DateTime newDateTime && originDateTime.EqualBySecond(newDateTime))
+                    {
+                        return null;
+                    }
+
+                    if (oldValue is TimeSpan originTimeSpan && newValue is TimeSpan newTimeSpan && originTimeSpan == newTimeSpan)
+                    {
+                        return null;
+                    }
+
+                    if (oldValue is bool originBool && newValue is bool newBool && originBool == newBool)
+                    {
+                        return null;
+                    }
+
+                    if (oldValue is int originInt && newValue is int newInt && originInt == newInt)
+                    {
+                        return null;
+                    }
+                }
+
+
+                if (oldValue is Enum oriEnum && newValue is Enum newEnum)
+                {
+                    return new AlterRecord()
+                    {
+                        DisplayName = displayName,
+                        OldValue = oriEnum.ToString(),
+                        NewValue = newEnum.ToString()
+                    };
+                }
+                var record = new AlterRecord()
+                {
+                    DisplayName = displayName,
+                    OldValue = oldValue,
+                    NewValue = newValue
+                };
+
+                if (record.OldValue is DateTime dateTimeValue && dateTimeValue == default(DateTime))
+                {
+                    record.OldValue = null;
+                }
+                if (record.NewValue is DateTime newTimeValue && newTimeValue == default(DateTime))
+                {
+                    record.NewValue = null;
+                }
+
+                return record;
+            }
+        }
+
+        return list;
+    }
+    
+    
+    public override string ToString()
+    {
+        string data;
+        if (TargetRollbackIds is not null)
+        {
+            data = $"回滚修改{TargetRollbackIds.StringJoin(",")}";
+        }
+        else
+        {
+            var sb = new StringBuilder();
+            
+            foreach (var propertyAlterData in Data.GetChanges())
+            {
+                sb.Append(Format(propertyAlterData.DisplayName, propertyAlterData.NewValue));
+            }
+
+            data = sb.ToString().TrimEnd();
+            static string? Format(string name, object? newValue)
+            {
+                return newValue == null ? null : $"{name}变更为{newValue.ToString()?.BeNullIfEmpty() ?? "[空值]"}\n";
+            }
+        }
+
+        return IsInvalid ? $"[修改已被{RollbackBy}回滚]\n{data}" : data;
+    }
+
 }
