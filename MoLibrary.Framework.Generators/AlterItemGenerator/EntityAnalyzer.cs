@@ -136,23 +136,11 @@ internal class EntityAnalyzer(Compilation compilation, CancellationToken cancell
     }
 
     /// <summary>
-    /// 提取 XML 文档注释，优先使用AlterItemPropertyAttribute中的Title
+    /// 提取 XML 文档注释
     /// </summary>
     private string? ExtractXmlDocumentation(IPropertySymbol property)
     {
-        // 首先检查AlterItemPropertyAttribute中的Title
-        var alterItemAttr = property.GetAttributes()
-            .FirstOrDefault(attr => attr.AttributeClass?.Name == "AlterItemPropertyAttribute" ||
-                                  attr.AttributeClass?.ToDisplayString().Contains("MoLibrary.Framework.Generators.Attributes.AlterItemPropertyAttribute") == true);
-        
-        if (alterItemAttr != null)
-        {
-            var title = GetAttributeArgumentValue<string>(alterItemAttr, "Title");
-            if (!string.IsNullOrWhiteSpace(title))
-                return title;
-        }
-        
-        // 如果没有Title，则使用XML文档注释
+        // 使用XML文档注释
         var xmlDoc = property.GetDocumentationCommentXml();
         if (string.IsNullOrWhiteSpace(xmlDoc))
             return null;
