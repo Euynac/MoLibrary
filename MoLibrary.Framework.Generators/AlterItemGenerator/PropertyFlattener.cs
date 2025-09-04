@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -95,43 +94,35 @@ internal class PropertyFlattener
 /// <summary>
 /// 扁平化属性结果
 /// </summary>
-internal class FlattenedPropertyResult
+internal class FlattenedPropertyResult(
+    ImmutableList<FlattenedProperty> properties,
+    ImmutableList<NavigationPropertyGroup> navigationGroups)
 {
-    public FlattenedPropertyResult(ImmutableList<FlattenedProperty> properties, ImmutableList<NavigationPropertyGroup> navigationGroups)
-    {
-        Properties = properties;
-        NavigationGroups = navigationGroups;
-    }
-    
-    public ImmutableList<FlattenedProperty> Properties { get; }
-    public ImmutableList<NavigationPropertyGroup> NavigationGroups { get; }
+    public ImmutableList<FlattenedProperty> Properties { get; } = properties;
+    public ImmutableList<NavigationPropertyGroup> NavigationGroups { get; } = navigationGroups;
 }
 
 /// <summary>
 /// 扁平化的属性
 /// </summary>
-internal class FlattenedProperty
+internal class FlattenedProperty(
+    string name,
+    string type,
+    string originalType,
+    string propertyPath,
+    bool isFromOwnedType,
+    bool isOptionalNavigation,
+    Microsoft.CodeAnalysis.IPropertySymbol originalPropertySymbol,
+    string? xmlDocumentation = null)
 {
-    public FlattenedProperty(string name, string type, string originalType, string propertyPath, bool isFromOwnedType, bool isOptionalNavigation, Microsoft.CodeAnalysis.IPropertySymbol originalPropertySymbol, string? xmlDocumentation = null)
-    {
-        Name = name;
-        Type = type;
-        OriginalType = originalType;
-        PropertyPath = propertyPath;
-        IsFromOwnedType = isFromOwnedType;
-        IsOptionalNavigation = isOptionalNavigation;
-        OriginalPropertySymbol = originalPropertySymbol;
-        XmlDocumentation = xmlDocumentation;
-    }
-    
-    public string Name { get; }
-    public string Type { get; }
-    public string OriginalType { get; }
-    public string PropertyPath { get; }
-    public string? XmlDocumentation { get; }
-    public bool IsFromOwnedType { get; }
-    public bool IsOptionalNavigation { get; }
-    public Microsoft.CodeAnalysis.IPropertySymbol OriginalPropertySymbol { get; }
+    public string Name { get; } = name;
+    public string Type { get; } = type;
+    public string OriginalType { get; } = originalType;
+    public string PropertyPath { get; } = propertyPath;
+    public string? XmlDocumentation { get; } = xmlDocumentation;
+    public bool IsFromOwnedType { get; } = isFromOwnedType;
+    public bool IsOptionalNavigation { get; } = isOptionalNavigation;
+    public Microsoft.CodeAnalysis.IPropertySymbol OriginalPropertySymbol { get; } = originalPropertySymbol;
 }
 
 /// <summary>
@@ -145,17 +136,14 @@ internal class NavigationPropertyGroup
         Properties = properties;
         
         // 直接从根实体类型中查找导航属性
-        if (entitySymbol != null)
-        {
-            var navProperty = entitySymbol.GetMembers().OfType<Microsoft.CodeAnalysis.IPropertySymbol>()
-                .FirstOrDefault(p => p.Name == navigationPropertyName);
+        var navProperty = entitySymbol?.GetMembers().OfType<Microsoft.CodeAnalysis.IPropertySymbol>()
+            .FirstOrDefault(p => p.Name == navigationPropertyName);
                 
-            if (navProperty != null)
-            {
-                NavigationPropertyTypeName = GetNavigationPropertyTypeName(navProperty.Type);
-            }
+        if (navProperty != null)
+        {
+            NavigationPropertyTypeName = GetNavigationPropertyTypeName(navProperty.Type);
         }
-        
+
         NavigationPropertyTypeName ??= $"Unknown{navigationPropertyName}";
     }
     

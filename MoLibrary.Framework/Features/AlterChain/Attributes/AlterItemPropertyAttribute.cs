@@ -1,6 +1,4 @@
-using System;
-
-namespace MoLibrary.Framework.Generators.Attributes;
+namespace MoLibrary.Framework.Features.AlterChain.Attributes;
 
 /// <summary>
 /// 用于配置AlterItemData生成时的属性行为

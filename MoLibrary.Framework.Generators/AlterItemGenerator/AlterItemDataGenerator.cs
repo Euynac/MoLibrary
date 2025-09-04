@@ -1,12 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using MoLibrary.Framework.Generators.Attributes;
 
 namespace MoLibrary.Framework.Generators.AlterItemGenerator;
 
@@ -98,17 +94,15 @@ public class AlterItemDataGenerator : IIncrementalGenerator
                 includeDebugInfo
             );
         }
-        else
-        {
-            // 如果没有属性，使用默认设置
-            return new EntityGenerationInfo(
-                entitySymbol,
-                classSyntax,
-                null, // 默认命名空间
-                null, // 默认类名
-                false // 默认不包含调试信息
-            );
-        }
+
+        // 如果没有属性，使用默认设置
+        return new EntityGenerationInfo(
+            entitySymbol,
+            classSyntax,
+            null, // 默认命名空间
+            null, // 默认类名
+            false // 默认不包含调试信息
+        );
     }
 
 
@@ -194,22 +188,19 @@ public class AlterItemDataGenerator : IIncrementalGenerator
 /// <summary>
 /// 实体生成信息
 /// </summary>
-internal class EntityGenerationInfo : IEquatable<EntityGenerationInfo>
+internal class EntityGenerationInfo(
+    INamedTypeSymbol entitySymbol,
+    ClassDeclarationSyntax classSyntax,
+    string? customNamespace = null,
+    string? customClassName = null,
+    bool includeDebugInfo = false)
+    : IEquatable<EntityGenerationInfo>
 {
-    public EntityGenerationInfo(INamedTypeSymbol entitySymbol, ClassDeclarationSyntax classSyntax, string? customNamespace = null, string? customClassName = null, bool includeDebugInfo = false)
-    {
-        EntitySymbol = entitySymbol;
-        ClassSyntax = classSyntax;
-        CustomNamespace = customNamespace;
-        CustomClassName = customClassName;
-        IncludeDebugInfo = includeDebugInfo;
-    }
-    
-    public INamedTypeSymbol EntitySymbol { get; }
-    public ClassDeclarationSyntax ClassSyntax { get; }
-    public string? CustomNamespace { get; }
-    public string? CustomClassName { get; }
-    public bool IncludeDebugInfo { get; }
+    public INamedTypeSymbol EntitySymbol { get; } = entitySymbol;
+    public ClassDeclarationSyntax ClassSyntax { get; } = classSyntax;
+    public string? CustomNamespace { get; } = customNamespace;
+    public string? CustomClassName { get; } = customClassName;
+    public bool IncludeDebugInfo { get; } = includeDebugInfo;
 
     public bool Equals(EntityGenerationInfo? other)
     {
