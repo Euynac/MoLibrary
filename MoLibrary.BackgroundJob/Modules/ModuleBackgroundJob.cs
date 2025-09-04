@@ -44,7 +44,7 @@ public class ModuleBackgroundJob(ModuleBackgroundJobOption option) : MoModule<Mo
 
     public override void PostConfigureServices(IServiceCollection services)
     {
-        if (_backgroundWorkerTypes.Count <= 0 && _backgroundJobTypes.Count <= 0)
+        if (Option.DisableModuleWhenNoTypeRegistered && _backgroundWorkerTypes.Count <= 0 && _backgroundJobTypes.Count <= 0)
         {
             Logger.LogWarning("未发现需要自动注册的Worker或Jobs，将不启动Worker模块");
             _disable = true;
@@ -241,7 +241,7 @@ public class ModuleBackgroundJob(ModuleBackgroundJobOption option) : MoModule<Mo
                     _backgroundWorkerTypes.Add(type);
                 }
 
-                if (type.IsAssignableTo(typeof(IMoBackgroundJob<>)))
+                if (type.IsImplementInterfaceGeneric(typeof(IMoBackgroundJob<>)))
                 {
                     _backgroundJobTypes.Add(type);
                 }

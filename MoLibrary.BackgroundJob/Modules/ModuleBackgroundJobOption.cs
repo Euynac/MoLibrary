@@ -14,6 +14,10 @@ public class ModuleBackgroundJobOption : MoModuleOption<ModuleBackgroundJob>
     /// </summary>
     public bool DisableAutoRegister { get; set; }
 
+    /// <summary>
+    /// 禁用作业模块当作业自动注册时没有检测到任何任务类或后台作业类
+    /// </summary>
+    public bool DisableModuleWhenNoTypeRegistered { get; set; } = true;
 
     #region Hangfire
     public HashSet<string> Queues { get; set; } = ["default"];
