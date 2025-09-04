@@ -1,6 +1,4 @@
-using System;
-
-namespace MoLibrary.Framework.Generators.Attributes;
+namespace MoLibrary.Framework.Features.AlterChain.Attributes;
 
 /// <summary>
 /// 标记实体类需要生成对应的 AlterItemData 类和 Apply 方法

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
@@ -46,6 +45,9 @@ internal class CodeBuilder
 
         // Apply 方法
         BuildApplyMethod(sb, entityName, flattenedResult);
+        
+        // GetChanges 方法
+        BuildGetChangesMethod(sb, entityName, flattenedResult);
 
         // 类定义结束
         sb.AppendLine("}");
@@ -67,6 +69,8 @@ internal class CodeBuilder
             sb.AppendLine($"// Source entity: {entitySymbol.ToDisplayString()}");
         }
         
+        sb.AppendLine();
+        sb.AppendLine("#nullable enable");
         sb.AppendLine();
     }
 
@@ -127,10 +131,10 @@ internal class CodeBuilder
     /// <summary>
     /// 从类型符号中添加命名空间
     /// </summary>
-    private void AddNamespacesFromTypeSymbol(HashSet<string> usings, Microsoft.CodeAnalysis.ITypeSymbol typeSymbol)
+    private static void AddNamespacesFromTypeSymbol(HashSet<string> usings, ITypeSymbol typeSymbol)
     {
         // 处理可空类型
-        if (typeSymbol is Microsoft.CodeAnalysis.INamedTypeSymbol namedType && 
+        if (typeSymbol is INamedTypeSymbol namedType && 
             namedType.IsGenericType && 
             namedType.OriginalDefinition.ToDisplayString() == "System.Nullable<T>")
         {
@@ -146,7 +150,7 @@ internal class CodeBuilder
         }
         
         // 处理泛型类型参数
-        if (typeSymbol is Microsoft.CodeAnalysis.INamedTypeSymbol genericType && genericType.IsGenericType)
+        if (typeSymbol is INamedTypeSymbol genericType && genericType.IsGenericType)
         {
             foreach (var typeArg in genericType.TypeArguments)
             {
@@ -158,25 +162,36 @@ internal class CodeBuilder
     /// <summary>
     /// 获取简洁的类型显示字符串，不使用global::前缀
     /// </summary>
-    private string GetConciseTypeString(Microsoft.CodeAnalysis.ITypeSymbol typeSymbol)
+    private string GetConciseTypeString(ITypeSymbol typeSymbol)
     {
         // 创建简洁的显示格式，不使用全限定名称
-        var format = new Microsoft.CodeAnalysis.SymbolDisplayFormat(
-            typeQualificationStyle: Microsoft.CodeAnalysis.SymbolDisplayTypeQualificationStyle.NameOnly,
-            genericsOptions: Microsoft.CodeAnalysis.SymbolDisplayGenericsOptions.IncludeTypeParameters,
-            miscellaneousOptions: Microsoft.CodeAnalysis.SymbolDisplayMiscellaneousOptions.UseSpecialTypes
+        var format = new SymbolDisplayFormat(
+            typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameOnly,
+            genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters,
+            miscellaneousOptions: SymbolDisplayMiscellaneousOptions.UseSpecialTypes
         );
         
         var typeName = typeSymbol.ToDisplayString(format);
         
-        // 处理可空值类型
-        if (typeSymbol.CanBeReferencedByName && !typeSymbol.IsReferenceType)
+        // 确保所有引用类型和值类型都是可空的
+        if (!typeName.EndsWith("?"))
         {
-            if (!typeName.EndsWith("?") && typeSymbol is Microsoft.CodeAnalysis.INamedTypeSymbol namedType && 
-                !(namedType.IsGenericType && namedType.OriginalDefinition.ToDisplayString() == "System.Nullable<T>"))
+            // 对于值类型，如果不是已经是 Nullable<T>，则添加 ?
+            if (!typeSymbol.IsReferenceType)
             {
+                if (typeSymbol is INamedTypeSymbol namedType && 
+                    namedType.IsGenericType && 
+                    namedType.OriginalDefinition.ToDisplayString() == "System.Nullable<T>")
+                {
+                    // 已经是 Nullable<T>，保持原样
+                    return typeName;
+                }
+
                 return typeName + "?";
             }
+
+            // 对于引用类型（包括string），添加 ?
+            return typeName + "?";
         }
         
         return typeName;
@@ -321,24 +336,28 @@ internal class CodeBuilder
             if (property.OriginalType.Contains("?") || property.OriginalType.StartsWith("DateTime?"))
             {
                 // 目标属性是可空的，直接赋值
-                sb.AppendLine($"            entity.{property.PropertyPath} = {property.Name};");
+                var safePropertyPath = property.PropertyPath.Contains('.') ? MakeNonNullPropertyPath(property.PropertyPath) : property.PropertyPath;
+                sb.AppendLine($"            entity.{safePropertyPath} = {property.Name};");
             }
             else
             {
                 // 目标属性是非空的，需要检查默认值并转换
                 sb.AppendLine($"            if ({property.Name} != default(DateTime))");
                 sb.AppendLine("            {");
-                sb.AppendLine($"                entity.{property.PropertyPath} = {property.Name}.Value;");
+                var safePropertyPath = property.PropertyPath.Contains('.') ? MakeNonNullPropertyPath(property.PropertyPath) : property.PropertyPath;
+                sb.AppendLine($"                entity.{safePropertyPath} = {property.Name}.Value;");
                 sb.AppendLine("            }");
             }
         }
         else if (IsNullableValueType(property.Type))
         {
-            sb.AppendLine($"            entity.{property.PropertyPath} = {property.Name}.Value;");
+            var safePropertyPath = property.PropertyPath.Contains('.') ? MakeNonNullPropertyPath(property.PropertyPath) : property.PropertyPath;
+            sb.AppendLine($"            entity.{safePropertyPath} = {property.Name}.Value;");
         }
         else
         {
-            sb.AppendLine($"            entity.{property.PropertyPath} = {property.Name};");
+            var safePropertyPath = property.PropertyPath.Contains('.') ? MakeNonNullPropertyPath(property.PropertyPath) : property.PropertyPath;
+            sb.AppendLine($"            entity.{safePropertyPath} = {property.Name};");
         }
 
         sb.AppendLine("        }");
@@ -374,24 +393,28 @@ internal class CodeBuilder
                 if (property.OriginalType.Contains("?") || property.OriginalType.StartsWith("DateTime?"))
                 {
                     // 目标属性是可空的，直接赋值
-                    sb.AppendLine($"            entity.{property.PropertyPath} = {property.Name};");
+                    var safePropertyPath = MakeNonNullPropertyPath(property.PropertyPath);
+                    sb.AppendLine($"            entity.{safePropertyPath} = {property.Name};");
                 }
                 else
                 {
                     // 目标属性是非空的，需要检查默认值并转换
                     sb.AppendLine($"            if ({property.Name} != default(DateTime))");
                     sb.AppendLine("            {");
-                    sb.AppendLine($"                entity.{property.PropertyPath} = {property.Name}.Value;");
+                    var safePropertyPath = MakeNonNullPropertyPath(property.PropertyPath);
+                    sb.AppendLine($"                entity.{safePropertyPath} = {property.Name}.Value;");
                     sb.AppendLine("            }");
                 }
             }
             else if (IsNullableValueType(property.Type))
             {
-                sb.AppendLine($"            entity.{property.PropertyPath} = {property.Name}.Value;");
+                var safePropertyPath = MakeNonNullPropertyPath(property.PropertyPath);
+                sb.AppendLine($"            entity.{safePropertyPath} = {property.Name}.Value;");
             }
             else
             {
-                sb.AppendLine($"            entity.{property.PropertyPath} = {property.Name};");
+                var safePropertyPath = MakeNonNullPropertyPath(property.PropertyPath);
+                sb.AppendLine($"            entity.{safePropertyPath} = {property.Name};");
             }
             
             sb.AppendLine("        }");
@@ -499,10 +522,136 @@ internal class CodeBuilder
     /// <summary>
     /// 检查是否是引用类型
     /// </summary>
-    private bool IsReferenceType(Microsoft.CodeAnalysis.ITypeSymbol type)
+    private bool IsReferenceType(ITypeSymbol type)
     {
-        return type.IsReferenceType || (type is Microsoft.CodeAnalysis.INamedTypeSymbol namedType && 
+        return type.IsReferenceType || (type is INamedTypeSymbol namedType && 
                                        namedType.IsGenericType && 
                                        namedType.OriginalDefinition.ToDisplayString().StartsWith("System.Collections.Generic.List<"));
+    }
+
+    /// <summary>
+    /// 构建 GetChanges 方法和 GenedGetChanges 方法
+    /// </summary>
+    private void BuildGetChangesMethod(StringBuilder sb, string entityName, FlattenedPropertyResult flattenedResult)
+    {
+        // 生成 virtual GetChanges 方法
+        sb.AppendLine();
+        sb.AppendLine("    /// <summary>");
+        sb.AppendLine("    /// 获取当前变更信息 (可被重写以扩展功能)");
+        sb.AppendLine("    /// </summary>");
+        sb.AppendLine($"    /// <param name=\"entity\">如果传入此值将会返回变更相关的实体值</param>");
+        sb.AppendLine("    /// <returns>属性变更信息列表</returns>");
+        sb.AppendLine($"    public virtual IEnumerable<PropertyAlterData> GetChanges({entityName}? entity = null)");
+        sb.AppendLine("    {");
+        sb.AppendLine("        return GenedGetChanges(entity);");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+
+        // 生成 GenedGetChanges 方法
+        sb.AppendLine("    /// <summary>");
+        sb.AppendLine("    /// 生成的获取变更信息逻辑 (由Source Generator自动生成)");
+        sb.AppendLine("    /// </summary>");
+        sb.AppendLine($"    /// <param name=\"entity\">如果传入此值将会返回变更相关的实体值</param>");
+        sb.AppendLine("    /// <returns>属性变更信息列表</returns>");
+        sb.AppendLine($"    protected IEnumerable<PropertyAlterData> GenedGetChanges({entityName}? entity = null)");
+        sb.AppendLine("    {");
+
+        // 处理直接属性（从 Owned 类型扁平化的属性）
+        var directProperties = flattenedResult.Properties.Where(p => !p.IsOptionalNavigation).ToList();
+        foreach (var property in directProperties)
+        {
+            BuildGetChangesPropertyYield(sb, property);
+        }
+
+        // 处理导航属性组
+        foreach (var navGroup in flattenedResult.NavigationGroups)
+        {
+            foreach (var property in navGroup.Properties)
+            {
+                BuildGetChangesPropertyYield(sb, property);
+            }
+        }
+
+        sb.AppendLine("    }");
+    }
+
+    /// <summary>
+    /// 构建 GetChanges 方法中的属性 yield return 代码
+    /// </summary>
+    private void BuildGetChangesPropertyYield(StringBuilder sb, FlattenedProperty property)
+    {
+        sb.AppendLine($"        if ({property.Name} != null)");
+        sb.AppendLine("        {");
+        sb.AppendLine("            yield return new PropertyAlterData");
+        sb.AppendLine("            {");
+        
+        // 优先使用 AlterItemPropertyAttribute 的Title，否则使用 PropertyName
+        var displayName = GetPropertyDisplayName(property);
+        sb.AppendLine($"                DisplayName = \"{displayName}\",");
+        sb.AppendLine($"                PropertyName = nameof({property.Name}),");
+        sb.AppendLine($"                NewValue = {property.Name},");
+        
+        // 处理可空导航属性的安全访问
+        var safePropertyPath = MakeSafePropertyPath(property.PropertyPath);
+        sb.AppendLine($"                OldValue = entity?.{safePropertyPath}");
+        sb.AppendLine("            };");
+        sb.AppendLine("        }");
+        sb.AppendLine();
+    }
+
+    /// <summary>
+    /// 将属性路径转换为安全的可空访问路径
+    /// </summary>
+    private string MakeSafePropertyPath(string propertyPath)
+    {
+        // 将 "DepInfo.COBT" 转换为 "DepInfo?.COBT"
+        var parts = propertyPath.Split('.');
+        if (parts.Length > 1)
+        {
+            return string.Join("?.", parts);
+        }
+        return propertyPath;
+    }
+
+    /// <summary>
+    /// 将属性路径转换为非空访问路径（用于赋值语句）
+    /// </summary>
+    private string MakeNonNullPropertyPath(string propertyPath)
+    {
+        // 将 "DepInfo.COBT" 转换为 "DepInfo!.COBT"
+        var parts = propertyPath.Split('.');
+        if (parts.Length > 1)
+        {
+            // 第一个部分是导航属性，需要加上 !
+            return parts[0] + "!." + string.Join(".", parts.Skip(1));
+        }
+        return propertyPath;
+    }
+
+    /// <summary>
+    /// 获取属性显示名称，优先使用 AlterItemPropertyAttribute 的Title，否则使用 PropertyName
+    /// </summary>
+    private string GetPropertyDisplayName(FlattenedProperty property)
+    {
+        // 检查 AlterItemPropertyAttribute 的 Title 设置
+        var alterItemAttr = property.OriginalPropertySymbol.GetAttributes()
+            .FirstOrDefault(attr => attr.AttributeClass?.Name == "AlterItemPropertyAttribute");
+        
+        if (alterItemAttr != null)
+        {
+            // 查找 Title 属性
+            var titleNamedArg = alterItemAttr.NamedArguments
+                .FirstOrDefault(arg => arg.Key == "Title");
+            
+            if (!titleNamedArg.Equals(default(KeyValuePair<string, TypedConstant>)) && 
+                titleNamedArg.Value.Value is string titleValue && 
+                !string.IsNullOrEmpty(titleValue))
+            {
+                return titleValue;
+            }
+        }
+        
+        // 默认返回属性名
+        return property.Name;
     }
 }

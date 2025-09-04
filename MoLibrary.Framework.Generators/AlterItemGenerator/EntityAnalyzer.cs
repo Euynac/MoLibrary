@@ -4,30 +4,22 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace MoLibrary.Framework.Generators.AlterItemGenerator;
 
 /// <summary>
 /// 实体分析器，用于分析实体类及其属性
 /// </summary>
-internal class EntityAnalyzer
+internal class EntityAnalyzer(Compilation compilation, CancellationToken cancellationToken)
 {
-    private readonly Compilation _compilation;
-    private readonly CancellationToken _cancellationToken;
-
-    public EntityAnalyzer(Compilation compilation, CancellationToken cancellationToken)
-    {
-        _compilation = compilation;
-        _cancellationToken = cancellationToken;
-    }
+    private readonly Compilation _compilation = compilation;
 
     /// <summary>
     /// 分析实体类，提取所有需要生成的属性信息
     /// </summary>
     public EntityAnalysisResult? AnalyzeEntity(INamedTypeSymbol entitySymbol)
     {
-        _cancellationToken.ThrowIfCancellationRequested();
+        cancellationToken.ThrowIfCancellationRequested();
 
         try
         {
@@ -64,7 +56,7 @@ internal class EntityAnalyzer
         INamedTypeSymbol rootEntitySymbol,
         bool isFromOptionalNavigation = false)
     {
-        _cancellationToken.ThrowIfCancellationRequested();
+        cancellationToken.ThrowIfCancellationRequested();
 
         var publicProperties = typeSymbol
             .GetMembers()
@@ -349,43 +341,35 @@ internal class EntityAnalyzer
 /// <summary>
 /// 实体分析结果
 /// </summary>
-internal class EntityAnalysisResult
+internal class EntityAnalysisResult(
+    INamedTypeSymbol entitySymbol,
+    ImmutableList<PropertyInfo> properties,
+    ImmutableHashSet<INamedTypeSymbol> ownedTypes)
 {
-    public EntityAnalysisResult(INamedTypeSymbol entitySymbol, ImmutableList<PropertyInfo> properties, ImmutableHashSet<INamedTypeSymbol> ownedTypes)
-    {
-        EntitySymbol = entitySymbol;
-        Properties = properties;
-        OwnedTypes = ownedTypes;
-    }
-    
-    public INamedTypeSymbol EntitySymbol { get; }
-    public ImmutableList<PropertyInfo> Properties { get; }
-    public ImmutableHashSet<INamedTypeSymbol> OwnedTypes { get; }
+    public INamedTypeSymbol EntitySymbol { get; } = entitySymbol;
+    public ImmutableList<PropertyInfo> Properties { get; } = properties;
+    public ImmutableHashSet<INamedTypeSymbol> OwnedTypes { get; } = ownedTypes;
 }
 
 /// <summary>
 /// 属性信息
 /// </summary>
-internal class PropertyInfo
+internal class PropertyInfo(
+    string name,
+    string propertyPath,
+    string type,
+    string originalType,
+    bool isNullable,
+    bool isOptionalNavigation,
+    IPropertySymbol propertySymbol,
+    string? xmlDocumentation = null)
 {
-    public PropertyInfo(string name, string propertyPath, string type, string originalType, bool isNullable, bool isOptionalNavigation, IPropertySymbol propertySymbol, string? xmlDocumentation = null)
-    {
-        Name = name;
-        PropertyPath = propertyPath;
-        Type = type;
-        OriginalType = originalType;
-        IsNullable = isNullable;
-        IsOptionalNavigation = isOptionalNavigation;
-        PropertySymbol = propertySymbol;
-        XmlDocumentation = xmlDocumentation;
-    }
-    
-    public string Name { get; }
-    public string PropertyPath { get; }
-    public string Type { get; }
-    public string OriginalType { get; }
-    public bool IsNullable { get; }
-    public bool IsOptionalNavigation { get; }
-    public string? XmlDocumentation { get; }
-    public IPropertySymbol PropertySymbol { get; }
+    public string Name { get; } = name;
+    public string PropertyPath { get; } = propertyPath;
+    public string Type { get; } = type;
+    public string OriginalType { get; } = originalType;
+    public bool IsNullable { get; } = isNullable;
+    public bool IsOptionalNavigation { get; } = isOptionalNavigation;
+    public string? XmlDocumentation { get; } = xmlDocumentation;
+    public IPropertySymbol PropertySymbol { get; } = propertySymbol;
 }
