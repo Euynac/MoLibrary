@@ -9,9 +9,10 @@ namespace MoLibrary.Framework.Features.AlterChain;
 
 public interface IMoAlterItem
 {
-    public static readonly JsonSerializerOptions ALTER_ITEM_SERIALIZER_OPTIONS = new()
+    static readonly JsonSerializerOptions ALTER_ITEM_SERIALIZER_OPTIONS = new()
     {
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        Converters = { new JsonStringEnumConverter() }
     };
 }
 
@@ -33,7 +34,7 @@ public class MoAlterItem<TTargetEntity, TAlterItemData, TEnumAlterSource> : IMoA
     [JsonIgnore]
     public TAlterItemData Data
     {
-        get => _data ??= JsonSerializer.Deserialize<TAlterItemData>(DataJson)!;
+        get => _data ??= JsonSerializer.Deserialize<TAlterItemData>(DataJson, IMoAlterItem.ALTER_ITEM_SERIALIZER_OPTIONS)!;
         set
         {
             _data = value;
