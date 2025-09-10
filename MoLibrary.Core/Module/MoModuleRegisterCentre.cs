@@ -220,7 +220,7 @@ public static class MoModuleRegisterCentre
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "模块迭代出现异常");
+                throw ex.CreateException(Logger, "模块迭代出现异常");
             }
         }
         ModuleProfiler.StopPhase(nameof(EMoModuleConfigMethods.IterateBusinessTypes));
