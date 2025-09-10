@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -123,15 +125,56 @@ internal static class HandlerCandidateExtractor
     /// Retrieves and cleans up the documentation comment for a class.
     /// </summary>
     /// <param name="classDeclaration">The class declaration to analyze</param>
-    /// <returns>The formatted documentation comment</returns>
+    /// <returns>The formatted documentation comment with proper indentation, or empty string if no comment</returns>
     private static string ExtractDocumentationComment(ClassDeclarationSyntax classDeclaration)
     {
         var trivia = classDeclaration.GetLeadingTrivia()
             .FirstOrDefault(tr => tr.IsKind(SyntaxKind.SingleLineDocumentationCommentTrivia) ||
                                   tr.IsKind(SyntaxKind.MultiLineDocumentationCommentTrivia));
 
-        return $"{GeneratorConstants.Documentation.DocumentationPrefix}{trivia.ToString()}";
+        if (trivia.IsKind(SyntaxKind.None))
+            return string.Empty;
+
+        var rawComment = trivia.ToString();
+        if (string.IsNullOrWhiteSpace(rawComment))
+            return string.Empty;
+
+        return ProcessDocumentationComment(rawComment);
     }
+
+    /// <summary>
+    /// Processes the raw documentation comment to extract only the summary and format it properly.
+    /// </summary>
+    /// <param name="rawComment">The raw XML documentation comment</param>
+    /// <returns>The formatted summary with proper indentation</returns>
+    private static string ProcessDocumentationComment(string rawComment)
+    {
+        // Use regex to extract content between <summary> and </summary> tags
+        var summaryMatch = System.Text.RegularExpressions.Regex.Match(
+            rawComment, 
+            @"<summary>(.*?)</summary>", 
+            System.Text.RegularExpressions.RegexOptions.Singleline | System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        if (!summaryMatch.Success)
+            return string.Empty;
+
+        // Extract and clean the summary content
+        var summaryContent = summaryMatch.Groups[1].Value;
+        var lines = summaryContent.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
+            .Select(line => line.Replace("///", "").Trim())
+            .Where(line => !string.IsNullOrWhiteSpace(line))
+            .Select(line => $"        /// {line}");
+
+        if (!lines.Any())
+            return string.Empty;
+
+        // Build the complete summary with tags
+        return string.Join("\n", 
+            ((string[])["        /// <summary>"])
+            .Concat(lines)
+            .Concat(["        /// </summary>"]));
+    }
+
 
     /// <summary>
     /// Extracts the original using directives and candidate namespace information.
