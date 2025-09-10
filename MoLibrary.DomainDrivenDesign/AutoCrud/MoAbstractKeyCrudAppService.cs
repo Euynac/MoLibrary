@@ -43,7 +43,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
     /// <summary>
     /// Gets the repository for entity operations.
     /// </summary>
-    protected IMoRepository<TEntity, TKey> Repository { get; } = repository;
+    protected virtual IMoRepository<TEntity, TKey> Repository { get; } = repository;
 
     #region 查
 
@@ -64,11 +64,10 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
     /// Supports dynamic filtering, sorting, paging, and selecting specific properties.
     /// </summary>
     /// <param name="input">The input parameters for the list operation</param>
+    /// <param name="query"></param>
     /// <returns>A paged response containing the mapped entity DTOs</returns>
-    protected virtual async Task<ListResult> InnerGetListAsync<TCustomDto>(TGetListInput input)
+    protected virtual async Task<ListResult> InnerGetListAsync<TCustomDto>(TGetListInput input, IQueryable<TEntity> query)
     {
-        var query = await CreateFilteredQueryAsync(input);
-
         int? totalCount = null;
 
         FeatureSetting? featureSetting = null;
@@ -157,7 +156,8 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
     /// <returns>A paged response containing the mapped entity DTOs</returns>
     protected virtual async Task<ListResult> InnerGetListAsync(TGetListInput input)
     {
-        return await InnerGetListAsync<TGetListOutputDto>(input);
+        var query = await CreateFilteredQueryAsync(input);
+        return await InnerGetListAsync<TGetListOutputDto>(input, query);
     }
 
     /// <summary>
@@ -177,7 +177,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
         
         
         if ((await ApplyCustomActionToResponseListAsync(input, dtos)).IsFailed(out var error, out var data)) return error;
-        return new ResPaged<dynamic>(result.TotalCounts, (IReadOnlyList<dynamic>) (data.IsNullOrEmptySet()? dtos: data), result.CurrentPage,
+        return new ResPaged<dynamic>(result.TotalCounts, (IReadOnlyList<dynamic>) data, result.CurrentPage,
             result.PageSize);
     }
 
@@ -395,14 +395,17 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
     {
         return query;
     }
+
     /// <summary>
     /// 应用过滤器。已扩展统一查询模型及自定义过滤、客户端侧过滤功能。
     /// </summary>
     /// <param name="input">获取列表的输入参数</param>
+    /// <param name="repository">给定仓储层，如历史仓储</param>
     /// <returns>应用过滤后的查询</returns>
-    protected virtual async Task<IQueryable<TEntity>> CreateFilteredQueryAsync(TGetListInput input)
+    protected virtual async Task<IQueryable<TEntity>> CreateFilteredQueryAsync(TGetListInput input, IMoRepository<TEntity, TKey>? repository = null)
     {
-        var queryable = WithDetail() ? await Repository.WithDetailsAsync() : await Repository.GetQueryableAsync();
+        repository ??= Repository;
+        var queryable = WithDetail() ? await repository.WithDetailsAsync() : await repository.GetQueryableAsync();
         queryable = queryable.AsNoTracking();
 
         queryable = ApplyListInclude(queryable, input);

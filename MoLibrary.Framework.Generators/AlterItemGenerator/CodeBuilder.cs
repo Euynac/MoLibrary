@@ -335,18 +335,24 @@ internal class CodeBuilder
             // 检查原始属性是否可空
             if (property.OriginalType.Contains("?") || property.OriginalType.StartsWith("DateTime?"))
             {
-                // 目标属性是可空的，直接赋值
-                var safePropertyPath = property.PropertyPath.Contains('.') ? MakeNonNullPropertyPath(property.PropertyPath) : property.PropertyPath;
-                sb.AppendLine($"            entity.{safePropertyPath} = {property.Name};");
-            }
-            else
-            {
-                // 目标属性是非空的，需要检查默认值并转换
+
+                // 目标属性是可空的，需要检查默认值并转换
                 sb.AppendLine($"            if ({property.Name} != default(DateTime))");
                 sb.AppendLine("            {");
                 var safePropertyPath = property.PropertyPath.Contains('.') ? MakeNonNullPropertyPath(property.PropertyPath) : property.PropertyPath;
                 sb.AppendLine($"                entity.{safePropertyPath} = {property.Name}.Value;");
                 sb.AppendLine("            }");
+                sb.AppendLine("            else");
+                sb.AppendLine("            {");
+                sb.AppendLine($"                entity.{safePropertyPath} = null;");
+                sb.AppendLine("            }");
+                
+            }
+            else
+            {
+                // 目标属性是非空的，直接赋值
+                var safePropertyPath = property.PropertyPath.Contains('.') ? MakeNonNullPropertyPath(property.PropertyPath) : property.PropertyPath;
+                sb.AppendLine($"            entity.{safePropertyPath} = {property.Name}.Value;");
             }
         }
         else if (IsNullableValueType(property.Type))
