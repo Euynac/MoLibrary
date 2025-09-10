@@ -54,9 +54,12 @@ internal static class ControllerTemplate
             candidate.HttpMethodAttribute, 
             candidate.HasFromFormAttribute);
 
+        var documentationComment = string.IsNullOrWhiteSpace(candidate.DocumentationComment) 
+            ? string.Empty 
+            : $"{candidate.DocumentationComment}\n";
+
         return $$"""
-                {{candidate.DocumentationComment}}
-                [{{candidate.HttpMethodAttribute}}("{{candidate.HttpMethodRoute}}")]
+        {{documentationComment}}        [{{candidate.HttpMethodAttribute}}("{{candidate.HttpMethodRoute}}")]
                 [{{GeneratorConstants.AttributeNames.ProducesResponseType}}((int) HttpStatusCode.Accepted)]
                 [{{GeneratorConstants.AttributeNames.ProducesResponseType}}((int) HttpStatusCode.BadRequest)]
                 [{{GeneratorConstants.AttributeNames.ProducesResponseType}}(typeof({{string.Format(GeneratorConstants.ResponseTypes.GenericResponseTemplate, candidate.ResponseType)}}), (int) HttpStatusCode.OK)]
