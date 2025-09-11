@@ -4,6 +4,8 @@
 
 using System.Collections.Generic;
 using System.Linq.Dynamic.Core;
+using System.Runtime.CompilerServices;
+using System.Threading;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.DynamicLinq;
@@ -179,6 +181,70 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
         if ((await ApplyCustomActionToResponseListAsync(input, dtos)).IsFailed(out var error, out var data)) return error;
         return new ResPaged<dynamic>(result.TotalCounts, (IReadOnlyList<dynamic>) data, result.CurrentPage,
             result.PageSize);
+    }
+
+    /// <summary>
+    /// Retrieves a stream of entities based on the provided input.
+    /// Returns data as IAsyncEnumerable for memory-efficient processing of large datasets.
+    /// This method bypasses traditional paging and streams data directly from the database.
+    /// </summary>
+    /// <param name="input">The input parameters for the list operation</param>
+    /// <param name="cancellationToken">Cancellation token for the async operation</param>
+    /// <returns>An async enumerable of mapped entity DTOs</returns>
+    public virtual async IAsyncEnumerable<TGetListOutputDto> GetListStreamAsync(
+        TGetListInput input, 
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        var query = await CreateFilteredQueryAsync(input);
+        
+        await foreach (var dto in InnerGetListStreamAsync<TGetListOutputDto>(input, query, cancellationToken))
+        {
+            yield return dto;
+        }
+    }
+
+    /// <summary>
+    /// Internal implementation for streaming list retrieval with custom DTO type.
+    /// Supports filtering, sorting, and incremental processing without loading entire result set into memory.
+    /// </summary>
+    /// <typeparam name="TCustomDto">The custom DTO type for the results</typeparam>
+    /// <param name="input">The input parameters for the list operation</param>
+    /// <param name="query">The pre-filtered query to stream from</param>
+    /// <param name="cancellationToken">Cancellation token for the async operation</param>
+    /// <returns>An async enumerable of mapped custom DTOs</returns>
+    protected virtual async IAsyncEnumerable<TCustomDto> InnerGetListStreamAsync<TCustomDto>(
+        TGetListInput input, 
+        IQueryable<TEntity> query, 
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        // Apply sorting for consistent results in streaming scenarios
+        query = ApplySorting(query, input);
+
+        // Handle dynamic selection for streaming
+        if (input is IHasRequestSelect select && select.HasUsingSelected())
+        {
+            var dynamicQuery = !select.SelectColumns.IsNullOrWhiteSpace()
+                ? AutoModel.DynamicSelect(query, select.SelectColumns)
+                : AutoModel.DynamicSelectExcept(query, select.SelectExceptColumns!);
+
+            await foreach (var item in (dynamicQuery as IAsyncEnumerable<dynamic>)!.WithCancellation(cancellationToken))
+            {
+                yield return (TCustomDto)(dynamic)item;
+            }
+            yield break;
+        }
+
+        // Apply streaming limit if specified (but not traditional paging)
+        if (input is IHasRequestLimitedResult limitedResultRequest)
+        {
+            query = query.Take(limitedResultRequest.MaxResultCount);
+        }
+
+        // Stream entities and map them incrementally
+        await foreach (var entity in query.AsAsyncEnumerable().WithCancellation(cancellationToken))
+        {
+            yield return await MapToGetListOutputDtoStreamAsync<TCustomDto>(entity);
+        }
     }
 
     /// <summary>
@@ -472,23 +538,26 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
 
     /// <summary>
     /// Maps <typeparamref name="TEntity"/> to <typeparamref name="TGetOutputDto"/>.
-    /// It internally calls the <see cref="MapToGetOutputDto"/> by default.
-    /// It can be overriden for custom mapping.
-    /// Overriding this has higher priority than overriding the <see cref="MapToGetOutputDto"/>
-    /// </summary>
-    protected virtual Task<TGetOutputDto> MapToGetOutputDtoAsync(TEntity entity)
-    {
-        return Task.FromResult(MapToGetOutputDto(entity));
-    }
-
-    /// <summary>
-    /// Maps <typeparamref name="TEntity"/> to <typeparamref name="TGetOutputDto"/>.
     /// It uses <see cref="IMoMapper"/> by default.
     /// It can be overriden for custom mapping.
     /// </summary>
-    protected virtual TGetOutputDto MapToGetOutputDto(TEntity entity)
+    protected virtual Task<TGetOutputDto> MapToGetOutputDtoAsync(TEntity entity)
     {
-        return ObjectMapper.Map<TEntity, TGetOutputDto>(entity);
+        var result = ObjectMapper.Map<TEntity, TGetOutputDto>(entity);
+        return Task.FromResult(result);
+    }
+
+    /// <summary>
+    /// Maps a single <typeparamref name="TEntity"/> to <typeparamref name="TCustomDto"/> for streaming scenarios.
+    /// This method is called for each entity during streaming operations.
+    /// </summary>
+    /// <typeparam name="TCustomDto">The target DTO type</typeparam>
+    /// <param name="entity">The entity to map</param>
+    /// <returns>The mapped DTO</returns>
+    protected virtual Task<TCustomDto> MapToGetListOutputDtoStreamAsync<TCustomDto>(TEntity entity)
+    {
+        var result = ObjectMapper.Map<TEntity, TCustomDto>(entity);
+        return Task.FromResult(result);
     }
 
     /// <summary>
@@ -523,7 +592,8 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
         //return await ObjectMapper.ProjectToType<TCustomDto>(query).ToListAsync();
         return ObjectMapper.Map<List<TEntity>, List<TCustomDto>>(await query.ToListAsync());
     }
-   
+
+
     #endregion
     protected class ListResult(IReadOnlyList<dynamic> results)
     {
