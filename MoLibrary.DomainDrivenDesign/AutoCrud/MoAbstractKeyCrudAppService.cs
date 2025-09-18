@@ -7,6 +7,7 @@ using System.Linq.Dynamic.Core;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Mapster;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.DynamicLinq;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,6 +19,7 @@ using MoLibrary.Repository.EntityInterfaces;
 using MoLibrary.Repository.EntityInterfaces.Auditing;
 using MoLibrary.Repository.Exceptions;
 using MoLibrary.Repository.Interfaces;
+using MoLibrary.Repository.Transaction;
 using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.MoResponse;
 
@@ -191,10 +193,14 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
     /// <param name="input">The input parameters for the list operation</param>
     /// <param name="cancellationToken">Cancellation token for the async operation</param>
     /// <returns>An async enumerable of mapped entity DTOs</returns>
-    public virtual async IAsyncEnumerable<TGetListOutputDto> GetListStreamAsync(
+    [HttpPost]
+    public virtual async IAsyncEnumerable<TGetListOutputDto> ListStreamAsync(
         TGetListInput input, 
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+        //巨坑： IAsyncEnumerable 类型会丢失 AsyncLocal 值，进入到这个方法就已经丢失了
+        var unitOfWork = ServiceProvider.GetRequiredService<IMoUnitOfWorkManager>();
+        using var uow = unitOfWork.Begin();
         var query = await CreateFilteredQueryAsync(input);
         
         await foreach (var dto in InnerGetListStreamAsync<TGetListOutputDto>(input, query, cancellationToken))
@@ -202,7 +208,6 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
             yield return dto;
         }
     }
-
     /// <summary>
     /// Internal implementation for streaming list retrieval with custom DTO type.
     /// Supports filtering, sorting, and incremental processing without loading entire result set into memory.
