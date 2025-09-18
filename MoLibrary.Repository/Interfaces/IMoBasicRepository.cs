@@ -194,7 +194,7 @@ public interface IMoBasicRepository<TEntity, in TKey> : IMoBasicRepository<TEnti
     Task DeleteManyAsync(IEnumerable<TKey> ids, bool autoSave = false, CancellationToken cancellationToken = default);
     /// <summary>
     /// Gets an entity with given primary key.
-    /// Throws <see cref="T:Volo.Abp.Domain.Entities.EntityNotFoundException" /> if can not find an entity with given id.
+    /// Throws <see cref="T:EntityNotFoundException" /> if can not find an entity with given id.
     /// </summary>
     /// <param name="id">Primary key of the entity to get</param>
     /// <param name="includeDetails">Set true to include all children of this entity</param>
