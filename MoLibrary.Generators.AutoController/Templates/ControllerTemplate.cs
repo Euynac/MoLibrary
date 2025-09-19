@@ -58,8 +58,11 @@ internal static class ControllerTemplate
             ? string.Empty 
             : $"{candidate.DocumentationComment}\n";
 
+        // For CQRS convention: use empty route if no explicit route provided
+        var routeTemplate = string.IsNullOrEmpty(candidate.HttpMethodRoute) ? "" : $"(\"{candidate.HttpMethodRoute}\")";
+
         return $$"""
-        {{documentationComment}}        [{{candidate.HttpMethodAttribute}}("{{candidate.HttpMethodRoute}}")]
+        {{documentationComment}}        [{{candidate.HttpMethodAttribute}}{{routeTemplate}}]
                 [{{GeneratorConstants.AttributeNames.ProducesResponseType}}((int) HttpStatusCode.Accepted)]
                 [{{GeneratorConstants.AttributeNames.ProducesResponseType}}((int) HttpStatusCode.BadRequest)]
                 [{{GeneratorConstants.AttributeNames.ProducesResponseType}}(typeof({{string.Format(GeneratorConstants.ResponseTypes.GenericResponseTemplate, candidate.ResponseType)}}), (int) HttpStatusCode.OK)]
