@@ -10,6 +10,7 @@ internal static class AttributeHelper
 {
     /// <summary>
     /// Extracts the Route attribute value from a class declaration with fallback to configuration.
+    /// For CQRS convention, this returns the base route without method-specific parts.
     /// </summary>
     /// <param name="classDeclaration">The class declaration to analyze</param>
     /// <param name="config">The generator configuration for fallback routing</param>
@@ -21,7 +22,7 @@ internal static class AttributeHelper
         if (explicitRoute != null)
             return explicitRoute;
 
-        // Fallback to configured default routing if allowed
+        // Fallback to configured default routing if allowed (base route only)
         if (!config.RequireExplicitRoutes && config.HasDefaultRouting)
         {
             return NamingHelper.GenerateDefaultRoute(classDeclaration, config);
@@ -81,6 +82,32 @@ internal static class AttributeHelper
             GeneratorConstants.AttributeNames.HttpPatch => true,
             _ => false
         };
+    }
+
+    /// <summary>
+    /// Extracts the HTTP method attribute and its route from a method declaration with CQRS fallback.
+    /// For CQRS convention, generates method-specific route based on handler class name.
+    /// </summary>
+    /// <param name="method">The method declaration to analyze</param>
+    /// <param name="className">The class name for CQRS fallback detection</param>
+    /// <returns>Tuple containing the HTTP method name and route</returns>
+    public static (string httpMethod, string? route) ExtractHttpMethodAndRoute(MethodDeclarationSyntax method, string className)
+    {
+        var attr = method.AttributeLists
+            .SelectMany(al => al.Attributes)
+            .FirstOrDefault(a => IsHttpMethodAttribute(a.Name.ToString()));
+
+        if (attr != null)
+        {
+            var httpMethod = attr.Name.ToString();
+            var routeArgument = attr.ArgumentList?.Arguments.FirstOrDefault()?.ToString()?.Trim('"');
+            return (httpMethod, routeArgument);
+        }
+
+        // CQRS fallback: if no HTTP method attribute, determine default based on handler type
+        var defaultHttpMethod = NamingHelper.GetDefaultHttpMethod(className);
+        var methodRoute = NamingHelper.ExtractCqrsMethodName(className);
+        return (defaultHttpMethod, methodRoute);
     }
 
     /// <summary>

@@ -131,11 +131,80 @@ public class AdvancedFlightSearchQueryHandler : ApplicationService<...> { }
 - Set `RequireExplicitRoutes = true` for strict control
 - Document your routing conventions in team guidelines
 
+## CQRS Method Routing Convention
+
+The generator now supports CQRS-based method routing with automatic HTTP method detection:
+
+### Basic Pattern
+- **Controller Route**: `{DefaultRoutePrefix}/{DomainName}` (if DomainName exists) or `{DefaultRoutePrefix}`
+- **Method Route**: `{method-name}` (kebab-case) placed on individual methods
+- **Method Name Conversion**: Handler class names are converted to kebab-case
+  - `QueryGetUserName` → `get-user-name`
+  - `CommandCreateUser` → `create-user`
+- **HTTP Method Detection**:
+  - Query handlers default to `HttpGet`
+  - Command handlers default to `HttpPost`
+
+### Example
+
+```csharp
+using MoLibrary.DomainDrivenDesign.AutoController.Attributes;
+
+[assembly: AutoControllerGeneratorConfig(
+    DefaultRoutePrefix = "api/v1",
+    DomainName = "User"
+)]
+
+// No HTTP method attribute needed!
+public class QueryGetUserProfileHandler : ApplicationService<QueryGetUserProfile, GetUserProfileResponse>
+{
+    public async Task<GetUserProfileResponse> Handle(QueryGetUserProfile request)
+    {
+        // Implementation
+        return new GetUserProfileResponse();
+    }
+}
+
+// Generated controller: [Route("api/v1/User")]
+// Generated method: [HttpGet("get-user-profile")]
+// Final URL: GET api/v1/User/get-user-profile
+```
+
+### Override Behavior
+
+You can still override the defaults:
+
+```csharp
+public class QueryGetUserProfileHandler : ApplicationService<QueryGetUserProfile, GetUserProfileResponse>
+{
+    [HttpPost("custom-endpoint")]  // Overrides default GET with custom route
+    public async Task<GetUserProfileResponse> Handle(QueryGetUserProfile request)
+    {
+        // Implementation
+    }
+}
+
+// Alternative: Override just the HTTP method, keep auto-generated route
+public class QueryGetUserProfileHandler : ApplicationService<QueryGetUserProfile, GetUserProfileResponse>
+{
+    [HttpPost]  // Empty template uses auto-generated method route
+    public async Task<GetUserProfileResponse> Handle(QueryGetUserProfile request)
+    {
+        // Implementation
+    }
+}
+
+// Generated controller: [Route("api/v1/User")]
+// Generated method: [HttpPost("get-user-profile")]
+// Final URL: POST api/v1/User/get-user-profile
+```
+
 ## Benefits
 
-- **Reduced Boilerplate**: Less repetitive `[Route]` attributes
+- **Reduced Boilerplate**: Less repetitive `[Route]` and `[Http*]` attributes
 - **Consistency**: Enforced routing patterns across services
 - **Domain Organization**: Clear separation by domain when using `DomainName`
+- **CQRS Convention**: Automatic HTTP method selection based on handler type
 - **Maintainability**: Centralized route configuration
 - **Flexibility**: Mix explicit and default routing as needed
 - **Compile-Time**: All configuration happens at build time

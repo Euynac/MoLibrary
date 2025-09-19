@@ -47,15 +47,73 @@ public class SearchFlightQueryHandler : ApplicationService<SearchFlightQuery, Se
 
 ## Generated Routes
 
+### CQRS Convention (New)
+
 With configuration `DefaultRoutePrefix = "api/v1", DomainName = "Flight"`:
 
-- `GetFlightQueryHandler` → Route: `api/v1/Flight`
-- `SearchFlightQueryHandler` → Route: `custom/flight/search` (explicit override)
+```csharp
+// No HTTP attributes needed! Follows CQRS convention
+public class QueryGetFlightHandler : ApplicationService<QueryGetFlight, GetFlightResponse>
+{
+    public async Task<GetFlightResponse> Handle(QueryGetFlight request)
+    {
+        // Implementation
+        return new GetFlightResponse();
+    }
+}
 
-With configuration `DefaultRoutePrefix = "api/v1"` (no DomainName):
+public class CommandCreateFlightHandler : ApplicationService<CommandCreateFlight, CreateFlightResponse>
+{
+    public async Task<CreateFlightResponse> Handle(CommandCreateFlight request)
+    {
+        // Implementation
+        return new CreateFlightResponse();
+    }
+}
+```
 
-- `GetFlightQueryHandler` → Route: `api/v1`
-- `SearchFlightQueryHandler` → Route: `custom/flight/search` (explicit override)
+Generated code:
+- `QueryGetFlightHandler` → Controller: `[Route("api/v1/Flight")]`, Method: `[HttpGet("get-flight")]`
+- `CommandCreateFlightHandler` → Controller: `[Route("api/v1/Flight")]`, Method: `[HttpPost("create-flight")]`
+
+Final URLs:
+- `GET api/v1/Flight/get-flight`
+- `POST api/v1/Flight/create-flight`
+
+### Classic Convention (Still Supported)
+
+With explicit HTTP attributes:
+
+```csharp
+public class GetFlightQueryHandler : ApplicationService<GetFlightQuery, GetFlightResponse>
+{
+    [HttpGet]
+    public async Task<GetFlightResponse> Handle(GetFlightQuery request)
+    {
+        // Implementation
+        return new GetFlightResponse();
+    }
+}
+
+[Route("custom/flight/search")]
+public class SearchFlightQueryHandler : ApplicationService<SearchFlightQuery, SearchFlightResponse>
+{
+    [HttpGet]
+    public async Task<SearchFlightResponse> Handle(SearchFlightQuery request)
+    {
+        // Implementation
+        return new SearchFlightResponse();
+    }
+}
+```
+
+Generated code:
+- `GetFlightQueryHandler` → Controller: `[Route("api/v1/Flight")]`, Method: `[HttpGet]` (no method route)
+- `SearchFlightQueryHandler` → Controller: `[Route("custom/flight/search")]`, Method: `[HttpGet]`
+
+Final URLs:
+- `GET api/v1/Flight` (method uses controller route directly)
+- `GET custom/flight/search`
 
 ## Project References
 

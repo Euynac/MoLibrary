@@ -44,14 +44,14 @@ internal static class HandlerCandidateExtractor
         if (responseType == null) 
             return null;
 
-        // Find the method decorated with an HTTP method attribute
-        var method = FindHttpMethodDecoratedMethod(classDeclaration);
+        // Find the method (either decorated with an HTTP method attribute or any public method for CQRS)
+        var method = FindHttpMethodDecoratedMethod(classDeclaration) ?? FindPublicMethod(classDeclaration);
         if (method == null)
             return null;
 
-        // Retrieve the HTTP method name and its route
-        var (httpMethod, httpMethodRoute) = AttributeHelper.ExtractHttpMethodAndRoute(method);
-        if (string.IsNullOrEmpty(httpMethod)) 
+        // Retrieve the HTTP method name and its route (supports CQRS fallback)
+        var (httpMethod, httpMethodRoute) = AttributeHelper.ExtractHttpMethodAndRoute(method, className);
+        if (string.IsNullOrEmpty(httpMethod))
             return null;
 
         // Get the request type from the method's parameter
@@ -109,6 +109,17 @@ internal static class HandlerCandidateExtractor
             .FirstOrDefault(m => m.AttributeLists
                 .SelectMany(al => al.Attributes)
                 .Any(a => AttributeHelper.IsHttpMethodAttribute(a.Name.ToString())));
+    }
+
+    /// <summary>
+    /// Finds any public method for CQRS convention fallback.
+    /// </summary>
+    /// <param name="classDeclaration">The class declaration to analyze</param>
+    /// <returns>The first public method declaration or null if not found</returns>
+    private static MethodDeclarationSyntax? FindPublicMethod(ClassDeclarationSyntax classDeclaration)
+    {
+        return classDeclaration.Members.OfType<MethodDeclarationSyntax>()
+            .FirstOrDefault(m => m.Modifiers.Any(mod => mod.IsKind(SyntaxKind.PublicKeyword)));
     }
 
     /// <summary>
