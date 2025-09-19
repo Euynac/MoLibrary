@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using MoLibrary.Generators.AutoController.Constants;
+using MoLibrary.Generators.AutoController.Diagnostics;
 using MoLibrary.Generators.AutoController.Models;
 
 namespace MoLibrary.Generators.AutoController.Helpers;
@@ -9,7 +11,44 @@ namespace MoLibrary.Generators.AutoController.Helpers;
 internal static class AttributeHelper
 {
     /// <summary>
-    /// Extracts the Route attribute value from a class declaration with fallback to configuration.
+    /// Extracts the Route attribute value from a class declaration with fallback to configuration and error reporting.
+    /// For CQRS convention, this returns the base route without method-specific parts.
+    /// </summary>
+    /// <param name="classDeclaration">The class declaration to analyze</param>
+    /// <param name="config">The generator configuration for fallback routing</param>
+    /// <param name="context">The source production context for error reporting (optional)</param>
+    /// <returns>The route value or null if not found and no fallback available</returns>
+    public static string? ExtractRouteAttribute(ClassDeclarationSyntax classDeclaration, GeneratorConfig config, SourceProductionContext? context = null)
+    {
+        // First, try to find explicit Route attribute
+        var explicitRoute = ExtractExplicitRouteAttribute(classDeclaration);
+        if (explicitRoute != null)
+        {
+            // Validate explicit route format if context is provided
+            if (context.HasValue && !IsValidRouteFormat(explicitRoute))
+            {
+                var diagnostic = Diagnostic.Create(
+                    DiagnosticDescriptors.InvalidRouteTemplate,
+                    classDeclaration.GetLocation(),
+                    explicitRoute,
+                    classDeclaration.Identifier.Text);
+                context.Value.ReportDiagnostic(diagnostic);
+                return null;
+            }
+            return explicitRoute;
+        }
+
+        // Fallback to configured default routing if allowed (base route only)
+        if (!config.RequireExplicitRoutes && config.HasDefaultRouting)
+        {
+            return NamingHelper.GenerateDefaultRoute(classDeclaration, config);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Extracts the Route attribute value from a class declaration with fallback to configuration (compatibility overload).
     /// For CQRS convention, this returns the base route without method-specific parts.
     /// </summary>
     /// <param name="classDeclaration">The class declaration to analyze</param>
@@ -29,6 +68,28 @@ internal static class AttributeHelper
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Validates basic route format to catch common mistakes.
+    /// </summary>
+    /// <param name="route">The route to validate</param>
+    /// <returns>True if the route format is valid, false otherwise</returns>
+    private static bool IsValidRouteFormat(string route)
+    {
+        if (string.IsNullOrWhiteSpace(route))
+            return false;
+
+        // Check for common route format issues
+        if (route.Contains("//") || route.Contains("\\") || route.Contains(" "))
+            return false;
+
+        // Check for invalid characters
+        var invalidChars = new[] { '<', '>', '"', '\'', '\n', '\r', '\t' };
+        if (route.IndexOfAny(invalidChars) >= 0)
+            return false;
+
+        return true;
     }
 
     /// <summary>

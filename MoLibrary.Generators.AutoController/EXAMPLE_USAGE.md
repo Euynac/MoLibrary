@@ -115,6 +115,62 @@ Final URLs:
 - `GET api/v1/Flight` (method uses controller route directly)
 - `GET custom/flight/search`
 
+## Error Handling and Build Safety
+
+The AutoController generator includes comprehensive error detection that will cause builds to fail with detailed messages when issues are found:
+
+### Common Error Scenarios
+
+```csharp
+// ❌ AC0001: Missing configuration when using default routing
+// No [AutoControllerGeneratorConfig] attribute and RequireExplicitRoutes = false
+
+// ❌ AC0002: Invalid route prefix format
+[assembly: AutoControllerGeneratorConfig(DefaultRoutePrefix = "/api/v1/")]  // Leading/trailing slashes
+
+// ❌ AC0003: Invalid inheritance
+public class BadHandler : ApplicationService  // Missing generic arguments
+{
+    // ...
+}
+
+// ❌ AC0007: Route conflicts
+public class GetUserHandler : ApplicationService<GetUserQuery, GetUserResponse>
+{
+    [HttpGet("user")]  // Same route as another handler
+    public async Task<GetUserResponse> Handle(GetUserQuery request) { ... }
+}
+
+public class FindUserHandler : ApplicationService<FindUserQuery, FindUserResponse>
+{
+    [HttpGet("user")]  // ❌ Conflict with GetUserHandler
+    public async Task<FindUserResponse> Handle(FindUserQuery request) { ... }
+}
+```
+
+### Build Output Examples
+
+When errors occur, you'll see detailed build failures:
+
+```console
+error AC0001: Missing [AutoControllerGeneratorConfig] attribute when default routing is required
+  Add [assembly: AutoControllerGeneratorConfig(DefaultRoutePrefix = "api/v1")] to Program.cs
+
+error AC0003: Class 'BadHandler' does not properly inherit from ApplicationService<TRequest, TResponse>
+  Ensure the base class has exactly 2 generic type arguments
+
+error AC0007: Route conflict detected. Multiple handlers use route 'api/v1/user' with GET method: GetUser, FindUser
+  Ensure each handler has a unique route or HTTP method combination
+```
+
+### Error Prevention Tips
+
+1. **Always configure properly**: Include the assembly-level attribute with valid route prefixes
+2. **Use unique routes**: Ensure each handler has a distinct route/HTTP method combination
+3. **Follow naming conventions**: Use `Query*Handler` or `Command*Handler` for CQRS auto-detection
+4. **Validate inheritance**: Ensure proper `ApplicationService<TRequest, TResponse>` inheritance
+5. **Check method signatures**: Use `Task<TResponse> Handle(TRequest request)` pattern
+
 ## Project References
 
 Make sure your target project references:
@@ -125,3 +181,13 @@ Make sure your target project references:
   <Analyzer Include="MoLibrary.Generators.AutoController" Version="..." />
 </ItemGroup>
 ```
+
+## Troubleshooting
+
+If builds fail with AutoController errors:
+
+1. **Check configuration**: Verify your `[AutoControllerGeneratorConfig]` attribute syntax
+2. **Review class structure**: Ensure proper inheritance from `ApplicationService<TRequest, TResponse>`
+3. **Validate routes**: Look for duplicate route/HTTP method combinations
+4. **Check naming**: Follow CQRS conventions for automatic HTTP method detection
+5. **Rebuild solution**: Source generators may require a clean rebuild to detect changes
