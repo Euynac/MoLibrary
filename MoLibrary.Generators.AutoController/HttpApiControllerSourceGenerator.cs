@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -5,6 +6,7 @@ using MoLibrary.Generators.AutoController.Constants;
 using MoLibrary.Generators.AutoController.Extractors;
 using MoLibrary.Generators.AutoController.Generators;
 using MoLibrary.Generators.AutoController.Helpers;
+using MoLibrary.Generators.AutoController.Models;
 
 namespace MoLibrary.Generators.AutoController;
 
@@ -32,27 +34,53 @@ public class HttpApiControllerSourceGenerator : IIncrementalGenerator
                 transform: static (ctx, _) => (ClassDeclarationSyntax)ctx.Node)
             .Where(static c => c.BaseList!.Types.Any(t => t.ToString().Contains(GeneratorConstants.ClassNames.ApplicationService)));
 
-        // Extract configuration from assembly-level attributes
+        // Extract configuration from assembly-level attributes with error reporting
         var configProvider = context.CompilationProvider
             .Select((compilation, token) => ConfigurationHelper.ExtractConfiguration(compilation));
 
-        // Transform each candidate class into a HandlerCandidate
-        var handlerCandidates = classDeclarations
+        // Transform each candidate class into a HandlerCandidate with comprehensive error reporting
+        var handlerCandidatesWithErrors = classDeclarations
             .Combine(context.CompilationProvider)
             .Combine(configProvider)
             .Select((tuple, token) =>
             {
                 var (classDeclaration, compilation) = tuple.Left;
                 var config = tuple.Right;
-                return HandlerCandidateExtractor.ExtractHandlerCandidate(classDeclaration, compilation, config);
+                return new { classDeclaration, compilation, config };
             })
-            .Where(candidate => candidate is not null)
             .Collect();
 
-        // After processing all candidates, generate controllers grouped by Route and HandlerType
-        context.RegisterSourceOutput(handlerCandidates, (spc, candidates) =>
+        // Process all candidates and generate controllers with error handling
+        context.RegisterSourceOutput(handlerCandidatesWithErrors, (spc, candidatesInfo) =>
         {
-            ControllerCodeGenerator.GenerateControllers(spc, candidates.Where(c => c is not null).Select(c => c!).ToList());
+            var validCandidates = new List<HandlerCandidate>();
+
+            foreach (var info in candidatesInfo)
+            {
+                // Extract configuration with error reporting
+                var config = ConfigurationHelper.ExtractConfiguration(info.compilation, spc);
+                if (config == null)
+                    continue; // Configuration extraction failed, error already reported
+
+                // Extract handler candidate with error reporting
+                var candidate = HandlerCandidateExtractor.ExtractHandlerCandidate(
+                    info.classDeclaration,
+                    info.compilation,
+                    config,
+                    spc);
+
+                if (candidate != null)
+                {
+                    validCandidates.Add(candidate);
+                }
+                // If candidate is null, errors have already been reported by the extractor
+            }
+
+            // Generate controllers only if we have valid candidates
+            if (validCandidates.Any())
+            {
+                ControllerCodeGenerator.GenerateControllers(spc, validCandidates);
+            }
         });
     }
 }

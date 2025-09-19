@@ -199,6 +199,75 @@ public class QueryGetUserProfileHandler : ApplicationService<QueryGetUserProfile
 // Final URL: POST api/v1/User/get-user-profile
 ```
 
+## Error Handling and Build Failures
+
+The AutoController source generator includes comprehensive error handling that will cause builds to fail with detailed error messages when issues are detected:
+
+### Error Codes and Messages
+
+| Error Code | Description | Example Message |
+|------------|-------------|-----------------|
+| AC0001 | Missing configuration | Missing [AutoControllerGeneratorConfig] attribute when default routing is required |
+| AC0002 | Invalid route prefix | DefaultRoutePrefix '/api/v1/' is invalid. Remove leading/trailing slashes |
+| AC0003 | Invalid inheritance | Class 'MyHandler' does not properly inherit from ApplicationService<TRequest, TResponse> |
+| AC0004 | Missing Handle method | Class 'MyHandler' does not contain a public Handle method |
+| AC0005 | Invalid method signature | Handle method has invalid signature. Expected: Task<TResponse> Handle(TRequest request) |
+| AC0006 | Missing HTTP attribute | Method requires HTTP method attribute or CQRS naming convention |
+| AC0007 | Route conflict | Multiple handlers use route 'api/v1/user' with GET method |
+| AC0008 | Configuration failed | Failed to extract configuration from assembly attributes |
+| AC0009 | Handler extraction failed | Failed to extract handler information from class |
+| AC0010 | Code generation failed | Failed to generate controller code |
+| AC0011 | Invalid route template | Route template contains invalid characters or format |
+| AC0012 | Unknown handler type | Cannot determine if handler is Command or Query type |
+
+### Build Failure Examples
+
+When errors occur, the build will fail with clear messages:
+
+```console
+error AC0001: Missing [AutoControllerGeneratorConfig] attribute when default routing is required
+  Add [assembly: AutoControllerGeneratorConfig(DefaultRoutePrefix = "api/v1")] to Program.cs
+
+error AC0003: Class 'GetUserHandler' does not properly inherit from ApplicationService<TRequest, TResponse>
+  Ensure the base class has exactly 2 generic type arguments
+
+error AC0007: Route conflict detected. Multiple handlers use route 'api/v1/user' with GET method: GetUser, FindUser
+  Ensure each handler has a unique route or HTTP method combination
+```
+
+### Configuration Validation
+
+The generator validates configuration at build time:
+
+```csharp
+// ❌ This will cause build failure (leading slash)
+[assembly: AutoControllerGeneratorConfig(DefaultRoutePrefix = "/api/v1")]
+
+// ✅ Correct format
+[assembly: AutoControllerGeneratorConfig(DefaultRoutePrefix = "api/v1")]
+```
+
+### Handler Validation
+
+Handler classes are validated for proper structure:
+
+```csharp
+// ❌ Missing generic arguments - will cause AC0003 error
+public class BadHandler : ApplicationService
+{
+    // ...
+}
+
+// ✅ Correct inheritance
+public class GoodHandler : ApplicationService<GetUserQuery, GetUserResponse>
+{
+    public async Task<GetUserResponse> Handle(GetUserQuery request)
+    {
+        // ...
+    }
+}
+```
+
 ## Benefits
 
 - **Reduced Boilerplate**: Less repetitive `[Route]` and `[Http*]` attributes
@@ -208,3 +277,5 @@ public class QueryGetUserProfileHandler : ApplicationService<QueryGetUserProfile
 - **Maintainability**: Centralized route configuration
 - **Flexibility**: Mix explicit and default routing as needed
 - **Compile-Time**: All configuration happens at build time
+- **Build Safety**: Comprehensive error detection prevents runtime issues
+- **Developer Experience**: Clear error messages with actionable guidance
