@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using MoLibrary.Generators.AutoController.Constants;
 using MoLibrary.Generators.AutoController.Extractors;
 using MoLibrary.Generators.AutoController.Generators;
+using MoLibrary.Generators.AutoController.Helpers;
 
 namespace MoLibrary.Generators.AutoController;
 
@@ -31,10 +32,20 @@ public class HttpApiControllerSourceGenerator : IIncrementalGenerator
                 transform: static (ctx, _) => (ClassDeclarationSyntax)ctx.Node)
             .Where(static c => c.BaseList!.Types.Any(t => t.ToString().Contains(GeneratorConstants.ClassNames.ApplicationService)));
 
+        // Extract configuration from assembly-level attributes
+        var configProvider = context.CompilationProvider
+            .Select((compilation, token) => ConfigurationHelper.ExtractConfiguration(compilation));
+
         // Transform each candidate class into a HandlerCandidate
         var handlerCandidates = classDeclarations
             .Combine(context.CompilationProvider)
-            .Select((pair, token) => HandlerCandidateExtractor.ExtractHandlerCandidate(pair.Left, pair.Right))
+            .Combine(configProvider)
+            .Select((tuple, token) =>
+            {
+                var (classDeclaration, compilation) = tuple.Left;
+                var config = tuple.Right;
+                return HandlerCandidateExtractor.ExtractHandlerCandidate(classDeclaration, compilation, config);
+            })
             .Where(candidate => candidate is not null)
             .Collect();
 
