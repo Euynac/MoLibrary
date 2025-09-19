@@ -2,23 +2,46 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using MoLibrary.Generators.AutoController.Constants;
+using MoLibrary.Generators.AutoController.Models;
 
 namespace MoLibrary.Generators.AutoController.Helpers;
 
 internal static class AttributeHelper
 {
     /// <summary>
-    /// Extracts the Route attribute value from a class declaration.
+    /// Extracts the Route attribute value from a class declaration with fallback to configuration.
     /// </summary>
     /// <param name="classDeclaration">The class declaration to analyze</param>
-    /// <returns>The route value or null if not found</returns>
-    public static string? ExtractRouteAttribute(ClassDeclarationSyntax classDeclaration)
+    /// <param name="config">The generator configuration for fallback routing</param>
+    /// <returns>The route value or null if not found and no fallback available</returns>
+    public static string? ExtractRouteAttribute(ClassDeclarationSyntax classDeclaration, GeneratorConfig config)
+    {
+        // First, try to find explicit Route attribute
+        var explicitRoute = ExtractExplicitRouteAttribute(classDeclaration);
+        if (explicitRoute != null)
+            return explicitRoute;
+
+        // Fallback to configured default routing if allowed
+        if (!config.RequireExplicitRoutes && config.HasDefaultRouting)
+        {
+            return NamingHelper.GenerateDefaultRoute(classDeclaration, config);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Extracts explicit Route attribute value from a class declaration.
+    /// </summary>
+    /// <param name="classDeclaration">The class declaration to analyze</param>
+    /// <returns>The explicit route value or null if not found</returns>
+    private static string? ExtractExplicitRouteAttribute(ClassDeclarationSyntax classDeclaration)
     {
         var routeAttribute = classDeclaration.AttributeLists
             .SelectMany(al => al.Attributes)
             .FirstOrDefault(attr => attr.Name.ToString() == GeneratorConstants.AttributeNames.Route);
 
-        if (routeAttribute == null) 
+        if (routeAttribute == null)
             return null;
 
         var routeArg = routeAttribute.ArgumentList?.Arguments.FirstOrDefault()?.ToString()?.Trim('"');

@@ -17,12 +17,13 @@ internal static class HandlerCandidateExtractor
     /// </summary>
     /// <param name="classDeclaration">The class declaration to analyze</param>
     /// <param name="compilation">The compilation context</param>
+    /// <param name="config">The generator configuration</param>
     /// <returns>A HandlerCandidate if extraction is successful, null otherwise</returns>
-    public static HandlerCandidate? ExtractHandlerCandidate(ClassDeclarationSyntax classDeclaration, Compilation compilation)
+    public static HandlerCandidate? ExtractHandlerCandidate(ClassDeclarationSyntax classDeclaration, Compilation compilation, Models.GeneratorConfig config)
     {
-        // Extract and validate the Route attribute
-        var routeArg = AttributeHelper.ExtractRouteAttribute(classDeclaration);
-        if (routeArg == null) 
+        // Extract and validate the Route attribute (with fallback to configuration)
+        var routeArg = AttributeHelper.ExtractRouteAttribute(classDeclaration, config);
+        if (routeArg == null)
             return null;
 
         // Extract Tags attributes
@@ -163,7 +164,7 @@ internal static class HandlerCandidateExtractor
         var lines = summaryContent.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
             .Select(line => line.Replace("///", "").Trim())
             .Where(line => !string.IsNullOrWhiteSpace(line))
-            .Select(line => $"        /// {line}");
+            .Select(line => $"        /// {line}").ToList();
 
         if (!lines.Any())
             return string.Empty;

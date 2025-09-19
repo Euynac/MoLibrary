@@ -1,6 +1,8 @@
 using System;
 using System.Linq;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using MoLibrary.Generators.AutoController.Constants;
+using MoLibrary.Generators.AutoController.Models;
 
 namespace MoLibrary.Generators.AutoController.Helpers;
 
@@ -71,5 +73,49 @@ internal static class NamingHelper
     public static string GenerateControllerFileName(string controllerName)
     {
         return $"{controllerName}.Generated.cs";
+    }
+
+    /// <summary>
+    /// Generates a default route based on the configuration.
+    /// Pattern: {DefaultRoutePrefix}/{DomainName} if DomainName exists, otherwise just {DefaultRoutePrefix}
+    /// </summary>
+    /// <param name="classDeclaration">The class declaration</param>
+    /// <param name="config">The generator configuration</param>
+    /// <returns>The generated route or null if generation is not possible</returns>
+    public static string? GenerateDefaultRoute(ClassDeclarationSyntax classDeclaration, GeneratorConfig config)
+    {
+        if (!config.HasDefaultRouting)
+            return null;
+
+        if (string.IsNullOrEmpty(config.DefaultRoutePrefix))
+            return null;
+
+        var routePrefix = config.DefaultRoutePrefix!.TrimEnd('/');
+
+        // Pattern: {RoutePrefix}/{DomainName} if DomainName exists, otherwise just {RoutePrefix}
+        if (!string.IsNullOrEmpty(config.DomainName))
+        {
+            return $"{routePrefix}/{config.DomainName}";
+        }
+
+        // Just use the route prefix
+        return routePrefix;
+    }
+
+    /// <summary>
+    /// Extracts the service name from a class name by removing common suffixes.
+    /// </summary>
+    /// <param name="className">The class name to process</param>
+    /// <returns>The extracted service name</returns>
+    public static string ExtractServiceName(string className)
+    {
+        var serviceName = className
+            .Replace(GeneratorConstants.HandlerTypes.CommandHandler, "")
+            .Replace(GeneratorConstants.HandlerTypes.QueryHandler, "")
+            .Replace("Handler", "")
+            .Replace("Service", "")
+            .Replace("AppService", "");
+
+        return ConvertToPascalCase(serviceName);
     }
 }
