@@ -80,20 +80,31 @@ public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger,
                     documentAssemblies.AddRange(services.GetOrCreateMoModuleSystemTypeFinder().GetAssemblies().Select(p => p.GetName().Name!));
                 }
 
+                var xmlFilePaths = new List<string>();
                 foreach (var name in documentAssemblies.Distinct())
                 {
                     var filePath = Path.Combine(AppContext.BaseDirectory, $"{name}.xml");
                     if (File.Exists(filePath))
                     {
-                        options.IncludeXmlComments(filePath);
+                        xmlFilePaths.Add(filePath);
                     }
                     else if (!name.StartsWith(nameof(MoLibrary)))
                     {
                         Logger.LogWarning($"Swagger XML file not found: {filePath}, you need to add <GenerateDocumentationFile>True</GenerateDocumentationFile> into your .csproj file to generate swagger documents");
                     }
                 }
-                //似乎必须写在IncludeXmlComments下面，而且只支持/// <inheritdoc /> 一行
-                options.IncludeXmlCommentsFromInheritDocs(includeRemarks: true, excludedTypes: typeof(string));//扩展支持inherit doc
+
+                if (!Option.DisableInheritDocFilter)
+                {
+                    options.IncludeXmlCommentsWithInheritDoc(xmlFilePaths, includeControllerXmlComments: true, Logger);
+                }
+                else
+                {
+                    foreach (var filePath in xmlFilePaths)
+                    {
+                        options.IncludeXmlComments(filePath);
+                    }
+                }
             }
           
 
@@ -181,5 +192,10 @@ public class ModuleSwaggerOption : MoModuleOption<ModuleSwagger>
     /// 是否使用认证
     /// </summary>
     public bool UseAuth { get; set; }
+
+    /// <summary>
+    /// 是否禁用inheritdoc标签处理，支持从被引用的方法继承XML文档注释。
+    /// </summary>
+    public bool DisableInheritDocFilter { get; set; }
 
 }
