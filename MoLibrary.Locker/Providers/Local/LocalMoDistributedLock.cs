@@ -15,15 +15,15 @@ public class LocalMoDistributedLock(IDistributedLockKeyNormalizer distributedLoc
     protected IDistributedLockKeyNormalizer DistributedLockKeyNormalizer { get; } = distributedLockKeyNormalizer;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public async Task<IMoDistributedLockHandle?> TryAcquireAsync(
-        string name,
-        TimeSpan timeout = default,
+    public async Task<IMoDistributedLockHandle?> TryAcquireAsync(string name,
+        string? owner = null,
+        TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
         //Check.NotNullOrWhiteSpace(name, nameof(name));
         var key = DistributedLockKeyNormalizer.NormalizeKey(name);
 
-        var timeoutReleaser = await _localSyncObjects.LockOrNullAsync(key, timeout, cancellationToken);
+        var timeoutReleaser = await _localSyncObjects.LockOrNullAsync(key, timeout?? TimeSpan.FromMinutes(2), cancellationToken);
         if (timeoutReleaser is not null)
         {
             return new LocalMoDistributedLockHandle(timeoutReleaser);

@@ -28,7 +28,12 @@ public class MetadataForKafka : CommunicationMetadata<KafkaCore>
     /// <summary>
     /// Security protocol for authentication
     /// </summary>
-    public SecurityProtocol SecurityProtocol { get; set; } = SecurityProtocol.Plaintext;
+    public SecurityProtocol SecurityProtocol { get; set; } = SecurityProtocol.SaslPlaintext;
+
+    /// <summary>
+    /// SaslMechanism
+    /// </summary>
+    public SaslMechanism SaslMechanism { get; set; } = SaslMechanism.ScramSha512;
     
     /// <summary>
     /// Username for SASL authentication (optional)

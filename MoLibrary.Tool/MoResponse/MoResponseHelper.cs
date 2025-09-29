@@ -181,7 +181,7 @@ public static class MoResponseHelper
     /// <param name="res"></param>
     /// <param name="data"></param>
     /// <returns></returns>
-    public static bool IsOk<T>(this Res<T> res, [NotNullWhen(true)] out T data)
+    public static bool IsOk<T>(this Res<T> res,  [MaybeNullWhen(false)] out T data)
     {
         data = res.Data!;
         return res.IsOk();
