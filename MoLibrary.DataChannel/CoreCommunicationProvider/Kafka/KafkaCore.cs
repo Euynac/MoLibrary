@@ -84,7 +84,7 @@ public class KafkaCore(MetadataForKafka metadata, ILogger<KafkaCore> logger) : C
 
                 if (!string.IsNullOrEmpty(Metadata.Username) && !string.IsNullOrEmpty(Metadata.Password))
                 {
-                    consumerConfig.SaslMechanism = SaslMechanism.Plain;
+                    consumerConfig.SaslMechanism = Metadata.SaslMechanism;
                     consumerConfig.SaslUsername = Metadata.Username;
                     consumerConfig.SaslPassword = Metadata.Password;
                 }
@@ -96,7 +96,7 @@ public class KafkaCore(MetadataForKafka metadata, ILogger<KafkaCore> logger) : C
                     _consumer.Subscribe(Metadata.Topic);
                     
                     _consumerCts = new CancellationTokenSource();
-                    _consumerTask = Task.Run(() => ConsumeMessages(_consumerCts.Token), _consumerCts.Token);
+                    _consumerTask = Task.Run(async () => await ConsumeMessages(_consumerCts.Token), _consumerCts.Token);
                     
                     logger.LogInformation("Kafka consumer initialized and subscribed to topic: {Topic}", Metadata.Topic);
                 }

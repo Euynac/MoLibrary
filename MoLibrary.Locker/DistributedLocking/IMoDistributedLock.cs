@@ -9,11 +9,11 @@ public interface IMoDistributedLock
     /// Returns null if the lock could not be handled.
     /// </summary>
     /// <param name="name">The name of the lock</param>
+    /// <param name="owner"></param>
     /// <param name="timeout">How long to wait before giving up on the acquisition attempt. Defaults to 0</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    Task<IMoDistributedLockHandle?> TryAcquireAsync(
-        string name,
-        TimeSpan timeout = default,
-        CancellationToken cancellationToken = default
-    );
+    Task<IMoDistributedLockHandle?> TryAcquireAsync(string name,
+        string? owner = null,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default);
 }

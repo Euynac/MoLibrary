@@ -6,7 +6,7 @@ public class ModuleDaprLockerOption : MoModuleOption<ModuleDaprLocker>
 {
     public string StoreName { get; set; } = default!;
 
-    public string? Owner { get; set; }
+    public string? OwnerPrefix { get; set; }
 
     public TimeSpan DefaultExpirationTimeout { get; set; } = TimeSpan.FromMinutes(2);
 }
