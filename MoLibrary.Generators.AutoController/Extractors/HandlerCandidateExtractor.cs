@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using MoLibrary.Generators.AutoController.Constants;
+using MoLibrary.Generators.AutoController.Diagnostics;
 using MoLibrary.Generators.AutoController.Helpers;
 using MoLibrary.Generators.AutoController.Models;
 
@@ -13,16 +14,155 @@ namespace MoLibrary.Generators.AutoController.Extractors;
 internal static class HandlerCandidateExtractor
 {
     /// <summary>
-    /// Extracts the routing, HTTP method and other required metadata from a candidate class.
+    /// Extracts the routing, HTTP method and other required metadata from a candidate class with error reporting.
     /// </summary>
     /// <param name="classDeclaration">The class declaration to analyze</param>
     /// <param name="compilation">The compilation context</param>
+    /// <param name="config">The generator configuration</param>
+    /// <param name="context">The source production context for error reporting</param>
     /// <returns>A HandlerCandidate if extraction is successful, null otherwise</returns>
-    public static HandlerCandidate? ExtractHandlerCandidate(ClassDeclarationSyntax classDeclaration, Compilation compilation)
+    public static HandlerCandidate? ExtractHandlerCandidate(ClassDeclarationSyntax classDeclaration, Compilation compilation, Models.GeneratorConfig config, SourceProductionContext context)
     {
-        // Extract and validate the Route attribute
-        var routeArg = AttributeHelper.ExtractRouteAttribute(classDeclaration);
-        if (routeArg == null) 
+        var className = classDeclaration.Identifier.Text;
+        var location = classDeclaration.GetLocation();
+
+        try
+        {
+            // Validate ApplicationService inheritance
+            if (!ValidateApplicationServiceInheritance(classDeclaration, context))
+                return null;
+
+            // Extract and validate the Route attribute (with fallback to configuration)
+            var routeArg = AttributeHelper.ExtractRouteAttribute(classDeclaration, config);
+            if (routeArg == null)
+            {
+                var diagnostic = Diagnostic.Create(
+                    DiagnosticDescriptors.MissingConfigurationAttribute,
+                    location,
+                    className);
+                context.ReportDiagnostic(diagnostic);
+                return null;
+            }
+
+            // Extract Tags attributes
+            var tags = AttributeHelper.ExtractTagsAttributes(classDeclaration);
+
+            // Determine handler type based on naming convention
+            var handlerType = NamingHelper.DetermineHandlerType(className);
+            if (handlerType == null)
+            {
+                var diagnostic = Diagnostic.Create(
+                    DiagnosticDescriptors.UnknownHandlerType,
+                    location,
+                    className);
+                context.ReportDiagnostic(diagnostic);
+                return null;
+            }
+
+            // Compute the method name by removing the handler prefix
+            var methodName = NamingHelper.ComputeMethodName(className);
+
+            // Extract the response type from the base class generic arguments
+            var responseType = ExtractResponseType(classDeclaration);
+            if (responseType == null)
+            {
+                var diagnostic = Diagnostic.Create(
+                    DiagnosticDescriptors.InvalidApplicationServiceInheritance,
+                    location,
+                    className);
+                context.ReportDiagnostic(diagnostic);
+                return null;
+            }
+
+            // Find the method (either decorated with an HTTP method attribute or any public method for CQRS)
+            var method = FindHttpMethodDecoratedMethod(classDeclaration) ?? FindPublicMethod(classDeclaration);
+            if (method == null)
+            {
+                var diagnostic = Diagnostic.Create(
+                    DiagnosticDescriptors.MissingHandleMethod,
+                    location,
+                    className);
+                context.ReportDiagnostic(diagnostic);
+                return null;
+            }
+
+            // Validate method signature
+            if (!ValidateMethodSignature(method, context))
+                return null;
+
+            // Retrieve the HTTP method name and its route (supports CQRS fallback)
+            var (httpMethod, httpMethodRoute) = AttributeHelper.ExtractHttpMethodAndRoute(method, className);
+            if (string.IsNullOrEmpty(httpMethod))
+            {
+                var diagnostic = Diagnostic.Create(
+                    DiagnosticDescriptors.MissingHttpMethodAttribute,
+                    method.GetLocation(),
+                    method.Identifier.Text,
+                    className);
+                context.ReportDiagnostic(diagnostic);
+                return null;
+            }
+
+            // Get the request type from the method's parameter
+            var requestType = ExtractRequestType(method);
+            if (requestType == null)
+            {
+                var diagnostic = Diagnostic.Create(
+                    DiagnosticDescriptors.InvalidHandleMethodSignature,
+                    method.GetLocation(),
+                    className);
+                context.ReportDiagnostic(diagnostic);
+                return null;
+            }
+
+            // Check if the method parameter has FromForm attribute
+            var hasFromFormAttribute = AttributeHelper.HasFromFormAttribute(method);
+
+            // Extract the documentation comment from the class
+            var docComment = ExtractDocumentationComment(classDeclaration);
+
+            // Collect original using directives and candidate namespace
+            var (originalUsings, candidateNamespace) = ExtractNamespaceInfo(classDeclaration);
+
+            return new HandlerCandidate(
+                classRoute: routeArg,
+                tags: tags,
+                handlerType: handlerType,
+                methodName: methodName,
+                httpMethodAttribute: httpMethod,
+                httpMethodRoute: httpMethodRoute ?? string.Empty,
+                requestType: requestType,
+                responseType: responseType,
+                documentationComment: docComment,
+                originalUsings: originalUsings,
+                candidateNamespace: candidateNamespace,
+                hasFromFormAttribute: hasFromFormAttribute
+            );
+        }
+        catch (Exception ex)
+        {
+            var diagnostic = Diagnostic.Create(
+                DiagnosticDescriptors.HandlerExtractionFailed,
+                location,
+                className,
+                ex.Message);
+            context.ReportDiagnostic(diagnostic);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Extracts the routing, HTTP method and other required metadata from a candidate class (compatibility overload).
+    /// </summary>
+    /// <param name="classDeclaration">The class declaration to analyze</param>
+    /// <param name="compilation">The compilation context</param>
+    /// <param name="config">The generator configuration</param>
+    /// <returns>A HandlerCandidate if extraction is successful, null otherwise</returns>
+    public static HandlerCandidate? ExtractHandlerCandidate(ClassDeclarationSyntax classDeclaration, Compilation compilation, Models.GeneratorConfig config)
+    {
+        // Extract and validate the Route attribute (with fallback to configuration)
+        var routeArg = AttributeHelper.ExtractRouteAttribute(classDeclaration, config);
+        if (routeArg == null)
             return null;
 
         // Extract Tags attributes
@@ -32,7 +172,7 @@ internal static class HandlerCandidateExtractor
 
         // Determine handler type based on naming convention
         var handlerType = NamingHelper.DetermineHandlerType(className);
-        if (handlerType == null) 
+        if (handlerType == null)
             return null; // Skip if not recognized
 
         // Compute the method name by removing the handler prefix
@@ -40,22 +180,22 @@ internal static class HandlerCandidateExtractor
 
         // Extract the response type from the base class generic arguments
         var responseType = ExtractResponseType(classDeclaration);
-        if (responseType == null) 
+        if (responseType == null)
             return null;
 
-        // Find the method decorated with an HTTP method attribute
-        var method = FindHttpMethodDecoratedMethod(classDeclaration);
+        // Find the method (either decorated with an HTTP method attribute or any public method for CQRS)
+        var method = FindHttpMethodDecoratedMethod(classDeclaration) ?? FindPublicMethod(classDeclaration);
         if (method == null)
             return null;
 
-        // Retrieve the HTTP method name and its route
-        var (httpMethod, httpMethodRoute) = AttributeHelper.ExtractHttpMethodAndRoute(method);
-        if (string.IsNullOrEmpty(httpMethod)) 
+        // Retrieve the HTTP method name and its route (supports CQRS fallback)
+        var (httpMethod, httpMethodRoute) = AttributeHelper.ExtractHttpMethodAndRoute(method, className);
+        if (string.IsNullOrEmpty(httpMethod))
             return null;
 
         // Get the request type from the method's parameter
         var requestType = ExtractRequestType(method);
-        if (requestType == null) 
+        if (requestType == null)
             return null;
 
         // Check if the method parameter has FromForm attribute
@@ -84,6 +224,61 @@ internal static class HandlerCandidateExtractor
     }
 
     /// <summary>
+    /// Validates that the class properly inherits from ApplicationService with correct generic arguments.
+    /// </summary>
+    /// <param name="classDeclaration">The class declaration to validate</param>
+    /// <param name="context">The source production context for error reporting</param>
+    /// <returns>True if inheritance is valid, false otherwise</returns>
+    private static bool ValidateApplicationServiceInheritance(ClassDeclarationSyntax classDeclaration, SourceProductionContext context)
+    {
+        var baseTypeSyntax = classDeclaration.BaseList?.Types.First().Type as GenericNameSyntax;
+        if (baseTypeSyntax?.TypeArgumentList.Arguments.Count < 2)
+        {
+            var diagnostic = Diagnostic.Create(
+                DiagnosticDescriptors.InvalidApplicationServiceInheritance,
+                classDeclaration.GetLocation(),
+                classDeclaration.Identifier.Text);
+            context.ReportDiagnostic(diagnostic);
+            return false;
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// Validates that the method has a correct signature for a handler method.
+    /// </summary>
+    /// <param name="method">The method declaration to validate</param>
+    /// <param name="context">The source production context for error reporting</param>
+    /// <returns>True if signature is valid, false otherwise</returns>
+    private static bool ValidateMethodSignature(MethodDeclarationSyntax method, SourceProductionContext context)
+    {
+        // Check if method has at least one parameter
+        if (method.ParameterList.Parameters.Count == 0)
+        {
+            var diagnostic = Diagnostic.Create(
+                DiagnosticDescriptors.InvalidHandleMethodSignature,
+                method.GetLocation(),
+                "Missing request parameter");
+            context.ReportDiagnostic(diagnostic);
+            return false;
+        }
+
+        // Check if return type looks like Task<T>
+        var returnTypeString = method.ReturnType.ToString();
+        if (!returnTypeString.StartsWith("Task<") && !returnTypeString.StartsWith("async Task<"))
+        {
+            var diagnostic = Diagnostic.Create(
+                DiagnosticDescriptors.InvalidHandleMethodSignature,
+                method.GetLocation(),
+                $"Invalid return type '{returnTypeString}'. Expected Task<TResponse>");
+            context.ReportDiagnostic(diagnostic);
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
     /// Extracts the response type from the base class generic arguments.
     /// </summary>
     /// <param name="classDeclaration">The class declaration to analyze</param>
@@ -108,6 +303,17 @@ internal static class HandlerCandidateExtractor
             .FirstOrDefault(m => m.AttributeLists
                 .SelectMany(al => al.Attributes)
                 .Any(a => AttributeHelper.IsHttpMethodAttribute(a.Name.ToString())));
+    }
+
+    /// <summary>
+    /// Finds any public method for CQRS convention fallback.
+    /// </summary>
+    /// <param name="classDeclaration">The class declaration to analyze</param>
+    /// <returns>The first public method declaration or null if not found</returns>
+    private static MethodDeclarationSyntax? FindPublicMethod(ClassDeclarationSyntax classDeclaration)
+    {
+        return classDeclaration.Members.OfType<MethodDeclarationSyntax>()
+            .FirstOrDefault(m => m.Modifiers.Any(mod => mod.IsKind(SyntaxKind.PublicKeyword)));
     }
 
     /// <summary>
@@ -163,7 +369,7 @@ internal static class HandlerCandidateExtractor
         var lines = summaryContent.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
             .Select(line => line.Replace("///", "").Trim())
             .Where(line => !string.IsNullOrWhiteSpace(line))
-            .Select(line => $"        /// {line}");
+            .Select(line => $"        /// {line}").ToList();
 
         if (!lines.Any())
             return string.Empty;
