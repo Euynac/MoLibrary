@@ -29,4 +29,11 @@ public class AutoControllerGeneratorConfigAttribute : Attribute
     /// Default: false
     /// </summary>
     public bool RequireExplicitRoutes { get; set; } = false;
+
+    /// <summary>
+    /// When true, skips auto-controller generation for the current assembly entirely.
+    /// Useful for assemblies that reference the generator but don't want any controllers generated.
+    /// Default: false
+    /// </summary>
+    public bool SkipGeneration { get; set; } = false;
 }

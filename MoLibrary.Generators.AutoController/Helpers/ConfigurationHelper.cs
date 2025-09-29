@@ -9,12 +9,12 @@ namespace MoLibrary.Generators.AutoController.Helpers;
 internal static class ConfigurationHelper
 {
     /// <summary>
-    /// Extracts the generator configuration from assembly-level attributes with error reporting.
+    /// Extracts the generator configuration from assembly-level attributes without error reporting.
+    /// Used in incremental generator pipelines where SourceProductionContext is not available.
     /// </summary>
     /// <param name="compilation">The compilation context</param>
-    /// <param name="context">The source production context for error reporting</param>
-    /// <returns>The extracted configuration or null if extraction failed</returns>
-    public static GeneratorConfig? ExtractConfiguration(Compilation compilation, SourceProductionContext context)
+    /// <returns>The extracted configuration, error message, or null for success with default config</returns>
+    public static (GeneratorConfig? Config, string? ErrorMessage) ExtractConfiguration(Compilation compilation)
     {
         try
         {
@@ -33,52 +33,51 @@ internal static class ConfigurationHelper
             if (configAttribute == null)
             {
                 // No configuration found - this might be intentional if RequireExplicitRoutes is the default behavior
-                return GeneratorConfig.Default;
+                return (GeneratorConfig.Default, null);
             }
 
-            return ParseConfigurationAttribute(configAttribute, context);
+            var (config, errorMessage) = ParseConfigurationAttribute(configAttribute);
+            return (config, errorMessage);
         }
         catch (Exception ex)
+        {
+            return (null, $"Configuration extraction failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Extracts the generator configuration from assembly-level attributes with error reporting.
+    /// </summary>
+    /// <param name="compilation">The compilation context</param>
+    /// <param name="context">The source production context for error reporting</param>
+    /// <returns>The extracted configuration or null if extraction failed</returns>
+    public static GeneratorConfig? ExtractConfiguration(Compilation compilation, SourceProductionContext context)
+    {
+        var (config, errorMessage) = ExtractConfiguration(compilation);
+
+        if (errorMessage != null)
         {
             var diagnostic = Diagnostic.Create(
                 DiagnosticDescriptors.ConfigurationExtractionFailed,
                 Location.None,
-                ex.Message);
+                errorMessage);
             context.ReportDiagnostic(diagnostic);
             return null;
         }
+
+        return config;
     }
 
-    /// <summary>
-    /// Extracts the generator configuration from assembly-level attributes (compatibility overload).
-    /// </summary>
-    /// <param name="compilation">The compilation context</param>
-    /// <returns>The extracted configuration or default configuration</returns>
-    public static GeneratorConfig ExtractConfiguration(Compilation compilation)
-    {
-        var assemblyAttributes = compilation.Assembly.GetAttributes();
-
-        foreach (var attribute in assemblyAttributes)
-        {
-            if (attribute.AttributeClass?.Name == "AutoControllerGeneratorConfigAttribute")
-            {
-                return ParseConfigurationAttribute(attribute);
-            }
-        }
-
-        return GeneratorConfig.Default;
-    }
 
     /// <summary>
-    /// Parses the configuration from an attribute data instance with validation and error reporting.
+    /// Parses the configuration from an attribute data instance without error reporting.
+    /// Used in incremental generator pipelines where SourceProductionContext is not available.
     /// </summary>
     /// <param name="attributeData">The attribute data to parse</param>
-    /// <param name="context">The source production context for error reporting</param>
-    /// <returns>The parsed configuration or null if parsing failed</returns>
-    private static GeneratorConfig? ParseConfigurationAttribute(AttributeData attributeData, SourceProductionContext context)
+    /// <returns>The parsed configuration and error message (if any)</returns>
+    private static (GeneratorConfig? Config, string? ErrorMessage) ParseConfigurationAttribute(AttributeData attributeData)
     {
         var config = new GeneratorConfig();
-        var errors = new List<string>();
 
         foreach (var namedArgument in attributeData.NamedArguments)
         {
@@ -89,14 +88,9 @@ internal static class ConfigurationHelper
                     if (!string.IsNullOrEmpty(routePrefix))
                     {
                         // Validate route prefix format
-                        if (routePrefix.StartsWith("/") || routePrefix.EndsWith("/"))
+                        if (routePrefix!.StartsWith("/") || routePrefix.EndsWith("/"))
                         {
-                            var diagnostic = Diagnostic.Create(
-                                DiagnosticDescriptors.InvalidDefaultRoutePrefix,
-                                Location.None,
-                                routePrefix);
-                            context.ReportDiagnostic(diagnostic);
-                            return null;
+                            return (null, $"Invalid DefaultRoutePrefix '{routePrefix}'. Route prefix should not start or end with '/'.");
                         }
                     }
                     config.DefaultRoutePrefix = routePrefix;
@@ -108,48 +102,19 @@ internal static class ConfigurationHelper
                     if (namedArgument.Value.Value is bool requireExplicit)
                         config.RequireExplicitRoutes = requireExplicit;
                     break;
+                case "SkipGeneration":
+                    if (namedArgument.Value.Value is bool skipGeneration)
+                        config.SkipGeneration = skipGeneration;
+                    break;
             }
         }
 
         // Validate configuration consistency
         if (!config.RequireExplicitRoutes && string.IsNullOrEmpty(config.DefaultRoutePrefix))
         {
-            var diagnostic = Diagnostic.Create(
-                DiagnosticDescriptors.MissingConfigurationAttribute,
-                Location.None);
-            context.ReportDiagnostic(diagnostic);
-            return null;
+            return (null, "When RequireExplicitRoutes is false, DefaultRoutePrefix must be specified.");
         }
 
-        return config;
-    }
-
-    /// <summary>
-    /// Parses the configuration from an attribute data instance (compatibility overload).
-    /// </summary>
-    /// <param name="attributeData">The attribute data to parse</param>
-    /// <returns>The parsed configuration</returns>
-    private static GeneratorConfig ParseConfigurationAttribute(AttributeData attributeData)
-    {
-        var config = new GeneratorConfig();
-
-        foreach (var namedArgument in attributeData.NamedArguments)
-        {
-            switch (namedArgument.Key)
-            {
-                case "DefaultRoutePrefix":
-                    config.DefaultRoutePrefix = namedArgument.Value.Value?.ToString();
-                    break;
-                case "DomainName":
-                    config.DomainName = namedArgument.Value.Value?.ToString();
-                    break;
-                case "RequireExplicitRoutes":
-                    if (namedArgument.Value.Value is bool requireExplicit)
-                        config.RequireExplicitRoutes = requireExplicit;
-                    break;
-            }
-        }
-
-        return config;
+        return (config, null);
     }
 }

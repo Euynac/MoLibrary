@@ -47,28 +47,6 @@ internal static class AttributeHelper
         return null;
     }
 
-    /// <summary>
-    /// Extracts the Route attribute value from a class declaration with fallback to configuration (compatibility overload).
-    /// For CQRS convention, this returns the base route without method-specific parts.
-    /// </summary>
-    /// <param name="classDeclaration">The class declaration to analyze</param>
-    /// <param name="config">The generator configuration for fallback routing</param>
-    /// <returns>The route value or null if not found and no fallback available</returns>
-    public static string? ExtractRouteAttribute(ClassDeclarationSyntax classDeclaration, GeneratorConfig config)
-    {
-        // First, try to find explicit Route attribute
-        var explicitRoute = ExtractExplicitRouteAttribute(classDeclaration);
-        if (explicitRoute != null)
-            return explicitRoute;
-
-        // Fallback to configured default routing if allowed (base route only)
-        if (!config.RequireExplicitRoutes && config.HasDefaultRouting)
-        {
-            return NamingHelper.GenerateDefaultRoute(classDeclaration, config);
-        }
-
-        return null;
-    }
 
     /// <summary>
     /// Validates basic route format to catch common mistakes.
@@ -171,24 +149,6 @@ internal static class AttributeHelper
         return (defaultHttpMethod, methodRoute);
     }
 
-    /// <summary>
-    /// Extracts the HTTP method attribute and its route from a method declaration.
-    /// </summary>
-    /// <param name="method">The method declaration to analyze</param>
-    /// <returns>Tuple containing the HTTP method name and route</returns>
-    public static (string httpMethod, string? route) ExtractHttpMethodAndRoute(MethodDeclarationSyntax method)
-    {
-        var attr = method.AttributeLists
-            .SelectMany(al => al.Attributes)
-            .FirstOrDefault(a => IsHttpMethodAttribute(a.Name.ToString()));
-
-        if (attr == null)
-            return (string.Empty, null);
-
-        var httpMethod = attr.Name.ToString();
-        var routeArgument = attr.ArgumentList?.Arguments.FirstOrDefault()?.ToString()?.Trim('"');
-        return (httpMethod, routeArgument);
-    }
 
     /// <summary>
     /// Checks if a method parameter has the FromForm attribute.

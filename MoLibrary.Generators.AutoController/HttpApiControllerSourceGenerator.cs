@@ -3,6 +3,7 @@ using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using MoLibrary.Generators.AutoController.Constants;
+using MoLibrary.Generators.AutoController.Diagnostics;
 using MoLibrary.Generators.AutoController.Extractors;
 using MoLibrary.Generators.AutoController.Generators;
 using MoLibrary.Generators.AutoController.Helpers;
@@ -25,8 +26,6 @@ public class HttpApiControllerSourceGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        //Debugger.Launch();
-        
         // Filter classes that derive from an application service
         var classDeclarations = context.SyntaxProvider
             .CreateSyntaxProvider(
@@ -45,8 +44,8 @@ public class HttpApiControllerSourceGenerator : IIncrementalGenerator
             .Select((tuple, token) =>
             {
                 var (classDeclaration, compilation) = tuple.Left;
-                var config = tuple.Right;
-                return new { classDeclaration, compilation, config };
+                var (config, errorMessage) = tuple.Right;
+                return new { classDeclaration, compilation, config, errorMessage };
             })
             .Collect();
 
@@ -55,18 +54,34 @@ public class HttpApiControllerSourceGenerator : IIncrementalGenerator
         {
             var validCandidates = new List<HandlerCandidate>();
 
+            // Report configuration errors once per compilation, not per class
+            var processedConfigErrors = new HashSet<string>();
             foreach (var info in candidatesInfo)
             {
-                // Extract configuration with error reporting
-                var config = ConfigurationHelper.ExtractConfiguration(info.compilation, spc);
-                if (config == null)
+                // Check if generation should be skipped for this assembly
+                if (info.config?.SkipGeneration is true)
+                {
+                    break; 
+                }
+                // Report configuration error only once per unique error message
+                if (info.errorMessage != null && processedConfigErrors.Add(info.errorMessage))
+                {
+                    var diagnostic = Diagnostic.Create(
+                        DiagnosticDescriptors.ConfigurationExtractionFailed,
+                        Location.None,
+                        info.errorMessage);
+                    spc.ReportDiagnostic(diagnostic);
+                }
+
+                // Skip if configuration extraction failed
+                if (info.config == null)
                     continue; // Configuration extraction failed, error already reported
 
                 // Extract handler candidate with error reporting
                 var candidate = HandlerCandidateExtractor.ExtractHandlerCandidate(
                     info.classDeclaration,
                     info.compilation,
-                    config,
+                    info.config,
                     spc);
 
                 if (candidate != null)
