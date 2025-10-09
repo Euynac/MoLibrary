@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using MoLibrary.DomainDrivenDesign.Interfaces;
 
-namespace MoLibrary.Framework.Features.MoRpc;
+namespace MoLibrary.DomainDrivenDesign.AutoController.MoRpc;
 
 
 public record MoRpcRequest : IValidatableObject, IHasRpcHttpInfo

@@ -5,8 +5,8 @@ using MoLibrary.Core.Features.MoChainTracing.Models;
 using MoLibrary.Core.Features.MoTimekeeper;
 using MoLibrary.DependencyInjection.DynamicProxy;
 using MoLibrary.DependencyInjection.DynamicProxy.Abstract;
+using MoLibrary.DomainDrivenDesign.AutoController.MoRpc;
 using MoLibrary.DomainDrivenDesign.ExceptionHandler;
-using MoLibrary.Framework.Features.MoRpc;
 using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.MoResponse;
 
