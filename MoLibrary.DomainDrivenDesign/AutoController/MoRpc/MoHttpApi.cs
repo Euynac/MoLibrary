@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Authority.Security;
 using MoLibrary.DependencyInjection.AppInterfaces;
 
-namespace MoLibrary.Framework.Features.MoRpc;
+namespace MoLibrary.DomainDrivenDesign.AutoController.MoRpc;
 
 public abstract class MoHttpApi : MoRpcApi
 {
