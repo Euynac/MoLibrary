@@ -391,7 +391,21 @@ internal static class HandlerCandidateExtractor
     {
         // Collect original using directives from the candidate's file
         var root = (CompilationUnitSyntax)classDeclaration.SyntaxTree.GetRoot();
-        var originalUsings = root.Usings.Select(u => u.Name.ToString()).ToArray();
+        var originalUsings = root.Usings.Select(u =>
+        {
+            // Handle using alias: using Alias = Namespace.Type;
+            if (u.Alias != null)
+            {
+                return $"{u.Alias} {u.Name}";
+            }
+            // Handle using static: using static Namespace.Type;
+            if (u.StaticKeyword.IsKind(SyntaxKind.StaticKeyword))
+            {
+                return $"static {u.Name}";
+            }
+            // Handle normal using: using Namespace;
+            return u.Name.ToString();
+        }).ToArray();
 
         // Capture the candidate's own namespace
         var candidateNamespace = string.Empty;

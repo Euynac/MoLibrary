@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -26,6 +27,7 @@ public class HttpApiControllerSourceGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
+        //Debugger.Launch();
         // Filter classes that derive from an application service
         var classDeclarations = context.SyntaxProvider
             .CreateSyntaxProvider(
