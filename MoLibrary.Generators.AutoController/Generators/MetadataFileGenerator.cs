@@ -61,24 +61,33 @@ internal static class MetadataFileGenerator
             Handlers = new List<HandlerMetadata>()
         };
 
+        // Collect all unique namespaces from all handlers
+        var allNamespaces = new HashSet<string>();
+
         foreach (var candidate in candidates)
         {
             var handlerMetadata = new HandlerMetadata
             {
-                HandlerName = ExtractSimpleHandlerName(candidate.HandlerType),
-                FullTypeName = $"{candidate.CandidateNamespace}.{candidate.HandlerType}",
                 RequestType = candidate.RequestType,
                 ResponseType = candidate.ResponseType,
                 HttpMethod = NormalizeHttpMethod(candidate.HttpMethodAttribute),
                 Route = BuildCompleteRoute(candidate),
-                Namespace = candidate.CandidateNamespace,
-                Tags = candidate.Tags,
                 ClientMethodName = candidate.MethodName,
-                HandlerType = NamingHelper.DetermineHandlerType(candidate.HandlerType) ?? "Unknown"
+                HandlerType = NamingHelper.DetermineHandlerType(candidate.HandlerType) ?? "Unknown",
+                Summary = candidate.PlainTextSummary
             };
 
             metadata.Handlers.Add(handlerMetadata);
+
+            // Collect namespaces from this candidate
+            foreach (var ns in candidate.RelatedNamespaces)
+            {
+                allNamespaces.Add(ns);
+            }
         }
+
+        // Sort namespaces for consistent output
+        metadata.RelatedNamespaces = allNamespaces.OrderBy(ns => ns).ToList();
 
         return metadata;
     }
@@ -94,15 +103,6 @@ internal static class MetadataFileGenerator
             return baseRoute;
         }
         return $"{baseRoute}/{candidate.HttpMethodRoute.TrimStart('/')}";
-    }
-
-    /// <summary>
-    /// Extracts the simple handler name from the full type name.
-    /// </summary>
-    private static string ExtractSimpleHandlerName(string fullTypeName)
-    {
-        var lastDot = fullTypeName.LastIndexOf('.');
-        return lastDot >= 0 ? fullTypeName.Substring(lastDot + 1) : fullTypeName;
     }
 
     /// <summary>
@@ -125,22 +125,33 @@ internal static class MetadataFileGenerator
         sb.AppendLine($"  \"AssemblyName\": \"{EscapeJson(metadata.AssemblyName)}\",");
         sb.AppendLine($"  \"DomainName\": {JsonValue(metadata.DomainName)},");
         sb.AppendLine($"  \"RoutePrefix\": {JsonValue(metadata.RoutePrefix)},");
+
+        // Serialize RelatedNamespaces array
+        sb.AppendLine("  \"RelatedNamespaces\": [");
+        for (int i = 0; i < metadata.RelatedNamespaces.Count; i++)
+        {
+            var ns = metadata.RelatedNamespaces[i];
+            sb.Append($"    \"{EscapeJson(ns)}\"");
+            if (i < metadata.RelatedNamespaces.Count - 1)
+                sb.AppendLine(",");
+            else
+                sb.AppendLine();
+        }
+        sb.AppendLine("  ],");
+
         sb.AppendLine("  \"Handlers\": [");
 
         for (int i = 0; i < metadata.Handlers.Count; i++)
         {
             var handler = metadata.Handlers[i];
             sb.AppendLine("    {");
-            sb.AppendLine($"      \"HandlerName\": \"{EscapeJson(handler.HandlerName)}\",");
-            sb.AppendLine($"      \"FullTypeName\": \"{EscapeJson(handler.FullTypeName)}\",");
             sb.AppendLine($"      \"RequestType\": \"{EscapeJson(handler.RequestType)}\",");
             sb.AppendLine($"      \"ResponseType\": \"{EscapeJson(handler.ResponseType)}\",");
             sb.AppendLine($"      \"HttpMethod\": \"{EscapeJson(handler.HttpMethod)}\",");
             sb.AppendLine($"      \"Route\": \"{EscapeJson(handler.Route)}\",");
-            sb.AppendLine($"      \"Namespace\": \"{EscapeJson(handler.Namespace)}\",");
-            sb.AppendLine($"      \"Tags\": [{string.Join(", ", handler.Tags.Select(t => $"\"{EscapeJson(t)}\""))}],");
             sb.AppendLine($"      \"ClientMethodName\": \"{EscapeJson(handler.ClientMethodName)}\",");
-            sb.AppendLine($"      \"HandlerType\": \"{EscapeJson(handler.HandlerType)}\"");
+            sb.AppendLine($"      \"HandlerType\": \"{EscapeJson(handler.HandlerType)}\",");
+            sb.AppendLine($"      \"Summary\": \"{EscapeJson(handler.Summary)}\"");
             sb.Append("    }");
             if (i < metadata.Handlers.Count - 1)
                 sb.AppendLine(",");

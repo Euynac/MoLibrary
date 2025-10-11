@@ -12,29 +12,56 @@ internal static class RpcClientCodeGenerator
 {
     /// <summary>
     /// Generates client code for a single domain (assembly).
-    /// Returns a tuple of (interfaceCode, implementationCode).
+    /// Returns a list of (fileName, fileContent) tuples for all generated files.
     /// </summary>
-    public static (string InterfaceCode, string ImplementationCode) GenerateClientForDomain(
+    public static List<(string FileName, string Content)> GenerateClientForDomain(
         RpcMetadata metadata,
         string httpImplType)
     {
         var domainName = metadata.DomainName ?? metadata.AssemblyName.Replace(".API", "").Replace("Service", "");
-        var interfaceName = $"I{domainName}Api";
-        var implementationName = $"{domainName}HttpApi";
+        var result = new List<(string, string)>();
 
-        // Generate interface
-        var interfaceCode = GenerateClientInterface(metadata, interfaceName);
+        // Group handlers by type (Command/Query)
+        var commandHandlers = metadata.Handlers.Where(h => h.HandlerType == "Command").ToList();
+        var queryHandlers = metadata.Handlers.Where(h => h.HandlerType == "Query").ToList();
 
-        // Generate implementation
-        var implementationCode = GenerateClientImplementation(metadata, interfaceName, implementationName, httpImplType);
+        // Generate Command interface and implementation if there are command handlers
+        if (commandHandlers.Count > 0)
+        {
+            var commandInterfaceName = $"ICommand{domainName}";
+            var commandImplName = $"Command{domainName}HttpApi";
 
-        return (interfaceCode, implementationCode);
+            var interfaceCode = GenerateClientInterface(metadata, commandInterfaceName, commandHandlers, "Command");
+            var implCode = GenerateClientImplementation(metadata, commandInterfaceName, commandImplName, commandHandlers, httpImplType);
+
+            result.Add(($"{commandInterfaceName}.g.cs", interfaceCode));
+            result.Add(($"{commandImplName}.g.cs", implCode));
+        }
+
+        // Generate Query interface and implementation if there are query handlers
+        if (queryHandlers.Count > 0)
+        {
+            var queryInterfaceName = $"IQuery{domainName}";
+            var queryImplName = $"Query{domainName}HttpApi";
+
+            var interfaceCode = GenerateClientInterface(metadata, queryInterfaceName, queryHandlers, "Query");
+            var implCode = GenerateClientImplementation(metadata, queryInterfaceName, queryImplName, queryHandlers, httpImplType);
+
+            result.Add(($"{queryInterfaceName}.g.cs", interfaceCode));
+            result.Add(($"{queryImplName}.g.cs", implCode));
+        }
+
+        return result;
     }
 
     /// <summary>
     /// Generates the client interface code.
     /// </summary>
-    private static string GenerateClientInterface(RpcMetadata metadata, string interfaceName)
+    private static string GenerateClientInterface(
+        RpcMetadata metadata,
+        string interfaceName,
+        List<HandlerMetadata> handlers,
+        string handlerType)
     {
         var sb = new StringBuilder();
 
@@ -44,18 +71,13 @@ internal static class RpcClientCodeGenerator
         sb.AppendLine();
 
         // Usings
+        sb.AppendLine("using System.ServiceModel;");
         sb.AppendLine("using System.Threading.Tasks;");
+        sb.AppendLine("using JetBrains.Annotations;");
         sb.AppendLine();
 
-        // Extract unique namespaces from request/response types
-        var namespaces = metadata.Handlers
-            .SelectMany(h => new[] { h.RequestType, h.ResponseType })
-            .Select(ExtractNamespace)
-            .Where(ns => !string.IsNullOrEmpty(ns))
-            .Distinct()
-            .OrderBy(ns => ns);
-
-        foreach (var ns in namespaces)
+        // Use RelatedNamespaces from metadata (already sorted and distinct)
+        foreach (var ns in metadata.RelatedNamespaces)
         {
             sb.AppendLine($"using {ns};");
         }
@@ -63,28 +85,54 @@ internal static class RpcClientCodeGenerator
         sb.AppendLine();
 
         // Namespace
-        var clientNamespace = "ProtocolPlatform.RpcClients";
+        var clientNamespace = $"ProtocolPlatform.PublishedLanguages.Domain{metadata.DomainName}.AppInterfaces";
         sb.AppendLine($"namespace {clientNamespace};");
         sb.AppendLine();
 
-        // Interface declaration
-        sb.AppendLine($"/// <summary>");
-        sb.AppendLine($"/// RPC client interface for {metadata.DomainName} domain");
-        sb.AppendLine($"/// Generated from assembly: {metadata.AssemblyName}");
-        sb.AppendLine($"/// </summary>");
-        sb.AppendLine($"public interface {interfaceName}");
+        // Interface declaration with ServiceContract attribute
+        sb.AppendLine("[ServiceContract]");
+
+        // Add IMoRpcApi inheritance for Command interfaces
+        if (handlerType == "Command")
+        {
+            sb.AppendLine($"public interface {interfaceName} : MoLibrary.DomainDrivenDesign.AutoController.MoRpc.IMoRpcApi");
+        }
+        else
+        {
+            sb.AppendLine($"public interface {interfaceName}");
+        }
+
         sb.AppendLine("{");
 
         // Generate interface methods
-        foreach (var handler in metadata.Handlers)
+        for (int i = 0; i < handlers.Count; i++)
         {
-            sb.AppendLine($"    /// <summary>");
-            sb.AppendLine($"    /// {handler.ClientMethodName}");
-            sb.AppendLine($"    /// Handler: {handler.HandlerName}");
-            sb.AppendLine($"    /// Route: {handler.HttpMethod} {handler.Route}");
-            sb.AppendLine($"    /// </summary>");
-            sb.AppendLine($"    Task<{handler.ResponseType}> {handler.ClientMethodName}({handler.RequestType} request);");
-            sb.AppendLine();
+            var handler = handlers[i];
+
+            // Add summary comment if available
+            if (!string.IsNullOrWhiteSpace(handler.Summary))
+            {
+                sb.AppendLine("    /// <summary>");
+                sb.AppendLine($"    /// {handler.Summary}");
+                sb.AppendLine("    /// </summary>");
+            }
+
+            // Add parameter documentation
+            sb.AppendLine($"    /// <param name=\"{GetParameterName(handler.RequestType)}\"></param>");
+            sb.AppendLine("    /// <returns></returns>");
+
+            // Add attributes
+            sb.AppendLine("    [OperationContract]");
+            sb.AppendLine("    [MustUseReturnValue]");
+
+            // Method signature
+            sb.AppendLine($"    Task<{handler.ResponseType}> {handler.ClientMethodName}({handler.RequestType} {GetParameterName(handler.RequestType)});");
+
+            // Add blank line between methods except for the last one
+            if (i < handlers.Count - 1)
+            {
+                sb.AppendLine();
+            }
         }
 
         sb.AppendLine("}");
@@ -99,9 +147,18 @@ internal static class RpcClientCodeGenerator
         RpcMetadata metadata,
         string interfaceName,
         string implementationName,
+        List<HandlerMetadata> handlers,
         string httpImplType)
     {
         var sb = new StringBuilder();
+
+        // Extract base type name and namespace from httpImplType (e.g., "MoLibrary.DomainDrivenDesign.AutoController.MoRpc.MoHttpApi")
+        var baseTypeName = httpImplType.Contains(".")
+            ? httpImplType.Substring(httpImplType.LastIndexOf('.') + 1)
+            : httpImplType;
+        var baseTypeNamespace = httpImplType.Contains(".")
+            ? httpImplType.Substring(0, httpImplType.LastIndexOf('.'))
+            : string.Empty;
 
         // File header
         sb.AppendLine("// <auto-generated />");
@@ -112,59 +169,49 @@ internal static class RpcClientCodeGenerator
         sb.AppendLine("using System.Net.Http;");
         sb.AppendLine("using System.Net.Http.Json;");
         sb.AppendLine("using System.Threading.Tasks;");
-        sb.AppendLine("using MoLibrary.DependencyInjection.AppInterfaces;");
 
-        // Add using for the base class
-        var baseClassNamespace = ExtractNamespace(httpImplType);
-        if (!string.IsNullOrEmpty(baseClassNamespace))
+        // Add base type namespace if available
+        if (!string.IsNullOrEmpty(baseTypeNamespace))
         {
-            sb.AppendLine($"using {baseClassNamespace};");
+            sb.AppendLine($"using {baseTypeNamespace};");
         }
 
+        sb.AppendLine("using MoLibrary.DependencyInjection.AppInterfaces;");
+        sb.AppendLine("using MoLibrary.Framework.Extensions;");
         sb.AppendLine();
 
-        // Extract unique namespaces from request/response types
-        var namespaces = metadata.Handlers
-            .SelectMany(h => new[] { h.RequestType, h.ResponseType })
-            .Select(ExtractNamespace)
-            .Where(ns => !string.IsNullOrEmpty(ns))
-            .Distinct()
-            .OrderBy(ns => ns);
-
-        foreach (var ns in namespaces)
+        // Use RelatedNamespaces from metadata (already sorted and distinct)
+        foreach (var ns in metadata.RelatedNamespaces)
         {
             sb.AppendLine($"using {ns};");
         }
 
+        // Add interface namespace for using directive
+        var interfaceNamespace = $"ProtocolPlatform.PublishedLanguages.Domain{metadata.DomainName}.AppInterfaces";
+        sb.AppendLine($"using {interfaceNamespace};");
+
         sb.AppendLine();
 
         // Namespace
-        var clientNamespace = "ProtocolPlatform.RpcClients";
+        var clientNamespace = $"ProtocolPlatform.PublishedLanguages.Domain{metadata.DomainName}.Implements";
         sb.AppendLine($"namespace {clientNamespace};");
         sb.AppendLine();
 
-        // Extract simple base class name
-        var baseClassName = ExtractSimpleTypeName(httpImplType);
-
         // Implementation declaration
-        sb.AppendLine($"/// <summary>");
-        sb.AppendLine($"/// HTTP RPC client implementation for {metadata.DomainName} domain");
-        sb.AppendLine($"/// Generated from assembly: {metadata.AssemblyName}");
-        sb.AppendLine($"/// </summary>");
-        sb.AppendLine($"public class {implementationName} : {baseClassName}, {interfaceName}");
+        sb.AppendLine($"public class {implementationName}(HttpClient httpClient, IMoServiceProvider provider) : {baseTypeName}(provider, httpClient), {interfaceName}");
         sb.AppendLine("{");
 
-        // Constructor
-        sb.AppendLine($"    public {implementationName}(IMoServiceProvider provider, HttpClient httpClient)");
-        sb.AppendLine($"        : base(provider, httpClient)");
-        sb.AppendLine("    {");
-        sb.AppendLine("    }");
-        sb.AppendLine();
-
         // Generate implementation methods
-        foreach (var handler in metadata.Handlers)
+        for (int i = 0; i < handlers.Count; i++)
         {
+            var handler = handlers[i];
             GenerateClientMethod(sb, handler);
+
+            // Add blank line between methods except for the last one
+            if (i < handlers.Count - 1)
+            {
+                sb.AppendLine();
+            }
         }
 
         sb.AppendLine("}");
@@ -177,13 +224,20 @@ internal static class RpcClientCodeGenerator
     /// </summary>
     private static void GenerateClientMethod(StringBuilder sb, HandlerMetadata handler)
     {
-        sb.AppendLine($"    /// <summary>");
-        sb.AppendLine($"    /// {handler.ClientMethodName}");
-        sb.AppendLine($"    /// Handler: {handler.HandlerName}");
-        sb.AppendLine($"    /// Route: {handler.HttpMethod} {handler.Route}");
-        sb.AppendLine($"    /// </summary>");
-        sb.AppendLine($"    public async Task<{handler.ResponseType}> {handler.ClientMethodName}({handler.RequestType} request)");
+        var paramName = GetParameterName(handler.RequestType);
+
+        // No need for summary comments in implementation since the interface already has them
+        // Make all methods virtual so users can override them
+        sb.AppendLine($"    public virtual async Task<{handler.ResponseType}> {handler.ClientMethodName}({handler.RequestType} {paramName})");
         sb.AppendLine("    {");
+
+        // Special handling for object return type - throw exception for user to implement
+        if (handler.ResponseType == "object")
+        {
+            sb.AppendLine("        throw new System.NotImplementedException(\"This method returns a file or special object. Please override this method in a derived class to provide a custom implementation.\");");
+            sb.AppendLine("    }");
+            return;
+        }
 
         // Generate HTTP call based on method type
         var httpMethod = handler.HttpMethod.ToUpperInvariant();
@@ -191,59 +245,118 @@ internal static class RpcClientCodeGenerator
 
         switch (httpMethod)
         {
-            case "POST":
-                sb.AppendLine($"        var response = await HttpClient.PostAsJsonAsync(\"{route}\", request);");
-                break;
             case "GET":
-                // For GET, we might need to serialize request as query string
-                // For now, assume GET requests don't need body
-                sb.AppendLine($"        var response = await HttpClient.GetAsync(\"{route}\");");
+                // Check if the route contains route parameters (e.g., {id})
+                if (route.Contains("{"))
+                {
+                    // Route has parameters - replace {id} with {query.Id} and append query string
+                    var processedRoute = ProcessRouteWithParameters(route, paramName);
+                    sb.AppendLine("        return await HttpClient.GetAsync($\"" + processedRoute + "{" + paramName + ".ToQueryString()}\")");
+                }
+                else
+                {
+                    // No route parameters, use query string with ?
+                    sb.AppendLine("        return await HttpClient.GetAsync($\"" + route + "?{" + paramName + ".ToQueryString()}\")");
+                }
+                sb.AppendLine($"            .GetResponse<{handler.ResponseType}>();");
                 break;
+
+            case "POST":
+                sb.AppendLine($"        return await HttpClient.PostAsJsonAsync(\"{route}\", {paramName})");
+                sb.AppendLine($"            .GetResponse<{handler.ResponseType}>();");
+                break;
+
             case "PUT":
-                sb.AppendLine($"        var response = await HttpClient.PutAsJsonAsync(\"{route}\", request);");
+                sb.AppendLine($"        return await HttpClient.PutAsJsonAsync(\"{route}\", {paramName})");
+                sb.AppendLine($"            .GetResponse<{handler.ResponseType}>();");
                 break;
+
             case "DELETE":
-                sb.AppendLine($"        var response = await HttpClient.DeleteAsync(\"{route}\");");
+                // For DELETE, check if it needs a body
+                if (route.Contains("{"))
+                {
+                    sb.AppendLine($"        return await HttpClient.DeleteAsync($\"{route}\")");
+                }
+                else
+                {
+                    sb.AppendLine($"        return await HttpClient.DeleteAsync(\"{route}\")");
+                }
+                sb.AppendLine($"            .GetResponse<{handler.ResponseType}>();");
                 break;
+
             default:
-                sb.AppendLine($"        var response = await HttpClient.PostAsJsonAsync(\"{route}\", request);");
+                sb.AppendLine($"        return await HttpClient.PostAsJsonAsync(\"{route}\", {paramName})");
+                sb.AppendLine($"            .GetResponse<{handler.ResponseType}>();");
                 break;
         }
 
-        sb.AppendLine("        response.EnsureSuccessStatusCode();");
-        sb.AppendLine($"        return await response.Content.ReadFromJsonAsync<{handler.ResponseType}>() ");
-        sb.AppendLine($"            ?? throw new System.InvalidOperationException(\"Failed to deserialize response\");");
         sb.AppendLine("    }");
-        sb.AppendLine();
     }
 
     /// <summary>
-    /// Extracts the namespace from a fully qualified type name.
+    /// Gets the parameter name from a request type (converts to camelCase).
     /// </summary>
-    private static string? ExtractNamespace(string fullTypeName)
+    private static string GetParameterName(string requestType)
     {
-        if (string.IsNullOrEmpty(fullTypeName))
-            return null;
-
-        // Remove generic arguments
-        var typeWithoutGenerics = fullTypeName.Split('<')[0];
-
-        var lastDot = typeWithoutGenerics.LastIndexOf('.');
-        return lastDot > 0 ? typeWithoutGenerics.Substring(0, lastDot) : null;
-    }
-
-    /// <summary>
-    /// Extracts the simple type name from a fully qualified type name.
-    /// </summary>
-    private static string ExtractSimpleTypeName(string fullTypeName)
-    {
-        if (string.IsNullOrEmpty(fullTypeName))
-            return "MoHttpApi"; // Default fallback
+        // Extract simple type name without namespace
+        var simpleTypeName = requestType.Contains(".")
+            ? requestType.Substring(requestType.LastIndexOf('.') + 1)
+            : requestType;
 
         // Remove generic arguments if any
-        var typeWithoutGenerics = fullTypeName.Split('<')[0];
+        if (simpleTypeName.Contains("<"))
+        {
+            simpleTypeName = simpleTypeName.Substring(0, simpleTypeName.IndexOf('<'));
+        }
 
-        var lastDot = typeWithoutGenerics.LastIndexOf('.');
-        return lastDot >= 0 ? typeWithoutGenerics.Substring(lastDot + 1) : typeWithoutGenerics;
+        // Convert to camelCase
+        if (string.IsNullOrEmpty(simpleTypeName))
+            return "request";
+
+        // Handle common prefixes
+        if (simpleTypeName.StartsWith("Command"))
+        {
+            var withoutPrefix = simpleTypeName.Substring("Command".Length);
+            return char.ToLowerInvariant(withoutPrefix[0]) + withoutPrefix.Substring(1);
+        }
+        else if (simpleTypeName.StartsWith("Query"))
+        {
+            var withoutPrefix = simpleTypeName.Substring("Query".Length);
+            return char.ToLowerInvariant(withoutPrefix[0]) + withoutPrefix.Substring(1);
+        }
+
+        return char.ToLowerInvariant(simpleTypeName[0]) + simpleTypeName.Substring(1);
+    }
+
+    /// <summary>
+    /// Converts a string to PascalCase.
+    /// </summary>
+    private static string ToPascalCase(string input)
+    {
+        if (string.IsNullOrEmpty(input))
+            return input;
+
+        return char.ToUpperInvariant(input[0]) + input.Substring(1);
+    }
+
+    /// <summary>
+    /// Processes a route with path parameters, replacing {paramName} with {query.ParamName}.
+    /// </summary>
+    private static string ProcessRouteWithParameters(string route, string paramName)
+    {
+        // Use regex to find all route parameters like {id}, {name}, etc.
+        var pattern = @"\{([^}]+)\}";
+        var matches = System.Text.RegularExpressions.Regex.Matches(route, pattern);
+
+        var result = route;
+        foreach (System.Text.RegularExpressions.Match match in matches)
+        {
+            var routeParamName = match.Groups[1].Value;
+            var pascalCaseParam = ToPascalCase(routeParamName);
+            // Replace {paramName} with {query.ParamName}
+            result = result.Replace("{" + routeParamName + "}", "{" + paramName + "." + pascalCaseParam + "}");
+        }
+
+        return result;
     }
 }

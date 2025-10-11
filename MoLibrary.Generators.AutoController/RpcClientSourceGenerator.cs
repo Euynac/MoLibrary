@@ -154,19 +154,21 @@ public class RpcClientSourceGenerator : IIncrementalGenerator
         {
             try
             {
-                var (interfaceCode, implementationCode) = RpcClientCodeGenerator.GenerateClientForDomain(
+                var generatedFiles = RpcClientCodeGenerator.GenerateClientForDomain(
                     metadata,
                     httpImplType);
 
                 var domainName = metadata.DomainName ?? metadata.AssemblyName.Replace(".API", "").Replace("Service", "");
 
-                // Add generated files
-                context.AddSource($"I{domainName}Api.g.cs", interfaceCode);
-                context.AddSource($"{domainName}HttpApi.g.cs", implementationCode);
+                // Add all generated files
+                foreach (var (fileName, content) in generatedFiles)
+                {
+                    context.AddSource(fileName, content);
+                }
 
                 ReportDiagnostic(context, DiagnosticSeverity.Info, "RPC_CLIENT_009",
                     "Client Generated",
-                    $"Generated RPC client for {domainName} domain",
+                    $"Generated {generatedFiles.Count} RPC client file(s) for {domainName} domain",
                     Location.None);
             }
             catch (Exception ex)
@@ -186,7 +188,7 @@ public class RpcClientSourceGenerator : IIncrementalGenerator
     private static RpcMetadata ParseMetadataJson(string json)
     {
         var metadata = new RpcMetadata();
-
+        
         // Parse assembly name
         var assemblyNameMatch = Regex.Match(json, @"""AssemblyName""\s*:\s*""([^""]*)""");
         if (assemblyNameMatch.Success)
@@ -202,17 +204,31 @@ public class RpcClientSourceGenerator : IIncrementalGenerator
         if (routePrefixMatch.Success)
             metadata.RoutePrefix = routePrefixMatch.Groups[1].Value;
 
+        // Parse related namespaces array
+        var namespacesMatch = Regex.Match(json, @"""RelatedNamespaces""\s*:\s*\[(.*?)\]", RegexOptions.Singleline);
+        if (namespacesMatch.Success)
+        {
+            var namespacesJson = namespacesMatch.Groups[1].Value;
+            // Extract each namespace string
+            var namespaceMatches = Regex.Matches(namespacesJson, @"""([^""]*)""");
+            foreach (Match nsMatch in namespaceMatches)
+            {
+                var ns = nsMatch.Groups[1].Value;
+                if (!string.IsNullOrEmpty(ns))
+                    metadata.RelatedNamespaces.Add(ns);
+            }
+        }
+
         // Parse handlers array
         var handlersMatch = Regex.Match(json, @"""Handlers""\s*:\s*\[(.*)\]", RegexOptions.Singleline);
         if (handlersMatch.Success)
         {
             var handlersJson = handlersMatch.Groups[1].Value;
-            // Split by handler objects (look for opening braces)
-            var handlerMatches = Regex.Matches(handlersJson, @"\{[^}]*\}", RegexOptions.Singleline);
+            // Extract handler objects using balanced brace matching
+            var handlers = ExtractJsonObjects(handlersJson);
 
-            foreach (Match handlerMatch in handlerMatches)
+            foreach (var handlerJson in handlers)
             {
-                var handlerJson = handlerMatch.Value;
                 var handler = ParseHandlerMetadata(handlerJson);
                 if (handler != null)
                     metadata.Handlers.Add(handler);
@@ -223,35 +239,89 @@ public class RpcClientSourceGenerator : IIncrementalGenerator
     }
 
     /// <summary>
+    /// Extracts JSON objects from a JSON array content using balanced brace matching.
+    /// Handles nested braces in string values correctly.
+    /// </summary>
+    private static List<string> ExtractJsonObjects(string jsonArrayContent)
+    {
+        var result = new List<string>();
+        var current = new StringBuilder();
+        int braceDepth = 0;
+        bool inString = false;
+        bool escaped = false;
+
+        foreach (char c in jsonArrayContent)
+        {
+            if (escaped)
+            {
+                current.Append(c);
+                escaped = false;
+                continue;
+            }
+
+            if (c == '\\' && inString)
+            {
+                current.Append(c);
+                escaped = true;
+                continue;
+            }
+
+            if (c == '"')
+            {
+                inString = !inString;
+                current.Append(c);
+                continue;
+            }
+
+            if (inString)
+            {
+                current.Append(c);
+                continue;
+            }
+
+            if (c == '{')
+            {
+                braceDepth++;
+                current.Append(c);
+            }
+            else if (c == '}')
+            {
+                current.Append(c);
+                braceDepth--;
+
+                if (braceDepth == 0 && current.Length > 0)
+                {
+                    // Complete object found
+                    result.Add(current.ToString());
+                    current.Clear();
+                }
+            }
+            else
+            {
+                current.Append(c);
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>
     /// Parses a single handler metadata object from JSON.
     /// </summary>
     private static HandlerMetadata? ParseHandlerMetadata(string json)
     {
         try
         {
-            var handler = new HandlerMetadata();
-
-            handler.HandlerName = ExtractJsonString(json, "HandlerName") ?? "";
-            handler.FullTypeName = ExtractJsonString(json, "FullTypeName") ?? "";
-            handler.RequestType = ExtractJsonString(json, "RequestType") ?? "";
-            handler.ResponseType = ExtractJsonString(json, "ResponseType") ?? "";
-            handler.HttpMethod = ExtractJsonString(json, "HttpMethod") ?? "";
-            handler.Route = ExtractJsonString(json, "Route") ?? "";
-            handler.Namespace = ExtractJsonString(json, "Namespace") ?? "";
-            handler.ClientMethodName = ExtractJsonString(json, "ClientMethodName") ?? "";
-            handler.HandlerType = ExtractJsonString(json, "HandlerType") ?? "";
-
-            // Parse tags array
-            var tagsMatch = Regex.Match(json, @"""Tags""\s*:\s*\[(.*?)\]");
-            if (tagsMatch.Success)
+            var handler = new HandlerMetadata
             {
-                var tagsJson = tagsMatch.Groups[1].Value;
-                var tagMatches = Regex.Matches(tagsJson, @"""([^""]*)""");
-                foreach (Match tagMatch in tagMatches)
-                {
-                    handler.Tags.Add(tagMatch.Groups[1].Value);
-                }
-            }
+                RequestType = ExtractJsonString(json, "RequestType") ?? "",
+                ResponseType = ExtractJsonString(json, "ResponseType") ?? "",
+                HttpMethod = ExtractJsonString(json, "HttpMethod") ?? "",
+                Route = ExtractJsonString(json, "Route") ?? "",
+                ClientMethodName = ExtractJsonString(json, "ClientMethodName") ?? "",
+                HandlerType = ExtractJsonString(json, "HandlerType") ?? "",
+                Summary = ExtractJsonString(json, "Summary") ?? ""
+            };
 
             return handler;
         }
@@ -263,11 +333,20 @@ public class RpcClientSourceGenerator : IIncrementalGenerator
 
     /// <summary>
     /// Extracts a string value from a JSON property.
+    /// Handles escaped characters including escaped quotes (\").
     /// </summary>
     private static string? ExtractJsonString(string json, string propertyName)
     {
-        var match = Regex.Match(json, $@"""{propertyName}""\s*:\s*""([^""]*)""");
-        return match.Success ? match.Groups[1].Value : null;
+        // Regex pattern that handles escaped characters:
+        // - [^"\\]* matches any character except " and \
+        // - (?:\\.[^"\\]*)* matches zero or more occurrences of: \ followed by any char, then any non-" non-\ chars
+        var match = Regex.Match(json, $@"""{propertyName}""\s*:\s*""([^""\\]*(?:\\.[^""\\]*)*)""");
+        if (!match.Success)
+            return null;
+
+        // Unescape the matched string (replace \" with ", \\ with \, etc.)
+        var escaped = match.Groups[1].Value;
+        return Regex.Replace(escaped, @"\\(.)", "$1");
     }
 
     /// <summary>
