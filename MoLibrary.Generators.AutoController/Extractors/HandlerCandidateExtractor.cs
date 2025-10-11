@@ -118,11 +118,18 @@ internal static class HandlerCandidateExtractor
             // Check if the method parameter has FromForm attribute
             var hasFromFormAttribute = AttributeHelper.HasFromFormAttribute(method);
 
-            // Extract the documentation comment from the class
-            var docComment = ExtractDocumentationComment(classDeclaration);
+            // Extract the documentation comment and plain text summary from the class
+            var (docComment, plainTextSummary) = ExtractDocumentationCommentAndSummary(classDeclaration);
 
             // Collect original using directives and candidate namespace
             var (originalUsings, candidateNamespace) = ExtractNamespaceInfo(classDeclaration);
+
+            // Get semantic model for namespace extraction
+            var semanticModel = compilation.GetSemanticModel(classDeclaration.SyntaxTree);
+
+            // Extract related namespaces using semantic analysis
+            var relatedNamespacesArray = ExtractRelatedNamespaces(classDeclaration, method, semanticModel);
+            var relatedNamespaces = new HashSet<string>(relatedNamespacesArray);
 
             return new HandlerCandidate(
                 classRoute: routeArg,
@@ -136,7 +143,9 @@ internal static class HandlerCandidateExtractor
                 documentationComment: docComment,
                 originalUsings: originalUsings,
                 candidateNamespace: candidateNamespace,
-                hasFromFormAttribute: hasFromFormAttribute
+                hasFromFormAttribute: hasFromFormAttribute,
+                relatedNamespaces: relatedNamespaces,
+                plainTextSummary: plainTextSummary
             );
         }
         catch (Exception ex)
@@ -201,11 +210,18 @@ internal static class HandlerCandidateExtractor
         // Check if the method parameter has FromForm attribute
         var hasFromFormAttribute = AttributeHelper.HasFromFormAttribute(method);
 
-        // Extract the documentation comment from the class
-        var docComment = ExtractDocumentationComment(classDeclaration);
+        // Extract the documentation comment and plain text summary from the class
+        var (docComment, plainTextSummary) = ExtractDocumentationCommentAndSummary(classDeclaration);
 
         // Collect original using directives and candidate namespace
         var (originalUsings, candidateNamespace) = ExtractNamespaceInfo(classDeclaration);
+
+        // Get semantic model for namespace extraction
+        var semanticModel = compilation.GetSemanticModel(classDeclaration.SyntaxTree);
+
+        // Extract related namespaces using semantic analysis
+        var relatedNamespacesArray = ExtractRelatedNamespaces(classDeclaration, method, semanticModel);
+        var relatedNamespaces = new HashSet<string>(relatedNamespacesArray);
 
         return new HandlerCandidate(
             classRoute: routeArg,
@@ -219,7 +235,9 @@ internal static class HandlerCandidateExtractor
             documentationComment: docComment,
             originalUsings: originalUsings,
             candidateNamespace: candidateNamespace,
-            hasFromFormAttribute: hasFromFormAttribute
+            hasFromFormAttribute: hasFromFormAttribute,
+            relatedNamespaces: relatedNamespaces,
+            plainTextSummary: plainTextSummary
         );
     }
 
@@ -280,6 +298,7 @@ internal static class HandlerCandidateExtractor
 
     /// <summary>
     /// Extracts the response type from the base class generic arguments.
+    /// Returns simple type name without namespace for concise metadata.
     /// </summary>
     /// <param name="classDeclaration">The class declaration to analyze</param>
     /// <returns>The response type or null if not found</returns>
@@ -318,6 +337,7 @@ internal static class HandlerCandidateExtractor
 
     /// <summary>
     /// Extracts the request type from the method's first parameter.
+    /// Returns simple type name without namespace for concise metadata.
     /// </summary>
     /// <param name="method">The method declaration to analyze</param>
     /// <returns>The request type or null if not found</returns>
@@ -328,57 +348,53 @@ internal static class HandlerCandidateExtractor
     }
 
     /// <summary>
-    /// Retrieves and cleans up the documentation comment for a class.
+    /// Retrieves and cleans up the documentation comment for a class, returning both formatted and plain text versions.
     /// </summary>
     /// <param name="classDeclaration">The class declaration to analyze</param>
-    /// <returns>The formatted documentation comment with proper indentation, or empty string if no comment</returns>
-    private static string ExtractDocumentationComment(ClassDeclarationSyntax classDeclaration)
+    /// <returns>Tuple of (formatted documentation comment, plain text summary)</returns>
+    private static (string formattedComment, string plainTextSummary) ExtractDocumentationCommentAndSummary(ClassDeclarationSyntax classDeclaration)
     {
         var trivia = classDeclaration.GetLeadingTrivia()
             .FirstOrDefault(tr => tr.IsKind(SyntaxKind.SingleLineDocumentationCommentTrivia) ||
                                   tr.IsKind(SyntaxKind.MultiLineDocumentationCommentTrivia));
 
         if (trivia.IsKind(SyntaxKind.None))
-            return string.Empty;
+            return (string.Empty, string.Empty);
 
         var rawComment = trivia.ToString();
         if (string.IsNullOrWhiteSpace(rawComment))
-            return string.Empty;
+            return (string.Empty, string.Empty);
 
-        return ProcessDocumentationComment(rawComment);
-    }
-
-    /// <summary>
-    /// Processes the raw documentation comment to extract only the summary and format it properly.
-    /// </summary>
-    /// <param name="rawComment">The raw XML documentation comment</param>
-    /// <returns>The formatted summary with proper indentation</returns>
-    private static string ProcessDocumentationComment(string rawComment)
-    {
         // Use regex to extract content between <summary> and </summary> tags
         var summaryMatch = System.Text.RegularExpressions.Regex.Match(
-            rawComment, 
-            @"<summary>(.*?)</summary>", 
+            rawComment,
+            @"<summary>(.*?)</summary>",
             System.Text.RegularExpressions.RegexOptions.Singleline | System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
         if (!summaryMatch.Success)
-            return string.Empty;
+            return (string.Empty, string.Empty);
 
         // Extract and clean the summary content
         var summaryContent = summaryMatch.Groups[1].Value;
-        var lines = summaryContent.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
+        var cleanLines = summaryContent.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
             .Select(line => line.Replace("///", "").Trim())
             .Where(line => !string.IsNullOrWhiteSpace(line))
-            .Select(line => $"        /// {line}").ToList();
+            .ToList();
 
-        if (!lines.Any())
-            return string.Empty;
+        if (!cleanLines.Any())
+            return (string.Empty, string.Empty);
 
-        // Build the complete summary with tags
-        return string.Join("\n", 
+        // Generate formatted comment with proper indentation
+        var formattedLines = cleanLines.Select(line => $"        /// {line}").ToList();
+        var formattedComment = string.Join("\n",
             ((string[])["        /// <summary>"])
-            .Concat(lines)
+            .Concat(formattedLines)
             .Concat(["        /// </summary>"]));
+
+        // Generate plain text summary (without XML tags or ///)
+        var plainTextSummary = string.Join(" ", cleanLines).Trim();
+
+        return (formattedComment, plainTextSummary);
     }
 
 
@@ -415,5 +431,103 @@ internal static class HandlerCandidateExtractor
         }
 
         return (originalUsings, candidateNamespace);
+    }
+
+    /// <summary>
+    /// Extracts all unique namespaces from request and response types using SemanticModel.
+    /// Handles generic types by extracting namespaces from both the outer type and generic arguments.
+    /// </summary>
+    /// <param name="classDeclaration">The class declaration to analyze</param>
+    /// <param name="method">The method declaration to analyze</param>
+    /// <param name="semanticModel">The semantic model for type resolution</param>
+    /// <returns>Array of unique, sorted namespaces</returns>
+    private static string[] ExtractRelatedNamespaces(
+        ClassDeclarationSyntax classDeclaration,
+        MethodDeclarationSyntax method,
+        SemanticModel semanticModel)
+    {
+        var namespaces = new HashSet<string>();
+
+        // Extract namespaces from response type
+        var baseTypeSyntax = classDeclaration.BaseList?.Types.First().Type as GenericNameSyntax;
+        if (baseTypeSyntax?.TypeArgumentList.Arguments.Count >= 3)
+        {
+            var responseTypeSyntax = baseTypeSyntax.TypeArgumentList.Arguments.Last();
+            CollectNamespacesFromType(responseTypeSyntax, semanticModel, namespaces);
+        }
+
+        // Extract namespaces from request type
+        var firstParameter = method.ParameterList.Parameters.FirstOrDefault();
+        if (firstParameter?.Type != null)
+        {
+            CollectNamespacesFromType(firstParameter.Type, semanticModel, namespaces);
+        }
+
+        return namespaces
+            .Where(ns => !string.IsNullOrEmpty(ns) && !ns.StartsWith("System"))
+            .OrderBy(ns => ns)
+            .ToArray();
+    }
+
+    /// <summary>
+    /// Collects namespaces from a type syntax, including generic type arguments.
+    /// </summary>
+    /// <param name="typeSyntax">The type syntax to analyze</param>
+    /// <param name="semanticModel">The semantic model for type resolution</param>
+    /// <param name="namespaces">HashSet to collect unique namespaces</param>
+    private static void CollectNamespacesFromType(
+        TypeSyntax typeSyntax,
+        SemanticModel semanticModel,
+        HashSet<string> namespaces)
+    {
+        var typeInfo = semanticModel.GetTypeInfo(typeSyntax);
+        var typeSymbol = typeInfo.Type;
+
+        if (typeSymbol == null) return;
+
+        // Handle generic types (e.g., Res<ResponseType>)
+        if (typeSymbol is INamedTypeSymbol namedType)
+        {
+            // Add the namespace of the outer type
+            var ns = namedType.ContainingNamespace?.ToDisplayString();
+            if (!string.IsNullOrEmpty(ns))
+                namespaces.Add(ns);
+
+            // Process generic type arguments recursively
+            if (namedType.IsGenericType)
+            {
+                foreach (var typeArg in namedType.TypeArguments)
+                {
+                    CollectNamespacesFromTypeSymbol(typeArg, namespaces);
+                }
+            }
+        }
+        else
+        {
+            var ns = typeSymbol.ContainingNamespace?.ToDisplayString();
+            if (!string.IsNullOrEmpty(ns))
+                namespaces.Add(ns);
+        }
+    }
+
+    /// <summary>
+    /// Recursively collects namespaces from a type symbol.
+    /// </summary>
+    private static void CollectNamespacesFromTypeSymbol(ITypeSymbol typeSymbol, HashSet<string> namespaces)
+    {
+        if (typeSymbol == null) return;
+
+        var ns = typeSymbol.ContainingNamespace?.ToDisplayString();
+        if (!string.IsNullOrEmpty(ns))
+            namespaces.Add(ns);
+
+        // Handle nested generic types
+        if (typeSymbol is INamedTypeSymbol namedType && namedType.IsGenericType)
+        {
+            foreach (var typeArg in namedType.TypeArguments)
+            {
+                CollectNamespacesFromTypeSymbol(typeArg, namespaces);
+            }
+        }
     }
 }

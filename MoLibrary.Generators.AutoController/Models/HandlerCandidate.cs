@@ -17,7 +17,9 @@ internal class HandlerCandidate(
     string documentationComment,
     IEnumerable<string> originalUsings,
     string candidateNamespace,
-    bool hasFromFormAttribute = false)
+    bool hasFromFormAttribute = false,
+    HashSet<string>? relatedNamespaces = null,
+    string plainTextSummary = "")
 {
     /// <summary>
     /// The route path associated with the handler class.
@@ -78,4 +80,15 @@ internal class HandlerCandidate(
     /// Indicates whether the handler method has a FromForm attribute for form data binding.
     /// </summary>
     public bool HasFromFormAttribute { get; } = hasFromFormAttribute;
+
+    /// <summary>
+    /// Collection of unique namespaces extracted from request and response types (including generic type arguments).
+    /// These namespaces are used to generate appropriate 'using' statements in client code.
+    /// </summary>
+    public HashSet<string> RelatedNamespaces { get; } = relatedNamespaces ?? new HashSet<string>();
+
+    /// <summary>
+    /// The plain text summary documentation (without XML tags and prefixes).
+    /// </summary>
+    public string PlainTextSummary { get; } = plainTextSummary;
 }

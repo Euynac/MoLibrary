@@ -24,6 +24,12 @@ internal class RpcMetadata
     public string? RoutePrefix { get; set; }
 
     /// <summary>
+    /// Collection of unique namespaces from all request and response types used by handlers in this assembly.
+    /// These namespaces are used to generate appropriate 'using' statements in client code.
+    /// </summary>
+    public List<string> RelatedNamespaces { get; set; } = new();
+
+    /// <summary>
     /// Collection of handler metadata for RPC client generation.
     /// </summary>
     public List<HandlerMetadata> Handlers { get; set; } = new();
@@ -35,16 +41,6 @@ internal class RpcMetadata
 internal class HandlerMetadata
 {
     /// <summary>
-    /// The simple name of the handler class (e.g., "QueryHandlerGetFlightListToDay").
-    /// </summary>
-    public string HandlerName { get; set; } = string.Empty;
-
-    /// <summary>
-    /// The fully qualified type name of the handler class.
-    /// </summary>
-    public string FullTypeName { get; set; } = string.Empty;
-
-    /// <summary>
     /// The fully qualified type name of the request parameter.
     /// </summary>
     public string RequestType { get; set; } = string.Empty;
@@ -55,24 +51,14 @@ internal class HandlerMetadata
     public string ResponseType { get; set; } = string.Empty;
 
     /// <summary>
-    /// The HTTP method attribute (e.g., "HttpPost", "HttpGet").
+    /// The HTTP method (e.g., "POST", "GET").
     /// </summary>
     public string HttpMethod { get; set; } = string.Empty;
 
     /// <summary>
-    /// The complete route for this handler (combines class route and method route).
+    /// The complete route for this handler (e.g., "api/v1/Flight/transport-flights").
     /// </summary>
     public string Route { get; set; } = string.Empty;
-
-    /// <summary>
-    /// The namespace where the handler is defined.
-    /// </summary>
-    public string Namespace { get; set; } = string.Empty;
-
-    /// <summary>
-    /// The list of tags associated with the handler for grouping.
-    /// </summary>
-    public List<string> Tags { get; set; } = new();
 
     /// <summary>
     /// The client method name to be generated (e.g., "GetFlightListToDay").
@@ -83,4 +69,9 @@ internal class HandlerMetadata
     /// The handler type (e.g., "Command", "Query").
     /// </summary>
     public string HandlerType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The plain text summary documentation for this handler (without XML tags).
+    /// </summary>
+    public string Summary { get; set; } = string.Empty;
 }
