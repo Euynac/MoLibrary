@@ -97,6 +97,18 @@ public class HttpApiControllerSourceGenerator : IIncrementalGenerator
             if (validCandidates.Any())
             {
                 ControllerCodeGenerator.GenerateControllers(spc, validCandidates);
+
+                // Generate RPC metadata file for client code generation
+                // Extract config and compilation from first candidate's context
+                var firstInfo = candidatesInfo.FirstOrDefault();
+                if (firstInfo != null && firstInfo.config != null)
+                {
+                    MetadataFileGenerator.GenerateMetadataFile(
+                        spc,
+                        validCandidates,
+                        firstInfo.config,
+                        firstInfo.compilation);
+                }
             }
         });
     }

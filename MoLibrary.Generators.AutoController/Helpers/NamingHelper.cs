@@ -15,9 +15,15 @@ internal static class NamingHelper
     /// <returns>Handler type or null if not recognized</returns>
     public static string? DetermineHandlerType(string className)
     {
+        // Check for full handler names (e.g., "CommandHandler", "QueryHandler")
         if (className.Contains(GeneratorConstants.HandlerTypes.CommandHandler))
             return GeneratorConstants.HandlerTypes.Command;
         else if (className.Contains(GeneratorConstants.HandlerTypes.QueryHandler))
+            return GeneratorConstants.HandlerTypes.Query;
+        // Check for CQRS style names (e.g., "CommandCreateUser", "QueryGetUser")
+        else if (className.StartsWith(GeneratorConstants.HandlerTypes.Command))
+            return GeneratorConstants.HandlerTypes.Command;
+        else if (className.StartsWith(GeneratorConstants.HandlerTypes.Query))
             return GeneratorConstants.HandlerTypes.Query;
         else
             return null;
