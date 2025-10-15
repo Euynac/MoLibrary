@@ -390,41 +390,42 @@ internal class CodeBuilder
         // 生成单个属性赋值
         foreach (var property in group.Properties)
         {
-            sb.AppendLine($"        if ({property.Name} != null)");
-            sb.AppendLine("        {");
-            
-            if (IsDateTimeType(property.Type))
-            {
-                // 检查原始属性是否可空
-                if (property.OriginalType.Contains("?") || property.OriginalType.StartsWith("DateTime?"))
-                {
-                    // 目标属性是可空的，直接赋值
-                    var safePropertyPath = MakeNonNullPropertyPath(property.PropertyPath);
-                    sb.AppendLine($"            entity.{safePropertyPath} = {property.Name};");
-                }
-                else
-                {
-                    // 目标属性是非空的，需要检查默认值并转换
-                    sb.AppendLine($"            if ({property.Name} != default(DateTime))");
-                    sb.AppendLine("            {");
-                    var safePropertyPath = MakeNonNullPropertyPath(property.PropertyPath);
-                    sb.AppendLine($"                entity.{safePropertyPath} = {property.Name}.Value;");
-                    sb.AppendLine("            }");
-                }
-            }
-            else if (IsNullableValueType(property.Type))
-            {
-                var safePropertyPath = MakeNonNullPropertyPath(property.PropertyPath);
-                sb.AppendLine($"            entity.{safePropertyPath} = {property.Name}.Value;");
-            }
-            else
-            {
-                var safePropertyPath = MakeNonNullPropertyPath(property.PropertyPath);
-                sb.AppendLine($"            entity.{safePropertyPath} = {property.Name};");
-            }
-            
-            sb.AppendLine("        }");
-            sb.AppendLine();
+            BuildPropertyAssignment(sb, property);
+            // sb.AppendLine($"        if ({property.Name} != null)");
+            // sb.AppendLine("        {");
+            //
+            // if (IsDateTimeType(property.Type))
+            // {
+            //     // 检查原始属性是否可空
+            //     if (property.OriginalType.Contains("?") || property.OriginalType.StartsWith("DateTime?"))
+            //     {
+            //         // 目标属性是可空的，直接赋值
+            //         var safePropertyPath = MakeNonNullPropertyPath(property.PropertyPath);
+            //         sb.AppendLine($"            entity.{safePropertyPath} = {property.Name};");
+            //     }
+            //     else
+            //     {
+            //         // 目标属性是非空的，需要检查默认值并转换
+            //         sb.AppendLine($"            if ({property.Name} != default(DateTime))");
+            //         sb.AppendLine("            {");
+            //         var safePropertyPath = MakeNonNullPropertyPath(property.PropertyPath);
+            //         sb.AppendLine($"                entity.{safePropertyPath} = {property.Name}.Value;");
+            //         sb.AppendLine("            }");
+            //     }
+            // }
+            // else if (IsNullableValueType(property.Type))
+            // {
+            //     var safePropertyPath = MakeNonNullPropertyPath(property.PropertyPath);
+            //     sb.AppendLine($"            entity.{safePropertyPath} = {property.Name}.Value;");
+            // }
+            // else
+            // {
+            //     var safePropertyPath = MakeNonNullPropertyPath(property.PropertyPath);
+            //     sb.AppendLine($"            entity.{safePropertyPath} = {property.Name};");
+            // }
+            //
+            // sb.AppendLine("        }");
+            // sb.AppendLine();
         }
 
         sb.AppendLine("        #endregion");
