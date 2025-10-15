@@ -74,6 +74,7 @@ internal static class RpcClientCodeGenerator
         sb.AppendLine("using System.ServiceModel;");
         sb.AppendLine("using System.Threading.Tasks;");
         sb.AppendLine("using JetBrains.Annotations;");
+        sb.AppendLine("using MoLibrary.DomainDrivenDesign.AutoController.MoRpc;");
         sb.AppendLine();
 
         // Use RelatedNamespaces from metadata (already sorted and distinct)
@@ -92,15 +93,8 @@ internal static class RpcClientCodeGenerator
         // Interface declaration with ServiceContract attribute
         sb.AppendLine("[ServiceContract]");
 
-        // Add IMoRpcApi inheritance for Command interfaces
-        if (handlerType == "Command")
-        {
-            sb.AppendLine($"public interface {interfaceName} : MoLibrary.DomainDrivenDesign.AutoController.MoRpc.IMoRpcApi");
-        }
-        else
-        {
-            sb.AppendLine($"public interface {interfaceName}");
-        }
+        // Add IMoRpcApi extend
+        sb.AppendLine($"public interface {interfaceName} : IMoRpcApi");
 
         sb.AppendLine("{");
 

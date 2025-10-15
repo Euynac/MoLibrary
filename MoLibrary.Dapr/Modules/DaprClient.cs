@@ -33,7 +33,6 @@ public class ModuleDaprClient(ModuleDaprClientOption option)
             MaxReceiveMessageSize = Option.MaxReceiveMessageSize,
             MaxSendMessageSize = Option.MaxSendMessageSize,
             MaxRetryBufferSize = Option.MaxRetryBufferSize,
-
         }).UseJsonSerializationOptions(DefaultMoGlobalJsonOptions.GlobalJsonSerializerOptions));
     }
 }

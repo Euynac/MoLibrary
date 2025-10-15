@@ -164,7 +164,7 @@ public class ModuleRegisterInfo(Type moduleType)
         string? secondKey, string key) where TOption : class, IMoModuleOptionBase, new()
     {
         RegisterRequests.Add(
-            new ModuleRegisterRequest($"{key}{secondKey?.BeAfter("_")}:ConfigOption<{typeof(TOption).Name}>")
+            new ModuleRegisterRequest($"{key}{secondKey?.BeAfter("_")}")
             {
                 ConfigureContext = context =>
                 {
@@ -172,7 +172,8 @@ public class ModuleRegisterInfo(Type moduleType)
                 },
                 RequestMethod = EMoModuleConfigMethods.ConfigureServices,
                 Order = guideFrom != EMoModules.Developer ? order - 1 : order, //来自模块级联注册的Option的优先级始终比用户Order低1
-                RequestFrom = guideFrom
+                RequestFrom = guideFrom,
+                SourceDesc = $"ConfigOption<{typeof(TOption).Name}>"
             });
 
         var type = typeof(TOption);
