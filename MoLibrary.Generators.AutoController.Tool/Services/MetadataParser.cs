@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using MoLibrary.Generators.AutoController.Tool.Models;
 
 namespace MoLibrary.Generators.AutoController.Tool.Services;
 
@@ -16,14 +17,21 @@ public class MetadataParser
     );
 
     /// <summary>
-    /// Parses a metadata file and extracts the JSON content.
+    /// Parses a metadata file and extracts the JSON content along with file information.
     /// </summary>
     /// <param name="filePath">Path to the metadata file</param>
-    /// <returns>Tuple of (AssemblyName, JsonContent), or null if parsing failed</returns>
-    public static (string AssemblyName, string JsonContent)? ParseMetadataFile(string filePath)
+    /// <returns>MetadataFileInfo object, or null if parsing failed</returns>
+    public static MetadataFileInfo? ParseMetadataFile(string filePath)
     {
         try
         {
+            var fileInfo = new FileInfo(filePath);
+            if (!fileInfo.Exists)
+            {
+                Console.WriteLine($"[WARNING] File does not exist: {filePath}");
+                return null;
+            }
+
             var content = File.ReadAllText(filePath);
 
             // Extract JSON from raw string literal
@@ -53,7 +61,14 @@ public class MetadataParser
                 return null;
             }
 
-            return (assemblyName, jsonContent);
+            return new MetadataFileInfo
+            {
+                FilePath = filePath,
+                AssemblyName = assemblyName,
+                JsonContent = jsonContent,
+                LastWriteTime = fileInfo.LastWriteTime,
+                CreationTime = fileInfo.CreationTime
+            };
         }
         catch (Exception ex)
         {
@@ -66,9 +81,8 @@ public class MetadataParser
     /// Writes metadata JSON to the output directory.
     /// </summary>
     /// <param name="outputDirectory">The directory to write the file to</param>
-    /// <param name="assemblyName">The assembly name (used as filename)</param>
-    /// <param name="jsonContent">The JSON content to write</param>
-    public static bool WriteMetadataFile(string outputDirectory, string assemblyName, string jsonContent)
+    /// <param name="metadataInfo">The metadata file information to write</param>
+    public static bool WriteMetadataFile(string outputDirectory, MetadataFileInfo metadataInfo)
     {
         try
         {
@@ -76,15 +90,18 @@ public class MetadataParser
             Directory.CreateDirectory(outputDirectory);
 
             // Write JSON file
-            var outputPath = Path.Combine(outputDirectory, $"{assemblyName}.rpc-metadata.json");
-            File.WriteAllText(outputPath, jsonContent);
+            var outputPath = Path.Combine(outputDirectory, $"{metadataInfo.AssemblyName}.rpc-metadata.json");
+            File.WriteAllText(outputPath, metadataInfo.JsonContent);
 
-            Console.WriteLine($"[GENERATE] {assemblyName}.rpc-metadata.json");
+            Console.WriteLine($"[GENERATE] {metadataInfo.AssemblyName}.rpc-metadata.json");
+            Console.WriteLine($"           Source: {metadataInfo.FilePath}");
+            Console.WriteLine($"           Last Modified: {metadataInfo.LastWriteTime:yyyy-MM-dd HH:mm:ss}");
+            Console.WriteLine($"           Created: {metadataInfo.CreationTime:yyyy-MM-dd HH:mm:ss}");
             return true;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Failed to write metadata for {assemblyName}: {ex.Message}");
+            Console.WriteLine($"[ERROR] Failed to write metadata for {metadataInfo.AssemblyName}: {ex.Message}");
             return false;
         }
     }

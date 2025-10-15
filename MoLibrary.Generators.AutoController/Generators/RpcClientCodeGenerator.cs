@@ -218,7 +218,8 @@ internal static class RpcClientCodeGenerator
     /// </summary>
     private static void GenerateClientMethod(StringBuilder sb, HandlerMetadata handler)
     {
-        var paramName = GetParameterName(handler.RequestType);
+        var paramName = "request";
+        // var paramName = GetParameterName(handler.RequestType);
 
         // No need for summary comments in implementation since the interface already has them
         // Make all methods virtual so users can override them

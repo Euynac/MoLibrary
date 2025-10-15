@@ -26,7 +26,8 @@
       "mcp__browsermcp__browser_press_key",
       "mcp__browsermcp__browser_wait",
       "Bash(grep:*)",
-      "Bash(dotnet run)"
+      "Bash(dotnet run)",
+      "Bash(dotnet publish:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"
