@@ -11,7 +11,6 @@ using MoLibrary.Core.GlobalJson;
 using MoLibrary.SignalR.Interfaces;
 using SignalRSwaggerGen;
 using SignalRSwaggerGen.Attributes;
-using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace MoLibrary.SignalR;
 
@@ -80,7 +79,16 @@ public static class SignalRBuilderExtensions
         {
             new() { Name = option.SwaggerGroupName, Description = "SignalR相关功能扩展" }
         };
-        endpoints.MapGet(option.ServerMethodsRoute, async (HttpResponse response, HttpContext context) =>
+
+        var uniqueRoutePattern = string.Empty;
+        // 生成唯一的端点名称
+        var endpointName = $"获取SignalR所有Server端事件定义_{typeof(THubServer).Name}";
+        // 生成唯一的路由路径，融入Hub的类型名，避免路径冲突
+        uniqueRoutePattern = !typeof(THubServer).Name.Equals("UnifiedHub") ? 
+            $"{option.ServerMethodsRoute.TrimEnd('/')}/{typeof(THubServer).Name}" 
+            : option.ServerMethodsRoute;
+
+        endpoints.MapGet(uniqueRoutePattern, async (HttpResponse response, HttpContext context) =>
         {
             var methods = typeof(THubServer).GetMethods().Where(p => p.DeclaringType == typeof(THubServer)).Select(p =>
                 new
@@ -95,7 +103,8 @@ public static class SignalRBuilderExtensions
                 }).ToList();
 
             await response.WriteAsJsonAsync(methods);
-        }).WithName("获取SignalR所有Server端事件定义").WithOpenApi(operation =>
+        }).WithName(endpointName) 
+        .WithOpenApi(operation =>
         {
             operation.Summary = "获取SignalR所有Server端事件定义";
             operation.Description = "获取SignalR所有Server端事件定义";
