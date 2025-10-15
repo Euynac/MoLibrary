@@ -137,7 +137,7 @@ public class OptionItem
     }
 
     /// <summary>
-    /// 根据配置类获取配置项信息列表
+    /// 根据配置类获取配置项信息列表（必须是含有set方法的属性）
     /// </summary>
     /// <param name="configType"></param>
     /// <param name="configInstance"></param>
@@ -145,7 +145,7 @@ public class OptionItem
     /// <returns></returns>
     public static List<OptionItem> CreateItems(Type configType, object? configInstance, string? parentKey)
     {
-        var items = configType.GetProperties()
+        var items = configType.GetProperties().Where(p=>p.CanWrite)
             .Select(x => new OptionItem(x.GetCustomAttribute<OptionSettingAttribute>(), x, configInstance, parentKey)).ToList();
         return items;
     }
