@@ -81,11 +81,13 @@ public enum EMoModules
     TimekeeperUI,
     DataChannelUI,
     ConfigurationUI,
-MapperUI,
+    MapperUI,
     RegisterCentreUI,
     FrameworkMonitorUI,
     /// <summary>
     /// 文本差异对比高亮UI模块
     /// </summary>
     DiffHighlightUI,
+    RpcClient,
+    RpcClientDaprProvider
 }

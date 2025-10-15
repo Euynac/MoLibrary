@@ -377,6 +377,7 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     /// <param name="optionAction">模块选项配置操作</param>
     /// <param name="order">配置执行顺序枚举值</param>
     /// <param name="secondKey">配置方法第二标志符，用于某些可多次调用该方法的情况，若本身可多次调用，可传入<see cref=" Guid.NewGuid()"/></param>
+    /// <param name="key">配置方法的唯一标识符</param>
     private TModuleGuideSelf ConfigureOption<TOption>(Action<TOption>? optionAction, int order, string? secondKey,
         string key) where TOption : class, IMoModuleOptionBase, new()
     {
@@ -393,6 +394,7 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     /// <param name="optionAction">模块额外选项配置操作</param>
     /// <param name="order">配置执行顺序枚举值</param>
     /// <param name="secondKey">配置方法第二标志符，用于某些可多次调用该方法的情况，若本身可多次调用，可传入<see cref=" Guid.NewGuid()"/></param>
+    /// <param name="key">配置方法的唯一标识符</param>
     public TModuleGuideSelf ConfigureExtraOption<TOption>(Action<TOption>? optionAction,
         EMoModuleOrder order = EMoModuleOrder.Normal, string? secondKey = null, [CallerMemberName] string key = "") where TOption : class, IMoModuleExtraOption<TModule>, new()
     {

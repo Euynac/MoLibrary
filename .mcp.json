@@ -30,6 +30,11 @@
     "microsoft_docs_mcp": {
       "type": "http",
       "url": "https://learn.microsoft.com/api/mcp"
+    },
+    "word-document-server": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["--from", "office-word-mcp-server", "word_mcp_server"]
     }
   }
 }
