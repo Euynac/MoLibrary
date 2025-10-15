@@ -62,18 +62,6 @@ internal static class HandlerCandidateExtractor
             // Compute the method name by removing the handler prefix
             var methodName = NamingHelper.ComputeMethodName(className);
 
-            // Extract the response type from the base class generic arguments
-            var responseType = ExtractResponseType(classDeclaration);
-            if (responseType == null)
-            {
-                var diagnostic = Diagnostic.Create(
-                    DiagnosticDescriptors.InvalidApplicationServiceInheritance,
-                    location,
-                    className);
-                context.ReportDiagnostic(diagnostic);
-                return null;
-            }
-
             // Find the method (either decorated with an HTTP method attribute or any public method for CQRS)
             var method = FindHttpMethodDecoratedMethod(classDeclaration) ?? FindPublicMethod(classDeclaration);
             if (method == null)
@@ -82,6 +70,18 @@ internal static class HandlerCandidateExtractor
                     DiagnosticDescriptors.MissingHandleMethod,
                     location,
                     className);
+                context.ReportDiagnostic(diagnostic);
+                return null;
+            }
+
+            // Extract the response type from the method's return type
+            var responseType = ExtractResponseType(method);
+            if (responseType == null)
+            {
+                var diagnostic = Diagnostic.Create(
+                    DiagnosticDescriptors.InvalidHandleMethodSignature,
+                    location,
+                    "Could not extract response type from method return type");
                 context.ReportDiagnostic(diagnostic);
                 return null;
             }
@@ -187,14 +187,14 @@ internal static class HandlerCandidateExtractor
         // Compute the method name by removing the handler prefix
         var methodName = NamingHelper.ComputeMethodName(className);
 
-        // Extract the response type from the base class generic arguments
-        var responseType = ExtractResponseType(classDeclaration);
-        if (responseType == null)
-            return null;
-
         // Find the method (either decorated with an HTTP method attribute or any public method for CQRS)
         var method = FindHttpMethodDecoratedMethod(classDeclaration) ?? FindPublicMethod(classDeclaration);
         if (method == null)
+            return null;
+
+        // Extract the response type from the method's return type
+        var responseType = ExtractResponseType(method);
+        if (responseType == null)
             return null;
 
         // Retrieve the HTTP method name and its route (supports CQRS fallback)
@@ -297,18 +297,29 @@ internal static class HandlerCandidateExtractor
     }
 
     /// <summary>
-    /// Extracts the response type from the base class generic arguments.
-    /// Returns simple type name without namespace for concise metadata.
+    /// Extracts the response type from the handler method's return type.
+    /// The method should return Task&lt;ResponseType&gt;, and we extract the ResponseType.
     /// </summary>
-    /// <param name="classDeclaration">The class declaration to analyze</param>
+    /// <param name="method">The handler method</param>
     /// <returns>The response type or null if not found</returns>
-    private static string? ExtractResponseType(ClassDeclarationSyntax classDeclaration)
+    private static string? ExtractResponseType(MethodDeclarationSyntax method)
     {
-        var baseTypeSyntax = classDeclaration.BaseList?.Types.First().Type as GenericNameSyntax;
-        if (baseTypeSyntax?.TypeArgumentList.Arguments.Count < 3)
-            return null;
+        // Get the return type (should be Task<ResponseType>)
+        var returnType = method.ReturnType;
 
-        return baseTypeSyntax!.TypeArgumentList.Arguments.Last().ToString();
+        // Handle generic Task<T>
+        if (returnType is GenericNameSyntax genericReturnType)
+        {
+            // Check if it's Task<T>
+            if (genericReturnType.Identifier.Text == "Task" &&
+                genericReturnType.TypeArgumentList.Arguments.Count > 0)
+            {
+                // Extract the T from Task<T>
+                return genericReturnType.TypeArgumentList.Arguments.First().ToString();
+            }
+        }
+
+        return null;
     }
 
     /// <summary>
