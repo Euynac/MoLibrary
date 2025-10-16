@@ -14,8 +14,8 @@ public class ModuleEventBus(ModuleEventBusOption option) : MoModule<ModuleEventB
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddSingleton<IMoLocalEventBus, LocalEventBus>();
-        services.AddSingleton<LocalEventBus>();
+        services.AddSingleton<IMoLocalEventBus, LocalEventBusProvider>();
+        services.AddSingleton<LocalEventBusProvider>();
         services.AddSingleton<IEventHandlerInvoker, EventHandlerInvoker>();
     }
 }

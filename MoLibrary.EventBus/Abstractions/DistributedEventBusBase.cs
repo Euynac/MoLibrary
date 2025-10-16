@@ -34,6 +34,9 @@ public abstract class DistributedEventBusBase(
 }
 
 
+/// <summary>
+/// 空的分布式事件总线，用于测试或不需要实际发布事件的场景
+/// </summary>
 public sealed class NullDistributedEventBus(IServiceScopeFactory serviceScopeFactory, IOptions<DistributedEventBusOptions> options, IEventHandlerInvoker eventHandlerInvoker, IMoLocalEventBus localEventBus) : DistributedEventBusBase(serviceScopeFactory, options, eventHandlerInvoker, localEventBus)
 {
     protected override async Task PublishToEventBusAsync(Type eventType, object eventData)
