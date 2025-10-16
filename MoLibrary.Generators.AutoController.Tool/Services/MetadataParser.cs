@@ -79,6 +79,7 @@ public class MetadataParser
 
     /// <summary>
     /// Writes metadata JSON to the output directory.
+    /// Sorts Handlers by ClientMethodName before writing.
     /// </summary>
     /// <param name="outputDirectory">The directory to write the file to</param>
     /// <param name="metadataInfo">The metadata file information to write</param>
@@ -89,9 +90,12 @@ public class MetadataParser
             // Ensure output directory exists
             Directory.CreateDirectory(outputDirectory);
 
+            // Parse JSON and sort Handlers by ClientMethodName
+            var sortedJsonContent = SortHandlersByClientMethodName(metadataInfo.JsonContent);
+
             // Write JSON file
             var outputPath = Path.Combine(outputDirectory, $"{metadataInfo.AssemblyName}.rpc-metadata.json");
-            File.WriteAllText(outputPath, metadataInfo.JsonContent);
+            File.WriteAllText(outputPath, sortedJsonContent);
 
             Console.WriteLine($"[GENERATE] {metadataInfo.AssemblyName}.rpc-metadata.json");
             Console.WriteLine($"           Source: {metadataInfo.FilePath}");
@@ -103,6 +107,74 @@ public class MetadataParser
         {
             Console.WriteLine($"[ERROR] Failed to write metadata for {metadataInfo.AssemblyName}: {ex.Message}");
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Sorts the Handlers array in JSON by ClientMethodName.
+    /// </summary>
+    /// <param name="jsonContent">The original JSON content</param>
+    /// <returns>JSON content with sorted Handlers</returns>
+    private static string SortHandlersByClientMethodName(string jsonContent)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(jsonContent);
+            var root = doc.RootElement;
+
+            // Create a new JSON object with sorted Handlers
+            using var stream = new MemoryStream();
+            using var writer = new Utf8JsonWriter(stream, new JsonWriterOptions
+            {
+                Indented = true,
+                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            });
+
+            writer.WriteStartObject();
+
+            // Write all properties in order
+            foreach (var property in root.EnumerateObject())
+            {
+                if (property.Name == "Handlers")
+                {
+                    // Sort Handlers by ClientMethodName
+                    var handlers = property.Value.EnumerateArray()
+                        .OrderBy(h =>
+                        {
+                            if (h.TryGetProperty("ClientMethodName", out var methodName))
+                            {
+                                return methodName.GetString() ?? string.Empty;
+                            }
+                            return string.Empty;
+                        })
+                        .ToList();
+
+                    writer.WritePropertyName("Handlers");
+                    writer.WriteStartArray();
+
+                    foreach (var handler in handlers)
+                    {
+                        handler.WriteTo(writer);
+                    }
+
+                    writer.WriteEndArray();
+                }
+                else
+                {
+                    // Write other properties as-is
+                    property.WriteTo(writer);
+                }
+            }
+
+            writer.WriteEndObject();
+            writer.Flush();
+
+            return System.Text.Encoding.UTF8.GetString(stream.ToArray());
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[WARNING] Failed to sort Handlers, using original JSON: {ex.Message}");
+            return jsonContent;
         }
     }
 }
