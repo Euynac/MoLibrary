@@ -29,7 +29,7 @@ internal static class RpcClientCodeGenerator
         if (commandHandlers.Count > 0)
         {
             var commandInterfaceName = $"ICommand{domainName}";
-            var commandImplName = $"Command{domainName}HttpApi";
+            var commandImplName = $"CommandHttpApi{domainName}";
 
             var interfaceCode = GenerateClientInterface(metadata, commandInterfaceName, commandHandlers, "Command");
             var implCode = GenerateClientImplementation(metadata, commandInterfaceName, commandImplName, commandHandlers, httpImplType);
@@ -42,7 +42,7 @@ internal static class RpcClientCodeGenerator
         if (queryHandlers.Count > 0)
         {
             var queryInterfaceName = $"IQuery{domainName}";
-            var queryImplName = $"Query{domainName}HttpApi";
+            var queryImplName = $"QueryHttpApi{domainName}";
 
             var interfaceCode = GenerateClientInterface(metadata, queryInterfaceName, queryHandlers, "Query");
             var implCode = GenerateClientImplementation(metadata, queryInterfaceName, queryImplName, queryHandlers, httpImplType);
@@ -111,16 +111,12 @@ internal static class RpcClientCodeGenerator
                 sb.AppendLine("    /// </summary>");
             }
 
-            // Add parameter documentation
-            sb.AppendLine($"    /// <param name=\"{GetParameterName(handler.RequestType)}\"></param>");
-            sb.AppendLine("    /// <returns></returns>");
-
             // Add attributes
             sb.AppendLine("    [OperationContract]");
             sb.AppendLine("    [MustUseReturnValue]");
 
             // Method signature
-            sb.AppendLine($"    Task<{handler.ResponseType}> {handler.ClientMethodName}({handler.RequestType} {GetParameterName(handler.RequestType)});");
+            sb.AppendLine($"    Task<{handler.ResponseType}> {handler.ClientMethodName}({handler.RequestType} request);");
 
             // Add blank line between methods except for the last one
             if (i < handlers.Count - 1)

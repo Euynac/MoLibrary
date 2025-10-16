@@ -59,7 +59,8 @@ public class ModuleRpcClient(ModuleRpcClientOption option) :
             {
                 if (domain.ToString() == "None") continue;
 
-                foreach (var type in RelatedTypes.Where(p => p.Name.Contains(domain.ToString())))
+                foreach (var type in RelatedTypes.Where(p => p.Name.IndexOf("Api", StringComparison.Ordinal) is var index and > 0 
+                                                             && domain.ToString() == p.Name[(index + 3)..]))
                 {
                     var interfaces = type.GetInterfaces()
                         .Where(p => p != typeof(IMoRpcApi) && p.IsImplementInterface<IMoRpcApi>()).ToList();
@@ -76,7 +77,7 @@ public class ModuleRpcClient(ModuleRpcClientOption option) :
                     if (!registeredInterfaces.Add(targetInterface))
                     {
                         throw new InvalidOperationException(
-                            $"Interface {targetInterface.GetCleanFullName()} has been registered for type {type.GetCleanFullName()}");
+                            $"Interface {targetInterface.GetCleanFullName()} has been registered, the type {type.GetCleanFullName()} can not register again!");
                     }
 
                     if (type.IsSubclassOf(typeof(MoHttpApi)))
@@ -94,8 +95,8 @@ public class ModuleRpcClient(ModuleRpcClientOption option) :
                                     infoProvider.GetDomainRelatedAppId(domain));
                             return ActivatorUtilities.CreateInstance(provider, type, client);
                         });
-                        Logger.LogInformation("Register Domain ({domainName} - {domainDesc}) HTTP RPC {type} for {interface}", domain.ToString(), domain.GetDescription(), type.GetCleanFullName(),
-                            targetInterface.GetCleanFullName());
+                        Logger.LogInformation("Register Domain ({domainName} - {domainDesc}) HTTP RPC {type} -> {interface}", domain.ToString(), domain.GetDescription(), type.Name,
+                            targetInterface.Name);
                     }
                     else if (Option.UseGrpc)
                     {
@@ -104,8 +105,8 @@ public class ModuleRpcClient(ModuleRpcClientOption option) :
                     else
                     {
                         services.TryAddSingleton(targetInterface, type);
-                        Logger.LogInformation("Register Custom RPC {type} for {interface}", type.GetCleanFullName(),
-                            targetInterface.GetCleanFullName());
+                        Logger.LogInformation("Register Domain ({domainName} - {domainDesc}) Custom RPC {type} -> {interface}", domain.ToString(), domain.GetDescription(), type.Name,
+                            targetInterface.Name);
                     }
                 }
             }
