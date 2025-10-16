@@ -8,17 +8,17 @@ namespace MoLibrary.EventBus.Abstractions;
 /// <summary>
 /// Implements EventBus as Singleton pattern.
 /// </summary>
-public class LocalEventBus(
+public class LocalEventBusProvider(
     IOptions<LocalEventBusOptions> options,
     IServiceScopeFactory serviceScopeFactory,
     IEventHandlerInvoker eventHandlerInvoker,
-    ILogger<LocalEventBus> logger)
+    ILogger<LocalEventBusProvider> logger)
     : EventBusBase(serviceScopeFactory, eventHandlerInvoker), IMoLocalEventBus
 {
     /// <summary>
     /// Reference to the Logger.
     /// </summary>
-    public ILogger<LocalEventBus> Logger { get; set; } = logger;
+    public ILogger<LocalEventBusProvider> Logger { get; set; } = logger;
 
     protected LocalEventBusOptions Options { get; } = options.Value;
 
