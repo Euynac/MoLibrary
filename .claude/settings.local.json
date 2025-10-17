@@ -30,7 +30,8 @@
       "Bash(dotnet publish:*)",
       "Bash(git rev-parse:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git log:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"
