@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.EventBus.Abstractions;
 
@@ -33,13 +34,38 @@ public class ModuleEventBusGuide : MoModuleGuide<ModuleEventBus, ModuleEventBusO
         });
         return this;
     }
-
     /// <summary>
-    /// 设置Keyed抽象事件总线Provider
+    /// 添加指定键的状态存储服务，使用统一的提供者
+    /// </summary>
+    /// <param name="key">服务键</param>
+    /// <param name="useDistributed">是否使用分布式存储，false则使用内存存储</param>
+    /// <returns>返回当前模块指南实例以支持链式调用</returns>
+    public ModuleEventBusGuide AddKeyedCommonEventBus(string key, bool useDistributed = false)
+    {
+        ConfigureServices(context =>
+        {
+            if (useDistributed)
+            {
+                CheckRequiredMethod(nameof(SetDistributedEventBusProvider));
+                context.Services.TryAddKeyedSingleton<IMoEventBus>(key, (serviceProvider, _) =>
+                    serviceProvider.GetRequiredService<IMoDistributedEventBus>());
+            }
+            else
+            {
+                context.Services.TryAddKeyedSingleton<IMoEventBus>(key, (serviceProvider, _) =>
+                    serviceProvider.GetRequiredService<IMoLocalEventBus>());
+            }
+        }, secondKey: key);
+
+        return this;
+    }
+    /// <summary>
+    /// 添加Keyed抽象事件总线Provider
     /// </summary>
     /// <typeparam name="TProvider"></typeparam>
+    /// <param name="key">服务键</param>
     /// <returns></returns>
-    public ModuleEventBusGuide SetKeyedEventBus<TProvider>(string key) where TProvider : class, IMoEventBus
+    public ModuleEventBusGuide AddKeyedEventBus<TProvider>(string key) where TProvider : class, IMoEventBus
     {
         ConfigureServices(services =>
         {
