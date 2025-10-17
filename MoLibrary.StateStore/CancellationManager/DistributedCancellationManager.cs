@@ -3,10 +3,13 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MoLibrary.Core.Extensions;
 using MoLibrary.StateStore.Modules;
+// ReSharper disable PossiblyMistakenUseOfCancellationToken
 
 namespace MoLibrary.StateStore.CancellationManager;
 
 //TODO 是不是应该用分布式锁
+//TODO 使用EventBus替代轮询
+//TODO 替代InMemoryCancellationManager
 
 /// <summary>
 /// 默认分布式取消令牌管理器实现
