@@ -27,7 +27,10 @@
       "mcp__browsermcp__browser_wait",
       "Bash(grep:*)",
       "Bash(dotnet run)",
-      "Bash(dotnet publish:*)"
+      "Bash(dotnet publish:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"
