@@ -69,7 +69,7 @@ public class ModuleCancellationManager(ModuleCancellationManagerOption option)
     {
         if (Option.UseDistributed)
         {
-            DependsOnModule<ModuleStateStoreGuide>().Register().AddKeyedStateStore(nameof(ModuleCancellationManager), true);
+            DependsOnModule<ModuleStateStoreGuide>().Register().AddKeyedCommonStateStore(nameof(ModuleCancellationManager), true);
         }
     }
 }
@@ -91,7 +91,7 @@ public class ModuleCancellationManagerGuide : MoModuleGuide<ModuleCancellationMa
         if (useDistributed)
         {
             // 使用分布式实现，需要依赖StateStore
-            DependsOnModule<ModuleStateStoreGuide>().Register().AddKeyedStateStore(key, true);
+            DependsOnModule<ModuleStateStoreGuide>().Register().AddKeyedCommonStateStore(key, true);
         }
         
         ConfigureServices(context =>

@@ -29,7 +29,7 @@ public class ModuleDaprStateStore(ModuleDaprStateStoreOption option)
     public override void ClaimDependencies()
     {
         DependsOnModule<ModuleDaprClientGuide>().Register();
-        DependsOnModule<ModuleStateStoreGuide>().Register().RegisterDistributedStateStoreProvider<DaprStateStore>();
+        DependsOnModule<ModuleStateStoreGuide>().Register().SetCommonDistributedStateStoreProvider<DaprStateStore>();
     }
 }
 

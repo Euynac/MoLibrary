@@ -34,7 +34,7 @@ public class ModuleProgressBar(ModuleProgressBarOption option)
     public override void ClaimDependencies()
     {
         DependsOnModule<ModuleCancellationManagerGuide>().Register().AddKeyedCancellationManager(nameof(ModuleProgressBar), Option.UseDistributedStateStore);
-        DependsOnModule<ModuleStateStoreGuide>().Register().AddKeyedStateStore(nameof(ModuleProgressBar), Option.UseDistributedStateStore);
+        DependsOnModule<ModuleStateStoreGuide>().Register().AddKeyedCommonStateStore(nameof(ModuleProgressBar), Option.UseDistributedStateStore);
     }
 }
 
