@@ -19,7 +19,7 @@ public static class ModuleDaprClientBuilderExtensions
 }
 
 public class ModuleDaprClient(ModuleDaprClientOption option)
-    : MoModule<ModuleDaprClient, ModuleDaprClientOption, ModuleDaprClientGuide>(option)
+    : MoModuleWithDependencies<ModuleDaprClient, ModuleDaprClientOption, ModuleDaprClientGuide>(option)
 {
     public override EMoModules CurModuleEnum()
     {
@@ -34,6 +34,11 @@ public class ModuleDaprClient(ModuleDaprClientOption option)
             MaxSendMessageSize = Option.MaxSendMessageSize,
             MaxRetryBufferSize = Option.MaxRetryBufferSize,
         }).UseJsonSerializationOptions(DefaultMoGlobalJsonOptions.GlobalJsonSerializerOptions));
+    }
+
+    public override void ClaimDependencies()
+    {
+        DependsOnModule<ModuleDaprGuide>().Register();
     }
 }
 

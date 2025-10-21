@@ -10,9 +10,10 @@ namespace MoLibrary.Dapr.Modules;
 
 public static class ModuleDaprLockerBuilderExtensions
 {
-    public static ModuleDaprLockerGuide ConfigModuleDaprLocker(this WebApplicationBuilder builder,
+    public static ModuleDaprLockerGuide UseProviderDapr(this ModuleLockerGuide guide,
         Action<ModuleDaprLockerOption>? action = null)
     {
+        guide.SetDistributedLockProvider<DaprMoDistributedLock>();
         return new ModuleDaprLockerGuide().Register(action);
     }
 }
@@ -26,7 +27,7 @@ public class ModuleDaprLocker(ModuleDaprLockerOption option)
     }
     public override void ClaimDependencies()
     {
-        DependsOnModule<ModuleLockerGuide>().Register().SetDistributedLockProvider<DaprMoDistributedLock>();
+        DependsOnModule<ModuleLockerGuide>().Register();
     }
 }
 
@@ -36,3 +37,11 @@ public class ModuleDaprLockerGuide : MoModuleGuide<ModuleDaprLocker, ModuleDaprL
 
 }
 
+public class ModuleDaprLockerOption : MoModuleOption<ModuleDaprLocker>
+{
+    public string StoreName { get; set; } = default!;
+
+    public string? OwnerPrefix { get; set; }
+
+    public TimeSpan DefaultExpirationTimeout { get; set; } = TimeSpan.FromMinutes(2);
+}

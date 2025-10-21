@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using MoLibrary.Core.GlobalJson.Interfaces;
 using MoLibrary.Core.Module;
+using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.Dapr.EventBus;
 using MoLibrary.Dapr.EventBus.Models;
@@ -17,7 +18,15 @@ using MoLibrary.EventBus.Modules;
 using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.Dapr.Modules;
-
+public static class ModuleDaprEventBusBuilderExtensions
+{
+    public static ModuleDaprEventBusGuide UseProviderDapr(this ModuleEventBusGuide guide,
+        Action<ModuleDaprEventBusOption>? action = null)
+    {
+        guide.SetDistributedEventBusProvider<DaprDistributedEventBus>();
+        return new ModuleDaprEventBusGuide().Register(action);
+    }
+}
 public class ModuleDaprEventBus(ModuleDaprEventBusOption option)
     : MoModuleWithDependencies<ModuleDaprEventBus, ModuleDaprEventBusOption, ModuleDaprEventBusGuide>(option)
 {
@@ -166,6 +175,24 @@ public class ModuleDaprEventBus(ModuleDaprEventBusOption option)
 
     public override void ClaimDependencies()
     {
-        DependsOnModule<ModuleEventBusGuide>().Register().SetDistributedEventBusProvider<DaprDistributedEventBus>();
+        DependsOnModule<ModuleEventBusGuide>().Register();
     }
+}
+
+public class
+    ModuleDaprEventBusGuide : MoModuleGuide<ModuleDaprEventBus, ModuleDaprEventBusOption, ModuleDaprEventBusGuide>
+{
+
+
+}
+
+public class ModuleDaprEventBusOption : MoModuleControllerOption<ModuleDaprEventBus>
+{
+    public string PubSubName { get; set; } = "pubsub";
+    public string DaprEventBusCallback { get; set; } = "api/event-bus/dapr/event";
+
+    /// <summary>
+    /// 默认大批量事件批处理数量，为null则不进行分批推送。
+    /// </summary>
+    public int? BulkChunkSize { get; set; } = 1000;
 }
