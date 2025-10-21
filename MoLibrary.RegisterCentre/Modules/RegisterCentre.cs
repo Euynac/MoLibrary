@@ -10,7 +10,6 @@ using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
-using MoLibrary.Dapr.Modules;
 using MoLibrary.RegisterCentre.Implements;
 using MoLibrary.RegisterCentre.Interfaces;
 using MoLibrary.RegisterCentre.Models;
@@ -18,7 +17,7 @@ using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.RegisterCentre.Modules;
 
-public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModuleWithDependencies<ModuleRegisterCentre, ModuleRegisterCentreOption, ModuleRegisterCentreGuide>(option)
+public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModule<ModuleRegisterCentre, ModuleRegisterCentreOption, ModuleRegisterCentreGuide>(option)
 {
     public override EMoModules CurModuleEnum()
     {
@@ -134,11 +133,6 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModuleW
             });
         }
     }
-
-    public override void ClaimDependencies()
-    {
-        DependsOnModule<ModuleDaprClientGuide>().Register();
-    }
 }
 
 public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, ModuleRegisterCentreOption, ModuleRegisterCentreGuide>
@@ -150,7 +144,21 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
     }
 
     /// <summary>
-    /// 注册MoRegisterCentreClient
+    /// 设置注册中心服务端的客户端连接器实现类型
+    /// </summary>
+    /// <typeparam name="TClientConnector"></typeparam>
+    /// <returns></returns>
+    public ModuleRegisterCentreGuide SetCentreServerClientConnector<TClientConnector>()
+        where TClientConnector : class, IRegisterCentreClientConnector
+    {
+        ConfigureServices(context =>
+        {
+            context.Services.TryAddSingleton<IRegisterCentreClientConnector, TClientConnector>();
+        });
+        return this;
+    }
+    /// <summary>
+    /// 设置当前服务为注册中心服务端
     /// </summary>
     /// <returns></returns>
     public ModuleRegisterCentreGuide SetAsCentreServer()
@@ -158,19 +166,30 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
         ConfigureModuleOption(o =>
         {
             o.ThisIsCentreServer = true;
-        }, key: SET_CENTRE_TYPE);
+        });
 
         ConfigureServices(context =>
         {
-            context.Services.AddSingleton<IRegisterCentreServer, MemoryProviderForRegisterCentre>();
-            context.Services.AddSingleton<IRegisterCentreClientConnector, DaprHttpForConnectClient>();
+            context.Services.TryAddSingleton<IRegisterCentreServer, MemoryProviderForRegisterCentre>();
         }, key: SET_CENTRE_TYPE);
 
+        ConfigureApplicationBuilder(context =>
+        {
+            var isServiceProviderIsService =
+                context.ApplicationBuilder.ApplicationServices.GetRequiredKeyedService<IServiceProviderIsService>(
+                    SET_CENTRE_TYPE);
+            if (!isServiceProviderIsService.IsService(typeof(IRegisterCentreClientConnector)))
+            {
+                throw new InvalidOperationException($"You must to call {nameof(SetCentreServerClientConnector)} to set client connector provider when set as centre server.");
+            }
+        }, EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
         return this;
     }
     /// <summary>
-    /// 注册MoRegisterCentreClient
+    /// 设置当前服务为注册中心客户端
     /// </summary>
+    /// <typeparam name="TServer">注册中心服务端连接器实现类型</typeparam>
+    /// <typeparam name="TClient">注册中心客户端实现类型</typeparam>
     /// <returns></returns>
     public ModuleRegisterCentreGuide SetAsCentreClient<TServer, TClient>()
         where TServer : class, IRegisterCentreServerConnector where TClient : class, IRegisterCentreClient
@@ -178,11 +197,11 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
         ConfigureModuleOption(o =>
         {
             o.ThisIsCentreClient = true;
-        }, key: SET_CENTRE_TYPE);
+        });
         ConfigureServices(context =>
         {
-            context.Services.AddSingleton<IRegisterCentreServerConnector, TServer>();
-            context.Services.AddSingleton<IRegisterCentreClient, TClient>();
+            context.Services.TryAddSingleton<IRegisterCentreServerConnector, TServer>();
+            context.Services.TryAddSingleton<IRegisterCentreClient, TClient>();
         }, key: SET_CENTRE_TYPE);
         return this;
     }
@@ -197,7 +216,7 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
     {
         ConfigureServices(context =>
         {
-            context.Services.AddSingleton<IRegisterCentreInfoProvider, TInfoProvider>();
+            context.Services.TryAddSingleton<IRegisterCentreInfoProvider, TInfoProvider>();
         });
         return this;
     }

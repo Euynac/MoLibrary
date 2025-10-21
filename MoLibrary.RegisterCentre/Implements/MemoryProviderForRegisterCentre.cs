@@ -50,10 +50,10 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
         }
     }
     
-    public virtual async Task<Res> Register(ServiceRegisterInfo req)
+    public virtual Task<Res> Register(ServiceRegisterInfo req)
     {
         if (req.AppId.IsNullOrWhiteSpace()) 
-            return Res.Fail("该微服务未设置APPID，无法注册");
+            return Task.FromResult(Res.Fail("该微服务未设置APPID，无法注册"));
 
         // 补充来源信息
         if (req.FromClient is null && _accessor.HttpContext?.Connection is { } connection)
@@ -62,7 +62,7 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
         }
         
         if (req.FromClient.IsNullOrWhiteSpace())
-            return Res.Fail("无法识别服务实例来源");
+            return Task.FromResult(Res.Fail("无法识别服务实例来源"));
 
         var service = Services.GetOrAdd(req.AppId, _ => new RegisteredServiceStatus
         {
@@ -102,13 +102,13 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
             };
         }
 
-        return Res.Ok();
+        return Task.FromResult(Res.Ok());
     }
 
-    public virtual async Task<Res<ServiceHeartbeatResponse>> Heartbeat(ServiceHeartbeat req)
+    public virtual Task<Res<ServiceHeartbeatResponse>> Heartbeat(ServiceHeartbeat req)
     {
         if (req.AppId.IsNullOrWhiteSpace())
-            return "未提供AppId";
+            return Task.FromResult<Res<ServiceHeartbeatResponse>>("未提供AppId");
             
         // 补充来源信息
         if (req.FromClient is null && _accessor.HttpContext?.Connection is { } connection)
@@ -117,7 +117,7 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
         }
         
         if (req.FromClient.IsNullOrWhiteSpace())
-            return "无法识别服务实例来源";
+            return Task.FromResult<Res<ServiceHeartbeatResponse>>("无法识别服务实例来源");
         
         var response = new ServiceHeartbeatResponse { RequireReRegister = false };
         
@@ -126,7 +126,7 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
         {
             response.RequireReRegister = true;
             response.Message = "服务未注册";
-            return response;
+            return Task.FromResult<Res<ServiceHeartbeatResponse>>(response);
         }
         
         // 查找实例
@@ -135,7 +135,7 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
         {
             response.RequireReRegister = true;
             response.Message = "实例未注册";
-            return response;
+            return Task.FromResult<Res<ServiceHeartbeatResponse>>(response);
         }
         
         // 检查版本信息是否一致
@@ -159,18 +159,18 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
             response.Message = "心跳成功";
         }
         
-        return response;
+        return Task.FromResult<Res<ServiceHeartbeatResponse>>(response);
     }
 
-    public virtual async Task<Res<List<RegisteredServiceStatus>>> GetServicesStatus()
+    public virtual Task<Res<List<RegisteredServiceStatus>>> GetServicesStatus()
     {
-        return Services.Values.ToList();
+        return Task.FromResult<Res<List<RegisteredServiceStatus>>>(Services.Values.ToList());
     }
 
-    public virtual async Task<Res> UnregisterAll()
+    public virtual Task<Res> UnregisterAll()
     {
         Services.Clear();
-        return Res.Ok();
+        return Task.FromResult(Res.Ok());
     }
 
     public virtual async Task<Dictionary<ServiceRegisterInfo, Res<TResponse>>> GetAsync<TResponse>(string callbackUrl)
