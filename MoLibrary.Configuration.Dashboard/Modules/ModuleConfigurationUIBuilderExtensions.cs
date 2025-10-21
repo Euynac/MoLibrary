@@ -9,7 +9,7 @@ namespace MoLibrary.Configuration.Dashboard.Modules;
 /// </summary>
 public static class ModuleConfigurationUIBuilderExtensions
 {
-    public static ModuleConfigurationUIGuide ConfigMoConfigurationUI(this WebApplicationBuilder builder,
+    public static ModuleConfigurationUIGuide ConfigModuleConfigurationUI(this WebApplicationBuilder builder,
         Action<ModuleConfigurationUIOption>? action = null)
     {
         return new ModuleConfigurationUIGuide().Register(action);

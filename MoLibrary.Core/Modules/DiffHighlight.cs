@@ -133,7 +133,7 @@ public static class ModuleDiffHighlightBuilderExtensions
     /// <param name="builder">Web应用构建器</param>
     /// <param name="action">配置委托</param>
     /// <returns>模块引导实例</returns>
-    public static ModuleDiffHighlightGuide ConfigMoDiffHighlight(this WebApplicationBuilder builder,
+    public static ModuleDiffHighlightGuide ConfigModuleDiffHighlight(this WebApplicationBuilder builder,
         Action<ModuleDiffHighlightOption>? action = null)
     {
         return new ModuleDiffHighlightGuide().Register(action);

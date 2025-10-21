@@ -42,7 +42,7 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
         services.AddSingleton<IMoConfigurationServiceInfo, MoConfigurationServiceInfoDefault>();
         services.AddScoped<ModuleConfigurationService>();
 
-        if (Option is { UseDaprProvider: true, AppConfiguration: ConfigurationManager manager})
+        if (Option is { UseProviderDapr: true, AppConfiguration: ConfigurationManager manager})
         {
             Logger.LogDebug($"[MoConfiguration] Using Dapr Configuration Provider. StoreName: {Option.DaprStoreName}");
             //TODO 1.考虑使用JsonSerializer进行配置序列化存储 2.使用单例DaprClient
