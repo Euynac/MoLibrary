@@ -288,9 +288,13 @@ public partial class AutoModelTokenExpressionGenDynamicLinqProvider(IOptions<Aut
                 not = true;
                 parsed = parsed[3..].TrimStart();
             }
-            if (parsed == "null")
+            switch (parsed)
             {
-                return not ? $"{_curFieldParam} != null" : $"{_curFieldParam} == null";
+                case "empty" when _fieldTypeSetting.BasicType == EBasicType.IsString:
+                    return not ? $"{_curFieldParam} != null && {_curFieldParam} != string.Empty" : $"{_curFieldParam} == string.Empty || {_curFieldParam} == null";
+                case "null":
+                case "empty":
+                    return not ? $"{_curFieldParam} != null" : $"{_curFieldParam} == null";
             }
         }
 
