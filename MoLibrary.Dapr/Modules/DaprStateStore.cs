@@ -11,9 +11,10 @@ namespace MoLibrary.Dapr.Modules;
 
 public static class ModuleDaprStateStoreBuilderExtensions
 {
-    public static ModuleDaprStateStoreGuide ConfigModuleDaprStateStore(this WebApplicationBuilder builder,
+    public static ModuleDaprStateStoreGuide UseProviderDapr(this ModuleStateStoreGuide guide,
         Action<ModuleDaprStateStoreOption>? action = null)
     {
+        guide.SetCommonDistributedStateStoreProvider<DaprStateStore>();
         return new ModuleDaprStateStoreGuide().Register(action);
     }
 }
@@ -29,7 +30,7 @@ public class ModuleDaprStateStore(ModuleDaprStateStoreOption option)
     public override void ClaimDependencies()
     {
         DependsOnModule<ModuleDaprClientGuide>().Register();
-        DependsOnModule<ModuleStateStoreGuide>().Register().SetCommonDistributedStateStoreProvider<DaprStateStore>();
+        DependsOnModule<ModuleStateStoreGuide>().Register();
     }
 }
 
