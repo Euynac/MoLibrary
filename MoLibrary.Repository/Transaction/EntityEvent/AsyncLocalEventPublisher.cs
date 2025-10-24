@@ -92,7 +92,9 @@ public class AsyncLocalEventPublisher(
     IOptions<DistributedEntityEventOptions> distributedEntityEventOptions,
     IMoLocalEventBus localEventBus,
     IMoDistributedEventBus distributedEventBus,
-    ILogger<AsyncLocalEventPublisher> logger, IAsyncLocalEventStore bufferStore) : IAsyncLocalEventPublisher
+    ILogger<AsyncLocalEventPublisher> logger,
+    IAsyncLocalEventStore bufferStore,
+    IEnumerable<IEntityEventPublishSwitch>? publishSwitches) : IAsyncLocalEventPublisher
 {
     /// <summary>
     /// Gets or sets the local event bus
@@ -113,6 +115,8 @@ public class AsyncLocalEventPublisher(
     /// Gets the distributed entity event options
     /// </summary>
     protected DistributedEntityEventOptions DistributedEntityEventOptions { get; } = distributedEntityEventOptions.Value;
+
+    private readonly IEnumerable<IEntityEventPublishSwitch> _publishSwitches = publishSwitches ?? Array.Empty<IEntityEventPublishSwitch>();
 
     /// <summary>
     /// Adds an entity created event to the event buffer
@@ -157,6 +161,12 @@ public class AsyncLocalEventPublisher(
     /// <returns>True if events should be published, false otherwise</returns>
     private bool ShouldPublishEventForEntity(object entity,[NotNullWhen(true)] out EntityEventOption? eventOption)
     {
+        if (!_publishSwitches.All(s => s.CanPublish(entity)))
+        {
+            eventOption = null;
+            return false;
+        }
+        
         return DistributedEntityEventOptions
             .AutoEventOptionDict
             .TryGetValue(entity.GetType(), out eventOption);
@@ -330,6 +340,4 @@ public class AsyncLocalEventPublisher(
         return EntityHelper.EntityEquals(record1OriginalEntity, record2OriginalEntity);
     }
     #endregion
-
-
 }

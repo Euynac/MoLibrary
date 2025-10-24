@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Dapr.Client;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Logging;
