@@ -317,7 +317,14 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
             DependencyUnits.Add(unit);
         }
         
+        RelatedUnits.Add(unit);
+        
     }
+
+    /// <summary>
+    /// 相关项目单元
+    /// </summary>
+    public HashSet<ProjectUnit> RelatedUnits { get; } = [];
 
     /// <summary>
     /// 获取所依赖的项目单元
