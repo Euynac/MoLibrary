@@ -65,7 +65,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.UI", "MoLibrary.U
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.FrameworkUI", "MoLibrary.FrameworkUI\MoLibrary.FrameworkUI.csproj", "{DBF82951-B054-4400-A5DE-6F0A62BE14F7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.Scheduler", "MoLibrary.Scheduler\MoLibrary.Scheduler.csproj", "{D00581F5-587E-4356-1DF3-A38E26B3B0E7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.TaskScheduler", "MoLibrary.TaskScheduler\MoLibrary.TaskScheduler.csproj", "{D00581F5-587E-4356-1DF3-A38E26B3B0E7}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.Framework.Generators", "MoLibrary.Framework.Generators\MoLibrary.Framework.Generators.csproj", "{21EA73ED-06CA-2F49-452E-136914CCDFEB}"
 EndProject
