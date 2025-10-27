@@ -11,7 +11,7 @@
   - _Requirements: 1.7, 1.1, 1.2_
   - _Prompt: Implement the task for spec task-scheduler. First run spec-workflow-guide to get the workflow guide, then implement the task: Role: .NET Developer specializing in domain modeling and enumerations | Task: Create TaskState and TaskType enumerations following requirements 1.7, 1.1, and 1.2 from the design document. TaskState must include all 8 states with XML documentation describing each state and its purpose in the state machine. TaskType must distinguish between Recurring and Triggered tasks. | Restrictions: Do not add additional states beyond those specified, use proper XML documentation for each enum member, follow .NET naming conventions | _Leverage: Design document state diagram in design.md | _Requirements: 1.7 (Task State Lifecycle Management), 1.1 (Recurring Task Scheduling), 1.2 (Triggered Task Execution) | Success: Both enums compile without errors, all enum members have XML documentation, enum values align with state diagram in design document | Instructions: Before starting, edit tasks.md and change this task from [ ] to [-]. After completion, change [-] to [x]._
 
-- [ ] 2. Create TaskDefinition and TaskInstance data models
+- [x] 2. Create TaskDefinition and TaskInstance data models
   - Files: `MoLibrary.TaskScheduler/Models/TaskDefinition.cs`, `MoLibrary.TaskScheduler/Models/TaskInstance.cs`
   - Implement TaskDefinition with all properties from design (TaskKey, TaskName, Type, MaxConcurrency, RetryCount, MaxExecutionTimeout, CronExpression, etc.)
   - Implement TaskInstance with all properties from design (InstanceId, TaskKey, State, Parameters, CreatedAt, ScheduledFor, StartedAt, CompletedAt, ErrorMessage, RetryAttempt)
@@ -20,7 +20,7 @@
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7_
   - _Prompt: Implement the task for spec task-scheduler. First run spec-workflow-guide to get the workflow guide, then implement the task: Role: .NET Developer with expertise in data modeling and entity design | Task: Create TaskDefinition and TaskInstance classes following the data models section in design.md, implementing all properties specified in requirements 1.1-1.7. TaskDefinition must support both recurring (with cron/start/end times) and triggered tasks (with parameter types). TaskInstance must track full lifecycle including retry attempts and error messages. | Restrictions: Use appropriate C# types (TimeSpan for timeout, DateTime? for nullable timestamps), add XML documentation for all properties, do not add computed properties or methods yet, ensure all fields are nullable where specified in design | _Leverage: TaskState and TaskType enums from task 1, design.md data models section | _Requirements: 1.1-1.7 (all task configuration and lifecycle requirements) | Success: Both classes compile with all properties from design document, proper use of nullable types, comprehensive XML documentation, classes are suitable for serialization to metadata store | Instructions: Before starting, edit tasks.md and change this task from [ ] to [-]. After completion, change [-] to [x]._
 
-- [ ] 3. Create TaskConfigAttribute for task configuration
+- [-] 3. Create TaskConfigAttribute for task configuration
   - File: `MoLibrary.TaskScheduler/Attributes/TaskConfigAttribute.cs`
   - Create consolidated attribute with properties: TaskKey, TaskName, Description, MaxConcurrency, RetryCount, MaxExecutionTimeout, CronSchedule, StartTime, EndTime, IsDisabled
   - All properties optional with sensible defaults
