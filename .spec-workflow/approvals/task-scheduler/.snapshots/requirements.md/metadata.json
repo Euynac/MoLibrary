@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/task-scheduler/requirements.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-10-27T02:15:19.302Z",
+      "trigger": "initial",
+      "approvalId": "approval_1761531319255_bscpqznbg",
+      "approvalTitle": "Task Scheduler Requirements Document"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2025-10-27T02:29:51.355Z",
+      "trigger": "approved",
+      "approvalId": "approval_1761531319255_bscpqznbg",
+      "approvalTitle": "Task Scheduler Requirements Document"
+    }
+  ]
+}
