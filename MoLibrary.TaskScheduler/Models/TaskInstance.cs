@@ -1,3 +1,5 @@
+using MoLibrary.TaskScheduler.Attributes;
+
 namespace MoLibrary.TaskScheduler.Models;
 
 /// <summary>
