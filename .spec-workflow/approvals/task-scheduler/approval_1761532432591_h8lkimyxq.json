@@ -1,0 +1,63 @@
+{
+  "id": "approval_1761532432591_h8lkimyxq",
+  "title": "Task Scheduler Design Document",
+  "filePath": ".spec-workflow/specs/task-scheduler/design.md",
+  "type": "document",
+  "status": "needs-revision",
+  "createdAt": "2025-10-27T02:33:52.591Z",
+  "category": "spec",
+  "categoryName": "task-scheduler",
+  "response": "Feedback Summary (4 comments):\n\nSpecific Text Comments:\n1. \"#### RecurringTask\n- **Purpose:** Base class for r...\": Use one attribute with all these configurable properties instead.\n2. \"- `ModuleTaskSchedulerGuide EnableRecurringTaskDeb...\": put them to module option\n3. \"## Testing Strategy\n\n### Unit Testing\": Delete unit test part, currently we don't need to do unit test.\n4. \"- Static assets in `wwwroot/` (for future UI modul...\": The UI module is a new project, currently don't need to be considered. But notice that we will create minimal api during module register, and the minimal apis use a injected Service to implement instead of controller.\n",
+  "annotations": "{\n  \"decision\": \"needs-revision\",\n  \"comments\": [\n    {\n      \"type\": \"selection\",\n      \"comment\": \"Use one attribute with all these configurable properties instead.\",\n      \"timestamp\": \"2025-10-27T03:17:37.822Z\",\n      \"selectedText\": \"#### RecurringTask\\n- **Purpose:** Base class for recurring scheduled tasks\\n- **Abstract Members:**\\n  - `Task ExecuteAsync(CancellationToken cancellationToken)`: Task execution logic\\n- **Attributes:**\\n  - `[TaskName(\\\"...\\\")]`: Override default task name\\n  - `[TaskDescription(\\\"...\\\")]`: Provide task description\\n  - `[TaskKey(\\\"...\\\")]`: Override default task key (TypeFullName)\\n  - `[MaxConcurrency(n)]`: Override global concurrency limit\\n  - `[RetryCount(n)]`: Override global retry count\\n  - `[MaxExecutionTimeout(\\\"hh:mm:ss\\\")]`: Override execution timeout\\n  - `[CronSchedule(\\\"...\\\")]`: Define cron expression\\n  - `[TaskStartTime(\\\"yyyy-MM-dd HH:mm:ss\\\")]`: Define start time\\n  - `[TaskEndTime(\\\"yyyy-MM-dd HH:mm:ss\\\")]`: Define end time\\n- **Dependencies:** Constructor supports DI\",\n      \"highlightColor\": {\n        \"bg\": \"rgba(255, 235, 59, 0.3)\",\n        \"border\": \"#FFEB3B\",\n        \"name\": \"#ffeb3b\"\n      },\n      \"id\": \"comment_1761535057822_muwnx7iej\"\n    },\n    {\n      \"type\": \"selection\",\n      \"comment\": \"put them to module option\",\n      \"timestamp\": \"2025-10-27T05:39:23.267Z\",\n      \"selectedText\": \"- `ModuleTaskSchedulerGuide EnableRecurringTaskDebugMode()`: Enable recurring debug mode\\n  - `ModuleTaskSchedulerGuide EnableTriggeredTaskDebugMode()`: Enable triggered debug mode\\n  - `ModuleTaskSchedulerGuide SetMaxWorkerThreads(int maxThreads)`: Configure thread limit\",\n      \"highlightColor\": {\n        \"bg\": \"rgba(255, 235, 59, 0.3)\",\n        \"border\": \"#FFEB3B\",\n        \"name\": \"#ffeb3b\"\n      },\n      \"id\": \"comment_1761543563267_bju06jzmc\"\n    },\n    {\n      \"type\": \"selection\",\n      \"comment\": \"Delete unit test part, currently we don't need to do unit test.\",\n      \"timestamp\": \"2025-10-27T05:46:54.274Z\",\n      \"selectedText\": \"## Testing Strategy\\n\\n### Unit Testing\",\n      \"highlightColor\": {\n        \"bg\": \"rgba(255, 235, 59, 0.3)\",\n        \"border\": \"#FFEB3B\",\n        \"name\": \"#ffeb3b\"\n      },\n      \"id\": \"comment_1761544014274_m83nfz0q4\"\n    },\n    {\n      \"type\": \"selection\",\n      \"comment\": \"The UI module is a new project, currently don't need to be considered. But notice that we will create minimal api during module register, and the minimal apis use a injected Service to implement instead of controller.\",\n      \"timestamp\": \"2025-10-27T05:50:43.237Z\",\n      \"selectedText\": \"- Static assets in `wwwroot/` (for future UI module)\",\n      \"highlightColor\": {\n        \"bg\": \"rgba(255, 235, 59, 0.3)\",\n        \"border\": \"#FFEB3B\",\n        \"name\": \"#ffeb3b\"\n      },\n      \"id\": \"comment_1761544243237_u0yevllh8\"\n    }\n  ],\n  \"summary\": \"Feedback Summary (4 comments):\\n\\nSpecific Text Comments:\\n1. \\\"#### RecurringTask\\n- **Purpose:** Base class for r...\\\": Use one attribute with all these configurable properties instead.\\n2. \\\"- `ModuleTaskSchedulerGuide EnableRecurringTaskDeb...\\\": put them to module option\\n3. \\\"## Testing Strategy\\n\\n### Unit Testing\\\": Delete unit test part, currently we don't need to do unit test.\\n4. \\\"- Static assets in `wwwroot/` (for future UI modul...\\\": The UI module is a new project, currently don't need to be considered. But notice that we will create minimal api during module register, and the minimal apis use a injected Service to implement instead of controller.\\n\",\n  \"timestamp\": \"2025-10-27T05:50:45.814Z\"\n}",
+  "respondedAt": "2025-10-27T05:50:46.158Z",
+  "comments": [
+    {
+      "type": "selection",
+      "comment": "Use one attribute with all these configurable properties instead.",
+      "timestamp": "2025-10-27T03:17:37.822Z",
+      "selectedText": "#### RecurringTask\n- **Purpose:** Base class for recurring scheduled tasks\n- **Abstract Members:**\n  - `Task ExecuteAsync(CancellationToken cancellationToken)`: Task execution logic\n- **Attributes:**\n  - `[TaskName(\"...\")]`: Override default task name\n  - `[TaskDescription(\"...\")]`: Provide task description\n  - `[TaskKey(\"...\")]`: Override default task key (TypeFullName)\n  - `[MaxConcurrency(n)]`: Override global concurrency limit\n  - `[RetryCount(n)]`: Override global retry count\n  - `[MaxExecutionTimeout(\"hh:mm:ss\")]`: Override execution timeout\n  - `[CronSchedule(\"...\")]`: Define cron expression\n  - `[TaskStartTime(\"yyyy-MM-dd HH:mm:ss\")]`: Define start time\n  - `[TaskEndTime(\"yyyy-MM-dd HH:mm:ss\")]`: Define end time\n- **Dependencies:** Constructor supports DI",
+      "highlightColor": {
+        "bg": "rgba(255, 235, 59, 0.3)",
+        "border": "#FFEB3B",
+        "name": "#ffeb3b"
+      },
+      "id": "comment_1761535057822_muwnx7iej"
+    },
+    {
+      "type": "selection",
+      "comment": "put them to module option",
+      "timestamp": "2025-10-27T05:39:23.267Z",
+      "selectedText": "- `ModuleTaskSchedulerGuide EnableRecurringTaskDebugMode()`: Enable recurring debug mode\n  - `ModuleTaskSchedulerGuide EnableTriggeredTaskDebugMode()`: Enable triggered debug mode\n  - `ModuleTaskSchedulerGuide SetMaxWorkerThreads(int maxThreads)`: Configure thread limit",
+      "highlightColor": {
+        "bg": "rgba(255, 235, 59, 0.3)",
+        "border": "#FFEB3B",
+        "name": "#ffeb3b"
+      },
+      "id": "comment_1761543563267_bju06jzmc"
+    },
+    {
+      "type": "selection",
+      "comment": "Delete unit test part, currently we don't need to do unit test.",
+      "timestamp": "2025-10-27T05:46:54.274Z",
+      "selectedText": "## Testing Strategy\n\n### Unit Testing",
+      "highlightColor": {
+        "bg": "rgba(255, 235, 59, 0.3)",
+        "border": "#FFEB3B",
+        "name": "#ffeb3b"
+      },
+      "id": "comment_1761544014274_m83nfz0q4"
+    },
+    {
+      "type": "selection",
+      "comment": "The UI module is a new project, currently don't need to be considered. But notice that we will create minimal api during module register, and the minimal apis use a injected Service to implement instead of controller.",
+      "timestamp": "2025-10-27T05:50:43.237Z",
+      "selectedText": "- Static assets in `wwwroot/` (for future UI module)",
+      "highlightColor": {
+        "bg": "rgba(255, 235, 59, 0.3)",
+        "border": "#FFEB3B",
+        "name": "#ffeb3b"
+      },
+      "id": "comment_1761544243237_u0yevllh8"
+    }
+  ]
+}
