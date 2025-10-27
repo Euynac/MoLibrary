@@ -35,6 +35,11 @@
       "type": "stdio",
       "command": "uvx",
       "args": ["--from", "office-word-mcp-server", "word_mcp_server"]
+    },
+    "spec-workflow": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@pimzino/spec-workflow-mcp@latest", "/mnt/d/Code/MoLibrary", "--AutoStartDashboard"]
     }
   }
 }
