@@ -41,7 +41,7 @@
 
 ## Phase 2: Metadata Store Abstraction
 
-- [ ] 5. Create IMoTaskScheduleMetadataStore interface
+- [x] 5. Create IMoTaskScheduleMetadataStore interface
   - File: `MoLibrary.TaskScheduler/Abstractions/IMoTaskScheduleMetadataStore.cs`
   - Define all interface methods from design: GetTaskDefinitionAsync, GetAllTaskDefinitionsAsync, SaveTaskDefinitionAsync, TaskDefinitionExistsAsync, GetTaskInstanceAsync, GetTaskInstancesByKeyAsync, GetProcessingCountAsync, SaveTaskInstanceAsync, UpdateTaskStateAsync, ArchiveTaskInstanceAsync, GetTaskHistoryAsync
   - Purpose: Provide abstraction for pluggable metadata persistence
