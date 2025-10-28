@@ -60,7 +60,7 @@
 
 ## Phase 3: Control Plane Components
 
-- [ ] 7. Create TaskRegistry for task definition registration
+- [x] 7. Create TaskRegistry for task definition registration
   - File: `MoLibrary.TaskScheduler/ControlPlane/TaskRegistry.cs`
   - Implement CheckUnregisteredAsync, RegisterTasksAsync, GetDefinitionAsync methods
   - Use primary constructor for IMoTaskScheduleMetadataStore and ILogger
