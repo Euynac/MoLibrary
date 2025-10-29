@@ -132,7 +132,7 @@
 
 ## Phase 5: Module Integration
 
-- [ ] 14. Create ModuleTaskSchedulerOption configuration class
+- [x] 14. Create ModuleTaskSchedulerOption configuration class
   - File: `MoLibrary.TaskScheduler/Modules/ModuleTaskSchedulerOption.cs`
   - Inherit from MoModuleOption<ModuleTaskScheduler>
   - Define properties: RecurringTaskDebugMode, TriggeredTaskDebugMode, MaxWorkerExecutionThreads, CustomMetadataStoreType
@@ -141,7 +141,7 @@
   - _Requirements: 1.13 (Debug Mode Support), 1.9 (Worker Execution Plane), 1.12 (Metadata Persistence Layer)_
   - _Prompt: Implement the task for spec task-scheduler. First run spec-workflow-guide to get the workflow guide, then implement the task: Role: .NET Developer with expertise in configuration management and module patterns | Task: Create ModuleTaskSchedulerOption class following requirements 1.9, 1.12, 1.13 and design.md ModuleTaskSchedulerOption component. Inherit from MoModuleOption<ModuleTaskScheduler>. Define properties: bool RecurringTaskDebugMode (default false), bool TriggeredTaskDebugMode (default false), int? MaxWorkerExecutionThreads (nullable, null means unlimited), Type? CustomMetadataStoreType (nullable, for custom metadata store implementations). Add XML documentation for each property explaining purpose and defaults. | Restrictions: Must inherit from MoModuleOption<ModuleTaskScheduler>, use appropriate default values, add comprehensive XML documentation, do not add validation logic (that happens during module registration), follow MoLibrary module option pattern from existing modules | _Leverage: MoModuleOption from MoLibrary.Core, design.md ModuleTaskSchedulerOption section, existing module options like ModuleBackgroundJobOption for pattern reference | _Requirements: 1.9 (Worker Execution Plane), 1.12 (Metadata Persistence Layer), 1.13 (Debug Mode Support) | Success: Class compiles inheriting from MoModuleOption<ModuleTaskScheduler>, all four properties defined with correct types and defaults, comprehensive XML documentation, follows MoLibrary option pattern | Instructions: Before starting, edit tasks.md and change this task from [ ] to [-]. After completion, change [-] to [x]._
 
-- [ ] 15. Create ModuleTaskSchedulerGuide fluent configuration builder
+- [x] 15. Create ModuleTaskSchedulerGuide fluent configuration builder
   - File: `MoLibrary.TaskScheduler/Modules/ModuleTaskSchedulerGuide.cs`
   - Inherit from MoModuleGuide<ModuleTaskScheduler, ModuleTaskSchedulerOption, ModuleTaskSchedulerGuide>
   - Implement UseCustomMetadataStore<TStore>() method
@@ -150,7 +150,7 @@
   - _Requirements: 1.12 (Metadata Persistence Layer)_
   - _Prompt: Implement the task for spec task-scheduler. First run spec-workflow-guide to get the workflow guide, then implement the task: Role: .NET Developer with expertise in fluent APIs and builder patterns | Task: Create ModuleTaskSchedulerGuide class following requirement 1.12 and design.md ModuleTaskSchedulerGuide component. Inherit from MoModuleGuide<ModuleTaskScheduler, ModuleTaskSchedulerOption, ModuleTaskSchedulerGuide>. Implement UseCustomMetadataStore<TStore>() method where TStore : IMoTaskScheduleMetadataStore. This method should set option.CustomMetadataStoreType = typeof(TStore) and return this for method chaining. Add XML documentation with usage example. | Restrictions: Must inherit from MoModuleGuide with correct generic parameters, UseCustomMetadataStore must validate TStore implements IMoTaskScheduleMetadataStore, return 'this' for fluent chaining, add comprehensive XML documentation with code example, follow MoLibrary guide pattern from existing modules | _Leverage: MoModuleGuide from MoLibrary.Core, IMoTaskScheduleMetadataStore from task 5, design.md ModuleTaskSchedulerGuide section, existing module guides like ModuleBackgroundJobGuide for pattern reference | _Requirements: 1.12 (Metadata Persistence Layer) | Success: Class compiles inheriting from MoModuleGuide, UseCustomMetadataStore method works with fluent chaining, generic constraint enforced, comprehensive XML documentation with usage example, follows MoLibrary guide pattern | Instructions: Before starting, edit tasks.md and change this task from [ ] to [-]. After completion, change [-] to [x]._
 
-- [ ] 16. Create ModuleTaskSchedulerBuilderExtensions for WebApplicationBuilder
+- [x] 16. Create ModuleTaskSchedulerBuilderExtensions for WebApplicationBuilder
   - File: `MoLibrary.TaskScheduler/Modules/ModuleTaskSchedulerBuilderExtensions.cs`
   - Implement ConfigMoTaskScheduler extension method
   - Purpose: WebApplicationBuilder extension for module registration
@@ -158,7 +158,7 @@
   - _Requirements: Module registration pattern_
   - _Prompt: Implement the task for spec task-scheduler. First run spec-workflow-guide to get the workflow guide, then implement the task: Role: .NET Developer with expertise in extension methods and ASP.NET Core configuration | Task: Create ModuleTaskSchedulerBuilderExtensions static class following design.md ModuleTaskSchedulerBuilderExtensions component and MoLibrary module pattern. Implement static extension method: 'public static ModuleTaskSchedulerGuide ConfigMoTaskScheduler(this WebApplicationBuilder builder, Action<ModuleTaskSchedulerOption>? configure = null)'. Method should create ModuleTaskSchedulerOption, invoke configure action if provided, create ModuleTaskSchedulerGuide, and return guide for fluent chaining. Add XML documentation with usage examples. | Restrictions: Class must be static, method must extend WebApplicationBuilder, accept optional Action<ModuleTaskSchedulerOption> for lambda configuration, return ModuleTaskSchedulerGuide for fluent chaining, add comprehensive XML documentation with usage examples for both lambda and fluent configuration, follow MoLibrary builder extension pattern from existing modules | _Leverage: ModuleTaskSchedulerOption from task 14, ModuleTaskSchedulerGuide from task 15, existing builder extensions like ModuleBackgroundJobBuilderExtensions for pattern reference, CLAUDE.md module pattern documentation | _Requirements: Module registration pattern | Success: Static class compiles with ConfigMoTaskScheduler extension method, method signature matches pattern (WebApplicationBuilder extension, optional configure action, returns guide), comprehensive XML documentation with usage examples for both configuration styles, follows MoLibrary pattern | Instructions: Before starting, edit tasks.md and change this task from [ ] to [-]. After completion, change [-] to [x]._
 
-- [ ] 17. Create ModuleTaskScheduler main module implementation
+- [x] 17. Create ModuleTaskScheduler main module implementation
   - File: `MoLibrary.TaskScheduler/Modules/ModuleTaskScheduler.cs`
   - Inherit from MoModule<ModuleTaskScheduler, ModuleTaskSchedulerOption, ModuleTaskSchedulerGuide> and implement IWantIterateBusinessTypes
   - Implement ConfigureServices: register all services and metadata store
@@ -172,7 +172,7 @@
 
 ## Phase 6: API Layer
 
-- [ ] 18. Create TaskSchedulerApiService and register minimal APIs
+- [x] 18. Create TaskSchedulerApiService and register minimal APIs
   - File: `MoLibrary.TaskScheduler/Api/TaskSchedulerApiService.cs`
   - Create service with methods: GetAllTasks, CreateTaskInstance, GetTaskHistory, CancelTaskInstance, PauseRecurringTask, ResumeRecurringTask, UpdateTaskConfig
   - Register minimal APIs in ModuleTaskScheduler.ConfigureApplicationBuilder
@@ -184,7 +184,7 @@
 
 ## Phase 7: Task Type Discovery and Registration
 
-- [ ] 19. Implement task type discovery and metadata extraction
+- [x] 19. Implement task type discovery and metadata extraction
   - File: Modify `MoLibrary.TaskScheduler/Modules/ModuleTaskScheduler.cs` (from task 17)
   - In IterateBusinessTypes method: extract TaskConfigAttribute metadata, create TaskDefinition objects, call TaskRegistry.RegisterTasksAsync
   - Purpose: Automatic task discovery and registration on module startup

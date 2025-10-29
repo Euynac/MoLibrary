@@ -7,6 +7,7 @@ using MoLibrary.EventBus.Abstractions;
 using MoLibrary.TaskScheduler.Abstractions;
 using MoLibrary.TaskScheduler.Events;
 using MoLibrary.TaskScheduler.Models;
+using MoLibrary.TaskScheduler.Modules;
 
 namespace MoLibrary.TaskScheduler.ControlPlane;
 
@@ -547,33 +548,4 @@ public class MoTaskScheduler(
         public Timer? Timer { get; set; }
         public DateTime NextOccurrence { get; set; }
     }
-}
-
-/// <summary>
-/// Configuration options for the Task Scheduler module.
-/// This is a placeholder - the actual implementation will be in ModuleTaskSchedulerOption (task 14).
-/// </summary>
-public class ModuleTaskSchedulerOption
-{
-    /// <summary>
-    /// When true, recurring tasks will not be automatically scheduled.
-    /// Useful for development and testing scenarios.
-    /// </summary>
-    public bool RecurringTaskDebugMode { get; set; } = false;
-
-    /// <summary>
-    /// When true, triggered tasks will not be automatically executed after EnqueueAsync.
-    /// Useful for development and testing scenarios.
-    /// </summary>
-    public bool TriggeredTaskDebugMode { get; set; } = false;
-
-    /// <summary>
-    /// Maximum number of worker execution threads. Null means unlimited.
-    /// </summary>
-    public int? MaxWorkerExecutionThreads { get; set; } = null;
-
-    /// <summary>
-    /// Custom metadata store implementation type.
-    /// </summary>
-    public Type? CustomMetadataStoreType { get; set; } = null;
 }
