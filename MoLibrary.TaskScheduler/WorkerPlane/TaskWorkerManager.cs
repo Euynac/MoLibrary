@@ -6,6 +6,7 @@ using MoLibrary.TaskScheduler.Abstractions;
 using MoLibrary.TaskScheduler.ControlPlane;
 using MoLibrary.TaskScheduler.Events;
 using MoLibrary.TaskScheduler.Models;
+using MoLibrary.TaskScheduler.Modules;
 
 namespace MoLibrary.TaskScheduler.WorkerPlane;
 
