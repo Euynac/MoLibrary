@@ -69,7 +69,7 @@
   - _Requirements: 1.8 (Task Registration and Discovery)_
   - _Prompt: Implement the task for spec task-scheduler. First run spec-workflow-guide to get the workflow guide, then implement the task: Role: Backend Developer with expertise in service layer design and dependency injection | Task: Create TaskRegistry class following requirement 1.8 and design.md Control Plane Components section. Implement CheckUnregisteredAsync (accepts IEnumerable<string> taskKeys, returns unregistered ones), RegisterTasksAsync (accepts IEnumerable<TaskDefinition>, persists to store, throws TaskRegistrationException on duplicate keys), and GetDefinitionAsync (retrieves by key). Use primary constructor for IMoTaskScheduleMetadataStore and ILogger<TaskRegistry>. | Restrictions: Must validate for duplicate TaskKey during registration and throw TaskRegistrationException with details, log all registrations, use async/await properly, do not cache definitions (rely on metadata store), follow primary constructor pattern | _Leverage: IMoTaskScheduleMetadataStore from task 5, TaskDefinition from task 2, CLAUDE.md dependency injection guidelines | _Requirements: 1.8 (Task Registration and Discovery) | Success: Class compiles with all three methods, duplicate detection works correctly throwing TaskRegistrationException, operations properly logged, async methods use proper cancellation tokens, primary constructor used for DI | Instructions: Before starting, edit tasks.md and change this task from [ ] to [-]. After completion, change [-] to [x]._
 
-- [ ] 8. Create TaskExecutionEvent model
+- [x] 8. Create TaskExecutionEvent model
   - File: `MoLibrary.TaskScheduler/Events/TaskExecutionEvent.cs`
   - Define event properties: InstanceId, TaskKey, Parameters (JSON string), RequestedAt
   - Purpose: Event model for publishing task execution requests via IMoEventBus
@@ -77,7 +77,7 @@
   - _Requirements: 1.1 (Recurring Task Scheduling), 1.2 (Triggered Task Execution)_
   - _Prompt: Implement the task for spec task-scheduler. First run spec-workflow-guide to get the workflow guide, then implement the task: Role: .NET Developer with expertise in event-driven architecture and data models | Task: Create TaskExecutionEvent class following design.md Event Models section and requirements 1.1 and 1.2. Define properties: string InstanceId, string TaskKey, string? Parameters (for JSON-serialized triggered task params), DateTime RequestedAt. This event will be published via IMoEventBus when tasks need execution. | Restrictions: Use init-only properties for immutability, add XML documentation for each property, ensure class is serializable (simple properties only), do not add methods or validation logic | _Leverage: Design.md Event Models section | _Requirements: 1.1 (Recurring Task Scheduling), 1.2 (Triggered Task Execution) | Success: Class compiles with all four properties, properties use init-only setters, comprehensive XML documentation, class is simple and serializable | Instructions: Before starting, edit tasks.md and change this task from [ ] to [-]. After completion, change [-] to [x]._
 
-- [ ] 9. Create MetadataWriter for instance creation and state management
+- [x] 9. Create MetadataWriter for instance creation and state management
   - File: `MoLibrary.TaskScheduler/ControlPlane/MetadataWriter.cs`
   - Implement CreateInstanceAsync and UpdateStateAsync methods
   - Validate state transitions according to state machine
