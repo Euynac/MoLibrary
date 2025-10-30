@@ -277,7 +277,7 @@ public class JobExecutor(
         }
 
         // Execute based on job type
-        if (jobInstance is RecurringJob recurringJob)
+        if (jobInstance is MoRecurringJob recurringJob)
         {
             // Execute recurring job (no parameters)
             logger.LogDebug(

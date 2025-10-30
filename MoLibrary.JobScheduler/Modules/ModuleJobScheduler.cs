@@ -35,7 +35,7 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
             if (type is { IsClass: true, IsAbstract: false })
             {
                 // Check if type inherits from RecurringTask
-                if (type.IsAssignableTo(typeof(RecurringJob)))
+                if (type.IsAssignableTo(typeof(MoRecurringJob)))
                 {
                     try
                     {

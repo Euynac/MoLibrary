@@ -25,15 +25,15 @@ Every module follows a consistent pattern:
 Modules use a unified registration pattern:
 ```csharp
 // Basic registration
-builder.ConfigMo{ModuleName}(options => 
+builder.ConfigModule{ModuleName}(options => 
 {
     // Configure options
 });
 
 // With guide for fluent configuration
-builder.ConfigMo{ModuleName}()
-    .ConfigureOption1()
-    .ConfigureOption2();
+builder.ConfigModule{ModuleName}()
+    .GuideMethod1()
+    .GuideMethod2();
 ```
 
 ### Key Architectural Decisions
@@ -47,7 +47,7 @@ builder.ConfigMo{ModuleName}()
 When adding dependencies between modules:
 1. Check existing module dependencies in `.csproj` files
 2. Maintain minimal coupling between modules
-3. Use `MoModule.DependsOn<T>()` to declare module dependencies
+3. Use `DependsOnModule<{ModuleName}Guide>().Register();` to declare module dependencies
 4. Dependencies are automatically registered when a module is added
 
 ### Static Assets
@@ -97,7 +97,7 @@ Static web assets (wwwroot) are handled through:
   .config-table-wrapper ::deep tr.mud-selected {
       background-color: var(--mud-palette-action-default-hover) !important;
   }
-  ```  
+  ```
 
 ## **Interface Return Value Guidelines**  
 - For the return value definitions of frontend APIs (used by Controllers and Blazor), always use the **unified response model `Res`**. Refer to `@rules\mo-framework-res-type.mdc` for usage details.  

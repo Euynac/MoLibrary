@@ -3,7 +3,7 @@
 /// <summary>
 ///     Defines interface of a background job.
 /// </summary>
-public interface IMoBackgroundJob<in TArgs>
+public interface IMoTriggeredJob<in TArgs>
 {
     /// <summary>
     ///     Executes the job with the <paramref name="args" />.
