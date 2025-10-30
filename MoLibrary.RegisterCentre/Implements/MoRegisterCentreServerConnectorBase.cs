@@ -111,7 +111,7 @@ public abstract class MoRegisterCentreServerConnectorBase(
             }
             catch (Exception e)
             {
-                Logger?.LogError(e, "向配置中心发送心跳出现异常");
+                Logger?.LogError(e, "向注册中心发送心跳出现异常");
             }
             finally
             {

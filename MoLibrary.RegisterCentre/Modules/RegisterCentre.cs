@@ -38,7 +38,7 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModule<
         }
         
         // 注册默认信息提供者实现
-        services.TryAddSingleton<IRegisterCentreInfoProvider, DefaultRegisterCentreInfoProvider>();
+        services.TryAddSingleton<IRegisterCentreServerInfoProvider, DefaultRegisterCentreServerInfoProvider>();
     }
 
     public override void ConfigureApplicationBuilder(IApplicationBuilder app)
@@ -212,11 +212,11 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
     /// <typeparam name="TInfoProvider">信息提供者服务实现类型</typeparam>
     /// <returns></returns>
     public ModuleRegisterCentreGuide SetInfoProvider<TInfoProvider>()
-        where TInfoProvider : class, IRegisterCentreInfoProvider
+        where TInfoProvider : class, IRegisterCentreServerInfoProvider
     {
         ConfigureServices(context =>
         {
-            context.Services.TryAddSingleton<IRegisterCentreInfoProvider, TInfoProvider>();
+            context.Services.TryAddSingleton<IRegisterCentreServerInfoProvider, TInfoProvider>();
         });
         return this;
     }

@@ -7,7 +7,7 @@ namespace MoLibrary.RegisterCentre.Implements;
 /// <summary>
 /// 默认注册中心预定义信息提供者实现
 /// </summary>
-public class DefaultRegisterCentreInfoProvider(IRegisterCentreServer? registerCentreServer = null) : IRegisterCentreInfoProvider
+public class DefaultRegisterCentreServerInfoProvider(IRegisterCentreServer? registerCentreServer = null) : IRegisterCentreServerInfoProvider
 {
     /// <summary>
     /// 获取所有领域信息（默认实现通过IRegisterCentreServer获取已注册的DomainName列表）
