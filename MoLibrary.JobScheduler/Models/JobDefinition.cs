@@ -1,0 +1,95 @@
+namespace MoLibrary.JobScheduler.Models;
+
+/// <summary>
+/// Represents the metadata and configuration for a job definition.
+/// Job definitions are registered at application startup and define how jobs should be scheduled and executed.
+/// </summary>
+public class JobDefinition
+{
+    /// <summary>
+    /// Gets or sets the unique identifier for this job definition.
+    /// Defaults to the job type's full name (TypeFullName).
+    /// Must be unique across all registered job definitions in the metadata store.
+    /// </summary>
+    public string JobKey { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the human-readable name for this job.
+    /// Defaults to the job type's simple name.
+    /// Used for display purposes in UI and logs.
+    /// </summary>
+    public string JobName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets an optional description explaining the purpose of this job.
+    /// Provides additional context about what the job does and when it should run.
+    /// </summary>
+    public string? Description { get; set; }
+
+    /// <summary>
+    /// Gets or sets the type of job (Recurring or Triggered).
+    /// Determines whether the job is scheduled automatically or triggered on-demand.
+    /// </summary>
+    public JobType Type { get; set; }
+
+    /// <summary>
+    /// Gets or sets the maximum number of concurrent executions allowed for this job.
+    /// Default is 1. When the limit is reached, new job instances will be skipped.
+    /// </summary>
+    public int MaxConcurrency { get; set; } = 1;
+
+    /// <summary>
+    /// Gets or sets the number of automatic retry attempts on failure.
+    /// Default is 0 (no retries). Failed jobs will retry up to this count before being terminated.
+    /// </summary>
+    public int RetryCount { get; set; } = 0;
+
+    /// <summary>
+    /// Gets or sets the maximum execution timeout for this job.
+    /// Default is 1 hour. Jobs exceeding this duration will be cancelled via IMoCancellationManager.
+    /// </summary>
+    public TimeSpan MaxExecutionTimeout { get; set; } = TimeSpan.FromHours(1);
+
+    /// <summary>
+    /// Gets or sets whether this job is disabled.
+    /// Default is false. Disabled jobs will not be scheduled or executed.
+    /// </summary>
+    public bool IsDisabled { get; set; } = false;
+
+    // Recurring job specific properties
+
+    /// <summary>
+    /// Gets or sets the cron expression for recurring job scheduling.
+    /// Only applicable for recurring jobs. Supports second-level precision.
+    /// Example: "*/10 * * * * *" runs every 10 seconds.
+    /// </summary>
+    public string? CronExpression { get; set; }
+
+    /// <summary>
+    /// Gets or sets the earliest time this recurring job should start executing.
+    /// Only applicable for recurring jobs. Null means no start restriction.
+    /// </summary>
+    public DateTime? StartTime { get; set; }
+
+    /// <summary>
+    /// Gets or sets the latest time this recurring job should stop executing.
+    /// Only applicable for recurring jobs. Null means no end restriction.
+    /// </summary>
+    public DateTime? EndTime { get; set; }
+
+    // Metadata properties
+
+    /// <summary>
+    /// Gets or sets the CLR type of the job class for instantiation.
+    /// Used to create job instances via dependency injection.
+    /// Must inherit from RecurringJob or TriggeredJob{TParam}.
+    /// </summary>
+    public Type JobClrType { get; set; } = typeof(object);
+
+    /// <summary>
+    /// Gets or sets the CLR type of the parameter for triggered jobs.
+    /// Only applicable for TriggeredJob{TParam}. Null for recurring jobs.
+    /// Used to deserialize JSON parameters when creating job instances.
+    /// </summary>
+    public Type? ParameterClrType { get; set; }
+}

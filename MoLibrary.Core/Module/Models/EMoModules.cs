@@ -91,5 +91,5 @@ public enum EMoModules
     RpcClient,
     DaprProviderRpcClient,
     DaprProviderClientConnector,
-    TaskScheduler
+    JobScheduler
 }
