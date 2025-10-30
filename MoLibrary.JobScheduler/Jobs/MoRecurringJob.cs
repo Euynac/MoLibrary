@@ -28,7 +28,7 @@ namespace MoLibrary.JobScheduler.Jobs;
 /// Implementations should respect the cancellation token and exit gracefully when signaled.
 /// </para>
 /// </remarks>
-public abstract class RecurringJob
+public abstract class MoRecurringJob
 {
     /// <summary>
     /// Executes the recurring job logic.
