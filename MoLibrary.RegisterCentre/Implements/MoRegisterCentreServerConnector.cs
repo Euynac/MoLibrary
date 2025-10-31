@@ -7,19 +7,35 @@ using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.RegisterCentre.Implements;
 
-public abstract class MoRegisterCentreServerConnectorBase(
+public class MoRegisterCentreServerConnector(
     IRegisterCentreClient client, 
-    ILogger<MoRegisterCentreServerConnectorBase> logger, 
-    IOptions<ModuleRegisterCentreOption> option) : IRegisterCentreServerConnector
+    ILogger<MoRegisterCentreServerConnector> logger, 
+    IOptions<ModuleRegisterCentreOption> option, IRegisterCentreServerInvocationConnector connector) : IRegisterCentreServerConnector
 {
     protected readonly ModuleRegisterCentreOption Option = option.Value;
-    protected readonly IRegisterCentreClient Client = client;
-    protected readonly ILogger<MoRegisterCentreServerConnectorBase> Logger = logger;
-    
+
+    private readonly Lazy<string> _registerCentreAppId = new(client.GetRegisterCentreAppId);
+    protected string RegisterCentreAppId => _registerCentreAppId.Value;
+
     private CancellationTokenSource? _heartbeatCts;
-    
-    public abstract Task<Res> Register(ServiceRegisterInfo req);
-    public abstract Task<Res<ServiceHeartbeatResponse>> Heartbeat(ServiceHeartbeat req);
+
+    public virtual async Task<Res> Register(ServiceRegisterInfo req)
+    {
+        if ((await connector.PostAsync<ServiceRegisterInfo, Res>(RegisterCentreAppId, MoRegisterCentreConventions.ServerCentreRegister, req)).IsFailed(out var error, out var data)) return error;
+        return data;
+    }
+
+    public virtual async Task<Res<ServiceHeartbeatResponse>> Heartbeat(ServiceHeartbeat req)
+    {
+        if ((await connector.PostAsync<ServiceHeartbeat, Res<ServiceHeartbeatResponse>>(RegisterCentreAppId, MoRegisterCentreConventions.ServerCentreHeartbeat, req)).IsFailed(out var error, out var data)) return error;
+        return data;
+    }
+
+    public virtual async Task<Res<LeaderStatusResponse>> GetLeaderStatus(LeaderStatusRequest req)
+    {
+        if ((await connector.PostAsync<LeaderStatusRequest, Res<LeaderStatusResponse>>(RegisterCentreAppId, MoRegisterCentreConventions.ServerCentreLeaderStatus, req)).IsFailed(out var error, out var data)) return error;
+        return data;
+    }
     
     public virtual async Task DoingRegister()
     {
@@ -30,23 +46,23 @@ public abstract class MoRegisterCentreServerConnectorBase(
         {
             try
             {
-                var serviceInfo = Client.GetServiceStatus();
+                var serviceInfo = client.GetServiceStatus();
                 var res = await Register(serviceInfo);
                 
                 if (res.IsFailed(out var error))
                 {
-                    Logger?.LogError("注册失败: {Message}", error.Message);
+                    logger?.LogError("注册失败: {Message}", error.Message);
                 }
                 else
                 {
-                    Logger?.LogInformation("成功注册到注册中心: {AppId}", serviceInfo.AppId);
+                    logger?.LogInformation("成功注册到注册中心: {AppId}", serviceInfo.AppId);
                     StartHeartbeat();
                     break;
                 }
             }
             catch (Exception e)
             {
-                Logger?.LogError(e, "注册配置中心出现异常");
+                logger?.LogError(e, "注册配置中心出现异常");
             }
             finally
             {
@@ -57,7 +73,7 @@ public abstract class MoRegisterCentreServerConnectorBase(
         
         if (retryTimes == 0)
         {
-            Logger?.LogError("注册中心注册失败，已达到最大重试次数");
+            logger?.LogError("注册中心注册失败，已达到最大重试次数");
         }
     }
     
@@ -78,7 +94,7 @@ public abstract class MoRegisterCentreServerConnectorBase(
         {
             try
             {
-                var serviceInfo = Client.GetServiceStatus(true);
+                var serviceInfo = client.GetServiceStatus(true);
                 var heartbeat = new ServiceHeartbeat
                 {
                     AppId = serviceInfo.AppId,
@@ -92,26 +108,26 @@ public abstract class MoRegisterCentreServerConnectorBase(
                 
                 if (res.IsFailed(out var heartbeatError, out var heartbeatData))
                 {
-                    Logger?.LogError("心跳失败: {Message}", heartbeatError.Message);
+                    logger?.LogError("心跳失败: {Message}", heartbeatError.Message);
                 }
                 else if (heartbeatData.RequireReRegister)
                 {
-                    Logger?.LogInformation("需要重新注册: {Message}", heartbeatData.Message);
+                    logger?.LogInformation("需要重新注册: {Message}", heartbeatData.Message);
                     // 重新注册
                     var registerRes = await Register(serviceInfo);
                     if (registerRes.IsFailed(out var registerError))
                     {
-                        Logger?.LogError("重新注册失败: {Message}", registerError.Message);
+                        logger?.LogError("重新注册失败: {Message}", registerError.Message);
                     }
                     else
                     {
-                        Logger?.LogInformation("重新注册成功");
+                        logger?.LogInformation("重新注册成功");
                     }
                 }
             }
             catch (Exception e)
             {
-                Logger?.LogError(e, "向注册中心发送心跳出现异常");
+                logger?.LogError(e, "向注册中心发送心跳出现异常");
             }
             finally
             {

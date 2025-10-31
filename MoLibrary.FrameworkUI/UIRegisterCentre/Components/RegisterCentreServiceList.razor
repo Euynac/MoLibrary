@@ -112,7 +112,7 @@
 		</TemplateColumn>
 		<TemplateColumn Title="实例状态">
 			<CellTemplate>
-				<MudStack Row="true" Spacing="1">
+				<MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
 					@foreach (var instance in context.Item.Instances.Values.Take(3))
 					{
 						var instanceColor = instance.Status switch
@@ -123,9 +123,21 @@
 							ServiceStatus.Error => Color.Error,
 							_ => Color.Default
 						};
-						<MudTooltip Text="@($"{instance.InstanceId}: {instance.Status}")">
-							<MudIcon Icon="@Icons.Material.Filled.Circle" Color="@instanceColor" Size="Size.Small" />
-						</MudTooltip>
+						var leaderBadge = instance.IsLeader ? " 👑 Leader" : "";
+						var tooltipText = $"{instance.InstanceId}: {instance.Status}{leaderBadge}";
+
+						<MudStack Row="false" Spacing="0" AlignItems="AlignItems.Center" Style="position: relative;">
+							<MudTooltip Text="@tooltipText">
+								<MudIcon Icon="@Icons.Material.Filled.Circle" Color="@instanceColor" Size="Size.Small" />
+							</MudTooltip>
+							@if (instance.IsLeader)
+							{
+								<MudIcon Icon="@Icons.Material.Filled.WorkspacePremium"
+								         Color="Color.Warning"
+								         Size="Size.Small"
+								         Style="position: absolute; top: -4px; right: -4px; font-size: 0.75rem;" />
+							}
+						</MudStack>
 					}
 					@if (context.Item.Instances.Count > 3)
 					{

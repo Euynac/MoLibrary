@@ -76,13 +76,26 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModule<
                 
                 endpoints.MapPost(MoRegisterCentreConventions.ServerCentreHeartbeat, async (ServiceHeartbeat req, [FromServices] IRegisterCentreServer centre) =>
                 {
-                    if ((await centre.Heartbeat(req)).IsFailed(out var error, out var data)) 
+                    if ((await centre.Heartbeat(req)).IsFailed(out var error, out var data))
                         return error.GetResponse();
                     return Res.Create(data, ResponseCode.Ok).GetResponse();
                 }).WithName("微服务心跳").WithOpenApi(operation =>
                 {
                     operation.Summary = "微服务心跳";
                     operation.Description = "发送心跳到注册中心";
+                    operation.Tags = tagGroup;
+                    return operation;
+                });
+
+                endpoints.MapPost(MoRegisterCentreConventions.ServerCentreLeaderStatus, async (LeaderStatusRequest req, [FromServices] IRegisterCentreServer centre) =>
+                {
+                    if ((await centre.GetLeaderStatus(req)).IsFailed(out var error, out var data))
+                        return error.GetResponse();
+                    return Res.Create(data, ResponseCode.Ok).GetResponse();
+                }).WithName("查询领导者状态").WithOpenApi(operation =>
+                {
+                    operation.Summary = "查询领导者状态";
+                    operation.Description = "查询当前实例在服务集群中的领导者状态（Leader/Follower/Looking）";
                     operation.Tags = tagGroup;
                     return operation;
                 });
@@ -140,20 +153,20 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
     public const string SET_CENTRE_TYPE = nameof(SET_CENTRE_TYPE);
     protected override string[] GetRequestedConfigMethodKeys()
     {
-        return [SET_CENTRE_TYPE];
+        return [SET_CENTRE_TYPE, nameof(SetCentreServerClientConnector)];
     }
 
     /// <summary>
-    /// 设置注册中心服务端的客户端连接器实现类型
+    /// 设置注册中心服务间调用连接器
     /// </summary>
     /// <typeparam name="TClientConnector"></typeparam>
     /// <returns></returns>
     public ModuleRegisterCentreGuide SetCentreServerClientConnector<TClientConnector>()
-        where TClientConnector : class, IRegisterCentreClientConnector
+        where TClientConnector : class, IRegisterCentreServerInvocationConnector
     {
         ConfigureServices(context =>
         {
-            context.Services.TryAddSingleton<IRegisterCentreClientConnector, TClientConnector>();
+            context.Services.TryAddSingleton<IRegisterCentreServerInvocationConnector, TClientConnector>();
         });
         return this;
     }
@@ -172,27 +185,14 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
         {
             context.Services.TryAddSingleton<IRegisterCentreServer, MemoryProviderForRegisterCentre>();
         }, key: SET_CENTRE_TYPE);
-
-        ConfigureApplicationBuilder(context =>
-        {
-            var isServiceProviderIsService =
-                context.ApplicationBuilder.ApplicationServices.GetRequiredKeyedService<IServiceProviderIsService>(
-                    SET_CENTRE_TYPE);
-            if (!isServiceProviderIsService.IsService(typeof(IRegisterCentreClientConnector)))
-            {
-                throw new InvalidOperationException($"You must to call {nameof(SetCentreServerClientConnector)} to set client connector provider when set as centre server.");
-            }
-        }, EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
         return this;
     }
     /// <summary>
     /// 设置当前服务为注册中心客户端
     /// </summary>
-    /// <typeparam name="TServer">注册中心服务端连接器实现类型</typeparam>
     /// <typeparam name="TClient">注册中心客户端实现类型</typeparam>
     /// <returns></returns>
-    public ModuleRegisterCentreGuide SetAsCentreClient<TServer, TClient>()
-        where TServer : class, IRegisterCentreServerConnector where TClient : class, IRegisterCentreClient
+    public ModuleRegisterCentreGuide SetAsCentreClient<TClient>() where TClient : class, IRegisterCentreClient
     {
         ConfigureModuleOption(o =>
         {
@@ -200,7 +200,7 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
         });
         ConfigureServices(context =>
         {
-            context.Services.TryAddSingleton<IRegisterCentreServerConnector, TServer>();
+            context.Services.TryAddSingleton<IRegisterCentreServerConnector, MoRegisterCentreServerConnector>();
             context.Services.TryAddSingleton<IRegisterCentreClient, TClient>();
         }, key: SET_CENTRE_TYPE);
         return this;
@@ -241,6 +241,10 @@ public class ModuleRegisterCentreOption : MoModuleControllerOption<ModuleRegiste
     internal bool ThisIsCentreClient { get; set; } = false;
 
     /// <summary>
+    /// 注册中心Appid
+    /// </summary>
+    internal string? RegisterServerCentreAppId { get; set; }
+    /// <summary>
     /// TODO 最大并发执行数量
     /// </summary>
     public int MaxParallelInvokerCount { get; set; }
@@ -268,14 +272,21 @@ public class ModuleRegisterCentreOption : MoModuleControllerOption<ModuleRegiste
     /// 服务端心跳检查间隔（单位：ms）
     /// </summary>
     public int ServerHeartbeatCheckInterval { get; set; } = 5000;
-    
+
     /// <summary>
     /// 需要读取作为元数据的环境变量Key列表
     /// </summary>
     public List<string> MetadataEnvironmentVariables { get; set; } = new();
-    
+
     /// <summary>
     /// 是否获取监听地址作为元数据
     /// </summary>
     public bool IncludeListeningAddresses { get; set; } = true;
+
+    /// <summary>
+    /// 是否启用领导者选举功能
+    /// <para>启用后，注册中心会自动为每个AppId的实例进行领导者选举</para>
+    /// <para>选举规则：注册时间最早的Running状态实例被选为领导者</para>
+    /// </summary>
+    public bool EnableLeaderElection { get; set; } = true;
 }

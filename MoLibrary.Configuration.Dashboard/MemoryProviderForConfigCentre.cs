@@ -25,11 +25,11 @@ namespace MoLibrary.Configuration.Dashboard;
 /// <seealso cref="IMoConfigurationCentre"/>
 public class MemoryProviderForConfigCentre(
     IHttpContextAccessor accessor, IMoConfigurationModifier modifier,
-    IMoConfigurationStores stores, IMoConfigurationCardManager manager, IRegisterCentreClientConnector connector,
+    IMoConfigurationStores stores, IMoConfigurationCardManager manager, IRegisterCentreServerInvocationConnector connector,
     IOptions<ModuleRegisterCentreOption> options) : MemoryProviderForRegisterCentre(accessor, connector, options), IMoConfigurationCentre
 {
     private static List<DtoDomainConfigs>? _cache;
-    private readonly IRegisterCentreClientConnector _connector = connector;
+    private readonly IRegisterCentreServerInvocationConnector _connector = connector;
 
 
     public override Task<Res> Register(ServiceRegisterInfo req)
