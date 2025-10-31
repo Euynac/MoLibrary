@@ -216,7 +216,7 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
     {
         ConfigureServices(context =>
         {
-            context.Services.TryAddSingleton<IRegisterCentreServerInfoProvider, TInfoProvider>();
+            context.Services.AddSingleton<IRegisterCentreServerInfoProvider, TInfoProvider>();
         });
         return this;
     }
@@ -262,16 +262,26 @@ public class ModuleRegisterCentreOption : MoModuleControllerOption<ModuleRegiste
     /// 客户端重试频率（单位：ms）
     /// </summary>
     public int RetryDuration { get; set; } = 5000;
-
-    /// <summary>
-    /// 服务端心跳超时时间（单位：ms）
-    /// </summary>
-    public int ServerHeartbeatTimeout { get; set; } = 11000;
-
+    
     /// <summary>
     /// 服务端心跳检查间隔（单位：ms）
     /// </summary>
     public int ServerHeartbeatCheckInterval { get; set; } = 5000;
+
+    /// <summary>
+    /// 不健康阈值（单位：ms）- 心跳超过此时间后实例被标记为Unhealthy
+    /// </summary>
+    public int UnhealthyThreshold { get; set; } = 6000;
+
+    /// <summary>
+    /// 离线阈值（单位：ms）- 心跳超过此时间后实例被标记为Offline
+    /// </summary>
+    public int OfflineThreshold { get; set; } = 16000;
+
+    /// <summary>
+    /// 驱逐阈值（单位：ms）- 心跳超过此时间后实例被从注册中心移除
+    /// </summary>
+    public int ExpelThreshold { get; set; } = 45000;
 
     /// <summary>
     /// 需要读取作为元数据的环境变量Key列表

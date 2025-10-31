@@ -160,6 +160,7 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
         else
         {
             // 更新心跳信息
+            // 无论实例之前是什么状态（Running/Unhealthy/Offline），成功的心跳都会立即恢复到Running状态
             instance.Status = ServiceStatus.Running;
             instance.LastHeartbeatTime = DateTime.Now;
             instance.HeartbeatCount++;
@@ -194,15 +195,15 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
             return Task.FromResult<Res<LeaderStatusResponse>>(response);
         }
 
-        // 获取所有运行中的实例
-        var runningInstances = service.Instances.Values
-            .Where(i => i.Status == ServiceStatus.Running)
+        // 获取所有符合条件的实例（Running和Unhealthy状态）
+        var eligibleInstances = service.Instances.Values
+            .Where(i => i.Status == ServiceStatus.Running || i.Status == ServiceStatus.Unhealthy)
             .ToList();
 
-        response.RunningInstanceCount = runningInstances.Count;
+        response.RunningInstanceCount = eligibleInstances.Count;
 
-        // 如果没有运行中的实例
-        if (runningInstances.Count == 0)
+        // 如果没有符合条件的实例
+        if (eligibleInstances.Count == 0)
         {
             response.Status = LeaderStatus.Looking;
             response.Message = "当前没有运行中的实例";
@@ -214,7 +215,7 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
         var currentInstance = service.Instances.GetValueOrDefault(instanceId);
 
         // 查找领导者
-        var leader = runningInstances.FirstOrDefault(i => i.IsLeader);
+        var leader = eligibleInstances.FirstOrDefault(i => i.IsLeader);
 
         if (leader == null)
         {
@@ -308,17 +309,34 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
     private static void CheckHeartbeatTimeout(object? state)
     {
         var option = _staticOption ?? new ModuleRegisterCentreOption();
-        var timeout = TimeSpan.FromMilliseconds(option.ServerHeartbeatTimeout);
+        var unhealthyThreshold = TimeSpan.FromMilliseconds(option.UnhealthyThreshold);
+        var offlineThreshold = TimeSpan.FromMilliseconds(option.OfflineThreshold);
+        var expelThreshold = TimeSpan.FromMilliseconds(option.ExpelThreshold);
         var now = DateTime.Now;
 
         foreach (var service in Services.Values)
         {
-            // 1. 检查心跳超时并标记离线实例
+            // 1. 检查心跳超时并根据阈值更新实例状态
+            var instancesToRemove = new List<string>();
+
             foreach (var instance in service.Instances.Values)
             {
-                if (instance.Status == ServiceStatus.Running)
+                // 跳过Error和Updating状态的实例，这些状态由其他逻辑管理
+                if (instance.Status == ServiceStatus.Error || instance.Status == ServiceStatus.Updating)
+                    continue;
+
+                var timeSinceLastHeartbeat = now - instance.LastHeartbeatTime;
+
+                // 多级健康检查：根据时间阈值进行状态转换
+                if (timeSinceLastHeartbeat > expelThreshold)
                 {
-                    if (now - instance.LastHeartbeatTime > timeout)
+                    // 超过驱逐阈值：从注册中心移除实例
+                    instancesToRemove.Add(instance.InstanceId);
+                }
+                else if (timeSinceLastHeartbeat > offlineThreshold)
+                {
+                    // 超过离线阈值：标记为Offline
+                    if (instance.Status != ServiceStatus.Offline)
                     {
                         instance.Status = ServiceStatus.Offline;
                         // 如果离线的是领导者，标记为非领导者以触发重新选举
@@ -328,9 +346,25 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
                         }
                     }
                 }
+                else if (timeSinceLastHeartbeat > unhealthyThreshold)
+                {
+                    // 超过不健康阈值：标记为Unhealthy
+                    if (instance.Status == ServiceStatus.Running)
+                    {
+                        instance.Status = ServiceStatus.Unhealthy;
+                        // 注意：根据配置，Unhealthy实例仍可保持领导者身份
+                    }
+                }
+                // 如果未超过任何阈值，保持当前状态（由心跳处理恢复到Running）
             }
 
-            // 2. 进行领导者选举（如果启用）
+            // 2. 移除需要驱逐的实例
+            foreach (var instanceId in instancesToRemove)
+            {
+                service.Instances.Remove(instanceId);
+            }
+
+            // 3. 进行领导者选举（如果启用）
             if (option.EnableLeaderElection)
             {
                 PerformLeaderElection(service);
@@ -344,13 +378,14 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
     /// <param name="service">服务状态信息</param>
     private static void PerformLeaderElection(RegisteredServiceStatus service)
     {
-        // 获取所有运行中的实例
-        var runningInstances = service.Instances.Values
-            .Where(i => i.Status == ServiceStatus.Running)
+        // 获取所有符合条件的实例（Running和Unhealthy状态）
+        // Unhealthy实例仍可参与领导者选举，只有Offline和Error状态的实例被排除
+        var eligibleInstances = service.Instances.Values
+            .Where(i => i.Status == ServiceStatus.Running || i.Status == ServiceStatus.Unhealthy)
             .ToList();
 
-        // 如果没有运行中的实例，清除所有领导者标记
-        if (runningInstances.Count == 0)
+        // 如果没有符合条件的实例，清除所有领导者标记
+        if (eligibleInstances.Count == 0)
         {
             foreach (var instance in service.Instances.Values)
             {
@@ -360,11 +395,11 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
         }
 
         // 检查是否已有领导者
-        var currentLeader = runningInstances.FirstOrDefault(i => i.IsLeader);
+        var currentLeader = eligibleInstances.FirstOrDefault(i => i.IsLeader);
         if (currentLeader != null)
         {
             // 已有领导者，无需重新选举，但确保其他实例不是领导者
-            foreach (var instance in runningInstances.Where(i => i != currentLeader))
+            foreach (var instance in eligibleInstances.Where(i => i != currentLeader))
             {
                 instance.IsLeader = false;
             }
@@ -372,7 +407,7 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
         }
 
         // 没有领导者，按注册时间排序，选择最早注册的实例为领导者
-        var newLeader = runningInstances
+        var newLeader = eligibleInstances
             .OrderBy(i => i.RegistrationTime)
             .First();
 
@@ -380,7 +415,7 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
         newLeader.IsLeader = true;
 
         // 确保其他实例不是领导者
-        foreach (var instance in runningInstances.Where(i => i != newLeader))
+        foreach (var instance in eligibleInstances.Where(i => i != newLeader))
         {
             instance.IsLeader = false;
         }

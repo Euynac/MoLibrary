@@ -8,9 +8,9 @@ public class ModuleAuthenticationGuide : MoModuleGuide<ModuleAuthentication, Mod
 {
     protected override string[] GetRequestedConfigMethodKeys()
     {
-        return [nameof(ConfigMoSystemUser)];
+        return [nameof(ConfigSystemUser)];
     }
-    public ModuleAuthenticationGuide ConfigMoSystemUser<T>(T curSystemEnum, Action<MoSystemUserOptions>? action = null) where T : struct, Enum
+    public ModuleAuthenticationGuide ConfigSystemUser<T>(T curSystemEnum, Action<MoSystemUserOptions>? action = null) where T : struct, Enum
     {
         ConfigureServices(context =>
         {
@@ -25,8 +25,8 @@ public class ModuleAuthenticationGuide : MoModuleGuide<ModuleAuthentication, Mod
         
     }
 
-    public ModuleAuthenticationGuide ConfigDefaultMoSystemUser(Action<MoSystemUserOptions>? action = null)
+    public ModuleAuthenticationGuide ConfigDefaultSystemUser(Action<MoSystemUserOptions>? action = null)
     {
-        return ConfigMoSystemUser(EMoDefaultSystemUser.System, action);
+        return ConfigSystemUser(EMoDefaultSystemUser.System, action);
     }
 }

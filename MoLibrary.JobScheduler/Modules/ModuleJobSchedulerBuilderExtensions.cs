@@ -100,7 +100,7 @@ public static class ModuleJobSchedulerBuilderExtensions
     /// app.Run();
     /// </code>
     /// </example>
-    public static ModuleJobSchedulerGuide ConfigMoJobScheduler(
+    public static ModuleJobSchedulerGuide ConfigModuleJobScheduler(
         this WebApplicationBuilder builder,
         Action<ModuleJobSchedulerOption>? configure = null)
     {

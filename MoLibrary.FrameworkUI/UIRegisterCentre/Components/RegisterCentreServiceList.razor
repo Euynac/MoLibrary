@@ -42,6 +42,11 @@
 							statusText = "更新中";
 							statusIcon = Icons.Material.Filled.Update;
 							break;
+						case ServiceStatus.Unhealthy:
+							statusColor = Color.Warning;
+							statusText = "不健康";
+							statusIcon = Icons.Material.Filled.HealthAndSafety;
+							break;
 						case ServiceStatus.Offline:
 							statusColor = Color.Default;
 							statusText = "离线";
@@ -119,6 +124,7 @@
 						{
 							ServiceStatus.Running => Color.Success,
 							ServiceStatus.Updating => Color.Info,
+							ServiceStatus.Unhealthy => Color.Warning,
 							ServiceStatus.Offline => Color.Default,
 							ServiceStatus.Error => Color.Error,
 							_ => Color.Default

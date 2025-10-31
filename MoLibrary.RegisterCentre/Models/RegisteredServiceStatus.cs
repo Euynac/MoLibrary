@@ -42,18 +42,22 @@ public class RegisteredServiceStatus
     {
         if (!Instances.Any())
             return ServiceStatus.Offline;
-            
+
         var statuses = Instances.Values.Select(x => x.Status).ToList();
-        
+
+        // 优先级：Error > Running > Unhealthy > Updating > Offline
         if (statuses.Any(s => s == ServiceStatus.Error))
             return ServiceStatus.Error;
-            
+
         if (statuses.Any(s => s == ServiceStatus.Running))
             return ServiceStatus.Running;
-            
+
+        if (statuses.Any(s => s == ServiceStatus.Unhealthy))
+            return ServiceStatus.Unhealthy;
+
         if (statuses.Any(s => s == ServiceStatus.Updating))
             return ServiceStatus.Updating;
-            
+
         return ServiceStatus.Offline;
     }
 }
