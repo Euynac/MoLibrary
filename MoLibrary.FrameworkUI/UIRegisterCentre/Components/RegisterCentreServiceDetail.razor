@@ -124,21 +124,57 @@
                         <MudText Typo="Typo.h6" Class="mb-3">客户端配置</MudText>
                         <MudGrid>
                             <MudItem xs="12" sm="4">
-                                <MudTextField T="int" Label="心跳频率 (秒)" 
-                                            Value="@(RegisterCentreOptions.Value.HeartbeatDuration / 1000)" 
+                                <MudTextField T="int" Label="心跳频率 (秒)"
+                                            Value="@(RegisterCentreOptions.Value.HeartbeatDuration / 1000)"
                                             ReadOnly="true" />
                             </MudItem>
                             <MudItem xs="12" sm="4">
-                                <MudTextField T="int" Label="重试次数" 
-                                            Value="@RegisterCentreOptions.Value.ClientRetryTimes" 
+                                <MudTextField T="int" Label="重试次数"
+                                            Value="@RegisterCentreOptions.Value.ClientRetryTimes"
                                             ReadOnly="true" />
                             </MudItem>
                             <MudItem xs="12" sm="4">
-                                <MudTextField T="int" Label="重试频率 (秒)" 
-                                            Value="@(RegisterCentreOptions.Value.RetryDuration / 1000)" 
+                                <MudTextField T="int" Label="重试频率 (秒)"
+                                            Value="@(RegisterCentreOptions.Value.RetryDuration / 1000)"
                                             ReadOnly="true" />
                             </MudItem>
                         </MudGrid>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudPaper Class="pa-4" Elevation="0">
+                        <MudText Typo="Typo.h6" Class="mb-3">服务端健康检查配置</MudText>
+                        <MudGrid>
+                            <MudItem xs="12" sm="3">
+                                <MudTextField T="int" Label="检查间隔 (秒)"
+                                            Value="@(RegisterCentreOptions.Value.ServerHeartbeatCheckInterval / 1000)"
+                                            ReadOnly="true"
+                                            HelperText="服务端执行健康检查的时间间隔" />
+                            </MudItem>
+                            <MudItem xs="12" sm="3">
+                                <MudTextField T="int" Label="不健康阈值 (秒)"
+                                            Value="@(RegisterCentreOptions.Value.UnhealthyThreshold / 1000)"
+                                            ReadOnly="true"
+                                            HelperText="心跳超时后标记为Unhealthy" />
+                            </MudItem>
+                            <MudItem xs="12" sm="3">
+                                <MudTextField T="int" Label="离线阈值 (秒)"
+                                            Value="@(RegisterCentreOptions.Value.OfflineThreshold / 1000)"
+                                            ReadOnly="true"
+                                            HelperText="心跳超时后标记为Offline" />
+                            </MudItem>
+                            <MudItem xs="12" sm="3">
+                                <MudTextField T="int" Label="驱逐阈值 (秒)"
+                                            Value="@(RegisterCentreOptions.Value.ExpelThreshold / 1000)"
+                                            ReadOnly="true"
+                                            HelperText="心跳超时后从注册中心移除" />
+                            </MudItem>
+                        </MudGrid>
+                        <MudDivider Class="my-4" />
+                        <MudText Typo="Typo.body2" Color="Color.Info">
+                            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" />
+                            健康状态转换流程: Running → Unhealthy (@(RegisterCentreOptions.Value.UnhealthyThreshold/1000)s) → Offline (@(RegisterCentreOptions.Value.OfflineThreshold/1000)s) → 移除 (@(RegisterCentreOptions.Value.ExpelThreshold/1000)s)
+                        </MudText>
                     </MudPaper>
                 </MudItem>
             </MudGrid>
@@ -207,42 +243,46 @@
         {
             ServiceStatus.Running => Color.Success,
             ServiceStatus.Updating => Color.Info,
+            ServiceStatus.Unhealthy => Color.Warning,
             ServiceStatus.Offline => Color.Default,
             ServiceStatus.Error => Color.Error,
             _ => Color.Default
         };
     }
-    
+
     private string GetOverallStatusIcon()
     {
         return Service.OverallStatus switch
         {
             ServiceStatus.Running => Icons.Material.Filled.CheckCircle,
             ServiceStatus.Updating => Icons.Material.Filled.Update,
+            ServiceStatus.Unhealthy => Icons.Material.Filled.HealthAndSafety,
             ServiceStatus.Offline => Icons.Material.Filled.CloudOff,
             ServiceStatus.Error => Icons.Material.Filled.Error,
             _ => Icons.Material.Filled.Help
         };
     }
-    
+
     private string GetOverallStatusText()
     {
         return Service.OverallStatus switch
         {
             ServiceStatus.Running => "运行中",
             ServiceStatus.Updating => "更新中",
+            ServiceStatus.Unhealthy => "不健康",
             ServiceStatus.Offline => "离线",
             ServiceStatus.Error => "异常",
             _ => "未知"
         };
     }
-    
+
     private (Color color, string text, string icon) GetInstanceStatusInfo(ServiceStatus status)
     {
         return status switch
         {
             ServiceStatus.Running => (Color.Success, "运行中", Icons.Material.Filled.CheckCircle),
             ServiceStatus.Updating => (Color.Info, "更新中", Icons.Material.Filled.Update),
+            ServiceStatus.Unhealthy => (Color.Warning, "不健康", Icons.Material.Filled.HealthAndSafety),
             ServiceStatus.Offline => (Color.Default, "离线", Icons.Material.Filled.CloudOff),
             ServiceStatus.Error => (Color.Error, "异常", Icons.Material.Filled.Error),
             _ => (Color.Default, "未知", Icons.Material.Filled.Help)
@@ -251,24 +291,32 @@
     
     private string GetHeartbeatHealthText(TimeSpan timeSinceHeartbeat)
     {
-        if (timeSinceHeartbeat.TotalSeconds < 30)
+        var unhealthyThreshold = RegisterCentreOptions.Value.UnhealthyThreshold / 1000.0;
+        var offlineThreshold = RegisterCentreOptions.Value.OfflineThreshold / 1000.0;
+        var expelThreshold = RegisterCentreOptions.Value.ExpelThreshold / 1000.0;
+
+        if (timeSinceHeartbeat.TotalSeconds < unhealthyThreshold)
             return "健康";
-        else if (timeSinceHeartbeat.TotalSeconds < 60)
-            return "良好";
-        else if (timeSinceHeartbeat.TotalMinutes < 5)
-            return "警告";
+        else if (timeSinceHeartbeat.TotalSeconds < offlineThreshold)
+            return "不健康";
+        else if (timeSinceHeartbeat.TotalSeconds < expelThreshold)
+            return "离线";
         else
-            return "超时";
+            return "待移除";
     }
-    
+
     private Color GetHeartbeatHealthColor(TimeSpan timeSinceHeartbeat)
     {
-        if (timeSinceHeartbeat.TotalSeconds < 30)
+        var unhealthyThreshold = RegisterCentreOptions.Value.UnhealthyThreshold / 1000.0;
+        var offlineThreshold = RegisterCentreOptions.Value.OfflineThreshold / 1000.0;
+        var expelThreshold = RegisterCentreOptions.Value.ExpelThreshold / 1000.0;
+
+        if (timeSinceHeartbeat.TotalSeconds < unhealthyThreshold)
             return Color.Success;
-        else if (timeSinceHeartbeat.TotalSeconds < 60)
-            return Color.Info;
-        else if (timeSinceHeartbeat.TotalMinutes < 5)
+        else if (timeSinceHeartbeat.TotalSeconds < offlineThreshold)
             return Color.Warning;
+        else if (timeSinceHeartbeat.TotalSeconds < expelThreshold)
+            return Color.Default;
         else
             return Color.Error;
     }
