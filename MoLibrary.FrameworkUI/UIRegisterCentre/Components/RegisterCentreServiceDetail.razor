@@ -54,11 +54,21 @@
                 <Columns>
                     <TemplateColumn Title="实例ID">
                         <CellTemplate>
-                            <MudTooltip Text="@context.Item.InstanceId">
-                                <MudText Typo="Typo.body2" Class="text-truncate" Style="max-width: 200px;">
-                                    @context.Item.InstanceId
-                                </MudText>
-                            </MudTooltip>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudTooltip Text="@context.Item.InstanceId">
+                                    <MudText Typo="Typo.body2" Class="text-truncate" Style="max-width: 200px;">
+                                        @context.Item.InstanceId
+                                    </MudText>
+                                </MudTooltip>
+                                @if (context.Item.IsLeader)
+                                {
+                                    <MudTooltip Text="领导者实例">
+                                        <MudIcon Icon="@Icons.Material.Filled.WorkspacePremium"
+                                                 Color="Color.Warning"
+                                                 Size="Size.Small" />
+                                    </MudTooltip>
+                                }
+                            </MudStack>
                         </CellTemplate>
                     </TemplateColumn>
                     <TemplateColumn Title="状态">
@@ -69,6 +79,22 @@
                             <MudChip T="string" Color="@color" Size="Size.Small" Icon="@icon">
                                 @text
                             </MudChip>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="角色">
+                        <CellTemplate>
+                            @if (context.Item.IsLeader)
+                            {
+                                <MudChip T="string" Color="Color.Warning" Size="Size.Small" Icon="@Icons.Material.Filled.Star">
+                                    Leader
+                                </MudChip>
+                            }
+                            else
+                            {
+                                <MudChip T="string" Color="Color.Default" Size="Size.Small" Icon="@Icons.Material.Filled.Circle" Variant="Variant.Outlined">
+                                    Follower
+                                </MudChip>
+                            }
                         </CellTemplate>
                     </TemplateColumn>
                     <PropertyColumn Property="x => x.RegisterInfo.AssemblyVersion" Title="程序集版本" />
@@ -124,15 +150,23 @@
                 {
                     <MudItem xs="12">
                         <MudPaper Class="pa-4" Elevation="0">
-                            <MudText Typo="Typo.h6" Class="mb-3">
-                                实例 @instance.InstanceId 元数据
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-3">
+                                <MudText Typo="Typo.h6">
+                                    实例 @instance.InstanceId 元数据
+                                </MudText>
                                 @{
                                     var (color, text, icon) = GetInstanceStatusInfo(instance.Status);
                                 }
-                                <MudChip T="string" Color="@color" Size="Size.Small" Icon="@icon" Class="ml-2">
+                                <MudChip T="string" Color="@color" Size="Size.Small" Icon="@icon">
                                     @text
                                 </MudChip>
-                            </MudText>
+                                @if (instance.IsLeader)
+                                {
+                                    <MudChip T="string" Color="Color.Warning" Size="Size.Small" Icon="@Icons.Material.Filled.Star">
+                                        Leader
+                                    </MudChip>
+                                }
+                            </MudStack>
                             @if (instance.RegisterInfo.Metadata.Any())
                             {
                                 <MudDataGrid T="KeyValuePair<string, string>" Items="@instance.RegisterInfo.Metadata" Dense="true" Hover="true">

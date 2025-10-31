@@ -17,4 +17,9 @@ public interface IRegisterCentreClient
     /// <param name="isHeartbeatInfo"></param>
     /// <returns></returns>
     public ServiceRegisterInfo GetServiceStatus(bool isHeartbeatInfo = false);
+    /// <summary>
+    /// 获取注册中心APPID
+    /// </summary>
+    /// <returns></returns>
+    public string GetRegisterCentreAppId();
 }

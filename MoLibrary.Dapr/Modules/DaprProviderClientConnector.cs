@@ -20,7 +20,7 @@ public static class ModuleDaprProviderClientConnectorBuilderExtensions
     public static ModuleDaprProviderClientConnectorGuide UseProviderDapr(
         this ModuleRegisterCentreGuide guide, Action<ModuleDaprProviderClientConnectorOption>? action = null)
     {
-        guide.SetCentreServerClientConnector<DaprHttpForConnectClient>();
+        guide.SetCentreServerClientConnector<ServerInvocationDaprHttpProvider>();
         return new ModuleDaprProviderClientConnectorGuide().Register(action);
     }
 }
@@ -55,7 +55,7 @@ public class ModuleDaprProviderClientConnectorOption : MoModuleOption<ModuleDapr
 
 
 
-public class DaprHttpForConnectClient(DaprClient client, ILogger<DaprHttpForConnectClient> logger, IGlobalJsonOption jsonOption) : IRegisterCentreClientConnector
+public class ServerInvocationDaprHttpProvider(DaprClient client, ILogger<ServerInvocationDaprHttpProvider> logger, IGlobalJsonOption jsonOption) : IRegisterCentreServerInvocationConnector
 {
     public async Task<Res<TResponse>> GetAsync<TResponse>(string appid, string callbackUrl)
     {

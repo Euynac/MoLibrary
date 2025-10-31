@@ -2,7 +2,7 @@ using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.RegisterCentre.Interfaces;
 
-public interface IRegisterCentreClientConnector
+public interface IRegisterCentreServerInvocationConnector
 {
     /// <summary>
     /// Get 方法执行调用

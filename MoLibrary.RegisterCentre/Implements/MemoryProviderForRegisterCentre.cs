@@ -15,7 +15,7 @@ namespace MoLibrary.RegisterCentre.Implements;
 public class MemoryProviderForRegisterCentre : IRegisterCentreServer
 {
     private readonly IHttpContextAccessor _accessor;
-    private readonly IRegisterCentreClientConnector _connector;
+    private readonly IRegisterCentreServerInvocationConnector _connector;
 
     /// <summary>
     /// 服务字典（Key: AppId, Value: RegisteredServiceStatus）
@@ -34,7 +34,7 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
     
     public MemoryProviderForRegisterCentre(
         IHttpContextAccessor accessor,
-        IRegisterCentreClientConnector connector,
+        IRegisterCentreServerInvocationConnector connector,
         IOptions<ModuleRegisterCentreOption> options)
     {
         _accessor = accessor;
@@ -52,7 +52,7 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
     
     public virtual Task<Res> Register(ServiceRegisterInfo req)
     {
-        if (req.AppId.IsNullOrWhiteSpace()) 
+        if (req.AppId.IsNullOrWhiteSpace())
             return Task.FromResult(Res.Fail("该微服务未设置APPID，无法注册"));
 
         // 补充来源信息
@@ -60,7 +60,7 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
         {
             req.FromClient = $"[Remote: {connection.RemoteIpAddress}:{connection.RemotePort}][Local: {connection.LocalIpAddress}:{connection.LocalPort}]";
         }
-        
+
         if (req.FromClient.IsNullOrWhiteSpace())
             return Task.FromResult(Res.Fail("无法识别服务实例来源"));
 
@@ -72,13 +72,13 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
             ProjectName = req.ProjectName,
             DependentSubDomains = req.DependentSubDomains
         });
-        
+
         // 更新服务基本信息
         service.AppName = req.AppName;
         service.DomainName = req.DomainName;
         service.ProjectName = req.ProjectName;
         service.DependentSubDomains = req.DependentSubDomains;
-        
+
         // 添加或更新实例
         var instanceId = req.FromClient!;
         if (service.Instances.TryGetValue(instanceId, out var instance))
@@ -98,8 +98,15 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
                 Status = ServiceStatus.Running,
                 LastHeartbeatTime = DateTime.Now,
                 RegistrationTime = DateTime.Now,
-                HeartbeatCount = 0
+                HeartbeatCount = 0,
+                IsLeader = false // 初始化时默认不是领导者
             };
+        }
+
+        // 触发领导者选举（如果启用）
+        if (_staticOption?.EnableLeaderElection ?? true)
+        {
+            PerformLeaderElection(service);
         }
 
         return Task.FromResult(Res.Ok());
@@ -109,18 +116,18 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
     {
         if (req.AppId.IsNullOrWhiteSpace())
             return Task.FromResult<Res<ServiceHeartbeatResponse>>("未提供AppId");
-            
+
         // 补充来源信息
         if (req.FromClient is null && _accessor.HttpContext?.Connection is { } connection)
         {
             req.FromClient = $"[Remote: {connection.RemoteIpAddress}:{connection.RemotePort}][Local: {connection.LocalIpAddress}:{connection.LocalPort}]";
         }
-        
+
         if (req.FromClient.IsNullOrWhiteSpace())
             return Task.FromResult<Res<ServiceHeartbeatResponse>>("无法识别服务实例来源");
-        
+
         var response = new ServiceHeartbeatResponse { RequireReRegister = false };
-        
+
         // 查找服务
         if (!Services.TryGetValue(req.AppId, out var service))
         {
@@ -128,7 +135,7 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
             response.Message = "服务未注册";
             return Task.FromResult<Res<ServiceHeartbeatResponse>>(response);
         }
-        
+
         // 查找实例
         var instanceId = req.FromClient!;
         if (!service.Instances.TryGetValue(instanceId, out var instance))
@@ -137,13 +144,13 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
             response.Message = "实例未注册";
             return Task.FromResult<Res<ServiceHeartbeatResponse>>(response);
         }
-        
+
         // 检查版本信息是否一致
         var registerInfo = instance.RegisterInfo;
         bool versionChanged = registerInfo.BuildTime != req.BuildTime ||
                              registerInfo.AssemblyVersion != req.AssemblyVersion ||
                              registerInfo.ReleaseVersion != req.ReleaseVersion;
-        
+
         if (versionChanged)
         {
             instance.Status = ServiceStatus.Updating;
@@ -158,8 +165,82 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
             instance.HeartbeatCount++;
             response.Message = "心跳成功";
         }
-        
+
         return Task.FromResult<Res<ServiceHeartbeatResponse>>(response);
+    }
+
+    public virtual Task<Res<LeaderStatusResponse>> GetLeaderStatus(LeaderStatusRequest req)
+    {
+        if (req.AppId.IsNullOrWhiteSpace())
+            return Task.FromResult<Res<LeaderStatusResponse>>("未提供AppId");
+
+        // 补充来源信息
+        if (req.FromClient is null && _accessor.HttpContext?.Connection is { } connection)
+        {
+            req.FromClient = $"[Remote: {connection.RemoteIpAddress}:{connection.RemotePort}][Local: {connection.LocalIpAddress}:{connection.LocalPort}]";
+        }
+
+        if (req.FromClient.IsNullOrWhiteSpace())
+            return Task.FromResult<Res<LeaderStatusResponse>>("无法识别服务实例来源");
+
+        var response = new LeaderStatusResponse();
+
+        // 查找服务
+        if (!Services.TryGetValue(req.AppId, out var service))
+        {
+            response.Status = LeaderStatus.Looking;
+            response.Message = "服务未注册";
+            response.RunningInstanceCount = 0;
+            return Task.FromResult<Res<LeaderStatusResponse>>(response);
+        }
+
+        // 获取所有运行中的实例
+        var runningInstances = service.Instances.Values
+            .Where(i => i.Status == ServiceStatus.Running)
+            .ToList();
+
+        response.RunningInstanceCount = runningInstances.Count;
+
+        // 如果没有运行中的实例
+        if (runningInstances.Count == 0)
+        {
+            response.Status = LeaderStatus.Looking;
+            response.Message = "当前没有运行中的实例";
+            return Task.FromResult<Res<LeaderStatusResponse>>(response);
+        }
+
+        // 查找当前请求的实例
+        var instanceId = req.FromClient!;
+        var currentInstance = service.Instances.GetValueOrDefault(instanceId);
+
+        // 查找领导者
+        var leader = runningInstances.FirstOrDefault(i => i.IsLeader);
+
+        if (leader == null)
+        {
+            // 没有领导者，返回Looking状态
+            response.Status = LeaderStatus.Looking;
+            response.Message = "正在进行领导者选举";
+            return Task.FromResult<Res<LeaderStatusResponse>>(response);
+        }
+
+        // 设置领导者信息
+        response.LeaderInstanceId = leader.InstanceId;
+        response.LeaderRegistrationTime = leader.RegistrationTime;
+
+        // 判断当前实例的状态
+        if (currentInstance != null && currentInstance.IsLeader)
+        {
+            response.Status = LeaderStatus.Leader;
+            response.Message = "当前实例是领导者";
+        }
+        else
+        {
+            response.Status = LeaderStatus.Follower;
+            response.Message = $"当前实例是跟随者，领导者是 {leader.InstanceId}";
+        }
+
+        return Task.FromResult<Res<LeaderStatusResponse>>(response);
     }
 
     public virtual Task<Res<List<RegisteredServiceStatus>>> GetServicesStatus()
@@ -229,9 +310,10 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
         var option = _staticOption ?? new ModuleRegisterCentreOption();
         var timeout = TimeSpan.FromMilliseconds(option.ServerHeartbeatTimeout);
         var now = DateTime.Now;
-        
+
         foreach (var service in Services.Values)
         {
+            // 1. 检查心跳超时并标记离线实例
             foreach (var instance in service.Instances.Values)
             {
                 if (instance.Status == ServiceStatus.Running)
@@ -239,9 +321,68 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
                     if (now - instance.LastHeartbeatTime > timeout)
                     {
                         instance.Status = ServiceStatus.Offline;
+                        // 如果离线的是领导者，标记为非领导者以触发重新选举
+                        if (option.EnableLeaderElection && instance.IsLeader)
+                        {
+                            instance.IsLeader = false;
+                        }
                     }
                 }
             }
+
+            // 2. 进行领导者选举（如果启用）
+            if (option.EnableLeaderElection)
+            {
+                PerformLeaderElection(service);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 为指定服务执行领导者选举
+    /// </summary>
+    /// <param name="service">服务状态信息</param>
+    private static void PerformLeaderElection(RegisteredServiceStatus service)
+    {
+        // 获取所有运行中的实例
+        var runningInstances = service.Instances.Values
+            .Where(i => i.Status == ServiceStatus.Running)
+            .ToList();
+
+        // 如果没有运行中的实例，清除所有领导者标记
+        if (runningInstances.Count == 0)
+        {
+            foreach (var instance in service.Instances.Values)
+            {
+                instance.IsLeader = false;
+            }
+            return;
+        }
+
+        // 检查是否已有领导者
+        var currentLeader = runningInstances.FirstOrDefault(i => i.IsLeader);
+        if (currentLeader != null)
+        {
+            // 已有领导者，无需重新选举，但确保其他实例不是领导者
+            foreach (var instance in runningInstances.Where(i => i != currentLeader))
+            {
+                instance.IsLeader = false;
+            }
+            return;
+        }
+
+        // 没有领导者，按注册时间排序，选择最早注册的实例为领导者
+        var newLeader = runningInstances
+            .OrderBy(i => i.RegistrationTime)
+            .First();
+
+        // 设置新领导者
+        newLeader.IsLeader = true;
+
+        // 确保其他实例不是领导者
+        foreach (var instance in runningInstances.Where(i => i != newLeader))
+        {
+            instance.IsLeader = false;
         }
     }
 }
