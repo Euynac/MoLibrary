@@ -1,0 +1,8 @@
+.log-filter-panel {
+    background-color: var(--mud-palette-surface);
+    border-radius: 4px;
+}
+
+.log-filter-panel ::deep .mud-input-root {
+    min-width: 280px;
+}

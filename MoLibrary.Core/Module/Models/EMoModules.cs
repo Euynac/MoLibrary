@@ -90,5 +90,6 @@ public enum EMoModules
     DiffHighlightUI,
     RpcClient,
     DaprProviderRpcClient,
-    DaprProviderClientConnector
+    DaprProviderClientConnector,
+    LoggingUI
 }

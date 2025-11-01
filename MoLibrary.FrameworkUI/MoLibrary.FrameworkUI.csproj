@@ -13,5 +13,6 @@
   <ItemGroup>
     <ProjectReference Include="..\MoLibrary.Framework\MoLibrary.Framework.csproj" />
     <ProjectReference Include="..\MoLibrary.UI\MoLibrary.UI.csproj" />
+    <ProjectReference Include="..\MoLibrary.Logging\MoLibrary.Logging.csproj" />
   </ItemGroup>
 </Project>
