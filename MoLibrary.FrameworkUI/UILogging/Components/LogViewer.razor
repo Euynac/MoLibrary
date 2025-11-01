@@ -4,39 +4,37 @@
 @using MoLibrary.FrameworkUI.UILogging.Models
 @using MudBlazor
 
-<MudPaper Class="log-viewer-wrapper">
-    <MudStack Spacing="1" Class="pa-2">
-        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-            <MudText Typo="Typo.subtitle1">实时日志</MudText>
-            <MudChipSet T="string">
-                <MudChip T="string" Color="Color.Info" Variant="Variant.Outlined">共 @_linesCount 行</MudChip>
-                @if (Filter?.IsActive == true)
-                {
-                    <MudChip T="string" Color="Color.Secondary" Variant="Variant.Outlined">筛选: @Filter.Keyword</MudChip>
-                }
-            </MudChipSet>
-        </MudStack>
+<div class="log-viewer-wrapper">
+    <div class="log-viewer-header">
+        <MudText Typo="Typo.subtitle1">实时日志</MudText>
+        <MudChipSet T="string">
+            <MudChip T="string" Color="Color.Info" Variant="Variant.Outlined" Size="Size.Small">共 @_linesCount 行</MudChip>
+            @if (Filter?.IsActive == true)
+            {
+                <MudChip T="string" Color="Color.Secondary" Variant="Variant.Outlined" Size="Size.Small">筛选: @Filter.Keyword</MudChip>
+            }
+        </MudChipSet>
+    </div>
 
-        <div class="log-viewer-scroll" @ref="_scrollContainer">
-            @if (Lines is null || Lines.Count == 0)
+    <div class="log-viewer-scroll" @ref="_scrollContainer">
+        @if (Lines is null || Lines.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info" Dense="true">暂无日志内容</MudAlert>
+        }
+        else
+        {
+            @foreach (var line in Lines)
             {
-                <MudAlert Severity="Severity.Info" Dense="true">暂无日志内容</MudAlert>
+                <div class="log-entry @GetSeverityClass(line.Severity)">
+                    <span class="log-entry__header">@line.Header</span>
+                    <span class="log-entry__message" @onclick="() => OnLineClicked.InvokeAsync(line)">
+                        @((MarkupString)BuildMessageMarkup(line))
+                    </span>
+                </div>
             }
-            else
-            {
-                @foreach (var line in Lines)
-                {
-                    <div class="log-entry @GetSeverityClass(line.Severity)">
-                        <span class="log-entry__header">@line.Header</span>
-                        <span class="log-entry__message" @onclick="() => OnLineClicked.InvokeAsync(line)">
-                            @((MarkupString)BuildMessageMarkup(line))
-                        </span>
-                    </div>
-                }
-            }
-        </div>
-    </MudStack>
-</MudPaper>
+        }
+    </div>
+</div>
 
 @code {
     [Inject]
@@ -83,11 +81,6 @@
         if (firstRender)
         {
             _isRendered = true;
-        }
-
-        if (AutoScroll)
-        {
-            await ScrollToBottomAsync();
         }
     }
 

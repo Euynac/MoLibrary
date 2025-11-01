@@ -7,7 +7,12 @@
         }
 
         try {
-            element.scrollTop = element.scrollHeight;
+            // Use requestAnimationFrame to ensure DOM is updated before scrolling
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    element.scrollTop = element.scrollHeight;
+                });
+            });
         } catch (error) {
             console.error("Failed to scroll log viewer", error);
         }

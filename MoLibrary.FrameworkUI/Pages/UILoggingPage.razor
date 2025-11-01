@@ -1,4 +1,4 @@
-@page "/logging-monitor"
+@attribute [Route(LOGGING_MONITOR_URL)]
 @using System.Threading.Channels
 @using Microsoft.Extensions.Logging
 @using MoLibrary.FrameworkUI.UILogging.Components
@@ -18,60 +18,73 @@
 
 <script src="_content/MoLibrary.FrameworkUI/js/logging-ui.js"></script>
 
-<MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
+<div class="page-container">
     @if (_isInitializing)
     {
-        <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Class="pa-6">
+        <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="height: 100vh;">
             <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Large" />
-            <MudText Typo="Typo.subtitle1" Class="mt-3">正在加载日志数据...</MudText>
+            <MudText Typo="Typo.h6" Class="mt-4">正在加载日志数据...</MudText>
         </MudStack>
     }
     else
     {
-        <MudTabs Elevation="0">
-            <MudTabPanel Text="实时日志">
-                <MudStack Spacing="2">
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">
-                        当前监听日志文件：@(_currentLogFilePath ?? "未检测到")
-                    </MudText>
+        <div class="page-content">
+            <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="tab-content">
+                <MudTabPanel Text="实时日志" Icon="@Icons.Material.Filled.Timeline">
+                    <div class="realtime-log-panel">
+                        <div class="file-info">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" Class="mr-1" />
+                                当前监听日志文件：<strong>@(_currentLogFilePath ?? "未检测到")</strong>
+                            </MudText>
+                        </div>
 
-                    <LoggingToolbar IsRunning="@_isRunning"
-                                    AutoScroll="@_autoScroll"
-                                    AutoScrollChanged="OnAutoScrollChanged"
-                                    SelectedLineLimit="@_selectedLineLimit"
-                                    PresetLineCounts="@LoggingService.UIOption.PresetLineCounts"
-                                    LineLimitChanged="OnLineLimitChanged"
-                                    StartRequested="StartTailAsync"
-                                    PauseRequested="PauseTailAsync"
-                                    RefreshRequested="ReloadSnapshotAsync"
-                                    ExportRequested="ExportBuffer" />
+                        <div class="toolbar-section">
+                            <LoggingToolbar IsRunning="@_isRunning"
+                                            AutoScroll="@_autoScroll"
+                                            AutoScrollChanged="OnAutoScrollChanged"
+                                            SelectedLineLimit="@_selectedLineLimit"
+                                            PresetLineCounts="@LoggingService.UIOption.PresetLineCounts"
+                                            LineLimitChanged="OnLineLimitChanged"
+                                            StartRequested="StartTailAsync"
+                                            PauseRequested="PauseTailAsync"
+                                            RefreshRequested="ReloadSnapshotAsync"
+                                            ExportRequested="ExportBuffer" />
+                        </div>
 
-                    <LogFilterPanel Keyword="@_filterKeyword"
-                                    OnlyCapture="@_onlyCapture"
-                                    IsApplying="@_isApplyingFilter"
-                                    KeywordChanged="OnKeywordChanged"
-                                    OnlyCaptureChanged="OnOnlyCaptureChanged"
-                                    ApplyRequested="ApplyFilterAsync"
-                                    ClearRequested="ClearFilterAsync" />
+                        <div class="filter-section">
+                            <LogFilterPanel Keyword="@_filterKeyword"
+                                            OnlyCapture="@_onlyCapture"
+                                            IsApplying="@_isApplyingFilter"
+                                            KeywordChanged="OnKeywordChanged"
+                                            OnlyCaptureChanged="OnOnlyCaptureChanged"
+                                            ApplyRequested="ApplyFilterAsync"
+                                            ClearRequested="ClearFilterAsync" />
+                        </div>
 
-                    <LogViewer Lines="@_currentLines"
-                               Version="@_currentVersion"
-                               AutoScroll="@_autoScroll"
-                               Filter="@_snapshot?.Filter"
-                               OnLineClicked="HandleLineClick" />
-                </MudStack>
-            </MudTabPanel>
+                        <div class="viewer-section">
+                            <LogViewer Lines="@_currentLines"
+                                       Version="@_currentVersion"
+                                       AutoScroll="@_autoScroll"
+                                       Filter="@_snapshot?.Filter"
+                                       OnLineClicked="HandleLineClick" />
+                        </div>
+                    </div>
+                </MudTabPanel>
 
-            <MudTabPanel Text="日志文件">
-                <LogFileTable Files="@_logFiles"
-                              IsLoading="@_filesLoading"
-                              CurrentDirectory="@_logDirectory"
-                              RefreshRequested="RefreshFilesAsync"
-                              DownloadRequested="DownloadFileAsync" />
-            </MudTabPanel>
-        </MudTabs>
+                <MudTabPanel Text="日志文件" Icon="@Icons.Material.Filled.Folder">
+                    <div class="file-table-panel">
+                        <LogFileTable Files="@_logFiles"
+                                      IsLoading="@_filesLoading"
+                                      CurrentDirectory="@_logDirectory"
+                                      RefreshRequested="RefreshFilesAsync"
+                                      DownloadRequested="DownloadFileAsync" />
+                    </div>
+                </MudTabPanel>
+            </MudTabs>
+        </div>
     }
-</MudContainer>
+</div>
 
 @code {
     public const string LOGGING_MONITOR_URL = "/logging-monitor";
@@ -269,13 +282,13 @@
 
     private Task DownloadFileAsync(string relativePath)
     {
-        NavigationManager.NavigateTo($"/framework/logging-ui/files/{relativePath}", true);
+        NavigationManager.NavigateTo($"logging-ui/files/{relativePath}", true);
         return Task.CompletedTask;
     }
 
     private void ExportBuffer()
     {
-        NavigationManager.NavigateTo("/framework/logging-ui/current/export", true);
+        NavigationManager.NavigateTo("logging-ui/current/export", true);
     }
 
     public async ValueTask DisposeAsync()
