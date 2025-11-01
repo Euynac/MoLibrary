@@ -25,14 +25,14 @@
         </MudStack>
 
         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-            <MudSelect T="int" Value="@SelectedLineLimit" ValueChanged="HandleLineLimitChanged" Dense="true" Label="显示行数">
+            <MudSelect T="int" Value="@SelectedLineLimit" ValueChanged="HandleLineLimitChanged" Dense="true" Label="显示行数" Style="min-width: 150px;">
                 @foreach (var option in PresetLineCounts)
                 {
                     <MudSelectItem Value="@option">@option</MudSelectItem>
                 }
             </MudSelect>
 
-            <MudSwitch T="bool" Checked="@_autoScroll" CheckedChanged="OnAutoScrollChanged" Color="Color.Primary">自动滚动</MudSwitch>
+            <MudSwitch T="bool" Value="@_autoScroll" ValueChanged="OnAutoScrollChanged" Color="Color.Primary">自动滚动</MudSwitch>
         </MudStack>
     </MudStack>
 </MudPaper>

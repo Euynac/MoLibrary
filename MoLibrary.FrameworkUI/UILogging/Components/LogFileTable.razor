@@ -1,41 +1,44 @@
 @using MudBlazor
 @using MoLibrary.FrameworkUI.UILogging.Models
 
-<MudPaper Class="log-file-table pa-3">
-    <MudStack Spacing="1" Class="mb-2">
-        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+<div class="log-file-table">
+    <div class="table-header-section">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-2">
             <MudText Typo="Typo.subtitle1">日志文件</MudText>
             <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Refresh" OnClick="HandleRefresh" Disabled="@IsLoading">刷新</MudButton>
         </MudStack>
         <MudText Typo="Typo.caption" Color="Color.Secondary">
             当前日志目录：@(DisplayDirectory ?? "未配置")
         </MudText>
-    </MudStack>
+    </div>
 
-    <MudTable Items="@Files" Dense="true" Hover="true" Loading="@IsLoading">
-        <HeaderContent>
-            <MudTh>相对路径</MudTh>
-            <MudTh>大小</MudTh>
-            <MudTh>最后修改时间</MudTh>
-            <MudTh></MudTh>
-        </HeaderContent>
-        <RowTemplate>
-            <MudTd>@context.RelativePath</MudTd>
-            <MudTd>@FormatSize(context.Size)</MudTd>
-            <MudTd>@context.LastModified.ToString("yyyy-MM-dd HH:mm:ss")</MudTd>
-            <MudTd Align="DataGridCellAlign.Right">
-                <MudButton Variant="Variant.Text"
-                           StartIcon="@Icons.Material.Filled.Download"
-                           OnClick="() => HandleDownload(context.RelativePath)">
-                    下载
-                </MudButton>
-            </MudTd>
-        </RowTemplate>
-        <NoRecordsContent>
-            <MudText Typo="Typo.caption" Color="Color.Secondary">当前目录暂无日志文件</MudText>
-        </NoRecordsContent>
-    </MudTable>
-</MudPaper>
+    <div class="table-container">
+        <MudTable Items="@Files" Dense="true" Hover="true" Loading="@IsLoading" Elevation="0">
+            <HeaderContent>
+                <MudTh>相对路径</MudTh>
+                <MudTh>大小</MudTh>
+                <MudTh>最后修改时间</MudTh>
+                <MudTh></MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.RelativePath</MudTd>
+                <MudTd>@FormatSize(context.Size)</MudTd>
+                <MudTd>@context.LastModified.ToString("yyyy-MM-dd HH:mm:ss")</MudTd>
+                <MudTd>
+                    <MudButton Variant="Variant.Text"
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Download"
+                               OnClick="() => HandleDownload(context.RelativePath)">
+                        下载
+                    </MudButton>
+                </MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <MudAlert Severity="Severity.Info" Dense="true">当前目录暂无日志文件</MudAlert>
+            </NoRecordsContent>
+        </MudTable>
+    </div>
+</div>
 
 @code {
     [Parameter]
