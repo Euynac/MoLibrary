@@ -1,0 +1,154 @@
+@using System.Net
+@using System.Text
+@using Microsoft.JSInterop
+@using MoLibrary.FrameworkUI.UILogging.Models
+@using MudBlazor
+
+<MudPaper Class="log-viewer-wrapper">
+    <MudStack Spacing="1" Class="pa-2">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+            <MudText Typo="Typo.subtitle1">实时日志</MudText>
+            <MudChipSet T="string">
+                <MudChip T="string" Color="Color.Info" Variant="Variant.Outlined">共 @_linesCount 行</MudChip>
+                @if (Filter?.IsActive == true)
+                {
+                    <MudChip T="string" Color="Color.Secondary" Variant="Variant.Outlined">筛选: @Filter.Keyword</MudChip>
+                }
+            </MudChipSet>
+        </MudStack>
+
+        <div class="log-viewer-scroll" @ref="_scrollContainer">
+            @if (Lines is null || Lines.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info" Dense="true">暂无日志内容</MudAlert>
+            }
+            else
+            {
+                @foreach (var line in Lines)
+                {
+                    <div class="log-entry @GetSeverityClass(line.Severity)">
+                        <span class="log-entry__header">@line.Header</span>
+                        <span class="log-entry__message" @onclick="() => OnLineClicked.InvokeAsync(line)">
+                            @((MarkupString)BuildMessageMarkup(line))
+                        </span>
+                    </div>
+                }
+            }
+        </div>
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Inject]
+    private IJSRuntime JsRuntime { get; set; } = default!;
+
+    [Parameter]
+    public IReadOnlyList<LogLineViewModel> Lines { get; set; } = Array.Empty<LogLineViewModel>();
+
+    [Parameter]
+    public long Version { get; set; }
+
+    [Parameter]
+    public bool AutoScroll { get; set; }
+
+    [Parameter]
+    public LogFilterState? Filter { get; set; }
+
+    [Parameter]
+    public EventCallback<LogLineViewModel> OnLineClicked { get; set; }
+
+    private ElementReference _scrollContainer;
+    private bool _isRendered;
+    private long _lastVersion;
+    private int _linesCount;
+
+    protected override Task OnParametersSetAsync()
+    {
+        _linesCount = Lines?.Count ?? 0;
+
+        if (Version != _lastVersion)
+        {
+            _lastVersion = Version;
+            if (_isRendered && AutoScroll)
+            {
+                _ = ScrollToBottomAsync();
+            }
+        }
+
+        return base.OnParametersSetAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _isRendered = true;
+        }
+
+        if (AutoScroll)
+        {
+            await ScrollToBottomAsync();
+        }
+    }
+
+    private async Task ScrollToBottomAsync()
+    {
+        try
+        {
+            await JsRuntime.InvokeVoidAsync("MoLogging.scrollToBottom", _scrollContainer);
+        }
+        catch (JSException)
+        {
+            // ignore js error
+        }
+    }
+
+    private static string GetSeverityClass(LogSeverity severity) => severity switch
+    {
+        LogSeverity.Trace => "severity-trace",
+        LogSeverity.Debug => "severity-debug",
+        LogSeverity.Information => "severity-info",
+        LogSeverity.Warning => "severity-warning",
+        LogSeverity.Error => "severity-error",
+        LogSeverity.Critical => "severity-critical",
+        _ => "severity-unknown"
+    };
+
+    private static string BuildMessageMarkup(LogLineViewModel line)
+    {
+        var message = line.Message ?? string.Empty;
+        if (line.MatchSegments is null || line.MatchSegments.Count == 0)
+        {
+            return WebUtility.HtmlEncode(message);
+        }
+
+        var builder = new StringBuilder(message.Length + 32);
+        var cursor = 0;
+        foreach (var segment in line.MatchSegments)
+        {
+            var safeStart = Math.Clamp(segment.Start, 0, message.Length);
+            if (safeStart > cursor)
+            {
+                builder.Append(WebUtility.HtmlEncode(message[cursor..safeStart]));
+            }
+
+            var length = Math.Min(segment.Length, message.Length - safeStart);
+            if (length <= 0)
+            {
+                continue;
+            }
+
+            builder.Append("<span class=\"match-chip\">");
+            builder.Append(WebUtility.HtmlEncode(message.Substring(safeStart, length)));
+            builder.Append("</span>");
+            cursor = safeStart + length;
+        }
+
+        if (cursor < message.Length)
+        {
+            builder.Append(WebUtility.HtmlEncode(message[cursor..]));
+        }
+
+        return builder.ToString();
+    }
+}
