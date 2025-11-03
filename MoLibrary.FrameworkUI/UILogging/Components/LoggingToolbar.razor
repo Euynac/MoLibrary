@@ -1,0 +1,96 @@
+@using MudBlazor
+
+<MudPaper Class="logging-toolbar pa-3">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Justify="Justify.SpaceBetween">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.PlayArrow"
+                       Disabled="@IsRunning"
+                       OnClick="HandleStart">开始</MudButton>
+
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Secondary"
+                       StartIcon="@Icons.Material.Filled.Pause"
+                       Disabled="@(!IsRunning)"
+                       OnClick="HandlePause">暂停</MudButton>
+
+            <MudButton Variant="Variant.Text"
+                       StartIcon="@Icons.Material.Filled.Refresh"
+                       OnClick="HandleRefresh">刷新</MudButton>
+
+            <MudButton Variant="Variant.Text"
+                       StartIcon="@Icons.Material.Filled.Download"
+                       OnClick="HandleExport">导出临时日志</MudButton>
+        </MudStack>
+
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudSelect T="int" Value="@SelectedLineLimit" ValueChanged="HandleLineLimitChanged" Dense="true" Label="显示行数" Style="min-width: 150px;">
+                @foreach (var option in PresetLineCounts)
+                {
+                    <MudSelectItem Value="@option">@option</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudSwitch T="bool" Value="@_autoScroll" ValueChanged="OnAutoScrollChanged" Color="Color.Primary">自动滚动</MudSwitch>
+        </MudStack>
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter]
+    public bool IsRunning { get; set; }
+
+    [Parameter]
+    public bool AutoScroll { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> AutoScrollChanged { get; set; }
+
+    [Parameter]
+    public int SelectedLineLimit { get; set; }
+
+    [Parameter]
+    public IEnumerable<int> PresetLineCounts { get; set; } = Array.Empty<int>();
+
+    [Parameter]
+    public EventCallback<int> LineLimitChanged { get; set; }
+
+    [Parameter]
+    public EventCallback StartRequested { get; set; }
+
+    [Parameter]
+    public EventCallback PauseRequested { get; set; }
+
+    [Parameter]
+    public EventCallback RefreshRequested { get; set; }
+
+    [Parameter]
+    public EventCallback ExportRequested { get; set; }
+
+    private bool _autoScroll;
+
+    protected override void OnParametersSet()
+    {
+        _autoScroll = AutoScroll;
+    }
+
+    private Task HandleStart() => StartRequested.InvokeAsync(null);
+
+    private Task HandlePause() => PauseRequested.InvokeAsync(null);
+
+    private Task HandleRefresh() => RefreshRequested.InvokeAsync(null);
+
+    private Task HandleExport() => ExportRequested.InvokeAsync(null);
+
+    private Task HandleLineLimitChanged(int value) => LineLimitChanged.InvokeAsync(value);
+
+    private async Task OnAutoScrollChanged(bool value)
+    {
+        _autoScroll = value;
+        if (AutoScrollChanged.HasDelegate)
+        {
+            await AutoScrollChanged.InvokeAsync(value);
+        }
+    }
+}
