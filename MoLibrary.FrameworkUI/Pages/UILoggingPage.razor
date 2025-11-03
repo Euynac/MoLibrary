@@ -2,6 +2,7 @@
 @using System.Diagnostics
 @using System.Threading.Channels
 @using Microsoft.Extensions.Logging
+@using Microsoft.JSInterop
 @using MoLibrary.FrameworkUI.UILogging.Components
 @using MoLibrary.FrameworkUI.UILogging.Models
 @using MoLibrary.FrameworkUI.UILogging.Services
@@ -13,6 +14,7 @@
 @inject ISnackbar Snackbar
 @inject NavigationManager NavigationManager
 @inject ILogger<UILoggingPage> Logger
+@inject IJSRuntime JSRuntime
 
 @implements IAsyncDisposable
 
@@ -95,7 +97,8 @@
                                 </MudAlert>
                             }
 
-                            <LogViewer Lines="@_currentLines"
+                            <LogViewer @ref="_logViewerRef"
+                                       Lines="@_currentLines"
                                        Version="@_currentVersion"
                                        AutoScroll="@_autoScroll"
                                        Filter="@_snapshot?.Filter"
@@ -143,6 +146,7 @@
     // Context mode state
     private bool _isContextMode;
     private long? _contextTargetLine;
+    private int? _savedLineIndex;
     private ScreenLogSnapshot? _savedSnapshot;
     private bool _savedAutoScroll;
     private bool _savedIsRunning;
@@ -150,6 +154,8 @@
     // Metrics
     private long _totalFileLineCount;
     private long _initLoadTimeMs;
+
+    private LogViewer? _logViewerRef;
 
     private IReadOnlyList<LogLineViewModel> _currentLines => _snapshot?.Lines ?? Array.Empty<LogLineViewModel>();
 
@@ -345,8 +351,10 @@
         NavigationManager.NavigateTo("logging-ui/current/export", true);
     }
 
-    private async Task HandleShowContext(LogLineViewModel line)
+    private async Task HandleShowContext((LogLineViewModel line, int lineIndex) args)
     {
+        var (line, lineIndex) = args;
+
         if (!line.AbsoluteLineNumber.HasValue)
         {
             Snackbar.Add("无法显示上下文：行号信息不可用", Severity.Warning);
@@ -359,6 +367,7 @@
             _savedSnapshot = _snapshot;
             _savedAutoScroll = _autoScroll;
             _savedIsRunning = _isRunning;
+            _savedLineIndex = lineIndex;
 
             // 如果正在运行，先暂停
             if (_isRunning)
@@ -396,11 +405,33 @@
 
             Snackbar.Add($"已加载行号 #{line.AbsoluteLineNumber.Value} 附近的上下文", Severity.Info);
             StateHasChanged();
+
+            // 等待UI渲染后滚动到目标行（居中显示）
+            await Task.Delay(100);
+            await ScrollToTargetLineAsync();
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "显示上下文失败");
             Snackbar.Add($"显示上下文失败: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ScrollToTargetLineAsync()
+    {
+        if (_logViewerRef == null || !_contextTargetLine.HasValue)
+        {
+            return;
+        }
+
+        // 找到目标行在当前快照中的索引
+        var targetIndex = _snapshot?.Lines
+            .Select((line, index) => new { line, index })
+            .FirstOrDefault(x => x.line.AbsoluteLineNumber == _contextTargetLine.Value)?.index;
+
+        if (targetIndex.HasValue)
+        {
+            await _logViewerRef.ScrollToLineAsync(targetIndex.Value);
         }
     }
 
@@ -428,6 +459,17 @@
 
         Snackbar.Add("已返回实时日志视图", Severity.Info);
         StateHasChanged();
+
+        // 恢复滚动位置到之前查看的行
+        if (_savedLineIndex.HasValue)
+        {
+            await Task.Delay(100); // 等待UI渲染
+            if (_logViewerRef != null)
+            {
+                await _logViewerRef.ScrollToLineAsync(_savedLineIndex.Value);
+            }
+            _savedLineIndex = null;
+        }
     }
 
     private async Task HandleApplyFilter((LogLineViewModel line, string keyword) args)
