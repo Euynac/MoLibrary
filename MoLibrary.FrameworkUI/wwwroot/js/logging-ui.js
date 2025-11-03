@@ -127,4 +127,65 @@
             console.error("Failed to scroll to line index", error);
         }
     };
+
+    /**
+     * 添加滚动事件监听，检测滚动到顶部
+     * @param {HTMLElement} container - 滚动容器元素
+     * @param {object} dotNetRef - DotNetObjectReference
+     * @param {string} methodName - 要调用的.NET方法名
+     * @param {number} threshold - 触发阈值（像素），默认为50
+     */
+    window.MoLogging.addScrollTopListener = function (container, dotNetRef, methodName, threshold = 50) {
+        if (!container || !dotNetRef) {
+            return;
+        }
+
+        let isLoading = false;
+        let lastScrollTop = container.scrollTop;
+
+        const handleScroll = function () {
+            const scrollTop = container.scrollTop;
+            const isScrollingUp = scrollTop < lastScrollTop;
+            lastScrollTop = scrollTop;
+
+            // 检测是否滚动到顶部附近且正在向上滚动
+            if (isScrollingUp && scrollTop <= threshold && !isLoading) {
+                isLoading = true;
+                dotNetRef.invokeMethodAsync(methodName)
+                    .then(() => {
+                        isLoading = false;
+                    })
+                    .catch((error) => {
+                        console.error("Error invoking load more:", error);
+                        isLoading = false;
+                    });
+            }
+        };
+
+        container.addEventListener('scroll', handleScroll, { passive: true });
+    };
+
+    /**
+     * 保存并恢复滚动位置
+     * @param {HTMLElement} container - 滚动容器元素
+     * @param {number} previousLineCount - 加载前的行数
+     * @param {number} newLineCount - 加载后的新增行数
+     */
+    window.MoLogging.preserveScrollPosition = function (container, previousLineCount, newLineCount) {
+        if (!container || newLineCount === 0) {
+            return;
+        }
+
+        try {
+            // 找到第一个旧的日志条目（新加载的行数之后）
+            const firstOldLineElement = container.querySelector(`[data-line-index="${newLineCount}"]`);
+
+            if (firstOldLineElement) {
+                // 滚动到原来的第一行位置
+                firstOldLineElement.scrollIntoView({ block: 'start' });
+            }
+        } catch (error) {
+            console.error("Failed to preserve scroll position", error);
+        }
+    };
 })();

@@ -65,6 +65,66 @@ public sealed class LogTailService(
     }
 
     /// <summary>
+    /// 读取指定行号之前的N行日志
+    /// </summary>
+    /// <param name="beforeLineNumber">在此行号之前读取</param>
+    /// <param name="lineCount">要读取的行数</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>读取的日志行及起始行号</returns>
+    public async Task<Res<LogReadResult>> ReadLinesBeforeAsync(long beforeLineNumber, int lineCount, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (!File.Exists(_logFilePath))
+            {
+                logger.LogWarning("日志文件不存在: {File}", _logFilePath);
+                return new LogReadResult(Array.Empty<string>(), 0);
+            }
+
+            var lines = new List<string>();
+            var startLineNumber = Math.Max(1, beforeLineNumber - lineCount);
+            var endLineNumber = beforeLineNumber - 1;
+
+            if (endLineNumber < startLineNumber)
+            {
+                return new LogReadResult(Array.Empty<string>(), startLineNumber);
+            }
+
+            await using var stream = new FileStream(_logFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            using var reader = new StreamReader(stream, Encoding.UTF8);
+
+            long currentLine = 1;
+            while (!reader.EndOfStream && currentLine <= endLineNumber)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var line = await reader.ReadLineAsync();
+                if (line == null)
+                {
+                    break;
+                }
+
+                if (currentLine >= startLineNumber)
+                {
+                    lines.Add(line);
+                }
+
+                currentLine++;
+            }
+
+            return new LogReadResult(lines, startLineNumber);
+        }
+        catch (OperationCanceledException)
+        {
+            return new LogReadResult(Array.Empty<string>(), 0);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "读取指定行之前的日志失败");
+            return $"读取日志失败: {ex.Message}";
+        }
+    }
+
+    /// <summary>
     /// 读取最近的N行日志
     /// </summary>
     public async Task<Res<LogReadResult>> ReadLatestLinesAsync(int lineCount, CancellationToken cancellationToken = default)
