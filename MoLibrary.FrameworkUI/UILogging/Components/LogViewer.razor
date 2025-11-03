@@ -203,6 +203,8 @@
     {
         _contextMenuItems = ContextMenuBuilder<LogLineViewModel>.Create()
             .AddItem("显示行位置信息", Icons.Material.Filled.Info, OnShowLineInfoAsync)
+            .AddItem("按此日志级别筛选", Icons.Material.Filled.Label, OnFilterBySeverityAsync)
+            .AddItem("查找选中的信息", Icons.Material.Filled.Search, OnFindSelectedTextAsync)
             .AddItem("显示上下文", Icons.Material.Filled.Article, OnShowContextClickedAsync)
             .AddDivider()
             .AddSubMenu("复制", Icons.Material.Filled.ContentCopy, builder => builder
@@ -210,9 +212,6 @@
                 .AddItem("仅复制消息", Icons.Material.Filled.Subject, async item => await CopyToClipboardAsync(item, LogCopyFormat.MessageOnly))
                 .AddItem("带时间戳复制", Icons.Material.Filled.AccessTime, async item => await CopyToClipboardAsync(item, LogCopyFormat.WithTimestamp))
                 .AddItem("带行号复制", Icons.Material.Filled.Numbers, async item => await CopyToClipboardAsync(item, LogCopyFormat.WithLineNumber)))
-            .AddSubMenu("筛选", Icons.Material.Filled.FilterAlt, builder => builder
-                .AddItem("按此日志级别筛选", Icons.Material.Filled.Label, OnFilterBySeverityAsync)
-                .AddItem("查找选中的信息", Icons.Material.Filled.Search, OnFindSelectedTextAsync))
             .AddSubMenu("导航", Icons.Material.Filled.Navigation, builder => builder
                 .AddItem("跳转到顶部", Icons.Material.Filled.ArrowUpward, async _ => await ScrollToTopAsync())
                 .AddItem("跳转到底部", Icons.Material.Filled.ArrowDownward, async _ => await ScrollToBottomAsync()))
@@ -271,10 +270,9 @@
         var text = line.GetCopyText(format);
         var success = await JsRuntime.InvokeAsync<bool>("MoLogging.copyToClipboard", text);
 
-        // TODO: 显示复制成功的提示（可以使用 MudBlazor 的 Snackbar）
         if (success)
         {
-            Console.WriteLine($"已复制: {text[..Math.Min(50, text.Length)]}...");
+            Snackbar.Add($"已复制: {text[..Math.Min(50, text.Length)]}...");
         }
     }
 
