@@ -53,6 +53,10 @@
     <SignalRConnectionStatus ConnectionState="@_connectionState"
                            SelectedHubRoute="@_selectedHubRoute" />
 
+    <!-- 已连接用户 -->
+    <SignalRConnectedUsers ConnectedUsers="@_connectedUsers"
+                          OnRefreshClicked="LoadConnectedUsersAsync" />
+
     <!-- Hub方法监听 -->
     <SignalRMethodListener HubMethods="@_hubMethods"
                          IsConnected="@_connectionState.IsConnected"
@@ -97,6 +101,7 @@
     private readonly List<HubMethodInfo> _hubMethods = [];
     private readonly Dictionary<string, string> _methodParameters = new();
     private readonly List<SignalRMessage> _messages = [];
+    private readonly List<SignalRConnectedUserInfo> _connectedUsers = [];
     private SignalRConnectionState _connectionState = new();
     private bool _verboseLogging = false; // 详细调试日志开关
 
@@ -137,9 +142,13 @@
             SignalRDebugService.MessageReceived += OnMessageReceived;
             SignalRDebugService.ConnectionStateChanged += OnConnectionStateChanged;
             SignalRDebugService.MethodListenerChanged += OnMethodListenerChanged;
-            
+            SignalRDebugService.ConnectedUsersChanged += OnConnectedUsersChanged;
+
             // 加载Hub信息
             await LoadHubsAsync();
+
+            // 加载已连接用户信息
+            await LoadConnectedUsersAsync();
             
             // 初始化组件状态
             await UpdateComponentState();
@@ -182,31 +191,54 @@
         try
         {
             var success = await SignalRDebugService.LoadHubsAsync();
-            
+
             if (success)
             {
                 // 更新可用Hub列表
                 _availableHubs.Clear();
-                
+
                 // 从服务中获取真实的Hub组信息
                 var hubGroups = SignalRDebugService.GetHubGroups();
                 if (hubGroups.Any())
                 {
                     _availableHubs.AddRange(hubGroups);
                 }
-                
+
                 // 如果没有选择Hub，默认选择第一个
                 if (string.IsNullOrEmpty(_selectedHubRoute) && _availableHubs.Any())
                 {
                     _selectedHubRoute = _availableHubs.First().Route;
                 }
-                
+
                 await UpdateComponentState();
             }
         }
         catch (Exception ex)
         {
             SnackBar.Add($"加载Hub信息失败: {ex.Message}", Severity.Error);
+        }
+    }
+
+    /// <summary>
+    /// 加载已连接用户信息
+    /// </summary>
+    private async Task LoadConnectedUsersAsync()
+    {
+        try
+        {
+            var success = await SignalRDebugService.LoadConnectedUsersAsync();
+
+            if (success)
+            {
+                _connectedUsers.Clear();
+                _connectedUsers.AddRange(SignalRDebugService.GetConnectedUsers());
+                StateHasChanged();
+                SnackBar.Add("已连接用户信息加载成功", Severity.Success);
+            }
+        }
+        catch (Exception ex)
+        {
+            SnackBar.Add($"加载已连接用户信息失败: {ex.Message}", Severity.Error);
         }
     }
 
@@ -479,6 +511,16 @@
     }
 
     /// <summary>
+    /// 已连接用户列表变化事件处理
+    /// </summary>
+    private void OnConnectedUsersChanged(IReadOnlyList<SignalRConnectedUserInfo> users)
+    {
+        _connectedUsers.Clear();
+        _connectedUsers.AddRange(users);
+        InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
     /// 组件销毁
     /// </summary>
     public async ValueTask DisposeAsync()
@@ -487,7 +529,8 @@
         SignalRDebugService.MessageReceived -= OnMessageReceived;
         SignalRDebugService.ConnectionStateChanged -= OnConnectionStateChanged;
         SignalRDebugService.MethodListenerChanged -= OnMethodListenerChanged;
-        
+        SignalRDebugService.ConnectedUsersChanged -= OnConnectedUsersChanged;
+
         // 释放服务资源
         await SignalRDebugService.DisposeAsync();
     }
