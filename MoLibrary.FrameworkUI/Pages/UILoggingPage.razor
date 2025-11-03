@@ -1,4 +1,5 @@
 @attribute [Route(LOGGING_MONITOR_URL)]
+@using System.Diagnostics
 @using System.Threading.Channels
 @using Microsoft.Extensions.Logging
 @using MoLibrary.FrameworkUI.UILogging.Components
@@ -8,6 +9,7 @@
 @using MudBlazor
 
 @inject LoggingService LoggingService
+@inject LogFileQueryService LogFileQueryService
 @inject ISnackbar Snackbar
 @inject NavigationManager NavigationManager
 @inject ILogger<UILoggingPage> Logger
@@ -33,10 +35,22 @@
                 <MudTabPanel Text="实时日志" Icon="@Icons.Material.Filled.Timeline">
                     <div class="realtime-log-panel">
                         <div class="file-info">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" Class="mr-1" />
-                                当前监听日志文件：<strong>@(_currentLogFilePath ?? "未检测到")</strong>
-                            </MudText>
+                            <MudStack Row="true" Spacing="4" AlignItems="AlignItems.Center">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" Class="mr-1" />
+                                    当前监听日志文件：<strong>@(_currentLogFilePath ?? "未检测到")</strong>
+                                </MudText>
+                                <MudDivider Vertical="true" FlexItem="true" />
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    <MudIcon Icon="@Icons.Material.Filled.FormatListNumbered" Size="Size.Small" Class="mr-1" />
+                                    文件总行数：<strong>@_totalFileLineCount.ToString("N0")</strong>
+                                </MudText>
+                                <MudDivider Vertical="true" FlexItem="true" />
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    <MudIcon Icon="@Icons.Material.Filled.Speed" Size="Size.Small" Class="mr-1" />
+                                    初始加载耗时：<strong>@_initLoadTimeMs ms</strong>
+                                </MudText>
+                            </MudStack>
                         </div>
 
                         <div class="toolbar-section">
@@ -63,11 +77,31 @@
                         </div>
 
                         <div class="viewer-section">
+                            @if (_isContextMode)
+                            {
+                                <MudAlert Severity="Severity.Info" Elevation="1" Class="mb-2">
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <div>
+                                            <MudIcon Icon="@Icons.Material.Filled.Visibility" Class="mr-2" />
+                                            正在查看行号 <strong>#@_contextTargetLine</strong> 附近的上下文
+                                        </div>
+                                        <MudButton OnClick="ExitContextMode"
+                                                   Variant="Variant.Text"
+                                                   Color="Color.Primary"
+                                                   StartIcon="@Icons.Material.Filled.ArrowBack">
+                                            返回
+                                        </MudButton>
+                                    </div>
+                                </MudAlert>
+                            }
+
                             <LogViewer Lines="@_currentLines"
                                        Version="@_currentVersion"
                                        AutoScroll="@_autoScroll"
                                        Filter="@_snapshot?.Filter"
-                                       OnLineClicked="HandleLineClick" />
+                                       OnLineClicked="HandleLineClick"
+                                       OnShowContext="HandleShowContext"
+                                       OnApplyFilter="HandleApplyFilter" />
                         </div>
                     </div>
                 </MudTabPanel>
@@ -105,6 +139,17 @@
     private LoggingSubscription? _subscription;
     private CancellationTokenSource? _subscriptionCts;
 
+    // Context mode state
+    private bool _isContextMode;
+    private long? _contextTargetLine;
+    private ScreenLogSnapshot? _savedSnapshot;
+    private bool _savedAutoScroll;
+    private bool _savedIsRunning;
+
+    // Metrics
+    private long _totalFileLineCount;
+    private long _initLoadTimeMs;
+
     private IReadOnlyList<LogLineViewModel> _currentLines => _snapshot?.Lines ?? Array.Empty<LogLineViewModel>();
 
     private long _currentVersion => _snapshot?.Version ?? 0;
@@ -134,7 +179,13 @@
 
     private async Task InitializeSnapshotAsync()
     {
+        var stopwatch = Stopwatch.StartNew();
+
         var result = await LoggingService.InitializeAsync(_selectedLineLimit);
+
+        stopwatch.Stop();
+        _initLoadTimeMs = stopwatch.ElapsedMilliseconds;
+
         if (result.IsFailed(out var error, out var snapshot))
         {
             Snackbar.Add(error.Message ?? "初始化日志失败", Severity.Error);
@@ -143,6 +194,8 @@
 
         _snapshot = snapshot;
         _isRunning = LoggingService.IsRunning;
+        _totalFileLineCount = LoggingService.TotalFileLineCount;
+
         StateHasChanged();
     }
 
@@ -289,6 +342,97 @@
     private void ExportBuffer()
     {
         NavigationManager.NavigateTo("logging-ui/current/export", true);
+    }
+
+    private async Task HandleShowContext(LogLineViewModel line)
+    {
+        if (!line.AbsoluteLineNumber.HasValue)
+        {
+            Snackbar.Add("无法显示上下文：行号信息不可用", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            // 保存当前状态
+            _savedSnapshot = _snapshot;
+            _savedAutoScroll = _autoScroll;
+            _savedIsRunning = _isRunning;
+
+            // 如果正在运行，先暂停
+            if (_isRunning)
+            {
+                await LoggingService.PauseAsync();
+            }
+
+            // 禁用自动滚动
+            _autoScroll = false;
+
+            // 读取上下文
+            var contextResult = await LogFileQueryService.ReadContextAsync(
+                _currentLogFilePath ?? string.Empty,
+                line.AbsoluteLineNumber.Value,
+                50);
+
+            if (contextResult.IsFailed(out var error, out var context))
+            {
+                Snackbar.Add(error.Message ?? "读取上下文失败", Severity.Error);
+                return;
+            }
+
+            // 创建临时快照显示上下文
+            _snapshot = new ScreenLogSnapshot
+            {
+                Lines = context.Lines,
+                Version = _snapshot?.Version ?? 0 + 1,
+                TotalStoredLines = context.Lines.Count,
+                Filter = LogFilterState.Disabled,
+                GeneratedAt = DateTimeOffset.UtcNow
+            };
+
+            _isContextMode = true;
+            _contextTargetLine = line.AbsoluteLineNumber.Value;
+
+            Snackbar.Add($"已加载行号 #{line.AbsoluteLineNumber.Value} 附近的上下文", Severity.Info);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "显示上下文失败");
+            Snackbar.Add($"显示上下文失败: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ExitContextMode()
+    {
+        if (!_isContextMode)
+        {
+            return;
+        }
+
+        // 恢复之前的状态
+        _snapshot = _savedSnapshot;
+        _autoScroll = _savedAutoScroll;
+
+        // 如果之前在运行，重新启动
+        if (_savedIsRunning)
+        {
+            await LoggingService.StartAsync();
+            _isRunning = true;
+        }
+
+        _isContextMode = false;
+        _contextTargetLine = null;
+        _savedSnapshot = null;
+
+        Snackbar.Add("已返回实时日志视图", Severity.Info);
+        StateHasChanged();
+    }
+
+    private async Task HandleApplyFilter((LogLineViewModel line, string keyword) args)
+    {
+        _filterKeyword = args.keyword;
+        await ApplyFilterAsync();
     }
 
     public async ValueTask DisposeAsync()
