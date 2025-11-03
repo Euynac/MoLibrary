@@ -20,6 +20,17 @@
         </MudChipSet>
     </div>
 
+    @* Load More Indicator *@
+    @if (_isLoadingMore)
+    {
+        <div class="load-more-indicator">
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Size="Size.Small" />
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center" Class="mt-1">
+                正在加载更多日志...
+            </MudText>
+        </div>
+    }
+
     @* Match Navigation Bar - Only shown when filter is active and OnlyCapture is false *@
     @if (Filter?.IsActive == true && !Filter.OnlyCapture && _totalMatches > 0)
     {
@@ -115,6 +126,9 @@
     [Parameter]
     public EventCallback<(LogLineViewModel line, string keyword)> OnApplyFilter { get; set; }
 
+    [Parameter]
+    public EventCallback<int> OnLoadMore { get; set; }
+
     private ElementReference _scrollContainer;
     private bool _isRendered;
     private long _lastVersion;
@@ -132,6 +146,10 @@
     private int _totalMatches = 0;
     private List<int> _matchedLineIndices = new();
     private LogFilterState? _lastFilter;
+
+    // Load more state
+    private bool _isLoadingMore = false;
+    private IJSObjectReference? _scrollListenerRef;
 
     protected override Task OnParametersSetAsync()
     {
@@ -196,6 +214,74 @@
         {
             _isRendered = true;
             BuildContextMenu();
+            await SetupScrollListenerAsync();
+        }
+    }
+
+    private async Task SetupScrollListenerAsync()
+    {
+        try
+        {
+            // Create a DotNetObjectReference to pass to JavaScript
+            var dotNetRef = DotNetObjectReference.Create(this);
+
+            // Add scroll listener with callback
+            await JsRuntime.InvokeVoidAsync("MoLogging.addScrollTopListener",
+                _scrollContainer,
+                dotNetRef,
+                nameof(HandleScrollToTop),
+                50); // 50px threshold
+        }
+        catch (Exception ex)
+        {
+            // Ignore JS errors during setup
+            Console.WriteLine($"Failed to setup scroll listener: {ex.Message}");
+        }
+    }
+
+    [JSInvokable]
+    public async Task<bool> HandleScrollToTop()
+    {
+        if (_isLoadingMore || !OnLoadMore.HasDelegate)
+        {
+            return false;
+        }
+
+        try
+        {
+            _isLoadingMore = true;
+            StateHasChanged();
+
+            var previousLineCount = Lines?.Count ?? 0;
+
+            // Trigger load more event (load 50 lines)
+            await OnLoadMore.InvokeAsync(50);
+
+            // Wait a bit for the new lines to render
+            await Task.Delay(100);
+
+            // Preserve scroll position
+            var newLineCount = (Lines?.Count ?? 0) - previousLineCount;
+            if (newLineCount > 0)
+            {
+                await JsRuntime.InvokeVoidAsync("MoLogging.preserveScrollPosition",
+                    _scrollContainer,
+                    previousLineCount,
+                    newLineCount);
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading more lines: {ex.Message}");
+            Snackbar.Add($"加载更多日志失败: {ex.Message}", Severity.Error);
+            return false;
+        }
+        finally
+        {
+            _isLoadingMore = false;
+            StateHasChanged();
         }
     }
 

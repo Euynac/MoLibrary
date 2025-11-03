@@ -26,6 +26,13 @@
     background-color: var(--mud-palette-surface);
 }
 
+.load-more-indicator {
+    flex-shrink: 0;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--mud-palette-divider);
+    background-color: var(--mud-palette-surface);
+}
+
 .log-viewer-scroll {
     flex: 1;
     min-height: 0;

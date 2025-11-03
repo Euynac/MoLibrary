@@ -101,7 +101,8 @@
                                        Filter="@_snapshot?.Filter"
                                        OnLineClicked="HandleLineClick"
                                        OnShowContext="HandleShowContext"
-                                       OnApplyFilter="HandleApplyFilter" />
+                                       OnApplyFilter="HandleApplyFilter"
+                                       OnLoadMore="HandleLoadMore" />
                         </div>
                     </div>
                 </MudTabPanel>
@@ -433,6 +434,47 @@
     {
         _filterKeyword = args.keyword;
         await ApplyFilterAsync();
+    }
+
+    private async Task HandleLoadMore(int lineCount)
+    {
+        if (_isContextMode)
+        {
+            // Don't load more in context mode
+            return;
+        }
+
+        try
+        {
+            var result = await LoggingService.LoadMoreLinesAsync(lineCount);
+
+            if (result.IsFailed(out var error, out var loadedCount))
+            {
+                if (loadedCount == 0)
+                {
+                    Snackbar.Add("已到达日志文件开头", Severity.Info);
+                }
+                else
+                {
+                    Snackbar.Add(error.Message ?? "加载更多日志失败", Severity.Warning);
+                }
+                return;
+            }
+
+            if (loadedCount == 0)
+            {
+                Snackbar.Add("已到达日志文件开头", Severity.Info);
+            }
+            else
+            {
+                Logger.LogDebug("已加载 {Count} 行历史日志", loadedCount);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "加载更多日志时发生异常");
+            Snackbar.Add($"加载失败: {ex.Message}", Severity.Error);
+        }
     }
 
     public async ValueTask DisposeAsync()

@@ -67,6 +67,45 @@ public sealed class ScreenLogBuffer(IOptions<ModuleLoggingUIOption> options)
     }
 
     /// <summary>
+    /// 在缓冲区开头前置日志行
+    /// </summary>
+    /// <param name="lines">要前置的日志行集合</param>
+    /// <param name="startLineNumber">起始行号（第一行的绝对行号）</param>
+    public ScreenLogSnapshot Prepend(IEnumerable<string> lines, long startLineNumber)
+    {
+        lock (_syncRoot)
+        {
+            var linesList = lines.ToList();
+            if (linesList.Count == 0)
+            {
+                return BuildSnapshotLocked(incrementVersion: false);
+            }
+
+            // 将新行添加到开头
+            foreach (var line in linesList.AsEnumerable().Reverse())
+            {
+                if (line is null)
+                {
+                    continue;
+                }
+
+                _rawLines.AddFirst(line);
+            }
+
+            // 更新起始行号
+            _firstLineNumber = startLineNumber;
+
+            // 清理超出容量的旧日志（从尾部移除）
+            while (_rawLines.Count > _maxRetainedLines)
+            {
+                _rawLines.RemoveLast();
+            }
+
+            return BuildSnapshotLocked();
+        }
+    }
+
+    /// <summary>
     /// 更新筛选器
     /// </summary>
     /// <param name="filter">筛选条件</param>
