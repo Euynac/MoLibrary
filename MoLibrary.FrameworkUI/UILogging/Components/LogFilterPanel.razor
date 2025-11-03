@@ -1,0 +1,86 @@
+@using MudBlazor
+@using Microsoft.AspNetCore.Components.Web
+
+<MudPaper Class="log-filter-panel pa-3">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+        <MudTextField T="string"
+                      Value="@_keyword"
+                      ValueChanged="OnKeywordChanged"
+                      Placeholder="输入筛选关键字"
+                      Immediate="false"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      OnKeyDown="HandleKeyDown"
+                      Class="log-filter-panel__input"
+                      ResetValueOnEmptyText="true" />
+
+        <MudSwitch T="bool" Value="@_onlyCapture" ValueChanged="OnOnlyCaptureChanged" Color="Color.Primary">仅捕获匹配</MudSwitch>
+
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       Disabled="@IsApplying"
+                       OnClick="ApplyFilter">应用筛选</MudButton>
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Secondary"
+                       Disabled="string.IsNullOrWhiteSpace(_keyword)"
+                       OnClick="ClearFilter">清除</MudButton>
+        </MudStack>
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter]
+    public string? Keyword { get; set; }
+
+    [Parameter]
+    public bool OnlyCapture { get; set; }
+
+    [Parameter]
+    public bool IsApplying { get; set; }
+
+    [Parameter]
+    public EventCallback<string?> KeywordChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> OnlyCaptureChanged { get; set; }
+
+    [Parameter]
+    public EventCallback ApplyRequested { get; set; }
+
+    [Parameter]
+    public EventCallback ClearRequested { get; set; }
+
+    private string? _keyword;
+    private bool _onlyCapture;
+
+    protected override void OnParametersSet()
+    {
+        _keyword = Keyword;
+        _onlyCapture = OnlyCapture;
+    }
+
+    private Task OnKeywordChanged(string? value)
+    {
+        _keyword = value;
+        return KeywordChanged.InvokeAsync(value);
+    }
+
+    private Task OnOnlyCaptureChanged(bool value)
+    {
+        _onlyCapture = value;
+        return OnlyCaptureChanged.InvokeAsync(value);
+    }
+
+    private Task ApplyFilter() => ApplyRequested.InvokeAsync(null);
+
+    private Task ClearFilter() => ClearRequested.InvokeAsync(null);
+
+    private async Task HandleKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            await ApplyFilter();
+        }
+    }
+}
