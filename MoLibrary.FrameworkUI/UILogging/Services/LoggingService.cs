@@ -34,6 +34,8 @@ public sealed class LoggingService(
 
     public bool IsRunning => _isRunning;
 
+    public long TotalFileLineCount => logTailService.TotalFileLineCount;
+
     /// <summary>
     /// 初始化日志缓冲池
     /// </summary>
@@ -42,12 +44,12 @@ public sealed class LoggingService(
         var maxLines = buffer.MaxDisplayLines;
         var lineCount = Math.Clamp(requestedLines, 1, maxLines);
         var result = await logTailService.ReadLatestLinesAsync(lineCount, cancellationToken);
-        if (result.IsFailed(out var error, out var lines))
+        if (result.IsFailed(out var error, out var readResult))
         {
             return error;
         }
 
-        var snapshot = buffer.Reset(lines);
+        var snapshot = buffer.Reset(readResult.Lines, readResult.StartLineNumber);
         await PublishSnapshotAsync(snapshot, cancellationToken).ConfigureAwait(false);
         return snapshot;
     }

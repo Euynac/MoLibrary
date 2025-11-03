@@ -126,6 +126,26 @@ public sealed class LogLineViewModel
 
     public bool IsMatch { get; private set; }
 
+    /// <summary>
+    /// 绝对行号（在原始日志文件中的行号）
+    /// </summary>
+    public long? AbsoluteLineNumber { get; private set; }
+
+    /// <summary>
+    /// 缓冲区索引（在未过滤的缓冲区中的位置，从1开始）
+    /// </summary>
+    public int? BufferIndex { get; private set; }
+
+    /// <summary>
+    /// 过滤后索引（在过滤视图中的位置，从1开始，仅在过滤时有值）
+    /// </summary>
+    public int? FilteredIndex { get; private set; }
+
+    /// <summary>
+    /// 是否为上下文跳转的目标行
+    /// </summary>
+    public bool IsContextTarget { get; private set; }
+
     public static LogLineViewModel FromRaw(string rawLine)
     {
         if (string.IsNullOrWhiteSpace(rawLine))
@@ -184,6 +204,79 @@ public sealed class LogLineViewModel
 
         return list.Count == 0 ? null : list.ToImmutable();
     }
+
+    /// <summary>
+    /// 设置位置信息
+    /// </summary>
+    public LogLineViewModel WithPosition(long? absoluteLineNumber, int? bufferIndex, int? filteredIndex = null)
+    {
+        AbsoluteLineNumber = absoluteLineNumber;
+        BufferIndex = bufferIndex;
+        FilteredIndex = filteredIndex;
+        return this;
+    }
+
+    /// <summary>
+    /// 标记为上下文目标行
+    /// </summary>
+    public LogLineViewModel WithContextTarget(bool isTarget)
+    {
+        IsContextTarget = isTarget;
+        return this;
+    }
+
+    /// <summary>
+    /// 获取格式化的复制文本
+    /// </summary>
+    public string GetCopyText(LogCopyFormat format)
+    {
+        return format switch
+        {
+            LogCopyFormat.Raw => Raw,
+            LogCopyFormat.MessageOnly => Message,
+            LogCopyFormat.WithTimestamp => Timestamp.HasValue
+                ? $"[{Timestamp.Value:yyyy-MM-dd HH:mm:ss.fff}] {Message}"
+                : Message,
+            LogCopyFormat.WithLineNumber => AbsoluteLineNumber.HasValue
+                ? $"Line {AbsoluteLineNumber}: {Raw}"
+                : Raw,
+            _ => Raw
+        };
+    }
+
+    /// <summary>
+    /// 获取格式化的时间戳
+    /// </summary>
+    public string GetFormattedTimestamp()
+    {
+        return Timestamp?.ToString("yyyy-MM-dd HH:mm:ss.fff") ?? "N/A";
+    }
+}
+
+/// <summary>
+/// 日志复制格式
+/// </summary>
+public enum LogCopyFormat
+{
+    /// <summary>
+    /// 原始完整日志行
+    /// </summary>
+    Raw,
+
+    /// <summary>
+    /// 仅消息内容
+    /// </summary>
+    MessageOnly,
+
+    /// <summary>
+    /// 带时间戳的消息
+    /// </summary>
+    WithTimestamp,
+
+    /// <summary>
+    /// 带行号的完整日志
+    /// </summary>
+    WithLineNumber
 }
 
 /// <summary>
@@ -202,6 +295,19 @@ public sealed record class LogFileDescriptor(string FileName, long Size, DateTim
 /// <param name="ContentType">内容类型</param>
 /// <param name="Content">文件内容</param>
 public readonly record struct LogExportResult(string FileName, string ContentType, byte[] Content);
+
+/// <summary>
+/// 上下文日志读取结果
+/// </summary>
+/// <param name="Lines">日志行列表</param>
+/// <param name="TargetLineNumber">目标行号</param>
+/// <param name="StartLineNumber">起始行号</param>
+/// <param name="EndLineNumber">结束行号</param>
+public readonly record struct ContextLogResult(
+    IReadOnlyList<LogLineViewModel> Lines,
+    long TargetLineNumber,
+    long StartLineNumber,
+    long EndLineNumber);
 
 internal static class LogLineParser
 {
