@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Microsoft.JSInterop;
 using MoLibrary.FrameworkUI.UISignalr.Models;
-using MoLibrary.SignalR.Controllers;
+using MoLibrary.SignalR.Services;
 using MoLibrary.SignalR.Models;
 using MoLibrary.Tool.MoResponse;
 
@@ -19,6 +19,7 @@ namespace MoLibrary.FrameworkUI.UISignalr.Services
         private readonly List<SignalRMessage> _messages = [];
         private readonly List<HubMethodInfo> _hubMethods = [];
         private readonly List<SignalRServerGroupInfo> _hubGroups = [];
+        private readonly List<SignalRConnectedUserInfo> _connectedUsers = [];
         private readonly SignalRConnectionState _connectionState = new();
 
         /// <summary>
@@ -40,6 +41,11 @@ namespace MoLibrary.FrameworkUI.UISignalr.Services
         /// 方法监听状态变化事件
         /// </summary>
         public event Action<HubMethodInfo>? MethodListenerChanged;
+
+        /// <summary>
+        /// 已连接用户列表变化事件
+        /// </summary>
+        public event Action<IReadOnlyList<SignalRConnectedUserInfo>>? ConnectedUsersChanged;
 
         /// <summary>
         /// 构造函数
@@ -154,6 +160,42 @@ namespace MoLibrary.FrameworkUI.UISignalr.Services
                 return false;
             }
         }
+
+        /// <summary>
+        /// 加载已连接用户信息
+        /// </summary>
+        /// <returns>是否成功</returns>
+        public async Task<bool> LoadConnectedUsersAsync()
+        {
+            try
+            {
+                var result = await _signalRService.GetConnectedUsersAsync();
+
+                if (result.IsFailed(out var error, out var users))
+                {
+                    AddMessage("错误", $"加载已连接用户失败: {error}", MessageType.Error);
+                    return false;
+                }
+
+                _connectedUsers.Clear();
+                _connectedUsers.AddRange(users);
+
+                AddMessage("系统", $"成功加载 {users.Count} 个已连接用户", MessageType.Success);
+                ConnectedUsersChanged?.Invoke(_connectedUsers.AsReadOnly());
+                return true;
+            }
+            catch (Exception ex)
+            {
+                AddMessage("错误", $"加载已连接用户时发生异常: {ex.Message}", MessageType.Error);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 获取已连接用户列表
+        /// </summary>
+        /// <returns>已连接用户列表</returns>
+        public IReadOnlyList<SignalRConnectedUserInfo> GetConnectedUsers() => _connectedUsers.AsReadOnly();
 
         /// <summary>
         /// 连接到SignalR Hub
