@@ -1,7 +1,7 @@
 ﻿namespace MoLibrary.JobScheduler.Abstractions;
 
 /// <summary>
-///     Defines interface of a background job.
+///     Defines interface of a triggered job.
 /// </summary>
 public interface IMoTriggeredJob<in TArgs>
 {

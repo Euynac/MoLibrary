@@ -56,7 +56,7 @@ public class JobWorkerManager(
         logger.LogInformation("JobWorkerManager starting...");
 
         // Initialize worker thread semaphore if MaxWorkerExecutionThreads is configured
-        if (_options.MaxWorkerExecutionThreads.HasValue && _options.MaxWorkerExecutionThreads.Value > 0)
+        if (_options.MaxWorkerExecutionThreads is > 0)
         {
             _workerThreadSemaphore = new SemaphoreSlim(
                 _options.MaxWorkerExecutionThreads.Value,
@@ -72,7 +72,7 @@ public class JobWorkerManager(
         }
 
         // Subscribe to JobExecutionEvent
-        _eventSubscription = eventBus.Subscribe<JobExecutionEvent>(HandleJobExecutionAsync);
+        _eventSubscription = eventBus.Subscribe<MoJobExecutionEvent>(HandleJobExecutionAsync);
 
         logger.LogInformation("JobWorkerManager started and subscribed to JobExecutionEvent");
         return Task.CompletedTask;
@@ -137,14 +137,8 @@ public class JobWorkerManager(
     /// Handles job execution events from the event bus.
     /// </summary>
     /// <param name="executionEvent">The job execution event.</param>
-    private async Task HandleJobExecutionAsync(JobExecutionEvent executionEvent)
+    private async Task HandleJobExecutionAsync(MoJobExecutionEvent executionEvent)
     {
-        if (executionEvent == null)
-        {
-            logger.LogWarning("Received null JobExecutionEvent, ignoring");
-            return;
-        }
-
         logger.LogInformation(
             "Received JobExecutionEvent for job {JobKey}, InstanceId: {InstanceId}",
             executionEvent.JobKey,
@@ -162,10 +156,10 @@ public class JobWorkerManager(
     /// <summary>
     /// Executes a job with concurrency control and thread limiting.
     /// </summary>
-    private async Task ExecuteJobAsync(JobExecutionEvent executionEvent)
+    private async Task ExecuteJobAsync(MoJobExecutionEvent executionEvent)
     {
-        bool workerSlotAcquired = false;
-        bool concurrencySlotAcquired = false;
+        var workerSlotAcquired = false;
+        var concurrencySlotAcquired = false;
         JobDefinition? definition = null;
         JobInstance? instance = null;
 

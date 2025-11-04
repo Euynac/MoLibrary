@@ -505,7 +505,7 @@ public class MoJobScheduler(
     {
         try
         {
-            var executionEvent = new JobExecutionEvent
+            var executionEvent = new MoJobExecutionEvent
             {
                 InstanceId = instanceId,
                 JobKey = jobKey,
