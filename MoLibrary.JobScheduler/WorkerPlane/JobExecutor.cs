@@ -457,7 +457,7 @@ public class JobExecutor(
         // Re-publish job execution event for retry
         try
         {
-            var retryEvent = new JobExecutionEvent
+            var retryEvent = new MoJobExecutionEvent
             {
                 InstanceId = instance.InstanceId,
                 JobKey = instance.JobKey,

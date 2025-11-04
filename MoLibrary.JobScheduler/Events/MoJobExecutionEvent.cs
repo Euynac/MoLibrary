@@ -5,7 +5,7 @@ namespace MoLibrary.JobScheduler.Events;
 /// This event is published when a job needs to be executed, either from
 /// recurring job scheduling or manual triggered job invocation.
 /// </summary>
-public class JobExecutionEvent
+public class MoJobExecutionEvent
 {
     /// <summary>
     /// Gets the unique identifier for this job instance.
