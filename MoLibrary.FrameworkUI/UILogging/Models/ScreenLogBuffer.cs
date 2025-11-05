@@ -17,6 +17,8 @@ public sealed class ScreenLogBuffer(IOptions<ModuleLoggingUIOption> options)
 
     private LogFilterState _filter = LogFilterState.Disabled;
     private long _version;
+    private long _firstLineNumber = 1; // 缓冲区第一行的绝对行号
+    private int _trimmedCount; // 记录已裁剪的行数
 
     public int MaxDisplayLines => _maxDisplayLines;
 
@@ -26,11 +28,15 @@ public sealed class ScreenLogBuffer(IOptions<ModuleLoggingUIOption> options)
     /// 用指定日志重置缓存
     /// </summary>
     /// <param name="lines">日志集合</param>
-    public ScreenLogSnapshot Reset(IEnumerable<string> lines)
+    /// <param name="startLineNumber">起始行号（第一行的绝对行号）</param>
+    public ScreenLogSnapshot Reset(IEnumerable<string> lines, long startLineNumber = 1)
     {
         lock (_syncRoot)
         {
             _rawLines.Clear();
+            _firstLineNumber = startLineNumber;
+            _trimmedCount = 0;
+
             foreach (var line in lines)
             {
                 if (line is null)
@@ -56,6 +62,45 @@ public sealed class ScreenLogBuffer(IOptions<ModuleLoggingUIOption> options)
         {
             _rawLines.AddLast(line);
             TrimRawIfNeeded();
+            return BuildSnapshotLocked();
+        }
+    }
+
+    /// <summary>
+    /// 在缓冲区开头前置日志行
+    /// </summary>
+    /// <param name="lines">要前置的日志行集合</param>
+    /// <param name="startLineNumber">起始行号（第一行的绝对行号）</param>
+    public ScreenLogSnapshot Prepend(IEnumerable<string> lines, long startLineNumber)
+    {
+        lock (_syncRoot)
+        {
+            var linesList = lines.ToList();
+            if (linesList.Count == 0)
+            {
+                return BuildSnapshotLocked(incrementVersion: false);
+            }
+
+            // 将新行添加到开头
+            foreach (var line in linesList.AsEnumerable().Reverse())
+            {
+                if (line is null)
+                {
+                    continue;
+                }
+
+                _rawLines.AddFirst(line);
+            }
+
+            // 更新起始行号
+            _firstLineNumber = startLineNumber;
+
+            // 清理超出容量的旧日志（从尾部移除）
+            while (_rawLines.Count > _maxRetainedLines)
+            {
+                _rawLines.RemoveLast();
+            }
+
             return BuildSnapshotLocked();
         }
     }
@@ -126,24 +171,69 @@ public sealed class ScreenLogBuffer(IOptions<ModuleLoggingUIOption> options)
 
     private IReadOnlyList<LogLineViewModel> BuildVisibleLines()
     {
-        var filtered = new List<LogLineViewModel>(_maxDisplayLines);
+        var allLines = new List<LogLineViewModel>(_rawLines.Count);
+        var bufferIndex = 1;
+        var absoluteLineNumber = _firstLineNumber;
+
+        // 第一遍：构建所有行并分配缓冲区索引和绝对行号
         foreach (var raw in _rawLines)
         {
             var line = LogLineViewModel.FromRaw(raw);
             line.WithFilter(_filter);
+            line.WithPosition(absoluteLineNumber, bufferIndex);
+            allLines.Add(line);
+            bufferIndex++;
+            absoluteLineNumber++;
+        }
+
+        // 第二遍：筛选可见行
+        var filtered = new List<LogLineViewModel>(_maxDisplayLines);
+        foreach (var line in allLines)
+        {
             if (ShouldInclude(line))
             {
                 filtered.Add(line);
             }
         }
 
+        // 第三遍：为筛选后的行分配筛选索引
+        if (_filter.IsActive && _filter.OnlyCapture)
+        {
+            var filteredIndex = 1;
+            foreach (var line in filtered)
+            {
+                if (line.IsMatch)
+                {
+                    line.WithPosition(line.AbsoluteLineNumber, line.BufferIndex, filteredIndex);
+                    filteredIndex++;
+                }
+            }
+        }
+
+        // 裁剪到最大显示行数
         if (filtered.Count <= _maxDisplayLines)
         {
             return filtered;
         }
 
         var skip = filtered.Count - _maxDisplayLines;
-        return filtered.Skip(skip).ToList();
+        var result = filtered.Skip(skip).ToList();
+
+        // 重新分配筛选索引（如果启用了筛选）
+        if (_filter.IsActive && _filter.OnlyCapture)
+        {
+            var filteredIndex = 1;
+            foreach (var line in result)
+            {
+                if (line.IsMatch)
+                {
+                    line.WithPosition(line.AbsoluteLineNumber, line.BufferIndex, filteredIndex);
+                    filteredIndex++;
+                }
+            }
+        }
+
+        return result;
     }
 
     private bool ShouldInclude(LogLineViewModel line)
@@ -166,6 +256,8 @@ public sealed class ScreenLogBuffer(IOptions<ModuleLoggingUIOption> options)
         while (_rawLines.Count > _maxRetainedLines)
         {
             _rawLines.RemoveFirst();
+            _trimmedCount++;
+            _firstLineNumber++;
         }
     }
 }

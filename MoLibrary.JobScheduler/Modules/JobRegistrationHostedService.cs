@@ -1,0 +1,115 @@
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using MoLibrary.JobScheduler.ControlPlane;
+using MoLibrary.JobScheduler.Exceptions;
+using MoLibrary.JobScheduler.Models;
+
+namespace MoLibrary.JobScheduler.Modules;
+
+/// <summary>
+/// Hosted service that registers discovered job definitions to the JobRegistry during application startup.
+/// Ensures all jobs are properly registered before the application begins serving requests.
+/// </summary>
+internal class JobRegistrationHostedService(
+    JobRegistry jobRegistry,
+    IReadOnlyList<JobDefinition> jobDefinitions,
+    ILogger<JobRegistrationHostedService> logger) : IHostedService
+{
+    /// <summary>
+    /// Registers all discovered job definitions when the application starts.
+    /// </summary>
+    public async Task StartAsync(CancellationToken cancellationToken)
+    {
+        if (jobDefinitions.Count == 0)
+        {
+            logger.LogInformation("No job definitions to register");
+            return;
+        }
+
+        try
+        {
+            logger.LogInformation("Starting job registration for {Count} job(s)", jobDefinitions.Count);
+
+            // Extract job keys from definitions
+            var jobKeys = jobDefinitions.Select(d => d.JobKey).ToList();
+
+            // Check which jobs are not yet registered
+            var unregisteredKeys = await jobRegistry.CheckUnregisteredAsync(jobKeys, cancellationToken);
+            var unregisteredKeysList = unregisteredKeys.ToList();
+
+            if (unregisteredKeysList.Count == 0)
+            {
+                logger.LogInformation("All {Count} job(s) are already registered. Skipping registration.", jobDefinitions.Count);
+                return;
+            }
+
+            // Filter to only unregistered job definitions
+            var unregisteredDefinitions = jobDefinitions
+                .Where(d => unregisteredKeysList.Contains(d.JobKey))
+                .ToList();
+
+            logger.LogInformation("Registering {UnregisteredCount} unregistered job(s) out of {TotalCount} discovered",
+                unregisteredDefinitions.Count, jobDefinitions.Count);
+
+            // Register unregistered jobs
+            await jobRegistry.RegisterJobsAsync(unregisteredDefinitions, cancellationToken);
+
+            logger.LogInformation("Successfully registered {Count} job definition(s)", unregisteredDefinitions.Count);
+
+            // Log summary of all discovered jobs
+            foreach (var definition in jobDefinitions)
+            {
+                var status = unregisteredKeysList.Contains(definition.JobKey) ? "Registered" : "Already Registered";
+                logger.LogInformation(
+                    "[{Status}] Job: {JobKey} | Name: {JobName} | Type: {JobType} | MaxConcurrency: {MaxConcurrency} | RetryCount: {RetryCount} | Timeout: {Timeout}",
+                    status,
+                    definition.JobKey,
+                    definition.JobName,
+                    definition.Type,
+                    definition.MaxConcurrency,
+                    definition.RetryCount,
+                    definition.MaxExecutionTimeout);
+
+                if (definition.Type == JobType.Recurring)
+                {
+                    logger.LogDebug(
+                        "Recurring job details - JobKey: {JobKey}, CronExpression: {CronExpression}, StartTime: {StartTime}, EndTime: {EndTime}, IsDisabled: {IsDisabled}",
+                        definition.JobKey,
+                        definition.CronExpression,
+                        definition.StartTime,
+                        definition.EndTime,
+                        definition.IsDisabled);
+                }
+                else if (definition.Type == JobType.Triggered)
+                {
+                    logger.LogDebug(
+                        "Triggered job details - JobKey: {JobKey}, ParameterType: {ParameterType}",
+                        definition.JobKey,
+                        definition.ParameterClrType?.FullName ?? "None");
+                }
+            }
+        }
+        catch (JobRegistrationException ex)
+        {
+            logger.LogError(ex,
+                "Job registration failed for job key: {JobKey}. Message: {Message}",
+                ex.JobKey,
+                ex.Message);
+            throw; // Re-throw to prevent application startup if registration fails
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Unexpected error during job registration");
+            throw; // Re-throw to prevent application startup if registration fails
+        }
+    }
+
+    /// <summary>
+    /// No cleanup needed when the application stops.
+    /// </summary>
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        // No cleanup needed
+        return Task.CompletedTask;
+    }
+}

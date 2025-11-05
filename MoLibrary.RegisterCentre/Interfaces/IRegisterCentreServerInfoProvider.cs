@@ -3,7 +3,7 @@ namespace MoLibrary.RegisterCentre.Interfaces;
 /// <summary>
 /// 注册中心预定义信息提供者接口
 /// </summary>
-public interface IRegisterCentreInfoProvider
+public interface IRegisterCentreServerInfoProvider
 {
     /// <summary>
     /// 获取所有领域信息

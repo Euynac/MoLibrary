@@ -50,7 +50,7 @@ public class ModuleDomainDrivenDesign(ModuleDomainDrivenDesignOption option) : M
         DependsOnModule<ModuleSwaggerGuide>().Register();
         DependsOnModule<ModuleGlobalExceptionHandlerGuide>().Register();
         //DependsOnModule<ModuleAuthorizationGuide>().Register().AddDefaultPermissionBit<>();
-        DependsOnModule<ModuleAuthenticationGuide>().Register().ConfigDefaultMoSystemUser();
+        DependsOnModule<ModuleAuthenticationGuide>().Register().ConfigDefaultSystemUser();
         DependsOnModule<ModuleMediatorGuide>().Register();
         DependsOnModule<ModuleMapperGuide>().Register();
         DependsOnModule<ModuleRepositoryGuide>().Register();

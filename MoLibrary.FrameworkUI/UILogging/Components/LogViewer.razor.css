@@ -19,6 +19,20 @@
     background-color: var(--mud-palette-surface);
 }
 
+.match-navigation-bar {
+    flex-shrink: 0;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--mud-palette-divider);
+    background-color: var(--mud-palette-surface);
+}
+
+.load-more-indicator {
+    flex-shrink: 0;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--mud-palette-divider);
+    background-color: var(--mud-palette-surface);
+}
+
 .log-viewer-scroll {
     flex: 1;
     min-height: 0;
@@ -57,11 +71,13 @@
     grid-template-columns: minmax(240px, 320px) 1fr;
     gap: 0.75rem;
     padding: 0.5rem 0.75rem;
-    
+    position: relative;
+
     border-left: 3px solid transparent;
     margin-bottom: 0.3rem;
     background-color: var(--mud-palette-surface);
     transition: all 0.2s ease;
+    cursor: pointer;
 }
 
 .log-entry:hover {
@@ -122,4 +138,78 @@
 
 .severity-unknown {
     border-left-color: var(--mud-palette-text-disabled);
+}
+
+/* Context target highlighting */
+.log-entry.context-target {
+    background-color: var(--mud-palette-primary-lighten);
+    border-left-width: 5px;
+    border-left-color: var(--mud-palette-primary) !important;
+    animation: context-highlight 1.5s ease-in-out;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.log-entry.context-target:hover {
+    background-color: var(--mud-palette-primary-lighten);
+}
+
+@keyframes context-highlight {
+    0%, 100% {
+        background-color: var(--mud-palette-primary-lighten);
+    }
+    50% {
+        background-color: var(--mud-palette-primary-hover);
+    }
+}
+
+/* Current match highlighting */
+.log-entry.current-match {
+    background-color: var(--mud-palette-warning-lighten);
+    border-left-width: 5px;
+    border-left-color: var(--mud-palette-warning) !important;
+    box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+    animation: current-match-pulse 2s ease-in-out infinite;
+}
+
+.log-entry.current-match:hover {
+    background-color: var(--mud-palette-warning-lighten);
+}
+
+@keyframes current-match-pulse {
+    0%, 100% {
+        box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+    }
+    50% {
+        box-shadow: 0 4px 12px rgba(255, 152, 0, 0.5);
+    }
+}
+
+/* Selected line highlighting */
+.log-entry.selected {
+    background-color: var(--mud-palette-action-selected);
+    border-left-width: 4px;
+    border-left-color: var(--mud-palette-primary) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.log-entry.selected:hover {
+    background-color: var(--mud-palette-action-selected-hover);
+}
+
+/* Floating line number badge */
+.log-entry__line-badge {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 0.25rem 0.5rem;
+    background-color: var(--mud-palette-primary);
+    color: var(--mud-palette-primary-text);
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-family: monospace;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    z-index: 10;
+    pointer-events: none;
 }

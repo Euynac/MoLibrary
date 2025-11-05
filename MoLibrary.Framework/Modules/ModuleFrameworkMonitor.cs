@@ -9,6 +9,7 @@ using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.Core.Modules;
+using MoLibrary.EventBus.Modules;
 using MoLibrary.Framework.Core;
 using MoLibrary.Framework.Core.Extensions;
 using MoLibrary.Framework.Core.Model;
@@ -28,6 +29,7 @@ public class ModuleFrameworkMonitor(ModuleFrameworkMonitorOption option)
         {
             DependsOnModule<ModuleXmlDocumentationGuide>().Register();
         }
+        DependsOnModule<ModuleEventBusGuide>().Register();
     }
     private static void InitProjectUnitFactories()
     {

@@ -34,6 +34,8 @@ public sealed class LoggingService(
 
     public bool IsRunning => _isRunning;
 
+    public long TotalFileLineCount => logTailService.TotalFileLineCount;
+
     /// <summary>
     /// 初始化日志缓冲池
     /// </summary>
@@ -42,12 +44,12 @@ public sealed class LoggingService(
         var maxLines = buffer.MaxDisplayLines;
         var lineCount = Math.Clamp(requestedLines, 1, maxLines);
         var result = await logTailService.ReadLatestLinesAsync(lineCount, cancellationToken);
-        if (result.IsFailed(out var error, out var lines))
+        if (result.IsFailed(out var error, out var readResult))
         {
             return error;
         }
 
-        var snapshot = buffer.Reset(lines);
+        var snapshot = buffer.Reset(readResult.Lines, readResult.StartLineNumber);
         await PublishSnapshotAsync(snapshot, cancellationToken).ConfigureAwait(false);
         return snapshot;
     }
@@ -124,6 +126,56 @@ public sealed class LoggingService(
     public ScreenLogSnapshot GetSnapshot()
     {
         return buffer.Snapshot();
+    }
+
+    /// <summary>
+    /// 加载更多历史日志（在当前缓冲区之前）
+    /// </summary>
+    /// <param name="lineCount">要加载的行数，默认50行</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>加载的行数</returns>
+    public async Task<Res<int>> LoadMoreLinesAsync(int lineCount = 50, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var snapshot = buffer.Snapshot();
+            if (snapshot.Lines.Count == 0)
+            {
+                return 0;
+            }
+
+            // 获取当前缓冲区最早的行号
+            var firstLine = snapshot.Lines.FirstOrDefault();
+            if (firstLine?.AbsoluteLineNumber == null || firstLine.AbsoluteLineNumber <= 1)
+            {
+                // 已经到达文件开头
+                return 0;
+            }
+
+            var beforeLineNumber = firstLine.AbsoluteLineNumber.Value;
+            var result = await logTailService.ReadLinesBeforeAsync(beforeLineNumber, lineCount, cancellationToken);
+
+            if (result.IsFailed(out var error, out var readResult))
+            {
+                return error;
+            }
+
+            if (readResult.Lines.Count == 0)
+            {
+                return 0;
+            }
+
+            // 前置到缓冲区
+            var newSnapshot = buffer.Prepend(readResult.Lines, readResult.StartLineNumber);
+            await PublishSnapshotAsync(newSnapshot, cancellationToken).ConfigureAwait(false);
+
+            return readResult.Lines.Count;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "加载更多日志失败");
+            return $"加载更多日志失败: {ex.Message}";
+        }
     }
 
     /// <summary>

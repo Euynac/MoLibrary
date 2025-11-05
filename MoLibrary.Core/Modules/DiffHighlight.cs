@@ -29,8 +29,6 @@ public class ModuleDiffHighlight(ModuleDiffHighlightOption option) : MoModule<Mo
     /// <param name="services">服务集合</param>
     public override void ConfigureServices(IServiceCollection services)
     {
-        Logger.LogInformation("正在配置差异对比高亮模块服务");
-        
         // 注册核心服务
         services.AddScoped<IMoDiffHighlight, DefaultDiffHighlight>();
         services.AddScoped<DiffHighlightService>();
@@ -49,8 +47,6 @@ public class ModuleDiffHighlight(ModuleDiffHighlightOption option) : MoModule<Mo
             services.AddSingleton<IDiffHighlightRenderer>(provider => option.CustomRendererFactory());
             Logger.LogDebug("已注册自定义渲染器");
         }
-        
-        Logger.LogInformation("差异对比高亮模块服务配置完成");
     }
     
     /// <summary>
@@ -117,8 +113,6 @@ public class ModuleDiffHighlight(ModuleDiffHighlightOption option) : MoModule<Mo
                 return operation;
             });
         });
-        
-        Logger.LogInformation("差异对比高亮模块端点配置完成");
     }
 }
 

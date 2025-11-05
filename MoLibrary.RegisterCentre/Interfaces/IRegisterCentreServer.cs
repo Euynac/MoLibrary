@@ -6,7 +6,7 @@ namespace MoLibrary.RegisterCentre.Interfaces;
 /// <summary>
 /// 服务端完整接口
 /// </summary>
-public interface IRegisterCentreServer : IRegisterCentreApiForClient
+public interface IRegisterCentreServer : IRegisterCentreServerApiForClient
 {
     /// <summary>
     /// 获取所有已注册微服务的状态
