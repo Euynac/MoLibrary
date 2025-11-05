@@ -525,10 +525,6 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
     /// <returns></returns>
     protected virtual bool ShouldFilterEntity<TEntity>(IMutableEntityType entityType) where TEntity : class
     {
-        // TODO 
-        //var scopedData = ServiceProvider.GetRequiredService<IScopedData>();
-        //if (scopedData.DataDict.ContainsKey("disableFilter")) return false;
-
         if (typeof(IHasSoftDelete).IsAssignableFrom(typeof(TEntity)))
         {
             return true;
@@ -537,6 +533,10 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
         return false;
     }
 
+    public virtual void DisableSoftDeleteFilter()
+    {
+        ScopedData?.SetData(MoEfCoreDataFilterDbFunctionMethods.DisableSoftDeleteFilterKey, true);
+    }
     /// <summary>
     /// Creates a filter expression for given entity.
     /// </summary>
@@ -550,16 +550,18 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
 
         if (typeof(IHasSoftDelete).IsAssignableFrom(typeof(TEntity)))
         {
-            var softDeleteColumnName = modelBuilder.Entity<TEntity>().Metadata.FindProperty(nameof(IHasSoftDelete.IsDeleted))?.GetColumnName() ?? "IsDeleted";
+            var softDeleteColumnName = modelBuilder.Entity<TEntity>().Metadata.FindProperty(nameof(IHasSoftDelete.IsDeleted))?.GetColumnName() ?? nameof(IHasSoftDelete.IsDeleted);
+            
+            var enabledFilter = ScopedData?.DataDict.ContainsKey(MoEfCoreDataFilterDbFunctionMethods.DisableSoftDeleteFilterKey) != true;
 
             if (MoOptions.UseDbFunction)
             {
                 expression = e => MoEfCoreDataFilterDbFunctionMethods.SoftDeleteFilter(((IHasSoftDelete)e).IsDeleted, true);
-                modelBuilder.ConfigureSoftDeleteDbFunction(MoEfCoreDataFilterDbFunctionMethods.SoftDeleteFilterMethodInfo);
+                modelBuilder.ConfigureSoftDeleteDbFunction(MoEfCoreDataFilterDbFunctionMethods.SoftDeleteFilterMethodInfo, enabledFilter);
             }
             else
             {
-                expression = e => !EF.Property<bool>(e, softDeleteColumnName);
+                expression = e => !enabledFilter || !EF.Property<bool>(e, softDeleteColumnName);
             }
         }
 
