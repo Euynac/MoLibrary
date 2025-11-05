@@ -59,9 +59,17 @@
     overflow: hidden;
 }
 
+.viewer-section ::deep .mud-alert .mud-icon-root {
+    vertical-align: middle;
+}
+
 .file-info {
     padding: 0.5rem 0;
     border-bottom: 1px solid var(--mud-palette-divider);
+}
+
+.file-info ::deep .mud-icon-root {
+    vertical-align: middle;
 }
 
 .file-table-panel {

@@ -38,20 +38,26 @@
                     <div class="realtime-log-panel">
                         <div class="file-info">
                             <MudStack Row="true" Spacing="4" AlignItems="AlignItems.Center">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                    <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" Class="mr-1" />
-                                    当前监听日志文件：<strong>@(_currentLogFilePath ?? "未检测到")</strong>
-                                </MudText>
+                                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                                    <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" />
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        当前监听日志文件：<strong>@(_currentLogFilePath ?? "未检测到")</strong>
+                                    </MudText>
+                                </MudStack>
                                 <MudDivider Vertical="true" FlexItem="true" />
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                    <MudIcon Icon="@Icons.Material.Filled.FormatListNumbered" Size="Size.Small" Class="mr-1" />
-                                    文件总行数：<strong>@_totalFileLineCount.ToString("N0")</strong>
-                                </MudText>
+                                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                                    <MudIcon Icon="@Icons.Material.Filled.FormatListNumbered" Size="Size.Small" />
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        文件总行数：<strong>@_totalFileLineCount.ToString("N0")</strong>
+                                    </MudText>
+                                </MudStack>
                                 <MudDivider Vertical="true" FlexItem="true" />
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                    <MudIcon Icon="@Icons.Material.Filled.Speed" Size="Size.Small" Class="mr-1" />
-                                    初始加载耗时：<strong>@_initLoadTimeMs ms</strong>
-                                </MudText>
+                                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                                    <MudIcon Icon="@Icons.Material.Filled.Speed" Size="Size.Small" />
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        初始加载耗时：<strong>@_initLoadTimeMs ms</strong>
+                                    </MudText>
+                                </MudStack>
                             </MudStack>
                         </div>
 
@@ -81,11 +87,11 @@
                         <div class="viewer-section">
                             @if (_isContextMode)
                             {
-                                <MudAlert Severity="Severity.Info" Elevation="1" Class="mb-2">
+                                <MudAlert Severity="Severity.Info" Elevation="1" Class="mb-2" NoIcon="true">
                                     <div style="display: flex; align-items: center; justify-content: space-between;">
-                                        <div>
+                                        <div style="display: flex; align-items: center;">
                                             <MudIcon Icon="@Icons.Material.Filled.Visibility" Class="mr-2" />
-                                            正在查看行号 <strong>#@_contextTargetLine</strong> 附近的上下文
+                                            <span>正在查看行号 <strong>#@_contextTargetLine</strong> 附近的上下文</span>
                                         </div>
                                         <MudButton OnClick="ExitContextMode"
                                                    Variant="Variant.Text"
