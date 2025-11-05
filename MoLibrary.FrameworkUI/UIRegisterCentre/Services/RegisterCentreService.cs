@@ -99,7 +99,7 @@ public class RegisterCentreService(
         try
         {
             var registerCentreServer = serviceProvider.GetService<IRegisterCentreServer>();
-            var infoProvider = serviceProvider.GetService<IRegisterCentreInfoProvider>();
+            var infoProvider = serviceProvider.GetService<IRegisterCentreServerInfoProvider>();
 
             // 获取已注册的服务状态
             List<RegisteredServiceStatus> registeredServices = [];
@@ -154,7 +154,7 @@ public class RegisterCentreService(
     {
         try
         {
-            var infoProvider = serviceProvider.GetService<IRegisterCentreInfoProvider>();
+            var infoProvider = serviceProvider.GetService<IRegisterCentreServerInfoProvider>();
             if (infoProvider == null)
             {
                 return "当前服务未配置IRegisterCentreInfoProvider";

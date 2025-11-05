@@ -31,7 +31,10 @@
       "Bash(git rev-parse:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Read(//d/Code/MoLibrary.Docs/docs/BackgroundJob/**)",
+      "mcp__spec-workflow__spec-workflow-guide",
+      "mcp__spec-workflow__approvals"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"
@@ -39,7 +42,10 @@
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "context7",
+    "browsermcp",
     "puppeteer",
-    "microsoft_docs_mcp"
+    "microsoft_docs_mcp",
+    "word-document-server",
+    "spec-workflow"
   ]
 }

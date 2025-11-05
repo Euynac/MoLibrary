@@ -39,7 +39,12 @@ public abstract class RegisterCentreClientBase(IOptions<ModuleRegisterCentreOpti
     /// </summary>
     /// <returns></returns>
     protected abstract ServiceRegisterInfo GetBaseServiceInfo();
-
+ 
+    /// <summary>
+    /// 获取注册中心APPID
+    /// </summary>
+    /// <returns></returns>
+    public abstract string GetRegisterCentreAppId();
     /// <summary>
     /// 添加环境变量作为元数据
     /// </summary>

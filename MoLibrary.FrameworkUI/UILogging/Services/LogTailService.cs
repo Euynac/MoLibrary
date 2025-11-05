@@ -10,6 +10,13 @@ using MoLibrary.FrameworkUI.UILogging.Models;
 namespace MoLibrary.FrameworkUI.UILogging.Services;
 
 /// <summary>
+/// 日志读取结果
+/// </summary>
+/// <param name="Lines">日志行集合</param>
+/// <param name="StartLineNumber">起始行号（第一行的绝对行号）</param>
+public readonly record struct LogReadResult(IReadOnlyList<string> Lines, long StartLineNumber);
+
+/// <summary>
 /// 底层日志文件读取服务
 /// </summary>
 public sealed class LogTailService(
@@ -22,6 +29,7 @@ public sealed class LogTailService(
     private readonly object _syncRoot = new();
 
     private long _lastPosition;
+    private long _currentLineNumber;
     private bool _isInitialized;
 
     public string LogFilePath => _logFilePath;
@@ -29,9 +37,97 @@ public sealed class LogTailService(
     public string LogDirectory => Path.GetDirectoryName(_logFilePath) ?? AppContext.BaseDirectory;
 
     /// <summary>
+    /// 当前行号（最后读取到的行的绝对行号）
+    /// </summary>
+    public long CurrentLineNumber
+    {
+        get
+        {
+            lock (_syncRoot)
+            {
+                return _currentLineNumber;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 文件总行数（初始化时统计）
+    /// </summary>
+    public long TotalFileLineCount
+    {
+        get
+        {
+            lock (_syncRoot)
+            {
+                return _currentLineNumber;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 读取指定行号之前的N行日志
+    /// </summary>
+    /// <param name="beforeLineNumber">在此行号之前读取</param>
+    /// <param name="lineCount">要读取的行数</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>读取的日志行及起始行号</returns>
+    public async Task<Res<LogReadResult>> ReadLinesBeforeAsync(long beforeLineNumber, int lineCount, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (!File.Exists(_logFilePath))
+            {
+                logger.LogWarning("日志文件不存在: {File}", _logFilePath);
+                return new LogReadResult(Array.Empty<string>(), 0);
+            }
+
+            var lines = new List<string>();
+            var startLineNumber = Math.Max(1, beforeLineNumber - lineCount);
+            var endLineNumber = beforeLineNumber - 1;
+
+            if (endLineNumber < startLineNumber)
+            {
+                return new LogReadResult(Array.Empty<string>(), startLineNumber);
+            }
+
+            await using var stream = new FileStream(_logFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            using var reader = new StreamReader(stream, Encoding.UTF8);
+
+            long currentLine = 1;
+            while (!reader.EndOfStream && currentLine <= endLineNumber)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var line = await reader.ReadLineAsync();
+                if (line == null)
+                {
+                    break;
+                }
+
+                if (currentLine >= startLineNumber)
+                {
+                    lines.Add(line);
+                }
+
+                currentLine++;
+            }
+
+            return new LogReadResult(lines, startLineNumber);
+        }
+        catch (OperationCanceledException)
+        {
+            return new LogReadResult(Array.Empty<string>(), 0);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "读取指定行之前的日志失败");
+            return $"读取日志失败: {ex.Message}";
+        }
+    }
+
+    /// <summary>
     /// 读取最近的N行日志
     /// </summary>
-    public async Task<Res<IReadOnlyList<string>>> ReadLatestLinesAsync(int lineCount, CancellationToken cancellationToken = default)
+    public async Task<Res<LogReadResult>> ReadLatestLinesAsync(int lineCount, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -41,13 +137,15 @@ public sealed class LogTailService(
                 lock (_syncRoot)
                 {
                     _lastPosition = 0;
+                    _currentLineNumber = 0;
                     _isInitialized = true;
                 }
 
-                return Array.Empty<string>();
+                return new LogReadResult(Array.Empty<string>(), 0);
             }
 
             var queue = new Queue<string>(lineCount);
+            long totalLineCount = 0;
 
             await using var stream = new FileStream(_logFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
             using var reader = new StreamReader(stream, Encoding.UTF8);
@@ -61,6 +159,8 @@ public sealed class LogTailService(
                     break;
                 }
 
+                totalLineCount++;
+
                 if (queue.Count == lineCount)
                 {
                     queue.Dequeue();
@@ -69,17 +169,20 @@ public sealed class LogTailService(
                 queue.Enqueue(line);
             }
 
+            var startLineNumber = Math.Max(1, totalLineCount - queue.Count + 1);
+
             lock (_syncRoot)
             {
                 _lastPosition = stream.Position;
+                _currentLineNumber = totalLineCount;
                 _isInitialized = true;
             }
 
-            return queue.ToList();
+            return new LogReadResult(queue.ToList(), startLineNumber);
         }
         catch (OperationCanceledException)
         {
-            return Array.Empty<string>();
+            return new LogReadResult(Array.Empty<string>(), 0);
         }
         catch (Exception ex)
         {
@@ -141,11 +244,15 @@ public sealed class LogTailService(
         await using var stream = new FileStream(_logFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
 
         long startPosition;
+        bool isFileRotated = false;
         lock (_syncRoot)
         {
+            // 检测文件是否被轮转（文件大小小于上次位置）
             if (stream.Length < _lastPosition)
             {
                 _lastPosition = 0;
+                _currentLineNumber = 0;
+                isFileRotated = true;
             }
 
             startPosition = _lastPosition;
@@ -154,6 +261,7 @@ public sealed class LogTailService(
         if (startPosition > stream.Length)
         {
             startPosition = 0;
+            isFileRotated = true;
         }
 
         stream.Seek(startPosition, SeekOrigin.Begin);
@@ -175,6 +283,13 @@ public sealed class LogTailService(
         lock (_syncRoot)
         {
             _lastPosition = stream.Position;
+            // 增加行号计数
+            _currentLineNumber += result.Count;
+        }
+
+        if (isFileRotated && result.Count > 0)
+        {
+            logger.LogInformation("检测到日志文件轮转，行号已重置");
         }
 
         return result;

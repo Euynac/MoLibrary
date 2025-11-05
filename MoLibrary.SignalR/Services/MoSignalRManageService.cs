@@ -1,25 +1,29 @@
 using System.Reflection;
-using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using MoLibrary.Core.Extensions;
-using MoLibrary.Core.Module.ModuleController;
-using MoLibrary.SignalR.Implements;
+using MoLibrary.Authority.Security;
+using MoLibrary.SignalR.Interfaces;
 using MoLibrary.SignalR.Models;
 using MoLibrary.SignalR.Modules;
 using MoLibrary.Tool.MoResponse;
 using SignalRSwaggerGen.Attributes;
 
-namespace MoLibrary.SignalR.Controllers;
+namespace MoLibrary.SignalR.Services;
+
 /// <summary>
-/// SignalR业务服务，实现Hub信息获取等核心业务逻辑
+/// SignalR业务服务，实现Hub信息获取和连接管理等核心业务逻辑
 /// </summary>
 /// <remarks>
 /// 构造函数
 /// </remarks>
 /// <param name="logger">日志记录器</param>
 /// <param name="signalROptions">SignalR模块选项</param>
-public class MoSignalRManageService(ILogger<MoSignalRManageService> logger, IOptions<ModuleSignalROption> signalROptions)
+/// <param name="connectionManager">SignalR连接管理器</param>
+public class MoSignalRManageService(
+    ILogger<MoSignalRManageService> logger,
+    IOptions<ModuleSignalROption> signalROptions,
+    IMoSignalRConnectionManager connectionManager)
 {
     private readonly ModuleSignalROption _signalROption = signalROptions.Value;
 
@@ -61,20 +65,38 @@ public class MoSignalRManageService(ILogger<MoSignalRManageService> logger, IOpt
             return Res.Fail($"获取Hub信息失败: {ex.Message}");
         }
     }
-}
-/// <summary>
-/// SignalR相关功能Controller
-/// </summary>
-[ApiController]
-public class ModuleSignalRController(MoSignalRManageService service) : MoModuleControllerBase
-{
+
     /// <summary>
-    /// 获取SignalR所有Server端事件定义
+    /// 获取当前所有已连接的SignalR用户
     /// </summary>
-    /// <returns>SignalR服务端方法信息列表</returns>
-    [HttpGet("hubs")]
-    public async Task<IActionResult> GetServerMethods()
+    /// <returns>已连接用户信息列表</returns>
+    public async Task<Res<List<SignalRConnectedUserInfo>>> GetConnectedUsersAsync()
     {
-        return await service.GetHubInfosAsync().GetResponse(this);
+        try
+        {
+            logger.LogInformation("开始获取SignalR已连接用户信息");
+
+            var connections = connectionManager.GetConnectionInfos();
+            var userInfos = connections.Select(conn => new SignalRConnectedUserInfo
+            {
+                ConnectionId = conn.ConnectionId,
+                ConnectionTime = conn.ConnectionTime,
+                IsAuthenticated = conn.ClaimsPrincipal.Identity?.IsAuthenticated ?? false,
+                UserName = conn.ClaimsPrincipal.Identity?.Name,
+                UserId = conn.ClaimsPrincipal.FindFirst(MoClaimTypes.UserId)?.Value,
+                Claims = conn.ClaimsPrincipal.Claims.ToDictionary(
+                    c => c.Type,
+                    c => c.Value
+                )
+            }).ToList();
+
+            logger.LogInformation("成功获取到 {UserCount} 个已连接用户", userInfos.Count);
+            return await Task.FromResult(Res.Ok(userInfos));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "获取SignalR已连接用户信息失败");
+            return Res.Fail($"获取已连接用户信息失败: {ex.Message}");
+        }
     }
-} 
+}

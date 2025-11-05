@@ -71,22 +71,19 @@ public class ModuleConfigurationDashboardGuide : MoModuleGuide<ModuleConfigurati
     /// <summary>
     /// 注册MoConfigurationDashboard客户端
     /// </summary>
-    /// <typeparam name="TServer">注册中心服务器接口</typeparam>
     /// <typeparam name="TClient">注册中心客户端接口</typeparam>
     /// <param name="action">可选的配置操作</param>
-    public ModuleConfigurationDashboardGuide AddMoConfigurationDashboardClient<TServer, TClient>(
+    public ModuleRegisterCentreGuide AddMoConfigurationDashboardClient<TClient>(
         Action<ModuleRegisterCentreOption>? action = null)
-        where TServer : class, IRegisterCentreServerConnector
         where TClient : class, IRegisterCentreClient
     {
         if (_isDashboard is true) throw new InvalidOperationException("面板服务无需注册面板客户端");
         _isDashboard = false;
-        DependsOnModule<ModuleRegisterCentreGuide>().Register(action).SetAsCentreClient<TServer, TClient>();
         ConfigureServices(context =>
         {
             context.Services.AddSingleton<IMoConfigurationModifier, MoConfigurationJsonFileModifier>();
         });
-        return this;
+        return DependsOnModule<ModuleRegisterCentreGuide>().Register(action).SetAsCentreClient<TClient>();
     }
 
 

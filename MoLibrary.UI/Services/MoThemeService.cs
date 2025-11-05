@@ -8,7 +8,7 @@ namespace MoLibrary.UI.Services;
 /// <summary>
 /// MoLibrary主题服务 - 管理主题切换和自定义样式
 /// </summary>
-public class MoThemeService(IOptionsSnapshot<ModuleUICoreOption> options)
+public class MoThemeService(IOptions<ModuleUICoreOption> options)
 {
     private bool _isDarkMode = false;
     private MudTheme _currentTheme = new();
