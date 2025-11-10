@@ -33,10 +33,10 @@ public class RegisteredServiceStatus
     public ServiceStatus OverallStatus => DetermineOverallStatus();
 
     /// <summary>
-    /// 获取任意一个正常的服务实例信息
+    /// 获取有效的服务实例信息
     /// </summary>
     /// <returns></returns>
-    public ServiceInstance? GetRunningInstanceInfo() => Instances.Values.FirstOrDefault(x => x.Status == ServiceStatus.Running);
+    public ServiceInstance? GetValidInstanceInfo() => Instances.Values.FirstOrDefault(x => x.Status is not ServiceStatus.Offline);
 
     private ServiceStatus DetermineOverallStatus()
     {
