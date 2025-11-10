@@ -72,7 +72,7 @@
 		<TemplateColumn Title="程序集版本">
 			<CellTemplate>
 				@{
-					var runningInstance = context.Item.GetRunningInstanceInfo();
+					var runningInstance = context.Item.GetValidInstanceInfo();
 				}
 				<MudText Typo="Typo.body2">
 					@(runningInstance?.RegisterInfo.AssemblyVersion ?? "N/A")
@@ -82,7 +82,7 @@
 		<TemplateColumn Title="构建时间">
 			<CellTemplate>
 				@{
-					var runningInstance = context.Item.GetRunningInstanceInfo();
+					var runningInstance = context.Item.GetValidInstanceInfo();
 				}
 				<MudTooltip Text="@(runningInstance?.RegisterInfo.BuildTime.ToString("yyyy-MM-dd HH:mm:ss") ?? "N/A")">
 					<MudText Typo="Typo.body2">
@@ -106,7 +106,7 @@
 		<TemplateColumn Title="最后心跳">
 			<CellTemplate>
 				@{
-					var runningInstance = context.Item.GetRunningInstanceInfo();
+					var runningInstance = context.Item.GetValidInstanceInfo();
 				}
 				<MudTooltip Text="@(runningInstance?.LastHeartbeatTime.ToString("yyyy-MM-dd HH:mm:ss") ?? "N/A")">
 					<MudText Typo="Typo.body2">
@@ -277,7 +277,7 @@
         // 检查是否有任何服务包含配置的元数据键
         var hasMetadata = Services.Any(service =>
         {
-            var runningInstance = service.GetRunningInstanceInfo();
+            var runningInstance = service.GetValidInstanceInfo();
             return runningInstance?.RegisterInfo.Metadata != null &&
                    configuredKeys.Any(key => runningInstance.RegisterInfo.Metadata.ContainsKey(key));
         });
