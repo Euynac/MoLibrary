@@ -33,4 +33,11 @@ public interface IAutoModelOperator<TModel>
     /// <returns></returns>
     (List<AutoField> fields, List<string> failedList) NormalizeLiteralSelectWithoutException(string selectExpression,
         bool isReverseSelect = false);
+
+    /// <summary>
+    /// 获取过滤表达式的归一化结果
+    /// </summary>
+    /// <param name="filter"></param>
+    /// <returns></returns>
+    NormalizedResult GetNormalizedResult(string filter);
 }

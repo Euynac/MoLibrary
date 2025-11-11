@@ -160,7 +160,7 @@ public partial class AutoModelExpressionTokenizer<TModel>(
 
         var parameters = context.Tokens.Select(p => p.ConvertedValue).ToList();
         parameters.AddRange(supplementObjects);
-        return new NormalizedResult(context.GetFinalExpression(), parameters);
+        return new NormalizedResult(context.GetFinalExpression(), parameters, context);
     }
 
 

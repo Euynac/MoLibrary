@@ -23,6 +23,19 @@ public class AutoModelDbOperatorDynamicLinqProvider<TModel>(IAutoModelExpression
 
     private readonly IAutoModelExpressionNormalizer<TModel> _normalizer = normalizer;
 
+    public IQueryable<TModel> ApplyFilter(IQueryable<TModel> queryable, NormalizedResult result)
+    {
+        try
+        {
+            var query = queryable.Where(_config, result.FinalExpression, [.. result.Params]);
+            return query;
+        }
+        catch (Exception e)
+        {
+            throw new AutoModelInvokerException($"{result}执行SQL生成出现错误：{e.Message}");
+        }
+    }
+
     public virtual IQueryable<TModel> ApplyFilter(IQueryable<TModel> queryable, Expression<Func<TModel, object>> selector, EFieldConditions condition, string value)
     {
         return ApplyFilter(queryable, $"{selector.GetPropertyInfo().Name} {condition.GetKouEnumName()} \"{value}\""); //TODO 转义？
@@ -35,29 +48,13 @@ public class AutoModelDbOperatorDynamicLinqProvider<TModel>(IAutoModelExpression
             return queryable.Where(_config, filter.TrimStart('[').TrimEnd(']'));
         }
         var result = _normalizer.NormalizeFilter(filter);
-        try
-        {
-            var query = queryable.Where(_config, result.FinalExpression, [.. result.Params]);
-            return query;
-        }
-        catch (Exception e)
-        {
-            throw new AutoModelInvokerException($"{result}执行SQL生成出现错误：{e.Message}");
-        }
+        return ApplyFilter(queryable, result);
     }
 
     public virtual IQueryable<TModel> ApplyFuzzy(IQueryable<TModel> queryable, string fuzzy, string? fuzzyColumns = null)
     {
         var result = _normalizer.NormalizeFuzzy(fuzzy, fuzzyColumns);
-        try
-        {
-            var query = queryable.Where(_config, result.FinalExpression, [.. result.Params]);
-            return query;
-        }
-        catch (Exception e)
-        {
-            throw new AutoModelInvokerException($"{result}执行SQL生成出现错误：{e.Message}");
-        }
+        return ApplyFilter(queryable, result);
     }
 
     public virtual IQueryable DynamicSelect(IQueryable<TModel> queryable, string selectColumns)
