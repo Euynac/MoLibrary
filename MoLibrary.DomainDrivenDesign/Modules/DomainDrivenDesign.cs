@@ -49,8 +49,7 @@ public class ModuleDomainDrivenDesign(ModuleDomainDrivenDesignOption option) : M
         DependsOnModule<ModuleDependencyInjectionGuide>().Register();
         DependsOnModule<ModuleDynamicProxyGuide>().Register();
         DependsOnModule<ModuleGlobalExceptionHandlerGuide>().Register()
-            .AddDefaultExceptionHandler()
-            .AddCustomExceptionHandler<AutoModelExceptionHandlerForRes>();
+            .AddDefaultExceptionHandler();
         DependsOnModule<ModuleSwaggerGuide>().Register();
         DependsOnModule<ModuleGlobalExceptionHandlerGuide>().Register();
         //DependsOnModule<ModuleAuthorizationGuide>().Register().AddDefaultPermissionBit<>();
@@ -58,7 +57,7 @@ public class ModuleDomainDrivenDesign(ModuleDomainDrivenDesignOption option) : M
         DependsOnModule<ModuleMediatorGuide>().Register();
         DependsOnModule<ModuleMapperGuide>().Register();
         DependsOnModule<ModuleRepositoryGuide>().Register();
-        if (Option.UseGlobalExceptionHandler)
+        if (!Option.DisableGlobalExceptionHandler)
         {
             DependsOnModule<ModuleGlobalExceptionHandlerGuide>().Register()
                 .AddMoExceptionHandlerPack<MoValidationExceptionHandler>();
@@ -81,5 +80,5 @@ public class ModuleDomainDrivenDesignGuide : MoModuleGuide<ModuleDomainDrivenDes
 
 public class ModuleDomainDrivenDesignOption : MoModuleOption<ModuleDomainDrivenDesign>, IMoModuleOptionUseGlobalException
 {
-    public bool UseGlobalExceptionHandler { get; set; }
+    public bool DisableGlobalExceptionHandler { get; set; }
 }

@@ -2,5 +2,8 @@
 
 public interface IMoModuleOptionUseGlobalException
 {
-    bool UseGlobalExceptionHandler { get; set; }
+    /// <summary>
+    /// 是否禁用全局异常处理器
+    /// </summary>
+    bool DisableGlobalExceptionHandler { get; set; }
 }

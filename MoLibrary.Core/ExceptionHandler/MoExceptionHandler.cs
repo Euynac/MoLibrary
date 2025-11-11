@@ -25,30 +25,32 @@ internal class MoExceptionHandler(ILogger<MoExceptionHandler> logger, IHttpConte
     public async Task<Res> TryHandleAsync(HttpContext? httpContext, Exception exception,
         CancellationToken cancellationToken)
     {
+        // 展开包装异常并收集额外信息
+        var (actualException, extraInfoList) = UnwrapException(exception);
+
         foreach (var pack in packs)
         {
-            if (pack.TryHandleAsync(httpContext, exception, cancellationToken, out var res))
+            if (pack.TryHandleAsync(httpContext, actualException, cancellationToken, out var res))
             {
-                return res!;
+                return AppendExtraInfoList(res!);
             }
         }
 
-        switch (exception)
+        switch (actualException)
         {
             case MoExceptionBusinessError businessError:
-                return Res.Fail(businessError.Message);
-            
-           
+                return AppendExtraInfoList(Res.Fail(businessError.Message));
+
             default:
             {
                 var problemDetail = new ProblemDetails
                 {
                     //StatusCodes.Status500InternalServerError
                     Status = httpContext?.Response.StatusCode,
-                    Title = exception.GetMessageRecursively(),
+                    Title = actualException.GetMessageRecursively(),
                     Extensions =
                     {
-                        ["stackTrace"] = exception.ToString().Split(new[]{'\r', '\n'}, StringSplitOptions.RemoveEmptyEntries),
+                        ["stackTrace"] = actualException.ToString().Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries),
                         ["response"] = httpContext?.Response.CloneAs<DtoHttpContextResponse>(),
                         ["request"] = httpContext?.Request.CloneAs<DtoHttpContextRequest>(),
                         ["connection"] = httpContext?.Connection.ToJsonStringForce(),
@@ -57,9 +59,48 @@ internal class MoExceptionHandler(ILogger<MoExceptionHandler> logger, IHttpConte
                     }
                 };
 
-                return new ResError<ProblemDetails>(problemDetail, "服务器出现异常", ResponseCode.InternalError);
+                return AppendExtraInfoList(
+                    new ResError<ProblemDetails>(problemDetail, "服务器出现异常", ResponseCode.InternalError));
             }
         }
+
+        // 本地函数：将额外信息列表添加到响应对象中
+        T AppendExtraInfoList<T>(T res) where T : IMoResponse
+        {
+            foreach (var kvp in extraInfoList)
+            {
+                res.AppendExtraInfo(kvp.Key, kvp.Value);
+            }
+            return res;
+        }
+    }
+
+    /// <summary>
+    /// 展开 MoWrapperException 并收集所有额外信息
+    /// </summary>
+    /// <param name="exception">原始异常</param>
+    /// <returns>实际异常和额外信息列表</returns>
+    private static (Exception ActualException, List<KeyValuePair<string, object?>> ExtraInfo) UnwrapException(Exception exception)
+    {
+        var extraInfoList = new List<KeyValuePair<string, object?>>();
+        var currentException = exception;
+
+        // 迭代展开所有的 MoWrapperException
+        while (currentException is MoWrapperException wrapperException)
+        {
+            // 收集额外信息
+            extraInfoList.AddRange(wrapperException.ExtraInfo);
+
+            // 如果没有内部异常，则当前包装器就是实际异常（不推荐但要处理）
+            if (wrapperException.InnerException == null)
+            {
+                break;
+            }
+
+            currentException = wrapperException.InnerException;
+        }
+
+        return (currentException, extraInfoList);
     }
 }
 
