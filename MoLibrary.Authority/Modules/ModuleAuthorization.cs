@@ -37,7 +37,7 @@ public class ModuleAuthorization(ModuleAuthorizationOption option) : MoModuleWit
 
     public override void ClaimDependencies()
     {
-        if (Option.UseGlobalExceptionHandler)
+        if (!Option.DisableGlobalExceptionHandler)
         {
             DependsOnModule<ModuleGlobalExceptionHandlerGuide>().Register().AddMoExceptionHandlerPack<MoAuthorizationExceptionHandler>();
         }

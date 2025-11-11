@@ -5,5 +5,5 @@ namespace MoLibrary.Authority.Modules;
 
 public class ModuleAuthorizationOption : MoModuleOption<ModuleAuthorization>, IMoModuleOptionUseGlobalException
 {
-    public bool UseGlobalExceptionHandler { get; set; }
+    public bool DisableGlobalExceptionHandler { get; set; }
 }

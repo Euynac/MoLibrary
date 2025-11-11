@@ -118,7 +118,6 @@ public class ModuleGlobalExceptionHandler(ModuleGlobalExceptionHandlerOption opt
 public class ModuleGlobalExceptionHandlerGuide : MoModuleGuide<ModuleGlobalExceptionHandler,
     ModuleGlobalExceptionHandlerOption, ModuleGlobalExceptionHandlerGuide>
 {
-
     public ModuleGlobalExceptionHandlerGuide AddDefaultExceptionHandler()
     {
         ConfigureServices(context =>
