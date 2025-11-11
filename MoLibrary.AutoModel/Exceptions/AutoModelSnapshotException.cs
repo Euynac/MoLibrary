@@ -1,8 +1,19 @@
 namespace MoLibrary.AutoModel.Exceptions;
 
-public class AutoModelSnapshotException(string message) : AutoModelBaseException(message);
+/// <summary>
+/// Snapshot 构建和配置错误
+/// </summary>
+public class AutoModelSnapshotException(string displayMessage, string? technicalDetail = null)
+    : AutoModelBaseException(displayMessage, technicalDetail);
 
-public class AutoModelSnapshotNotSupportTypeException(string message, Type fromPropertyType) : AutoModelSnapshotException(message)
+/// <summary>
+/// Snapshot 不支持的类型异常
+/// </summary>
+public class AutoModelSnapshotNotSupportTypeException(
+    string displayMessage,
+    string technicalDetail,
+    Type fromPropertyType)
+    : AutoModelSnapshotException(displayMessage, technicalDetail)
 {
     /// <summary>
     /// 相关的不支持的字段类型

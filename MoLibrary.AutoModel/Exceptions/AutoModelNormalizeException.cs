@@ -1,4 +1,13 @@
 namespace MoLibrary.AutoModel.Exceptions;
 
-public class AutoModelNormalizeException(string message) : AutoModelBaseException(message);
-public class AutoModelTokenExpGenException(string message) : AutoModelBaseException(message);
+/// <summary>
+/// 表达式/查询标准化/解析错误
+/// </summary>
+public class AutoModelNormalizeException(string displayMessage, string? technicalDetail = null)
+    : AutoModelBaseException(displayMessage, technicalDetail);
+
+/// <summary>
+/// Token 表达式生成错误
+/// </summary>
+public class AutoModelTokenExpGenException(string displayMessage, string? technicalDetail = null)
+    : AutoModelBaseException(displayMessage, technicalDetail);

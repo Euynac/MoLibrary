@@ -86,7 +86,9 @@ public partial class AutoModelExpressionTokenizer<TModel>(
                 logger.LogError("Expression tokenize encountered error: {exp}\n Errors:\n{errors}",
                     context.OriginExpression, finalError.ToString().TrimEnd());
             }
-            throw new AutoModelNormalizeException(finalError.ToString().TrimEnd());
+            throw new AutoModelNormalizeException(
+                displayMessage: "查询表达式解析失败",
+                technicalDetail: finalError.ToString().TrimEnd());
         }
     }
 

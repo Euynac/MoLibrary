@@ -32,7 +32,9 @@ public class AutoModelDbOperatorDynamicLinqProvider<TModel>(IAutoModelExpression
         }
         catch (Exception e)
         {
-            throw new AutoModelInvokerException($"{result}执行SQL生成出现错误：{e.Message}");
+            throw new AutoModelInvokerException(
+                displayMessage: "数据查询执行失败",
+                technicalDetail: $"SQL: {result.FinalExpression}, 参数: {result.Params.ToJsonString()}, 错误: {e.Message}");
         }
     }
 
