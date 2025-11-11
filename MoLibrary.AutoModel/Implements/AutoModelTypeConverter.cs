@@ -67,7 +67,7 @@ public class AutoModelTypeConverter(IOptions<AutoModelExpressionOptions> options
             case EBasicType.IsChar:
             case EBasicType.IsClass:
             case EBasicType.IsFloat:
-            default: throw new AutoModelValueConvertException($"不支持转换的参数类型{typeSetting.OriginType.FullName}");
+            default: throw new AutoModelValueConvertException($"不支持转换的参数类型{typeSetting.OriginType.GetCleanFullName()}");
         }
     }
 

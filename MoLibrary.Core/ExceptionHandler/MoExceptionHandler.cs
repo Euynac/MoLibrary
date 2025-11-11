@@ -41,6 +41,16 @@ internal class MoExceptionHandler(ILogger<MoExceptionHandler> logger, IHttpConte
             case MoExceptionBusinessError businessError:
                 return AppendExtraInfoList(Res.Fail(businessError.Message));
 
+            case MoDisplayMessageException displayMsgException:
+            {
+                var res = new Res(displayMsgException.DisplayMessage, displayMsgException.ResponseCode);
+                if (displayMsgException.TechnicalDetail != null)
+                {
+                    res.AppendExtraInfo("detail", displayMsgException.TechnicalDetail);
+                }
+                return AppendExtraInfoList(res);
+            }
+
             default:
             {
                 var problemDetail = new ProblemDetails

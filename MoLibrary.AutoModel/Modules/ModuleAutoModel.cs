@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
-using MoLibrary.AutoModel.Exceptions;
 using MoLibrary.AutoModel.Implements;
 using MoLibrary.AutoModel.Interfaces;
 using MoLibrary.Core.Module;
@@ -71,7 +70,7 @@ public class ModuleAutoModel(ModuleAutoModelOption option) : MoModuleWithDepende
     {
         if (!Option.DisableGlobalExceptionHandler)
         {
-            DependsOnModule<ModuleGlobalExceptionHandlerGuide>().Register().AddMoExceptionHandlerPack<AutoModelExceptionHandler>();
+            DependsOnModule<ModuleGlobalExceptionHandlerGuide>().Register();
         }
     }
 }
