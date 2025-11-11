@@ -12,9 +12,15 @@ public interface IAutoModelMemoryOperator<TModel> : IAutoModelOperator<TModel>
     /// <summary>
     /// 获取过滤器
     /// </summary>
+    /// <param name="result"></param>
+    /// <returns></returns>
+    Func<TModel, bool> GetFilter(NormalizedResult result);
+    /// <summary>
+    /// 获取过滤器
+    /// </summary>
     /// <param name="filter"></param>
     /// <returns></returns>
-    Func<TModel, bool> GetFilter(NormalizedResult filter);
+    Func<TModel, bool> GetFilter(string filter);
     /// <summary>
     /// 应用过滤器
     /// </summary>

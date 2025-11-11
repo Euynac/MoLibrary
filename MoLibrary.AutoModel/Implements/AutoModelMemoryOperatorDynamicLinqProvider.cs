@@ -32,6 +32,13 @@ public class AutoModelMemoryOperatorDynamicLinqProvider<TModel> : AutoModelOpera
             [.. result.Params]).Compile();
         return func;
     }
+    public Func<TModel, bool> GetFilter(string filter)
+    {
+        var result = _normalizer.NormalizeFilter(filter);
+        var func = (Func<TModel, bool>)DynamicExpressionParser.ParseLambda(_config, typeof(TModel), typeof(bool), result.FinalExpression,
+            [.. result.Params]).Compile();
+        return func;
+    }
 
     public IEnumerable<TModel> ApplyFilter(IEnumerable<TModel> queryable, string filter)
     {
