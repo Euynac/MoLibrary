@@ -56,10 +56,12 @@ public interface IAutoModelExpressionNormalizer<TModel>
         bool isReverseSelect = false);
 }
 
-public class NormalizedResult(string finalExpression, List<object?> @params)
+public class NormalizedResult(string finalExpression, List<object?> @params, TokenizerContext context)
 {
     public string FinalExpression { get; set; } = finalExpression;
     public List<object?> Params { get; set; } = @params;
+    public TokenizerContext Context { get; } = context;
+
     public override string ToString()
     {
         return $"Generated expression:{FinalExpression}\nparams:{Params.Select((p, i) =>
