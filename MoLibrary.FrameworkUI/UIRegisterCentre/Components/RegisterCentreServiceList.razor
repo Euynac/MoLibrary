@@ -96,7 +96,7 @@
 			<TemplateColumn Title="@metadataKey">
 				<CellTemplate>
 					@{
-						var runningInstance = context.Item.GetRunningInstanceInfo();
+						var runningInstance = context.Item.GetValidInstanceInfo();
 						var metadataValue = runningInstance?.RegisterInfo.Metadata.GetValueOrDefault(metadataKey) ?? "N/A";
 					}
 					<MetadataValueDisplay Value="@metadataValue" IsCompactMode="true" />
