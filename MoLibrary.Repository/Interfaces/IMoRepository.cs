@@ -19,6 +19,12 @@ public interface IMoRepository<TEntity> : IMoBasicRepository<TEntity>, IMoReposi
     where TEntity : class, IMoEntity
 {
     /// <summary>
+    /// Disables the soft delete filter for the specified queryable.
+    /// </summary>
+    /// <param name="queryable">The queryable to disable the soft delete filter for.</param>
+    /// <returns>The queryable with the soft delete filter disabled.</returns>
+    IQueryable<TEntity> DisableSoftDeleteFilter(IQueryable<TEntity> queryable);
+    /// <summary>
     /// Asynchronously retrieves the <see cref="DbSet{TEntity}"/> instance associated with the repository.
     /// </summary>
     /// <returns>
@@ -103,5 +109,5 @@ public interface IMoRepositoryFeatures
     /// 该仓库是进行了分表操作
     /// </summary>
     /// <returns></returns>
-    public bool IsShardingTable() => false;
+    bool IsShardingTable() => false;
 }
