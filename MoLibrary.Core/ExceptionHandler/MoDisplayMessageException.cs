@@ -1,3 +1,4 @@
+using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Core.ExceptionHandler;
@@ -33,7 +34,7 @@ public abstract class MoDisplayMessageException : Exception
     /// <param name="displayMessage">用户友好的错误消息</param>
     /// <param name="technicalDetail">技术细节（可选）</param>
     protected MoDisplayMessageException(string displayMessage, string? technicalDetail = null)
-        : base(technicalDetail ?? displayMessage)
+        : base($"{displayMessage}{technicalDetail?.BeAfter(": ")}")
     {
         DisplayMessage = displayMessage;
         TechnicalDetail = technicalDetail;

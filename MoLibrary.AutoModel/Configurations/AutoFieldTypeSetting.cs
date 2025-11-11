@@ -81,7 +81,9 @@ public class AutoFieldTypeSetting
             }
 
             if (parameterType == null)
-                throw new AutoModelSnapshotNotSupportTypeException($"不支持该功能参数类型{originParameterTypeName}",
+                throw new AutoModelSnapshotNotSupportTypeException(
+                    displayMessage: "字段类型不支持",
+                    technicalDetail: $"IEnumerable 泛型参数为 null: {originParameterTypeName}",
                     origin);
         }
 
@@ -90,7 +92,9 @@ public class AutoFieldTypeSetting
             features |= ETypeFeatures.IsThreadLocal;
             parameterType = parameterType.GetGenericArguments().FirstOrDefault();
             if (parameterType == null)
-                throw new AutoModelSnapshotNotSupportTypeException($"不支持该功能参数类型{originParameterTypeName}",
+                throw new AutoModelSnapshotNotSupportTypeException(
+                    displayMessage: "字段类型不支持",
+                    technicalDetail: $"ThreadLocal 泛型参数为 null: {originParameterTypeName}",
                     origin);
         }
         if (parameterType.IsNullableValueType())
@@ -155,7 +159,10 @@ public class AutoFieldTypeSetting
 
         if (underlyingType == typeof(char)) return EBasicType.IsChar;
         if (underlyingType.IsClass) return EBasicType.IsClass;//string is also class.
-        throw new AutoModelSnapshotNotSupportTypeException($"暂不支持的类型{underlyingType.GetCleanFullName()}", origin);
+        throw new AutoModelSnapshotNotSupportTypeException(
+            displayMessage: "字段类型不支持",
+            technicalDetail: $"不支持的类型: {underlyingType.GetCleanFullName()}",
+            origin);
     }
 
     public override string ToString()

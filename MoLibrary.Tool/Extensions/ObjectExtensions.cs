@@ -29,11 +29,11 @@ namespace MoLibrary.Tool.Extensions
         [StringFormatMethod("be")]
         public static string? Be([NotNull] this object obj, string? be, bool useStringFormat) => be == null ? null : string.Format(be, obj);
         /// <summary>
-        /// Returns given front append with object. Use must obj?.Be() in this way to quickly truncate to null.
+        /// Returns given string append with object. Use must obj?.Be() in this way to quickly truncate to null.
         /// </summary>
         /// <param name="obj"></param>
-        /// <param name="fontAppend"></param>
-        public static string BeAfter(this object obj, string fontAppend) => $"{fontAppend}{obj}";
+        /// <param name="strAppend"></param>
+        public static string BeAfter(this object obj, string strAppend) => $"{strAppend}{obj}";
         /// <summary>
         /// If the string is not null or Empty, the given string is returned directly.
         /// </summary>
