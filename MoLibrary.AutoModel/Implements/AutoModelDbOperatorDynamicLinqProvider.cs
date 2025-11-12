@@ -7,6 +7,7 @@ using MoLibrary.AutoModel.Configurations;
 using MoLibrary.AutoModel.Exceptions;
 using MoLibrary.AutoModel.Interfaces;
 using MoLibrary.AutoModel.Model;
+using MoLibrary.Core.Extensions;
 using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.General;
 
@@ -33,8 +34,8 @@ public class AutoModelDbOperatorDynamicLinqProvider<TModel>(IAutoModelExpression
         catch (Exception e)
         {
             throw new AutoModelInvokerException(
-                displayMessage: "数据查询执行失败",
-                technicalDetail: $"SQL: {result.FinalExpression}, 参数: {result.Params.ToJsonString()}, 错误: {e.Message}");
+                displayMessage: "数据查询执行失败，请检查表达式是否存在语法错误",
+                technicalDetail: $"Expr: {result.FinalExpression}, 参数: {result.Params.ToJsonString()}, 错误: {e.GetMessageRecursively()}");
         }
     }
 
