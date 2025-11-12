@@ -1,3 +1,6 @@
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
+
 namespace MoLibrary.JobScheduler.Models;
 
 /// <summary>
@@ -84,6 +87,8 @@ public class JobDefinition
     /// Used to create job instances via dependency injection.
     /// Must inherit from RecurringJob or TriggeredJob{TParam}.
     /// </summary>
+    [NotMapped]
+    [JsonIgnore]
     public Type JobClrType { get; set; } = typeof(object);
 
     /// <summary>
@@ -91,5 +96,7 @@ public class JobDefinition
     /// Only applicable for TriggeredJob{TParam}. Null for recurring jobs.
     /// Used to deserialize JSON parameters when creating job instances.
     /// </summary>
+    [NotMapped]
+    [JsonIgnore]
     public Type? ParameterClrType { get; set; }
 }

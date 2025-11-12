@@ -3,7 +3,7 @@
 /// <summary>
 ///     Defines interface of a triggered job.
 /// </summary>
-public interface IMoTriggeredJob<in TArgs>
+public interface IMoTriggeredJob<in TArgs> : IMoJobDefinition
 {
     /// <summary>
     ///     Executes the job with the <paramref name="args" />.

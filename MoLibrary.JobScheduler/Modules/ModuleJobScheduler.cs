@@ -4,10 +4,12 @@ using Microsoft.Extensions.Logging;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
+using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Attributes;
 using MoLibrary.JobScheduler.ControlPlane;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.JobScheduler.Jobs;
+using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.JobScheduler.Modules;
 
@@ -19,7 +21,6 @@ namespace MoLibrary.JobScheduler.Modules;
 public class ModuleJobScheduler(ModuleJobSchedulerOption option)
     : MoModule<ModuleJobScheduler, ModuleJobSchedulerOption, ModuleJobSchedulerGuide>(option), IWantIterateBusinessTypes
 {
-    private readonly List<Type> _jobTypes = [];
     private readonly List<JobDefinition> _jobDefinitions = [];
 
     public override EMoModules CurModuleEnum() => EMoModules.JobScheduler;
@@ -34,35 +35,16 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
         {
             if (type is { IsClass: true, IsAbstract: false })
             {
-                // Check if type inherits from RecurringTask
-                if (type.IsAssignableTo(typeof(MoRecurringJob)))
+                if (type.IsAssignableTo(typeof(IMoRecurringJob)))
                 {
-                    try
-                    {
-                        var jobDefinition = ExtractJobDefinition(type, JobType.Recurring);
-                        _jobTypes.Add(type);
-                        _jobDefinitions.Add(jobDefinition);
-                        Logger.LogDebug("Discovered RecurringJob: {JobKey} ({TypeName})", jobDefinition.JobKey, type.Name);
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.LogError(ex, "Failed to extract job definition from RecurringJob type: {TypeName}", type.FullName);
-                    }
+                    var jobDefinition = ExtractJobDefinition(type, JobType.Recurring);
+                    _jobDefinitions.Add(jobDefinition);
                 }
-                // Check if type inherits from TriggeredJob<>
-                else if (IsTriggeredJob(type))
+                else if (type.IsImplementInterfaceGeneric(typeof(IMoTriggeredJob<>), out var parameterType))
                 {
-                    try
-                    {
-                        var jobDefinition = ExtractJobDefinition(type, JobType.Triggered);
-                        _jobTypes.Add(type);
-                        _jobDefinitions.Add(jobDefinition);
-                        Logger.LogDebug("Discovered TriggeredJob: {JobKey} ({TypeName})", jobDefinition.JobKey, type.Name);
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.LogError(ex, "Failed to extract job definition from TriggeredJob type: {TypeName}", type.FullName);
-                    }
+                    var jobDefinition = ExtractJobDefinition(type, JobType.Triggered);
+                    jobDefinition.ParameterClrType = parameterType;
+                    _jobDefinitions.Add(jobDefinition);
                 }
             }
 
@@ -76,10 +58,10 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
     public override void PostConfigureServices(IServiceCollection services)
     {
         // Register all discovered job types as transient in DI
-        foreach (var jobType in _jobTypes)
+        foreach (var job in _jobDefinitions)
         {
-            services.AddTransient(jobType);
-            Logger.LogDebug("Registered job type to DI: {TypeName}", jobType.Name);
+            services.AddTransient(job.JobClrType);
+            Logger.LogDebug("Discovered {JobType}Job: {JobKey} ({TypeName})", job.Type, job.JobKey, job.JobName);
         }
 
         Logger.LogInformation("Discovered {Count} job type(s) for registration", _jobDefinitions.Count);
@@ -99,24 +81,7 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
             return new JobRegistrationHostedService(jobRegistry, _jobDefinitions, logger);
         });
     }
-
-    /// <summary>
-    /// Checks if a type inherits from TriggeredJob{TParam}.
-    /// </summary>
-    private static bool IsTriggeredJob(Type type)
-    {
-        var baseType = type.BaseType;
-        while (baseType != null)
-        {
-            if (baseType.IsGenericType && baseType.GetGenericTypeDefinition() == typeof(MoTriggeredJob<>))
-            {
-                return true;
-            }
-            baseType = baseType.BaseType;
-        }
-        return false;
-    }
-
+    
     /// <summary>
     /// Extracts JobDefinition from a job type using reflection and JobConfigAttribute.
     /// </summary>
@@ -167,27 +132,6 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
                 definition.IsDisabled = true;
             }
         }
-
-        // Extract triggered job parameter type
-        if (jobTypeEnum == JobType.Triggered)
-        {
-            var baseType = jobType.BaseType;
-            while (baseType != null)
-            {
-                if (baseType.IsGenericType && baseType.GetGenericTypeDefinition() == typeof(MoTriggeredJob<>))
-                {
-                    definition.ParameterClrType = baseType.GetGenericArguments()[0];
-                    break;
-                }
-                baseType = baseType.BaseType;
-            }
-
-            if (definition.ParameterClrType == null)
-            {
-                Logger.LogWarning("Failed to extract parameter type from TriggeredJob {JobKey}", definition.JobKey);
-            }
-        }
-
         return definition;
     }
 }
