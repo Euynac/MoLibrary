@@ -67,7 +67,9 @@ public class AutoModelTypeConverter(IOptions<AutoModelExpressionOptions> options
             case EBasicType.IsChar:
             case EBasicType.IsClass:
             case EBasicType.IsFloat:
-            default: throw new AutoModelValueConvertException($"不支持转换的参数类型{typeSetting.OriginType.FullName}");
+            default: throw new AutoModelValueConvertException(
+                displayMessage: "数据类型转换失败",
+                technicalDetail: $"不支持的类型: {typeSetting.OriginType.GetCleanFullName()}");
         }
     }
 
@@ -84,7 +86,9 @@ public class AutoModelTypeConverter(IOptions<AutoModelExpressionOptions> options
             return value;
         }
 
-        throw new AutoModelValueConvertException($"无法转换{value}为Boolean");
+        throw new AutoModelValueConvertException(
+            displayMessage: "布尔值转换失败",
+            technicalDetail: $"无法转换 '{value}' 为 Boolean");
     }
 
     #region DateTime相关
@@ -99,7 +103,9 @@ public class AutoModelTypeConverter(IOptions<AutoModelExpressionOptions> options
             return timeSpanResult;
         }
 
-        throw new AutoModelValueConvertException($"无法转换{value}为TimeSpan");
+        throw new AutoModelValueConvertException(
+            displayMessage: "时间间隔转换失败",
+            technicalDetail: $"无法转换 '{value}' 为 TimeSpan");
     }
 
 
@@ -115,7 +121,9 @@ public class AutoModelTypeConverter(IOptions<AutoModelExpressionOptions> options
             return dateTime;
         }
 
-        throw new AutoModelValueConvertException($"无法转换{value}为DateTime");
+        throw new AutoModelValueConvertException(
+            displayMessage: "日期时间转换失败",
+            technicalDetail: $"无法转换 '{value}' 为 DateTime");
     }
 
     public dynamic ConvertTimeOnly(string value, AutoFieldTypeSetting typeSetting, EFieldConditionFeatures features)
@@ -130,7 +138,9 @@ public class AutoModelTypeConverter(IOptions<AutoModelExpressionOptions> options
             return time;
         }
 
-        throw new AutoModelValueConvertException($"无法转换{value}为TimeOnly");
+        throw new AutoModelValueConvertException(
+            displayMessage: "时间转换失败",
+            technicalDetail: $"无法转换 '{value}' 为 TimeOnly");
     }
     public dynamic ConvertDateOnly(string value, AutoFieldTypeSetting typeSetting, EFieldConditionFeatures features)
     {
@@ -146,7 +156,9 @@ public class AutoModelTypeConverter(IOptions<AutoModelExpressionOptions> options
             return time;
         }
 
-        throw new AutoModelValueConvertException($"无法转换{value}为DateOnly");
+        throw new AutoModelValueConvertException(
+            displayMessage: "日期转换失败",
+            technicalDetail: $"无法转换 '{value}' 为 DateOnly");
     }
     #endregion
 
@@ -166,7 +178,9 @@ public class AutoModelTypeConverter(IOptions<AutoModelExpressionOptions> options
             return doubleResult;
         }
 
-        throw new AutoModelValueConvertException($"无法转换{value}为数字double类型");
+        throw new AutoModelValueConvertException(
+            displayMessage: "数值转换失败",
+            technicalDetail: $"无法转换 '{value}' 为 Double");
     }
 
     public dynamic ConvertLong(string value, AutoFieldTypeSetting typeSetting, EFieldConditionFeatures features)
@@ -179,7 +193,9 @@ public class AutoModelTypeConverter(IOptions<AutoModelExpressionOptions> options
         {
             return result;
         }
-        throw new AutoModelValueConvertException($"无法转换{value}为数字long类型");
+        throw new AutoModelValueConvertException(
+            displayMessage: "数值转换失败",
+            technicalDetail: $"无法转换 '{value}' 为 Long");
     }
 
     public dynamic ConvertInt(string value, AutoFieldTypeSetting typeSetting, EFieldConditionFeatures features)
@@ -192,7 +208,9 @@ public class AutoModelTypeConverter(IOptions<AutoModelExpressionOptions> options
         {
             return result;
         }
-        throw new AutoModelValueConvertException($"无法转换{value}为数字int类型");
+        throw new AutoModelValueConvertException(
+            displayMessage: "数值转换失败",
+            technicalDetail: $"无法转换 '{value}' 为 Int32");
     }
 
     public dynamic ConvertDecimal(string value, AutoFieldTypeSetting typeSetting, EFieldConditionFeatures features)
@@ -205,7 +223,9 @@ public class AutoModelTypeConverter(IOptions<AutoModelExpressionOptions> options
         {
             return result;
         }
-        throw new AutoModelValueConvertException($"无法转换{value}为数字decimal类型");
+        throw new AutoModelValueConvertException(
+            displayMessage: "数值转换失败",
+            technicalDetail: $"无法转换 '{value}' 为 Decimal");
     }
     #endregion
 
@@ -227,7 +247,9 @@ public class AutoModelTypeConverter(IOptions<AutoModelExpressionOptions> options
         }
         catch (Exception e)
         {
-            throw new AutoModelValueConvertException(e.Message);
+            throw new AutoModelValueConvertException(
+                displayMessage: "枚举值转换失败",
+                technicalDetail: e.Message);
         }
     }
     public dynamic ConvertString(string value, AutoFieldTypeSetting typeSetting, EFieldConditionFeatures features)
@@ -249,7 +271,9 @@ public class AutoModelTypeConverter(IOptions<AutoModelExpressionOptions> options
             return guid;
         }
 
-        throw new AutoModelValueConvertException($"无法转换{value}为Guid");
+        throw new AutoModelValueConvertException(
+            displayMessage: "唯一标识符转换失败",
+            technicalDetail: $"无法转换 '{value}' 为 Guid");
     }
 
 

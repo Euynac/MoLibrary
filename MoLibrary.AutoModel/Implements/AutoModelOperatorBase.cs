@@ -26,4 +26,9 @@ public abstract class AutoModelOperatorBase<TModel>(IAutoModelExpressionNormaliz
     {
         return normalizer.NormalizeLiteralSelectWithoutException(selectExpression, isReverseSelect);
     }
+
+    public NormalizedResult GetNormalizedResult(string filter)
+    {
+        return normalizer.NormalizeFilter(filter);
+    }
 }

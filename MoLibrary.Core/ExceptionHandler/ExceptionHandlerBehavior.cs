@@ -2,7 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Http;
 using MoLibrary.Tool.MoResponse;
 
-namespace MoLibrary.DomainDrivenDesign.ExceptionHandler;
+namespace MoLibrary.Core.ExceptionHandler;
 
 /// <summary>
 /// Middleware for handling exceptions in MediatR pipeline.

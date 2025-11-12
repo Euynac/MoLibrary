@@ -4,6 +4,7 @@ using MoLibrary.Authority.Authorization;
 using MoLibrary.Authority.Implements.Authorization;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Models;
+using MoLibrary.Core.Modules;
 
 namespace MoLibrary.Authority.Modules;
 
@@ -36,5 +37,10 @@ public class ModuleAuthorization(ModuleAuthorizationOption option) : MoModuleWit
 
     public override void ClaimDependencies()
     {
+        if (!Option.DisableGlobalExceptionHandler)
+        {
+            DependsOnModule<ModuleGlobalExceptionHandlerGuide>().Register().AddMoExceptionHandlerPack<MoAuthorizationExceptionHandler>();
+        }
+        DependsOnModule<ModuleAuthenticationGuide>().Register();
     }
 }

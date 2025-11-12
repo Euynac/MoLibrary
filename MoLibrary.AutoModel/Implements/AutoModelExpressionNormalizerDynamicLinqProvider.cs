@@ -28,7 +28,9 @@ public class AutoModelExpressionNormalizerDynamicLinqProvider<TModel>(
         var (fields, failedList) = NormalizeLiteralSelectWithoutException(columns, isReverseSelect);
 
         if (failedList.Count <= 0) return fields;
-        throw new AutoModelNormalizeException($"选择字段{failedList.StringJoin(",")}无法识别。支持的激活名有：{string.Join(',', snapshot.GetAllActivateNames())}");
+        throw new AutoModelNormalizeException(
+            displayMessage: "查询字段无法识别",
+            technicalDetail: $"无法识别的字段: {failedList.StringJoin(",")}; 支持的字段: {string.Join(',', snapshot.GetAllActivateNames())}");
     }
 
     public (List<AutoField> fields, List<string> failedList) NormalizeLiteralSelectWithoutException(string selectExpression,
@@ -70,7 +72,9 @@ public class AutoModelExpressionNormalizerDynamicLinqProvider<TModel>(
     {
         if (field.NavigationProperties is { } list)
         {
-            if (field.NavigationProperties.Any(p => p.IsCollection)) throw new AutoModelNormalizeException($"暂不支持选择列表字段{field}");
+            if (field.NavigationProperties.Any(p => p.IsCollection)) throw new AutoModelNormalizeException(
+                displayMessage: "不支持查询集合字段",
+                technicalDetail: $"字段 '{field.ReflectionName}' 是集合类型，暂不支持直接查询");
 
             return list.Select(p => p.RefelectName).CombineForeach([field.ReflectionName]).StringJoin(".");
         }
@@ -80,7 +84,9 @@ public class AutoModelExpressionNormalizerDynamicLinqProvider<TModel>(
     public string NormalizeSelectColumns(string selectColumns, bool isReverseSelect = false)
     {
         if (string.IsNullOrWhiteSpace(selectColumns))
-            throw new AutoModelNormalizeException("选择字段不能为空");
+            throw new AutoModelNormalizeException(
+                displayMessage: "查询字段不能为空",
+                technicalDetail: "Select 参数为 null 或空");
         var selectColumnExp = "";
         if (isReverseSelect)
         {
@@ -132,7 +138,9 @@ public class AutoModelExpressionNormalizerDynamicLinqProvider<TModel>(
                 .Select(p => $"({p.TypeSetting.OriginType.Name}){p.ReflectionName}").StringJoin(",");
             if (!string.IsNullOrWhiteSpace(unsupported))
             {
-                throw new AutoModelNormalizeException($"模糊查询存在不支持的字段：{unsupported}");
+                throw new AutoModelNormalizeException(
+                    displayMessage: "模糊查询字段类型不支持",
+                    technicalDetail: $"不支持的字段: {unsupported}");
             }
         }
         else

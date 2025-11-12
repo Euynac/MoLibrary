@@ -1,8 +1,9 @@
+using MoLibrary.Core.ExceptionHandler;
 using MoLibrary.Core.Module.Interfaces;
 
 namespace MoLibrary.AutoModel.Modules;
 
-public class ModuleAutoModelOption : MoModuleControllerOption<ModuleAutoModel>
+public class ModuleAutoModelOption : MoModuleControllerOption<ModuleAutoModel>, IMoModuleOptionUseGlobalException
 {
     /// <summary>
     /// 全局主动模式（仅使用了AutoField标签的字段才会启用自动模型功能）
@@ -36,4 +37,6 @@ public class ModuleAutoModelOption : MoModuleControllerOption<ModuleAutoModel>
     /// 开启对于不支持的字段类型进行异常报错
     /// </summary>
     public bool EnableErrorForUnsupportedFieldTypes { get; set; }
+
+    public bool DisableGlobalExceptionHandler { get; set; }
 }

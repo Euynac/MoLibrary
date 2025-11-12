@@ -1,12 +1,12 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using MoLibrary.Core.ExceptionHandler;
 using MoLibrary.Core.Features.MoChainTracing;
 using MoLibrary.Core.Features.MoChainTracing.Models;
 using MoLibrary.Core.Features.MoTimekeeper;
 using MoLibrary.DependencyInjection.DynamicProxy;
 using MoLibrary.DependencyInjection.DynamicProxy.Abstract;
 using MoLibrary.DomainDrivenDesign.AutoController.MoRpc;
-using MoLibrary.DomainDrivenDesign.ExceptionHandler;
 using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.MoResponse;
 
@@ -93,8 +93,13 @@ public class ChainTrackingProviderInvocationInterceptor(
             }
             catch (Exception ex)
             {
-                // 对于不记录调用链的方法，抛出包装异常
-                throw new Exception($"执行方法 {invocation.Method.DeclaringType?.Name}.{invocation.Method.Name} 异常", ex);
+                // 对于不记录调用链的方法，使用 MoWrapperException 包装异常并附加上下文信息
+                throw new MoWrapperException(
+                    $"执行方法 {invocation.Method.DeclaringType?.Name}.{invocation.Method.Name} 异常",
+                    ex)
+                    .WithExtraInfo("declaringType", invocation.Method.DeclaringType?.Name)
+                    .WithExtraInfo("methodName", invocation.Method.Name)
+                    .WithExtraInfo("invocationContext", "ChainTrackingProviderInvocationInterceptor");
             }
             return;
         }
