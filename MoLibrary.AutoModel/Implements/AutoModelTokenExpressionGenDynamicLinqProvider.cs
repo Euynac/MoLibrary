@@ -7,6 +7,7 @@ using MoLibrary.AutoModel.Configurations;
 using MoLibrary.AutoModel.Exceptions;
 using MoLibrary.AutoModel.Interfaces;
 using MoLibrary.AutoModel.Model;
+using MoLibrary.Tool.General;
 
 namespace MoLibrary.AutoModel.Implements;
 
@@ -298,7 +299,9 @@ public partial class AutoModelTokenExpressionGenDynamicLinqProvider(IOptions<Aut
             }
         }
 
-        throw new AutoModelTokenExpGenException("生成Is对应表达式错误");
+        throw new AutoModelTokenExpGenException(
+            displayMessage: "Is 表达式格式错误",
+            technicalDetail: $"Token: {_token.ToJsonStringForce()}");
     }
 
     #endregion
@@ -355,7 +358,9 @@ public partial class AutoModelTokenExpressionGenDynamicLinqProvider(IOptions<Aut
             return finalExp.ToString();
         }
 
-        throw new AutoModelTokenExpGenException("生成ExpLike对应表达式错误");
+        throw new AutoModelTokenExpGenException(
+            displayMessage: "ExpLike 表达式格式错误",
+            technicalDetail: $"Token: {_token.ToJsonStringForce()}");
 
         string GenElementExp(int start, int end)
         {

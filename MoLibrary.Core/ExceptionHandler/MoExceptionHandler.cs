@@ -1,20 +1,17 @@
+using System.ComponentModel.DataAnnotations;
 using System.Net;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
-using MoLibrary.Authority.Implements.Authorization;
 using MoLibrary.Core.Extensions;
-using MoLibrary.Core.Features;
-using MoLibrary.DomainDrivenDesign.Validation;
 using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.General;
 using MoLibrary.Tool.MoResponse;
 
-namespace MoLibrary.DomainDrivenDesign.ExceptionHandler;
+namespace MoLibrary.Core.ExceptionHandler;
 
-internal class MoExceptionHandler(ILogger<MoExceptionHandler> logger, IHttpContextAccessor accessor) : IMoExceptionHandler
+internal class MoExceptionHandler(ILogger<MoExceptionHandler> logger, IHttpContextAccessor accessor, IEnumerable<IMoExceptionHandlerPack> packs) : IMoExceptionHandler
 {
     public Task<Res> TryHandleWithCurrentHttpContextAsync(Exception exception, CancellationToken cancellationToken)
     {
@@ -28,48 +25,42 @@ internal class MoExceptionHandler(ILogger<MoExceptionHandler> logger, IHttpConte
     public async Task<Res> TryHandleAsync(HttpContext? httpContext, Exception exception,
         CancellationToken cancellationToken)
     {
-        var problemDetail = new ProblemDetails();
-        switch (exception)
+        // 展开包装异常并收集额外信息
+        var (actualException, extraInfoList) = UnwrapException(exception);
+
+        foreach (var pack in packs)
+        {
+            if (pack.TryHandleAsync(httpContext, actualException, cancellationToken, out var res))
+            {
+                return AppendExtraInfoList(res!);
+            }
+        }
+
+        switch (actualException)
         {
             case MoExceptionBusinessError businessError:
-                return Res.Fail(businessError.Message);
-            case MoAuthorizationException { Type: MoAuthorizationException.ExceptionType.NotLogin }:
-                return MoAuthorizationRes.NotLogin();
+                return AppendExtraInfoList(Res.Fail(businessError.Message));
 
-            case MoAuthorizationException { Type: MoAuthorizationException.ExceptionType.RefreshTokenExpired }:
-                return MoAuthorizationRes.RefreshTokenExpired();
-
-            case MoAuthorizationException { Type: MoAuthorizationException.ExceptionType.AccessTokenExpired } e:
-                return MoAuthorizationRes.AccessTokenExpired(e.Reason);
-            case SecurityTokenExpiredException expired:
-                return MoAuthorizationRes.AccessTokenExpired(expired.Message);
-            case MoAuthorizationException authorizationException:
+            case MoDisplayMessageException displayMsgException:
             {
-                problemDetail.Title = authorizationException.Reason;
-                return new ResError<ProblemDetails>(problemDetail, authorizationException.Title, ResponseCode.Forbidden);
+                var res = new Res(displayMsgException.DisplayMessage, displayMsgException.ResponseCode);
+                if (displayMsgException.TechnicalDetail != null)
+                {
+                    res.AppendExtraInfo("detail", displayMsgException.TechnicalDetail);
+                }
+                return AppendExtraInfoList(res);
             }
-            case SecurityTokenArgumentException tokenMalformedException:
-                return new Res("用户Token异常", ResponseCode.Unauthorized).AppendExtraInfo("detail",
-                    tokenMalformedException.Message);
-
-            case SecurityTokenException:
-                return new Res("用户Token异常", ResponseCode.Unauthorized).AppendExtraInfo("detail",
-                    exception.Message);
-     
-            case MoValidationException validationException:
-                return Res.CreateError(validationException.ValidationErrors, "接口请求参数校验失败",
-                    ResponseCode.ValidateError);
 
             default:
             {
-                problemDetail = new ProblemDetails
+                var problemDetail = new ProblemDetails
                 {
                     //StatusCodes.Status500InternalServerError
                     Status = httpContext?.Response.StatusCode,
-                    Title = exception.GetMessageRecursively(),
+                    Title = actualException.GetMessageRecursively(),
                     Extensions =
                     {
-                        ["stackTrace"] = exception.ToString().Split(new[]{'\r', '\n'}, StringSplitOptions.RemoveEmptyEntries),
+                        ["stackTrace"] = actualException.ToString().Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries),
                         ["response"] = httpContext?.Response.CloneAs<DtoHttpContextResponse>(),
                         ["request"] = httpContext?.Request.CloneAs<DtoHttpContextRequest>(),
                         ["connection"] = httpContext?.Connection.ToJsonStringForce(),
@@ -78,9 +69,48 @@ internal class MoExceptionHandler(ILogger<MoExceptionHandler> logger, IHttpConte
                     }
                 };
 
-                return new ResError<ProblemDetails>(problemDetail, "服务器出现异常", ResponseCode.InternalError);
+                return AppendExtraInfoList(
+                    new ResError<ProblemDetails>(problemDetail, "服务器出现异常", ResponseCode.InternalError));
             }
         }
+
+        // 本地函数：将额外信息列表添加到响应对象中
+        T AppendExtraInfoList<T>(T res) where T : IMoResponse
+        {
+            foreach (var kvp in extraInfoList)
+            {
+                res.AppendExtraInfo(kvp.Key, kvp.Value);
+            }
+            return res;
+        }
+    }
+
+    /// <summary>
+    /// 展开 MoWrapperException 并收集所有额外信息
+    /// </summary>
+    /// <param name="exception">原始异常</param>
+    /// <returns>实际异常和额外信息列表</returns>
+    private static (Exception ActualException, List<KeyValuePair<string, object?>> ExtraInfo) UnwrapException(Exception exception)
+    {
+        var extraInfoList = new List<KeyValuePair<string, object?>>();
+        var currentException = exception;
+
+        // 迭代展开所有的 MoWrapperException
+        while (currentException is MoWrapperException wrapperException)
+        {
+            // 收集额外信息
+            extraInfoList.AddRange(wrapperException.ExtraInfo);
+
+            // 如果没有内部异常，则当前包装器就是实际异常（不推荐但要处理）
+            if (wrapperException.InnerException == null)
+            {
+                break;
+            }
+
+            currentException = wrapperException.InnerException;
+        }
+
+        return (currentException, extraInfoList);
     }
 }
 

@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using MoLibrary.Tool.MoResponse;
 
-namespace MoLibrary.DomainDrivenDesign.ExceptionHandler;
+namespace MoLibrary.Core.ExceptionHandler;
 
 /// <summary>
 /// Global exception handler for handling exceptions in the application.

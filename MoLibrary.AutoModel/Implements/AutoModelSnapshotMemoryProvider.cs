@@ -157,7 +157,8 @@ public class AutoModelSnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel
                     {
                         if (!fieldDictionary.TryAdd(name, field))
                             throw new AutoModelSnapshotException(
-                                $"{table.FullTypeName}中{field}激活名{name}已存在，存在的是{fieldDictionary[name]}。请使用[{nameof(AutoField)}]进行忽略或修改其激活名使其不重复。");
+                                displayMessage: "模型字段名称冲突，请使用 [AutoField] 特性重命名",
+                                technicalDetail: $"类型: {table.FullTypeName}, 冲突字段: {field.ReflectionName}, 激活名: {name}, 已存在: {fieldDictionary[name].ReflectionName}");
                     }
                 }
                 catch (AutoModelSnapshotNotSupportTypeException ex)
@@ -167,7 +168,9 @@ public class AutoModelSnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel
                     var msg = $"AutoModel构建Snapshot时发现了不支持该字段类型：{propertyTypeName} in {declaringTypeName}";
                     if (options.EnableErrorForUnsupportedFieldTypes)
                     {
-                        throw new AutoModelSnapshotException(msg);
+                        throw new AutoModelSnapshotException(
+                            displayMessage: "模型包含不支持的字段类型",
+                            technicalDetail: $"类型: {propertyTypeName}, 所在类: {declaringTypeName}");
                     }
 
                     Console.WriteLine(msg); //TODO 后续换为统一模块日志

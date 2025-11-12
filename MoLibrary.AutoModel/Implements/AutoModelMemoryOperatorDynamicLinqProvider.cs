@@ -26,6 +26,12 @@ public class AutoModelMemoryOperatorDynamicLinqProvider<TModel> : AutoModelOpera
         _normalizer = normalizer;
     }
 
+    public Func<TModel, bool> GetFilter(NormalizedResult result)
+    {
+        var func = (Func<TModel, bool>)DynamicExpressionParser.ParseLambda(_config, typeof(TModel), typeof(bool), result.FinalExpression,
+            [.. result.Params]).Compile();
+        return func;
+    }
     public Func<TModel, bool> GetFilter(string filter)
     {
         var result = _normalizer.NormalizeFilter(filter);
@@ -36,27 +42,37 @@ public class AutoModelMemoryOperatorDynamicLinqProvider<TModel> : AutoModelOpera
 
     public IEnumerable<TModel> ApplyFilter(IEnumerable<TModel> queryable, string filter)
     {
-        return queryable.Where(GetFilter(filter));
+        var result = _normalizer.NormalizeFilter(filter);
+        return ApplyFilter(queryable, result);
     }
+
+    public IEnumerable<TModel> ApplyFilter(IEnumerable<TModel> queryable, NormalizedResult result)
+    {
+        return queryable.Where(GetFilter(result));
+    }
+
     public virtual IEnumerable<TModel> ApplyFilter(IEnumerable<TModel> queryable, Expression<Func<TModel, object>> selector, EFieldConditions condition, string value)
     {
         return ApplyFilter(queryable, $"{selector.GetPropertyInfo().Name} {condition.GetKouEnumName()} \"{value}\""); //TODO 转义？
     }
     public IEnumerable<TModel> ApplyFuzzy(IEnumerable<TModel> queryable, string fuzzy, string? fuzzyColumns = null)
     {
-        throw new NotImplementedException();
+        var result = _normalizer.NormalizeFuzzy(fuzzy, fuzzyColumns);
+        return ApplyFilter(queryable, result);
     }
 
     public IEnumerable<dynamic> DynamicSelect(IEnumerable<TModel> queryable, string selectColumns)
     {
         var selector = _normalizer.NormalizeSelectColumns(selectColumns);
-        var func = (dynamic)DynamicExpressionParser.ParseLambda(_config, true, typeof(TModel), null, selector, null).Compile();
+        dynamic func = DynamicExpressionParser.ParseLambda(_config, true, typeof(TModel), null, selector, null).Compile();
         return Enumerable.Select(queryable, func);
     }
 
     public IEnumerable<dynamic> DynamicSelectExcept(IEnumerable<TModel> queryable, string selectExceptColumns)
     {
-        throw new NotImplementedException();
+        var selector = _normalizer.NormalizeSelectColumns(selectExceptColumns, true);
+        dynamic func = DynamicExpressionParser.ParseLambda(_config, true, typeof(TModel), null, selector, null).Compile();
+        return Enumerable.Select(queryable, func);
     }
 }
 

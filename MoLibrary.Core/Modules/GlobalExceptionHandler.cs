@@ -4,15 +4,15 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using MoLibrary.Core.ExceptionHandler;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
-using MoLibrary.DomainDrivenDesign.ExceptionHandler;
 using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.General;
 using MoLibrary.Tool.MoResponse;
 
-namespace MoLibrary.DomainDrivenDesign.Modules;
+namespace MoLibrary.Core.Modules;
 
 
 public static class ModuleGlobalExceptionHandlerBuilderExtensions
@@ -70,7 +70,7 @@ public class ModuleGlobalExceptionHandler(ModuleGlobalExceptionHandlerOption opt
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddSingleton<IMoExceptionHandler, MoExceptionHandler>(); 
-        services.AddSingleton<IAsyncExceptionFilter, MoMvcExceptionFilter>();
+        // services.AddSingleton<IAsyncExceptionFilter, MoMvcExceptionFilter>();
         //services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ExceptionHandlerBehavior<,>));
       
         //services.AddProblemDetails();
@@ -118,7 +118,6 @@ public class ModuleGlobalExceptionHandler(ModuleGlobalExceptionHandlerOption opt
 public class ModuleGlobalExceptionHandlerGuide : MoModuleGuide<ModuleGlobalExceptionHandler,
     ModuleGlobalExceptionHandlerOption, ModuleGlobalExceptionHandlerGuide>
 {
-
     public ModuleGlobalExceptionHandlerGuide AddDefaultExceptionHandler()
     {
         ConfigureServices(context =>
@@ -127,7 +126,14 @@ public class ModuleGlobalExceptionHandlerGuide : MoModuleGuide<ModuleGlobalExcep
         });
         return this;
     }
-
+    public ModuleGlobalExceptionHandlerGuide AddMoExceptionHandlerPack<TPack>() where TPack : class, IMoExceptionHandlerPack
+    {
+        ConfigureServices(context =>
+        {
+            context.Services.AddTransient<IMoExceptionHandlerPack, TPack>();
+        }, secondKey: typeof(TPack).GetCleanFullName());
+        return this;
+    }
     public ModuleGlobalExceptionHandlerGuide AddCustomExceptionHandler<THandler>() where THandler : class, IExceptionHandler
     {
         ConfigureServices(context =>

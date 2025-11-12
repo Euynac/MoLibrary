@@ -1,6 +1,6 @@
 using MoLibrary.Tool.MoResponse;
 
-namespace MoLibrary.DomainDrivenDesign.ExceptionHandler;
+namespace MoLibrary.Core.ExceptionHandler;
 
 /// <summary>
 /// 业务异常，一般用于非<see cref="Res"/>类型返回值

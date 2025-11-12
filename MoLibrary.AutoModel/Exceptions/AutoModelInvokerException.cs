@@ -3,5 +3,5 @@ namespace MoLibrary.AutoModel.Exceptions;
 /// <summary>
 /// 调用执行错误
 /// </summary>
-/// <param name="message"></param>
-public class AutoModelInvokerException(string message) : AutoModelBaseException(message);
+public class AutoModelInvokerException(string displayMessage, string? technicalDetail = null)
+    : AutoModelBaseException(displayMessage, technicalDetail);

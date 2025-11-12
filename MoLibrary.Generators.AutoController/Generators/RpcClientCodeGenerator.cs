@@ -246,8 +246,8 @@ internal static class RpcClientCodeGenerator
                 }
                 else
                 {
-                    // No route parameters, use query string with ?
-                    sb.AppendLine("        return await HttpClient.GetAsync($\"" + route + "?{" + paramName + ".ToQueryString()}\")");
+                    // No route parameters
+                    sb.AppendLine("        return await HttpClient.GetAsync($\"" + route + "{" + paramName + ".ToQueryString()}\")");
                 }
                 sb.AppendLine($"            .GetResponse<{handler.ResponseType}>();");
                 break;

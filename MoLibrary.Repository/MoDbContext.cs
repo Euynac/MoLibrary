@@ -532,11 +532,7 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
 
         return false;
     }
-
-    public virtual void DisableSoftDeleteFilter()
-    {
-        ScopedData?.SetData(MoEfCoreDataFilterDbFunctionMethods.DisableSoftDeleteFilterKey, true);
-    }
+    
     /// <summary>
     /// Creates a filter expression for given entity.
     /// </summary>
@@ -551,17 +547,15 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
         if (typeof(IHasSoftDelete).IsAssignableFrom(typeof(TEntity)))
         {
             var softDeleteColumnName = modelBuilder.Entity<TEntity>().Metadata.FindProperty(nameof(IHasSoftDelete.IsDeleted))?.GetColumnName() ?? nameof(IHasSoftDelete.IsDeleted);
-            
-            var enabledFilter = ScopedData?.DataDict.ContainsKey(MoEfCoreDataFilterDbFunctionMethods.DisableSoftDeleteFilterKey) != true;
 
             if (MoOptions.UseDbFunction)
             {
                 expression = e => MoEfCoreDataFilterDbFunctionMethods.SoftDeleteFilter(((IHasSoftDelete)e).IsDeleted, true);
-                modelBuilder.ConfigureSoftDeleteDbFunction(MoEfCoreDataFilterDbFunctionMethods.SoftDeleteFilterMethodInfo, enabledFilter);
+                modelBuilder.ConfigureSoftDeleteDbFunction(MoEfCoreDataFilterDbFunctionMethods.SoftDeleteFilterMethodInfo, true);
             }
             else
             {
-                expression = e => !enabledFilter || !EF.Property<bool>(e, softDeleteColumnName);
+                expression = e => !EF.Property<bool>(e, softDeleteColumnName);
             }
         }
 

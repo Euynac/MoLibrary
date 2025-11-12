@@ -12,6 +12,12 @@ public interface IAutoModelMemoryOperator<TModel> : IAutoModelOperator<TModel>
     /// <summary>
     /// 获取过滤器
     /// </summary>
+    /// <param name="result"></param>
+    /// <returns></returns>
+    Func<TModel, bool> GetFilter(NormalizedResult result);
+    /// <summary>
+    /// 获取过滤器
+    /// </summary>
     /// <param name="filter"></param>
     /// <returns></returns>
     Func<TModel, bool> GetFilter(string filter);
@@ -23,6 +29,13 @@ public interface IAutoModelMemoryOperator<TModel> : IAutoModelOperator<TModel>
     /// <returns></returns>
     IEnumerable<TModel> ApplyFilter(IEnumerable<TModel> queryable, string filter);
 
+    /// <summary>
+    /// 应用过滤器
+    /// </summary>
+    /// <param name="queryable"></param>
+    /// <param name="result"></param>
+    /// <returns></returns>
+    IEnumerable<TModel> ApplyFilter(IEnumerable<TModel> queryable, NormalizedResult result);
     /// <summary>
     /// 应用过滤器
     /// </summary>

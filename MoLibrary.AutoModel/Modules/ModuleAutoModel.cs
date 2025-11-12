@@ -7,11 +7,12 @@ using MoLibrary.AutoModel.Implements;
 using MoLibrary.AutoModel.Interfaces;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Models;
+using MoLibrary.Core.Modules;
 using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.AutoModel.Modules;
 
-public class ModuleAutoModel(ModuleAutoModelOption option) : MoModule<ModuleAutoModel, ModuleAutoModelOption, ModuleAutoModelGuide>(option)
+public class ModuleAutoModel(ModuleAutoModelOption option) : MoModuleWithDependencies<ModuleAutoModel, ModuleAutoModelOption, ModuleAutoModelGuide>(option)
 {
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -63,5 +64,13 @@ public class ModuleAutoModel(ModuleAutoModelOption option) : MoModule<ModuleAuto
                 return operation;
             });
         });
+    }
+
+    public override void ClaimDependencies()
+    {
+        if (!Option.DisableGlobalExceptionHandler)
+        {
+            DependsOnModule<ModuleGlobalExceptionHandlerGuide>().Register();
+        }
     }
 }

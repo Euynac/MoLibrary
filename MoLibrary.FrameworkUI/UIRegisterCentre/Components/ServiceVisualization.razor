@@ -358,8 +358,7 @@
             runningInstances = service.RunningInstanceCount,
             totalInstances = service.TotalInstanceCount,
             color = RegisterCentreService.GetDomainColor(service.DomainName ?? "未知"),
-            // 获取运行实例的详细信息
-            instanceInfo = service.GetRunningInstanceInfo()
+            instanceInfo = service.GetValidInstanceInfo()
         }).ToList();
 
         // 暂时不构建服务间的依赖关系，因为当前模型中没有这个信息

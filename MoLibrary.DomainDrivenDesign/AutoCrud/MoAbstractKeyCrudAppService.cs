@@ -486,7 +486,14 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
         if (input is IHasRequestFilter filterRequest)
         {
             if (!string.IsNullOrEmpty(filterRequest.Filter))
-                queryable = AutoModel.ApplyFilter(queryable, filterRequest.Filter);
+            {
+                var result = AutoModel.GetNormalizedResult(filterRequest.Filter);
+                if (result.Context.Tokens.Any(p => p.FieldInfo?.ReflectionName == nameof(IHasSoftDelete.IsDeleted)))
+                {
+                    queryable = repository.DisableSoftDeleteFilter(queryable);
+                }
+                queryable = AutoModel.ApplyFilter(queryable, result);
+            }
             if (!string.IsNullOrEmpty(filterRequest.Fuzzy))
                 queryable = AutoModel.ApplyFuzzy(queryable, filterRequest.Fuzzy, filterRequest.FuzzyColumns);
         }

@@ -16,6 +16,15 @@ public interface IAutoModelDbOperator<TModel> : IAutoModelOperator<TModel>
     /// <param name="filter"></param>
     /// <returns></returns>
     IQueryable<TModel> ApplyFilter(IQueryable<TModel> queryable, string filter);
+    
+
+    /// <summary>
+    /// 应用过滤器
+    /// </summary>
+    /// <param name="queryable"></param>
+    /// <param name="result"></param>
+    /// <returns></returns>
+    IQueryable<TModel> ApplyFilter(IQueryable<TModel> queryable, NormalizedResult result);
 
     /// <summary>
     /// 应用过滤器

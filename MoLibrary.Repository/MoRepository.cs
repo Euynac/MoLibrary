@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.EntityFrameworkCore.Storage;
 using MoLibrary.Repository.EntityInterfaces;
 using MoLibrary.Repository.Exceptions;
+using MoLibrary.Repository.Extensions;
 using MoLibrary.Repository.Interfaces;
 using MoLibrary.Tool.Extensions;
 
@@ -227,7 +228,8 @@ public class MoRepository<TDbContext, TEntity>(
 
     public override async Task<IQueryable<TEntity>> GetQueryableAsync()
     {
-        return (await GetDbSetAsync()).AsQueryable();
+        var queryable = (await GetDbSetAsync()).AsQueryable();
+        return queryable;
     }
 
     //TODO 优化为FirstOrDefault？
@@ -313,6 +315,12 @@ public class MoRepository<TDbContext, TEntity>(
         }
 
         return query;
+    }
+
+    public IQueryable<TEntity> DisableSoftDeleteFilter(IQueryable<TEntity> queryable)
+    {
+        //TODO https://github.com/dotnet/efcore/issues/17347
+        return queryable.IgnoreQueryFilters();
     }
 }
 

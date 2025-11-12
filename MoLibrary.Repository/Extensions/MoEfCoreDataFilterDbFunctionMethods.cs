@@ -7,7 +7,6 @@ namespace MoLibrary.Repository.Extensions;
 
 public static class MoEfCoreDataFilterDbFunctionMethods
 {
-    public const string DisableSoftDeleteFilterKey = "Disable_" + nameof(SoftDeleteFilter);
     public const string NotSupportedExceptionMessage = "Your EF Core database provider does not support 'User-defined function mapping'." +
                                                         "Please set 'UseDbFunction' of 'AbpEfCoreGlobalFilterOptions' to false to disable it." +
                                                         "See https://learn.microsoft.com/en-us/ef/core/querying/user-defined-function-mapping for more information.";
@@ -25,24 +24,17 @@ public static class MoEfCoreDataFilterDbFunctionMethods
         modelBuilder.HasDbFunction(methodInfo)
             .HasTranslation(args =>
             {
-                
                 // (bool isDeleted, bool boolParam)
                 var isDeleted = args[0];
                 var boolParam = args[1];
 
-                if (enabledFilter)
-                {
-                    // IsDeleted == false
-                    return new SqlBinaryExpression(
-                        ExpressionType.Equal,
-                        isDeleted,
-                        new SqlConstantExpression(Expression.Constant(false), boolParam.TypeMapping),
-                        boolParam.Type,
-                        boolParam.TypeMapping);
-                }
-
-                // empty where sql
-                return new SqlConstantExpression(Expression.Constant(true), boolParam.TypeMapping);
+                // Always generate: IsDeleted == false
+                return new SqlBinaryExpression(
+                    ExpressionType.Equal,
+                    isDeleted,
+                    new SqlConstantExpression(Expression.Constant(false), boolParam.TypeMapping),
+                    boolParam.Type,
+                    boolParam.TypeMapping);
             });
 
         return modelBuilder;
