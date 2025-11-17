@@ -69,9 +69,35 @@ public class MoDomainTypeFinder(ModuleCoreOptionTypeFinder options) : IDomainTyp
     {
         LoadAssemblies();
 
-        foreach (var type in _assemblies.SelectMany(assembly => assembly.GetTypes()))
+        foreach (var assembly in _assemblies)
         {
-            yield return type;
+            Type[] types;
+            try
+            {
+                types = assembly.GetTypes();
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                // 当程序集引用的其他程序集无法加载时，仍然返回能够加载的类型
+                types = ex.Types.Where(t => t != null).ToArray()!;
+
+                // 记录加载异常的详细信息
+                if (Logger != null && ex.LoaderExceptions.Length > 0)
+                {
+                    var exceptionMessages = ex.LoaderExceptions
+                        .Where(e => e != null)
+                        .Select(e => e!.Message)
+                        .Distinct();
+                    Logger.LogWarning("程序集 {AssemblyName} 部分类型加载失败: {Exceptions}",
+                        assembly.GetName().Name,
+                        string.Join("; ", exceptionMessages));
+                }
+            }
+
+            foreach (var type in types)
+            {
+                yield return type;
+            }
         }
     }
 

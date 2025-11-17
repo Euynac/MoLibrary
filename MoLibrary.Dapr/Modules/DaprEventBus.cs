@@ -151,7 +151,7 @@ public class ModuleDaprEventBus(ModuleDaprEventBusOption option)
                         return Results.Ok();
                     }
 
-                    await distributedEventBus.TriggerHandlersAsync(distributedEventBus.GetEventType(topic!), eventData);
+                    await distributedEventBus.TriggerHandlersAsync(eventType, eventData);
 
                     return Results.Ok();
                 }
