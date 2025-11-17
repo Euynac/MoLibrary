@@ -9,6 +9,8 @@ using MoLibrary.JobScheduler.Attributes;
 using MoLibrary.JobScheduler.ControlPlane;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.JobScheduler.Jobs;
+using MoLibrary.RegisterCentre.Interfaces;
+using MoLibrary.RegisterCentre.Modules;
 using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.JobScheduler.Modules;
@@ -19,7 +21,7 @@ namespace MoLibrary.JobScheduler.Modules;
 /// and metadata persistence layer.
 /// </summary>
 public class ModuleJobScheduler(ModuleJobSchedulerOption option)
-    : MoModule<ModuleJobScheduler, ModuleJobSchedulerOption, ModuleJobSchedulerGuide>(option), IWantIterateBusinessTypes
+    : MoModuleWithDependencies<ModuleJobScheduler, ModuleJobSchedulerOption, ModuleJobSchedulerGuide>(option), IWantIterateBusinessTypes
 {
     private readonly List<JobDefinition> _jobDefinitions = [];
 
@@ -78,7 +80,8 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
         {
             var jobRegistry = provider.GetRequiredService<JobRegistry>();
             var logger = provider.GetRequiredService<ILogger<JobRegistrationHostedService>>();
-            return new JobRegistrationHostedService(jobRegistry, _jobDefinitions, logger);
+            var leaderService = provider.GetRequiredService<ILeaderService>();
+            return new JobRegistrationHostedService(jobRegistry, _jobDefinitions, logger, leaderService);
         });
     }
     
@@ -133,5 +136,10 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
             }
         }
         return definition;
+    }
+
+    public override void ClaimDependencies()
+    {
+        DependsOnModule<ModuleRegisterCentreGuide>().Register(); //TODO 依赖于 ILeaderService 需要支持单体架构 
     }
 }

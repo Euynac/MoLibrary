@@ -7,9 +7,9 @@ using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.RegisterCentre.Implements;
 
-public class MoRegisterCentreServerConnector(
+public class RegisterCentreServerConnector(
     IRegisterCentreClient client, 
-    ILogger<MoRegisterCentreServerConnector> logger, 
+    ILogger<RegisterCentreServerConnector> logger, 
     IOptions<ModuleRegisterCentreOption> option, IRegisterCentreServerInvocationConnector connector) : IRegisterCentreServerConnector
 {
     protected readonly ModuleRegisterCentreOption Option = option.Value;
@@ -21,19 +21,19 @@ public class MoRegisterCentreServerConnector(
 
     public virtual async Task<Res> Register(ServiceRegisterInfo req)
     {
-        if ((await connector.PostAsync<ServiceRegisterInfo, Res>(RegisterCentreAppId, MoRegisterCentreConventions.ServerCentreRegister, req)).IsFailed(out var error, out var data)) return error;
+        if ((await connector.PostAsync<ServiceRegisterInfo, Res>(RegisterCentreAppId, RegisterCentreConventions.ServerCentreRegister, req)).IsFailed(out var error, out var data)) return error;
         return data;
     }
 
     public virtual async Task<Res<ServiceHeartbeatResponse>> Heartbeat(ServiceHeartbeat req)
     {
-        if ((await connector.PostAsync<ServiceHeartbeat, Res<ServiceHeartbeatResponse>>(RegisterCentreAppId, MoRegisterCentreConventions.ServerCentreHeartbeat, req)).IsFailed(out var error, out var data)) return error;
+        if ((await connector.PostAsync<ServiceHeartbeat, Res<ServiceHeartbeatResponse>>(RegisterCentreAppId, RegisterCentreConventions.ServerCentreHeartbeat, req)).IsFailed(out var error, out var data)) return error;
         return data;
     }
 
     public virtual async Task<Res<LeaderStatusResponse>> GetLeaderStatus(LeaderStatusRequest req)
     {
-        if ((await connector.PostAsync<LeaderStatusRequest, Res<LeaderStatusResponse>>(RegisterCentreAppId, MoRegisterCentreConventions.ServerCentreLeaderStatus, req)).IsFailed(out var error, out var data)) return error;
+        if ((await connector.PostAsync<LeaderStatusRequest, Res<LeaderStatusResponse>>(RegisterCentreAppId, RegisterCentreConventions.ServerCentreLeaderStatus, req)).IsFailed(out var error, out var data)) return error;
         return data;
     }
     

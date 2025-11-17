@@ -3,7 +3,7 @@
 /// <summary>
 /// Defines interface of a recurring job.
 /// </summary>
-public interface IMoRecurringJob
+public interface IMoRecurringJob : IMoJobDefinition
 {
     /// <summary>
     /// Executes the recurring job logic.

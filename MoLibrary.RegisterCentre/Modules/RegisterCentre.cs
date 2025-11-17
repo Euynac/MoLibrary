@@ -62,7 +62,7 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModule<
             app.UseEndpoints(endpoints =>
             {
                 var tagGroup = new List<OpenApiTag> { new() { Name = option.GetApiGroupName(), Description = "注册中心" } };
-                endpoints.MapPost(MoRegisterCentreConventions.ServerCentreRegister, async (ServiceRegisterInfo req, [FromServices] IRegisterCentreServer centre) =>
+                endpoints.MapPost(RegisterCentreConventions.ServerCentreRegister, async (ServiceRegisterInfo req, [FromServices] IRegisterCentreServer centre) =>
                 {
                     if ((await centre.Register(req)).IsFailed(out var error)) return error;
                     return Res.Ok("注册成功");
@@ -74,7 +74,7 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModule<
                     return operation;
                 });
                 
-                endpoints.MapPost(MoRegisterCentreConventions.ServerCentreHeartbeat, async (ServiceHeartbeat req, [FromServices] IRegisterCentreServer centre) =>
+                endpoints.MapPost(RegisterCentreConventions.ServerCentreHeartbeat, async (ServiceHeartbeat req, [FromServices] IRegisterCentreServer centre) =>
                 {
                     if ((await centre.Heartbeat(req)).IsFailed(out var error, out var data))
                         return error.GetResponse();
@@ -87,7 +87,7 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModule<
                     return operation;
                 });
 
-                endpoints.MapPost(MoRegisterCentreConventions.ServerCentreLeaderStatus, async (LeaderStatusRequest req, [FromServices] IRegisterCentreServer centre) =>
+                endpoints.MapPost(RegisterCentreConventions.ServerCentreLeaderStatus, async (LeaderStatusRequest req, [FromServices] IRegisterCentreServer centre) =>
                 {
                     if ((await centre.GetLeaderStatus(req)).IsFailed(out var error, out var data))
                         return error.GetResponse();
@@ -95,12 +95,12 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModule<
                 }).WithName("查询领导者状态").WithOpenApi(operation =>
                 {
                     operation.Summary = "查询领导者状态";
-                    operation.Description = "查询当前实例在服务集群中的领导者状态（Leader/Follower/Looking）";
+                    operation.Description = "查询指定实例在服务集群中的领导者状态（Leader/Follower/Looking）";
                     operation.Tags = tagGroup;
                     return operation;
                 });
 
-                endpoints.MapGet(MoRegisterCentreConventions.ServerCentreGetServicesStatus, async ([FromServices] IRegisterCentreServer centre) =>
+                endpoints.MapGet(RegisterCentreConventions.ServerCentreGetServicesStatus, async ([FromServices] IRegisterCentreServer centre) =>
                 {
                     if ((await centre.GetServicesStatus()).IsFailed(out var error, out var data))
                         return error.GetResponse();
@@ -114,7 +114,7 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModule<
                 });
 
 
-                endpoints.MapGet(MoRegisterCentreConventions.ServerCentreUnregisterAll, async ([FromServices] IRegisterCentreServer centre) =>
+                endpoints.MapGet(RegisterCentreConventions.ServerCentreUnregisterAll, async ([FromServices] IRegisterCentreServer centre) =>
                 {
                     var res = await centre.UnregisterAll();
                     return res.GetResponse();
@@ -133,7 +133,7 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModule<
             app.UseEndpoints(endpoints =>
             {
                 var tagGroup = new List<OpenApiTag> { new() { Name = option.GetApiGroupName(), Description = "注册中心客户端相关内置接口" } };
-                endpoints.MapGet(MoRegisterCentreConventions.ClientReconnectCentre, async (HttpResponse response, HttpContext context, [FromServices] IRegisterCentreServerConnector connector, [FromServices] IRegisterCentreClient client) =>
+                endpoints.MapGet(RegisterCentreConventions.ClientReconnectCentre, async (HttpResponse response, HttpContext context, [FromServices] IRegisterCentreServerConnector connector, [FromServices] IRegisterCentreClient client) =>
                 {
                     return await connector.Register(client.GetServiceStatus());
                 }).WithName("测试重连配置中心").WithOpenApi(operation =>
@@ -200,8 +200,9 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
         });
         ConfigureServices(context =>
         {
-            context.Services.TryAddSingleton<IRegisterCentreServerConnector, MoRegisterCentreServerConnector>();
+            context.Services.TryAddSingleton<IRegisterCentreServerConnector, RegisterCentreServerConnector>();
             context.Services.TryAddSingleton<IRegisterCentreClient, TClient>();
+            context.Services.TryAddSingleton<ILeaderService, ClientSideLeaderService>();
         }, key: SET_CENTRE_TYPE);
         return this;
     }

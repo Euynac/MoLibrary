@@ -1,6 +1,6 @@
 namespace MoLibrary.RegisterCentre.Models;
 
-public static class MoRegisterCentreConventions
+public static class RegisterCentreConventions
 {
     /// <summary>
     /// 微服务注册注册中心

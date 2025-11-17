@@ -17,9 +17,8 @@ public interface IRegisterCentreServerApiForClient
     /// 接收客户端心跳
     /// </summary>
     Task<Res<ServiceHeartbeatResponse>> Heartbeat(ServiceHeartbeat req);
-
     /// <summary>
-    /// 查询领导者状态
+    /// 查询指定实例在服务集群中的领导者状态（Leader/Follower/Looking）
     /// </summary>
     Task<Res<LeaderStatusResponse>> GetLeaderStatus(LeaderStatusRequest req);
 }
