@@ -22,9 +22,10 @@ public interface IMoJobScheduleMetadataStore
     /// <summary>
     /// Retrieves all registered job definitions.
     /// </summary>
+    /// <param name="includeDeleted">Whether to include soft-deleted job definitions. Default is false (excludes deleted).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Collection of all registered job definitions.</returns>
-    Task<IEnumerable<JobDefinition>> GetAllJobDefinitionsAsync(CancellationToken cancellationToken = default);
+    Task<IEnumerable<JobDefinition>> GetAllJobDefinitionsAsync(bool includeDeleted = false, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Persists a job definition to the metadata store (creates or updates).
@@ -42,6 +43,16 @@ public interface IMoJobScheduleMetadataStore
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>True if the job definition exists, otherwise false.</returns>
     Task<bool> JobDefinitionExistsAsync(string jobKey, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Soft deletes a job definition by marking it as deleted without physically removing it from the store.
+    /// Sets IsDeleted = true and DeletedAt = current timestamp.
+    /// </summary>
+    /// <param name="jobKey">The unique identifier for the job to soft delete.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <exception cref="ArgumentException">Thrown when jobKey is null or empty.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the job definition is not found.</exception>
+    Task SoftDeleteJobDefinitionAsync(string jobKey, CancellationToken cancellationToken = default);
 
     #endregion
 

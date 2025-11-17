@@ -53,11 +53,14 @@ public class MetadataStoreInMemoryProvider(ILogger<MetadataStoreInMemoryProvider
     }
 
     /// <inheritdoc />
-    public Task<IEnumerable<JobDefinition>> GetAllJobDefinitionsAsync(CancellationToken cancellationToken = default)
+    public Task<IEnumerable<JobDefinition>> GetAllJobDefinitionsAsync(bool includeDeleted = false, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var definitions = _definitions.Values.ToList();
+        var definitions = includeDeleted
+            ? _definitions.Values.ToList()
+            : _definitions.Values.Where(d => !d.IsDeleted).ToList();
+
         return Task.FromResult<IEnumerable<JobDefinition>>(definitions);
     }
 
@@ -113,6 +116,35 @@ public class MetadataStoreInMemoryProvider(ILogger<MetadataStoreInMemoryProvider
 
         var exists = _definitions.ContainsKey(jobKey);
         return Task.FromResult(exists);
+    }
+
+    /// <inheritdoc />
+    public Task SoftDeleteJobDefinitionAsync(string jobKey, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(jobKey))
+        {
+            throw new ArgumentException("Job key cannot be null or empty.", nameof(jobKey));
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (!_definitions.TryGetValue(jobKey, out var definition))
+        {
+            throw new InvalidOperationException($"Job definition '{jobKey}' not found.");
+        }
+
+        definition.IsDeleted = true;
+        definition.DeletedAt = DateTime.UtcNow;
+
+        // Update the definition in the dictionary
+        _definitions[jobKey] = definition;
+
+        logger.LogInformation(
+            "Job definition soft deleted: {JobKey} ({JobName})",
+            definition.JobKey,
+            definition.JobName);
+
+        return Task.CompletedTask;
     }
 
     #endregion
