@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using MoLibrary.RegisterCentre.Interfaces;
 using MoLibrary.RegisterCentre.Models;
 using MoLibrary.RegisterCentre.Modules;
+using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.RegisterCentre.Implements;
 

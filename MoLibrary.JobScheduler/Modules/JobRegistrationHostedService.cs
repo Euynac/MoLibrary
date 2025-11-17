@@ -3,6 +3,9 @@ using Microsoft.Extensions.Logging;
 using MoLibrary.JobScheduler.ControlPlane;
 using MoLibrary.JobScheduler.Exceptions;
 using MoLibrary.JobScheduler.Models;
+using MoLibrary.RegisterCentre.Interfaces;
+using MoLibrary.RegisterCentre.Models;
+using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.JobScheduler.Modules;
 
@@ -13,13 +16,25 @@ namespace MoLibrary.JobScheduler.Modules;
 internal class JobRegistrationHostedService(
     JobRegistry jobRegistry,
     IReadOnlyList<JobDefinition> jobDefinitions,
-    ILogger<JobRegistrationHostedService> logger) : IHostedService
+    ILogger<JobRegistrationHostedService> logger,
+    ILeaderService leaderService) : IHostedService
 {
     /// <summary>
     /// Registers all discovered job definitions when the application starts.
     /// </summary>
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        if ((await leaderService.GetCurrentLeaderStatusAsync()).IsFailed(out var error, out var data))
+        {
+            logger.LogError("Error getting leader status: {Error}", error);
+            return;
+        }
+        if (data.Status != LeaderStatus.Leader)
+        {
+            logger.LogInformation("Not leader, current Leader status is {Status}, skip job registration", data.Status);
+            return;
+        }
+
         if (jobDefinitions.Count == 0)
         {
             logger.LogInformation("No job definitions to register");

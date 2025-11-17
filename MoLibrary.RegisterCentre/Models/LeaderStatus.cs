@@ -65,4 +65,9 @@ public class LeaderStatusResponse
     /// 附加消息
     /// </summary>
     public string? Message { get; set; }
+
+    public override string ToString()
+    {
+        return $"Status: {Status}, LeaderInstanceId: {LeaderInstanceId}, LeaderRegistrationTime: {LeaderRegistrationTime}, RunningInstanceCount: {RunningInstanceCount}, Message: {Message}";
+    }
 }

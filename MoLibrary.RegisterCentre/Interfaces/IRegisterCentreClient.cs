@@ -10,16 +10,16 @@ public interface IRegisterCentreClient
     /// <summary>
     /// 用于展示客户端监听地址元数据
     /// </summary>
-    public static string ListeningAddressMetadataKey = "ListeningAddresses";
+    static string ListeningAddressMetadataKey = "ListeningAddresses";
     /// <summary>
     /// 获取当前微服务状态
     /// </summary>
     /// <param name="isHeartbeatInfo"></param>
     /// <returns></returns>
-    public ServiceRegisterInfo GetServiceStatus(bool isHeartbeatInfo = false);
+    ServiceRegisterInfo GetServiceStatus(bool isHeartbeatInfo = false);
     /// <summary>
     /// 获取注册中心APPID
     /// </summary>
     /// <returns></returns>
-    public string GetRegisterCentreAppId();
+    string GetRegisterCentreAppId();
 }
