@@ -59,6 +59,18 @@ public class JobDefinition
     /// </summary>
     public bool IsDisabled { get; set; } = false;
 
+    /// <summary>
+    /// Gets or sets whether this job definition has been soft deleted.
+    /// Default is false. Soft deleted jobs are no longer active but preserved for audit purposes.
+    /// </summary>
+    public bool IsDeleted { get; set; } = false;
+
+    /// <summary>
+    /// Gets or sets the timestamp when this job definition was soft deleted.
+    /// Null if the job has never been deleted.
+    /// </summary>
+    public DateTime? DeletedAt { get; set; }
+
     // Recurring job specific properties
 
     /// <summary>

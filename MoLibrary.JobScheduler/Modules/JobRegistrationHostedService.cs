@@ -43,38 +43,31 @@ internal class JobRegistrationHostedService(
 
         try
         {
-            logger.LogInformation("Starting job registration for {Count} job(s)", jobDefinitions.Count);
+            logger.LogInformation("Starting job reconciliation for {Count} job(s)", jobDefinitions.Count);
 
-            // Extract job keys from definitions
-            var jobKeys = jobDefinitions.Select(d => d.JobKey).ToList();
+            // Reconcile job definitions (add new jobs and soft delete removed jobs)
+            var result = await jobRegistry.ReconcileJobDefinitionsAsync(jobDefinitions, cancellationToken);
 
-            // Check which jobs are not yet registered
-            var unregisteredKeys = await jobRegistry.CheckUnregisteredAsync(jobKeys, cancellationToken);
-            var unregisteredKeysList = unregisteredKeys.ToList();
+            // Log reconciliation summary
+            logger.LogInformation(
+                "Job reconciliation completed: {AddedCount} job(s) added, {DeletedCount} job(s) soft deleted, {UnchangedCount} job(s) unchanged",
+                result.AddedCount,
+                result.DeletedCount,
+                jobDefinitions.Count - result.AddedCount);
 
-            if (unregisteredKeysList.Count == 0)
+            // Log deleted jobs if any
+            if (result.DeletedCount > 0)
             {
-                logger.LogInformation("All {Count} job(s) are already registered. Skipping registration.", jobDefinitions.Count);
-                return;
+                foreach (var deletedKey in result.DeletedJobKeys)
+                {
+                    logger.LogWarning("[Deleted] Job: {JobKey} - No longer exists in code", deletedKey);
+                }
             }
 
-            // Filter to only unregistered job definitions
-            var unregisteredDefinitions = jobDefinitions
-                .Where(d => unregisteredKeysList.Contains(d.JobKey))
-                .ToList();
-
-            logger.LogInformation("Registering {UnregisteredCount} unregistered job(s) out of {TotalCount} discovered",
-                unregisteredDefinitions.Count, jobDefinitions.Count);
-
-            // Register unregistered jobs
-            await jobRegistry.RegisterJobsAsync(unregisteredDefinitions, cancellationToken);
-
-            logger.LogInformation("Successfully registered {Count} job definition(s)", unregisteredDefinitions.Count);
-
-            // Log summary of all discovered jobs
+            // Log summary of all current job definitions
             foreach (var definition in jobDefinitions)
             {
-                var status = unregisteredKeysList.Contains(definition.JobKey) ? "Registered" : "Already Registered";
+                var status = result.AddedJobKeys.Contains(definition.JobKey) ? "Added" : "Already Registered";
                 logger.LogInformation(
                     "[{Status}] Job: {JobKey} | Name: {JobName} | Type: {JobType} | MaxConcurrency: {MaxConcurrency} | RetryCount: {RetryCount} | Timeout: {Timeout}",
                     status,
