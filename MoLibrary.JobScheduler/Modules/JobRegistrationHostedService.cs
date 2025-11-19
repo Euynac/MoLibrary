@@ -65,48 +65,12 @@ internal class JobRegistrationHostedService(
                 }
             }
 
-            // Log summary of all current job definitions
+            // Register all current job definitions
             foreach (var definition in jobDefinitions)
             {
                 var status = result.AddedJobKeys.Contains(definition.JobKey) ? "Added" : "Already Registered";
-                logger.LogInformation(
-                    "[{Status}] Job: {JobKey} | Name: {JobName} | Type: {JobType} | MaxConcurrency: {MaxConcurrency} | RetryCount: {RetryCount} | Timeout: {Timeout}",
-                    status,
-                    definition.JobKey,
-                    definition.JobName,
-                    definition.Type,
-                    definition.MaxConcurrency,
-                    definition.RetryCount,
-                    definition.MaxExecutionTimeout);
-                await jobRegistry.RegisterJob(definition.JobClrType, definition.JobArgsClrType);
-                
-                if (definition.Type == JobType.Recurring)
-                {
-                    logger.LogDebug(
-                        "Recurring job details - JobKey: {JobKey}, CronExpression: {CronExpression}, StartTime: {StartTime}, EndTime: {EndTime}, IsDisabled: {IsDisabled}",
-                        definition.JobKey,
-                        definition.CronExpression,
-                        definition.StartTime,
-                        definition.EndTime,
-                        definition.IsDisabled);
-                }
-                else if (definition.Type == JobType.Triggered)
-                {
-                    if(definition.JobArgsClrType == null) throw new JobRegistrationException(definition.JobKey, "ParameterClrType is null");
-                    logger.LogDebug(
-                        "Triggered job details - JobKey: {JobKey}, ParameterType: {ParameterType}",
-                        definition.JobKey,
-                        definition.JobArgsClrType.GetCleanFullName());
-                }
+                await jobRegistry.RegisterJob(definition, status);
             }
-        }
-        catch (JobRegistrationException ex)
-        {
-            logger.LogError(ex,
-                "Job registration failed for job key: {JobKey}. Message: {Message}",
-                ex.JobKey,
-                ex.Message);
-            throw; // Re-throw to prevent application startup if registration fails
         }
         catch (Exception ex)
         {

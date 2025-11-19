@@ -3,15 +3,15 @@ using Microsoft.Extensions.Logging;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Models;
 
-namespace MoLibrary.JobScheduler.ControlPlane;
+namespace MoLibrary.JobScheduler.Metadata;
 
 /// <summary>
 /// Handles job instance creation and state transitions with validation.
 /// Ensures state transitions follow the defined state machine and manages instance timestamps.
 /// </summary>
-public class MetadataWriter(
+public class JobInstanceManager(
     IMoJobScheduleMetadataStore metadataStore,
-    ILogger<MetadataWriter> logger)
+    ILogger<JobInstanceManager> logger)
 {
     /// <summary>
     /// Creates a new job instance with the specified initial state.

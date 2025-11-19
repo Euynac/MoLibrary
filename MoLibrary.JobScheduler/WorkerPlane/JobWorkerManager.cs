@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.JobScheduler.Abstractions;
-using MoLibrary.JobScheduler.ControlPlane;
 using MoLibrary.JobScheduler.Events;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.JobScheduler.Modules;
@@ -15,27 +14,10 @@ namespace MoLibrary.JobScheduler.WorkerPlane;
 /// Implements IHostedService to subscribe to job execution events and orchestrate
 /// job execution with concurrency control and thread limiting.
 /// </summary>
-/// <remarks>
-/// <para>
-/// JobWorkerManager is the entry point for job execution in the worker plane.
-/// It subscribes to JobExecutionEvent from the event bus and coordinates execution by:
-/// </para>
-/// <list type="bullet">
-/// <item><description>Enforcing worker thread limits via SemaphoreSlim (if configured)</description></item>
-/// <item><description>Delegating execution to JobExecutor</description></item>
-/// <item><description>Marking jobs as Skipped when concurrency limits are exceeded</description></item>
-/// <item><description>Tracking in-flight jobs for graceful shutdown</description></item>
-/// </list>
-/// <para>
-/// <b>Thread Safety:</b> This class handles concurrent event delivery and ensures
-/// proper synchronization when tracking in-flight jobs and managing worker threads.
-/// </para>
-/// </remarks>
 public class JobWorkerManager(
     IOptions<ModuleJobSchedulerOption> options,
     IMoEventBus eventBus,
-    JobExecutor jobExecutor,
-    JobRegistry jobRegistry,
+    JobOrchestrator jobOrchestrator,
     IMoJobScheduleMetadataStore metadataStore,
     ILogger<JobWorkerManager> logger) : IHostedService
 {
@@ -123,7 +105,6 @@ public class JobWorkerManager(
     {
         var workerSlotAcquired = false;
         var concurrencySlotAcquired = false;
-        JobDefinition? definition = null;
         JobInstance? instance = null;
 
         try
@@ -139,18 +120,7 @@ public class JobWorkerManager(
                     executionEvent.JobKey,
                     executionEvent.InstanceId);
             }
-
-            // Get job definition and instance
-            definition = await jobRegistry.GetDefinitionAsync(executionEvent.JobKey);
-            if (definition == null)
-            {
-                logger.LogError(
-                    "Job definition not found for {JobKey}, instance {InstanceId}",
-                    executionEvent.JobKey,
-                    executionEvent.InstanceId);
-                return;
-            }
-
+            
             instance = await metadataStore.GetJobInstanceAsync(executionEvent.InstanceId);
             if (instance == null)
             {
@@ -166,7 +136,7 @@ public class JobWorkerManager(
                 executionEvent.JobKey,
                 executionEvent.InstanceId);
 
-            await jobExecutor.ExecuteAsync(instance, definition);
+            await jobOrchestrator.ExecuteAsync(instance, executionEvent);
 
             logger.LogInformation(
                 "Completed execution for job {JobKey} instance {InstanceId}",
@@ -181,25 +151,6 @@ public class JobWorkerManager(
                 executionEvent.JobKey,
                 executionEvent.InstanceId,
                 ex.Message);
-
-            // Try to mark instance as failed
-            try
-            {
-                if (instance != null)
-                {
-                    await metadataStore.UpdateJobStateAsync(
-                        executionEvent.InstanceId,
-                        JobState.Failed,
-                        $"Worker error: {ex.GetType().Name}: {ex.Message}");
-                }
-            }
-            catch (Exception updateEx)
-            {
-                logger.LogError(
-                    updateEx,
-                    "Failed to update job state after worker error: {Message}",
-                    updateEx.Message);
-            }
         }
         finally
         {

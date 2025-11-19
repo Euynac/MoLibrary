@@ -1,7 +1,9 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using MoLibrary.JobScheduler.Abstractions;
+using MoLibrary.JobScheduler.Exceptions;
 using MoLibrary.JobScheduler.Models;
+using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.JobScheduler.ControlPlane;
 
@@ -21,15 +23,64 @@ public class JobRegistry(
     /// <summary>
     ///    Registers a job type to be executed
     /// </summary>
-    public Task RegisterJob(Type jobType, Type? argsType) 
+    public Task RegisterJob(JobDefinition jobDefinition, string status)
     {
-        _jobDefinitionTypeMap.Add(jobType.FullName!, jobType);
-        if (argsType == null) return Task.CompletedTask;
+        logger.LogInformation(
+            "[{Status}] Job: {JobKey} | Name: {JobName} | Type: {JobType} | MaxConcurrency: {MaxConcurrency} | RetryCount: {RetryCount} | Timeout: {Timeout}",
+            status,
+            jobDefinition.JobKey,
+            jobDefinition.JobName,
+            jobDefinition.Type,
+            jobDefinition.MaxConcurrency,
+            jobDefinition.RetryCount,
+            jobDefinition.MaxExecutionTimeout);
+        _jobDefinitionTypeMap.Add(jobDefinition.JobClrType.FullName!, jobDefinition.JobClrType);
         
-        _triggeredJobMapping.Add(argsType, jobType);
-        _triggeredJobArgsTypeMap.Add(argsType.FullName!, argsType);
+        if (jobDefinition.Type == JobType.Recurring)
+        {
+            logger.LogDebug(
+                "Recurring job details - JobKey: {JobKey}, CronExpression: {CronExpression}, StartTime: {StartTime}, EndTime: {EndTime}, IsDisabled: {IsDisabled}",
+                jobDefinition.JobKey,
+                jobDefinition.CronExpression,
+                jobDefinition.StartTime,
+                jobDefinition.EndTime,
+                jobDefinition.IsDisabled);
+        }
+        else if (jobDefinition.Type == JobType.Triggered)
+        {
+            if (jobDefinition.JobArgsClrType == null)
+                throw new JobRegistrationException(jobDefinition.JobKey, "ParameterClrType is null");
+            _triggeredJobMapping.Add(jobDefinition.JobArgsClrType, jobDefinition.JobClrType);
+            _triggeredJobArgsTypeMap.Add(jobDefinition.JobArgsClrType.FullName!, jobDefinition.JobArgsClrType);
+            logger.LogDebug(
+                "Triggered job details - JobKey: {JobKey}, ParameterType: {ParameterType}",
+                jobDefinition.JobKey,
+                jobDefinition.JobArgsClrType.GetCleanFullName());
+        }
+
         return Task.CompletedTask;
     }
+
+    /// <summary>
+    /// Retrieves the CLR type for a job by its job key.
+    /// </summary>
+    /// <param name="jobKey">The unique job key (job type's full name).</param>
+    /// <returns>The CLR type of the job, or null if not found.</returns>
+    public Type? GetJobClrType(string jobKey)
+    {
+        return _jobDefinitionTypeMap.TryGetValue(jobKey, out var type) ? type : null;
+    }
+
+    /// <summary>
+    /// Retrieves the CLR type for job arguments by its job args key.
+    /// </summary>
+    /// <param name="jobArgsKey">The unique job args key (args type's full name).</param>
+    /// <returns>The CLR type of the job arguments, or null if not found.</returns>
+    public Type? GetJobArgsClrType(string jobArgsKey)
+    {
+        return _triggeredJobArgsTypeMap.TryGetValue(jobArgsKey, out var type) ? type : null;
+    }
+
     /// <summary>
     /// Retrieves a job definition by its unique job key.
     /// </summary>

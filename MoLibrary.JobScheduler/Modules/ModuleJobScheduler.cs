@@ -76,7 +76,7 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
             return;
         }
 
-        services.AddSingleton<IMoTriggeredJobExecutor, DefaultMoTriggeredJobExecutor>();
+        services.AddSingleton<IMoJobExecutor, MoJobExecutor>();
 
         // Register job definitions to JobRegistry
         // This is done synchronously during startup (blocking is acceptable)
