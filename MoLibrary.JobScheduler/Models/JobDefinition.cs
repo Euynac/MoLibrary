@@ -10,18 +10,20 @@ namespace MoLibrary.JobScheduler.Models;
 public class JobDefinition
 {
     /// <summary>
-    /// Gets or sets the unique identifier for this job definition.
-    /// Defaults to the job type's full name (TypeFullName).
-    /// Must be unique across all registered job definitions in the metadata store.
+    /// Gets or sets the unique identifier for this job definition. which is the job type's full name (TypeFullName).
     /// </summary>
-    public string JobKey { get; set; } = string.Empty;
+    public required string JobKey { get; set; }
+    /// <summary>
+    /// Gets or sets the unique identifier for the job arguments type. which is the args type's full name (TypeFullName).
+    /// </summary>
+    public string? JobArgsKey { get; set; }
 
     /// <summary>
     /// Gets or sets the human-readable name for this job.
     /// Defaults to the job type's simple name.
     /// Used for display purposes in UI and logs.
     /// </summary>
-    public string JobName { get; set; } = string.Empty;
+    public required string JobName { get; set; } 
 
     /// <summary>
     /// Gets or sets an optional description explaining the purpose of this job.
@@ -105,10 +107,10 @@ public class JobDefinition
 
     /// <summary>
     /// Gets or sets the CLR type of the parameter for triggered jobs.
-    /// Only applicable for TriggeredJob{TParam}. Null for recurring jobs.
+    /// Only applicable for TriggeredJob{TArgs}. Null for recurring jobs.
     /// Used to deserialize JSON parameters when creating job instances.
     /// </summary>
     [NotMapped]
     [JsonIgnore]
-    public Type? ParameterClrType { get; set; }
+    public Type? JobArgsClrType { get; set; }
 }

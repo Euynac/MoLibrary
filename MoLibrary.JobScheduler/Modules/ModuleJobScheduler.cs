@@ -9,6 +9,7 @@ using MoLibrary.JobScheduler.Attributes;
 using MoLibrary.JobScheduler.ControlPlane;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.JobScheduler.Jobs;
+using MoLibrary.JobScheduler.WorkerPlane;
 using MoLibrary.RegisterCentre.Interfaces;
 using MoLibrary.RegisterCentre.Modules;
 using MoLibrary.Tool.Extensions;
@@ -42,10 +43,11 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
                     var jobDefinition = ExtractJobDefinition(type, JobType.Recurring);
                     _jobDefinitions.Add(jobDefinition);
                 }
-                else if (type.IsImplementInterfaceGeneric(typeof(IMoTriggeredJob<>), out var parameterType))
+                else if (type.IsImplementInterfaceGeneric(typeof(IMoTriggeredJob<>), out var argsType))
                 {
                     var jobDefinition = ExtractJobDefinition(type, JobType.Triggered);
-                    jobDefinition.ParameterClrType = parameterType;
+                    jobDefinition.JobArgsClrType = argsType;
+                    jobDefinition.JobArgsKey = argsType.FullName ?? throw new InvalidOperationException($"Job type {type.Name}'s argument type {argsType.Name} must have full name.");
                     _jobDefinitions.Add(jobDefinition);
                 }
             }
@@ -74,6 +76,8 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
             return;
         }
 
+        services.AddSingleton<IMoTriggeredJobExecutor, DefaultMoTriggeredJobExecutor>();
+
         // Register job definitions to JobRegistry
         // This is done synchronously during startup (blocking is acceptable)
         services.AddHostedService<JobRegistrationHostedService>(provider =>
@@ -97,7 +101,7 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
         // Create JobDefinition with defaults
         var definition = new JobDefinition
         {
-            JobKey = attribute?.JobKey ?? jobType.FullName ?? jobType.Name,
+            JobKey = jobType.FullName ?? throw new InvalidOperationException($"Job type {jobType.Name} must have full name."),
             JobName = attribute?.JobName ?? jobType.Name,
             Description = attribute?.Description,
             Type = jobTypeEnum,

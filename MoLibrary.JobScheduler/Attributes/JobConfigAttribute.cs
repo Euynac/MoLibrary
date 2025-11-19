@@ -28,16 +28,9 @@ namespace MoLibrary.JobScheduler.Attributes;
 /// }
 /// </code>
 /// </example>
-[AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
+[AttributeUsage(AttributeTargets.Class, Inherited = false)]
 public class JobConfigAttribute : Attribute
 {
-    /// <summary>
-    /// Gets or sets the unique identifier for the job.
-    /// If not specified, defaults to the job type's full name (TypeFullName).
-    /// Must be unique across all registered jobs in the system.
-    /// </summary>
-    public string? JobKey { get; set; }
-
     /// <summary>
     /// Gets or sets the human-readable name for the job.
     /// If not specified, defaults to the job type's simple name.

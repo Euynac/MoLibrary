@@ -27,7 +27,7 @@ public class JobSchedulerApiService(
     public async Task<IEnumerable<JobDefinition>> GetAllJobsAsync(CancellationToken cancellationToken = default)
     {
         logger.LogDebug("API: GetAllJobs requested");
-        return await metadataStore.GetAllJobDefinitionsAsync(cancellationToken);
+        return await metadataStore.GetAllJobDefinitionsAsync(cancellationToken: cancellationToken);
     }
 
     /// <summary>
@@ -63,7 +63,7 @@ public class JobSchedulerApiService(
         logger.LogDebug("API: GetJobHistory requested");
 
         // Placeholder - actual implementation would query metadata store with filters
-        var allInstances = await metadataStore.GetAllJobDefinitionsAsync(cancellationToken);
+        var allInstances = await metadataStore.GetAllJobDefinitionsAsync(cancellationToken: cancellationToken);
         return new List<JobInstance>();
     }
 
