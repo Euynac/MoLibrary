@@ -5,6 +5,7 @@ using MoLibrary.JobScheduler.Exceptions;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.RegisterCentre.Interfaces;
 using MoLibrary.RegisterCentre.Models;
+using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.JobScheduler.Modules;
@@ -77,7 +78,8 @@ internal class JobRegistrationHostedService(
                     definition.MaxConcurrency,
                     definition.RetryCount,
                     definition.MaxExecutionTimeout);
-
+                await jobRegistry.RegisterJob(definition.JobClrType, definition.JobArgsClrType);
+                
                 if (definition.Type == JobType.Recurring)
                 {
                     logger.LogDebug(
@@ -90,10 +92,11 @@ internal class JobRegistrationHostedService(
                 }
                 else if (definition.Type == JobType.Triggered)
                 {
+                    if(definition.JobArgsClrType == null) throw new JobRegistrationException(definition.JobKey, "ParameterClrType is null");
                     logger.LogDebug(
                         "Triggered job details - JobKey: {JobKey}, ParameterType: {ParameterType}",
                         definition.JobKey,
-                        definition.ParameterClrType?.FullName ?? "None");
+                        definition.JobArgsClrType.GetCleanFullName());
                 }
             }
         }

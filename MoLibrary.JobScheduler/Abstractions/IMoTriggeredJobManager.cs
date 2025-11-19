@@ -7,8 +7,7 @@ namespace MoLibrary.JobScheduler.Abstractions;
 /// </summary>
 public interface IMoTriggeredJobManager
 {
-    static readonly ConcurrentDictionary<Type, Type> JobTypeMap = new();
-
+   
     /// <summary>
     ///     Enqueues a job to be executed.
     /// </summary>
@@ -20,23 +19,6 @@ public interface IMoTriggeredJobManager
         TArgs args,
         TimeSpan? delay = null
     );
-
-    /// <summary>
-    ///    Registers a job type to be executed
-    /// </summary>
-    /// <typeparam name="TJobType"></typeparam>
-    /// <typeparam name="TArgs"></typeparam>
-    /// <returns></returns>
-    static Task RegisterJob<TJobType, TArgs>() where TJobType : IMoTriggeredJob<TArgs>
-    {
-        return RegisterJob(typeof(TJobType), typeof(TArgs));
-    }
-    /// <summary>
-    ///    Registers a job type to be executed
-    /// </summary>
-    static Task RegisterJob(Type jobType, Type argsType) 
-    {
-        JobTypeMap.AddOrUpdate(argsType, jobType, (_, _) => jobType);
-        return Task.CompletedTask;
-    }
+    
+ 
 }

@@ -25,7 +25,8 @@ public interface IMoJobScheduleMetadataStore
     /// <param name="includeDeleted">Whether to include soft-deleted job definitions. Default is false (excludes deleted).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Collection of all registered job definitions.</returns>
-    Task<IEnumerable<JobDefinition>> GetAllJobDefinitionsAsync(bool includeDeleted = false, CancellationToken cancellationToken = default);
+    Task<IEnumerable<JobDefinition>> GetAllJobDefinitionsAsync(bool includeDeleted = false,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Persists a job definition to the metadata store (creates or updates).

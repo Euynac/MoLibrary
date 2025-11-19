@@ -44,7 +44,7 @@ public class MoJobScheduler(
             _options.TriggeredJobDebugMode);
 
         // Load all recurring job definitions
-        var allDefinitions = await metadataStore.GetAllJobDefinitionsAsync(cancellationToken);
+        var allDefinitions = await metadataStore.GetAllJobDefinitionsAsync(cancellationToken: cancellationToken);
         var recurringJobs = allDefinitions.Where(d => d.Type == JobType.Recurring).ToList();
 
         logger.LogInformation("Loaded {Count} recurring job definitions", recurringJobs.Count);
