@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Models;
 
-namespace MoLibrary.JobScheduler.Metadata;
+namespace MoLibrary.JobScheduler.ControlPlane;
 
 /// <summary>
 /// Handles job instance creation and state transitions with validation.
@@ -22,7 +22,7 @@ public class JobInstanceManager(
     /// <param name="scheduledFor">Optional scheduled execution time for Scheduled state.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The generated instance ID (GUID).</returns>
-    public async Task<string> CreateInstanceAsync(
+    public async Task<JobInstance> CreateInstanceAsync(
         JobDefinition definition,
         object? parameters,
         JobState initialState,
@@ -37,7 +37,7 @@ public class JobInstanceManager(
             InstanceId = instanceId,
             JobKey = definition.JobKey,
             State = initialState,
-            Parameters = parameters != null ? JsonSerializer.Serialize(parameters) : null,
+            JobArgs = parameters != null ? JsonSerializer.Serialize(parameters) : null,
             CreatedAt = now,
             ScheduledFor = initialState == JobState.Scheduled ? scheduledFor : null,
             RetryAttempt = 0
@@ -51,7 +51,7 @@ public class JobInstanceManager(
             definition.JobKey,
             initialState);
 
-        return instanceId;
+        return instance;
     }
 
     /// <summary>

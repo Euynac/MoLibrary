@@ -15,7 +15,7 @@ namespace MoLibrary.JobScheduler.Api;
 /// It serves as the interface layer between HTTP endpoints and the job scheduler components.
 /// </remarks>
 public class JobSchedulerApiService(
-    MoJobScheduler jobScheduler,
+    ControlPlane.JobScheduler jobScheduler,
     JobRegistry jobRegistry,
     IMoJobScheduleMetadataStore metadataStore,
     IMoCancellationManager cancellationManager,
@@ -90,8 +90,22 @@ public class JobSchedulerApiService(
     /// </summary>
     public async Task PauseRecurringJobAsync(string jobKey, CancellationToken cancellationToken = default)
     {
-        logger.LogInformation("API: PauseRecurringJob requested for {JobKey}", jobKey);
-        await jobScheduler.PauseRecurringJobAsync(jobKey, cancellationToken);
+        var definition = await jobRegistry.GetDefinitionAsync(jobKey, cancellationToken);
+        if (definition == null)
+        {
+            throw new InvalidOperationException($"Job {jobKey} not found");
+        }
+
+        if (definition.JobType != JobType.Recurring)
+        {
+            throw new InvalidOperationException($"Job {jobKey} is not a recurring job");
+        }
+
+        // Update definition in metadata store
+        definition.IsDisabled = true;
+        await metadataStore.SaveJobDefinitionAsync(definition, cancellationToken);
+
+        logger.LogInformation("Recurring job paused: {JobKey}", jobKey);
     }
 
     /// <summary>
@@ -99,8 +113,22 @@ public class JobSchedulerApiService(
     /// </summary>
     public async Task ResumeRecurringJobAsync(string jobKey, CancellationToken cancellationToken = default)
     {
-        logger.LogInformation("API: ResumeRecurringJob requested for {JobKey}", jobKey);
-        await jobScheduler.ResumeRecurringJobAsync(jobKey, cancellationToken);
+        var definition = await jobRegistry.GetDefinitionAsync(jobKey, cancellationToken);
+        if (definition == null)
+        {
+            throw new InvalidOperationException($"Job {jobKey} not found");
+        }
+
+        if (definition.JobType != JobType.Recurring)
+        {
+            throw new InvalidOperationException($"Job {jobKey} is not a recurring job");
+        }
+
+        // Update definition in metadata store
+        definition.IsDisabled = false;
+        await metadataStore.SaveJobDefinitionAsync(definition, cancellationToken);
+
+        logger.LogInformation("Recurring job resumed: {JobKey}", jobKey);
     }
 
     /// <summary>

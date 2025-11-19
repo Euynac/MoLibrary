@@ -6,7 +6,6 @@ using Microsoft.Extensions.Options;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Events;
-using MoLibrary.JobScheduler.Metadata;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.JobScheduler.Modules;
 
@@ -17,18 +16,18 @@ namespace MoLibrary.JobScheduler.ControlPlane;
 /// Implements IHostedService to manage recurring job scheduling via cron expressions
 /// and coordinates triggered job execution with optional delays.
 /// </summary>
-public class MoJobScheduler(
+public class JobScheduler(
     IOptions<ModuleJobSchedulerOption> options,
     IMoJobScheduleMetadataStore metadataStore,
     JobRegistry jobRegistry,
     JobInstanceManager jobInstanceManager,
     IMoEventBus eventBus,
-    ILogger<MoJobScheduler> logger) : IHostedService
+    ILogger<JobScheduler> logger) : IHostedService
 {
     private readonly ModuleJobSchedulerOption _options = options.Value;
 
     // Recurring job scheduling state
-    private readonly ConcurrentDictionary<string, RecurringJobSchedule> _recurringSchedules = new();
+    private readonly ConcurrentDictionary<string, RecurringJobSchedule> _inFlightRecurringSchedules = new();
     private readonly ConcurrentDictionary<string, Timer> _delayedJobTimers = new();
     private CancellationTokenSource? _stoppingCts;
 
@@ -46,10 +45,17 @@ public class MoJobScheduler(
 
         // Load all recurring job definitions
         var allDefinitions = await metadataStore.GetAllJobDefinitionsAsync(cancellationToken: cancellationToken);
-        var recurringJobs = allDefinitions.Where(d => d.Type == JobType.Recurring).ToList();
+        var recurringJobs = allDefinitions.Where(d => d.JobType == JobType.Recurring).ToList();
 
         logger.LogInformation("Loaded {Count} recurring job definitions", recurringJobs.Count);
 
+        
+        if (_options.RecurringJobDebugMode)
+        {
+            logger.LogWarning(
+                "RecurringJobDebugMode is enabled. Job will not be automatically scheduled.");
+            return;
+        }
         // Schedule each recurring task
         foreach (var definition in recurringJobs)
         {
@@ -80,11 +86,11 @@ public class MoJobScheduler(
         _stoppingCts?.Cancel();
 
         // Dispose all recurring job timers
-        foreach (var schedule in _recurringSchedules.Values)
+        foreach (var schedule in _inFlightRecurringSchedules.Values)
         {
             schedule.Timer?.Dispose();
         }
-        _recurringSchedules.Clear();
+        _inFlightRecurringSchedules.Clear();
 
         // Dispose all delayed job timers
         foreach (var timer in _delayedJobTimers.Values)
@@ -98,168 +104,12 @@ public class MoJobScheduler(
         logger.LogInformation("JobScheduler stopped");
         return Task.CompletedTask;
     }
-
-    /// <summary>
-    /// Enqueues a triggered job for execution with optional delay.
-    /// </summary>
-    /// <typeparam name="TJob">The job type inheriting from TriggeredJob{TParam}.</typeparam>
-    /// <param name="parameters">Parameters to pass to the job.</param>
-    /// <param name="delay">Optional delay before job execution. If null, job executes immediately.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The instance ID of the created job instance.</returns>
-    public async Task<string> EnqueueAsync<TJob>(
-        object? parameters = null,
-        TimeSpan? delay = null,
-        CancellationToken cancellationToken = default) where TJob : class
-    {
-        var jobKey = typeof(TJob).FullName ?? typeof(TJob).Name;
-
-        // Get job definition
-        var definition = await jobRegistry.GetDefinitionAsync(jobKey, cancellationToken);
-        if (definition == null)
-        {
-            throw new InvalidOperationException(
-                $"Job {jobKey} is not registered. Ensure the job class inherits from TriggeredJob<TParam> and is discovered during module initialization.");
-        }
-
-        // Determine initial state and scheduled time
-        JobState initialState;
-        DateTime? scheduledFor = null;
-
-        if (delay.HasValue && delay.Value > TimeSpan.Zero)
-        {
-            initialState = JobState.Scheduled;
-            scheduledFor = DateTime.UtcNow.Add(delay.Value);
-        }
-        else
-        {
-            initialState = JobState.Enqueued;
-        }
-
-        // Create instance
-        var instanceId = await jobInstanceManager.CreateInstanceAsync(
-            definition,
-            parameters,
-            initialState,
-            scheduledFor,
-            cancellationToken);
-
-        logger.LogInformation(
-            "Triggered job enqueued: {JobKey}, InstanceId: {InstanceId}, Delay: {Delay}, InitialState: {InitialState}",
-            jobKey,
-            instanceId,
-            delay,
-            initialState);
-
-        // If delayed, schedule timer for state transition
-        if (delay.HasValue && delay.Value > TimeSpan.Zero)
-        {
-            ScheduleDelayedJob(instanceId, jobKey, delay.Value);
-        }
-        else if (!_options.TriggeredJobDebugMode)
-        {
-            // Immediate execution - publish event (unless debug mode is enabled)
-            await PublishJobExecutionEventAsync(instanceId, jobKey, parameters, cancellationToken);
-        }
-        else
-        {
-            logger.LogDebug(
-                "TriggeredJobDebugMode is enabled. Job {JobKey} instance {InstanceId} created but not published for automatic execution.",
-                jobKey,
-                instanceId);
-        }
-
-        return instanceId;
-    }
-
-    /// <summary>
-    /// Pauses a recurring job by marking it as disabled in the metadata store.
-    /// </summary>
-    /// <param name="jobKey">The unique job key to pause.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    public async Task PauseRecurringJobAsync(string jobKey, CancellationToken cancellationToken = default)
-    {
-        var definition = await jobRegistry.GetDefinitionAsync(jobKey, cancellationToken);
-        if (definition == null)
-        {
-            throw new InvalidOperationException($"Job {jobKey} not found");
-        }
-
-        if (definition.Type != JobType.Recurring)
-        {
-            throw new InvalidOperationException($"Job {jobKey} is not a recurring job");
-        }
-
-        // Update definition in metadata store
-        definition.IsDisabled = true;
-        await metadataStore.SaveJobDefinitionAsync(definition, cancellationToken);
-
-        // Cancel timer if exists
-        if (_recurringSchedules.TryRemove(jobKey, out var schedule))
-        {
-            schedule.Timer?.Dispose();
-        }
-
-        logger.LogInformation("Recurring job paused: {JobKey}", jobKey);
-    }
-
-    /// <summary>
-    /// Resumes a paused recurring job by marking it as enabled and rescheduling.
-    /// </summary>
-    /// <param name="jobKey">The unique job key to resume.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    public async Task ResumeRecurringJobAsync(string jobKey, CancellationToken cancellationToken = default)
-    {
-        var definition = await jobRegistry.GetDefinitionAsync(jobKey, cancellationToken);
-        if (definition == null)
-        {
-            throw new InvalidOperationException($"Job {jobKey} not found");
-        }
-
-        if (definition.Type != JobType.Recurring)
-        {
-            throw new InvalidOperationException($"Job {jobKey} is not a recurring job");
-        }
-
-        // Update definition in metadata store
-        definition.IsDisabled = false;
-        await metadataStore.SaveJobDefinitionAsync(definition, cancellationToken);
-
-        // Reschedule
-        ScheduleRecurringJob(definition);
-
-        logger.LogInformation("Recurring job resumed: {JobKey}", jobKey);
-    }
-
+    
     /// <summary>
     /// Schedules a recurring job using its cron expression.
     /// </summary>
     private void ScheduleRecurringJob(JobDefinition definition)
     {
-        if (string.IsNullOrWhiteSpace(definition.CronExpression))
-        {
-            logger.LogDebug(
-                "Recurring job {JobKey} has no cron expression. Skipping automatic scheduling.",
-                definition.JobKey);
-            return;
-        }
-
-        if (definition.IsDisabled)
-        {
-            logger.LogDebug(
-                "Recurring job {JobKey} is disabled. Skipping scheduling.",
-                definition.JobKey);
-            return;
-        }
-
-        if (_options.RecurringJobDebugMode)
-        {
-            logger.LogDebug(
-                "RecurringJobDebugMode is enabled. Job {JobKey} will not be automatically scheduled.",
-                definition.JobKey);
-            return;
-        }
-
         try
         {
             // Parse cron expression (with seconds support)
@@ -299,7 +149,7 @@ public class MoJobScheduler(
                 NextOccurrence = nextOccurrence.Value
             };
 
-            _recurringSchedules[definition.JobKey] = schedule;
+            _inFlightRecurringSchedules[definition.JobKey] = schedule;
 
             logger.LogDebug(
                 "Scheduled recurring job {JobKey}, next execution at {NextExecution} (in {DueTime})",
@@ -317,6 +167,84 @@ public class MoJobScheduler(
         }
     }
 
+    public async Task<JobDefinition?> GetValidatedRecurringJobAsync(string jobKey)
+    {
+        
+        var definition = await jobRegistry.GetDefinitionAsync(jobKey);
+        if (definition == null)
+        {
+            logger.LogWarning(
+                "Recurring job {JobKey} not found during timer callback. Removing from schedule.",
+                jobKey);
+            await RemoveSchedule();
+            return null;
+        }
+        
+        if (string.IsNullOrWhiteSpace(definition.CronExpression))
+        {
+            logger.LogWarning(
+                "Recurring job {JobKey} has no cron expression. Skipping automatic scheduling.",
+                definition.JobKey);
+            await RemoveSchedule();
+            return null;
+        }
+
+        if (definition.IsDisabled)
+        {
+            logger.LogWarning(
+                "Recurring job {JobKey} is disabled. Skipping scheduling.",
+                definition.JobKey);
+            await RemoveSchedule();
+            return null;
+        }
+
+        // Check if job is still enabled
+        if (definition.IsDisabled)
+        {
+            logger.LogDebug(
+                "Recurring job {JobKey} is disabled. Skipping schedule.",
+                jobKey);
+            await RemoveSchedule();
+            return null;
+        }
+
+        var now = DateTime.UtcNow;
+
+        // Check start/end time constraints
+        if (definition.StartTime.HasValue && now < definition.StartTime.Value)
+        {
+            logger.LogDebug(
+                "Recurring job {JobKey} schedule skipped (before start time {StartTime})",
+                jobKey,
+                definition.StartTime.Value);
+
+            // Reschedule for next occurrence
+            ScheduleRecurringJob(definition);//TODO 优化为Delayed Timer
+            await RemoveSchedule();
+            return null;
+        }
+
+        if (definition.EndTime.HasValue && now > definition.EndTime.Value)
+        {
+            logger.LogInformation(
+                "Recurring job {JobKey} has passed end time {EndTime}. Removing from schedule.",
+                jobKey,
+                definition.EndTime.Value);
+            await RemoveSchedule();
+            return null;
+        }
+
+        return definition;
+
+        async Task RemoveSchedule()
+        {
+            if (_inFlightRecurringSchedules.TryRemove(jobKey, out var oldSchedule) && oldSchedule.Timer is { } timer)
+            {
+                await timer.DisposeAsync();
+            }
+        }
+    }
+
     /// <summary>
     /// Timer callback for recurring job execution.
     /// </summary>
@@ -324,57 +252,14 @@ public class MoJobScheduler(
     {
         try
         {
-            // Get current job definition (may have been updated)
-            var definition = await jobRegistry.GetDefinitionAsync(jobKey);
+            var definition = await GetValidatedRecurringJobAsync(jobKey);
             if (definition == null)
             {
-                logger.LogWarning(
-                    "Recurring job {JobKey} not found during timer callback. Removing from schedule.",
-                    jobKey);
-                _recurringSchedules.TryRemove(jobKey, out _);
                 return;
             }
-
-            // Check if job is still enabled
-            if (definition.IsDisabled)
-            {
-                logger.LogDebug(
-                    "Recurring job {JobKey} is disabled. Skipping execution.",
-                    jobKey);
-                _recurringSchedules.TryRemove(jobKey, out var oldSchedule);
-                oldSchedule?.Timer?.Dispose();
-                return;
-            }
-
-            var now = DateTime.UtcNow;
-
-            // Check start/end time constraints
-            if (definition.StartTime.HasValue && now < definition.StartTime.Value)
-            {
-                logger.LogDebug(
-                    "Recurring job {JobKey} execution skipped (before start time {StartTime})",
-                    jobKey,
-                    definition.StartTime.Value);
-
-                // Reschedule for next occurrence
-                ScheduleRecurringJob(definition);
-                return;
-            }
-
-            if (definition.EndTime.HasValue && now > definition.EndTime.Value)
-            {
-                logger.LogInformation(
-                    "Recurring job {JobKey} has passed end time {EndTime}. Removing from schedule.",
-                    jobKey,
-                    definition.EndTime.Value);
-
-                _recurringSchedules.TryRemove(jobKey, out var oldSchedule);
-                oldSchedule?.Timer?.Dispose();
-                return;
-            }
-
+            
             // Create instance and publish event
-            var instanceId = await jobInstanceManager.CreateInstanceAsync(
+            var instance = await jobInstanceManager.CreateInstanceAsync(
                 definition,
                 parameters: null,
                 JobState.Enqueued,
@@ -383,9 +268,9 @@ public class MoJobScheduler(
             logger.LogInformation(
                 "Recurring job triggered: {JobKey}, InstanceId: {InstanceId}",
                 jobKey,
-                instanceId);
+                instance);
 
-            await PublishJobExecutionEventAsync(instanceId, jobKey, null);
+            await PublishJobExecutionEventAsync(instance, definition, null);
 
             // Reschedule for next occurrence
             ScheduleRecurringJob(definition);
@@ -397,110 +282,16 @@ public class MoJobScheduler(
                 "Error in recurring job timer callback for {JobKey}: {Message}",
                 jobKey,
                 ex.Message);
-
-            // Try to reschedule despite error
-            try
-            {
-                var definition = await jobRegistry.GetDefinitionAsync(jobKey);
-                if (definition != null)
-                {
-                    ScheduleRecurringJob(definition);
-                }
-            }
-            catch (Exception rescheduleEx)
-            {
-                logger.LogError(
-                    rescheduleEx,
-                    "Failed to reschedule recurring job {JobKey} after error: {Message}",
-                    jobKey,
-                    rescheduleEx.Message);
-            }
+            //TODO Handle rescheduling
         }
     }
-
-    /// <summary>
-    /// Schedules a delayed job timer.
-    /// </summary>
-    private void ScheduleDelayedJob(string instanceId, string jobKey, TimeSpan delay)
-    {
-        var timer = new Timer(
-            _ => OnDelayedJobTimerCallback(instanceId, jobKey),
-            null,
-            delay,
-            Timeout.InfiniteTimeSpan); // One-shot timer
-
-        _delayedJobTimers[instanceId] = timer;
-
-        logger.LogDebug(
-            "Scheduled delayed job {JobKey}, InstanceId: {InstanceId}, Delay: {Delay}",
-            jobKey,
-            instanceId,
-            delay);
-    }
-
-    /// <summary>
-    /// Timer callback for delayed job execution.
-    /// </summary>
-    private async void OnDelayedJobTimerCallback(string instanceId, string jobKey)
-    {
-        try
-        {
-            // Remove timer
-            if (_delayedJobTimers.TryRemove(instanceId, out var timer))
-            {
-                timer.Dispose();
-            }
-
-            // Transition from Scheduled to Enqueued
-            await jobInstanceManager.UpdateStateAsync(instanceId, JobState.Enqueued);
-
-            logger.LogInformation(
-                "Delayed job state transitioned: {JobKey}, InstanceId: {InstanceId}, Scheduled -> Enqueued",
-                jobKey,
-                instanceId);
-
-            // Publish execution event (unless debug mode)
-            if (!_options.TriggeredJobDebugMode)
-            {
-                var instance = await metadataStore.GetJobInstanceAsync(instanceId);
-                if (instance != null)
-                {
-                    object? parameters = null;
-                    if (!string.IsNullOrEmpty(instance.Parameters))
-                    {
-                        // Parameters are stored as JSON, pass as-is for now
-                        // JobExecutor will deserialize based on job type
-                        parameters = instance.Parameters;
-                    }
-
-                    await PublishJobExecutionEventAsync(instanceId, jobKey, parameters);
-                }
-            }
-            else
-            {
-                logger.LogDebug(
-                    "TriggeredJobDebugMode is enabled. Delayed job {JobKey} instance {InstanceId} transitioned to Enqueued but not published for automatic execution.",
-                    jobKey,
-                    instanceId);
-            }
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(
-                ex,
-                "Error in delayed job timer callback for {JobKey}, InstanceId: {InstanceId}: {Message}",
-                jobKey,
-                instanceId,
-                ex.Message);
-        }
-    }
-
+    
     /// <summary>
     /// Publishes a job execution event to the event bus.
     /// </summary>
     private async Task PublishJobExecutionEventAsync(
-        string instanceId,
-        string jobKey,
+        JobInstance instance,
+        JobDefinition definition,
         object? parameters,
         CancellationToken cancellationToken = default)
     {
@@ -508,33 +299,33 @@ public class MoJobScheduler(
         {
             var executionEvent = new MoJobExecutionEvent
             {
-                InstanceId = instanceId,
-                JobKey = jobKey,
+                InstanceId = instance.InstanceId,
+                JobKey = definition.JobKey,
                 JobArgs = parameters?.ToString(), // Already JSON string or null
                 RequestedAt = DateTime.UtcNow,
-                MaxExecutionTimeout = _options,
-                JobType = JobType.Triggered,
+                MaxExecutionTimeout = definition.MaxExecutionTimeout,
+                JobType = definition.JobType,
             };
 
             await eventBus.PublishAsync(executionEvent);
 
             logger.LogDebug(
                 "Job execution event published: {JobKey}, InstanceId: {InstanceId}",
-                jobKey,
-                instanceId);
+                definition,
+                instance.InstanceId);
         }
         catch (Exception ex)
         {
             logger.LogError(
                 ex,
                 "Failed to publish job execution event for {JobKey}, InstanceId: {InstanceId}: {Message}",
-                jobKey,
-                instanceId,
+                definition,
+                instance.InstanceId,
                 ex.Message);
 
             // Mark instance as failed
             await jobInstanceManager.UpdateStateAsync(
-                instanceId,
+                instance.InstanceId,
                 JobState.Failed,
                 $"Event bus publishing failure: {ex.Message}",
                 cancellationToken);

@@ -65,7 +65,7 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
         foreach (var job in _jobDefinitions)
         {
             services.AddTransient(job.JobClrType);
-            Logger.LogDebug("Discovered {JobType}Job: {JobKey} ({TypeName})", job.Type, job.JobKey, job.JobName);
+            Logger.LogDebug("Discovered {JobType}Job: {JobKey} ({TypeName})", job.JobType, job.JobKey, job.JobName);
         }
 
         Logger.LogInformation("Discovered {Count} job type(s) for registration", _jobDefinitions.Count);
@@ -76,7 +76,7 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
             return;
         }
 
-        services.AddSingleton<IMoJobExecutor, MoJobExecutor>();
+        services.AddSingleton<JobExecutor>();
 
         // Register job definitions to JobRegistry
         // This is done synchronously during startup (blocking is acceptable)
@@ -104,7 +104,7 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
             JobKey = jobType.FullName ?? throw new InvalidOperationException($"Job type {jobType.Name} must have full name."),
             JobName = attribute?.JobName ?? jobType.Name,
             Description = attribute?.Description,
-            Type = jobTypeEnum,
+            JobType = jobTypeEnum,
             MaxConcurrency = attribute?.MaxConcurrencyBridge ?? 1,
             RetryCount = attribute?.RetryCountBridge ?? 0,
             MaxExecutionTimeout = attribute?.MaxExecutionTimeout ?? TimeSpan.FromHours(1),

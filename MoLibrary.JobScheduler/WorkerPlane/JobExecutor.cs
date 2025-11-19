@@ -10,11 +10,8 @@ namespace MoLibrary.JobScheduler.WorkerPlane;
 /// Executes jobs for both recurring and triggered job types.
 /// Handles the actual job invocation logic while the orchestrator manages state, timeout, and retries.
 /// </summary>
-public class MoJobExecutor(ILogger<MoJobExecutor> logger) : IMoJobExecutor
+public class JobExecutor(ILogger<JobExecutor> logger)
 {
-    /// <summary>
-    /// Executes a recurring job by casting to IMoRecurringJob and invoking ExecuteAsync.
-    /// </summary>
     public async Task ExecuteRecurringJobAsync(JobExecutionContext context)
     {
         var job = context.ServiceProvider.GetService(context.JobType);
@@ -32,10 +29,6 @@ public class MoJobExecutor(ILogger<MoJobExecutor> logger) : IMoJobExecutor
 
         await recurringJob.ExecuteAsync(context.CancellationToken);
     }
-
-    /// <summary>
-    /// Executes a triggered job using reflection to invoke the ExecuteAsync method.
-    /// </summary>
     public async Task ExecuteTriggeredJobAsync(JobExecutionContext context)
     {
         var job = context.ServiceProvider.GetService(context.JobType);
