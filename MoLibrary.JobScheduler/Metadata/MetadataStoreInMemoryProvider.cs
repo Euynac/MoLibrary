@@ -87,7 +87,7 @@ public class MetadataStoreInMemoryProvider(ILogger<MetadataStoreInMemoryProvider
                 "Job definition registered: {JobKey} ({JobName}), Type: {JobType}, MaxConcurrency: {MaxConcurrency}",
                 definition.JobKey,
                 definition.JobName,
-                definition.Type,
+                definition.JobType,
                 definition.MaxConcurrency);
         }
         else

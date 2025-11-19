@@ -30,13 +30,13 @@ public class JobRegistry(
             status,
             jobDefinition.JobKey,
             jobDefinition.JobName,
-            jobDefinition.Type,
+            jobDefinition.JobType,
             jobDefinition.MaxConcurrency,
             jobDefinition.RetryCount,
             jobDefinition.MaxExecutionTimeout);
         _jobDefinitionTypeMap.Add(jobDefinition.JobClrType.FullName!, jobDefinition.JobClrType);
         
-        if (jobDefinition.Type == JobType.Recurring)
+        if (jobDefinition.JobType == JobType.Recurring)
         {
             logger.LogDebug(
                 "Recurring job details - JobKey: {JobKey}, CronExpression: {CronExpression}, StartTime: {StartTime}, EndTime: {EndTime}, IsDisabled: {IsDisabled}",
@@ -46,7 +46,7 @@ public class JobRegistry(
                 jobDefinition.EndTime,
                 jobDefinition.IsDisabled);
         }
-        else if (jobDefinition.Type == JobType.Triggered)
+        else if (jobDefinition.JobType == JobType.Triggered)
         {
             if (jobDefinition.JobArgsClrType == null)
                 throw new JobRegistrationException(jobDefinition.JobKey, "ParameterClrType is null");
@@ -159,7 +159,7 @@ public class JobRegistry(
                 "Job added: {JobKey} ({JobName}), Type: {JobType}",
                 definition.JobKey,
                 definition.JobName,
-                definition.Type);
+                definition.JobType);
         }
 
         // Soft delete removed jobs

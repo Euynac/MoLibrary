@@ -1,4 +1,4 @@
-using MoLibrary.JobScheduler.Attributes;
+using MoLibrary.JobScheduler.Jobs;
 
 namespace MoLibrary.JobScheduler.Models;
 
@@ -29,10 +29,10 @@ public class JobInstance
 
     /// <summary>
     /// Gets or sets the JSON-serialized parameters for triggered jobs.
-    /// Only applicable for TriggeredJob{TParam}. Null for recurring jobs.
+    /// Only applicable for <see cref="MoTriggeredJob{TParam}"/>. Null for recurring jobs.
     /// Deserialized and passed to the job's ExecuteAsync method.
     /// </summary>
-    public string? Parameters { get; set; }
+    public string? JobArgs { get; set; }
 
     /// <summary>
     /// Gets or sets the timestamp when this job instance was created.

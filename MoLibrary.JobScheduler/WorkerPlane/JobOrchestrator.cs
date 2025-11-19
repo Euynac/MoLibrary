@@ -19,7 +19,7 @@ public class JobOrchestrator(
     IServiceProvider serviceProvider,
     JobInstanceManager jobInstanceManager,
     IMoCancellationManager cancellationManager,
-    IMoJobExecutor jobExecutor,
+    JobExecutor jobExecutor,
     JobRegistry jobRegistry,
     ILogger<JobOrchestrator> logger)
 {

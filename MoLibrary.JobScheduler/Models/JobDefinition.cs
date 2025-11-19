@@ -35,7 +35,7 @@ public class JobDefinition
     /// Gets or sets the type of job (Recurring or Triggered).
     /// Determines whether the job is scheduled automatically or triggered on-demand.
     /// </summary>
-    public JobType Type { get; set; }
+    public JobType JobType { get; set; }
 
     /// <summary>
     /// Gets or sets the maximum number of concurrent executions allowed for this job.
