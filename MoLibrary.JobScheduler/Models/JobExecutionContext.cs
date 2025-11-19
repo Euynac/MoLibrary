@@ -1,18 +1,29 @@
-using MoLibrary.DependencyInjection.AppInterfaces;
-
 namespace MoLibrary.JobScheduler.Models;
 
-public class JobExecutionContext(
-    IServiceProvider serviceProvider,
-    Type jobType,
-    object jobArgs,
-    CancellationToken cancellationToken = default)
-    : IMoServiceProviderAccessor
+/// <summary>
+/// Provides execution context for job execution.
+/// Contains all necessary information for both recurring and triggered jobs.
+/// </summary>
+public class JobExecutionContext
 {
-    public CancellationToken CancellationToken { get; } = cancellationToken;
+    /// <summary>
+    /// Gets or sets the service provider for resolving job instances and dependencies.
+    /// </summary>
+    public required IServiceProvider ServiceProvider { get; init; }
 
-    public object JobArgs { get; } = jobArgs;
+    /// <summary>
+    /// Gets or sets the CLR type of the job to execute.
+    /// </summary>
+    public required Type JobType { get; init; }
 
-    public Type JobType { get; } = jobType;
-    public IServiceProvider ServiceProvider { get; } = serviceProvider;
+    /// <summary>
+    /// Gets or sets the job arguments (for triggered jobs only).
+    /// Null for recurring jobs.
+    /// </summary>
+    public object? JobArgs { get; init; }
+
+    /// <summary>
+    /// Gets or sets the cancellation token for the job execution.
+    /// </summary>
+    public required CancellationToken CancellationToken { get; init; }
 }

@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Events;
+using MoLibrary.JobScheduler.Metadata;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.JobScheduler.Modules;
 
@@ -20,7 +21,7 @@ public class MoJobScheduler(
     IOptions<ModuleJobSchedulerOption> options,
     IMoJobScheduleMetadataStore metadataStore,
     JobRegistry jobRegistry,
-    MetadataWriter metadataWriter,
+    JobInstanceManager jobInstanceManager,
     IMoEventBus eventBus,
     ILogger<MoJobScheduler> logger) : IHostedService
 {
@@ -136,7 +137,7 @@ public class MoJobScheduler(
         }
 
         // Create instance
-        var instanceId = await metadataWriter.CreateInstanceAsync(
+        var instanceId = await jobInstanceManager.CreateInstanceAsync(
             definition,
             parameters,
             initialState,
@@ -373,7 +374,7 @@ public class MoJobScheduler(
             }
 
             // Create instance and publish event
-            var instanceId = await metadataWriter.CreateInstanceAsync(
+            var instanceId = await jobInstanceManager.CreateInstanceAsync(
                 definition,
                 parameters: null,
                 JobState.Enqueued,
@@ -451,7 +452,7 @@ public class MoJobScheduler(
             }
 
             // Transition from Scheduled to Enqueued
-            await metadataWriter.UpdateStateAsync(instanceId, JobState.Enqueued);
+            await jobInstanceManager.UpdateStateAsync(instanceId, JobState.Enqueued);
 
             logger.LogInformation(
                 "Delayed job state transitioned: {JobKey}, InstanceId: {InstanceId}, Scheduled -> Enqueued",
@@ -509,8 +510,10 @@ public class MoJobScheduler(
             {
                 InstanceId = instanceId,
                 JobKey = jobKey,
-                Parameters = parameters?.ToString(), // Already JSON string or null
-                RequestedAt = DateTime.UtcNow
+                JobArgs = parameters?.ToString(), // Already JSON string or null
+                RequestedAt = DateTime.UtcNow,
+                MaxExecutionTimeout = _options,
+                JobType = JobType.Triggered,
             };
 
             await eventBus.PublishAsync(executionEvent);
@@ -530,7 +533,7 @@ public class MoJobScheduler(
                 ex.Message);
 
             // Mark instance as failed
-            await metadataWriter.UpdateStateAsync(
+            await jobInstanceManager.UpdateStateAsync(
                 instanceId,
                 JobState.Failed,
                 $"Event bus publishing failure: {ex.Message}",
