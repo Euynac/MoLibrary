@@ -21,23 +21,20 @@ public class JobScheduler(
     IMoJobScheduleMetadataStore metadataStore,
     JobRegistry jobRegistry,
     JobInstanceManager jobInstanceManager,
-    IMoEventBus eventBus,
+    JobDispatcher jobDispatcher,
     ILogger<JobScheduler> logger) : IHostedService
 {
     private readonly ModuleJobSchedulerOption _options = options.Value;
 
     // Recurring job scheduling state
     private readonly ConcurrentDictionary<string, RecurringJobSchedule> _inFlightRecurringSchedules = new();
-    private readonly ConcurrentDictionary<string, Timer> _delayedJobTimers = new();
-    private CancellationTokenSource? _stoppingCts;
+    
 
     /// <summary>
     /// Starts the job scheduler, loading all recurring jobs and scheduling cron-based executions.
     /// </summary>
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        _stoppingCts = new CancellationTokenSource();
-
         logger.LogInformation(
             "JobScheduler starting. RecurringJobDebugMode: {RecurringDebug}, TriggeredJobDebugMode: {TriggeredDebug}",
             _options.RecurringJobDebugMode,
@@ -83,24 +80,13 @@ public class JobScheduler(
     {
         logger.LogInformation("JobScheduler stopping...");
 
-        _stoppingCts?.Cancel();
-
         // Dispose all recurring job timers
         foreach (var schedule in _inFlightRecurringSchedules.Values)
         {
             schedule.Timer?.Dispose();
         }
         _inFlightRecurringSchedules.Clear();
-
-        // Dispose all delayed job timers
-        foreach (var timer in _delayedJobTimers.Values)
-        {
-            timer?.Dispose();
-        }
-        _delayedJobTimers.Clear();
-
-        _stoppingCts?.Dispose();
-
+     
         logger.LogInformation("JobScheduler stopped");
         return Task.CompletedTask;
     }
@@ -270,7 +256,7 @@ public class JobScheduler(
                 jobKey,
                 instance);
 
-            await PublishJobExecutionEventAsync(instance, definition, null);
+            await jobDispatcher.PublishJobExecutionEventAsync(instance, definition, null);
 
             // Reschedule for next occurrence
             ScheduleRecurringJob(definition);
@@ -286,52 +272,7 @@ public class JobScheduler(
         }
     }
     
-    /// <summary>
-    /// Publishes a job execution event to the event bus.
-    /// </summary>
-    private async Task PublishJobExecutionEventAsync(
-        JobInstance instance,
-        JobDefinition definition,
-        object? parameters,
-        CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            var executionEvent = new MoJobExecutionEvent
-            {
-                InstanceId = instance.InstanceId,
-                JobKey = definition.JobKey,
-                JobArgs = parameters?.ToString(), // Already JSON string or null
-                RequestedAt = DateTime.UtcNow,
-                MaxExecutionTimeout = definition.MaxExecutionTimeout,
-                JobType = definition.JobType,
-            };
-
-            await eventBus.PublishAsync(executionEvent);
-
-            logger.LogDebug(
-                "Job execution event published: {JobKey}, InstanceId: {InstanceId}",
-                definition,
-                instance.InstanceId);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(
-                ex,
-                "Failed to publish job execution event for {JobKey}, InstanceId: {InstanceId}: {Message}",
-                definition,
-                instance.InstanceId,
-                ex.Message);
-
-            // Mark instance as failed
-            await jobInstanceManager.UpdateStateAsync(
-                instance.InstanceId,
-                JobState.Failed,
-                $"Event bus publishing failure: {ex.Message}",
-                cancellationToken);
-        }
-    }
-
+    
     /// <summary>
     /// Internal class to track recurring job scheduling state.
     /// </summary>

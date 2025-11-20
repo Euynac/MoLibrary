@@ -63,6 +63,32 @@ public abstract class MoModule<TModuleSelf, TModuleOption, TModuleGuide>(TModule
         return moduleEnum;
     }
 
+    /// <summary>
+    /// 获取指定的任意模块配置选项
+    /// </summary>
+    /// <typeparam name="TModuleOptions"></typeparam>
+    /// <returns></returns>
+    /// <exception cref="InvalidOperationException"></exception>
+    public TModuleOptions GetOptions<TModuleOptions>() where TModuleOptions : IMoModuleOptionBase, new()
+    {
+        var optionInterface = typeof(TModuleOptions)
+            .GetInterfaces()
+            .FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IMoModuleOptionBase<>));
+
+        if (optionInterface == null)
+            throw new InvalidOperationException($"{typeof(TModuleOptions).Name} does not implement IMoModuleOptionBase<T>.");
+
+        var moduleType = optionInterface.GetGenericArguments()[0];
+        MoModuleRegisterCentre.ModuleRegisterContextDict.TryGetValue(moduleType, out var context);
+        
+        if (context == null)
+            throw new InvalidOperationException($"Module {moduleType.Name} is not registered.");
+
+        context.FinalConfigures.TryGetValue(typeof(TModuleOption), out var value);
+        if(value == null)
+            throw new InvalidOperationException($"Module {moduleType.Name} does not have option {typeof(TModuleOptions).Name}.");
+        return (TModuleOptions)value;
+    }
     internal override void ConvertToRegisterRequest()
     {
         var guide = new TModuleGuide();

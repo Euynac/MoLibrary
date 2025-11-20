@@ -235,16 +235,12 @@ public class ModuleRegisterCentreOption : MoModuleControllerOption<ModuleRegiste
     /// <summary>
     /// 设定当前微服务是注册中心
     /// </summary>
-    internal bool ThisIsCentreServer { get; set; } = false;
+    public bool ThisIsCentreServer { get; internal set; } = false;
     /// <summary>
     /// 设定当前微服务是注册中心客户端
     /// </summary>
-    internal bool ThisIsCentreClient { get; set; } = false;
+    public bool ThisIsCentreClient { get; internal set; } = false;
 
-    /// <summary>
-    /// 注册中心Appid
-    /// </summary>
-    internal string? RegisterServerCentreAppId { get; set; }
     /// <summary>
     /// TODO 最大并发执行数量
     /// </summary>

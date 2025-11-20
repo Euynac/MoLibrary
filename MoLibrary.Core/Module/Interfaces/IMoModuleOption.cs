@@ -46,13 +46,16 @@ public interface IMoModuleOptionBase
 {
 
 }
+public interface IMoModuleOptionBase<TModule> : IMoModuleOptionBase where TModule : IMoModule
+{
 
-public interface IMoModuleOption<TModule> : IMoModuleOption where TModule : IMoModule
+}
+public interface IMoModuleOption<TModule> : IMoModuleOption, IMoModuleOptionBase<TModule> where TModule : IMoModule
 {
 
 }
 
-public interface IMoModuleExtraOption<TModule> : IMoModuleOptionBase where TModule : IMoModule
+public interface IMoModuleExtraOption<TModule> : IMoModuleOptionBase<TModule> where TModule : IMoModule
 {
 }
 

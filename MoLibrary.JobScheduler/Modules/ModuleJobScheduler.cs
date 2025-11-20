@@ -87,6 +87,11 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
             var leaderService = provider.GetRequiredService<ILeaderService>();
             return new JobRegistrationHostedService(jobRegistry, _jobDefinitions, logger, leaderService);
         });
+
+        if (GetOptions<ModuleRegisterCentreOption>().ThisIsCentreServer)
+        {
+            services.AddHostedService<ControlPlane.JobScheduler>();
+        }
     }
     
     /// <summary>
