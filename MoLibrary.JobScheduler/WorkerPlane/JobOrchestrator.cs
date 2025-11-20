@@ -8,6 +8,7 @@ using MoLibrary.JobScheduler.ControlPlane;
 using MoLibrary.JobScheduler.Events;
 using MoLibrary.JobScheduler.Metadata;
 using MoLibrary.JobScheduler.Models;
+using MoLibrary.RegisterCentre.Interfaces;
 
 namespace MoLibrary.JobScheduler.WorkerPlane;
 
@@ -21,6 +22,7 @@ public class JobOrchestrator(
     IMoCancellationManager cancellationManager,
     JobExecutor jobExecutor,
     JobRegistry jobRegistry,
+    IRegisterCentreClient client,
     ILogger<JobOrchestrator> logger)
 {
     /// <summary>
