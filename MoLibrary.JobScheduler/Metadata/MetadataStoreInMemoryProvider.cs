@@ -8,28 +8,6 @@ namespace MoLibrary.JobScheduler.Metadata;
 /// Default in-memory implementation of <see cref="IMoJobScheduleMetadataStore"/>.
 /// Provides thread-safe, volatile storage for job definitions and instances using concurrent dictionaries.
 /// </summary>
-/// <remarks>
-/// <para>
-/// This implementation is suitable for:
-/// </para>
-/// <list type="bullet">
-/// <item><description><b>Development:</b> Fast, simple setup without external dependencies</description></item>
-/// <item><description><b>Testing:</b> Isolated test environments with predictable state</description></item>
-/// <item><description><b>Single-Instance Production:</b> Low-volume scenarios where data persistence is not critical</description></item>
-/// </list>
-/// <para>
-/// <b>Limitations:</b>
-/// </para>
-/// <list type="bullet">
-/// <item><description>Data is lost on application restart (no persistence)</description></item>
-/// <item><description>Not suitable for distributed deployments (no shared state across instances)</description></item>
-/// <item><description>Memory usage grows with job history (no automatic cleanup)</description></item>
-/// </list>
-/// <para>
-/// For production distributed deployments, consider implementing a persistent store using:
-/// SQL Server, PostgreSQL, MongoDB, Redis, or other appropriate storage technologies.
-/// </para>
-/// </remarks>
 public class MetadataStoreInMemoryProvider(ILogger<MetadataStoreInMemoryProvider> logger)
     : IMoJobScheduleMetadataStore
 {

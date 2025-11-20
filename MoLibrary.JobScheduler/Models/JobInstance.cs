@@ -79,4 +79,90 @@ public class JobInstance
     /// Used to track which worker is handling the job.
     /// </summary>
     public string? RunningClientId { get; set; }
+    
+    
+    /// <summary>
+    /// Updates the state of a job instance with validation of state transitions.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when the state transition is invalid.</exception>
+    public void UpdateStateAsync(
+        JobState newState,
+        string? errorMessage = null,
+        CancellationToken cancellationToken = default)
+    {
+        
+        var currentState = State;
+
+        // Validate state transition
+        if (!IsValidTransition(currentState, newState))
+        {
+            var message = $"Invalid state transition from {currentState} to {newState}";
+            throw new InvalidOperationException(message);
+        }
+
+        // Update state
+        State = newState;   
+
+        // Update timestamps based on new state
+        var now = DateTime.UtcNow;
+        switch (newState)
+        {
+            case JobState.Processing:
+                StartedAt = now;        
+                break;
+
+            case JobState.Succeeded:
+            case JobState.Failed:
+            case JobState.Terminated:
+            case JobState.Cancelled:
+            case JobState.Skipped:
+                // Terminal states (and Failed which may retry but we still timestamp it)
+                CompletedAt = now;
+                break;
+        }
+
+        // Set error message if provided
+        if (!string.IsNullOrEmpty(errorMessage))
+        {
+            ErrorMessage = errorMessage;
+        }
+    }
+
+    /// <summary>
+    /// Validates whether a state transition is allowed according to the state machine.
+    /// </summary>
+    /// <param name="currentState">The current state.</param>
+    /// <param name="newState">The desired new state.</param>
+    /// <returns>True if the transition is valid, false otherwise.</returns>
+    private static bool IsValidTransition(JobState currentState, JobState newState)
+    {
+        // Allow transition to same state (idempotent updates)
+        if (currentState == newState)
+        {
+            return true;
+        }
+
+        return currentState switch
+        {
+            // Scheduled can transition to Enqueued or Cancelled
+            JobState.Scheduled => newState is JobState.Enqueued or JobState.Cancelled,
+
+            // Enqueued can transition to Processing, Skipped, or Cancelled
+            JobState.Enqueued => newState is JobState.Processing or JobState.Skipped or JobState.Cancelled,
+
+            // Processing can transition to Succeeded, Failed, or Cancelled
+            JobState.Processing => newState is JobState.Succeeded or JobState.Failed or JobState.Cancelled,
+
+            // Failed can transition to Processing (retry) or Terminated (no retries)
+            JobState.Failed => newState is JobState.Processing or JobState.Terminated,
+
+            // Terminal states cannot transition to any other state
+            JobState.Succeeded => false,
+            JobState.Terminated => false,
+            JobState.Cancelled => false,
+            JobState.Skipped => false,
+
+            _ => false
+        };
+    }
 }

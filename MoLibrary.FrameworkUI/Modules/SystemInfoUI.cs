@@ -1,11 +1,14 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.OpenApi.Models;
+using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.Core.Modules;
 using MoLibrary.FrameworkUI.Pages;
-using MoLibrary.FrameworkUI.UISystemInfo.Controllers;
 using MoLibrary.FrameworkUI.UISystemInfo.Services;
 using MoLibrary.UI.Modules;
 using MudBlazor;
@@ -44,19 +47,38 @@ public class ModuleSystemInfoUI(ModuleSystemInfoUIOption option)
     {
         if (!Option.DisableUISystemInfoPage)
         {
-            // 注册Controller依赖
-            DependsOnModule<ModuleControllersGuide>().Register()
-                .RegisterMoControllers<ModuleSystemInfoController>(Option);
-            
             DependsOnModule<ModuleUICoreGuide>().Register()
                 .RegisterUIComponents(p => p.RegisterComponent<UISystemInfoPage>(
-                    UISystemInfoPage.SYSTEM_INFO_URL, 
-                    "系统信息", 
-                    Icons.Material.Filled.Info, 
-                    "系统管理", 
-                    addToNav: true, 
+                    UISystemInfoPage.SYSTEM_INFO_URL,
+                    "系统信息",
+                    Icons.Material.Filled.Info,
+                    "系统管理",
+                    addToNav: true,
                     navOrder: 10));
         }
+    }
+
+    public override void ConfigureEndpoints(IApplicationBuilder app)
+    {
+        app.UseEndpoints(endpoints =>
+        {
+            var tagGroup = new List<OpenApiTag> { new() { Name = Option.GetApiGroupName(), Description = "系统信息相关接口" } };
+
+            endpoints.MapGet("/system/info",
+                async ([FromQuery] bool? simple,
+                      [FromServices] SystemInfoService systemInfoService) =>
+                {
+                    var result = await systemInfoService.GetSystemInfoAsync(simple);
+                    return result.GetResponse();
+                })
+                .WithName("获取微服务信息").WithOpenApi(operation =>
+                {
+                    operation.Summary = "获取微服务信息";
+                    operation.Description = "获取微服务信息";
+                    operation.Tags = tagGroup;
+                    return operation;
+                });
+        });
     }
 }
 
