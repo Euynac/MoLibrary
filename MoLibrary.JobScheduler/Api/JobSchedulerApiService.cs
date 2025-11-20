@@ -19,6 +19,7 @@ public class JobSchedulerApiService(
     JobRegistry jobRegistry,
     IMoJobScheduleMetadataStore metadataStore,
     IMoCancellationManager cancellationManager,
+    JobInstanceManager jobInstanceManager,
     ILogger<JobSchedulerApiService> logger)
 {
     /// <summary>
@@ -78,7 +79,7 @@ public class JobSchedulerApiService(
         await cancellationManager.CancelTokenAsync(instanceId, cancellationToken);
 
         // Update instance state to Cancelled
-        await metadataStore.UpdateJobStateAsync(
+        await jobInstanceManager.UpdateStateAsync(
             instanceId,
             JobState.Cancelled,
             "Cancelled via API",

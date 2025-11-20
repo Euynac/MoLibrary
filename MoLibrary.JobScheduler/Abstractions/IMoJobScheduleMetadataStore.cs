@@ -96,23 +96,6 @@ public interface IMoJobScheduleMetadataStore
     /// <exception cref="ArgumentNullException">Thrown when instance is null.</exception>
     /// <exception cref="ArgumentException">Thrown when instance.InstanceId is null or empty.</exception>
     Task SaveJobInstanceAsync(JobInstance instance, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Updates the state of a job instance and optionally sets an error message.
-    /// Updates timestamps (StartedAt when entering Processing, CompletedAt for terminal states).
-    /// </summary>
-    /// <param name="instanceId">The unique identifier for the job instance.</param>
-    /// <param name="newState">The new state to transition to.</param>
-    /// <param name="errorMessage">Optional error message (typically for Failed, Terminated, or Cancelled states).</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <exception cref="ArgumentException">Thrown when instanceId is null or empty.</exception>
-    /// <exception cref="InvalidOperationException">Thrown when the instance is not found.</exception>
-    Task UpdateJobStateAsync(
-        string instanceId,
-        JobState newState,
-        string? errorMessage = null,
-        CancellationToken cancellationToken = default);
-
     #endregion
 
     #region Job History

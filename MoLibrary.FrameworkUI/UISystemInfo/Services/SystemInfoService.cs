@@ -29,13 +29,15 @@ public class SystemInfoService(ILogger<SystemInfoService> logger)
             }
 
             var fileInfo = FileVersionInfo.GetVersionInfo(entryAssembly.Location);
-            var buildTime = System.IO.File.GetLastWriteTime(fileInfo.FileName);
+            var buildTime = File.GetLastWriteTime(fileInfo.FileName);
+            var processStartTime = Process.GetCurrentProcess().StartTime;
 
             var response = new SystemInfoResponse
             {
                 BuildTime = buildTime,
                 LocalTime = DateTime.Now,
-                UtcTime = DateTime.UtcNow
+                UtcTime = DateTime.UtcNow,
+                ProcessStartTime = processStartTime
             };
 
             if (simple is not true)
@@ -48,6 +50,7 @@ public class SystemInfoService(ILogger<SystemInfoService> logger)
                     MachineName = Environment.MachineName,
                     OSVersion = Environment.OSVersion,
                     ProcessId = Environment.ProcessId,
+                    ProcessStartTime = processStartTime,
                     CurrentDirectory = Environment.CurrentDirectory,
                     HasShutdownStarted = Environment.HasShutdownStarted,
                     Is64BitOperatingSystem = Environment.Is64BitOperatingSystem,
