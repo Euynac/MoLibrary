@@ -1,14 +1,19 @@
+using System.IO;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.OpenApi.Models;
+using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.Core.Modules;
 using MoLibrary.FrameworkUI.Pages;
-using MoLibrary.FrameworkUI.UILogging.Controllers;
 using MoLibrary.FrameworkUI.UILogging.Models;
 using MoLibrary.FrameworkUI.UILogging.Services;
 using MoLibrary.Logging.Modules;
+using MoLibrary.Tool.MoResponse;
 using MoLibrary.UI.Modules;
 using MudBlazor;
 
@@ -51,9 +56,6 @@ public class ModuleLoggingUI(ModuleLoggingUIOption option)
 
         if (!Option.DisableUILoggingPage)
         {
-            DependsOnModule<ModuleControllersGuide>().Register()
-                .RegisterMoControllers<ModuleLoggingUiController>(Option);
-
             DependsOnModule<ModuleUICoreGuide>().Register()
                 .RegisterUIComponents(p => p.RegisterComponent<UILoggingPage>(
                     UILoggingPage.LOGGING_MONITOR_URL,
@@ -63,6 +65,70 @@ public class ModuleLoggingUI(ModuleLoggingUIOption option)
                     addToNav: true,
                     navOrder: 60));
         }
+    }
+
+    public override void ConfigureEndpoints(IApplicationBuilder app)
+    {
+        app.UseEndpoints(endpoints =>
+        {
+            var tagGroup = new List<OpenApiTag> { new() { Name = Option.GetApiGroupName(), Description = "日志监控相关接口" } };
+
+            endpoints.MapGet("/logging-ui/files",
+                async ([FromServices] LoggingService loggingService) =>
+                {
+                    var result = await loggingService.ListFilesAsync();
+                    return result.GetResponse();
+                })
+                .WithName("列出日志文件").WithOpenApi(operation =>
+                {
+                    operation.Summary = "列出日志文件";
+                    operation.Description = "获取所有可用的日志文件列表";
+                    operation.Tags = tagGroup;
+                    return operation;
+                });
+
+            endpoints.MapGet("/logging-ui/files/{*filePath}",
+                async ([FromRoute] string filePath,
+                      [FromServices] LoggingService loggingService) =>
+                {
+                    filePath = Uri.UnescapeDataString(filePath);
+                    var result = await loggingService.OpenFileAsync(filePath);
+                    if (result.IsFailed(out var error, out var stream))
+                    {
+                        return error.GetResponse();
+                    }
+
+                    stream.Seek(0, SeekOrigin.Begin);
+                    var downloadName = Path.GetFileName(filePath);
+                    return Results.File(stream, "text/plain", downloadName);
+                })
+                .WithName("下载日志文件").WithOpenApi(operation =>
+                {
+                    operation.Summary = "下载日志文件";
+                    operation.Description = "下载指定的日志文件";
+                    operation.Tags = tagGroup;
+                    return operation;
+                });
+
+            endpoints.MapGet("/logging-ui/current/export",
+                async ([FromServices] LoggingService loggingService) =>
+                {
+                    var result = await loggingService.ExportBufferAsync();
+                    if (result.IsFailed(out var error, out var export))
+                    {
+                        return error.GetResponse();
+                    }
+
+                    return Results.File(export.Content, export.ContentType, export.FileName);
+                })
+                .WithName("导出当前日志").WithOpenApi(operation =>
+                {
+                    operation.Summary = "导出当前日志";
+                    operation.Description = "导出当前缓冲区中的日志";
+                    operation.Tags = tagGroup;
+                    return operation;
+                });
+        });
     }
 }
 

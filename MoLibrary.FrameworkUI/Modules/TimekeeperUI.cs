@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.OpenApi.Models;
+using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.Core.Modules;
 using MoLibrary.FrameworkUI.Pages;
-using MoLibrary.FrameworkUI.UITimekeeper.Controllers;
 using MoLibrary.FrameworkUI.UITimekeeper.Services;
 using MoLibrary.UI.Modules;
 using MudBlazor;
@@ -46,20 +48,52 @@ public class ModuleTimekeeperUI(ModuleTimekeeperUIOption option)
         {
             // 注册原有的Timekeeper模块依赖
             DependsOnModule<ModuleTimekeeperGuide>().Register();
-            
-            // 注册Controller依赖
-            DependsOnModule<ModuleControllersGuide>().Register()
-                .RegisterMoControllers<ModuleTimekeeperController>(Option);
-            
+
             DependsOnModule<ModuleUICoreGuide>().Register()
                 .RegisterUIComponents(p => p.RegisterComponent<UITimekeeperPage>(
-                    UITimekeeperPage.TIMEKEEPER_DEBUG_URL, 
-                    "Timekeeper调试", 
-                    Icons.Material.Filled.Timer, 
-                    "系统管理", 
-                    addToNav: true, 
+                    UITimekeeperPage.TIMEKEEPER_DEBUG_URL,
+                    "Timekeeper调试",
+                    Icons.Material.Filled.Timer,
+                    "系统管理",
+                    addToNav: true,
                     navOrder: 50));
         }
+    }
+
+    public override void ConfigureEndpoints(IApplicationBuilder app)
+    {
+        app.UseEndpoints(endpoints =>
+        {
+            var tagGroup = new List<OpenApiTag> { new() { Name = Option.GetApiGroupName(), Description = "Timekeeper相关接口" } };
+
+            endpoints.MapGet("/timekeeper/status",
+                async ([FromServices] TimekeeperService timekeeperService) =>
+                {
+                    var result = await timekeeperService.GetTimekeeperStatusAsync();
+                    return result.GetResponse();
+                })
+                .WithName("获取Timekeeper统计状态").WithOpenApi(operation =>
+                {
+                    operation.Summary = "获取Timekeeper统计状态";
+                    operation.Description = "获取Timekeeper统计信息列表";
+                    operation.Tags = tagGroup;
+                    return operation;
+                });
+
+            endpoints.MapGet("/timekeeper/running",
+                async ([FromServices] TimekeeperService timekeeperService) =>
+                {
+                    var result = await timekeeperService.GetRunningTimekeepersAsync();
+                    return result.GetResponse();
+                })
+                .WithName("获取当前正在运行的Timekeeper").WithOpenApi(operation =>
+                {
+                    operation.Summary = "获取当前正在运行的Timekeeper";
+                    operation.Description = "获取正在运行的Timekeeper信息列表";
+                    operation.Tags = tagGroup;
+                    return operation;
+                });
+        });
     }
 }
 
