@@ -10,7 +10,8 @@ public interface IRegisterCentreClient
     /// <summary>
     /// 用于展示客户端监听地址元数据
     /// </summary>
-    static string ListeningAddressMetadataKey = "ListeningAddresses";
+    const string LISTENING_ADDRESS_METADATA_KEY = "ListeningAddresses";
+
     /// <summary>
     /// 获取当前微服务状态
     /// </summary>

@@ -101,7 +101,7 @@ public class RegisterCentreServerConnector(
                     BuildTime = serviceInfo.BuildTime,
                     AssemblyVersion = serviceInfo.AssemblyVersion,
                     ReleaseVersion = serviceInfo.ReleaseVersion,
-                    FromClient = serviceInfo.FromClient
+                    FromClient = serviceInfo.FromInstance
                 };
                 
                 var res = await Heartbeat(heartbeat);
