@@ -76,49 +76,8 @@ public class JobInstanceManager(
         }
 
         var currentState = instance.State;
-
-        // Validate state transition
-        if (!IsValidTransition(currentState, newState))
-        {
-            var message = $"Invalid state transition from {currentState} to {newState} for instance {instanceId}";
-            logger.LogError(message);
-            throw new InvalidOperationException(message);
-        }
-
-        // Update state
-        instance.State = newState;
-
-        // Update timestamps based on new state
-        var now = DateTime.UtcNow;
-        switch (newState)
-        {
-            case JobState.Processing:
-                instance.StartedAt = now;
-                break;
-
-            case JobState.Succeeded:
-            case JobState.Failed:
-            case JobState.Terminated:
-            case JobState.Cancelled:
-            case JobState.Skipped:
-                // Terminal states (and Failed which may retry but we still timestamp it)
-                instance.CompletedAt = now;
-                break;
-        }
-
-        // Set error message if provided
-        if (!string.IsNullOrEmpty(errorMessage))
-        {
-            instance.ErrorMessage = errorMessage;
-        }
-
-        // Save updated instance
-        await metadataStore.UpdateJobStateAsync(
-            instanceId,
-            newState,
-            errorMessage,
-            cancellationToken);
-
+        instance.UpdateStateAsync(newState, errorMessage);
+        await metadataStore.SaveJobInstanceAsync(instance, cancellationToken);
         logger.LogInformation(
             "Updated job instance {InstanceId} state from {OldState} to {NewState}",
             instanceId,

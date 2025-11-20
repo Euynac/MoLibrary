@@ -87,8 +87,7 @@ public class JobInstance
     /// <exception cref="InvalidOperationException">Thrown when the state transition is invalid.</exception>
     public void UpdateStateAsync(
         JobState newState,
-        string? errorMessage = null,
-        CancellationToken cancellationToken = default)
+        string? errorMessage = null)
     {
         
         var currentState = State;

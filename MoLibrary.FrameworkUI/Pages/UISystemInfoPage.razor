@@ -78,6 +78,15 @@
                                 </MudStack>
                                 <MudText Class="ml-6" Style="color: #666;">@_systemInfo.ProductVersion</MudText>
                             }
+
+                            @if (_systemInfo.ProcessStartTime.HasValue)
+                            {
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@Icons.Material.Filled.PlayArrow" Size="Size.Small" Color="Color.Success" />
+                                    <MudText><strong>进程启动时间:</strong></MudText>
+                                </MudStack>
+                                <MudText Class="ml-6" Style="color: #666;">@_systemInfo.ProcessStartTime.Value.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                            }
                         </MudStack>
                     </MudCardContent>
                 </MudCard>
@@ -115,7 +124,19 @@
                                     <MudText><strong>进程ID:</strong></MudText>
                                 </MudStack>
                                 <MudText Class="ml-6" Style="color: #666;">@_systemInfo.EnvironmentInfo.ProcessId</MudText>
-                                
+
+                                @if (_systemInfo.EnvironmentInfo.ProcessStartTime.HasValue)
+                                {
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                        <MudIcon Icon="@Icons.Material.Filled.PlayArrow" Size="Size.Small" Color="Color.Success" />
+                                        <MudText><strong>进程启动时间:</strong></MudText>
+                                    </MudStack>
+                                    <MudText Class="ml-6" Style="color: #666;">@_systemInfo.EnvironmentInfo.ProcessStartTime.Value.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                                    <MudText Class="ml-6" Style="color: #888; font-size: 0.875rem;">
+                                        已运行 @FormatUptime(_systemInfo.EnvironmentInfo.ProcessStartTime.Value)
+                                    </MudText>
+                                }
+
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                     <MudIcon Icon="@Icons.Material.Filled.Architecture" Size="Size.Small" Color="Color.Secondary" />
                                     <MudText><strong>64位操作系统:</strong></MudText>
@@ -302,5 +323,33 @@
             max = max / scale;
         }
         return $"{max:##.##} {orders[order]}";
+    }
+
+    private static string FormatUptime(DateTime startTime)
+    {
+        var uptime = DateTime.Now - startTime;
+        var parts = new List<string>();
+
+        if (uptime.Days > 0)
+        {
+            parts.Add($"{uptime.Days}天");
+        }
+
+        if (uptime.Hours > 0)
+        {
+            parts.Add($"{uptime.Hours}小时");
+        }
+
+        if (uptime.Minutes > 0)
+        {
+            parts.Add($"{uptime.Minutes}分钟");
+        }
+
+        if (parts.Count == 0)
+        {
+            parts.Add($"{uptime.Seconds}秒");
+        }
+
+        return string.Join("", parts);
     }
 } 

@@ -28,6 +28,11 @@ public class SystemInfoResponse
     public string? ProductVersion { get; set; }
 
     /// <summary>
+    /// 进程启动时间
+    /// </summary>
+    public DateTime? ProcessStartTime { get; set; }
+
+    /// <summary>
     /// 文件信息（详细模式）
     /// </summary>
     public FileVersionInfo? FileInfo { get; set; }
@@ -67,6 +72,11 @@ public class EnvironmentInfo
     /// 进程ID
     /// </summary>
     public int ProcessId { get; set; }
+
+    /// <summary>
+    /// 进程启动时间
+    /// </summary>
+    public DateTime? ProcessStartTime { get; set; }
 
     /// <summary>
     /// 当前目录
