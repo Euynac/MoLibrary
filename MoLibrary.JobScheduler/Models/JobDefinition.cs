@@ -12,7 +12,7 @@ public class JobDefinition
     /// <summary>
     /// Gets or sets the unique identifier for this job definition. which is the job type's full name (TypeFullName).
     /// </summary>
-    public required string JobKey { get; set; }
+    public required string JobKey { get; init; }
     /// <summary>
     /// Gets or sets the unique identifier for the job arguments type. which is the args type's full name (TypeFullName).
     /// </summary>
