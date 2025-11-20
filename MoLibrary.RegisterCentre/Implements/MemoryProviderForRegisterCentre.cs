@@ -56,12 +56,12 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
             return Task.FromResult(Res.Fail("该微服务未设置APPID，无法注册"));
 
         // 补充来源信息
-        if (req.FromClient is null && _accessor.HttpContext?.Connection is { } connection)
+        if (req.FromInstance is null && _accessor.HttpContext?.Connection is { } connection)
         {
-            req.FromClient = $"[Remote: {connection.RemoteIpAddress}:{connection.RemotePort}][Local: {connection.LocalIpAddress}:{connection.LocalPort}]";
+            req.FromInstance = $"[Remote: {connection.RemoteIpAddress}:{connection.RemotePort}][Local: {connection.LocalIpAddress}:{connection.LocalPort}]";
         }
 
-        if (req.FromClient.IsNullOrWhiteSpace())
+        if (req.FromInstance.IsNullOrWhiteSpace())
             return Task.FromResult(Res.Fail("无法识别服务实例来源"));
 
         var service = Services.GetOrAdd(req.AppId, _ => new RegisteredServiceStatus
@@ -80,7 +80,7 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
         service.DependentSubDomains = req.DependentSubDomains;
 
         // 添加或更新实例
-        var instanceId = req.FromClient!;
+        var instanceId = req.FromInstance!;
         if (service.Instances.TryGetValue(instanceId, out var instance))
         {
             // 更新现有实例

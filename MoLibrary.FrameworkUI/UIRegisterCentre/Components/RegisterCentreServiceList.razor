@@ -268,7 +268,7 @@
 		var configuredKeys = new List<string>(RegisterCentreUIOptions.Value.DisplayMetadataKeys);
 		if (!RegisterCentreUIOptions.Value.DisableListeningAddressDisplay)
 		{
-			configuredKeys.Add(IRegisterCentreClient.ListeningAddressMetadataKey);
+			configuredKeys.Add(IRegisterCentreClient.LISTENING_ADDRESS_METADATA_KEY);
 		}
 
         if (!configuredKeys.Any())

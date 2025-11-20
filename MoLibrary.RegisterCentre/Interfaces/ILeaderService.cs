@@ -16,6 +16,6 @@ public class ClientSideLeaderService(IRegisterCentreClient client, IRegisterCent
     public Task<Res<LeaderStatusResponse>> GetCurrentLeaderStatusAsync()
     {
         var info = client.GetServiceStatus();
-        return connector.GetLeaderStatus(new LeaderStatusRequest {AppId = info.AppId, FromClient = info.FromClient});
+        return connector.GetLeaderStatus(new LeaderStatusRequest {AppId = info.AppId, FromClient = info.FromInstance});
     }
 }

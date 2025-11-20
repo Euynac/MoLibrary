@@ -1,3 +1,4 @@
+using System.Reflection;
 using Cronos;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -114,7 +115,8 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
             RetryCount = attribute?.RetryCountBridge ?? 0,
             MaxExecutionTimeout = attribute?.MaxExecutionTimeout ?? TimeSpan.FromHours(1),
             IsDisabled = attribute?.IsDisabledBridge ?? false,
-            JobClrType = jobType
+            JobClrType = jobType,
+            FromProject = Assembly.GetEntryAssembly()?.GetName().Name ?? throw new InvalidOperationException("Entry assembly must have name for getting job source project.")
         };
 
         // Extract recurring job specific properties

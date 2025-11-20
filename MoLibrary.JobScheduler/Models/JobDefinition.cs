@@ -13,10 +13,18 @@ public class JobDefinition
     /// Gets or sets the unique identifier for this job definition. which is the job type's full name (TypeFullName).
     /// </summary>
     public required string JobKey { get; init; }
+    
     /// <summary>
     /// Gets or sets the unique identifier for the job arguments type. which is the args type's full name (TypeFullName).
     /// </summary>
     public string? JobArgsKey { get; set; }
+
+    /// <summary>
+    /// Gets or sets the client project name where this job definition is defined.
+    /// This is used to identify the source of the job definition in multi-project setups, which is also as the event topic
+    /// for job queue.
+    /// </summary>
+    public required string FromProject { get; init; }
 
     /// <summary>
     /// Gets or sets the human-readable name for this job.

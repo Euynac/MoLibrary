@@ -41,9 +41,9 @@ public class ServiceRegisterInfo
     /// </summary>
     public required string ProjectName { get; set; }
     /// <summary>
-    /// 来源IP端口等信息
+    /// 来源IP端口/主机名 等信息，用于唯一确定一个客户端实例
     /// </summary>
-    public string? FromClient { get; set; }
+    public string? FromInstance { get; set; }
     /// <summary>
     /// 依赖子域列表
     /// </summary>

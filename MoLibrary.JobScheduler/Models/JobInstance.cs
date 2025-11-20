@@ -72,4 +72,11 @@ public class JobInstance
     /// Used to determine if the job should retry or transition to Terminated.
     /// </summary>
     public int RetryAttempt { get; set; } = 0;
+
+    /// <summary>
+    /// Gets or sets the client ID of the worker that is currently processing this job instance.
+    /// Null if the job is not currently running.
+    /// Used to track which worker is handling the job.
+    /// </summary>
+    public string? RunningClientId { get; set; }
 }
