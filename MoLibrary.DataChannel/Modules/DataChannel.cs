@@ -1,11 +1,15 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.OpenApi.Models;
+using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.Core.Modules;
 using MoLibrary.Dapr.Modules;
-using MoLibrary.DataChannel.Dashboard.Controllers;
+using MoLibrary.DataChannel.Dashboard.Services;
 using MoLibrary.DataChannel.Interfaces;
 using MoLibrary.DataChannel.Services;
 
@@ -21,19 +25,11 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
 
     public override void ConfigureServices(IServiceCollection services)
     {
-
         DataChannelCentral.Setting = Option;
         services.AddSingleton<IDataChannelManager, DataChannelManager>();
+        services.AddScoped<DataChannelService>();
         // Add the hosted service for channel initialization
         services.AddHostedService<DataChannelInitializerService>();
-
-        //services.AddControllers()
-        //    .AddApplicationPart(typeof(DataChannelController).Assembly)
-        //    .ConfigureApplicationPartManager(manager =>
-        //    {
-        //        // 动态控制Controller的启用
-        //        manager.FeatureProviders.Add(new ModuleControllerFeatureProvider<DataChannelController>(setting));
-        //    });
     }
 
     public override void ConfigureApplicationBuilder(IApplicationBuilder app)
@@ -51,13 +47,91 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
 
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
-
         DataChannelCentral.ConfigEndpoints(app);
+
+        app.UseEndpoints(endpoints =>
+        {
+            var tagGroup = new List<OpenApiTag> { new() { Name = Option.GetApiGroupName(), Description = "数据通道相关接口" } };
+
+            endpoints.MapGet("/channel/{id}/re-init",
+                async ([FromRoute] string id,
+                      [FromServices] DataChannelService service,
+                      CancellationToken cancellationToken = default) =>
+                {
+                    var result = await service.ReInitializeChannelAsync(id, cancellationToken);
+                    return result.GetResponse();
+                })
+                .WithName("重新初始化DataChannel").WithOpenApi(operation =>
+                {
+                    operation.Summary = "重新初始化DataChannel";
+                    operation.Description = "对给定ID的DataChannel进行重新初始化操作";
+                    operation.Tags = tagGroup;
+                    return operation;
+                });
+
+            endpoints.MapGet("/channels",
+                async ([FromServices] DataChannelService service) =>
+                {
+                    var result = await service.GetChannelsStatusAsync();
+                    return result.GetResponse();
+                })
+                .WithName("获取DataChannel状态列表").WithOpenApi(operation =>
+                {
+                    operation.Summary = "获取DataChannel状态列表";
+                    operation.Description = "获取所有DataChannel的状态信息";
+                    operation.Tags = tagGroup;
+                    return operation;
+                });
+
+            endpoints.MapGet("/channel/{id}/exceptions",
+                async ([FromRoute] string id,
+                      [FromQuery] int count,
+                      [FromServices] DataChannelService service) =>
+                {
+                    var result = await service.GetChannelExceptionsAsync(id, count);
+                    return result.GetResponse();
+                })
+                .WithName("获取指定DataChannel的异常信息").WithOpenApi(operation =>
+                {
+                    operation.Summary = "获取指定DataChannel的异常信息";
+                    operation.Description = "获取指定DataChannel的异常信息";
+                    operation.Tags = tagGroup;
+                    return operation;
+                });
+
+            endpoints.MapGet("/channels/exceptions/summary",
+                async ([FromServices] DataChannelService service) =>
+                {
+                    var result = await service.GetExceptionSummaryAsync();
+                    return result.GetResponse();
+                })
+                .WithName("获取所有DataChannel的异常统计信息").WithOpenApi(operation =>
+                {
+                    operation.Summary = "获取所有DataChannel的异常统计信息";
+                    operation.Description = "获取所有DataChannel的异常统计信息";
+                    operation.Tags = tagGroup;
+                    return operation;
+                });
+
+            endpoints.MapDelete("/channel/{id}/exceptions",
+                async ([FromRoute] string id,
+                      [FromServices] DataChannelService service) =>
+                {
+                    var result = await service.ClearChannelExceptionsAsync(id);
+                    return result.GetResponse();
+                })
+                .WithName("清空指定DataChannel的异常信息").WithOpenApi(operation =>
+                {
+                    operation.Summary = "清空指定DataChannel的异常信息";
+                    operation.Description = "清空指定DataChannel的异常信息";
+                    operation.Tags = tagGroup;
+                    return operation;
+                });
+        });
     }
 
     public override void ClaimDependencies()
     {
-        DependsOnModule<ModuleControllersGuide>().Register().RegisterMoControllers<ModuleDataChannelController>(Option);
         DependsOnModule<ModuleDaprClientGuide>().Register();
     }
 }
