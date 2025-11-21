@@ -382,7 +382,7 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
                     _staticServiceInstanceOffline?.Invoke(null, new ServiceInstanceOfflineEvent
                     {
                         InstanceId = instanceId,
-                        ProjectName = service.ProjectName,
+                        ProjectName = service.ProjectName ?? service.AppName ?? service.AppId,
                         OfflineTime = DateTime.UtcNow
                     });
                 }
@@ -405,7 +405,7 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
         // 获取所有符合条件的实例（Running和Unhealthy状态）
         // Unhealthy实例仍可参与领导者选举，只有Offline和Error状态的实例被排除
         var eligibleInstances = service.Instances.Values
-            .Where(i => i.Status == ServiceStatus.Running || i.Status == ServiceStatus.Unhealthy)
+            .Where(i => i.Status is ServiceStatus.Running or ServiceStatus.Unhealthy)
             .ToList();
 
         // 如果没有符合条件的实例，清除所有领导者标记
