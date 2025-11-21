@@ -19,14 +19,12 @@ public class JobInstanceManager(
     /// <param name="definition">The job definition for this instance.</param>
     /// <param name="parameters">Optional parameters for triggered jobs (will be JSON-serialized).</param>
     /// <param name="initialState">The initial state for the job instance.</param>
-    /// <param name="scheduledFor">Optional scheduled execution time for Scheduled state.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The generated instance ID (GUID).</returns>
     public async Task<JobInstance> CreateInstanceAsync(
         JobDefinition definition,
         object? parameters,
         JobState initialState,
-        DateTime? scheduledFor = null,
         CancellationToken cancellationToken = default)
     {
         var instanceId = Guid.NewGuid().ToString();
@@ -39,7 +37,6 @@ public class JobInstanceManager(
             State = initialState,
             JobArgs = parameters != null ? JsonSerializer.Serialize(parameters) : null,
             CreatedAt = now,
-            ScheduledFor = initialState == JobState.Scheduled ? scheduledFor : null,
             RetryAttempt = 0
         };
 
@@ -60,13 +57,15 @@ public class JobInstanceManager(
     /// <param name="instanceId">The instance ID to update.</param>
     /// <param name="newState">The new state to transition to.</param>
     /// <param name="errorMessage">Optional error message for failed states.</param>
+    /// <param name="clientId">The instance ID that triggered this update (must have value when newState is Processing).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <exception cref="InvalidOperationException">Thrown when the state transition is invalid.</exception>
     public async Task UpdateStateAsync(
         string instanceId,
         JobState newState,
         string? errorMessage = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? clientId = null)
     {
         var instance = await metadataStore.GetJobInstanceAsync(instanceId, cancellationToken);
         if (instance == null)
@@ -76,50 +75,12 @@ public class JobInstanceManager(
         }
 
         var currentState = instance.State;
-        instance.UpdateStateAsync(newState, errorMessage);
+        instance.UpdateStateAsync(newState, errorMessage, clientId);
         await metadataStore.SaveJobInstanceAsync(instance, cancellationToken);
         logger.LogInformation(
             "Updated job instance {InstanceId} state from {OldState} to {NewState}",
             instanceId,
             currentState,
             newState);
-    }
-
-    /// <summary>
-    /// Validates whether a state transition is allowed according to the state machine.
-    /// </summary>
-    /// <param name="currentState">The current state.</param>
-    /// <param name="newState">The desired new state.</param>
-    /// <returns>True if the transition is valid, false otherwise.</returns>
-    private static bool IsValidTransition(JobState currentState, JobState newState)
-    {
-        // Allow transition to same state (idempotent updates)
-        if (currentState == newState)
-        {
-            return true;
-        }
-
-        return currentState switch
-        {
-            // Scheduled can transition to Enqueued or Cancelled
-            JobState.Scheduled => newState is JobState.Enqueued or JobState.Cancelled,
-
-            // Enqueued can transition to Processing, Skipped, or Cancelled
-            JobState.Enqueued => newState is JobState.Processing or JobState.Skipped or JobState.Cancelled,
-
-            // Processing can transition to Succeeded, Failed, or Cancelled
-            JobState.Processing => newState is JobState.Succeeded or JobState.Failed or JobState.Cancelled,
-
-            // Failed can transition to Processing (retry) or Terminated (no retries)
-            JobState.Failed => newState is JobState.Processing or JobState.Terminated,
-
-            // Terminal states cannot transition to any other state
-            JobState.Succeeded => false,
-            JobState.Terminated => false,
-            JobState.Cancelled => false,
-            JobState.Skipped => false,
-
-            _ => false
-        };
     }
 }
