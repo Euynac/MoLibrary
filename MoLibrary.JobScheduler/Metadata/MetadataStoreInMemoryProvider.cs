@@ -4,6 +4,7 @@ using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Models;
 
 namespace MoLibrary.JobScheduler.Metadata;
+
 /// <summary>
 /// Default in-memory implementation of <see cref="IMoJobScheduleMetadataStore"/>.
 /// Provides thread-safe, volatile storage for job definitions and instances using concurrent dictionaries.
@@ -16,7 +17,6 @@ public class MetadataStoreInMemoryProvider(ILogger<MetadataStoreInMemoryProvider
 
     #region Job Definitions
 
-    /// <inheritdoc />
     public Task<JobDefinition?> GetJobDefinitionAsync(string jobKey, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(jobKey))
@@ -30,8 +30,9 @@ public class MetadataStoreInMemoryProvider(ILogger<MetadataStoreInMemoryProvider
         return Task.FromResult(definition);
     }
 
-    /// <inheritdoc />
-    public Task<IEnumerable<JobDefinition>> GetAllJobDefinitionsAsync(bool includeDeleted = false, CancellationToken cancellationToken = default)
+
+    public Task<List<JobDefinition>> GetAllJobDefinitionsAsync(bool includeDeleted = false,
+        CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -39,10 +40,10 @@ public class MetadataStoreInMemoryProvider(ILogger<MetadataStoreInMemoryProvider
             ? _definitions.Values.ToList()
             : _definitions.Values.Where(d => !d.IsDeleted).ToList();
 
-        return Task.FromResult<IEnumerable<JobDefinition>>(definitions);
+        return Task.FromResult(definitions);
     }
 
-    /// <inheritdoc />
+
     public Task SaveJobDefinitionAsync(JobDefinition definition, CancellationToken cancellationToken = default)
     {
         if (definition == null)
@@ -82,7 +83,7 @@ public class MetadataStoreInMemoryProvider(ILogger<MetadataStoreInMemoryProvider
         return Task.CompletedTask;
     }
 
-    /// <inheritdoc />
+
     public Task<bool> JobDefinitionExistsAsync(string jobKey, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(jobKey))
@@ -96,7 +97,7 @@ public class MetadataStoreInMemoryProvider(ILogger<MetadataStoreInMemoryProvider
         return Task.FromResult(exists);
     }
 
-    /// <inheritdoc />
+
     public Task SoftDeleteJobDefinitionAsync(string jobKey, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(jobKey))
@@ -129,7 +130,6 @@ public class MetadataStoreInMemoryProvider(ILogger<MetadataStoreInMemoryProvider
 
     #region Job Instances
 
-    /// <inheritdoc />
     public Task<JobInstance?> GetJobInstanceAsync(string instanceId, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(instanceId))
@@ -143,9 +143,8 @@ public class MetadataStoreInMemoryProvider(ILogger<MetadataStoreInMemoryProvider
         return Task.FromResult(instance);
     }
 
-    /// <inheritdoc />
-    public Task<IEnumerable<JobInstance>> GetJobInstancesByKeyAsync(
-        string jobKey,
+
+    public Task<List<JobInstance>> GetJobInstancesByKeyAsync(string jobKey,
         JobState? stateFilter = null,
         CancellationToken cancellationToken = default)
     {
@@ -162,10 +161,10 @@ public class MetadataStoreInMemoryProvider(ILogger<MetadataStoreInMemoryProvider
             .OrderByDescending(i => i.CreatedAt)
             .ToList();
 
-        return Task.FromResult<IEnumerable<JobInstance>>(instances);
+        return Task.FromResult(instances);
     }
 
-    /// <inheritdoc />
+
     public Task<int> GetProcessingCountAsync(string jobKey, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(jobKey))
@@ -181,7 +180,7 @@ public class MetadataStoreInMemoryProvider(ILogger<MetadataStoreInMemoryProvider
         return Task.FromResult(count);
     }
 
-    /// <inheritdoc />
+
     public Task SaveJobInstanceAsync(JobInstance instance, CancellationToken cancellationToken = default)
     {
         if (instance == null)
@@ -225,7 +224,6 @@ public class MetadataStoreInMemoryProvider(ILogger<MetadataStoreInMemoryProvider
 
     #region Job History
 
-    /// <inheritdoc />
     public Task ArchiveJobInstanceAsync(JobInstance instance, CancellationToken cancellationToken = default)
     {
         if (instance == null)
@@ -248,7 +246,7 @@ public class MetadataStoreInMemoryProvider(ILogger<MetadataStoreInMemoryProvider
         return Task.CompletedTask;
     }
 
-    /// <inheritdoc />
+
     public Task<IEnumerable<JobInstance>> GetJobHistoryAsync(
         string jobKey,
         int pageSize,

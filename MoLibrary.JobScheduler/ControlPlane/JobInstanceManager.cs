@@ -1,6 +1,8 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using MoLibrary.EventBus.Abstractions;
 using MoLibrary.JobScheduler.Abstractions;
+using MoLibrary.JobScheduler.Events;
 using MoLibrary.JobScheduler.Models;
 
 namespace MoLibrary.JobScheduler.ControlPlane;
@@ -8,9 +10,11 @@ namespace MoLibrary.JobScheduler.ControlPlane;
 /// <summary>
 /// Handles job instance creation and state transitions with validation.
 /// Ensures state transitions follow the defined state machine and manages instance timestamps.
+/// Publishes lifecycle events for state changes.
 /// </summary>
 public class JobInstanceManager(
     IMoJobScheduleMetadataStore metadataStore,
+    IMoEventBus eventBus,
     ILogger<JobInstanceManager> logger)
 {
     /// <summary>
@@ -39,6 +43,7 @@ public class JobInstanceManager(
             CreatedAt = now,
             RetryAttempt = 0
         };
+        
 
         await metadataStore.SaveJobInstanceAsync(instance, cancellationToken);
 
@@ -53,12 +58,14 @@ public class JobInstanceManager(
 
     /// <summary>
     /// Updates the state of a job instance with validation of state transitions.
+    /// Publishes lifecycle events: JobStartedEvent when transitioning to Processing,
+    /// JobCompletedEvent when transitioning to terminal states.
     /// </summary>
     /// <param name="instanceId">The instance ID to update.</param>
     /// <param name="newState">The new state to transition to.</param>
     /// <param name="errorMessage">Optional error message for failed states.</param>
-    /// <param name="clientId">The instance ID that triggered this update (must have value when newState is Processing).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <param name="clientId">The worker instance ID (required when newState is Processing).</param>
     /// <exception cref="InvalidOperationException">Thrown when the state transition is invalid.</exception>
     public async Task UpdateStateAsync(
         string instanceId,
@@ -77,10 +84,92 @@ public class JobInstanceManager(
         var currentState = instance.State;
         instance.UpdateStateAsync(newState, errorMessage, clientId);
         await metadataStore.SaveJobInstanceAsync(instance, cancellationToken);
+
         logger.LogInformation(
             "Updated job instance {InstanceId} state from {OldState} to {NewState}",
             instanceId,
             currentState,
             newState);
+
+        // Publish lifecycle events based on state transitions
+        await PublishLifecycleEventAsync(instance, currentState, newState);
     }
+
+    /// <summary>
+    /// Publishes appropriate lifecycle events based on the new state.
+    /// </summary>
+    private async Task PublishLifecycleEventAsync(JobInstance instance, JobState oldState, JobState newState)
+    {
+        try
+        {
+            // Publish JobStartedEvent when job starts processing
+            if (newState == JobState.Processing)
+            {
+                if (string.IsNullOrEmpty(instance.RunningClientId))
+                {
+                    logger.LogWarning(
+                        "Job instance {InstanceId} entered Processing state without RunningClientId",
+                        instance.InstanceId);
+                    return;
+                }
+
+                await eventBus.PublishAsync(new JobStartedEvent
+                {
+                    InstanceId = instance.InstanceId,
+                    JobKey = instance.JobKey,
+                    WorkerClientId = instance.RunningClientId,
+                    StartedAt = instance.StartedAt ?? DateTime.UtcNow
+                });
+
+                logger.LogDebug(
+                    "Published JobStartedEvent for instance {InstanceId}",
+                    instance.InstanceId);
+            }
+            // Publish JobCompletedEvent when job reaches a terminal state from processing.
+            else if (oldState == JobState.Processing && IsTerminalState(newState))
+            {
+                if (string.IsNullOrEmpty(instance.RunningClientId))
+                {
+                    logger.LogWarning(
+                        "Job instance {InstanceId} reached terminal state {State} without RunningClientId",
+                        instance.InstanceId,
+                        newState);
+                    return;
+                }
+
+                await eventBus.PublishAsync(new JobCompletedEvent
+                {
+                    InstanceId = instance.InstanceId,
+                    JobKey = instance.JobKey,
+                    WorkerClientId = instance.RunningClientId,
+                    FinalState = newState,
+                    CompletedAt = instance.CompletedAt ?? DateTime.UtcNow
+                });
+
+                logger.LogDebug(
+                    "Published JobCompletedEvent for instance {InstanceId} with state {State}",
+                    instance.InstanceId,
+                    newState);
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log but don't throw - event publishing failure should not break state updates
+            logger.LogError(
+                ex,
+                "Failed to publish lifecycle event for instance {InstanceId} with state {State}",
+                instance.InstanceId,
+                newState);
+        }
+    }
+
+    /// <summary>
+    /// Determines if a state is terminal (job execution has finished).
+    /// </summary>
+    private static bool IsTerminalState(JobState state) => state is
+        JobState.Succeeded or
+        JobState.Failed or
+        JobState.Terminated or
+        JobState.Cancelled or
+        JobState.Skipped;
 }

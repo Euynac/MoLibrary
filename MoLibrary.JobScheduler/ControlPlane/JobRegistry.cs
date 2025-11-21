@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Exceptions;
@@ -123,7 +122,7 @@ public class JobRegistry(
         logger.LogInformation("Starting job definition reconciliation for {Count} current job(s)", currentDefinitions.Count);
 
         // Get all existing non-deleted job definitions from the metadata store
-        var existingDefinitions = await metadataStore.GetAllJobDefinitionsAsync(includeDeleted: false, cancellationToken);
+        var existingDefinitions = await metadataStore.GetAllJobDefinitionsAsync(includeDeleted: false, cancellationToken: cancellationToken);
         var existingJobKeys = existingDefinitions.Select(d => d.JobKey).ToHashSet();
         var currentJobKeys = currentDefinitions.Select(d => d.JobKey).ToHashSet();
 

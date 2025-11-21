@@ -15,6 +15,7 @@ namespace MoLibrary.JobScheduler.ControlPlane;
 /// Central orchestrator for job scheduling and execution requests.
 /// Implements IHostedService to manage recurring job scheduling via cron expressions
 /// and coordinates triggered job execution with optional delays.
+/// Listens to JobDefinitionsChangedEvent to dynamically update schedules when definitions change.
 /// </summary>
 public class JobScheduler(
     IOptions<ModuleJobSchedulerOption> options,
@@ -22,12 +23,19 @@ public class JobScheduler(
     JobRegistry jobRegistry,
     JobInstanceManager jobInstanceManager,
     JobDispatcher jobDispatcher,
+    IMoEventBus eventBus,
     ILogger<JobScheduler> logger) : IHostedService
 {
     private readonly ModuleJobSchedulerOption _options = options.Value;
 
     // Recurring job scheduling state
     private readonly ConcurrentDictionary<string, RecurringJobSchedule> _inFlightRecurringSchedules = new();
+
+    // Synchronization for updating schedules
+    private readonly SemaphoreSlim _scheduleLock = new(1, 1);
+
+    // Event subscription
+    private IDisposable? _definitionsChangedSubscription;
     
 
     /// <summary>
@@ -56,19 +64,12 @@ public class JobScheduler(
         // Schedule each recurring task
         foreach (var definition in recurringJobs)
         {
-            try
-            {
-                ScheduleRecurringJob(definition);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(
-                    ex,
-                    "Failed to schedule recurring job {JobKey}: {Message}",
-                    definition.JobKey,
-                    ex.Message);
-            }
+            ScheduleRecurringJob(definition);
         }
+
+        // Subscribe to job definitions changed event
+        _definitionsChangedSubscription = eventBus.Subscribe<JobDefinitionsChangedEvent>(OnJobDefinitionsChangedAsync);
+        logger.LogDebug("Subscribed to JobDefinitionsChangedEvent");
 
         logger.LogInformation("JobScheduler started successfully");
     }
@@ -80,13 +81,19 @@ public class JobScheduler(
     {
         logger.LogInformation("JobScheduler stopping...");
 
+        // Unsubscribe from event
+        _definitionsChangedSubscription?.Dispose();
+
         // Dispose all recurring job timers
         foreach (var schedule in _inFlightRecurringSchedules.Values)
         {
             schedule.Timer?.Dispose();
         }
         _inFlightRecurringSchedules.Clear();
-     
+
+        // Dispose lock
+        _scheduleLock.Dispose();
+
         logger.LogInformation("JobScheduler stopped");
         return Task.CompletedTask;
     }
@@ -147,9 +154,9 @@ public class JobScheduler(
         {
             logger.LogError(
                 ex,
-                "Failed to parse cron expression for job {JobKey}: {CronExpression}",
+                "Failed to schedule recurring job {JobKey}: {Message}",
                 definition.JobKey,
-                definition.CronExpression);
+                ex.Message);
         }
     }
 
@@ -162,7 +169,7 @@ public class JobScheduler(
             logger.LogWarning(
                 "Recurring job {JobKey} not found during timer callback. Removing from schedule.",
                 jobKey);
-            await RemoveSchedule();
+            await RemoveSchedule(jobKey);
             return null;
         }
         
@@ -171,7 +178,7 @@ public class JobScheduler(
             logger.LogWarning(
                 "Recurring job {JobKey} has no cron expression. Skipping automatic scheduling.",
                 definition.JobKey);
-            await RemoveSchedule();
+            await RemoveSchedule(jobKey);
             return null;
         }
 
@@ -180,7 +187,7 @@ public class JobScheduler(
             logger.LogWarning(
                 "Recurring job {JobKey} is disabled. Skipping scheduling.",
                 definition.JobKey);
-            await RemoveSchedule();
+            await RemoveSchedule(jobKey);
             return null;
         }
 
@@ -190,7 +197,7 @@ public class JobScheduler(
             logger.LogDebug(
                 "Recurring job {JobKey} is disabled. Skipping schedule.",
                 jobKey);
-            await RemoveSchedule();
+            await RemoveSchedule(jobKey);
             return null;
         }
 
@@ -206,7 +213,7 @@ public class JobScheduler(
 
             // Reschedule for next occurrence
             ScheduleRecurringJob(definition);//TODO 优化为Delayed Timer
-            await RemoveSchedule();
+            await RemoveSchedule(jobKey);
             return null;
         }
 
@@ -216,18 +223,64 @@ public class JobScheduler(
                 "Recurring job {JobKey} has passed end time {EndTime}. Removing from schedule.",
                 jobKey,
                 definition.EndTime.Value);
-            await RemoveSchedule();
+            await RemoveSchedule(jobKey);
             return null;
         }
 
         return definition;
 
-        async Task RemoveSchedule()
+       
+    }
+    private async Task RemoveSchedule(string jobKey)
+    {
+        if (_inFlightRecurringSchedules.TryRemove(jobKey, out var oldSchedule) && oldSchedule.Timer is { } timer)
         {
-            if (_inFlightRecurringSchedules.TryRemove(jobKey, out var oldSchedule) && oldSchedule.Timer is { } timer)
+            await timer.DisposeAsync();
+        }
+    }
+    /// <summary>
+    /// Handles JobDefinitionsChangedEvent to update in-flight schedules dynamically.
+    /// </summary>
+    private async Task OnJobDefinitionsChangedAsync(JobDefinitionsChangedEvent evt)
+    {
+   
+        await _scheduleLock.WaitAsync();
+        try
+        {
+            logger.LogInformation(
+                "Received JobDefinitionsChangedEvent from {FromProject}: {AddedCount} added, {DeletedCount} deleted, {TotalCount} total definitions",
+                evt.FromProject,
+                evt.AddedJobKeys.Count,
+                evt.DeletedJobKeys.Count,
+                evt.AddedDefinitions.Count);
+
+            // 1. Remove schedules for deleted jobs
+            foreach (var deletedJobKey in evt.DeletedJobKeys)
             {
-                await timer.DisposeAsync();
+                logger.LogInformation("Removed schedule for deleted job: {JobKey}", deletedJobKey);
+                await RemoveSchedule(deletedJobKey);
             }
+            
+             // 2. Get current recurring job definitions
+            var recurringJobs = evt.AddedDefinitions
+                .Where(d => d.JobType == JobType.Recurring)
+                .ToList();
+
+            // 3. Update or add schedules for current recurring jobs
+            foreach (var jobDefinition in recurringJobs)
+            {
+                if (_inFlightRecurringSchedules.ContainsKey(jobDefinition.JobKey))
+                {
+                    await RemoveSchedule(jobDefinition.JobKey);
+                    logger.LogInformation("Removed schedule for updated job: {JobKey}", jobDefinition.JobKey);
+                }
+                ScheduleRecurringJob(jobDefinition);
+            }
+            logger.LogInformation("JobDefinitionsChangedEvent completed. Scheduled {Count} new recurring jobs", recurringJobs.Count);
+        }
+        finally
+        {
+            _scheduleLock.Release();
         }
     }
 

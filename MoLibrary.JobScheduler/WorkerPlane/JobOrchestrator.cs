@@ -1,12 +1,9 @@
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using MoLibrary.EventBus.Abstractions;
 using MoLibrary.StateStore.CancellationManager;
-using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.ControlPlane;
 using MoLibrary.JobScheduler.Events;
-using MoLibrary.JobScheduler.Metadata;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.RegisterCentre.Interfaces;
 
@@ -15,6 +12,7 @@ namespace MoLibrary.JobScheduler.WorkerPlane;
 /// <summary>
 /// Orchestrates job execution lifecycle including state management, timeout enforcement, and retry logic.
 /// Delegates actual job invocation to IMoJobExecutor while managing the complete execution workflow.
+/// Lifecycle events are automatically published by JobInstanceManager during state transitions.
 /// </summary>
 public class JobOrchestrator(
     IServiceProvider serviceProvider,
@@ -34,7 +32,7 @@ public class JobOrchestrator(
     /// <returns>A task representing the execution operation.</returns>
     public async Task ExecuteAsync(
         JobInstance instance,
-        MoJobExecutionEvent executionEvent,
+        JobExecutionEvent executionEvent,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(instance);
@@ -61,13 +59,16 @@ public class JobOrchestrator(
                 "Acquired cancellation token for instance {InstanceId}",
                 instance.InstanceId);
 
-            // Step 3: Update state to Processing
+            // Step 3: Update state to Processing (will automatically publish JobStartedEvent)
+            var workerClientId = client.GetServiceStatus().FromInstance;
+
+            if(workerClientId == null) throw new InvalidOperationException("Worker client id is null. Check if the register centre module is properly configured.");
             await jobInstanceManager.UpdateStateAsync(
                 instance.InstanceId,
                 JobState.Processing,
                 null,
                 cancellationToken,
-                client.GetServiceStatus().FromInstance);
+                workerClientId);
 
             // Step 4: Execute job via executor
             var executionTask = ExecuteJobViaExecutorAsync(
@@ -95,7 +96,7 @@ public class JobOrchestrator(
                 // Wait a brief moment for graceful cancellation
                 await Task.WhenAny(executionTask, Task.Delay(TimeSpan.FromSeconds(2)));
 
-                // Update state to Failed
+                // Update state to Failed (will automatically publish JobCompletedEvent)
                 await jobInstanceManager.UpdateStateAsync(
                     instance.InstanceId,
                     JobState.Failed,
@@ -114,6 +115,7 @@ public class JobOrchestrator(
                         instance.JobKey,
                         instance.InstanceId);
 
+                    // Update state to Succeeded (will automatically publish JobCompletedEvent)
                     await jobInstanceManager.UpdateStateAsync(
                         instance.InstanceId,
                         JobState.Succeeded,
@@ -128,6 +130,7 @@ public class JobOrchestrator(
                         instance.JobKey,
                         instance.InstanceId);
 
+                    // Update state to Cancelled (will automatically publish JobCompletedEvent)
                     await jobInstanceManager.UpdateStateAsync(
                         instance.InstanceId,
                         JobState.Cancelled,
@@ -144,6 +147,7 @@ public class JobOrchestrator(
                         instance.InstanceId,
                         ex.Message);
 
+                    // Update state to Failed (will automatically publish JobCompletedEvent)
                     await jobInstanceManager.UpdateStateAsync(
                         instance.InstanceId,
                         JobState.Failed,
@@ -164,6 +168,7 @@ public class JobOrchestrator(
 
             try
             {
+                // Update state to Failed (will automatically publish JobCompletedEvent)
                 await jobInstanceManager.UpdateStateAsync(
                     instance.InstanceId,
                     JobState.Failed,
@@ -212,7 +217,7 @@ public class JobOrchestrator(
     /// </summary>
     private async Task ExecuteJobViaExecutorAsync(
         IServiceProvider scopedProvider,
-        MoJobExecutionEvent executionEvent,
+        JobExecutionEvent executionEvent,
         JobInstance instance,
         CancellationToken cancellationToken)
     {

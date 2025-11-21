@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
+using MoLibrary.RegisterCentre.Events;
 using MoLibrary.RegisterCentre.Interfaces;
 using MoLibrary.RegisterCentre.Models;
 using MoLibrary.RegisterCentre.Modules;
@@ -21,17 +22,31 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
     /// 服务字典（Key: AppId, Value: RegisteredServiceStatus）
     /// </summary>
     protected static readonly ConcurrentDictionary<string, RegisteredServiceStatus> Services = new();
-    
+
     /// <summary>
     /// 心跳超时检查定时器
     /// </summary>
     private static Timer? _heartbeatCheckTimer;
-    
+
     /// <summary>
     /// 配置选项实例（静态方法需要）
     /// </summary>
     private static ModuleRegisterCentreOption? _staticOption;
-    
+
+    /// <summary>
+    /// 静态事件处理器（用于在静态方法中触发事件）
+    /// </summary>
+    private static EventHandler<ServiceInstanceOfflineEvent>? _staticServiceInstanceOffline;
+
+    /// <summary>
+    /// 服务实例下线事件
+    /// </summary>
+    public event EventHandler<ServiceInstanceOfflineEvent>? ServiceInstanceOffline
+    {
+        add => _staticServiceInstanceOffline += value;
+        remove => _staticServiceInstanceOffline -= value;
+    }
+
     public MemoryProviderForRegisterCentre(
         IHttpContextAccessor accessor,
         IRegisterCentreServerInvocationConnector connector,
@@ -358,10 +373,19 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
                 // 如果未超过任何阈值，保持当前状态（由心跳处理恢复到Running）
             }
 
-            // 2. 移除需要驱逐的实例
+            // 2. 移除需要驱逐的实例并触发下线事件
             foreach (var instanceId in instancesToRemove)
             {
-                service.Instances.Remove(instanceId);
+                if (service.Instances.Remove(instanceId))
+                {
+                    // 触发服务实例下线事件
+                    _staticServiceInstanceOffline?.Invoke(null, new ServiceInstanceOfflineEvent
+                    {
+                        InstanceId = instanceId,
+                        ProjectName = service.ProjectName,
+                        OfflineTime = DateTime.UtcNow
+                    });
+                }
             }
 
             // 3. 进行领导者选举（如果启用）
