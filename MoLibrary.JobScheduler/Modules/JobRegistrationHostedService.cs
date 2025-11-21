@@ -1,4 +1,5 @@
 using System.Reflection;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -22,7 +23,8 @@ internal class JobRegistrationHostedService(
     IReadOnlyList<JobDefinition> jobDefinitions,
     ILogger<JobRegistrationHostedService> logger,
     ILeaderService leaderService,
-    IMoEventBus eventBus, IOptions<ModuleJobSchedulerOption> option) : IHostedService
+    [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
+    IOptions<ModuleJobSchedulerOption> option) : IHostedService
 {
     /// <summary>
     /// Registers all discovered job definitions when the application starts.

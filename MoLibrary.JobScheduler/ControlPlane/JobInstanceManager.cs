@@ -1,9 +1,11 @@
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Events;
 using MoLibrary.JobScheduler.Models;
+using MoLibrary.JobScheduler.Modules;
 
 namespace MoLibrary.JobScheduler.ControlPlane;
 
@@ -14,7 +16,7 @@ namespace MoLibrary.JobScheduler.ControlPlane;
 /// </summary>
 public class JobInstanceManager(
     IMoJobScheduleMetadataStore metadataStore,
-    IMoEventBus eventBus,
+    [FromKeyedServices(nameof(ModuleJobScheduler))]IMoEventBus eventBus,
     ILogger<JobInstanceManager> logger)
 {
     /// <summary>

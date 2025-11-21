@@ -5,6 +5,7 @@ using MoLibrary.StateStore.CancellationManager;
 using MoLibrary.JobScheduler.ControlPlane;
 using MoLibrary.JobScheduler.Events;
 using MoLibrary.JobScheduler.Models;
+using MoLibrary.JobScheduler.Modules;
 using MoLibrary.RegisterCentre.Interfaces;
 
 namespace MoLibrary.JobScheduler.WorkerPlane;
@@ -17,7 +18,7 @@ namespace MoLibrary.JobScheduler.WorkerPlane;
 public class JobOrchestrator(
     IServiceProvider serviceProvider,
     JobInstanceManager jobInstanceManager,
-    IMoCancellationManager cancellationManager,
+    [FromKeyedServices(nameof(ModuleJobScheduler))] IMoCancellationManager cancellationManager,
     JobExecutor jobExecutor,
     JobRegistry jobRegistry,
     IRegisterCentreClient client,
