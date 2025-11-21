@@ -49,7 +49,7 @@ public class JobWorkerManager(
         }
 
         // Subscribe to JobExecutionEvent
-        _eventSubscription = eventBus.Subscribe<MoJobExecutionEvent>(HandleJobExecutionAsync);
+        _eventSubscription = eventBus.Subscribe<JobExecutionEvent>(HandleJobExecutionAsync);
 
         logger.LogInformation("JobWorkerManager started and subscribed to JobExecutionEvent");
         return Task.CompletedTask;
@@ -82,7 +82,7 @@ public class JobWorkerManager(
     /// Handles job execution events from the event bus.
     /// </summary>
     /// <param name="executionEvent">The job execution event.</param>
-    private async Task HandleJobExecutionAsync(MoJobExecutionEvent executionEvent)
+    private async Task HandleJobExecutionAsync(JobExecutionEvent executionEvent)
     {
         logger.LogInformation(
             "Received JobExecutionEvent for job {JobKey}, InstanceId: {InstanceId}",
@@ -101,7 +101,7 @@ public class JobWorkerManager(
     /// <summary>
     /// Executes a job with concurrency control and thread limiting.
     /// </summary>
-    private async Task ExecuteJobAsync(MoJobExecutionEvent executionEvent)
+    private async Task ExecuteJobAsync(JobExecutionEvent executionEvent)
     {
         var workerSlotAcquired = false;
         var concurrencySlotAcquired = false;

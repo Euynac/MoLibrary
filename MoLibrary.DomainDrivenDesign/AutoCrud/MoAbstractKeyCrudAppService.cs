@@ -490,7 +490,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
                 var result = AutoModel.GetNormalizedResult(filterRequest.Filter);
                 if (result.Context.Tokens.Any(p => p.FieldInfo?.ReflectionName == nameof(IHasSoftDelete.IsDeleted)))
                 {
-                    queryable = repository.DisableSoftDeleteFilter(queryable);
+                    queryable = repository.DisableSoftDeleteFilter(queryable); //巨坑：发现ShardingTable会使其失效
                 }
                 queryable = AutoModel.ApplyFilter(queryable, result);
             }

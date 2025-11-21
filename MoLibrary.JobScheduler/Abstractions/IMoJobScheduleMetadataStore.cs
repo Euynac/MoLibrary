@@ -25,7 +25,7 @@ public interface IMoJobScheduleMetadataStore
     /// <param name="includeDeleted">Whether to include soft-deleted job definitions. Default is false (excludes deleted).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Collection of all registered job definitions.</returns>
-    Task<IEnumerable<JobDefinition>> GetAllJobDefinitionsAsync(bool includeDeleted = false,
+    Task<List<JobDefinition>> GetAllJobDefinitionsAsync(bool includeDeleted = false,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -74,8 +74,7 @@ public interface IMoJobScheduleMetadataStore
     /// <param name="stateFilter">Optional state filter. If null, returns instances in all states.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Collection of job instances matching the criteria.</returns>
-    Task<IEnumerable<JobInstance>> GetJobInstancesByKeyAsync(
-        string jobKey,
+    Task<List<JobInstance>> GetJobInstancesByKeyAsync(string jobKey,
         JobState? stateFilter = null,
         CancellationToken cancellationToken = default);
 

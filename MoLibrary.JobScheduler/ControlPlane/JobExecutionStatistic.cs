@@ -1,0 +1,57 @@
+namespace MoLibrary.JobScheduler.ControlPlane;
+
+/// <summary>
+/// Represents a running job instance for concurrency tracking
+/// </summary>
+public class RunningJobInfo
+{
+    public required string InstanceId { get; init; }
+    public required string WorkerClientId { get; init; }
+    public required DateTime StartedAt { get; init; }
+}
+
+/// <summary>
+/// Tracks execution statistics for a job definition to enforce concurrency limits
+/// </summary>
+public class JobExecutionStatistic
+{
+    public required string JobKey { get; init; }
+    public required int MaxConcurrency { get; init; }
+    public List<RunningJobInfo> RunningInstances { get; init; } = [];
+
+    /// <summary>
+    /// Gets the current number of running instances
+    /// </summary>
+    public int CurrentExecutingCount => RunningInstances.Count;
+
+    /// <summary>
+    /// Checks if a new job can be executed without exceeding concurrency limit
+    /// </summary>
+    public bool CanExecute => CurrentExecutingCount < MaxConcurrency;
+
+    /// <summary>
+    /// Adds a running instance to the tracking list
+    /// </summary>
+    public void AddInstance(RunningJobInfo info)
+    {
+        RunningInstances.Add(info);
+    }
+
+    /// <summary>
+    /// Removes a running instance from the tracking list
+    /// </summary>
+    public bool RemoveInstance(string instanceId)
+    {
+        return RunningInstances.RemoveAll(i => i.InstanceId == instanceId) > 0;
+    }
+
+    /// <summary>
+    /// Removes all instances running on a specific worker client
+    /// </summary>
+    public List<RunningJobInfo> RemoveInstancesByWorker(string workerClientId)
+    {
+        var removed = RunningInstances.Where(i => i.WorkerClientId == workerClientId).ToList();
+        RunningInstances.RemoveAll(i => i.WorkerClientId == workerClientId);
+        return removed;
+    }
+}

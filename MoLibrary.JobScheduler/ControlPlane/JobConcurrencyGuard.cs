@@ -1,0 +1,317 @@
+using System.Collections.Concurrent;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using MoLibrary.EventBus.Abstractions;
+using MoLibrary.JobScheduler.Abstractions;
+using MoLibrary.JobScheduler.Events;
+using MoLibrary.JobScheduler.Models;
+using MoLibrary.RegisterCentre.Events;
+using MoLibrary.RegisterCentre.Interfaces;
+
+namespace MoLibrary.JobScheduler.ControlPlane;
+
+/// <summary>
+/// Manages job concurrency limits by tracking running instances and listening to lifecycle events.
+/// Implements IHostedService to initialize statistics on startup and clean up on shutdown.
+/// </summary>
+public class JobConcurrencyGuard(
+    IMoJobScheduleMetadataStore metadataStore,
+    IMoEventBus eventBus,
+    JobInstanceManager instanceManager,
+    ILogger<JobConcurrencyGuard> logger,
+    IRegisterCentreServer? registerCentreServer = null) : IJobConcurrencyGuard, IHostedService
+{
+    private readonly ConcurrentDictionary<string, JobExecutionStatistic> _statistics = new();
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _jobLocks = new();
+    private readonly List<IDisposable> _eventSubscriptions = [];
+
+    public async Task StartAsync(CancellationToken cancellationToken)
+    {
+        logger.LogInformation("JobConcurrencyGuard is initializing...");
+
+        // 1. Load all job definitions
+        var definitions = await metadataStore.GetAllJobDefinitionsAsync(cancellationToken: cancellationToken);
+        logger.LogDebug("Loaded {Count} job definitions", definitions.Count);
+
+        // 2. Initialize statistics for each job definition
+        foreach (var definition in definitions)
+        {
+            _statistics[definition.JobKey] = new JobExecutionStatistic
+            {
+                JobKey = definition.JobKey,
+                MaxConcurrency = definition.MaxConcurrency,
+                RunningInstances = []
+            };
+
+            _jobLocks[definition.JobKey] = new SemaphoreSlim(1, 1);
+        }
+
+        // 3. Scan all Processing state instances to recover in-memory state
+        foreach (var definition in definitions)
+        {
+            var processingInstances = await metadataStore.GetJobInstancesByKeyAsync(
+                definition.JobKey,
+                JobState.Processing,
+                cancellationToken);
+
+            foreach (var instance in processingInstances)
+            {
+                if (string.IsNullOrEmpty(instance.RunningClientId) || !instance.StartedAt.HasValue)
+                {
+                    logger.LogWarning(
+                        "Found Processing instance {InstanceId} with missing client ID or started time, skipping recovery",
+                        instance.InstanceId);
+                    continue;
+                }
+
+                _statistics[definition.JobKey].AddInstance(new RunningJobInfo
+                {
+                    InstanceId = instance.InstanceId,
+                    WorkerClientId = instance.RunningClientId,
+                    StartedAt = instance.StartedAt.Value
+                });
+
+                logger.LogDebug(
+                    "Recovered running instance {InstanceId} for job {JobKey} on worker {WorkerId}",
+                    instance.InstanceId,
+                    definition.JobKey,
+                    instance.RunningClientId);
+            }
+        }
+
+        // 4. Subscribe to lifecycle events
+        _eventSubscriptions.Add(eventBus.Subscribe<JobStartedEvent>(OnJobStartedAsync));
+        _eventSubscriptions.Add(eventBus.Subscribe<JobCompletedEvent>(OnJobCompletedAsync));
+
+        // 5. Subscribe to RegisterCentre offline event (if available)
+        if (registerCentreServer != null)
+        {
+            registerCentreServer.ServiceInstanceOffline += OnServiceInstanceOfflineHandler;
+            logger.LogDebug("Subscribed to RegisterCentre ServiceInstanceOffline event");
+        }
+        else
+        {
+            logger.LogWarning("RegisterCentre server is not available, worker offline detection will not work");
+        }
+
+        logger.LogInformation(
+            "JobConcurrencyGuard initialized with {DefinitionCount} job definitions and {RunningCount} recovered running instances",
+            _statistics.Count,
+            _statistics.Values.Sum(s => s.CurrentExecutingCount));
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        logger.LogInformation("JobConcurrencyGuard is stopping...");
+
+        // Unsubscribe from EventBus events
+        foreach (var subscription in _eventSubscriptions)
+        {
+            subscription.Dispose();
+        }
+        _eventSubscriptions.Clear();
+
+        // Unsubscribe from RegisterCentre event
+        if (registerCentreServer != null)
+        {
+            registerCentreServer.ServiceInstanceOffline -= OnServiceInstanceOfflineHandler;
+        }
+
+        // Dispose all semaphores
+        foreach (var semaphore in _jobLocks.Values)
+        {
+            semaphore.Dispose();
+        }
+        _jobLocks.Clear();
+
+        logger.LogInformation("JobConcurrencyGuard stopped");
+        return Task.CompletedTask;
+    }
+
+    public async Task<bool> CanExecuteJobAsync(string jobKey, CancellationToken cancellationToken = default)
+    {
+        if (!_statistics.TryGetValue(jobKey, out var statistic))
+        {
+            logger.LogWarning("Job {JobKey} not found in concurrency guard statistics", jobKey);
+            return false;
+        }
+
+        // Get job-specific lock to ensure thread-safety
+        var semaphore = _jobLocks.GetOrAdd(jobKey, _ => new SemaphoreSlim(1, 1));
+        await semaphore.WaitAsync(cancellationToken);
+
+        try
+        {
+            var canExecute = statistic.CanExecute;
+
+            if (!canExecute)
+            {
+                logger.LogWarning(
+                    "Job {JobKey} exceeded MaxConcurrency limit: {Current}/{Max}",
+                    jobKey,
+                    statistic.CurrentExecutingCount,
+                    statistic.MaxConcurrency);
+            }
+            else
+            {
+                logger.LogDebug(
+                    "Job {JobKey} can execute: {Current}/{Max}",
+                    jobKey,
+                    statistic.CurrentExecutingCount,
+                    statistic.MaxConcurrency);
+            }
+
+            return canExecute;
+        }
+        finally
+        {
+            semaphore.Release();
+        }
+    }
+
+    public Task<int> GetCurrentExecutingCountAsync(string jobKey, CancellationToken cancellationToken = default)
+    {
+        if (_statistics.TryGetValue(jobKey, out var statistic))
+        {
+            return Task.FromResult(statistic.CurrentExecutingCount);
+        }
+
+        return Task.FromResult(0);
+    }
+
+    private async Task OnJobStartedAsync(JobStartedEvent evt)
+    {
+        if (!_statistics.TryGetValue(evt.JobKey, out var statistic))
+        {
+            logger.LogWarning(
+                "Received JobStartedEvent for unknown job {JobKey}, instance {InstanceId}",
+                evt.JobKey,
+                evt.InstanceId);
+            return;
+        }
+
+        var semaphore = _jobLocks.GetOrAdd(evt.JobKey, _ => new SemaphoreSlim(1, 1));
+        await semaphore.WaitAsync();
+
+        try
+        {
+            statistic.AddInstance(new RunningJobInfo
+            {
+                InstanceId = evt.InstanceId,
+                WorkerClientId = evt.WorkerClientId,
+                StartedAt = evt.StartedAt
+            });
+
+            logger.LogInformation(
+                "Job {JobKey} instance {InstanceId} started on worker {WorkerId}, current executing: {Current}/{Max}",
+                evt.JobKey,
+                evt.InstanceId,
+                evt.WorkerClientId,
+                statistic.CurrentExecutingCount,
+                statistic.MaxConcurrency);
+        }
+        finally
+        {
+            semaphore.Release();
+        }
+    }
+
+    private async Task OnJobCompletedAsync(JobCompletedEvent evt)
+    {
+        if (!_statistics.TryGetValue(evt.JobKey, out var statistic))
+        {
+            logger.LogWarning(
+                "Received JobCompletedEvent for unknown job {JobKey}, instance {InstanceId}",
+                evt.JobKey,
+                evt.InstanceId);
+            return;
+        }
+
+        var semaphore = _jobLocks.GetOrAdd(evt.JobKey, _ => new SemaphoreSlim(1, 1));
+        await semaphore.WaitAsync();
+
+        try
+        {
+            var removed = statistic.RemoveInstance(evt.InstanceId);
+
+            if (removed)
+            {
+                logger.LogInformation(
+                    "Job {JobKey} instance {InstanceId} completed with state {FinalState}, current executing: {Current}/{Max}",
+                    evt.JobKey,
+                    evt.InstanceId,
+                    evt.FinalState,
+                    statistic.CurrentExecutingCount,
+                    statistic.MaxConcurrency);
+            }
+            else
+            {
+                logger.LogWarning(
+                    "Job {JobKey} instance {InstanceId} completed but was not found in running instances",
+                    evt.JobKey,
+                    evt.InstanceId);
+            }
+        }
+        finally
+        {
+            semaphore.Release();
+        }
+    }
+
+    /// <summary>
+    /// Handler for RegisterCentre's C# event
+    /// </summary>
+    private void OnServiceInstanceOfflineHandler(object? sender, ServiceInstanceOfflineEvent evt)
+    {
+        // Call the async method without awaiting (fire-and-forget)
+        // Since this is an event handler, we can't await
+        _ = OnWorkerOfflineAsync(evt);
+    }
+
+    private async Task OnWorkerOfflineAsync(ServiceInstanceOfflineEvent evt)
+    {
+        logger.LogWarning(
+            "Worker instance {InstanceId} from project {ProjectName} went offline, cleaning up orphaned jobs",
+            evt.InstanceId,
+            evt.ProjectName);
+
+        var orphanedCount = 0;
+
+        foreach (var (jobKey, statistic) in _statistics)
+        {
+            var semaphore = _jobLocks.GetOrAdd(jobKey, _ => new SemaphoreSlim(1, 1));
+            await semaphore.WaitAsync();
+
+            try
+            {
+                var orphanedInstances = statistic.RemoveInstancesByWorker(evt.InstanceId);
+
+                foreach (var orphaned in orphanedInstances)
+                {
+                    // Mark the orphaned instance as Failed
+                    await instanceManager.UpdateStateAsync(
+                        orphaned.InstanceId,
+                        JobState.Failed,
+                        errorMessage: $"Worker instance {evt.InstanceId} went offline at {evt.OfflineTime:yyyy-MM-dd HH:mm:ss} UTC");
+
+                    logger.LogWarning(
+                        "Marked orphaned job instance {InstanceId} (job {JobKey}) as Failed due to worker {WorkerId} offline",
+                        orphaned.InstanceId,
+                        jobKey,
+                        evt.InstanceId);
+
+                    orphanedCount++;
+                }
+            }
+            finally
+            {
+                semaphore.Release();
+            }
+        }
+
+        logger.LogInformation(
+            "Cleaned up {OrphanedCount} orphaned job instances from offline worker {InstanceId}",
+            orphanedCount,
+            evt.InstanceId);
+    }
+}

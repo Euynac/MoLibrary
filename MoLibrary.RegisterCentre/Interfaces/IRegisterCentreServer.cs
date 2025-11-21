@@ -1,3 +1,4 @@
+using MoLibrary.RegisterCentre.Events;
 using MoLibrary.RegisterCentre.Models;
 using MoLibrary.Tool.MoResponse;
 
@@ -8,6 +9,12 @@ namespace MoLibrary.RegisterCentre.Interfaces;
 /// </summary>
 public interface IRegisterCentreServer : IRegisterCentreServerApiForClient
 {
+    /// <summary>
+    /// 服务实例下线事件（当服务实例被驱逐时触发）
+    /// </summary>
+    event EventHandler<ServiceInstanceOfflineEvent>? ServiceInstanceOffline;
+
+
     /// <summary>
     /// 获取所有已注册微服务的状态
     /// </summary>

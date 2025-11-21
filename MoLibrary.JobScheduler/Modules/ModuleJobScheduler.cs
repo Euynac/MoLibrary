@@ -9,9 +9,7 @@ using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Attributes;
 using MoLibrary.JobScheduler.ControlPlane;
 using MoLibrary.JobScheduler.Models;
-using MoLibrary.JobScheduler.Jobs;
 using MoLibrary.JobScheduler.WorkerPlane;
-using MoLibrary.RegisterCentre.Interfaces;
 using MoLibrary.RegisterCentre.Modules;
 using MoLibrary.Tool.Extensions;
 
@@ -79,14 +77,17 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
 
         services.AddSingleton<JobExecutor>();
 
+        // Register JobConcurrencyGuard as both service and hosted service
+        services.AddSingleton<IJobConcurrencyGuard, JobConcurrencyGuard>();
+        services.AddHostedService(provider => provider.GetRequiredService<IJobConcurrencyGuard>() as JobConcurrencyGuard
+            ?? throw new InvalidOperationException("JobConcurrencyGuard must be registered as IJobConcurrencyGuard"));
+
         // Register job definitions to JobRegistry
         // This is done synchronously during startup (blocking is acceptable)
         services.AddHostedService<JobRegistrationHostedService>(provider =>
         {
             var jobRegistry = provider.GetRequiredService<JobRegistry>();
-            var logger = provider.GetRequiredService<ILogger<JobRegistrationHostedService>>();
-            var leaderService = provider.GetRequiredService<ILeaderService>();
-            return new JobRegistrationHostedService(jobRegistry, _jobDefinitions, logger, leaderService);
+            return ActivatorUtilities.CreateInstance<JobRegistrationHostedService>(provider, jobRegistry);
         });
 
         if (GetOptions<ModuleRegisterCentreOption>().ThisIsCentreServer)

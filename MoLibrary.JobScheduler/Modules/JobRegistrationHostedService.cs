@@ -1,11 +1,13 @@
+using System.Reflection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using MoLibrary.EventBus.Abstractions;
 using MoLibrary.JobScheduler.ControlPlane;
-using MoLibrary.JobScheduler.Exceptions;
+using MoLibrary.JobScheduler.Events;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.RegisterCentre.Interfaces;
 using MoLibrary.RegisterCentre.Models;
-using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.JobScheduler.Modules;
@@ -13,12 +15,14 @@ namespace MoLibrary.JobScheduler.Modules;
 /// <summary>
 /// Hosted service that registers discovered job definitions to the JobRegistry during application startup.
 /// Ensures all jobs are properly registered before the application begins serving requests.
+/// Publishes JobDefinitionsChangedEvent after reconciliation to notify subscribers of changes.
 /// </summary>
 internal class JobRegistrationHostedService(
     JobRegistry jobRegistry,
     IReadOnlyList<JobDefinition> jobDefinitions,
     ILogger<JobRegistrationHostedService> logger,
-    ILeaderService leaderService) : IHostedService
+    ILeaderService leaderService,
+    IMoEventBus eventBus, IOptions<ModuleJobSchedulerOption> option) : IHostedService
 {
     /// <summary>
     /// Registers all discovered job definitions when the application starts.
@@ -70,6 +74,37 @@ internal class JobRegistrationHostedService(
             {
                 var status = result.AddedJobKeys.Contains(definition.JobKey) ? "Added" : "Already Registered";
                 await jobRegistry.RegisterJob(definition, status);
+            }
+            if (option.Value.RecurringJobDebugMode)
+            {
+                logger.LogDebug("Received JobDefinitionsChangedEvent in debug mode, skipping schedule updates");
+                return;
+            }
+
+            // Publish JobDefinitionsChangedEvent to notify subscribers
+            try
+            {
+                if (result is { AddedCount: 0, DeletedCount: 0})
+                {
+                    logger.LogInformation("No job definitions changed, skipping event publication");
+                    return;
+                }
+                
+                await eventBus.PublishAsync(new JobDefinitionsChangedEvent
+                {
+                    FromProject = Assembly.GetEntryAssembly()?.GetName().Name!,
+                    AddedDefinitions = jobDefinitions.Where(d => result.AddedJobKeys.Contains(d.JobKey)).ToList(),
+                    AddedJobKeys = result.AddedJobKeys.ToList(),
+                    DeletedJobKeys = result.DeletedJobKeys.ToList(),
+                    ReconciledAt = DateTime.UtcNow
+                });
+
+                logger.LogInformation("Published JobDefinitionsChangedEvent to notify subscribers of reconciliation");
+            }
+            catch (Exception eventEx)
+            {
+                // Log error but don't fail startup if event publishing fails
+                logger.LogError(eventEx, "Failed to publish JobDefinitionsChangedEvent, but continuing startup");
             }
         }
         catch (Exception ex)

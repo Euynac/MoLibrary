@@ -35,7 +35,7 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
 
     public ILogger<MoDbContext<TDbContext>> Logger => ServiceProvider.GetService<ILogger<MoDbContext<TDbContext>>>() ?? NullLogger<MoDbContext<TDbContext>>.Instance;
 
-    public ModuleRepositoryOption MoOptions =>
+    public ModuleRepositoryOption Options =>
         ServiceProvider.GetRequiredService<IOptions<ModuleRepositoryOption>>().Value;
 
     public bool HasInit { get; protected set; }
@@ -46,7 +46,7 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         //check if is in development
-        if ((MoOptions.EnableSensitiveDataLogging is null && UtilsEnvironment.IsDevelopment()) || MoOptions.EnableSensitiveDataLogging is true)
+        if ((Options.EnableSensitiveDataLogging is null && UtilsEnvironment.IsDevelopment()) || Options.EnableSensitiveDataLogging is true)
         {
             optionsBuilder.EnableSensitiveDataLogging();//巨坑:这个可以显示具体参数值的设置必须写在OnConfiguring里面才会生效。
         }
@@ -140,9 +140,9 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
         //Tidb与mysql8.0.0以上版本使用。
         //builder.UseCollation("utf8mb4_bin"); 
 
-        builder.ApplyEntitySelfConfigurations(MoOptions, Logger);
+        builder.ApplyEntitySelfConfigurations(Options, Logger);
 
-        builder.ApplyEntitySeparateConfigurations(MoOptions, Logger);
+        builder.ApplyEntitySeparateConfigurations(Options, Logger);
 
         OnModelCreatingExtend(builder);
     }
@@ -548,7 +548,7 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
         {
             var softDeleteColumnName = modelBuilder.Entity<TEntity>().Metadata.FindProperty(nameof(IHasSoftDelete.IsDeleted))?.GetColumnName() ?? nameof(IHasSoftDelete.IsDeleted);
 
-            if (MoOptions.UseDbFunction)
+            if (Options.UseDbFunction)
             {
                 expression = e => MoEfCoreDataFilterDbFunctionMethods.SoftDeleteFilter(((IHasSoftDelete)e).IsDeleted, true);
                 modelBuilder.ConfigureSoftDeleteDbFunction(MoEfCoreDataFilterDbFunctionMethods.SoftDeleteFilterMethodInfo, true);
