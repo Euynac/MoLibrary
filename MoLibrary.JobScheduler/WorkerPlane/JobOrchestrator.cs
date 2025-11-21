@@ -66,7 +66,8 @@ public class JobOrchestrator(
                 instance.InstanceId,
                 JobState.Processing,
                 null,
-                cancellationToken);
+                cancellationToken,
+                client.GetServiceStatus().FromInstance);
 
             // Step 4: Execute job via executor
             var executionTask = ExecuteJobViaExecutorAsync(

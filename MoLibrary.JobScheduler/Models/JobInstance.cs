@@ -41,13 +41,6 @@ public class JobInstance
     public DateTime CreatedAt { get; set; }
 
     /// <summary>
-    /// Gets or sets the scheduled execution time for delayed jobs.
-    /// Only set for jobs with a delay (state starts as Scheduled).
-    /// When this time arrives, the state transitions from Scheduled to Enqueued.
-    /// </summary>
-    public DateTime? ScheduledFor { get; set; }
-
-    /// <summary>
     /// Gets or sets the timestamp when job execution started.
     /// Set when a worker transitions the job to Processing state.
     /// </summary>
@@ -85,9 +78,8 @@ public class JobInstance
     /// Updates the state of a job instance with validation of state transitions.
     /// </summary>
     /// <exception cref="InvalidOperationException">Thrown when the state transition is invalid.</exception>
-    public void UpdateStateAsync(
-        JobState newState,
-        string? errorMessage = null)
+    public void UpdateStateAsync(JobState newState,
+        string? errorMessage = null, string? clientId = null)
     {
         
         var currentState = State;
@@ -107,7 +99,8 @@ public class JobInstance
         switch (newState)
         {
             case JobState.Processing:
-                StartedAt = now;        
+                StartedAt = now;
+                RunningClientId = clientId ?? throw new InvalidOperationException("RunningClientId must be set when state is Processing");
                 break;
 
             case JobState.Succeeded:

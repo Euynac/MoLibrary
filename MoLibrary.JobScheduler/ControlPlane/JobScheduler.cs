@@ -248,8 +248,7 @@ public class JobScheduler(
             var instance = await jobInstanceManager.CreateInstanceAsync(
                 definition,
                 parameters: null,
-                JobState.Enqueued,
-                scheduledFor: null);
+                JobState.Enqueued);
 
             logger.LogInformation(
                 "Recurring job triggered: {JobKey}, InstanceId: {InstanceId}",
