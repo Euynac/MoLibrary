@@ -1,12 +1,16 @@
 using System.Collections.Concurrent;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Events;
 using MoLibrary.JobScheduler.Models;
+using MoLibrary.JobScheduler.Modules;
 using MoLibrary.RegisterCentre.Events;
 using MoLibrary.RegisterCentre.Interfaces;
+using MoLibrary.RegisterCentre.Models;
+using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.JobScheduler.ControlPlane;
 
@@ -16,9 +20,10 @@ namespace MoLibrary.JobScheduler.ControlPlane;
 /// </summary>
 public class JobConcurrencyGuard(
     IMoJobScheduleMetadataStore metadataStore,
-    IMoEventBus eventBus,
+    [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
     JobInstanceManager instanceManager,
     ILogger<JobConcurrencyGuard> logger,
+    ILeaderService leaderService,
     IRegisterCentreServer? registerCentreServer = null) : IJobConcurrencyGuard, IHostedService
 {
     private readonly ConcurrentDictionary<string, JobExecutionStatistic> _statistics = new();
@@ -27,6 +32,17 @@ public class JobConcurrencyGuard(
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        if ((await leaderService.GetCurrentLeaderStatusAsync()).IsFailed(out var error, out var data))
+        {
+            logger.LogError("Error getting leader status: {Error}", error);
+            return;
+        }
+        if (data.Status != LeaderStatus.Leader)
+        {
+            logger.LogInformation("Not leader, current Leader status is {Status}, skip job concurrency guard initialization", data.Status);
+            return;
+        }
+        
         logger.LogInformation("JobConcurrencyGuard is initializing...");
 
         // 1. Load all job definitions

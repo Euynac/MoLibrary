@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Cronos;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -8,6 +9,9 @@ using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Events;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.JobScheduler.Modules;
+using MoLibrary.RegisterCentre.Interfaces;
+using MoLibrary.RegisterCentre.Models;
+using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.JobScheduler.ControlPlane;
 
@@ -23,7 +27,8 @@ public class JobScheduler(
     JobRegistry jobRegistry,
     JobInstanceManager jobInstanceManager,
     JobDispatcher jobDispatcher,
-    IMoEventBus eventBus,
+    [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
+    ILeaderService leaderService,
     ILogger<JobScheduler> logger) : IHostedService
 {
     private readonly ModuleJobSchedulerOption _options = options.Value;
@@ -43,6 +48,18 @@ public class JobScheduler(
     /// </summary>
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        if ((await leaderService.GetCurrentLeaderStatusAsync()).IsFailed(out var error, out var data))
+        {
+            logger.LogError("Error getting leader status: {Error}", error);
+            return;
+        }
+        if (data.Status != LeaderStatus.Leader)
+        {
+            logger.LogInformation("Not leader, current Leader status is {Status}, skip job scheduling", data.Status);
+            return;
+        }
+
+        
         logger.LogInformation(
             "JobScheduler starting. RecurringJobDebugMode: {RecurringDebug}, TriggeredJobDebugMode: {TriggeredDebug}",
             _options.RecurringJobDebugMode,

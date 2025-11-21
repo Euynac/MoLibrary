@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -16,7 +17,7 @@ namespace MoLibrary.JobScheduler.WorkerPlane;
 /// </summary>
 public class JobWorkerManager(
     IOptions<ModuleJobSchedulerOption> options,
-    IMoEventBus eventBus,
+    [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
     JobOrchestrator jobOrchestrator,
     IMoJobScheduleMetadataStore metadataStore,
     ILogger<JobWorkerManager> logger) : IHostedService

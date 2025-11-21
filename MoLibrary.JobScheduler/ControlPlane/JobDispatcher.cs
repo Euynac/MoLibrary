@@ -1,8 +1,10 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Events;
 using MoLibrary.JobScheduler.Models;
+using MoLibrary.JobScheduler.Modules;
 
 namespace MoLibrary.JobScheduler.ControlPlane;
 
@@ -10,7 +12,7 @@ namespace MoLibrary.JobScheduler.ControlPlane;
 /// Job dispatcher is responsible for publishing job execution events to the event bus.
 /// </summary>
 public class JobDispatcher(
-    IMoEventBus eventBus,
+    [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
     ILogger<JobDispatcher> logger,
     JobInstanceManager jobInstanceManager,
     IJobConcurrencyGuard concurrencyGuard)

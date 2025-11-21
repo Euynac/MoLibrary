@@ -1,8 +1,10 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MoLibrary.StateStore.CancellationManager;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.ControlPlane;
 using MoLibrary.JobScheduler.Models;
+using MoLibrary.JobScheduler.Modules;
 
 namespace MoLibrary.JobScheduler.Api;
 
@@ -18,7 +20,7 @@ public class JobSchedulerApiService(
     ControlPlane.JobScheduler jobScheduler,
     JobRegistry jobRegistry,
     IMoJobScheduleMetadataStore metadataStore,
-    IMoCancellationManager cancellationManager,
+    [FromKeyedServices(nameof(ModuleJobScheduler))] IMoCancellationManager cancellationManager,
     JobInstanceManager jobInstanceManager,
     ILogger<JobSchedulerApiService> logger)
 {
