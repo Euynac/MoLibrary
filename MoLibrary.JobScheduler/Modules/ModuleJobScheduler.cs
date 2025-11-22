@@ -78,17 +78,19 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
         }
 
         services.AddSingleton<JobExecutor>();
+        services.AddSingleton<JobRegistry>();
+        services.AddSingleton<JobInstanceManager>();
+        services.AddSingleton<JobDispatcher>();
+        services.AddSingleton<JobOrchestrator>();
 
-        // Register JobConcurrencyGuard as both service and hosted service
         services.AddSingleton<IJobConcurrencyGuard, JobConcurrencyGuard>();
         
-        // Register job definitions to JobRegistry
-        // This is done synchronously during startup (blocking is acceptable)
         services.AddHostedService<JobRegistrationHostedService>(provider =>
         {
-            var jobRegistry = provider.GetRequiredService<JobRegistry>();
-            return ActivatorUtilities.CreateInstance<JobRegistrationHostedService>(provider, jobRegistry);
+            return ActivatorUtilities.CreateInstance<JobRegistrationHostedService>(provider, _jobDefinitions);
         });
+
+        services.AddHostedService<JobWorkerManager>();
 
         if (GetOptions<ModuleRegisterCentreOption>().ThisIsCentreServer)
         {
