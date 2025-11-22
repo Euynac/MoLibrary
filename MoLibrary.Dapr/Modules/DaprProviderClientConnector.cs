@@ -59,12 +59,12 @@ public class ServerInvocationDaprHttpProvider(DaprClient client, ILogger<ServerI
 {
     public async Task<Res<TResponse>> GetAsync<TResponse>(string appid, string callbackUrl)
     {
-        var response = await client.InvokeMethodWithResponseAsync(
-            client.CreateInvokeMethodRequest(HttpMethod.Get, appid,
-                callbackUrl, []));
         var content = "";
         try
         {
+            var response = await client.InvokeMethodWithResponseAsync(
+                client.CreateInvokeMethodRequest(HttpMethod.Get, appid,
+                    callbackUrl, []));
             content = await response.Content.ReadAsStringAsync();
             var res = JsonSerializer.Deserialize<TResponse>(content, jsonOption.GlobalOptions);
             if (res == null)
@@ -76,20 +76,19 @@ public class ServerInvocationDaprHttpProvider(DaprClient client, ILogger<ServerI
                 serviceResponse.AutoParseResponseFromOrigin(content);
             }
 
-            //var res = await response.Content.ReadFromJsonAsync<TResponse>(jsonOption.GlobalOptions);
-
-
             return res;
         }
         catch (JsonException jsonException)
         {
             var message = jsonException.GetMessageRecursively();
+            logger.LogError(jsonException, "执行{0}服务{1}失败:{2}，Json数据：{3}", appid, callbackUrl, message, content);
             return Res.Fail(ResponseCode.BadRequest, "执行{0}服务{1}失败:{2}，Json数据：{3}", appid, callbackUrl, message, content);
         }
         catch (Exception e)
         {
             var message = e.GetMessageRecursively();
-            return Res.Fail(ResponseCode.BadRequest, "执行{0}服务{1}失败:{2}", appid, callbackUrl, message);
+            logger.LogError(e, "执行{0}服务{1}失败:{2}", appid, callbackUrl, message);
+            return Res.Fail(ResponseCode.BadRequest, "执行{0}服务{1}失败:{2}", appid, callbackUrl, message);  
         }
     }
 
@@ -107,14 +106,13 @@ public class ServerInvocationDaprHttpProvider(DaprClient client, ILogger<ServerI
 
     public async Task<Res<TResponse>> PostAsync<TRequest, TResponse>(string appid, string callbackUrl, TRequest req)
     {
-
-        var response = await client.InvokeMethodWithResponseAsync(
-            client.CreateInvokeMethodRequest(HttpMethod.Post, appid,
-                callbackUrl, [], req));
-
         var content = "";
         try
         {
+            var response = await client.InvokeMethodWithResponseAsync(
+                client.CreateInvokeMethodRequest(HttpMethod.Post, appid,
+                    callbackUrl, [], req));
+
             content = await response.Content.ReadAsStringAsync();
             var res = JsonSerializer.Deserialize<TResponse>(content, jsonOption.GlobalOptions);
             if (res == null)
@@ -130,11 +128,13 @@ public class ServerInvocationDaprHttpProvider(DaprClient client, ILogger<ServerI
         catch (JsonException jsonException)
         {
             var message = jsonException.GetMessageRecursively();
+            logger.LogError(jsonException, "执行{0}服务{1}失败:{2}，Json数据：{3}", appid, callbackUrl, message, content);
             return Res.Fail(ResponseCode.BadRequest, "执行{0}服务{1}失败:{2}，Json数据：{3}", appid, callbackUrl, message, content);
         }
         catch (Exception e)
         {
             var message = e.GetMessageRecursively();
+            logger.LogError(e, "执行{0}服务{1}失败:{2}", appid, callbackUrl, message);
             return Res.Fail(ResponseCode.BadRequest, "执行{0}服务{1}失败:{2}", appid, callbackUrl, message);
         }
     }
