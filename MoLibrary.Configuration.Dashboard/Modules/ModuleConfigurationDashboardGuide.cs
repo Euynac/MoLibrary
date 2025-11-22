@@ -74,7 +74,7 @@ public class ModuleConfigurationDashboardGuide : MoModuleGuide<ModuleConfigurati
     /// <param name="action">可选的配置操作</param>
     public ModuleRegisterCentreGuide AddMoConfigurationDashboardClient<TClient>(
         Action<ModuleRegisterCentreOption>? action = null)
-        where TClient : class, IRegisterCentreClient
+        where TClient : class, IRegisterCentreClientInfo
     {
         if (_isDashboard is true) throw new InvalidOperationException("面板服务无需注册面板客户端");
         _isDashboard = false;
@@ -82,7 +82,7 @@ public class ModuleConfigurationDashboardGuide : MoModuleGuide<ModuleConfigurati
         {
             context.Services.AddSingleton<IMoConfigurationModifier, MoConfigurationJsonFileModifier>();
         });
-        return DependsOnModule<ModuleRegisterCentreGuide>().Register(action).SetAsCentreClient<TClient>();
+        return DependsOnModule<ModuleRegisterCentreGuide>().Register(action).ConfigClientInfo<TClient>();
     }
 
 

@@ -37,24 +37,12 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModule<
             });
         }
         
+        services.AddHostedService<RegisterCentreClientHostedService>();
+
         // 注册默认信息提供者实现
-        services.TryAddSingleton<IRegisterCentreServerInfoProvider, DefaultRegisterCentreServerInfoProvider>();
+        services.TryAddSingleton<IRegisterCentreCatalogProvider, DefaultRegisterCentreCatalogProvider>();
     }
 
-    public override void ConfigureApplicationBuilder(IApplicationBuilder app)
-    {
-        if (option.ThisIsCentreClient)
-        {
-            var connector = app.ApplicationServices.GetService<IRegisterCentreServerConnector>();
-            if (connector == null) throw new InvalidOperationException($"无法解析{nameof(IRegisterCentreServerConnector)}，可能未注册{nameof(IRegisterCentreServerConnector)}及{nameof(IRegisterCentreClient)}实现");
-            Task.Factory.StartNew(async () =>
-            {
-                await connector.DoingRegister();
-            }, TaskCreationOptions.LongRunning);
-        }
-        
-    }
-    
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
         if (option.ThisIsCentreServer)
@@ -128,45 +116,74 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModule<
 
             });
         }
-        else if (option.ThisIsCentreClient)
+        app.UseEndpoints(endpoints =>
         {
-            app.UseEndpoints(endpoints =>
+            var tagGroup = new List<OpenApiTag> { new() { Name = option.GetApiGroupName(), Description = "注册中心客户端相关内置接口" } };
+            endpoints.MapGet(RegisterCentreConventions.ClientReconnectCentre, async (HttpResponse response, HttpContext context, [FromServices] IRegisterCentreServerConnector connector, [FromServices] IRegisterCentreClientInfo client) =>
             {
-                var tagGroup = new List<OpenApiTag> { new() { Name = option.GetApiGroupName(), Description = "注册中心客户端相关内置接口" } };
-                endpoints.MapGet(RegisterCentreConventions.ClientReconnectCentre, async (HttpResponse response, HttpContext context, [FromServices] IRegisterCentreServerConnector connector, [FromServices] IRegisterCentreClient client) =>
-                {
-                    return await connector.Register(client.GetServiceStatus());
-                }).WithName("测试重连配置中心").WithOpenApi(operation =>
-                {
-                    operation.Summary = "测试重连配置中心";
-                    operation.Description = "测试重连配置中心";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
+                return await connector.Register(client.GetServiceStatus());
+            }).WithName("测试重连配置中心").WithOpenApi(operation =>
+            {
+                operation.Summary = "测试重连配置中心";
+                operation.Description = "测试重连配置中心";
+                operation.Tags = tagGroup;
+                return operation;
             });
-        }
+        });
     }
 }
 
 public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, ModuleRegisterCentreOption, ModuleRegisterCentreGuide>
 {
-    public const string SET_CENTRE_TYPE = nameof(SET_CENTRE_TYPE);
+    private const string SET_ARCHITECTURE =  nameof(SET_ARCHITECTURE);
     protected override string[] GetRequestedConfigMethodKeys()
     {
-        return [SET_CENTRE_TYPE, nameof(SetCentreServerClientConnector)];
+        return [nameof(SET_ARCHITECTURE), nameof(ConfigClientInfo)];
     }
-
     /// <summary>
-    /// 设置注册中心服务间调用连接器
+    /// 设置注册中心客户端信息
     /// </summary>
-    /// <typeparam name="TClientConnector"></typeparam>
+    /// <typeparam name="TClientInfo">注册中心客户端信息实现类型</typeparam>
     /// <returns></returns>
-    public ModuleRegisterCentreGuide SetCentreServerClientConnector<TClientConnector>()
-        where TClientConnector : class, IRegisterCentreServerInvocationConnector
+    public ModuleRegisterCentreGuide ConfigClientInfo<TClientInfo>() where TClientInfo : class, IRegisterCentreClientInfo
     {
         ConfigureServices(context =>
         {
+            context.Services.TryAddSingleton<IRegisterCentreClientInfo, TClientInfo>();
+        });
+        return this;
+    }
+
+    /// <summary>
+    /// 设置当前服务为单体架构(单实例)
+    /// </summary>
+    /// <returns></returns>
+    public ModuleRegisterCentreGuide SetAsStandalone()
+    {
+        ConfigureEmpty(SET_ARCHITECTURE);
+        SetAsCentreServer();
+        ConfigureServices(context =>
+        {
+            context.Services.TryAddSingleton<ILeaderService, ClientSideLeaderService>();
+            context.Services.TryAddSingleton<IRegisterCentreServerConnector, RegisterCentreServerConnectorStandaloneProvider>();
+        });
+        return this;
+    }
+
+    /// <summary>
+    /// 设置当前服务为分布式架构(多实例)
+    /// </summary>
+    /// <typeparam name="TClientConnector"></typeparam>
+    /// <returns></returns>
+    public ModuleRegisterCentreGuide SetAsDistributed<TClientConnector>()
+        where TClientConnector : class, IRegisterCentreServerInvocationConnector
+    {
+        ConfigureEmpty(SET_ARCHITECTURE);
+        ConfigureServices(context =>
+        {
+            context.Services.TryAddSingleton<ILeaderService, ClientSideLeaderService>();
             context.Services.TryAddSingleton<IRegisterCentreServerInvocationConnector, TClientConnector>();
+            context.Services.TryAddSingleton<IRegisterCentreServerConnector, RegisterCentreServerConnectorDistributedProvider>();
         });
         return this;
     }
@@ -184,40 +201,21 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
         ConfigureServices(context =>
         {
             context.Services.TryAddSingleton<IRegisterCentreServer, MemoryProviderForRegisterCentre>();
-        }, key: SET_CENTRE_TYPE);
-        return this;
-    }
-    /// <summary>
-    /// 设置当前服务为注册中心客户端
-    /// </summary>
-    /// <typeparam name="TClient">注册中心客户端实现类型</typeparam>
-    /// <returns></returns>
-    public ModuleRegisterCentreGuide SetAsCentreClient<TClient>() where TClient : class, IRegisterCentreClient
-    {
-        ConfigureModuleOption(o =>
-        {
-            o.ThisIsCentreClient = true;
         });
-        ConfigureServices(context =>
-        {
-            context.Services.TryAddSingleton<IRegisterCentreServerConnector, RegisterCentreServerConnector>();
-            context.Services.TryAddSingleton<IRegisterCentreClient, TClient>();
-            context.Services.TryAddSingleton<ILeaderService, ClientSideLeaderService>();
-        }, key: SET_CENTRE_TYPE);
         return this;
     }
-    
+   
     /// <summary>
-    /// 设置信息提供者服务(仅注册中心服务端需要)
+    /// 设置注册中心服务端目录提供者服务
     /// </summary>
-    /// <typeparam name="TInfoProvider">信息提供者服务实现类型</typeparam>
+    /// <typeparam name="TInfoProvider">目录提供者服务实现类型</typeparam>
     /// <returns></returns>
-    public ModuleRegisterCentreGuide SetInfoProvider<TInfoProvider>()
-        where TInfoProvider : class, IRegisterCentreServerInfoProvider
+    public ModuleRegisterCentreGuide ConfigServerCatalog<TInfoProvider>()
+        where TInfoProvider : class, IRegisterCentreCatalogProvider
     {
         ConfigureServices(context =>
         {
-            context.Services.AddSingleton<IRegisterCentreServerInfoProvider, TInfoProvider>();
+            context.Services.AddSingleton<IRegisterCentreCatalogProvider, TInfoProvider>();
         });
         return this;
     }
@@ -236,11 +234,7 @@ public class ModuleRegisterCentreOption : MoModuleControllerOption<ModuleRegiste
     /// 设定当前微服务是注册中心
     /// </summary>
     public bool ThisIsCentreServer { get; internal set; } = false;
-    /// <summary>
-    /// 设定当前微服务是注册中心客户端
-    /// </summary>
-    public bool ThisIsCentreClient { get; internal set; } = false;
-
+   
     /// <summary>
     /// TODO 最大并发执行数量
     /// </summary>

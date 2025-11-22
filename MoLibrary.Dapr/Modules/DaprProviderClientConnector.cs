@@ -20,7 +20,7 @@ public static class ModuleDaprProviderClientConnectorBuilderExtensions
     public static ModuleDaprProviderClientConnectorGuide UseProviderDapr(
         this ModuleRegisterCentreGuide guide, Action<ModuleDaprProviderClientConnectorOption>? action = null)
     {
-        guide.SetCentreServerClientConnector<ServerInvocationDaprHttpProvider>();
+        guide.SetAsDistributed<ServerInvocationDaprHttpProvider>();
         return new ModuleDaprProviderClientConnectorGuide().Register(action);
     }
 }
