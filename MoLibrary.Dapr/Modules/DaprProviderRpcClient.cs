@@ -9,7 +9,7 @@ namespace MoLibrary.Dapr.Modules;
 
 public static class ModuleDaprProviderRpcClientBuilderExtensions
 {
-    public static ModuleDaprProviderRpcClientGuide UseProviderDapr(this ModuleRpcClientGuide guide,
+    public static ModuleDaprProviderRpcClientGuide UseDaprProvider(this ModuleRpcClientGuide guide,
         Action<ModuleDaprProviderRpcClientOption>? action = null)
     {
         return new ModuleDaprProviderRpcClientGuide().Register(action);

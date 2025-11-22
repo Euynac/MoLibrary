@@ -11,7 +11,7 @@ namespace MoLibrary.Dapr.Modules;
 
 public static class ModuleDaprStateStoreBuilderExtensions
 {
-    public static ModuleDaprStateStoreGuide UseProviderDapr(this ModuleStateStoreGuide guide,
+    public static ModuleDaprStateStoreGuide UseDaprProvider(this ModuleStateStoreGuide guide,
         Action<ModuleDaprStateStoreOption>? action = null)
     {
         guide.SetCommonDistributedStateStoreProvider<DaprStateStore>();

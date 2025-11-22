@@ -135,10 +135,10 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModule<
 
 public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, ModuleRegisterCentreOption, ModuleRegisterCentreGuide>
 {
-    private const string SET_ARCHITECTURE =  nameof(SET_ARCHITECTURE);
+    private const string SET_PROVIDER =  nameof(SET_PROVIDER);
     protected override string[] GetRequestedConfigMethodKeys()
     {
-        return [nameof(SET_ARCHITECTURE), nameof(ConfigClientInfo)];
+        return [nameof(SET_PROVIDER), nameof(ConfigClientInfo)];
     }
     /// <summary>
     /// 设置注册中心客户端信息
@@ -155,12 +155,12 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
     }
 
     /// <summary>
-    /// 设置当前服务为单体架构(单实例)
+    /// 使用单实例内存模式
     /// </summary>
     /// <returns></returns>
-    public ModuleRegisterCentreGuide SetAsStandalone()
+    public ModuleRegisterCentreGuide UseInMemoryProvider()
     {
-        ConfigureEmpty(SET_ARCHITECTURE);
+        ConfigureEmpty(SET_PROVIDER);
         SetAsCentreServer();
         ConfigureServices(context =>
         {
@@ -171,18 +171,18 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
     }
 
     /// <summary>
-    /// 设置当前服务为分布式架构(多实例)
+    /// 使用分布式模式(多实例场景)
     /// </summary>
-    /// <typeparam name="TClientConnector"></typeparam>
+    /// <typeparam name="TProvider"></typeparam>
     /// <returns></returns>
-    public ModuleRegisterCentreGuide SetAsDistributed<TClientConnector>()
-        where TClientConnector : class, IRegisterCentreServerInvocationConnector
+    public ModuleRegisterCentreGuide UseDistributedProvider<TProvider>()
+        where TProvider : class, IRegisterCentreServerInvocationConnector
     {
-        ConfigureEmpty(SET_ARCHITECTURE);
+        ConfigureEmpty(SET_PROVIDER);
         ConfigureServices(context =>
         {
             context.Services.TryAddSingleton<ILeaderService, ClientSideLeaderService>();
-            context.Services.TryAddSingleton<IRegisterCentreServerInvocationConnector, TClientConnector>();
+            context.Services.TryAddSingleton<IRegisterCentreServerInvocationConnector, TProvider>();
             context.Services.TryAddSingleton<IRegisterCentreServerConnector, RegisterCentreServerConnectorDistributedProvider>();
         });
         return this;
