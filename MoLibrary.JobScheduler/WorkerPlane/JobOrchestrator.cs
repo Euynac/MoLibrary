@@ -21,7 +21,7 @@ public class JobOrchestrator(
     [FromKeyedServices(nameof(ModuleJobScheduler))] IMoCancellationManager cancellationManager,
     JobExecutor jobExecutor,
     JobRegistry jobRegistry,
-    IRegisterCentreClient client,
+    IRegisterCentreClientInfo client,
     ILogger<JobOrchestrator> logger)
 {
     /// <summary>

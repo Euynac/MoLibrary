@@ -16,7 +16,7 @@ public interface ILeaderService
     Task<Res<LeaderStatusResponse>> GetCurrentLeaderStatusAsync();
 }
 
-public class ClientSideLeaderService(IRegisterCentreClient client, IRegisterCentreServerConnector connector) : ILeaderService
+public class ClientSideLeaderService(IRegisterCentreClientInfo client, IRegisterCentreServerConnector connector) : ILeaderService
 {
     public Task<Res<LeaderStatusResponse>> GetCurrentLeaderStatusAsync()
     {

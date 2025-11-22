@@ -5,9 +5,4 @@ namespace MoLibrary.RegisterCentre.Interfaces;
 /// </summary>
 public interface IRegisterCentreServerConnector : IRegisterCentreServerApiForClient
 {
-    /// <summary>
-    /// 客户端开始注册微服务
-    /// </summary>
-    /// <returns></returns>
-    Task DoingRegister();
 }

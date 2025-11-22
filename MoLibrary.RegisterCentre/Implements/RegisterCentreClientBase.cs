@@ -10,7 +10,7 @@ namespace MoLibrary.RegisterCentre.Implements;
 /// <summary>
 /// 注册中心客户端抽象基类
 /// </summary>
-public abstract class RegisterCentreClientBase(IOptions<ModuleRegisterCentreOption> options, IServerAddressesFeature? serverAddressesFeature = null) : IRegisterCentreClient
+public abstract class RegisterCentreClientBase(IOptions<ModuleRegisterCentreOption> options, IServerAddressesFeature? serverAddressesFeature = null) : IRegisterCentreClientInfo
 {
     protected readonly ModuleRegisterCentreOption _options = options.Value;
 
@@ -73,7 +73,7 @@ public abstract class RegisterCentreClientBase(IOptions<ModuleRegisterCentreOpti
             serverAddressesFeature.Addresses.Any())
         {
             var addresses = string.Join(";", serverAddressesFeature.Addresses);
-            serviceInfo.Metadata[IRegisterCentreClient.LISTENING_ADDRESS_METADATA_KEY] = addresses;
+            serviceInfo.Metadata[IRegisterCentreClientInfo.LISTENING_ADDRESS_METADATA_KEY] = addresses;
         }
     }
     

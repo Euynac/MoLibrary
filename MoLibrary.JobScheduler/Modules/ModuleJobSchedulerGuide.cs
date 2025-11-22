@@ -13,11 +13,11 @@ namespace MoLibrary.JobScheduler.Modules;
 public class ModuleJobSchedulerGuide
     : MoModuleGuide<ModuleJobScheduler, ModuleJobSchedulerOption, ModuleJobSchedulerGuide>
 {
-    private const string ConfigMetadataStore = nameof(ConfigMetadataStore);
-    private const string ConfigProvider = nameof(ConfigProvider);
+    private const string CONFIG_METADATA_STORE = nameof(CONFIG_METADATA_STORE);
+    private const string CONFIG_PROVIDER = nameof(CONFIG_PROVIDER);
     protected override string[] GetRequestedConfigMethodKeys()
     {
-        return [ConfigProvider,ConfigMetadataStore];
+        return [CONFIG_PROVIDER,CONFIG_METADATA_STORE];
     }
 
     /// <summary>
@@ -33,7 +33,7 @@ public class ModuleJobSchedulerGuide
         PostConfigureServices(context =>
         {
             context.Services.AddSingleton<IMoJobScheduleMetadataStore, TStore>();
-        }, key: ConfigMetadataStore);
+        }, key: CONFIG_METADATA_STORE);
         return this;
     }
 
@@ -45,7 +45,7 @@ public class ModuleJobSchedulerGuide
         PostConfigureServices(context =>
         {
             context.Services.AddSingleton<IMoJobScheduleMetadataStore, MetadataStoreInMemoryProvider>();
-        }, key: ConfigMetadataStore);
+        }, key: CONFIG_METADATA_STORE);
         return this;
     }
     
@@ -56,7 +56,7 @@ public class ModuleJobSchedulerGuide
     /// <returns></returns>
     public ModuleJobSchedulerGuide UseDistributeProvider()
     {
-        PostConfigureServices(_ => { }, key: ConfigProvider);
+        ConfigureEmpty(CONFIG_PROVIDER);
         DependsOnModule<ModuleEventBusGuide>().Register()
             .AddKeyedCommonEventBus(nameof(ModuleJobScheduler), useDistributed: true);
         DependsOnModule<ModuleCancellationManagerGuide>().Register()
@@ -70,7 +70,7 @@ public class ModuleJobSchedulerGuide
     /// <returns></returns>
     public ModuleJobSchedulerGuide UseInMemoryProvider()
     {
-        PostConfigureServices(_ => { }, key: ConfigProvider);
+        ConfigureEmpty(CONFIG_PROVIDER);
         DependsOnModule<ModuleEventBusGuide>().Register()
             .AddKeyedCommonEventBus(nameof(ModuleJobScheduler), useDistributed: false);
         DependsOnModule<ModuleCancellationManagerGuide>().Register()

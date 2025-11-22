@@ -3,14 +3,14 @@ using MoLibrary.RegisterCentre.Models;
 namespace MoLibrary.RegisterCentre.Interfaces;
 
 /// <summary>
-/// 注册中心客户端侧接口
+/// 注册中心客户端信息接口
 /// </summary>
-public interface IRegisterCentreClient
+public interface IRegisterCentreClientInfo
 {
     /// <summary>
     /// 用于展示客户端监听地址元数据
     /// </summary>
-    const string LISTENING_ADDRESS_METADATA_KEY = "ListeningAddresses";
+    const string LISTENING_ADDRESS_METADATA_KEY = "LISTENING_ADDRESS";
 
     /// <summary>
     /// 获取当前微服务状态
