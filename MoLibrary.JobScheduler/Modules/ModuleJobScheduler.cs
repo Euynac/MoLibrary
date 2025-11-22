@@ -5,12 +5,14 @@ using Microsoft.Extensions.Logging;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
+using MoLibrary.EventBus.Modules;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Attributes;
 using MoLibrary.JobScheduler.ControlPlane;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.JobScheduler.WorkerPlane;
 using MoLibrary.RegisterCentre.Modules;
+using MoLibrary.StateStore.Modules;
 using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.JobScheduler.Modules;
@@ -79,9 +81,7 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
 
         // Register JobConcurrencyGuard as both service and hosted service
         services.AddSingleton<IJobConcurrencyGuard, JobConcurrencyGuard>();
-        services.AddHostedService(provider => provider.GetRequiredService<IJobConcurrencyGuard>() as JobConcurrencyGuard
-            ?? throw new InvalidOperationException("JobConcurrencyGuard must be registered as IJobConcurrencyGuard"));
-
+        
         // Register job definitions to JobRegistry
         // This is done synchronously during startup (blocking is acceptable)
         services.AddHostedService<JobRegistrationHostedService>(provider =>
@@ -93,6 +93,8 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
         if (GetOptions<ModuleRegisterCentreOption>().ThisIsCentreServer)
         {
             services.AddHostedService<ControlPlane.JobScheduler>();
+            services.AddHostedService(provider => provider.GetRequiredService<IJobConcurrencyGuard>() as JobConcurrencyGuard
+                                                  ?? throw new InvalidOperationException("JobConcurrencyGuard must be registered as IJobConcurrencyGuard"));
         }
     }
     
@@ -153,5 +155,6 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
     public override void ClaimDependencies()
     {
         DependsOnModule<ModuleRegisterCentreGuide>().Register(); //TODO 依赖于 ILeaderService 需要支持单体架构 
+       
     }
 }

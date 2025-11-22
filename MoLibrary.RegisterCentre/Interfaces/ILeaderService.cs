@@ -3,6 +3,11 @@ using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.RegisterCentre.Interfaces;
 
+/// <summary>
+/// 领导者服务接口
+/// 提供查询当前实例领导者状态的功能
+/// </summary>
+/// TODO 控制中心多副本支持选主
 public interface ILeaderService
 {
     /// <summary>

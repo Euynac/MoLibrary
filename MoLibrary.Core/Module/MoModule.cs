@@ -66,17 +66,17 @@ public abstract class MoModule<TModuleSelf, TModuleOption, TModuleGuide>(TModule
     /// <summary>
     /// 获取指定的任意模块配置选项
     /// </summary>
-    /// <typeparam name="TModuleOptions"></typeparam>
+    /// <typeparam name="TSpecificModuleOption"></typeparam>
     /// <returns></returns>
     /// <exception cref="InvalidOperationException"></exception>
-    public TModuleOptions GetOptions<TModuleOptions>() where TModuleOptions : IMoModuleOptionBase, new()
+    public TSpecificModuleOption GetOptions<TSpecificModuleOption>() where TSpecificModuleOption : IMoModuleOptionBase, new()
     {
-        var optionInterface = typeof(TModuleOptions)
+        var optionInterface = typeof(TSpecificModuleOption)
             .GetInterfaces()
             .FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IMoModuleOptionBase<>));
 
         if (optionInterface == null)
-            throw new InvalidOperationException($"{typeof(TModuleOptions).Name} does not implement IMoModuleOptionBase<T>.");
+            throw new InvalidOperationException($"{typeof(TSpecificModuleOption).Name} does not implement IMoModuleOptionBase<T>.");
 
         var moduleType = optionInterface.GetGenericArguments()[0];
         MoModuleRegisterCentre.ModuleRegisterContextDict.TryGetValue(moduleType, out var context);
@@ -84,10 +84,10 @@ public abstract class MoModule<TModuleSelf, TModuleOption, TModuleGuide>(TModule
         if (context == null)
             throw new InvalidOperationException($"Module {moduleType.Name} is not registered.");
 
-        context.FinalConfigures.TryGetValue(typeof(TModuleOption), out var value);
+        context.FinalConfigures.TryGetValue(typeof(TSpecificModuleOption), out var value);
         if(value == null)
-            throw new InvalidOperationException($"Module {moduleType.Name} does not have option {typeof(TModuleOptions).Name}.");
-        return (TModuleOptions)value;
+            throw new InvalidOperationException($"Module {moduleType.Name} does not have option {typeof(TSpecificModuleOption).Name}.");
+        return (TSpecificModuleOption)value;
     }
     internal override void ConvertToRegisterRequest()
     {
