@@ -1,81 +1,81 @@
+using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Module.Interfaces;
+using MoLibrary.EventBus.Modules;
 using MoLibrary.JobScheduler.Abstractions;
+using MoLibrary.JobScheduler.Metadata;
+using MoLibrary.StateStore.Modules;
 
 namespace MoLibrary.JobScheduler.Modules;
 
 /// <summary>
 /// Fluent configuration builder for the Job Scheduler module.
 /// </summary>
-/// <example>
-/// <code>
-/// builder.ConfigMoJobScheduler()
-///     .UseCustomMetadataStore&lt;SqlServerMetadataStore&gt;()
-///     .SetMaxWorkerExecutionThreads(10)
-///     .EnableRecurringJobDebugMode();
-/// </code>
-/// </example>
 public class ModuleJobSchedulerGuide
     : MoModuleGuide<ModuleJobScheduler, ModuleJobSchedulerOption, ModuleJobSchedulerGuide>
 {
+    private const string ConfigMetadataStore = nameof(ConfigMetadataStore);
+    private const string ConfigProvider = nameof(ConfigProvider);
+    protected override string[] GetRequestedConfigMethodKeys()
+    {
+        return [ConfigProvider,ConfigMetadataStore];
+    }
+
     /// <summary>
     /// Configures a custom metadata store implementation for job persistence.
-    /// Defaults to in-memory provider if not specified.
     /// </summary>
-    /// <typeparam name="TStore">The metadata store type implementing <see cref="IMoJobScheduleMetadataStore"/>.</typeparam>
-    /// <returns>The current guide instance for method chaining.</returns>
+    /// <typeparam name="TStore">The metadata store type implementing <see cref="IMoJobScheduleMetadataStore"/>.</typeparam>\
     /// <remarks>
     /// Custom stores must be thread-safe and provide atomic state transitions.
     /// </remarks>
     public ModuleJobSchedulerGuide UseCustomMetadataStore<TStore>()
-        where TStore : IMoJobScheduleMetadataStore
+        where TStore : class, IMoJobScheduleMetadataStore
     {
-        return ConfigureModuleOption(options =>
+        PostConfigureServices(context =>
         {
-            options.CustomMetadataStoreType = typeof(TStore);
-        });
+            context.Services.AddSingleton<IMoJobScheduleMetadataStore, TStore>();
+        }, key: ConfigMetadataStore);
+        return this;
     }
 
     /// <summary>
-    /// Enables recurring job debug mode, preventing automatic cron-based scheduling.
-    /// Jobs can still be triggered manually for testing.
+    /// Configures the module to use the in-memory metadata store provider.
     /// </summary>
-    /// <param name="enabled">Whether to enable debug mode. Default is <c>true</c>.</param>
-    /// <returns>The current guide instance for method chaining.</returns>
-    public ModuleJobSchedulerGuide EnableRecurringJobDebugMode(bool enabled = true)
+    public ModuleJobSchedulerGuide UseInMemoryMetadataStore()
     {
-        return ConfigureModuleOption(options =>
+        PostConfigureServices(context =>
         {
-            options.RecurringJobDebugMode = enabled;
-        });
+            context.Services.AddSingleton<IMoJobScheduleMetadataStore, MetadataStoreInMemoryProvider>();
+        }, key: ConfigMetadataStore);
+        return this;
     }
-
+    
+    
     /// <summary>
-    /// Enables triggered job debug mode, preventing automatic execution after EnqueueAsync.
-    /// Job instances are created but not published to the event bus.
+    /// Configures the module to use the distributed event bus and cancellation manager providers.
     /// </summary>
-    /// <param name="enabled">Whether to enable debug mode. Default is <c>true</c>.</param>
-    /// <returns>The current guide instance for method chaining.</returns>
-    public ModuleJobSchedulerGuide EnableTriggeredJobDebugMode(bool enabled = true)
+    /// <returns></returns>
+    public ModuleJobSchedulerGuide UseDistributeProvider()
     {
-        return ConfigureModuleOption(options =>
-        {
-            options.TriggeredJobDebugMode = enabled;
-        });
+        PostConfigureServices(_ => { }, key: ConfigProvider);
+        DependsOnModule<ModuleEventBusGuide>().Register()
+            .AddKeyedCommonEventBus(nameof(ModuleJobScheduler), useDistributed: true);
+        DependsOnModule<ModuleCancellationManagerGuide>().Register()
+            .AddKeyedCancellationManager(nameof(ModuleJobScheduler), useDistributed: true);
+        return this;
     }
-
+   
     /// <summary>
-    /// Sets the maximum number of concurrent job executions allowed on this worker instance.
+    /// Configures the module to use the in-memory metadata store and event bus and cancellation manager providers.
     /// </summary>
-    /// <param name="maxThreads">
-    /// Maximum concurrent worker threads. Use <c>null</c> for unlimited.
-    /// Recommended: 2-4x CPU cores.
-    /// </param>
-    /// <returns>The current guide instance for method chaining.</returns>
-    public ModuleJobSchedulerGuide SetMaxWorkerExecutionThreads(int? maxThreads)
+    /// <returns></returns>
+    public ModuleJobSchedulerGuide UseInMemoryProvider()
     {
-        return ConfigureModuleOption(options =>
-        {
-            options.MaxWorkerExecutionThreads = maxThreads;
-        });
+        PostConfigureServices(_ => { }, key: ConfigProvider);
+        DependsOnModule<ModuleEventBusGuide>().Register()
+            .AddKeyedCommonEventBus(nameof(ModuleJobScheduler), useDistributed: false);
+        DependsOnModule<ModuleCancellationManagerGuide>().Register()
+            .AddKeyedCancellationManager(nameof(ModuleJobScheduler), useDistributed: false);
+        UseInMemoryMetadataStore();
+        return this;
     }
 }

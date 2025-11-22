@@ -76,42 +76,4 @@ public class ModuleJobSchedulerOption : MoModuleOption<ModuleJobScheduler>
     /// </para>
     /// </remarks>
     public int? MaxWorkerExecutionThreads { get; set; } = null;
-
-    /// <summary>
-    /// Gets or sets the custom metadata store implementation type.
-    /// When set, the module will register the specified type as the IMoJobScheduleMetadataStore implementation.
-    /// When <c>null</c>, the default MetadataStoreInMemoryProvider will be used.
-    /// </summary>
-    /// <value>
-    /// The <see cref="Type"/> of the custom metadata store implementation, or <c>null</c> for the default.
-    /// Default is <c>null</c> (uses MetadataStoreInMemoryProvider).
-    /// </value>
-    /// <remarks>
-    /// <para>
-    /// The custom metadata store type must implement <see cref="Abstractions.IMoJobScheduleMetadataStore"/>.
-    /// The type will be registered as a singleton in the dependency injection container.
-    /// </para>
-    /// <para>
-    /// Common scenarios for custom metadata stores:
-    /// </para>
-    /// <list type="bullet">
-    /// <item><description>SQL database persistence (SQL Server, PostgreSQL, MySQL)</description></item>
-    /// <item><description>NoSQL database persistence (MongoDB, Redis)</description></item>
-    /// <item><description>Distributed cache integration for multi-worker scenarios</description></item>
-    /// </list>
-    /// <example>
-    /// <para><b>Registering a custom SQL-based metadata store:</b></para>
-    /// <code>
-    /// builder.ConfigMoJobScheduler(options =>
-    /// {
-    ///     options.CustomMetadataStoreType = typeof(SqlServerMetadataStore);
-    /// });
-    ///
-    /// // Or using fluent API:
-    /// builder.ConfigMoJobScheduler()
-    ///     .UseCustomMetadataStore&lt;SqlServerMetadataStore&gt;();
-    /// </code>
-    /// </example>
-    /// </remarks>
-    public Type? CustomMetadataStoreType { get; set; } = null;
 }
