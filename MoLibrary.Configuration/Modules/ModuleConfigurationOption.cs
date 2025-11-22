@@ -30,7 +30,7 @@ public class ModuleConfigurationOption : MoModuleControllerOption<ModuleConfigur
     /// <summary>
     /// 增加Dapr Configuration作为配置Provider
     /// </summary>
-    internal bool UseProviderDapr => DaprStoreName != null;
+    internal bool UseDaprProvider => DaprStoreName != null;
 
     /// <summary>
     /// Dapr Configuration Store Name，用于Dapr Configuration Provider

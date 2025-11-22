@@ -20,7 +20,7 @@ using MoLibrary.Tool.Extensions;
 namespace MoLibrary.Dapr.Modules;
 public static class ModuleDaprEventBusBuilderExtensions
 {
-    public static ModuleDaprEventBusGuide UseProviderDapr(this ModuleEventBusGuide guide,
+    public static ModuleDaprEventBusGuide UseDaprProvider(this ModuleEventBusGuide guide,
         Action<ModuleDaprEventBusOption>? action = null)
     {
         guide.SetDistributedEventBusProvider<DaprDistributedEventBus>();

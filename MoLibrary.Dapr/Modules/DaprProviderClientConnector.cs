@@ -17,10 +17,10 @@ namespace MoLibrary.Dapr.Modules;
 
 public static class ModuleDaprProviderClientConnectorBuilderExtensions
 {
-    public static ModuleDaprProviderClientConnectorGuide UseProviderDapr(
+    public static ModuleDaprProviderClientConnectorGuide UseDaprProvider(
         this ModuleRegisterCentreGuide guide, Action<ModuleDaprProviderClientConnectorOption>? action = null)
     {
-        guide.SetAsDistributed<ServerInvocationDaprHttpProvider>();
+        guide.UseDistributedProvider<ServerInvocationDaprHttpProvider>();
         return new ModuleDaprProviderClientConnectorGuide().Register(action);
     }
 }

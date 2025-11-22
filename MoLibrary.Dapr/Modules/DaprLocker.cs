@@ -10,7 +10,7 @@ namespace MoLibrary.Dapr.Modules;
 
 public static class ModuleDaprLockerBuilderExtensions
 {
-    public static ModuleDaprLockerGuide UseProviderDapr(this ModuleLockerGuide guide,
+    public static ModuleDaprLockerGuide UseDaprProvider(this ModuleLockerGuide guide,
         Action<ModuleDaprLockerOption>? action = null)
     {
         guide.SetDistributedLockProvider<DaprMoDistributedLock>();
