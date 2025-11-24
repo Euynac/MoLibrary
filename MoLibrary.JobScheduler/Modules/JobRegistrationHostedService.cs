@@ -38,7 +38,7 @@ internal class JobRegistrationHostedService(
         }
         if (data.Status != LeaderStatus.Leader)
         {
-            logger.LogInformation("Not leader, current Leader status is {Status}, skip job registration", data.Status);
+            logger.LogInformation("Not leader, current Leader status is {Status}, skip job registration", data);
             return;
         }
 

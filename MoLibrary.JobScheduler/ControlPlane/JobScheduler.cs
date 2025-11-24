@@ -55,7 +55,7 @@ public class JobScheduler(
         }
         if (data.Status != LeaderStatus.Leader)
         {
-            logger.LogInformation("Not leader, current Leader status is {Status}, skip job scheduling", data.Status);
+            logger.LogInformation("Not leader, current Leader status is {Status}, skip job scheduling", data);
             return;
         }
 
