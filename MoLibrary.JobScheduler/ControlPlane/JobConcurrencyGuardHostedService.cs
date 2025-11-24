@@ -18,11 +18,11 @@ namespace MoLibrary.JobScheduler.ControlPlane;
 /// Manages job concurrency limits by tracking running instances and listening to lifecycle events.
 /// Implements IHostedService to initialize statistics on startup and clean up on shutdown.
 /// </summary>
-public class JobConcurrencyGuard(
+public class JobConcurrencyGuardHostedService(
     IMoJobScheduleMetadataStore metadataStore,
     [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
     JobInstanceManager instanceManager,
-    ILogger<JobConcurrencyGuard> logger,
+    ILogger<JobConcurrencyGuardHostedService> logger,
     ILeaderService leaderService,
     IRegisterCentreServer? registerCentreServer = null) : IJobConcurrencyGuard, IHostedService
 {

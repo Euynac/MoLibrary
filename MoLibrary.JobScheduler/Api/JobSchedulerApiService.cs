@@ -17,7 +17,7 @@ namespace MoLibrary.JobScheduler.Api;
 /// It serves as the interface layer between HTTP endpoints and the job scheduler components.
 /// </remarks>
 public class JobSchedulerApiService(
-    ControlPlane.JobScheduler jobScheduler,
+    ControlPlane.JobSchedulerHostedService jobScheduler,
     JobRegistry jobRegistry,
     IMoJobScheduleMetadataStore metadataStore,
     [FromKeyedServices(nameof(ModuleJobScheduler))] IMoCancellationManager cancellationManager,
