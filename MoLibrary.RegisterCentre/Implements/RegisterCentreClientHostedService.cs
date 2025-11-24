@@ -10,7 +10,7 @@ namespace MoLibrary.RegisterCentre.Implements;
 
 public class RegisterCentreClientHostedService(
     IRegisterCentreClientInfo client,
-    ILogger<RegisterCentreServerConnectorDistributedProvider> logger,
+    ILogger<RegisterCentreClientHostedService> logger,
     IOptions<ModuleRegisterCentreOption> option,
     IRegisterCentreServerConnector connector) : IHostedService
 {
@@ -30,7 +30,6 @@ public class RegisterCentreClientHostedService(
     protected virtual async Task DoingHeartbeat(CancellationToken cancellationToken)
     {
         await Task.Delay(3000, cancellationToken);
-
         while (!cancellationToken.IsCancellationRequested)
         {
             try

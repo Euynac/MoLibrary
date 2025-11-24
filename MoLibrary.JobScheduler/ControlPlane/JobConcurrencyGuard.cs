@@ -39,7 +39,7 @@ public class JobConcurrencyGuard(
         }
         if (data.Status != LeaderStatus.Leader)
         {
-            logger.LogInformation("Not leader, current Leader status is {Status}, skip job concurrency guard initialization", data.Status);
+            logger.LogInformation("Not leader, current Leader status is {Status}, skip job concurrency guard initialization", data);
             return;
         }
         

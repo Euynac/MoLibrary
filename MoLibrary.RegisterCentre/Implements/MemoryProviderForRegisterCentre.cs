@@ -21,22 +21,22 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
     /// <summary>
     /// 服务字典（Key: AppId, Value: RegisteredServiceStatus）
     /// </summary>
-    protected static readonly ConcurrentDictionary<string, RegisteredServiceStatus> Services = new();
+    protected readonly ConcurrentDictionary<string, RegisteredServiceStatus> Services = new();
 
     /// <summary>
     /// 心跳超时检查定时器
     /// </summary>
-    private static Timer? _heartbeatCheckTimer;
+    private readonly Timer? _heartbeatCheckTimer;
 
     /// <summary>
-    /// 配置选项实例（静态方法需要）
+    /// 配置选项
     /// </summary>
-    private static ModuleRegisterCentreOption? _staticOption;
+    private readonly ModuleRegisterCentreOption? _option;
 
     /// <summary>
-    /// 静态事件处理器（用于在静态方法中触发事件）
+    /// 服务实例下线事件处理器
     /// </summary>
-    private static EventHandler<ServiceInstanceOfflineEvent>? _staticServiceInstanceOffline;
+    private EventHandler<ServiceInstanceOfflineEvent>? _staticServiceInstanceOffline;
 
     /// <summary>
     /// 服务实例下线事件
@@ -54,27 +54,37 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
     {
         _accessor = accessor;
         _connector = connector;
-        var option = options.Value;
+        _option = options.Value;
 
         // 初始化定时器（单例模式，只初始化一次）
-        if (_staticOption == null)
+        var checkInterval = TimeSpan.FromMilliseconds(_option.ServerHeartbeatCheckInterval);
+        _heartbeatCheckTimer ??= new Timer(CheckHeartbeatTimeout, null, checkInterval, checkInterval);
+    }
+
+    /// <summary>
+    /// 填充来源实例信息（FromClient 或 FromInstance）
+    /// </summary>
+    /// <param name="source">当前的来源值</param>
+    /// <returns>填充后的来源值，如果无法识别则返回 null</returns>
+    private string? PopulateSourceInfo(string? source)
+    {
+        if (!source.IsNullOrWhiteSpace())
+            return source;
+
+        if (_accessor.HttpContext?.Connection is { } connection)
         {
-            _staticOption = option;
-            var checkInterval = TimeSpan.FromMilliseconds(option.ServerHeartbeatCheckInterval);
-            _heartbeatCheckTimer ??= new Timer(CheckHeartbeatTimeout, null, checkInterval, checkInterval);
+            return $"[Remote: {connection.RemoteIpAddress}:{connection.RemotePort}][Local: {connection.LocalIpAddress}:{connection.LocalPort}]";
         }
+
+        return null;
     }
     
     public virtual Task<Res> Register(ServiceRegisterInfo req)
     {
         if (req.AppId.IsNullOrWhiteSpace())
             return Task.FromResult(Res.Fail("该微服务未设置APPID，无法注册"));
-
-        // 补充来源信息
-        if (req.FromInstance is null && _accessor.HttpContext?.Connection is { } connection)
-        {
-            req.FromInstance = $"[Remote: {connection.RemoteIpAddress}:{connection.RemotePort}][Local: {connection.LocalIpAddress}:{connection.LocalPort}]";
-        }
+        
+        req.FromInstance = PopulateSourceInfo(req.FromInstance);
 
         if (req.FromInstance.IsNullOrWhiteSpace())
             return Task.FromResult(Res.Fail("无法识别服务实例来源"));
@@ -119,7 +129,7 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
         }
 
         // 触发领导者选举（如果启用）
-        if (_staticOption?.EnableLeaderElection ?? true)
+        if (_option?.EnableLeaderElection ?? true)
         {
             PerformLeaderElection(service);
         }
@@ -132,11 +142,8 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
         if (req.AppId.IsNullOrWhiteSpace())
             return Task.FromResult<Res<ServiceHeartbeatResponse>>("未提供AppId");
 
-        // 补充来源信息
-        if (req.FromClient is null && _accessor.HttpContext?.Connection is { } connection)
-        {
-            req.FromClient = $"[Remote: {connection.RemoteIpAddress}:{connection.RemotePort}][Local: {connection.LocalIpAddress}:{connection.LocalPort}]";
-        }
+        
+        req.FromClient = PopulateSourceInfo(req.FromClient);
 
         if (req.FromClient.IsNullOrWhiteSpace())
             return Task.FromResult<Res<ServiceHeartbeatResponse>>("无法识别服务实例来源");
@@ -190,11 +197,8 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
         if (req.AppId.IsNullOrWhiteSpace())
             return Task.FromResult<Res<LeaderStatusResponse>>("未提供AppId");
 
-        // 补充来源信息
-        if (req.FromClient is null && _accessor.HttpContext?.Connection is { } connection)
-        {
-            req.FromClient = $"[Remote: {connection.RemoteIpAddress}:{connection.RemotePort}][Local: {connection.LocalIpAddress}:{connection.LocalPort}]";
-        }
+        
+        req.FromClient = PopulateSourceInfo(req.FromClient);
 
         if (req.FromClient.IsNullOrWhiteSpace())
             return Task.FromResult<Res<LeaderStatusResponse>>("无法识别服务实例来源");
@@ -209,6 +213,10 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
             response.RunningInstanceCount = 0;
             return Task.FromResult<Res<LeaderStatusResponse>>(response);
         }
+
+        var performedElection = false;
+        
+        findLeader:
 
         // 获取所有符合条件的实例（Running和Unhealthy状态）
         var eligibleInstances = service.Instances.Values
@@ -232,8 +240,17 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
         // 查找领导者
         var leader = eligibleInstances.FirstOrDefault(i => i.IsLeader);
 
+        // 如果没有领导者且要求返回确认状态
         if (leader == null)
         {
+            // 如果要求返回确认状态，则触发领导者选举
+            if (!performedElection && req.RequiresLeaderConfirmation && (_option?.EnableLeaderElection ?? true))
+            {
+                PerformLeaderElection(service);
+                performedElection = true;
+                goto findLeader;
+            }
+
             // 没有领导者，返回Looking状态
             response.Status = LeaderStatus.Looking;
             response.Message = "正在进行领导者选举";
@@ -245,7 +262,7 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
         response.LeaderRegistrationTime = leader.RegistrationTime;
 
         // 判断当前实例的状态
-        if (currentInstance != null && currentInstance.IsLeader)
+        if (currentInstance is {IsLeader: true})
         {
             response.Status = LeaderStatus.Leader;
             response.Message = "当前实例是领导者";
@@ -321,12 +338,11 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
     /// <summary>
     /// 检查心跳超时
     /// </summary>
-    private static void CheckHeartbeatTimeout(object? state)
+    private void CheckHeartbeatTimeout(object? state)
     {
-        var option = _staticOption ?? new ModuleRegisterCentreOption();
-        var unhealthyThreshold = TimeSpan.FromMilliseconds(option.UnhealthyThreshold);
-        var offlineThreshold = TimeSpan.FromMilliseconds(option.OfflineThreshold);
-        var expelThreshold = TimeSpan.FromMilliseconds(option.ExpelThreshold);
+        var unhealthyThreshold = TimeSpan.FromMilliseconds(_option.UnhealthyThreshold);
+        var offlineThreshold = TimeSpan.FromMilliseconds(_option.OfflineThreshold);
+        var expelThreshold = TimeSpan.FromMilliseconds(_option.ExpelThreshold);
         var now = DateTime.Now;
 
         foreach (var service in Services.Values)
@@ -355,7 +371,7 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
                     {
                         instance.Status = ServiceStatus.Offline;
                         // 如果离线的是领导者，标记为非领导者以触发重新选举
-                        if (option.EnableLeaderElection && instance.IsLeader)
+                        if (_option.EnableLeaderElection && instance.IsLeader)
                         {
                             instance.IsLeader = false;
                         }
@@ -389,7 +405,7 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
             }
 
             // 3. 进行领导者选举（如果启用）
-            if (option.EnableLeaderElection)
+            if (_option.EnableLeaderElection)
             {
                 PerformLeaderElection(service);
             }
