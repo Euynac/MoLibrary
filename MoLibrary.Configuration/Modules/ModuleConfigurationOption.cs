@@ -57,12 +57,6 @@ public class ModuleConfigurationOption : MoModuleControllerOption<ModuleConfigur
     /// 是否允许在没有配置项特性的情况下对选项进行日志记录
     /// </summary>
     public bool EnableLoggingWithoutOptionSetting { get; set; }
- 
-
-    /// <summary>
-    /// 设定当前微服务是配置中心
-    /// </summary>
-    public bool ThisIsDashboard { get; set; } = false;
 
     #region 配置文件管理
 

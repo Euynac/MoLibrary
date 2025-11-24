@@ -13,14 +13,15 @@ public interface ILeaderService
     /// <summary>
     /// 查询当前实例的领导者状态（Leader/Follower/Looking）
     /// </summary>
-    Task<Res<LeaderStatusResponse>> GetCurrentLeaderStatusAsync();
+    /// <param name="requiresLeaderConfirmation">是否要求返回确认状态，即当Looking时，开始选主后返回确认状态</param>
+    Task<Res<LeaderStatusResponse>> GetCurrentLeaderStatusAsync(bool requiresLeaderConfirmation = true);
 }
 
 public class ClientSideLeaderService(IRegisterCentreClientInfo client, IRegisterCentreServerConnector connector) : ILeaderService
 {
-    public Task<Res<LeaderStatusResponse>> GetCurrentLeaderStatusAsync()
+    public Task<Res<LeaderStatusResponse>> GetCurrentLeaderStatusAsync(bool requiresLeaderConfirmation = true)
     {
         var info = client.GetServiceStatus();
-        return connector.GetLeaderStatus(new LeaderStatusRequest {AppId = info.AppId, FromClient = info.FromInstance});
+        return connector.GetLeaderStatus(new LeaderStatusRequest {AppId = info.AppId, FromClient = info.FromInstance, RequiresLeaderConfirmation = requiresLeaderConfirmation});
     }
 }

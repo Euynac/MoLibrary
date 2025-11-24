@@ -45,7 +45,7 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModule<
 
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
-        if (option.ThisIsCentreServer)
+        if (option.IsCentreServer)
         {
             app.UseEndpoints(endpoints =>
             {
@@ -161,11 +161,16 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
     public ModuleRegisterCentreGuide UseInMemoryProvider()
     {
         ConfigureEmpty(SET_PROVIDER);
+        ConfigureModuleOption(o =>
+        {
+            o.IsStandaloneMode = true;
+        });
         SetAsCentreServer();
         ConfigureServices(context =>
         {
             context.Services.TryAddSingleton<ILeaderService, ClientSideLeaderService>();
             context.Services.TryAddSingleton<IRegisterCentreServerConnector, RegisterCentreServerConnectorStandaloneProvider>();
+            context.Services.TryAddSingleton<IRegisterCentreServerInvocationConnector, RegisterCentreServerInvocationConnectorStandaloneProvider>();
         });
         return this;
     }
@@ -195,7 +200,7 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
     {
         ConfigureModuleOption(o =>
         {
-            o.ThisIsCentreServer = true;
+            o.IsCentreServer = true;
         });
 
         ConfigureServices(context =>
@@ -231,9 +236,15 @@ public static class ModuleRegisterCentreBuilderExtensions
 public class ModuleRegisterCentreOption : MoModuleControllerOption<ModuleRegisterCentre>
 {
     /// <summary>
-    /// 设定当前微服务是注册中心
+    /// 当前微服务是注册中心
     /// </summary>
-    public bool ThisIsCentreServer { get; internal set; } = false;
+    public bool IsCentreServer { get; internal set; }
+
+    /// <summary>
+    /// 是否是单实例内存模式(standalone mode)
+    /// 适用于单实例部署或开发环境，不支持跨服务配置调用
+    /// </summary>
+    public bool IsStandaloneMode { get; internal set; }
    
     /// <summary>
     /// TODO 最大并发执行数量

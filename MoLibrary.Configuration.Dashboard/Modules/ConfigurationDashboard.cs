@@ -1,13 +1,18 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.OpenApi.Models;
+using MoLibrary.Configuration.Dashboard.Implements;
+using MoLibrary.Configuration.Dashboard.Interfaces;
 using MoLibrary.Configuration.Dashboard.Model;
-using MoLibrary.Configuration.Dashboard.UIConfiguration.Services;
+using MoLibrary.Configuration.Dashboard.Services;
 using MoLibrary.Configuration.Modules;
 using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module;
+using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
+using MoLibrary.RegisterCentre.Interfaces;
 using MoLibrary.RegisterCentre.Modules;
 
 namespace MoLibrary.Configuration.Dashboard.Modules;
@@ -31,11 +36,22 @@ public class ModuleConfigurationDashboard(ModuleConfigurationDashboardOption opt
         // 注册配置服务
         services.AddScoped<ConfigurationClientService>();
         services.AddScoped<ConfigurationDashboardService>();
+        
+        if (GetOptions<ModuleRegisterCentreOption>().IsStandaloneMode)
+        {
+            services.TryAddSingleton<IConfigurationCentreServiceInvoker,
+                ConfigurationCentreServiceInvokerStandaloneProvider>();
+        }
+        else
+        {
+            services.TryAddSingleton<IConfigurationCentreServiceInvoker,
+                ConfigurationCentreServiceInvokerDistributedProvider>();
+        }
     }
 
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
-        if (option.ThisIsDashboard)
+        if (GetOptions<ModuleRegisterCentreOption>().IsCentreServer)
         {
             app.UseEndpoints(endpoints =>
             {
@@ -135,4 +151,61 @@ public class RollbackRequest
     public required string Key { get; set; }
     public required string AppId { get; set; }
     public required string Version { get; set; }
+}
+
+
+
+public class ModuleConfigurationDashboardGuide : MoModuleGuide<ModuleConfigurationDashboard,
+    ModuleConfigurationDashboardOption, ModuleConfigurationDashboardGuide>
+{
+
+    public ModuleConfigurationDashboardGuide ConfigCustomDashboard<TDashboard>() where TDashboard : class, IMoConfigurationDashboard
+    {
+        ConfigureServices(context =>
+        {
+            context.Services.AddSingleton<IMoConfigurationDashboard, TDashboard>();
+        }, EMoModuleOrder.PreConfig);
+        return this;
+    }
+
+    public ModuleConfigurationDashboardGuide SetAsDashboard()
+    {
+        DependsOnModule<ModuleRegisterCentreGuide>().Register().SetAsCentreServer();
+        ConfigureServices(context =>
+        {
+            context.Services.TryAddSingleton<IMoConfigurationDashboard, DefaultArrangeDashboard>();
+            context.Services.AddSingleton<MemoryProviderForConfigCentre>();
+            context.Services.AddSingleton(p =>
+                ((IRegisterCentreServer?) p.GetService(typeof(MemoryProviderForConfigCentre)))!);
+            context.Services.AddSingleton(p =>
+                ((IMoConfigurationCentre?) p.GetService(typeof(MemoryProviderForConfigCentre)))!);
+           
+            context.Services.TryAddTransient<IMoConfigurationStores, MoConfigurationDefaultMemoryStore>();
+            context.Services.AddSingleton<IMoConfigurationModifier, MoConfigurationJsonFileModifier>();
+        });
+        return this;
+    }
+    
+    public ModuleConfigurationDashboardGuide ConfigCustomStore<TStore>()
+        where TStore : class, IMoConfigurationStores
+    {
+        ConfigureServices(context =>
+        {
+            context.Services.AddTransient<IMoConfigurationStores, TStore>();
+        }, EMoModuleOrder.PreConfig);
+        return this;
+    }
+    
+}
+public static class ModuleConfigurationDashboardBuilderExtensions
+{
+    public static ModuleConfigurationDashboardGuide ConfigModuleConfigurationDashboard(this WebApplicationBuilder builder,
+        Action<ModuleConfigurationDashboardOption>? action = null)
+    {
+        return new ModuleConfigurationDashboardGuide().Register(action);
+    }
+}
+
+public class ModuleConfigurationDashboardOption : MoModuleControllerOption<ModuleConfigurationDashboard>
+{
 }

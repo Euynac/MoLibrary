@@ -4,10 +4,10 @@ using MoLibrary.Configuration.Dashboard.Model;
 using MoLibrary.Configuration.Model;
 using MoLibrary.Tool.MoResponse;
 
-namespace MoLibrary.Configuration.Dashboard.UIConfiguration.Services;
+namespace MoLibrary.Configuration.Dashboard.Services;
 
 /// <summary>
-/// 配置仪表板服务，提供配置中心管理功能
+/// 配置仪表板服务,提供配置中心管理功能
 /// </summary>
 public class ConfigurationDashboardService(
     IMoConfigurationCentre configCentre,
@@ -90,7 +90,7 @@ public class ConfigurationDashboardService(
     /// <param name="end">结束时间</param>
     /// <returns>配置历史</returns>
     public async Task<Res<List<DtoOptionHistory>>> GetConfigHistoryAsync(
-        string? key, 
+        string? key,
         string? appid,
         DateTime? start,
         DateTime? end)

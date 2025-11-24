@@ -62,7 +62,7 @@ public class ModuleRepositoryGuide : MoModuleGuide<ModuleRepository, ModuleRepos
 
             context.Services.AddMemoryCache();
 
-            context.Services.AddTransient(typeof(IDbContextProvider<>), typeof(UnitOfWorkDbContextProvider<>));
+            context.Services.AddTransient(typeof(IDbContextProvider<>), typeof(UnitOfWorkDbContextProvider<>));//TODO 可使用Singleton？
 
 
             if (context.ModuleOption.UseDbContextFactory)

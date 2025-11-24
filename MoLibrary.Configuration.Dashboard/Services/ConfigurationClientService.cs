@@ -3,10 +3,10 @@ using MoLibrary.Configuration.Dashboard.Interfaces;
 using MoLibrary.Configuration.Dashboard.Model;
 using MoLibrary.Tool.MoResponse;
 
-namespace MoLibrary.Configuration.Dashboard.UIConfiguration.Services;
+namespace MoLibrary.Configuration.Dashboard.Services;
 
 /// <summary>
-/// 配置客户端服务，提供配置热更新功能
+/// 配置客户端服务,提供配置热更新功能
 /// </summary>
 public class ConfigurationClientService(
     IMoConfigurationModifier modifier,
@@ -33,7 +33,7 @@ public class ConfigurationClientService(
                 return await modifier.UpdateConfig(config, value);
             }
 
-            return Res.Fail($"更新失败，找不到Key为{request.Key}的配置");
+            return Res.Fail($"更新失败,找不到Key为{request.Key}的配置");
         }
         catch (Exception ex)
         {
