@@ -1,8 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.EventBus.Modules;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Metadata;
+using MoLibrary.RegisterCentre.Modules;
 using MoLibrary.StateStore.Modules;
 
 namespace MoLibrary.JobScheduler.Modules;
@@ -23,7 +25,7 @@ public class ModuleJobSchedulerGuide
     /// <summary>
     /// Configures a custom metadata store implementation for job persistence.
     /// </summary>
-    /// <typeparam name="TStore">The metadata store type implementing <see cref="IMoJobScheduleMetadataStore"/>.</typeparam>\
+    /// <typeparam name="TStore">The metadata store type implementing <see cref="IMoJobScheduleMetadataStore"/>.</typeparam>
     /// <remarks>
     /// Custom stores must be thread-safe and provide atomic state transitions.
     /// </remarks>
@@ -32,7 +34,7 @@ public class ModuleJobSchedulerGuide
     {
         PostConfigureServices(context =>
         {
-            context.Services.AddSingleton<IMoJobScheduleMetadataStore, TStore>();
+            context.Services.TryAddSingleton<IMoJobScheduleMetadataStore, TStore>();
         }, key: CONFIG_METADATA_STORE);
         return this;
     }
@@ -44,7 +46,7 @@ public class ModuleJobSchedulerGuide
     {
         PostConfigureServices(context =>
         {
-            context.Services.AddSingleton<IMoJobScheduleMetadataStore, MetadataStoreInMemoryProvider>();
+            context.Services.TryAddSingleton<IMoJobScheduleMetadataStore, MetadataStoreInMemoryProvider>();
         }, key: CONFIG_METADATA_STORE);
         return this;
     }
@@ -61,6 +63,7 @@ public class ModuleJobSchedulerGuide
             .AddKeyedCommonEventBus(nameof(ModuleJobScheduler), useDistributed: true);
         DependsOnModule<ModuleCancellationManagerGuide>().Register()
             .AddKeyedCancellationManager(nameof(ModuleJobScheduler), useDistributed: true);
+        DependsOnModule<ModuleRegisterCentreGuide>().Register();
         return this;
     }
    
@@ -76,6 +79,7 @@ public class ModuleJobSchedulerGuide
         DependsOnModule<ModuleCancellationManagerGuide>().Register()
             .AddKeyedCancellationManager(nameof(ModuleJobScheduler), useDistributed: false);
         UseInMemoryMetadataStore();
+        DependsOnModule<ModuleRegisterCentreGuide>().Register().UseInMemoryProvider();
         return this;
     }
 }

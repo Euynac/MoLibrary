@@ -75,11 +75,12 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
         app.UseEndpoints(endpoints =>
         {
             var tagGroup = new List<OpenApiTag> { new() { Name = option.GetApiGroupName(), Description = "热配置相关内置接口" } };
-            endpoints.MapGet(MoConfigurationConventions.GetConfigStatus, async (HttpResponse response,
-                HttpContext context, [FromQuery] bool? onlyCurDomain,
-                [FromServices] IMoConfigurationCardManager manager) =>
+            endpoints.MapGet(MoConfigurationConventions.GetConfigStatus, async (
+                [FromQuery] bool? onlyCurDomain,
+                [FromServices] ModuleConfigurationService service) =>
             {
-                return Res.Create(manager.GetDomainConfigs(onlyCurDomain), ResponseCode.Ok).GetResponse();
+                var result = await service.GetConfigStatusAsync(onlyCurDomain);
+                return result.GetResponse();
             }).WithName("获取热配置状态信息").WithOpenApi(operation =>
             {
                 operation.Summary = "获取热配置状态信息";
@@ -88,14 +89,10 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
                 return operation;
             });
 
-            endpoints.MapGet("/option/debug", async (HttpResponse response, HttpContext context) =>
+            endpoints.MapGet("/option/debug", async ([FromServices] ModuleConfigurationService service) =>
             {
-                var res = new
-                {
-                    debug = MoConfigurationManager.GetDebugView().Split(Environment.NewLine),
-                };
-
-                return res;
+                var result = await service.GetDebugViewAsync();
+                return result.GetResponse();
             }).WithName("获取DebuggingView")
                 .WithOpenApi(operation =>
                 {
@@ -105,10 +102,10 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
                     return operation;
                 });
 
-            endpoints.MapGet("/option/providers", async (HttpResponse response, HttpContext context) =>
+            endpoints.MapGet("/option/providers", async ([FromServices] ModuleConfigurationService service) =>
             {
-                var res = MoConfigurationManager.GetProvidersGrouped();
-                return Res.Ok(res).GetResponse();
+                var result = await service.GetProvidersAsync();
+                return result.GetResponse();
             }).WithName("获取配置提供者")
                 .WithOpenApi(operation =>
                 {

@@ -34,6 +34,11 @@ public class LeaderStatusRequest
     /// 来源客户端标识（用于标识具体实例）
     /// </summary>
     public string? FromClient { get; set; }
+
+    /// <summary>
+    /// 是否要求返回确认状态，即当Looking时，开始选主后返回确认状态
+    /// </summary>
+    public bool RequiresLeaderConfirmation { get; set; }
 }
 
 /// <summary>

@@ -8,19 +8,16 @@ using MoLibrary.Repository.Transaction;
 namespace MoLibrary.Repository.Interfaces;
 
 public class UnitOfWorkDbContextProvider<TDbContext>(
-    IMoUnitOfWorkManager unitOfWorkManager)
-    : IDbContextProvider<TDbContext>, ITransientDependency
+    IMoUnitOfWorkManager unitOfWorkManager,
+    ILogger<UnitOfWorkDbContextProvider<TDbContext>> logger)
+    : IDbContextProvider<TDbContext>
     where TDbContext : DbContext
 {
     private const string TransactionsNotSupportedWarningMessage = "Current database does not support transactions. Your database may remain in an inconsistent state in an error case.";
 
-    public ILogger<UnitOfWorkDbContextProvider<TDbContext>> Logger { get; set; } = NullLogger<UnitOfWorkDbContextProvider<TDbContext>>.Instance;
-
-    protected readonly IMoUnitOfWorkManager UnitOfWorkManager = unitOfWorkManager;
-
     public virtual async Task<TDbContext> GetDbContextAsync()
     {
-        var unitOfWork = UnitOfWorkManager.Current;
+        var unitOfWork = unitOfWorkManager.Current;
         if (unitOfWork == null)
         {
             throw new Exception("A DbContext can only be created inside a unit of work!");
@@ -71,7 +68,7 @@ public class UnitOfWorkDbContextProvider<TDbContext>(
         }
         catch (Exception e) when (e is InvalidOperationException or NotSupportedException)
         {
-            Logger.LogWarning(TransactionsNotSupportedWarningMessage);
+            logger.LogWarning(TransactionsNotSupportedWarningMessage);
 
             return dbContext;
         }

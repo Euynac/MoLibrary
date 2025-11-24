@@ -92,7 +92,7 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
 
         services.AddHostedService<JobWorkerManager>();
 
-        if (GetOptions<ModuleRegisterCentreOption>().ThisIsCentreServer)
+        if (GetOptions<ModuleRegisterCentreOption>().IsCentreServer)
         {
             services.AddHostedService<ControlPlane.JobScheduler>();
             services.AddHostedService(provider => provider.GetRequiredService<IJobConcurrencyGuard>() as JobConcurrencyGuard
@@ -156,7 +156,7 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
 
     public override void ClaimDependencies()
     {
-        DependsOnModule<ModuleRegisterCentreGuide>().Register(); //TODO 依赖于 ILeaderService 需要支持单体架构 
+        
        
     }
 }

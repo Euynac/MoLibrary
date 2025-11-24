@@ -1,14 +1,13 @@
 @page "/configuration-dashboard"
 @using MoLibrary.Configuration.Dashboard.UIConfiguration.Components
-@using MoLibrary.Configuration.Dashboard.UIConfiguration.Services
-@using MoLibrary.Configuration.Dashboard.Modules
+@using MoLibrary.Configuration.Dashboard.Services
 @using MoLibrary.Configuration.Model
 @using MoLibrary.Configuration.Dashboard.Model
 @using Microsoft.Extensions.Options
-@using MudBlazor
 @using MoLibrary.Tool.MoResponse
 @using Microsoft.Extensions.DependencyInjection
-@inject IOptionsSnapshot<ModuleConfigurationDashboardOption> DashboardOptions
+@using MoLibrary.RegisterCentre.Modules
+@inject IOptions<ModuleRegisterCentreOption> Options
 @inject IServiceProvider ServiceProvider
 @inject ISnackbar Snackbar
 
@@ -17,7 +16,7 @@
 <MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
     <MudText Typo="Typo.h4" Class="mb-4">配置面板</MudText>
     
-    @if (DashboardOptions.Value.ThisIsDashboard)
+    @if (Options.Value.IsCentreServer)
     {
         <MudTabs Elevation="4" Rounded="true" Color="Color.Primary" ActivePanelIndexChanged="OnTabChanged">
             <MudTabPanel Text="配置状态">
@@ -85,7 +84,7 @@
     {
         if (firstRender)
         {
-            if (DashboardOptions.Value.ThisIsDashboard)
+            if (Options.Value.IsCentreServer)
             {
 				configurationDashboardService = ServiceProvider.GetService<ConfigurationDashboardService>();
                 if (configurationDashboardService != null)
