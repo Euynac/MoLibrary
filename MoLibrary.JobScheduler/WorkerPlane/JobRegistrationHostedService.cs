@@ -7,11 +7,12 @@ using MoLibrary.EventBus.Abstractions;
 using MoLibrary.JobScheduler.ControlPlane;
 using MoLibrary.JobScheduler.Events;
 using MoLibrary.JobScheduler.Models;
+using MoLibrary.JobScheduler.Modules;
 using MoLibrary.RegisterCentre.Interfaces;
 using MoLibrary.RegisterCentre.Models;
 using MoLibrary.Tool.MoResponse;
 
-namespace MoLibrary.JobScheduler.Modules;
+namespace MoLibrary.JobScheduler.WorkerPlane;
 
 /// <summary>
 /// Hosted service that registers discovered job definitions to the JobRegistry during application startup.

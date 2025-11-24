@@ -83,7 +83,7 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
         services.AddSingleton<JobDispatcher>();
         services.AddSingleton<JobOrchestrator>();
 
-        services.AddSingleton<IJobConcurrencyGuard, JobConcurrencyGuard>();
+        services.AddSingleton<IJobConcurrencyGuard, JobConcurrencyGuardHostedService>();
         
         services.AddHostedService<JobRegistrationHostedService>(provider =>
         {
@@ -94,8 +94,8 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
 
         if (GetOptions<ModuleRegisterCentreOption>().IsCentreServer)
         {
-            services.AddHostedService<ControlPlane.JobScheduler>();
-            services.AddHostedService(provider => provider.GetRequiredService<IJobConcurrencyGuard>() as JobConcurrencyGuard
+            services.AddHostedService<ControlPlane.JobSchedulerHostedService>();
+            services.AddHostedService(provider => provider.GetRequiredService<IJobConcurrencyGuard>() as JobConcurrencyGuardHostedService
                                                   ?? throw new InvalidOperationException("JobConcurrencyGuard must be registered as IJobConcurrencyGuard"));
         }
     }

@@ -21,7 +21,7 @@ namespace MoLibrary.JobScheduler.ControlPlane;
 /// and coordinates triggered job execution with optional delays.
 /// Listens to JobDefinitionsChangedEvent to dynamically update schedules when definitions change.
 /// </summary>
-public class JobScheduler(
+public class JobSchedulerHostedService(
     IOptions<ModuleJobSchedulerOption> options,
     IMoJobScheduleMetadataStore metadataStore,
     JobRegistry jobRegistry,
@@ -29,7 +29,7 @@ public class JobScheduler(
     JobDispatcher jobDispatcher,
     [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
     ILeaderService leaderService,
-    ILogger<JobScheduler> logger) : IHostedService
+    ILogger<JobSchedulerHostedService> logger) : IHostedService
 {
     private readonly ModuleJobSchedulerOption _options = options.Value;
 
