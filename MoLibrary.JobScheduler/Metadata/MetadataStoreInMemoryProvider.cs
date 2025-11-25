@@ -84,6 +84,31 @@ public class MetadataStoreInMemoryProvider(ILogger<MetadataStoreInMemoryProvider
     }
 
 
+    public Task<Dictionary<string, JobDefinition?>> GetJobDefinitionsByKeysAsync(
+        IReadOnlyList<string> jobKeys,
+        CancellationToken cancellationToken = default)
+    {
+        if (jobKeys == null)
+        {
+            throw new ArgumentNullException(nameof(jobKeys));
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var result = new Dictionary<string, JobDefinition?>(jobKeys.Count);
+
+        foreach (var key in jobKeys)
+        {
+            _definitions.TryGetValue(key, out var definition);
+            result[key] = definition;
+        }
+
+        logger.LogDebug("Retrieved {Count} job definitions by keys", jobKeys.Count);
+
+        return Task.FromResult(result);
+    }
+
+
     public Task<bool> JobDefinitionExistsAsync(string jobKey, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(jobKey))

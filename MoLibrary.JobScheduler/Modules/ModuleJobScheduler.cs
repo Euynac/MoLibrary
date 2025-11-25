@@ -7,6 +7,7 @@ using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Attributes;
+using MoLibrary.JobScheduler.Cache;
 using MoLibrary.JobScheduler.ControlPlane;
 using MoLibrary.JobScheduler.HealthChecks;
 using MoLibrary.JobScheduler.Models;
@@ -80,6 +81,7 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
         services.AddSingleton<JobRegistry>();
         services.AddSingleton<JobInstanceManager>();
         services.AddSingleton<JobDispatcher>();
+        services.AddSingleton<IJobDefinitionCacheService, JobDefinitionCacheServiceDisabled>();
         services.AddSingleton<JobOrchestrator>();
 
         services.AddSingleton<IJobConcurrencyGuard, JobConcurrencyGuardHostedService>();

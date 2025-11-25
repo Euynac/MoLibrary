@@ -18,6 +18,7 @@ namespace MoLibrary.JobScheduler.ControlPlane;
 /// Extends CoordinatedLeaderService for consistent initialization with RegisterCentre coordination and leader-only execution.
 /// </summary>
 public class JobConcurrencyGuardHostedService(
+    IJobDefinitionCacheService cacheService,
     IMoJobScheduleMetadataStore metadataStore,
     [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
     JobInstanceManager instanceManager,
@@ -42,8 +43,8 @@ public class JobConcurrencyGuardHostedService(
     {
         logger.LogInformation("JobConcurrencyGuard is initializing...");
 
-        // 1. Load all job definitions
-        var definitions = await metadataStore.GetAllJobDefinitionsAsync(cancellationToken: cancellationToken);
+        // 1. Load all job definitions from cache
+        var definitions = await cacheService.GetAllJobDefinitionsAsync(cancellationToken);
         logger.LogDebug("Loaded {Count} job definitions", definitions.Count);
 
         // 2. Initialize statistics for each job definition

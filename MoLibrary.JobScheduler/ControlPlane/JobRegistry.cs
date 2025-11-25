@@ -12,6 +12,7 @@ namespace MoLibrary.JobScheduler.ControlPlane;
 /// and retrieving job metadata from the metadata store.
 /// </summary>
 public class JobRegistry(
+    IJobDefinitionCacheService cacheService,
     IMoJobScheduleMetadataStore metadataStore,
     ILogger<JobRegistry> logger)
 {
@@ -80,28 +81,7 @@ public class JobRegistry(
         return _triggeredJobArgsTypeMap.TryGetValue(jobArgsKey, out var type) ? type : null;
     }
 
-    /// <summary>
-    /// Retrieves a job definition by its unique job key.
-    /// </summary>
-    public async Task<JobDefinition?> GetDefinitionAsync(
-        string jobKey,
-        CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrWhiteSpace(jobKey))
-        {
-            throw new ArgumentException("Job key cannot be null or empty.", nameof(jobKey));
-        }
-
-        var definition = await metadataStore.GetJobDefinitionAsync(jobKey, cancellationToken);
-
-        if (definition == null)
-        {
-            logger.LogWarning("Job definition not found: {JobKey}", jobKey);
-        }
-
-        return definition;
-    }
-
+  
     /// <summary>
     /// Reconciles the current job definitions with the metadata store.
     /// Adds new jobs that are not yet registered and soft deletes jobs that no longer exist.
@@ -121,8 +101,8 @@ public class JobRegistry(
 
         logger.LogInformation("Starting job definition reconciliation for {Count} current job(s)", currentDefinitions.Count);
 
-        // Get all existing non-deleted job definitions from the metadata store
-        var existingDefinitions = await metadataStore.GetAllJobDefinitionsAsync(includeDeleted: false, cancellationToken: cancellationToken);
+        // Get all existing non-deleted job definitions from cache (initializes cache if needed)
+        var existingDefinitions = await cacheService.GetAllJobDefinitionsAsync(cancellationToken);
         var existingJobKeys = existingDefinitions.Select(d => d.JobKey).ToHashSet();
         var currentJobKeys = currentDefinitions.Select(d => d.JobKey).ToHashSet();
 
