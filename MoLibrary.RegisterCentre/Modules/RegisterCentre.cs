@@ -32,12 +32,17 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModule<
             services.TryAddSingleton(provider =>
             {
                 var server = provider.GetService<IServer>();
-                return server?.Features.Get<IServerAddressesFeature>() 
+                return server?.Features.Get<IServerAddressesFeature>()
                        ?? new ServerAddressesFeature();
             });
         }
-        
-        services.AddHostedService<RegisterCentreClientHostedService>();
+
+        // 注册 RegisterCentreClientHostedService 为单例并同时作为 HostedService 和 Coordinator
+        services.AddSingleton<RegisterCentreClientHostedService>();
+        services.AddSingleton<IServiceRegistrationCoordinator>(provider =>
+            provider.GetRequiredService<RegisterCentreClientHostedService>());
+        services.AddHostedService(provider =>
+            provider.GetRequiredService<RegisterCentreClientHostedService>());
 
         // 注册默认信息提供者实现
         services.TryAddSingleton<IRegisterCentreCatalogProvider, DefaultRegisterCentreCatalogProvider>();

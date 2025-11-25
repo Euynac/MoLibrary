@@ -5,14 +5,13 @@ using Microsoft.Extensions.Logging;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
-using MoLibrary.EventBus.Modules;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Attributes;
 using MoLibrary.JobScheduler.ControlPlane;
+using MoLibrary.JobScheduler.HealthChecks;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.JobScheduler.WorkerPlane;
 using MoLibrary.RegisterCentre.Modules;
-using MoLibrary.StateStore.Modules;
 using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.JobScheduler.Modules;
@@ -85,19 +84,20 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
 
         services.AddSingleton<IJobConcurrencyGuard, JobConcurrencyGuardHostedService>();
         
-        services.AddHostedService<JobRegistrationHostedService>(provider =>
-        {
-            return ActivatorUtilities.CreateInstance<JobRegistrationHostedService>(provider, _jobDefinitions);
-        });
+        services.AddHostedService<JobRegistrationHostedService>(provider => ActivatorUtilities.CreateInstance<JobRegistrationHostedService>(provider, _jobDefinitions));
 
         services.AddHostedService<JobWorkerManager>();
 
         if (GetOptions<ModuleRegisterCentreOption>().IsCentreServer)
         {
-            services.AddHostedService<ControlPlane.JobSchedulerHostedService>();
+            services.AddHostedService<JobSchedulerHostedService>();
             services.AddHostedService(provider => provider.GetRequiredService<IJobConcurrencyGuard>() as JobConcurrencyGuardHostedService
                                                   ?? throw new InvalidOperationException("JobConcurrencyGuard must be registered as IJobConcurrencyGuard"));
         }
+
+        // Register health check for monitoring initialization status
+        services.AddHealthChecks()
+            .AddCheck<JobSchedulerHealthCheck>("job-scheduler", tags: ["ready", "scheduler"]);
     }
     
     /// <summary>

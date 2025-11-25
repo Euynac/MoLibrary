@@ -6,16 +6,6 @@ namespace MoLibrary.JobScheduler.Modules;
 /// Configuration options for the Job Scheduler module.
 /// Provides settings for debug modes, worker thread limits, and custom metadata store registration.
 /// </summary>
-/// <remarks>
-/// <para>
-/// ModuleJobSchedulerOption controls the behavior of the job scheduler system including:
-/// </para>
-/// <list type="bullet">
-/// <item><description>Debug modes for development and testing scenarios</description></item>
-/// <item><description>Worker thread limits for resource management</description></item>
-/// <item><description>Custom metadata store implementations for different persistence backends</description></item>
-/// </list>
-/// </remarks>
 public class ModuleJobSchedulerOption : MoModuleOption<ModuleJobScheduler>
 {
     /// <summary>
@@ -76,4 +66,38 @@ public class ModuleJobSchedulerOption : MoModuleOption<ModuleJobScheduler>
     /// </para>
     /// </remarks>
     public int? MaxWorkerExecutionThreads { get; set; } = null;
+
+    /// <summary>
+    /// Gets or sets the maximum time to wait for RegisterCentre registration to complete before starting job scheduler services.
+    /// This ensures that job scheduler services only start after the service has successfully registered to the register centre.
+    /// </summary>
+    /// <value>
+    /// The timeout duration for waiting for registration completion.
+    /// Default is 5 minutes.
+    /// </value>
+    /// <remarks>
+    /// <para>
+    /// This setting applies to ControlPlane services (JobSchedulerHostedService, JobConcurrencyGuardHostedService)
+    /// and WorkerPlane registration service (JobRegistrationHostedService).
+    /// </para>
+    /// <para>
+    /// If registration does not complete within this timeout, services will start anyway in degraded mode.
+    /// The JobWorkerManager service is not affected by this setting and will start immediately.
+    /// </para>
+    /// </remarks>
+    public TimeSpan RegistrationWaitTimeout { get; set; } = TimeSpan.FromMinutes(5);
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to skip waiting for RegisterCentre registration.
+    /// When enabled, job scheduler services will start immediately without waiting for registration.
+    /// </summary>
+    /// <value>
+    /// <c>true</c> to skip waiting for registration; otherwise, <c>false</c>.
+    /// Default is <c>false</c>.
+    /// </value>
+    /// <remarks>
+    /// This mode is useful during development and testing when you want to test job scheduler
+    /// functionality without setting up a register centre, or when running in standalone mode.
+    /// </remarks>
+    public bool SkipRegistrationWait { get; set; } = false;
 }

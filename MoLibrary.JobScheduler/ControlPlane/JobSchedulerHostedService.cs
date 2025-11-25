@@ -1,24 +1,22 @@
 using System.Collections.Concurrent;
 using Cronos;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.JobScheduler.Abstractions;
+using MoLibrary.JobScheduler.Core;
 using MoLibrary.JobScheduler.Events;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.JobScheduler.Modules;
 using MoLibrary.RegisterCentre.Interfaces;
-using MoLibrary.RegisterCentre.Models;
-using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.JobScheduler.ControlPlane;
 
 /// <summary>
 /// Central orchestrator for job scheduling and execution requests.
-/// Implements IHostedService to manage recurring job scheduling via cron expressions
-/// and coordinates triggered job execution with optional delays.
+/// Extends CoordinatedLeaderService for consistent initialization with RegisterCentre coordination and leader-only execution.
+/// Manages recurring job scheduling via cron expressions and coordinates triggered job execution.
 /// Listens to JobDefinitionsChangedEvent to dynamically update schedules when definitions change.
 /// </summary>
 public class JobSchedulerHostedService(
@@ -29,7 +27,8 @@ public class JobSchedulerHostedService(
     JobDispatcher jobDispatcher,
     [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
     ILeaderService leaderService,
-    ILogger<JobSchedulerHostedService> logger) : IHostedService
+    ILogger<JobSchedulerHostedService> logger,
+    IServiceRegistrationCoordinator coordinator) : CoordinatedLeaderService(leaderService, options, logger, coordinator)
 {
     private readonly ModuleJobSchedulerOption _options = options.Value;
 
@@ -41,25 +40,11 @@ public class JobSchedulerHostedService(
 
     // Event subscription
     private IDisposable? _definitionsChangedSubscription;
-    
 
-    /// <summary>
-    /// Starts the job scheduler, loading all recurring jobs and scheduling cron-based executions.
-    /// </summary>
-    public async Task StartAsync(CancellationToken cancellationToken)
+    protected override string ServiceName => nameof(JobSchedulerHostedService);
+
+    protected override async Task InitializeServiceAsync(CancellationToken cancellationToken)
     {
-        if ((await leaderService.GetCurrentLeaderStatusAsync()).IsFailed(out var error, out var data))
-        {
-            logger.LogError("Error getting leader status: {Error}", error);
-            return;
-        }
-        if (data.Status != LeaderStatus.Leader)
-        {
-            logger.LogInformation("Not leader, current Leader status is {Status}, skip job scheduling", data);
-            return;
-        }
-
-        
         logger.LogInformation(
             "JobScheduler starting. RecurringJobDebugMode: {RecurringDebug}, TriggeredJobDebugMode: {TriggeredDebug}",
             _options.RecurringJobDebugMode,
@@ -71,13 +56,12 @@ public class JobSchedulerHostedService(
 
         logger.LogInformation("Loaded {Count} recurring job definitions", recurringJobs.Count);
 
-        
         if (_options.RecurringJobDebugMode)
         {
-            logger.LogWarning(
-                "RecurringJobDebugMode is enabled. Job will not be automatically scheduled.");
+            logger.LogWarning("RecurringJobDebugMode is enabled. Jobs will not be automatically scheduled.");
             return;
         }
+
         // Schedule each recurring task
         foreach (var definition in recurringJobs)
         {
@@ -87,32 +71,40 @@ public class JobSchedulerHostedService(
         // Subscribe to job definitions changed event
         _definitionsChangedSubscription = eventBus.Subscribe<JobDefinitionsChangedEvent>(OnJobDefinitionsChangedAsync);
         logger.LogDebug("Subscribed to JobDefinitionsChangedEvent");
-
-        logger.LogInformation("JobScheduler started successfully");
     }
 
     /// <summary>
     /// Stops the job scheduler gracefully, cancelling all pending timers.
     /// </summary>
-    public Task StopAsync(CancellationToken cancellationToken)
+    public override async Task StopAsync(CancellationToken cancellationToken)
     {
         logger.LogInformation("JobScheduler stopping...");
 
-        // Unsubscribe from event
-        _definitionsChangedSubscription?.Dispose();
-
-        // Dispose all recurring job timers
-        foreach (var schedule in _inFlightRecurringSchedules.Values)
+        try
         {
-            schedule.Timer?.Dispose();
+            // Call base to stop ExecuteAsync
+            await base.StopAsync(cancellationToken);
+
+            // Unsubscribe from event
+            _definitionsChangedSubscription?.Dispose();
+
+            // Dispose all recurring job timers
+            foreach (var schedule in _inFlightRecurringSchedules.Values)
+            {
+                schedule.Timer?.Dispose();
+            }
+            _inFlightRecurringSchedules.Clear();
+
+            // Dispose lock
+            _scheduleLock.Dispose();
+
+            logger.LogInformation("JobScheduler stopped");
         }
-        _inFlightRecurringSchedules.Clear();
-
-        // Dispose lock
-        _scheduleLock.Dispose();
-
-        logger.LogInformation("JobScheduler stopped");
-        return Task.CompletedTask;
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error during JobScheduler shutdown");
+            throw;
+        }
     }
     
     /// <summary>
