@@ -77,15 +77,7 @@ public interface IMoJobScheduleMetadataStore
     Task<List<JobInstance>> GetJobInstancesByKeyAsync(string jobKey,
         JobState? stateFilter = null,
         CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Gets the count of job instances currently in Processing state for a specific job key.
-    /// Used to enforce concurrency limits.
-    /// </summary>
-    /// <param name="jobKey">The unique identifier for the job definition.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Count of instances in Processing state. Returns 0 if none are processing.</returns>
-    Task<int> GetProcessingCountAsync(string jobKey, CancellationToken cancellationToken = default);
+    
 
     /// <summary>
     /// Persists a job instance to the metadata store (creates or updates).
@@ -98,16 +90,6 @@ public interface IMoJobScheduleMetadataStore
     #endregion
 
     #region Job History
-
-    /// <summary>
-    /// Archives a completed job instance to the job history storage.
-    /// Called when a job reaches a terminal state (Succeeded, Terminated, Cancelled, Skipped).
-    /// </summary>
-    /// <param name="instance">The job instance to archive (should be in a terminal state).</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <exception cref="ArgumentNullException">Thrown when instance is null.</exception>
-    Task ArchiveJobInstanceAsync(JobInstance instance, CancellationToken cancellationToken = default);
-
     /// <summary>
     /// Retrieves paginated historical job instances for a specific job key.
     /// Results are ordered by CreatedAt descending (most recent first).

@@ -165,22 +165,6 @@ public class MetadataStoreInMemoryProvider(ILogger<MetadataStoreInMemoryProvider
     }
 
 
-    public Task<int> GetProcessingCountAsync(string jobKey, CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrWhiteSpace(jobKey))
-        {
-            throw new ArgumentException("Job key cannot be null or empty.", nameof(jobKey));
-        }
-
-        cancellationToken.ThrowIfCancellationRequested();
-
-        var count = _instances.Values
-            .Count(i => i.JobKey == jobKey && i.State == JobState.Processing);
-
-        return Task.FromResult(count);
-    }
-
-
     public Task SaveJobInstanceAsync(JobInstance instance, CancellationToken cancellationToken = default)
     {
         if (instance == null)
@@ -223,29 +207,6 @@ public class MetadataStoreInMemoryProvider(ILogger<MetadataStoreInMemoryProvider
     #endregion
 
     #region Job History
-
-    public Task ArchiveJobInstanceAsync(JobInstance instance, CancellationToken cancellationToken = default)
-    {
-        if (instance == null)
-        {
-            throw new ArgumentNullException(nameof(instance));
-        }
-
-        cancellationToken.ThrowIfCancellationRequested();
-
-        // In the in-memory implementation, archiving is a no-op since we keep everything in the same dictionary
-        // In a real implementation, this might move the instance to a separate archive storage
-        // or mark it with an archived flag
-
-        logger.LogDebug(
-            "Job instance archived: {InstanceId} for {JobKey}, State: {State}",
-            instance.InstanceId,
-            instance.JobKey,
-            instance.State);
-
-        return Task.CompletedTask;
-    }
-
 
     public Task<IEnumerable<JobInstance>> GetJobHistoryAsync(
         string jobKey,
