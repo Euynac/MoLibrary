@@ -85,7 +85,7 @@ public class JobWorkerManager(
     /// <param name="executionEvent">The job execution event.</param>
     private async Task HandleJobExecutionAsync(JobExecutionEvent executionEvent)
     {
-        logger.LogInformation(
+        logger.LogDebug(
             "Received JobExecutionEvent for job {JobKey}, InstanceId: {InstanceId}",
             executionEvent.JobKey,
             executionEvent.InstanceId);
@@ -130,16 +130,16 @@ public class JobWorkerManager(
                     executionEvent.InstanceId);
                 return;
             }
-            
 
-            logger.LogInformation(
+
+            logger.LogDebug(
                 "Starting execution for job {JobKey} instance {InstanceId}",
                 executionEvent.JobKey,
                 executionEvent.InstanceId);
 
             await jobOrchestrator.ExecuteAsync(instance, executionEvent);
 
-            logger.LogInformation(
+            logger.LogDebug(
                 "Completed execution for job {JobKey} instance {InstanceId}",
                 executionEvent.JobKey,
                 executionEvent.InstanceId);
