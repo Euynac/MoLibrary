@@ -21,8 +21,7 @@ namespace MoLibrary.JobScheduler.ControlPlane;
 /// </summary>
 public class JobSchedulerHostedService(
     IOptions<ModuleJobSchedulerOption> options,
-    IMoJobScheduleMetadataStore metadataStore,
-    JobRegistry jobRegistry,
+    IJobDefinitionCacheService cacheService,
     JobInstanceManager jobInstanceManager,
     JobDispatcher jobDispatcher,
     [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
@@ -50,8 +49,8 @@ public class JobSchedulerHostedService(
             _options.RecurringJobDebugMode,
             _options.TriggeredJobDebugMode);
 
-        // Load all recurring job definitions
-        var allDefinitions = await metadataStore.GetAllJobDefinitionsAsync(cancellationToken: cancellationToken);
+        // Load all recurring job definitions from cache
+        var allDefinitions = await cacheService.GetAllJobDefinitionsAsync(cancellationToken);
         var recurringJobs = allDefinitions.Where(d => d.JobType == JobType.Recurring).ToList();
 
         logger.LogInformation("Loaded {Count} recurring job definitions", recurringJobs.Count);
@@ -172,7 +171,7 @@ public class JobSchedulerHostedService(
     public async Task<JobDefinition?> GetValidatedRecurringJobAsync(string jobKey)
     {
         
-        var definition = await jobRegistry.GetDefinitionAsync(jobKey);
+        var definition = await cacheService.GetJobDefinitionAsync(jobKey);
         if (definition == null)
         {
             logger.LogWarning(

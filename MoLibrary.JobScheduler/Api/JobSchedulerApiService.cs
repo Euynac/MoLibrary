@@ -19,6 +19,7 @@ namespace MoLibrary.JobScheduler.Api;
 public class JobSchedulerApiService(
     JobSchedulerHostedService jobScheduler,
     JobRegistry jobRegistry,
+    IJobDefinitionCacheService cacheService,
     IMoJobScheduleMetadataStore metadataStore,
     [FromKeyedServices(nameof(ModuleJobScheduler))] IMoCancellationManager cancellationManager,
     JobInstanceManager jobInstanceManager,
@@ -30,7 +31,7 @@ public class JobSchedulerApiService(
     public async Task<IEnumerable<JobDefinition>> GetAllJobsAsync(CancellationToken cancellationToken = default)
     {
         logger.LogDebug("API: GetAllJobs requested");
-        return await metadataStore.GetAllJobDefinitionsAsync(cancellationToken: cancellationToken);
+        return await cacheService.GetAllJobDefinitionsAsync(cancellationToken);
     }
 
     /// <summary>
@@ -43,7 +44,7 @@ public class JobSchedulerApiService(
     {
         logger.LogInformation("API: CreateJobInstance requested for {JobKey}", jobKey);
 
-        var definition = await jobRegistry.GetDefinitionAsync(jobKey, cancellationToken);
+        var definition = await cacheService.GetJobDefinitionAsync(jobKey, cancellationToken);   
         if (definition == null)
         {
             throw new InvalidOperationException($"Job {jobKey} not found");
@@ -65,8 +66,8 @@ public class JobSchedulerApiService(
     {
         logger.LogDebug("API: GetJobHistory requested");
 
-        // Placeholder - actual implementation would query metadata store with filters
-        var allInstances = await metadataStore.GetAllJobDefinitionsAsync(cancellationToken: cancellationToken);
+        // Placeholder - actual implementation would query metadata store for job instances
+        // TODO: This should call metadataStore.GetJobInstancesByKeyAsync or similar
         return new List<JobInstance>();
     }
 
@@ -93,7 +94,7 @@ public class JobSchedulerApiService(
     /// </summary>
     public async Task PauseRecurringJobAsync(string jobKey, CancellationToken cancellationToken = default)
     {
-        var definition = await jobRegistry.GetDefinitionAsync(jobKey, cancellationToken);
+        var definition = await cacheService.GetJobDefinitionAsync(jobKey, cancellationToken);
         if (definition == null)
         {
             throw new InvalidOperationException($"Job {jobKey} not found");
@@ -104,9 +105,9 @@ public class JobSchedulerApiService(
             throw new InvalidOperationException($"Job {jobKey} is not a recurring job");
         }
 
-        // Update definition in metadata store
+        // Update definition via cache service (write-through)
         definition.IsDisabled = true;
-        await metadataStore.SaveJobDefinitionAsync(definition, cancellationToken);
+        await cacheService.SaveJobDefinitionAsync(definition, cancellationToken);
 
         logger.LogInformation("Recurring job paused: {JobKey}", jobKey);
     }
@@ -116,7 +117,7 @@ public class JobSchedulerApiService(
     /// </summary>
     public async Task ResumeRecurringJobAsync(string jobKey, CancellationToken cancellationToken = default)
     {
-        var definition = await jobRegistry.GetDefinitionAsync(jobKey, cancellationToken);
+        var definition = await cacheService.GetJobDefinitionAsync(jobKey, cancellationToken);
         if (definition == null)
         {
             throw new InvalidOperationException($"Job {jobKey} not found");
@@ -127,9 +128,9 @@ public class JobSchedulerApiService(
             throw new InvalidOperationException($"Job {jobKey} is not a recurring job");
         }
 
-        // Update definition in metadata store
+        // Update definition via cache service (write-through)
         definition.IsDisabled = false;
-        await metadataStore.SaveJobDefinitionAsync(definition, cancellationToken);
+        await cacheService.SaveJobDefinitionAsync(definition, cancellationToken);
 
         logger.LogInformation("Recurring job resumed: {JobKey}", jobKey);
     }
@@ -144,8 +145,8 @@ public class JobSchedulerApiService(
     {
         logger.LogInformation("API: UpdateJobConfig requested for {JobKey}", jobKey);
 
-        // Update in metadata store
-        await metadataStore.SaveJobDefinitionAsync(updatedDefinition, cancellationToken);
+        // Update via cache service (write-through)
+        await cacheService.SaveJobDefinitionAsync(updatedDefinition, cancellationToken);
 
         logger.LogInformation("Job {JobKey} configuration updated", jobKey);
     }

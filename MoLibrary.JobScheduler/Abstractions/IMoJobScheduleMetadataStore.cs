@@ -38,6 +38,18 @@ public interface IMoJobScheduleMetadataStore
     Task SaveJobDefinitionAsync(JobDefinition definition, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Retrieves multiple job definitions by their job keys in a single operation.
+    /// More efficient than multiple individual GetJobDefinitionAsync calls for bulk retrieval.
+    /// </summary>
+    /// <param name="jobKeys">Collection of job keys to retrieve.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Dictionary mapping job keys to definitions (null if not found).</returns>
+    /// <exception cref="ArgumentNullException">Thrown when jobKeys is null.</exception>
+    Task<Dictionary<string, JobDefinition?>> GetJobDefinitionsByKeysAsync(
+        IReadOnlyList<string> jobKeys,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Checks whether a job definition with the specified key exists.
     /// </summary>
     /// <param name="jobKey">The unique identifier for the job to check.</param>
