@@ -50,9 +50,6 @@ public abstract class CoordinatedLeaderService(
     /// <param name="stoppingToken">Triggered when the application host is performing a graceful shutdown</param>
     protected sealed override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // Yield immediately to prevent blocking application startup
-        await Task.Yield();
-
         try
         {
             // Step 1: Optional pre-initialization hook
@@ -79,8 +76,8 @@ public abstract class CoordinatedLeaderService(
             // Step 6: Optional post-initialization hook
             await OnAfterInitialization(stoppingToken);
 
-            // Step 7: Keep service running for event subscriptions, timers, etc.
-            await Task.Delay(Timeout.Infinite, stoppingToken);
+            // // Step 7: Keep service running for event subscriptions, timers, etc.
+            // await Task.Delay(Timeout.Infinite, stoppingToken);
         }
         catch (OperationCanceledException)
         {

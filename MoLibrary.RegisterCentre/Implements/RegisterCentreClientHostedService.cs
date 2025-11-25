@@ -120,7 +120,6 @@ public class RegisterCentreClientHostedService(
         _ = Task.Factory.StartNew<Task>(async () =>
         {
             Status = RegistrationStatus.InProgress;
-            await Task.Delay(3000, cancellationToken);
             logger.LogInformation("开始注册到注册中心");
             var retryTimes = Option.ClientRetryTimes;
             var totalRetries = Option.ClientRetryTimes;
