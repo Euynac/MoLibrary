@@ -28,7 +28,7 @@ public class JobSchedulerApiService(
     /// <summary>
     /// Gets all registered job definitions.
     /// </summary>
-    public async Task<IEnumerable<JobDefinition>> GetAllJobsAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<JobDefinition>> GetAllJobsAsync(CancellationToken cancellationToken = default)
     {
         logger.LogDebug("API: GetAllJobs requested");
         return await cacheService.GetAllJobDefinitionsAsync(cancellationToken);
@@ -58,7 +58,7 @@ public class JobSchedulerApiService(
     /// <summary>
     /// Gets job execution history with filtering.
     /// </summary>
-    public async Task<IEnumerable<JobInstance>> GetJobHistoryAsync(
+    public async Task<IReadOnlyList<JobInstance>> GetJobHistoryAsync(
         string? jobKey = null,
         JobState? state = null,
         int? limit = 100,
