@@ -147,7 +147,17 @@ public class JobRegistry(
         {
             try
             {
-                await metadataStore.SoftDeleteJobDefinitionAsync(jobKey, cancellationToken);
+                var definition = await metadataStore.GetJobDefinitionAsync(jobKey, cancellationToken);
+                if (definition == null)
+                {
+                    logger.LogWarning("Job not found for soft delete: {JobKey}", jobKey);
+                    continue;
+                }
+                definition.IsDeleted = true;
+                definition.DeletedAt = DateTime.UtcNow;
+                definition.JobKey =  $"[deleted]{jobKey}";
+                
+                await metadataStore.SaveJobDefinitionAsync(definition, cancellationToken);
                 deletedJobKeys.Add(jobKey);
 
                 logger.LogInformation("Job soft deleted: {JobKey}", jobKey);
