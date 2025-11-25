@@ -312,7 +312,7 @@ public class JobSchedulerHostedService(
                 parameters: null,
                 JobState.Enqueued);
 
-            logger.LogInformation(
+            logger.LogDebug(
                 "Recurring job triggered: {JobKey}, InstanceId: {InstanceId}",
                 jobKey,
                 instance);

@@ -225,7 +225,7 @@ public class JobConcurrencyGuardHostedService(
                 StartedAt = evt.StartedAt
             });
 
-            logger.LogInformation(
+            logger.LogDebug(
                 "Job {JobKey} instance {InstanceId} started on worker {WorkerId}, current executing: {Current}/{Max}",
                 evt.JobKey,
                 evt.InstanceId,

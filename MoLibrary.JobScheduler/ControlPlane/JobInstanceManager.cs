@@ -49,7 +49,7 @@ public class JobInstanceManager(
 
         await metadataStore.SaveJobInstanceAsync(instance, cancellationToken);
 
-        logger.LogInformation(
+        logger.LogDebug(
             "Created job instance {InstanceId} for job {JobKey} with initial state {InitialState}",
             instanceId,
             definition.JobKey,
@@ -87,7 +87,7 @@ public class JobInstanceManager(
         instance.UpdateStateAsync(newState, errorMessage, clientId);
         await metadataStore.SaveJobInstanceAsync(instance, cancellationToken);
 
-        logger.LogInformation(
+        logger.LogDebug(
             "Updated job instance {InstanceId} state from {OldState} to {NewState}",
             instanceId,
             currentState,

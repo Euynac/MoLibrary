@@ -39,7 +39,7 @@ public class JobOrchestrator(
         ArgumentNullException.ThrowIfNull(instance);
         ArgumentNullException.ThrowIfNull(executionEvent);
 
-        logger.LogInformation(
+        logger.LogDebug(
             "Starting execution of job {JobKey}, InstanceId: {InstanceId}",
             instance.JobKey,
             instance.InstanceId);
@@ -111,7 +111,7 @@ public class JobOrchestrator(
                 {
                     await executionTask; // Rethrow any exception
 
-                    logger.LogInformation(
+                    logger.LogDebug(
                         "Job {JobKey} instance {InstanceId} completed successfully",
                         instance.JobKey,
                         instance.InstanceId);
@@ -269,7 +269,7 @@ public class JobOrchestrator(
         };
 
         // Delegate to appropriate executor method based on job type
-        if (executionEvent.JobType == JobType.Triggered)
+        if (executionEvent.JobType == JobType.Recurring)
         {
             logger.LogDebug(
                 "Executing recurring job {JobKey} instance {InstanceId}",
