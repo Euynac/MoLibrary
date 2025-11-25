@@ -1,22 +1,21 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.JobScheduler.Abstractions;
+using MoLibrary.JobScheduler.Core;
 using MoLibrary.JobScheduler.Events;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.JobScheduler.Modules;
 using MoLibrary.RegisterCentre.Events;
 using MoLibrary.RegisterCentre.Interfaces;
-using MoLibrary.RegisterCentre.Models;
-using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.JobScheduler.ControlPlane;
 
 /// <summary>
 /// Manages job concurrency limits by tracking running instances and listening to lifecycle events.
-/// Implements IHostedService to initialize statistics on startup and clean up on shutdown.
+/// Extends CoordinatedLeaderService for consistent initialization with RegisterCentre coordination and leader-only execution.
 /// </summary>
 public class JobConcurrencyGuardHostedService(
     IMoJobScheduleMetadataStore metadataStore,
@@ -24,25 +23,23 @@ public class JobConcurrencyGuardHostedService(
     JobInstanceManager instanceManager,
     ILogger<JobConcurrencyGuardHostedService> logger,
     ILeaderService leaderService,
-    IRegisterCentreServer? registerCentreServer = null) : IJobConcurrencyGuard, IHostedService
+    IOptions<ModuleJobSchedulerOption> options,
+    IServiceRegistrationCoordinator coordinator,
+    IRegisterCentreServer? registerCentreServer = null) : CoordinatedLeaderService(leaderService, options, logger, coordinator), IJobConcurrencyGuard
 {
     private readonly ConcurrentDictionary<string, JobExecutionStatistic> _statistics = new();
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _jobLocks = new();
     private readonly List<IDisposable> _eventSubscriptions = [];
 
-    public async Task StartAsync(CancellationToken cancellationToken)
+    protected override string ServiceName => nameof(JobConcurrencyGuardHostedService);
+
+    protected override async Task InitializeServiceAsync(CancellationToken cancellationToken)
     {
-        if ((await leaderService.GetCurrentLeaderStatusAsync()).IsFailed(out var error, out var data))
-        {
-            logger.LogError("Error getting leader status: {Error}", error);
-            return;
-        }
-        if (data.Status != LeaderStatus.Leader)
-        {
-            logger.LogInformation("Not leader, current Leader status is {Status}, skip job concurrency guard initialization", data);
-            return;
-        }
-        
+        await InitializeConcurrencyTrackingAsync(cancellationToken);
+    }
+
+    private async Task InitializeConcurrencyTrackingAsync(CancellationToken cancellationToken)
+    {
         logger.LogInformation("JobConcurrencyGuard is initializing...");
 
         // 1. Load all job definitions
@@ -116,32 +113,42 @@ public class JobConcurrencyGuardHostedService(
             _statistics.Values.Sum(s => s.CurrentExecutingCount));
     }
 
-    public Task StopAsync(CancellationToken cancellationToken)
+    public override async Task StopAsync(CancellationToken cancellationToken)
     {
         logger.LogInformation("JobConcurrencyGuard is stopping...");
 
-        // Unsubscribe from EventBus events
-        foreach (var subscription in _eventSubscriptions)
+        try
         {
-            subscription.Dispose();
-        }
-        _eventSubscriptions.Clear();
+            // Call base to stop ExecuteAsync
+            await base.StopAsync(cancellationToken);
 
-        // Unsubscribe from RegisterCentre event
-        if (registerCentreServer != null)
+            // Unsubscribe from EventBus events
+            foreach (var subscription in _eventSubscriptions)
+            {
+                subscription.Dispose();
+            }
+            _eventSubscriptions.Clear();
+
+            // Unsubscribe from RegisterCentre event
+            if (registerCentreServer != null)
+            {
+                registerCentreServer.ServiceInstanceOffline -= OnServiceInstanceOfflineHandler;
+            }
+
+            // Dispose all semaphores
+            foreach (var semaphore in _jobLocks.Values)
+            {
+                semaphore.Dispose();
+            }
+            _jobLocks.Clear();
+
+            logger.LogInformation("JobConcurrencyGuard stopped");
+        }
+        catch (Exception ex)
         {
-            registerCentreServer.ServiceInstanceOffline -= OnServiceInstanceOfflineHandler;
+            logger.LogError(ex, "Error during JobConcurrencyGuard shutdown");
+            throw;
         }
-
-        // Dispose all semaphores
-        foreach (var semaphore in _jobLocks.Values)
-        {
-            semaphore.Dispose();
-        }
-        _jobLocks.Clear();
-
-        logger.LogInformation("JobConcurrencyGuard stopped");
-        return Task.CompletedTask;
     }
 
     public async Task<bool> CanExecuteJobAsync(string jobKey, CancellationToken cancellationToken = default)

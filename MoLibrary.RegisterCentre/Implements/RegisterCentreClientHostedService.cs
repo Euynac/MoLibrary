@@ -12,10 +12,50 @@ public class RegisterCentreClientHostedService(
     IRegisterCentreClientInfo client,
     ILogger<RegisterCentreClientHostedService> logger,
     IOptions<ModuleRegisterCentreOption> option,
-    IRegisterCentreServerConnector connector) : IHostedService
+    IRegisterCentreServerConnector connector) : IHostedService, IServiceRegistrationCoordinator
 {
     protected readonly ModuleRegisterCentreOption Option = option.Value;
     private CancellationTokenSource? _heartbeatCts;
+    private readonly TaskCompletionSource<bool> _registrationCompletionSource = new();
+    private RegistrationStatus _status = RegistrationStatus.NotStarted;
+    private readonly object _statusLock = new();
+
+    public RegistrationStatus Status
+    {
+        get
+        {
+            lock (_statusLock)
+            {
+                return _status;
+            }
+        }
+        private set
+        {
+            lock (_statusLock)
+            {
+                _status = value;
+            }
+        }
+    }
+
+    public bool IsRegistered => Status == RegistrationStatus.Completed;
+
+    public async Task<bool> WaitForRegistrationAsync(TimeSpan timeout, CancellationToken cancellationToken = default)
+    {
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        cts.CancelAfter(timeout);
+
+        try
+        {
+            await _registrationCompletionSource.Task.WaitAsync(cts.Token);
+            return _registrationCompletionSource.Task.Result;
+        }
+        catch (OperationCanceledException)
+        {
+            logger?.LogWarning("等待注册中心注册完成超时 ({Timeout})", timeout);
+            return false;
+        }
+    }
 
     protected virtual void StartHeartbeat()
     {
@@ -79,9 +119,11 @@ public class RegisterCentreClientHostedService(
     {
         _ = Task.Factory.StartNew<Task>(async () =>
         {
+            Status = RegistrationStatus.InProgress;
             await Task.Delay(3000, cancellationToken);
             logger.LogInformation("开始注册到注册中心");
             var retryTimes = Option.ClientRetryTimes;
+            var totalRetries = Option.ClientRetryTimes;
 
             while (retryTimes > 0)
             {
@@ -95,6 +137,8 @@ public class RegisterCentreClientHostedService(
                     else
                     {
                         logger?.LogInformation("成功注册到注册中心: {AppId}", serviceInfo.AppId);
+                        Status = RegistrationStatus.Completed;
+                        _registrationCompletionSource.TrySetResult(true);
                         StartHeartbeat();
                         break;
                     }
@@ -113,9 +157,11 @@ public class RegisterCentreClientHostedService(
             if (retryTimes == 0)
             {
                 logger?.LogError("注册中心注册失败，已达到最大重试次数");
+                Status = RegistrationStatus.Failed;
+                _registrationCompletionSource.TrySetResult(false);
             }
         }, cancellationToken);
-    
+
         return Task.CompletedTask;
     }
 
