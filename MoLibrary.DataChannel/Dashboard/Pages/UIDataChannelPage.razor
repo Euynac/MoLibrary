@@ -1,4 +1,4 @@
-@page "/datachannel-manage"
+@attribute [Route(PAGE_URL)]
 @using MoLibrary.DataChannel.Dashboard.Services
 @using MoLibrary.DataChannel.Dashboard.Models
 @using MoLibrary.DataChannel.Dashboard.Components
@@ -136,7 +136,7 @@
 </MudContainer>
 
 @code {
-    public const string DATACHANNEL_MANAGE_URL = "/datachannel-manage";
+    public const string PAGE_URL = "/datachannel-manage";
 
     private bool _loading = true;
     private List<ChannelStatusInfo>? _channels;

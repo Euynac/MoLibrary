@@ -1,4 +1,4 @@
-@page "/job-scheduler/definitions"
+@attribute [Route(PAGE_URL)]
 @inject JobSchedulerUIService UIService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
@@ -144,6 +144,8 @@
 </MudContainer>
 
 @code {
+    public const string PAGE_URL = "/job-scheduler/definitions";
+
     private MudTable<JobDefinition>? _table;
 
     private string? _filterFromProject;

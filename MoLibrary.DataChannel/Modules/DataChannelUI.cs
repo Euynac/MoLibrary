@@ -48,7 +48,7 @@ public class ModuleDataChannelUI(ModuleDataChannelUIOption option)
             // 依赖UI核心模块，并注册UI页面
             DependsOnModule<ModuleUICoreGuide>().Register()
                 .RegisterUIComponents(p => p.RegisterComponent<UIDataChannelPage>(
-                    UIDataChannelPage.DATACHANNEL_MANAGE_URL,
+                    UIDataChannelPage.PAGE_URL,
                     "DataChannel管理",
                     Icons.Material.Filled.DataObject,
                     "系统管理",

@@ -58,7 +58,7 @@
                 {
                     <MudStack Row="true" Justify="Justify.SpaceBetween">
                         <MudText Typo="Typo.body2">最慢执行时间</MudText>
-                        <MudLink OnClick="() => @NavigateToInstance(_statistics.SlowestInstanceId)" Typo="Typo.body2" Color="Color.Warning">
+                        <MudLink OnClick="() => NavigateToInstance(_statistics.SlowestInstanceId)" Typo="Typo.body2" Color="Color.Warning">
                             @FormatTimeSpan(_statistics.SlowestExecutionTime.Value)
                         </MudLink>
                     </MudStack>

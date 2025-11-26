@@ -1,4 +1,4 @@
-@page "/job-scheduler/instances/{InstanceId}"
+@attribute [Route(PAGE_URL)]
 @inject JobSchedulerUIService UIService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
@@ -111,6 +111,8 @@
 </MudContainer>
 
 @code {
+    public const string PAGE_URL = "/job-scheduler/instances/{InstanceId}";
+
     [Parameter]
     public string InstanceId { get; set; } = string.Empty;
 

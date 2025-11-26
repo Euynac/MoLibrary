@@ -49,7 +49,7 @@ public class ModuleSystemInfoUI(ModuleSystemInfoUIOption option)
         {
             DependsOnModule<ModuleUICoreGuide>().Register()
                 .RegisterUIComponents(p => p.RegisterComponent<UISystemInfoPage>(
-                    UISystemInfoPage.SYSTEM_INFO_URL,
+                    UISystemInfoPage.PAGE_URL,
                     "系统信息",
                     Icons.Material.Filled.Info,
                     "系统管理",

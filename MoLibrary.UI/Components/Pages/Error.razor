@@ -1,4 +1,4 @@
-@page "/Error"
+@attribute [Route(PAGE_URL)]
 @using System.Diagnostics
 @using Microsoft.AspNetCore.Http
 
@@ -26,6 +26,8 @@
 </p>
 
 @code{
+    public const string PAGE_URL = "/Error";
+
     [CascadingParameter]
     private HttpContext? HttpContext { get; set; }
 

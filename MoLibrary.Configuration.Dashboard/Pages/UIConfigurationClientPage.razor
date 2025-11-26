@@ -1,4 +1,4 @@
-@page "/configuration-client"
+@attribute [Route(PAGE_URL)]
 @using MoLibrary.Configuration.Dashboard.Services
 @using MoLibrary.Configuration.Dashboard.UIConfiguration.Components
 @using MoLibrary.Configuration.Model
@@ -181,7 +181,7 @@
 </MudContainer>
 
 @code {
-    public const string CONFIGURATION_CLIENT_URL = "/configuration-client";
+    public const string PAGE_URL = "/configuration-client";
     
     private List<DtoDomainConfigs>? configStatus;
     private string[]? debugView;

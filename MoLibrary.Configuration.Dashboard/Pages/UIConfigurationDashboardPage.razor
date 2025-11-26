@@ -1,4 +1,4 @@
-@page "/configuration-dashboard"
+@attribute [Route(PAGE_URL)]
 @using MoLibrary.Configuration.Dashboard.UIConfiguration.Components
 @using MoLibrary.Configuration.Dashboard.Services
 @using MoLibrary.Configuration.Model
@@ -74,7 +74,7 @@
 </MudContainer>
 
 @code {
-    public const string CONFIGURATION_DASHBOARD_URL = "/configuration-dashboard";
+    public const string PAGE_URL = "/configuration-dashboard";
     
     private List<DtoDomainConfigs>? configStatus;
     private bool isLoading = false;

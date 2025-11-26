@@ -3,8 +3,10 @@ using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.JobScheduler.Modules;
+using MoLibrary.JobScheduler.UI.Pages;
 using MoLibrary.JobScheduler.UI.Services;
 using MoLibrary.UI.Modules;
+using MudBlazor;
 
 namespace MoLibrary.JobScheduler.UI.Modules;
 
@@ -38,28 +40,27 @@ public class ModuleJobSchedulerUI(ModuleJobSchedulerUIOption option)
         DependsOnModule<ModuleJobSchedulerGuide>().Register();
 
         // 依赖 UI 核心模块并注册页面
-        // TODO: 在 Phase 5 创建页面后，取消下面的注释
-        // if (!Option.DisableJobSchedulerPages)
-        // {
-        //     DependsOnModule<ModuleUICoreGuide>().Register()
-        //         .RegisterUIComponents(p =>
-        //         {
-        //             p.RegisterComponent<JobDefinitionsPage>(
-        //                 JobDefinitionsPage.PAGE_URL,
-        //                 "任务定义",
-        //                 Icons.Material.Filled.WorkOutline,
-        //                 "任务调度",
-        //                 addToNav: true,
-        //                 navOrder: 100);
-        //
-        //             p.RegisterComponent<JobInstancesPage>(
-        //                 JobInstancesPage.PAGE_URL,
-        //                 "任务实例",
-        //                 Icons.Material.Filled.PlaylistPlay,
-        //                 "任务调度",
-        //                 addToNav: true,
-        //                 navOrder: 101);
-        //         });
-        // }
+        if (!Option.DisableJobSchedulerPages)
+        {
+            DependsOnModule<ModuleUICoreGuide>().Register()
+                .RegisterUIComponents(p =>
+                {
+                    p.RegisterComponent<JobDefinitionsPage>(
+                        JobDefinitionsPage.PAGE_URL,
+                        "任务定义",
+                        Icons.Material.Filled.WorkOutline,
+                        "任务调度",
+                        addToNav: true,
+                        navOrder: 100);
+        
+                    p.RegisterComponent<JobInstancesPage>(
+                        JobInstancesPage.PAGE_URL,
+                        "任务实例",
+                        Icons.Material.Filled.PlaylistPlay,
+                        "任务调度",
+                        addToNav: true,
+                        navOrder: 101);
+                });
+        }
     }
 }

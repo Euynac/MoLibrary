@@ -1,4 +1,4 @@
-@page "/timekeeper-debug"
+@attribute [Route(PAGE_URL)]
 @using MoLibrary.FrameworkUI.UITimekeeper.Services
 @using MoLibrary.FrameworkUI.UITimekeeper.Models
 @using MoLibrary.Tool.MoResponse
@@ -179,7 +179,7 @@
     /// <summary>
     /// Timekeeper调试页面URL
     /// </summary>
-    public const string TIMEKEEPER_DEBUG_URL = "/timekeeper-debug";
+    public const string PAGE_URL = "/timekeeper-debug";
 
     private bool _loading = true;
     private List<TimekeeperStatisticsResponse> _statistics = new();
