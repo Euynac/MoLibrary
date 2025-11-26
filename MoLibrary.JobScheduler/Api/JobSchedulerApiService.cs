@@ -5,6 +5,7 @@ using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.ControlPlane;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.JobScheduler.Modules;
+using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.JobScheduler.Api;
 
@@ -18,133 +19,287 @@ namespace MoLibrary.JobScheduler.Api;
 /// </remarks>
 public class JobSchedulerApiService(
     IJobDefinitionCacheService cacheService,
+    IMoJobScheduleMetadataStore metadataStore,
     [FromKeyedServices(nameof(ModuleJobScheduler))] IMoCancellationManager cancellationManager,
     JobInstanceManager jobInstanceManager,
+    JobDispatcher jobDispatcher,
     ILogger<JobSchedulerApiService> logger)
 {
     /// <summary>
     /// Gets all registered job definitions.
     /// </summary>
-    public async Task<IReadOnlyList<JobDefinition>> GetAllJobsAsync(CancellationToken cancellationToken = default)
+    public async Task<Res<IReadOnlyList<JobDefinition>>> GetAllJobsAsync(CancellationToken cancellationToken = default)
     {
-        logger.LogDebug("API: GetAllJobs requested");
-        return await cacheService.GetAllJobDefinitionsAsync(cancellationToken);
+        try
+        {
+            logger.LogDebug("API: GetAllJobs requested");
+            var jobs = await cacheService.GetAllJobDefinitionsAsync(cancellationToken);
+            return Res.Ok(jobs);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to get all jobs");
+            return Res.Fail($"Failed to get all jobs: {ex.Message}");
+        }
     }
 
     /// <summary>
     /// Creates a new job instance for manual execution.
     /// </summary>
-    public async Task<string> CreateJobInstanceAsync(
+    public async Task<Res<string>> CreateJobInstanceAsync(
         string jobKey,
         object? jobArgs,
         CancellationToken cancellationToken = default)
     {
-        logger.LogInformation("API: CreateJobInstance requested for {JobKey}", jobKey);
-
-        var definition = await cacheService.GetJobDefinitionAsync(jobKey, cancellationToken);   
-        if (definition == null)
+        try
         {
-            throw new InvalidOperationException($"Job {jobKey} not found");
-        }
+            logger.LogInformation("API: CreateJobInstance requested for {JobKey}", jobKey);
 
-        // For now, use EnqueueAsync with parameters
-        // This is a placeholder - actual implementation would need proper parameter handling
-        throw new NotImplementedException("CreateJobInstance API method not yet implemented");
+            var definition = await cacheService.GetJobDefinitionAsync(jobKey, cancellationToken);
+            if (definition == null)
+            {
+                return Res.Fail($"Job {jobKey} not found");
+            }
+
+            if (definition.JobType != JobType.Triggered)
+            {
+                return Res.Fail($"Job {jobKey} is not a triggered job. Only triggered jobs can be manually executed.");
+            }
+
+            // Create instance via JobInstanceManager
+            var instance = await jobInstanceManager.CreateInstanceAsync(
+                definition,
+                jobArgs,
+                JobState.Enqueued,
+                cancellationToken);
+
+            // Publish to event bus for worker pickup via JobDispatcher
+            await jobDispatcher.PublishJobExecutionEventAsync(
+                instance,
+                definition,
+                jobArgs,
+                cancellationToken);
+
+            logger.LogInformation(
+                "Manually triggered job instance {InstanceId} for {JobKey}",
+                instance.InstanceId,
+                jobKey);
+
+            return Res.Ok(instance.InstanceId);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to create job instance for {JobKey}", jobKey);
+            return Res.Fail($"Failed to create job instance: {ex.Message}");
+        }
     }
 
     /// <summary>
-    /// Gets job execution history with filtering.
+    /// Gets job definitions with advanced filtering and pagination.
     /// </summary>
-    public async Task<IReadOnlyList<JobInstance>> GetJobHistoryAsync(
+    public async Task<ResPaged<JobDefinition>> GetJobDefinitionsAsync(
+        string? fromProject = null,
         string? jobKey = null,
-        JobState? state = null,
-        int? limit = 100,
+        string? jobName = null,
+        JobType? jobType = null,
+        int pageNumber = 1,
+        int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        logger.LogDebug("API: GetJobHistory requested");
+        try
+        {
+            logger.LogDebug("API: GetJobDefinitions requested with filters");
 
-        // Placeholder - actual implementation would query metadata store for job instances
-        // TODO: This should call metadataStore.GetJobInstancesByKeyAsync or similar
-        return new List<JobInstance>();
+            var allDefinitions = await cacheService.GetAllJobDefinitionsAsync(cancellationToken);
+
+            // Apply filters in-memory
+            var filtered = allDefinitions.AsEnumerable();
+
+            if (!string.IsNullOrEmpty(fromProject))
+                filtered = filtered.Where(d =>
+                    d.FromProject.Contains(fromProject, StringComparison.OrdinalIgnoreCase));
+
+            if (!string.IsNullOrEmpty(jobKey))
+                filtered = filtered.Where(d =>
+                    d.JobKey.Contains(jobKey, StringComparison.OrdinalIgnoreCase));
+
+            if (!string.IsNullOrEmpty(jobName))
+                filtered = filtered.Where(d =>
+                    d.JobName.Contains(jobName, StringComparison.OrdinalIgnoreCase));
+
+            if (jobType.HasValue)
+                filtered = filtered.Where(d => d.JobType == jobType.Value);
+
+            var totalCount = filtered.Count();
+            var items = filtered
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            return new ResPaged<JobDefinition>(totalCount, items, pageNumber, pageSize);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to get job definitions");
+            return Res.Fail($"Failed to get job definitions: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Gets job execution history with filtering and pagination.
+    /// </summary>
+    public async Task<ResPaged<JobInstance>> GetJobHistoryAsync(
+        string? jobKey = null,
+        JobState? state = null,
+        DateTime? startTime = null,
+        DateTime? endTime = null,
+        int pageNumber = 1,
+        int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            logger.LogDebug("API: GetJobHistory requested with filters");
+
+            var instances = await metadataStore.GetJobInstancesAsync(
+                jobKey,
+                state,
+                startTime,
+                endTime,
+                pageNumber,
+                pageSize,
+                cancellationToken);
+
+            var totalCount = await metadataStore.GetJobInstancesCountAsync(
+                jobKey,
+                state,
+                startTime,
+                endTime,
+                cancellationToken);
+
+            return new ResPaged<JobInstance>(totalCount, instances, pageNumber, pageSize);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to get job history");
+            return Res.Fail($"Failed to get job history: {ex.Message}");
+        }
     }
 
     /// <summary>
     /// Cancels a running job instance.
     /// </summary>
-    public async Task CancelJobInstanceAsync(string instanceId, CancellationToken cancellationToken = default)
+    public async Task<Res> CancelJobInstanceAsync(string instanceId, CancellationToken cancellationToken = default)
     {
-        logger.LogInformation("API: CancelJobInstance requested for {InstanceId}", instanceId);
+        try
+        {
+            logger.LogInformation("API: CancelJobInstance requested for {InstanceId}", instanceId);
 
-        // Cancel the distributed cancellation token
-        await cancellationManager.CancelTokenAsync(instanceId, cancellationToken);
+            // Cancel the distributed cancellation token
+            await cancellationManager.CancelTokenAsync(instanceId, cancellationToken);
 
-        // Update instance state to Cancelled
-        await jobInstanceManager.UpdateStateAsync(
-            instanceId,
-            JobState.Cancelled,
-            "Cancelled via API",
-            cancellationToken);
+            // Update instance state to Cancelled
+            await jobInstanceManager.UpdateStateAsync(
+                instanceId,
+                JobState.Cancelled,
+                "Cancelled via API",
+                cancellationToken);
+
+            return Res.Ok("Job instance cancelled successfully");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to cancel job instance {InstanceId}", instanceId);
+            return Res.Fail($"Failed to cancel job instance: {ex.Message}");
+        }
     }
 
     /// <summary>
     /// Pauses a recurring job.
     /// </summary>
-    public async Task PauseRecurringJobAsync(string jobKey, CancellationToken cancellationToken = default)
+    public async Task<Res> PauseRecurringJobAsync(string jobKey, CancellationToken cancellationToken = default)
     {
-        var definition = await cacheService.GetJobDefinitionAsync(jobKey, cancellationToken);
-        if (definition == null)
+        try
         {
-            throw new InvalidOperationException($"Job {jobKey} not found");
-        }
+            var definition = await cacheService.GetJobDefinitionAsync(jobKey, cancellationToken);
+            if (definition == null)
+            {
+                return Res.Fail($"Job {jobKey} not found");
+            }
 
-        if (definition.JobType != JobType.Recurring)
+            if (definition.JobType != JobType.Recurring)
+            {
+                return Res.Fail($"Job {jobKey} is not a recurring job");
+            }
+
+            // Update definition via cache service (write-through)
+            definition.IsDisabled = true;
+            await cacheService.SaveJobDefinitionAsync(definition, cancellationToken);
+
+            logger.LogInformation("Recurring job paused: {JobKey}", jobKey);
+            return Res.Ok("Recurring job paused successfully");
+        }
+        catch (Exception ex)
         {
-            throw new InvalidOperationException($"Job {jobKey} is not a recurring job");
+            logger.LogError(ex, "Failed to pause recurring job {JobKey}", jobKey);
+            return Res.Fail($"Failed to pause recurring job: {ex.Message}");
         }
-
-        // Update definition via cache service (write-through)
-        definition.IsDisabled = true;
-        await cacheService.SaveJobDefinitionAsync(definition, cancellationToken);
-
-        logger.LogInformation("Recurring job paused: {JobKey}", jobKey);
     }
 
     /// <summary>
     /// Resumes a paused recurring job.
     /// </summary>
-    public async Task ResumeRecurringJobAsync(string jobKey, CancellationToken cancellationToken = default)
+    public async Task<Res> ResumeRecurringJobAsync(string jobKey, CancellationToken cancellationToken = default)
     {
-        var definition = await cacheService.GetJobDefinitionAsync(jobKey, cancellationToken);
-        if (definition == null)
+        try
         {
-            throw new InvalidOperationException($"Job {jobKey} not found");
-        }
+            var definition = await cacheService.GetJobDefinitionAsync(jobKey, cancellationToken);
+            if (definition == null)
+            {
+                return Res.Fail($"Job {jobKey} not found");
+            }
 
-        if (definition.JobType != JobType.Recurring)
+            if (definition.JobType != JobType.Recurring)
+            {
+                return Res.Fail($"Job {jobKey} is not a recurring job");
+            }
+
+            // Update definition via cache service (write-through)
+            definition.IsDisabled = false;
+            await cacheService.SaveJobDefinitionAsync(definition, cancellationToken);
+
+            logger.LogInformation("Recurring job resumed: {JobKey}", jobKey);
+            return Res.Ok("Recurring job resumed successfully");
+        }
+        catch (Exception ex)
         {
-            throw new InvalidOperationException($"Job {jobKey} is not a recurring job");
+            logger.LogError(ex, "Failed to resume recurring job {JobKey}", jobKey);
+            return Res.Fail($"Failed to resume recurring job: {ex.Message}");
         }
-
-        // Update definition via cache service (write-through)
-        definition.IsDisabled = false;
-        await cacheService.SaveJobDefinitionAsync(definition, cancellationToken);
-
-        logger.LogInformation("Recurring job resumed: {JobKey}", jobKey);
     }
 
     /// <summary>
     /// Updates job configuration.
     /// </summary>
-    public async Task UpdateJobConfigAsync(
+    public async Task<Res> UpdateJobConfigAsync(
         string jobKey,
         JobDefinition updatedDefinition,
         CancellationToken cancellationToken = default)
     {
-        logger.LogInformation("API: UpdateJobConfig requested for {JobKey}", jobKey);
+        try
+        {
+            logger.LogInformation("API: UpdateJobConfig requested for {JobKey}", jobKey);
 
-        // Update via cache service (write-through)
-        await cacheService.SaveJobDefinitionAsync(updatedDefinition, cancellationToken);
+            // Update via cache service (write-through)
+            await cacheService.SaveJobDefinitionAsync(updatedDefinition, cancellationToken);
 
-        logger.LogInformation("Job {JobKey} configuration updated", jobKey);
+            logger.LogInformation("Job {JobKey} configuration updated", jobKey);
+            return Res.Ok("Job configuration updated successfully");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to update job config for {JobKey}", jobKey);
+            return Res.Fail($"Failed to update job configuration: {ex.Message}");
+        }
     }
 }

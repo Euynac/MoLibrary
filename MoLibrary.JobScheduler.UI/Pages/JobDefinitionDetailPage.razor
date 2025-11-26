@@ -1,0 +1,359 @@
+@page "/job-scheduler/definitions/{JobKey}"
+@inject JobSchedulerUIService UIService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+    @if (_isLoading)
+    {
+        <MudStack AlignItems="AlignItems.Center" Spacing="2">
+            <MudProgressCircular Indeterminate="true" Size="Size.Large" />
+            <MudText Typo="Typo.h6">加载中...</MudText>
+        </MudStack>
+    }
+    else if (_error != null)
+    {
+        <MudAlert Severity="Severity.Error">@_error</MudAlert>
+    }
+    else if (_jobDefinition != null)
+    {
+        <!-- 标题和操作按钮 -->
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+            <MudText Typo="Typo.h4">@_jobDefinition.JobName</MudText>
+            <MudStack Row="true" Spacing="2">
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Default"
+                           StartIcon="@Icons.Material.Filled.ArrowBack"
+                           OnClick="NavigateBack">
+                    返回列表
+                </MudButton>
+                @if (_jobDefinition.JobType == JobType.Recurring && !_jobDefinition.IsDisabled)
+                {
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Warning"
+                               StartIcon="@Icons.Material.Filled.Pause"
+                               OnClick="DisableJobAsync">
+                        禁用
+                    </MudButton>
+                }
+                @if (_jobDefinition.JobType == JobType.Triggered)
+                {
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.PlayCircle"
+                               OnClick="ExecuteJobAsync">
+                        执行
+                    </MudButton>
+                }
+            </MudStack>
+        </MudStack>
+
+        <!-- 基本信息 -->
+        <MudPaper Class="pa-4 mb-4" Elevation="2">
+            <MudText Typo="Typo.h6" Class="mb-3">基本信息</MudText>
+            <MudGrid>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">作业键</MudText>
+                    <MudText Typo="Typo.body1">@_jobDefinition.JobKey</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">来源项目</MudText>
+                    <MudText Typo="Typo.body1">@_jobDefinition.FromProject</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">作业类型</MudText>
+                    <MudChip T="string" Size="Size.Small" Color="@GetJobTypeColor(_jobDefinition.JobType)">
+                        @_jobDefinition.JobType
+                    </MudChip>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">状态</MudText>
+                    <MudChip T="string" Size="Size.Small" Color="@GetDisabledStateColor(_jobDefinition.IsDisabled)">
+                        @(_jobDefinition.IsDisabled ? "已禁用" : "启用")
+                    </MudChip>
+                </MudItem>
+                @if (!string.IsNullOrEmpty(_jobDefinition.CronExpression))
+                {
+                    <MudItem xs="12" sm="6">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Cron表达式</MudText>
+                        <MudText Typo="Typo.body1" Style="font-family: monospace;">@_jobDefinition.CronExpression</MudText>
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudPaper>
+
+        <!-- 健康指标和统计信息 -->
+        <MudGrid Class="mb-4">
+            <MudItem xs="12" md="6">
+                <JobHealthMetricsCard JobKey="@JobKey" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <JobStatisticsCard JobKey="@JobKey" />
+            </MudItem>
+        </MudGrid>
+
+        <!-- 运行中的实例 -->
+        <MudPaper Class="pa-4 mb-4" Elevation="2">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+                <MudText Typo="Typo.h6">运行中的实例</MudText>
+                <MudStack Row="true" Spacing="2">
+                    <MudButton Variant="Variant.Text"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.List"
+                               OnClick="NavigateToAllInstances">
+                        查看所有实例
+                    </MudButton>
+                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   OnClick="RefreshRunningInstancesAsync" />
+                </MudStack>
+            </MudStack>
+
+            @if (_runningInstancesLoading)
+            {
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+            }
+            else if (_runningInstances.Count > 0)
+            {
+                <MudTable T="JobInstance"
+                          Items="_runningInstances"
+                          Hover="true"
+                          Dense="true"
+                          Striped="true">
+                    <HeaderContent>
+                        <MudTh>实例ID</MudTh>
+                        <MudTh>状态</MudTh>
+                        <MudTh>创建时间</MudTh>
+                        <MudTh>开始时间</MudTh>
+                        <MudTh>运行时长</MudTh>
+                        <MudTh>操作</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="实例ID">
+                            <MudText Typo="Typo.body2" Style="font-family: monospace;">
+                                @context.InstanceId.Substring(0, Math.Min(8, context.InstanceId.Length))...
+                            </MudText>
+                        </MudTd>
+                        <MudTd DataLabel="状态">
+                            <MudChip T="string" Size="Size.Small" Color="@GetStateColor(context.State)">
+                                @context.State
+                            </MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="创建时间">
+                            @context.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")
+                        </MudTd>
+                        <MudTd DataLabel="开始时间">
+                            @(context.StartedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-")
+                        </MudTd>
+                        <MudTd DataLabel="运行时长">
+                            @if (context.StartedAt.HasValue)
+                            {
+                                var duration = DateTime.UtcNow - context.StartedAt.Value;
+                                <text>@FormatDuration(duration)</text>
+                            }
+                            else
+                            {
+                                <text>-</text>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="操作">
+                            <MudTooltip Text="详情">
+                                <MudIconButton Icon="@Icons.Material.Filled.Info"
+                                               Color="Color.Info"
+                                               Size="Size.Small"
+                                               OnClick="() => NavigateToInstance(context.InstanceId)" />
+                            </MudTooltip>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Info" Dense="true" NoIcon="true">
+                    当前无运行中的实例
+                </MudAlert>
+            }
+        </MudPaper>
+
+        <!-- 作业信息摘要 -->
+        <MudPaper Class="pa-4 mb-4" Elevation="2">
+            <MudText Typo="Typo.h6" Class="mb-3">作业配置</MudText>
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">最大并发数</MudText>
+                    <MudText Typo="Typo.body1">@_jobDefinition.MaxConcurrency</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">重试次数</MudText>
+                    <MudText Typo="Typo.body1">@_jobDefinition.RetryCount</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">最大执行超时</MudText>
+                    <MudText Typo="Typo.body1">@_jobDefinition.MaxExecutionTimeout</MudText>
+                </MudItem>
+                @if (!string.IsNullOrEmpty(_jobDefinition.Description))
+                {
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">描述</MudText>
+                        <MudText Typo="Typo.body1">@_jobDefinition.Description</MudText>
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    [Parameter]
+    public string JobKey { get; set; } = string.Empty;
+
+    private JobDefinition? _jobDefinition;
+    private List<JobInstance> _runningInstances = new();
+
+    private bool _isLoading = true;
+    private bool _runningInstancesLoading = false;
+    private string? _error;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadJobDefinitionAsync();
+        await RefreshRunningInstancesAsync();
+    }
+
+    private async Task LoadJobDefinitionAsync()
+    {
+        _isLoading = true;
+        _error = null;
+
+        try
+        {
+            var result = await UIService.GetJobDefinitionAsync(JobKey);
+            if (result.Code == ResponseCode.Ok && result.Data != null)
+            {
+                _jobDefinition = result.Data;
+            }
+            else
+            {
+                _error = $"加载失败: {result.Message}";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"加载失败: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task RefreshRunningInstancesAsync()
+    {
+        _runningInstancesLoading = true;
+
+        try
+        {
+            var result = await UIService.GetRunningInstancesAsync(JobKey);
+            if (result.Code == ResponseCode.Ok && result.Data != null)
+            {
+                _runningInstances = result.Data.ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"加载运行中实例失败: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _runningInstancesLoading = false;
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task DisableJobAsync()
+    {
+        var result = await UIService.PauseJobAsync(JobKey);
+        if (result.Code == ResponseCode.Ok)
+        {
+            Snackbar.Add("作业已禁用", Severity.Success);
+            await LoadJobDefinitionAsync();
+        }
+        else
+        {
+            Snackbar.Add($"禁用失败: {result.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ExecuteJobAsync()
+    {
+        var result = await UIService.ExecuteJobAsync(JobKey);
+        if (result.Code == ResponseCode.Ok)
+        {
+            Snackbar.Add("作业已触发执行", Severity.Success);
+            await RefreshRunningInstancesAsync();
+        }
+        else
+        {
+            Snackbar.Add($"执行失败: {result.Message}", Severity.Error);
+        }
+    }
+
+    private void NavigateBack()
+    {
+        NavigationManager.NavigateTo("/job-scheduler/definitions");
+    }
+
+    private void NavigateToAllInstances()
+    {
+        NavigationManager.NavigateTo($"/job-scheduler/instances?jobKey={Uri.EscapeDataString(JobKey)}");
+    }
+
+    private void NavigateToInstance(string instanceId)
+    {
+        NavigationManager.NavigateTo($"/job-scheduler/instances/{Uri.EscapeDataString(instanceId)}");
+    }
+
+    private Color GetJobTypeColor(JobType jobType)
+    {
+        return jobType switch
+        {
+            JobType.Recurring => Color.Primary,
+            JobType.Triggered => Color.Secondary,
+            _ => Color.Default
+        };
+    }
+
+    private Color GetDisabledStateColor(bool isDisabled)
+    {
+        return isDisabled ? Color.Warning : Color.Success;
+    }
+
+    private Color GetStateColor(JobState state)
+    {
+        return state switch
+        {
+            JobState.Succeeded => Color.Success,
+            JobState.Failed => Color.Error,
+            JobState.Terminated => Color.Error,
+            JobState.Cancelled => Color.Warning,
+            JobState.Processing => Color.Primary,
+            JobState.Enqueued => Color.Info,
+            JobState.Scheduled => Color.Default,
+            _ => Color.Default
+        };
+    }
+
+    private string FormatDuration(TimeSpan duration)
+    {
+        if (duration.TotalHours >= 1)
+            return $"{duration.TotalHours:F2}h";
+        if (duration.TotalMinutes >= 1)
+            return $"{duration.TotalMinutes:F2}m";
+        if (duration.TotalSeconds >= 1)
+            return $"{duration.TotalSeconds:F2}s";
+        return $"{duration.TotalMilliseconds:F0}ms";
+    }
+}

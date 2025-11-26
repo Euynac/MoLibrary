@@ -1,0 +1,103 @@
+@using MoLibrary.JobScheduler.Models
+
+<MudCard Elevation="2">
+    <MudCardHeader>
+        <MudText Typo="Typo.h6">状态历史</MudText>
+    </MudCardHeader>
+    <MudCardContent>
+        @if (_historyRecords?.Any() == true)
+        {
+            <MudTimeline TimelineOrientation="TimelineOrientation.Vertical">
+                @foreach (var record in _historyRecords)
+                {
+                    <MudTimelineItem Color="@GetStateColor(record.NewState)"
+                                     Icon="@GetStateIcon(record.NewState)"
+                                     Size="Size.Small">
+                        <ItemContent>
+                            <MudStack Spacing="1">
+                                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                                    <MudChip T="string"
+                                             Size="Size.Small"
+                                             Color="@GetStateColor(record.NewState)">
+                                        @record.OldState → @record.NewState
+                                    </MudChip>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        @record.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")
+                                    </MudText>
+                                </MudStack>
+
+                                @if (!string.IsNullOrEmpty(record.Message))
+                                {
+                                    <MudPaper Elevation="0"
+                                              Class="@GetMessageClass(record.Message)">
+                                        <MudText Typo="Typo.body2"
+                                                 Style="white-space: pre-wrap; font-family: monospace; font-size: 0.85rem;">
+                                            @record.Message
+                                        </MudText>
+                                    </MudPaper>
+                                }
+                            </MudStack>
+                        </ItemContent>
+                    </MudTimelineItem>
+                }
+            </MudTimeline>
+        }
+        else
+        {
+            <MudText Typo="Typo.body2" Color="Color.Secondary">暂无状态历史记录</MudText>
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public JobInstance? Instance { get; set; }
+
+    private List<JobInstance.StateHistoryRecord>? _historyRecords;
+
+    protected override void OnParametersSet()
+    {
+        _historyRecords = Instance?.GetStateHistoryRecords();
+    }
+
+    private string GetMessageClass(string message)
+    {
+        // 高亮堆栈信息（包含异常堆栈的消息）
+        if (message.Contains("\n   at ") ||
+            message.Contains("Exception:") ||
+            message.Contains("StackTrace:"))
+        {
+            return "stack-trace-message";
+        }
+        return "normal-message";
+    }
+
+    private Color GetStateColor(JobState state)
+    {
+        return state switch
+        {
+            JobState.Succeeded => Color.Success,
+            JobState.Failed => Color.Error,
+            JobState.Terminated => Color.Error,
+            JobState.Cancelled => Color.Warning,
+            JobState.Processing => Color.Primary,
+            JobState.Enqueued => Color.Info,
+            _ => Color.Default
+        };
+    }
+
+    private string GetStateIcon(JobState state)
+    {
+        return state switch
+        {
+            JobState.Succeeded => Icons.Material.Filled.CheckCircle,
+            JobState.Failed => Icons.Material.Filled.Error,
+            JobState.Terminated => Icons.Material.Filled.Cancel,
+            JobState.Cancelled => Icons.Material.Filled.Warning,
+            JobState.Processing => Icons.Material.Filled.PlayArrow,
+            JobState.Enqueued => Icons.Material.Filled.Queue,
+            JobState.Scheduled => Icons.Material.Filled.Schedule,
+            JobState.Skipped => Icons.Material.Filled.SkipNext,
+            _ => Icons.Material.Filled.Circle
+        };
+    }
+}
