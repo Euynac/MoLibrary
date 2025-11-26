@@ -1,4 +1,4 @@
-@page "/home"
+@attribute [Route(PAGE_URL)]
 @using MoLibrary.FrameworkUI.UISystemInfo.Services
 @using MoLibrary.FrameworkUI.UISystemInfo.Models
 @using MoLibrary.Tool.Extensions
@@ -256,7 +256,7 @@
 </MudContainer>
 
 @code {
-    public const string SYSTEM_INFO_URL = "/home";
+    public const string PAGE_URL = "/home";
 
     private bool _loading = true;
     private SystemInfoResponse? _systemInfo;

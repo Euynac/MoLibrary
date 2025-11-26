@@ -39,7 +39,7 @@ public class ModuleConfigurationUI(ModuleConfigurationUIOption option)
                 {
                     // 注册客户端配置页面
                     registry.RegisterComponent<UIConfigurationClientPage>(
-                        UIConfigurationClientPage.CONFIGURATION_CLIENT_URL, 
+                        UIConfigurationClientPage.PAGE_URL, 
                         "配置客户端", 
                         Icons.Material.Filled.Devices, 
                         "系统管理", 
@@ -48,7 +48,7 @@ public class ModuleConfigurationUI(ModuleConfigurationUIOption option)
                     
                     // 注册面板配置页面
                     registry.RegisterComponent<UIConfigurationDashboardPage>(
-                        UIConfigurationDashboardPage.CONFIGURATION_DASHBOARD_URL, 
+                        UIConfigurationDashboardPage.PAGE_URL, 
                         "配置面板", 
                         Icons.Material.Filled.Dashboard, 
                         "系统管理", 

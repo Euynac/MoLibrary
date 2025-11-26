@@ -51,7 +51,7 @@ public class ModuleTimekeeperUI(ModuleTimekeeperUIOption option)
 
             DependsOnModule<ModuleUICoreGuide>().Register()
                 .RegisterUIComponents(p => p.RegisterComponent<UITimekeeperPage>(
-                    UITimekeeperPage.TIMEKEEPER_DEBUG_URL,
+                    UITimekeeperPage.PAGE_URL,
                     "Timekeeper调试",
                     Icons.Material.Filled.Timer,
                     "系统管理",
