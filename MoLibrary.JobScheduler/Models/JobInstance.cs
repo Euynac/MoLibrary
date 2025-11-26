@@ -51,13 +51,12 @@ public class JobInstance
     /// Set when the job reaches a terminal state (Succeeded, Terminated, Cancelled, Skipped).
     /// </summary>
     public DateTime? CompletedAt { get; set; }
-
+    
     /// <summary>
-    /// Gets or sets the error message if the job failed.
-    /// Contains exception details, timeout messages, or other failure information.
-    /// Populated when state transitions to Failed, Terminated, or Cancelled.
+    /// Gets or sets the state change history.
+    /// Each line represents a state transition in the format: [yyyy-MM-dd HH:mm:ss] [oldstate->newstate] message
     /// </summary>
-    public string? ErrorMessage { get; set; }
+    public string? StateHistory { get; set; }
 
     /// <summary>
     /// Gets or sets the current retry attempt number.
@@ -79,20 +78,19 @@ public class JobInstance
     /// </summary>
     /// <exception cref="InvalidOperationException">Thrown when the state transition is invalid.</exception>
     public void UpdateStateAsync(JobState newState,
-        string? errorMessage = null, string? clientId = null)
+        string? message = null, string? clientId = null)
     {
-        
+
         var currentState = State;
 
         // Validate state transition
         if (!IsValidTransition(currentState, newState))
         {
-            var message = $"Invalid state transition from {currentState} to {newState}";
-            throw new InvalidOperationException(message);
+            throw new InvalidOperationException($"Invalid state transition from {currentState} to {newState}");
         }
 
         // Update state
-        State = newState;   
+        State = newState;
 
         // Update timestamps based on new state
         var now = DateTime.UtcNow;
@@ -112,13 +110,126 @@ public class JobInstance
                 CompletedAt = now;
                 break;
         }
-
-        // Set error message if provided
-        if (!string.IsNullOrEmpty(errorMessage))
+        
+        // Append state history if message is provided
+        if (!string.IsNullOrEmpty(message))
         {
-            ErrorMessage = errorMessage;
+            AppendStateHistory(currentState, newState, message, now);
         }
     }
+
+    /// <summary>
+    /// Appends a state change record to the state history.
+    /// </summary>
+    /// <param name="oldState">The previous state.</param>
+    /// <param name="newState">The new state.</param>
+    /// <param name="message">The message to record.</param>
+    /// <param name="timestamp">The timestamp of the state change.</param>
+    private void AppendStateHistory(JobState oldState, JobState newState, string message, DateTime timestamp)
+    {
+        var historyEntry = $"[{timestamp:yyyy-MM-dd HH:mm:ss}] [{oldState}->{newState}] {message}";
+
+        if (string.IsNullOrEmpty(StateHistory))
+        {
+            StateHistory = historyEntry;
+        }
+        else
+        {
+            StateHistory += Environment.NewLine + historyEntry;
+        }
+    }
+
+    /// <summary>
+    /// Parses the state history string into a list of structured records.
+    /// </summary>
+    /// <returns>A list of state history records, or an empty list if no history exists.</returns>
+    public List<StateHistoryRecord> GetStateHistoryRecords()
+    {
+        if (string.IsNullOrEmpty(StateHistory))
+        {
+            return [];
+        }
+
+        var records = new List<StateHistoryRecord>();
+        var lines = StateHistory.Split([Environment.NewLine, "\n"], StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (var line in lines)
+        {
+            if (TryParseHistoryLine(line, out var record))
+            {
+                records.Add(record);
+            }
+        }
+
+        return records;
+    }
+
+    /// <summary>
+    /// Attempts to parse a single history line into a StateHistoryRecord.
+    /// </summary>
+    /// <param name="line">The line to parse.</param>
+    /// <param name="record">The parsed record, if successful.</param>
+    /// <returns>True if parsing succeeded, false otherwise.</returns>
+    private static bool TryParseHistoryLine(string line, out StateHistoryRecord record)
+    {
+        record = null!;
+
+        // Expected format: [yyyy-MM-dd HH:mm:ss] [oldstate->newstate] message
+        // Find the closing bracket of timestamp
+        var timestampEnd = line.IndexOf(']');
+        if (timestampEnd < 0)
+        {
+            return false;
+        }
+
+        // Extract timestamp
+        var timestampStr = line[1..timestampEnd];
+        if (!DateTime.TryParseExact(timestampStr, "yyyy-MM-dd HH:mm:ss",
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.AssumeUniversal,
+                out var timestamp))
+        {
+            return false;
+        }
+
+        // Find the state transition part
+        var stateStart = line.IndexOf('[', timestampEnd + 1);
+        var stateEnd = line.IndexOf(']', stateStart + 1);
+        if (stateStart < 0 || stateEnd < 0)
+        {
+            return false;
+        }
+
+        // Extract and parse state transition
+        var stateTransition = line[(stateStart + 1)..stateEnd];
+        var states = stateTransition.Split("->", StringSplitOptions.TrimEntries);
+        if (states.Length != 2)
+        {
+            return false;
+        }
+
+        if (!Enum.TryParse<JobState>(states[0], out var oldState) ||
+            !Enum.TryParse<JobState>(states[1], out var newState))
+        {
+            return false;
+        }
+
+        // Extract message (everything after the second closing bracket and space)
+        var message = line[(stateEnd + 1)..].TrimStart();
+
+        record = new StateHistoryRecord(timestamp, oldState, newState, message);
+        return true;
+    }
+
+    /// <summary>
+    /// Represents a single state change record in the job instance history.
+    /// </summary>
+    /// <param name="Timestamp">The timestamp when the state change occurred.</param>
+    /// <param name="OldState">The previous state.</param>
+    /// <param name="NewState">The new state.</param>
+    /// <param name="Message">The message associated with this state change.</param>
+    public record StateHistoryRecord(DateTime Timestamp, JobState OldState, JobState NewState, string Message);
+
 
     /// <summary>
     /// Validates whether a state transition is allowed according to the state machine.

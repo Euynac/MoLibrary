@@ -92,5 +92,6 @@ public enum EMoModules
     DaprProviderRpcClient,
     DaprProviderClientConnector,
     JobScheduler,
-    LoggingUI
+    LoggingUI,
+    Clock
 }
