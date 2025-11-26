@@ -1,0 +1,333 @@
+@page "/job-scheduler/instances"
+@inject JobSchedulerUIService UIService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h4" Class="mb-4">作业实例</MudText>
+
+    <!-- 筛选器 -->
+    <MudPaper Class="pa-4 mb-4" Elevation="2">
+        <MudGrid Spacing="2">
+            <MudItem xs="12" sm="6" md="3">
+                <MudTextField T="string"
+                              @bind-Value="_filterJobKey"
+                              Label="作业键"
+                              Variant="Variant.Outlined"
+                              Clearable="true"
+                              Immediate="true"
+                              OnClearButtonClick="HandleFilterChanged" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudTextField T="string"
+                              @bind-Value="_filterInstanceId"
+                              Label="实例ID"
+                              Variant="Variant.Outlined"
+                              Clearable="true"
+                              Immediate="true"
+                              OnClearButtonClick="HandleFilterChanged" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudSelect T="JobState?"
+                           @bind-Value="_filterState"
+                           Label="状态"
+                           Variant="Variant.Outlined"
+                           Clearable="true"
+                           OnClearButtonClick="HandleFilterChanged">
+                    <MudSelectItem T="JobState?" Value="@((JobState?)null)">全部</MudSelectItem>
+                    <MudSelectItem T="JobState?" Value="@JobState.Scheduled">Scheduled</MudSelectItem>
+                    <MudSelectItem T="JobState?" Value="@JobState.Enqueued">Enqueued</MudSelectItem>
+                    <MudSelectItem T="JobState?" Value="@JobState.Processing">Processing</MudSelectItem>
+                    <MudSelectItem T="JobState?" Value="@JobState.Succeeded">Succeeded</MudSelectItem>
+                    <MudSelectItem T="JobState?" Value="@JobState.Failed">Failed</MudSelectItem>
+                    <MudSelectItem T="JobState?" Value="@JobState.Cancelled">Cancelled</MudSelectItem>
+                    <MudSelectItem T="JobState?" Value="@JobState.Terminated">Terminated</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudSelect T="string"
+                           @bind-Value="_timeRangePreset"
+                           Label="时间范围"
+                           Variant="Variant.Outlined"
+                           OnClearButtonClick="HandleTimeRangePresetChanged">
+                    <MudSelectItem T="string" Value="@string.Empty">自定义</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("last_hour")">最近1小时</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("last_24_hours")">最近24小时</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("last_7_days")">最近7天</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("last_30_days")">最近30天</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudDatePicker Label="开始时间"
+                               Date="_filterStartDate"
+                               DateChanged="HandleStartDateChanged"
+                               Variant="Variant.Outlined"
+                               Clearable="true"
+                               Disabled="@(!string.IsNullOrEmpty(_timeRangePreset))" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudDatePicker Label="结束时间"
+                               Date="_filterEndDate"
+                               DateChanged="HandleEndDateChanged"
+                               Variant="Variant.Outlined"
+                               Clearable="true"
+                               Disabled="@(!string.IsNullOrEmpty(_timeRangePreset))" />
+            </MudItem>
+            <MudItem xs="12" Class="d-flex justify-end">
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           OnClick="HandleFilterChanged"
+                           StartIcon="@Icons.Material.Filled.Search">
+                    搜索
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Default"
+                           OnClick="HandleResetFilters"
+                           StartIcon="@Icons.Material.Filled.Clear"
+                           Class="ml-2">
+                    重置
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <!-- 数据表格 -->
+    <MudTable @ref="_table"
+              T="JobInstance"
+              ServerData="LoadDataAsync"
+              Hover="true"
+              Striped="true"
+              Elevation="2">
+        <ToolBarContent>
+            <MudText Typo="Typo.h6">实例列表</MudText>
+            <MudSpacer />
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                           Color="Color.Primary"
+                           OnClick="RefreshAsync" />
+        </ToolBarContent>
+        <HeaderContent>
+            <MudTh>实例ID</MudTh>
+            <MudTh>作业键</MudTh>
+            <MudTh>状态</MudTh>
+            <MudTh>创建时间</MudTh>
+            <MudTh>开始时间</MudTh>
+            <MudTh>结束时间</MudTh>
+            <MudTh>执行时长</MudTh>
+            <MudTh>操作</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="实例ID">
+                <MudText Typo="Typo.body2" Style="font-family: monospace;">
+                    @context.InstanceId.Substring(0, Math.Min(8, context.InstanceId.Length))...
+                </MudText>
+            </MudTd>
+            <MudTd DataLabel="作业键">@context.JobKey</MudTd>
+            <MudTd DataLabel="状态">
+                <MudChip T="string" Size="Size.Small" Color="@GetStateColor(context.State)">
+                    @context.State
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="创建时间">
+                @context.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")
+            </MudTd>
+            <MudTd DataLabel="开始时间">
+                @(context.StartedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-")
+            </MudTd>
+            <MudTd DataLabel="结束时间">
+                @(context.CompletedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-")
+            </MudTd>
+            <MudTd DataLabel="执行时长">
+                @if (context.StartedAt.HasValue && context.CompletedAt.HasValue)
+                {
+                    var duration = context.CompletedAt.Value - context.StartedAt.Value;
+                    <text>@FormatDuration(duration)</text>
+                }
+                else if (context.StartedAt.HasValue)
+                {
+                    var duration = DateTime.UtcNow - context.StartedAt.Value;
+                    <text>@FormatDuration(duration) (运行中)</text>
+                }
+                else
+                {
+                    <text>-</text>
+                }
+            </MudTd>
+            <MudTd DataLabel="操作">
+                <MudTooltip Text="详情">
+                    <MudIconButton Icon="@Icons.Material.Filled.Info"
+                                   Color="Color.Info"
+                                   Size="Size.Small"
+                                   OnClick="() => NavigateToDetail(context.InstanceId)" />
+                </MudTooltip>
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>没有找到匹配的作业实例</MudText>
+        </NoRecordsContent>
+        <LoadingContent>
+            <MudProgressCircular Indeterminate="true" />
+        </LoadingContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new int[] { 10, 20, 50, 100 }" />
+        </PagerContent>
+    </MudTable>
+</MudContainer>
+
+@code {
+    [SupplyParameterFromQuery(Name = "jobKey")]
+    public string? InitialJobKey { get; set; }
+
+    [SupplyParameterFromQuery(Name = "state")]
+    public string? InitialState { get; set; }
+
+    private MudTable<JobInstance>? _table;
+
+    private string? _filterJobKey;
+    private string? _filterInstanceId;
+    private JobState? _filterState;
+    private DateTime? _filterStartDate;
+    private DateTime? _filterEndDate;
+    private string _timeRangePreset = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        _filterJobKey = InitialJobKey;
+
+        if (!string.IsNullOrEmpty(InitialState))
+        {
+            var states = InitialState.Split(',');
+            if (states.Length > 0 && Enum.TryParse<JobState>(states[0], out var state))
+            {
+                _filterState = state;
+            }
+        }
+    }
+
+    private async Task<TableData<JobInstance>> LoadDataAsync(TableState state, CancellationToken cancellationToken)
+    {
+        var (startTime, endTime) = GetTimeRange();
+
+        var filter = new JobInstanceFilterRequest
+        {
+            JobKey = _filterJobKey,
+            InstanceId = _filterInstanceId,
+            State = _filterState,
+            StartTime = startTime,
+            EndTime = endTime,
+            PageNumber = state.Page + 1,
+            PageSize = state.PageSize
+        };
+
+        var result = await UIService.GetJobInstancesAsync(filter, cancellationToken);
+
+        if (result.Code != ResponseCode.Ok || result.Data == null)
+        {
+            Snackbar.Add($"加载失败: {result.Message}", Severity.Error);
+            return new TableData<JobInstance> { Items = Array.Empty<JobInstance>(), TotalItems = 0 };
+        }
+
+        return new TableData<JobInstance>
+        {
+            Items = result.Data.Items ?? Array.Empty<JobInstance>(),
+            TotalItems = result.Data.Sum ?? 0
+        };
+    }
+
+    private (DateTime?, DateTime?) GetTimeRange()
+    {
+        if (!string.IsNullOrEmpty(_timeRangePreset))
+        {
+            var now = DateTime.UtcNow;
+            return _timeRangePreset switch
+            {
+                "last_hour" => (now.AddHours(-1), now),
+                "last_24_hours" => (now.AddDays(-1), now),
+                "last_7_days" => (now.AddDays(-7), now),
+                "last_30_days" => (now.AddDays(-30), now),
+                _ => (null, null)
+            };
+        }
+
+        return (_filterStartDate, _filterEndDate);
+    }
+
+    private async Task HandleFilterChanged()
+    {
+        if (_table != null)
+        {
+            await _table.ReloadServerData();
+        }
+    }
+
+    private async Task HandleTimeRangePresetChanged()
+    {
+        if (!string.IsNullOrEmpty(_timeRangePreset))
+        {
+            _filterStartDate = null;
+            _filterEndDate = null;
+        }
+        await HandleFilterChanged();
+    }
+
+    private async Task HandleStartDateChanged(DateTime? newDate)
+    {
+        _filterStartDate = newDate;
+        await HandleFilterChanged();
+    }
+
+    private async Task HandleEndDateChanged(DateTime? newDate)
+    {
+        _filterEndDate = newDate;
+        await HandleFilterChanged();
+    }
+
+    private void HandleResetFilters()
+    {
+        _filterJobKey = null;
+        _filterInstanceId = null;
+        _filterState = null;
+        _filterStartDate = null;
+        _filterEndDate = null;
+        _timeRangePreset = string.Empty;
+        _ = HandleFilterChanged();
+    }
+
+    private async Task RefreshAsync()
+    {
+        if (_table != null)
+        {
+            await _table.ReloadServerData();
+        }
+    }
+
+    private void NavigateToDetail(string instanceId)
+    {
+        NavigationManager.NavigateTo($"/job-scheduler/instances/{Uri.EscapeDataString(instanceId)}");
+    }
+
+    private Color GetStateColor(JobState state)
+    {
+        return state switch
+        {
+            JobState.Succeeded => Color.Success,
+            JobState.Failed => Color.Error,
+            JobState.Terminated => Color.Error,
+            JobState.Cancelled => Color.Warning,
+            JobState.Processing => Color.Primary,
+            JobState.Enqueued => Color.Info,
+            JobState.Scheduled => Color.Default,
+            _ => Color.Default
+        };
+    }
+
+    private string FormatDuration(TimeSpan duration)
+    {
+        if (duration.TotalHours >= 1)
+            return $"{duration.TotalHours:F2}h";
+        if (duration.TotalMinutes >= 1)
+            return $"{duration.TotalMinutes:F2}m";
+        if (duration.TotalSeconds >= 1)
+            return $"{duration.TotalSeconds:F2}s";
+        return $"{duration.TotalMilliseconds:F0}ms";
+    }
+}

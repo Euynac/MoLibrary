@@ -35,7 +35,9 @@
       "Read(//d/Code/MoLibrary.Docs/docs/BackgroundJob/**)",
       "mcp__spec-workflow__spec-workflow-guide",
       "mcp__spec-workflow__approvals",
-      "Bash(dotnet --version:*)"
+      "Bash(dotnet --version:*)",
+      "Bash(dotnet restore:*)",
+      "Bash(dotnet clean:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

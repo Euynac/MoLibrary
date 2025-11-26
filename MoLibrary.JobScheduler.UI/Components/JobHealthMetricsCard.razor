@@ -1,0 +1,149 @@
+@inject JobSchedulerUIService UIService
+@inject NavigationManager NavigationManager
+
+<MudCard Elevation="2">
+    <MudCardHeader>
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.h6">健康指标 (最近 @_timeWindowDays 天)</MudText>
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                           OnClick="RefreshAsync"
+                           Size="Size.Small"
+                           Color="Color.Primary" />
+        </MudStack>
+    </MudCardHeader>
+    <MudCardContent>
+        @if (_metrics != null)
+        {
+            <MudStack Spacing="3">
+                <MudGrid>
+                    <MudItem xs="4">
+                        <MudStack Spacing="1">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">总执行次数</MudText>
+                            <MudText Typo="Typo.h5">@_metrics.TotalExecutions</MudText>
+                        </MudStack>
+                    </MudItem>
+                    <MudItem xs="4">
+                        <MudStack Spacing="1">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">失败次数</MudText>
+                            <MudText Typo="Typo.h5" Color="Color.Error">@_metrics.FailedExecutions</MudText>
+                        </MudStack>
+                    </MudItem>
+                    <MudItem xs="4">
+                        <MudStack Spacing="1">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">失败率</MudText>
+                            <MudText Typo="Typo.h5" Color="@GetHealthColor(_metrics.FailureRate)">
+                                @_metrics.FailureRate.ToString("F2")%
+                            </MudText>
+                        </MudStack>
+                    </MudItem>
+                </MudGrid>
+
+                <!-- 健康进度条 -->
+                <MudProgressLinear Color="@GetHealthColor(_metrics.FailureRate)"
+                                   Value="@(100 - _metrics.FailureRate)"
+                                   Size="Size.Large"
+                                   Rounded="true" />
+
+                <!-- 最近失败实例 -->
+                @if (_metrics.RecentFailures.Any())
+                {
+                    <MudExpansionPanels Elevation="0">
+                        <MudExpansionPanel Text="最近失败实例" Icon="@Icons.Material.Filled.Error">
+                            <MudList T="string" Dense="true">
+                                @foreach (var failure in _metrics.RecentFailures)
+                                {
+                                    <MudListItem T="string" OnClick="() => NavigateToInstance(failure.InstanceId)">
+                                        <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                            <MudText Typo="Typo.body2">@failure.InstanceId</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                @failure.CreatedAt.ToString("MM-dd HH:mm:ss")
+                                            </MudText>
+                                        </MudStack>
+                                    </MudListItem>
+                                }
+                            </MudList>
+                        </MudExpansionPanel>
+                    </MudExpansionPanels>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Success" Dense="true" NoIcon="true">
+                        在监控时间窗口内无失败记录
+                    </MudAlert>
+                }
+            </MudStack>
+        }
+        else if (_isLoading)
+        {
+            <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                <MudText Typo="Typo.caption">正在加载健康指标...</MudText>
+            </MudStack>
+        }
+        else if (_error != null)
+        {
+            <MudAlert Severity="Severity.Error">@_error</MudAlert>
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public string JobKey { get; set; } = null!;
+
+    private JobHealthMetrics? _metrics;
+    private int _timeWindowDays;
+    private bool _isLoading = true;
+    private string? _error;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await RefreshAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        if (string.IsNullOrEmpty(JobKey))
+            return;
+
+        _isLoading = true;
+        _error = null;
+
+        try
+        {
+            var result = await UIService.GetHealthMetricsAsync(JobKey);
+            if (result.Code == ResponseCode.Ok && result.Data != null)
+            {
+                _metrics = result.Data;
+                _timeWindowDays = (int)(_metrics.MetricsEndTime - _metrics.MetricsStartTime).TotalDays;
+            }
+            else
+            {
+                _error = $"加载失败: {result.Message}";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"加载失败: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+
+        StateHasChanged();
+    }
+
+    private Color GetHealthColor(double failureRate)
+    {
+        if (failureRate < 5)
+            return Color.Success;
+        if (failureRate < 20)
+            return Color.Warning;
+        return Color.Error;
+    }
+
+    private void NavigateToInstance(string instanceId)
+    {
+        NavigationManager.NavigateTo($"/job-scheduler/instances/{Uri.EscapeDataString(instanceId)}");
+    }
+}

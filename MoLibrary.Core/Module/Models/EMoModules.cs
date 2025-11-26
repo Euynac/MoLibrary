@@ -92,6 +92,10 @@ public enum EMoModules
     DaprProviderRpcClient,
     DaprProviderClientConnector,
     JobScheduler,
+    /// <summary>
+    /// 作业调度 UI 模块
+    /// </summary>
+    JobSchedulerUI,
     LoggingUI,
     Clock
 }

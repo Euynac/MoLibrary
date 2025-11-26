@@ -237,4 +237,86 @@ public class MetadataStoreInMemoryProvider(ILogger<MetadataStoreInMemoryProvider
     }
 
     #endregion
+
+    #region Advanced Queries for UI
+
+    public Task<List<JobInstance>> GetJobInstancesAsync(
+        string? jobKey = null,
+        JobState? stateFilter = null,
+        DateTime? startTime = null,
+        DateTime? endTime = null,
+        int pageNumber = 1,
+        int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        if (pageNumber <= 0)
+            throw new ArgumentException("Page number must be greater than 0.", nameof(pageNumber));
+        if (pageSize <= 0)
+            throw new ArgumentException("Page size must be greater than 0.", nameof(pageSize));
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var query = _instances.Values.AsEnumerable();
+
+        // Apply filters
+        if (!string.IsNullOrEmpty(jobKey))
+            query = query.Where(i => i.JobKey.Contains(jobKey, StringComparison.OrdinalIgnoreCase));
+
+        if (stateFilter.HasValue)
+            query = query.Where(i => i.State == stateFilter.Value);
+
+        if (startTime.HasValue)
+            query = query.Where(i => i.CreatedAt >= startTime.Value);
+
+        if (endTime.HasValue)
+            query = query.Where(i => i.CreatedAt <= endTime.Value);
+
+        // Pagination
+        var skip = (pageNumber - 1) * pageSize;
+        var result = query
+            .OrderByDescending(i => i.CreatedAt)
+            .Skip(skip)
+            .Take(pageSize)
+            .ToList();
+
+        logger.LogDebug(
+            "GetJobInstancesAsync: Returned {Count} instances (Page {PageNumber}, Size {PageSize})",
+            result.Count,
+            pageNumber,
+            pageSize);
+
+        return Task.FromResult(result);
+    }
+
+    public Task<int> GetJobInstancesCountAsync(
+        string? jobKey = null,
+        JobState? stateFilter = null,
+        DateTime? startTime = null,
+        DateTime? endTime = null,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var query = _instances.Values.AsEnumerable();
+
+        if (!string.IsNullOrEmpty(jobKey))
+            query = query.Where(i => i.JobKey.Contains(jobKey, StringComparison.OrdinalIgnoreCase));
+
+        if (stateFilter.HasValue)
+            query = query.Where(i => i.State == stateFilter.Value);
+
+        if (startTime.HasValue)
+            query = query.Where(i => i.CreatedAt >= startTime.Value);
+
+        if (endTime.HasValue)
+            query = query.Where(i => i.CreatedAt <= endTime.Value);
+
+        var count = query.Count();
+
+        logger.LogDebug("GetJobInstancesCountAsync: Total count = {Count}", count);
+
+        return Task.FromResult(count);
+    }
+
+    #endregion
 }

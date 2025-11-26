@@ -88,4 +88,46 @@ public interface IMoJobScheduleMetadataStore
         CancellationToken cancellationToken = default);
 
     #endregion
+
+    #region Advanced Queries for UI
+
+    /// <summary>
+    /// Retrieves job instances with advanced filtering and pagination.
+    /// Results are ordered by CreatedAt descending (most recent first).
+    /// </summary>
+    /// <param name="jobKey">Optional job key filter (fuzzy match).</param>
+    /// <param name="stateFilter">Optional state filter.</param>
+    /// <param name="startTime">Optional start time filter (inclusive).</param>
+    /// <param name="endTime">Optional end time filter (inclusive).</param>
+    /// <param name="pageNumber">Page number (1-based).</param>
+    /// <param name="pageSize">Page size.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>List of job instances matching the criteria.</returns>
+    Task<List<JobInstance>> GetJobInstancesAsync(
+        string? jobKey = null,
+        JobState? stateFilter = null,
+        DateTime? startTime = null,
+        DateTime? endTime = null,
+        int pageNumber = 1,
+        int pageSize = 20,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the total count of job instances matching the filter criteria.
+    /// Used for pagination calculations.
+    /// </summary>
+    /// <param name="jobKey">Optional job key filter (fuzzy match).</param>
+    /// <param name="stateFilter">Optional state filter.</param>
+    /// <param name="startTime">Optional start time filter (inclusive).</param>
+    /// <param name="endTime">Optional end time filter (inclusive).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Total count of matching instances.</returns>
+    Task<int> GetJobInstancesCountAsync(
+        string? jobKey = null,
+        JobState? stateFilter = null,
+        DateTime? startTime = null,
+        DateTime? endTime = null,
+        CancellationToken cancellationToken = default);
+
+    #endregion
 }
