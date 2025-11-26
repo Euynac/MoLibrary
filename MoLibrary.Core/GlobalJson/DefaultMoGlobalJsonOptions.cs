@@ -29,9 +29,6 @@ public class DefaultMoGlobalJsonOptions : IGlobalJsonOption
     ];
     public static readonly string OutputDateTimeFormat = "yyyy-MM-dd HH:mm:ss";
 
-    //.NET 6后 TimeZoneInfo的ID 支持跨平台自动转换
-    public static TimeZoneInfo CurTimeZoneInfo => TimeExtensions.LocalTimeZoneInfo;
-
     /// <summary>
     /// 统一标准化从外部传入的时间
     /// 巨坑：2024-08-08T03:27:05+08:00格式的 MVC序列化会自动转化为Kind为UTC的DateTime。

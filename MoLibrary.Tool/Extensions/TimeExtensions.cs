@@ -59,11 +59,11 @@ public class BaseTimeInterval(TimeSpan thresholdLeft, TimeSpan thresholdRight, D
 #endregion
 public static class TimeExtensions
 {
-
-    public static readonly TimeZoneInfo LocalTimeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById("China Standard Time");
+    //.NET 6后 TimeZoneInfo的ID 支持跨平台自动转换
+    public static TimeZoneInfo LocalTimeZoneInfo { get; set; } = TimeZoneInfo.FindSystemTimeZoneById("China Standard Time");
 
     /// <summary>
-    /// Combine given date and time to datetime.
+    /// Combine given date and time to datetime.    
     /// </summary>
     /// <param name="timeOnly"></param>
     /// <param name="dateOnly"></param>
@@ -82,21 +82,6 @@ public static class TimeExtensions
     {
         return dateOnly?.ToDateTime(timeOnly);
     }
-    /// <summary>
-    /// Convert given local date  to UTC  datetime.
-    /// </summary>
-    /// <param name="localDateOnly"></param>
-    /// <returns></returns>
-    public static DateTime FromLocalToUtc(this DateOnly localDateOnly) => localDateOnly.ToDateTime(TimeOnly.MinValue).FromLocalToUtc();
-
-    /// <summary>
-    /// Convert given UTC date  to local datetime.
-    /// </summary>
-    /// <param name="utcDateOnly"></param>
-    /// <returns></returns>
-    public static DateTime FromUtcToLocal(this DateOnly utcDateOnly) => utcDateOnly.ToDateTime(TimeOnly.MinValue).FromUtcToLocal();
-
-    public static DateTime FromUtcToLocal(this DateOnly utcDateOnly, TimeOnly localTimeOnly) => utcDateOnly.ToDateTime(localTimeOnly).FromUtcToLocal();
 
     public static TimeOnly FromLocalToUtc(this TimeOnly localTimeOnly)
     {
@@ -133,12 +118,6 @@ public static class TimeExtensions
     public static DateTime? FromUtcToLocal(this DateTime? utcDateTime) =>
         utcDateTime == null ? null : FromUtcToLocal(utcDateTime.Value);
 
-    /// <summary>
-    /// Convert utc datetime to local DateOnly. (Disregard the kind of given datetime)
-    /// </summary>
-    /// <param name="dateTime"></param>
-    /// <returns></returns>
-    public static DateTime FromUtcToLocalDateOnly(this DateTime dateTime) => dateTime.FromUtcToLocal().ToDateOnly().FromLocalToUtc();
 
     /// <summary>
     /// Convert given local time to UTC time. (Disregard the kind of given datetime)
