@@ -167,7 +167,7 @@ public class InMemoryCancellationManager(ILogger<InMemoryCancellationManager> lo
             tokenSource.Dispose();
         }
 
-        logger.LogInformation("Deleted token for key: {Key}", key);
+        logger.LogDebug("Deleted token for key: {Key}", key);
         return Task.CompletedTask;
     }
 

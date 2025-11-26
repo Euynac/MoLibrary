@@ -1,3 +1,4 @@
+using System.Text;
 using MoLibrary.JobScheduler.Jobs;
 
 namespace MoLibrary.JobScheduler.Models;
@@ -54,7 +55,9 @@ public class JobInstance
     
     /// <summary>
     /// Gets or sets the state change history.
-    /// Each line represents a state transition in the format: [yyyy-MM-dd HH:mm:ss] [oldstate->newstate] message
+    /// Uses line-prefix format where each entry starts with ">>> " followed by metadata:
+    /// >>> [yyyy-MM-dd HH:mm:ss] [oldstate->newstate] optional message
+    /// Multi-line messages (like stack traces) continue on following lines without the ">>> " prefix.
     /// </summary>
     public string? StateHistory { get; set; }
 
@@ -111,23 +114,25 @@ public class JobInstance
                 break;
         }
         
-        // Append state history if message is provided
-        if (!string.IsNullOrEmpty(message))
-        {
-            AppendStateHistory(currentState, newState, message, now);
-        }
+        // Always append state history for complete audit trail
+        AppendStateHistory(currentState, newState, message, now);
     }
 
     /// <summary>
-    /// Appends a state change record to the state history.
+    /// Appends a state change record to the state history using line-prefix format.
+    /// Format: >>> [timestamp] [oldstate->newstate] optional message
+    /// Multi-line messages continue on subsequent lines without the prefix.
     /// </summary>
     /// <param name="oldState">The previous state.</param>
     /// <param name="newState">The new state.</param>
-    /// <param name="message">The message to record.</param>
+    /// <param name="message">Optional message to record. Can be null or multi-line.</param>
     /// <param name="timestamp">The timestamp of the state change.</param>
-    private void AppendStateHistory(JobState oldState, JobState newState, string message, DateTime timestamp)
+    private void AppendStateHistory(JobState oldState, JobState newState, string? message, DateTime timestamp)
     {
-        var historyEntry = $"[{timestamp:yyyy-MM-dd HH:mm:ss}] [{oldState}->{newState}] {message}";
+        var header = $">>> [{timestamp:yyyy-MM-dd HH:mm:ss}] [{oldState}->{newState}]";
+        var historyEntry = string.IsNullOrEmpty(message)
+            ? header
+            : $"{header} {message}";
 
         if (string.IsNullOrEmpty(StateHistory))
         {
@@ -141,6 +146,7 @@ public class JobInstance
 
     /// <summary>
     /// Parses the state history string into a list of structured records.
+    /// Handles line-prefix format where entries start with ">>> ".
     /// </summary>
     /// <returns>A list of state history records, or an empty list if no history exists.</returns>
     public List<StateHistoryRecord> GetStateHistoryRecords()
@@ -151,11 +157,11 @@ public class JobInstance
         }
 
         var records = new List<StateHistoryRecord>();
-        var lines = StateHistory.Split([Environment.NewLine, "\n"], StringSplitOptions.RemoveEmptyEntries);
+        var entries = SplitIntoEntries(StateHistory);
 
-        foreach (var line in lines)
+        foreach (var entry in entries)
         {
-            if (TryParseHistoryLine(line, out var record))
+            if (TryParseHistoryEntry(entry, out var record))
             {
                 records.Add(record);
             }
@@ -165,25 +171,77 @@ public class JobInstance
     }
 
     /// <summary>
-    /// Attempts to parse a single history line into a StateHistoryRecord.
+    /// Splits the state history into individual entries based on the ">>> " line prefix.
+    /// Each entry may contain multiple lines if the message is multi-line.
     /// </summary>
-    /// <param name="line">The line to parse.</param>
+    /// <param name="history">The complete state history string.</param>
+    /// <returns>A list of individual entry strings.</returns>
+    private static List<string> SplitIntoEntries(string history)
+    {
+        var entries = new List<string>();
+        var lines = history.Split(["\r\n", "\n"], StringSplitOptions.None);
+        var currentEntry = new StringBuilder();
+
+        foreach (var line in lines)
+        {
+            if (line.StartsWith(">>>"))
+            {
+                // Start of new entry - save previous if exists
+                if (currentEntry.Length > 0)
+                {
+                    entries.Add(currentEntry.ToString().TrimEnd());
+                    currentEntry.Clear();
+                }
+                currentEntry.AppendLine(line);
+            }
+            else if (currentEntry.Length > 0)
+            {
+                // Continuation line for current entry
+                currentEntry.AppendLine(line);
+            }
+        }
+
+        // Add final entry
+        if (currentEntry.Length > 0)
+        {
+            entries.Add(currentEntry.ToString().TrimEnd());
+        }
+
+        return entries;
+    }
+
+    /// <summary>
+    /// Attempts to parse a single history entry into a StateHistoryRecord.
+    /// Handles multi-line entries where the first line has metadata and subsequent lines are message continuation.
+    /// </summary>
+    /// <param name="entry">The entry to parse (may contain multiple lines).</param>
     /// <param name="record">The parsed record, if successful.</param>
     /// <returns>True if parsing succeeded, false otherwise.</returns>
-    private static bool TryParseHistoryLine(string line, out StateHistoryRecord record)
+    private static bool TryParseHistoryEntry(string entry, out StateHistoryRecord record)
     {
         record = null!;
 
-        // Expected format: [yyyy-MM-dd HH:mm:ss] [oldstate->newstate] message
-        // Find the closing bracket of timestamp
-        var timestampEnd = line.IndexOf(']');
-        if (timestampEnd < 0)
+        // Entry format:
+        // >>> [timestamp] [oldstate->newstate] optional message
+        // continuation line 1
+        // continuation line 2
+
+        var lines = entry.Split(["\r\n", "\n"], StringSplitOptions.None);
+        if (lines.Length == 0 || !lines[0].StartsWith(">>>"))
         {
             return false;
         }
 
-        // Extract timestamp
-        var timestampStr = line[1..timestampEnd];
+        var firstLine = lines[0][4..]; // Skip ">>> "
+
+        // Parse timestamp
+        var timestampEnd = firstLine.IndexOf(']');
+        if (timestampEnd < 0 || firstLine[0] != '[')
+        {
+            return false;
+        }
+
+        var timestampStr = firstLine[1..timestampEnd];
         if (!DateTime.TryParseExact(timestampStr, "yyyy-MM-dd HH:mm:ss",
                 System.Globalization.CultureInfo.InvariantCulture,
                 System.Globalization.DateTimeStyles.AssumeUniversal,
@@ -192,16 +250,15 @@ public class JobInstance
             return false;
         }
 
-        // Find the state transition part
-        var stateStart = line.IndexOf('[', timestampEnd + 1);
-        var stateEnd = line.IndexOf(']', stateStart + 1);
+        // Parse state transition
+        var stateStart = firstLine.IndexOf('[', timestampEnd);
+        var stateEnd = firstLine.IndexOf(']', stateStart + 1);
         if (stateStart < 0 || stateEnd < 0)
         {
             return false;
         }
 
-        // Extract and parse state transition
-        var stateTransition = line[(stateStart + 1)..stateEnd];
+        var stateTransition = firstLine[(stateStart + 1)..stateEnd];
         var states = stateTransition.Split("->", StringSplitOptions.TrimEntries);
         if (states.Length != 2)
         {
@@ -214,9 +271,28 @@ public class JobInstance
             return false;
         }
 
-        // Extract message (everything after the second closing bracket and space)
-        var message = line[(stateEnd + 1)..].TrimStart();
+        // Extract message (rest of first line + all continuation lines)
+        var messageBuilder = new StringBuilder();
+        var firstLineMessage = stateEnd + 1 < firstLine.Length
+            ? firstLine[(stateEnd + 1)..].TrimStart()
+            : "";
 
+        if (!string.IsNullOrEmpty(firstLineMessage))
+        {
+            messageBuilder.Append(firstLineMessage);
+        }
+
+        // Add continuation lines
+        for (int i = 1; i < lines.Length; i++)
+        {
+            if (messageBuilder.Length > 0)
+            {
+                messageBuilder.AppendLine();
+            }
+            messageBuilder.Append(lines[i]);
+        }
+
+        var message = messageBuilder.ToString();
         record = new StateHistoryRecord(timestamp, oldState, newState, message);
         return true;
     }
@@ -267,5 +343,16 @@ public class JobInstance
 
             _ => false
         };
+    }
+
+    /// <summary>
+    /// Returns a string representation of the job instance.
+    /// </summary>
+    /// <returns>A string containing key information about the job instance.</returns>
+    public override string ToString()
+    {
+        var retryInfo = RetryAttempt > 0 ? $" (Retry: {RetryAttempt})" : "";
+        var clientInfo = !string.IsNullOrEmpty(RunningClientId) ? $" [{RunningClientId}]" : "";
+        return $"JobInstance[{InstanceId}] {JobKey} - {State}{retryInfo}{clientInfo}";
     }
 }

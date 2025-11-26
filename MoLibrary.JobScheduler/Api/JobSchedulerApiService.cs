@@ -36,7 +36,7 @@ public class JobSchedulerApiService(
     /// </summary>
     public async Task<string> CreateJobInstanceAsync(
         string jobKey,
-        string? parameters,
+        object? jobArgs,
         CancellationToken cancellationToken = default)
     {
         logger.LogInformation("API: CreateJobInstance requested for {JobKey}", jobKey);

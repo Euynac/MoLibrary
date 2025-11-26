@@ -32,11 +32,13 @@ public class ModuleClock(ModuleClockOption option) : MoModule<ModuleClock, Modul
         var targetTimeZone = Option.ConfiguredTimeZone ?? TimeZoneInfo.Local;
         TimeExtensions.LocalTimeZoneInfo = targetTimeZone;
 
-        Logger.LogInformation(
+        Logger.LogWarning(
             "Clock module timezone set to: {TimeZoneId} (Display: {DisplayName}, Offset: {BaseUtcOffset})",
             targetTimeZone.Id,
             targetTimeZone.DisplayName,
             targetTimeZone.BaseUtcOffset);
+        Logger.LogWarning("Current system local timezone(TimeZoneInfo.Local): {timezone}", TimeZoneInfo.Local);
+        
     }
 }
 
