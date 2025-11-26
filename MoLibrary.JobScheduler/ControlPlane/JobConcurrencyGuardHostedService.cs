@@ -260,7 +260,7 @@ public class JobConcurrencyGuardHostedService(
 
             if (removed)
             {
-                logger.LogInformation(
+                logger.LogDebug(
                     "Job {JobKey} instance {InstanceId} completed with state {FinalState}, current executing: {Current}/{Max}",
                     evt.JobKey,
                     evt.InstanceId,
@@ -316,7 +316,7 @@ public class JobConcurrencyGuardHostedService(
                     await instanceManager.UpdateStateAsync(
                         orphaned.InstanceId,
                         JobState.Failed,
-                        errorMessage: $"Worker instance {evt.InstanceId} went offline at {evt.OfflineTime:yyyy-MM-dd HH:mm:ss} UTC");
+                        message: $"Worker instance {evt.InstanceId} went offline at {evt.OfflineTime:yyyy-MM-dd HH:mm:ss} UTC");
 
                     logger.LogWarning(
                         "Marked orphaned job instance {InstanceId} (job {JobKey}) as Failed due to worker {WorkerId} offline",

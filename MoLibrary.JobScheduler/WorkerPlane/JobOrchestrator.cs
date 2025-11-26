@@ -206,7 +206,7 @@ public class JobOrchestrator(
             // Dispose scope
             scope?.Dispose();
 
-            logger.LogInformation(
+            logger.LogDebug(
                 "Completed execution lifecycle for job {JobKey} instance {InstanceId}",
                 instance.JobKey,
                 instance.InstanceId);

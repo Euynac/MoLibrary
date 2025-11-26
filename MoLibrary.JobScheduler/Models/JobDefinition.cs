@@ -121,4 +121,22 @@ public class JobDefinition
     [NotMapped]
     [JsonIgnore]
     public Type? JobArgsClrType { get; set; }
+
+    /// <summary>
+    /// Returns a string representation of the job definition.
+    /// </summary>
+    /// <returns>A string containing key information about the job definition.</returns>
+    public override string ToString()
+    {
+        var statusFlags = new List<string>();
+        if (IsDisabled) statusFlags.Add("Disabled");
+        if (IsDeleted) statusFlags.Add("Deleted");
+        var flags = statusFlags.Count > 0 ? $" [{string.Join(", ", statusFlags)}]" : "";
+
+        var typeInfo = JobType == JobType.Recurring && !string.IsNullOrEmpty(CronExpression)
+            ? $"{JobType} ({CronExpression})"
+            : JobType.ToString();
+
+        return $"JobDefinition[{JobKey}] {JobName} ({typeInfo}){flags}";
+    }
 }

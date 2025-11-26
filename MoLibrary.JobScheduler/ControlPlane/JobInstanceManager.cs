@@ -65,14 +65,14 @@ public class JobInstanceManager(
     /// </summary>
     /// <param name="instanceId">The instance ID to update.</param>
     /// <param name="newState">The new state to transition to.</param>
-    /// <param name="errorMessage">Optional error message for failed states.</param>
+    /// <param name="message">Optional message to record with state transition.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <param name="clientId">The worker instance ID (required when newState is Processing).</param>
     /// <exception cref="InvalidOperationException">Thrown when the state transition is invalid.</exception>
     public async Task UpdateStateAsync(
         string instanceId,
         JobState newState,
-        string? errorMessage = null,
+        string? message = null,
         CancellationToken cancellationToken = default,
         string? clientId = null)
     {
@@ -84,7 +84,7 @@ public class JobInstanceManager(
         }
 
         var currentState = instance.State;
-        instance.UpdateStateAsync(newState, errorMessage, clientId);
+        instance.UpdateStateAsync(newState, message, clientId);
         await metadataStore.SaveJobInstanceAsync(instance, cancellationToken);
 
         logger.LogDebug(
