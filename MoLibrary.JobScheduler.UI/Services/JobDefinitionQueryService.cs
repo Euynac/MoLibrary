@@ -1,4 +1,6 @@
+using Cronos;
 using Microsoft.Extensions.Logging;
+using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Api;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.JobScheduler.UI.Models;
@@ -11,6 +13,7 @@ namespace MoLibrary.JobScheduler.UI.Services;
 /// </summary>
 public class JobDefinitionQueryService(
     JobSchedulerApiService apiService,
+    IMoJobScheduleMetadataStore metadataStore,
     ILogger<JobDefinitionQueryService> logger)
 {
     public async Task<ResPaged<JobDefinition>> GetJobDefinitionsAsync(
@@ -59,6 +62,119 @@ public class JobDefinitionQueryService(
         {
             logger.LogError(ex, "Failed to get job definition {JobKey}", jobKey);
             return Res.Fail($"Failed to get job definition: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 获取带有上次执行信息的作业定义列表
+    /// </summary>
+    public async Task<ResPaged<JobDefinitionWithLastExecution>> GetJobDefinitionsWithLastExecutionAsync(
+        JobDefinitionFilterRequest filter,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var definitionsResult = await apiService.GetJobDefinitionsAsync(
+                filter.FromProject,
+                filter.JobKey,
+                filter.JobName,
+                filter.JobType,
+                filter.PageNumber,
+                filter.PageSize,
+                cancellationToken);
+
+            if (definitionsResult.Code != ResponseCode.Ok || definitionsResult.Data == null)
+            {
+                return Res.Fail($"Failed to query job definitions: {definitionsResult.Message}");
+            }
+
+            var enhancedJobs = new List<JobDefinitionWithLastExecution>();
+
+            foreach (var definition in definitionsResult.Data.Items ?? [])
+            {
+                var enhanced = new JobDefinitionWithLastExecution
+                {
+                    Definition = definition
+                };
+
+                // 获取上次执行实例
+                var lastInstance = await GetLastExecutionInstanceAsync(definition.JobKey, cancellationToken);
+                enhanced.LastExecution = lastInstance;
+
+                // 计算下次执行时间（仅针对 RecurringJob）
+                if (definition.JobType == JobType.Recurring && !string.IsNullOrEmpty(definition.CronExpression))
+                {
+                    enhanced.NextExecutionTime = CalculateNextExecutionTime(definition.CronExpression, definition.StartTime, definition.EndTime);
+                }
+
+                enhancedJobs.Add(enhanced);
+            }
+
+            return new ResPaged<JobDefinitionWithLastExecution>(
+                definitionsResult.Data.Sum ?? 0,
+                enhancedJobs,
+                filter.PageNumber,
+                filter.PageSize);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to query job definitions with last execution");
+            return Res.Fail($"Failed to query job definitions: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 获取指定作业的上次执行实例
+    /// </summary>
+    private async Task<JobInstance?> GetLastExecutionInstanceAsync(string jobKey, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var instances = await metadataStore.GetJobInstancesAsync(
+                jobKey: jobKey,
+                stateFilter: null,
+                startTime: null,
+                endTime: null,
+                pageNumber: 1,
+                pageSize: 1,
+                cancellationToken: cancellationToken);
+
+            return instances.FirstOrDefault();
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to get last execution for job {JobKey}", jobKey);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// 计算 RecurringJob 的下次执行时间
+    /// </summary>
+    private DateTime? CalculateNextExecutionTime(string cronExpression, DateTime? startTime, DateTime? endTime)
+    {
+        try
+        {
+            var cron = CronExpression.Parse(cronExpression, CronFormat.IncludeSeconds);
+            var now = DateTime.UtcNow;
+
+            // 如果有开始时间限制，使用开始时间和当前时间中较晚的时间
+            var fromTime = startTime.HasValue && startTime.Value > now ? startTime.Value : now;
+
+            var nextOccurrence = cron.GetNextOccurrence(fromTime, TimeZoneInfo.Utc);
+
+            // 检查是否超过结束时间
+            if (nextOccurrence.HasValue && endTime.HasValue && nextOccurrence.Value > endTime.Value)
+            {
+                return null;
+            }
+
+            return nextOccurrence;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to calculate next execution time for cron expression: {CronExpression}", cronExpression);
+            return null;
         }
     }
 }

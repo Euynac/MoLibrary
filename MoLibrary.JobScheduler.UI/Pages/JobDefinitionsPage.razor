@@ -9,7 +9,7 @@
     <!-- 筛选器 -->
     <MudPaper Class="pa-4 mb-4" Elevation="2">
         <MudGrid Spacing="2">
-            <MudItem xs="12" sm="6" md="3">
+            <MudItem xs="12" sm="6" md="4">
                 <MudTextField T="string"
                               @bind-Value="_filterFromProject"
                               Label="来源项目"
@@ -18,7 +18,7 @@
                               Immediate="true"
                               OnClearButtonClick="HandleFilterChanged" />
             </MudItem>
-            <MudItem xs="12" sm="6" md="3">
+            <MudItem xs="12" sm="6" md="4">
                 <MudTextField T="string"
                               @bind-Value="_filterJobKey"
                               Label="作业键"
@@ -27,7 +27,7 @@
                               Immediate="true"
                               OnClearButtonClick="HandleFilterChanged" />
             </MudItem>
-            <MudItem xs="12" sm="6" md="3">
+            <MudItem xs="12" sm="6" md="4">
                 <MudTextField T="string"
                               @bind-Value="_filterJobName"
                               Label="作业名称"
@@ -35,18 +35,6 @@
                               Clearable="true"
                               Immediate="true"
                               OnClearButtonClick="HandleFilterChanged" />
-            </MudItem>
-            <MudItem xs="12" sm="6" md="3">
-                <MudSelect T="JobType?"
-                           @bind-Value="_filterJobType"
-                           Label="作业类型"
-                           Variant="Variant.Outlined"
-                           Clearable="true"
-                           OnClearButtonClick="HandleFilterChanged">
-                    <MudSelectItem T="JobType?" Value="@((JobType?)null)">全部</MudSelectItem>
-                    <MudSelectItem T="JobType?" Value="@JobType.Recurring">Recurring</MudSelectItem>
-                    <MudSelectItem T="JobType?" Value="@JobType.Triggered">Triggered</MudSelectItem>
-                </MudSelect>
             </MudItem>
             <MudItem xs="12" Class="d-flex justify-end">
                 <MudButton Variant="Variant.Filled"
@@ -66,125 +54,271 @@
         </MudGrid>
     </MudPaper>
 
-    <!-- 数据表格 -->
-    <MudTable @ref="_table"
-              T="JobDefinition"
-              ServerData="LoadDataAsync"
-              Hover="true"
-              Striped="true"
-              Elevation="2">
-        <ToolBarContent>
-            <MudText Typo="Typo.h6">作业列表</MudText>
-            <MudSpacer />
-            <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                           Color="Color.Primary"
-                           OnClick="RefreshAsync" />
-        </ToolBarContent>
-        <HeaderContent>
-            <MudTh>来源项目</MudTh>
-            <MudTh>作业键</MudTh>
-            <MudTh>作业名称</MudTh>
-            <MudTh>作业类型</MudTh>
-            <MudTh>状态</MudTh>
-            <MudTh>操作</MudTh>
-        </HeaderContent>
-        <RowTemplate>
-            <MudTd DataLabel="来源项目">@context.FromProject</MudTd>
-            <MudTd DataLabel="作业键">@context.JobKey</MudTd>
-            <MudTd DataLabel="作业名称">@context.JobName</MudTd>
-            <MudTd DataLabel="作业类型">
-                <MudChip T="string" Size="Size.Small" Color="@GetJobTypeColor(context.JobType)">
-                    @context.JobType
-                </MudChip>
-            </MudTd>
-            <MudTd DataLabel="状态">
-                <MudChip T="string" Size="Size.Small" Color="@GetDisabledStateColor(context.IsDisabled)">
-                    @(context.IsDisabled ? "已禁用" : "启用")
-                </MudChip>
-            </MudTd>
-            <MudTd DataLabel="操作">
-                <MudStack Row="true" Spacing="1">
-                    @if (context.JobType == JobType.Recurring && !context.IsDisabled)
-                    {
-                        <MudTooltip Text="禁用">
-                            <MudIconButton Icon="@Icons.Material.Filled.Pause"
-                                           Color="Color.Warning"
-                                           Size="Size.Small"
-                                           OnClick="() => DisableJobAsync(context.JobKey)" />
-                        </MudTooltip>
-                    }
-                    @if (context.JobType == JobType.Triggered)
-                    {
-                        <MudTooltip Text="执行">
-                            <MudIconButton Icon="@Icons.Material.Filled.PlayCircle"
-                                           Color="Color.Primary"
-                                           Size="Size.Small"
-                                           OnClick="() => ExecuteJobAsync(context.JobKey)" />
-                        </MudTooltip>
-                    }
-                    <MudTooltip Text="详情">
-                        <MudIconButton Icon="@Icons.Material.Filled.Info"
-                                       Color="Color.Info"
-                                       Size="Size.Small"
-                                       OnClick="() => NavigateToDetail(context.JobKey)" />
-                    </MudTooltip>
-                </MudStack>
-            </MudTd>
-        </RowTemplate>
-        <NoRecordsContent>
-            <MudText>没有找到匹配的作业定义</MudText>
-        </NoRecordsContent>
-        <LoadingContent>
-            <MudProgressCircular Indeterminate="true" />
-        </LoadingContent>
-        <PagerContent>
-            <MudTablePager PageSizeOptions="new int[] { 10, 20, 50, 100 }" />
-        </PagerContent>
-    </MudTable>
+    <!-- Tabs -->
+    <MudTabs @bind-ActivePanelIndex="_activeTabIndex"
+             Elevation="2"
+             Rounded="true"
+             ApplyEffectsToContainer="true"
+             PanelClass="pa-6">
+        <MudTabPanel Text="RecurringJob" Icon="@Icons.Material.Filled.Schedule">
+            <MudTable @ref="_recurringTable"
+                      T="JobDefinitionWithLastExecution"
+                      ServerData="LoadRecurringJobsAsync"
+                      Hover="true"
+                      Striped="true"
+                      Elevation="0">
+                <ToolBarContent>
+                    <MudText Typo="Typo.h6">周期性作业</MudText>
+                    <MudSpacer />
+                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                   Color="Color.Primary"
+                                   OnClick="RefreshRecurringJobsAsync" />
+                </ToolBarContent>
+                <HeaderContent>
+                    <MudTh>来源项目</MudTh>
+                    <MudTh>作业键</MudTh>
+                    <MudTh>作业名称</MudTh>
+                    <MudTh>Cron表达式</MudTh>
+                    <MudTh>下次执行时间</MudTh>
+                    <MudTh>上次执行时间</MudTh>
+                    <MudTh>状态</MudTh>
+                    <MudTh>操作</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="来源项目">@context.Definition.FromProject</MudTd>
+                    <MudTd DataLabel="作业键">@context.Definition.JobKey</MudTd>
+                    <MudTd DataLabel="作业名称">@context.Definition.JobName</MudTd>
+                    <MudTd DataLabel="Cron表达式">
+                        <MudText Typo="Typo.body2" Class="font-monospace">@context.Definition.CronExpression</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="下次执行时间">
+                        @if (context.NextExecutionTime.HasValue)
+                        {
+                            <MudText Typo="Typo.body2">@context.NextExecutionTime.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">-</MudText>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="上次执行时间">
+                        @if (context.LastExecution != null)
+                        {
+                            <div class="last-execution-wrapper">
+                                <MudChip T="string"
+                                         Size="Size.Small"
+                                         Color="@GetLastExecutionColor(context.LastExecution.State)"
+                                         OnClick="@(() => NavigateToInstance(context.LastExecution.InstanceId))"
+                                         Class="clickable-execution-time">
+                                    @context.LastExecution.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")
+                                </MudChip>
+                            </div>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">-</MudText>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="状态">
+                        <MudChip T="string" Size="Size.Small" Color="@GetDisabledStateColor(context.Definition.IsDisabled)">
+                            @(context.Definition.IsDisabled ? "已禁用" : "启用")
+                        </MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="操作">
+                        <MudStack Row="true" Spacing="1">
+                            @if (context.Definition.IsDisabled)
+                            {
+                                <MudTooltip Text="继续">
+                                    <MudIconButton Icon="@Icons.Material.Filled.PlayArrow"
+                                                   Color="Color.Success"
+                                                   Size="Size.Small"
+                                                   OnClick="() => ResumeJobAsync(context.Definition.JobKey)" />
+                                </MudTooltip>
+                            }
+                            else
+                            {
+                                <MudTooltip Text="暂停">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Pause"
+                                                   Color="Color.Warning"
+                                                   Size="Size.Small"
+                                                   OnClick="() => PauseJobAsync(context.Definition.JobKey)" />
+                                </MudTooltip>
+                            }
+                            <MudTooltip Text="详情">
+                                <MudIconButton Icon="@Icons.Material.Filled.Info"
+                                               Color="Color.Info"
+                                               Size="Size.Small"
+                                               OnClick="() => NavigateToDetail(context.Definition.JobKey)" />
+                            </MudTooltip>
+                        </MudStack>
+                    </MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    <MudText>没有找到匹配的周期性作业</MudText>
+                </NoRecordsContent>
+                <LoadingContent>
+                    <MudProgressCircular Indeterminate="true" />
+                </LoadingContent>
+                <PagerContent>
+                    <MudTablePager PageSizeOptions="new int[] { 10, 20, 50, 100 }" />
+                </PagerContent>
+            </MudTable>
+        </MudTabPanel>
+
+        <MudTabPanel Text="TriggerJob" Icon="@Icons.Material.Filled.TouchApp">
+            <MudTable @ref="_triggerTable"
+                      T="JobDefinitionWithLastExecution"
+                      ServerData="LoadTriggerJobsAsync"
+                      Hover="true"
+                      Striped="true"
+                      Elevation="0">
+                <ToolBarContent>
+                    <MudText Typo="Typo.h6">触发型作业</MudText>
+                    <MudSpacer />
+                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                   Color="Color.Primary"
+                                   OnClick="RefreshTriggerJobsAsync" />
+                </ToolBarContent>
+                <HeaderContent>
+                    <MudTh>来源项目</MudTh>
+                    <MudTh>作业键</MudTh>
+                    <MudTh>作业名称</MudTh>
+                    <MudTh>上次执行时间</MudTh>
+                    <MudTh>操作</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="来源项目">@context.Definition.FromProject</MudTd>
+                    <MudTd DataLabel="作业键">@context.Definition.JobKey</MudTd>
+                    <MudTd DataLabel="作业名称">@context.Definition.JobName</MudTd>
+                    <MudTd DataLabel="上次执行时间">
+                        @if (context.LastExecution != null)
+                        {
+                            <div class="last-execution-wrapper">
+                                <MudChip T="string"
+                                         Size="Size.Small"
+                                         Color="@GetLastExecutionColor(context.LastExecution.State)"
+                                         OnClick="@(() => NavigateToInstance(context.LastExecution.InstanceId))"
+                                         Class="clickable-execution-time">
+                                    @context.LastExecution.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")
+                                </MudChip>
+                            </div>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">-</MudText>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="操作">
+                        <MudStack Row="true" Spacing="1">
+                            <MudTooltip Text="执行">
+                                <MudIconButton Icon="@Icons.Material.Filled.PlayCircle"
+                                               Color="Color.Primary"
+                                               Size="Size.Small"
+                                               OnClick="() => ExecuteJobAsync(context.Definition.JobKey)" />
+                            </MudTooltip>
+                            <MudTooltip Text="详情">
+                                <MudIconButton Icon="@Icons.Material.Filled.Info"
+                                               Color="Color.Info"
+                                               Size="Size.Small"
+                                               OnClick="() => NavigateToDetail(context.Definition.JobKey)" />
+                            </MudTooltip>
+                        </MudStack>
+                    </MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    <MudText>没有找到匹配的触发型作业</MudText>
+                </NoRecordsContent>
+                <LoadingContent>
+                    <MudProgressCircular Indeterminate="true" />
+                </LoadingContent>
+                <PagerContent>
+                    <MudTablePager PageSizeOptions="new int[] { 10, 20, 50, 100 }" />
+                </PagerContent>
+            </MudTable>
+        </MudTabPanel>
+    </MudTabs>
 </MudContainer>
 
 @code {
     public const string PAGE_URL = "/job-scheduler/definitions";
 
-    private MudTable<JobDefinition>? _table;
+    private MudTable<JobDefinitionWithLastExecution>? _recurringTable;
+    private MudTable<JobDefinitionWithLastExecution>? _triggerTable;
+    private int _activeTabIndex = 0;
 
     private string? _filterFromProject;
     private string? _filterJobKey;
     private string? _filterJobName;
-    private JobType? _filterJobType;
 
-    private async Task<TableData<JobDefinition>> LoadDataAsync(TableState state, CancellationToken cancellationToken)
+    private async Task<TableData<JobDefinitionWithLastExecution>> LoadRecurringJobsAsync(TableState state, CancellationToken cancellationToken)
     {
         var filter = new JobDefinitionFilterRequest
         {
             FromProject = _filterFromProject,
             JobKey = _filterJobKey,
             JobName = _filterJobName,
-            JobType = _filterJobType,
+            JobType = JobType.Recurring,
             PageNumber = state.Page + 1,
             PageSize = state.PageSize
         };
 
-        var result = await UIService.GetJobDefinitionsAsync(filter, cancellationToken);
+        var result = await UIService.GetJobDefinitionsWithLastExecutionAsync(filter, cancellationToken);
 
         if (result.Code != ResponseCode.Ok || result.Data == null)
         {
             Snackbar.Add($"加载失败: {result.Message}", Severity.Error);
-            return new TableData<JobDefinition> { Items = Array.Empty<JobDefinition>(), TotalItems = 0 };
+            return new TableData<JobDefinitionWithLastExecution> { Items = Array.Empty<JobDefinitionWithLastExecution>(), TotalItems = 0 };
         }
 
-        return new TableData<JobDefinition>
+        return new TableData<JobDefinitionWithLastExecution>
         {
-            Items = result.Data.Items ?? Array.Empty<JobDefinition>(),
+            Items = result.Data.Items ?? Array.Empty<JobDefinitionWithLastExecution>(),
+            TotalItems = result.Data.Sum ?? 0
+        };
+    }
+
+    private async Task<TableData<JobDefinitionWithLastExecution>> LoadTriggerJobsAsync(TableState state, CancellationToken cancellationToken)
+    {
+        var filter = new JobDefinitionFilterRequest
+        {
+            FromProject = _filterFromProject,
+            JobKey = _filterJobKey,
+            JobName = _filterJobName,
+            JobType = JobType.Triggered,
+            PageNumber = state.Page + 1,
+            PageSize = state.PageSize
+        };
+
+        var result = await UIService.GetJobDefinitionsWithLastExecutionAsync(filter, cancellationToken);
+
+        if (result.Code != ResponseCode.Ok || result.Data == null)
+        {
+            Snackbar.Add($"加载失败: {result.Message}", Severity.Error);
+            return new TableData<JobDefinitionWithLastExecution> { Items = Array.Empty<JobDefinitionWithLastExecution>(), TotalItems = 0 };
+        }
+
+        return new TableData<JobDefinitionWithLastExecution>
+        {
+            Items = result.Data.Items ?? Array.Empty<JobDefinitionWithLastExecution>(),
             TotalItems = result.Data.Sum ?? 0
         };
     }
 
     private async Task HandleFilterChanged()
     {
-        if (_table != null)
+        if (_activeTabIndex == 0)
         {
-            await _table.ReloadServerData();
+            if (_recurringTable != null)
+            {
+                await _recurringTable.ReloadServerData();
+            }
+        }
+        else
+        {
+            if (_triggerTable != null)
+            {
+                await _triggerTable.ReloadServerData();
+            }
         }
     }
 
@@ -193,29 +327,50 @@
         _filterFromProject = null;
         _filterJobKey = null;
         _filterJobName = null;
-        _filterJobType = null;
         _ = HandleFilterChanged();
     }
 
-    private async Task RefreshAsync()
+    private async Task RefreshRecurringJobsAsync()
     {
-        if (_table != null)
+        if (_recurringTable != null)
         {
-            await _table.ReloadServerData();
+            await _recurringTable.ReloadServerData();
         }
     }
 
-    private async Task DisableJobAsync(string jobKey)
+    private async Task RefreshTriggerJobsAsync()
+    {
+        if (_triggerTable != null)
+        {
+            await _triggerTable.ReloadServerData();
+        }
+    }
+
+    private async Task PauseJobAsync(string jobKey)
     {
         var result = await UIService.PauseJobAsync(jobKey);
         if (result.Code == ResponseCode.Ok)
         {
-            Snackbar.Add($"作业 {jobKey} 已禁用", Severity.Success);
-            await RefreshAsync();
+            Snackbar.Add($"作业 {jobKey} 已暂停", Severity.Success);
+            await RefreshRecurringJobsAsync();
         }
         else
         {
-            Snackbar.Add($"禁用失败: {result.Message}", Severity.Error);
+            Snackbar.Add($"暂停失败: {result.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ResumeJobAsync(string jobKey)
+    {
+        var result = await UIService.ResumeJobAsync(jobKey);
+        if (result.Code == ResponseCode.Ok)
+        {
+            Snackbar.Add($"作业 {jobKey} 已继续", Severity.Success);
+            await RefreshRecurringJobsAsync();
+        }
+        else
+        {
+            Snackbar.Add($"继续失败: {result.Message}", Severity.Error);
         }
     }
 
@@ -237,18 +392,27 @@
         NavigationManager.NavigateTo($"/job-scheduler/definitions/{Uri.EscapeDataString(jobKey)}");
     }
 
-    private Color GetJobTypeColor(JobType jobType)
+    private void NavigateToInstance(string instanceId)
     {
-        return jobType switch
-        {
-            JobType.Recurring => Color.Primary,
-            JobType.Triggered => Color.Secondary,
-            _ => Color.Default
-        };
+        NavigationManager.NavigateTo($"/job-scheduler/instances/{Uri.EscapeDataString(instanceId)}");
     }
 
     private Color GetDisabledStateColor(bool isDisabled)
     {
         return isDisabled ? Color.Warning : Color.Success;
+    }
+
+    private Color GetLastExecutionColor(JobState state)
+    {
+        return state switch
+        {
+            JobState.Succeeded => Color.Success,
+            JobState.Failed => Color.Error,
+            JobState.Terminated => Color.Error,
+            JobState.Cancelled => Color.Warning,
+            JobState.Skipped => Color.Secondary,
+            JobState.Processing => Color.Info,
+            _ => Color.Default
+        };
     }
 }

@@ -6,6 +6,7 @@ using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.JobScheduler.Abstractions;
+using MoLibrary.JobScheduler.Api;
 using MoLibrary.JobScheduler.Attributes;
 using MoLibrary.JobScheduler.Cache;
 using MoLibrary.JobScheduler.ControlPlane;
@@ -78,6 +79,7 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
         }
 
         services.AddSingleton<JobExecutor>();
+        services.AddSingleton<JobSchedulerApiService>();
         services.AddSingleton<JobRegistry>();
         services.AddSingleton<JobInstanceManager>();
         services.AddSingleton<JobDispatcher>();
