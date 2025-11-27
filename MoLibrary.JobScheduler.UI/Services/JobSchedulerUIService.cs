@@ -27,6 +27,11 @@ public class JobSchedulerUIService(
         CancellationToken cancellationToken = default)
         => definitionQuery.GetJobDefinitionAsync(jobKey, cancellationToken);
 
+    public Task<ResPaged<JobDefinitionWithLastExecution>> GetJobDefinitionsWithLastExecutionAsync(
+        JobDefinitionFilterRequest filter,
+        CancellationToken cancellationToken = default)
+        => definitionQuery.GetJobDefinitionsWithLastExecutionAsync(filter, cancellationToken);
+
     // Job Instance Operations
     public Task<ResPaged<JobInstance>> GetJobInstancesAsync(
         JobInstanceFilterRequest filter,

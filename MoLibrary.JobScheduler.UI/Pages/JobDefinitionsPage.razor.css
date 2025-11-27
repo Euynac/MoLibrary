@@ -1,0 +1,17 @@
+.last-execution-wrapper ::deep .clickable-execution-time {
+    cursor: pointer;
+    transition: transform 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.last-execution-wrapper ::deep .clickable-execution-time:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.last-execution-wrapper ::deep .clickable-execution-time:active {
+    transform: translateY(0);
+}
+
+.font-monospace {
+    font-family: 'Courier New', Courier, monospace;
+}
