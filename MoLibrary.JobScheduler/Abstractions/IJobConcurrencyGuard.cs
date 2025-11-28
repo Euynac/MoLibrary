@@ -14,6 +14,31 @@ public interface IJobConcurrencyGuard
     Task<bool> CanExecuteJobAsync(string jobKey, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Atomically checks concurrency and reserves a slot using local lock.
+    /// This method MUST be called within the control plane's dispatch logic.
+    /// </summary>
+    /// <param name="jobKey">The job definition key</param>
+    /// <param name="instanceId">The job instance ID to reserve for</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>True if reservation succeeded, false otherwise</returns>
+    Task<bool> TryReserveExecutionSlotAsync(
+        string jobKey,
+        string instanceId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Releases a reserved slot when job execution is cancelled before starting.
+    /// This is called when event publishing fails after reservation.
+    /// </summary>
+    /// <param name="jobKey">The job definition key</param>
+    /// <param name="instanceId">The job instance ID to release</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    Task ReleaseReservedSlotAsync(
+        string jobKey,
+        string instanceId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets the current number of executing instances for a specific job
     /// </summary>
     /// <param name="jobKey">The job definition key</param>
