@@ -1,5 +1,6 @@
 @attribute [Route(PAGE_URL)]
 @inject JobSchedulerUIService UIService
+@inject JobStateColorService ColorService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
@@ -53,7 +54,7 @@
                 </MudItem>
                 <MudItem xs="12" sm="6" md="4">
                     <MudText Typo="Typo.caption" Color="Color.Secondary">状态</MudText>
-                    <MudChip T="string" Size="Size.Small" Color="@GetStateColor(_jobInstance.State)">
+                    <MudChip T="string" Size="Size.Small" Color="@ColorService.GetStateColor(_jobInstance.State)">
                         @_jobInstance.State
                     </MudChip>
                 </MudItem>
@@ -169,21 +170,6 @@
         {
             NavigationManager.NavigateTo($"/job-scheduler/definitions/{Uri.EscapeDataString(_jobInstance.JobKey)}");
         }
-    }
-
-    private Color GetStateColor(JobState state)
-    {
-        return state switch
-        {
-            JobState.Succeeded => Color.Success,
-            JobState.Failed => Color.Error,
-            JobState.Terminated => Color.Error,
-            JobState.Cancelled => Color.Warning,
-            JobState.Processing => Color.Primary,
-            JobState.Enqueued => Color.Info,
-            JobState.Scheduled => Color.Default,
-            _ => Color.Default
-        };
     }
 
     private string FormatDuration(TimeSpan duration)

@@ -1,5 +1,6 @@
 @attribute [Route(PAGE_URL)]
 @inject JobSchedulerUIService UIService
+@inject JobStateColorService ColorService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
@@ -137,7 +138,7 @@
                             </MudText>
                         </MudTd>
                         <MudTd DataLabel="状态">
-                            <MudChip T="string" Size="Size.Small" Color="@GetStateColor(context.State)">
+                            <MudChip T="string" Size="Size.Small" Color="@ColorService.GetStateColor(context.State)">
                                 @context.State
                             </MudChip>
                         </MudTd>
@@ -331,21 +332,6 @@
     private Color GetDisabledStateColor(bool isDisabled)
     {
         return isDisabled ? Color.Warning : Color.Success;
-    }
-
-    private Color GetStateColor(JobState state)
-    {
-        return state switch
-        {
-            JobState.Succeeded => Color.Success,
-            JobState.Failed => Color.Error,
-            JobState.Terminated => Color.Error,
-            JobState.Cancelled => Color.Warning,
-            JobState.Processing => Color.Primary,
-            JobState.Enqueued => Color.Info,
-            JobState.Scheduled => Color.Default,
-            _ => Color.Default
-        };
     }
 
     private string FormatDuration(TimeSpan duration)
