@@ -1,4 +1,5 @@
 @inject JobSchedulerUIService UIService
+@inject JobStateColorService ColorService
 @inject NavigationManager NavigationManager
 
 <MudCard Elevation="2">
@@ -79,7 +80,7 @@
                     {
                         <MudStack Row="true" Justify="Justify.SpaceBetween">
                             <MudText Typo="Typo.body2">最后执行状态</MudText>
-                            <MudChip T="string" Size="Size.Small" Color="@GetStateColor(_statistics.LastExecutionState.Value)">
+                            <MudChip T="string" Size="Size.Small" Color="@ColorService.GetStateColor(_statistics.LastExecutionState.Value)">
                                 @_statistics.LastExecutionState.Value
                             </MudChip>
                         </MudStack>
@@ -154,19 +155,6 @@
         if (timeSpan.TotalSeconds >= 1)
             return $"{timeSpan.TotalSeconds:F2}s";
         return $"{timeSpan.TotalMilliseconds:F0}ms";
-    }
-
-    private Color GetStateColor(JobState state)
-    {
-        return state switch
-        {
-            JobState.Succeeded => Color.Success,
-            JobState.Failed => Color.Error,
-            JobState.Terminated => Color.Error,
-            JobState.Cancelled => Color.Warning,
-            JobState.Processing => Color.Primary,
-            _ => Color.Default
-        };
     }
 
     private void NavigateToAllInstances()
