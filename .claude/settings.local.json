@@ -37,7 +37,12 @@
       "mcp__spec-workflow__approvals",
       "Bash(dotnet --version:*)",
       "Bash(dotnet restore:*)",
-      "Bash(dotnet clean:*)"
+      "Bash(dotnet clean:*)",
+      "Bash(tree:*)",
+      "mcp__puppeteer__puppeteer_navigate",
+      "mcp__puppeteer__puppeteer_screenshot",
+      "mcp__puppeteer__puppeteer_hover",
+      "mcp__puppeteer__puppeteer_evaluate"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"
@@ -48,7 +53,6 @@
     "browsermcp",
     "puppeteer",
     "microsoft_docs_mcp",
-    "word-document-server",
     "spec-workflow"
   ]
 }

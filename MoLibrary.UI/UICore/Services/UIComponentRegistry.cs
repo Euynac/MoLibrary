@@ -60,6 +60,7 @@ public class UIComponentRegistry : IUIComponentRegistry
                 Text = displayName,
                 Href = route,
                 Icon = icon,
+                Category = category,
                 Order = navOrder,
                 NavLinkMatch = navLinkMatch
             };

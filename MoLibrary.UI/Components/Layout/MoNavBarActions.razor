@@ -1,0 +1,48 @@
+@using MoLibrary.UI.Services
+@inject MoUserContextService UserContext
+
+<div class="navbar-actions">
+    <!-- 搜索按钮 -->
+    <MudIconButton Icon="@Icons.Material.Filled.Search"
+                   Color="Color.Default"
+                   Size="Size.Medium"
+                   Class="action-button"
+                   OnClick="OpenSearch"
+                   Title="搜索 (Ctrl+K)" />
+
+    <!-- 通知按钮 -->
+    <MudIconButton Icon="@Icons.Material.Filled.Notifications"
+                   Color="Color.Default"
+                   Size="Size.Medium"
+                   Class="action-button"
+                   Title="通知" />
+
+    <!-- 主题选择器 -->
+    <MoThemeSelector />
+
+    <!-- 用户菜单 -->
+    <MudMenu AnchorOrigin="Origin.BottomRight"
+             TransformOrigin="Origin.TopRight"
+             Class="user-menu">
+        <ActivatorContent>
+            <MudButton Variant="Variant.Text"
+                      Class="user-button"
+                      StartIcon="@Icons.Material.Filled.AccountCircle">
+                <span class="user-name">@UserContext.UserName</span>
+            </MudButton>
+        </ActivatorContent>
+        <ChildContent>
+            <MudMenuItem Icon="@Icons.Material.Filled.Person">个人资料</MudMenuItem>
+            <MudMenuItem Icon="@Icons.Material.Filled.Settings">设置</MudMenuItem>
+            <MudDivider />
+            <MudMenuItem Icon="@Icons.Material.Filled.Logout">退出登录</MudMenuItem>
+        </ChildContent>
+    </MudMenu>
+</div>
+
+@code {
+    private void OpenSearch()
+    {
+        // TODO: 实现全局搜索对话框
+    }
+}
