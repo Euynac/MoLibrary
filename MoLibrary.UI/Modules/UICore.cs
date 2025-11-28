@@ -101,6 +101,9 @@ public class ModuleUICore(ModuleUICoreOption option)
         // 注册主题服务
         services.AddSingleton<MoThemeService>();
 
+        // 注册用户上下文服务
+        services.AddScoped<MoUserContextService>();
+
         // 注册通用Controller调用器
         services.AddScoped(typeof(IUIControllerInvoker<>), typeof(UIControllerInvokerHttpClientProvider<>));
     }
@@ -208,5 +211,15 @@ public class ModuleUICoreOption : MoModuleOption<ModuleUICore>
     /// 启用Markdown支持
     /// </summary>
     public bool EnableMarkdown { get; set; }
+
+    /// <summary>
+    /// 顶部导航栏显示的最大分类数量（超出部分放入"更多"菜单）
+    /// </summary>
+    public int MaxVisibleCategories { get; set; } = 4;
+
+    /// <summary>
+    /// 是否启用导航栏搜索功能
+    /// </summary>
+    public bool EnableNavBarSearch { get; set; } = true;
 
 }

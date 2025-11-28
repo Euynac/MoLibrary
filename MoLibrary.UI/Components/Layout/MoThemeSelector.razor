@@ -2,12 +2,12 @@
 @inject MoThemeService ThemeService
 @inject IDialogService DialogService
 
-<MudIconButton Icon="@Icons.Material.Filled.Palette" 
-               Color="Color.Primary" 
-               Variant="Variant.Filled"
-               Size="Size.Small"
-               Class="mo-theme-selector-btn"
-               OnClick="OpenThemeDialog" />
+<MudIconButton Icon="@Icons.Material.Filled.Palette"
+               Color="Color.Primary"
+               Size="Size.Medium"
+               Class="action-button"
+               OnClick="OpenThemeDialog"
+               Title="主题设置" />
 
 @code {
     private async Task OpenThemeDialog()

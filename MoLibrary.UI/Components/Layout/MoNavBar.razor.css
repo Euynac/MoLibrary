@@ -1,0 +1,77 @@
+.mo-navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 64px;
+    background: linear-gradient(
+        135deg,
+        var(--mud-palette-surface) 0%,
+        var(--mud-palette-background-gray) 100%
+    );
+    border-bottom: 1px solid var(--mud-palette-divider);
+    box-shadow: var(--mud-elevation-4);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 32px;
+    z-index: 1000;
+    backdrop-filter: blur(10px);
+}
+
+.navbar-nav {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    gap: 4px;
+    height: 100%;
+}
+
+/* 主题适配 */
+[data-theme*="light"] .mo-navbar {
+    background: linear-gradient(
+        135deg,
+        var(--mud-palette-surface) 0%,
+        var(--mud-palette-background-gray) 100%
+    );
+}
+
+[data-theme*="dark"] .mo-navbar {
+    background: linear-gradient(
+        135deg,
+        var(--mud-palette-surface) 0%,
+        var(--mud-palette-background) 100%
+    );
+}
+
+/* 动画关键帧 */
+@keyframes dropdownFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes flyoutSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}

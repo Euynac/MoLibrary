@@ -25,13 +25,6 @@
 /* 如需创建新主题，可以创建新的CSS文件并在此引入 */
 /* @import url('./themes/mo-theme-custom.css'); */
 
-/* 全局样式重置和增强 */
-* {
-    transition-property: background-color, border-color, color, fill, stroke;
-    transition-duration: var(--mo-transition-normal, 300ms);
-    transition-timing-function: ease-in-out;
-}
-
 /* 防止过渡动画影响性能的元素 */
 .mud-table *,
 .mud-data-grid *,

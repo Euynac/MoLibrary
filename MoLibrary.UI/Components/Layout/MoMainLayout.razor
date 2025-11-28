@@ -12,23 +12,19 @@
     <MudPopoverProvider />
     <MudDialogProvider />
     <MudSnackbarProvider />
-    <div class="mo-main-container @GetMainContainerClass()">
-        <!-- 左侧固定导航栏卡片 -->
-        <div class="mo-sidebar-container">
-            <MudPaper Class="mo-sidebar-card" Elevation="3">
-                <MoSidebar @bind-IsExpanded="_sidebarExpanded" />
-            </MudPaper>
-        </div>
-        
-        <!-- 右侧内容卡片 -->
-        <div class="mo-content-container @GetContentContainerClass()">
-            <MudPaper Class="mo-content-card" Elevation="2">
+
+    <div class="mo-layout" data-theme="@ThemeService.GetThemeDataAttribute()">
+        <!-- 顶部导航栏 -->
+        <MoNavBar />
+
+        <!-- 主内容区（全宽） -->
+        <div class="mo-main-content">
+            <main class="mo-body-content">
                 @Body
-            </MudPaper>
+            </main>
         </div>
     </div>
 </MoThemeProvider>
-
 
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.
@@ -37,8 +33,6 @@
 </div>
 
 @code {
-    private bool _sidebarExpanded = false;
-
     protected override void OnInitialized()
     {
         base.OnInitialized();
@@ -53,16 +47,6 @@
     private void HandleThemeChanged()
     {
         InvokeAsync(StateHasChanged);
-    }
-
-    private string GetMainContainerClass()
-    {
-        return _sidebarExpanded ? "sidebar-expanded" : "sidebar-collapsed";
-    }
-
-    private string GetContentContainerClass()
-    {
-        return _sidebarExpanded ? "content-with-expanded-sidebar" : "content-with-collapsed-sidebar";
     }
 }
 
