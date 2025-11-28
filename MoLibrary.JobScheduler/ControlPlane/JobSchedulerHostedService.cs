@@ -108,17 +108,28 @@ public class JobSchedulerHostedService(
     
     /// <summary>
     /// Schedules a recurring job using its cron expression.
+    /// Thread-safe: Disposes old timer before creating new one to prevent leaks.
     /// </summary>
-    private void ScheduleRecurringJob(JobDefinition definition)
+    /// <param name="definition">Job definition to schedule</param>
+    /// <param name="lastOccurrence">Last occurrence time (used when rescheduling to ensure we get the next occurrence)</param>
+    private void ScheduleRecurringJob(JobDefinition definition, DateTime? lastOccurrence = null)
     {
         try
         {
             // Parse cron expression (with seconds support)
             var cronExpression = CronExpression.Parse(definition.CronExpression, CronFormat.IncludeSeconds);
 
-            // Calculate next occurrence
+            // Calculate next occurrence with minimum buffer to avoid timer accumulation
+            // IMPORTANT: Add 100ms buffer to current time to prevent dueTime from being too small
             var now = DateTime.UtcNow;
-            var nextOccurrence = cronExpression.GetNextOccurrence(now, TimeZoneInfo.Utc);
+            var baseTime = now.AddMilliseconds(100);
+            var nextOccurrence = cronExpression.GetNextOccurrence(baseTime, TimeZoneInfo.Utc);
+
+            // If rescheduling and next occurrence is same as last, advance by 1ms to get exact next occurrence
+            if (lastOccurrence.HasValue && nextOccurrence.HasValue && nextOccurrence.Value == lastOccurrence.Value)
+            {
+                nextOccurrence = cronExpression.GetNextOccurrence(lastOccurrence.Value.AddMilliseconds(1), TimeZoneInfo.Utc);
+            }
 
             if (!nextOccurrence.HasValue)
             {
@@ -129,15 +140,18 @@ public class JobSchedulerHostedService(
                 return;
             }
 
-            var dueTime = nextOccurrence.Value - now;
+            var dueTime = nextOccurrence.Value - now + TimeSpan.FromMilliseconds(1);
+            
             if (dueTime < TimeSpan.Zero)
             {
                 dueTime = TimeSpan.Zero;
             }
 
+
+            // Ensure minimum delay to prevent timer accumulation
             // Create timer for next occurrence
             var timer = new Timer(
-                _ => OnRecurringJobTimerCallback(definition.JobKey),
+                _ => OnRecurringJobTimerCallback(definition.JobKey, nextOccurrence.Value),
                 null,
                 dueTime,
                 Timeout.InfiniteTimeSpan); // One-shot timer
@@ -295,8 +309,11 @@ public class JobSchedulerHostedService(
     /// <summary>
     /// Timer callback for recurring job execution.
     /// </summary>
-    private async void OnRecurringJobTimerCallback(string jobKey)
+    /// <param name="jobKey">Job key</param>
+    /// <param name="scheduledOccurrence">The occurrence time this timer was scheduled for</param>
+    private async void OnRecurringJobTimerCallback(string jobKey, DateTime scheduledOccurrence)
     {
+        Thread.Sleep(1);
         try
         {
             var definition = await GetValidatedRecurringJobAsync(jobKey);
@@ -304,7 +321,7 @@ public class JobSchedulerHostedService(
             {
                 return;
             }
-            
+
             // Create instance and publish event
             var instance = await jobInstanceManager.CreateInstanceAsync(
                 definition,
@@ -318,8 +335,8 @@ public class JobSchedulerHostedService(
 
             await jobDispatcher.PublishJobExecutionEventAsync(instance, definition, null);
 
-            // Reschedule for next occurrence
-            ScheduleRecurringJob(definition);
+            // Reschedule for next occurrence, passing the scheduled occurrence to ensure we get the next one
+            ScheduleRecurringJob(definition, scheduledOccurrence);
         }
         catch (Exception ex)
         {

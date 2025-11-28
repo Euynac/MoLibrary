@@ -193,6 +193,82 @@ public class JobConcurrencyGuardHostedService(
         }
     }
 
+    public async Task<bool> TryReserveExecutionSlotAsync(
+        string jobKey,
+        string instanceId,
+        CancellationToken cancellationToken = default)
+    {
+        if (!_statistics.TryGetValue(jobKey, out var statistic))
+        {
+            logger.LogWarning("Job {JobKey} not found in concurrency guard statistics", jobKey);
+            return false;
+        }
+
+        // Get job-specific lock to ensure thread-safety
+        var semaphore = _jobLocks.GetOrAdd(jobKey, _ => new SemaphoreSlim(1, 1));
+        await semaphore.WaitAsync(cancellationToken);
+
+        try
+        {
+            if (!statistic.CanExecute)
+            {
+                logger.LogWarning(
+                    "Job {JobKey} instance {InstanceId} exceeded MaxConcurrency: {Current}/{Max}",
+                    jobKey,
+                    instanceId,
+                    statistic.CurrentExecutingCount,
+                    statistic.MaxConcurrency);
+                return false;
+            }
+
+            // Reserve the slot
+            statistic.ReserveSlot(instanceId);
+
+            logger.LogDebug(
+                "Reserved execution slot for job {JobKey} instance {InstanceId}: {Current}/{Max}",
+                jobKey,
+                instanceId,
+                statistic.CurrentExecutingCount,
+                statistic.MaxConcurrency);
+
+            return true;
+        }
+        finally
+        {
+            semaphore.Release();
+        }
+    }
+
+    public async Task ReleaseReservedSlotAsync(
+        string jobKey,
+        string instanceId,
+        CancellationToken cancellationToken = default)
+    {
+        if (!_statistics.TryGetValue(jobKey, out var statistic))
+        {
+            return;
+        }
+
+        var semaphore = _jobLocks.GetOrAdd(jobKey, _ => new SemaphoreSlim(1, 1));
+        await semaphore.WaitAsync(cancellationToken);
+
+        try
+        {
+            var released = statistic.ReleaseReservation(instanceId);
+            if (released)
+            {
+                logger.LogDebug(
+                    "Released reserved slot for job {JobKey} instance {InstanceId}",
+                    jobKey,
+                    instanceId);
+            }
+        }
+        finally
+        {
+            semaphore.Release();
+        }
+    }
+
     public Task<int> GetCurrentExecutingCountAsync(string jobKey, CancellationToken cancellationToken = default)
     {
         if (_statistics.TryGetValue(jobKey, out var statistic))
@@ -219,12 +295,15 @@ public class JobConcurrencyGuardHostedService(
 
         try
         {
-            statistic.AddInstance(new RunningJobInfo
+            var info = new RunningJobInfo
             {
                 InstanceId = evt.InstanceId,
                 WorkerClientId = evt.WorkerClientId,
                 StartedAt = evt.StartedAt
-            });
+            };
+
+            // Confirm reservation (move from pending to running)
+            statistic.ConfirmReservation(evt.InstanceId, info);
 
             logger.LogDebug(
                 "Job {JobKey} instance {InstanceId} started on worker {WorkerId}, current executing: {Current}/{Max}",
@@ -337,5 +416,71 @@ public class JobConcurrencyGuardHostedService(
             "Cleaned up {OrphanedCount} orphaned job instances from offline worker {InstanceId}",
             orphanedCount,
             evt.InstanceId);
+    }
+
+    protected override Task OnAfterInitialization(CancellationToken cancellationToken)
+    {
+        // Start background cleanup task for stale reservations
+        _ = Task.Run(async () =>
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                try
+                {
+                    await Task.Delay(TimeSpan.FromMinutes(1), cancellationToken);
+                    await CleanupStaleReservationsAsync(cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Error in concurrency guard background cleanup");
+                }
+            }
+        }, cancellationToken);
+
+        return Task.CompletedTask;
+    }
+
+    private async Task CleanupStaleReservationsAsync(CancellationToken cancellationToken)
+    {
+        var staleThreshold = DateTime.UtcNow.AddMinutes(-5); // 5 minutes
+        var cleanupCount = 0;
+
+        foreach (var (jobKey, statistic) in _statistics)
+        {
+            var semaphore = _jobLocks.GetOrAdd(jobKey, _ => new SemaphoreSlim(1, 1));
+            await semaphore.WaitAsync(cancellationToken);
+
+            try
+            {
+                var staleIds = statistic.PendingReservations
+                    .Where(r => r.Value < staleThreshold)
+                    .Select(r => r.Key)
+                    .ToList();
+
+                foreach (var instanceId in staleIds)
+                {
+                    statistic.ReleaseReservation(instanceId);
+                    cleanupCount++;
+
+                    logger.LogWarning(
+                        "Cleaned up stale reservation: job {JobKey}, instance {InstanceId}",
+                        jobKey,
+                        instanceId);
+                }
+            }
+            finally
+            {
+                semaphore.Release();
+            }
+        }
+
+        if (cleanupCount > 0)
+        {
+            logger.LogInformation("Cleaned up {Count} stale reservations", cleanupCount);
+        }
     }
 }
