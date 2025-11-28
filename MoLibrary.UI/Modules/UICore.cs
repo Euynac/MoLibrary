@@ -198,6 +198,11 @@ public class ModuleUICoreOption : MoModuleOption<ModuleUICore>
     public string UIAppBarName { get; set; } = nameof(MoLibrary);
 
     /// <summary>
+    /// 应用版本号
+    /// </summary>
+    public string UIAppVersion { get; set; } = "v1.0";
+
+    /// <summary>
     /// 禁用模块系统UI界面
     /// </summary>
     public bool DisableModuleSystemUI { get; set; }

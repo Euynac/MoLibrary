@@ -155,7 +155,7 @@ public class JobDefinitionQueryService(
     {
         try
         {
-            var cron = CronExpression.Parse(cronExpression, CronFormat.IncludeSeconds);
+            var cron = CronExpression.Parse(cronExpression, Cronos.CronFormat.IncludeSeconds);
             var now = DateTime.UtcNow;
 
             // 如果有开始时间限制，使用开始时间和当前时间中较晚的时间
