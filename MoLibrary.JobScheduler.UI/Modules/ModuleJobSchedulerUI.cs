@@ -30,6 +30,7 @@ public class ModuleJobSchedulerUI(ModuleJobSchedulerUIOption option)
         services.AddSingleton<JobStatisticsService>();
         services.AddSingleton<JobHealthMetricsService>();
         services.AddSingleton<JobStateColorService>();
+        services.AddSingleton<CronExpressionService>();
 
         // 注册 Scoped 门面服务（Blazor Circuit）
         services.AddScoped<JobSchedulerUIService>();

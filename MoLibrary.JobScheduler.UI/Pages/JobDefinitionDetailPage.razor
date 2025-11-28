@@ -77,8 +77,16 @@
                 @if (!string.IsNullOrEmpty(_jobDefinition.CronExpression))
                 {
                     <MudItem xs="12" sm="6">
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">Cron表达式</MudText>
-                        <MudText Typo="Typo.body1" Style="font-family: monospace;">@_jobDefinition.CronExpression</MudText>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <div>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Cron表达式</MudText>
+                                <MudText Typo="Typo.body1" Style="font-family: monospace;">@_jobDefinition.CronExpression</MudText>
+                            </div>
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                           Color="Color.Primary"
+                                           Size="Size.Small"
+                                           OnClick="OpenCronEditorDialog" />
+                        </MudStack>
                     </MudItem>
                 }
             </MudGrid>
@@ -343,5 +351,32 @@
         if (duration.TotalSeconds >= 1)
             return $"{duration.TotalSeconds:F2}s";
         return $"{duration.TotalMilliseconds:F0}ms";
+    }
+
+    private async Task OpenCronEditorDialog()
+    {
+        if (_jobDefinition == null) return;
+
+        var parameters = new DialogParameters<CronEditorDialog>
+        {
+            { x => x.JobDefinition, _jobDefinition }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            CloseButton = true,
+            BackdropClick = true
+        };
+
+        var dialog = await DialogService.ShowAsync<CronEditorDialog>("编辑 Cron 表达式", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            // 刷新页面数据
+            await LoadJobDefinitionAsync();
+        }
     }
 }
