@@ -1,11 +1,3 @@
-.stack-trace-message {
-    background-color: var(--mud-palette-error-lighten);
-    border-left: 4px solid var(--mud-palette-error);
-    padding: 8px;
-    margin-top: 4px;
-    border-radius: 4px;
-}
-
 .normal-message {
     background-color: var(--mud-palette-background-gray);
     border-left: 4px solid var(--mud-palette-divider);
