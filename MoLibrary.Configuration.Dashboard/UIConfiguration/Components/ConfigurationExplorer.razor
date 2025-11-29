@@ -49,6 +49,7 @@
         <MudItem xs="3">
             <MudPaper Class="pa-2 config-navigation-panel">
                 <MudText Typo="Typo.h6" Class="mb-3">配置导航</MudText>
+                <div class="nav-menu-wrapper">
                 <MudNavMenu>
                     @foreach (var domain in FilteredConfigs)
                     {
@@ -66,6 +67,7 @@
                         </div>
                     }
                 </MudNavMenu>
+                </div>
             </MudPaper>
         </MudItem>
         

@@ -39,13 +39,15 @@
                                     else
                                     {
                                         <!-- 普通消息，保持原有显示方式 -->
-                                        <MudPaper Elevation="0"
-                                                  Class="normal-message">
-                                            <MudText Typo="Typo.body2"
-                                                     Style="white-space: pre-wrap; font-family: monospace; font-size: 0.85rem;">
-                                                @record.Message
-                                            </MudText>
-                                        </MudPaper>
+                                        <div class="normal-message-wrapper">
+                                            <MudPaper Elevation="0"
+                                                      Class="normal-message">
+                                                <MudText Typo="Typo.body2"
+                                                         Style="white-space: pre-wrap; font-family: monospace; font-size: 0.85rem;">
+                                                    @record.Message
+                                                </MudText>
+                                            </MudPaper>
+                                        </div>
                                     }
                                 }
                             </MudStack>

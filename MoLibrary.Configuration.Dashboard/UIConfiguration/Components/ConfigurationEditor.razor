@@ -6,8 +6,9 @@
 
 <MudDialog Options="@_dialogOptions">
     <DialogContent>
+        <div class="configuration-editor-wrapper">
         <MudContainer Style="max-width: 900px; padding: 0;">
-            
+
             <!-- Simplified Configuration Info -->
             <MudGrid Class="mb-4">
                 <!-- Provider Info -->
@@ -109,8 +110,9 @@
                 </MudAlert>
             }
         </MudContainer>
+        </div>
     </DialogContent>
-    
+
     <DialogActions>
         <MudButton OnClick="Cancel" Class="mr-2">取消</MudButton>
         <MudButton Color="Color.Primary" 

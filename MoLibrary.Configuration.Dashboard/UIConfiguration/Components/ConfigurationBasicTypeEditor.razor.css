@@ -20,19 +20,19 @@
     justify-content: center;
 }
 
-.configuration-basic-type-editor .mud-input-root {
+.configuration-basic-type-editor ::deep .mud-input-root {
     margin-bottom: 8px;
 }
 
-.configuration-basic-type-editor .mud-switch {
+.configuration-basic-type-editor ::deep .mud-switch {
     margin: 8px 0;
 }
 
-.configuration-basic-type-editor .mud-select {
+.configuration-basic-type-editor ::deep .mud-select {
     min-width: 200px;
 }
 
-.configuration-basic-type-editor .mud-picker {
+.configuration-basic-type-editor ::deep .mud-picker {
     width: 100%;
 }
 
@@ -41,7 +41,7 @@
     background-color: rgba(255, 193, 7, 0.1);
 }
 
-.modified-input .mud-input-control {
+.modified-input ::deep .mud-input-control {
     background-color: rgba(255, 193, 7, 0.1);
 }
 
