@@ -1,0 +1,308 @@
+/* 堆栈跟踪查看器样式 */
+
+/* 整体容器 */
+.stack-trace-container {
+    background-color: var(--mud-palette-surface-variant);
+    border-left: 4px solid var(--mud-palette-error);
+    border-radius: 4px;
+    padding: 12px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--mud-palette-text-primary);
+    overflow-x: auto;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* 异常头部 */
+.exception-header {
+    margin-bottom: 8px;
+    padding: 8px;
+    background-color: color-mix(in srgb, var(--mud-palette-error) 10%, transparent);
+    border-radius: 3px;
+    word-break: break-word;
+}
+
+.exception-type {
+    font-weight: 700;
+    color: var(--mud-palette-error);
+    margin-right: 4px;
+}
+
+.exception-message {
+    color: var(--mud-palette-text-primary);
+}
+
+/* 单条堆栈帧 */
+.stack-frame {
+    margin: 6px 0;
+    padding: 6px;
+    border-radius: 2px;
+    word-break: break-word;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+}
+
+.stack-frame:hover {
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 5%, transparent);
+}
+
+.frame-prefix {
+    color: var(--mud-palette-text-secondary);
+    user-select: none;
+}
+
+.namespace {
+    color: var(--mud-palette-text-secondary);
+}
+
+.class-name {
+    color: var(--mud-palette-text-secondary);
+}
+
+/* 方法名高亮（橙色背景） */
+.method-name {
+    background-color: var(--mud-palette-warning);
+    color: white;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 3px;
+    display: inline-block;
+    transition: all 0.2s ease;
+}
+
+.method-name:hover {
+    background-color: color-mix(in srgb, var(--mud-palette-warning) 80%, black);
+    transform: brightness(0.85);
+}
+
+/* 参数列表 */
+.parameters {
+    color: var(--mud-palette-text-secondary);
+}
+
+/* 文件信息 */
+.file-info {
+    color: var(--mud-palette-text-secondary);
+}
+
+/* 文件路径（目录部分） */
+.file-path-dir {
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.9em;
+}
+
+/* 文件名高亮（蓝色背景） */
+.file-name {
+    background-color: var(--mud-palette-info);
+    color: white;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 3px;
+    display: inline-block;
+    transition: all 0.2s ease;
+}
+
+.file-name:hover {
+    background-color: color-mix(in srgb, var(--mud-palette-info) 80%, black);
+    transform: brightness(0.85);
+}
+
+/* 行号高亮（绿色背景） */
+.line-number {
+    background-color: var(--mud-palette-success);
+    color: white;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 3px;
+    display: inline-block;
+    transition: all 0.2s ease;
+}
+
+.line-number:hover {
+    background-color: color-mix(in srgb, var(--mud-palette-success) 80%, black);
+    transform: brightness(0.85);
+}
+
+/* 内部异常标题 */
+.inner-exception-header {
+    margin: 12px 0 8px 0;
+    padding: 8px;
+    background-color: color-mix(in srgb, var(--mud-palette-warning) 15%, transparent);
+    border-left: 4px solid var(--mud-palette-warning);
+    border-radius: 3px;
+}
+
+/* 内部异常标签 */
+.inner-exception-label {
+    color: var(--mud-palette-text-primary);
+    font-weight: 500;
+}
+
+/* 内部异常结束标记 */
+.inner-exception-end {
+    color: var(--mud-palette-warning);
+    font-weight: 500;
+    font-style: italic;
+}
+
+/* 普通文本行 */
+.plain-text-line {
+    margin: 4px 0;
+    padding: 4px;
+    color: var(--mud-palette-text-secondary);
+    border-left: 2px solid var(--mud-palette-divider);
+    padding-left: 8px;
+}
+
+/* 解析错误提示 */
+.parse-error {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 12px;
+    background-color: color-mix(in srgb, var(--mud-palette-error) 15%, transparent);
+    border: 1px solid var(--mud-palette-error-lighten);
+    border-radius: 4px;
+    margin-bottom: 12px;
+}
+
+.error-icon {
+    font-size: 1.2rem;
+    color: var(--mud-palette-error);
+    flex-shrink: 0;
+    line-height: 1.2;
+}
+
+.error-message {
+    color: var(--mud-palette-error);
+    word-break: break-word;
+    line-height: 1.4;
+}
+
+/* 降级显示的原始文本 */
+.fallback-text {
+    margin-top: 8px;
+    padding: 12px;
+    background-color: var(--mud-palette-background-grey);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 4px;
+    overflow-x: auto;
+}
+
+.fallback-text pre {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.8rem;
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--mud-palette-text-primary);
+}
+
+/* 空消息提示 */
+.empty-message {
+    padding: 12px;
+    text-align: center;
+    color: var(--mud-palette-text-secondary);
+    font-style: italic;
+}
+
+/* 滚动条样式 */
+.stack-trace-container::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.stack-trace-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.stack-trace-container::-webkit-scrollbar-thumb {
+    background: var(--mud-palette-text-disabled);
+    border-radius: 3px;
+}
+
+.stack-trace-container::-webkit-scrollbar-thumb:hover {
+    background: var(--mud-palette-text-secondary);
+}
+
+/* 文本选择样式 */
+.stack-trace-container ::selection {
+    background-color: var(--mud-palette-primary-lighten);
+    color: var(--mud-palette-text-primary);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .stack-trace-container {
+        font-size: 0.75rem;
+        padding: 8px;
+        max-height: 300px;
+    }
+
+    .method-name,
+    .line-number {
+        padding: 1px 4px;
+        font-size: 0.7rem;
+    }
+
+    .exception-header {
+        padding: 6px;
+        margin-bottom: 6px;
+    }
+
+    .stack-frame {
+        margin: 4px 0;
+        padding: 4px;
+        gap: 1px;
+    }
+
+    .inner-exception-header {
+        padding: 6px;
+        gap: 6px;
+    }
+
+    .inner-exception-collapsed {
+        margin-left: 24px;
+    }
+}
+
+@media (max-width: 576px) {
+    .stack-trace-container {
+        font-size: 0.7rem;
+        padding: 6px;
+        max-height: 250px;
+        line-height: 1.4;
+    }
+
+    .method-name,
+    .line-number {
+        padding: 1px 3px;
+        font-size: 0.65rem;
+    }
+
+    .exception-header {
+        padding: 4px;
+        margin-bottom: 4px;
+    }
+
+    .stack-frame {
+        margin: 2px 0;
+        padding: 2px;
+    }
+
+    .parse-error {
+        padding: 8px;
+        gap: 6px;
+    }
+
+    .error-icon {
+        font-size: 1rem;
+    }
+
+    .error-message {
+        font-size: 0.7rem;
+    }
+}

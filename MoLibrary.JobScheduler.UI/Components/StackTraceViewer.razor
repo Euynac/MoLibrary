@@ -1,0 +1,171 @@
+@using MoLibrary.JobScheduler.UI.Models
+@using MoLibrary.JobScheduler.UI.Services
+@inject StackTraceParserService ParserService
+
+<div class="stack-trace-container">
+    @if (_parseResult?.Success == true && _parseResult.Lines.Count > 0)
+    {
+        @foreach (var (line, level) in GetLinesWithLevel(_parseResult.Lines))
+        {
+            @if (line.LineType == StackLineType.ExceptionHeader)
+            {
+                <div class="exception-header" style="@GetInnerExceptionIndentForLevel(level)">
+                    <span class="exception-type">@line.ExceptionType:</span>
+                    <span class="exception-message">@line.Message</span>
+                </div>
+            }
+            else if (line.LineType == StackLineType.StackFrame)
+            {
+                <div class="stack-frame" style="@GetInnerExceptionIndentForLevel(level)">
+                    <span class="frame-prefix">   at </span>
+                    @if (!string.IsNullOrEmpty(line.Namespace))
+                    {
+                        <span class="namespace">@line.Namespace.</span>
+                    }
+                    @if (!string.IsNullOrEmpty(line.ClassName))
+                    {
+                        <span class="class-name">@line.ClassName.</span>
+                    }
+                    @if (!string.IsNullOrEmpty(line.MethodName))
+                    {
+                        <span class="method-name">@line.MethodName</span>
+                    }
+                    @if (!string.IsNullOrEmpty(line.Parameters))
+                    {
+                        <span class="parameters">@line.Parameters</span>
+                    }
+                    @if (!string.IsNullOrEmpty(line.FilePath))
+                    {
+                        <span class="file-info"> in </span>
+                        @if (line.FilePath.Length > line.FileName?.Length)
+                        {
+                            <span class="file-path-dir">@line.FilePath.Substring(0, line.FilePath.Length - (line.FileName?.Length ?? 0))</span>
+                        }
+                        @if (!string.IsNullOrEmpty(line.FileName))
+                        {
+                            <span class="file-name">@line.FileName</span>
+                        }
+                        <span class="file-info">:</span>
+                    }
+                    @if (line.LineNumber.HasValue)
+                    {
+                        <span class="line-number">line @line.LineNumber</span>
+                    }
+                </div>
+            }
+            else if (line.LineType == StackLineType.InnerException)
+            {
+                <div class="inner-exception-header" style="@GetInnerExceptionIndentForLevel(level)">
+                    <span class="inner-exception-label">@line.RawContent</span>
+                </div>
+            }
+            else if (line.LineType == StackLineType.PlainText)
+            {
+                <div class="plain-text-line" style="@GetInnerExceptionIndentForLevel(level)">
+                    @if (IsEndOfInnerException(line.RawContent))
+                    {
+                        <span class="inner-exception-end">@line.RawContent</span>
+                    }
+                    else
+                    {
+                        @line.RawContent
+                    }
+                </div>
+            }
+            else if (line.LineType == StackLineType.ParseError)
+            {
+                <div class="parse-error">
+                    <span class="error-icon">⚠</span>
+                    <span class="error-message">@line.ErrorMessage</span>
+                </div>
+            }
+        }
+    }
+    else if (_parseResult?.Success == false)
+    {
+        <!-- 解析失败，显示错误提示和原始文本 -->
+        <div class="parse-error">
+            <span class="error-icon">⚠</span>
+            <span class="error-message">@_parseResult.ErrorMessage</span>
+        </div>
+        <div class="fallback-text">
+            <pre>@_parseResult.OriginalText</pre>
+        </div>
+    }
+    else
+    {
+        <div class="empty-message">暂无堆栈信息</div>
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// 堆栈信息文本
+    /// </summary>
+    [Parameter]
+    public string? Message { get; set; }
+
+    private ParseResult? _parseResult;
+
+    /// <summary>
+    /// 组件参数变化时调用
+    /// </summary>
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrWhiteSpace(Message))
+        {
+            _parseResult = ParserService.Parse(Message);
+        }
+        else
+        {
+            _parseResult = new ParseResult { Success = false, ErrorMessage = "未提供堆栈信息" };
+        }
+    }
+
+    /// <summary>
+    /// 获取行及其对应的嵌套层级
+    /// </summary>
+    private IEnumerable<(StackTraceLine line, int level)> GetLinesWithLevel(List<StackTraceLine> lines)
+    {
+        int level = 0;
+        foreach (var line in lines)
+        {
+            if (line.LineType == StackLineType.InnerException)
+            {
+                level++;
+                yield return (line, level - 1);
+            }
+            else if (line.LineType == StackLineType.PlainText && line.RawContent?.Contains("--- End of inner exception") == true)
+            {
+                yield return (line, level);
+                if (level > 0)
+                {
+                    level--;
+                }
+            }
+            else
+            {
+                yield return (line, level);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 获取指定层级的内部异常缩进样式
+    /// </summary>
+    private string GetInnerExceptionIndentForLevel(int level)
+    {
+        if (level <= 0)
+            return "";
+
+        return $"margin-left: {level * 16}px; border-left: 2px dashed var(--mud-palette-warning);";
+    }
+
+    /// <summary>
+    /// 检查是否为内部异常结束标记
+    /// </summary>
+    private bool IsEndOfInnerException(string? content)
+    {
+        return content?.Contains("--- End of inner exception") == true;
+    }
+}

@@ -148,11 +148,10 @@ public class JobOrchestrator(
                         instance.InstanceId,
                         ex.Message);
 
-                    // Update state to Failed (will automatically publish JobCompletedEvent)
                     await jobInstanceManager.UpdateStateAsync(
                         instance.InstanceId,
                         JobState.Failed,
-                        $"{ex.GetType().Name}: {ex.Message}",
+                        $"{ex}",
                         cancellationToken);
                 }
             }

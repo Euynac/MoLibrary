@@ -34,6 +34,7 @@ public class ModuleJobSchedulerUI(ModuleJobSchedulerUIOption option)
 
         // 注册 Scoped 门面服务（Blazor Circuit）
         services.AddScoped<JobSchedulerUIService>();
+        services.AddScoped<StackTraceParserService>();
     }
 
     public override void ClaimDependencies()
