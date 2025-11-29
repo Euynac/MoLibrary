@@ -55,30 +55,32 @@
         {
             <MudCard>
                 <MudCardContent>
-                    <MudTable T="MapperInfo" Items="@_mapperData.MapperInfos" Hover="true" Striped="true" Dense="true">
-                        <HeaderContent>
-                            <MudTh>源类型</MudTh>
-                            <MudTh>目标类型</MudTh>
-                            <MudTh Style="width: 150px;">操作</MudTh>
-                        </HeaderContent>
-                        <RowTemplate>
-                            <MudTd DataLabel="源类型">
-                                <MudText Typo="Typo.body2" Class="font-monospace">@context.SourceType</MudText>
-                            </MudTd>
-                            <MudTd DataLabel="目标类型">
-                                <MudText Typo="Typo.body2" Class="font-monospace">@context.DestinationType</MudText>
-                            </MudTd>
-                            <MudTd DataLabel="操作">
-                                <MudButton Variant="Variant.Text" 
-                                          Color="Color.Primary" 
-                                          Size="Size.Small"
-                                          StartIcon="@Icons.Material.Filled.Code"
-                                          OnClick="@(() => ShowMapperCode(context))">
-                                    查看代码
-                                </MudButton>
-                            </MudTd>
-                        </RowTemplate>
-                    </MudTable>
+                    <div class="mapper-table-wrapper">
+                        <MudTable T="MapperInfo" Items="@_mapperData.MapperInfos" Hover="true" Striped="true" Dense="true">
+                            <HeaderContent>
+                                <MudTh>源类型</MudTh>
+                                <MudTh>目标类型</MudTh>
+                                <MudTh Style="width: 150px;">操作</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="源类型">
+                                    <MudText Typo="Typo.body2" Class="font-monospace">@context.SourceType</MudText>
+                                </MudTd>
+                                <MudTd DataLabel="目标类型">
+                                    <MudText Typo="Typo.body2" Class="font-monospace">@context.DestinationType</MudText>
+                                </MudTd>
+                                <MudTd DataLabel="操作">
+                                    <MudButton Variant="Variant.Text"
+                                              Color="Color.Primary"
+                                              Size="Size.Small"
+                                              StartIcon="@Icons.Material.Filled.Code"
+                                              OnClick="@(() => ShowMapperCode(context))">
+                                        查看代码
+                                    </MudButton>
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </div>
                 </MudCardContent>
             </MudCard>
         }
@@ -118,14 +120,16 @@
                 
                 <MudDivider />
                 
-                @if (!string.IsNullOrEmpty(_selectedMapper.MapExpression))
-                {
-                    <MudMarkdown Value="@($"```csharp\n{_selectedMapper.MapExpression}\n```")" />
-                }
-                else
-                {
-                    <MudAlert Severity="Severity.Warning">无映射表达式</MudAlert>
-                }
+                <div class="mapper-markdown-wrapper">
+                    @if (!string.IsNullOrEmpty(_selectedMapper.MapExpression))
+                    {
+                        <MudMarkdown Value="@($"```csharp\n{_selectedMapper.MapExpression}\n```")" />
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Warning">无映射表达式</MudAlert>
+                    }
+                </div>
             </MudStack>
         }
     </DialogContent>

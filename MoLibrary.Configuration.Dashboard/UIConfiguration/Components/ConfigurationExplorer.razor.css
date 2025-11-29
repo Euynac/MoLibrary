@@ -2,8 +2,8 @@
     cursor: pointer;
 }
 
-/* 导航菜单选中状态 */
-::deep .mud-nav-link-active {
+/* 导航菜单选中状态 - using ::deep with wrapper */
+.nav-menu-wrapper ::deep .mud-nav-link-active {
     background-color: var(--mud-palette-action-default-hover) !important;
     border-left: 3px solid var(--mud-palette-primary) !important;
 }

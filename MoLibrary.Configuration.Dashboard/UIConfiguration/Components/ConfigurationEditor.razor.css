@@ -34,38 +34,38 @@
     width: 100%;
 }
 
-/* Card styling enhancements */
-.mud-card {
+/* Card styling enhancements - using ::deep for MudBlazor components */
+.configuration-editor-wrapper ::deep .mud-card {
     border-radius: 8px;
     transition: box-shadow 0.2s ease-in-out;
 }
 
-.mud-card:hover {
+.configuration-editor-wrapper ::deep .mud-card:hover {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.mud-card-header {
+.configuration-editor-wrapper ::deep .mud-card-header {
     background-color: var(--mud-palette-background-grey);
     border-bottom: 1px solid var(--mud-palette-divider);
 }
 
 /* Chip styling */
-.mud-chip {
+.configuration-editor-wrapper ::deep .mud-chip {
     font-size: 0.75rem;
     font-weight: 500;
 }
 
 /* Alert styling */
-.mud-alert {
+.configuration-editor-wrapper ::deep .mud-alert {
     border-radius: 6px;
     border-left: 4px solid;
 }
 
-.mud-alert.mud-alert-filled-warning {
+.configuration-editor-wrapper ::deep .mud-alert.mud-alert-filled-warning {
     border-left-color: var(--mud-palette-warning);
 }
 
-.mud-alert.mud-alert-filled-error {
+.configuration-editor-wrapper ::deep .mud-alert.mud-alert-filled-error {
     border-left-color: var(--mud-palette-error);
 }
 

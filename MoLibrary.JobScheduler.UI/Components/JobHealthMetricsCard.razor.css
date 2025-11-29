@@ -1,9 +1,44 @@
 /* 健康指标卡片样式 */
+/* 使用 ::deep 选择器穿透 MudBlazor 组件 */
 
-.mud-paper {
+/* MudPaper hover 效果 */
+.state-grid-wrapper ::deep .mud-paper {
     transition: transform 0.2s ease-in-out;
 }
 
-.mud-paper:hover {
+.state-grid-wrapper ::deep .mud-paper:hover {
     transform: translateY(-2px);
+}
+
+/* 状态统计卡片样式 - 按 JobState 枚举顺序 */
+.state-grid-wrapper ::deep .state-scheduled {
+    background-color: var(--mud-palette-surface);
+}
+
+.state-grid-wrapper ::deep .state-enqueued {
+    background-color: var(--mud-palette-info-darken);
+}
+
+.state-grid-wrapper ::deep .state-processing {
+    background-color: var(--mud-palette-primary-darken);
+}
+
+.state-grid-wrapper ::deep .state-succeeded {
+    background-color: var(--mud-palette-success-darken);
+}
+
+.state-grid-wrapper ::deep .state-failed {
+    background-color: var(--mud-palette-error-darken);
+}
+
+.state-grid-wrapper ::deep .state-terminated {
+    background-color: var(--mud-palette-error-darken);
+}
+
+.state-grid-wrapper ::deep .state-cancelled {
+    background-color: var(--mud-palette-warning-darken);
+}
+
+.state-grid-wrapper ::deep .state-skipped {
+    background-color: var(--mud-palette-surface);
 }

@@ -62,72 +62,74 @@
                                    Rounded="true" />
 
                 <!-- 执行状态统计 -->
-                <MudGrid>
-                    <MudItem xs="6" sm="3">
-                        <MudPaper Class="pa-2" Style="background-color: var(--mud-palette-success-darken);">
-                            <MudStack Spacing="1">
-                                <MudText Typo="Typo.caption">成功</MudText>
-                                <MudText Typo="Typo.h6">@_metrics.SucceededCount</MudText>
-                            </MudStack>
-                        </MudPaper>
-                    </MudItem>
-                    <MudItem xs="6" sm="3">
-                        <MudPaper Class="pa-2" Style="background-color: var(--mud-palette-error-darken);">
-                            <MudStack Spacing="1">
-                                <MudText Typo="Typo.caption">失败</MudText>
-                                <MudText Typo="Typo.h6">@_metrics.FailedCount</MudText>
-                            </MudStack>
-                        </MudPaper>
-                    </MudItem>
-                    <MudItem xs="6" sm="3">
-                        <MudPaper Class="pa-2" Style="background-color: var(--mud-palette-warning-darken);">
-                            <MudStack Spacing="1">
-                                <MudText Typo="Typo.caption">终止</MudText>
-                                <MudText Typo="Typo.h6">@_metrics.TerminatedCount</MudText>
-                            </MudStack>
-                        </MudPaper>
-                    </MudItem>
-                    <MudItem xs="6" sm="3">
-                        <MudPaper Class="pa-2" Style="background-color: var(--mud-palette-info-darken);">
-                            <MudStack Spacing="1">
-                                <MudText Typo="Typo.caption">运行中</MudText>
-                                <MudText Typo="Typo.h6">@_metrics.ProcessingCount</MudText>
-                            </MudStack>
-                        </MudPaper>
-                    </MudItem>
-                    <MudItem xs="6" sm="3">
-                        <MudPaper Class="pa-2" Style="background-color: var(--mud-palette-surface);">
-                            <MudStack Spacing="1">
-                                <MudText Typo="Typo.caption">跳过</MudText>
-                                <MudText Typo="Typo.h6">@_metrics.SkippedCount</MudText>
-                            </MudStack>
-                        </MudPaper>
-                    </MudItem>
-                    <MudItem xs="6" sm="3">
-                        <MudPaper Class="pa-2" Style="background-color: var(--mud-palette-dark);">
-                            <MudStack Spacing="1">
-                                <MudText Typo="Typo.caption">取消</MudText>
-                                <MudText Typo="Typo.h6">@_metrics.CancelledCount</MudText>
-                            </MudStack>
-                        </MudPaper>
-                    </MudItem>
-                    <MudItem xs="6" sm="3">
-                        <MudPaper Class="pa-2" Style="background-color: var(--mud-palette-tertiary);">
-                            <MudStack Spacing="1">
-                                <MudText Typo="Typo.caption">已调度</MudText>
-                                <MudText Typo="Typo.h6">@_metrics.ScheduledCount</MudText>
-                            </MudStack>
-                        </MudPaper>
-                    </MudItem>
-                    <MudItem xs="6" sm="3">
-                        <MudPaper Class="pa-2" Style="background-color: var(--mud-palette-secondary-darken);">
-                            <MudStack Spacing="1">
-                                <MudText Typo="Typo.caption">已入队</MudText>
-                                <MudText Typo="Typo.h6">@_metrics.EnqueuedCount</MudText>
-                            </MudStack>
-                        </MudPaper>
-                    </MudItem>
-                </MudGrid>
+                <div class="state-grid-wrapper">
+                    <MudGrid>
+                        <MudItem xs="6" sm="3">
+                            <MudPaper Class="pa-2 state-scheduled">
+                                <MudStack Spacing="1">
+                                    <MudText Typo="Typo.caption">Scheduled</MudText>
+                                    <MudText Typo="Typo.h6">@_metrics.ScheduledCount</MudText>
+                                </MudStack>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="6" sm="3">
+                            <MudPaper Class="pa-2 state-enqueued">
+                                <MudStack Spacing="1">
+                                    <MudText Typo="Typo.caption">Enqueued</MudText>
+                                    <MudText Typo="Typo.h6">@_metrics.EnqueuedCount</MudText>
+                                </MudStack>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="6" sm="3">
+                            <MudPaper Class="pa-2 state-processing">
+                                <MudStack Spacing="1">
+                                    <MudText Typo="Typo.caption">Processing</MudText>
+                                    <MudText Typo="Typo.h6">@_metrics.ProcessingCount</MudText>
+                                </MudStack>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="6" sm="3">
+                            <MudPaper Class="pa-2 state-succeeded">
+                                <MudStack Spacing="1">
+                                    <MudText Typo="Typo.caption">Succeeded</MudText>
+                                    <MudText Typo="Typo.h6">@_metrics.SucceededCount</MudText>
+                                </MudStack>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="6" sm="3">
+                            <MudPaper Class="pa-2 state-failed">
+                                <MudStack Spacing="1">
+                                    <MudText Typo="Typo.caption">Failed</MudText>
+                                    <MudText Typo="Typo.h6">@_metrics.FailedCount</MudText>
+                                </MudStack>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="6" sm="3">
+                            <MudPaper Class="pa-2 state-terminated">
+                                <MudStack Spacing="1">
+                                    <MudText Typo="Typo.caption">Terminated</MudText>
+                                    <MudText Typo="Typo.h6">@_metrics.TerminatedCount</MudText>
+                                </MudStack>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="6" sm="3">
+                            <MudPaper Class="pa-2 state-cancelled">
+                                <MudStack Spacing="1">
+                                    <MudText Typo="Typo.caption">Cancelled</MudText>
+                                    <MudText Typo="Typo.h6">@_metrics.CancelledCount</MudText>
+                                </MudStack>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="6" sm="3">
+                            <MudPaper Class="pa-2 state-skipped">
+                                <MudStack Spacing="1">
+                                    <MudText Typo="Typo.caption">Skipped</MudText>
+                                    <MudText Typo="Typo.h6">@_metrics.SkippedCount</MudText>
+                                </MudStack>
+                            </MudPaper>
+                        </MudItem>
+                    </MudGrid>
+                </div>
 
                 <!-- 总执行次数 -->
                 <MudStack Row="true" Justify="Justify.Center">
