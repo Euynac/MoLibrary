@@ -17,34 +17,124 @@
         @if (_metrics != null)
         {
             <MudStack Spacing="3">
+                <!-- 健康度和执行失败率 -->
                 <MudGrid>
-                    <MudItem xs="4">
+                    <MudItem xs="6">
                         <MudStack Spacing="1">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">总执行次数</MudText>
-                            <MudText Typo="Typo.h5">@_metrics.TotalExecutions</MudText>
+                            <MudStack Row="true" AlignItems="AlignItems.Center">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">健康度</MudText>
+                                <MudTooltip Text="健康度 = (总执行次数 - 跳过 - 取消) / 总执行次数。反映作业被成功调度执行的比例。">
+                                    <MudIcon Icon="@Icons.Material.Filled.Info"
+                                             Size="Size.Small"
+                                             Color="Color.Info"
+                                             Class="ml-1"
+                                             Style="font-size: 14px;" />
+                                </MudTooltip>
+                            </MudStack>
+                            <MudText Typo="Typo.h5" Color="@GetHealthScoreColor(_metrics.HealthScore)">
+                                @_metrics.HealthScore.ToString("F2")%
+                            </MudText>
                         </MudStack>
                     </MudItem>
-                    <MudItem xs="4">
+                    <MudItem xs="6">
                         <MudStack Spacing="1">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">失败次数</MudText>
-                            <MudText Typo="Typo.h5" Color="Color.Error">@_metrics.FailedExecutions</MudText>
-                        </MudStack>
-                    </MudItem>
-                    <MudItem xs="4">
-                        <MudStack Spacing="1">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">失败率</MudText>
-                            <MudText Typo="Typo.h5" Color="@GetHealthColor(_metrics.FailureRate)">
-                                @_metrics.FailureRate.ToString("F2")%
+                            <MudStack Row="true" AlignItems="AlignItems.Center">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">执行失败率</MudText>
+                                <MudTooltip Text="执行失败率 = 失败次数 / 实际完成次数。实际完成次数 = 总执行次数 - 跳过 - 取消 - 运行中。反映作业执行代码的失败率。">
+                                    <MudIcon Icon="@Icons.Material.Filled.Info"
+                                             Size="Size.Small"
+                                             Color="Color.Info"
+                                             Class="ml-1"
+                                             Style="font-size: 14px;" />
+                                </MudTooltip>
+                            </MudStack>
+                            <MudText Typo="Typo.h5" Color="@GetFailureRateColor(_metrics.ExecutionFailureRate)">
+                                @_metrics.ExecutionFailureRate.ToString("F2")%
                             </MudText>
                         </MudStack>
                     </MudItem>
                 </MudGrid>
 
-                <!-- 健康进度条 -->
-                <MudProgressLinear Color="@GetHealthColor(_metrics.FailureRate)"
-                                   Value="@(100 - _metrics.FailureRate)"
+                <!-- 健康度进度条 -->
+                <MudProgressLinear Color="@GetHealthScoreColor(_metrics.HealthScore)"
+                                   Value="@_metrics.HealthScore"
                                    Size="Size.Large"
                                    Rounded="true" />
+
+                <!-- 执行状态统计 -->
+                <MudGrid>
+                    <MudItem xs="6" sm="3">
+                        <MudPaper Class="pa-2" Style="background-color: var(--mud-palette-success-darken);">
+                            <MudStack Spacing="1">
+                                <MudText Typo="Typo.caption">成功</MudText>
+                                <MudText Typo="Typo.h6">@_metrics.SucceededCount</MudText>
+                            </MudStack>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="6" sm="3">
+                        <MudPaper Class="pa-2" Style="background-color: var(--mud-palette-error-darken);">
+                            <MudStack Spacing="1">
+                                <MudText Typo="Typo.caption">失败</MudText>
+                                <MudText Typo="Typo.h6">@_metrics.FailedCount</MudText>
+                            </MudStack>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="6" sm="3">
+                        <MudPaper Class="pa-2" Style="background-color: var(--mud-palette-warning-darken);">
+                            <MudStack Spacing="1">
+                                <MudText Typo="Typo.caption">终止</MudText>
+                                <MudText Typo="Typo.h6">@_metrics.TerminatedCount</MudText>
+                            </MudStack>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="6" sm="3">
+                        <MudPaper Class="pa-2" Style="background-color: var(--mud-palette-info-darken);">
+                            <MudStack Spacing="1">
+                                <MudText Typo="Typo.caption">运行中</MudText>
+                                <MudText Typo="Typo.h6">@_metrics.ProcessingCount</MudText>
+                            </MudStack>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="6" sm="3">
+                        <MudPaper Class="pa-2" Style="background-color: var(--mud-palette-surface);">
+                            <MudStack Spacing="1">
+                                <MudText Typo="Typo.caption">跳过</MudText>
+                                <MudText Typo="Typo.h6">@_metrics.SkippedCount</MudText>
+                            </MudStack>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="6" sm="3">
+                        <MudPaper Class="pa-2" Style="background-color: var(--mud-palette-dark);">
+                            <MudStack Spacing="1">
+                                <MudText Typo="Typo.caption">取消</MudText>
+                                <MudText Typo="Typo.h6">@_metrics.CancelledCount</MudText>
+                            </MudStack>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="6" sm="3">
+                        <MudPaper Class="pa-2" Style="background-color: var(--mud-palette-tertiary);">
+                            <MudStack Spacing="1">
+                                <MudText Typo="Typo.caption">已调度</MudText>
+                                <MudText Typo="Typo.h6">@_metrics.ScheduledCount</MudText>
+                            </MudStack>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="6" sm="3">
+                        <MudPaper Class="pa-2" Style="background-color: var(--mud-palette-secondary-darken);">
+                            <MudStack Spacing="1">
+                                <MudText Typo="Typo.caption">已入队</MudText>
+                                <MudText Typo="Typo.h6">@_metrics.EnqueuedCount</MudText>
+                            </MudStack>
+                        </MudPaper>
+                    </MudItem>
+                </MudGrid>
+
+                <!-- 总执行次数 -->
+                <MudStack Row="true" Justify="Justify.Center">
+                    <MudText Typo="Typo.body1" Color="Color.Secondary">
+                        总执行次数: <strong>@_metrics.TotalExecutions</strong>
+                    </MudText>
+                </MudStack>
 
                 <!-- 最近失败实例 -->
                 @if (_metrics.RecentFailures.Any())
@@ -135,7 +225,16 @@
         StateHasChanged();
     }
 
-    private Color GetHealthColor(double failureRate)
+    private Color GetHealthScoreColor(double healthScore)
+    {
+        if (healthScore >= 95)
+            return Color.Success;
+        if (healthScore >= 80)
+            return Color.Warning;
+        return Color.Error;
+    }
+
+    private Color GetFailureRateColor(double failureRate)
     {
         if (failureRate < 5)
             return Color.Success;
