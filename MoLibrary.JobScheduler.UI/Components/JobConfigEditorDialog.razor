@@ -1,0 +1,263 @@
+@using MoLibrary.JobScheduler.Models
+@using MoLibrary.JobScheduler.UI.Services
+@inject JobSchedulerUIService UIService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        @if (_isLoading)
+        {
+            <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="pa-4">
+                <MudProgressCircular Indeterminate="true" />
+                <MudText>保存中...</MudText>
+            </MudStack>
+        }
+        else
+        {
+            <MudForm @ref="form" @bind-IsValid="@success">
+                <MudStack Spacing="3">
+                    <!-- JobName -->
+                    <MudTextField @bind-Value="@_jobName"
+                                  T="string"
+                                  Label="作业名称"
+                                  Variant="Variant.Outlined"
+                                  HelperText="作业的可读名称"
+                                  Required="true"
+                                  RequiredError="作业名称不能为空" />
+
+                    <!-- Description -->
+                    <MudTextField @bind-Value="@_description"
+                                  T="string"
+                                  Label="描述"
+                                  Variant="Variant.Outlined"
+                                  Lines="3"
+                                  HelperText="作业的详细描述（可选）" />
+
+                    <!-- MaxConcurrency -->
+                    <MudNumericField @bind-Value="@_maxConcurrency"
+                                     T="int"
+                                     Label="最大并发数"
+                                     Variant="Variant.Outlined"
+                                     Min="1"
+                                     Required="true"
+                                     RequiredError="最大并发数必须大于等于1"
+                                     HelperText="相同作业Key的并发执行数量，默认值为1" />
+
+                    <!-- RetryCount -->
+                    <MudNumericField @bind-Value="@_retryCount"
+                                     T="int"
+                                     Label="重试次数"
+                                     Variant="Variant.Outlined"
+                                     Min="0"
+                                     Required="true"
+                                     RequiredError="重试次数必须大于等于0"
+                                     HelperText="作业出现异常后自动重试的次数，默认值为0" />
+
+                    <!-- MaxExecutionTimeout -->
+                    <MudStack Row="true" Spacing="2">
+                        <MudNumericField @bind-Value="@_timeoutHours"
+                                         T="int"
+                                         Label="超时时间（小时）"
+                                         Variant="Variant.Outlined"
+                                         Min="0"
+                                         Style="flex: 1;"
+                                         Required="true"
+                                         RequiredError="超时时间必须大于0" />
+                        <MudNumericField @bind-Value="@_timeoutMinutes"
+                                         T="int"
+                                         Label="分钟"
+                                         Variant="Variant.Outlined"
+                                         Min="0"
+                                         Max="59"
+                                         Style="flex: 1;" />
+                    </MudStack>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        当前超时: @_timeoutHours 小时 @_timeoutMinutes 分钟（默认: 1小时）
+                    </MudText>
+
+                    <!-- Recurring Job Specific Fields -->
+                    @if (JobDefinition?.JobType == JobType.Recurring)
+                    {
+                        <!-- StartTime -->
+                        <MudDatePicker @bind-Date="@_startDate"
+                                       Label="开始时间"
+                                       Variant="Variant.Outlined"
+                                       HelperText="作业最早执行时间（可选）" />
+                        @if (_startDate.HasValue)
+                        {
+                            <MudTimePicker @bind-Time="@_startTime"
+                                           Label="开始时间（时:分:秒）"
+                                           Variant="Variant.Outlined" />
+                        }
+
+                        <!-- EndTime -->
+                        <MudDatePicker @bind-Date="@_endDate"
+                                       Label="结束时间"
+                                       Variant="Variant.Outlined"
+                                       HelperText="作业最晚执行时间（可选）" />
+                        @if (_endDate.HasValue)
+                        {
+                            <MudTimePicker @bind-Time="@_endTime"
+                                           Label="结束时间（时:分:秒）"
+                                           Variant="Variant.Outlined" />
+                        }
+                    }
+                </MudStack>
+            </MudForm>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">取消</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   OnClick="Save"
+                   Disabled="@(!success || _isLoading)">
+            保存
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public JobDefinition JobDefinition { get; set; } = null!;
+
+    private MudForm form = null!;
+    private bool success;
+
+    private string _jobName = string.Empty;
+    private string _description = string.Empty;
+    private int _maxConcurrency = 1;
+    private int _retryCount = 0;
+    private int _timeoutHours = 1;
+    private int _timeoutMinutes = 0;
+    private DateTime? _startDate;
+    private TimeSpan? _startTime;
+    private DateTime? _endDate;
+    private TimeSpan? _endTime;
+
+    private bool _isLoading = false;
+
+    protected override void OnInitialized()
+    {
+        if (JobDefinition == null) return;
+
+        _jobName = JobDefinition.JobName ?? string.Empty;
+        _description = JobDefinition.Description ?? string.Empty;
+        _maxConcurrency = JobDefinition.MaxConcurrency;
+        _retryCount = JobDefinition.RetryCount;
+
+        // Convert timeout to hours and minutes
+        var totalMinutes = (int)JobDefinition.MaxExecutionTimeout.TotalMinutes;
+        _timeoutHours = totalMinutes / 60;
+        _timeoutMinutes = totalMinutes % 60;
+
+        // Set StartTime and EndTime for Recurring jobs
+        if (JobDefinition.JobType == JobType.Recurring)
+        {
+            if (JobDefinition.StartTime.HasValue)
+            {
+                var startDateTime = JobDefinition.StartTime.Value.ToLocalTime();
+                _startDate = startDateTime.Date;
+                _startTime = startDateTime.TimeOfDay;
+            }
+
+            if (JobDefinition.EndTime.HasValue)
+            {
+                var endDateTime = JobDefinition.EndTime.Value.ToLocalTime();
+                _endDate = endDateTime.Date;
+                _endTime = endDateTime.TimeOfDay;
+            }
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private async Task Save()
+    {
+        await form.Validate();
+        if (!success) return;
+
+        // Validation
+        if (string.IsNullOrWhiteSpace(_jobName))
+        {
+            Snackbar.Add("作业名称不能为空", Severity.Warning);
+            return;
+        }
+
+        if (_maxConcurrency < 1)
+        {
+            Snackbar.Add("最大并发数必须大于等于1", Severity.Warning);
+            return;
+        }
+
+        if (_timeoutHours == 0 && _timeoutMinutes == 0)
+        {
+            Snackbar.Add("超时时间必须大于0", Severity.Warning);
+            return;
+        }
+
+        _isLoading = true;
+
+        try
+        {
+            // Update job definition
+            JobDefinition.JobName = _jobName;
+            JobDefinition.Description = _description;
+            JobDefinition.MaxConcurrency = _maxConcurrency;
+            JobDefinition.RetryCount = _retryCount;
+
+            // Convert hours and minutes back to TimeSpan
+            JobDefinition.MaxExecutionTimeout = new TimeSpan(_timeoutHours, _timeoutMinutes, 0);
+
+            // Update StartTime and EndTime for Recurring jobs
+            if (JobDefinition.JobType == JobType.Recurring)
+            {
+                if (_startDate.HasValue && _startTime.HasValue)
+                {
+                    var startDateTime = _startDate.Value.Add(_startTime.Value);
+                    JobDefinition.StartTime = startDateTime.ToUniversalTime();
+                }
+                else
+                {
+                    JobDefinition.StartTime = null;
+                }
+
+                if (_endDate.HasValue && _endTime.HasValue)
+                {
+                    var endDateTime = _endDate.Value.Add(_endTime.Value);
+                    JobDefinition.EndTime = endDateTime.ToUniversalTime();
+                }
+                else
+                {
+                    JobDefinition.EndTime = null;
+                }
+            }
+
+            var result = await UIService.UpdateJobConfigAsync(JobDefinition);
+
+            if (result.IsFailed(out var error))
+            {
+                Snackbar.Add($"保存失败: {error.Message}", Severity.Error);
+            }
+            else
+            {
+                Snackbar.Add("配置已保存", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"保存失败: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}

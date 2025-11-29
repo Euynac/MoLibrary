@@ -37,6 +37,10 @@ public class JobHealthMetricsService(
                 pageSize: 10000, // Get all within window
                 cancellationToken: cancellationToken);
 
+            // Group instances by state for efficient counting
+            var stateGroups = instances.GroupBy(i => i.State)
+                .ToDictionary(g => g.Key, g => g.Count());
+
             var failedInstances = instances
                 .Where(i => i.State == JobState.Failed || i.State == JobState.Terminated)
                 .OrderByDescending(i => i.CreatedAt)
@@ -47,8 +51,16 @@ public class JobHealthMetricsService(
             {
                 JobKey = jobKey,
                 TotalExecutions = instances.Count,
-                FailedExecutions = instances.Count(i =>
-                    i.State == JobState.Failed || i.State == JobState.Terminated),
+
+                // State counts
+                SucceededCount = stateGroups.GetValueOrDefault(JobState.Succeeded, 0),
+                SkippedCount = stateGroups.GetValueOrDefault(JobState.Skipped, 0),
+                CancelledCount = stateGroups.GetValueOrDefault(JobState.Cancelled, 0),
+                ProcessingCount = stateGroups.GetValueOrDefault(JobState.Processing, 0),
+                FailedCount = stateGroups.GetValueOrDefault(JobState.Failed, 0),
+                TerminatedCount = stateGroups.GetValueOrDefault(JobState.Terminated, 0),
+                EnqueuedCount = stateGroups.GetValueOrDefault(JobState.Enqueued, 0),
+                ScheduledCount = stateGroups.GetValueOrDefault(JobState.Scheduled, 0),
                 RecentFailures = failedInstances,
                 MetricsStartTime = startTime,
                 MetricsEndTime = endTime

@@ -37,7 +37,7 @@ public class JobDispatcher(
 
             if (!reserved)
             {
-                logger.LogWarning(
+                logger.LogDebug(
                     "Job {JobKey} instance {InstanceId} could not reserve execution slot (MaxConcurrency: {MaxConcurrency})",
                     definition.JobKey,
                     instance.InstanceId,
