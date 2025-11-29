@@ -1,5 +1,14 @@
 @using MoLibrary.JobScheduler.UI.Services
+@using Microsoft.JSInterop
 @inject CronExpressionService CronService
+@inject IJSRuntime JSRuntime
+@inject ISnackbar Snackbar
+
+<!-- 引入 cronstrue 库 -->
+@if (!_cronstrueLoaded)
+{
+    <script src="_content/MoLibrary.JobScheduler.UI/lib/cronstrue/cronstrue-i18n.min.js"></script>
+}
 
 <MudPaper Elevation="2" Class="pa-4">
     <MudStack Spacing="3">
@@ -29,7 +38,16 @@
                       ErrorText="@_errorText" />
 
         <!-- 文字解析 -->
-        @if (!string.IsNullOrWhiteSpace(_description))
+        @if (_isLoadingDescription)
+        {
+            <MudAlert Severity="Severity.Info" Dense="true">
+                <MudText Typo="Typo.body2">
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                    <strong>解析中...</strong>
+                </MudText>
+            </MudAlert>
+        }
+        else if (!string.IsNullOrWhiteSpace(_description))
         {
             <MudAlert Severity="Severity.Info" Dense="true">
                 <MudText Typo="Typo.body2">
@@ -321,6 +339,8 @@
     </MudStack>
 </MudPaper>
 
+@implements IAsyncDisposable
+
 @code {
     [Parameter]
     public string Value { get; set; } = string.Empty;
@@ -340,6 +360,9 @@
     private string _description = string.Empty;
     private List<DateTime> _nextOccurrences = new();
     private SimpleSettings _simpleSettings = new();
+    private bool _cronstrueLoaded = false;
+    private bool _isLoadingDescription = false;
+    private IJSObjectReference? _jsModule;
 
     private List<CronFieldInfo> _quartzFields = new()
     {
@@ -364,10 +387,33 @@
     {
         _format = InitialFormat;
         _helperText = _format == CronFormat.Quartz ? "格式：秒 分 时 日 月 周" : "格式：分 时 日 月 周";
+    }
 
-        if (!string.IsNullOrWhiteSpace(Value))
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
         {
-            UpdatePreview();
+            try
+            {
+                // 加载 JavaScript 模块
+                _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                    "import",
+                    "./_content/MoLibrary.JobScheduler.UI/js/cron-helper.js");
+
+                _cronstrueLoaded = true;
+
+                if (!string.IsNullOrWhiteSpace(Value))
+                {
+                    await UpdatePreview();
+                    StateHasChanged();
+                }
+            }
+            catch (Exception ex)
+            {
+                // JS 模块加载失败，记录错误但不阻止组件渲染
+                _cronstrueLoaded = false;
+                Snackbar.Add($"加载 JavaScript 模块失败: {ex.Message}", Severity.Warning);
+            }
         }
     }
 
@@ -391,25 +437,29 @@
             if (oldFormat != _format)
             {
                 var result = CronService.ConvertFormat(Value, oldFormat, _format);
-                if (result.IsOk())
+                if (result.IsFailed(out var error, out var convertedExpr))
                 {
-                    Value = result.Data!;
+                    Snackbar.Add($"格式转换失败: {error.Message}", Severity.Error);
+                }
+                else
+                {
+                    Value = convertedExpr;
                     await ValueChanged.InvokeAsync(Value);
                 }
             }
         }
 
         _helperText = _format == CronFormat.Quartz ? "格式：秒 分 时 日 月 周" : "格式：分 时 日 月 周";
-        UpdatePreview();
+        await UpdatePreview();
     }
 
     private async Task OnExpressionChanged()
     {
-        UpdatePreview();
+        await UpdatePreview();
         await ValueChanged.InvokeAsync(Value);
     }
 
-    private void UpdatePreview()
+    private async Task UpdatePreview()
     {
         if (string.IsNullOrWhiteSpace(Value))
         {
@@ -420,41 +470,77 @@
             return;
         }
 
-        // 验证表达式
+        // 验证表达式（同步验证）
         var validation = CronService.ValidateExpression(Value, _format);
-        _hasError = !validation.IsOk();
-        _errorText = validation.IsOk() ? string.Empty : validation.Message ?? string.Empty;
-
-        if (!validation.IsOk())
+        if (validation.IsFailed(out var error))
         {
+            _hasError = true;
+            _errorText = error.Message ?? string.Empty;
             _description = string.Empty;
             _nextOccurrences.Clear();
             return;
         }
 
-        // 获取文字描述
-        var descResult = CronService.ParseToDescription(Value, _format);
-        _description = descResult.IsOk() ? descResult.Data! : string.Empty;
+        _hasError = false;
+        _errorText = string.Empty;
 
-        // 获取执行时间
+        // 异步获取文字描述（仅在 JS 模块已加载时）
+        if (_jsModule != null)
+        {
+            _isLoadingDescription = true;
+            StateHasChanged(); // 立即更新 UI 显示加载状态
+
+            try
+            {
+                var descResult = await CronService.ParseToDescriptionAsync(_jsModule, Value, _format);
+                if (descResult.IsFailed(out var descError, out var description))
+                {
+                    _description = string.Empty;
+                    Snackbar.Add($"解析描述失败: {descError.Message}", Severity.Warning);
+                }
+                else
+                {
+                    _description = description;
+                }
+            }
+            finally
+            {
+                _isLoadingDescription = false;
+            }
+        }
+        else
+        {
+            _description = string.Empty;
+        }
+
+        // 获取执行时间（同步）
         var occurrences = CronService.GetNextOccurrences(Value, _format, 5);
-        _nextOccurrences = occurrences.IsOk() ? occurrences.Data! : new List<DateTime>();
+        if (occurrences.IsFailed(out var occError, out var occurrenceList))
+        {
+            _nextOccurrences = new List<DateTime>();
+            Snackbar.Add($"计算执行时间失败: {occError.Message}", Severity.Warning);
+        }
+        else
+        {
+            _nextOccurrences = occurrenceList;
+        }
     }
 
     private async Task ApplySimpleSettings()
     {
         var result = CronService.BuildFromSimpleSettings(_simpleSettings, _format);
-        if (result.IsOk())
+        if (result.IsFailed(out var error, out var expression))
         {
-            Value = result.Data!;
-            await ValueChanged.InvokeAsync(Value);
-            UpdatePreview();
+            _hasError = true;
+            _errorText = error.Message ?? "生成表达式失败";
+            Snackbar.Add($"生成表达式失败: {_errorText}", Severity.Error);
             StateHasChanged();
         }
         else
         {
-            _hasError = true;
-            _errorText = result.Message ?? "生成表达式失败";
+            Value = expression;
+            await ValueChanged.InvokeAsync(Value);
+            await UpdatePreview();
             StateHasChanged();
         }
     }
@@ -464,5 +550,13 @@
         public string Field { get; set; } = string.Empty;
         public string AllowedValues { get; set; } = string.Empty;
         public string SpecialChars { get; set; } = string.Empty;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_jsModule is not null)
+        {
+            await _jsModule.DisposeAsync();
+        }
     }
 }

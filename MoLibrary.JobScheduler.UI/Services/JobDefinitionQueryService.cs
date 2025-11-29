@@ -51,9 +51,9 @@ public class JobDefinitionQueryService(
                 cancellationToken: cancellationToken);
 
             // ResPaged 失败时，Code 不是 Ok
-            if (result.Code != ResponseCode.Ok)
+            if (result.IsFailed(out var error))
             {
-                return Res.Fail($"Failed to get job definition: {result.Message}");
+                return Res.Fail($"Failed to get job definition: {error.Message}");
             }
 
             return Res.Ok(result.Data.Items?.FirstOrDefault());
@@ -83,14 +83,14 @@ public class JobDefinitionQueryService(
                 filter.PageSize,
                 cancellationToken);
 
-            if (definitionsResult.Code != ResponseCode.Ok || definitionsResult.Data == null)
+            if (definitionsResult.IsFailed(out var error, out var pageData))
             {
-                return Res.Fail($"Failed to query job definitions: {definitionsResult.Message}");
+                return Res.Fail($"Failed to query job definitions: {error.Message}");
             }
 
             var enhancedJobs = new List<JobDefinitionWithLastExecution>();
 
-            foreach (var definition in definitionsResult.Data.Items ?? [])
+            foreach (var definition in pageData.Items ?? [])
             {
                 var enhanced = new JobDefinitionWithLastExecution
                 {
@@ -111,7 +111,7 @@ public class JobDefinitionQueryService(
             }
 
             return new ResPaged<JobDefinitionWithLastExecution>(
-                definitionsResult.Data.Sum ?? 0,
+                pageData.Sum ?? 0,
                 enhancedJobs,
                 filter.PageNumber,
                 filter.PageSize);

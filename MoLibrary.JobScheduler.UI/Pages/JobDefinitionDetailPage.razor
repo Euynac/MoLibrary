@@ -241,13 +241,13 @@
         try
         {
             var result = await UIService.GetJobDefinitionAsync(JobKey);
-            if (result.Code == ResponseCode.Ok && result.Data != null)
+            if (result.IsFailed(out var error, out var data))
             {
-                _jobDefinition = result.Data;
+                _error = $"加载失败: {error.Message}";
             }
             else
             {
-                _error = $"加载失败: {result.Message}";
+                _jobDefinition = data;
             }
         }
         catch (Exception ex)
@@ -267,9 +267,13 @@
         try
         {
             var result = await UIService.GetRunningInstancesAsync(JobKey);
-            if (result.Code == ResponseCode.Ok && result.Data != null)
+            if (result.IsFailed(out var error, out var data))
             {
-                _runningInstances = result.Data.ToList();
+                Snackbar.Add($"加载运行中实例失败: {error.Message}", Severity.Error);
+            }
+            else
+            {
+                _runningInstances = data.ToList();
             }
         }
         catch (Exception ex)
@@ -287,28 +291,28 @@
     private async Task DisableJobAsync()
     {
         var result = await UIService.PauseJobAsync(JobKey);
-        if (result.Code == ResponseCode.Ok)
+        if (result.IsFailed(out var error))
         {
-            Snackbar.Add("作业已禁用", Severity.Success);
-            await LoadJobDefinitionAsync();
+            Snackbar.Add($"禁用失败: {error.Message}", Severity.Error);
         }
         else
         {
-            Snackbar.Add($"禁用失败: {result.Message}", Severity.Error);
+            Snackbar.Add("作业已禁用", Severity.Success);
+            await LoadJobDefinitionAsync();
         }
     }
 
     private async Task ExecuteJobAsync()
     {
         var result = await UIService.ExecuteJobAsync(JobKey);
-        if (result.Code == ResponseCode.Ok)
+        if (result.IsFailed(out var error))
         {
-            Snackbar.Add("作业已触发执行", Severity.Success);
-            await RefreshRunningInstancesAsync();
+            Snackbar.Add($"执行失败: {error.Message}", Severity.Error);
         }
         else
         {
-            Snackbar.Add($"执行失败: {result.Message}", Severity.Error);
+            Snackbar.Add("作业已触发执行", Severity.Success);
+            await RefreshRunningInstancesAsync();
         }
     }
 

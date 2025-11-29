@@ -270,16 +270,16 @@
 
         var result = await UIService.GetJobDefinitionsWithLastExecutionAsync(filter, cancellationToken);
 
-        if (result.Code != ResponseCode.Ok || result.Data == null)
+        if (result.IsFailed(out var error, out var data))
         {
-            Snackbar.Add($"加载失败: {result.Message}", Severity.Error);
+            Snackbar.Add($"加载失败: {error.Message}", Severity.Error);
             return new TableData<JobDefinitionWithLastExecution> { Items = Array.Empty<JobDefinitionWithLastExecution>(), TotalItems = 0 };
         }
 
         return new TableData<JobDefinitionWithLastExecution>
         {
-            Items = result.Data.Items ?? Array.Empty<JobDefinitionWithLastExecution>(),
-            TotalItems = result.Data.Sum ?? 0
+            Items = data.Items ?? Array.Empty<JobDefinitionWithLastExecution>(),
+            TotalItems = data.Sum ?? 0
         };
     }
 
@@ -297,16 +297,16 @@
 
         var result = await UIService.GetJobDefinitionsWithLastExecutionAsync(filter, cancellationToken);
 
-        if (result.Code != ResponseCode.Ok || result.Data == null)
+        if (result.IsFailed(out var error, out var data))
         {
-            Snackbar.Add($"加载失败: {result.Message}", Severity.Error);
+            Snackbar.Add($"加载失败: {error.Message}", Severity.Error);
             return new TableData<JobDefinitionWithLastExecution> { Items = Array.Empty<JobDefinitionWithLastExecution>(), TotalItems = 0 };
         }
 
         return new TableData<JobDefinitionWithLastExecution>
         {
-            Items = result.Data.Items ?? Array.Empty<JobDefinitionWithLastExecution>(),
-            TotalItems = result.Data.Sum ?? 0
+            Items = data.Items ?? Array.Empty<JobDefinitionWithLastExecution>(),
+            TotalItems = data.Sum ?? 0
         };
     }
 
@@ -355,41 +355,41 @@
     private async Task PauseJobAsync(string jobKey)
     {
         var result = await UIService.PauseJobAsync(jobKey);
-        if (result.Code == ResponseCode.Ok)
+        if (result.IsFailed(out var error))
         {
-            Snackbar.Add($"作业 {jobKey} 已暂停", Severity.Success);
-            await RefreshRecurringJobsAsync();
+            Snackbar.Add($"暂停失败: {error.Message}", Severity.Error);
         }
         else
         {
-            Snackbar.Add($"暂停失败: {result.Message}", Severity.Error);
+            Snackbar.Add($"作业 {jobKey} 已暂停", Severity.Success);
+            await RefreshRecurringJobsAsync();
         }
     }
 
     private async Task ResumeJobAsync(string jobKey)
     {
         var result = await UIService.ResumeJobAsync(jobKey);
-        if (result.Code == ResponseCode.Ok)
+        if (result.IsFailed(out var error))
         {
-            Snackbar.Add($"作业 {jobKey} 已继续", Severity.Success);
-            await RefreshRecurringJobsAsync();
+            Snackbar.Add($"继续失败: {error.Message}", Severity.Error);
         }
         else
         {
-            Snackbar.Add($"继续失败: {result.Message}", Severity.Error);
+            Snackbar.Add($"作业 {jobKey} 已继续", Severity.Success);
+            await RefreshRecurringJobsAsync();
         }
     }
 
     private async Task ExecuteJobAsync(string jobKey)
     {
         var result = await UIService.ExecuteJobAsync(jobKey);
-        if (result.Code == ResponseCode.Ok)
+        if (result.IsFailed(out var error))
         {
-            Snackbar.Add($"作业 {jobKey} 已触发执行", Severity.Success);
+            Snackbar.Add($"执行失败: {error.Message}", Severity.Error);
         }
         else
         {
-            Snackbar.Add($"执行失败: {result.Message}", Severity.Error);
+            Snackbar.Add($"作业 {jobKey} 已触发执行", Severity.Success);
         }
     }
 

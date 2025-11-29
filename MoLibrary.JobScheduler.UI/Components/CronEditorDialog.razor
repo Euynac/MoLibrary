@@ -70,14 +70,14 @@
             JobDefinition.CronExpression = _cronExpression;
             var result = await UIService.UpdateJobConfigAsync(JobDefinition);
 
-            if (result.IsOk())
+            if (result.IsFailed(out var error))
             {
-                Snackbar.Add("Cron 表达式已更新", Severity.Success);
-                MudDialog.Close(DialogResult.Ok(true));
+                Snackbar.Add($"更新失败: {error.Message}", Severity.Error);
             }
             else
             {
-                Snackbar.Add($"更新失败: {result.Message}", Severity.Error);
+                Snackbar.Add("Cron 表达式已更新", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
             }
         }
         catch (Exception ex)
