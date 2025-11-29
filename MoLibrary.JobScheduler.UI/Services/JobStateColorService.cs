@@ -25,7 +25,7 @@ public class JobStateColorService
             JobState.Processing => Color.Primary,
             JobState.Enqueued => Color.Info,
             JobState.Scheduled => Color.Default,
-            JobState.Skipped => Color.Secondary,
+            JobState.Skipped => Color.Surface,
             _ => Color.Default
         };
     }

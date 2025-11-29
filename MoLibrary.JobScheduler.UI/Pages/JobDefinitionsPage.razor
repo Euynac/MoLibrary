@@ -3,6 +3,8 @@
 @inject JobStateColorService ColorService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@using MudBlazor
 
 <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
     <MudText Typo="Typo.h4" Class="mb-4">作业定义</MudText>
@@ -114,7 +116,7 @@
                                 <MudChip T="string"
                                          Size="Size.Small"
                                          Color="@ColorService.GetStateColor(context.LastExecution.State)"
-                                         OnClick="@(() => NavigateToInstance(context.LastExecution.InstanceId))"
+                                         OnClick="@(async () => await OpenInstanceDetailDialog(context.LastExecution.InstanceId))"
                                          Class="clickable-execution-time">
                                     @context.LastExecution.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")
                                 </MudChip>
@@ -203,7 +205,7 @@
                                 <MudChip T="string"
                                          Size="Size.Small"
                                          Color="@ColorService.GetStateColor(context.LastExecution.State)"
-                                         OnClick="@(() => NavigateToInstance(context.LastExecution.InstanceId))"
+                                         OnClick="@(async () => await OpenInstanceDetailDialog(context.LastExecution.InstanceId))"
                                          Class="clickable-execution-time">
                                     @context.LastExecution.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")
                                 </MudChip>
@@ -398,9 +400,24 @@
         NavigationManager.NavigateTo($"/job-scheduler/definitions/{Uri.EscapeDataString(jobKey)}");
     }
 
-    private void NavigateToInstance(string instanceId)
+    private async Task OpenInstanceDetailDialog(string instanceId)
     {
-        NavigationManager.NavigateTo($"/job-scheduler/instances/{Uri.EscapeDataString(instanceId)}");
+        var parameters = new DialogParameters<JobInstanceDetailDialog>
+        {
+            { x => x.InstanceId, instanceId },
+            { x => x.ShowJobDefinitionButton, true }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.ExtraLarge,
+            FullWidth = true,
+            CloseButton = true,
+            BackdropClick = false,
+            Position = DialogPosition.Center
+        };
+
+        await DialogService.ShowAsync<JobInstanceDetailDialog>("作业实例详情", parameters, options);
     }
 
     private Color GetDisabledStateColor(bool isDisabled)

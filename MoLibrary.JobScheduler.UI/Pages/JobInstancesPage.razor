@@ -3,6 +3,8 @@
 @inject JobStateColorService ColorService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@using MudBlazor
 
 <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
     <MudText Typo="Typo.h4" Class="mb-4">作业实例</MudText>
@@ -158,7 +160,7 @@
                     <MudIconButton Icon="@Icons.Material.Filled.Info"
                                    Color="Color.Info"
                                    Size="Size.Small"
-                                   OnClick="() => NavigateToDetail(context.InstanceId)" />
+                                   OnClick="@(async () => await OpenInstanceDetailDialog(context.InstanceId))" />
                 </MudTooltip>
             </MudTd>
         </RowTemplate>
@@ -303,9 +305,24 @@
         }
     }
 
-    private void NavigateToDetail(string instanceId)
+    private async Task OpenInstanceDetailDialog(string instanceId)
     {
-        NavigationManager.NavigateTo($"/job-scheduler/instances/{Uri.EscapeDataString(instanceId)}");
+        var parameters = new DialogParameters<JobInstanceDetailDialog>
+        {
+            { x => x.InstanceId, instanceId },
+            { x => x.ShowJobDefinitionButton, true }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.ExtraLarge,
+            FullWidth = true,
+            CloseButton = true,
+            BackdropClick = false,
+            Position = DialogPosition.Center
+        };
+
+        await DialogService.ShowAsync<JobInstanceDetailDialog>("作业实例详情", parameters, options);
     }
 
     private string FormatDuration(TimeSpan duration)

@@ -4,6 +4,7 @@
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@using MudBlazor
 
 <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
     @if (_isLoading)
@@ -29,13 +30,31 @@
                            OnClick="NavigateBack">
                     返回列表
                 </MudButton>
-                @if (_jobDefinition.JobType == JobType.Recurring && !_jobDefinition.IsDisabled)
+                @if (_jobDefinition.JobType == JobType.Recurring)
                 {
+                    @if (_jobDefinition.IsDisabled)
+                    {
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Success"
+                                   StartIcon="@Icons.Material.Filled.PlayArrow"
+                                   OnClick="EnableJobAsync">
+                            启用
+                        </MudButton>
+                    }
+                    else
+                    {
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Warning"
+                                   StartIcon="@Icons.Material.Filled.Pause"
+                                   OnClick="DisableJobAsync">
+                            禁用
+                        </MudButton>
+                    }
                     <MudButton Variant="Variant.Filled"
-                               Color="Color.Warning"
-                               StartIcon="@Icons.Material.Filled.Pause"
-                               OnClick="DisableJobAsync">
-                        禁用
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.PlayCircle"
+                               OnClick="ExecuteJobAsync">
+                        立即执行
                     </MudButton>
                 }
                 @if (_jobDefinition.JobType == JobType.Triggered)
@@ -77,16 +96,15 @@
                 @if (!string.IsNullOrEmpty(_jobDefinition.CronExpression))
                 {
                     <MudItem xs="12" sm="6">
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                            <div>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">Cron表达式</MudText>
-                                <MudText Typo="Typo.body1" Style="font-family: monospace;">@_jobDefinition.CronExpression</MudText>
-                            </div>
-                            <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                                           Color="Color.Primary"
-                                           Size="Size.Small"
-                                           OnClick="OpenCronEditorDialog" />
-                        </MudStack>
+                        <div>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Cron表达式</MudText>
+                            <MudChip T="string"
+                                     Color="Color.Primary"
+                                     OnClick="OpenCronEditorDialog"
+                                     Style="cursor: pointer; font-family: monospace; margin-top: 4px;">
+                                @_jobDefinition.CronExpression
+                            </MudChip>
+                        </div>
                     </MudItem>
                 }
             </MudGrid>
@@ -172,7 +190,7 @@
                                 <MudIconButton Icon="@Icons.Material.Filled.Info"
                                                Color="Color.Info"
                                                Size="Size.Small"
-                                               OnClick="() => NavigateToInstance(context.InstanceId)" />
+                                               OnClick="@(async () => await OpenInstanceDetailDialog(context.InstanceId))" />
                             </MudTooltip>
                         </MudTd>
                     </RowTemplate>
@@ -302,6 +320,20 @@
         }
     }
 
+    private async Task EnableJobAsync()
+    {
+        var result = await UIService.ResumeJobAsync(JobKey);
+        if (result.IsFailed(out var error))
+        {
+            Snackbar.Add($"启用失败: {error.Message}", Severity.Error);
+        }
+        else
+        {
+            Snackbar.Add("作业已启用", Severity.Success);
+            await LoadJobDefinitionAsync();
+        }
+    }
+
     private async Task ExecuteJobAsync()
     {
         var result = await UIService.ExecuteJobAsync(JobKey);
@@ -326,9 +358,24 @@
         NavigationManager.NavigateTo($"/job-scheduler/instances?jobKey={Uri.EscapeDataString(JobKey)}");
     }
 
-    private void NavigateToInstance(string instanceId)
+    private async Task OpenInstanceDetailDialog(string instanceId)
     {
-        NavigationManager.NavigateTo($"/job-scheduler/instances/{Uri.EscapeDataString(instanceId)}");
+        var parameters = new DialogParameters<JobInstanceDetailDialog>
+        {
+            { x => x.InstanceId, instanceId },
+            { x => x.ShowJobDefinitionButton, false }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.ExtraLarge,
+            FullWidth = true,
+            CloseButton = true,
+            BackdropClick = false,
+            Position = DialogPosition.Center
+        };
+
+        await DialogService.ShowAsync<JobInstanceDetailDialog>("作业实例详情", parameters, options);
     }
 
     private Color GetJobTypeColor(JobType jobType)
