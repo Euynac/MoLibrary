@@ -75,8 +75,8 @@ public class StackTraceParserService
                     };
                     result.Lines.Add(innerExceptionLine);
 
-                    // 继续处理该行的异常头部（去掉 --->）
-                    string cleanLine = line.TrimStart().Substring(3).TrimStart();
+                    // 继续处理该行的异常头部（去掉 ---> 这4个字符）
+                    string cleanLine = line.TrimStart().Substring(4).TrimStart();
                     var exceptionMatch = ExceptionHeaderRegex.Match(cleanLine);
                     if (exceptionMatch.Success && IsValidExceptionType(exceptionMatch.Groups["exceptionType"].Value))
                     {
@@ -204,6 +204,12 @@ public class StackTraceParserService
             line.LineNumber = lineNumber;
         }
 
+        // 解析方法参数
+        if (!string.IsNullOrEmpty(line.Parameters))
+        {
+            line.ParsedParameters = ParseMethodParameters(line.Parameters);
+        }
+
         // 提取命名空间和类名
         string namespaceValue = match.Groups["namespace"].Value;
         if (!string.IsNullOrEmpty(namespaceValue))
@@ -222,6 +228,116 @@ public class StackTraceParserService
         }
 
         return line;
+    }
+
+    /// <summary>
+    /// 解析方法参数字符串，提取参数类型和名称
+    /// </summary>
+    private static List<MethodParameter> ParseMethodParameters(string parametersStr)
+    {
+        var result = new List<MethodParameter>();
+
+        if (string.IsNullOrWhiteSpace(parametersStr))
+            return result;
+
+        // 移除括号
+        var content = parametersStr.Trim();
+        if (content.StartsWith("(") && content.EndsWith(")"))
+        {
+            content = content.Substring(1, content.Length - 2);
+        }
+
+        if (string.IsNullOrWhiteSpace(content))
+            return result;
+
+        // 按逗号分割参数（需要考虑泛型中的逗号）
+        var parameters = SplitParameters(content);
+
+        foreach (var param in parameters)
+        {
+            var trimmedParam = param.Trim();
+            if (string.IsNullOrEmpty(trimmedParam))
+                continue;
+
+            // 分离参数类型和名称
+            var parts = SplitParameterTypeAndName(trimmedParam);
+            result.Add(new MethodParameter
+            {
+                Type = parts.type,
+                Name = parts.name
+            });
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// 按逗号分割参数字符串，考虑泛型中的逗号
+    /// </summary>
+    private static List<string> SplitParameters(string content)
+    {
+        var result = new List<string>();
+        var currentParam = new System.Text.StringBuilder();
+        int angleDepth = 0;
+
+        foreach (var c in content)
+        {
+            switch (c)
+            {
+                case '<':
+                    angleDepth++;
+                    currentParam.Append(c);
+                    break;
+                case '>':
+                    angleDepth--;
+                    currentParam.Append(c);
+                    break;
+                case ',' when angleDepth == 0:
+                    result.Add(currentParam.ToString());
+                    currentParam.Clear();
+                    break;
+                default:
+                    currentParam.Append(c);
+                    break;
+            }
+        }
+
+        if (currentParam.Length > 0)
+        {
+            result.Add(currentParam.ToString());
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// 从参数字符串分离类型和名称
+    /// </summary>
+    private static (string type, string name) SplitParameterTypeAndName(string param)
+    {
+        var trimmed = param.Trim();
+
+        // 处理 ref/out/in 修饰符
+        if (trimmed.StartsWith("ref "))
+            trimmed = trimmed.Substring(4);
+        else if (trimmed.StartsWith("out "))
+            trimmed = trimmed.Substring(4);
+        else if (trimmed.StartsWith("in "))
+            trimmed = trimmed.Substring(3);
+
+        // 从右到左找最后一个空格，作为类型和名称的分隔符
+        int lastSpaceIndex = trimmed.LastIndexOf(' ');
+
+        if (lastSpaceIndex <= 0)
+        {
+            // 没有找到空格，整个字符串是类型（不应该发生）
+            return (trimmed, string.Empty);
+        }
+
+        var type = trimmed.Substring(0, lastSpaceIndex).Trim();
+        var name = trimmed.Substring(lastSpaceIndex + 1).Trim();
+
+        return (type, name);
     }
 
     /// <summary>

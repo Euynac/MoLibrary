@@ -17,39 +17,70 @@
             else if (line.LineType == StackLineType.StackFrame)
             {
                 <div class="stack-frame" style="@GetInnerExceptionIndentForLevel(level)">
-                    <span class="frame-prefix">   at </span>
+                    <!-- "at" 关键字: 加粗 + Color.Info -->
+                    <span class="at-keyword">at</span>
+
+                    <!-- 命名空间、类名、方法名 -->
                     @if (!string.IsNullOrEmpty(line.Namespace))
                     {
-                        <span class="namespace">@line.Namespace.</span>
+                        <span class="namespace-part">@line.Namespace.</span>
                     }
                     @if (!string.IsNullOrEmpty(line.ClassName))
                     {
-                        <span class="class-name">@line.ClassName.</span>
+                        <span class="classname-part">@line.ClassName.</span>
                     }
                     @if (!string.IsNullOrEmpty(line.MethodName))
                     {
+                        <!-- 最后一个方法名: 加粗 + Color.Warning -->
                         <span class="method-name">@line.MethodName</span>
                     }
+
+                    <!-- 方法参数 -->
                     @if (!string.IsNullOrEmpty(line.Parameters))
                     {
-                        <span class="parameters">@line.Parameters</span>
+                        <span class="param-bracket">(</span>
+                        @if (line.ParsedParameters.Count > 0)
+                        {
+                            @for (int i = 0; i < line.ParsedParameters.Count; i++)
+                            {
+                                if (i > 0)
+                                {
+                                    <span class="param-separator">,</span>
+                                    <span class="param-space"> </span>
+                                }
+                                <!-- 参数类型: 加粗 -->
+                                <span class="param-type">@line.ParsedParameters[i].Type</span>
+                                @if (!string.IsNullOrEmpty(line.ParsedParameters[i].Name))
+                                {
+                                    <span class="param-space"> </span>
+                                    <!-- 参数名: 不加粗 -->
+                                    <span class="param-name">@line.ParsedParameters[i].Name</span>
+                                }
+                            }
+                        }
+                        <span class="param-bracket">)</span>
                     }
+
+                    <!-- 文件信息 -->
                     @if (!string.IsNullOrEmpty(line.FilePath))
                     {
-                        <span class="file-info"> in </span>
+                        <span class="in-keyword"> in </span>
                         @if (line.FilePath.Length > line.FileName?.Length)
                         {
                             <span class="file-path-dir">@line.FilePath.Substring(0, line.FilePath.Length - (line.FileName?.Length ?? 0))</span>
                         }
                         @if (!string.IsNullOrEmpty(line.FileName))
                         {
+                            <!-- 文件名: 加粗 + Color.Warning -->
                             <span class="file-name">@line.FileName</span>
                         }
-                        <span class="file-info">:</span>
                     }
+
+                    <!-- 行号: 加粗 + Color.Error -->
                     @if (line.LineNumber.HasValue)
                     {
-                        <span class="line-number">line @line.LineNumber</span>
+                        <span class="line-info">:line</span>
+                        <span class="line-number"> @line.LineNumber</span>
                     }
                 </div>
             }
