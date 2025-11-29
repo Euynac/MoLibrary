@@ -32,6 +32,22 @@ public enum StackLineType
 }
 
 /// <summary>
+/// 方法参数信息
+/// </summary>
+public class MethodParameter
+{
+    /// <summary>
+    /// 参数类型（如 string, int, object 等）
+    /// </summary>
+    public string? Type { get; set; }
+
+    /// <summary>
+    /// 参数名
+    /// </summary>
+    public string? Name { get; set; }
+}
+
+/// <summary>
 /// 表示堆栈跟踪中的一行信息
 /// </summary>
 public class StackTraceLine
@@ -75,6 +91,11 @@ public class StackTraceLine
     /// 参数列表（包括括号）
     /// </summary>
     public string? Parameters { get; set; }
+
+    /// <summary>
+    /// 解析后的方法参数列表
+    /// </summary>
+    public List<MethodParameter> ParsedParameters { get; set; } = new();
 
     /// <summary>
     /// 文件路径（完整路径）
