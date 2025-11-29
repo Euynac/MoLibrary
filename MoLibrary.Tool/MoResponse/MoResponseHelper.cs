@@ -161,6 +161,37 @@ public static class MoResponseHelper
         error = res;
         return true;
     }
+
+    /// <summary>
+    /// [not 200] 代表请求存在问题
+    /// </summary>
+    public static bool IsFailed<T>(this ResPaged<T> res, [NotNullWhen(true)] out Res? error, out ResPaged<T>.PageData data)
+    {
+        error = null;
+        if (res.IsOk(out data)) return false;
+        error = res.Inherit();
+        return true;
+    }
+
+    /// <summary>
+    /// [not 200] 代表请求存在问题
+    /// </summary>
+    public static bool IsFailed<T>(this ResPaged<T> res, [NotNullWhen(true)] out Res? error)
+    {
+        error = null;
+        if (res.IsOk()) return false;
+        error = res.Inherit();
+        return true;
+    }
+
+    /// <summary>
+    /// [200] 代表请求正常处理
+    /// </summary>
+    public static bool IsOk<T>(this ResPaged<T> res, out ResPaged<T>.PageData data)
+    {
+        data = res.Data;
+        return res.IsOk();
+    }
     /// <summary>
     /// [200] 代表请求正常处理
     /// </summary>

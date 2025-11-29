@@ -134,13 +134,13 @@
         try
         {
             var result = await UIService.GetJobInstanceAsync(InstanceId);
-            if (result.Code == ResponseCode.Ok && result.Data != null)
+            if (result.IsFailed(out var error, out var data))
             {
-                _jobInstance = result.Data;
+                _error = $"加载失败: {error.Message}";
             }
             else
             {
-                _error = $"加载失败: {result.Message}";
+                _jobInstance = data;
             }
         }
         catch (Exception ex)

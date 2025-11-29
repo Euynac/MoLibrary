@@ -111,14 +111,14 @@
         try
         {
             var result = await UIService.GetHealthMetricsAsync(JobKey);
-            if (result.Code == ResponseCode.Ok && result.Data != null)
+            if (result.IsFailed(out var error, out var data))
             {
-                _metrics = result.Data;
-                _timeWindowDays = (int)(_metrics.MetricsEndTime - _metrics.MetricsStartTime).TotalDays;
+                _error = $"加载失败: {error.Message}";
             }
             else
             {
-                _error = $"加载失败: {result.Message}";
+                _metrics = data;
+                _timeWindowDays = (int)(_metrics.MetricsEndTime - _metrics.MetricsStartTime).TotalDays;
             }
         }
         catch (Exception ex)

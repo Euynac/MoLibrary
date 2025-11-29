@@ -1,5 +1,6 @@
 using Cronos;
 using MoLibrary.Tool.MoResponse;
+using Microsoft.JSInterop;
 
 namespace MoLibrary.JobScheduler.UI.Services;
 
@@ -21,6 +22,7 @@ public enum CronFormat
 
 /// <summary>
 /// Cron 表达式服务，提供表达式解析、验证和执行时间计算
+/// 注意：解析描述功能需要组件提供 JS 模块引用
 /// </summary>
 public class CronExpressionService
 {
@@ -95,10 +97,18 @@ public class CronExpressionService
     }
 
     /// <summary>
-    /// 将表达式解析为可读的中文描述
+    /// 将表达式解析为可读的中文描述（使用 JavaScript cronstrue 库）
     /// </summary>
-    public Res<string> ParseToDescription(string expression, CronFormat format)
+    /// <param name="jsModule">由组件提供的 JS 模块引用</param>
+    /// <param name="expression">Cron 表达式</param>
+    /// <param name="format">表达式格式</param>
+    public async Task<Res<string>> ParseToDescriptionAsync(IJSObjectReference jsModule, string expression, CronFormat format)
     {
+        if (jsModule == null)
+        {
+            return Res.Fail("JavaScript 模块未加载");
+        }
+
         if (string.IsNullOrWhiteSpace(expression))
         {
             return Res.Fail("表达式不能为空");
@@ -106,28 +116,19 @@ public class CronExpressionService
 
         try
         {
-            var cronFormat = format == CronFormat.Quartz
-                ? Cronos.CronFormat.IncludeSeconds
-                : Cronos.CronFormat.Standard;
+            // 调用 JavaScript 函数
+            var result = await jsModule.InvokeAsync<CronParseResult>(
+                "parseCronExpression",
+                expression,
+                format == CronFormat.Quartz ? "quartz" : "standard");
 
-            var cronExpression = CronExpression.Parse(expression, cronFormat);
-            var parts = expression.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-            if (format == CronFormat.Quartz && parts.Length != 6)
-            {
-                return Res.Fail("Quartz 格式需要 6 段（秒 分 时 日 月 周）");
-            }
-
-            if (format == CronFormat.Standard && parts.Length != 5)
-            {
-                return Res.Fail("Standard 格式需要 5 段（分 时 日 月 周）");
-            }
-
-            var description = format == CronFormat.Quartz
-                ? BuildQuartzDescription(parts)
-                : BuildStandardDescription(parts);
-
-            return Res.Ok(description);
+            return result.Success
+                ? Res.Ok<string>(result.Description ?? "")
+                : Res.Fail(result.Error ?? "解析失败");
+        }
+        catch (JSException jsEx)
+        {
+            return Res.Fail($"JavaScript 调用失败: {jsEx.Message}");
         }
         catch (Exception ex)
         {
@@ -160,14 +161,14 @@ public class CronExpressionService
                     : $"{settings.Minute} {settings.Hour} {settings.DayOfMonth} {settings.Month} {settings.DayOfWeek}",
                 _ => throw new ArgumentException("未知的设置类型")
             };
-
+    
             var validation = ValidateExpression(expression, format);
             if (validation.IsFailed(out var error))
             {
                 return Res.Fail($"生成的表达式无效: {error.Message}");
             }
 
-            return Res.Ok(expression);
+            return Res.Ok<string>(expression);
         }
         catch (Exception ex)
         {
@@ -182,7 +183,7 @@ public class CronExpressionService
     {
         if (fromFormat == toFormat)
         {
-            return Res.Ok(expression);
+            return Res.Ok<string>(expression);
         }
 
         var validation = ValidateExpression(expression, fromFormat);
@@ -196,7 +197,7 @@ public class CronExpressionService
             if (fromFormat == CronFormat.Standard && toFormat == CronFormat.Quartz)
             {
                 // Standard (5段) -> Quartz (6段)：添加秒位（默认为 0）
-                return Res.Ok($"0 {expression}");
+                return Res.Ok<string>($"0 {expression}");
             }
             else
             {
@@ -206,7 +207,7 @@ public class CronExpressionService
                 {
                     return Res.Fail("Quartz 格式必须包含 6 段");
                 }
-                return Res.Ok(string.Join(" ", parts.Skip(1)));
+                return Res.Ok<string>(string.Join(" ", parts.Skip(1)));
             }
         }
         catch (Exception ex)
@@ -215,110 +216,16 @@ public class CronExpressionService
         }
     }
 
-    private string BuildQuartzDescription(string[] parts)
-    {
-        var descriptions = new List<string>();
+}
 
-        // 秒
-        if (parts[0] != "*" && parts[0] != "?")
-        {
-            descriptions.Add($"秒: {DescribePart(parts[0], "秒")}");
-        }
-
-        // 分
-        if (parts[1] != "*")
-        {
-            descriptions.Add($"分: {DescribePart(parts[1], "分")}");
-        }
-
-        // 时
-        if (parts[2] != "*")
-        {
-            descriptions.Add($"时: {DescribePart(parts[2], "时")}");
-        }
-
-        // 日
-        if (parts[3] != "*" && parts[3] != "?")
-        {
-            descriptions.Add($"日: {DescribePart(parts[3], "日")}");
-        }
-
-        // 月
-        if (parts[4] != "*")
-        {
-            descriptions.Add($"月: {DescribePart(parts[4], "月")}");
-        }
-
-        // 周
-        if (parts[5] != "*" && parts[5] != "?")
-        {
-            descriptions.Add($"周: {DescribePart(parts[5], "周")}");
-        }
-
-        return descriptions.Count > 0
-            ? string.Join(", ", descriptions)
-            : "每秒执行";
-    }
-
-    private string BuildStandardDescription(string[] parts)
-    {
-        var descriptions = new List<string>();
-
-        // 分
-        if (parts[0] != "*")
-        {
-            descriptions.Add($"分: {DescribePart(parts[0], "分")}");
-        }
-
-        // 时
-        if (parts[1] != "*")
-        {
-            descriptions.Add($"时: {DescribePart(parts[1], "时")}");
-        }
-
-        // 日
-        if (parts[2] != "*")
-        {
-            descriptions.Add($"日: {DescribePart(parts[2], "日")}");
-        }
-
-        // 月
-        if (parts[3] != "*")
-        {
-            descriptions.Add($"月: {DescribePart(parts[3], "月")}");
-        }
-
-        // 周
-        if (parts[4] != "*")
-        {
-            descriptions.Add($"周: {DescribePart(parts[4], "周")}");
-        }
-
-        return descriptions.Count > 0
-            ? string.Join(", ", descriptions)
-            : "每分钟执行";
-    }
-
-    private string DescribePart(string part, string unit)
-    {
-        if (part.StartsWith("*/"))
-        {
-            return $"每 {part[2..]} {unit}";
-        }
-
-        if (part.Contains("-"))
-        {
-            var range = part.Split('-');
-            return $"{range[0]}-{range[1]} {unit}";
-        }
-
-        if (part.Contains(","))
-        {
-            return $"{part} {unit}";
-        }
-
-        return $"{part} {unit}";
-    }
+/// <summary>
+/// JavaScript 返回结果模型
+/// </summary>
+internal class CronParseResult
+{
+    public bool Success { get; set; }
+    public string? Description { get; set; }
+    public string? Error { get; set; }
 }
 
 /// <summary>

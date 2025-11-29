@@ -125,13 +125,13 @@
         try
         {
             var result = await UIService.GetStatisticsAsync(JobKey);
-            if (result.Code == ResponseCode.Ok && result.Data != null)
+            if (result.IsFailed(out var error, out var data))
             {
-                _statistics = result.Data;
+                _error = $"加载失败: {error.Message}";
             }
             else
             {
-                _error = $"加载失败: {result.Message}";
+                _statistics = data;
             }
         }
         catch (Exception ex)

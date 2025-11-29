@@ -223,16 +223,16 @@
 
         var result = await UIService.GetJobInstancesAsync(filter, cancellationToken);
 
-        if (result.Code != ResponseCode.Ok || result.Data == null)
+        if (result.IsFailed(out var error, out var data))
         {
-            Snackbar.Add($"加载失败: {result.Message}", Severity.Error);
+            Snackbar.Add($"加载失败: {error.Message}", Severity.Error);
             return new TableData<JobInstance> { Items = Array.Empty<JobInstance>(), TotalItems = 0 };
         }
 
         return new TableData<JobInstance>
         {
-            Items = result.Data.Items ?? Array.Empty<JobInstance>(),
-            TotalItems = result.Data.Sum ?? 0
+            Items = data.Items ?? Array.Empty<JobInstance>(),
+            TotalItems = data.Sum ?? 0
         };
     }
 
