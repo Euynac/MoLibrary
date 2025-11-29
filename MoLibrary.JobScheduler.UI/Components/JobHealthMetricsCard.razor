@@ -1,5 +1,7 @@
 @inject JobSchedulerUIService UIService
 @inject NavigationManager NavigationManager
+@inject IDialogService DialogService
+@using MudBlazor
 
 <MudCard Elevation="2">
     <MudCardHeader>
@@ -52,7 +54,7 @@
                             <MudList T="string" Dense="true">
                                 @foreach (var failure in _metrics.RecentFailures)
                                 {
-                                    <MudListItem T="string" OnClick="() => NavigateToInstance(failure.InstanceId)">
+                                    <MudListItem T="string" OnClick="@(async () => await OpenInstanceDetailDialog(failure.InstanceId))">
                                         <MudStack Row="true" Justify="Justify.SpaceBetween">
                                             <MudText Typo="Typo.body2">@failure.InstanceId</MudText>
                                             <MudText Typo="Typo.caption" Color="Color.Secondary">
@@ -142,8 +144,23 @@
         return Color.Error;
     }
 
-    private void NavigateToInstance(string instanceId)
+    private async Task OpenInstanceDetailDialog(string instanceId)
     {
-        NavigationManager.NavigateTo($"/job-scheduler/instances/{Uri.EscapeDataString(instanceId)}");
+        var parameters = new DialogParameters<JobInstanceDetailDialog>
+        {
+            { x => x.InstanceId, instanceId },
+            { x => x.ShowJobDefinitionButton, true }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.ExtraLarge,
+            FullWidth = true,
+            CloseButton = true,
+            BackdropClick = false,
+            Position = DialogPosition.Center
+        };
+
+        await DialogService.ShowAsync<JobInstanceDetailDialog>("作业实例详情", parameters, options);
     }
 }

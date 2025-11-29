@@ -60,12 +60,7 @@ public class JobSchedulerApiService(
             {
                 return Res.Fail($"Job {jobKey} not found");
             }
-
-            if (definition.JobType != JobType.Triggered)
-            {
-                return Res.Fail($"Job {jobKey} is not a triggered job. Only triggered jobs can be manually executed.");
-            }
-
+            
             // Create instance via JobInstanceManager
             var instance = await jobInstanceManager.CreateInstanceAsync(
                 definition,

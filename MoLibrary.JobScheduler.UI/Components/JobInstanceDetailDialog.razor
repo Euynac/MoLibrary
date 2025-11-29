@@ -1,0 +1,190 @@
+@inject JobSchedulerUIService UIService
+@inject JobStateColorService ColorService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        @if (_isLoading)
+        {
+            <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                <MudProgressCircular Indeterminate="true" Size="Size.Large" />
+                <MudText Typo="Typo.h6">加载中...</MudText>
+            </MudStack>
+        }
+        else if (_error != null)
+        {
+            <MudAlert Severity="Severity.Error">@_error</MudAlert>
+        }
+        else if (_jobInstance != null)
+        {
+            <!-- 操作按钮 -->
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+                <MudStack Row="true" Spacing="2">
+                    @if (ShowJobDefinitionButton)
+                    {
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.Description"
+                                   OnClick="@NavigateToJobDefinition">
+                            查看作业定义
+                        </MudButton>
+                    }
+                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                   Color="Color.Primary"
+                                   OnClick="RefreshAsync" />
+                </MudStack>
+            </MudStack>
+
+            <!-- 基本信息 -->
+            <MudPaper Class="pa-4 mb-4" Elevation="2">
+                <MudText Typo="Typo.h6" Class="mb-3">基本信息</MudText>
+                <MudGrid>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">实例ID</MudText>
+                        <MudText Typo="Typo.body1" Style="font-family: monospace;">@_jobInstance.InstanceId</MudText>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">作业键</MudText>
+                        <MudText Typo="Typo.body1">@_jobInstance.JobKey</MudText>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">状态</MudText>
+                        <MudChip T="string" Size="Size.Small" Color="@ColorService.GetStateColor(_jobInstance.State)">
+                            @_jobInstance.State
+                        </MudChip>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">创建时间</MudText>
+                        <MudText Typo="Typo.body1">@_jobInstance.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">开始时间</MudText>
+                        <MudText Typo="Typo.body1">@(_jobInstance.StartedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-")</MudText>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">结束时间</MudText>
+                        <MudText Typo="Typo.body1">@(_jobInstance.CompletedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-")</MudText>
+                    </MudItem>
+                    @if (_jobInstance.StartedAt.HasValue)
+                    {
+                        <MudItem xs="12" sm="6" md="4">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">执行时长</MudText>
+                            <MudText Typo="Typo.body1">
+                                @if (_jobInstance.CompletedAt.HasValue)
+                                {
+                                    var duration = _jobInstance.CompletedAt.Value - _jobInstance.StartedAt.Value;
+                                    @FormatDuration(duration)
+                                }
+                                else
+                                {
+                                    var duration = DateTime.UtcNow - _jobInstance.StartedAt.Value;
+                                    <text>@FormatDuration(duration) (运行中)</text>
+                                }
+                            </MudText>
+                        </MudItem>
+                    }
+                </MudGrid>
+            </MudPaper>
+
+            <!-- 作业参数 -->
+            @if (!string.IsNullOrEmpty(_jobInstance.JobArgs))
+            {
+                <MudPaper Class="pa-4 mb-4" Elevation="2">
+                    <MudText Typo="Typo.h6" Class="mb-3">作业参数</MudText>
+                    <MudTextField T="string"
+                                  Value="@_jobInstance.JobArgs"
+                                  ReadOnly="true"
+                                  Variant="Variant.Outlined"
+                                  Lines="10"
+                                  AutoGrow="true"
+                                  Style="font-family: monospace;" />
+                </MudPaper>
+            }
+
+            <!-- 状态历史 -->
+            <StateHistoryViewer Instance="@_jobInstance" />
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">关闭</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter]
+    public string InstanceId { get; set; } = string.Empty;
+
+    [Parameter]
+    public bool ShowJobDefinitionButton { get; set; } = false;
+
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    private JobInstance? _jobInstance;
+    private bool _isLoading = true;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadJobInstanceAsync();
+    }
+
+    private async Task LoadJobInstanceAsync()
+    {
+        _isLoading = true;
+        _error = null;
+
+        try
+        {
+            var result = await UIService.GetJobInstanceAsync(InstanceId);
+            if (result.IsFailed(out var error, out var data))
+            {
+                _error = $"加载失败: {error.Message}";
+            }
+            else
+            {
+                _jobInstance = data;
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"加载失败: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task RefreshAsync()
+    {
+        await LoadJobInstanceAsync();
+        StateHasChanged();
+    }
+
+    private void NavigateToJobDefinition()
+    {
+        if (_jobInstance != null)
+        {
+            MudDialog.Close();
+            NavigationManager.NavigateTo($"/job-scheduler/definitions/{Uri.EscapeDataString(_jobInstance.JobKey)}");
+        }
+    }
+
+    private void Close()
+    {
+        MudDialog.Close();
+    }
+
+    private string FormatDuration(TimeSpan duration)
+    {
+        if (duration.TotalHours >= 1)
+            return $"{duration.TotalHours:F2}h";
+        if (duration.TotalMinutes >= 1)
+            return $"{duration.TotalMinutes:F2}m";
+        if (duration.TotalSeconds >= 1)
+            return $"{duration.TotalSeconds:F2}s";
+        return $"{duration.TotalMilliseconds:F0}ms";
+    }
+}
