@@ -1,4 +1,4 @@
-namespace MoLibrary.JobScheduler.UI.Models;
+namespace MoLibrary.UI.UIStackTrace.Models;
 
 /// <summary>
 /// 堆栈跟踪行的类型枚举

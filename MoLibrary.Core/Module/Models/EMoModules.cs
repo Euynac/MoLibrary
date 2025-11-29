@@ -88,6 +88,10 @@ public enum EMoModules
     /// 文本差异对比高亮UI模块
     /// </summary>
     DiffHighlightUI,
+    /// <summary>
+    /// 堆栈跟踪UI模块
+    /// </summary>
+    UIStackTrace,
     RpcClient,
     DaprProviderRpcClient,
     DaprProviderClientConnector,

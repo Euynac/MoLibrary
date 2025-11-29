@@ -6,6 +6,7 @@ using MoLibrary.JobScheduler.Modules;
 using MoLibrary.JobScheduler.UI.Pages;
 using MoLibrary.JobScheduler.UI.Services;
 using MoLibrary.UI.Modules;
+using MoLibrary.UI.UIStackTrace.Services;
 using MudBlazor;
 
 namespace MoLibrary.JobScheduler.UI.Modules;
@@ -34,13 +35,16 @@ public class ModuleJobSchedulerUI(ModuleJobSchedulerUIOption option)
 
         // 注册 Scoped 门面服务（Blazor Circuit）
         services.AddScoped<JobSchedulerUIService>();
-        services.AddScoped<StackTraceParserService>();
+        // StackTraceParserService is now registered by ModuleUIStackTrace module
     }
 
     public override void ClaimDependencies()
     {
         // 依赖后端 JobScheduler 模块
         DependsOnModule<ModuleJobSchedulerGuide>().Register();
+
+        // 依赖 UIStackTrace 模块（用于堆栈跟踪可视化）
+        DependsOnModule<ModuleUIStackTraceGuide>().Register();
 
         // 依赖 UI 核心模块并注册页面
         if (!Option.DisableJobSchedulerPages)

@@ -1,7 +1,7 @@
-using MoLibrary.JobScheduler.UI.Models;
+using MoLibrary.UI.UIStackTrace.Models;
 using System.Text.RegularExpressions;
 
-namespace MoLibrary.JobScheduler.UI.Services;
+namespace MoLibrary.UI.UIStackTrace.Services;
 
 /// <summary>
 /// .NET 堆栈跟踪解析服务
