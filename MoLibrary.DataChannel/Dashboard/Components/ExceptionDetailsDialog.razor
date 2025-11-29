@@ -131,9 +131,7 @@
                                         <MudCard Elevation="1" Class="pa-3">
                                             <MudStack Spacing="2">
                                                 <MudText Typo="Typo.subtitle2" Class="exception-section-title">异常堆栈</MudText>
-                                                <MudPaper Class="exception-stack-container">
-                                                    <pre class="exception-stack-text">@_selectedExceptionDetail.StackTrace</pre>
-                                                </MudPaper>
+                                                <StackTraceViewer Message="@_selectedExceptionDetail.StackTrace" />
                                             </MudStack>
                                         </MudCard>
                                     }

@@ -44,7 +44,10 @@ public class ModuleDataChannelUI(ModuleDataChannelUIOption option)
         {
             // 依赖DataChannel核心模块
             DependsOnModule<ModuleDataChannelGuide>().Register();
-            
+
+            // 依赖UIStackTrace模块（用于异常堆栈跟踪可视化）
+            DependsOnModule<ModuleUIStackTraceGuide>().Register();
+
             // 依赖UI核心模块，并注册UI页面
             DependsOnModule<ModuleUICoreGuide>().Register()
                 .RegisterUIComponents(p => p.RegisterComponent<UIDataChannelPage>(
