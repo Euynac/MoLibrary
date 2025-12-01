@@ -52,7 +52,15 @@ public class JobInstance
     /// Set when the job reaches a terminal state (Succeeded, Terminated, Cancelled, Skipped).
     /// </summary>
     public DateTime? CompletedAt { get; set; }
-    
+
+    /// <summary>
+    /// Gets or sets the scheduled execution time for delayed jobs.
+    /// Set when a job is created with a delay via IMoTriggeredJobManager.EnqueueAsync.
+    /// Null for immediate execution or recurring jobs.
+    /// Used during service restart to calculate remaining delay and reschedule.
+    /// </summary>
+    public DateTime? ScheduledExecutionTime { get; set; }
+
     /// <summary>
     /// Gets or sets the state change history.
     /// Uses line-prefix format where each entry starts with ">>> " followed by metadata:
@@ -323,8 +331,8 @@ public class JobInstance
 
         return currentState switch
         {
-            // Scheduled can transition to Enqueued or Cancelled
-            JobState.Scheduled => newState is JobState.Enqueued or JobState.Cancelled,
+            // Scheduled can transition to Enqueued, Cancelled, or Failed
+            JobState.Scheduled => newState is JobState.Enqueued or JobState.Cancelled or JobState.Failed,
 
             // Enqueued can transition to Processing, Skipped, or Cancelled
             JobState.Enqueued => newState is JobState.Processing or JobState.Skipped or JobState.Cancelled,

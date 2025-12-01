@@ -17,6 +17,11 @@ public interface IMoTriggeredJobManager
         TArgs args,
         TimeSpan? delay = null
     );
-    
- 
+
+    /// <summary>
+    ///     Cancels a scheduled job that has not yet started execution.
+    /// </summary>
+    /// <param name="instanceId">The instance ID returned from EnqueueAsync.</param>
+    /// <returns>True if cancelled successfully, false if job not found or already started.</returns>
+    Task<bool> CancelScheduledJobAsync(string instanceId);
 }
