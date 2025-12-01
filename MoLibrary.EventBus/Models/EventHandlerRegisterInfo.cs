@@ -44,20 +44,50 @@ public sealed record EventHandlerRegisterInfo
     public static IEnumerable<EventHandlerRegisterInfo> CreateFromHandlerType(Type handlerType)
     {
         var results = new List<EventHandlerRegisterInfo>();
-       
-        foreach (var @interface in handlerType.GetInterfaces().Where(p=>p.IsGenericType))
+        var distributedEvents = new HashSet<Type>();
+        var localEvents = new HashSet<Type>();
+
+        foreach (var @interface in handlerType.GetInterfaces().Where(p => p.IsGenericType))
         {
             var eventType = @interface.GetGenericArguments()[0];
+            if (eventType.IsGenericParameter) continue; // 跳过泛型参数
+            if (@interface.GetGenericTypeDefinition() == typeof(IMoDistributedEventHandler<>))
+            {
+                distributedEvents.Add(eventType);
+            }
+            else if (@interface.GetGenericTypeDefinition() == typeof(IMoLocalEventHandler<>))
+            {
+                localEvents.Add(eventType);
+            }
+        }
+
+        // Validate no overlap
+        var overlap = distributedEvents.Intersect(localEvents).ToList();
+        if (overlap.Count != 0)
+        {
+            throw new InvalidOperationException(
+                $"Handler '{handlerType.FullName}' implements both IMoDistributedEventHandler and " +
+                $"IMoLocalEventHandler for the same event type(s): {string.Join(", ", overlap.Select(t => t.Name))}. " +
+                $"A handler cannot process the same event type through both distributed and local buses.");
+        }
+
+        // Create registrations for distributed handlers
+        foreach (var eventType in distributedEvents)
+        {
             var topicName = EventNameAttribute.GetNameOrDefault(eventType);
-            var isDistributed = @interface.GetGenericTypeDefinition() == typeof(IMoDistributedEventHandler<>);
-            var isLocal = @interface.GetGenericTypeDefinition() == typeof(IMoLocalEventHandler<>);
-           
             results.Add(new EventHandlerRegisterInfo(
                 handlerType, eventType, topicName,
-                isDistributed, isLocal));
+                isDistributed: true, isLocal: false));
         }
-        
-    
+
+        // Create registrations for local handlers
+        foreach (var eventType in localEvents)
+        {
+            var topicName = EventNameAttribute.GetNameOrDefault(eventType);
+            results.Add(new EventHandlerRegisterInfo(
+                handlerType, eventType, topicName,
+                isDistributed: false, isLocal: true));
+        }
 
         return results;
     }

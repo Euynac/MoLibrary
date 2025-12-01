@@ -38,7 +38,7 @@ public class ModuleRpcClient(ModuleRpcClientOption option) :
     {
         foreach (var type in types)
         {
-            if (!type.IsAbstract && type.IsSubclassOf(typeof(MoRpcApi)))
+            if (type is { IsClass: true, IsAbstract: false} && type.IsSubclassOf(typeof(MoRpcApi)))
             {
                 RelatedTypes.Add(type);
             }
