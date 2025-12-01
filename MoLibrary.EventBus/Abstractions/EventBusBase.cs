@@ -38,38 +38,33 @@ public abstract class EventBusBase : IMoEventBus
 
     public virtual Type GetEventType(string eventName)
     {
-        return EventTypes.GetOrDefault(eventName)!;
+        return EventTypes.GetOrDefault(eventName) ?? throw new InvalidOperationException($"Event name {eventName} not found and can not get relative event type.");
     }
 
-    /// <inheritdoc/>
-    public virtual IDisposable Subscribe<TEvent>(Func<TEvent, Task> action) where TEvent : class
+        public virtual IDisposable Subscribe<TEvent>(Func<TEvent, Task> action) where TEvent : class
     {
         return Subscribe(typeof(TEvent), new ActionEventHandler<TEvent>(action));
     }
 
 
-    /// <inheritdoc/>
-    public virtual IDisposable Subscribe<TEvent, THandler>()
+        public virtual IDisposable Subscribe<TEvent, THandler>()
         where TEvent : class
         where THandler : IMoEventHandler, new()
     {
         return Subscribe(typeof(TEvent), new TransientEventHandlerFactory<THandler>());
     }
 
-    /// <inheritdoc/>
-    public virtual IDisposable Subscribe(Type eventType, IMoEventHandler handler)
+        public virtual IDisposable Subscribe(Type eventType, IMoEventHandler handler)
     {
         return Subscribe(eventType, new SingleInstanceHandlerFactory(handler));
     }
 
-    /// <inheritdoc/>
-    public virtual IDisposable Subscribe<TEvent>(IEventHandlerFactory factory) where TEvent : class
+        public virtual IDisposable Subscribe<TEvent>(IEventHandlerFactory factory) where TEvent : class
     {
         return Subscribe(typeof(TEvent), factory);
     }
 
-    /// <inheritdoc/>
-    public virtual IDisposable Subscribe(Type eventType, IEventHandlerFactory factory)
+        public virtual IDisposable Subscribe(Type eventType, IEventHandlerFactory factory)
     {
         var eventName = EventNameAttribute.GetNameOrDefault(eventType);
         EventTypes.GetOrAdd(eventName, eventType);
@@ -125,33 +120,28 @@ public abstract class EventBusBase : IMoEventBus
             });
     }
 
-    /// <inheritdoc/>
-    public virtual void Unsubscribe<TEvent>(IMoLocalEventHandler<TEvent> handler) where TEvent : class
+        public virtual void Unsubscribe<TEvent>(IMoLocalEventHandler<TEvent> handler) where TEvent : class
     {
         Unsubscribe(typeof(TEvent), handler);
     }
-    /// <inheritdoc/>
-    public virtual void Unsubscribe(Type eventType, IEventHandlerFactory factory)
+        public virtual void Unsubscribe(Type eventType, IEventHandlerFactory factory)
     {
         GetOrCreateHandlerFactories(eventType).Locking(factories => factories.Remove(factory));
     }
 
-    /// <inheritdoc/>
-    public virtual void UnsubscribeAll(Type eventType)
+        public virtual void UnsubscribeAll(Type eventType)
     {
         GetOrCreateHandlerFactories(eventType).Locking(factories => factories.Clear());
     }
 
   
-    /// <inheritdoc/>
-    public virtual void Unsubscribe<TEvent>(IEventHandlerFactory factory) where TEvent : class
+        public virtual void Unsubscribe<TEvent>(IEventHandlerFactory factory) where TEvent : class
     {
         Unsubscribe(typeof(TEvent), factory);
     }
 
 
-    /// <inheritdoc/>
-    public virtual void UnsubscribeAll<TEvent>() where TEvent : class
+        public virtual void UnsubscribeAll<TEvent>() where TEvent : class
     {
         UnsubscribeAll(typeof(TEvent));
     }
@@ -173,15 +163,13 @@ public abstract class EventBusBase : IMoEventBus
         await BulkPublishToEventBusAsync(eventType, eventDataList);
     }
 
-    /// <inheritdoc/>
-    public Task PublishAsync<TEvent>(TEvent eventData)
+        public Task PublishAsync<TEvent>(TEvent eventData)
         where TEvent : class
     {
         return PublishAsync(typeof(TEvent), eventData);
     }
 
-    /// <inheritdoc/>
-    public virtual async Task PublishAsync(
+        public virtual async Task PublishAsync(
         Type eventType,
         object eventData)
     {
@@ -290,8 +278,6 @@ public abstract class EventBusBase : IMoEventBus
         using var eventHandlerWrapper = asyncHandlerFactory.GetHandler();
         try
         {
-            var handlerType = eventHandlerWrapper.EventHandler.GetType();
-
             await InvokeEventHandlerAsync(eventHandlerWrapper.EventHandler, eventData, eventType);
         }
         catch (TargetInvocationException ex)
