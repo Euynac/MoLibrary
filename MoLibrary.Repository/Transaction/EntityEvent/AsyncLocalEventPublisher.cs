@@ -32,7 +32,6 @@ public class AsyncEventBuffer
                 {
                     await eventBus.BulkPublishAsync(record.Key, record.Value);
                 }
-
             }
 
             if (DistributedEvents.Count != 0)

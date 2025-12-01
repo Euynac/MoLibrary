@@ -15,15 +15,12 @@ public class LocalEventHandlerMethodExecutor<TEvent> : IEventHandlerMethodExecut
 {
     public EventHandlerMethodExecutorAsync ExecutorAsync => (target, parameter) =>
     {
-        return parameter switch
+        if (parameter is TEvent eventData)
         {
-            TEvent signalEvent => target.As<IMoLocalEventHandler<TEvent>>().HandleEventAsync(signalEvent),
-            IEnumerable<object> events when events.Select(p => p as TEvent).Where(p => p != null).ToList() is
-            {
-                Count: > 0
-            } list => target.As<IMoLocalEventHandler<TEvent>>().HandleBulkEventAsync(list!),
-            _ => Task.CompletedTask
-        };
+            return target.As<IMoLocalEventHandler<TEvent>>().HandleEventAsync(eventData);
+        }
+
+        return Task.CompletedTask;
     };
 
     public Task ExecuteAsync(IMoEventHandler target, TEvent parameters)
@@ -37,15 +34,12 @@ public class DistributedEventHandlerMethodExecutor<TEvent> : IEventHandlerMethod
 {
     public EventHandlerMethodExecutorAsync ExecutorAsync => (target, parameter) =>
     {
-        return parameter switch
+        if (parameter is TEvent eventData)
         {
-            TEvent signalEvent => target.As<IMoDistributedEventHandler<TEvent>>().HandleEventAsync(signalEvent),
-            IEnumerable<object> events when events.Select(p => p as TEvent).Where(p => p != null).ToList() is
-            {
-                Count: > 0
-            } list => target.As<IMoDistributedEventHandler<TEvent>>().HandleBulkEventAsync(list!),
-            _ => Task.CompletedTask
-        };
+            return target.As<IMoDistributedEventHandler<TEvent>>().HandleEventAsync(eventData);
+        }
+
+        return Task.CompletedTask;
     };
 
     public Task ExecuteAsync(IMoEventHandler target, TEvent parameters)

@@ -43,6 +43,5 @@ public class DistributedEventBusDaprProvider(
             await Client.BulkPublishEventAsync(pubsubName: DaprEventBusOptions.PubSubName, topicName: EventNameAttribute.GetNameOrDefault(eventType),
                 chunk);
         }
-
     }
 }

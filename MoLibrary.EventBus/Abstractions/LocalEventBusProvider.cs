@@ -38,9 +38,4 @@ public class LocalEventBusProvider(
     {
         await TriggerHandlersAsync(eventType, eventData);
     }
-
-    protected override async Task BulkPublishToEventBusAsync(Type eventType, IEnumerable<object> eventDataList)
-    {
-        await PublishToEventBusAsync(eventType, eventDataList);
-    }
 }

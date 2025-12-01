@@ -190,7 +190,7 @@ public class ModuleDaprEventBusOption : MoModuleControllerOption<ModuleDaprEvent
     public string DaprEventBusCallback { get; set; } = "api/event-bus/dapr/event";
 
     /// <summary>
-    /// 默认大批量事件批处理数量，为null则不进行分批推送。
+    /// Bulk chunk size for BulkPublishEventAsync. Defaults to 1000.
     /// </summary>
     public int? BulkChunkSize { get; set; } = 1000;
 }
