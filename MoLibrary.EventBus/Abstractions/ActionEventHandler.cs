@@ -25,12 +25,4 @@ public class ActionEventHandler<TEvent> : IMoLocalEventHandler<TEvent>
     {
         await Action(eventData);
     }
-
-    public async Task HandleBulkEventAsync(IEnumerable<TEvent> events)
-    {
-        foreach (var @event in events)
-        {
-            await HandleEventAsync(@event);
-        }
-    }
 }

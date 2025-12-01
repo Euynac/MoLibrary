@@ -3,21 +3,22 @@ namespace MoLibrary.EventBus.Abstractions;
 public interface IMoEventBus
 {
     /// <summary>
-    /// Triggers an event.
+    /// Triggers multiple events in bulk.
     /// </summary>
     /// <typeparam name="TEvent">Event type</typeparam>
-    /// <param name="eventDataList">Related data for the event</param>
+    /// <param name="eventDataList">List of event data</param>
     /// <returns>The task to handle async operation</returns>
     Task BulkPublishAsync<TEvent>(IEnumerable<TEvent> eventDataList)
         where TEvent : class;
 
     /// <summary>
-    /// Triggers an event.
+    /// Triggers multiple events in bulk.
     /// </summary>
     /// <param name="eventType">Event type</param>
-    /// <param name="eventDataList">Related data for the event</param>
+    /// <param name="eventDataList">List of event data</param>
     /// <returns>The task to handle async operation</returns>
     Task BulkPublishAsync(Type eventType, IEnumerable<object> eventDataList);
+
     /// <summary>
     /// Triggers an event.
     /// </summary>

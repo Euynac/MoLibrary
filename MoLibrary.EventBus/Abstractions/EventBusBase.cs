@@ -163,7 +163,7 @@ public abstract class EventBusBase : IMoEventBus
         await BulkPublishToEventBusAsync(eventType, eventDataList);
     }
 
-        public Task PublishAsync<TEvent>(TEvent eventData)
+    public Task PublishAsync<TEvent>(TEvent eventData)
         where TEvent : class
     {
         return PublishAsync(typeof(TEvent), eventData);
@@ -177,13 +177,19 @@ public abstract class EventBusBase : IMoEventBus
     }
 
     protected abstract Task PublishToEventBusAsync(Type eventType, object eventData);
+
+    /// <summary>
+    /// Default implementation: iterates and publishes each event individually.
+    /// Derived classes can override for optimized bulk publishing.
+    /// </summary>
     protected virtual async Task BulkPublishToEventBusAsync(Type eventType, IEnumerable<object> eventDataList)
     {
-        foreach (var o in eventDataList)
+        foreach (var eventData in eventDataList)
         {
-            await PublishToEventBusAsync(eventType, o);
+            await PublishToEventBusAsync(eventType, eventData);
         }
     }
+
     public virtual async Task TriggerHandlersAsync(Type eventType, object eventData)
     {
         var exceptions = new List<Exception>();

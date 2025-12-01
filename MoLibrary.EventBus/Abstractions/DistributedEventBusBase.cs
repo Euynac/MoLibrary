@@ -29,7 +29,7 @@ public abstract class DistributedEventBusBase(
 
     protected virtual async Task TriggerHandlersDirectAsync(Type eventType, object eventData)
     {
-       
+
         await TriggerHandlersAsync(eventType, eventData);
     }
 }
@@ -41,11 +41,6 @@ public abstract class DistributedEventBusBase(
 public sealed class NullDistributedEventBus(IServiceScopeFactory serviceScopeFactory, IOptions<ModuleEventBusOption> options, IEventHandlerInvoker eventHandlerInvoker, IMoLocalEventBus localEventBus) : DistributedEventBusBase(serviceScopeFactory, options, eventHandlerInvoker, localEventBus)
 {
     protected override async Task PublishToEventBusAsync(Type eventType, object eventData)
-    {
-        return;
-    }
-
-    protected override async Task BulkPublishToEventBusAsync(Type eventType, IEnumerable<object> eventDataList)
     {
         return;
     }
