@@ -4,6 +4,7 @@ using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Extensions;
 using MoLibrary.EventBus.Attributes;
+using MoLibrary.EventBus.Models;
 using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.Utils;
 
@@ -30,9 +31,9 @@ public abstract class EventBusBase : IMoEventBus
     /// for those automatically registered handlers
     /// </summary>
     /// <returns></returns>
-    public virtual ITypeList<IMoEventHandler> GetDefaultHandlers()
+    public virtual IEnumerable<EventHandlerRegisterInfo> GetDefaultHandlers()
     {
-        return new TypeList<IMoEventHandler>();
+        return Enumerable.Empty<EventHandlerRegisterInfo>();
     }
 
     public virtual Type GetEventType(string eventName)
@@ -228,24 +229,19 @@ public abstract class EventBusBase : IMoEventBus
         );
     }
 
-    protected virtual void SubscribeHandlers(ITypeList<IMoEventHandler> handlers)
+    /// <summary>
+    /// Subscribe handlers using pre-computed registration information
+    /// </summary>
+    protected virtual void SubscribeHandlers(IEnumerable<EventHandlerRegisterInfo> handlers)
     {
-        foreach (var handler in handlers)
+        foreach (var handlerInfo in handlers)
         {
-            var interfaces = handler.GetInterfaces();
-            foreach (var @interface in interfaces)
-            {
-                if (!typeof(IMoEventHandler).GetTypeInfo().IsAssignableFrom(@interface))
-                {
-                    continue;
-                }
+            // Direct subscription using pre-computed metadata - NO REFLECTION
+            Subscribe(handlerInfo.EventType,
+                     new IocEventHandlerFactory(ServiceScopeFactory, handlerInfo.HandlerType));
 
-                var genericArgs = @interface.GetGenericArguments();
-                if (genericArgs.Length == 1)
-                {
-                    Subscribe(genericArgs[0], new IocEventHandlerFactory(ServiceScopeFactory, handler));
-                }
-            }
+            // Register event type -> topic name mapping
+            EventTypes.TryAdd(handlerInfo.TopicName, handlerInfo.EventType);
         }
     }
 

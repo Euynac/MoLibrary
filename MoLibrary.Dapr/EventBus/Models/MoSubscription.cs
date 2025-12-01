@@ -14,29 +14,25 @@ internal class MoSubscription
         ModuleDaprEventBusOption busOption)
     {
         var result = new List<MoSubscription>();
-        foreach (var handler in option.DistributedEventHandlers)
-        {
-            foreach (var @interface in handler.GetInterfaces().Where(x =>
-                         x.IsGenericType && x.GetGenericTypeDefinition() ==
-                         typeof(IMoDistributedEventHandler<>)))
-            {
-                var eventType = @interface.GetGenericArguments()[0];
-                var eventName = EventNameAttribute.GetNameOrDefault(eventType);
 
-                var subscription = new MoSubscription
+        // Use pre-computed registration information - ZERO REFLECTION!
+        var distributedHandlers = option.EventHandlers.Where(h => h.IsDistributed);
+
+        foreach (var handlerInfo in distributedHandlers)
+        {
+            var subscription = new MoSubscription
+            {
+                PubsubName = busOption.PubSubName,
+                Topic = handlerInfo.TopicName, // Pre-computed topic name!
+                Route = busOption.DaprEventBusCallback,
+                Metadata = new MoMetadata
                 {
-                    PubsubName = busOption.PubSubName,
-                    Topic = eventName,
-                    Route = busOption.DaprEventBusCallback,
-                    Metadata = new MoMetadata
                     {
-                        {
-                            "rawPayload", "true"
-                        }
+                        "rawPayload", "true"
                     }
-                };
-                result.Add(subscription);
-            }
+                }
+            };
+            result.Add(subscription);
         }
 
         return result;

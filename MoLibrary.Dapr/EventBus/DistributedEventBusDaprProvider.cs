@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using MoLibrary.Dapr.Modules;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.EventBus.Attributes;
+using MoLibrary.EventBus.Models;
 using MoLibrary.EventBus.Modules;
 using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.Utils;
@@ -24,9 +25,9 @@ public class DistributedEventBusDaprProvider(
     private readonly ModuleEventBusOption _distributedEventBusOptions = options.Value;
     public DaprClient Client { get; } = client;
     protected ModuleDaprEventBusOption DaprEventBusOptions { get; } = daprEventBusOptions.Value;
-    public override ITypeList<IMoEventHandler> GetDefaultHandlers()
+    public override IEnumerable<EventHandlerRegisterInfo> GetDefaultHandlers()
     {
-        return _distributedEventBusOptions.DistributedEventHandlers;
+        return _distributedEventBusOptions.EventHandlers.Where(h => h.IsDistributed);
     }
 
 
