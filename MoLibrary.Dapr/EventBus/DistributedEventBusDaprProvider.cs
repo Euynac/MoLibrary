@@ -10,7 +10,7 @@ using MoLibrary.Tool.Utils;
 
 namespace MoLibrary.Dapr.EventBus;
 
-public class DaprDistributedEventBus(
+public class DistributedEventBusDaprProvider(
     IServiceScopeFactory serviceScopeFactory,
     IOptions<ModuleEventBusOption> options,
     IEventHandlerInvoker eventHandlerInvoker,

@@ -13,7 +13,6 @@ using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.Dapr.EventBus;
 using MoLibrary.Dapr.EventBus.Models;
-using MoLibrary.EventBus.Abstractions;
 using MoLibrary.EventBus.Modules;
 using MoLibrary.Tool.Extensions;
 
@@ -23,7 +22,7 @@ public static class ModuleDaprEventBusBuilderExtensions
     public static ModuleDaprEventBusGuide UseDaprProvider(this ModuleEventBusGuide guide,
         Action<ModuleDaprEventBusOption>? action = null)
     {
-        guide.SetDistributedEventBusProvider<DaprDistributedEventBus>();
+        guide.SetDistributedEventBusProvider<DistributedEventBusDaprProvider>();
         return new ModuleDaprEventBusGuide().Register(action);
     }
 }
@@ -113,7 +112,7 @@ public class ModuleDaprEventBus(ModuleDaprEventBusOption option)
 
 
             //TODO 优化此方法，目前格式化失败将未能拿到原始数据，难以排错。
-            endpoints.MapPost(options.DaprEventBusCallback, async (HttpResponse response, HttpContext context, [FromServices] ILogger<DaprDistributedEventBus> logger, [FromServices] IGlobalJsonOption jsonOption) =>
+            endpoints.MapPost(options.DaprEventBusCallback, async (HttpResponse response, HttpContext context, [FromServices] ILogger<DistributedEventBusDaprProvider> logger, [FromServices] IGlobalJsonOption jsonOption) =>
             {
                 var topic = "";
                 try
@@ -129,7 +128,7 @@ public class ModuleDaprEventBus(ModuleDaprEventBusOption option)
                         return Results.Ok();
                     }
 
-                    var distributedEventBus = context.RequestServices.GetRequiredService<DaprDistributedEventBus>();
+                    var distributedEventBus = context.RequestServices.GetRequiredService<DistributedEventBusDaprProvider>();
 
                     object? eventData = null;
                     Type? eventType = null;
