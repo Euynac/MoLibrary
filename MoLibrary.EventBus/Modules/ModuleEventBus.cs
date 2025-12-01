@@ -3,6 +3,7 @@ using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.EventBus.Abstractions;
+using MoLibrary.EventBus.Models;
 using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.EventBus.Modules;
@@ -26,18 +27,34 @@ public class ModuleEventBus(ModuleEventBusOption option) : MoModule<ModuleEventB
     {
         foreach (var type in types)
         {
-            if(Option.DisableAutoDiscovery) yield return type;
-            if (type.IsImplementInterfaceGeneric(typeof(IMoDistributedEventHandler<>)))
+            if (Option.DisableAutoDiscovery)
             {
-                Option.DistributedEventHandlers.Add(type);
+                yield return type;
+                continue;
             }
-            if (type.IsImplementInterfaceGeneric(typeof(IMoLocalEventHandler<>)))
+
+          
+            if (type.IsImplementInterface<IMoEventHandler>())
             {
-                Option.LocalEventHandlers.Add(type);
+                try
+                {
+                    // Use factory method - handles all reflection and validation
+                    var registrations = EventHandlerRegisterInfo.CreateFromHandlerType(type);
+                    foreach (var registration in registrations)
+                    {
+                        Option.EventHandlers.Add(registration);
+                    }
+                }
+                catch (InvalidOperationException ex)
+                {
+                    // Fail fast with clear error at startup
+                    throw new InvalidOperationException(
+                        $"Failed to register event handler '{type.GetCleanFullName()}': {ex.Message}", ex);
+                }
             }
+
             yield return type;
         }
-        
     }
 }
 

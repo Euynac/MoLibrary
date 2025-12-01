@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MoLibrary.EventBus.Models;
 using MoLibrary.EventBus.Modules;
 using MoLibrary.Tool.Utils;
 
@@ -23,9 +24,9 @@ public class LocalEventBusProvider(
 
     protected ModuleEventBusOption Options { get; } = options.Value;
 
-    public override ITypeList<IMoEventHandler> GetDefaultHandlers()
+    public override IEnumerable<EventHandlerRegisterInfo> GetDefaultHandlers()
     {
-        return Options.LocalEventHandlers;
+        return Options.EventHandlers.Where(h => h.IsLocal);
     }
 
     /// <inheritdoc/>
