@@ -9,7 +9,6 @@ using MoLibrary.Tool.Utils;
 
 namespace MoLibrary.EventBus.Abstractions;
 
-
 public abstract class EventBusBase : IMoEventBus
 {
     [SuppressMessage("ReSharper", "VirtualMemberCallInConstructor")]
@@ -38,33 +37,35 @@ public abstract class EventBusBase : IMoEventBus
 
     public virtual Type GetEventType(string eventName)
     {
-        return EventTypes.GetOrDefault(eventName) ?? throw new InvalidOperationException($"Event name {eventName} not found and can not get relative event type.");
+        return EventTypes.GetOrDefault(eventName) ??
+               throw new InvalidOperationException(
+                   $"Event name {eventName} not found and can not get relative event type.");
     }
 
-        public virtual IDisposable Subscribe<TEvent>(Func<TEvent, Task> action) where TEvent : class
+    public virtual IDisposable Subscribe<TEvent>(Func<TEvent, Task> action) where TEvent : class
     {
         return Subscribe(typeof(TEvent), new ActionEventHandler<TEvent>(action));
     }
 
 
-        public virtual IDisposable Subscribe<TEvent, THandler>()
+    public virtual IDisposable Subscribe<TEvent, THandler>()
         where TEvent : class
         where THandler : IMoEventHandler, new()
     {
         return Subscribe(typeof(TEvent), new TransientEventHandlerFactory<THandler>());
     }
 
-        public virtual IDisposable Subscribe(Type eventType, IMoEventHandler handler)
+    public virtual IDisposable Subscribe(Type eventType, IMoEventHandler handler)
     {
         return Subscribe(eventType, new SingleInstanceHandlerFactory(handler));
     }
 
-        public virtual IDisposable Subscribe<TEvent>(IEventHandlerFactory factory) where TEvent : class
+    public virtual IDisposable Subscribe<TEvent>(IEventHandlerFactory factory) where TEvent : class
     {
         return Subscribe(typeof(TEvent), factory);
     }
 
-        public virtual IDisposable Subscribe(Type eventType, IEventHandlerFactory factory)
+    public virtual IDisposable Subscribe(Type eventType, IEventHandlerFactory factory)
     {
         var eventName = EventNameAttribute.GetNameOrDefault(eventType);
         EventTypes.GetOrAdd(eventName, eventType);
@@ -89,21 +90,20 @@ public abstract class EventBusBase : IMoEventBus
         GetOrCreateHandlerFactories(typeof(TEvent))
             .Locking(factories =>
             {
-                factories.RemoveAll(
-                    factory =>
+                factories.RemoveAll(factory =>
+                {
+                    if (factory is not SingleInstanceHandlerFactory singleInstanceFactory)
                     {
-                        if (factory is not SingleInstanceHandlerFactory singleInstanceFactory)
-                        {
-                            return false;
-                        }
+                        return false;
+                    }
 
-                        if (singleInstanceFactory.HandlerInstance is not ActionEventHandler<TEvent> actionHandler)
-                        {
-                            return false;
-                        }
+                    if (singleInstanceFactory.HandlerInstance is not ActionEventHandler<TEvent> actionHandler)
+                    {
+                        return false;
+                    }
 
-                        return actionHandler.Action == action;
-                    });
+                    return actionHandler.Action == action;
+                });
             });
     }
 
@@ -112,36 +112,36 @@ public abstract class EventBusBase : IMoEventBus
         GetOrCreateHandlerFactories(eventType)
             .Locking(factories =>
             {
-                factories.RemoveAll(
-                    factory =>
-                        factory is SingleInstanceHandlerFactory handlerFactory &&
-                        handlerFactory.HandlerInstance == handler
+                factories.RemoveAll(factory =>
+                    factory is SingleInstanceHandlerFactory handlerFactory &&
+                    handlerFactory.HandlerInstance == handler
                 );
             });
     }
 
-        public virtual void Unsubscribe<TEvent>(IMoLocalEventHandler<TEvent> handler) where TEvent : class
+    public virtual void Unsubscribe<TEvent>(IMoLocalEventHandler<TEvent> handler) where TEvent : class
     {
         Unsubscribe(typeof(TEvent), handler);
     }
-        public virtual void Unsubscribe(Type eventType, IEventHandlerFactory factory)
+
+    public virtual void Unsubscribe(Type eventType, IEventHandlerFactory factory)
     {
         GetOrCreateHandlerFactories(eventType).Locking(factories => factories.Remove(factory));
     }
 
-        public virtual void UnsubscribeAll(Type eventType)
+    public virtual void UnsubscribeAll(Type eventType)
     {
         GetOrCreateHandlerFactories(eventType).Locking(factories => factories.Clear());
     }
 
-  
-        public virtual void Unsubscribe<TEvent>(IEventHandlerFactory factory) where TEvent : class
+
+    public virtual void Unsubscribe<TEvent>(IEventHandlerFactory factory) where TEvent : class
     {
         Unsubscribe(typeof(TEvent), factory);
     }
 
 
-        public virtual void UnsubscribeAll<TEvent>() where TEvent : class
+    public virtual void UnsubscribeAll<TEvent>() where TEvent : class
     {
         UnsubscribeAll(typeof(TEvent));
     }
@@ -169,7 +169,7 @@ public abstract class EventBusBase : IMoEventBus
         return PublishAsync(typeof(TEvent), eventData);
     }
 
-        public virtual async Task PublishAsync(
+    public virtual async Task PublishAsync(
         Type eventType,
         object eventData)
     {
