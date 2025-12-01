@@ -1,6 +1,7 @@
 using MoLibrary.Dapr.Modules;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.EventBus.Attributes;
+using MoLibrary.EventBus.Modules;
 
 namespace MoLibrary.Dapr.EventBus.Models;
 
@@ -9,11 +10,11 @@ namespace MoLibrary.Dapr.EventBus.Models;
 /// </summary>
 internal class MoSubscription
 {
-    public static IEnumerable<MoSubscription> GetMoSubscriptions(DistributedEventBusOptions option,
+    public static IEnumerable<MoSubscription> GetMoSubscriptions(ModuleEventBusOption option,
         ModuleDaprEventBusOption busOption)
     {
         var result = new List<MoSubscription>();
-        foreach (var handler in option.Handlers)
+        foreach (var handler in option.DistributedEventHandlers)
         {
             foreach (var @interface in handler.GetInterfaces().Where(x =>
                          x.IsGenericType && x.GetGenericTypeDefinition() ==

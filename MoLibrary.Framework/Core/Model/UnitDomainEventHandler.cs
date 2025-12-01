@@ -39,10 +39,6 @@ public class UnitDomainEventHandler(Type type) : ProjectUnit(type, EProjectUnitT
         if (!type.IsClass ||
             !type.IsImplementInterfaceGeneric(typeof(IMoDistributedEventHandler<>), out var genericType) || genericType?.FullName is null) return null;
         unit.CheckNameConventionMode();
-        context.ServiceCollection.Configure<DistributedEventBusOptions>(options =>
-        {
-            options.Handlers.Add(type);
-        });
         unit.EventType = genericType.GetGenericArguments().First();
         return unit;
     }
