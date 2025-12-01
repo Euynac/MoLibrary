@@ -32,9 +32,8 @@ public class ModuleEventBus(ModuleEventBusOption option) : MoModule<ModuleEventB
                 yield return type;
                 continue;
             }
-
-          
-            if (type.IsImplementInterface<IMoEventHandler>())
+            
+            if (type is { IsClass: true, IsAbstract: false} && type.IsImplementInterface<IMoEventHandler>())
             {
                 try
                 {
