@@ -88,7 +88,13 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
         services.AddSingleton<IMoTriggeredJobManager, TriggeredJobManager>();
 
         services.AddSingleton<IJobConcurrencyGuard, JobConcurrencyGuardHostedService>();
-        
+
+        // Register job scheduler components
+        services.AddSingleton<RecurringJobValidator>();
+        services.AddSingleton<DelayedJobRecoveryService>();
+        services.AddSingleton<RecurringJobScheduler>();
+        services.AddSingleton<TriggeredJobScheduler>();
+
         services.AddHostedService<JobRegistrationHostedService>(provider => ActivatorUtilities.CreateInstance<JobRegistrationHostedService>(provider, _jobDefinitions));
 
         services.AddHostedService<JobWorkerManager>();
