@@ -26,14 +26,16 @@ public class JobInstanceManager(
     /// <param name="parameters">Optional parameters for triggered jobs (will be JSON-serialized).</param>
     /// <param name="initialState">The initial state for the job instance.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <param name="instanceId">Optional pre-generated instance ID. If null, a new GUID will be generated.</param>
     /// <returns>The generated instance ID (GUID).</returns>
     public async Task<JobInstance> CreateInstanceAsync(
         JobDefinition definition,
         object? parameters,
         JobState initialState,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? instanceId = null)
     {
-        var instanceId = Guid.NewGuid().ToString();
+        instanceId ??= Guid.NewGuid().ToString();
         var now = DateTime.UtcNow;
 
         var instance = new JobInstance
