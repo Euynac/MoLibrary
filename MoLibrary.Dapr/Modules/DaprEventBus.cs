@@ -70,12 +70,11 @@ public class ModuleDaprEventBus(ModuleDaprEventBusOption option)
 
             var originJson = JsonSerializer.Deserialize<List<MoSubscription>>(originalResponse, _jsonSerializerOptions);
 
-            var distributedEventBusOptions = context.RequestServices.GetRequiredService<IOptions<DistributedEventBusOptions>>().Value;
             var daprEventBusOption = context.RequestServices.GetRequiredService<IOptions<ModuleDaprEventBusOption>>().Value;
 
 
             originJson ??= [];
-            originJson.AddRange(MoSubscription.GetMoSubscriptions(distributedEventBusOptions, daprEventBusOption));
+            originJson.AddRange(MoSubscription.GetMoSubscriptions(GetOptions<ModuleEventBusOption>(), daprEventBusOption));
 
             context.Response.Body = originalBodyStream;
             await context.Response.WriteAsJsonAsync(originJson, _jsonSerializerOptions);

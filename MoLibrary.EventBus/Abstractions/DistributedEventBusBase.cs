@@ -1,17 +1,18 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using MoLibrary.EventBus.Modules;
 
 namespace MoLibrary.EventBus.Abstractions;
 
 public abstract class DistributedEventBusBase(
     IServiceScopeFactory serviceScopeFactory,
-    IOptions<DistributedEventBusOptions> options,
+    IOptions<ModuleEventBusOption> options,
     IEventHandlerInvoker eventHandlerInvoker,
     IMoLocalEventBus localEventBus) : EventBusBase(
     serviceScopeFactory,
     eventHandlerInvoker), IMoDistributedEventBus
 {
-    protected DistributedEventBusOptions EventBusOptions { get; } = options.Value;
+    protected ModuleEventBusOption EventBusOptions { get; } = options.Value;
     protected IMoLocalEventBus LocalEventBus { get; } = localEventBus;
 
     public IDisposable Subscribe<TEvent>(IMoDistributedEventHandler<TEvent> handler) where TEvent : class
@@ -37,7 +38,7 @@ public abstract class DistributedEventBusBase(
 /// <summary>
 /// 空的分布式事件总线，用于测试或不需要实际发布事件的场景
 /// </summary>
-public sealed class NullDistributedEventBus(IServiceScopeFactory serviceScopeFactory, IOptions<DistributedEventBusOptions> options, IEventHandlerInvoker eventHandlerInvoker, IMoLocalEventBus localEventBus) : DistributedEventBusBase(serviceScopeFactory, options, eventHandlerInvoker, localEventBus)
+public sealed class NullDistributedEventBus(IServiceScopeFactory serviceScopeFactory, IOptions<ModuleEventBusOption> options, IEventHandlerInvoker eventHandlerInvoker, IMoLocalEventBus localEventBus) : DistributedEventBusBase(serviceScopeFactory, options, eventHandlerInvoker, localEventBus)
 {
     protected override async Task PublishToEventBusAsync(Type eventType, object eventData)
     {

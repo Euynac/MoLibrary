@@ -37,10 +37,6 @@ public class UnitLocalEventHandler(Type type) : ProjectUnit(type, EProjectUnitTy
         if (!type.IsClass ||
             !type.IsImplementInterfaceGeneric(typeof(IMoLocalEventHandler<>), out var genericType) || genericType?.FullName is null) return null;
         unit.CheckNameConventionMode();
-        context.ServiceCollection.Configure<LocalEventBusOptions>(options =>
-        {
-            options.Handlers.Add(type);
-        });
         unit.EventType = genericType.GetGenericArguments().First();
         return unit;
     }
