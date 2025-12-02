@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 using Dapr.Client;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Logging;
 using MoLibrary.Core.Extensions;
 using MoLibrary.Core.GlobalJson.Interfaces;

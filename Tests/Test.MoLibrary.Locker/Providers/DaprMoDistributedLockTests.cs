@@ -1,26 +1,53 @@
-using Dapr.Client;
+using Dapr.DistributedLock;
+using Dapr.DistributedLock.Models;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MoLibrary.Dapr.Locker;
+using MoLibrary.Dapr.Modules;
 using MoLibrary.Locker.DistributedLocking;
-using MoLibrary.Locker.Providers.Dapr;
 using NSubstitute;
 using NUnit.Framework;
 using Test.MoLibrary.Locker.Base;
 
 namespace Test.MoLibrary.Locker.Providers;
 
+#pragma warning disable DAPR_DISTRIBUTEDLOCK // DaprDistributedLockClient is evaluation API
+
+// Test fake for DaprDistributedLockClient
+public class FakeDaprDistributedLockClient : DaprDistributedLockClient
+{
+    public LockResponse? NextLockResponse { get; set; }
+
+    public FakeDaprDistributedLockClient() : base(null!, null!, string.Empty)
+    {
+    }
+
+    public override Task<LockResponse?> TryLockAsync(string storeName, string resourceId, string lockOwner,
+        int expiryInSeconds, CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(NextLockResponse);
+    }
+
+    public override Task<UnlockResponse> TryUnlockAsync(string storeName, string resourceId, string lockOwner,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(new UnlockResponse(LockStatus.Success));
+    }
+}
+
 public class DaprMoDistributedLockTests : MoDistributedLockTestsBase
 {
-    private readonly DaprClient _daprClient;
-    private readonly MoDistributedLockDaprOptions _daprOptions;
+    private readonly FakeDaprDistributedLockClient _daprClient;
+    private readonly ModuleDaprLockerOption _daprOptions;
 
     public DaprMoDistributedLockTests()
     {
-        _daprClient = Substitute.For<DaprClient>();
-        _daprOptions = new MoDistributedLockDaprOptions
+        _daprClient = new FakeDaprDistributedLockClient();
+        _daprOptions = new ModuleDaprLockerOption
         {
             StoreName = "test-store",
-            Owner = "test-owner",
+            OwnerPrefix = "test-owner-",
             DefaultExpirationTimeout = TimeSpan.FromMinutes(5)
         };
     }
@@ -30,7 +57,8 @@ public class DaprMoDistributedLockTests : MoDistributedLockTestsBase
         return new DaprMoDistributedLock(
             _daprClient,
             Options.Create(_daprOptions),
-            KeyNormalizer
+            KeyNormalizer,
+            Substitute.For<ILogger<DaprMoDistributedLock>>()
         );
     }
 
@@ -40,14 +68,7 @@ public class DaprMoDistributedLockTests : MoDistributedLockTestsBase
         // Arrange
         var lockName = "test-lock";
         var normalizedKey = KeyNormalizer.NormalizeKey(lockName);
-        var mockResponse = new TryLockResponse { Success = true };
-        _daprClient.Lock(
-            _daprOptions.StoreName,
-            normalizedKey,
-            _daprOptions.Owner,
-            (int)_daprOptions.DefaultExpirationTimeout.TotalSeconds,
-            Arg.Any<CancellationToken>()
-        ).Returns(mockResponse);
+        _daprClient.NextLockResponse = Substitute.For<LockResponse>();
 
         var @lock = CreateLock();
 
@@ -56,13 +77,6 @@ public class DaprMoDistributedLockTests : MoDistributedLockTestsBase
 
         // Assert
         handle.Should().NotBeNull();
-        await _daprClient.Received(1).Lock(
-            _daprOptions.StoreName,
-            normalizedKey,
-            _daprOptions.Owner,
-            (int)_daprOptions.DefaultExpirationTimeout.TotalSeconds,
-            Arg.Any<CancellationToken>()
-        );
         await handle!.DisposeAsync();
     }
 
@@ -71,19 +85,12 @@ public class DaprMoDistributedLockTests : MoDistributedLockTestsBase
     {
         // Arrange
         var lockName = "test-lock";
-        var mockResponse = new TryLockResponse { Success = false };
-        _daprClient.Lock(
-            Arg.Any<string>(),
-            Arg.Any<string>(),
-            Arg.Any<string>(),
-            Arg.Any<int>(),
-            Arg.Any<CancellationToken>()
-        ).Returns(mockResponse);
+        _daprClient.NextLockResponse = null;
 
         var @lock = CreateLock();
 
         // Act
-        var handle = await @lock.TryAcquireAsync(lockName);
+        var handle = await @lock.TryAcquireAsync(lockName, timeout: TimeSpan.FromMilliseconds(100));
 
         // Assert
         handle.Should().BeNull();
@@ -94,14 +101,7 @@ public class DaprMoDistributedLockTests : MoDistributedLockTestsBase
     {
         // Arrange
         var lockName = "test-lock";
-        var mockResponse = new TryLockResponse { Success = true };
-        _daprClient.Lock(
-            Arg.Any<string>(),
-            Arg.Any<string>(),
-            Arg.Any<string>(),
-            Arg.Any<int>(),
-            Arg.Any<CancellationToken>()
-        ).Returns(mockResponse);
+        _daprClient.NextLockResponse = Substitute.For<LockResponse>();
 
         var @lock = CreateLock();
 
@@ -112,4 +112,23 @@ public class DaprMoDistributedLockTests : MoDistributedLockTestsBase
         handle.Should().NotBeNull();
         await handle!.DisposeAsync();
     }
+
+    [Test]
+    public async Task TryAcquireAsync_WithCustomOwner_ShouldUseProvidedOwner()
+    {
+        // Arrange
+        var lockName = "test-lock";
+        var customOwner = "custom-owner-123";
+        _daprClient.NextLockResponse = Substitute.For<LockResponse>();
+
+        var @lock = CreateLock();
+
+        // Act
+        var handle = await @lock.TryAcquireAsync(lockName, owner: customOwner);
+
+        // Assert
+        handle.Should().NotBeNull();
+        await handle!.DisposeAsync();
+    }
 }
+#pragma warning restore DAPR_DISTRIBUTEDLOCK

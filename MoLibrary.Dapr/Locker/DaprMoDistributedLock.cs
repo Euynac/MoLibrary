@@ -1,4 +1,4 @@
-﻿using Dapr.Client;
+﻿using Dapr.DistributedLock;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MoLibrary.Dapr.Modules;
@@ -6,12 +6,14 @@ using MoLibrary.Locker.DistributedLocking;
 
 namespace MoLibrary.Dapr.Locker;
 
+#pragma warning disable DAPR_DISTRIBUTEDLOCK // DaprDistributedLockClient is evaluation API
 public class DaprMoDistributedLock(
-    DaprClient client,
+    DaprDistributedLockClient client,
     IOptions<ModuleDaprLockerOption> distributedLockDaprOptions,
     IDistributedLockKeyNormalizer distributedLockKeyNormalizer,
     ILogger<DaprMoDistributedLock> logger)
     : IMoDistributedLock
+#pragma warning restore DAPR_DISTRIBUTEDLOCK
 {
     protected ModuleDaprLockerOption DistributedLockDaprOptions { get; } = distributedLockDaprOptions.Value;
     protected IDistributedLockKeyNormalizer DistributedLockKeyNormalizer { get; } = distributedLockKeyNormalizer;
@@ -30,19 +32,19 @@ public class DaprMoDistributedLock(
             
             while (true)
             {
-                var lockResponse = await client.Lock(
+                var lockResponse = await client.TryLockAsync(
                     DistributedLockDaprOptions.StoreName,
                     name,
                     owner ?? DistributedLockDaprOptions.OwnerPrefix + Guid.NewGuid().ToString(),
                     (int)timeout.Value.TotalSeconds,
                     token);
-                
+
                 if (token.IsCancellationRequested)
                 {
                     return null;
                 }
-                
-                if (lockResponse is { Success: true })
+
+                if (lockResponse != null)
                 {
                     return new DaprMoDistributedLockHandle(lockResponse);
                 }
