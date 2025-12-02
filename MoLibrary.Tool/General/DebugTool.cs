@@ -60,11 +60,12 @@ namespace MoLibrary.Tool.General
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="s"></param>
-        /// <param name="writeIndented">unicode character including chinese will not escape</param>
+        /// <param name="writeIndented"></param>
+        /// <param name="relaxedEscaping">unicode character including chinese will not escape</param>
         /// <param name="customOptions"></param>
         /// <remarks><see cref="System.Text.Json.JsonSerializer"/> is not support to serialize <see cref="Exception"/> and <see cref="Type"/>. See <see href="https://github.com/dotnet/runtime/issues/43026"/> and <see href="https://github.com/dotnet/runtime/issues/31567#issuecomment-558335944"/></remarks>
         /// <returns>Not support to deserialize, only use to print Exception or other type info.</returns>
-        public static string? ToJsonStringForce<T>(this T? s, bool writeIndented = true, JsonSerializerOptions? customOptions = null)
+        public static string? ToJsonStringForce<T>(this T? s, bool writeIndented = true, bool relaxedEscaping = true, JsonSerializerOptions? customOptions = null)
         {
             if (s == null) return null;
             if (customOptions is not null)
@@ -76,10 +77,9 @@ namespace MoLibrary.Tool.General
                 WriteIndented = writeIndented
             };
 
-            if (writeIndented)
+            if (relaxedEscaping)
             {
-                options.Encoder = JavaScriptEncoder.Create(UnicodeRanges.All);
-                //Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping //这个也可以防止中文转义
+                options.Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
             }
 
             options.Converters.Add(new AnyConverter<T>());
