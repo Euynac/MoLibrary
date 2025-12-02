@@ -45,7 +45,8 @@
       "mcp__puppeteer__puppeteer_evaluate",
       "Bash(cat:*)",
       "WebFetch(domain:docs.dapr.io)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(dotnet test:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

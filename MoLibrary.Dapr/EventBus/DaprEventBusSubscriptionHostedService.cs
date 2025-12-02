@@ -1,7 +1,6 @@
 using System.Text;
 using System.Text.Json;
 using Dapr.Messaging.PublishSubscribe;
-using Dapr.Messaging.PublishSubscribe.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

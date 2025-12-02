@@ -7,7 +7,6 @@ using MoLibrary.EventBus.Attributes;
 using MoLibrary.EventBus.Models;
 using MoLibrary.EventBus.Modules;
 using MoLibrary.Tool.Extensions;
-using MoLibrary.Tool.Utils;
 
 namespace MoLibrary.Dapr.EventBus;
 

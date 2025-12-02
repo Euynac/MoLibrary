@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Microsoft.Extensions.Options;
 using MoLibrary.Locker.DistributedLocking;
+using MoLibrary.Locker.Modules;
 using NUnit.Framework;
 
 namespace Test.MoLibrary.Locker.Base;
@@ -8,15 +9,15 @@ namespace Test.MoLibrary.Locker.Base;
 public abstract class MoDistributedLockTestsBase
 {
     protected readonly IDistributedLockKeyNormalizer KeyNormalizer;
-    protected readonly MoDistributedLockOptions LockOptions;
+    protected readonly ModuleLockerOption LockOptions;
 
     protected MoDistributedLockTestsBase()
     {
-        LockOptions = new MoDistributedLockOptions
+        LockOptions = new ModuleLockerOption
         {
             KeyPrefix = "test:"
         };
-        KeyNormalizer = new DistributedLockKeyNormalizer(LockOptions.CreateOptions());
+        KeyNormalizer = new DistributedLockKeyNormalizer(Options.Create(LockOptions));
     }
 
     protected abstract IMoDistributedLock CreateLock();
@@ -45,7 +46,7 @@ public abstract class MoDistributedLockTestsBase
         var timeout = TimeSpan.FromMilliseconds(100);
 
         // Act
-        var handle = await @lock.TryAcquireAsync(lockName, timeout);
+        var handle = await @lock.TryAcquireAsync(lockName, timeout: timeout);
 
         // Assert
         handle.Should().NotBeNull();
@@ -83,13 +84,5 @@ public abstract class MoDistributedLockTestsBase
         // Assert
         newHandle.Should().NotBeNull();
         await newHandle!.DisposeAsync();
-    }
-}
-
-public static class MoDistributedLockOptionsExtensions
-{
-    public static IOptions<MoDistributedLockOptions> CreateOptions(this MoDistributedLockOptions options)
-    {
-        return Options.Create(options);
     }
 }
