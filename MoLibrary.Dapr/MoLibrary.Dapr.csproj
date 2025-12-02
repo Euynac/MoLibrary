@@ -6,8 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Dapr.AspNetCore" Version="1.14.0" />
-    <PackageReference Include="Dapr.Client" Version="1.14.0" />
+    <PackageReference Include="Dapr.AspNetCore" Version="1.16.1" />
+    <PackageReference Include="Dapr.Client" Version="1.16.1" />
+    <PackageReference Include="Dapr.Messaging" Version="1.16.1" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MoLibrary.Core\MoLibrary.Core.csproj" />

@@ -33,7 +33,7 @@ public abstract class EventBusBase : IMoEventBus
     /// <returns></returns>
     public virtual IEnumerable<EventHandlerRegisterInfo> GetDefaultHandlers()
     {
-        return Enumerable.Empty<EventHandlerRegisterInfo>();
+        return [];
     }
 
     public virtual Type GetEventType(string eventName)
