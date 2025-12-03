@@ -1,20 +1,14 @@
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using MoLibrary.EventBus.Modules;
 
 namespace MoLibrary.EventBus.Abstractions;
 
 public abstract class DistributedEventBusBase(
     IServiceScopeFactory serviceScopeFactory,
-    IOptions<ModuleEventBusOption> options,
-    IEventHandlerInvoker eventHandlerInvoker,
-    IMoLocalEventBus localEventBus) : EventBusBase(
+    IEventHandlerInvoker eventHandlerInvoker) : EventBusBase(
     serviceScopeFactory,
     eventHandlerInvoker), IMoDistributedEventBus
 {
-    protected ModuleEventBusOption EventBusOptions { get; } = options.Value;
-    protected IMoLocalEventBus LocalEventBus { get; } = localEventBus;
-
+  
     public IDisposable Subscribe<TEvent>(IMoDistributedEventHandler<TEvent> handler) where TEvent : class
     {
         return Subscribe(typeof(TEvent), handler);
@@ -26,22 +20,17 @@ public abstract class DistributedEventBusBase(
     {
         await PublishToEventBusAsync(eventType, eventData);
     }
-
-    protected virtual async Task TriggerHandlersDirectAsync(Type eventType, object eventData)
-    {
-
-        await TriggerHandlersAsync(eventType, eventData);
-    }
+    
 }
 
 
 /// <summary>
 /// 空的分布式事件总线，用于测试或不需要实际发布事件的场景
 /// </summary>
-public sealed class NullDistributedEventBus(IServiceScopeFactory serviceScopeFactory, IOptions<ModuleEventBusOption> options, IEventHandlerInvoker eventHandlerInvoker, IMoLocalEventBus localEventBus) : DistributedEventBusBase(serviceScopeFactory, options, eventHandlerInvoker, localEventBus)
+public sealed class NullDistributedEventBus(IServiceScopeFactory serviceScopeFactory, IEventHandlerInvoker eventHandlerInvoker) : DistributedEventBusBase(serviceScopeFactory, eventHandlerInvoker)
 {
-    protected override async Task PublishToEventBusAsync(Type eventType, object eventData)
+    protected override Task PublishToEventBusAsync(Type eventType, object eventData)
     {
-        return;
+        return Task.CompletedTask;
     }
 }

@@ -86,15 +86,7 @@ public interface IMoEventBus
     /// <param name="action"></param>
     void Unsubscribe<TEvent>(Func<TEvent, Task> action)
         where TEvent : class;
-
-    /// <summary>
-    /// Unregisters from an event.
-    /// </summary>
-    /// <typeparam name="TEvent">Event type</typeparam>
-    /// <param name="handler">Handler object that is registered before</param>
-    void Unsubscribe<TEvent>(IMoLocalEventHandler<TEvent> handler)
-        where TEvent : class;
-
+    
     /// <summary>
     /// Unregisters from an event.
     /// </summary>
