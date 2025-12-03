@@ -15,11 +15,8 @@ public class DistributedEventBusDaprProvider(
     IOptions<ModuleEventBusOption> options,
     IEventHandlerInvoker eventHandlerInvoker,
     IOptions<ModuleDaprEventBusOption> daprEventBusOptions,
-    DaprClient client,
-    IMoLocalEventBus localEventBus) : DistributedEventBusBase(serviceScopeFactory,
-        options,
-        eventHandlerInvoker,
-        localEventBus)
+    DaprClient client) : DistributedEventBusBase(serviceScopeFactory,
+        eventHandlerInvoker)
 {
     private readonly ModuleEventBusOption _distributedEventBusOptions = options.Value;
     public DaprClient Client { get; } = client;

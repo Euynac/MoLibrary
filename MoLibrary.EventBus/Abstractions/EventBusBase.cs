@@ -120,11 +120,6 @@ public abstract class EventBusBase : IMoEventBus
             });
     }
 
-    public virtual void Unsubscribe<TEvent>(IMoLocalEventHandler<TEvent> handler) where TEvent : class
-    {
-        Unsubscribe(typeof(TEvent), handler);
-    }
-
     public virtual void Unsubscribe(Type eventType, IEventHandlerFactory factory)
     {
         GetOrCreateHandlerFactories(eventType).Locking(factories => factories.Remove(factory));
