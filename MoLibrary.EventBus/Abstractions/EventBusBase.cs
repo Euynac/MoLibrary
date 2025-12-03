@@ -18,7 +18,7 @@ public abstract class EventBusBase : IMoEventBus
     {
         ServiceScopeFactory = serviceScopeFactory;
         EventHandlerInvoker = eventHandlerInvoker;
-        SubscribeHandlers(GetDefaultHandlers());
+        SubscribeHandlers(GetAutoRegisteredHandlers());
     }
 
     protected IServiceScopeFactory ServiceScopeFactory { get; }
@@ -31,7 +31,7 @@ public abstract class EventBusBase : IMoEventBus
     /// for those automatically registered handlers
     /// </summary>
     /// <returns></returns>
-    public virtual IEnumerable<EventHandlerRegisterInfo> GetDefaultHandlers()
+    public virtual IEnumerable<EventHandlerRegisterInfo> GetAutoRegisteredHandlers()
     {
         return [];
     }

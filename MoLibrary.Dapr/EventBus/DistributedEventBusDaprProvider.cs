@@ -21,9 +21,9 @@ public class DistributedEventBusDaprProvider(
     private readonly ModuleEventBusOption _distributedEventBusOptions = options.Value;
     public DaprClient Client { get; } = client;
     protected ModuleDaprEventBusOption DaprEventBusOptions { get; } = daprEventBusOptions.Value;
-    public override IEnumerable<EventHandlerRegisterInfo> GetDefaultHandlers()
+    public override IEnumerable<EventHandlerRegisterInfo> GetAutoRegisteredHandlers()
     {
-        return _distributedEventBusOptions.EventHandlers.Where(h => h.IsDistributed);
+        return _distributedEventBusOptions.EventHandlers.Where(h => h is { IsDistributed: true, IsAutoRegistered: true, IsLocal: false });
     }
 
 
