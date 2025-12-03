@@ -19,9 +19,12 @@ public class LocalEventBusProvider(
 {
     protected ModuleEventBusOption Options { get; } = options.Value;
 
-    public override IEnumerable<EventHandlerRegisterInfo> GetDefaultHandlers()
+    public override IEnumerable<EventHandlerRegisterInfo> GetAutoRegisteredHandlers()
     {
-        return Options.EventHandlers.Where(h => h.IsLocal);
+        return Options.EventHandlers.Where(h => h is
+        {
+            IsDistributed: false, IsLocal: true, IsAutoRegistered: true
+        });
     }
 
   

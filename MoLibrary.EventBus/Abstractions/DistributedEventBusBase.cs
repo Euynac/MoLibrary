@@ -8,12 +8,6 @@ public abstract class DistributedEventBusBase(
     serviceScopeFactory,
     eventHandlerInvoker), IMoDistributedEventBus
 {
-  
-    public IDisposable Subscribe<TEvent>(IMoDistributedEventHandler<TEvent> handler) where TEvent : class
-    {
-        return Subscribe(typeof(TEvent), handler);
-    }
-
     public override async Task PublishAsync(
         Type eventType,
         object eventData)

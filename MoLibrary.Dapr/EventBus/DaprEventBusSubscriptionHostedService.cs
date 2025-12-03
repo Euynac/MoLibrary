@@ -28,7 +28,7 @@ public class DaprEventBusSubscriptionHostedService(
         try
         {
             // 1. Get distributed handlers from pre-computed metadata
-            var distributedHandlers = eventBus.GetDefaultHandlers();
+            var distributedHandlers = eventBus.GetAutoRegisteredHandlers();
 
             // 2. Group by topic (multiple handlers can share same topic)
             var topicGroups = distributedHandlers.GroupBy(h => h.TopicName);

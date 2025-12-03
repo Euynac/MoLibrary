@@ -13,13 +13,18 @@ public sealed record EventHandlerRegisterInfo
     public string TopicName { get; }
     public bool IsDistributed { get; }
     public bool IsLocal { get; }
+    /// <summary>
+    /// 是否是自动注册的
+    /// </summary>
+    public bool IsAutoRegistered { get; }
 
     public EventHandlerRegisterInfo(
         Type handlerType,
         Type eventType,
         string topicName,
         bool isDistributed,
-        bool isLocal)
+        bool isLocal,
+        bool isAutoRegistered = false)
     {
         HandlerType = handlerType ?? throw new ArgumentNullException(nameof(handlerType));
         EventType = eventType ?? throw new ArgumentNullException(nameof(eventType));
@@ -36,6 +41,7 @@ public sealed record EventHandlerRegisterInfo
 
         IsDistributed = isDistributed;
         IsLocal = isLocal;
+        IsAutoRegistered = isAutoRegistered;
     }
 
     /// <summary>
@@ -77,7 +83,7 @@ public sealed record EventHandlerRegisterInfo
             var topicName = EventNameAttribute.GetNameOrDefault(eventType);
             results.Add(new EventHandlerRegisterInfo(
                 handlerType, eventType, topicName,
-                isDistributed: true, isLocal: false));
+                isDistributed: true, isLocal: false, isAutoRegistered: true));
         }
 
         // Create registrations for local handlers
@@ -86,7 +92,7 @@ public sealed record EventHandlerRegisterInfo
             var topicName = EventNameAttribute.GetNameOrDefault(eventType);
             results.Add(new EventHandlerRegisterInfo(
                 handlerType, eventType, topicName,
-                isDistributed: false, isLocal: true));
+                isDistributed: false, isLocal: true, isAutoRegistered: true));
         }
 
         return results;
