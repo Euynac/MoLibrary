@@ -134,5 +134,7 @@ Static web assets (wwwroot) are handled through:
 2. 将下载的字体文件复制到对应UI模块的 `wwwroot/fonts/` 目录
 3. 在主题CSS中配置 `@font-face` 规则引用本地字体文件
 
-## Code Modernization Guidelines
-- Unless explicitly instructed to maintain backward compatibility, all refactoring or modifications ​​do not need​​ to consider compatibility with older versions.
+## Development Phase & Optimization Policy
+- **Development Stage**: This project is in internal development and has not been released. Backward compatibility is not a concern unless explicitly instructed otherwise.
+- **Optimization First**: Always prioritize the most optimal design and implementation approaches. Proactively identify and propose refactoring or redesign opportunities when improvements are possible.
+- **Testing Policy**: Unit testing is not required during this phase. Do not include testing-related tasks in planning or implementation unless explicitly requested.
