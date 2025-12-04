@@ -30,7 +30,7 @@ public class JobConcurrencyGuardHostedService(
 {
     private readonly ConcurrentDictionary<string, JobExecutionStatistic> _statistics = new();
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _jobLocks = new();
-    private readonly List<IDisposable> _eventSubscriptions = [];
+    private readonly List<IAsyncDisposable> _eventSubscriptions = [];
 
     protected override string ServiceName => nameof(JobConcurrencyGuardHostedService);
 
@@ -126,7 +126,7 @@ public class JobConcurrencyGuardHostedService(
             // Unsubscribe from EventBus events
             foreach (var subscription in _eventSubscriptions)
             {
-                subscription.Dispose();
+                await subscription.DisposeAsync();
             }
             _eventSubscriptions.Clear();
 

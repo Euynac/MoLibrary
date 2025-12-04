@@ -1,44 +1,64 @@
 using Dapr.Client;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MoLibrary.Dapr.Modules;
 using MoLibrary.EventBus.Abstractions;
-using MoLibrary.EventBus.Attributes;
-using MoLibrary.EventBus.Models;
-using MoLibrary.EventBus.Modules;
+using MoLibrary.EventBus.Abstractions.Subscriptions;
 using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.Dapr.EventBus;
 
-public class DistributedEventBusDaprProvider(
+/// <summary>
+/// Dapr-based distributed event bus implementation.
+/// Publishes events using Dapr PubSub component.
+/// </summary>
+public class DistributedEventBusDaprEventBus(
     IServiceScopeFactory serviceScopeFactory,
-    IOptions<ModuleEventBusOption> options,
     IEventHandlerInvoker eventHandlerInvoker,
-    IOptions<ModuleDaprEventBusOption> daprEventBusOptions,
-    DaprClient client) : DistributedEventBusBase(serviceScopeFactory,
-        eventHandlerInvoker)
+    ISubscriptionManager subscriptionManager,
+    DaprClient daprClient,
+    IOptions<ModuleDaprEventBusOption> daprOptions,
+    ILogger<DistributedEventBusDaprEventBus> logger,
+    string? serviceKey = null)
+    : DistributedEventBusBase(serviceScopeFactory, eventHandlerInvoker, subscriptionManager, logger, serviceKey)
 {
-    private readonly ModuleEventBusOption _distributedEventBusOptions = options.Value;
-    public DaprClient Client { get; } = client;
-    protected ModuleDaprEventBusOption DaprEventBusOptions { get; } = daprEventBusOptions.Value;
-    public override IEnumerable<EventHandlerRegisterInfo> GetAutoRegisteredHandlers()
+    private readonly DaprClient _daprClient = daprClient ?? throw new ArgumentNullException(nameof(daprClient));
+    private readonly ModuleDaprEventBusOption _daprOptions = daprOptions?.Value ?? throw new ArgumentNullException(nameof(daprOptions));
+
+    /// <summary>
+    /// Publishes an event to Dapr PubSub.
+    /// </summary>
+    public override async Task PublishAsync(Type eventType, object eventData, string? topicName = null, CancellationToken cancellationToken = default)
     {
-        return _distributedEventBusOptions.EventHandlers.Where(h => h is { IsDistributed: true, IsAutoRegistered: true, IsLocal: false });
+        var finalTopicName = ResolveTopicName(eventType, topicName);
+
+        Logger.LogDebug(
+            "Publishing event {EventType} to Dapr topic {Topic} on PubSub {PubSubName}",
+            eventType.Name, finalTopicName, _daprOptions.PubSubName);
+
+        await _daprClient.PublishEventAsync(
+            _daprOptions.PubSubName,
+            finalTopicName,
+            eventData,
+            cancellationToken);
     }
 
-
-    protected override async Task PublishToEventBusAsync(Type eventType, object eventData)
+    /// <summary>
+    /// Publishes multiple events in bulk to Dapr PubSub.
+    /// </summary>
+    public override async Task BulkPublishAsync(Type eventType, IEnumerable<object> eventDataList, string? topicName = null, CancellationToken cancellationToken = default)
     {
-        await Client.PublishEventAsync(pubsubName: DaprEventBusOptions.PubSubName, topicName: EventNameAttribute.GetNameOrDefault(eventType),
-            eventData);
-    }
+        var finalTopicName = ResolveTopicName(eventType, topicName);
+        var eventsList = eventDataList.ToList();
 
-    protected override async Task BulkPublishToEventBusAsync(Type eventType, IEnumerable<object> eventDataList)
-    {
-        foreach (var chunk in eventDataList.ToList().SplitIntoChunks(DaprEventBusOptions.BulkChunkSize))
+        Logger.LogDebug(
+            "Bulk publishing {Count} events of type {EventType} to Dapr topic {Topic} on PubSub {PubSubName}",
+            eventsList.Count, eventType.Name, finalTopicName, _daprOptions.PubSubName);
+
+        foreach (var chunk in eventsList.SplitIntoChunks(_daprOptions.BulkChunkSize))
         {
-            await Client.BulkPublishEventAsync(pubsubName: DaprEventBusOptions.PubSubName, topicName: EventNameAttribute.GetNameOrDefault(eventType),
-                chunk);
+            await _daprClient.BulkPublishEventAsync(_daprOptions.PubSubName, finalTopicName, chunk, metadata: null, cancellationToken);
         }
     }
 }

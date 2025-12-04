@@ -1,39 +1,39 @@
 using Microsoft.Extensions.DependencyInjection;
 
 namespace MoLibrary.EventBus.Abstractions;
+
 /// <summary>
-/// This <see cref="IEventHandlerFactory"/> implementation is used to get/release
-/// handlers using Ioc.
+/// Factory for creating event handlers from the IoC container.
 /// </summary>
-public class IocEventHandlerFactory(IServiceScopeFactory scopeFactory, Type handlerType)
-    : IEventHandlerFactory, IDisposable
+public class IocEventHandlerFactory(IServiceScopeFactory serviceScopeFactory, Type handlerType) : IEventHandlerFactory
 {
-    public Type HandlerType { get; } = handlerType;
+    private readonly IServiceScopeFactory _serviceScopeFactory = serviceScopeFactory ?? throw new ArgumentNullException(nameof(serviceScopeFactory));
+    private readonly Type _handlerType = handlerType ?? throw new ArgumentNullException(nameof(handlerType));
 
-    protected IServiceScopeFactory ScopeFactory { get; } = scopeFactory;
-
-    /// <summary>
-    /// Resolves handler object from Ioc container.
-    /// </summary>
-    /// <returns>Resolved handler object</returns>
     public IEventHandlerDisposeWrapper GetHandler()
     {
-        var scope = ScopeFactory.CreateScope();
-        return new EventHandlerDisposeWrapper(
-            (IMoEventHandler)scope.ServiceProvider.GetRequiredService(HandlerType),
-            () => scope.Dispose()
-        );
+        var scope = _serviceScopeFactory.CreateScope();
+        var handler = (IMoEventHandler)scope.ServiceProvider.GetRequiredService(_handlerType);
+        return new IocEventHandlerDisposeWrapper(handler, scope);
     }
 
     public bool IsInFactories(List<IEventHandlerFactory> handlerFactories)
     {
         return handlerFactories
             .OfType<IocEventHandlerFactory>()
-            .Any(f => f.HandlerType == HandlerType);
+            .Any(f => f._handlerType == _handlerType);
     }
 
-    public void Dispose()
-    {
+    public Type GetHandlerType() => _handlerType;
 
+    private class IocEventHandlerDisposeWrapper(IMoEventHandler eventHandler, IServiceScope scope)
+        : IEventHandlerDisposeWrapper
+    {
+        public IMoEventHandler EventHandler { get; } = eventHandler;
+
+        public void Dispose()
+        {
+            scope.Dispose();
+        }
     }
 }
