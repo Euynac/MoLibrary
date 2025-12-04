@@ -15,7 +15,7 @@ namespace MoLibrary.JobScheduler.Cache;
 /// Provides write-through caching with lazy invalidation based on JobDefinitionsChangedEvent.
 /// Thread-safe for concurrent access using per-job locks for high concurrency.
 /// </summary>
-public class JobDefinitionCacheService : IJobDefinitionCacheService, IDisposable
+public class JobDefinitionCacheService : IJobDefinitionCacheService, IDisposable, IAsyncDisposable
 {
     private readonly IMoJobScheduleMetadataStore _metadataStore;
     private readonly IMoStateStore _stateStore;
@@ -24,7 +24,7 @@ public class JobDefinitionCacheService : IJobDefinitionCacheService, IDisposable
     private readonly ConcurrentDictionary<string, JobDefinition> _cache = new();
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _jobLocks = new();
     private readonly SemaphoreSlim _initLock = new(1, 1);
-    private IDisposable? _eventSubscription;
+    private IAsyncDisposable? _eventSubscription;
 
     private const string STALE_FLAG_PREFIX = "JobDefinition:Updated";
     private static readonly TimeSpan STALE_FLAG_TTL = TimeSpan.FromHours(1);
@@ -265,11 +265,22 @@ public class JobDefinitionCacheService : IJobDefinitionCacheService, IDisposable
     }
 
     /// <summary>
-    /// Disposes event subscription and releases resources.
+    /// Disposes event subscription and releases resources synchronously.
     /// </summary>
     public void Dispose()
     {
-        _eventSubscription?.Dispose();
+        DisposeAsync().AsTask().GetAwaiter().GetResult();
+    }
+
+    /// <summary>
+    /// Disposes event subscription and releases resources asynchronously.
+    /// </summary>
+    public async ValueTask DisposeAsync()
+    {
+        if (_eventSubscription != null)
+        {
+            await _eventSubscription.DisposeAsync();
+        }
         _initLock.Dispose();
 
         // Dispose all per-job locks

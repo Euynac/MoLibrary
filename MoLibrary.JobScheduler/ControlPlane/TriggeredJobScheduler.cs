@@ -23,8 +23,8 @@ public class TriggeredJobScheduler(
     private readonly ConcurrentDictionary<string, DelayedJobSchedule> _inFlightDelayedSchedules = new();
 
     // Event subscriptions
-    private IDisposable? _triggeredJobSubscription;
-    private IDisposable? _cancellationSubscription;
+    private IAsyncDisposable? _triggeredJobSubscription;
+    private IAsyncDisposable? _cancellationSubscription;
 
     /// <summary>
     /// Initializes the triggered job scheduler.
@@ -267,8 +267,14 @@ public class TriggeredJobScheduler(
         logger.LogInformation("TriggeredJobScheduler stopping...");
 
         // Unsubscribe from events
-        _triggeredJobSubscription?.Dispose();
-        _cancellationSubscription?.Dispose();
+        if (_triggeredJobSubscription != null)
+        {
+            await _triggeredJobSubscription.DisposeAsync();
+        }
+        if (_cancellationSubscription != null)
+        {
+            await _cancellationSubscription.DisposeAsync();
+        }
 
         // Dispose all delayed job timers
         foreach (var schedule in _inFlightDelayedSchedules.Values)
@@ -278,7 +284,5 @@ public class TriggeredJobScheduler(
         _inFlightDelayedSchedules.Clear();
 
         logger.LogInformation("TriggeredJobScheduler stopped");
-
-        await Task.CompletedTask;
     }
 }

@@ -26,7 +26,7 @@ public class JobSchedulerHostedService(
     private readonly ModuleJobSchedulerOption _options = options.Value;
 
     // Event subscriptions
-    private IDisposable? _definitionsChangedSubscription;
+    private IAsyncDisposable? _definitionsChangedSubscription;
 
     protected override string ServiceName => nameof(JobSchedulerHostedService);
 
@@ -62,7 +62,10 @@ public class JobSchedulerHostedService(
             await base.StopAsync(cancellationToken);
 
             // Unsubscribe from events
-            _definitionsChangedSubscription?.Dispose();
+            if (_definitionsChangedSubscription != null)
+            {
+                await _definitionsChangedSubscription.DisposeAsync();
+            }
 
             // Stop schedulers
             await recurringJobScheduler.StopAsync(cancellationToken);
