@@ -1,0 +1,122 @@
+@using MoLibrary.FrameworkUI.UIEventBus.Models
+@using MoLibrary.EventBus.Models
+
+<MudPaper Class="pa-4 mb-4" Elevation="2">
+    <MudStack Spacing="3">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.FilterList" Color="Color.Primary" />
+                <MudText Typo="Typo.h6">过滤条件</MudText>
+            </MudStack>
+            @if (Filter?.HasAnyFilter == true)
+            {
+                <MudButton StartIcon="@Icons.Material.Filled.Clear"
+                          Color="Color.Secondary"
+                          Variant="Variant.Text"
+                          Size="Size.Small"
+                          OnClick="ClearFilter">
+                    清空过滤
+                </MudButton>
+            }
+        </MudStack>
+
+        <MudGrid Spacing="2">
+            <!-- 状态过滤 -->
+            <MudItem xs="12" sm="6" md="3">
+                <MudSelect T="SubscriptionState?"
+                          Label="状态"
+                          @bind-Value="Filter!.State"
+                          Clearable="true"
+                          OnClearButtonClick="@(() => ApplyFilterAsync())"
+                          OnClose="@(() => ApplyFilterAsync())">
+                    <MudSelectItem T="SubscriptionState?" Value="@(SubscriptionState.Active)">活跃</MudSelectItem>
+                    <MudSelectItem T="SubscriptionState?" Value="@(SubscriptionState.Pending)">待激活</MudSelectItem>
+                    <MudSelectItem T="SubscriptionState?" Value="@(SubscriptionState.Inactive)">未激活</MudSelectItem>
+                    <MudSelectItem T="SubscriptionState?" Value="@(SubscriptionState.Disposed)">已释放</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+
+            <!-- 范围过滤 -->
+            <MudItem xs="12" sm="6" md="3">
+                <MudSelect T="SubscriptionScope?"
+                          Label="范围"
+                          @bind-Value="Filter!.Scope"
+                          Clearable="true"
+                          OnClearButtonClick="@(() => ApplyFilterAsync())"
+                          OnClose="@(() => ApplyFilterAsync())">
+                    <MudSelectItem T="SubscriptionScope?" Value="@(SubscriptionScope.Local)">本地</MudSelectItem>
+                    <MudSelectItem T="SubscriptionScope?" Value="@(SubscriptionScope.Distributed)">分布式</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+
+            <!-- 自动发现过滤 -->
+            <MudItem xs="12" sm="6" md="3">
+                <MudSelect T="bool?"
+                          Label="发现方式"
+                          @bind-Value="Filter!.IsAutoDiscovered"
+                          Clearable="true"
+                          OnClearButtonClick="@(() => ApplyFilterAsync())"
+                          OnClose="@(() => ApplyFilterAsync())">
+                    <MudSelectItem T="bool?" Value="@(true)">自动发现</MudSelectItem>
+                    <MudSelectItem T="bool?" Value="@(false)">手动订阅</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+
+            <!-- 搜索文本 -->
+            <MudItem xs="12" sm="6" md="3">
+                <MudTextField T="string"
+                             Label="搜索"
+                             @bind-Value="Filter!.SearchText"
+                             Placeholder="事件类型或主题名称"
+                             Clearable="true"
+                             Immediate="false"
+                             OnDebounceIntervalElapsed="ApplyFilterAsync"
+                             DebounceInterval="500"
+                             Adornment="Adornment.Start"
+                             AdornmentIcon="@Icons.Material.Filled.Search" />
+            </MudItem>
+        </MudGrid>
+
+        @if (Filter?.HasAnyFilter == true)
+        {
+            <MudChip T="string"
+                    Color="Color.Info"
+                    Size="Size.Small"
+                    Icon="@Icons.Material.Filled.Info">
+                已应用 @GetFilterCount() 个过滤条件
+            </MudChip>
+        }
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter]
+    public SubscriptionFilter? Filter { get; set; }
+
+    [Parameter]
+    public EventCallback OnFilterChanged { get; set; }
+
+    private async Task ApplyFilterAsync()
+    {
+        await OnFilterChanged.InvokeAsync();
+    }
+
+    private async Task ClearFilter()
+    {
+        Filter?.Clear();
+        await ApplyFilterAsync();
+    }
+
+    private int GetFilterCount()
+    {
+        if (Filter == null) return 0;
+
+        int count = 0;
+        if (Filter.State.HasValue) count++;
+        if (Filter.Scope.HasValue) count++;
+        if (Filter.IsAutoDiscovered.HasValue) count++;
+        if (!string.IsNullOrWhiteSpace(Filter.SearchText)) count++;
+
+        return count;
+    }
+}

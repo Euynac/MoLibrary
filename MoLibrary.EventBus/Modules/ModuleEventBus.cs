@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
@@ -73,15 +74,15 @@ public class ModuleEventBus(ModuleEventBusOption option)
 /// Hosted service that initializes auto-discovered subscriptions on application startup.
 /// </summary>
 internal class EventBusInitializationService(
-    IMoEventBus eventBus,
-    ModuleEventBusOption option,
+    ISubscriptionManager subscriptionManager,
+    IOptions<ModuleEventBusOption> option,
     IServiceProvider serviceProvider)
     : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         // Convert auto-discovered EventHandlerRegisterInfo to Subscriptions
-        var descriptors = option.EventHandlers.Where(h => h.IsAutoRegistered)
+        var descriptors = option.Value.EventHandlers.Where(h => h.IsAutoRegistered)
             .Select(handlerInfo => new SubscriptionDescriptor
             {
                 ServiceKey = null, // Auto-discovered handlers register to default EventBus
@@ -96,7 +97,7 @@ internal class EventBusInitializationService(
         // Batch subscribe
         if (descriptors.Count != 0)
         {
-            await eventBus.Subscriptions.SubscribeBatchAsync(descriptors);
+            await subscriptionManager.SubscribeBatchAsync(descriptors);
         }
     }
 
