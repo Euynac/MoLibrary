@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 
-namespace MoLibrary.EventBus.Abstractions;
+namespace MoLibrary.EventBus.Abstractions.Handlers;
 
 /// <summary>
 /// Factory for creating event handlers from the IoC container.

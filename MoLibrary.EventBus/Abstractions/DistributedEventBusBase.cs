@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using MoLibrary.EventBus.Abstractions.Handlers;
 using MoLibrary.EventBus.Abstractions.Subscriptions;
 
 namespace MoLibrary.EventBus.Abstractions;

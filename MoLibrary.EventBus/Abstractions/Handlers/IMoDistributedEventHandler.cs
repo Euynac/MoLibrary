@@ -1,6 +1,6 @@
-namespace MoLibrary.EventBus.Abstractions;
+namespace MoLibrary.EventBus.Abstractions.Handlers;
 
-public interface IMoLocalEventHandler<in TEvent> : IMoEventHandler<TEvent>
+public interface IMoDistributedEventHandler<in TEvent> : IMoEventHandler<TEvent>
 {
     /// <summary>
     /// Handler handles the event by implementing this method.

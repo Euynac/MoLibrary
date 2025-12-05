@@ -1,6 +1,6 @@
 using MoLibrary.Tool.Extensions;
 
-namespace MoLibrary.EventBus.Abstractions;
+namespace MoLibrary.EventBus.Abstractions.Handlers;
 
 public delegate Task EventHandlerMethodExecutorAsync(IMoEventHandler target, object parameter);
 
@@ -21,11 +21,6 @@ public class LocalEventHandlerMethodExecutor<TEvent> : IEventHandlerMethodExecut
 
         return Task.CompletedTask;
     };
-
-    public Task ExecuteAsync(IMoEventHandler target, TEvent parameters)
-    {
-        return ExecutorAsync(target, parameters);
-    }
 }
 
 public class DistributedEventHandlerMethodExecutor<TEvent> : IEventHandlerMethodExecutor
@@ -40,9 +35,4 @@ public class DistributedEventHandlerMethodExecutor<TEvent> : IEventHandlerMethod
 
         return Task.CompletedTask;
     };
-
-    public Task ExecuteAsync(IMoEventHandler target, TEvent parameters)
-    {
-        return ExecutorAsync(target, parameters);
-    }
 }

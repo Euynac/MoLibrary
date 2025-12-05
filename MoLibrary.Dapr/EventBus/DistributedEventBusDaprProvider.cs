@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MoLibrary.Dapr.Modules;
 using MoLibrary.EventBus.Abstractions;
+using MoLibrary.EventBus.Abstractions.Handlers;
 using MoLibrary.EventBus.Abstractions.Subscriptions;
 using MoLibrary.Tool.Extensions;
 
@@ -24,7 +25,7 @@ public class DistributedEventBusDaprEventBus(
     : DistributedEventBusBase(serviceScopeFactory, eventHandlerInvoker, subscriptionManager, logger, serviceKey)
 {
     private readonly DaprClient _daprClient = daprClient ?? throw new ArgumentNullException(nameof(daprClient));
-    private readonly ModuleDaprEventBusOption _daprOptions = daprOptions?.Value ?? throw new ArgumentNullException(nameof(daprOptions));
+    private readonly ModuleDaprEventBusOption _daprOptions = daprOptions.Value ?? throw new ArgumentNullException(nameof(daprOptions));
 
     /// <summary>
     /// Publishes an event to Dapr PubSub.

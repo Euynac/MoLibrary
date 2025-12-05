@@ -9,6 +9,7 @@ using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.Dapr.EventBus;
 using MoLibrary.EventBus.Abstractions;
+using MoLibrary.EventBus.Abstractions.Handlers;
 using MoLibrary.EventBus.Abstractions.Subscriptions;
 using MoLibrary.EventBus.Modules;
 

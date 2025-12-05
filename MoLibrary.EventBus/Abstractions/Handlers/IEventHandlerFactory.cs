@@ -1,4 +1,4 @@
-namespace MoLibrary.EventBus.Abstractions;
+namespace MoLibrary.EventBus.Abstractions.Handlers;
 
 /// <summary>
 /// Defines an interface for factories those are responsible to create/get and release of event handlers.

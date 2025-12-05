@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using MoLibrary.EventBus.Abstractions.Handlers;
 using MoLibrary.EventBus.Abstractions.Subscriptions;
 using MoLibrary.EventBus.Attributes;
 using MoLibrary.EventBus.Models;
@@ -140,25 +141,10 @@ public abstract class EventBusBase(
     /// <summary>
     /// Resolves the topic name for an event type, using custom topic if provided,
     /// otherwise falling back to EventNameAttribute.
-    /// Logs a warning if custom topic differs from attribute for distributed event bus.
     /// </summary>
-    protected string ResolveTopicName(Type eventType, string? topicName)
+    protected static string ResolveTopicName(Type eventType, string? topicName)
     {
         var finalTopicName = topicName ?? EventNameAttribute.GetNameOrDefault(eventType);
-
-        // If topicName differs from EventNameAttribute, log warning for distributed bus
-        if (topicName != null && this is IMoDistributedEventBus)
-        {
-            var attributeTopicName = EventNameAttribute.GetNameOrDefault(eventType);
-            if (topicName != attributeTopicName)
-            {
-                Logger.LogWarning(
-                    "Publishing event {EventType} with custom topic {CustomTopic}, " +
-                    "which differs from EventNameAttribute topic {AttributeTopic}",
-                    eventType.Name, topicName, attributeTopicName);
-            }
-        }
-
         return finalTopicName;
     }
 
