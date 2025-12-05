@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Events;
+using MoLibrary.JobScheduler.Helpers;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.JobScheduler.Modules;
 
@@ -64,10 +65,12 @@ public class JobDispatcher(
                 JobType = definition.JobType,
             };
 
-            await eventBus.PublishAsync(executionEvent, cancellationToken: cancellationToken);
+            var topicName = JobEventTopicHelper.GetTopicName<JobExecutionEvent>(definition.FromProject);
+            await eventBus.PublishAsync(executionEvent, topicName, cancellationToken);
 
             logger.LogDebug(
-                "Job execution event published: {JobKey}, InstanceId: {InstanceId}",
+                "Job execution event published to topic {TopicName}: {JobKey}, InstanceId: {InstanceId}",
+                topicName,
                 definition.JobKey,
                 instance.InstanceId);
         }

@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Events;
+using MoLibrary.JobScheduler.Helpers;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.JobScheduler.Modules;
 
@@ -20,10 +21,12 @@ public class JobWorkerManager(
     [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
     JobOrchestrator jobOrchestrator,
     IMoJobScheduleMetadataStore metadataStore,
+    IReadOnlyList<JobDefinition> jobDefinitions,
     ILogger<JobWorkerManager> logger) : IHostedService
 {
     private readonly ModuleJobSchedulerOption _options = options.Value;
-    private IAsyncDisposable? _eventSubscription;
+    private readonly List<IAsyncDisposable> _eventSubscriptions = new();
+    private readonly HashSet<string> _subscribedProjects = new();
     private SemaphoreSlim? _workerThreadSemaphore;
 
     /// <summary>
@@ -49,10 +52,43 @@ public class JobWorkerManager(
             logger.LogInformation("Worker thread limit: unlimited");
         }
 
-        // Subscribe to JobExecutionEvent
-        _eventSubscription = eventBus.Subscribe<JobExecutionEvent>(HandleJobExecutionAsync);
+        // Extract unique FromProject values from registered job definitions
+        var projectsToSubscribe = jobDefinitions
+            .Where(d => !string.IsNullOrWhiteSpace(d.FromProject))
+            .Select(d => d.FromProject)
+            .Distinct()
+            .ToList();
 
-        logger.LogInformation("JobWorkerManager started and subscribed to JobExecutionEvent");
+        if (projectsToSubscribe.Count == 0)
+        {
+            logger.LogWarning("No job definitions with valid FromProject found, no subscriptions created");
+            return Task.CompletedTask;
+        }
+
+        logger.LogInformation(
+            "Subscribing to JobExecutionEvent from {Count} project(s): {Projects}",
+            projectsToSubscribe.Count,
+            string.Join(", ", projectsToSubscribe));
+
+        // Subscribe to each project's topic
+        foreach (var fromProject in projectsToSubscribe)
+        {
+            var topicName = JobEventTopicHelper.GetTopicName<JobExecutionEvent>(fromProject);
+            var subscription = eventBus.Subscribe<JobExecutionEvent>(HandleJobExecutionAsync, topicName);
+
+            _eventSubscriptions.Add(subscription);
+            _subscribedProjects.Add(fromProject);
+
+            logger.LogInformation(
+                "Subscribed to topic: {TopicName} (Project: {Project})",
+                topicName,
+                fromProject);
+        }
+
+        logger.LogInformation(
+            "JobWorkerManager started with {SubscriptionCount} subscription(s)",
+            _eventSubscriptions.Count);
+
         return Task.CompletedTask;
     }
 
@@ -63,18 +99,25 @@ public class JobWorkerManager(
     {
         logger.LogInformation("JobWorkerManager stopping...");
 
-        // Unsubscribe from events to prevent new jobs
-        if (_eventSubscription != null)
+        // Unsubscribe from all events
+        if (_eventSubscriptions.Count > 0)
         {
-            await _eventSubscription.DisposeAsync();
-            _eventSubscription = null;
+            logger.LogInformation("Unsubscribing from {Count} topic(s)", _eventSubscriptions.Count);
+
+            foreach (var subscription in _eventSubscriptions)
+            {
+                await subscription.DisposeAsync();
+            }
+
+            _eventSubscriptions.Clear();
+            _subscribedProjects.Clear();
+
+            logger.LogInformation("All subscriptions disposed");
         }
 
-        logger.LogInformation("Unsubscribed from JobExecutionEvent");
-
         // TODO Print all in-flight jobs
-       
-  
+
+
         // Dispose semaphore
         _workerThreadSemaphore?.Dispose();
         _workerThreadSemaphore = null;
