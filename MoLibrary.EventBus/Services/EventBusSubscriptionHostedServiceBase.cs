@@ -12,12 +12,17 @@ namespace MoLibrary.EventBus.Services;
 /// Listens to SubscriptionManager changes and manages external subscriptions (e.g., Dapr, RabbitMQ).
 /// Each derived class handles a specific ServiceKey and implements the actual subscription management.
 /// </summary>
-public abstract class EventBusSubscriptionHostedServiceBase : IHostedService, IObserver<SubscriptionChange>
+public abstract class EventBusSubscriptionHostedServiceBase(
+    ISubscriptionManager subscriptionManager,
+    IMoEventBus eventBus,
+    ILogger logger,
+    string? serviceKey)
+    : IHostedService, IObserver<SubscriptionChange>
 {
-    protected readonly ISubscriptionManager SubscriptionManager;
-    protected readonly IMoEventBus EventBus;
-    protected readonly ILogger Logger;
-    protected readonly string? ServiceKey;
+    protected readonly ISubscriptionManager SubscriptionManager = subscriptionManager;
+    protected readonly IMoEventBus EventBus = eventBus;
+    protected readonly ILogger Logger = logger;
+    protected readonly string? ServiceKey = serviceKey;
 
     /// <summary>
     /// Tracks active external subscriptions by SubscriptionId.
@@ -27,25 +32,13 @@ public abstract class EventBusSubscriptionHostedServiceBase : IHostedService, IO
 
     private IDisposable? _subscriptionManagerObserver;
 
-    protected EventBusSubscriptionHostedServiceBase(
-        ISubscriptionManager subscriptionManager,
-        IMoEventBus eventBus,
-        ILogger logger,
-        string? serviceKey)
-    {
-        SubscriptionManager = subscriptionManager;
-        EventBus = eventBus;
-        Logger = logger;
-        ServiceKey = serviceKey;
-    }
-
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         // Subscribe to SubscriptionManager changes
         _subscriptionManagerObserver = SubscriptionManager.Subscribe(this);
 
         // Create subscriptions for existing active distributed subscriptions matching our ServiceKey
-        var existingSubscriptions = SubscriptionManager.GetAll()
+        var existingSubscriptions = SubscriptionManager.GetAll().AsEnumerable()
             .Where(ShouldHandleSubscription)
             .Where(s => s.State == SubscriptionState.Active)
             .ToList();

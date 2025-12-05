@@ -1,7 +1,6 @@
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.EventBus.Models;
-using MoLibrary.Tool.Utils;
 
 namespace MoLibrary.EventBus.Modules;
 

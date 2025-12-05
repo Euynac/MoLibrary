@@ -1,5 +1,4 @@
 using MoLibrary.EventBus.Abstractions.Subscriptions;
-using MoLibrary.EventBus.Models;
 
 namespace MoLibrary.EventBus.Abstractions;
 
