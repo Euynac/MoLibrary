@@ -4,6 +4,7 @@ using MoLibrary.EventBus.Abstractions;
 using MoLibrary.EventBus.Abstractions.Subscriptions;
 using MoLibrary.EventBus.Models;
 using MoLibrary.FrameworkUI.UIEventBus.Models;
+using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.FrameworkUI.UIEventBus.Services;
@@ -12,13 +13,12 @@ namespace MoLibrary.FrameworkUI.UIEventBus.Services;
 /// EventBus监控服务 - 封装订阅管理和实时更新功能
 /// </summary>
 public sealed class EventBusMonitorService(
+    ISubscriptionManager subscriptionManager,
     IMoLocalEventBus localEventBus,
     IMoDistributedEventBus distributedEventBus,
     ILogger<EventBusMonitorService> logger) : IAsyncDisposable
 {
-    private readonly IMoLocalEventBus _localEventBus = localEventBus;
-    private readonly IMoDistributedEventBus _distributedEventBus = distributedEventBus;
-    private readonly ILogger<EventBusMonitorService> _logger = logger;
+    private readonly ISubscriptionManager _subscriptionManager = subscriptionManager;
 
     // 实时变更通道
     private readonly Channel<SubscriptionChangeViewModel> _changesChannel =
@@ -47,31 +47,31 @@ public sealed class EventBusMonitorService(
             try
             {
                 // 订阅本地EventBus的变更
-                var localSub = _localEventBus.Subscriptions.Subscribe(
+                var localSub = localEventBus.Subscriptions.Subscribe(
                     new SubscriptionChangeObserver(change => {
                         var vm = MapToChangeViewModel(change);
                         _changesChannel.Writer.TryWrite(vm);
-                        _logger.LogDebug("Local subscription change: {ChangeType} - {EventType}",
+                        logger.LogDebug("Local subscription change: {ChangeType} - {EventType}",
                             change.ChangeType, change.Subscription.EventType.Name);
                     }));
                 _observableSubscriptions.Add(localSub);
 
                 // 订阅分布式EventBus的变更
-                var distSub = _distributedEventBus.Subscriptions.Subscribe(
+                var distSub = distributedEventBus.Subscriptions.Subscribe(
                     new SubscriptionChangeObserver(change => {
                         var vm = MapToChangeViewModel(change);
                         _changesChannel.Writer.TryWrite(vm);
-                        _logger.LogDebug("Distributed subscription change: {ChangeType} - {EventType}",
+                        logger.LogDebug("Distributed subscription change: {ChangeType} - {EventType}",
                             change.ChangeType, change.Subscription.EventType.Name);
                     }));
                 _observableSubscriptions.Add(distSub);
 
                 _initialized = true;
-                _logger.LogInformation("EventBusMonitorService initialized successfully");
+                logger.LogInformation("EventBusMonitorService initialized successfully");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to initialize EventBusMonitorService");
+                logger.LogError(ex, "Failed to initialize EventBusMonitorService");
                 throw;
             }
         }
@@ -98,22 +98,24 @@ public sealed class EventBusMonitorService(
     {
         try
         {
-            var localSubs = _localEventBus.Subscriptions.GetAll().ToList();
-            var distSubs = _distributedEventBus.Subscriptions.GetAll().ToList();
+            var allSubscriptions = _subscriptionManager.GetAll().ToList();
 
-            var allSubs = localSubs.Concat(distSubs)
+            var allSubs = allSubscriptions
                 .Select(MapToViewModel)
                 .OrderByDescending(s => s.CreatedAt)
                 .ToList();
 
-            _logger.LogDebug("Retrieved {Count} subscriptions (Local: {LocalCount}, Distributed: {DistCount})",
-                allSubs.Count, localSubs.Count, distSubs.Count);
+            var localCount = allSubscriptions.Count(s => s.Scope == SubscriptionScope.Local);
+            var distCount = allSubscriptions.Count(s => s.Scope == SubscriptionScope.Distributed);
+
+            logger.LogDebug("Retrieved {Count} subscriptions (Local: {LocalCount}, Distributed: {DistCount})",
+                allSubs.Count, localCount, distCount);
 
             return Res.Ok(allSubs);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get all subscriptions");
+            logger.LogError(ex, "Failed to get all subscriptions");
             return Res.Fail($"获取订阅列表失败: {ex.Message}", ResponseCode.InternalError);
         }
     }
@@ -125,8 +127,7 @@ public sealed class EventBusMonitorService(
     {
         try
         {
-            var subscription = _localEventBus.Subscriptions.GetById(subscriptionId)
-                               ?? _distributedEventBus.Subscriptions.GetById(subscriptionId);
+            var subscription = _subscriptionManager.GetById(subscriptionId);
 
             if (subscription == null)
             {
@@ -138,7 +139,7 @@ public sealed class EventBusMonitorService(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get subscription by ID: {SubscriptionId}", subscriptionId);
+            logger.LogError(ex, "Failed to get subscription by ID: {SubscriptionId}", subscriptionId);
             return Res.Fail($"获取订阅详情失败: {ex.Message}", ResponseCode.InternalError);
         }
     }
@@ -150,9 +151,7 @@ public sealed class EventBusMonitorService(
     {
         try
         {
-            var allSubs = _localEventBus.Subscriptions.GetAll()
-                .Concat(_distributedEventBus.Subscriptions.GetAll())
-                .AsQueryable();
+            var allSubs = _subscriptionManager.GetAll().AsQueryable();
 
             // 应用过滤条件
             if (filter.State.HasValue)
@@ -189,12 +188,12 @@ public sealed class EventBusMonitorService(
                 .OrderByDescending(s => s.CreatedAt)
                 .ToList();
 
-            _logger.LogDebug("Filtered subscriptions: {Count} results", result.Count);
+            logger.LogDebug("Filtered subscriptions: {Count} results", result.Count);
             return Res.Ok(result);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to filter subscriptions");
+            logger.LogError(ex, "Failed to filter subscriptions");
             return Res.Fail($"过滤订阅失败: {ex.Message}", ResponseCode.InternalError);
         }
     }
@@ -206,9 +205,7 @@ public sealed class EventBusMonitorService(
     {
         try
         {
-            var allSubs = _localEventBus.Subscriptions.GetAll()
-                .Concat(_distributedEventBus.Subscriptions.GetAll())
-                .ToList();
+            var allSubs = _subscriptionManager.GetAll().ToList();
 
             var stats = new SubscriptionStatistics
             {
@@ -229,8 +226,8 @@ public sealed class EventBusMonitorService(
                     .Take(10)
                     .Select(g => new EventTypeCount
                     {
-                        EventType = g.Key.FullName ?? g.Key.Name,
-                        EventTypeShortName = GetShortTypeName(g.Key),
+                        EventType = g.Key.GetCleanFullName(),
+                        EventTypeShortName = g.Key.GetCleanName(),
                         Count = g.Count()
                     })
                     .ToList(),
@@ -246,14 +243,14 @@ public sealed class EventBusMonitorService(
                     .ToList()
             };
 
-            _logger.LogDebug("Generated statistics: Total={Total}, Active={Active}",
+            logger.LogDebug("Generated statistics: Total={Total}, Active={Active}",
                 stats.TotalSubscriptions, stats.ActiveSubscriptions);
 
             return Res.Ok(stats);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to calculate statistics");
+            logger.LogError(ex, "Failed to calculate statistics");
             return Res.Fail($"统计失败: {ex.Message}");
         }
     }
@@ -269,8 +266,7 @@ public sealed class EventBusMonitorService(
     {
         try
         {
-            var subscription = _localEventBus.Subscriptions.GetById(subscriptionId)
-                               ?? _distributedEventBus.Subscriptions.GetById(subscriptionId);
+            var subscription = _subscriptionManager.GetById(subscriptionId);
 
             if (subscription == null)
             {
@@ -289,8 +285,8 @@ public sealed class EventBusMonitorService(
 
             // 根据范围选择对应的管理器
             var manager = subscription.Scope == SubscriptionScope.Local
-                ? _localEventBus.Subscriptions
-                : _distributedEventBus.Subscriptions;
+                ? localEventBus.Subscriptions
+                : distributedEventBus.Subscriptions;
 
             if (subscription.State == SubscriptionState.Inactive)
             {
@@ -301,12 +297,12 @@ public sealed class EventBusMonitorService(
                 await manager.ActivateAsync(subscriptionId);
             }
 
-            _logger.LogInformation("Activated subscription: {SubscriptionId}", subscriptionId);
+            logger.LogInformation("Activated subscription: {SubscriptionId}", subscriptionId);
             return Res.Ok("订阅已激活");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to activate subscription: {SubscriptionId}", subscriptionId);
+            logger.LogError(ex, "Failed to activate subscription: {SubscriptionId}", subscriptionId);
             return Res.Fail($"激活订阅失败: {ex.Message}");
         }
     }
@@ -318,8 +314,7 @@ public sealed class EventBusMonitorService(
     {
         try
         {
-            var subscription = _localEventBus.Subscriptions.GetById(subscriptionId)
-                               ?? _distributedEventBus.Subscriptions.GetById(subscriptionId);
+            var subscription = _subscriptionManager.GetById(subscriptionId);
 
             if (subscription == null)
             {
@@ -333,17 +328,17 @@ public sealed class EventBusMonitorService(
 
             // 根据范围选择对应的管理器
             var manager = subscription.Scope == SubscriptionScope.Local
-                ? _localEventBus.Subscriptions
-                : _distributedEventBus.Subscriptions;
+                ? localEventBus.Subscriptions
+                : distributedEventBus.Subscriptions;
 
             await manager.DeactivateAsync(subscriptionId);
 
-            _logger.LogInformation("Deactivated subscription: {SubscriptionId}", subscriptionId);
+            logger.LogInformation("Deactivated subscription: {SubscriptionId}", subscriptionId);
             return Res.Ok("订阅已停用");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to deactivate subscription: {SubscriptionId}", subscriptionId);
+            logger.LogError(ex, "Failed to deactivate subscription: {SubscriptionId}", subscriptionId);
             return Res.Fail($"停用订阅失败: {ex.Message}");
         }
     }
@@ -355,8 +350,7 @@ public sealed class EventBusMonitorService(
     {
         try
         {
-            var subscription = _localEventBus.Subscriptions.GetById(subscriptionId)
-                               ?? _distributedEventBus.Subscriptions.GetById(subscriptionId);
+            var subscription = _subscriptionManager.GetById(subscriptionId);
 
             if (subscription == null)
             {
@@ -370,17 +364,17 @@ public sealed class EventBusMonitorService(
 
             // 根据范围选择对应的管理器
             var manager = subscription.Scope == SubscriptionScope.Local
-                ? _localEventBus.Subscriptions
-                : _distributedEventBus.Subscriptions;
+                ? localEventBus.Subscriptions
+                : distributedEventBus.Subscriptions;
 
             await manager.UnsubscribeAsync(subscriptionId);
 
-            _logger.LogInformation("Removed subscription: {SubscriptionId}", subscriptionId);
+            logger.LogInformation("Removed subscription: {SubscriptionId}", subscriptionId);
             return Res.Ok("订阅已移除");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to unsubscribe: {SubscriptionId}", subscriptionId);
+            logger.LogError(ex, "Failed to unsubscribe: {SubscriptionId}", subscriptionId);
             return Res.Fail($"移除订阅失败: {ex.Message}");
         }
     }
@@ -410,14 +404,12 @@ public sealed class EventBusMonitorService(
         return new SubscriptionViewModel
         {
             SubscriptionId = subscription.Id.ToString(),
-            EventType = subscription.EventType.FullName ?? subscription.EventType.Name,
-            EventTypeShortName = GetShortTypeName(subscription.EventType),
+            EventType = subscription.EventType.GetCleanFullName(),
+            EventTypeShortName = subscription.EventType.GetCleanName(),
             TopicName = subscription.TopicName,
             ServiceKey = subscription.ServiceKey,
-            HandlerType = subscription.HandlerType?.FullName,
-            HandlerTypeShortName = subscription.HandlerType != null
-                ? GetShortTypeName(subscription.HandlerType)
-                : null,
+            HandlerType = subscription.HandlerType?.GetCleanFullName(),
+            HandlerTypeShortName = subscription.HandlerType?.GetCleanName(),
             HandlerFactoryType = subscription.HandlerFactory.GetType().Name,
             Scope = subscription.Scope,
             State = subscription.State,
@@ -443,33 +435,13 @@ public sealed class EventBusMonitorService(
         };
     }
 
-    /// <summary>
-    /// 获取类型简短名称
-    /// </summary>
-    private static string GetShortTypeName(Type type)
-    {
-        var name = type.Name;
-        if (type.IsGenericType)
-        {
-            var backtickIndex = name.IndexOf('`');
-            if (backtickIndex > 0)
-            {
-                name = name.Substring(0, backtickIndex);
-            }
-            var genericArgs = string.Join(", ",
-                type.GetGenericArguments().Select(GetShortTypeName));
-            name += $"<{genericArgs}>";
-        }
-        return name;
-    }
-
     #endregion
 
     #region Disposal
 
     public async ValueTask DisposeAsync()
     {
-        _logger.LogInformation("Disposing EventBusMonitorService...");
+        logger.LogInformation("Disposing EventBusMonitorService...");
 
         // 取消所有Observable订阅
         foreach (var subscription in _observableSubscriptions)
@@ -480,7 +452,7 @@ public sealed class EventBusMonitorService(
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error disposing observable subscription");
+                logger.LogError(ex, "Error disposing observable subscription");
             }
         }
         _observableSubscriptions.Clear();
@@ -489,7 +461,7 @@ public sealed class EventBusMonitorService(
         _changesChannel.Writer.Complete();
 
         await Task.CompletedTask;
-        _logger.LogInformation("EventBusMonitorService disposed");
+        logger.LogInformation("EventBusMonitorService disposed");
     }
 
     #endregion
