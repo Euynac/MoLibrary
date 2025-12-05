@@ -142,14 +142,4 @@ public interface ISubscriptionManager : IObservable<SubscriptionChange>
     Task UnsubscribeByServiceKeyAsync(string? serviceKey, CancellationToken cancellationToken = default);
 
     #endregion
-
-    #region Fluent Builder
-
-    /// <summary>
-    /// Gets a fluent subscription builder for complex subscription scenarios.
-    /// </summary>
-    /// <returns>Subscription builder</returns>
-    ISubscriptionBuilder Builder();
-
-    #endregion
 }

@@ -18,7 +18,7 @@ public class SubscriptionManager(ILogger<SubscriptionManager> logger) : ISubscri
     public async Task<ISubscription> SubscribeAsync(SubscriptionDescriptor descriptor)
     {
         var subscription = new Subscription(descriptor);
-
+ 
         if (!_subscriptions.TryAdd(subscription.Id, subscription))
         {
             throw new InvalidOperationException($"Subscription {subscription.Id} already exists");
@@ -140,7 +140,7 @@ public class SubscriptionManager(ILogger<SubscriptionManager> logger) : ISubscri
         {
             logger.LogWarning("Subscription {SubscriptionId} not found for activation", subscriptionId);
             return;
-        }
+        }  
 
         await subscription.ActivateAsync();
 
@@ -199,14 +199,6 @@ public class SubscriptionManager(ILogger<SubscriptionManager> logger) : ISubscri
 
     #endregion
 
-    #region Fluent Builder
-
-    public ISubscriptionBuilder Builder()
-    {
-        return new SubscriptionBuilder(this);
-    }
-
-    #endregion
 
     #region IObservable Implementation
 
