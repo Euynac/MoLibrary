@@ -92,8 +92,9 @@ public class RegisterCentreClientHostedService(
                 else if (heartbeatData.RequireReRegister)
                 {
                     logger?.LogInformation("需要重新注册: {Message}", heartbeatData.Message);
-                    // 重新注册
-                    var registerRes = await connector.Register(serviceInfo);
+                    // 重新注册 - 重新获取包含元数据的完整服务信息
+                    var fullServiceInfo = client.GetServiceStatus();
+                    var registerRes = await connector.Register(fullServiceInfo);
                     if (registerRes.IsFailed(out var registerError))
                     {
                         logger?.LogError("重新注册失败: {Message}", registerError.Message);
