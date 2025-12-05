@@ -1,0 +1,102 @@
+@using MoLibrary.FrameworkUI.UIEventBus.Models
+
+<div class="subscription-table-wrapper">
+    <MudTable T="SubscriptionViewModel"
+             Items="@Subscriptions"
+             Dense="true"
+             Hover="true"
+             Breakpoint="Breakpoint.Sm"
+             Loading="@Loading"
+             LoadingProgressColor="Color.Info"
+             RowsPerPage="20">
+        <HeaderContent>
+            <MudTh>事件类型</MudTh>
+            <MudTh>主题名称</MudTh>
+            <MudTh>处理器</MudTh>
+            <MudTh>范围</MudTh>
+            <MudTh>状态</MudTh>
+            <MudTh>创建时间</MudTh>
+            <MudTh>操作</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="事件类型">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                    <MudIcon Icon="@Icons.Material.Filled.Event" Size="Size.Small" Color="Color.Default" />
+                    <MudTooltip Text="@context.EventType">
+                        <MudText Typo="Typo.body2" Style="cursor: pointer;" @onclick="() => OnRowClick.InvokeAsync(context)">
+                            @context.EventTypeShortName
+                        </MudText>
+                    </MudTooltip>
+                </MudStack>
+                @if (context.IsAutoDiscovered)
+                {
+                    <MudChip T="string" Color="Color.Info" Size="Size.Small" Icon="@Icons.Material.Filled.AutoAwesome">自动</MudChip>
+                }
+            </MudTd>
+            <MudTd DataLabel="主题名称">
+                <MudText Typo="Typo.body2">@context.TopicName</MudText>
+            </MudTd>
+            <MudTd DataLabel="处理器">
+                <MudTooltip Text="@(context.HandlerType ?? "Action处理器")">
+                    <MudText Typo="Typo.body2">@context.HandlerDisplay</MudText>
+                </MudTooltip>
+            </MudTd>
+            <MudTd DataLabel="范围">
+                <MudChip T="string" Color="@context.ScopeColor" Size="Size.Small">
+                    @context.ScopeDisplay
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="状态">
+                <MudChip T="string" Color="@context.StateColor" Size="Size.Small">
+                    @context.StateDisplay
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="创建时间">
+                <MudStack Spacing="0">
+                    <MudText Typo="Typo.body2">@context.CreatedAtDisplay</MudText>
+                    @if (context.State == MoLibrary.EventBus.Models.SubscriptionState.Active)
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            已运行 @context.DurationDisplay
+                        </MudText>
+                    }
+                </MudStack>
+            </MudTd>
+            <MudTd DataLabel="操作">
+                <SubscriptionLifecycleControl Subscription="context"
+                                             OnActivate="() => OnActivate.InvokeAsync(context)"
+                                             OnDeactivate="() => OnDeactivate.InvokeAsync(context)"
+                                             OnUnsubscribe="() => OnUnsubscribe.InvokeAsync(context)" />
+            </MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="@(new[] { 10, 20, 50, 100 })" />
+        </PagerContent>
+        <NoRecordsContent>
+            <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="pa-4">
+                <MudIcon Icon="@Icons.Material.Filled.SearchOff" Size="Size.Large" Color="Color.Secondary" />
+                <MudText Typo="Typo.body1" Color="Color.Secondary">暂无订阅数据</MudText>
+            </MudStack>
+        </NoRecordsContent>
+    </MudTable>
+</div>
+
+@code {
+    [Parameter]
+    public List<SubscriptionViewModel>? Subscriptions { get; set; }
+
+    [Parameter]
+    public bool Loading { get; set; }
+
+    [Parameter]
+    public EventCallback<SubscriptionViewModel> OnRowClick { get; set; }
+
+    [Parameter]
+    public EventCallback<SubscriptionViewModel> OnActivate { get; set; }
+
+    [Parameter]
+    public EventCallback<SubscriptionViewModel> OnDeactivate { get; set; }
+
+    [Parameter]
+    public EventCallback<SubscriptionViewModel> OnUnsubscribe { get; set; }
+}

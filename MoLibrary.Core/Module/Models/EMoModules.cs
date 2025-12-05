@@ -101,5 +101,9 @@ public enum EMoModules
     /// </summary>
     JobSchedulerUI,
     LoggingUI,
-    Clock
+    Clock,
+    /// <summary>
+    /// 事件总线 UI 监控模块
+    /// </summary>
+    EventBusUI
 }

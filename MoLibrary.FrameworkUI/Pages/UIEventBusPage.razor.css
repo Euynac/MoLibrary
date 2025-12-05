@@ -1,0 +1,43 @@
+/* 使用MudBlazor CSS变量 */
+
+.subscription-table-wrapper ::deep .mud-table-row:hover {
+    background-color: var(--mud-palette-action-default-hover);
+    cursor: pointer;
+}
+
+.subscription-table-wrapper ::deep .mud-table-cell {
+    padding: 12px 16px;
+}
+
+.subscription-table-wrapper ::deep .mud-table-head .mud-table-cell {
+    font-weight: 600;
+    background-color: var(--mud-palette-background-grey);
+}
+
+/* 详情面板样式 */
+.subscription-detail-wrapper ::deep .mud-card {
+    border-left: 4px solid var(--mud-palette-primary);
+}
+
+/* 变更流样式 */
+.change-feed-item {
+    padding: 8px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+    background-color: var(--mud-palette-background-grey);
+    transition: background-color 0.2s;
+}
+
+.change-feed-item:hover {
+    background-color: var(--mud-palette-action-default-hover);
+}
+
+/* 统计卡片动画 */
+.subscription-table-wrapper ::deep .mud-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.subscription-table-wrapper ::deep .mud-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}

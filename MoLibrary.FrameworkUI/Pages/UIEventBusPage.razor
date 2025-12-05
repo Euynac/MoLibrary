@@ -1,0 +1,339 @@
+@page "/ui/eventbus"
+@attribute [Route(PAGE_URL)]
+@implements IAsyncDisposable
+@using MoLibrary.FrameworkUI.UIEventBus.Services
+@using MoLibrary.FrameworkUI.UIEventBus.Models
+@using MoLibrary.FrameworkUI.UIEventBus.Components
+@using MoLibrary.Tool.Extensions
+@using MoLibrary.Tool.MoResponse
+@using MoLibrary.EventBus.Models
+@inject EventBusMonitorService MonitorService
+@inject ISnackbar Snackbar
+
+<PageTitle>事件总线监控</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
+    <!-- 渐变 Header -->
+    <MudPaper Class="pa-4 mb-4" Style="background: linear-gradient(45deg, #1976D2 30%, #2196F3 90%); color: white;">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                <MudIcon Icon="@Icons.Material.Filled.Hub" Size="Size.Large" />
+                <MudText Typo="Typo.h4" Style="font-weight: 500; margin: 0;">事件总线监控</MudText>
+            </MudStack>
+            <MudStack Row="true" Spacing="2">
+                <MudButton StartIcon="@Icons.Material.Filled.Refresh"
+                          Color="Color.Inherit"
+                          Variant="Variant.Outlined"
+                          OnClick="RefreshAsync"
+                          Size="Size.Medium"
+                          Style="border-color: white; color: white;">
+                    刷新
+                </MudButton>
+            </MudStack>
+        </MudStack>
+    </MudPaper>
+
+    @if (_loading && _subscriptions.Count == 0)
+    {
+        <MudStack AlignItems="AlignItems.Center" Spacing="4" Class="pa-8">
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+            <MudText Typo="Typo.h6" Color="Color.Primary">正在加载订阅信息...</MudText>
+        </MudStack>
+    }
+    else
+    {
+        <!-- Tabs -->
+        <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4">
+            <MudTabPanel Text="总览" Icon="@Icons.Material.Filled.Dashboard">
+                <SubscriptionStatisticsCard Statistics="_statistics" />
+
+                @if (_recentChanges.Any())
+                {
+                    <MudPaper Class="pa-4" Elevation="2">
+                        <MudStack Spacing="2">
+                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@Icons.Material.Filled.Update" Color="Color.Info" />
+                                    <MudText Typo="Typo.h6">最近变更</MudText>
+                                </MudStack>
+                                <MudChip T="string" Color="Color.Info" Size="Size.Small">
+                                    @_recentChanges.Count 条
+                                </MudChip>
+                            </MudStack>
+
+                            <MudList T="string" Clickable="false" Dense="true" Style="max-height: 400px; overflow-y: auto;">
+                                @foreach (var change in _recentChanges.Take(20))
+                                {
+                                    <MudListItem T="string">
+                                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                                <MudIcon Icon="@change.ChangeTypeIcon" Color="@change.ChangeTypeColor" Size="Size.Small" />
+                                                <MudChip T="string" Color="@change.ChangeTypeColor" Size="Size.Small">
+                                                    @change.ChangeTypeDisplay
+                                                </MudChip>
+                                                <MudText Typo="Typo.body2">@change.Subscription.EventTypeShortName</MudText>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@change.TimestampDisplay</MudText>
+                                            </MudStack>
+                                            <MudChip T="string" Color="@change.Subscription.ScopeColor" Size="Size.Small">
+                                                @change.Subscription.ScopeDisplay
+                                            </MudChip>
+                                        </MudStack>
+                                    </MudListItem>
+                                }
+                            </MudList>
+                        </MudStack>
+                    </MudPaper>
+                }
+            </MudTabPanel>
+
+            <MudTabPanel Text="订阅浏览" Icon="@Icons.Material.Filled.List">
+                <SubscriptionFilterPanel Filter="_filter" OnFilterChanged="ApplyFilterAsync" />
+
+                <SubscriptionTable Subscriptions="_displayedSubscriptions"
+                                  Loading="_loading"
+                                  OnRowClick="ShowSubscriptionDetail"
+                                  OnActivate="ActivateSubscriptionAsync"
+                                  OnDeactivate="DeactivateSubscriptionAsync"
+                                  OnUnsubscribe="UnsubscribeWithConfirmAsync" />
+            </MudTabPanel>
+        </MudTabs>
+    }
+</MudContainer>
+
+<!-- 详情对话框 -->
+<MudDialog @bind-IsVisible="_showDetailDialog" Options="_dialogOptions">
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.Info" />
+            <MudText Typo="Typo.h6">订阅详情</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        @if (_selectedSubscription != null)
+        {
+            <SubscriptionDetailPanel Subscription="_selectedSubscription" />
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => _showDetailDialog = false" Color="Color.Primary">关闭</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    public const string PAGE_URL = "/ui/eventbus";
+
+    private bool _loading = true;
+    private CancellationTokenSource _cts = new();
+
+    // 数据
+    private List<SubscriptionViewModel> _subscriptions = new();
+    private List<SubscriptionViewModel> _displayedSubscriptions = new();
+    private SubscriptionStatistics? _statistics;
+    private List<SubscriptionChangeViewModel> _recentChanges = new();
+
+    // 过滤器
+    private SubscriptionFilter _filter = new();
+
+    // 详情对话框
+    private bool _showDetailDialog;
+    private SubscriptionViewModel? _selectedSubscription;
+    private DialogOptions _dialogOptions = new() { MaxWidth = MaxWidth.Large, FullWidth = true };
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadDataAsync();
+
+            // 启动实时监听
+            _ = ListenToChangesAsync(_cts.Token);
+
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        try
+        {
+            // 加载订阅列表
+            if ((await MonitorService.GetAllSubscriptionsAsync()).IsFailed(out var error, out var subscriptions))
+            {
+                Snackbar.Add("加载订阅列表失败: " + error, Severity.Error);
+            }
+            else
+            {
+                _subscriptions = subscriptions ?? new();
+                await ApplyFilterAsync();
+            }
+
+            // 加载统计信息
+            if ((await MonitorService.GetStatisticsAsync()).IsFailed(out var statsError, out var stats))
+            {
+                Snackbar.Add("加载统计信息失败: " + statsError, Severity.Error);
+            }
+            else
+            {
+                _statistics = stats;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"加载数据时发生错误: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefreshAsync()
+    {
+        await LoadDataAsync();
+        Snackbar.Add("数据已刷新", Severity.Success);
+    }
+
+    private Task ApplyFilterAsync()
+    {
+        if (_filter.HasAnyFilter)
+        {
+            _displayedSubscriptions = _subscriptions.Where(s =>
+            {
+                if (_filter.State.HasValue && s.State != _filter.State.Value)
+                    return false;
+
+                if (_filter.Scope.HasValue && s.Scope != _filter.Scope.Value)
+                    return false;
+
+                if (_filter.IsAutoDiscovered.HasValue && s.IsAutoDiscovered != _filter.IsAutoDiscovered.Value)
+                    return false;
+
+                if (!string.IsNullOrWhiteSpace(_filter.SearchText))
+                {
+                    var searchText = _filter.SearchText.ToLowerInvariant();
+                    if (!s.EventType.ToLowerInvariant().Contains(searchText) &&
+                        !s.TopicName.ToLowerInvariant().Contains(searchText))
+                        return false;
+                }
+
+                return true;
+            }).ToList();
+        }
+        else
+        {
+            _displayedSubscriptions = _subscriptions;
+        }
+
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private async Task ListenToChangesAsync(CancellationToken ct)
+    {
+        try
+        {
+            var reader = MonitorService.SubscribeToChanges();
+            await foreach (var change in reader.ReadAllAsync(ct))
+            {
+                // 添加到最近变更列表
+                _recentChanges.Insert(0, change);
+                if (_recentChanges.Count > 100)
+                {
+                    _recentChanges.RemoveAt(100);
+                }
+
+                // 刷新订阅列表和统计
+                await RefreshSubscriptionsAsync();
+
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected on disposal
+        }
+        catch (Exception ex)
+        {
+            await InvokeAsync(() =>
+            {
+                Snackbar.Add($"实时更新错误: {ex.Message}", Severity.Error);
+            });
+        }
+    }
+
+    private async Task RefreshSubscriptionsAsync()
+    {
+        if ((await MonitorService.GetAllSubscriptionsAsync()).IsFailed(out _, out var subscriptions))
+        {
+            return;
+        }
+
+        _subscriptions = subscriptions ?? new();
+        await ApplyFilterAsync();
+
+        if ((await MonitorService.GetStatisticsAsync()).IsFailed(out _, out var stats))
+        {
+            return;
+        }
+
+        _statistics = stats;
+    }
+
+    private void ShowSubscriptionDetail(SubscriptionViewModel subscription)
+    {
+        _selectedSubscription = subscription;
+        _showDetailDialog = true;
+    }
+
+    private async Task ActivateSubscriptionAsync(SubscriptionViewModel subscription)
+    {
+        var subscriptionId = new SubscriptionId(Guid.Parse(subscription.SubscriptionId));
+        if ((await MonitorService.ActivateSubscriptionAsync(subscriptionId)).IsFailed(out var error))
+        {
+            Snackbar.Add("激活失败: " + error.Message, Severity.Error);
+        }
+        else
+        {
+            Snackbar.Add("订阅已激活", Severity.Success);
+        }
+    }
+
+    private async Task DeactivateSubscriptionAsync(SubscriptionViewModel subscription)
+    {
+        var subscriptionId = new SubscriptionId(Guid.Parse(subscription.SubscriptionId));
+        if ((await MonitorService.DeactivateSubscriptionAsync(subscriptionId)).IsFailed(out var error))
+        {
+            Snackbar.Add("停用失败: " + error.Message, Severity.Error);
+        }
+        else
+        {
+            Snackbar.Add("订阅已停用", Severity.Warning);
+        }
+    }
+
+    private async Task UnsubscribeWithConfirmAsync(SubscriptionViewModel subscription)
+    {
+        // 简化处理：直接执行移除，不显示确认对话框
+        // 在生产环境中，可以使用 MudBlazor 的 IDialogService 显示确认对话框
+        var subscriptionId = new SubscriptionId(Guid.Parse(subscription.SubscriptionId));
+        if ((await MonitorService.UnsubscribeAsync(subscriptionId)).IsFailed(out var error))
+        {
+            Snackbar.Add("移除失败: " + error.Message, Severity.Error);
+        }
+        else
+        {
+            Snackbar.Add("订阅已移除", Severity.Info);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+        await Task.CompletedTask;
+    }
+}
