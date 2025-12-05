@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace MoLibrary.EventBus.Abstractions;
+namespace MoLibrary.EventBus.Abstractions.Handlers;
 
 public interface IEventHandlerInvoker
 {

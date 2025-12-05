@@ -1,301 +1,146 @@
-using System.Collections.Concurrent;
-using System.Diagnostics.CodeAnalysis;
-using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
-using MoLibrary.Core.Extensions;
+using Microsoft.Extensions.Logging;
+using MoLibrary.EventBus.Abstractions.Handlers;
+using MoLibrary.EventBus.Abstractions.Subscriptions;
 using MoLibrary.EventBus.Attributes;
 using MoLibrary.EventBus.Models;
-using MoLibrary.Tool.Extensions;
-using MoLibrary.Tool.Utils;
+using MoLibrary.EventBus.Subscriptions;
 
 namespace MoLibrary.EventBus.Abstractions;
 
-public abstract class EventBusBase : IMoEventBus
+/// <summary>
+/// Base class for all EventBus implementations.
+/// Provides common subscription management and handler triggering functionality.
+/// </summary>
+public abstract class EventBusBase(
+    IServiceScopeFactory serviceScopeFactory,
+    IEventHandlerInvoker eventHandlerInvoker,
+    ISubscriptionManager subscriptionManager,
+    ILogger logger,
+    string? serviceKey = null)
+    : IMoEventBus
 {
-    [SuppressMessage("ReSharper", "VirtualMemberCallInConstructor")]
-    protected EventBusBase(IServiceScopeFactory serviceScopeFactory,
-        IEventHandlerInvoker eventHandlerInvoker)
-    {
-        ServiceScopeFactory = serviceScopeFactory;
-        EventHandlerInvoker = eventHandlerInvoker;
-        SubscribeHandlers(GetAutoRegisteredHandlers());
-    }
+    protected readonly IServiceScopeFactory ServiceScopeFactory = serviceScopeFactory;
+    protected readonly IEventHandlerInvoker EventHandlerInvoker = eventHandlerInvoker;
+    protected readonly ISubscriptionManager SubscriptionManager = subscriptionManager;
+    protected readonly ILogger Logger = logger;
+    protected readonly string? ServiceKey = serviceKey;
 
-    protected IServiceScopeFactory ServiceScopeFactory { get; }
-    protected IEventHandlerInvoker EventHandlerInvoker { get; }
+    public ISubscriptionManager Subscriptions => SubscriptionManager;
 
-    protected ConcurrentDictionary<Type, List<IEventHandlerFactory>> HandlerFactories { get; } = new();
-    protected ConcurrentDictionary<string, Type> EventTypes { get; } = new();
+    #region Subscribe Methods
 
-    /// <summary>
-    /// for those automatically registered handlers
-    /// </summary>
-    /// <returns></returns>
-    public virtual IEnumerable<EventHandlerRegisterInfo> GetAutoRegisteredHandlers()
-    {
-        return [];
-    }
-
-    public virtual Type GetEventType(string eventName)
-    {
-        return EventTypes.GetOrDefault(eventName) ??
-               throw new InvalidOperationException(
-                   $"Event name {eventName} not found and can not get relative event type.");
-    }
-
-    public virtual IDisposable Subscribe<TEvent>(Func<TEvent, Task> action) where TEvent : class
-    {
-        return Subscribe(typeof(TEvent), new ActionEventHandler<TEvent>(action));
-    }
-
-
-    public virtual IDisposable Subscribe<TEvent, THandler>()
+    public virtual ISubscription Subscribe<TEvent, THandler>(string? topicName = null)
         where TEvent : class
-        where THandler : IMoEventHandler, new()
+        where THandler : IMoEventHandler
     {
-        return Subscribe(typeof(TEvent), new TransientEventHandlerFactory<THandler>());
+        var finalTopicName = topicName ?? EventNameAttribute.GetNameOrDefault(typeof(TEvent));
+        var descriptor = new SubscriptionDescriptor
+        {
+            ServiceKey = ServiceKey,
+            EventType = typeof(TEvent),
+            TopicName = finalTopicName,
+            HandlerFactory = new IocEventHandlerFactory(ServiceScopeFactory, typeof(THandler)),
+            Scope = this is IMoLocalEventBus ? SubscriptionScope.Local : SubscriptionScope.Distributed,
+            IsAutoDiscovered = false
+        };
+        return SubscriptionManager.SubscribeAsync(descriptor).GetAwaiter().GetResult();
     }
 
-    public virtual IDisposable Subscribe(Type eventType, IMoEventHandler handler)
-    {
-        return Subscribe(eventType, new SingleInstanceHandlerFactory(handler));
-    }
-
-    public virtual IDisposable Subscribe<TEvent>(IEventHandlerFactory factory) where TEvent : class
-    {
-        return Subscribe(typeof(TEvent), factory);
-    }
-
-    public virtual IDisposable Subscribe(Type eventType, IEventHandlerFactory factory)
-    {
-        var eventName = EventNameAttribute.GetNameOrDefault(eventType);
-        EventTypes.GetOrAdd(eventName, eventType);
-        GetOrCreateHandlerFactories(eventType)
-            .Locking(factories =>
-                {
-                    if (!factory.IsInFactories(factories))
-                    {
-                        factories.Add(factory);
-                    }
-                }
-            );
-
-        return new EventHandlerFactoryUnRegistrar(this, eventType, factory);
-    }
-
-
-    public virtual void Unsubscribe<TEvent>(Func<TEvent, Task> action) where TEvent : class
-    {
-        Check.NotNull(action, nameof(action));
-
-        GetOrCreateHandlerFactories(typeof(TEvent))
-            .Locking(factories =>
-            {
-                factories.RemoveAll(factory =>
-                {
-                    if (factory is not SingleInstanceHandlerFactory singleInstanceFactory)
-                    {
-                        return false;
-                    }
-
-                    if (singleInstanceFactory.HandlerInstance is not ActionEventHandler<TEvent> actionHandler)
-                    {
-                        return false;
-                    }
-
-                    return actionHandler.Action == action;
-                });
-            });
-    }
-
-    public virtual void Unsubscribe(Type eventType, IMoEventHandler handler)
-    {
-        GetOrCreateHandlerFactories(eventType)
-            .Locking(factories =>
-            {
-                factories.RemoveAll(factory =>
-                    factory is SingleInstanceHandlerFactory handlerFactory &&
-                    handlerFactory.HandlerInstance == handler
-                );
-            });
-    }
-
-    public virtual void Unsubscribe(Type eventType, IEventHandlerFactory factory)
-    {
-        GetOrCreateHandlerFactories(eventType).Locking(factories => factories.Remove(factory));
-    }
-
-    public virtual void UnsubscribeAll(Type eventType)
-    {
-        GetOrCreateHandlerFactories(eventType).Locking(factories => factories.Clear());
-    }
-
-
-    public virtual void Unsubscribe<TEvent>(IEventHandlerFactory factory) where TEvent : class
-    {
-        Unsubscribe(typeof(TEvent), factory);
-    }
-
-
-    public virtual void UnsubscribeAll<TEvent>() where TEvent : class
-    {
-        UnsubscribeAll(typeof(TEvent));
-    }
-
-    protected virtual List<IEventHandlerFactory> GetOrCreateHandlerFactories(Type eventType)
-    {
-        return HandlerFactories.GetOrAdd(
-            eventType, _ => []);
-    }
-
-
-    public async Task BulkPublishAsync<TEvent>(IEnumerable<TEvent> eventDataList) where TEvent : class
-    {
-        await BulkPublishAsync(typeof(TEvent), eventDataList);
-    }
-
-    public async Task BulkPublishAsync(Type eventType, IEnumerable<object> eventDataList)
-    {
-        await BulkPublishToEventBusAsync(eventType, eventDataList);
-    }
-
-    public Task PublishAsync<TEvent>(TEvent eventData)
+    public virtual ISubscription Subscribe<TEvent>(Func<TEvent, Task> handler, string? topicName = null)
         where TEvent : class
     {
-        return PublishAsync(typeof(TEvent), eventData);
-    }
-
-    public virtual async Task PublishAsync(
-        Type eventType,
-        object eventData)
-    {
-        await PublishToEventBusAsync(eventType, eventData);
-    }
-
-    protected abstract Task PublishToEventBusAsync(Type eventType, object eventData);
-
-    /// <summary>
-    /// Default implementation: iterates and publishes each event individually.
-    /// Derived classes can override for optimized bulk publishing.
-    /// </summary>
-    protected virtual async Task BulkPublishToEventBusAsync(Type eventType, IEnumerable<object> eventDataList)
-    {
-        foreach (var eventData in eventDataList)
+        var finalTopicName = topicName ?? EventNameAttribute.GetNameOrDefault(typeof(TEvent));
+        var descriptor = new SubscriptionDescriptor
         {
-            await PublishToEventBusAsync(eventType, eventData);
+            ServiceKey = ServiceKey,
+            EventType = typeof(TEvent),
+            TopicName = finalTopicName,
+            HandlerFactory = new ActionEventHandlerFactory<TEvent>(handler),
+            Scope = this is IMoLocalEventBus ? SubscriptionScope.Local : SubscriptionScope.Distributed,
+            IsAutoDiscovered = false
+        };
+        return SubscriptionManager.SubscribeAsync(descriptor).GetAwaiter().GetResult();
+    }
+
+    #endregion
+
+    #region Publish Methods
+
+    public virtual Task PublishAsync<TEvent>(TEvent eventData, string? topicName = null, CancellationToken cancellationToken = default)
+        where TEvent : class
+    {
+        return PublishAsync(typeof(TEvent), eventData, topicName, cancellationToken);
+    }
+
+    public abstract Task PublishAsync(Type eventType, object eventData, string? topicName = null, CancellationToken cancellationToken = default);
+
+    public virtual Task BulkPublishAsync<TEvent>(IEnumerable<TEvent> eventDataList, string? topicName = null, CancellationToken cancellationToken = default)
+        where TEvent : class
+    {
+        return BulkPublishAsync(typeof(TEvent), eventDataList, topicName, cancellationToken);
+    }
+
+    public abstract Task BulkPublishAsync(Type eventType, IEnumerable<object> eventDataList, string? topicName = null, CancellationToken cancellationToken = default);
+
+    #endregion
+
+    #region Trigger Handlers
+
+    public virtual async Task TriggerHandlersAsync(Type eventType, object eventData, string topicName, CancellationToken cancellationToken = default)
+    {
+        var isLocal = this is IMoLocalEventBus;
+        // Query active subscriptions for this event type and topic
+        var subscriptions = SubscriptionManager.GetAll()
+            .Where(s => s.EventType == eventType &&
+                        s.TopicName == topicName &&
+                        s.State == SubscriptionState.Active &&
+                        s.ServiceKey == ServiceKey && s.Scope == (isLocal ? SubscriptionScope.Local : SubscriptionScope.Distributed))
+            .ToList();
+
+        if (subscriptions.Count == 0)
+        {
+            Logger.LogDebug(
+                "No active subscriptions found for event {EventType} on topic {Topic}",
+                eventType.Name, topicName);
+            return;
         }
-    }
 
-    public virtual async Task TriggerHandlersAsync(Type eventType, object eventData)
-    {
-        var exceptions = new List<Exception>();
+        Logger.LogDebug(
+            "Triggering {Count} handlers for event {EventType} on topic {Topic}",
+            subscriptions.Count, eventType.Name, topicName);
 
-        await TriggerHandlersAsync(eventType, eventData, exceptions);
-
-        if (exceptions.Any())
+        // Invoke each handler
+        foreach (var subscription in subscriptions)
         {
-            ThrowOriginalExceptions(eventType, exceptions);
-        }
-    }
-
-    protected virtual async Task TriggerHandlersAsync(Type eventType, object eventData, List<Exception> exceptions)
-    {
-        await new SynchronizationContextRemover();
-
-        foreach (var handlerFactories in GetHandlerFactories(eventType))
-        {
-            foreach (var handlerFactory in handlerFactories.EventHandlerFactories)
+            try
             {
-                await TriggerHandlerAsync(handlerFactory, handlerFactories.EventType, eventData, exceptions);
+                using var handlerWrapper = subscription.HandlerFactory.GetHandler();
+                await EventHandlerInvoker.InvokeAsync(handlerWrapper.EventHandler, eventData, eventType);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex,
+                    "Error invoking handler {HandlerType} for event {EventType}",
+                    subscription.HandlerType?.Name ?? "Unknown", eventType.Name);
+                throw;
             }
         }
     }
 
-    protected void ThrowOriginalExceptions(Type eventType, List<Exception> exceptions)
-    {
-        if (exceptions.Count == 1)
-        {
-            exceptions[0].ReThrow();
-        }
+    #endregion
 
-        throw new AggregateException(
-            "More than one error has occurred while triggering the event: " + eventType,
-            exceptions
-        );
-    }
+    #region Helper Methods
 
     /// <summary>
-    /// Subscribe handlers using pre-computed registration information
+    /// Resolves the topic name for an event type, using custom topic if provided,
+    /// otherwise falling back to EventNameAttribute.
     /// </summary>
-    protected virtual void SubscribeHandlers(IEnumerable<EventHandlerRegisterInfo> handlers)
+    protected static string ResolveTopicName(Type eventType, string? topicName)
     {
-        foreach (var handlerInfo in handlers)
-        {
-            // Direct subscription using pre-computed metadata - NO REFLECTION
-            Subscribe(handlerInfo.EventType,
-                     new IocEventHandlerFactory(ServiceScopeFactory, handlerInfo.HandlerType));
-
-            // Register event type -> topic name mapping
-            EventTypes.TryAdd(handlerInfo.TopicName, handlerInfo.EventType);
-        }
+        var finalTopicName = topicName ?? EventNameAttribute.GetNameOrDefault(eventType);
+        return finalTopicName;
     }
 
-    protected virtual IEnumerable<EventTypeWithEventHandlerFactories> GetHandlerFactories(Type eventType)
-    {
-        var handlerFactoryList = new List<EventTypeWithEventHandlerFactories>();
-
-        foreach (var handlerFactory in HandlerFactories.Where(hf => ShouldTriggerEventForHandler(eventType, hf.Key)))
-        {
-            handlerFactoryList.Add(new EventTypeWithEventHandlerFactories(handlerFactory.Key, handlerFactory.Value));
-        }
-
-        return handlerFactoryList.ToArray();
-    }
-
-    private static bool ShouldTriggerEventForHandler(Type targetEventType, Type handlerEventType)
-    {
-        //Should trigger same type
-        if (handlerEventType == targetEventType)
-        {
-            return true;
-        }
-
-        //Should trigger for inherited types
-        if (handlerEventType.IsAssignableFrom(targetEventType))
-        {
-            return true;
-        }
-
-        return false;
-    }
-
-    protected virtual async Task TriggerHandlerAsync(IEventHandlerFactory asyncHandlerFactory, Type eventType,
-        object eventData, List<Exception> exceptions)
-    {
-        using var eventHandlerWrapper = asyncHandlerFactory.GetHandler();
-        try
-        {
-            await InvokeEventHandlerAsync(eventHandlerWrapper.EventHandler, eventData, eventType);
-        }
-        catch (TargetInvocationException ex)
-        {
-            exceptions.Add(ex.InnerException!);
-        }
-        catch (Exception ex)
-        {
-            exceptions.Add(ex);
-        }
-    }
-
-    protected virtual Task InvokeEventHandlerAsync(IMoEventHandler eventHandler, object eventData, Type eventType)
-    {
-        return EventHandlerInvoker.InvokeAsync(eventHandler, eventData, eventType);
-    }
-
-    protected class EventTypeWithEventHandlerFactories(Type eventType, List<IEventHandlerFactory> eventHandlerFactories)
-    {
-        public Type EventType { get; } = eventType;
-
-        public List<IEventHandlerFactory> EventHandlerFactories { get; } = eventHandlerFactories;
-    }
+    #endregion
 }

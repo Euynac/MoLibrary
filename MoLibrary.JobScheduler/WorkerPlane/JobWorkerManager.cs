@@ -23,7 +23,7 @@ public class JobWorkerManager(
     ILogger<JobWorkerManager> logger) : IHostedService
 {
     private readonly ModuleJobSchedulerOption _options = options.Value;
-    private IDisposable? _eventSubscription;
+    private IAsyncDisposable? _eventSubscription;
     private SemaphoreSlim? _workerThreadSemaphore;
 
     /// <summary>
@@ -64,8 +64,11 @@ public class JobWorkerManager(
         logger.LogInformation("JobWorkerManager stopping...");
 
         // Unsubscribe from events to prevent new jobs
-        _eventSubscription?.Dispose();
-        _eventSubscription = null;
+        if (_eventSubscription != null)
+        {
+            await _eventSubscription.DisposeAsync();
+            _eventSubscription = null;
+        }
 
         logger.LogInformation("Unsubscribed from JobExecutionEvent");
 
