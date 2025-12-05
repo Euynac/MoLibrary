@@ -1,4 +1,4 @@
-namespace MoLibrary.EventBus.Abstractions;
+namespace MoLibrary.EventBus.Abstractions.Handlers;
 
 /// <summary>
 /// This event handler is an adapter to be able to use an action as <see cref="IMoLocalEventHandler{TEvent}"/> implementation.

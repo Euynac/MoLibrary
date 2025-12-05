@@ -1,3 +1,4 @@
+using MoLibrary.EventBus.Abstractions.Handlers;
 using MoLibrary.EventBus.Models;
 
 namespace MoLibrary.EventBus.Abstractions.Subscriptions;

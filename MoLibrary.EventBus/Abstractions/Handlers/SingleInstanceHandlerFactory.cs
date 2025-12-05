@@ -1,4 +1,4 @@
-namespace MoLibrary.EventBus.Abstractions;
+namespace MoLibrary.EventBus.Abstractions.Handlers;
 
 /// <summary>
 /// This <see cref="IEventHandlerFactory"/> implementation is used to handle events
