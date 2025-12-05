@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.EventBus.Abstractions.Subscriptions;
 using MoLibrary.EventBus.Attributes;
@@ -9,9 +8,8 @@ namespace MoLibrary.EventBus.Subscriptions;
 /// <summary>
 /// Fluent builder for creating complex subscriptions.
 /// </summary>
-public class SubscriptionBuilder : ISubscriptionBuilder
+public class SubscriptionBuilder(ISubscriptionManager subscriptionManager) : ISubscriptionBuilder
 {
-    private readonly ISubscriptionManager _subscriptionManager;
     private Type? _eventType;
     private string? _topicName;
     private IEventHandlerFactory? _handlerFactory;
@@ -19,11 +17,6 @@ public class SubscriptionBuilder : ISubscriptionBuilder
     private SubscriptionScope? _scope;
     private bool _isAutoDiscovered;
     private readonly Dictionary<string, object> _metadata = new();
-
-    public SubscriptionBuilder(ISubscriptionManager subscriptionManager)
-    {
-        _subscriptionManager = subscriptionManager;
-    }
 
     public ISubscriptionBuilder ForEvent<TEvent>() where TEvent : class
     {
@@ -101,7 +94,7 @@ public class SubscriptionBuilder : ISubscriptionBuilder
     public async Task<ISubscription> SubscribeAsync()
     {
         var descriptor = Build();
-        return await _subscriptionManager.SubscribeAsync(descriptor);
+        return await subscriptionManager.SubscribeAsync(descriptor);
     }
 
     public SubscriptionDescriptor Build()
@@ -159,14 +152,10 @@ public class SubscriptionBuilder : ISubscriptionBuilder
 /// <summary>
 /// Action-based event handler factory.
 /// </summary>
-internal class ActionEventHandlerFactory<TEvent> : IEventHandlerFactory where TEvent : class
+internal class ActionEventHandlerFactory<TEvent>(Func<TEvent, Task> action) : IEventHandlerFactory
+    where TEvent : class
 {
-    private readonly Func<TEvent, Task> _action;
-
-    public ActionEventHandlerFactory(Func<TEvent, Task> action)
-    {
-        _action = action ?? throw new ArgumentNullException(nameof(action));
-    }
+    private readonly Func<TEvent, Task> _action = action ?? throw new ArgumentNullException(nameof(action));
 
     public IEventHandlerDisposeWrapper GetHandler()
     {
@@ -181,14 +170,9 @@ internal class ActionEventHandlerFactory<TEvent> : IEventHandlerFactory where TE
             actionFactory._action == _action);
     }
 
-    private class EventHandlerDisposeWrapper : IEventHandlerDisposeWrapper
+    private class EventHandlerDisposeWrapper(IMoEventHandler eventHandler) : IEventHandlerDisposeWrapper
     {
-        public EventHandlerDisposeWrapper(IMoEventHandler eventHandler)
-        {
-            EventHandler = eventHandler;
-        }
-
-        public IMoEventHandler EventHandler { get; }
+        public IMoEventHandler EventHandler { get; } = eventHandler;
 
         public void Dispose()
         {
@@ -200,14 +184,10 @@ internal class ActionEventHandlerFactory<TEvent> : IEventHandlerFactory where TE
 /// <summary>
 /// Wraps an action as an event handler.
 /// </summary>
-internal class ActionEventHandler<TEvent> : IMoLocalEventHandler<TEvent> where TEvent : class
+internal class ActionEventHandler<TEvent>(Func<TEvent, Task> action) : IMoLocalEventHandler<TEvent>
+    where TEvent : class
 {
-    private readonly Func<TEvent, Task> _action;
-
-    public ActionEventHandler(Func<TEvent, Task> action)
-    {
-        _action = action ?? throw new ArgumentNullException(nameof(action));
-    }
+    private readonly Func<TEvent, Task> _action = action ?? throw new ArgumentNullException(nameof(action));
 
     public Func<TEvent, Task> Action => _action;
 

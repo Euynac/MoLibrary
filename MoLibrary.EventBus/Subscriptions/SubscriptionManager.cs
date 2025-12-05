@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
-using MoLibrary.EventBus.Abstractions;
 using MoLibrary.EventBus.Abstractions.Subscriptions;
 using MoLibrary.EventBus.Models;
 
@@ -9,16 +8,10 @@ namespace MoLibrary.EventBus.Subscriptions;
 /// <summary>
 /// Manages subscription lifecycle and provides queryable access to all subscriptions.
 /// </summary>
-public class SubscriptionManager : ISubscriptionManager
+public class SubscriptionManager(ILogger<SubscriptionManager> logger) : ISubscriptionManager
 {
     private readonly ConcurrentDictionary<SubscriptionId, Subscription> _subscriptions = new();
     private readonly ConcurrentBag<IObserver<SubscriptionChange>> _observers = new();
-    private readonly ILogger<SubscriptionManager> _logger;
-
-    public SubscriptionManager(ILogger<SubscriptionManager> logger)
-    {
-        _logger = logger;
-    }
 
     #region Subscription CRUD
 
@@ -31,7 +24,7 @@ public class SubscriptionManager : ISubscriptionManager
             throw new InvalidOperationException($"Subscription {subscription.Id} already exists");
         }
 
-        _logger.LogDebug(
+        logger.LogDebug(
             "Subscription {SubscriptionId} created for {EventType} on topic {Topic}",
             subscription.Id, descriptor.EventType.Name, descriptor.TopicName);
 
@@ -64,11 +57,11 @@ public class SubscriptionManager : ISubscriptionManager
     {
         if (!_subscriptions.TryRemove(subscriptionId, out var subscription))
         {
-            _logger.LogWarning("Subscription {SubscriptionId} not found for unsubscribe", subscriptionId);
+            logger.LogWarning("Subscription {SubscriptionId} not found for unsubscribe", subscriptionId);
             return;
         }
 
-        _logger.LogDebug("Unsubscribing {SubscriptionId}", subscriptionId);
+        logger.LogDebug("Unsubscribing {SubscriptionId}", subscriptionId);
 
         // Notify observers before disposal
         NotifyObservers(new SubscriptionChange(
@@ -145,7 +138,7 @@ public class SubscriptionManager : ISubscriptionManager
         var subscription = GetById(subscriptionId);
         if (subscription == null)
         {
-            _logger.LogWarning("Subscription {SubscriptionId} not found for activation", subscriptionId);
+            logger.LogWarning("Subscription {SubscriptionId} not found for activation", subscriptionId);
             return;
         }
 
@@ -162,7 +155,7 @@ public class SubscriptionManager : ISubscriptionManager
         var subscription = GetById(subscriptionId);
         if (subscription == null)
         {
-            _logger.LogWarning("Subscription {SubscriptionId} not found for deactivation", subscriptionId);
+            logger.LogWarning("Subscription {SubscriptionId} not found for deactivation", subscriptionId);
             return;
         }
 
@@ -233,23 +226,18 @@ public class SubscriptionManager : ISubscriptionManager
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error notifying observer of subscription change");
+                logger.LogError(ex, "Error notifying observer of subscription change");
             }
         }
     }
 
-    private class Unsubscriber : IDisposable
+    private class Unsubscriber(
+        ConcurrentBag<IObserver<SubscriptionChange>> observers,
+        IObserver<SubscriptionChange> observer)
+        : IDisposable
     {
-        private readonly ConcurrentBag<IObserver<SubscriptionChange>> _observers;
-        private readonly IObserver<SubscriptionChange> _observer;
-
-        public Unsubscriber(
-            ConcurrentBag<IObserver<SubscriptionChange>> observers,
-            IObserver<SubscriptionChange> observer)
-        {
-            _observers = observers;
-            _observer = observer;
-        }
+        private readonly ConcurrentBag<IObserver<SubscriptionChange>> _observers = observers;
+        private readonly IObserver<SubscriptionChange> _observer = observer;
 
         public void Dispose()
         {

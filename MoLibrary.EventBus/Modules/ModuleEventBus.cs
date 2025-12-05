@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MoLibrary.Core.Module;
@@ -6,7 +5,6 @@ using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.EventBus.Abstractions.Subscriptions;
-using MoLibrary.EventBus.Attributes;
 using MoLibrary.EventBus.Models;
 using MoLibrary.EventBus.Subscriptions;
 using MoLibrary.Tool.Extensions;
@@ -72,49 +70,32 @@ public class ModuleEventBus(ModuleEventBusOption option)
 /// <summary>
 /// Hosted service that initializes auto-discovered subscriptions on application startup.
 /// </summary>
-internal class EventBusInitializationService : IHostedService
+internal class EventBusInitializationService(
+    IMoEventBus eventBus,
+    ModuleEventBusOption option,
+    IServiceProvider serviceProvider)
+    : IHostedService
 {
-    private readonly IMoEventBus _eventBus;
-    private readonly ModuleEventBusOption _option;
-    private readonly IServiceProvider _serviceProvider;
-
-    public EventBusInitializationService(
-        IMoEventBus eventBus,
-        ModuleEventBusOption option,
-        IServiceProvider serviceProvider)
-    {
-        _eventBus = eventBus;
-        _option = option;
-        _serviceProvider = serviceProvider;
-    }
-
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         // Convert auto-discovered EventHandlerRegisterInfo to Subscriptions
-        var descriptors = new List<SubscriptionDescriptor>();
-
-        foreach (var handlerInfo in _option.EventHandlers.Where(h => h.IsAutoRegistered))
-        {
-            var descriptor = new SubscriptionDescriptor
+        var descriptors = option.EventHandlers.Where(h => h.IsAutoRegistered)
+            .Select(handlerInfo => new SubscriptionDescriptor
             {
                 ServiceKey = null, // Auto-discovered handlers register to default EventBus
                 EventType = handlerInfo.EventType,
                 TopicName = handlerInfo.TopicName,
-                HandlerFactory = new IocEventHandlerFactory(
-                    _serviceProvider.GetRequiredService<Microsoft.Extensions.DependencyInjection.IServiceScopeFactory>(),
-                    handlerInfo.HandlerType),
+                HandlerFactory = new IocEventHandlerFactory(serviceProvider.GetRequiredService<IServiceScopeFactory>(), handlerInfo.HandlerType),
                 Scope = handlerInfo.IsDistributed ? SubscriptionScope.Distributed : SubscriptionScope.Local,
                 HandlerType = handlerInfo.HandlerType,
                 IsAutoDiscovered = true
-            };
-
-            descriptors.Add(descriptor);
-        }
+            })
+            .ToList();
 
         // Batch subscribe
-        if (descriptors.Any())
+        if (descriptors.Count != 0)
         {
-            await _eventBus.Subscriptions.SubscribeBatchAsync(descriptors);
+            await eventBus.Subscriptions.SubscribeBatchAsync(descriptors);
         }
     }
 

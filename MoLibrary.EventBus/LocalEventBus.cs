@@ -9,15 +9,10 @@ namespace MoLibrary.EventBus;
 /// Local (in-process) event bus implementation.
 /// Events are published and handled synchronously within the same process.
 /// </summary>
-public class LocalEventBus : LocalEventBusBase
-{
-    public LocalEventBus(
-        IServiceScopeFactory serviceScopeFactory,
-        IEventHandlerInvoker eventHandlerInvoker,
-        ISubscriptionManager subscriptionManager,
-        ILogger<LocalEventBus> logger,
-        string? serviceKey = null)
-        : base(serviceScopeFactory, eventHandlerInvoker, subscriptionManager, logger, serviceKey)
-    {
-    }
-}
+public class LocalEventBus(
+    IServiceScopeFactory serviceScopeFactory,
+    IEventHandlerInvoker eventHandlerInvoker,
+    ISubscriptionManager subscriptionManager,
+    ILogger<LocalEventBus> logger,
+    string? serviceKey = null)
+    : LocalEventBusBase(serviceScopeFactory, eventHandlerInvoker, subscriptionManager, logger, serviceKey);

@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.EventBus.Abstractions.Subscriptions;
@@ -10,21 +9,16 @@ namespace MoLibrary.EventBus.Providers;
 /// Null implementation of distributed event bus for testing or scenarios where event publishing is not needed.
 /// All publish operations are no-ops.
 /// </summary>
-public sealed class NullDistributedEventBus : DistributedEventBusBase
+public sealed class NullDistributedEventBus(
+    IServiceScopeFactory serviceScopeFactory,
+    IEventHandlerInvoker eventHandlerInvoker,
+    ISubscriptionManager subscriptionManager)
+    : DistributedEventBusBase(serviceScopeFactory,
+        eventHandlerInvoker,
+        subscriptionManager,
+        NullLogger<NullDistributedEventBus>.Instance,
+        serviceKey: null)
 {
-    public NullDistributedEventBus(
-        IServiceScopeFactory serviceScopeFactory,
-        IEventHandlerInvoker eventHandlerInvoker,
-        ISubscriptionManager subscriptionManager)
-        : base(
-            serviceScopeFactory,
-            eventHandlerInvoker,
-            subscriptionManager,
-            NullLogger<NullDistributedEventBus>.Instance,
-            serviceKey: null)
-    {
-    }
-
     /// <summary>
     /// Null implementation - does nothing.
     /// </summary>

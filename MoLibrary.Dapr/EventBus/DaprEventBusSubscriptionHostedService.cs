@@ -13,23 +13,16 @@ namespace MoLibrary.Dapr.EventBus;
 /// Dapr-specific implementation of subscription hosted service.
 /// Manages Dapr streaming subscriptions for distributed events.
 /// </summary>
-internal class DaprEventBusSubscriptionHostedService : EventBusSubscriptionHostedServiceBase
+internal class DaprEventBusSubscriptionHostedService(
+    DaprPublishSubscribeClient daprClient,
+    ISubscriptionManager subscriptionManager,
+    IMoEventBus eventBus,
+    IOptions<ModuleDaprEventBusOption> options,
+    ILogger<DaprEventBusSubscriptionHostedService> logger,
+    string? serviceKey = null)
+    : EventBusSubscriptionHostedServiceBase(subscriptionManager, eventBus, logger, serviceKey)
 {
-    private readonly DaprPublishSubscribeClient _daprClient;
-    private readonly ModuleDaprEventBusOption _options;
-
-    public DaprEventBusSubscriptionHostedService(
-        DaprPublishSubscribeClient daprClient,
-        ISubscriptionManager subscriptionManager,
-        IMoEventBus eventBus,
-        IOptions<ModuleDaprEventBusOption> options,
-        ILogger<DaprEventBusSubscriptionHostedService> logger,
-        string? serviceKey = null)
-        : base(subscriptionManager, eventBus, logger, serviceKey)
-    {
-        _daprClient = daprClient;
-        _options = options.Value;
-    }
+    private readonly ModuleDaprEventBusOption _options = options.Value;
 
     /// <summary>
     /// Creates a Dapr streaming subscription for the given subscription.
@@ -52,7 +45,7 @@ internal class DaprEventBusSubscriptionHostedService : EventBusSubscriptionHoste
                 subscription.TopicName, subscription.Id, ServiceKey ?? "default");
 
             // Message handler function
-            Task<TopicResponseAction> HandleMessageAsync(TopicMessage message, CancellationToken ct)
+            async Task<TopicResponseAction> HandleMessageAsync(TopicMessage message, CancellationToken ct)
             {
                 try
                 {
@@ -61,28 +54,33 @@ internal class DaprEventBusSubscriptionHostedService : EventBusSubscriptionHoste
                     if (eventData != null)
                     {
                         // Trigger handlers through EventBus
-                        EventBus.TriggerHandlersAsync(
+                        await EventBus.TriggerHandlersAsync(
                             subscription.EventType,
                             eventData,
-                            ct).GetAwaiter().GetResult();
+                            ct);
                     }
 
-                    return Task.FromResult(TopicResponseAction.Success);
+                    return TopicResponseAction.Success;
                 }
                 catch (Exception ex)
                 {
                     Logger.LogError(ex,
                         "Error handling Dapr message for topic {Topic} (SubscriptionId: {SubscriptionId})",
                         subscription.TopicName, subscription.Id);
-                    return Task.FromResult(TopicResponseAction.Retry);
+                    return TopicResponseAction.Drop;
                 }
             }
 
             // Create Dapr streaming subscription
             var subscriptionOptions = new DaprSubscriptionOptions(
-                new MessageHandlingPolicy(_options.MessageHandlingTimeout, TopicResponseAction.Retry));
+                new MessageHandlingPolicy(_options.MessageHandlingTimeout, TopicResponseAction.Retry))
+            {
+                DeadLetterTopic = _options.DeadLetterTopic,
+                MaximumCleanupTimeout = _options.MaximumCleanupTimeout,
+                MaximumQueuedMessages = _options.MaximumQueuedMessages
+            };
 
-            var daprSubscription = await _daprClient.SubscribeAsync(
+            var daprSubscription = await daprClient.SubscribeAsync(
                 _options.PubSubName,
                 subscription.TopicName,
                 subscriptionOptions,

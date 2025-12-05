@@ -6,63 +6,47 @@ namespace MoLibrary.EventBus.Models;
 /// <summary>
 /// Concrete subscription implementation with lifecycle management.
 /// </summary>
-internal class Subscription : ISubscription
+internal class Subscription(SubscriptionDescriptor descriptor) : ISubscription
 {
-    private SubscriptionState _state;
+    private SubscriptionState _state = SubscriptionState.Pending;
     private DateTimeOffset? _activatedAt;
     private DateTimeOffset? _deactivatedAt;
 
-    public Subscription(SubscriptionDescriptor descriptor)
-    {
-        Id = SubscriptionId.NewId();
-        ServiceKey = descriptor.ServiceKey;
-        EventType = descriptor.EventType;
-        TopicName = descriptor.TopicName;
-        HandlerType = descriptor.HandlerType;
-        HandlerFactory = descriptor.HandlerFactory;
-        Scope = descriptor.Scope;
-        IsAutoDiscovered = descriptor.IsAutoDiscovered;
-        Metadata = descriptor.Metadata ?? new Dictionary<string, object>();
-
-        CreatedAt = DateTimeOffset.UtcNow;
-        _state = SubscriptionState.Pending;
-    }
-
     #region Identity
 
-    public SubscriptionId Id { get; }
-    public string? ServiceKey { get; }
-    public Type EventType { get; }
-    public string TopicName { get; }
+    public SubscriptionId Id { get; } = SubscriptionId.NewId();
+    public string? ServiceKey { get; } = descriptor.ServiceKey;
+    public Type EventType { get; } = descriptor.EventType;
+    public string TopicName { get; } = descriptor.TopicName;
 
     #endregion
 
     #region Handler Information
 
-    public Type? HandlerType { get; }
-    public IEventHandlerFactory HandlerFactory { get; }
+    public Type? HandlerType { get; } = descriptor.HandlerType;
+    public IEventHandlerFactory HandlerFactory { get; } = descriptor.HandlerFactory;
 
     #endregion
 
     #region Scope Information
 
-    public SubscriptionScope Scope { get; }
+    public SubscriptionScope Scope { get; } = descriptor.Scope;
 
     #endregion
 
     #region Lifecycle
 
     public SubscriptionState State => _state;
-    public DateTimeOffset CreatedAt { get; }
+    public DateTimeOffset CreatedAt { get; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? ActivatedAt => _activatedAt;
     public DateTimeOffset? DeactivatedAt => _deactivatedAt;
-    public bool IsAutoDiscovered { get; }
+    public bool IsAutoDiscovered { get; } = descriptor.IsAutoDiscovered;
 
     #endregion
 
     #region Metadata
 
-    public IReadOnlyDictionary<string, object> Metadata { get; }
+    public IReadOnlyDictionary<string, object> Metadata { get; } = descriptor.Metadata ?? new Dictionary<string, object>();
 
     public T? GetMetadata<T>(string key)
     {

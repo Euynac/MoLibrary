@@ -1,5 +1,6 @@
 using Dapr.Client;
 using Dapr.Messaging.PublishSubscribe.Extensions;
+using Grpc.Net.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -137,7 +138,7 @@ public class ModuleDaprEventBusOption : MoModuleControllerOption<ModuleDaprEvent
     /// Message handling timeout for streaming subscriptions. Defaults to 10 seconds.
     /// If a handler takes longer than this, Dapr will retry the message.
     /// </summary>
-    public TimeSpan MessageHandlingTimeout { get; set; } = TimeSpan.FromSeconds(10);
+    public TimeSpan MessageHandlingTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
     /// <summary>
     /// Maximum number of messages to queue for processing. Defaults to 100.
