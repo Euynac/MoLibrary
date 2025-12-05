@@ -62,19 +62,7 @@ public interface IMoEventBus
         where TEvent : class;
 
     #endregion
-
-    #region Handler Triggering (Internal)
-
-    /// <summary>
-    /// Triggers registered handlers for an event.
-    /// Called internally by providers when events are received.
-    /// </summary>
-    /// <param name="eventType">Event type</param>
-    /// <param name="eventData">Event data</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    Task TriggerHandlersAsync(Type eventType, object eventData, CancellationToken cancellationToken = default);
-
-    #endregion
+    
 
     #region Non-Generic Publishing (Advanced)
 

@@ -41,7 +41,6 @@ public abstract class EventBusBase(
             EventType = typeof(TEvent),
             TopicName = finalTopicName,
             HandlerFactory = new IocEventHandlerFactory(ServiceScopeFactory, typeof(THandler)),
-            HandlerType = typeof(THandler),
             Scope = this is IMoLocalEventBus ? SubscriptionScope.Local : SubscriptionScope.Distributed,
             IsAutoDiscovered = false
         };
@@ -88,20 +87,15 @@ public abstract class EventBusBase(
 
     #region Trigger Handlers
 
-    public virtual async Task TriggerHandlersAsync(Type eventType, object eventData, CancellationToken cancellationToken = default)
-    {
-        var topicName = EventNameAttribute.GetNameOrDefault(eventType);
-        await TriggerHandlersAsync(eventType, eventData, topicName, cancellationToken);
-    }
-
     public virtual async Task TriggerHandlersAsync(Type eventType, object eventData, string topicName, CancellationToken cancellationToken = default)
     {
+        var isLocal = this is IMoLocalEventBus;
         // Query active subscriptions for this event type and topic
         var subscriptions = SubscriptionManager.GetAll()
             .Where(s => s.EventType == eventType &&
                         s.TopicName == topicName &&
                         s.State == SubscriptionState.Active &&
-                        s.ServiceKey == ServiceKey)
+                        s.ServiceKey == ServiceKey && s.Scope == (isLocal ? SubscriptionScope.Local : SubscriptionScope.Distributed))
             .ToList();
 
         if (subscriptions.Count == 0)

@@ -17,13 +17,6 @@ public class IocEventHandlerFactory(IServiceScopeFactory serviceScopeFactory, Ty
         return new IocEventHandlerDisposeWrapper(handler, scope);
     }
 
-    public bool IsInFactories(List<IEventHandlerFactory> handlerFactories)
-    {
-        return handlerFactories
-            .OfType<IocEventHandlerFactory>()
-            .Any(f => f._handlerType == _handlerType);
-    }
-
     public Type GetHandlerType() => _handlerType;
 
     private class IocEventHandlerDisposeWrapper(IMoEventHandler eventHandler, IServiceScope scope)

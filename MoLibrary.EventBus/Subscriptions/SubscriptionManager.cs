@@ -32,7 +32,7 @@ public class SubscriptionManager(ILogger<SubscriptionManager> logger) : ISubscri
         NotifyObservers(new SubscriptionChange(
             SubscriptionChangeType.Added,
             subscription,
-            DateTimeOffset.UtcNow));
+            DateTime.UtcNow));
 
         // Auto-activate
         await ActivateAsync(subscription.Id);
@@ -67,7 +67,7 @@ public class SubscriptionManager(ILogger<SubscriptionManager> logger) : ISubscri
         NotifyObservers(new SubscriptionChange(
             SubscriptionChangeType.Removed,
             subscription,
-            DateTimeOffset.UtcNow));
+            DateTime.UtcNow));
 
         // Dispose the subscription
         await subscription.DisposeAsync();
@@ -147,7 +147,7 @@ public class SubscriptionManager(ILogger<SubscriptionManager> logger) : ISubscri
         NotifyObservers(new SubscriptionChange(
             SubscriptionChangeType.Activated,
             subscription,
-            DateTimeOffset.UtcNow));
+            DateTime.UtcNow));
     }
 
     public async Task DeactivateAsync(SubscriptionId subscriptionId)
@@ -164,7 +164,7 @@ public class SubscriptionManager(ILogger<SubscriptionManager> logger) : ISubscri
         NotifyObservers(new SubscriptionChange(
             SubscriptionChangeType.Deactivated,
             subscription,
-            DateTimeOffset.UtcNow));
+            DateTime.UtcNow));
     }
 
     public async Task ReactivateAsync(SubscriptionId subscriptionId)

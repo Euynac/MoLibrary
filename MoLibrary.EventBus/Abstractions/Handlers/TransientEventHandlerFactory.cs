@@ -41,11 +41,9 @@ public class TransientEventHandlerFactory(Type handlerType) : IEventHandlerFacto
         );
     }
 
-    public bool IsInFactories(List<IEventHandlerFactory> handlerFactories)
+    public Type? GetHandlerType()
     {
-        return handlerFactories
-            .OfType<TransientEventHandlerFactory>()
-            .Any(f => f.HandlerType == HandlerType);
+        return HandlerType;
     }
 
     protected virtual IMoEventHandler CreateHandler()

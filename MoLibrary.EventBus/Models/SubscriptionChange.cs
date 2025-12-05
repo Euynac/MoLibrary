@@ -8,4 +8,4 @@ namespace MoLibrary.EventBus.Models;
 public sealed record SubscriptionChange(
     SubscriptionChangeType ChangeType,
     ISubscription Subscription,
-    DateTimeOffset Timestamp);
+    DateTime Timestamp);

@@ -23,10 +23,8 @@ public class SingleInstanceHandlerFactory(IMoEventHandler handler) : IEventHandl
         return new EventHandlerDisposeWrapper(HandlerInstance);
     }
 
-    public bool IsInFactories(List<IEventHandlerFactory> handlerFactories)
+    public Type? GetHandlerType()
     {
-        return handlerFactories
-            .OfType<SingleInstanceHandlerFactory>()
-            .Any(f => f.HandlerInstance == HandlerInstance);
+        return HandlerInstance.GetType();
     }
 }
