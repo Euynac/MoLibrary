@@ -7,6 +7,7 @@ using MoLibrary.EventBus.Abstractions;
 using MoLibrary.EventBus.Abstractions.Handlers;
 using MoLibrary.EventBus.Abstractions.Subscriptions;
 using MoLibrary.EventBus.Models;
+using MoLibrary.EventBus.Providers;
 using MoLibrary.EventBus.Subscriptions;
 using MoLibrary.Tool.Extensions;
 
