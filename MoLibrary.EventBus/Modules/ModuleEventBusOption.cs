@@ -1,7 +1,5 @@
 using MoLibrary.Core.Module.Interfaces;
-using MoLibrary.EventBus.Abstractions;
 using MoLibrary.EventBus.Abstractions.Handlers;
-using MoLibrary.EventBus.Models;
 
 namespace MoLibrary.EventBus.Modules;
 
@@ -11,9 +9,4 @@ public class ModuleEventBusOption : MoModuleControllerOption<ModuleEventBus>
     /// 是否禁止自动注册实现了 <see cref="IMoDistributedEventHandler{TEvent}"/>以及 <see cref="IMoLocalEventHandler{TEvent}"/> 的类型
     /// </summary>
     public bool DisableAutoDiscovery { get; set; }
-
-    /// <summary>
-    /// Unified event handler registration information with pre-computed metadata.
-    /// </summary>
-    public List<EventHandlerRegisterInfo> EventHandlers { get; } = new();
 }

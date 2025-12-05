@@ -52,13 +52,13 @@ public class ModuleEventBusGuide : MoModuleGuide<ModuleEventBus, ModuleEventBusO
                 CheckRequiredMethod(nameof(SetDistributedEventBusProvider));
                 // For distributed, delegate to the registered keyed IMoDistributedEventBus
                 context.Services.TryAddKeyedSingleton<IMoEventBus>(key, (sp, _) =>
-                    sp.GetRequiredKeyedService<IMoDistributedEventBus>(key));
+                    sp.GetRequiredService<IMoDistributedEventBus>());
             }
             else
             {
                 // For local, delegate to the registered keyed IMoLocalEventBus
                 context.Services.TryAddKeyedSingleton<IMoEventBus>(key, (sp, _) =>
-                    sp.GetRequiredKeyedService<IMoLocalEventBus>(key));
+                    sp.GetRequiredService<IMoLocalEventBus>());
             }
         }, secondKey: key);
 
