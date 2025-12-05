@@ -88,7 +88,6 @@ internal class EventBusInitializationService(
                 TopicName = handlerInfo.TopicName,
                 HandlerFactory = new IocEventHandlerFactory(serviceProvider.GetRequiredService<IServiceScopeFactory>(), handlerInfo.HandlerType),
                 Scope = handlerInfo.IsDistributed ? SubscriptionScope.Distributed : SubscriptionScope.Local,
-                HandlerType = handlerInfo.HandlerType,
                 IsAutoDiscovered = true
             })
             .ToList();

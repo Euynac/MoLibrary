@@ -35,11 +35,6 @@ public sealed record SubscriptionDescriptor
     public required SubscriptionScope Scope { get; init; }
 
     /// <summary>
-    /// Handler type (optional, only for type-based handlers).
-    /// </summary>
-    public Type? HandlerType { get; init; }
-
-    /// <summary>
     /// Whether this subscription was auto-discovered during startup.
     /// </summary>
     public bool IsAutoDiscovered { get; init; }

@@ -64,19 +64,19 @@ public interface ISubscription : IAsyncDisposable
     SubscriptionState State { get; }
 
     /// <summary>
-    /// When the subscription was created.
+    /// When the subscription was created (UTC).
     /// </summary>
-    DateTimeOffset CreatedAt { get; }
+    DateTime CreatedAt { get; }
 
     /// <summary>
-    /// When the subscription was last activated.
+    /// When the subscription was last activated (UTC).
     /// </summary>
-    DateTimeOffset? ActivatedAt { get; }
+    DateTime? ActivatedAt { get; }
 
     /// <summary>
-    /// When the subscription was last deactivated.
+    /// When the subscription was last deactivated (UTC).
     /// </summary>
-    DateTimeOffset? DeactivatedAt { get; }
+    DateTime? DeactivatedAt { get; }
 
     /// <summary>
     /// Whether this subscription was auto-discovered during startup.

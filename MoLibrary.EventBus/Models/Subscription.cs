@@ -10,8 +10,6 @@ namespace MoLibrary.EventBus.Models;
 internal class Subscription(SubscriptionDescriptor descriptor) : ISubscription
 {
     private SubscriptionState _state = SubscriptionState.Pending;
-    private DateTimeOffset? _activatedAt;
-    private DateTimeOffset? _deactivatedAt;
 
     #region Identity
 
@@ -24,7 +22,7 @@ internal class Subscription(SubscriptionDescriptor descriptor) : ISubscription
 
     #region Handler Information
 
-    public Type? HandlerType { get; } = descriptor.HandlerType;
+    public Type? HandlerType => descriptor.HandlerFactory.GetHandlerType();
     public IEventHandlerFactory HandlerFactory { get; } = descriptor.HandlerFactory;
 
     #endregion
@@ -38,9 +36,9 @@ internal class Subscription(SubscriptionDescriptor descriptor) : ISubscription
     #region Lifecycle
 
     public SubscriptionState State => _state;
-    public DateTimeOffset CreatedAt { get; } = DateTimeOffset.UtcNow;
-    public DateTimeOffset? ActivatedAt => _activatedAt;
-    public DateTimeOffset? DeactivatedAt => _deactivatedAt;
+    public DateTime CreatedAt { get; } = DateTime.UtcNow;
+    public DateTime? ActivatedAt { get; private set; }
+    public DateTime? DeactivatedAt { get; private set; }
     public bool IsAutoDiscovered { get; } = descriptor.IsAutoDiscovered;
 
     #endregion
@@ -68,7 +66,7 @@ internal class Subscription(SubscriptionDescriptor descriptor) : ISubscription
         }
 
         _state = SubscriptionState.Active;
-        _activatedAt = DateTimeOffset.UtcNow;
+        ActivatedAt = DateTime.UtcNow;
         return Task.CompletedTask;
     }
 
@@ -80,7 +78,7 @@ internal class Subscription(SubscriptionDescriptor descriptor) : ISubscription
         }
 
         _state = SubscriptionState.Inactive;
-        _deactivatedAt = DateTimeOffset.UtcNow;
+        DeactivatedAt = DateTime.UtcNow;
         return Task.CompletedTask;
     }
 

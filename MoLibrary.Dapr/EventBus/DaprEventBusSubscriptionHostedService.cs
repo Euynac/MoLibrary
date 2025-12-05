@@ -54,9 +54,10 @@ internal class DaprEventBusSubscriptionHostedService(
                     if (eventData != null)
                     {
                         // Trigger handlers through EventBus
-                        await EventBus.TriggerHandlersAsync(
+                        await (EventBus as DistributedEventBusDaprEventBus)!.TriggerHandlersAsync(
                             subscription.EventType,
                             eventData,
+                            message.Topic,
                             ct);
                     }
 

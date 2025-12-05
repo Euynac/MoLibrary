@@ -10,6 +10,9 @@ public interface IEventHandlerFactory
     /// </summary>
     /// <returns>The event handler</returns>
     IEventHandlerDisposeWrapper GetHandler();
-
-    bool IsInFactories(List<IEventHandlerFactory> handlerFactories);
+    /// <summary>
+    /// Gets the type of the event handler. if it is action event handler behind the factory, return nul.  
+    /// </summary>
+    /// <returns></returns>
+    Type? GetHandlerType();
 }
