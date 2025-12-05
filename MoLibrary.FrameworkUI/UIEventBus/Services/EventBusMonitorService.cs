@@ -2,6 +2,7 @@ using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.EventBus.Abstractions.Subscriptions;
+using MoLibrary.EventBus.Constants;
 using MoLibrary.EventBus.Models;
 using MoLibrary.FrameworkUI.UIEventBus.Models;
 using MoLibrary.Tool.Extensions;
@@ -401,7 +402,7 @@ public sealed class EventBusMonitorService(
     /// </summary>
     private SubscriptionViewModel MapToViewModel(ISubscription subscription)
     {
-        return new SubscriptionViewModel
+        var vm = new SubscriptionViewModel
         {
             SubscriptionId = subscription.Id.ToString(),
             EventType = subscription.EventType.GetCleanFullName(),
@@ -420,6 +421,17 @@ public sealed class EventBusMonitorService(
             Metadata = subscription.Metadata
                 .ToDictionary(kvp => kvp.Key, kvp => kvp.Value?.ToString() ?? "null")
         };
+
+        // 提取 Action 处理器元数据
+        if (subscription.HandlerType == null) // Action 处理器
+        {
+            vm.ActionMethodName = subscription.GetMetadata<string>(SubscriptionMetadataKeys.ActionMethodName);
+            vm.ActionDeclaringType = subscription.GetMetadata<string>(SubscriptionMetadataKeys.ActionDeclaringType);
+            vm.ActionMethodSignature = subscription.GetMetadata<string>(SubscriptionMetadataKeys.ActionMethodSignature);
+            vm.ActionIsStatic = subscription.GetMetadata<bool?>(SubscriptionMetadataKeys.ActionIsStatic);
+        }
+
+        return vm;
     }
 
     /// <summary>

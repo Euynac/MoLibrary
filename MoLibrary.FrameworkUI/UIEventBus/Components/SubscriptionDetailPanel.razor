@@ -83,9 +83,49 @@
                                     <MudText Typo="Typo.caption" Color="Color.Secondary">处理器类型</MudText>
                                     @if (Subscription.IsActionHandler)
                                     {
-                                        <MudChip T="string" Color="Color.Info" Size="Size.Small" Icon="@Icons.Material.Filled.Functions">
-                                            Action处理器
-                                        </MudChip>
+                                        <MudStack Spacing="2">
+                                            <MudChip T="string" Color="Color.Info" Size="Size.Small" Icon="@Icons.Material.Filled.Functions">
+                                                Action处理器
+                                            </MudChip>
+
+                                            @if (!string.IsNullOrEmpty(Subscription.ActionDeclaringType))
+                                            {
+                                                <MudStack Spacing="1">
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">声明类型</MudText>
+                                                    <MudText Typo="Typo.body2" Style="font-family: monospace; word-break: break-all;">
+                                                        @Subscription.ActionDeclaringType
+                                                    </MudText>
+                                                </MudStack>
+                                            }
+
+                                            @if (!string.IsNullOrEmpty(Subscription.ActionMethodName))
+                                            {
+                                                <MudStack Spacing="1">
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">方法名称</MudText>
+                                                    <MudText Typo="Typo.body2" Style="font-family: monospace;">
+                                                        @Subscription.ActionMethodName
+                                                    </MudText>
+                                                </MudStack>
+                                            }
+
+                                            @if (!string.IsNullOrEmpty(Subscription.ActionMethodSignature))
+                                            {
+                                                <MudStack Spacing="1">
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">方法签名</MudText>
+                                                    <MudText Typo="Typo.body2" Style="font-family: monospace; word-break: break-all;">
+                                                        @Subscription.ActionMethodSignature
+                                                    </MudText>
+                                                </MudStack>
+                                            }
+
+                                            @if (Subscription.ActionIsStatic.HasValue)
+                                            {
+                                                <MudChip T="string" Size="Size.Small"
+                                                         Color="@(Subscription.ActionIsStatic.Value ? Color.Secondary : Color.Default)">
+                                                    @(Subscription.ActionIsStatic.Value ? "静态方法" : "实例方法")
+                                                </MudChip>
+                                            }
+                                        </MudStack>
                                     }
                                     else
                                     {

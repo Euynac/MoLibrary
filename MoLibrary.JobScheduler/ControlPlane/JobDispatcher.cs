@@ -64,7 +64,7 @@ public class JobDispatcher(
                 JobType = definition.JobType,
             };
 
-            await eventBus.PublishAsync(executionEvent);
+            await eventBus.PublishAsync(executionEvent, cancellationToken: cancellationToken);
 
             logger.LogDebug(
                 "Job execution event published: {JobKey}, InstanceId: {InstanceId}",

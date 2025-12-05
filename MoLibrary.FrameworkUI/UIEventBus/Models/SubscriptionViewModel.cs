@@ -61,6 +61,65 @@ public class SubscriptionViewModel
 
     #endregion
 
+    #region Action Handler Metadata
+
+    /// <summary>
+    /// Action处理器的方法名称
+    /// </summary>
+    public string? ActionMethodName { get; set; }
+
+    /// <summary>
+    /// Action处理器的声明类型
+    /// </summary>
+    public string? ActionDeclaringType { get; set; }
+
+    /// <summary>
+    /// Action处理器的方法签名
+    /// </summary>
+    public string? ActionMethodSignature { get; set; }
+
+    /// <summary>
+    /// Action处理器的方法是否为静态方法
+    /// </summary>
+    public bool? ActionIsStatic { get; set; }
+
+    /// <summary>
+    /// 获取Action处理器的完整描述（用于工具提示）
+    /// </summary>
+    public string ActionHandlerTooltip
+    {
+        get
+        {
+            if (!IsActionHandler) return string.Empty;
+
+            var parts = new List<string>();
+
+            if (!string.IsNullOrEmpty(ActionDeclaringType))
+            {
+                parts.Add($"声明类型: {ActionDeclaringType}");
+            }
+
+            if (!string.IsNullOrEmpty(ActionMethodName))
+            {
+                parts.Add($"方法名称: {ActionMethodName}");
+            }
+
+            if (!string.IsNullOrEmpty(ActionMethodSignature))
+            {
+                parts.Add($"方法签名: {ActionMethodSignature}");
+            }
+
+            if (ActionIsStatic.HasValue)
+            {
+                parts.Add($"静态方法: {(ActionIsStatic.Value ? "是" : "否")}");
+            }
+
+            return parts.Count > 0 ? string.Join("\n", parts) : "Action处理器";
+        }
+    }
+
+    #endregion
+
     #region Scope & State
 
     /// <summary>
@@ -189,7 +248,22 @@ public class SubscriptionViewModel
     /// <summary>
     /// 处理器显示文本
     /// </summary>
-    public string HandlerDisplay => IsActionHandler ? "Action处理器" : (HandlerTypeShortName ?? "未知");
+    public string HandlerDisplay
+    {
+        get
+        {
+            if (IsActionHandler)
+            {
+                // 如果有方法名，显示方法名
+                if (!string.IsNullOrEmpty(ActionMethodName))
+                {
+                    return $"Action: {ActionMethodName}";
+                }
+                return "Action处理器";
+            }
+            return HandlerTypeShortName ?? "未知";
+        }
+    }
 
     #endregion
 

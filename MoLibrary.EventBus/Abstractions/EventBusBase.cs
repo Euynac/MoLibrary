@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using MoLibrary.EventBus.Abstractions.Handlers;
 using MoLibrary.EventBus.Abstractions.Subscriptions;
 using MoLibrary.EventBus.Attributes;
+using MoLibrary.EventBus.Helpers;
 using MoLibrary.EventBus.Models;
 using MoLibrary.EventBus.Subscriptions;
 
@@ -51,6 +52,10 @@ public abstract class EventBusBase(
         where TEvent : class
     {
         var finalTopicName = topicName ?? EventNameAttribute.GetNameOrDefault(typeof(TEvent));
+
+        // 提取 Action 处理器的元数据
+        var metadata = DelegateMetadataExtractor.ExtractMetadata(handler);
+
         var descriptor = new SubscriptionDescriptor
         {
             ServiceKey = ServiceKey,
@@ -58,7 +63,8 @@ public abstract class EventBusBase(
             TopicName = finalTopicName,
             HandlerFactory = new ActionEventHandlerFactory<TEvent>(handler),
             Scope = this is IMoLocalEventBus ? SubscriptionScope.Local : SubscriptionScope.Distributed,
-            IsAutoDiscovered = false
+            IsAutoDiscovered = false,
+            Metadata = metadata
         };
         return SubscriptionManager.SubscribeAsync(descriptor).GetAwaiter().GetResult();
     }
