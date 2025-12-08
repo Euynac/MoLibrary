@@ -96,7 +96,7 @@ public class FrameworkMonitorService(
     {
         try
         {
-            if (ProjectUnitStores.GetUnit<UnitDomainEvent>(eventKey) is { } unitEvent)
+            if (ProjectUnitStores.GetUnitByName<UnitDomainEvent>(eventKey) is { } unitEvent)
             {
                 var json = eventContent.ToString();
                 var eventToPublish = JsonSerializer.Deserialize(json, unitEvent.Type, jsonOption.GlobalOptions)!;

@@ -69,7 +69,20 @@ public static class ProjectUnitStores
 
         return null;
     }
+    /// <summary>
+    /// 获取指定类型的项目单元（实体需继承IMoEntity）
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <returns></returns>
+    public static T? GetUnitByName<T>(string key) where T : ProjectUnit
+    {
+        if (ProjectUnitsByName.TryGetValue(key, out var unit) && unit is T u)
+        {
+            return u;
+        }
 
+        return null;
+    }
     /// <summary>
     /// 获取指定类型的项目单元
     /// </summary>

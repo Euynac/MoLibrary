@@ -1,7 +1,9 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 using Dapr.Messaging.PublishSubscribe;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MoLibrary.Core.GlobalJson.Interfaces;
 using MoLibrary.Dapr.Modules;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.EventBus.Abstractions.Subscriptions;
@@ -16,58 +18,64 @@ namespace MoLibrary.Dapr.EventBus;
 internal class DaprEventBusSubscriptionHostedService(
     DaprPublishSubscribeClient daprClient,
     ISubscriptionManager subscriptionManager,
-    IMoEventBus eventBus,
+    IMoDistributedEventBus eventBus,
     IOptions<ModuleDaprEventBusOption> options,
     ILogger<DaprEventBusSubscriptionHostedService> logger,
+    IGlobalJsonOption jsonOption,
     string? serviceKey = null)
     : EventBusSubscriptionHostedServiceBase(subscriptionManager, eventBus, logger, serviceKey)
 {
     private readonly ModuleDaprEventBusOption _options = options.Value;
 
-    /// <summary>
-    /// Creates a Dapr streaming subscription for the given subscription.
-    /// </summary>
-    protected override async Task CreateExternalSubscriptionAsync(ISubscription subscription, CancellationToken cancellationToken)
-    {
-        // Avoid duplicates
-        if (ExternalSubscriptions.ContainsKey(subscription.Id))
-        {
-            Logger.LogWarning(
-                "Dapr subscription already exists for {SubscriptionId}, skipping creation",
-                subscription.Id);
-            return;
-        }
+    // Track Dapr subscriptions by topic name
+    private readonly ConcurrentDictionary<string, IAsyncDisposable> _daprSubscriptionsByTopic = new();
 
+    /// <summary>
+    /// Creates a Dapr streaming subscription for the given topic.
+    /// </summary>
+    protected override async Task CreateExternalSubscriptionForTopicAsync(
+        string topicName,
+        Type eventType,
+        CancellationToken cancellationToken)
+    {
         try
         {
             Logger.LogDebug(
-                "Creating Dapr subscription for topic {Topic} (SubscriptionId: {SubscriptionId}, ServiceKey: {ServiceKey})",
-                subscription.TopicName, subscription.Id, ServiceKey ?? "default");
+                "Creating Dapr subscription for topic {Topic} with EventType {EventType} (ServiceKey: {ServiceKey})",
+                topicName, eventType.Name, ServiceKey ?? "default");
 
-            // Message handler function
+            // Message handler - deserializes and delegates to base class
             async Task<TopicResponseAction> HandleMessageAsync(TopicMessage message, CancellationToken ct)
             {
                 try
                 {
-                    // Deserialize JSON from message data
-                    var eventData = JsonSerializer.Deserialize(message.Data.Span, subscription.EventType);
-                    if (eventData != null)
+                    // Deserialize message data using the topic's event type
+                    var eventData = JsonSerializer.Deserialize(
+                        message.Data.Span,
+                        eventType,
+                        jsonOption.GlobalOptions);
+
+                    if (eventData == null)
                     {
-                        // Trigger handlers through EventBus
-                        await (EventBus as DistributedEventBusDaprEventBus)!.TriggerHandlersAsync(
-                            subscription.EventType,
-                            eventData,
-                            message.Topic,
-                            ct);
+                        Logger.LogWarning(
+                            "Deserialized message for topic {Topic} was null",
+                            message.Topic);
+                        return TopicResponseAction.Drop;
                     }
+
+                    // Delegate to base class for handler routing and invocation
+                    await HandleExternalMessageAsync(
+                        message.Topic,
+                        eventData,
+                        ct);
 
                     return TopicResponseAction.Success;
                 }
                 catch (Exception ex)
                 {
                     Logger.LogError(ex,
-                        "Error handling Dapr message for topic {Topic} (SubscriptionId: {SubscriptionId})",
-                        subscription.TopicName, subscription.Id);
+                        "Error handling Dapr message for topic {Topic}",
+                        message.Topic);
                     return TopicResponseAction.Drop;
                 }
             }
@@ -83,23 +91,57 @@ internal class DaprEventBusSubscriptionHostedService(
 
             var daprSubscription = await daprClient.SubscribeAsync(
                 _options.PubSubName,
-                subscription.TopicName,
+                topicName,
                 subscriptionOptions,
                 HandleMessageAsync,
                 cancellationToken);
 
-            ExternalSubscriptions.TryAdd(subscription.Id, daprSubscription);
+            // Store Dapr subscription for cleanup later
+            _daprSubscriptionsByTopic.TryAdd(topicName, daprSubscription);
 
             Logger.LogInformation(
-                "Created Dapr subscription for topic {Topic} (SubscriptionId: {SubscriptionId}, ServiceKey: {ServiceKey})",
-                subscription.TopicName, subscription.Id, ServiceKey ?? "default");
+                "Created Dapr subscription for topic {Topic} with EventType {EventType} (ServiceKey: {ServiceKey})",
+                topicName, eventType.Name, ServiceKey ?? "default");
         }
         catch (Exception ex)
         {
             Logger.LogError(ex,
-                "Failed to create Dapr subscription for topic {Topic} (SubscriptionId: {SubscriptionId})",
-                subscription.TopicName, subscription.Id);
+                "Failed to create Dapr subscription for topic {Topic}",
+                topicName);
             throw;
+        }
+    }
+
+    /// <summary>
+    /// Removes a Dapr subscription for the given topic.
+    /// </summary>
+    protected override async Task RemoveExternalSubscriptionForTopicAsync(
+        string topicName,
+        CancellationToken cancellationToken)
+    {
+        if (_daprSubscriptionsByTopic.TryRemove(topicName, out var daprSubscription))
+        {
+            try
+            {
+                Logger.LogInformation(
+                    "Disposing Dapr subscription for topic {Topic} (ServiceKey: {ServiceKey})",
+                    topicName, ServiceKey ?? "default");
+
+                await daprSubscription.DisposeAsync();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex,
+                    "Error disposing Dapr subscription for topic {Topic}",
+                    topicName);
+                throw;
+            }
+        }
+        else
+        {
+            Logger.LogWarning(
+                "Attempted to remove Dapr subscription for topic {Topic}, but it was not found",
+                topicName);
         }
     }
 }

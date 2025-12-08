@@ -1,16 +1,13 @@
-using Dapr.Client;
+using System.Runtime.Versioning;
 using Dapr.Messaging.PublishSubscribe.Extensions;
-using Grpc.Net.Client;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.Dapr.EventBus;
 using MoLibrary.EventBus.Abstractions;
-using MoLibrary.EventBus.Abstractions.Handlers;
-using MoLibrary.EventBus.Abstractions.Subscriptions;
 using MoLibrary.EventBus.Modules;
 
 namespace MoLibrary.Dapr.Modules;
@@ -42,14 +39,7 @@ public class ModuleDaprEventBus(ModuleDaprEventBusOption option)
         services.AddDaprPubSubClient();
 
         // Register hosted service to manage dynamic Dapr subscriptions (default, ServiceKey = null)
-        services.AddHostedService<DaprEventBusSubscriptionHostedService>(sp =>
-            new DaprEventBusSubscriptionHostedService(
-                sp.GetRequiredService<global::Dapr.Messaging.PublishSubscribe.DaprPublishSubscribeClient>(),
-                sp.GetRequiredService<ISubscriptionManager>(),
-                sp.GetRequiredService<IMoDistributedEventBus>(),
-                sp.GetRequiredService<IOptions<ModuleDaprEventBusOption>>(),
-                sp.GetRequiredService<ILogger<DaprEventBusSubscriptionHostedService>>(),
-                serviceKey: null));
+        services.AddHostedService<DaprEventBusSubscriptionHostedService>();
     }
 
     public override void ClaimDependencies()
@@ -66,59 +56,25 @@ public class ModuleDaprEventBusGuide : MoModuleGuide<ModuleDaprEventBus, ModuleD
     /// </summary>
     /// <param name="key">服务键</param>
     /// <param name="configureOptions">可选的Dapr配置（如不同的PubSubName）</param>
-    public ModuleDaprEventBusGuide AddKeyedDaprEventBus(string key, Action<ModuleDaprEventBusOption>? configureOptions = null)
+    [RequiresPreviewFeatures]
+    public ModuleDaprEventBusGuide AddKeyedDaprEventBus(string key, Action<ModuleDaprEventBusOption> configureOptions)
     {
         ConfigureServices(context =>
         {
-            // Configure options for this keyed instance if provided
-            if (configureOptions != null)
-            {
-                context.Services.Configure(key, configureOptions);
-            }
-
+            // Configure options for this keyed instance
+            context.Services.Configure(key, configureOptions);
             // Register keyed DaprEventBus with the specified serviceKey
             context.Services.AddKeyedSingleton<IMoDistributedEventBus>(key, (sp, _) =>
             {
-                IOptions<ModuleDaprEventBusOption> options;
-                if (configureOptions != null)
-                {
-                    options = Options.Create(sp.GetRequiredService<IOptionsSnapshot<ModuleDaprEventBusOption>>().Get(key));
-                }
-                else
-                {
-                    options = sp.GetRequiredService<IOptions<ModuleDaprEventBusOption>>();
-                }
-
-                return new DistributedEventBusDaprEventBus(
-                    sp.GetRequiredService<IServiceScopeFactory>(),
-                    sp.GetRequiredService<IEventHandlerInvoker>(),
-                    sp.GetRequiredService<ISubscriptionManager>(),
-                    sp.GetRequiredService<DaprClient>(),
-                    options,
-                    sp.GetRequiredService<ILogger<DistributedEventBusDaprEventBus>>(),
-                    serviceKey: key);
+                var options = Options.Create(sp.GetRequiredService<IOptionsSnapshot<ModuleDaprEventBusOption>>().Get(key));
+                return ActivatorUtilities.CreateInstance<DistributedEventBusDaprEventBus>(sp, options, key);
             });
 
             // Register HostedService for this keyed EventBus
-            context.Services.AddSingleton<Microsoft.Extensions.Hosting.IHostedService>(sp =>
+            context.Services.AddSingleton<IHostedService>(sp =>
             {
-                IOptions<ModuleDaprEventBusOption> hostedOptions;
-                if (configureOptions != null)
-                {
-                    hostedOptions = Options.Create(sp.GetRequiredService<IOptionsSnapshot<ModuleDaprEventBusOption>>().Get(key));
-                }
-                else
-                {
-                    hostedOptions = sp.GetRequiredService<IOptions<ModuleDaprEventBusOption>>();
-                }
-
-                return new DaprEventBusSubscriptionHostedService(
-                    sp.GetRequiredService<global::Dapr.Messaging.PublishSubscribe.DaprPublishSubscribeClient>(),
-                    sp.GetRequiredService<ISubscriptionManager>(),
-                    sp.GetRequiredKeyedService<IMoDistributedEventBus>(key),
-                    hostedOptions,
-                    sp.GetRequiredService<ILogger<DaprEventBusSubscriptionHostedService>>(),
-                    serviceKey: key);
+                var options = Options.Create(sp.GetRequiredService<IOptionsSnapshot<ModuleDaprEventBusOption>>().Get(key));
+                return ActivatorUtilities.CreateInstance<DaprEventBusSubscriptionHostedService>(sp, options, key);
             });
         }, secondKey: key);
 
@@ -153,7 +109,7 @@ public class ModuleDaprEventBusOption : MoModuleControllerOption<ModuleDaprEvent
     public TimeSpan MaximumCleanupTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
     /// <summary>
-    /// Dead letter topic name for failed messages. Defaults to "molibrary-eventbus-dlq".
+    /// Dead letter topic name for failed messages. Defaults to null.
     /// </summary>
-    public string DeadLetterTopic { get; set; } = "molibrary-eventbus-dlq";
+    public string? DeadLetterTopic { get; set; }
 }
