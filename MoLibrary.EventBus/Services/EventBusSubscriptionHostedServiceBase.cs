@@ -11,7 +11,6 @@ namespace MoLibrary.EventBus.Services;
 /// Abstract base class for subscription hosted services.
 /// Listens to SubscriptionManager changes and manages external subscriptions (e.g., Dapr, RabbitMQ).
 /// Each derived class handles a specific ServiceKey and implements the actual subscription management.
-/// TODO JobSchedule需等待注册初始化完毕
 /// </summary>
 public abstract class EventBusSubscriptionHostedServiceBase(
     ISubscriptionManager subscriptionManager,
