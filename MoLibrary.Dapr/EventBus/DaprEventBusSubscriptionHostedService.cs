@@ -49,6 +49,15 @@ internal class DaprEventBusSubscriptionHostedService(
             {
                 try
                 {
+                    // Debug logging for raw message data
+                    if (_options.EnableMessageDataDebugLogging)
+                    {
+                        var rawJson = System.Text.Encoding.UTF8.GetString(message.Data.Span);
+                        Logger.LogInformation(
+                            "Received message on topic {Topic}: {RawJson}",
+                            message.Topic, rawJson);
+                    }
+
                     // Deserialize message data using the topic's event type
                     var eventData = JsonSerializer.Deserialize(
                         message.Data.Span,

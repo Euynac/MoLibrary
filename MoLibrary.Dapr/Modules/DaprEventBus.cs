@@ -112,4 +112,11 @@ public class ModuleDaprEventBusOption : MoModuleControllerOption<ModuleDaprEvent
     /// Dead letter topic name for failed messages. Defaults to null.
     /// </summary>
     public string? DeadLetterTopic { get; set; }
+
+    /// <summary>
+    /// Enable debug logging for incoming message data.
+    /// When enabled, logs the raw JSON payload of each received message.
+    /// Useful for troubleshooting deserialization issues and inspecting message format.
+    /// </summary>
+    public bool EnableMessageDataDebugLogging { get; set; }
 }
