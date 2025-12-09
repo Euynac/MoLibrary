@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MoLibrary.Core.Extensions;
 using MoLibrary.JobScheduler.Modules;
 using MoLibrary.RegisterCentre.Interfaces;
 using MoLibrary.RegisterCentre.Models;
@@ -87,7 +88,7 @@ public abstract class CoordinatedLeaderService(
         catch (Exception ex)
         {
             // Initialization failure - capture error and rethrow
-            InitializationError = ex.Message;
+            InitializationError = ex.GetMessageRecursively();
             logger.LogError(ex, "{ServiceName} initialization failed", ServiceName);
             throw; // Rethrow to let the host handle the failure
         }

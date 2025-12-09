@@ -22,10 +22,10 @@ public class JobHealthMetrics
 
     /// <summary>
     /// 健康度 - 衡量作业调度的有效性
-    /// 公式: (总执行次数 - 跳过 - 取消) / 总执行次数 * 100
+    /// 公式: (总执行次数 - 跳过 - 失败 - 终止) / 总执行次数 * 100
     /// </summary>
     public double HealthScore => TotalExecutions > 0
-        ? ((TotalExecutions - SkippedCount - CancelledCount) / (double)TotalExecutions) * 100
+        ? ((TotalExecutions - SkippedCount - FailedCount - TerminatedCount) / (double)TotalExecutions) * 100
         : 100;
 
     /// <summary>

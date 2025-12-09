@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using MoLibrary.Core.Extensions;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Events;
@@ -103,7 +104,7 @@ public class JobDispatcher(
             await jobInstanceManager.UpdateStateAsync(
                 instance.InstanceId,
                 JobState.Failed,
-                $"Event bus publishing failure: {ex.Message}",
+                $"Event bus publishing failure: {ex.GetMessageRecursively()}",
                 cancellationToken);
         }
     }

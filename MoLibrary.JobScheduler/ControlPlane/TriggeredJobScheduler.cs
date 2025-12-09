@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
+using MoLibrary.Core.Extensions;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Events;
@@ -225,7 +226,7 @@ public class TriggeredJobScheduler(
                 await jobInstanceManager.UpdateStateAsync(
                     instanceId,
                     JobState.Failed,
-                    $"Timer callback error: {ex.Message}");
+                    $"Timer callback error: {ex.GetMessageRecursively()}");
             }
             catch { /* Best effort */ }
         }

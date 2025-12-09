@@ -334,8 +334,8 @@ public class JobInstance
             // Scheduled can transition to Enqueued, Cancelled, or Failed
             JobState.Scheduled => newState is JobState.Enqueued or JobState.Cancelled or JobState.Failed,
 
-            // Enqueued can transition to Processing, Skipped, or Cancelled
-            JobState.Enqueued => newState is JobState.Processing or JobState.Skipped or JobState.Cancelled,
+            // Enqueued can transition to Processing, Skipped, or Cancelled or Failed (delivery failure)
+            JobState.Enqueued => newState is JobState.Processing or JobState.Skipped or JobState.Cancelled or JobState.Failed,
 
             // Processing can transition to Succeeded, Failed, or Cancelled
             JobState.Processing => newState is JobState.Succeeded or JobState.Failed or JobState.Cancelled,
