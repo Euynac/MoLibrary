@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Modules;
@@ -14,14 +15,15 @@ using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.Repository.Modules;
 
+public enum DbContextProviderType
+{
+    Default,
+    UnitOfWork
+}
+
 public class ModuleRepositoryGuide : MoModuleGuide<ModuleRepository, ModuleRepositoryOption, ModuleRepositoryGuide>
 {
-    //protected override string[] GetRequestedConfigMethodKeys()
-    //{
-    //    return [ADD_DB_CONTEXT_PROVIDER, nameof(AddMoDbContext)];
-    //}
-    protected const string ADD_DB_CONTEXT_PROVIDER = nameof(ADD_DB_CONTEXT_PROVIDER);
-    public ModuleRepositoryGuide AddMoUnitOfWorkDbContextProvider(bool addEventSupport = false)
+    public ModuleRepositoryGuide AddMoUnitOfWorkSupport(bool addEventSupport = false)
     {
         DependsOnModule<ModuleScopedDataGuide>().Register()
             .AddKeyedScopedData<MoScopedDataUnitOfWorkProvider>(nameof(ModuleRepository));
@@ -35,36 +37,28 @@ public class ModuleRepositoryGuide : MoModuleGuide<ModuleRepository, ModuleRepos
             {
                 context.Services.AddMoUnitOfWork();
             }
-        }, key: ADD_DB_CONTEXT_PROVIDER);
+        });
         return this;
     }
 
-    /// <summary>
-    /// Adds a service of type <see cref="IDbContextProvider{TDbContext}"/> with the implementation type of <see cref="DefaultDbContextProvider{T}"/> to the specified <see cref="IServiceCollection"/>.
-    /// </summary>
-    /// <remarks>You need to manually save changes.</remarks>
-    /// <returns>The <see cref="IServiceCollection"/> so that additional calls can be chained.</returns>
-    public ModuleRepositoryGuide AddMoDefaultDbContextProvider()
-    {
-        ConfigureServices(context =>
-        {
-            context.Services.AddScoped(typeof(IDbContextProvider<>), typeof(DefaultDbContextProvider<>));
-        }, key: ADD_DB_CONTEXT_PROVIDER);
-        return this;
-    }
-
-    public ModuleRepositoryGuide AddMoDbContext<TDbContext>(Action<IServiceProvider, DbContextOptionsBuilder> optionsAction, Action<ModuleRepositoryOption>? moOptionsAction = null)
+    public ModuleRepositoryGuide AddMoDbContext<TDbContext>(Action<IServiceProvider, DbContextOptionsBuilder> optionsAction, DbContextProviderType dbContextProviderType = DbContextProviderType.Default)
         where TDbContext : MoDbContext<TDbContext>
     {
         ConfigureServices(context =>
         {
-            var option = context.ModuleOption;
-
-            context.Services.AddMemoryCache();
-
-            context.Services.AddTransient(typeof(IDbContextProvider<>), typeof(UnitOfWorkDbContextProvider<>));//TODO 可使用Singleton？
-
-
+            switch (dbContextProviderType)
+            {
+                case DbContextProviderType.UnitOfWork:
+                    CheckRequiredMethod(nameof(AddMoUnitOfWorkSupport));
+                    context.Services.AddTransient(typeof(IDbContextProvider<TDbContext>), typeof(UnitOfWorkDbContextProvider<TDbContext>));
+                    //TODO 可使用Singleton？
+                    break;
+                case DbContextProviderType.Default:
+                    context.Services.AddTransient(typeof(IDbContextProvider<TDbContext>), typeof(DefaultDbContextProvider<TDbContext>));
+                    break;
+            }
+            
+            context.Services.TryAddTransient<IMoAuditPropertySetter, MoAuditPropertySetter>();
             if (context.ModuleOption.UseDbContextFactory)
             {
                 context.Services.AddDbContextFactory<TDbContext>(optionsAction);
@@ -74,8 +68,6 @@ public class ModuleRepositoryGuide : MoModuleGuide<ModuleRepository, ModuleRepos
 
             //TODO 使用Module优化自动注册
             var options = new MoEfCoreRegistrationOptions(typeof(TDbContext), context.Services);
-
-            context.Services.AddTransient<IMoAuditPropertySetter, MoAuditPropertySetter>();
 
             context.Services.AddTransient(serviceProvider =>
             {
@@ -104,7 +96,7 @@ public class ModuleRepositoryGuide : MoModuleGuide<ModuleRepository, ModuleRepos
 
                     return false;
                 });
-        });
+        }, secondKey: typeof(TDbContext).Name);
         return this;
     }
 }

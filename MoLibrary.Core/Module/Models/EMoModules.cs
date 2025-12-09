@@ -100,6 +100,10 @@ public enum EMoModules
     /// 作业调度 UI 模块
     /// </summary>
     JobSchedulerUI,
+    /// <summary>
+    /// 作业调度 EF Core 持久化模块
+    /// </summary>
+    JobSchedulerEfCore,
     LoggingUI,
     Clock,
     /// <summary>

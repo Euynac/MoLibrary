@@ -73,6 +73,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.Dapr", "MoLibrary
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.JobScheduler.UI", "MoLibrary.JobScheduler.UI\MoLibrary.JobScheduler.UI.csproj", "{57DC37A3-85BC-4F2E-B43B-85F1CF57A80A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.JobScheduler.EfCore", "MoLibrary.JobScheduler.EfCore\MoLibrary.JobScheduler.EfCore.csproj", "{D0F5939F-53F5-490F-B124-95AA196D61C8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -207,6 +209,10 @@ Global
 		{57DC37A3-85BC-4F2E-B43B-85F1CF57A80A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{57DC37A3-85BC-4F2E-B43B-85F1CF57A80A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{57DC37A3-85BC-4F2E-B43B-85F1CF57A80A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D0F5939F-53F5-490F-B124-95AA196D61C8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D0F5939F-53F5-490F-B124-95AA196D61C8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D0F5939F-53F5-490F-B124-95AA196D61C8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D0F5939F-53F5-490F-B124-95AA196D61C8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

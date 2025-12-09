@@ -47,7 +47,8 @@
       "WebFetch(domain:docs.dapr.io)",
       "WebFetch(domain:github.com)",
       "Bash(dotnet test:*)",
-      "Bash(git branch:*)"
+      "Bash(git branch:*)",
+      "Bash(xargs:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

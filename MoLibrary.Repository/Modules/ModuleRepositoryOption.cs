@@ -28,7 +28,7 @@ public class ModuleRepositoryOption : MoModuleOption<ModuleRepository>
     public bool DisableEntitySelfConfiguration { get; set; }
 
     /// <summary>
-    /// 禁用实体原生配置 <see cref="IEntityTypeConfiguration{TEntity}"/> 功能，当不使用<see cref="MoDbContext{TDbContext}"/>提供的此接口自动注册功能可关闭
+    /// 禁用自动发现实体原生配置 <see cref="IEntityTypeConfiguration{TEntity}"/> 功能，当不使用<see cref="MoDbContext{TDbContext}"/>提供的此接口自动注册功能可关闭
     /// </summary>
     public bool DisableEntitySeparateConfiguration { get; set; }
 
