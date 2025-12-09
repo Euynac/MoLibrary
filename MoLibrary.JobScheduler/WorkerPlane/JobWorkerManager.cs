@@ -20,7 +20,7 @@ public class JobWorkerManager(
     IOptions<ModuleJobSchedulerOption> options,
     [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
     JobOrchestrator jobOrchestrator,
-    IMoJobScheduleMetadataStore metadataStore,
+    IMoJobMetadataRepository metadataRepository,
     IReadOnlyList<JobDefinition> jobDefinitions,
     ILogger<JobWorkerManager> logger) : IHostedService
 {
@@ -168,7 +168,7 @@ public class JobWorkerManager(
                     executionEvent.InstanceId);
             }
             
-            instance = await metadataStore.GetJobInstanceAsync(executionEvent.InstanceId);
+            instance = await metadataRepository.GetInstanceAsync(executionEvent.InstanceId);
             if (instance == null)
             {
                 logger.LogError(

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Events;
+using MoLibrary.JobScheduler.Metadata;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.JobScheduler.Modules;
 using MoLibrary.StateStore;
@@ -17,7 +18,7 @@ namespace MoLibrary.JobScheduler.Cache;
 /// </summary>
 public class JobDefinitionCacheService : IJobDefinitionCacheService, IDisposable, IAsyncDisposable
 {
-    private readonly IMoJobScheduleMetadataStore _metadataStore;
+    private readonly IMoJobMetadataRepository _metadataRepository;
     private readonly IMoStateStore _stateStore;
     private readonly ILogger<JobDefinitionCacheService> _logger;
 
@@ -27,16 +28,16 @@ public class JobDefinitionCacheService : IJobDefinitionCacheService, IDisposable
     private IAsyncDisposable? _eventSubscription;
 
     private const string STALE_FLAG_PREFIX = "JobDefinition:Updated";
-    private static readonly TimeSpan STALE_FLAG_TTL = TimeSpan.FromHours(1);
-    private static readonly TimeSpan LOCK_TIMEOUT = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan _staleFlagTtl = TimeSpan.FromHours(1);
+    private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(5);
 
     public JobDefinitionCacheService(
-        IMoJobScheduleMetadataStore metadataStore,
+        IMoJobMetadataRepository metadataRepository,
         [FromKeyedServices(nameof(ModuleJobScheduler))] IMoStateStore stateStore,
         [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
         ILogger<JobDefinitionCacheService> logger)
     {
-        _metadataStore = metadataStore;
+        _metadataRepository = metadataRepository;
         _stateStore = stateStore;
         _logger = logger;
 
@@ -55,7 +56,7 @@ public class JobDefinitionCacheService : IJobDefinitionCacheService, IDisposable
 
         var jobLock = _jobLocks.GetOrAdd(jobKey, _ => new SemaphoreSlim(1, 1));
 
-        if (!await jobLock.WaitAsync(LOCK_TIMEOUT, cancellationToken))
+        if (!await jobLock.WaitAsync(_lockTimeout, cancellationToken))
         {
             _logger.LogError("Timeout acquiring lock for job {JobKey}", jobKey);
             throw new TimeoutException($"Timeout acquiring lock for job {jobKey}");
@@ -83,7 +84,7 @@ public class JobDefinitionCacheService : IJobDefinitionCacheService, IDisposable
                     _logger.LogDebug("Cache stale for job {JobKey}, reloading from metadata store", jobKey);
 
                     // Reload from metadata store
-                    var reloadedDefinition = await _metadataStore.GetJobDefinitionAsync(jobKey, cancellationToken);
+                    var reloadedDefinition = await _metadataRepository.GetDefinitionAsync(jobKey, cancellationToken);
 
                     if (reloadedDefinition != null)
                     {
@@ -114,7 +115,7 @@ public class JobDefinitionCacheService : IJobDefinitionCacheService, IDisposable
 
             // Cache miss: load from metadata store
             _logger.LogDebug("Cache miss for job {JobKey}, loading from metadata store", jobKey);
-            var definition = await _metadataStore.GetJobDefinitionAsync(jobKey, cancellationToken);
+            var definition = await _metadataRepository.GetDefinitionAsync(jobKey, cancellationToken);
 
             if (definition != null)
             {
@@ -135,7 +136,7 @@ public class JobDefinitionCacheService : IJobDefinitionCacheService, IDisposable
         // If cache is empty, initialize it
         if (_cache.IsEmpty)
         {
-            if (!await _initLock.WaitAsync(LOCK_TIMEOUT, cancellationToken))
+            if (!await _initLock.WaitAsync(_lockTimeout, cancellationToken))
             {
                 _logger.LogError("Timeout acquiring initialization lock");
                 throw new TimeoutException("Timeout acquiring initialization lock");
@@ -147,14 +148,20 @@ public class JobDefinitionCacheService : IJobDefinitionCacheService, IDisposable
                 if (_cache.IsEmpty)
                 {
                     _logger.LogInformation("Initializing cache from metadata store");
-                    var allDefinitions = await _metadataStore.GetAllJobDefinitionsAsync(includeDeleted: false, cancellationToken);
+                    var query = new JobDefinitionQuery
+                    {
+                        IncludeDeleted = false,
+                        PageNumber = 1,
+                        PageSize = int.MaxValue // 获取所有结果
+                    };
+                    var result = await _metadataRepository.QueryDefinitionsAsync(query, cancellationToken);
 
-                    foreach (var definition in allDefinitions)
+                    foreach (var definition in result.Items)
                     {
                         _cache[definition.JobKey] = definition;
                     }
 
-                    _logger.LogInformation("Cache initialized with {Count} job definitions", allDefinitions.Count);
+                    _logger.LogInformation("Cache initialized with {Count} job definitions", result.TotalCount);
                 }
             }
             finally
@@ -181,7 +188,7 @@ public class JobDefinitionCacheService : IJobDefinitionCacheService, IDisposable
 
         var jobLock = _jobLocks.GetOrAdd(definition.JobKey, _ => new SemaphoreSlim(1, 1));
 
-        if (!await jobLock.WaitAsync(LOCK_TIMEOUT, cancellationToken))
+        if (!await jobLock.WaitAsync(_lockTimeout, cancellationToken))
         {
             _logger.LogError("Timeout acquiring lock for job {JobKey}", definition.JobKey);
             throw new TimeoutException($"Timeout acquiring lock for job {definition.JobKey}");
@@ -190,7 +197,7 @@ public class JobDefinitionCacheService : IJobDefinitionCacheService, IDisposable
         try
         {
             // Write-through: persist to metadata store first
-            await _metadataStore.SaveJobDefinitionAsync(definition, cancellationToken);
+            await _metadataRepository.SaveDefinitionAsync(definition, cancellationToken);
 
             // Update cache
             _cache[definition.JobKey] = definition;
@@ -203,7 +210,7 @@ public class JobDefinitionCacheService : IJobDefinitionCacheService, IDisposable
                     true,
                     STALE_FLAG_PREFIX,
                     cancellationToken,
-                    STALE_FLAG_TTL);
+                    _staleFlagTtl);
             }
             catch (Exception ex)
             {
@@ -237,7 +244,7 @@ public class JobDefinitionCacheService : IJobDefinitionCacheService, IDisposable
                     jobKey,
                     true,
                     STALE_FLAG_PREFIX,
-                    ttl: STALE_FLAG_TTL);
+                    ttl: _staleFlagTtl);
 
                 _logger.LogDebug("Marked job {JobKey} as stale", jobKey);
             }

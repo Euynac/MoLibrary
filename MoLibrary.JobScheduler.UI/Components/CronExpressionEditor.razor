@@ -1,7 +1,7 @@
 @using MoLibrary.JobScheduler.UI.Services
 @using Microsoft.JSInterop
 @inject CronExpressionService CronService
-@inject IJSRuntime JSRuntime
+@inject IJSRuntime JsRuntime
 @inject ISnackbar Snackbar
 
 <!-- 引入 cronstrue 库 -->
@@ -396,7 +396,7 @@
             try
             {
                 // 加载 JavaScript 模块
-                _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                _jsModule = await JsRuntime.InvokeAsync<IJSObjectReference>(
                     "import",
                     "./_content/MoLibrary.JobScheduler.UI/js/cron-helper.js");
 

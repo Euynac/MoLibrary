@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using MoLibrary.JobScheduler.Abstractions;
+using MoLibrary.JobScheduler.Metadata;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.JobScheduler.UI.Models;
 using MoLibrary.Tool.MoResponse;
@@ -10,7 +11,7 @@ namespace MoLibrary.JobScheduler.UI.Services;
 /// 作业统计信息计算服务
 /// </summary>
 public class JobStatisticsService(
-    IMoJobScheduleMetadataStore metadataStore,
+    IMoJobMetadataRepository metadataRepository,
     ILogger<JobStatisticsService> logger)
 {
     public async Task<Res<JobStatistics>> CalculateStatisticsAsync(
@@ -20,10 +21,15 @@ public class JobStatisticsService(
         try
         {
             // Get all instances for this job (no state filter, all time)
-            var allInstances = await metadataStore.GetJobInstancesByKeyAsync(
-                jobKey,
-                stateFilter: null,
-                cancellationToken);
+            var query = new JobInstanceQuery
+            {
+                JobKey = jobKey,
+                PageNumber = 1,
+                PageSize = int.MaxValue
+            };
+
+            var result = await metadataRepository.QueryInstancesAsync(query, cancellationToken);
+            var allInstances = result.Items;
 
             var statistics = new JobStatistics
             {

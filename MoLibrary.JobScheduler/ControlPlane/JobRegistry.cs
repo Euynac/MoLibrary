@@ -13,7 +13,7 @@ namespace MoLibrary.JobScheduler.ControlPlane;
 /// </summary>
 public class JobRegistry(
     IJobDefinitionCacheService cacheService,
-    IMoJobScheduleMetadataStore metadataStore,
+    IMoJobMetadataRepository metadataRepository,
     ILogger<JobRegistry> logger)
 {
     private readonly Dictionary<Type, Type> _triggeredJobMapping = new();
@@ -131,7 +131,7 @@ public class JobRegistry(
                 continue;
             }
 
-            await metadataStore.SaveJobDefinitionAsync(definition, cancellationToken);
+            await metadataRepository.SaveDefinitionAsync(definition, cancellationToken);
             addedJobKeys.Add(definition.JobKey);
 
             logger.LogInformation(
@@ -147,7 +147,7 @@ public class JobRegistry(
         {
             try
             {
-                var definition = await metadataStore.GetJobDefinitionAsync(jobKey, cancellationToken);
+                var definition = await metadataRepository.GetDefinitionAsync(jobKey, cancellationToken);
                 if (definition == null)
                 {
                     logger.LogWarning("Job not found for soft delete: {JobKey}", jobKey);
@@ -157,7 +157,7 @@ public class JobRegistry(
                 definition.DeletedAt = DateTime.UtcNow;
                 definition.JobKey =  $"[deleted]{jobKey}";
                 
-                await metadataStore.SaveJobDefinitionAsync(definition, cancellationToken);
+                await metadataRepository.SaveDefinitionAsync(definition, cancellationToken);
                 deletedJobKeys.Add(jobKey);
 
                 logger.LogInformation("Job soft deleted: {JobKey}", jobKey);

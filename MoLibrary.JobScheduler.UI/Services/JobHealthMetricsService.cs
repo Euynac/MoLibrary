@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MoLibrary.JobScheduler.Abstractions;
+using MoLibrary.JobScheduler.Metadata;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.JobScheduler.UI.Models;
 using MoLibrary.JobScheduler.UI.Modules;
@@ -12,7 +13,7 @@ namespace MoLibrary.JobScheduler.UI.Services;
 /// 作业健康指标服务（基于可配置的时间窗口）
 /// </summary>
 public class JobHealthMetricsService(
-    IMoJobScheduleMetadataStore metadataStore,
+    IMoJobMetadataRepository metadataRepository,
     IOptions<ModuleJobSchedulerUIOption> uiOptions,
     ILogger<JobHealthMetricsService> logger)
 {
@@ -28,14 +29,17 @@ public class JobHealthMetricsService(
             var startTime = endTime - _options.HealthMetricsWindow;
 
             // Get all instances in time window
-            var instances = await metadataStore.GetJobInstancesAsync(
-                jobKey: jobKey,
-                stateFilter: null,
-                startTime: startTime,
-                endTime: endTime,
-                pageNumber: 1,
-                pageSize: 10000, // Get all within window
-                cancellationToken: cancellationToken);
+            var query = new JobInstanceQuery
+            {
+                JobKey = jobKey,
+                CreatedAfter = startTime,
+                CreatedBefore = endTime,
+                PageNumber = 1,
+                PageSize = 10000 // Get all within window
+            };
+
+            var result = await metadataRepository.QueryInstancesAsync(query, cancellationToken);
+            var instances = result.Items;
 
             // Group instances by state for efficient counting
             var stateGroups = instances.GroupBy(i => i.State)

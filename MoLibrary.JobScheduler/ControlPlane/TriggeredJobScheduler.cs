@@ -16,7 +16,7 @@ public class TriggeredJobScheduler(
     IJobDefinitionCacheService cacheService,
     JobInstanceManager jobInstanceManager,
     JobDispatcher jobDispatcher,
-    IMoJobScheduleMetadataStore metadataStore,
+    IMoJobMetadataRepository metadataRepository,
     DelayedJobRecoveryService recoveryService,
     ILogger<TriggeredJobScheduler> logger)
 {
@@ -64,7 +64,7 @@ public class TriggeredJobScheduler(
     {
         try
         {
-            var definition = await cacheService.GetJobDefinitionAsync(evt.JobKey);
+            var definition = await cacheService.GetDefinitionAsync(evt.JobKey);
             if (definition == null || definition.IsDisabled)
             {
                 logger.LogWarning("Triggered job {JobKey} not found or disabled", evt.JobKey);
@@ -86,7 +86,7 @@ public class TriggeredJobScheduler(
             if (scheduledTime.HasValue)
             {
                 instance.ScheduledExecutionTime = scheduledTime.Value;
-                await metadataStore.SaveJobInstanceAsync(instance);
+                await metadataRepository.SaveInstanceAsync(instance);
             }
 
             logger.LogInformation(
@@ -178,7 +178,7 @@ public class TriggeredJobScheduler(
             _inFlightDelayedSchedules.TryRemove(instanceId, out var schedule);
             schedule?.Timer?.Dispose();
 
-            var instance = await metadataStore.GetJobInstanceAsync(instanceId);
+            var instance = await metadataRepository.GetInstanceAsync(instanceId);
             if (instance == null)
             {
                 logger.LogWarning("Instance {InstanceId} not found in timer callback", instanceId);
@@ -195,7 +195,7 @@ public class TriggeredJobScheduler(
                 return;
             }
 
-            var definition = await cacheService.GetJobDefinitionAsync(instance.JobKey);
+            var definition = await cacheService.GetDefinitionAsync(instance.JobKey);
             if (definition == null)
             {
                 logger.LogError("Job definition not found for {InstanceId}", instanceId);

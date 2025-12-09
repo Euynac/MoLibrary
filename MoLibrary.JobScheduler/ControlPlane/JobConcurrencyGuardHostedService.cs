@@ -6,6 +6,7 @@ using MoLibrary.EventBus.Abstractions;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Core;
 using MoLibrary.JobScheduler.Events;
+using MoLibrary.JobScheduler.Metadata;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.JobScheduler.Modules;
 using MoLibrary.RegisterCentre.Events;
@@ -19,7 +20,7 @@ namespace MoLibrary.JobScheduler.ControlPlane;
 /// </summary>
 public class JobConcurrencyGuardHostedService(
     IJobDefinitionCacheService cacheService,
-    IMoJobScheduleMetadataStore metadataStore,
+    IMoJobMetadataRepository metadataRepository,
     [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
     JobInstanceManager instanceManager,
     ILogger<JobConcurrencyGuardHostedService> logger,
@@ -63,10 +64,15 @@ public class JobConcurrencyGuardHostedService(
         // 3. Scan all Processing state instances to recover in-memory state
         foreach (var definition in definitions)
         {
-            var processingInstances = await metadataStore.GetJobInstancesByKeyAsync(
-                definition.JobKey,
-                JobState.Processing,
-                cancellationToken);
+            var query = new JobInstanceQuery
+            {
+                JobKey = definition.JobKey,
+                State = JobState.Processing,
+                PageNumber = 1,
+                PageSize = int.MaxValue
+            };
+            var result = await metadataRepository.QueryInstancesAsync(query, cancellationToken);
+            var processingInstances = result.Items;
 
             foreach (var instance in processingInstances)
             {

@@ -15,7 +15,7 @@ namespace MoLibrary.JobScheduler.ControlPlane;
 /// Publishes lifecycle events for state changes.
 /// </summary>
 public class JobInstanceManager(
-    IMoJobScheduleMetadataStore metadataStore,
+    IMoJobMetadataRepository metadataRepository,
     [FromKeyedServices(nameof(ModuleJobScheduler))]IMoEventBus eventBus,
     ILogger<JobInstanceManager> logger)
 {
@@ -49,7 +49,7 @@ public class JobInstanceManager(
         };
         
 
-        await metadataStore.SaveJobInstanceAsync(instance, cancellationToken);
+        await metadataRepository.SaveInstanceAsync(instance, cancellationToken);
 
         logger.LogDebug(
             "Created job instance {InstanceId} for job {JobKey} with initial state {InitialState}",
@@ -78,7 +78,7 @@ public class JobInstanceManager(
         CancellationToken cancellationToken = default,
         string? clientId = null)
     {
-        var instance = await metadataStore.GetJobInstanceAsync(instanceId, cancellationToken);
+        var instance = await metadataRepository.GetInstanceAsync(instanceId, cancellationToken);
         if (instance == null)
         {
             logger.LogError("Job instance {InstanceId} not found for state update", instanceId);
@@ -87,7 +87,7 @@ public class JobInstanceManager(
 
         var currentState = instance.State;
         instance.UpdateStateAsync(newState, message, clientId);
-        await metadataStore.SaveJobInstanceAsync(instance, cancellationToken);
+        await metadataRepository.SaveInstanceAsync(instance, cancellationToken);
 
         logger.LogDebug(
             "Updated job instance {InstanceId} state from {OldState} to {NewState}",

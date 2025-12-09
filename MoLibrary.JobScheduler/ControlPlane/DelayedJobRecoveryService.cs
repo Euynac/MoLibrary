@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using MoLibrary.JobScheduler.Abstractions;
+using MoLibrary.JobScheduler.Metadata;
 using MoLibrary.JobScheduler.Models;
 
 namespace MoLibrary.JobScheduler.ControlPlane;
@@ -9,7 +10,7 @@ namespace MoLibrary.JobScheduler.ControlPlane;
 /// Loads jobs in Scheduled state and reschedules them.
 /// </summary>
 public class DelayedJobRecoveryService(
-    IMoJobScheduleMetadataStore metadataStore,
+    IMoJobMetadataRepository metadataRepository,
     IJobDefinitionCacheService cacheService,
     JobInstanceManager jobInstanceManager,
     ILogger<DelayedJobRecoveryService> logger)
@@ -28,12 +29,14 @@ public class DelayedJobRecoveryService(
         {
             logger.LogInformation("Recovering scheduled jobs...");
 
-            var scheduledInstances = await metadataStore.GetJobInstancesAsync(
-                jobKey: null,
-                stateFilter: JobState.Scheduled,
-                pageNumber: 1,
-                pageSize: 10000,
-                cancellationToken: cancellationToken);
+            var query = new JobInstanceQuery
+            {
+                State = JobState.Scheduled,
+                PageNumber = 1,
+                PageSize = 10000
+            };
+            var result = await metadataRepository.QueryInstancesAsync(query, cancellationToken);
+            var scheduledInstances = result.Items;
 
             if (scheduledInstances.Count == 0)
             {
@@ -58,7 +61,7 @@ public class DelayedJobRecoveryService(
                     continue;
                 }
 
-                var definition = await cacheService.GetJobDefinitionAsync(instance.JobKey, cancellationToken);
+                var definition = await cacheService.GetDefinitionAsync(instance.JobKey, cancellationToken);
                 if (definition == null)
                 {
                     logger.LogWarning("Job definition not found for {InstanceId}", instance.InstanceId);

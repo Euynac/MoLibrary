@@ -14,7 +14,7 @@
         }
         else
         {
-            <MudForm @ref="form" @bind-IsValid="@success">
+            <MudForm @ref="_form" @bind-IsValid="@_success">
                 <MudStack Spacing="3">
                     <!-- JobName -->
                     <MudTextField @bind-Value="@_jobName"
@@ -111,7 +111,7 @@
         <MudButton Color="Color.Primary"
                    Variant="Variant.Filled"
                    OnClick="Save"
-                   Disabled="@(!success || _isLoading)">
+                   Disabled="@(!_success || _isLoading)">
             保存
         </MudButton>
     </DialogActions>
@@ -124,8 +124,8 @@
     [Parameter]
     public JobDefinition JobDefinition { get; set; } = null!;
 
-    private MudForm form = null!;
-    private bool success;
+    private MudForm _form = null!;
+    private bool _success;
 
     private string _jobName = string.Empty;
     private string _description = string.Empty;
@@ -180,8 +180,8 @@
 
     private async Task Save()
     {
-        await form.Validate();
-        if (!success) return;
+        await _form.Validate();
+        if (!_success) return;
 
         // Validation
         if (string.IsNullOrWhiteSpace(_jobName))

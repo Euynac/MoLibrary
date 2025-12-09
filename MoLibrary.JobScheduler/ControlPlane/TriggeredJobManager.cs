@@ -12,10 +12,10 @@ namespace MoLibrary.JobScheduler.ControlPlane;
 public class TriggeredJobManager(
     IJobDefinitionCacheService cacheService,
     [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
-    IMoJobScheduleMetadataStore metadataStore,
+    IMoJobMetadataRepository metadataRepository,
     ILogger<TriggeredJobManager> logger) : IMoTriggeredJobManager
 {
-    private static readonly TimeSpan MaxRecommendedDelay = TimeSpan.FromDays(24);
+    private static readonly TimeSpan _maxRecommendedDelay = TimeSpan.FromDays(24);
 
     public async Task<string> EnqueueAsync<TArgs>(TArgs args, TimeSpan? delay = null)
     {
@@ -27,12 +27,12 @@ public class TriggeredJobManager(
         }
 
         // Warn about Timer limitations (not enforced per user request)
-        if (delay.HasValue && delay.Value > MaxRecommendedDelay)
+        if (delay.HasValue && delay.Value > _maxRecommendedDelay)
         {
             logger.LogWarning(
                 "Delay {Delay} exceeds recommended maximum {Max}. .NET Timer has ~24.8 day limit.",
                 delay,
-                MaxRecommendedDelay);
+                _maxRecommendedDelay);
         }
 
         var argsType = typeof(TArgs);
@@ -85,7 +85,7 @@ public class TriggeredJobManager(
 
     public async Task<bool> CancelScheduledJobAsync(string instanceId)
     {
-        var instance = await metadataStore.GetJobInstanceAsync(instanceId);
+        var instance = await metadataRepository.GetInstanceAsync(instanceId);
 
         if (instance == null)
         {

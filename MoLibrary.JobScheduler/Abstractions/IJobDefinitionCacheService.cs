@@ -19,6 +19,12 @@ public interface IJobDefinitionCacheService
     Task<JobDefinition?> GetJobDefinitionAsync(string jobKey, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Alias for GetJobDefinitionAsync for consistency with repository naming
+    /// </summary>
+    Task<JobDefinition?> GetDefinitionAsync(string jobKey, CancellationToken cancellationToken = default)
+        => GetJobDefinitionAsync(jobKey, cancellationToken);
+
+    /// <summary>
     /// Gets all cached job definitions. Returns current cache snapshot without invalidation checks.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
@@ -32,4 +38,10 @@ public interface IJobDefinitionCacheService
     /// <param name="definition">The job definition to save</param>
     /// <param name="cancellationToken">Cancellation token</param>
     Task SaveJobDefinitionAsync(JobDefinition definition, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Alias for SaveJobDefinitionAsync for consistency with repository naming
+    /// </summary>
+    Task SaveDefinitionAsync(JobDefinition definition, CancellationToken cancellationToken = default)
+        => SaveJobDefinitionAsync(definition, cancellationToken);
 }

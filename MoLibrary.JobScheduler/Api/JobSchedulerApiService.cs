@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using MoLibrary.StateStore.CancellationManager;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.ControlPlane;
+using MoLibrary.JobScheduler.Metadata;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.JobScheduler.Modules;
 using MoLibrary.Tool.MoResponse;
@@ -19,7 +20,7 @@ namespace MoLibrary.JobScheduler.Api;
 /// </remarks>
 public class JobSchedulerApiService(
     IJobDefinitionCacheService cacheService,
-    IMoJobScheduleMetadataStore metadataStore,
+    IMoJobMetadataRepository metadataRepository,
     [FromKeyedServices(nameof(ModuleJobScheduler))] IMoCancellationManager cancellationManager,
     JobInstanceManager jobInstanceManager,
     JobDispatcher jobDispatcher,
@@ -55,7 +56,7 @@ public class JobSchedulerApiService(
         {
             logger.LogInformation("API: CreateJobInstance requested for {JobKey}", jobKey);
 
-            var definition = await cacheService.GetJobDefinitionAsync(jobKey, cancellationToken);
+            var definition = await cacheService.GetDefinitionAsync(jobKey, cancellationToken);
             if (definition == null)
             {
                 return Res.Fail($"Job {jobKey} not found");
@@ -156,23 +157,20 @@ public class JobSchedulerApiService(
         {
             logger.LogDebug("API: GetJobHistory requested with filters");
 
-            var instances = await metadataStore.GetJobInstancesAsync(
-                jobKey,
-                state,
-                startTime,
-                endTime,
-                pageNumber,
-                pageSize,
-                cancellationToken);
+            var query = new JobInstanceQuery
+            {
+                JobKeyContains = jobKey,
+                State = state,
+                CreatedAfter = startTime,
+                CreatedBefore = endTime,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                SortByCreatedAt = SortDirection.Descending
+            };
 
-            var totalCount = await metadataStore.GetJobInstancesCountAsync(
-                jobKey,
-                state,
-                startTime,
-                endTime,
-                cancellationToken);
+            var result = await metadataRepository.QueryInstancesAsync(query, cancellationToken);
 
-            return new ResPaged<JobInstance>(totalCount, instances, pageNumber, pageSize);
+            return new ResPaged<JobInstance>(result.TotalCount, result.Items, pageNumber, pageSize);
         }
         catch (Exception ex)
         {
@@ -216,7 +214,7 @@ public class JobSchedulerApiService(
     {
         try
         {
-            var definition = await cacheService.GetJobDefinitionAsync(jobKey, cancellationToken);
+            var definition = await cacheService.GetDefinitionAsync(jobKey, cancellationToken);
             if (definition == null)
             {
                 return Res.Fail($"Job {jobKey} not found");
@@ -229,7 +227,7 @@ public class JobSchedulerApiService(
 
             // Update definition via cache service (write-through)
             definition.IsDisabled = true;
-            await cacheService.SaveJobDefinitionAsync(definition, cancellationToken);
+            await cacheService.SaveDefinitionAsync(definition, cancellationToken);
 
             logger.LogInformation("Recurring job paused: {JobKey}", jobKey);
             return Res.Ok("Recurring job paused successfully");
@@ -248,7 +246,7 @@ public class JobSchedulerApiService(
     {
         try
         {
-            var definition = await cacheService.GetJobDefinitionAsync(jobKey, cancellationToken);
+            var definition = await cacheService.GetDefinitionAsync(jobKey, cancellationToken);
             if (definition == null)
             {
                 return Res.Fail($"Job {jobKey} not found");
@@ -261,7 +259,7 @@ public class JobSchedulerApiService(
 
             // Update definition via cache service (write-through)
             definition.IsDisabled = false;
-            await cacheService.SaveJobDefinitionAsync(definition, cancellationToken);
+            await cacheService.SaveDefinitionAsync(definition, cancellationToken);
 
             logger.LogInformation("Recurring job resumed: {JobKey}", jobKey);
             return Res.Ok("Recurring job resumed successfully");
@@ -286,7 +284,7 @@ public class JobSchedulerApiService(
             logger.LogInformation("API: UpdateJobConfig requested for {JobKey}", jobKey);
 
             // Update via cache service (write-through)
-            await cacheService.SaveJobDefinitionAsync(updatedDefinition, cancellationToken);
+            await cacheService.SaveDefinitionAsync(updatedDefinition, cancellationToken);
 
             logger.LogInformation("Job {JobKey} configuration updated", jobKey);
             return Res.Ok("Job configuration updated successfully");

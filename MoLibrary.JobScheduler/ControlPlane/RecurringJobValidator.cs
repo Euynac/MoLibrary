@@ -27,7 +27,7 @@ public class RecurringJobValidator(
         Func<JobDefinition, Task>? onBeforeStartTime = null,
         CancellationToken cancellationToken = default)
     {
-        var definition = await cacheService.GetJobDefinitionAsync(jobKey, cancellationToken);
+        var definition = await cacheService.GetDefinitionAsync(jobKey, cancellationToken);
         if (definition == null)
         {
             logger.LogWarning(

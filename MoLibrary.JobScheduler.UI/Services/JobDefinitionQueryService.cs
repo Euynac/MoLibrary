@@ -2,6 +2,7 @@ using Cronos;
 using Microsoft.Extensions.Logging;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Api;
+using MoLibrary.JobScheduler.Metadata;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.JobScheduler.UI.Models;
 using MoLibrary.Tool.MoResponse;
@@ -13,7 +14,7 @@ namespace MoLibrary.JobScheduler.UI.Services;
 /// </summary>
 public class JobDefinitionQueryService(
     JobSchedulerApiService apiService,
-    IMoJobScheduleMetadataStore metadataStore,
+    IMoJobMetadataRepository metadataRepository,
     ILogger<JobDefinitionQueryService> logger)
 {
     public async Task<ResPaged<JobDefinition>> GetJobDefinitionsAsync(
@@ -130,16 +131,16 @@ public class JobDefinitionQueryService(
     {
         try
         {
-            var instances = await metadataStore.GetJobInstancesAsync(
-                jobKey: jobKey,
-                stateFilter: null,
-                startTime: null,
-                endTime: null,
-                pageNumber: 1,
-                pageSize: 1,
-                cancellationToken: cancellationToken);
+            var query = new JobInstanceQuery
+            {
+                JobKey = jobKey,
+                PageNumber = 1,
+                PageSize = 1,
+                SortByCreatedAt = SortDirection.Descending
+            };
 
-            return instances.FirstOrDefault();
+            var result = await metadataRepository.QueryInstancesAsync(query, cancellationToken);
+            return result.Items.FirstOrDefault();
         }
         catch (Exception ex)
         {
