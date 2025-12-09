@@ -39,11 +39,9 @@ public static class ModuleJobSchedulerEfCoreBuilderExtensions
 public class ModuleJobSchedulerEfCoreGuide
     : MoModuleGuide<ModuleJobSchedulerEfCore, ModuleJobSchedulerEfCoreOption, ModuleJobSchedulerEfCoreGuide>
 {
-    private const string CONFIG_DB_CONTEXT = nameof(CONFIG_DB_CONTEXT);
-
     protected override string[] GetRequestedConfigMethodKeys()
     {
-        return [CONFIG_DB_CONTEXT];
+        return [nameof(UseDbContext)];
     }
 
     /// <summary>
@@ -57,15 +55,8 @@ public class ModuleJobSchedulerEfCoreGuide
         // Register Repository module dependency with DbContext using Default provider
         DependsOnModule<ModuleRepositoryGuide>().Register()
             .AddMoDbContext<JobSchedulerDbContext>(optionsAction);
-
-        // Register the EF Core repository implementation
-        PostConfigureServices(context =>
-        {
-            // Register as singleton to match IMoJobMetadataRepository expectation
-            // Thread safety is handled through scoped IDbContextProvider
-            context.Services.AddSingleton<IMoJobMetadataRepository, EfCoreJobMetadataRepository>();
-        }, key: CONFIG_DB_CONTEXT);
-
+        DependsOnModule<ModuleJobSchedulerGuide>().Register().UseCustomMetadataRepository<EfCoreJobMetadataRepository>();
+        ConfigureEmpty();
         return this;
     }
 }
@@ -78,9 +69,14 @@ public class ModuleJobSchedulerEfCore(ModuleJobSchedulerEfCoreOption option)
 {
     public override EMoModules CurModuleEnum() => EMoModules.JobSchedulerEfCore;
 
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IMoJobMetadataRepository, EfCoreJobMetadataRepository>();
+    }
+
     public override void ClaimDependencies()
     {
-        // Dependencies are configured in the guide
+        
     }
 }
 /// <summary>

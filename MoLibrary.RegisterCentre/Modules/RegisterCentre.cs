@@ -37,6 +37,10 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModule<
             });
         }
 
+        // 注册默认的IRegisterCentreClientInfo实现
+        // 使用TryAddSingleton允许用户在需要时提供自定义实现
+        services.TryAddSingleton<IRegisterCentreClientInfo, DefaultRegisterCentreClientInfo>();
+
         // 注册 RegisterCentreClientHostedService 为单例并同时作为 HostedService 和 Coordinator
         services.AddSingleton<RegisterCentreClientHostedService>();
         services.AddSingleton<IServiceRegistrationCoordinator>(provider =>
@@ -143,20 +147,7 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
     private const string SET_PROVIDER =  nameof(SET_PROVIDER);
     protected override string[] GetRequestedConfigMethodKeys()
     {
-        return [nameof(SET_PROVIDER), nameof(ConfigClientInfo)];
-    }
-    /// <summary>
-    /// 设置注册中心客户端信息
-    /// </summary>
-    /// <typeparam name="TClientInfo">注册中心客户端信息实现类型</typeparam>
-    /// <returns></returns>
-    public ModuleRegisterCentreGuide ConfigClientInfo<TClientInfo>() where TClientInfo : class, IRegisterCentreClientInfo
-    {
-        ConfigureServices(context =>
-        {
-            context.Services.TryAddSingleton<IRegisterCentreClientInfo, TClientInfo>();
-        });
-        return this;
+        return [nameof(SET_PROVIDER)];
     }
 
     /// <summary>
@@ -227,6 +218,39 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
         {
             context.Services.AddSingleton<IRegisterCentreCatalogProvider, TInfoProvider>();
         });
+        return this;
+    }
+
+    /// <summary>
+    /// 从Flags枚举设置依赖的子域列表
+    /// </summary>
+    /// <typeparam name="TEnum">标记了Flags特性的枚举类型</typeparam>
+    /// <param name="domainFlags">包含多个域标志的枚举值</param>
+    /// <returns></returns>
+    public ModuleRegisterCentreGuide SetDependentSubDomains<TEnum>(TEnum domainFlags)
+        where TEnum : struct, Enum
+    {
+        if (!typeof(TEnum).IsDefined(typeof(FlagsAttribute), false))
+        {
+            throw new ArgumentException("枚举类型必须标记为Flags", nameof(domainFlags));
+        }
+
+        var domains = new List<string>();
+        var flagValues = Enum.GetValues<TEnum>();
+
+        foreach (var flagValue in flagValues)
+        {
+            // 跳过None值（通常为0）
+            if (Convert.ToInt32(flagValue) == 0) continue;
+
+            // 检查是否包含该标志
+            if (domainFlags.HasFlag(flagValue))
+            {
+                domains.Add(flagValue.ToString());
+            }
+        }
+
+        ConfigureModuleOption(o => o.DependentSubDomains = domains);
         return this;
     }
 }
@@ -306,4 +330,64 @@ public class ModuleRegisterCentreOption : MoModuleControllerOption<ModuleRegiste
     /// <para>选举规则：注册时间最早的Running状态实例被选为领导者</para>
     /// </summary>
     public bool EnableLeaderElection { get; set; } = true;
+
+    // === Service Identity Configuration ===
+
+    /// <summary>
+    /// 子域名（可选）
+    /// </summary>
+    public string? DomainName { get; set; }
+
+    /// <summary>
+    /// 微服务唯一标识符（默认从入口程序集名称获取）
+    /// </summary>
+    public string? AppId { get; set; }
+
+    /// <summary>
+    /// 微服务显示名称（默认从入口程序集名称获取）
+    /// </summary>
+    public string? AppName { get; set; }
+
+    /// <summary>
+    /// 项目名称（默认从入口程序集名称获取）
+    /// </summary>
+    public string? ProjectName { get; set; }
+
+    // === Version Information ===
+
+    /// <summary>
+    /// 应用构建时间（默认从程序集文件修改时间获取）
+    /// </summary>
+    public DateTime? BuildTime { get; set; }
+
+    /// <summary>
+    /// 程序集版本号（默认从FileVersionInfo获取）
+    /// </summary>
+    public string? AssemblyVersion { get; set; }
+
+    /// <summary>
+    /// 发布版本号（自定义版本标识）
+    /// </summary>
+    public string? ReleaseVersion { get; set; }
+
+    // === Instance Information ===
+
+    /// <summary>
+    /// 实例标识符，格式："hostname:processId"
+    /// 如未设置，自动生成为："{COMPUTERNAME/HOSTNAME/MachineName}:{ProcessId}"
+    /// </summary>
+    public string? FromInstance { get; set; }
+
+    /// <summary>
+    /// 依赖的子域列表
+    /// </summary>
+    public List<string>? DependentSubDomains { get; set; }
+
+    // === Distributed Mode Configuration ===
+
+    /// <summary>
+    /// 注册中心服务的AppId（分布式模式下连接的注册中心标识）
+    /// 使用UseDistributedProvider时必须配置
+    /// </summary>
+    public string? RegisterCentreAppId { get; set; }
 }

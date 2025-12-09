@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.Options;
 using MoLibrary.RegisterCentre.Interfaces;
@@ -12,7 +13,7 @@ namespace MoLibrary.RegisterCentre.Implements;
 /// </summary>
 public abstract class RegisterCentreClientBase(IOptions<ModuleRegisterCentreOption> options, IServerAddressesFeature? serverAddressesFeature = null) : IRegisterCentreClientInfo
 {
-    protected readonly ModuleRegisterCentreOption _options = options.Value;
+    protected readonly ModuleRegisterCentreOption Options = options.Value;
 
     /// <summary>
     /// 获取当前微服务状态
@@ -52,7 +53,7 @@ public abstract class RegisterCentreClientBase(IOptions<ModuleRegisterCentreOpti
     /// <param name="serviceInfo"></param>
     private void AddEnvironmentVariablesMetadata(ServiceRegisterInfo serviceInfo)
     {
-        foreach (var envKey in _options.MetadataEnvironmentVariables)
+        foreach (var envKey in Options.MetadataEnvironmentVariables)
         {
             var envValue = Environment.GetEnvironmentVariable(envKey);
             if (!string.IsNullOrEmpty(envValue))
@@ -68,7 +69,7 @@ public abstract class RegisterCentreClientBase(IOptions<ModuleRegisterCentreOpti
     /// <param name="serviceInfo"></param>
     private void AddListeningAddressesMetadata(ServiceRegisterInfo serviceInfo)
     {
-        if (_options.IncludeListeningAddresses && 
+        if (Options.IncludeListeningAddresses && 
             serverAddressesFeature?.Addresses != null && 
             serverAddressesFeature.Addresses.Any())
         {
