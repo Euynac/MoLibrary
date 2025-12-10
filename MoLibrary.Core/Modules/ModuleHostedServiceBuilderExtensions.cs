@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Builder;
 namespace MoLibrary.Core.Modules;
 
 /// <summary>
-/// Extension methods for configuring the HostedService observability module
+/// Extension methods for configuring the HostedService observability module and registering observable hosted services
 /// </summary>
 public static class ModuleHostedServiceBuilderExtensions
 {

@@ -29,7 +29,7 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
         services.AddSingleton<IDataChannelManager, DataChannelManager>();
         services.AddScoped<DataChannelService>();
         // Add the hosted service for channel initialization
-        services.AddHostedService<DataChannelInitializerService>();
+        ServiceCollectionHostedServiceExtensions.AddHostedService<DataChannelInitializerService>(services);
     }
 
     public override void ConfigureApplicationBuilder(IApplicationBuilder app)

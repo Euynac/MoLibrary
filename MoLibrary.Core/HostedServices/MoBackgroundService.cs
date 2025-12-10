@@ -2,6 +2,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using MoLibrary.Core.ExceptionHandler.ExceptionPool;
+using MoLibrary.Core.HostedServices.Interfaces;
 using MoLibrary.Core.HostedServices.Models;
 
 namespace MoLibrary.Core.HostedServices;
@@ -12,50 +13,60 @@ namespace MoLibrary.Core.HostedServices;
 /// </summary>
 public abstract class MoBackgroundService(
     IExceptionPoolManager? exceptionPoolManager = null,
-    ILogger? logger = null) : BackgroundService
+    ILogger? logger = null) : BackgroundService, IMoHostedService
 {
     protected readonly ILogger Logger = logger ?? NullLogger.Instance;
-
-    // Observable state - protected so derived classes can access
-    protected HostedServiceObservableInfo ObservableInfo { get; private set; } = null!;
-    internal ExceptionPool? ExceptionPool { get; private set; }
-
-    private readonly List<HostedServiceStateHistory> _stateHistory = new();
-    private readonly object _stateLock = new();
 
     // Heartbeat mechanism
     private CancellationTokenSource? _heartbeatCts;
     private Task? _heartbeatTask;
 
-    // Abstract/Virtual members
+    // IMoHostedService implementation
 
     /// <summary>
     /// Gets the name of the service for identification purposes
     /// </summary>
-    protected abstract string ServiceName { get; }
+    public abstract string ServiceName { get; }
 
     /// <summary>
     /// Gets a value indicating whether exception pool is enabled for this service
     /// </summary>
-    protected virtual bool EnableExceptionPool => true;
+    public virtual bool EnableExceptionPool => true;
 
     /// <summary>
     /// Gets the maximum number of state history entries to retain
     /// </summary>
-    protected virtual int MaxHistorySize => 100;
+    public virtual int MaxHistorySize => 100;
 
     /// <summary>
     /// Gets the heartbeat interval for this service (null to disable heartbeat)
     /// </summary>
-    protected virtual TimeSpan? HeartbeatInterval => TimeSpan.FromMinutes(1);
+    public virtual TimeSpan? HeartbeatInterval => TimeSpan.FromMinutes(1);
 
     /// <summary>
-    /// Initializes observable info (called by registration system)
+    /// Gets the observable information for this service
     /// </summary>
-    /// <param name="info">The observable info to initialize</param>
-    internal void InitializeObservableInfo(HostedServiceObservableInfo info)
+    public HostedServiceObservableInfo ObservableInfo { get; private set; } = null!;
+
+    /// <summary>
+    /// Gets the exception pool for this service (null if disabled)
+    /// </summary>
+    public ExceptionPool? ExceptionPool { get; private set; }
+
+    /// <summary>
+    /// Initializes observable info (called by manager during registration)
+    /// </summary>
+    internal void InitializeObservableInfo()
     {
-        ObservableInfo = info;
+        ObservableInfo = new HostedServiceObservableInfo
+        {
+            ServiceName = ServiceName,
+            ServiceType = GetType(),
+            RegisteredAt = DateTime.UtcNow,
+            CurrentState = HostedServiceState.NotStarted,
+            MaxHistorySize = MaxHistorySize,
+            HeartbeatInterval = HeartbeatInterval
+        };
 
         if (EnableExceptionPool && exceptionPoolManager != null)
         {
@@ -80,32 +91,12 @@ public abstract class MoBackgroundService(
         string message,
         Exception? exception = null)
     {
-        lock (_stateLock)
+        ObservableInfo.RecordStateChange(newState, message, exception);
+
+        // Add to exception pool if error and pool is enabled
+        if (exception != null && ExceptionPool != null)
         {
-            var history = new HostedServiceStateHistory
-            {
-                PreviousState = ObservableInfo.CurrentState,
-                CurrentState = newState,
-                Message = message,
-                Exception = exception
-            };
-
-            _stateHistory.Add(history);
-            if (_stateHistory.Count > MaxHistorySize)
-            {
-                _stateHistory.RemoveAt(0);
-            }
-
-            ObservableInfo.CurrentState = newState;
-            ObservableInfo.StateChangedAt = DateTime.UtcNow;
-            ObservableInfo.TotalStateChanges++;
-            ObservableInfo.StateHistory = _stateHistory.AsReadOnly();
-
-            // Add to exception pool if error and pool is enabled
-            if (exception != null && ExceptionPool != null)
-            {
-                ExceptionPool.AddException(exception, this, message);
-            }
+            ExceptionPool.AddException(exception, this, message);
         }
     }
 

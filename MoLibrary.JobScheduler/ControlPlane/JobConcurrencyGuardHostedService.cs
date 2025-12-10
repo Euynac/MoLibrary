@@ -33,7 +33,7 @@ public class JobConcurrencyGuardHostedService(
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _jobLocks = new();
     private readonly List<IAsyncDisposable> _eventSubscriptions = [];
 
-    protected override string ServiceName => nameof(JobConcurrencyGuardHostedService);
+    public override string ServiceName => nameof(JobConcurrencyGuardHostedService);
 
     protected override async Task InitializeServiceAsync(CancellationToken cancellationToken)
     {

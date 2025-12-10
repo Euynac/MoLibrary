@@ -26,7 +26,7 @@ public class JobRegistrationHostedService(
     IOptions<ModuleJobSchedulerOption> option,
     IServiceRegistrationCoordinator coordinator) : CoordinatedLeaderService(leaderService, option, logger, coordinator)
 {
-    protected override string ServiceName => nameof(JobRegistrationHostedService);
+    public override string ServiceName => nameof(JobRegistrationHostedService);
 
     protected override async Task InitializeServiceAsync(CancellationToken cancellationToken)
     {

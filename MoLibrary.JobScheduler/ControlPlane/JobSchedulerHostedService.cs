@@ -28,7 +28,7 @@ public class JobSchedulerHostedService(
     // Event subscriptions
     private IAsyncDisposable? _definitionsChangedSubscription;
 
-    protected override string ServiceName => nameof(JobSchedulerHostedService);
+    public override string ServiceName => nameof(JobSchedulerHostedService);
 
     protected override async Task InitializeServiceAsync(CancellationToken cancellationToken)
     {

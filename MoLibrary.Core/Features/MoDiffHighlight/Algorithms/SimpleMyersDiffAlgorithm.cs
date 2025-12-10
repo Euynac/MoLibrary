@@ -96,7 +96,7 @@ public class SimpleMyersDiffAlgorithm : IDiffAlgorithm
         }
         
         // 添加字符级差异（如果启用）
-        if (options.Mode == EDiffHighlightMode.Character || options.Mode == EDiffHighlightMode.Mixed)
+        if (options.Mode is EDiffHighlightMode.Character or EDiffHighlightMode.Mixed)
         {
             AddCharacterDiffs(result, options);
         }

@@ -1,6 +1,7 @@
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using MoLibrary.Core.HostedServices;
-using MoLibrary.Core.HostedServices.Extensions;
 using MoLibrary.Core.HostedServices.Interfaces;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Models;
@@ -29,23 +30,31 @@ public class ModuleHostedService(ModuleHostedServiceOption option)
     {
         // Register the HostedService manager as singleton
         services.AddSingleton<IMoHostedServiceManager, MoHostedServiceManager>();
-
-        // Process any pending registration actions after all services are registered
-        services.AddSingleton(provider =>
-        {
-            var actions = provider.GetServices<MoHostedServiceExtensions.IHostedServiceRegistrationAction>();
-            foreach (var action in actions)
-            {
-                action.Execute(provider);
-            }
-            return new HostedServiceRegistrationProcessor();
-        });
     }
 
-    /// <summary>
-    /// Marker class to ensure registration actions are executed
-    /// </summary>
-    private class HostedServiceRegistrationProcessor
+    public override void ConfigureApplicationBuilder(IApplicationBuilder app)
     {
+        // Register all IHostedService instances that implement IMoHostedService
+        var manager = app.ApplicationServices.GetRequiredService<IMoHostedServiceManager>();
+        var hostedServices = app.ApplicationServices.GetServices<IHostedService>();
+
+        foreach (var service in hostedServices)
+        {
+            if (service is IMoHostedService moHostedService)
+            {
+                // Initialize observable info
+                if (service is MoHostedService moHosted)
+                {
+                    moHosted.InitializeObservableInfo();
+                }
+                else if (service is MoBackgroundService moBackground)
+                {
+                    moBackground.InitializeObservableInfo();
+                }
+
+                // Register with manager
+                manager.RegisterService(moHostedService);
+            }
+        }
     }
 }

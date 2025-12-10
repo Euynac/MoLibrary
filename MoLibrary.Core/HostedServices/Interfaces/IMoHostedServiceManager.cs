@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Hosting;
 using MoLibrary.Core.ExceptionHandler.ExceptionPool;
 using MoLibrary.Core.HostedServices.Models;
 
@@ -10,6 +9,12 @@ namespace MoLibrary.Core.HostedServices.Interfaces;
 public interface IMoHostedServiceManager
 {
     /// <summary>
+    /// Registers a hosted service with the manager (called internally during startup)
+    /// </summary>
+    /// <param name="service">The hosted service instance to register</param>
+    void RegisterService(IMoHostedService service);
+
+    /// <summary>
     /// Gets all registered hosted services
     /// </summary>
     /// <returns>A readonly list of observable information for all registered services</returns>
@@ -20,7 +25,7 @@ public interface IMoHostedServiceManager
     /// </summary>
     /// <typeparam name="TService">The hosted service type</typeparam>
     /// <returns>Observable information for the service, or null if not found</returns>
-    HostedServiceObservableInfo? GetService<TService>() where TService : IHostedService;
+    HostedServiceObservableInfo? GetService<TService>() where TService : IMoHostedService;
 
     /// <summary>
     /// Gets observable information for a specific service by type

@@ -5,6 +5,9 @@ namespace MoLibrary.Core.HostedServices.Models;
 /// </summary>
 public class HostedServiceObservableInfo
 {
+    private readonly List<HostedServiceStateHistory> _stateHistory = new();
+    private readonly object _stateLock = new();
+
     // Service Identity
 
     /// <summary>
@@ -54,8 +57,7 @@ public class HostedServiceObservableInfo
     /// <summary>
     /// Gets a value indicating whether the service is healthy (Running or Executing state)
     /// </summary>
-    public bool IsHealthy => CurrentState == HostedServiceState.Running ||
-                             CurrentState == HostedServiceState.Executing;
+    public bool IsHealthy => CurrentState is HostedServiceState.Running or HostedServiceState.Executing;
 
     /// <summary>
     /// Gets a value indicating whether the service is in a degraded state
@@ -108,10 +110,18 @@ public class HostedServiceObservableInfo
     // State History
 
     /// <summary>
-    /// Gets or sets the state history for this service
+    /// Gets the state history for this service
     /// </summary>
-    public IReadOnlyList<HostedServiceStateHistory> StateHistory { get; set; } =
-        Array.Empty<HostedServiceStateHistory>();
+    public IReadOnlyList<HostedServiceStateHistory> StateHistory
+    {
+        get
+        {
+            lock (_stateLock)
+            {
+                return _stateHistory.AsReadOnly();
+            }
+        }
+    }
 
     /// <summary>
     /// Gets the maximum number of history entries to retain
@@ -121,9 +131,9 @@ public class HostedServiceObservableInfo
     // Execution Statistics
 
     /// <summary>
-    /// Gets or sets the total number of state changes that have occurred
+    /// Gets the total number of state changes that have occurred
     /// </summary>
-    public long TotalStateChanges { get; set; }
+    public long TotalStateChanges { get; private set; }
 
     /// <summary>
     /// Gets the uptime of the service (time since started, null if not started or already stopped)
@@ -131,4 +141,34 @@ public class HostedServiceObservableInfo
     public TimeSpan? Uptime => StartedAt.HasValue && StoppedAt == null
         ? DateTime.UtcNow - StartedAt.Value
         : null;
+
+    /// <summary>
+    /// Records a state change and adds it to the history
+    /// </summary>
+    /// <param name="newState">The new state to transition to</param>
+    /// <param name="message">Descriptive message about the state change</param>
+    /// <param name="exception">Optional exception associated with this state change</param>
+    public void RecordStateChange(HostedServiceState newState, string message, Exception? exception = null)
+    {
+        lock (_stateLock)
+        {
+            var history = new HostedServiceStateHistory
+            {
+                PreviousState = CurrentState,
+                CurrentState = newState,
+                Message = message,
+                Exception = exception
+            };
+
+            _stateHistory.Add(history);
+            if (_stateHistory.Count > MaxHistorySize)
+            {
+                _stateHistory.RemoveAt(0);
+            }
+
+            CurrentState = newState;
+            StateChangedAt = DateTime.UtcNow;
+            TotalStateChanges++;
+        }
+    }
 }

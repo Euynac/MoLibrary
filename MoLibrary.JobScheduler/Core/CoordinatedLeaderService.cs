@@ -32,8 +32,7 @@ public abstract class CoordinatedLeaderService(
     /// Gets a value indicating whether the service has completed initialization.
     /// Used by health checks to monitor service status.
     /// </summary>
-    public bool IsInitialized => ObservableInfo.CurrentState == HostedServiceState.Running ||
-                                 ObservableInfo.CurrentState == HostedServiceState.Executing;
+    public bool IsInitialized => ObservableInfo.CurrentState is HostedServiceState.Running or HostedServiceState.Executing;
 
     /// <summary>
     /// Gets the initialization error message if initialization failed.

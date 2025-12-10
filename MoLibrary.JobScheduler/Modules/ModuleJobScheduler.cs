@@ -2,7 +2,6 @@ using System.Reflection;
 using Cronos;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using MoLibrary.Core.HostedServices.Extensions;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
@@ -97,14 +96,14 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
         services.AddSingleton<RecurringJobScheduler>();
         services.AddSingleton<TriggeredJobScheduler>();
 
-        services.AddMoHostedService<JobRegistrationHostedService>(provider => ActivatorUtilities.CreateInstance<JobRegistrationHostedService>(provider, _jobDefinitions));
+        services.AddHostedService<JobRegistrationHostedService>(provider => ActivatorUtilities.CreateInstance<JobRegistrationHostedService>(provider, _jobDefinitions));
 
-        services.AddMoHostedService<JobWorkerManager>(provider => ActivatorUtilities.CreateInstance<JobWorkerManager>(provider, _jobDefinitions as IReadOnlyList<JobDefinition>));
+        services.AddHostedService<JobWorkerManager>(provider => ActivatorUtilities.CreateInstance<JobWorkerManager>(provider, _jobDefinitions));
 
         if (GetOptions<ModuleRegisterCentreOption>().IsCentreServer)
         {
-            services.AddMoHostedService<JobSchedulerHostedService>();
-            services.AddMoHostedService(provider => provider.GetRequiredService<IJobConcurrencyGuard>() as JobConcurrencyGuardHostedService
+            services.AddHostedService<JobSchedulerHostedService>();
+            services.AddHostedService(provider => provider.GetRequiredService<IJobConcurrencyGuard>() as JobConcurrencyGuardHostedService
                                                   ?? throw new InvalidOperationException("JobConcurrencyGuard must be registered as IJobConcurrencyGuard"));
         }
 

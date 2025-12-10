@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using Microsoft.Extensions.Hosting;
 using MoLibrary.Core.ExceptionHandler.ExceptionPool;
 using MoLibrary.Core.HostedServices.Interfaces;
 using MoLibrary.Core.HostedServices.Models;
@@ -11,32 +10,22 @@ namespace MoLibrary.Core.HostedServices;
 /// </summary>
 public class MoHostedServiceManager : IMoHostedServiceManager
 {
-    private readonly ConcurrentDictionary<Type, HostedServiceObservableInfo> _serviceRegistry = new();
-    private readonly ConcurrentDictionary<Type, ExceptionPool> _exceptionPools = new();
+    private readonly ConcurrentDictionary<Type, IMoHostedService> _services = new();
 
-    /// <summary>
-    /// Registers a service with the manager (called by registration extensions)
-    /// </summary>
-    /// <param name="serviceType">The service type</param>
-    /// <param name="info">Observable information for the service</param>
-    /// <param name="pool">Exception pool for the service (optional)</param>
-    internal void RegisterService(Type serviceType, HostedServiceObservableInfo info, ExceptionPool? pool)
+    /// <inheritdoc />
+    public void RegisterService(IMoHostedService service)
     {
-        _serviceRegistry[serviceType] = info;
-        if (pool != null)
-        {
-            _exceptionPools[serviceType] = pool;
-        }
+        _services[service.GetType()] = service;
     }
 
     /// <inheritdoc />
     public IReadOnlyList<HostedServiceObservableInfo> GetAllServices()
     {
-        return _serviceRegistry.Values.ToList();
+        return _services.Values.Select(s => s.ObservableInfo).ToList();
     }
 
     /// <inheritdoc />
-    public HostedServiceObservableInfo? GetService<TService>() where TService : IHostedService
+    public HostedServiceObservableInfo? GetService<TService>() where TService : IMoHostedService
     {
         return GetService(typeof(TService));
     }
@@ -44,31 +33,38 @@ public class MoHostedServiceManager : IMoHostedServiceManager
     /// <inheritdoc />
     public HostedServiceObservableInfo? GetService(Type serviceType)
     {
-        return _serviceRegistry.TryGetValue(serviceType, out var info) ? info : null;
+        return _services.TryGetValue(serviceType, out var service) ? service.ObservableInfo : null;
     }
 
     /// <inheritdoc />
     public HostedServiceObservableInfo? GetServiceByName(string serviceName)
     {
-        return _serviceRegistry.Values.FirstOrDefault(s =>
-            s.ServiceName.Equals(serviceName, StringComparison.OrdinalIgnoreCase));
+        return _services.Values
+            .Select(s => s.ObservableInfo)
+            .FirstOrDefault(info => info.ServiceName.Equals(serviceName, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <inheritdoc />
     public IReadOnlyList<HostedServiceObservableInfo> GetServicesByState(HostedServiceState state)
     {
-        return _serviceRegistry.Values.Where(s => s.CurrentState == state).ToList();
+        return _services.Values
+            .Select(s => s.ObservableInfo)
+            .Where(info => info.CurrentState == state)
+            .ToList();
     }
 
     /// <inheritdoc />
     public IReadOnlyList<HostedServiceObservableInfo> GetUnhealthyServices()
     {
-        return _serviceRegistry.Values.Where(s => !s.IsHealthy).ToList();
+        return _services.Values
+            .Select(s => s.ObservableInfo)
+            .Where(info => !info.IsHealthy)
+            .ToList();
     }
 
     /// <inheritdoc />
     public ExceptionPool? GetServiceExceptionPool(Type serviceType)
     {
-        return _exceptionPools.TryGetValue(serviceType, out var pool) ? pool : null;
+        return _services.TryGetValue(serviceType, out var service) ? service.ExceptionPool : null;
     }
 }
