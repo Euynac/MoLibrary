@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using MoLibrary.Core.Extensions;
-using MoLibrary.Core.ObservableInstance;
+using MoLibrary.Core.Features.ObservableInstance;
 using MoLibrary.DataChannel.CoreCommunication;
 using MoLibrary.DataChannel.Interfaces;
 using MoLibrary.DataChannel.Modules;

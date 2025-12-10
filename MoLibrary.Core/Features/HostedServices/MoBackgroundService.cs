@@ -2,12 +2,12 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using MoLibrary.Core.HostedServices.Interfaces;
-using MoLibrary.Core.HostedServices.Models;
+using MoLibrary.Core.Features.HostedServices.Interfaces;
+using MoLibrary.Core.Features.HostedServices.Models;
+using MoLibrary.Core.Features.ObservableInstance;
 using MoLibrary.Core.Modules;
-using MoLibrary.Core.ObservableInstance;
 
-namespace MoLibrary.Core.HostedServices;
+namespace MoLibrary.Core.Features.HostedServices;
 
 /// <summary>
 /// Base class for observable BackgroundService implementations with built-in state management,

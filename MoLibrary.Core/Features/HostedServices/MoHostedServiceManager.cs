@@ -1,8 +1,8 @@
 using System.Collections.Concurrent;
-using MoLibrary.Core.HostedServices.Interfaces;
-using MoLibrary.Core.HostedServices.Models;
+using MoLibrary.Core.Features.HostedServices.Interfaces;
+using MoLibrary.Core.Features.HostedServices.Models;
 
-namespace MoLibrary.Core.HostedServices;
+namespace MoLibrary.Core.Features.HostedServices;
 
 /// <summary>
 /// Implementation of IMoHostedServiceManager that tracks all registered MoHostedServices

@@ -1,6 +1,6 @@
-using MoLibrary.Core.HostedServices.Models;
+using MoLibrary.Core.Features.HostedServices.Models;
 
-namespace MoLibrary.Core.HostedServices.Interfaces;
+namespace MoLibrary.Core.Features.HostedServices.Interfaces;
 
 /// <summary>
 /// Interface for observable hosted services with state management and exception tracking.

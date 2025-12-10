@@ -1,4 +1,4 @@
-namespace MoLibrary.Core.HostedServices.Models;
+namespace MoLibrary.Core.Features.HostedServices.Models;
 
 /// <summary>
 /// Represents a single state transition entry in the service history

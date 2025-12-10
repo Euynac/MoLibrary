@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using Microsoft.Extensions.Options;
 using MoLibrary.Core.Modules;
 
-namespace MoLibrary.Core.ObservableInstance;
+namespace MoLibrary.Core.Features.ObservableInstance;
 
 /// <summary>
 /// Default implementation of IObservableInstanceManager.

@@ -1,6 +1,6 @@
-using MoLibrary.Core.ObservableInstance;
+using MoLibrary.Core.Features.ObservableInstance;
 
-namespace MoLibrary.Core.HostedServices.Models;
+namespace MoLibrary.Core.Features.HostedServices.Models;
 
 /// <summary>
 /// Provides observable information about a hosted service including state, health, and history.

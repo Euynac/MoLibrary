@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using MoLibrary.Core.HostedServices.Interfaces;
-using MoLibrary.Core.HostedServices.Models;
+using MoLibrary.Core.Features.HostedServices.Interfaces;
 using MoLibrary.JobScheduler.ControlPlane;
 using MoLibrary.JobScheduler.WorkerPlane;
 

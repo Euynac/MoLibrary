@@ -1,4 +1,4 @@
-namespace MoLibrary.Core.ObservableInstance;
+namespace MoLibrary.Core.Features.ObservableInstance;
 
 /// <summary>
 /// Represents a single state change entry in the observable history.

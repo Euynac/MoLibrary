@@ -1,4 +1,4 @@
-namespace MoLibrary.Core.ObservableInstance;
+namespace MoLibrary.Core.Features.ObservableInstance;
 
 /// <summary>
 /// Configuration options for ObservableAgent instances

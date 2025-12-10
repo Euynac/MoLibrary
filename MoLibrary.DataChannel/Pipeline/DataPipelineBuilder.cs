@@ -1,5 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
-using MoLibrary.Core.ObservableInstance;
+using MoLibrary.Core.Features.ObservableInstance;
 using MoLibrary.DataChannel.CoreCommunication;
 using MoLibrary.DataChannel.CoreCommunicationProvider.Default;
 

@@ -1,4 +1,4 @@
-namespace MoLibrary.Core.ObservableInstance;
+namespace MoLibrary.Core.Features.ObservableInstance;
 
 /// <summary>
 /// Provides centralized management and query capabilities for all observable instances.

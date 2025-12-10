@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using MoLibrary.Core.HostedServices;
-using MoLibrary.Core.HostedServices.Interfaces;
+using MoLibrary.Core.Features.HostedServices;
+using MoLibrary.Core.Features.HostedServices.Interfaces;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Models;
 

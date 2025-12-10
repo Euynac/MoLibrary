@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
+using MoLibrary.Core.Features.ObservableInstance;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Models;
-using MoLibrary.Core.ObservableInstance;
 
 namespace MoLibrary.Core.Modules;
 

@@ -1,4 +1,4 @@
-namespace MoLibrary.Core.ObservableInstance;
+namespace MoLibrary.Core.Features.ObservableInstance;
 
 /// <summary>
 /// Provides observable tracking for any instance with state changes, exceptions, and history.

@@ -1,4 +1,4 @@
-namespace MoLibrary.Core.ObservableInstance;
+namespace MoLibrary.Core.Features.ObservableInstance;
 
 /// <summary>
 /// Interface for instances that can be observed with state and exception tracking
