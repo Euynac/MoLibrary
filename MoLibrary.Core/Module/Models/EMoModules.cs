@@ -113,5 +113,9 @@ public enum EMoModules
     /// <summary>
     /// 异常池模块
     /// </summary>
-    ExceptionPool
+    ExceptionPool,
+    /// <summary>
+    /// HostedService 可观测性模块
+    /// </summary>
+    HostedService
 }

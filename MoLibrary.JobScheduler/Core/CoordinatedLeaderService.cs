@@ -1,7 +1,10 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MoLibrary.Core.ExceptionHandler.ExceptionPool;
 using MoLibrary.Core.Extensions;
+using MoLibrary.Core.HostedServices;
+using MoLibrary.Core.HostedServices.Models;
 using MoLibrary.JobScheduler.Modules;
 using MoLibrary.RegisterCentre.Interfaces;
 using MoLibrary.RegisterCentre.Models;
@@ -17,62 +20,64 @@ public abstract class CoordinatedLeaderService(
     ILeaderService leaderService,
     IOptions<ModuleJobSchedulerOption> options,
     ILogger logger,
-    IServiceRegistrationCoordinator coordinator) : BackgroundService
+    IServiceRegistrationCoordinator coordinator,
+    IExceptionPoolManager? exceptionPoolManager = null) : MoBackgroundService(exceptionPoolManager, logger)
 {
-
-
     /// <summary>
     /// Module configuration options
     /// </summary>
     protected readonly ModuleJobSchedulerOption Options = options.Value;
 
-
     /// <summary>
     /// Gets a value indicating whether the service has completed initialization.
     /// Used by health checks to monitor service status.
     /// </summary>
-    public bool IsInitialized { get; private set; }
+    public bool IsInitialized => ObservableInfo.CurrentState == HostedServiceState.Running ||
+                                 ObservableInfo.CurrentState == HostedServiceState.Executing;
 
     /// <summary>
     /// Gets the initialization error message if initialization failed.
     /// Null if initialization succeeded or has not completed yet.
     /// </summary>
-    public string? InitializationError { get; private set; }
-
-    /// <summary>
-    /// Gets the name of the service for logging purposes.
-    /// Should return the service class name (e.g., "JobSchedulerHostedService").
-    /// </summary>
-    protected abstract string ServiceName { get; }
+    public string? InitializationError =>
+        ObservableInfo.StateHistory
+            .Where(h => h.Exception != null)
+            .OrderByDescending(h => h.Timestamp)
+            .FirstOrDefault()
+            ?.Exception?.GetMessageRecursively();
     /// <summary>
     /// Executes the background service lifecycle using the Template Method pattern.
     /// This method is sealed to enforce consistent initialization sequence.
     /// </summary>
     /// <param name="stoppingToken">Triggered when the application host is performing a graceful shutdown</param>
-    protected sealed override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected sealed override async Task ExecuteBackgroundAsync(CancellationToken stoppingToken)
     {
         try
         {
             // Step 1: Optional pre-initialization hook
+            RecordStateChange(HostedServiceState.Starting, "Pre-initialization starting");
             await OnBeforeInitialization(stoppingToken);
 
             // Step 2: Wait for RegisterCentre registration (if coordinator available)
+            RecordStateChange(HostedServiceState.Starting, "Waiting for registration");
             await WaitForRegistrationAsync(stoppingToken);
 
             // Step 3: Verify this instance is the leader
+            RecordStateChange(HostedServiceState.Starting, "Checking leader status");
             if (!await EnsureIsLeaderAsync(stoppingToken))
             {
-                // Follower instances mark as initialized without doing work
-                IsInitialized = true;
+                // Follower instances mark as running without doing work
+                RecordStateChange(HostedServiceState.Running, "Follower instance - no work to do");
                 return;
             }
 
             // Step 4: Perform service-specific initialization (only on leader)
+            RecordStateChange(HostedServiceState.Executing, "Initializing as leader");
             await InitializeServiceAsync(stoppingToken);
 
             // Step 5: Mark as successfully initialized
-            IsInitialized = true;
-            logger.LogInformation("{ServiceName} initialized successfully", ServiceName);
+            RecordStateChange(HostedServiceState.Running, "Leader initialized successfully");
+            Logger.LogInformation("{ServiceName} initialized successfully", ServiceName);
 
             // Step 6: Optional post-initialization hook
             await OnAfterInitialization(stoppingToken);
@@ -83,13 +88,13 @@ public abstract class CoordinatedLeaderService(
         catch (OperationCanceledException)
         {
             // Normal shutdown scenario - log at debug level
-            logger.LogDebug("{ServiceName} background service is shutting down", ServiceName);
+            Logger.LogDebug("{ServiceName} background service is shutting down", ServiceName);
         }
         catch (Exception ex)
         {
             // Initialization failure - capture error and rethrow
-            InitializationError = ex.GetMessageRecursively();
-            logger.LogError(ex, "{ServiceName} initialization failed", ServiceName);
+            RecordStateChange(HostedServiceState.Faulted, "Initialization failed", ex);
+            Logger.LogError(ex, "{ServiceName} initialization failed", ServiceName);
             throw; // Rethrow to let the host handle the failure
         }
     }
@@ -102,7 +107,7 @@ public abstract class CoordinatedLeaderService(
     {
         if (!Options.SkipRegistrationWait)
         {
-            logger.LogInformation("{ServiceName} 正在等待注册中心注册完成...", ServiceName);
+            Logger.LogInformation("{ServiceName} 正在等待注册中心注册完成...", ServiceName);
 
             var registered = await coordinator.WaitForRegistrationAsync(
                 Options.RegistrationWaitTimeout,
@@ -110,11 +115,11 @@ public abstract class CoordinatedLeaderService(
 
             if (registered)
             {
-                logger.LogInformation("{ServiceName} 检测到注册完成，开始启动服务", ServiceName);
+                Logger.LogInformation("{ServiceName} 检测到注册完成，开始启动服务", ServiceName);
             }
             else
             {
-                logger.LogWarning(
+                Logger.LogWarning(
                     "{ServiceName} 等待注册超时({Timeout})，继续启动服务（降级模式）",
                     ServiceName,
                     Options.RegistrationWaitTimeout);
@@ -133,14 +138,15 @@ public abstract class CoordinatedLeaderService(
 
         if (statusResult.IsFailed(out var error, out var data))
         {
-            logger.LogError("Error getting leader status: {Error}", error);
-            InitializationError = $"Failed to get leader status: {error.Message}";
+            Logger.LogError("Error getting leader status: {Error}", error);
+            var exception = new InvalidOperationException($"Failed to get leader status: {error.Message}");
+            RecordStateChange(HostedServiceState.Faulted, "Failed to get leader status", exception);
             return false;
         }
 
         if (data.Status != LeaderStatus.Leader)
         {
-            logger.LogInformation(
+            Logger.LogInformation(
                 "Not leader, current Leader status is {Status}, skip {ServiceName} initialization",
                 data.Status,
                 ServiceName);

@@ -2,9 +2,11 @@ using System.Reflection;
 using Cronos;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using MoLibrary.Core.HostedServices.Extensions;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
+using MoLibrary.Core.Modules;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Api;
 using MoLibrary.JobScheduler.Attributes;
@@ -95,14 +97,14 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
         services.AddSingleton<RecurringJobScheduler>();
         services.AddSingleton<TriggeredJobScheduler>();
 
-        services.AddHostedService<JobRegistrationHostedService>(provider => ActivatorUtilities.CreateInstance<JobRegistrationHostedService>(provider, _jobDefinitions));
+        services.AddMoHostedService<JobRegistrationHostedService>(provider => ActivatorUtilities.CreateInstance<JobRegistrationHostedService>(provider, _jobDefinitions));
 
-        services.AddHostedService<JobWorkerManager>(provider => ActivatorUtilities.CreateInstance<JobWorkerManager>(provider, _jobDefinitions as IReadOnlyList<JobDefinition>));
+        services.AddMoHostedService<JobWorkerManager>(provider => ActivatorUtilities.CreateInstance<JobWorkerManager>(provider, _jobDefinitions as IReadOnlyList<JobDefinition>));
 
         if (GetOptions<ModuleRegisterCentreOption>().IsCentreServer)
         {
-            services.AddHostedService<JobSchedulerHostedService>();
-            services.AddHostedService(provider => provider.GetRequiredService<IJobConcurrencyGuard>() as JobConcurrencyGuardHostedService
+            services.AddMoHostedService<JobSchedulerHostedService>();
+            services.AddMoHostedService(provider => provider.GetRequiredService<IJobConcurrencyGuard>() as JobConcurrencyGuardHostedService
                                                   ?? throw new InvalidOperationException("JobConcurrencyGuard must be registered as IJobConcurrencyGuard"));
         }
 
@@ -167,7 +169,7 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
 
     public override void ClaimDependencies()
     {
-        
-       
+        // Depend on HostedService module for observable hosted services
+        DependsOnModule<ModuleHostedServiceGuide>().Register();
     }
 }
