@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using MoLibrary.Core.ExceptionHandler.ExceptionPool;
 using MoLibrary.Core.HostedServices.Interfaces;
 using MoLibrary.Core.HostedServices.Models;
 
@@ -60,11 +59,5 @@ public class MoHostedServiceManager : IMoHostedServiceManager
             .Select(s => s.ObservableInfo)
             .Where(info => !info.IsHealthy)
             .ToList();
-    }
-
-    /// <inheritdoc />
-    public ExceptionPool? GetServiceExceptionPool(Type serviceType)
-    {
-        return _services.TryGetValue(serviceType, out var service) ? service.ExceptionPool : null;
     }
 }

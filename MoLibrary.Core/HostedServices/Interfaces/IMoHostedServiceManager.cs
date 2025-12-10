@@ -1,4 +1,3 @@
-using MoLibrary.Core.ExceptionHandler.ExceptionPool;
 using MoLibrary.Core.HostedServices.Models;
 
 namespace MoLibrary.Core.HostedServices.Interfaces;
@@ -53,11 +52,4 @@ public interface IMoHostedServiceManager
     /// </summary>
     /// <returns>A readonly list of unhealthy services</returns>
     IReadOnlyList<HostedServiceObservableInfo> GetUnhealthyServices();
-
-    /// <summary>
-    /// Gets the exception pool for a specific service (if the service has exception pool enabled)
-    /// </summary>
-    /// <param name="serviceType">The hosted service type</param>
-    /// <returns>The exception pool for the service, or null if not found or exception pool is disabled</returns>
-    ExceptionPool? GetServiceExceptionPool(Type serviceType);
 }

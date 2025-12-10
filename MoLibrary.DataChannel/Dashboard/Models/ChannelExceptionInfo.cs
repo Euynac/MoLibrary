@@ -18,12 +18,12 @@ public class ChannelExceptionInfo
     /// <summary>
     /// 当前异常数量
     /// </summary>
-    public int CurrentExceptions { get; set; }
-    
+    public long CurrentExceptions { get; set; }
+
     /// <summary>
     /// 总异常数量
     /// </summary>
-    public int TotalExceptions { get; set; }
+    public long TotalExceptions { get; set; }
     
     /// <summary>
     /// 异常池最大大小

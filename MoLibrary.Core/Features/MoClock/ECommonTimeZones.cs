@@ -1,5 +1,3 @@
-using System;
-
 namespace MoLibrary.Core.Features.MoClock;
 
 /// <summary>

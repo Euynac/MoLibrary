@@ -29,7 +29,7 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
         services.AddSingleton<IDataChannelManager, DataChannelManager>();
         services.AddScoped<DataChannelService>();
         // Add the hosted service for channel initialization
-        ServiceCollectionHostedServiceExtensions.AddHostedService<DataChannelInitializerService>(services);
+        services.AddHostedService<DataChannelInitializerService>();
     }
 
     public override void ConfigureApplicationBuilder(IApplicationBuilder app)
@@ -132,7 +132,7 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
 
     public override void ClaimDependencies()
     {
-        DependsOnModule<ModuleExceptionPoolGuide>().Register();
+        DependsOnModule<ModuleObservableInstanceGuide>().Register();
         DependsOnModule<ModuleDaprClientGuide>().Register();
     }
 }

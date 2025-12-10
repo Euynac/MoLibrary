@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MoLibrary.Core.ObservableInstance;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Core;
@@ -27,7 +28,8 @@ public class JobConcurrencyGuardHostedService(
     ILeaderService leaderService,
     IOptions<ModuleJobSchedulerOption> options,
     IServiceRegistrationCoordinator coordinator,
-    IRegisterCentreServer? registerCentreServer = null) : CoordinatedLeaderService(leaderService, options, logger, coordinator), IJobConcurrencyGuard
+    IObservableInstanceManager observableManager,
+    IRegisterCentreServer? registerCentreServer = null) : CoordinatedLeaderService(leaderService, options, logger, coordinator, observableManager), IJobConcurrencyGuard
 {
     private readonly ConcurrentDictionary<string, JobExecutionStatistic> _statistics = new();
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _jobLocks = new();

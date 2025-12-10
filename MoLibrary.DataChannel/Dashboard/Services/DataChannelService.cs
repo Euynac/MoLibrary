@@ -36,8 +36,8 @@ public class DataChannelService(IDataChannelManager manager, ILogger<DataChannel
                 IsInitialized = channel.Pipe.IsInitialized,
                 IsInitializing = channel.Pipe.IsInitializing,
                 HasExceptions = channel.Pipe.HasExceptions,
-                ExceptionCount = channel.Pipe.ExceptionPool.Count,
-                TotalExceptionCount = channel.Pipe.ExceptionPool.TotalExceptionCount
+                ExceptionCount = channel.Pipe.ObservableAgent.ExceptionCount,
+                TotalExceptionCount = channel.Pipe.ObservableAgent.TotalExceptions
             }).ToList();
 
             return await Task.FromResult(Res.Ok(channels));
@@ -91,25 +91,25 @@ public class DataChannelService(IDataChannelManager manager, ILogger<DataChannel
                 return Res.Fail("未找到指定的DataChannel");
             }
 
-            var exceptions = channel.Pipe.ExceptionPool.GetRecentExceptions(count);
-            
+            var exceptions = channel.Pipe.GetRecentExceptions(count);
+
             var result = new ChannelExceptionInfo
             {
                 ChannelId = id,
-                PipelineId = channel.Pipe.ExceptionPool.PoolId,
-                CurrentExceptions = channel.Pipe.ExceptionPool.Count,
-                TotalExceptions = channel.Pipe.ExceptionPool.TotalExceptionCount,
-                MaxPoolSize = channel.Pipe.ExceptionPool.MaxSize,
+                PipelineId = channel.Pipe.ObservableAgent.InstanceId,
+                CurrentExceptions = channel.Pipe.ObservableAgent.ExceptionCount,
+                TotalExceptions = channel.Pipe.ObservableAgent.TotalStateChanges,
+                MaxPoolSize = channel.Pipe.ObservableAgent.MaxHistorySize,
                 HasExceptions = channel.Pipe.HasExceptions,
                 Exceptions = exceptions.Select(ex => new ExceptionDetailInfo
                 {
                     Timestamp = ex.Timestamp,
-                    SourceType = ex.SourceType,
-                    SourceDescription = ex.SourceDescription,
-                    Description = ex.Description ?? string.Empty,
-                    ExceptionType = ex.Exception.GetType().Name,
-                    Message = ex.Exception.GetMessageRecursively(),
-                    StackTrace = ex.Exception.ToString()
+                    SourceType = "Unknown",
+                    SourceDescription = ex.Message,
+                    Description = ex.Message,
+                    ExceptionType = ex.Exception?.GetType().Name ?? "Unknown",
+                    Message = ex.Exception?.GetMessageRecursively() ?? ex.Message,
+                    StackTrace = ex.Exception?.ToString() ?? string.Empty
                 }).ToList()
             };
 
@@ -136,17 +136,17 @@ public class DataChannelService(IDataChannelManager manager, ILogger<DataChannel
             {
                 TotalChannels = channels.Count,
                 ChannelsWithExceptions = channels.Count(c => c.Pipe.HasExceptions),
-                TotalCurrentExceptions = channels.Sum(c => c.Pipe.ExceptionPool.Count),
-                TotalHistoricalExceptions = channels.Sum(c => c.Pipe.ExceptionPool.TotalExceptionCount),
+                TotalCurrentExceptions = channels.Sum(c => c.Pipe.ObservableAgent.ExceptionCount),
+                TotalHistoricalExceptions = channels.Sum(c => c.Pipe.ObservableAgent.TotalStateChanges),
                 ChannelSummaries = channels.Select(channel => new ChannelSummaryInfo
                 {
                     ChannelId = channel.Id,
-                    PipelineId = channel.Pipe.ExceptionPool.PoolId,
-                    CurrentExceptionCount = channel.Pipe.ExceptionPool.Count,
-                    TotalExceptionCount = channel.Pipe.ExceptionPool.TotalExceptionCount,
-                    MaxPoolSize = channel.Pipe.ExceptionPool.MaxSize,
+                    PipelineId = channel.Pipe.ObservableAgent.InstanceId,
+                    CurrentExceptionCount = channel.Pipe.ObservableAgent.ExceptionCount,
+                    TotalExceptionCount = channel.Pipe.ObservableAgent.TotalStateChanges,
+                    MaxPoolSize = channel.Pipe.ObservableAgent.MaxHistorySize,
                     HasExceptions = channel.Pipe.HasExceptions,
-                    LatestException = channel.Pipe.ExceptionPool.GetRecentExceptions(1).FirstOrDefault()?.Timestamp
+                    LatestException = channel.Pipe.GetRecentExceptions(1).FirstOrDefault()?.Timestamp
                 }).ToList()
             };
 
@@ -174,7 +174,7 @@ public class DataChannelService(IDataChannelManager manager, ILogger<DataChannel
                 return Res.Fail("未找到指定的DataChannel");
             }
 
-            channel.Pipe.ExceptionPool.Clear();
+            channel.Pipe.ObservableAgent.Clear();
             return await Task.FromResult(Res.Ok("异常信息已清空"));
         }
         catch (Exception ex)

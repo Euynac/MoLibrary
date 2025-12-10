@@ -1,18 +1,19 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using MoLibrary.Core.ExceptionHandler.ExceptionPool;
 using MoLibrary.Core.HostedServices.Interfaces;
 using MoLibrary.Core.HostedServices.Models;
+using MoLibrary.Core.ObservableInstance;
 
 namespace MoLibrary.Core.HostedServices;
 
 /// <summary>
 /// Base class for observable BackgroundService implementations with built-in state management,
-/// exception tracking, and heartbeat monitoring
+/// exception tracking, and heartbeat monitoring.
+/// Now uses ObservableAgent for unified tracking.
 /// </summary>
 public abstract class MoBackgroundService(
-    IExceptionPoolManager? exceptionPoolManager = null,
+    IObservableInstanceManager observableManager,
     ILogger? logger = null) : BackgroundService, IMoHostedService
 {
     protected readonly ILogger Logger = logger ?? NullLogger.Instance;
@@ -29,11 +30,6 @@ public abstract class MoBackgroundService(
     public abstract string ServiceName { get; }
 
     /// <summary>
-    /// Gets a value indicating whether exception pool is enabled for this service
-    /// </summary>
-    public virtual bool EnableExceptionPool => true;
-
-    /// <summary>
     /// Gets the maximum number of state history entries to retain
     /// </summary>
     public virtual int MaxHistorySize => 100;
@@ -46,38 +42,23 @@ public abstract class MoBackgroundService(
     /// <summary>
     /// Gets the observable information for this service
     /// </summary>
-    public HostedServiceObservableInfo ObservableInfo { get; private set; } = null!;
-
-    /// <summary>
-    /// Gets the exception pool for this service (null if disabled)
-    /// </summary>
-    public ExceptionPool? ExceptionPool { get; private set; }
+    public HostedServiceObservableInfo ObservableInfo { get; private set; } = null!; 
 
     /// <summary>
     /// Initializes observable info (called by manager during registration)
     /// </summary>
     internal void InitializeObservableInfo()
     {
-        ObservableInfo = new HostedServiceObservableInfo
+        var agentId = $"HostedService_{ServiceName}_{Guid.NewGuid():N}";
+        ObservableInfo = new HostedServiceObservableInfo(observableManager.Create(agentId, opt =>
         {
-            ServiceName = ServiceName,
-            ServiceType = GetType(),
-            RegisteredAt = DateTime.UtcNow,
-            CurrentState = HostedServiceState.NotStarted,
-            MaxHistorySize = MaxHistorySize,
+            opt.MaxHistorySize = MaxHistorySize;
+            opt.InstanceName = ServiceName;
+            opt.InstanceType = GetType();
+        }))
+        {
             HeartbeatInterval = HeartbeatInterval
         };
-
-        if (EnableExceptionPool && exceptionPoolManager != null)
-        {
-            var poolId = $"HostedService_{ServiceName}_{Guid.NewGuid():N}";
-            ExceptionPool = exceptionPoolManager.Create(poolId, opt =>
-            {
-                opt.MaxSize = MaxHistorySize;
-                opt.EnableEventTrigger = true;
-            });
-            ObservableInfo.ExceptionPoolId = poolId;
-        }
     }
 
     /// <summary>
@@ -92,12 +73,6 @@ public abstract class MoBackgroundService(
         Exception? exception = null)
     {
         ObservableInfo.RecordStateChange(newState, message, exception);
-
-        // Add to exception pool if error and pool is enabled
-        if (exception != null && ExceptionPool != null)
-        {
-            ExceptionPool.AddException(exception, this, message);
-        }
     }
 
     /// <summary>

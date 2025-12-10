@@ -22,8 +22,8 @@ public class ModuleHostedService(ModuleHostedServiceOption option)
 
     public override void ClaimDependencies()
     {
-        // Depend on ExceptionPool module for exception tracking
-        DependsOnModule<ModuleExceptionPoolGuide>().Register();
+        // Depend on ObservableInstance module for state and exception tracking
+        DependsOnModule<ModuleObservableInstanceGuide>().Register();
     }
 
     public override void ConfigureServices(IServiceCollection services)
@@ -40,21 +40,20 @@ public class ModuleHostedService(ModuleHostedServiceOption option)
 
         foreach (var service in hostedServices)
         {
-            if (service is IMoHostedService moHostedService)
+            if (service is not IMoHostedService moHostedService) continue;
+            switch (service)
             {
                 // Initialize observable info
-                if (service is MoHostedService moHosted)
-                {
+                case MoHostedService moHosted:
                     moHosted.InitializeObservableInfo();
-                }
-                else if (service is MoBackgroundService moBackground)
-                {
+                    break;
+                case MoBackgroundService moBackground:
                     moBackground.InitializeObservableInfo();
-                }
-
-                // Register with manager
-                manager.RegisterService(moHostedService);
+                    break;
             }
+
+            // Register with manager
+            manager.RegisterService(moHostedService);
         }
     }
 }

@@ -1,8 +1,7 @@
 using Microsoft.Extensions.Logging;
-using MoLibrary.Core.ExceptionHandler.ExceptionPool;
 using MoLibrary.Core.Extensions;
+using MoLibrary.Core.ObservableInstance;
 using MoLibrary.DataChannel.CoreCommunication;
-using MoLibrary.DataChannel.Exceptions;
 using MoLibrary.DataChannel.Interfaces;
 using MoLibrary.DataChannel.Modules;
 using MoLibrary.Tool.Extensions;
@@ -15,7 +14,7 @@ namespace MoLibrary.DataChannel.Pipeline;
 /// 作为数据通道的核心组件，负责数据的传输、转换和处理
 /// 管理数据端点和中间件的连接和协作
 /// </summary>
-public class DataPipeline
+public class DataPipeline : IObservableInstance
 {
     /// <summary>
     /// 内部端点
@@ -57,14 +56,14 @@ public class DataPipeline
     public bool IsNotAvailable { get; set; }
 
     /// <summary>
-    /// 异常池，用于收集和管理管道运行中的异常
+    /// 可观测代理，用于收集和管理管道运行中的状态和异常
     /// </summary>
-    public ExceptionPool<PipelineException> ExceptionPool { get; private set; }
+    public ObservableAgent ObservableAgent { get; set; } = null!;
 
     /// <summary>
     /// 是否存在异常
     /// </summary>
-    public bool HasExceptions => ExceptionPool?.HasExceptions ?? false;
+    public bool HasExceptions => ObservableAgent?.HasExceptions ?? false;
 
     /// <summary>
     /// 初始化数据管道的新实例
@@ -72,13 +71,13 @@ public class DataPipeline
     /// <param name="innerEndpoint">内部端点</param>
     /// <param name="outerEndpoint">外部端点</param>
     /// <param name="id">管道标识符</param>
-    /// <param name="poolManager">异常池管理器</param>
+    /// <param name="observableManager">可观测实例管理器</param>
     /// <param name="groupId">可选的管道组标识符</param>
     internal DataPipeline(
         IPipeEndpoint innerEndpoint,
         IPipeEndpoint outerEndpoint,
         string id,
-        IExceptionPoolManager poolManager,
+        IObservableInstanceManager observableManager,
         string? groupId = null)
     {
         InnerEndpoint = innerEndpoint;
@@ -86,30 +85,14 @@ public class DataPipeline
         Id = id;
         GroupId = groupId;
 
-        // 使用管理器创建异常池
-        ExceptionPool = poolManager.Create<PipelineException>(id, opt =>
+        // 使用管理器创建可观测代理
+        ObservableAgent = observableManager.Create(id, opt =>
         {
-            opt.MaxSize = DataChannelCentral.Setting.RecentExceptionToKeep;
+            opt.MaxHistorySize = DataChannelCentral.Setting.RecentExceptionToKeep;
+            opt.InstanceName = id;
+            opt.InstanceType = typeof(DataPipeline);
+            opt.GroupId = groupId;
         });
-
-        // 订阅异常池的事件
-        ExceptionPool.ExceptionCollected += OnExceptionCollected;
-    }
-
-    /// <summary>
-    /// 异常收集事件处理器
-    /// </summary>
-    /// <param name="sender">事件发送者</param>
-    /// <param name="e">事件参数</param>
-    private void OnExceptionCollected(object? sender, ExceptionCollectedEventArgs<PipelineException> e)
-    {
-        // 记录异常到日志
-        DataChannelCentral.Logger.LogError(
-            e.Exception,
-            "DataPipeline:{PipelineId} collected exception from {SourceType}: {Description}",
-            e.PoolId,
-            e.PooledException.SourceType,
-            e.Description ?? e.Exception.Message);
     }
 
     /// <summary>
@@ -187,14 +170,51 @@ public class DataPipeline
     }
 
     /// <summary>
-    /// 收集异常信息到异常池
+    /// 收集异常信息到可观测代理
     /// </summary>
     /// <param name="exception">发生的异常</param>
     /// <param name="source">异常来源对象</param>
     /// <param name="description">异常描述信息</param>
     public void CollectException(Exception exception, object source, string? description = null)
     {
-        ExceptionPool.AddException(exception, source, description);
+        var message = description ?? exception.Message;
+        ObservableAgent.RecordStateChange(PipelineState.Error, message, exception);
+    }
+
+    /// <summary>
+    /// 记录管道状态变化
+    /// </summary>
+    /// <param name="state">新状态</param>
+    /// <param name="message">状态描述</param>
+    public void RecordState(PipelineState state, string message)
+    {
+        ObservableAgent.RecordStateChange(state, message);
+    }
+
+    /// <summary>
+    /// 记录异常并切换到错误状态
+    /// </summary>
+    /// <param name="exception">异常对象</param>
+    /// <param name="message">异常描述</param>
+    public void RecordException(Exception exception, string message)
+    {
+        ObservableAgent.RecordStateChange(PipelineState.Error, message, exception);
+    }
+
+    /// <summary>
+    /// 获取所有异常记录（向后兼容）
+    /// </summary>
+    public IReadOnlyList<ObservableStateHistory> GetExceptions()
+    {
+        return ObservableAgent.GetExceptions();
+    }
+
+    /// <summary>
+    /// 获取最近的异常记录（向后兼容）
+    /// </summary>
+    public IReadOnlyList<ObservableStateHistory> GetRecentExceptions(int count)
+    {
+        return ObservableAgent.GetRecentExceptions(count);
     }
 
     /// <summary>
@@ -286,7 +306,7 @@ public class DataPipeline
     internal async Task DisposeAsync()
     {
         await GetEndpoints().OfType<ICommunicationCore>().DoAsync(async p => await p.DisposeAsync());
-        ExceptionPool?.Dispose();
+        ObservableAgent?.Dispose();
         IsInitialized = false;
     }
 }

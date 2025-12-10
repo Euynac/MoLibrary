@@ -19,7 +19,7 @@ public class ExceptionSummaryInfo
     /// 当前总异常数量
     /// </summary>
     public int TotalCurrentExceptions { get; set; }
-    
+
     /// <summary>
     /// 历史总异常数量
     /// </summary>
@@ -49,12 +49,12 @@ public class ChannelSummaryInfo
     /// <summary>
     /// 当前异常数量
     /// </summary>
-    public int CurrentExceptionCount { get; set; }
-    
+    public long CurrentExceptionCount { get; set; }
+
     /// <summary>
     /// 总异常数量
     /// </summary>
-    public int TotalExceptionCount { get; set; }
+    public long TotalExceptionCount { get; set; }
     
     /// <summary>
     /// 异常池最大大小

@@ -1,46 +1,58 @@
+using MoLibrary.Core.ObservableInstance;
+
 namespace MoLibrary.Core.HostedServices.Models;
 
 /// <summary>
-/// Provides observable information about a hosted service including state, health, and history
+/// Provides observable information about a hosted service including state, health, and history.
+/// Now uses ObservableAgent for core tracking functionality.
 /// </summary>
 public class HostedServiceObservableInfo
 {
-    private readonly List<HostedServiceStateHistory> _stateHistory = new();
-    private readonly object _stateLock = new();
+    private readonly ObservableAgent _agent;
 
-    // Service Identity
+    /// <summary>
+    /// Initializes a new instance of HostedServiceObservableInfo with an ObservableAgent
+    /// </summary>
+    /// <param name="agent">The observable agent that tracks state and history</param>
+    public HostedServiceObservableInfo(ObservableAgent agent)
+    {
+        _agent = agent ?? throw new ArgumentNullException(nameof(agent));
+    }
+
+    // Service Identity (delegates to agent)
 
     /// <summary>
     /// Gets the name of the service
     /// </summary>
-    public string ServiceName { get; init; } = string.Empty;
+    public string ServiceName => _agent.InstanceName;
 
     /// <summary>
     /// Gets the type of the service
     /// </summary>
-    public Type ServiceType { get; init; } = null!;
+    public Type ServiceType => _agent.InstanceType ?? typeof(object);
 
     /// <summary>
     /// Gets the service key for keyed service instances (optional)
     /// </summary>
-    public string? ServiceKey { get; init; }
+    public string? ServiceKey => _agent.InstanceKey;
 
-    // Current State
-
-    /// <summary>
-    /// Gets or sets the current state of the service
-    /// </summary>
-    public HostedServiceState CurrentState { get; set; }
+    // Current State (delegates to agent with typed state)
 
     /// <summary>
-    /// Gets or sets the timestamp when the current state was entered
+    /// Gets the current state of the service
     /// </summary>
-    public DateTime StateChangedAt { get; set; }
+    public HostedServiceState CurrentState =>
+        _agent.CurrentState is HostedServiceState state ? state : HostedServiceState.NotStarted;
+
+    /// <summary>
+    /// Gets the timestamp when the current state was entered
+    /// </summary>
+    public DateTime StateChangedAt => _agent.StateChangedAt;
 
     /// <summary>
     /// Gets the timestamp when the service was registered
     /// </summary>
-    public DateTime RegisteredAt { get; init; }
+    public DateTime RegisteredAt => _agent.RegisteredAt;
 
     /// <summary>
     /// Gets or sets the timestamp when the service was started (StartAsync called)
@@ -69,17 +81,6 @@ public class HostedServiceObservableInfo
     /// </summary>
     public bool IsFaulted => CurrentState == HostedServiceState.Faulted;
 
-    // Exception Pool (if enabled)
-
-    /// <summary>
-    /// Gets the exception pool ID associated with this service (if exception pool is enabled)
-    /// </summary>
-    public string? ExceptionPoolId { get; set; }
-
-    /// <summary>
-    /// Gets a value indicating whether this service has an exception pool
-    /// </summary>
-    public bool HasExceptionPool => !string.IsNullOrEmpty(ExceptionPoolId);
 
     // Heartbeat Information (BackgroundService only)
 
@@ -107,33 +108,35 @@ public class HostedServiceObservableInfo
         (LastHeartbeat.HasValue &&
          (DateTime.UtcNow - LastHeartbeat.Value) < (HeartbeatInterval!.Value * 2));
 
-    // State History
+    // State History (delegates to agent with typed conversion)
 
     /// <summary>
     /// Gets the state history for this service
     /// </summary>
-    public IReadOnlyList<HostedServiceStateHistory> StateHistory
-    {
-        get
-        {
-            lock (_stateLock)
+    public IReadOnlyList<HostedServiceStateHistory> StateHistory =>
+        _agent.GetHistory()
+            .Select(h => new HostedServiceStateHistory
             {
-                return _stateHistory.AsReadOnly();
-            }
-        }
-    }
+                Timestamp = h.Timestamp,
+                PreviousState = h.PreviousState as HostedServiceState?,
+                CurrentState = h.CurrentState is HostedServiceState s ? s : HostedServiceState.NotStarted,
+                Message = h.Message,
+                Exception = h.Exception
+            })
+            .ToList()
+            .AsReadOnly();
 
     /// <summary>
     /// Gets the maximum number of history entries to retain
     /// </summary>
-    public int MaxHistorySize { get; init; } = 100;
+    public int MaxHistorySize => _agent.MaxHistorySize;
 
     // Execution Statistics
 
     /// <summary>
     /// Gets the total number of state changes that have occurred
     /// </summary>
-    public long TotalStateChanges { get; private set; }
+    public long TotalStateChanges => _agent.TotalStateChanges;
 
     /// <summary>
     /// Gets the uptime of the service (time since started, null if not started or already stopped)
@@ -150,25 +153,6 @@ public class HostedServiceObservableInfo
     /// <param name="exception">Optional exception associated with this state change</param>
     public void RecordStateChange(HostedServiceState newState, string message, Exception? exception = null)
     {
-        lock (_stateLock)
-        {
-            var history = new HostedServiceStateHistory
-            {
-                PreviousState = CurrentState,
-                CurrentState = newState,
-                Message = message,
-                Exception = exception
-            };
-
-            _stateHistory.Add(history);
-            if (_stateHistory.Count > MaxHistorySize)
-            {
-                _stateHistory.RemoveAt(0);
-            }
-
-            CurrentState = newState;
-            StateChangedAt = DateTime.UtcNow;
-            TotalStateChanges++;
-        }
+        _agent.RecordStateChange(newState, message, exception);
     }
 }

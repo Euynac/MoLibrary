@@ -48,7 +48,8 @@
       "WebFetch(domain:github.com)",
       "Bash(dotnet test:*)",
       "Bash(git branch:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(tee:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

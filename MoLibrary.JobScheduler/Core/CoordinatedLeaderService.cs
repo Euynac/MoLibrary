@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using MoLibrary.Core.ExceptionHandler.ExceptionPool;
+using MoLibrary.Core.ObservableInstance;
 using MoLibrary.Core.Extensions;
 using MoLibrary.Core.HostedServices;
 using MoLibrary.Core.HostedServices.Models;
@@ -21,7 +21,7 @@ public abstract class CoordinatedLeaderService(
     IOptions<ModuleJobSchedulerOption> options,
     ILogger logger,
     IServiceRegistrationCoordinator coordinator,
-    IExceptionPoolManager? exceptionPoolManager = null) : MoBackgroundService(exceptionPoolManager, logger)
+    IObservableInstanceManager observableManager) : MoBackgroundService(observableManager, logger)
 {
     /// <summary>
     /// Module configuration options
@@ -32,7 +32,7 @@ public abstract class CoordinatedLeaderService(
     /// Gets a value indicating whether the service has completed initialization.
     /// Used by health checks to monitor service status.
     /// </summary>
-    public bool IsInitialized => ObservableInfo.CurrentState is HostedServiceState.Running or HostedServiceState.Executing;
+    public bool IsInitialized => ObservableInfo is {CurrentState: HostedServiceState.Running or HostedServiceState.Executing};
 
     /// <summary>
     /// Gets the initialization error message if initialization failed.
@@ -44,6 +44,7 @@ public abstract class CoordinatedLeaderService(
             .OrderByDescending(h => h.Timestamp)
             .FirstOrDefault()
             ?.Exception?.GetMessageRecursively();
+
     /// <summary>
     /// Executes the background service lifecycle using the Template Method pattern.
     /// This method is sealed to enforce consistent initialization sequence.

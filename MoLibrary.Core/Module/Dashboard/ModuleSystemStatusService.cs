@@ -1,7 +1,6 @@
 using MoLibrary.Core.Module.Dashboard.Interfaces;
 using MoLibrary.Core.Module.Dashboard.Models;
 using MoLibrary.Core.Module.Features;
-using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 
 namespace MoLibrary.Core.Module.Dashboard;

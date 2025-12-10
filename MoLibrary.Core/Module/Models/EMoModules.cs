@@ -111,9 +111,9 @@ public enum EMoModules
     /// </summary>
     EventBusUI,
     /// <summary>
-    /// 异常池模块
+    /// 可观测实例模块
     /// </summary>
-    ExceptionPool,
+    ObservableInstance,
     /// <summary>
     /// HostedService 可观测性模块
     /// </summary>
