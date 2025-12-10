@@ -2,7 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.ExceptionHandler.ExceptionPool;
 using MoLibrary.DataChannel.CoreCommunication;
 using MoLibrary.DataChannel.CoreCommunicationProvider.Default;
-using MoLibrary.DataChannel.Exceptions;
 
 namespace MoLibrary.DataChannel.Pipeline;
 
@@ -160,11 +159,11 @@ public class DataPipelineBuilder
         var outerEndpoint = TransientProxy.CreateEndpointProxy(provider, OuterCoreType!, EDataSource.Outer, _outerEndpointMetadata);
         outerEndpoint.EntranceType = EDataSource.Outer;
 
-        // 获取异常池工厂
-        var poolFactory = provider.GetRequiredService<ExceptionPoolFactory<PipelineException>>();
+        // 获取异常池管理器
+        var poolManager = provider.GetRequiredService<IExceptionPoolManager>();
 
         // 创建管道
-        var pipe = new DataPipeline(innerEndpoint, outerEndpoint, Id, poolFactory, GroupId);
+        var pipe = new DataPipeline(innerEndpoint, outerEndpoint, Id, poolManager, GroupId);
 
         // 创建中间件
         var middlewaresList = new List<IPipeMiddleware>(_middlewares);

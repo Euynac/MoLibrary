@@ -26,7 +26,7 @@ public class ModuleExceptionPool(ModuleExceptionPoolOption option)
             opt.EnableEventTrigger = Option.GlobalOption.EnableEventTrigger;
         });
 
-        // 注册泛型异常池工厂
-        services.AddSingleton(typeof(ExceptionPoolFactory<>));
+        // 注册异常池管理器
+        services.AddSingleton<IExceptionPoolManager, ExceptionPoolManager>();
     }
 }

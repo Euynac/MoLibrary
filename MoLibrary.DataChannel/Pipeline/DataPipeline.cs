@@ -72,13 +72,13 @@ public class DataPipeline
     /// <param name="innerEndpoint">内部端点</param>
     /// <param name="outerEndpoint">外部端点</param>
     /// <param name="id">管道标识符</param>
-    /// <param name="poolFactory">异常池工厂</param>
+    /// <param name="poolManager">异常池管理器</param>
     /// <param name="groupId">可选的管道组标识符</param>
     internal DataPipeline(
         IPipeEndpoint innerEndpoint,
         IPipeEndpoint outerEndpoint,
         string id,
-        ExceptionPoolFactory<PipelineException> poolFactory,
+        IExceptionPoolManager poolManager,
         string? groupId = null)
     {
         InnerEndpoint = innerEndpoint;
@@ -86,8 +86,8 @@ public class DataPipeline
         Id = id;
         GroupId = groupId;
 
-        // 使用工厂创建异常池
-        ExceptionPool = poolFactory.Create(id, opt =>
+        // 使用管理器创建异常池
+        ExceptionPool = poolManager.Create<PipelineException>(id, opt =>
         {
             opt.MaxSize = DataChannelCentral.Setting.RecentExceptionToKeep;
         });
