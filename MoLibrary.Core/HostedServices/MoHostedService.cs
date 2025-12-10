@@ -1,8 +1,10 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using MoLibrary.Core.HostedServices.Interfaces;
 using MoLibrary.Core.HostedServices.Models;
+using MoLibrary.Core.Modules;
 using MoLibrary.Core.ObservableInstance;
 
 namespace MoLibrary.Core.HostedServices;
@@ -13,9 +15,11 @@ namespace MoLibrary.Core.HostedServices;
 /// </summary>
 public abstract class MoHostedService(
     IObservableInstanceManager observableManager,
+    IOptions<ModuleHostedServiceOption> options,
     ILogger? logger = null) : IHostedService, IMoHostedService
 {
     protected readonly ILogger Logger = logger ?? NullLogger.Instance;
+    private readonly ModuleHostedServiceOption _options = options.Value;
 
     // IMoHostedService implementation
 
@@ -27,7 +31,7 @@ public abstract class MoHostedService(
     /// <summary>
     /// Gets the maximum number of state history entries to retain
     /// </summary>
-    public virtual int MaxHistorySize => 100;
+    public virtual int MaxHistorySize => _options.DefaultMaxHistorySize;
 
     /// <summary>
     /// Gets the heartbeat interval (always null for MoHostedService, only applicable to MoBackgroundService)
@@ -91,7 +95,11 @@ public abstract class MoHostedService(
         {
             RecordStateChange(HostedServiceState.Faulted, "Service start failed", ex);
             Logger.LogError(ex, "{ServiceName} failed to start", ServiceName);
-            throw;
+
+            if (_options.FailFastOnStartupError)
+            {
+                throw;
+            }
         }
     }
 
@@ -115,7 +123,6 @@ public abstract class MoHostedService(
         {
             RecordStateChange(HostedServiceState.Faulted, "Service stop failed", ex);
             Logger.LogError(ex, "{ServiceName} failed to stop gracefully", ServiceName);
-            throw;
         }
     }
 

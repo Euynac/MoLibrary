@@ -2,6 +2,7 @@ using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MoLibrary.Core.Modules;
 using MoLibrary.Core.ObservableInstance;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.JobScheduler.ControlPlane;
@@ -26,7 +27,8 @@ public class JobRegistrationHostedService(
     [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
     IOptions<ModuleJobSchedulerOption> option,
     IServiceRegistrationCoordinator coordinator,
-    IObservableInstanceManager observableManager) : CoordinatedLeaderService(leaderService, option, logger, coordinator, observableManager)
+    IObservableInstanceManager observableManager,
+    IOptions<ModuleHostedServiceOption> hostedServiceOptions) : CoordinatedLeaderService(leaderService, option, logger, coordinator, observableManager, hostedServiceOptions)
 {
     public override string ServiceName => nameof(JobRegistrationHostedService);
 

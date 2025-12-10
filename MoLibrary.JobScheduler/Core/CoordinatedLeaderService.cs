@@ -1,10 +1,11 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using MoLibrary.Core.ObservableInstance;
 using MoLibrary.Core.Extensions;
 using MoLibrary.Core.HostedServices;
 using MoLibrary.Core.HostedServices.Models;
+using MoLibrary.Core.Modules;
+using MoLibrary.Core.ObservableInstance;
 using MoLibrary.JobScheduler.Modules;
 using MoLibrary.RegisterCentre.Interfaces;
 using MoLibrary.RegisterCentre.Models;
@@ -21,7 +22,8 @@ public abstract class CoordinatedLeaderService(
     IOptions<ModuleJobSchedulerOption> options,
     ILogger logger,
     IServiceRegistrationCoordinator coordinator,
-    IObservableInstanceManager observableManager) : MoBackgroundService(observableManager, logger)
+    IObservableInstanceManager observableManager,
+    IOptions<ModuleHostedServiceOption> hostedServiceOptions) : MoBackgroundService(observableManager, hostedServiceOptions, logger)
 {
     /// <summary>
     /// Module configuration options

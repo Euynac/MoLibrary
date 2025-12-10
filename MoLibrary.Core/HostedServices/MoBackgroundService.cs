@@ -1,8 +1,10 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using MoLibrary.Core.HostedServices.Interfaces;
 using MoLibrary.Core.HostedServices.Models;
+using MoLibrary.Core.Modules;
 using MoLibrary.Core.ObservableInstance;
 
 namespace MoLibrary.Core.HostedServices;
@@ -14,9 +16,12 @@ namespace MoLibrary.Core.HostedServices;
 /// </summary>
 public abstract class MoBackgroundService(
     IObservableInstanceManager observableManager,
+    IOptions<ModuleHostedServiceOption> options,
     ILogger? logger = null) : BackgroundService, IMoHostedService
 {
     protected readonly ILogger Logger = logger ?? NullLogger.Instance;
+    private readonly IObservableInstanceManager _observableManager = observableManager;
+    private readonly ModuleHostedServiceOption _options = options.Value;
 
     // Heartbeat mechanism
     private CancellationTokenSource? _heartbeatCts;
@@ -32,12 +37,12 @@ public abstract class MoBackgroundService(
     /// <summary>
     /// Gets the maximum number of state history entries to retain
     /// </summary>
-    public virtual int MaxHistorySize => 100;
+    public virtual int MaxHistorySize => _options.DefaultMaxHistorySize;
 
     /// <summary>
     /// Gets the heartbeat interval for this service (null to disable heartbeat)
     /// </summary>
-    public virtual TimeSpan? HeartbeatInterval => TimeSpan.FromMinutes(1);
+    public virtual TimeSpan? HeartbeatInterval => _options.DefaultHeartbeatInterval;
 
     /// <summary>
     /// Gets the observable information for this service
@@ -50,7 +55,7 @@ public abstract class MoBackgroundService(
     internal void InitializeObservableInfo()
     {
         var agentId = $"HostedService_{ServiceName}_{Guid.NewGuid():N}";
-        ObservableInfo = new HostedServiceObservableInfo(observableManager.Create(agentId, opt =>
+        ObservableInfo = new HostedServiceObservableInfo(_observableManager.Create(agentId, opt =>
         {
             opt.MaxHistorySize = MaxHistorySize;
             opt.InstanceName = ServiceName;
@@ -132,7 +137,11 @@ public abstract class MoBackgroundService(
         {
             RecordStateChange(HostedServiceState.Faulted, "Service start failed", ex);
             Logger.LogError(ex, "{ServiceName} failed to start", ServiceName);
-            throw;
+
+            if (_options.FailFastOnStartupError)
+            {
+                throw;
+            }
         }
     }
 
@@ -160,7 +169,6 @@ public abstract class MoBackgroundService(
         {
             RecordStateChange(HostedServiceState.Faulted, "Service stop failed", ex);
             Logger.LogError(ex, "{ServiceName} failed to stop gracefully", ServiceName);
-            throw;
         }
     }
 
@@ -182,7 +190,6 @@ public abstract class MoBackgroundService(
         {
             RecordStateChange(HostedServiceState.Faulted, "Background work failed", ex);
             Logger.LogError(ex, "{ServiceName} background work failed", ServiceName);
-            throw;
         }
     }
 

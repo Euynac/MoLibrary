@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MoLibrary.Core.Modules;
 using MoLibrary.Core.ObservableInstance;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.JobScheduler.Core;
@@ -23,7 +24,8 @@ public class JobSchedulerHostedService(
     ILeaderService leaderService,
     ILogger<JobSchedulerHostedService> logger,
     IServiceRegistrationCoordinator coordinator,
-    IObservableInstanceManager observableManager) : CoordinatedLeaderService(leaderService, options, logger, coordinator, observableManager)
+    IObservableInstanceManager observableManager,
+    IOptions<ModuleHostedServiceOption> hostedServiceOptions) : CoordinatedLeaderService(leaderService, options, logger, coordinator, observableManager, hostedServiceOptions)
 {
     private readonly ModuleJobSchedulerOption _options = options.Value;
 

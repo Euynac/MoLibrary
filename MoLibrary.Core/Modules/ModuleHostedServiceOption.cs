@@ -10,7 +10,7 @@ public class ModuleHostedServiceOption : MoModuleOption<ModuleHostedService>
     /// <summary>
     /// Gets or sets the default maximum history size for all services
     /// </summary>
-    public int DefaultMaxHistorySize { get; set; } = 100; 
+    public int DefaultMaxHistorySize { get; set; } = 100;
 
     /// <summary>
     /// Gets or sets the default heartbeat interval for BackgroundServices
@@ -18,7 +18,10 @@ public class ModuleHostedServiceOption : MoModuleOption<ModuleHostedService>
     public TimeSpan DefaultHeartbeatInterval { get; set; } = TimeSpan.FromMinutes(1);
 
     /// <summary>
-    /// Gets or sets a value indicating whether exception pool should be enabled by default for all services
+    /// Gets or sets whether to fail fast (throw exception) when StartAsync encounters an error.
+    /// When true, exceptions during service startup will be re-thrown, causing the application to fail fast.
+    /// When false, exceptions are logged but not re-thrown, allowing the application to continue.
+    /// Default is false for production stability.
     /// </summary>
-    public bool EnableExceptionPoolByDefault { get; set; } = true;
+    public bool FailFastOnStartupError { get; set; } = false;
 }
