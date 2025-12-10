@@ -132,6 +132,7 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
 
     public override void ClaimDependencies()
     {
+        DependsOnModule<ModuleExceptionPoolGuide>().Register();
         DependsOnModule<ModuleDaprClientGuide>().Register();
     }
 }

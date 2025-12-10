@@ -109,5 +109,9 @@ public enum EMoModules
     /// <summary>
     /// 事件总线 UI 监控模块
     /// </summary>
-    EventBusUI
+    EventBusUI,
+    /// <summary>
+    /// 异常池模块
+    /// </summary>
+    ExceptionPool
 }

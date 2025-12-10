@@ -1,22 +1,25 @@
 using System.Collections.Concurrent;
 
-namespace MoLibrary.DataChannel.Exceptions;
+namespace MoLibrary.Core.ExceptionHandler.ExceptionPool;
 
 /// <summary>
-/// 异常池管理类
+/// 泛型异常池管理类
 /// 提供固定大小的异常缓冲池，自动移除最旧的异常记录
+/// 支持事件通知和自定义异常类型
 /// </summary>
-public class ExceptionPool
+/// <typeparam name="TException">异常记录类型，必须继承自 PooledException</typeparam>
+public class ExceptionPool<TException> where TException : PooledException
 {
     private readonly int _maxSize;
-    private readonly ConcurrentQueue<PipelineException> _exceptions;
+    private readonly bool _enableEventTrigger;
+    private readonly ConcurrentQueue<TException> _exceptions;
     private readonly ReaderWriterLockSlim _lock;
     private int _totalExceptionCount;
 
     /// <summary>
-    /// 管道ID
+    /// 异常池ID
     /// </summary>
-    public string PipelineId { get; private set; }
+    public string PoolId { get; private set; }
 
     /// <summary>
     /// 获取当前异常数量
@@ -53,25 +56,32 @@ public class ExceptionPool
     public bool HasExceptions => _exceptions.Count > 0;
 
     /// <summary>
+    /// 异常收集事件，当异常被添加到异常池时触发
+    /// </summary>
+    public event EventHandler<ExceptionCollectedEventArgs<TException>>? ExceptionCollected;
+
+    /// <summary>
     /// 初始化异常池
     /// </summary>
-    /// <param name="pipelineId">管道ID</param>
+    /// <param name="poolId">异常池ID</param>
     /// <param name="maxSize">异常池最大容量</param>
-    public ExceptionPool(string pipelineId, int maxSize = 10)
+    /// <param name="enableEventTrigger">是否启用事件触发</param>
+    public ExceptionPool(string poolId, int maxSize, bool enableEventTrigger = true)
     {
-        if (string.IsNullOrEmpty(pipelineId))
+        if (string.IsNullOrEmpty(poolId))
         {
-            throw new ArgumentException("管道ID不能为空", nameof(pipelineId));
+            throw new ArgumentException("异常池ID不能为空", nameof(poolId));
         }
-        
+
         if (maxSize <= 0)
         {
             throw new ArgumentException("异常池大小必须大于0", nameof(maxSize));
         }
-        
-        PipelineId = pipelineId;
+
+        PoolId = poolId;
         _maxSize = maxSize;
-        _exceptions = new ConcurrentQueue<PipelineException>();
+        _enableEventTrigger = enableEventTrigger;
+        _exceptions = new ConcurrentQueue<TException>();
         _lock = new ReaderWriterLockSlim();
         _totalExceptionCount = 0;
     }
@@ -85,14 +95,19 @@ public class ExceptionPool
     /// <param name="description">异常描述信息</param>
     public void AddException(Exception exception, object source, string? description = null)
     {
-        var pipelineException = new PipelineException(exception, source, description);
-        
+        // 创建异常记录实例
+        var pooledException = (TException)Activator.CreateInstance(
+            typeof(TException),
+            exception,
+            source,
+            description)!;
+
         _lock.EnterWriteLock();
         try
         {
-            _exceptions.Enqueue(pipelineException);
+            _exceptions.Enqueue(pooledException);
             _totalExceptionCount++;
-            
+
             // 如果超过最大容量，移除最旧的异常
             while (_exceptions.Count > _maxSize)
             {
@@ -103,13 +118,20 @@ public class ExceptionPool
         {
             _lock.ExitWriteLock();
         }
+
+        // 触发异常收集事件
+        if (_enableEventTrigger)
+        {
+            var eventArgs = new ExceptionCollectedEventArgs<TException>(pooledException, PoolId);
+            ExceptionCollected?.Invoke(this, eventArgs);
+        }
     }
 
     /// <summary>
     /// 获取所有异常记录
     /// </summary>
     /// <returns>异常记录列表，按时间倒序排列（最新的在前）</returns>
-    public IReadOnlyList<PipelineException> GetExceptions()
+    public IReadOnlyList<TException> GetExceptions()
     {
         _lock.EnterReadLock();
         try
@@ -129,10 +151,10 @@ public class ExceptionPool
     /// </summary>
     /// <param name="count">要获取的异常数量</param>
     /// <returns>最近的异常记录列表</returns>
-    public IReadOnlyList<PipelineException> GetRecentExceptions(int count)
+    public IReadOnlyList<TException> GetRecentExceptions(int count)
     {
-        if (count <= 0) return new List<PipelineException>();
-        
+        if (count <= 0) return new List<TException>();
+
         _lock.EnterReadLock();
         try
         {
@@ -173,4 +195,4 @@ public class ExceptionPool
     {
         _lock?.Dispose();
     }
-} 
+}

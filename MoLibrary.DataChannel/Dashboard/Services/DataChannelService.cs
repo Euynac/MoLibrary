@@ -96,7 +96,7 @@ public class DataChannelService(IDataChannelManager manager, ILogger<DataChannel
             var result = new ChannelExceptionInfo
             {
                 ChannelId = id,
-                PipelineId = channel.Pipe.ExceptionPool.PipelineId,
+                PipelineId = channel.Pipe.ExceptionPool.PoolId,
                 CurrentExceptions = channel.Pipe.ExceptionPool.Count,
                 TotalExceptions = channel.Pipe.ExceptionPool.TotalExceptionCount,
                 MaxPoolSize = channel.Pipe.ExceptionPool.MaxSize,
@@ -141,7 +141,7 @@ public class DataChannelService(IDataChannelManager manager, ILogger<DataChannel
                 ChannelSummaries = channels.Select(channel => new ChannelSummaryInfo
                 {
                     ChannelId = channel.Id,
-                    PipelineId = channel.Pipe.ExceptionPool.PipelineId,
+                    PipelineId = channel.Pipe.ExceptionPool.PoolId,
                     CurrentExceptionCount = channel.Pipe.ExceptionPool.Count,
                     TotalExceptionCount = channel.Pipe.ExceptionPool.TotalExceptionCount,
                     MaxPoolSize = channel.Pipe.ExceptionPool.MaxSize,

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using MoLibrary.Core.ExceptionHandler.ExceptionPool;
 using MoLibrary.Core.Extensions;
 using MoLibrary.DataChannel.CoreCommunication;
 using MoLibrary.DataChannel.Exceptions;
@@ -8,47 +9,6 @@ using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.DataChannel.Pipeline;
-
-/// <summary>
-/// 异常收集事件参数
-/// </summary>
-public class ExceptionCollectedEventArgs : EventArgs
-{
-    /// <summary>
-    /// 发生的异常
-    /// </summary>
-    public Exception Exception { get; }
-    
-    /// <summary>
-    /// 异常来源对象
-    /// </summary>
-    public object Source { get; }
-    
-    /// <summary>
-    /// 异常描述信息
-    /// </summary>
-    public string? Description { get; }
-    
-    /// <summary>
-    /// 管道ID
-    /// </summary>
-    public string PipelineId { get; }
-
-    /// <summary>
-    /// 初始化异常收集事件参数
-    /// </summary>
-    /// <param name="exception">发生的异常</param>
-    /// <param name="source">异常来源对象</param>
-    /// <param name="description">异常描述信息</param>
-    /// <param name="pipelineId">管道ID</param>
-    public ExceptionCollectedEventArgs(Exception exception, object source, string? description, string pipelineId)
-    {
-        Exception = exception;
-        Source = source;
-        Description = description;
-        PipelineId = pipelineId;
-    }
-}
 
 /// <summary>
 /// 数据管道类
@@ -99,7 +59,7 @@ public class DataPipeline
     /// <summary>
     /// 异常池，用于收集和管理管道运行中的异常
     /// </summary>
-    public ExceptionPool ExceptionPool { get; private set; }
+    public ExceptionPool<PipelineException> ExceptionPool { get; private set; }
 
     /// <summary>
     /// 是否存在异常
@@ -107,25 +67,49 @@ public class DataPipeline
     public bool HasExceptions => ExceptionPool?.HasExceptions ?? false;
 
     /// <summary>
-    /// 异常收集事件，当异常被添加到ExceptionPool时触发
-    /// </summary>
-    public event EventHandler<ExceptionCollectedEventArgs>? ExceptionCollected;
-
-    /// <summary>
     /// 初始化数据管道的新实例
     /// </summary>
     /// <param name="innerEndpoint">内部端点</param>
     /// <param name="outerEndpoint">外部端点</param>
     /// <param name="id">管道标识符</param>
+    /// <param name="poolFactory">异常池工厂</param>
     /// <param name="groupId">可选的管道组标识符</param>
-    internal DataPipeline(IPipeEndpoint innerEndpoint, IPipeEndpoint outerEndpoint, string id, string? groupId = null)
+    internal DataPipeline(
+        IPipeEndpoint innerEndpoint,
+        IPipeEndpoint outerEndpoint,
+        string id,
+        ExceptionPoolFactory<PipelineException> poolFactory,
+        string? groupId = null)
     {
         InnerEndpoint = innerEndpoint;
         OuterEndpoint = outerEndpoint;
         Id = id;
         GroupId = groupId;
-        
-        ExceptionPool = new ExceptionPool(id, DataChannelCentral.Setting.RecentExceptionToKeep);
+
+        // 使用工厂创建异常池
+        ExceptionPool = poolFactory.Create(id, opt =>
+        {
+            opt.MaxSize = DataChannelCentral.Setting.RecentExceptionToKeep;
+        });
+
+        // 订阅异常池的事件
+        ExceptionPool.ExceptionCollected += OnExceptionCollected;
+    }
+
+    /// <summary>
+    /// 异常收集事件处理器
+    /// </summary>
+    /// <param name="sender">事件发送者</param>
+    /// <param name="e">事件参数</param>
+    private void OnExceptionCollected(object? sender, ExceptionCollectedEventArgs<PipelineException> e)
+    {
+        // 记录异常到日志
+        DataChannelCentral.Logger.LogError(
+            e.Exception,
+            "DataPipeline:{PipelineId} collected exception from {SourceType}: {Description}",
+            e.PoolId,
+            e.PooledException.SourceType,
+            e.Description ?? e.Exception.Message);
     }
 
     /// <summary>
@@ -211,10 +195,6 @@ public class DataPipeline
     public void CollectException(Exception exception, object source, string? description = null)
     {
         ExceptionPool.AddException(exception, source, description);
-        
-        // 触发异常收集事件
-        var eventArgs = new ExceptionCollectedEventArgs(exception, source, description, Id);
-        ExceptionCollected?.Invoke(this, eventArgs);
     }
 
     /// <summary>
