@@ -549,7 +549,7 @@ namespace MoLibrary.Tool.Extensions
         /// <param name="value">The string to test.</param>
         /// <returns>true if the <paramref name="value">value</paramref> parameter is null or an empty string (""); otherwise, false.</returns>
         [ContractAnnotation("null => false")]
-        public static bool IsNotNullOrEmpty([NotNullWhen(false)] this string? value) => !string.IsNullOrEmpty(value);
+        public static bool IsNotNullOrEmpty([NotNullWhen(true)] this string? value) => !string.IsNullOrEmpty(value);
 
         /// <summary>
         /// Indicates whether a specified string is NOT null, empty, or consists only of white-space characters.
@@ -557,7 +557,7 @@ namespace MoLibrary.Tool.Extensions
         /// <param name="value">The string to test.</param>
         /// <returns>true if the <paramref name="value">value</paramref> parameter is null or <see cref="F:System.String.Empty"></see>, or if <paramref name="value">value</paramref> consists exclusively of white-space characters.</returns>
         [ContractAnnotation("null => false")]
-        public static bool IsNotNullOrWhiteSpace([NotNullWhen(false)] this string? value) => !string.IsNullOrWhiteSpace(value);
+        public static bool IsNotNullOrWhiteSpace([NotNullWhen(true)] this string? value) => !string.IsNullOrWhiteSpace(value);
         
         /// <summary>
         /// Indicates whether the specified string is null or an <see cref="F:System.String.Empty"></see> string.
