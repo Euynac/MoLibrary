@@ -2,26 +2,35 @@
     padding: 1rem;
 }
 
-.publish-section {
+/* 使用 ::deep 穿透 MudBlazor 组件样式 */
+.publish-section-wrapper ::deep .mud-paper {
     border-left: 4px solid var(--mud-palette-primary);
 }
 
-.subscribe-section {
+.subscribe-section-wrapper ::deep .mud-paper {
     border-left: 4px solid var(--mud-palette-info);
 }
 
-.status-indicator {
-    padding: 0.75rem;
-    border-radius: var(--mud-default-borderradius);
-    border: 1px solid var(--mud-palette-lines-default);
-}
-
-.status-indicator.subscribed {
+.status-indicator-wrapper ::deep .mud-paper.subscribed {
     background-color: var(--mud-palette-success-lighten);
     border-color: var(--mud-palette-success);
 }
 
-.status-indicator.unsubscribed {
+.status-indicator-wrapper ::deep .mud-paper.unsubscribed {
     background-color: var(--mud-palette-surface);
     border-color: var(--mud-palette-lines-default);
+}
+
+/* 消息列表样式 */
+.message-list-wrapper ::deep .mud-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.message-card-wrapper ::deep .mud-card {
+    transition: all 0.2s ease;
+}
+
+.message-card-wrapper ::deep .mud-card:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }

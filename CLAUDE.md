@@ -99,6 +99,8 @@ Static web assets (wwwroot) are handled through:
   }
   ```
 
+**⚠️ CRITICAL**: CSS isolation 无法直接穿透 MudBlazor 组件。必须使用 wrapper div + `::deep` 模式，否则样式不会生效。
+
 ## **Interface Return Value Guidelines**  
 - For the return value definitions of frontend APIs (used by Controllers and Blazor), always use the **unified response model `Res`**. Refer to `@rules\mo-framework-res-type.mdc` for usage details.  
 

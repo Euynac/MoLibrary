@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
+using MoLibrary.UI.Modules;
 
 namespace MoLibrary.FrameworkUI.Modules;
 
@@ -16,11 +17,17 @@ public static class ModuleFrameworkUIBuilderExtensions
 }
 
 public class ModuleFrameworkUI(ModuleFrameworkUIOption option)
-    : MoModule<ModuleFrameworkUI, ModuleFrameworkUIOption, ModuleFrameworkUIGuide>(option)
+    : MoModuleWithDependencies<ModuleFrameworkUI, ModuleFrameworkUIOption, ModuleFrameworkUIGuide>(option)
 {
     public override EMoModules CurModuleEnum()
     {
         return EMoModules.FrameworkUI;
+    }
+
+    public override void ClaimDependencies()
+    {
+        // 依赖 UIStackTrace 模块（用于堆栈跟踪可视化）
+        DependsOnModule<ModuleUIStackTraceGuide>().Register();
     }
 }
 
@@ -32,5 +39,5 @@ public class ModuleFrameworkUIGuide : MoModuleGuide<ModuleFrameworkUI, ModuleFra
 
 public class ModuleFrameworkUIOption : MoModuleOption<ModuleFrameworkUI>
 {
-  
+
 }
