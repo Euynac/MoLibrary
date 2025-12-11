@@ -150,7 +150,7 @@
                                         <MudStack Row="true" Justify="Justify.SpaceBetween">
                                             <MudText Typo="Typo.body2">@failure.InstanceId</MudText>
                                             <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                                @failure.CreatedAt.ToString("MM-dd HH:mm:ss")
+                                                @failure.CreatedAt.ToLocalTime().ToString("MM-dd HH:mm:ss")
                                             </MudText>
                                         </MudStack>
                                     </MudListItem>

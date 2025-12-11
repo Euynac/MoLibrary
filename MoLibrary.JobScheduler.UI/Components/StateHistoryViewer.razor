@@ -25,7 +25,7 @@
                                         @record.OldState → @record.NewState
                                     </MudChip>
                                     <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                        @record.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")
+                                        @record.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")
                                     </MudText>
                                 </MudStack>
 

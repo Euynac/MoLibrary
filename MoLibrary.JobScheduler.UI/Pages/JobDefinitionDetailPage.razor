@@ -169,15 +169,15 @@
                             </MudChip>
                         </MudTd>
                         <MudTd DataLabel="创建时间">
-                            @context.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")
+                            @context.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")
                         </MudTd>
                         <MudTd DataLabel="开始时间">
-                            @(context.StartedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-")
+                            @(context.StartedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "-")
                         </MudTd>
                         <MudTd DataLabel="运行时长">
                             @if (context.StartedAt.HasValue)
                             {
-                                var duration = DateTime.UtcNow - context.StartedAt.Value;
+                                var duration = DateTime.UtcNow.ToLocalTime() - context.StartedAt.Value.ToLocalTime();
                                 <text>@FormatDuration(duration)</text>
                             }
                             else

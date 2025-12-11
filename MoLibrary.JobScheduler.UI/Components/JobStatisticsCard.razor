@@ -74,7 +74,7 @@
                     <!-- 最后执行时间 -->
                     <MudStack Row="true" Justify="Justify.SpaceBetween">
                         <MudText Typo="Typo.body2">最后执行时间</MudText>
-                        <MudText Typo="Typo.body2">@_statistics.LastExecutionTime.Value.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                        <MudText Typo="Typo.body2">@_statistics.LastExecutionTime.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
                     </MudStack>
 
                     <!-- 最后执行状态 -->

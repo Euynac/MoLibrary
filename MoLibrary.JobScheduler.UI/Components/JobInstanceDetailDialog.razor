@@ -56,15 +56,15 @@
                     </MudItem>
                     <MudItem xs="12" sm="6" md="4">
                         <MudText Typo="Typo.caption" Color="Color.Secondary">创建时间</MudText>
-                        <MudText Typo="Typo.body1">@_jobInstance.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                        <MudText Typo="Typo.body1">@_jobInstance.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
                     </MudItem>
                     <MudItem xs="12" sm="6" md="4">
                         <MudText Typo="Typo.caption" Color="Color.Secondary">开始时间</MudText>
-                        <MudText Typo="Typo.body1">@(_jobInstance.StartedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-")</MudText>
+                        <MudText Typo="Typo.body1">@(_jobInstance.StartedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "-")</MudText>
                     </MudItem>
                     <MudItem xs="12" sm="6" md="4">
                         <MudText Typo="Typo.caption" Color="Color.Secondary">结束时间</MudText>
-                        <MudText Typo="Typo.body1">@(_jobInstance.CompletedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-")</MudText>
+                        <MudText Typo="Typo.body1">@(_jobInstance.CompletedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "-")</MudText>
                     </MudItem>
                     @if (_jobInstance.StartedAt.HasValue)
                     {
@@ -78,7 +78,7 @@
                                 }
                                 else
                                 {
-                                    var duration = DateTime.UtcNow - _jobInstance.StartedAt.Value;
+                                    var duration = DateTime.UtcNow.ToLocalTime() - _jobInstance.StartedAt.Value.ToLocalTime();
                                     <text>@FormatDuration(duration) (运行中)</text>
                                 }
                             </MudText>
