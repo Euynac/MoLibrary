@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
+using MoLibrary.Core.Modules;
 using MoLibrary.Dapr.EventBus;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.EventBus.Modules;
@@ -45,6 +46,7 @@ public class ModuleDaprEventBus(ModuleDaprEventBusOption option)
     public override void ClaimDependencies()
     {
         DependsOnModule<ModuleEventBusGuide>().Register();
+        DependsOnModule<ModuleHostedServiceGuide>().Register();
     }
 }
 
