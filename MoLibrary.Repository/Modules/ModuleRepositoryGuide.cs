@@ -18,7 +18,8 @@ namespace MoLibrary.Repository.Modules;
 public enum DbContextProviderType
 {
     Default,
-    UnitOfWork
+    UnitOfWork,
+    ContextFactory
 }
 
 public class ModuleRepositoryGuide : MoModuleGuide<ModuleRepository, ModuleRepositoryOption, ModuleRepositoryGuide>
@@ -53,18 +54,32 @@ public class ModuleRepositoryGuide : MoModuleGuide<ModuleRepository, ModuleRepos
                     context.Services.AddTransient(typeof(IDbContextProvider<TDbContext>), typeof(UnitOfWorkDbContextProvider<TDbContext>));
                     //TODO 可使用Singleton？
                     break;
+                case DbContextProviderType.ContextFactory:
+                    // Register EF Core factory and wrap it with our provider interface
+                    context.Services.AddDbContextFactory<TDbContext>(optionsAction);
+                    context.Services.AddSingleton(
+                        typeof(IDbContextProvider<TDbContext>),
+                        typeof(DbContextFactoryProvider<TDbContext>));
+                    break;
                 case DbContextProviderType.Default:
+                default:
                     context.Services.AddTransient(typeof(IDbContextProvider<TDbContext>), typeof(DefaultDbContextProvider<TDbContext>));
                     break;
             }
             
             context.Services.TryAddTransient<IMoAuditPropertySetter, MoAuditPropertySetter>();
-            if (context.ModuleOption.UseDbContextFactory)
+
+            // Only register factory separately if not using ContextFactory provider type
+            if (context.ModuleOption.UseDbContextFactory && dbContextProviderType != DbContextProviderType.ContextFactory)
             {
                 context.Services.AddDbContextFactory<TDbContext>(optionsAction);
             }
 
-            context.Services.AddDbContext<TDbContext>(optionsAction);
+            // Only register DbContext if not using ContextFactory (factory pattern doesn't need scoped DbContext)
+            if (dbContextProviderType != DbContextProviderType.ContextFactory)
+            {
+                context.Services.AddDbContext<TDbContext>(optionsAction);
+            }
 
             //TODO 使用Module优化自动注册
             var options = new MoEfCoreRegistrationOptions(typeof(TDbContext), context.Services);
