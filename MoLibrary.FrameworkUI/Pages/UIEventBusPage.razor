@@ -8,6 +8,7 @@
 @using MoLibrary.EventBus.Models
 @inject EventBusMonitorService MonitorService
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 
 <PageTitle>事件总线监控</PageTitle>
 
@@ -99,25 +100,6 @@
     }
 </MudContainer>
 
-<!-- 详情对话框 -->
-<MudDialog @bind-IsVisible="_showDetailDialog" Options="_dialogOptions">
-    <TitleContent>
-        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-            <MudIcon Icon="@Icons.Material.Filled.Info" />
-            <MudText Typo="Typo.h6">订阅详情</MudText>
-        </MudStack>
-    </TitleContent>
-    <DialogContent>
-        @if (_selectedSubscription != null)
-        {
-            <SubscriptionDetailPanel Subscription="_selectedSubscription" />
-        }
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="() => _showDetailDialog = false" Color="Color.Primary">关闭</MudButton>
-    </DialogActions>
-</MudDialog>
-
 @code {
     public const string PAGE_URL = "/ui/eventbus";
 
@@ -132,11 +114,6 @@
 
     // 过滤器
     private SubscriptionFilter _filter = new();
-
-    // 详情对话框
-    private bool _showDetailDialog;
-    private SubscriptionViewModel? _selectedSubscription;
-    private DialogOptions _dialogOptions = new() { MaxWidth = MaxWidth.Large, FullWidth = true };
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -282,10 +259,22 @@
         _statistics = stats;
     }
 
-    private void ShowSubscriptionDetail(SubscriptionViewModel subscription)
+    private async Task ShowSubscriptionDetail(SubscriptionViewModel subscription)
     {
-        _selectedSubscription = subscription;
-        _showDetailDialog = true;
+        var parameters = new DialogParameters
+        {
+            ["Subscription"] = subscription
+        };
+
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            Position = DialogPosition.Center,
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true
+        };
+
+        await DialogService.ShowAsync<SubscriptionDetailDialog>($"订阅详情 - {subscription.EventTypeShortName}", parameters, options);
     }
 
     private async Task ActivateSubscriptionAsync(SubscriptionViewModel subscription)

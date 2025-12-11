@@ -1,0 +1,110 @@
+@using MoLibrary.FrameworkUI.UIObservableInstance.Models
+
+<MudPaper Class="pa-4 mb-4" Elevation="2">
+    <MudStack Spacing="3">
+        <!-- Title with Active Filter Badge -->
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.FilterList" Color="Color.Primary" />
+                <MudText Typo="Typo.h6">筛选条件</MudText>
+                @if (Filter?.HasAnyFilter == true)
+                {
+                    <MudChip T="string" Color="Color.Info" Size="Size.Small">
+                        @Filter.ActiveFilterCount 个筛选
+                    </MudChip>
+                }
+            </MudStack>
+            @if (Filter?.HasAnyFilter == true)
+            {
+                <MudButton StartIcon="@Icons.Material.Filled.Clear"
+                          Size="Size.Small"
+                          Color="Color.Default"
+                          OnClick="ClearFilters">
+                    清除全部
+                </MudButton>
+            }
+        </MudStack>
+
+        @if (Filter != null)
+        {
+            <MudGrid>
+                <!-- Search Text -->
+                <MudItem xs="12" md="6" lg="4">
+                    <MudTextField T="string"
+                                 Label="搜索"
+                                 @bind-Value="Filter.SearchText"
+                                 Immediate="true"
+                                 Placeholder="输入实例ID或名称"
+                                 Adornment="Adornment.Start"
+                                 AdornmentIcon="@Icons.Material.Filled.Search"
+                                 Clearable="true"
+                                 OnClearButtonClick="OnFilterChanged" />
+                </MudItem>
+
+                <!-- Group ID Filter -->
+                <MudItem xs="12" md="6" lg="4">
+                    <MudTextField T="string"
+                                 Label="组ID"
+                                 @bind-Value="Filter.GroupId"
+                                 Immediate="true"
+                                 Placeholder="筛选指定组"
+                                 Adornment="Adornment.Start"
+                                 AdornmentIcon="@Icons.Material.Filled.Group"
+                                 Clearable="true"
+                                 OnClearButtonClick="OnFilterChanged" />
+                </MudItem>
+
+                <!-- Exception Status Filter -->
+                <MudItem xs="12" md="6" lg="4">
+                    <MudSelect T="bool?"
+                              Label="异常状态"
+                              @bind-Value="Filter.HasExceptions"
+                              AnchorOrigin="Origin.BottomCenter"
+                              Clearable="true"
+                              OnClearButtonClick="OnFilterChanged">
+                        <MudSelectItem T="bool?" Value="@(null)">全部</MudSelectItem>
+                        <MudSelectItem T="bool?" Value="@(true)">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error" />
+                                <span>有异常</span>
+                            </MudStack>
+                        </MudSelectItem>
+                        <MudSelectItem T="bool?" Value="@(false)">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Color="Color.Success" />
+                                <span>无异常</span>
+                            </MudStack>
+                        </MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+            </MudGrid>
+
+            <!-- Apply Button -->
+            <MudStack Row="true" Justify="Justify.FlexEnd">
+                <MudButton StartIcon="@Icons.Material.Filled.Done"
+                          Variant="Variant.Filled"
+                          Color="Color.Primary"
+                          OnClick="OnFilterChanged">
+                    应用筛选
+                </MudButton>
+            </MudStack>
+        }
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter]
+    public ObservableInstanceFilter? Filter { get; set; }
+
+    [Parameter]
+    public EventCallback OnFilterChanged { get; set; }
+
+    private async Task ClearFilters()
+    {
+        if (Filter != null)
+        {
+            Filter.Clear();
+            await OnFilterChanged.InvokeAsync();
+        }
+    }
+}

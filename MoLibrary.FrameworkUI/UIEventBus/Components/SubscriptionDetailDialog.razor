@@ -1,0 +1,36 @@
+@using MoLibrary.FrameworkUI.UIEventBus.Models
+
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.Info" />
+            <MudText Typo="Typo.h6">订阅详情</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        @if (Subscription != null)
+        {
+            <SubscriptionDetailPanel Subscription="Subscription" />
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Info">未选择订阅</MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close" Color="Color.Primary">关闭</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    public IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public SubscriptionViewModel? Subscription { get; set; }
+
+    private void Close()
+    {
+        MudDialog.Close();
+    }
+}

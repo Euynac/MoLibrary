@@ -115,6 +115,10 @@ public enum EMoModules
     /// </summary>
     ObservableInstance,
     /// <summary>
+    /// 可观测实例 UI 监控模块
+    /// </summary>
+    ObservableInstanceUI,
+    /// <summary>
     /// HostedService 可观测性模块
     /// </summary>
     HostedService
