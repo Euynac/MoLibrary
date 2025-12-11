@@ -1,0 +1,27 @@
+.test-panel-wrapper {
+    padding: 1rem;
+}
+
+.publish-section {
+    border-left: 4px solid var(--mud-palette-primary);
+}
+
+.subscribe-section {
+    border-left: 4px solid var(--mud-palette-info);
+}
+
+.status-indicator {
+    padding: 0.75rem;
+    border-radius: var(--mud-default-borderradius);
+    border: 1px solid var(--mud-palette-lines-default);
+}
+
+.status-indicator.subscribed {
+    background-color: var(--mud-palette-success-lighten);
+    border-color: var(--mud-palette-success);
+}
+
+.status-indicator.unsubscribed {
+    background-color: var(--mud-palette-surface);
+    border-color: var(--mud-palette-lines-default);
+}

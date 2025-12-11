@@ -7,6 +7,7 @@
 @using MoLibrary.Tool.MoResponse
 @using MoLibrary.EventBus.Models
 @inject EventBusMonitorService MonitorService
+@inject EventBusTestService TestService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 
@@ -97,6 +98,10 @@
                                   OnActivate="ActivateSubscriptionAsync"
                                   OnDeactivate="DeactivateSubscriptionAsync"
                                   OnUnsubscribe="UnsubscribeWithConfirmAsync" />
+            </MudTabPanel>
+
+            <MudTabPanel Text="测试工具" Icon="@Icons.Material.Filled.Science">
+                <EventBusTestPanel />
             </MudTabPanel>
         </MudTabs>
     }

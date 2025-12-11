@@ -43,6 +43,9 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
     {
         // 注册为Singleton以维护实时订阅状态
         services.AddSingleton<EventBusMonitorService>();
+
+        // 注册测试服务，用于分布式事件总线测试
+        services.AddSingleton<EventBusTestService>();
     }
 
     public override void ClaimDependencies()
