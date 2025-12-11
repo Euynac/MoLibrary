@@ -45,7 +45,9 @@
         <!-- Tabs -->
         <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4">
             <MudTabPanel Text="总览" Icon="@Icons.Material.Filled.Dashboard">
-                <SubscriptionStatisticsCard Statistics="_statistics" />
+                <SubscriptionStatisticsCard Statistics="_statistics"
+                                           OnEventTypeClick="ShowSubscriptionsByEventTypeAsync"
+                                           OnTopicClick="ShowSubscriptionsByTopicAsync" />
 
                 @if (_recentChanges.Any())
                 {
@@ -275,6 +277,54 @@
         };
 
         await DialogService.ShowAsync<SubscriptionDetailDialog>($"订阅详情 - {subscription.EventTypeShortName}", parameters, options);
+    }
+
+    private async Task ShowSubscriptionsByEventTypeAsync(string eventType)
+    {
+        var filteredSubscriptions = _subscriptions
+            .Where(s => s.EventType == eventType)
+            .ToList();
+
+        var parameters = new DialogParameters
+        {
+            ["Title"] = $"事件类型: {filteredSubscriptions.FirstOrDefault()?.EventTypeShortName ?? eventType}",
+            ["Subscriptions"] = filteredSubscriptions,
+            ["OnSubscriptionSelected"] = EventCallback.Factory.Create<SubscriptionViewModel>(this, ShowSubscriptionDetail)
+        };
+
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            Position = DialogPosition.Center,
+            MaxWidth = MaxWidth.ExtraLarge,
+            FullWidth = true
+        };
+
+        await DialogService.ShowAsync<SubscriptionListDialog>("订阅列表", parameters, options);
+    }
+
+    private async Task ShowSubscriptionsByTopicAsync(string topicName)
+    {
+        var filteredSubscriptions = _subscriptions
+            .Where(s => s.TopicName == topicName)
+            .ToList();
+
+        var parameters = new DialogParameters
+        {
+            ["Title"] = $"主题: {topicName}",
+            ["Subscriptions"] = filteredSubscriptions,
+            ["OnSubscriptionSelected"] = EventCallback.Factory.Create<SubscriptionViewModel>(this, ShowSubscriptionDetail)
+        };
+
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            Position = DialogPosition.Center,
+            MaxWidth = MaxWidth.ExtraLarge,
+            FullWidth = true
+        };
+
+        await DialogService.ShowAsync<SubscriptionListDialog>("订阅列表", parameters, options);
     }
 
     private async Task ActivateSubscriptionAsync(SubscriptionViewModel subscription)

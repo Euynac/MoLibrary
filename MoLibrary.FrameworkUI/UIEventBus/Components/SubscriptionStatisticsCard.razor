@@ -91,10 +91,10 @@
                 <MudCardContent>
                     @if (Statistics.TopEventTypes.Any())
                     {
-                        <MudList T="string" Clickable="false" Dense="true">
+                        <MudList T="string" Clickable="true" Dense="true">
                             @foreach (var eventType in Statistics.TopEventTypes)
                             {
-                                <MudListItem T="string">
+                                <MudListItem T="string" OnClick="() => OnEventTypeClick.InvokeAsync(eventType.EventType)" Style="cursor: pointer;">
                                     <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                                         <MudTooltip Text="@eventType.EventType">
                                             <MudText Typo="Typo.body2">@eventType.EventTypeShortName</MudText>
@@ -126,10 +126,10 @@
                 <MudCardContent>
                     @if (Statistics.TopTopics.Any())
                     {
-                        <MudList T="string" Clickable="false" Dense="true">
+                        <MudList T="string" Clickable="true" Dense="true">
                             @foreach (var topic in Statistics.TopTopics)
                             {
-                                <MudListItem T="string">
+                                <MudListItem T="string" OnClick="() => OnTopicClick.InvokeAsync(topic.TopicName)" Style="cursor: pointer;">
                                     <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                                         <MudText Typo="Typo.body2">@topic.TopicName</MudText>
                                         <MudChip T="string" Color="Color.Secondary" Size="Size.Small">@topic.Count</MudChip>
@@ -155,4 +155,10 @@ else
 @code {
     [Parameter]
     public SubscriptionStatistics? Statistics { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnEventTypeClick { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnTopicClick { get; set; }
 }
