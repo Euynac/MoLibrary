@@ -56,9 +56,7 @@ internal class DaprEventBusSubscriptionHostedService(
     /// </summary>
     protected override async Task OnStartingAsync(CancellationToken cancellationToken)
     {
-        RecordStateChange(
-            HostedServiceState.Starting,
-            "Waiting for Dapr sidecar to become healthy");
+        RecordState("Waiting for Dapr sidecar to become healthy", HostedServiceState.Starting);
 
         Logger.LogInformation("Waiting for Dapr sidecar health check...");
 
@@ -70,7 +68,7 @@ internal class DaprEventBusSubscriptionHostedService(
         if (!isHealthy)
         {
             var message = "Dapr sidecar is not healthy. Subscription creation will be skipped.";
-            RecordStateChange(HostedServiceState.Degraded, message);
+            RecordState(message, HostedServiceState.Degraded);
             Logger.LogWarning(message);
 
             if (_options.FailFastOnSidecarUnavailable)
@@ -81,9 +79,7 @@ internal class DaprEventBusSubscriptionHostedService(
             return; // Don't call base - skip subscription creation
         }
 
-        RecordStateChange(
-            HostedServiceState.Starting,
-            "Dapr sidecar is healthy, proceeding with subscription creation");
+        RecordState("Dapr sidecar is healthy, proceeding with subscription creation", HostedServiceState.Starting);
 
         Logger.LogInformation("Dapr sidecar is healthy, creating subscriptions");
 
@@ -101,9 +97,7 @@ internal class DaprEventBusSubscriptionHostedService(
     {
         try
         {
-            RecordStateChange(
-                HostedServiceState.Running,
-                $"Starting Dapr subscription for topic {topicName}");
+            RecordState($"Starting Dapr subscription for topic {topicName}", HostedServiceState.Running);
 
             Logger.LogDebug(
                 "Creating Dapr subscription for topic {Topic} with EventType {EventType} (ServiceKey: {ServiceKey})",
@@ -128,9 +122,7 @@ internal class DaprEventBusSubscriptionHostedService(
             // Store Dapr subscription for cleanup later
             _daprSubscriptionsByTopic.TryAdd(topicName, daprSubscription);
 
-            RecordStateChange(
-                HostedServiceState.Running,
-                $"Successfully created Dapr subscription for topic {topicName}");
+            RecordState($"Successfully created Dapr subscription for topic {topicName}", HostedServiceState.Running);
 
             Logger.LogInformation(
                 "Created Dapr subscription for topic {Topic} with EventType {EventType} (ServiceKey: {ServiceKey})",
@@ -138,10 +130,8 @@ internal class DaprEventBusSubscriptionHostedService(
         }
         catch (Exception ex)
         {
-            RecordStateChange(
-                HostedServiceState.Degraded,
-                $"Failed to create Dapr subscription for topic {topicName}",
-                ex);
+            RecordState($"Failed to create Dapr subscription for topic {topicName}",
+                HostedServiceState.Degraded, ex);
 
             Logger.LogError(ex,
                 "Failed to create Dapr subscription for topic {Topic}",
@@ -173,9 +163,7 @@ internal class DaprEventBusSubscriptionHostedService(
 
                 if (eventData == null)
                 {
-                    RecordStateChange(
-                        HostedServiceState.Degraded,
-                        $"Failed to deserialize message for topic {message.Topic}");
+                    RecordState($"Failed to deserialize message for topic {message.Topic}", HostedServiceState.Degraded);
 
                     Logger.LogWarning(
                         "Deserialized message for topic {Topic} was null",
@@ -193,10 +181,8 @@ internal class DaprEventBusSubscriptionHostedService(
             }
             catch (Exception ex)
             {
-                RecordStateChange(
-                    HostedServiceState.Degraded,
-                    $"Error handling Dapr message for topic {message.Topic}",
-                    ex);
+                RecordState($"Error handling Dapr message for topic {message.Topic}",
+                    HostedServiceState.Degraded, ex);
 
                 Logger.LogError(ex,
                     "Error handling Dapr message for topic {Topic}",
@@ -217,9 +203,7 @@ internal class DaprEventBusSubscriptionHostedService(
         {
             try
             {
-                RecordStateChange(
-                    HostedServiceState.Running,
-                    $"Disposing Dapr subscription for topic {topicName}");
+                RecordState($"Disposing Dapr subscription for topic {topicName}", HostedServiceState.Running);
 
                 Logger.LogInformation(
                     "Disposing Dapr subscription for topic {Topic} (ServiceKey: {ServiceKey})",
@@ -227,16 +211,12 @@ internal class DaprEventBusSubscriptionHostedService(
 
                 await daprSubscription.DisposeAsync();
 
-                RecordStateChange(
-                    HostedServiceState.Running,
-                    $"Successfully disposed Dapr subscription for topic {topicName}");
+                RecordState($"Successfully disposed Dapr subscription for topic {topicName}", HostedServiceState.Running);
             }
             catch (Exception ex)
             {
-                RecordStateChange(
-                    HostedServiceState.Degraded,
-                    $"Error disposing Dapr subscription for topic {topicName}",
-                    ex);
+                RecordState($"Error disposing Dapr subscription for topic {topicName}",
+                    HostedServiceState.Degraded, ex);
 
                 Logger.LogError(ex,
                     "Error disposing Dapr subscription for topic {Topic}",
@@ -246,9 +226,7 @@ internal class DaprEventBusSubscriptionHostedService(
         }
         else
         {
-            RecordStateChange(
-                HostedServiceState.Degraded,
-                $"Attempted to remove non-existent Dapr subscription for topic {topicName}");
+            RecordState($"Attempted to remove non-existent Dapr subscription for topic {topicName}", HostedServiceState.Degraded);
 
             Logger.LogWarning(
                 "Attempted to remove Dapr subscription for topic {Topic}, but it was not found",

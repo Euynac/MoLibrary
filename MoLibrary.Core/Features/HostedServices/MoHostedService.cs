@@ -61,18 +61,12 @@ public abstract class MoHostedService(
         };
     }
 
-    /// <summary>
-    /// Records a state change with optional message and exception
-    /// </summary>
-    /// <param name="newState">The new state to transition to</param>
-    /// <param name="message">Descriptive message about the state change</param>
-    /// <param name="exception">Optional exception associated with this state change</param>
-    protected void RecordStateChange(
-        HostedServiceState newState,
-        string message,
+    /// <inheritdoc cref="ObservableAgent.RecordState" />
+    protected void RecordState(string message,
+        HostedServiceState? newState,
         Exception? exception = null)
     {
-        ObservableInfo.RecordStateChange(newState, message, exception);
+        ObservableInfo.RecordState(message, newState, exception);
     }
 
     /// <summary>
@@ -82,18 +76,18 @@ public abstract class MoHostedService(
     {
         try
         {
-            RecordStateChange(HostedServiceState.Starting, "Service starting");
+            RecordState("Service starting", HostedServiceState.Starting);
             ObservableInfo.StartedAt = DateTime.UtcNow;
 
             await OnStartingAsync(cancellationToken);
 
-            RecordStateChange(HostedServiceState.Running, "Service started successfully");
+            RecordState("Service started successfully", HostedServiceState.Running);
 
             await OnStartedAsync(cancellationToken);
         }
         catch (Exception ex)
         {
-            RecordStateChange(HostedServiceState.Faulted, "Service start failed", ex);
+            RecordState("Service start failed", HostedServiceState.Faulted, ex);
             Logger.LogError(ex, "{ServiceName} failed to start", ServiceName);
 
             if (_options.FailFastOnStartupError)
@@ -110,18 +104,18 @@ public abstract class MoHostedService(
     {
         try
         {
-            RecordStateChange(HostedServiceState.Stopping, "Service stopping");
+            RecordState("Service stopping", HostedServiceState.Stopping);
 
             await OnStoppingAsync(cancellationToken);
 
             ObservableInfo.StoppedAt = DateTime.UtcNow;
-            RecordStateChange(HostedServiceState.Stopped, "Service stopped successfully");
+            RecordState("Service stopped successfully", HostedServiceState.Stopped);
 
             await OnStoppedAsync(cancellationToken);
         }
         catch (Exception ex)
         {
-            RecordStateChange(HostedServiceState.Faulted, "Service stop failed", ex);
+            RecordState("Service stop failed", HostedServiceState.Faulted, ex);
             Logger.LogError(ex, "{ServiceName} failed to stop gracefully", ServiceName);
         }
     }

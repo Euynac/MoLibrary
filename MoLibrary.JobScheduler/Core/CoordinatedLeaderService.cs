@@ -57,28 +57,28 @@ public abstract class CoordinatedLeaderService(
         try
         {
             // Step 1: Optional pre-initialization hook
-            RecordStateChange(HostedServiceState.Starting, "Pre-initialization starting");
+            RecordState("Pre-initialization starting", HostedServiceState.Starting);
             await OnBeforeInitialization(stoppingToken);
 
             // Step 2: Wait for RegisterCentre registration (if coordinator available)
-            RecordStateChange(HostedServiceState.Starting, "Waiting for registration");
+            RecordState("Waiting for registration", HostedServiceState.Starting);
             await WaitForRegistrationAsync(stoppingToken);
 
             // Step 3: Verify this instance is the leader
-            RecordStateChange(HostedServiceState.Starting, "Checking leader status");
+            RecordState("Checking leader status", HostedServiceState.Starting);
             if (!await EnsureIsLeaderAsync(stoppingToken))
             {
                 // Follower instances mark as running without doing work
-                RecordStateChange(HostedServiceState.Running, "Follower instance - no work to do");
+                RecordState("Follower instance - no work to do", HostedServiceState.Running);
                 return;
             }
 
             // Step 4: Perform service-specific initialization (only on leader)
-            RecordStateChange(HostedServiceState.Executing, "Initializing as leader");
+            RecordState("Initializing as leader", HostedServiceState.Executing);
             await InitializeServiceAsync(stoppingToken);
 
             // Step 5: Mark as successfully initialized
-            RecordStateChange(HostedServiceState.Running, "Leader initialized successfully");
+            RecordState("Leader initialized successfully", HostedServiceState.Running);
             Logger.LogInformation("{ServiceName} initialized successfully", ServiceName);
 
             // Step 6: Optional post-initialization hook
@@ -95,7 +95,7 @@ public abstract class CoordinatedLeaderService(
         catch (Exception ex)
         {
             // Initialization failure - capture error and rethrow
-            RecordStateChange(HostedServiceState.Faulted, "Initialization failed", ex);
+            RecordState("Initialization failed", HostedServiceState.Faulted, ex);
             Logger.LogError(ex, "{ServiceName} initialization failed", ServiceName);
             throw; // Rethrow to let the host handle the failure
         }
@@ -142,7 +142,7 @@ public abstract class CoordinatedLeaderService(
         {
             Logger.LogError("Error getting leader status: {Error}", error);
             var exception = new InvalidOperationException($"Failed to get leader status: {error.Message}");
-            RecordStateChange(HostedServiceState.Faulted, "Failed to get leader status", exception);
+            RecordState("Failed to get leader status", HostedServiceState.Faulted, exception);
             return false;
         }
 

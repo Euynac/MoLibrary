@@ -145,13 +145,8 @@ public class HostedServiceObservableInfo
         ? DateTime.UtcNow - StartedAt.Value
         : null;
 
-    /// <summary>
-    /// Records a state change and adds it to the history
-    /// </summary>
-    /// <param name="newState">The new state to transition to</param>
-    /// <param name="message">Descriptive message about the state change</param>
-    /// <param name="exception">Optional exception associated with this state change</param>
-    public void RecordStateChange(HostedServiceState newState, string message, Exception? exception = null)
+    /// <inheritdoc cref="ObservableAgent.RecordState" />
+    public void RecordState(string message, HostedServiceState? newState, Exception? exception = null)
     {
         _agent.RecordState(message, newState, exception);
     }

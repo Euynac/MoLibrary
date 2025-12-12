@@ -60,7 +60,7 @@ public abstract class EventBusSubscriptionHostedServiceBase(
     /// </summary>
     protected override async Task OnStartingAsync(CancellationToken cancellationToken)
     {
-        RecordStateChange(HostedServiceState.Starting, "Initializing subscription manager observer");
+        RecordState("Initializing subscription manager observer", HostedServiceState.Starting);
 
         // Subscribe to SubscriptionManager changes
         _subscriptionManagerObserver = SubscriptionManager.Subscribe(this);
@@ -71,9 +71,7 @@ public abstract class EventBusSubscriptionHostedServiceBase(
             .Where(s => s.State == SubscriptionState.Active)
             .ToList();
 
-        RecordStateChange(
-            HostedServiceState.Starting,
-            $"Creating subscriptions for {existingSubscriptions.Count} existing subscriptions across topics");
+        RecordState($"Creating subscriptions for {existingSubscriptions.Count} existing subscriptions across topics", HostedServiceState.Starting);
 
         // Add subscriptions using the new logic (which handles topic grouping)
         foreach (var subscription in existingSubscriptions)
@@ -94,14 +92,12 @@ public abstract class EventBusSubscriptionHostedServiceBase(
     /// </summary>
     protected override async Task OnStoppingAsync(CancellationToken cancellationToken)
     {
-        RecordStateChange(HostedServiceState.Stopping, "Disposing subscription manager observer");
+        RecordState("Disposing subscription manager observer", HostedServiceState.Stopping);
 
         // Unsubscribe from SubscriptionManager
         _subscriptionManagerObserver?.Dispose();
 
-        RecordStateChange(
-            HostedServiceState.Stopping,
-            $"Disposing {_topicSubscriptions.Count} external subscriptions");
+        RecordState($"Disposing {_topicSubscriptions.Count} external subscriptions", HostedServiceState.Stopping);
 
         // Dispose all external subscriptions
         var disposeTasks = _topicSubscriptions.Values
@@ -148,10 +144,8 @@ public abstract class EventBusSubscriptionHostedServiceBase(
         }
         catch (Exception ex)
         {
-            RecordStateChange(
-                HostedServiceState.Degraded,
-                $"Error handling subscription change {change.ChangeType} for {change.Subscription.Id}",
-                ex);
+            RecordState($"Error handling subscription change {change.ChangeType} for {change.Subscription.Id}",
+                HostedServiceState.Degraded, ex);
 
             Logger.LogError(ex,
                 "Error handling subscription change {ChangeType} for {SubscriptionId}",
@@ -179,7 +173,7 @@ public abstract class EventBusSubscriptionHostedServiceBase(
                                        $"but new subscription uses '{eventType.Name}'. " +
                                        $"Multiple event types per topic are not supported.";
                         Logger.LogError(errorMsg);
-                        RecordStateChange(HostedServiceState.Faulted, errorMsg);
+                        RecordState(errorMsg, HostedServiceState.Faulted);
                         throw new InvalidOperationException(errorMsg);
                     }
 
@@ -216,23 +210,17 @@ public abstract class EventBusSubscriptionHostedServiceBase(
             // Create external subscription if this is the first subscription for the topic
             if (shouldCreateExternal)
             {
-                RecordStateChange(
-                    HostedServiceState.Running,
-                    $"Creating external subscription for topic {topicName}");
+                RecordState($"Creating external subscription for topic {topicName}", HostedServiceState.Running);
 
                 await CreateExternalSubscriptionForTopicAsync(topicName, eventType, cancellationToken);
 
-                RecordStateChange(
-                    HostedServiceState.Running,
-                    $"Successfully created external subscription for topic {topicName}");
+                RecordState($"Successfully created external subscription for topic {topicName}", HostedServiceState.Running);
             }
         }
         catch (Exception ex) when (ex is not InvalidOperationException)
         {
-            RecordStateChange(
-                HostedServiceState.Degraded,
-                $"Error adding subscription for topic {topicName}",
-                ex);
+            RecordState($"Error adding subscription for topic {topicName}",
+                HostedServiceState.Degraded, ex);
             throw;
         }
     }
@@ -274,23 +262,17 @@ public abstract class EventBusSubscriptionHostedServiceBase(
             // Remove external subscription if this was the last subscription for the topic
             if (shouldRemoveExternal && topicToRemove != null)
             {
-                RecordStateChange(
-                    HostedServiceState.Running,
-                    $"Removing external subscription for topic {topicToRemove}");
+                RecordState($"Removing external subscription for topic {topicToRemove}", HostedServiceState.Running);
 
                 await RemoveExternalSubscriptionForTopicAsync(topicToRemove, cancellationToken);
 
-                RecordStateChange(
-                    HostedServiceState.Running,
-                    $"Successfully removed external subscription for topic {topicToRemove}");
+                RecordState($"Successfully removed external subscription for topic {topicToRemove}", HostedServiceState.Running);
             }
         }
         catch (Exception ex)
         {
-            RecordStateChange(
-                HostedServiceState.Degraded,
-                $"Error removing subscription {subscriptionId}",
-                ex);
+            RecordState($"Error removing subscription {subscriptionId}",
+                HostedServiceState.Degraded, ex);
             throw;
         }
     }
@@ -374,9 +356,7 @@ public abstract class EventBusSubscriptionHostedServiceBase(
             }
             else
             {
-                RecordStateChange(
-                    HostedServiceState.Degraded,
-                    $"Received null event data for topic {topicName}");
+                RecordState($"Received null event data for topic {topicName}", HostedServiceState.Degraded);
 
                 Logger.LogWarning(
                     "Event data for topic {Topic} was null",
@@ -385,10 +365,8 @@ public abstract class EventBusSubscriptionHostedServiceBase(
         }
         catch (Exception ex)
         {
-            RecordStateChange(
-                HostedServiceState.Degraded,
-                $"Error handling external message for topic {topicName}",
-                ex);
+            RecordState($"Error handling external message for topic {topicName}",
+                HostedServiceState.Degraded, ex);
 
             Logger.LogError(ex,
                 "Error handling external message for topic {Topic}",

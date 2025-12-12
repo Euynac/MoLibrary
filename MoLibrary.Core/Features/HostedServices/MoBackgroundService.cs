@@ -65,18 +65,12 @@ public abstract class MoBackgroundService(
         };
     }
 
-    /// <summary>
-    /// Records a state change with optional message and exception
-    /// </summary>
-    /// <param name="newState">The new state to transition to</param>
-    /// <param name="message">Descriptive message about the state change</param>
-    /// <param name="exception">Optional exception associated with this state change</param>
-    protected void RecordStateChange(
-        HostedServiceState newState,
-        string message,
+    /// <inheritdoc cref="ObservableAgent.RecordState" />
+    protected void RecordState(string message,
+        HostedServiceState? newState,
         Exception? exception = null)
     {
-        ObservableInfo.RecordStateChange(newState, message, exception);
+        ObservableInfo.RecordState(message, newState, exception);
     }
 
     /// <summary>
@@ -124,17 +118,17 @@ public abstract class MoBackgroundService(
     {
         try
         {
-            RecordStateChange(HostedServiceState.Starting, "Service starting");
+            RecordState("Service starting", HostedServiceState.Starting);
             ObservableInfo.StartedAt = DateTime.UtcNow;
 
             await base.StartAsync(cancellationToken);
             StartHeartbeat();
 
-            RecordStateChange(HostedServiceState.Running, "Service started, executing background work");
+            RecordState("Service started, executing background work", HostedServiceState.Running);
         }
         catch (Exception ex)
         {
-            RecordStateChange(HostedServiceState.Faulted, "Service start failed", ex);
+            RecordState("Service start failed", HostedServiceState.Faulted, ex);
             Logger.LogError(ex, "{ServiceName} failed to start", ServiceName);
 
             if (_options.FailFastOnStartupError)
@@ -151,7 +145,7 @@ public abstract class MoBackgroundService(
     {
         try
         {
-            RecordStateChange(HostedServiceState.Stopping, "Service stopping");
+            RecordState("Service stopping", HostedServiceState.Stopping);
 
             await _heartbeatCts?.CancelAsync();
             if (_heartbeatTask != null)
@@ -162,11 +156,11 @@ public abstract class MoBackgroundService(
             await base.StopAsync(cancellationToken);
 
             ObservableInfo.StoppedAt = DateTime.UtcNow;
-            RecordStateChange(HostedServiceState.Stopped, "Service stopped");
+            RecordState("Service stopped", HostedServiceState.Stopped);
         }
         catch (Exception ex)
         {
-            RecordStateChange(HostedServiceState.Faulted, "Service stop failed", ex);
+            RecordState("Service stop failed", HostedServiceState.Faulted, ex);
             Logger.LogError(ex, "{ServiceName} failed to stop gracefully", ServiceName);
         }
     }
@@ -178,7 +172,7 @@ public abstract class MoBackgroundService(
     {
         try
         {
-            RecordStateChange(HostedServiceState.Executing, "Executing background work");
+            RecordState("Executing background work", HostedServiceState.Executing);
             await ExecuteBackgroundAsync(stoppingToken);
         }
         catch (OperationCanceledException)
@@ -187,7 +181,7 @@ public abstract class MoBackgroundService(
         }
         catch (Exception ex)
         {
-            RecordStateChange(HostedServiceState.Faulted, "Background work failed", ex);
+            RecordState("Background work failed", HostedServiceState.Faulted, ex);
             Logger.LogError(ex, "{ServiceName} background work failed", ServiceName);
         }
     }

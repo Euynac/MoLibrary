@@ -90,7 +90,7 @@ public class DaprSidecarHealthCoordinator(
     {
         // Phase 1: Initial health check with retry and exponential backoff
         Status = DaprHealthStatus.Checking;
-        RecordStateChange(HostedServiceState.Starting, "Checking Dapr sidecar health");
+        RecordState("Checking Dapr sidecar health", HostedServiceState.Starting);
         Logger.LogInformation("Starting initial Dapr sidecar health check");
 
         var retryCount = _options.InitialRetryTimes;
@@ -108,7 +108,7 @@ public class DaprSidecarHealthCoordinator(
                     _lastHealthyAt = DateTime.UtcNow;
                     _consecutiveFailures = 0;
                     Status = DaprHealthStatus.Healthy;
-                    RecordStateChange(HostedServiceState.Running, "Dapr sidecar is healthy");
+                    RecordState("Dapr sidecar is healthy", HostedServiceState.Running);
                     Logger.LogInformation("Dapr sidecar is healthy");
                     _initialHealthCompletionSource.TrySetResult(true);
 
@@ -145,7 +145,7 @@ public class DaprSidecarHealthCoordinator(
 
         // Failed to become healthy after all initial retries
         Status = DaprHealthStatus.Failed;
-        RecordStateChange(HostedServiceState.Faulted, $"Failed to connect to Dapr sidecar after {_options.InitialRetryTimes} attempts");
+        RecordState($"Failed to connect to Dapr sidecar after {_options.InitialRetryTimes} attempts", HostedServiceState.Faulted);
         Logger.LogError("Failed to connect to Dapr sidecar after {Attempts} attempts", _options.InitialRetryTimes);
         _initialHealthCompletionSource.TrySetResult(false);
 
@@ -156,7 +156,7 @@ public class DaprSidecarHealthCoordinator(
             Logger.LogCritical(
                 "Fail-fast enabled: Failed to connect to Dapr sidecar after {Attempts} initial attempts. Initiating graceful application shutdown",
                 _options.InitialRetryTimes);
-            RecordStateChange(HostedServiceState.Faulted, "Initiating graceful shutdown (fail-fast mode)");
+            RecordState("Initiating graceful shutdown (fail-fast mode)", HostedServiceState.Faulted);
             applicationLifetime.StopApplication();
         }
     }
@@ -183,7 +183,7 @@ public class DaprSidecarHealthCoordinator(
                     if (Status != DaprHealthStatus.Healthy)
                     {
                         Status = DaprHealthStatus.Healthy;
-                        RecordStateChange(HostedServiceState.Running, "Dapr sidecar recovered to healthy state");
+                        RecordState("Dapr sidecar recovered to healthy state", HostedServiceState.Running);
                         Logger.LogInformation("Dapr sidecar recovered to healthy state");
                     }
                 }
@@ -199,9 +199,7 @@ public class DaprSidecarHealthCoordinator(
                     if (_options.EnableFailFast && _consecutiveFailures >= _options.FailFastThreshold)
                     {
                         Status = DaprHealthStatus.Failed;
-                        RecordStateChange(
-                            HostedServiceState.Faulted,
-                            $"Dapr sidecar failed: {_consecutiveFailures} consecutive failures reached fail-fast threshold ({_options.FailFastThreshold})");
+                        RecordState($"Dapr sidecar failed: {_consecutiveFailures} consecutive failures reached fail-fast threshold ({_options.FailFastThreshold})", HostedServiceState.Faulted);
                         Logger.LogCritical(
                             "Fail-fast enabled: {Failures} consecutive runtime failures reached threshold ({Threshold}). Initiating graceful application shutdown",
                             _consecutiveFailures, _options.FailFastThreshold);
@@ -212,13 +210,13 @@ public class DaprSidecarHealthCoordinator(
                     else if (_consecutiveFailures >= _options.UnhealthyThreshold)
                     {
                         Status = DaprHealthStatus.Unhealthy;
-                        RecordStateChange(HostedServiceState.Degraded, $"Dapr sidecar is unhealthy (consecutive failures: {_consecutiveFailures})");
+                        RecordState($"Dapr sidecar is unhealthy (consecutive failures: {_consecutiveFailures})", HostedServiceState.Degraded);
                         Logger.LogError("Dapr sidecar is unhealthy (consecutive failures: {Count})", _consecutiveFailures);
                     }
                     else if (_consecutiveFailures >= _options.DegradedThreshold)
                     {
                         Status = DaprHealthStatus.Degraded;
-                        RecordStateChange(HostedServiceState.Degraded, $"Dapr sidecar is degraded (consecutive failures: {_consecutiveFailures})");
+                        RecordState($"Dapr sidecar is degraded (consecutive failures: {_consecutiveFailures})", HostedServiceState.Degraded);
                         Logger.LogWarning("Dapr sidecar is degraded (consecutive failures: {Count})", _consecutiveFailures);
                     }
                 }
@@ -239,9 +237,7 @@ public class DaprSidecarHealthCoordinator(
                 if (_options.EnableFailFast && _consecutiveFailures >= _options.FailFastThreshold)
                 {
                     Status = DaprHealthStatus.Failed;
-                    RecordStateChange(
-                        HostedServiceState.Faulted,
-                        $"Dapr sidecar failed: {_consecutiveFailures} consecutive failures reached fail-fast threshold ({_options.FailFastThreshold})");
+                    RecordState($"Dapr sidecar failed: {_consecutiveFailures} consecutive failures reached fail-fast threshold ({_options.FailFastThreshold})", HostedServiceState.Faulted);
                     Logger.LogCritical(
                         "Fail-fast enabled: {Failures} consecutive runtime failures reached threshold ({Threshold}). Initiating graceful application shutdown",
                         _consecutiveFailures, _options.FailFastThreshold);
@@ -251,13 +247,13 @@ public class DaprSidecarHealthCoordinator(
                 else if (_consecutiveFailures >= _options.UnhealthyThreshold)
                 {
                     Status = DaprHealthStatus.Unhealthy;
-                    RecordStateChange(HostedServiceState.Degraded, $"Dapr sidecar is unhealthy (consecutive failures: {_consecutiveFailures})");
+                    RecordState($"Dapr sidecar is unhealthy (consecutive failures: {_consecutiveFailures})", HostedServiceState.Degraded);
                     Logger.LogError("Dapr sidecar is unhealthy (consecutive failures: {Count})", _consecutiveFailures);
                 }
                 else if (_consecutiveFailures >= _options.DegradedThreshold)
                 {
                     Status = DaprHealthStatus.Degraded;
-                    RecordStateChange(HostedServiceState.Degraded, $"Dapr sidecar is degraded (consecutive failures: {_consecutiveFailures})");
+                    RecordState($"Dapr sidecar is degraded (consecutive failures: {_consecutiveFailures})", HostedServiceState.Degraded);
                     Logger.LogWarning("Dapr sidecar is degraded (consecutive failures: {Count})", _consecutiveFailures);
                 }
             }
