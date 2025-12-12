@@ -20,7 +20,7 @@
             <!-- Statistics Cards Grid -->
             <MudGrid>
                 <!-- Total Instances -->
-                <MudItem xs="12" sm="6" md="3">
+                <MudItem xs="12" sm="6" md="4">
                     <MudPaper Class="pa-3" Elevation="1" Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
                         <MudStack Spacing="1">
                             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
@@ -32,21 +32,47 @@
                     </MudPaper>
                 </MudItem>
 
-                <!-- Instances with Exceptions -->
+                <!-- Healthy Instances -->
+                <MudItem xs="12" sm="6" md="3">
+                    <MudPaper Class="pa-3" Elevation="1" Style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+                        <MudStack Spacing="1">
+                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8);">健康实例</MudText>
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Style="color: rgba(255,255,255,0.6);" />
+                            </MudStack>
+                            <MudText Typo="Typo.h4" Style="color: white; font-weight: 600;">@Statistics.HealthyCount</MudText>
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+
+                <!-- Unhealthy Instances -->
                 <MudItem xs="12" sm="6" md="3">
                     <MudPaper Class="pa-3" Elevation="1" Style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
                         <MudStack Spacing="1">
                             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                                <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8);">异常实例</MudText>
-                                <MudIcon Icon="@Icons.Material.Filled.Error" Style="color: rgba(255,255,255,0.6);" />
+                                <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8);">不健康实例</MudText>
+                                <MudIcon Icon="@Icons.Material.Filled.Warning" Style="color: rgba(255,255,255,0.6);" />
                             </MudStack>
-                            <MudText Typo="Typo.h4" Style="color: white; font-weight: 600;">@Statistics.InstancesWithExceptions</MudText>
+                            <MudText Typo="Typo.h4" Style="color: white; font-weight: 600;">@Statistics.UnhealthyCount</MudText>
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+
+                <!-- Unknown Health Instances -->
+                <MudItem xs="12" sm="6" md="3">
+                    <MudPaper Class="pa-3" Elevation="1" Style="background: linear-gradient(135deg, #a8a8a8 0%, #d0d0d0 100%);">
+                        <MudStack Spacing="1">
+                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                <MudText Typo="Typo.caption" Style="color: rgba(0,0,0,0.6);">未知状态</MudText>
+                                <MudIcon Icon="@Icons.Material.Filled.HelpOutline" Style="color: rgba(0,0,0,0.4);" />
+                            </MudStack>
+                            <MudText Typo="Typo.h4" Style="color: rgba(0,0,0,0.8); font-weight: 600;">@Statistics.UnknownHealthCount</MudText>
                         </MudStack>
                     </MudPaper>
                 </MudItem>
 
                 <!-- Total State Changes -->
-                <MudItem xs="12" sm="6" md="3">
+                <MudItem xs="12" sm="6" md="4">
                     <MudPaper Class="pa-3" Elevation="1" Style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
                         <MudStack Spacing="1">
                             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
@@ -59,7 +85,7 @@
                 </MudItem>
 
                 <!-- Total Exceptions -->
-                <MudItem xs="12" sm="6" md="3">
+                <MudItem xs="12" sm="6" md="4">
                     <MudPaper Class="pa-3" Elevation="1" Style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
                         <MudStack Spacing="1">
                             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
@@ -71,6 +97,26 @@
                     </MudPaper>
                 </MudItem>
             </MudGrid>
+
+            <!-- Log Level Distribution -->
+            @if (Statistics.LogLevelDistribution.Any())
+            {
+                <MudPaper Class="pa-3" Elevation="1">
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">日志级别分布</MudText>
+                        <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
+                            @foreach (var logLevel in Statistics.LogLevelDistribution.OrderBy(kv => kv.Key))
+                            {
+                                var color = MapLogLevelToColor(logLevel.Key);
+                                var icon = MapLogLevelToIcon(logLevel.Key);
+                                <MudChip T="string" Color="@color" Icon="@icon">
+                                    @logLevel.Key: @logLevel.Value
+                                </MudChip>
+                            }
+                        </MudStack>
+                    </MudStack>
+                </MudPaper>
+            }
 
             <!-- Additional Metrics -->
             <MudGrid>
@@ -160,7 +206,31 @@
         if (Statistics == null || Statistics.TotalInstances == 0)
             return "0";
 
-        var percentage = (double)Statistics.InstancesWithoutExceptions / Statistics.TotalInstances * 100;
+        var percentage = (double)(Statistics.HealthyCount + Statistics.UnknownHealthCount) / Statistics.TotalInstances * 100;
         return percentage.ToString("F1");
     }
+
+    private Color MapLogLevelToColor(Microsoft.Extensions.Logging.LogLevel level) =>
+        level switch
+        {
+            Microsoft.Extensions.Logging.LogLevel.Trace => Color.Default,
+            Microsoft.Extensions.Logging.LogLevel.Debug => Color.Default,
+            Microsoft.Extensions.Logging.LogLevel.Information => Color.Info,
+            Microsoft.Extensions.Logging.LogLevel.Warning => Color.Warning,
+            Microsoft.Extensions.Logging.LogLevel.Error => Color.Error,
+            Microsoft.Extensions.Logging.LogLevel.Critical => Color.Error,
+            _ => Color.Default
+        };
+
+    private string MapLogLevelToIcon(Microsoft.Extensions.Logging.LogLevel level) =>
+        level switch
+        {
+            Microsoft.Extensions.Logging.LogLevel.Trace => Icons.Material.Filled.Code,
+            Microsoft.Extensions.Logging.LogLevel.Debug => Icons.Material.Filled.BugReport,
+            Microsoft.Extensions.Logging.LogLevel.Information => Icons.Material.Filled.Info,
+            Microsoft.Extensions.Logging.LogLevel.Warning => Icons.Material.Filled.Warning,
+            Microsoft.Extensions.Logging.LogLevel.Error => Icons.Material.Filled.Error,
+            Microsoft.Extensions.Logging.LogLevel.Critical => Icons.Material.Filled.ErrorOutline,
+            _ => Icons.Material.Filled.HelpOutline
+        };
 }

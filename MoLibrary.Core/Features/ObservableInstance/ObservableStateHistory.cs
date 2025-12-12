@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+
 namespace MoLibrary.Core.Features.ObservableInstance;
 
 /// <summary>
@@ -31,6 +33,11 @@ public class ObservableStateHistory
     /// Gets the exception associated with this state change (if any)
     /// </summary>
     public Exception? Exception { get; init; }
+
+    /// <summary>
+    /// Gets the log level associated with this state at the time of recording (if mapped)
+    /// </summary>
+    public LogLevel? LogLevel { get; init; }
 
     /// <summary>
     /// Gets whether this is an exception entry

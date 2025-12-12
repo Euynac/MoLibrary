@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using MoLibrary.Tool.Extensions;
 using MudBlazor;
 
@@ -86,6 +87,32 @@ public class ObservableInstanceViewModel
 
     #endregion
 
+    #region Log Level & Health State
+
+    /// <summary>
+    /// Current log level for this instance (null if not mapped)
+    /// </summary>
+    public LogLevel? CurrentLogLevel { get; set; }
+
+    /// <summary>
+    /// Whether this instance is unhealthy (Warning/Error/Critical)
+    /// </summary>
+    public bool IsUnhealthy { get; set; }
+
+    /// <summary>
+    /// Computed health state
+    /// </summary>
+    public HealthState HealthState
+    {
+        get
+        {
+            if (CurrentLogLevel == null) return HealthState.Unknown;
+            return IsUnhealthy ? HealthState.Unhealthy : HealthState.Healthy;
+        }
+    }
+
+    #endregion
+
     #region Display Properties
 
     /// <summary>
@@ -134,6 +161,66 @@ public class ObservableInstanceViewModel
             return FormatDuration(duration);
         }
     }
+
+    /// <summary>
+    /// Log level text for display
+    /// </summary>
+    public string LogLevelText => CurrentLogLevel?.ToString() ?? "Unknown";
+
+    /// <summary>
+    /// MudBlazor color for log level
+    /// </summary>
+    public Color LogLevelColor => MapLogLevelToColor(CurrentLogLevel);
+
+    /// <summary>
+    /// CSS variable color for log level dot
+    /// </summary>
+    public string LogLevelDotColor => MapLogLevelToCssColor(CurrentLogLevel);
+
+    /// <summary>
+    /// Icon for log level
+    /// </summary>
+    public string LogLevelIcon => MapLogLevelToIcon(CurrentLogLevel);
+
+    /// <summary>
+    /// Health state text
+    /// </summary>
+    public string HealthStateText => HealthState switch
+    {
+        HealthState.Healthy => "健康",
+        HealthState.Unhealthy => "不健康",
+        _ => "未知"
+    };
+
+    /// <summary>
+    /// MudBlazor color for health state
+    /// </summary>
+    public Color HealthStateColor => HealthState switch
+    {
+        HealthState.Healthy => Color.Success,
+        HealthState.Unhealthy => Color.Error,
+        _ => Color.Default
+    };
+
+    /// <summary>
+    /// CSS variable color for health state dot
+    /// </summary>
+    public string HealthStateDotColor => HealthState switch
+    {
+        HealthState.Healthy => "var(--mud-palette-success)",
+        HealthState.Unhealthy => "var(--mud-palette-error)",
+        _ => "var(--mud-palette-text-disabled)"
+    };
+
+    /// <summary>
+    /// Icon for health state
+    /// </summary>
+    public string HealthStateIcon => HealthState switch
+    {
+        HealthState.Healthy => Icons.Material.Filled.CheckCircle,
+        HealthState.Unhealthy => Icons.Material.Filled.Warning,
+        _ => Icons.Material.Filled.HelpOutline
+    };
 
     #endregion
 
@@ -206,6 +293,51 @@ public class ObservableInstanceViewModel
             return $"{(int)duration.TotalMinutes}分钟 {duration.Seconds}秒";
         return $"{(int)duration.TotalSeconds}秒";
     }
+
+    /// <summary>
+    /// Maps log level to MudBlazor color
+    /// </summary>
+    private static Color MapLogLevelToColor(LogLevel? level) =>
+        level switch
+        {
+            LogLevel.Trace => Color.Default,
+            LogLevel.Debug => Color.Default,
+            LogLevel.Information => Color.Info,
+            LogLevel.Warning => Color.Warning,
+            LogLevel.Error => Color.Error,
+            LogLevel.Critical => Color.Error,
+            _ => Color.Default
+        };
+
+    /// <summary>
+    /// Maps log level to CSS variable color
+    /// </summary>
+    private static string MapLogLevelToCssColor(LogLevel? level) =>
+        level switch
+        {
+            LogLevel.Trace => "var(--mud-palette-text-secondary)",
+            LogLevel.Debug => "var(--mud-palette-text-secondary)",
+            LogLevel.Information => "var(--mud-palette-info)",
+            LogLevel.Warning => "var(--mud-palette-warning)",
+            LogLevel.Error => "var(--mud-palette-error)",
+            LogLevel.Critical => "var(--mud-palette-error-darken)",
+            _ => "var(--mud-palette-text-disabled)"
+        };
+
+    /// <summary>
+    /// Maps log level to icon
+    /// </summary>
+    private static string MapLogLevelToIcon(LogLevel? level) =>
+        level switch
+        {
+            LogLevel.Trace => Icons.Material.Filled.Code,
+            LogLevel.Debug => Icons.Material.Filled.BugReport,
+            LogLevel.Information => Icons.Material.Filled.Info,
+            LogLevel.Warning => Icons.Material.Filled.Warning,
+            LogLevel.Error => Icons.Material.Filled.Error,
+            LogLevel.Critical => Icons.Material.Filled.ErrorOutline,
+            _ => Icons.Material.Filled.HelpOutline
+        };
 
     #endregion
 }

@@ -21,6 +21,15 @@ else
                                 <MudChip T="string" Color="@entry.HistoryEntryColor" Size="Size.Small">
                                     @entry.EntryTypeDescription
                                 </MudChip>
+                                @if (entry.LogLevel.HasValue)
+                                {
+                                    <MudTooltip Text="@($"日志级别: {entry.LogLevelText}")">
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="0">
+                                            <div style="width: 6px; height: 6px; border-radius: 50%; background: @entry.LogLevelDotColor; margin-right: 4px;"></div>
+                                            <MudIcon Icon="@entry.LogLevelIcon" Size="Size.Small" Color="@entry.LogLevelColor" />
+                                        </MudStack>
+                                    </MudTooltip>
+                                }
                             </MudStack>
                             <MudStack Spacing="0" AlignItems="AlignItems.End">
                                 <MudText Typo="Typo.body2">@entry.TimestampDisplay</MudText>

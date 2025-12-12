@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+
 namespace MoLibrary.FrameworkUI.UIObservableInstance.Models;
 
 /// <summary>
@@ -21,9 +23,24 @@ public class ObservableInstanceFilter
     public string? GroupId { get; set; }
 
     /// <summary>
-    /// Filter by exception status (null = all, true = with exceptions, false = without exceptions)
+    /// Filter by health state (null = all)
     /// </summary>
-    public bool? HasExceptions { get; set; }
+    public HealthState? HealthStateFilter { get; set; }
+
+    /// <summary>
+    /// Filter by specific log levels (null or empty = all)
+    /// </summary>
+    public HashSet<LogLevel>? LogLevels { get; set; }
+
+    /// <summary>
+    /// Quick filter: show only Critical and Error
+    /// </summary>
+    public bool ShowCriticalErrorOnly { get; set; }
+
+    /// <summary>
+    /// Quick filter: show only unhealthy instances
+    /// </summary>
+    public bool ShowUnhealthyOnly { get; set; }
 
     /// <summary>
     /// Filter by registration date range (start)
@@ -42,7 +59,10 @@ public class ObservableInstanceFilter
         !string.IsNullOrWhiteSpace(SearchText) ||
         InstanceType != null ||
         !string.IsNullOrWhiteSpace(GroupId) ||
-        HasExceptions.HasValue ||
+        HealthStateFilter.HasValue ||
+        LogLevels?.Any() == true ||
+        ShowCriticalErrorOnly ||
+        ShowUnhealthyOnly ||
         RegisteredFrom.HasValue ||
         RegisteredTo.HasValue;
 
@@ -57,7 +77,10 @@ public class ObservableInstanceFilter
             if (!string.IsNullOrWhiteSpace(SearchText)) count++;
             if (InstanceType != null) count++;
             if (!string.IsNullOrWhiteSpace(GroupId)) count++;
-            if (HasExceptions.HasValue) count++;
+            if (HealthStateFilter.HasValue) count++;
+            if (LogLevels?.Any() == true) count++;
+            if (ShowCriticalErrorOnly) count++;
+            if (ShowUnhealthyOnly) count++;
             if (RegisteredFrom.HasValue || RegisteredTo.HasValue) count++;
             return count;
         }
@@ -71,7 +94,10 @@ public class ObservableInstanceFilter
         SearchText = null;
         InstanceType = null;
         GroupId = null;
-        HasExceptions = null;
+        HealthStateFilter = null;
+        LogLevels = null;
+        ShowCriticalErrorOnly = false;
+        ShowUnhealthyOnly = false;
         RegisteredFrom = null;
         RegisteredTo = null;
     }

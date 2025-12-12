@@ -46,6 +46,38 @@ else
                     </MudGrid>
                 </MudPaper>
 
+                <!-- Health State -->
+                <MudPaper Class="pa-3" Elevation="1">
+                    <MudText Typo="Typo.h6" Class="mb-3">健康状态</MudText>
+                    <MudStack Spacing="2">
+                        <!-- Health State -->
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudText Typo="Typo.subtitle1" Style="min-width: 100px;">总体健康:</MudText>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <div style="width: 12px; height: 12px; border-radius: 50%; background: @Instance.HealthStateDotColor;"></div>
+                                <MudChip T="string" Color="@Instance.HealthStateColor" Icon="@Instance.HealthStateIcon">
+                                    @Instance.HealthStateText
+                                </MudChip>
+                            </MudStack>
+                        </MudStack>
+
+                        <!-- Log Level -->
+                        @if (Instance.CurrentLogLevel.HasValue)
+                        {
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudText Typo="Typo.subtitle1" Style="min-width: 100px;">日志级别:</MudText>
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                    <div style="width: 12px; height: 12px; border-radius: 50%; background: @Instance.LogLevelDotColor;"></div>
+                                    <MudIcon Icon="@Instance.LogLevelIcon" Size="Size.Small" Color="@Instance.LogLevelColor" />
+                                    <MudChip T="string" Color="@Instance.LogLevelColor">
+                                        @Instance.LogLevelText
+                                    </MudChip>
+                                </MudStack>
+                            </MudStack>
+                        }
+                    </MudStack>
+                </MudPaper>
+
                 <!-- Current State -->
                 <MudPaper Class="pa-3" Elevation="1">
                     <MudText Typo="Typo.h6" Class="mb-3">当前状态</MudText>

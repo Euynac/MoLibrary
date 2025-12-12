@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text;
 using MoLibrary.EventBus.Constants;
+using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.EventBus.Helpers;
 
@@ -59,7 +60,7 @@ internal static class DelegateMetadataExtractor
         var sb = new StringBuilder();
 
         // 返回类型
-        sb.Append(GetFriendlyTypeName(method.ReturnType));
+        sb.Append(method.ReturnType.GetCleanName());
         sb.Append(' ');
 
         // 方法名
@@ -71,7 +72,7 @@ internal static class DelegateMetadataExtractor
         for (int i = 0; i < parameters.Length; i++)
         {
             if (i > 0) sb.Append(", ");
-            sb.Append(GetFriendlyTypeName(parameters[i].ParameterType));
+            sb.Append(parameters[i].ParameterType.GetCleanName());
             sb.Append(' ');
             sb.Append(parameters[i].Name);
         }
@@ -81,20 +82,5 @@ internal static class DelegateMetadataExtractor
         return sb.ToString();
     }
 
-    /// <summary>
-    /// 获取友好的类型名称（处理泛型类型）
-    /// </summary>
-    /// <param name="type">类型</param>
-    /// <returns>友好的类型名称</returns>
-    private static string GetFriendlyTypeName(Type type)
-    {
-        if (!type.IsGenericType)
-        {
-            return type.Name;
-        }
-
-        var genericTypeName = type.Name[..type.Name.IndexOf('`')];
-        var genericArgs = string.Join(", ", type.GetGenericArguments().Select(GetFriendlyTypeName));
-        return $"{genericTypeName}<{genericArgs}>";
-    }
+   
 }

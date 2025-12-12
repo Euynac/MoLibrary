@@ -149,51 +149,78 @@ public sealed class ObservableInstanceMonitorService(
     {
         try
         {
-            var allInstances = _manager.GetAllInstances().AsQueryable();
+            var allInstances = _manager.GetAllInstances().ToList();
 
-            // Apply filters
+            // Convert to view models first to access computed properties
+            var viewModels = allInstances.Select(MapToViewModel).AsQueryable();
+
+            // Apply text search
             if (!string.IsNullOrWhiteSpace(filter.SearchText))
             {
                 var searchText = filter.SearchText.ToLowerInvariant();
-                allInstances = allInstances.Where(i =>
-                    i.InstanceId.ToLowerInvariant().Contains(searchText) ||
-                    i.InstanceName.ToLowerInvariant().Contains(searchText));
+                viewModels = viewModels.Where(vm =>
+                    vm.InstanceId.ToLowerInvariant().Contains(searchText) ||
+                    vm.InstanceName.ToLowerInvariant().Contains(searchText));
             }
 
+            // Apply type filter
             if (filter.InstanceType != null)
             {
-                allInstances = allInstances.Where(i => i.InstanceType == filter.InstanceType);
+                viewModels = viewModels.Where(vm => vm.InstanceType == filter.InstanceType);
             }
 
+            // Apply group filter
             if (!string.IsNullOrWhiteSpace(filter.GroupId))
             {
-                allInstances = allInstances.Where(i => i.GroupId == filter.GroupId);
+                viewModels = viewModels.Where(vm => vm.GroupId == filter.GroupId);
             }
 
-            if (filter.HasExceptions.HasValue)
+            // Apply health state filter
+            if (filter.HealthStateFilter.HasValue)
             {
-                allInstances = allInstances.Where(i => i.HasExceptions == filter.HasExceptions.Value);
+                viewModels = viewModels.Where(vm => vm.HealthState == filter.HealthStateFilter.Value);
             }
 
+            // Apply log level filter
+            if (filter.LogLevels?.Any() == true)
+            {
+                viewModels = viewModels.Where(vm =>
+                    vm.CurrentLogLevel.HasValue &&
+                    filter.LogLevels.Contains(vm.CurrentLogLevel.Value));
+            }
+
+            // Apply quick filter: Critical/Error only
+            if (filter.ShowCriticalErrorOnly)
+            {
+                viewModels = viewModels.Where(vm =>
+                    vm.CurrentLogLevel == Microsoft.Extensions.Logging.LogLevel.Critical ||
+                    vm.CurrentLogLevel == Microsoft.Extensions.Logging.LogLevel.Error);
+            }
+
+            // Apply quick filter: Unhealthy only
+            if (filter.ShowUnhealthyOnly)
+            {
+                viewModels = viewModels.Where(vm => vm.IsUnhealthy);
+            }
+
+            // Apply date range filters
             if (filter.RegisteredFrom.HasValue)
             {
-                allInstances = allInstances.Where(i => i.RegisteredAt >= filter.RegisteredFrom.Value);
+                viewModels = viewModels.Where(vm => vm.RegisteredAt >= filter.RegisteredFrom.Value);
             }
 
             if (filter.RegisteredTo.HasValue)
             {
-                allInstances = allInstances.Where(i => i.RegisteredAt <= filter.RegisteredTo.Value);
+                viewModels = viewModels.Where(vm => vm.RegisteredAt <= filter.RegisteredTo.Value);
             }
 
-            var viewModels = allInstances
-                .ToList()
-                .Select(MapToViewModel)
+            var results = viewModels
                 .OrderByDescending(vm => vm.RegisteredAt)
                 .ToList();
 
-            logger.LogDebug("Filtered instances: {Count} results", viewModels.Count);
+            logger.LogDebug("Filtered instances: {Count} results", results.Count);
 
-            return Res.Ok(viewModels);
+            return Res.Ok(results);
         }
         catch (Exception ex)
         {
@@ -210,12 +237,32 @@ public sealed class ObservableInstanceMonitorService(
         try
         {
             var allInstances = _manager.GetAllInstances().ToList();
+            var viewModels = allInstances.Select(MapToViewModel).ToList();
+
+            // Calculate health state distribution
+            var healthyCount = viewModels.Count(vm => vm.HealthState == HealthState.Healthy);
+            var unhealthyCount = viewModels.Count(vm => vm.HealthState == HealthState.Unhealthy);
+            var unknownCount = viewModels.Count(vm => vm.HealthState == HealthState.Unknown);
+
+            // Calculate log level distribution
+            var logLevelDistribution = viewModels
+                .Where(vm => vm.CurrentLogLevel.HasValue)
+                .GroupBy(vm => vm.CurrentLogLevel!.Value)
+                .ToDictionary(g => g.Key, g => g.Count());
 
             var statistics = new ObservableInstanceStatistics
             {
                 TotalInstances = allInstances.Count,
-                InstancesWithExceptions = allInstances.Count(i => i.HasExceptions),
-                InstancesWithoutExceptions = allInstances.Count(i => !i.HasExceptions),
+
+                // Health state counts
+                HealthyCount = healthyCount,
+                UnhealthyCount = unhealthyCount,
+                UnknownHealthCount = unknownCount,
+
+                // Log level distribution
+                LogLevelDistribution = logLevelDistribution,
+
+                // Statistics
                 TotalStateChanges = allInstances.Sum(i => i.TotalStateChanges),
                 TotalExceptions = allInstances.Sum(i => i.TotalExceptions),
                 AverageHistoryPerInstance = allInstances.Count > 0
@@ -246,8 +293,12 @@ public sealed class ObservableInstanceMonitorService(
                     .ToList()
             };
 
-            logger.LogDebug("Generated statistics: Total={Total}, WithExceptions={WithExceptions}",
-                statistics.TotalInstances, statistics.InstancesWithExceptions);
+            logger.LogDebug(
+                "Generated statistics: Total={Total}, Healthy={Healthy}, Unhealthy={Unhealthy}, Unknown={Unknown}",
+                statistics.TotalInstances,
+                statistics.HealthyCount,
+                statistics.UnhealthyCount,
+                statistics.UnknownHealthCount);
 
             return Res.Ok(statistics);
         }
@@ -374,7 +425,9 @@ public sealed class ObservableInstanceMonitorService(
             TotalExceptions = instance.TotalExceptions,
             HistoryCount = instance.Count,
             ExceptionCount = instance.ExceptionCount,
-            HasExceptions = instance.HasExceptions
+            HasExceptions = instance.HasExceptions,
+            CurrentLogLevel = instance.CurrentLogLevel,
+            IsUnhealthy = instance.IsUnhealthy()
         };
     }
 
@@ -389,7 +442,8 @@ public sealed class ObservableInstanceMonitorService(
             PreviousState = history.PreviousState,
             CurrentState = history.CurrentState,
             Message = history.Message,
-            Exception = history.Exception
+            Exception = history.Exception,
+            LogLevel = history.LogLevel
         };
     }
 

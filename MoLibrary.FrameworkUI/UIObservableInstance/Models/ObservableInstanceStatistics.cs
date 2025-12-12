@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+
 namespace MoLibrary.FrameworkUI.UIObservableInstance.Models;
 
 /// <summary>
@@ -11,14 +13,24 @@ public class ObservableInstanceStatistics
     public int TotalInstances { get; set; }
 
     /// <summary>
-    /// Number of instances with exceptions
+    /// Number of healthy instances (Debug/Information)
     /// </summary>
-    public int InstancesWithExceptions { get; set; }
+    public int HealthyCount { get; set; }
 
     /// <summary>
-    /// Number of instances without exceptions
+    /// Number of unhealthy instances (Warning/Error/Critical)
     /// </summary>
-    public int InstancesWithoutExceptions { get; set; }
+    public int UnhealthyCount { get; set; }
+
+    /// <summary>
+    /// Number of instances with unknown health state
+    /// </summary>
+    public int UnknownHealthCount { get; set; }
+
+    /// <summary>
+    /// Log level distribution across all instances
+    /// </summary>
+    public Dictionary<LogLevel, int> LogLevelDistribution { get; set; } = new();
 
     /// <summary>
     /// Total number of state changes across all instances

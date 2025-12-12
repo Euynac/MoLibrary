@@ -16,6 +16,7 @@ namespace MoLibrary.EventBus.Services;
 /// Listens to SubscriptionManager changes and manages external subscriptions (e.g., Dapr, RabbitMQ).
 /// Each derived class handles a specific ServiceKey and implements the actual subscription management.
 /// Now includes observable state management for monitoring.
+/// Runs as a background service that doesn't block application startup.
 /// </summary>
 public abstract class EventBusSubscriptionHostedServiceBase(
     ISubscriptionManager subscriptionManager,
@@ -24,7 +25,7 @@ public abstract class EventBusSubscriptionHostedServiceBase(
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
     ILogger logger,
     string? serviceKey)
-    : MoHostedService(observableManager, hostedServiceOptions, logger), IObserver<SubscriptionChange>
+    : MoBackgroundService(observableManager, hostedServiceOptions, logger), IObserver<SubscriptionChange>
 {
     protected readonly ISubscriptionManager SubscriptionManager = subscriptionManager;
     protected readonly IMoEventBus EventBus = eventBus;
@@ -56,9 +57,10 @@ public abstract class EventBusSubscriptionHostedServiceBase(
     private IDisposable? _subscriptionManagerObserver;
 
     /// <summary>
-    /// Called during service startup. Subscribes to SubscriptionManager and creates initial subscriptions.
+    /// Executes the background work for the subscription service.
+    /// Initializes subscriptions, subscribes to changes, and keeps running until cancellation.
     /// </summary>
-    protected override async Task OnStartingAsync(CancellationToken cancellationToken)
+    protected override async Task ExecuteBackgroundAsync(CancellationToken stoppingToken)
     {
         RecordState("Initializing subscription manager observer", HostedServiceState.Starting);
 
@@ -76,7 +78,7 @@ public abstract class EventBusSubscriptionHostedServiceBase(
         // Add subscriptions using the new logic (which handles topic grouping)
         foreach (var subscription in existingSubscriptions)
         {
-            await HandleSubscriptionAddedAsync(subscription, cancellationToken);
+            await HandleSubscriptionAddedAsync(subscription, stoppingToken);
         }
 
         Logger.LogInformation(
@@ -85,12 +87,26 @@ public abstract class EventBusSubscriptionHostedServiceBase(
             ServiceKey ?? "default",
             existingSubscriptions.Count,
             _topicSubscriptions.Count);
+
+        RecordState("Background service running, listening for subscription changes", HostedServiceState.Running);
+
+        // Keep the service running until cancellation is requested
+        // The observer pattern handles subscription changes asynchronously
+        try
+        {
+            await Task.Delay(Timeout.Infinite, stoppingToken);
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected when the service is stopping
+            Logger.LogDebug("{ServiceName} background task cancelled", ServiceName);
+        }
     }
 
     /// <summary>
     /// Called during service shutdown. Disposes all external subscriptions and cleans up.
     /// </summary>
-    protected override async Task OnStoppingAsync(CancellationToken cancellationToken)
+    public override async Task StopAsync(CancellationToken cancellationToken)
     {
         RecordState("Disposing subscription manager observer", HostedServiceState.Stopping);
 
@@ -113,6 +129,9 @@ public abstract class EventBusSubscriptionHostedServiceBase(
             "{ServiceName} cleanup completed for ServiceKey '{ServiceKey}'",
             ServiceName,
             ServiceKey ?? "default");
+
+        // Call base to complete the shutdown
+        await base.StopAsync(cancellationToken);
     }
 
     #region IObserver Implementation
@@ -172,7 +191,6 @@ public abstract class EventBusSubscriptionHostedServiceBase(
                                        $"Topic already has subscriptions with EventType '{topicInfo.EventType.Name}', " +
                                        $"but new subscription uses '{eventType.Name}'. " +
                                        $"Multiple event types per topic are not supported.";
-                        Logger.LogError(errorMsg);
                         RecordState(errorMsg, HostedServiceState.Faulted);
                         throw new InvalidOperationException(errorMsg);
                     }
@@ -196,7 +214,7 @@ public abstract class EventBusSubscriptionHostedServiceBase(
                     var newTopicInfo = new TopicSubscriptionInfo
                     {
                         EventType = eventType,
-                        SubscriptionIds = new HashSet<SubscriptionId> { subscription.Id }
+                        SubscriptionIds = [subscription.Id]
                     };
                     _topicSubscriptions[topicName] = newTopicInfo;
                     shouldCreateExternal = true;

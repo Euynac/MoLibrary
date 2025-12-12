@@ -284,7 +284,22 @@
                 if (!string.IsNullOrWhiteSpace(_filter.GroupId) && instance.GroupId != _filter.GroupId)
                     return false;
 
-                if (_filter.HasExceptions.HasValue && instance.HasExceptions != _filter.HasExceptions.Value)
+                // Health state filter
+                if (_filter.HealthStateFilter.HasValue && instance.HealthState != _filter.HealthStateFilter.Value)
+                    return false;
+
+                // Log level filter
+                if (_filter.LogLevels?.Any() == true && (!instance.CurrentLogLevel.HasValue || !_filter.LogLevels.Contains(instance.CurrentLogLevel.Value)))
+                    return false;
+
+                // Quick filter: Critical/Error only
+                if (_filter.ShowCriticalErrorOnly &&
+                    instance.CurrentLogLevel != Microsoft.Extensions.Logging.LogLevel.Critical &&
+                    instance.CurrentLogLevel != Microsoft.Extensions.Logging.LogLevel.Error)
+                    return false;
+
+                // Quick filter: Unhealthy only
+                if (_filter.ShowUnhealthyOnly && !instance.IsUnhealthy)
                     return false;
 
                 return true;

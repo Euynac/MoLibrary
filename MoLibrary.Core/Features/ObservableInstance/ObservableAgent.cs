@@ -64,6 +64,11 @@ public class ObservableAgent : IDisposable
     /// </summary>
     public DateTime RegisteredAt { get; init; }
 
+    /// <summary>
+    /// Gets the log level for the current state (null if not mapped)
+    /// </summary>
+    public LogLevel? CurrentLogLevel => GetLogLevel(CurrentState);
+
     // Statistics
     /// <summary>
     /// Gets the total number of state changes that have occurred
@@ -172,7 +177,8 @@ public class ObservableAgent : IDisposable
                 CurrentState = newState,
                 Message = message,
                 Exception = exception,
-                Timestamp = DateTime.UtcNow
+                Timestamp = DateTime.UtcNow,
+                LogLevel = GetLogLevel(newState)
             };
 
             _stateHistory.Add(history);

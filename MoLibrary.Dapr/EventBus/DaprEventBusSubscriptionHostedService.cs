@@ -20,6 +20,7 @@ namespace MoLibrary.Dapr.EventBus;
 /// Dapr-specific implementation of subscription hosted service.
 /// Manages Dapr streaming subscriptions for distributed events.
 /// Now includes observable state management for monitoring.
+/// Runs as a background service that doesn't block application startup.
 /// </summary>
 internal class DaprEventBusSubscriptionHostedService(
     DaprPublishSubscribeClient daprClient,
@@ -52,9 +53,10 @@ internal class DaprEventBusSubscriptionHostedService(
     private readonly ConcurrentDictionary<string, IAsyncDisposable> _daprSubscriptionsByTopic = new();
 
     /// <summary>
-    /// Override OnStartingAsync to wait for Dapr sidecar health before creating subscriptions.
+    /// Override ExecuteBackgroundAsync to wait for Dapr sidecar health before creating subscriptions.
+    /// This runs in the background without blocking application startup.
     /// </summary>
-    protected override async Task OnStartingAsync(CancellationToken cancellationToken)
+    protected override async Task ExecuteBackgroundAsync(CancellationToken stoppingToken)
     {
         RecordState("Waiting for Dapr sidecar to become healthy", HostedServiceState.Starting);
 
@@ -63,7 +65,7 @@ internal class DaprEventBusSubscriptionHostedService(
         // Wait for Dapr sidecar to be healthy before subscribing
         var isHealthy = await healthCoordinator.WaitForHealthyAsync(
             _options.SidecarHealthWaitTimeout,
-            cancellationToken);
+            stoppingToken);
 
         if (!isHealthy)
         {
@@ -75,7 +77,7 @@ internal class DaprEventBusSubscriptionHostedService(
             {
                 applicationLifetime.StopApplication();
             }
-            
+
             return; // Don't call base - skip subscription creation
         }
 
@@ -83,8 +85,8 @@ internal class DaprEventBusSubscriptionHostedService(
 
         Logger.LogInformation("Dapr sidecar is healthy, creating subscriptions");
 
-        // Now safe to create subscriptions
-        await base.OnStartingAsync(cancellationToken);
+        // Now safe to create subscriptions - call base to initialize and keep running
+        await base.ExecuteBackgroundAsync(stoppingToken);
     }
 
     /// <summary>
