@@ -147,10 +147,10 @@ public class ObservableAgent : IDisposable
     /// Records a state change with optional message and exception.
     /// This is the unified method that handles both state transitions and exception tracking.
     /// </summary>
-    /// <param name="newState">The new state to transition to (null if not applicable)</param>
     /// <param name="message">Descriptive message about the state change</param>
+    /// <param name="newState">The new state to transition to (null if state not changing)</param>
     /// <param name="exception">Optional exception associated with this state change</param>
-    public void RecordStateChange(object? newState, string message, Exception? exception = null)
+    public void RecordState(string message, object? newState = null, Exception? exception = null)
     {
         _lock.EnterWriteLock();
         try
@@ -170,7 +170,10 @@ public class ObservableAgent : IDisposable
                 _stateHistory.RemoveAt(0);
             }
 
-            CurrentState = newState;
+            if(newState != null) 
+            {
+                CurrentState = newState;
+            }
             StateChangedAt = DateTime.UtcNow;
             TotalStateChanges++;
             if (exception != null)

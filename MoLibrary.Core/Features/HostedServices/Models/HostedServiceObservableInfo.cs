@@ -153,6 +153,6 @@ public class HostedServiceObservableInfo
     /// <param name="exception">Optional exception associated with this state change</param>
     public void RecordStateChange(HostedServiceState newState, string message, Exception? exception = null)
     {
-        _agent.RecordStateChange(newState, message, exception);
+        _agent.RecordState(message, newState, exception);
     }
 }

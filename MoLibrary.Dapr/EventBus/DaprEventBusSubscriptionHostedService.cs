@@ -77,6 +77,7 @@ internal class DaprEventBusSubscriptionHostedService(
             {
                 applicationLifetime.StopApplication();
             }
+            
             return; // Don't call base - skip subscription creation
         }
 

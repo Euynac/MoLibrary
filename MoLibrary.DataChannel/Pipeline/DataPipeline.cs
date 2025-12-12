@@ -178,7 +178,7 @@ public class DataPipeline : IObservableInstance
     public void CollectException(Exception exception, object source, string? description = null)
     {
         var message = description ?? exception.Message;
-        ObservableAgent.RecordStateChange(PipelineState.Error, message, exception);
+        ObservableAgent.RecordState(message, PipelineState.Error, exception);
     }
 
     /// <summary>
@@ -188,7 +188,7 @@ public class DataPipeline : IObservableInstance
     /// <param name="message">状态描述</param>
     public void RecordState(PipelineState state, string message)
     {
-        ObservableAgent.RecordStateChange(state, message);
+        ObservableAgent.RecordState(message, state);
     }
 
     /// <summary>
@@ -198,7 +198,7 @@ public class DataPipeline : IObservableInstance
     /// <param name="message">异常描述</param>
     public void RecordException(Exception exception, string message)
     {
-        ObservableAgent.RecordStateChange(PipelineState.Error, message, exception);
+        ObservableAgent.RecordState(message, PipelineState.Error, exception);
     }
 
     /// <summary>
