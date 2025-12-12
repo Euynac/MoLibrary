@@ -24,36 +24,20 @@ public enum DbContextProviderType
 
 public class ModuleRepositoryGuide : MoModuleGuide<ModuleRepository, ModuleRepositoryOption, ModuleRepositoryGuide>
 {
-    public ModuleRepositoryGuide AddMoUnitOfWorkSupport(bool addEventSupport = false)
-    {
-        DependsOnModule<ModuleScopedDataGuide>().Register()
-            .AddKeyedScopedData<MoScopedDataUnitOfWorkProvider>(nameof(ModuleRepository));
-        ConfigureServices(context =>
-        {
-            if (addEventSupport)
-            {
-                context.Services.AddMoUnitOfWorkWithEvent();
-            }
-            else
-            {
-                context.Services.AddMoUnitOfWork();
-            }
-        });
-        return this;
-    }
 
     public ModuleRepositoryGuide AddMoDbContext<TDbContext>(Action<IServiceProvider, DbContextOptionsBuilder> optionsAction, DbContextProviderType dbContextProviderType = DbContextProviderType.Default)
         where TDbContext : MoDbContext<TDbContext>
     {
+        if (dbContextProviderType == DbContextProviderType.UnitOfWork)
+        {
+            DependsOnModule<ModuleUnitOfWorkGuide>().Register().AddDbContextProvider<TDbContext>();
+            DependsOnModule<ModuleScopedDataGuide>().Register()
+                .AddKeyedScopedData<MoScopedDataUnitOfWorkProvider>(nameof(ModuleRepository));
+        }
         ConfigureServices(context =>
         {
             switch (dbContextProviderType)
             {
-                case DbContextProviderType.UnitOfWork:
-                    CheckRequiredMethod(nameof(AddMoUnitOfWorkSupport));
-                    context.Services.AddTransient(typeof(IDbContextProvider<TDbContext>), typeof(UnitOfWorkDbContextProvider<TDbContext>));
-                    //TODO 可使用Singleton？
-                    break;
                 case DbContextProviderType.ContextFactory:
                     // Register EF Core factory and wrap it with our provider interface
                     context.Services.AddDbContextFactory<TDbContext>(optionsAction);
@@ -62,7 +46,6 @@ public class ModuleRepositoryGuide : MoModuleGuide<ModuleRepository, ModuleRepos
                         typeof(DbContextFactoryProvider<TDbContext>));
                     break;
                 case DbContextProviderType.Default:
-                default:
                     context.Services.AddTransient(typeof(IDbContextProvider<TDbContext>), typeof(DefaultDbContextProvider<TDbContext>));
                     break;
             }

@@ -49,9 +49,9 @@ public class JobSchedulerHostedService(
 
         // Subscribe to job definitions changed event (recurring jobs only)
         _definitionsChangedSubscription = eventBus.Subscribe<JobDefinitionsChangedEvent>(
-            evt => recurringJobScheduler.OnJobDefinitionsChangedAsync(evt));
+            recurringJobScheduler.OnJobDefinitionsChangedAsync);
         logger.LogDebug("Subscribed to JobDefinitionsChangedEvent");
-    }
+    } 
 
     /// <summary>
     /// Stops the job scheduler gracefully, coordinating shutdown of all schedulers.

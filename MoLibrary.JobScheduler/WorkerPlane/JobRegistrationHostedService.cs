@@ -96,7 +96,7 @@ public class JobRegistrationHostedService(
                 AddedJobKeys = result.AddedJobKeys.ToList(),
                 DeletedJobKeys = result.DeletedJobKeys.ToList(),
                 ReconciledAt = DateTime.UtcNow
-            });
+            }, cancellationToken: cancellationToken);
 
             logger.LogInformation("Published JobDefinitionsChangedEvent to notify subscribers of reconciliation");
         }
