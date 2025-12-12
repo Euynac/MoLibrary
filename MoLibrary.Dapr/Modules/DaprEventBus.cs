@@ -121,4 +121,21 @@ public class ModuleDaprEventBusOption : MoModuleControllerOption<ModuleDaprEvent
     /// Useful for troubleshooting deserialization issues and inspecting message format.
     /// </summary>
     public bool EnableMessageDataDebugLogging { get; set; }
+
+    // Health Check Integration Options
+
+    /// <summary>
+    /// Maximum time to wait for Dapr sidecar to become healthy during startup.
+    /// Default: 60 seconds
+    /// </summary>
+    public TimeSpan SidecarHealthWaitTimeout { get; set; } = TimeSpan.FromSeconds(60);
+
+    /// <summary>
+    /// Whether to fail fast if Dapr sidecar is unavailable during startup.
+    /// When true, throws InvalidOperationException if sidecar is not healthy after waiting.
+    /// When false (default), logs warning and continues in degraded mode without subscriptions.
+    /// Note: This is separate from EnableFailFast in ModuleDaprClientOption.
+    /// EnableFailFast triggers graceful shutdown, while this throws exception immediately.
+    /// </summary>
+    public bool FailFastOnSidecarUnavailable { get; set; } = false;
 }

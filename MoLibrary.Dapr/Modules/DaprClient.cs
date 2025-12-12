@@ -34,6 +34,13 @@ public class ModuleDaprClient(ModuleDaprClientOption option)
             MaxSendMessageSize = Option.MaxSendMessageSize,
             MaxRetryBufferSize = Option.MaxRetryBufferSize,
         }).UseJsonSerializationOptions(DefaultMoGlobalJsonOptions.GlobalJsonSerializerOptions));
+
+        // Register health coordinator (singleton implementing both interface and IHostedService)
+        services.AddSingleton<HealthCheck.DaprSidecarHealthCoordinator>();
+        services.AddSingleton<Interfaces.IDaprSidecarHealthCoordinator>(sp =>
+            sp.GetRequiredService<HealthCheck.DaprSidecarHealthCoordinator>());
+        services.AddHostedService(sp =>
+            sp.GetRequiredService<HealthCheck.DaprSidecarHealthCoordinator>());
     }
 
     public override void ClaimDependencies()
@@ -85,4 +92,71 @@ public class ModuleDaprClientOption : MoModuleOption<ModuleDaprClient>
     /// </para>
     /// </summary>
     public long? MaxRetryBufferSize { get; set; } = 100 * 1024 * 1024;
+
+    // Health Check Options
+
+    /// <summary>
+    /// Interval between periodic health checks after initial success.
+    /// Default: 30 seconds
+    /// </summary>
+    public TimeSpan PeriodicCheckInterval { get; set; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// Number of retry attempts for initial health check.
+    /// Default: 10 attempts
+    /// </summary>
+    public int InitialRetryTimes { get; set; } = 10;
+
+    /// <summary>
+    /// Initial interval between retry attempts.
+    /// Default: 2 seconds
+    /// </summary>
+    public TimeSpan InitialRetryInterval { get; set; } = TimeSpan.FromSeconds(2);
+
+    /// <summary>
+    /// Maximum interval between retry attempts (for exponential backoff).
+    /// Default: 30 seconds
+    /// </summary>
+    public TimeSpan MaxRetryInterval { get; set; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// Exponential backoff multiplier for retry delays.
+    /// Default: 1.5
+    /// </summary>
+    public double BackoffMultiplier { get; set; } = 1.5;
+
+    /// <summary>
+    /// Number of consecutive failures before marking as Degraded.
+    /// Default: 2
+    /// </summary>
+    public int DegradedThreshold { get; set; } = 2;
+
+    /// <summary>
+    /// Number of consecutive failures before marking as Unhealthy.
+    /// Default: 5
+    /// </summary>
+    public int UnhealthyThreshold { get; set; } = 5;
+
+    /// <summary>
+    /// Threshold for consecutive health check failures before triggering fail-fast (if enabled).
+    /// Applies to both initial startup retries and runtime periodic checks.
+    /// Default: 10 consecutive failures
+    /// </summary>
+    public int FailFastThreshold { get; set; } = 10;
+
+    /// <summary>
+    /// Whether to trigger graceful application shutdown when Dapr sidecar becomes unavailable.
+    /// When enabled and consecutive failures reach FailFastThreshold (default: 10):
+    ///   During initial startup:
+    ///     - Status becomes DaprHealthStatus.Failed
+    ///     - IHostApplicationLifetime.StopApplication() is called immediately
+    ///   During runtime (periodic checks):
+    ///     - After 10 consecutive periodic check failures
+    ///     - IHostApplicationLifetime.StopApplication() is called
+    ///   Result:
+    ///     - Application exits gracefully (exit code 0)
+    ///     - Kubernetes detects exit and recreates the pod
+    /// Default: false (degrade gracefully, app continues in degraded mode)
+    /// </summary>
+    public bool EnableFailFast { get; set; } = false;
 }

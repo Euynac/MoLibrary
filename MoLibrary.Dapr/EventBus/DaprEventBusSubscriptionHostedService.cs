@@ -7,6 +7,7 @@ using MoLibrary.Core.Features.HostedServices.Models;
 using MoLibrary.Core.Features.ObservableInstance;
 using MoLibrary.Core.GlobalJson.Interfaces;
 using MoLibrary.Core.Modules;
+using MoLibrary.Dapr.Interfaces;
 using MoLibrary.Dapr.Modules;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.EventBus.Abstractions.Subscriptions;
@@ -24,6 +25,7 @@ internal class DaprEventBusSubscriptionHostedService(
     ISubscriptionManager subscriptionManager,
     IMoDistributedEventBus eventBus,
     IObservableInstanceManager observableManager,
+    IDaprSidecarHealthCoordinator healthCoordinator,
     IOptions<ModuleDaprEventBusOption> options,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
     ILogger<DaprEventBusSubscriptionHostedService> logger,
@@ -48,6 +50,45 @@ internal class DaprEventBusSubscriptionHostedService(
     private readonly ConcurrentDictionary<string, IAsyncDisposable> _daprSubscriptionsByTopic = new();
 
     /// <summary>
+    /// Override OnStartingAsync to wait for Dapr sidecar health before creating subscriptions.
+    /// </summary>
+    protected override async Task OnStartingAsync(CancellationToken cancellationToken)
+    {
+        RecordStateChange(
+            HostedServiceState.Starting,
+            "Waiting for Dapr sidecar to become healthy");
+
+        Logger.LogInformation("Waiting for Dapr sidecar health check...");
+
+        // Wait for Dapr sidecar to be healthy before subscribing
+        var isHealthy = await healthCoordinator.WaitForHealthyAsync(
+            _options.SidecarHealthWaitTimeout,
+            cancellationToken);
+
+        if (!isHealthy)
+        {
+            var message = "Dapr sidecar is not healthy. Subscription creation will be skipped.";
+            RecordStateChange(HostedServiceState.Degraded, message);
+            Logger.LogWarning(message);
+
+            if (_options.FailFastOnSidecarUnavailable)
+            {
+                throw new InvalidOperationException(message);
+            }
+            return; // Don't call base - skip subscription creation
+        }
+
+        RecordStateChange(
+            HostedServiceState.Starting,
+            "Dapr sidecar is healthy, proceeding with subscription creation");
+
+        Logger.LogInformation("Dapr sidecar is healthy, creating subscriptions");
+
+        // Now safe to create subscriptions
+        await base.OnStartingAsync(cancellationToken);
+    }
+
+    /// <summary>
     /// Creates a Dapr streaming subscription for the given topic.
     /// </summary>
     protected override async Task CreateExternalSubscriptionForTopicAsync(
@@ -64,60 +105,6 @@ internal class DaprEventBusSubscriptionHostedService(
             Logger.LogDebug(
                 "Creating Dapr subscription for topic {Topic} with EventType {EventType} (ServiceKey: {ServiceKey})",
                 topicName, eventType.Name, ServiceKey ?? "default");
-
-            // Message handler - deserializes and delegates to base class
-            async Task<TopicResponseAction> HandleMessageAsync(TopicMessage message, CancellationToken ct)
-            {
-                try
-                {
-                    // Debug logging for raw message data
-                    if (_options.EnableMessageDataDebugLogging)
-                    {
-                        var rawJson = System.Text.Encoding.UTF8.GetString(message.Data.Span);
-                        Logger.LogInformation(
-                            "Received message on topic {Topic}: {RawJson}",
-                            message.Topic, rawJson);
-                    }
-
-                    // Deserialize message data using the topic's event type
-                    var eventData = JsonSerializer.Deserialize(
-                        message.Data.Span,
-                        eventType,
-                        jsonOption.GlobalOptions);
-
-                    if (eventData == null)
-                    {
-                        RecordStateChange(
-                            HostedServiceState.Degraded,
-                            $"Failed to deserialize message for topic {message.Topic}");
-
-                        Logger.LogWarning(
-                            "Deserialized message for topic {Topic} was null",
-                            message.Topic);
-                        return TopicResponseAction.Drop;
-                    }
-
-                    // Delegate to base class for handler routing and invocation
-                    await HandleExternalMessageAsync(
-                        message.Topic,
-                        eventData,
-                        ct);
-
-                    return TopicResponseAction.Success;
-                }
-                catch (Exception ex)
-                {
-                    RecordStateChange(
-                        HostedServiceState.Degraded,
-                        $"Error handling Dapr message for topic {message.Topic}",
-                        ex);
-
-                    Logger.LogError(ex,
-                        "Error handling Dapr message for topic {Topic}",
-                        message.Topic);
-                    return TopicResponseAction.Drop;
-                }
-            }
 
             // Create Dapr streaming subscription
             var subscriptionOptions = new DaprSubscriptionOptions(
@@ -157,6 +144,62 @@ internal class DaprEventBusSubscriptionHostedService(
                 "Failed to create Dapr subscription for topic {Topic}",
                 topicName);
             throw;
+        }
+
+        return;
+
+        // Message handler - deserializes and delegates to base class
+        async Task<TopicResponseAction> HandleMessageAsync(TopicMessage message, CancellationToken ct)
+        {
+            try
+            {
+                // Debug logging for raw message data
+                if (_options.EnableMessageDataDebugLogging)
+                {
+                    var rawJson = System.Text.Encoding.UTF8.GetString(message.Data.Span);
+                    Logger.LogInformation(
+                        "Received message on topic {Topic}: {RawJson}",
+                        message.Topic, rawJson);
+                }
+
+                // Deserialize message data using the topic's event type
+                var eventData = JsonSerializer.Deserialize(
+                    message.Data.Span,
+                    eventType,
+                    jsonOption.GlobalOptions);
+
+                if (eventData == null)
+                {
+                    RecordStateChange(
+                        HostedServiceState.Degraded,
+                        $"Failed to deserialize message for topic {message.Topic}");
+
+                    Logger.LogWarning(
+                        "Deserialized message for topic {Topic} was null",
+                        message.Topic);
+                    return TopicResponseAction.Drop;
+                }
+
+                // Delegate to base class for handler routing and invocation
+                await HandleExternalMessageAsync(
+                    message.Topic,
+                    eventData,
+                    ct);
+
+                return TopicResponseAction.Success;
+            }
+            catch (Exception ex)
+            {
+                RecordStateChange(
+                    HostedServiceState.Degraded,
+                    $"Error handling Dapr message for topic {message.Topic}",
+                    ex);
+
+                Logger.LogError(ex,
+                    "Error handling Dapr message for topic {Topic}",
+                    message.Topic);
+                return TopicResponseAction.Drop;
+            }
         }
     }
 
