@@ -50,7 +50,7 @@ public class JobExecutionStatistic
         PendingReservations.Remove(instanceId);
 
         // Prevent duplicate additions (handle event bus re-delivery)
-        if (!RunningInstances.Any(i => i.InstanceId == instanceId))
+        if (RunningInstances.All(i => i.InstanceId != instanceId))
         {
             RunningInstances.Add(info);
         }
@@ -65,7 +65,7 @@ public class JobExecutionStatistic
     }
 
     /// <summary>
-    /// Adds a running instance to the tracking list (legacy method for backward compatibility)
+    /// Adds a running instance to the tracking list
     /// </summary>
     public void AddInstance(RunningJobInfo info)
     {

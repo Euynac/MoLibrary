@@ -31,7 +31,7 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
     /// <summary>
     /// 配置选项
     /// </summary>
-    private readonly ModuleRegisterCentreOption? _option;
+    private readonly ModuleRegisterCentreOption _option;
 
     /// <summary>
     /// 服务实例下线事件处理器
@@ -57,7 +57,7 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
         _option = options.Value;
 
         // 初始化定时器（单例模式，只初始化一次）
-        var checkInterval = TimeSpan.FromMilliseconds(_option.ServerHeartbeatCheckInterval);
+        var checkInterval = TimeSpan.FromSeconds(_option.ServerHeartbeatCheckInterval);
         _heartbeatCheckTimer ??= new Timer(CheckHeartbeatTimeout, null, checkInterval, checkInterval);
     }
 
@@ -340,9 +340,11 @@ public class MemoryProviderForRegisterCentre : IRegisterCentreServer
     /// </summary>
     private void CheckHeartbeatTimeout(object? state)
     {
-        var unhealthyThreshold = TimeSpan.FromMilliseconds(_option.UnhealthyThreshold);
-        var offlineThreshold = TimeSpan.FromMilliseconds(_option.OfflineThreshold);
-        var expelThreshold = TimeSpan.FromMilliseconds(_option.ExpelThreshold);
+        // Calculate thresholds based on HeartbeatInterval × Multiplier
+        var heartbeatInterval = _option.HeartbeatInterval;
+        var unhealthyThreshold = TimeSpan.FromSeconds(heartbeatInterval * _option.UnhealthyThresholdMultiplier);
+        var offlineThreshold = TimeSpan.FromSeconds(heartbeatInterval * _option.OfflineThresholdMultiplier);
+        var expelThreshold = TimeSpan.FromSeconds(heartbeatInterval * _option.ExpelThresholdMultiplier);
         var now = DateTime.Now;
 
         foreach (var service in Services.Values)

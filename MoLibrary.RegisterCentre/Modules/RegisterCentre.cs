@@ -10,6 +10,7 @@ using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
+using MoLibrary.Core.Modules;
 using MoLibrary.RegisterCentre.Implements;
 using MoLibrary.RegisterCentre.Interfaces;
 using MoLibrary.RegisterCentre.Models;
@@ -17,11 +18,17 @@ using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.RegisterCentre.Modules;
 
-public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModule<ModuleRegisterCentre, ModuleRegisterCentreOption, ModuleRegisterCentreGuide>(option)
+public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModuleWithDependencies<ModuleRegisterCentre, ModuleRegisterCentreOption, ModuleRegisterCentreGuide>(option)
 {
     public override EMoModules CurModuleEnum()
     {
         return EMoModules.RegisterCentre;
+    }
+
+    public override void ClaimDependencies()
+    {
+        // Depend on HostedService module for MoBackgroundService base class
+        DependsOnModule<ModuleHostedServiceGuide>().Register();
     }
 
     public override void ConfigureServices(IServiceCollection services)
@@ -281,38 +288,41 @@ public class ModuleRegisterCentreOption : MoModuleControllerOption<ModuleRegiste
     public int MaxParallelInvokerCount { get; set; }
 
     /// <summary>
-    /// 客户端心跳频率（单位：ms）
+    /// 客户端心跳间隔（单位：秒）
     /// </summary>
-    public int HeartbeatDuration { get; set; } = 10000;
+    public int HeartbeatInterval { get; set; } = 10;
 
     /// <summary>
     /// 客户端注册中心重试次数
     /// </summary>
-    public int ClientRetryTimes { get; set; } = 3;
+    public int ClientRetryTimes { get; set; } = 0;
     /// <summary>
-    /// 客户端重试频率（单位：ms）
+    /// 客户端注册重试间隔（单位：秒）
     /// </summary>
-    public int RetryDuration { get; set; } = 5000;
+    public int InitialRetryInterval { get; set; } = 5;
     
     /// <summary>
-    /// 服务端心跳检查间隔（单位：ms）
+    /// 服务端心跳检查间隔（单位：秒）
     /// </summary>
-    public int ServerHeartbeatCheckInterval { get; set; } = 5000;
+    public int ServerHeartbeatCheckInterval { get; set; } = 5;
 
     /// <summary>
-    /// 不健康阈值（单位：ms）- 心跳超过此时间后实例被标记为Unhealthy
+    /// 不健康阈值倍数 - 心跳超过 (HeartbeatInterval × UnhealthyThresholdMultiplier) 秒后实例被标记为Unhealthy
+    /// 默认值：1.5（即 10秒心跳间隔 × 1.5 = 15秒后标记为不健康）
     /// </summary>
-    public int UnhealthyThreshold { get; set; } = 6000;
+    public double UnhealthyThresholdMultiplier { get; set; } = 1.5;
 
     /// <summary>
-    /// 离线阈值（单位：ms）- 心跳超过此时间后实例被标记为Offline
+    /// 离线阈值倍数 - 心跳超过 (HeartbeatInterval × OfflineThresholdMultiplier) 秒后实例被标记为Offline
+    /// 默认值：2.5（即 10秒心跳间隔 × 2.5 = 25秒后标记为离线）
     /// </summary>
-    public int OfflineThreshold { get; set; } = 16000;
+    public double OfflineThresholdMultiplier { get; set; } = 2.5;
 
     /// <summary>
-    /// 驱逐阈值（单位：ms）- 心跳超过此时间后实例被从注册中心移除
+    /// 驱逐阈值倍数 - 心跳超过 (HeartbeatInterval × ExpelThresholdMultiplier) 秒后实例被从注册中心移除
+    /// 默认值：5.0（即 10秒心跳间隔 × 5.0 = 50秒后从注册中心移除）
     /// </summary>
-    public int ExpelThreshold { get; set; } = 45000;
+    public double ExpelThresholdMultiplier { get; set; } = 5.0;
 
     /// <summary>
     /// 需要读取作为元数据的环境变量Key列表

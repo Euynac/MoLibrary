@@ -124,8 +124,8 @@
                         <MudText Typo="Typo.h6" Class="mb-3">客户端配置</MudText>
                         <MudGrid>
                             <MudItem xs="12" sm="4">
-                                <MudTextField T="int" Label="心跳频率 (秒)"
-                                            Value="@(RegisterCentreOptions.Value.HeartbeatDuration / 1000)"
+                                <MudTextField T="int" Label="心跳间隔 (秒)"
+                                            Value="@RegisterCentreOptions.Value.HeartbeatInterval"
                                             ReadOnly="true" />
                             </MudItem>
                             <MudItem xs="12" sm="4">
@@ -134,8 +134,8 @@
                                             ReadOnly="true" />
                             </MudItem>
                             <MudItem xs="12" sm="4">
-                                <MudTextField T="int" Label="重试频率 (秒)"
-                                            Value="@(RegisterCentreOptions.Value.RetryDuration / 1000)"
+                                <MudTextField T="int" Label="注册重试间隔 (秒)"
+                                            Value="@RegisterCentreOptions.Value.InitialRetryInterval"
                                             ReadOnly="true" />
                             </MudItem>
                         </MudGrid>
@@ -147,33 +147,39 @@
                         <MudGrid>
                             <MudItem xs="12" sm="3">
                                 <MudTextField T="int" Label="检查间隔 (秒)"
-                                            Value="@(RegisterCentreOptions.Value.ServerHeartbeatCheckInterval / 1000)"
+                                            Value="@RegisterCentreOptions.Value.ServerHeartbeatCheckInterval"
                                             ReadOnly="true"
                                             HelperText="服务端执行健康检查的时间间隔" />
                             </MudItem>
                             <MudItem xs="12" sm="3">
-                                <MudTextField T="int" Label="不健康阈值 (秒)"
-                                            Value="@(RegisterCentreOptions.Value.UnhealthyThreshold / 1000)"
+                                <MudTextField T="double" Label="不健康阈值倍数"
+                                            Value="@RegisterCentreOptions.Value.UnhealthyThresholdMultiplier"
                                             ReadOnly="true"
-                                            HelperText="心跳超时后标记为Unhealthy" />
+                                            HelperText="@($"实际阈值: {RegisterCentreOptions.Value.HeartbeatInterval * RegisterCentreOptions.Value.UnhealthyThresholdMultiplier}秒")" />
                             </MudItem>
                             <MudItem xs="12" sm="3">
-                                <MudTextField T="int" Label="离线阈值 (秒)"
-                                            Value="@(RegisterCentreOptions.Value.OfflineThreshold / 1000)"
+                                <MudTextField T="double" Label="离线阈值倍数"
+                                            Value="@RegisterCentreOptions.Value.OfflineThresholdMultiplier"
                                             ReadOnly="true"
-                                            HelperText="心跳超时后标记为Offline" />
+                                            HelperText="@($"实际阈值: {RegisterCentreOptions.Value.HeartbeatInterval * RegisterCentreOptions.Value.OfflineThresholdMultiplier}秒")" />
                             </MudItem>
                             <MudItem xs="12" sm="3">
-                                <MudTextField T="int" Label="驱逐阈值 (秒)"
-                                            Value="@(RegisterCentreOptions.Value.ExpelThreshold / 1000)"
+                                <MudTextField T="double" Label="驱逐阈值倍数"
+                                            Value="@RegisterCentreOptions.Value.ExpelThresholdMultiplier"
                                             ReadOnly="true"
-                                            HelperText="心跳超时后从注册中心移除" />
+                                            HelperText="@($"实际阈值: {RegisterCentreOptions.Value.HeartbeatInterval * RegisterCentreOptions.Value.ExpelThresholdMultiplier}秒")" />
                             </MudItem>
                         </MudGrid>
                         <MudDivider Class="my-4" />
+                        @{
+                            var hb = RegisterCentreOptions.Value.HeartbeatInterval;
+                            var unhealthy = hb * RegisterCentreOptions.Value.UnhealthyThresholdMultiplier;
+                            var offline = hb * RegisterCentreOptions.Value.OfflineThresholdMultiplier;
+                            var expel = hb * RegisterCentreOptions.Value.ExpelThresholdMultiplier;
+                        }
                         <MudText Typo="Typo.body2" Color="Color.Info">
                             <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" />
-                            健康状态转换流程: Running → Unhealthy (@(RegisterCentreOptions.Value.UnhealthyThreshold/1000)s) → Offline (@(RegisterCentreOptions.Value.OfflineThreshold/1000)s) → 移除 (@(RegisterCentreOptions.Value.ExpelThreshold/1000)s)
+                            健康状态转换流程: Running → Unhealthy (@unhealthy s) → Offline (@offline s) → 移除 (@expel s)
                         </MudText>
                     </MudPaper>
                 </MudItem>
@@ -291,9 +297,11 @@
     
     private string GetHeartbeatHealthText(TimeSpan timeSinceHeartbeat)
     {
-        var unhealthyThreshold = RegisterCentreOptions.Value.UnhealthyThreshold / 1000.0;
-        var offlineThreshold = RegisterCentreOptions.Value.OfflineThreshold / 1000.0;
-        var expelThreshold = RegisterCentreOptions.Value.ExpelThreshold / 1000.0;
+        // Calculate thresholds from multipliers
+        var heartbeatInterval = RegisterCentreOptions.Value.HeartbeatInterval;
+        var unhealthyThreshold = heartbeatInterval * RegisterCentreOptions.Value.UnhealthyThresholdMultiplier;
+        var offlineThreshold = heartbeatInterval * RegisterCentreOptions.Value.OfflineThresholdMultiplier;
+        var expelThreshold = heartbeatInterval * RegisterCentreOptions.Value.ExpelThresholdMultiplier;
 
         if (timeSinceHeartbeat.TotalSeconds < unhealthyThreshold)
             return "健康";
@@ -307,9 +315,11 @@
 
     private Color GetHeartbeatHealthColor(TimeSpan timeSinceHeartbeat)
     {
-        var unhealthyThreshold = RegisterCentreOptions.Value.UnhealthyThreshold / 1000.0;
-        var offlineThreshold = RegisterCentreOptions.Value.OfflineThreshold / 1000.0;
-        var expelThreshold = RegisterCentreOptions.Value.ExpelThreshold / 1000.0;
+        // Calculate thresholds from multipliers
+        var heartbeatInterval = RegisterCentreOptions.Value.HeartbeatInterval;
+        var unhealthyThreshold = heartbeatInterval * RegisterCentreOptions.Value.UnhealthyThresholdMultiplier;
+        var offlineThreshold = heartbeatInterval * RegisterCentreOptions.Value.OfflineThresholdMultiplier;
+        var expelThreshold = heartbeatInterval * RegisterCentreOptions.Value.ExpelThresholdMultiplier;
 
         if (timeSinceHeartbeat.TotalSeconds < unhealthyThreshold)
             return Color.Success;

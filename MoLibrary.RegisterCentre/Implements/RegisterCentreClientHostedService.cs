@@ -1,6 +1,10 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MoLibrary.Core.Features.HostedServices;
+using MoLibrary.Core.Features.HostedServices.Models;
+using MoLibrary.Core.Features.ObservableInstance;
+using MoLibrary.Core.Modules;
 using MoLibrary.RegisterCentre.Interfaces;
 using MoLibrary.RegisterCentre.Models;
 using MoLibrary.RegisterCentre.Modules;
@@ -12,13 +16,19 @@ public class RegisterCentreClientHostedService(
     IRegisterCentreClientInfo client,
     ILogger<RegisterCentreClientHostedService> logger,
     IOptions<ModuleRegisterCentreOption> option,
-    IRegisterCentreServerConnector connector) : IHostedService, IServiceRegistrationCoordinator
+    IRegisterCentreServerConnector connector,
+    IObservableInstanceManager observableManager,
+    IOptions<ModuleHostedServiceOption> hostedServiceOptions)
+    : MoBackgroundService(observableManager, hostedServiceOptions, logger), IServiceRegistrationCoordinator
 {
     protected readonly ModuleRegisterCentreOption Option = option.Value;
-    private CancellationTokenSource? _heartbeatCts;
     private readonly TaskCompletionSource<bool> _registrationCompletionSource = new();
     private RegistrationStatus _status = RegistrationStatus.NotStarted;
     private readonly object _statusLock = new();
+
+    public override string ServiceName => "RegisterCentreClient";
+
+    public override TimeSpan? HeartbeatInterval => null; // Custom heartbeat management
 
     public RegistrationStatus Status
     {
@@ -57,23 +67,83 @@ public class RegisterCentreClientHostedService(
         }
     }
 
-    protected virtual void StartHeartbeat()
+    protected override async Task ExecuteBackgroundAsync(CancellationToken stoppingToken)
     {
-        // 取消之前的心跳任务
-        _heartbeatCts?.Cancel();
-        _heartbeatCts = new CancellationTokenSource();
+        // Phase 1: Registration with fixed-interval retry
+        await RegisterWithRetryAsync(stoppingToken);
 
-        Task.Factory.StartNew(async () => await DoingHeartbeat(_heartbeatCts.Token), _heartbeatCts.Token,
-            TaskCreationOptions.LongRunning, TaskScheduler.Default);
+        // Phase 2: Continuous heartbeat loop (only if registration succeeded)
+        if (Status == RegistrationStatus.Completed)
+        {
+            await SendHeartbeatsAsync(stoppingToken);
+        }
     }
 
-    protected virtual async Task DoingHeartbeat(CancellationToken cancellationToken)
+    private async Task RegisterWithRetryAsync(CancellationToken stoppingToken)
     {
-        await Task.Delay(3000, cancellationToken);
-        while (!cancellationToken.IsCancellationRequested)
+        RecordState("开始注册到注册中心", HostedServiceState.Starting);
+        Status = RegistrationStatus.InProgress;
+
+        var retryCount = Option.ClientRetryTimes;
+        var retryInterval = TimeSpan.FromSeconds(Option.InitialRetryInterval);
+        var isInfiniteRetry = retryCount == 0;
+        var attemptNumber = 0;
+
+        while ((isInfiniteRetry || retryCount > 0) && !stoppingToken.IsCancellationRequested)
+        {
+            attemptNumber++;
+            try
+            {
+                var serviceInfo = client.GetServiceStatus();
+                if ((await connector.Register(serviceInfo)).IsFailed(out var error))
+                {
+                    var totalText = isInfiniteRetry ? "∞" : Option.ClientRetryTimes.ToString();
+                    RecordState($"注册失败 (尝试 {attemptNumber}/{totalText}): {error.Message}", HostedServiceState.Degraded);
+                }
+                else
+                {
+                    Status = RegistrationStatus.Completed;
+                    _registrationCompletionSource.TrySetResult(true);
+                    RecordState("注册成功", HostedServiceState.Running);
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                var totalText = isInfiniteRetry ? "∞" : Option.ClientRetryTimes.ToString();
+                RecordState($"注册异常 (尝试 {attemptNumber}/{totalText}): {ex.Message}", HostedServiceState.Degraded);
+            }
+
+            if (!isInfiniteRetry)
+            {
+                retryCount--;
+            }
+
+            if (isInfiniteRetry || retryCount > 0)
+            {
+                await Task.Delay(retryInterval, stoppingToken);
+            }
+        }
+
+        // Registration failed (only reachable when not infinite retry)
+        Status = RegistrationStatus.Failed;
+        _registrationCompletionSource.TrySetResult(false);
+        RecordState($"注册失败，已重试 {Option.ClientRetryTimes} 次", HostedServiceState.Faulted);
+    }
+
+    private async Task SendHeartbeatsAsync(CancellationToken stoppingToken)
+    {
+        // Initial delay before first heartbeat
+        await Task.Delay(Option.HeartbeatInterval, stoppingToken);
+
+        var heartbeatInterval = TimeSpan.FromSeconds(Option.HeartbeatInterval);
+
+        while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
+                RecordState("发送心跳", HostedServiceState.Executing);
+
                 var serviceInfo = client.GetServiceStatus(true);
                 var heartbeat = new ServiceHeartbeat
                 {
@@ -83,91 +153,40 @@ public class RegisterCentreClientHostedService(
                     ReleaseVersion = serviceInfo.ReleaseVersion,
                     FromClient = serviceInfo.FromInstance
                 };
-                
-                if ((await connector.Heartbeat(heartbeat)).IsFailed(out var heartbeatError,
-                        out var heartbeatData))
+
+                if ((await connector.Heartbeat(heartbeat)).IsFailed(out var error, out var data))
                 {
-                    logger?.LogError("心跳失败: {Message}", heartbeatError.Message);
+                    RecordState($"心跳失败: {error.Message}", HostedServiceState.Degraded);
                 }
-                else if (heartbeatData.RequireReRegister)
+                else if (data.RequireReRegister)
                 {
-                    logger?.LogInformation("需要重新注册: {Message}", heartbeatData.Message);
-                    // 重新注册 - 重新获取包含元数据的完整服务信息
+                    RecordState("需要重新注册", HostedServiceState.Degraded);
+
+                    // Re-register with single attempt
                     var fullServiceInfo = client.GetServiceStatus();
                     var registerRes = await connector.Register(fullServiceInfo);
                     if (registerRes.IsFailed(out var registerError))
                     {
-                        logger?.LogError("重新注册失败: {Message}", registerError.Message);
+                        RecordState($"重新注册失败: {registerError.Message}", HostedServiceState.Degraded);
                     }
                     else
                     {
-                        logger?.LogInformation("重新注册成功");
+                        RecordState("重新注册成功", HostedServiceState.Running);
                     }
                 }
+                else
+                {
+                    RecordState("心跳成功", HostedServiceState.Running);
+                }
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                logger?.LogError(e, "向注册中心发送心跳出现异常");
+                RecordState("心跳异常", HostedServiceState.Degraded, ex);
             }
             finally
             {
-                await Task.Delay(Option.HeartbeatDuration, cancellationToken);
+                await Task.Delay(heartbeatInterval, stoppingToken);
             }
         }
-    }
-
-    public Task StartAsync(CancellationToken cancellationToken)
-    {
-        _ = Task.Factory.StartNew<Task>(async () =>
-        {
-            Status = RegistrationStatus.InProgress;
-            logger.LogInformation("开始注册到注册中心");
-            var retryTimes = Option.ClientRetryTimes;
-            var totalRetries = Option.ClientRetryTimes;
-
-            while (retryTimes > 0)
-            {
-                try
-                {
-                    var serviceInfo = client.GetServiceStatus();
-                    if ((await connector.Register(serviceInfo)).IsFailed(out var error))
-                    {
-                        logger?.LogError("注册失败: {Message}", error.Message);
-                    }
-                    else
-                    {
-                        logger?.LogInformation("成功注册到注册中心: {AppId}", serviceInfo.AppId);
-                        Status = RegistrationStatus.Completed;
-                        _registrationCompletionSource.TrySetResult(true);
-                        StartHeartbeat();
-                        break;
-                    }
-                }
-                catch (Exception e)
-                {
-                    logger?.LogError(e, "注册配置中心出现异常");
-                }
-                finally
-                {
-                    await Task.Delay(Option.RetryDuration);
-                    retryTimes--;
-                }
-            }
-
-            if (retryTimes == 0)
-            {
-                logger?.LogError("注册中心注册失败，已达到最大重试次数");
-                Status = RegistrationStatus.Failed;
-                _registrationCompletionSource.TrySetResult(false);
-            }
-        }, cancellationToken);
-
-        return Task.CompletedTask;
-    }
-
-    public Task StopAsync(CancellationToken cancellationToken)
-    {
-        _heartbeatCts?.Cancel();
-        return Task.CompletedTask;
     }
 }
