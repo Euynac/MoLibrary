@@ -32,7 +32,7 @@ public class JobRegistrationHostedService(
 {
     public override string ServiceName => nameof(JobRegistrationHostedService);
 
-    protected override async Task InitializeServiceAsync(CancellationToken cancellationToken)
+    protected override async Task LeaderInitializeAsync(CancellationToken cancellationToken)
     {
         if (jobDefinitions.Count == 0)
         {

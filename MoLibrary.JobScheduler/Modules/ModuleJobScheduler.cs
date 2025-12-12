@@ -105,6 +105,19 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
             services.AddHostedService<JobSchedulerHostedService>();
             services.AddHostedService(provider => provider.GetRequiredService<IJobConcurrencyGuard>() as JobConcurrencyGuardHostedService
                                                   ?? throw new InvalidOperationException("JobConcurrencyGuard must be registered as IJobConcurrencyGuard"));
+
+            // Register zombie detection service (conditional)
+            if (Option.EnableZombieDetection)
+            {
+                services.AddHostedService<JobZombieDetectorService>();
+                Logger.LogInformation(
+                    "Zombie detection enabled with interval: {Interval}",
+                    Option.ZombieDetectionInterval);
+            }
+            else
+            {
+                Logger.LogInformation("Zombie detection disabled");
+            }
         }
 
         // Register health check for monitoring initialization status

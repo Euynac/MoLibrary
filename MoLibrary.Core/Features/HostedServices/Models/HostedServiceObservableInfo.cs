@@ -151,7 +151,7 @@ public class HostedServiceObservableInfo
         : null;
 
     /// <inheritdoc cref="ObservableAgent.RecordState" />
-    public void RecordState(string message, HostedServiceState? newState, Exception? exception = null)
+    public void RecordState(string message, HostedServiceState? newState = null, Exception? exception = null)
     {
         _agent.RecordState(message, newState, exception);
     }

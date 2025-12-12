@@ -39,7 +39,7 @@ public class JobConcurrencyGuardHostedService(
 
     public override string ServiceName => nameof(JobConcurrencyGuardHostedService);
 
-    protected override async Task InitializeServiceAsync(CancellationToken cancellationToken)
+    protected override async Task LeaderInitializeAsync(CancellationToken cancellationToken)
     {
         await InitializeConcurrencyTrackingAsync(cancellationToken);
     }
@@ -428,30 +428,24 @@ public class JobConcurrencyGuardHostedService(
             evt.InstanceId);
     }
 
-    protected override Task OnAfterInitialization(CancellationToken cancellationToken)
+    protected override async Task LeaderExecuteBackgroundAsync(CancellationToken cancellationToken)
     {
-        // Start background cleanup task for stale reservations
-        _ = Task.Run(async () =>
+        while (!cancellationToken.IsCancellationRequested)
         {
-            while (!cancellationToken.IsCancellationRequested)
+            try
             {
-                try
-                {
-                    await Task.Delay(TimeSpan.FromMinutes(1), cancellationToken);
-                    await CleanupStaleReservationsAsync(cancellationToken);
-                }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "Error in concurrency guard background cleanup");
-                }
+                await Task.Delay(TimeSpan.FromMinutes(1), cancellationToken);
+                await CleanupStaleReservationsAsync(cancellationToken);
             }
-        }, cancellationToken);
-
-        return Task.CompletedTask;
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error in concurrency guard background cleanup");
+            }
+        }
     }
 
     private async Task CleanupStaleReservationsAsync(CancellationToken cancellationToken)

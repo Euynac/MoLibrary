@@ -75,16 +75,13 @@ public abstract class CoordinatedLeaderService(
 
             // Step 4: Perform service-specific initialization (only on leader)
             RecordState("Initializing as leader", HostedServiceState.Executing);
-            await InitializeServiceAsync(stoppingToken);
+            await LeaderInitializeAsync(stoppingToken);
 
             // Step 5: Mark as successfully initialized
             RecordState("Leader initialized successfully", HostedServiceState.Running);
 
             // Step 6: Optional post-initialization hook
-            await OnAfterInitialization(stoppingToken);
-
-            // // Step 7: Keep service running for event subscriptions, timers, etc.
-            // await Task.Delay(Timeout.Infinite, stoppingToken);
+            await LeaderExecuteBackgroundAsync(stoppingToken);
         }
         catch (OperationCanceledException)
         {
@@ -107,7 +104,7 @@ public abstract class CoordinatedLeaderService(
     {
         if (!Options.SkipRegistrationWait)
         {
-            Logger.LogInformation("{ServiceName} 正在等待注册中心注册完成...", ServiceName);
+            RecordState("Waiting for RegisterCentre registration", HostedServiceState.Starting);
 
             var registered = await coordinator.WaitForRegistrationAsync(
                 Options.RegistrationWaitTimeout,
@@ -115,14 +112,11 @@ public abstract class CoordinatedLeaderService(
 
             if (registered)
             {
-                Logger.LogInformation("{ServiceName} 检测到注册完成，开始启动服务", ServiceName);
+                RecordState("Registration completed", HostedServiceState.Starting);
             }
             else
             {
-                Logger.LogWarning(
-                    "{ServiceName} 等待注册超时({Timeout})，继续启动服务（降级模式）",
-                    ServiceName,
-                    Options.RegistrationWaitTimeout);
+                RecordState($"Registration timeout ({Options.RegistrationWaitTimeout}), starting in degraded mode", HostedServiceState.Starting);
             }
         }
     }
@@ -138,7 +132,6 @@ public abstract class CoordinatedLeaderService(
 
         if (statusResult.IsFailed(out var error, out var data))
         {
-            Logger.LogError("Error getting leader status: {Error}", error);
             var exception = new InvalidOperationException($"Failed to get leader status: {error.Message}");
             RecordState("Failed to get leader status", HostedServiceState.Faulted, exception);
             return false;
@@ -146,10 +139,7 @@ public abstract class CoordinatedLeaderService(
 
         if (data.Status != LeaderStatus.Leader)
         {
-            Logger.LogInformation(
-                "Not leader, current Leader status is {Status}, skip {ServiceName} initialization",
-                data.Status,
-                ServiceName);
+            RecordState($"Not leader (status: {data.Status}), skipping initialization", HostedServiceState.Starting);
             return false;
         }
 
@@ -175,7 +165,7 @@ public abstract class CoordinatedLeaderService(
     /// This method is called within the try-catch block of ExecuteAsync.
     /// Exceptions thrown here will be caught, logged, and cause initialization to fail.
     /// </remarks>
-    protected abstract Task InitializeServiceAsync(CancellationToken cancellationToken);
+    protected abstract Task LeaderInitializeAsync(CancellationToken cancellationToken);
 
     /// <summary>
     /// Called after successful initialization.
@@ -183,6 +173,6 @@ public abstract class CoordinatedLeaderService(
     /// </summary>
     /// <param name="cancellationToken">Cancellation token for stopping the operation</param>
     /// <returns>A task representing the asynchronous operation</returns>
-    protected virtual Task OnAfterInitialization(CancellationToken cancellationToken)
+    protected virtual Task LeaderExecuteBackgroundAsync(CancellationToken cancellationToken)
         => Task.CompletedTask;
 }

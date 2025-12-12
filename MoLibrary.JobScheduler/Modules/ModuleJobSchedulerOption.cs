@@ -100,4 +100,82 @@ public class ModuleJobSchedulerOption : MoModuleOption<ModuleJobScheduler>
     /// functionality without setting up a register centre, or when running in standalone mode.
     /// </remarks>
     public bool SkipRegistrationWait { get; set; } = false;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether zombie job detection is enabled.
+    /// When enabled, the system will periodically scan for stuck jobs in Processing or Enqueued states
+    /// and automatically mark them as Failed after timeout.
+    /// </summary>
+    /// <value>
+    /// <c>true</c> to enable zombie detection; otherwise, <c>false</c>.
+    /// Default is <c>true</c>.
+    /// </value>
+    public bool EnableZombieDetection { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the interval for scanning zombie job instances.
+    /// The zombie detector runs periodically to find jobs that have exceeded their timeout limits.
+    /// </summary>
+    /// <value>
+    /// The interval between zombie detection scans.
+    /// Default is 2 minutes.
+    /// </value>
+    /// <remarks>
+    /// Setting this too low may cause unnecessary database queries. Setting this too high may delay
+    /// zombie detection. A good balance is 1-5 minutes depending on job criticality.
+    /// </remarks>
+    public TimeSpan ZombieDetectionInterval { get; set; } = TimeSpan.FromMinutes(2);
+
+    /// <summary>
+    /// Gets or sets the timeout multiplier for Processing state jobs.
+    /// Used to calculate effective timeout: MaxExecutionTimeout * ProcessingTimeoutMultiplier.
+    /// This provides a grace period beyond the configured job timeout before marking as zombie.
+    /// </summary>
+    /// <value>
+    /// The multiplier applied to MaxExecutionTimeout.
+    /// Default is 2.0 (allows jobs to run up to 2x their configured timeout).
+    /// </value>
+    /// <remarks>
+    /// <para>
+    /// Example: If a job has MaxExecutionTimeout = 1 hour and ProcessingTimeoutMultiplier = 2.0,
+    /// the job will be marked as zombie after 2 hours in Processing state.
+    /// </para>
+    /// <para>
+    /// This grace period accounts for clock skew, worker reporting delays, and transient issues.
+    /// </para>
+    /// </remarks>
+    public double ProcessingTimeoutMultiplier { get; set; } = 2.0;
+
+    /// <summary>
+    /// Gets or sets the timeout for jobs stuck in Enqueued state.
+    /// Jobs that remain in Enqueued state longer than this duration will be marked as Failed.
+    /// </summary>
+    /// <value>
+    /// The timeout for Enqueued state.
+    /// Default is 10 minutes.
+    /// </value>
+    /// <remarks>
+    /// <para>
+    /// This catches jobs that were queued but never picked up by any worker, indicating
+    /// either worker unavailability or event bus delivery issues.
+    /// </para>
+    /// <para>
+    /// Set this based on your worker pool size and expected queue processing time.
+    /// In a healthy system, jobs should transition from Enqueued to Processing within seconds.
+    /// </para>
+    /// </remarks>
+    public TimeSpan EnqueuedStateTimeout { get; set; } = TimeSpan.FromMinutes(10);
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to check worker health before marking jobs as zombies.
+    /// When enabled, jobs on offline workers are marked as Failed immediately without waiting for timeout.
+    /// </summary>
+    /// <value>
+    /// <c>true</c> to check worker health; otherwise, <c>false</c>.
+    /// Default is <c>true</c>.
+    /// </value>
+    /// <remarks>
+    /// Requires RegisterCentre integration. If RegisterCentre is unavailable, this setting is ignored.
+    /// </remarks>
+    public bool CheckWorkerHealthBeforeZombieDetection { get; set; } = true;
 }

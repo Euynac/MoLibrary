@@ -34,7 +34,7 @@ public class JobSchedulerHostedService(
 
     public override string ServiceName => nameof(JobSchedulerHostedService);
 
-    protected override async Task InitializeServiceAsync(CancellationToken cancellationToken)
+    protected override async Task LeaderInitializeAsync(CancellationToken cancellationToken)
     {
         logger.LogInformation(
             "JobScheduler starting. RecurringJobDebugMode: {RecurringDebug}, TriggeredJobDebugMode: {TriggeredDebug}",
