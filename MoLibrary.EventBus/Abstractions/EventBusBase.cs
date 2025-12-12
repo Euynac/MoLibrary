@@ -31,7 +31,7 @@ public abstract class EventBusBase(
 
     #region Subscribe Methods
 
-    public virtual ISubscription Subscribe<TEvent, THandler>(string? topicName = null)
+    public virtual async Task<ISubscription> SubscribeAsync<TEvent, THandler>(string? topicName = null)
         where TEvent : class
         where THandler : IMoEventHandler
     {
@@ -45,10 +45,10 @@ public abstract class EventBusBase(
             Scope = this is IMoLocalEventBus ? SubscriptionScope.Local : SubscriptionScope.Distributed,
             IsAutoDiscovered = false
         };
-        return SubscriptionManager.SubscribeAsync(descriptor).GetAwaiter().GetResult();
+        return await SubscriptionManager.SubscribeAsync(descriptor);
     }
 
-    public virtual ISubscription Subscribe<TEvent>(Func<TEvent, Task> handler, string? topicName = null)
+    public virtual async Task<ISubscription> SubscribeAsync<TEvent>(Func<TEvent, Task> handler, string? topicName = null)
         where TEvent : class
     {
         var finalTopicName = topicName ?? EventNameAttribute.GetNameOrDefault(typeof(TEvent));
@@ -66,7 +66,7 @@ public abstract class EventBusBase(
             IsAutoDiscovered = false,
             Metadata = metadata
         };
-        return SubscriptionManager.SubscribeAsync(descriptor).GetAwaiter().GetResult();
+        return await SubscriptionManager.SubscribeAsync(descriptor);
     }
 
     #endregion

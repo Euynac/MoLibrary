@@ -42,7 +42,7 @@ public class JobDefinitionCacheService : IJobDefinitionCacheService, IDisposable
         _logger = logger;
 
         // Subscribe to JobDefinitionsChangedEvent for cache invalidation
-        _eventSubscription = eventBus.Subscribe<JobDefinitionsChangedEvent>(OnJobDefinitionsChangedAsync);
+        _eventSubscription = eventBus.SubscribeAsync<JobDefinitionsChangedEvent>(OnJobDefinitionsChangedAsync).GetAwaiter().GetResult();
         _logger.LogDebug("JobDefinitionCacheService initialized and subscribed to JobDefinitionsChangedEvent");
     }
 

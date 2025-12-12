@@ -323,12 +323,6 @@ public class JobInstance
     /// <returns>True if the transition is valid, false otherwise.</returns>
     private static bool IsValidTransition(JobState currentState, JobState newState)
     {
-        // Allow transition to same state (idempotent updates)
-        if (currentState == newState)
-        {
-            return true;
-        }
-
         return currentState switch
         {
             // Scheduled can transition to Enqueued, Cancelled, or Failed

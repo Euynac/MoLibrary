@@ -98,7 +98,7 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
 
         services.AddHostedService<JobRegistrationHostedService>(provider => ActivatorUtilities.CreateInstance<JobRegistrationHostedService>(provider, _jobDefinitions));
 
-        services.AddHostedService<JobWorkerManager>(provider => ActivatorUtilities.CreateInstance<JobWorkerManager>(provider, _jobDefinitions));
+        services.AddHostedService<JobWorkerManagerHostedService>(provider => ActivatorUtilities.CreateInstance<JobWorkerManagerHostedService>(provider, _jobDefinitions));
 
         if (GetOptions<ModuleRegisterCentreOption>().IsCentreServer)
         {

@@ -166,11 +166,14 @@ public class ObservableAgent : IDisposable
     /// <param name="message">Descriptive message about the state change</param>
     /// <param name="newState">The new state to transition to (null if state not changing)</param>
     /// <param name="exception">Optional exception associated with this state change</param>
-    public void RecordState(string message, object? newState = null, Exception? exception = null)
+    /// <param name="givenLogLevel">Use specific log level instead of default.</param>
+    public void RecordState(string message, object? newState = null, Exception? exception = null,
+        LogLevel? givenLogLevel = null)
     {
         _lock.EnterWriteLock();
         try
         {
+            var logLevel = givenLogLevel ?? GetLogLevel(newState);
             var history = new ObservableStateHistory
             {
                 PreviousState = CurrentState,
@@ -178,7 +181,7 @@ public class ObservableAgent : IDisposable
                 Message = message,
                 Exception = exception,
                 Timestamp = DateTime.UtcNow,
-                LogLevel = GetLogLevel(newState)
+                LogLevel = logLevel
             };
 
             _stateHistory.Add(history);
@@ -199,13 +202,9 @@ public class ObservableAgent : IDisposable
             }
 
             // Auto-log based on state mapping
-            if (_logger != null && newState != null)
+            if (_logger != null && newState != null && logLevel.HasValue)
             {
-                var logLevel = GetLogLevel(newState);
-                if (logLevel.HasValue)
-                {
-                    LogStateChange(logLevel.Value, message, newState, exception);
-                }
+                LogStateChange(logLevel.Value, message, newState, exception);
             }
         }
         finally

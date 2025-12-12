@@ -39,7 +39,7 @@ public class JobZombieDetectorService(
     
     protected override Task LeaderInitializeAsync(CancellationToken cancellationToken)
     {
-        RecordState($"Zombie detector configured: Interval={_jobSchedulerOptions.ZombieDetectionInterval}, ProcessingMultiplier={_jobSchedulerOptions.ProcessingTimeoutMultiplier}, EnqueuedTimeout={_jobSchedulerOptions.EnqueuedStateTimeout}");
+        RecordState($"Zombie detector configured: Interval={_jobSchedulerOptions.ZombieDetectionInterval}, ProcessingMultiplier={_jobSchedulerOptions.ProcessingTimeoutMultiplier}, EnqueuedTimeout={_jobSchedulerOptions.EnqueuedStateTimeout}", givenLogLevel: LogLevel.Information);
         return Task.CompletedTask;
     }
 
@@ -60,7 +60,7 @@ public class JobZombieDetectorService(
             }
             catch (Exception ex)
             {
-                RecordState("Error during zombie detection scan", exception: ex);
+                RecordState("Error during zombie detection scan", givenLogLevel: LogLevel.Error, exception: ex);
             }
         }
     }
@@ -74,7 +74,7 @@ public class JobZombieDetectorService(
         var processingZombieCount = 0;
         var enqueuedZombieCount = 0;
 
-        RecordState("Zombie detection scan started");
+        RecordState("Zombie detection scan started", givenLogLevel: LogLevel.Information);
 
         try
         {
@@ -88,16 +88,16 @@ public class JobZombieDetectorService(
 
             if (processingZombieCount > 0 || enqueuedZombieCount > 0)
             {
-                RecordState($"Scan completed: Found {processingZombieCount} Processing and {enqueuedZombieCount} Enqueued zombies in {stopwatch.Elapsed.TotalSeconds:F2}s");
+                RecordState($"Scan completed: Found {processingZombieCount} Processing and {enqueuedZombieCount} Enqueued zombies in {stopwatch.Elapsed.TotalSeconds:F2}s", givenLogLevel: LogLevel.Warning);
             }
             else
             {
-                RecordState("Scan completed: No zombies found");
+                RecordState("Scan completed: No zombies found", givenLogLevel: LogLevel.Information);
             }
         }
         catch (Exception ex)
         {
-            RecordState("Scan failed", exception: ex);
+            RecordState("Scan failed", givenLogLevel: LogLevel.Error, exception: ex);
         }
     }
 
@@ -137,7 +137,7 @@ public class JobZombieDetectorService(
                 }
                 catch (Exception ex)
                 {
-                    RecordState($"Error processing instance {instance.InstanceId}", exception: ex);
+                    RecordState($"Error processing instance {instance.InstanceId}", givenLogLevel: LogLevel.Error, exception: ex);
                 }
             }
 
@@ -189,7 +189,7 @@ public class JobZombieDetectorService(
                 }
                 catch (Exception ex)
                 {
-                    RecordState($"Error processing instance {instance.InstanceId}", exception: ex);
+                    RecordState($"Error processing instance {instance.InstanceId}", givenLogLevel: LogLevel.Error, exception: ex);
                 }
             }
 
@@ -214,13 +214,13 @@ public class JobZombieDetectorService(
         var definition = await cacheService.GetJobDefinitionAsync(instance.JobKey, cancellationToken);
         if (definition == null)
         {
-            RecordState($"Zombie detected: Instance {instance.InstanceId} - definition not found for job {instance.JobKey}");
+            RecordState($"Zombie detected: Instance {instance.InstanceId} - definition not found for job {instance.JobKey}", givenLogLevel: LogLevel.Warning);
             return true;
         }
 
         if (definition.IsDisabled)
         {
-            RecordState($"Zombie detected: Instance {instance.InstanceId} - job {instance.JobKey} is disabled");
+            RecordState($"Zombie detected: Instance {instance.InstanceId} - job {instance.JobKey} is disabled", givenLogLevel: LogLevel.Warning);
             return true;
         }
 
@@ -232,7 +232,7 @@ public class JobZombieDetectorService(
             var isWorkerOnline = await IsWorkerOnlineAsync(instance.RunningClientId, cancellationToken);
             if (!isWorkerOnline)
             {
-                RecordState($"Zombie detected: Instance {instance.InstanceId} - worker {instance.RunningClientId} is offline");
+                RecordState($"Zombie detected: Instance {instance.InstanceId} - worker {instance.RunningClientId} is offline", givenLogLevel: LogLevel.Warning);
                 return true;
             }
         }
@@ -240,7 +240,7 @@ public class JobZombieDetectorService(
         // Calculate timeout
         if (!instance.StartedAt.HasValue)
         {
-            RecordState($"Zombie detected: Instance {instance.InstanceId} - no StartedAt timestamp");
+            RecordState($"Zombie detected: Instance {instance.InstanceId} - no StartedAt timestamp", givenLogLevel: LogLevel.Warning);
             return true;
         }
 
@@ -250,7 +250,7 @@ public class JobZombieDetectorService(
 
         if (elapsed > effectiveTimeout)
         {
-            RecordState($"Zombie detected: Instance {instance.InstanceId}, Job {instance.JobKey}, Elapsed {elapsed:hh\\:mm\\:ss}, Timeout {effectiveTimeout:hh\\:mm\\:ss}");
+            RecordState($"Zombie detected: Instance {instance.InstanceId}, Job {instance.JobKey}, Elapsed {elapsed:hh\\:mm\\:ss}, Timeout {effectiveTimeout:hh\\:mm\\:ss}", givenLogLevel: LogLevel.Warning);
             return true;
         }
 
@@ -266,7 +266,7 @@ public class JobZombieDetectorService(
 
         if (elapsed > _jobSchedulerOptions.EnqueuedStateTimeout)
         {
-            RecordState($"Zombie detected: Instance {instance.InstanceId}, Job {instance.JobKey}, Enqueued, Elapsed {elapsed:hh\\:mm\\:ss}, Timeout {_jobSchedulerOptions.EnqueuedStateTimeout:hh\\:mm\\:ss}");
+            RecordState($"Zombie detected: Instance {instance.InstanceId}, Job {instance.JobKey}, Enqueued, Elapsed {elapsed:hh\\:mm\\:ss}, Timeout {_jobSchedulerOptions.EnqueuedStateTimeout:hh\\:mm\\:ss}", givenLogLevel: LogLevel.Warning);
             return true;
         }
 
@@ -294,12 +294,12 @@ public class JobZombieDetectorService(
                 message,
                 cancellationToken);
 
-            RecordState($"Marked zombie instance {instance.InstanceId} as Failed");
+            RecordState($"Marked zombie instance {instance.InstanceId} as Failed", givenLogLevel: LogLevel.Warning);
         }
         catch (InvalidOperationException ex)
         {
             // State transition may fail if instance already moved to terminal state (race condition)
-            RecordState($"Failed to mark instance {instance.InstanceId} as zombie (likely already in terminal state)", exception: ex);
+            RecordState($"Failed to mark instance {instance.InstanceId} as zombie (likely already in terminal state)", givenLogLevel: LogLevel.Warning, exception: ex);
         }
     }
 
@@ -317,7 +317,7 @@ public class JobZombieDetectorService(
 
             if ((await registerCentreServer.GetServicesStatus()).IsFailed(out var error, out var data))
             {
-                RecordState($"Failed to get services status from RegisterCentre: {error}");
+                RecordState($"Failed to get services status from RegisterCentre: {error}", givenLogLevel: LogLevel.Warning);
                 return true; // Assume online on error
             }
 
@@ -336,7 +336,7 @@ public class JobZombieDetectorService(
         }
         catch (Exception ex)
         {
-            RecordState($"Failed to check worker health for {workerId}", exception: ex);
+            RecordState($"Failed to check worker health for {workerId}", givenLogLevel: LogLevel.Warning, exception: ex);
             return true; // Assume online on error
         }
     }

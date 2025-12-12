@@ -91,9 +91,10 @@ public abstract class MoBackgroundService(
     /// <inheritdoc cref="ObservableAgent.RecordState" />
     protected void RecordState(string message,
         HostedServiceState? newState = null,
-        Exception? exception = null)
+        Exception? exception = null,
+        LogLevel? givenLogLevel = null)
     {
-        ObservableInfo.RecordState(message, newState, exception);
+        ObservableInfo.Agent.RecordState(message, newState, exception, givenLogLevel);
     }
 
     /// <summary>

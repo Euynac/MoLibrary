@@ -47,7 +47,7 @@ public interface IMoEventBus
     /// <typeparam name="THandler">Handler type</typeparam>
     /// <param name="topicName">Optional custom topic name (overrides EventNameAttribute)</param>
     /// <returns>The created subscription</returns>
-    ISubscription Subscribe<TEvent, THandler>(string? topicName = null)
+    Task<ISubscription> SubscribeAsync<TEvent, THandler>(string? topicName = null)
         where TEvent : class
         where THandler : IMoEventHandler;
 
@@ -58,7 +58,7 @@ public interface IMoEventBus
     /// <param name="handler">Handler action</param>
     /// <param name="topicName">Optional custom topic name (overrides EventNameAttribute)</param>
     /// <returns>The created subscription</returns>
-    ISubscription Subscribe<TEvent>(Func<TEvent, Task> handler, string? topicName = null)
+    Task<ISubscription> SubscribeAsync<TEvent>(Func<TEvent, Task> handler, string? topicName = null)
         where TEvent : class;
 
     #endregion

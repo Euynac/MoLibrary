@@ -87,9 +87,10 @@ public abstract class MoHostedService(
     /// <inheritdoc cref="ObservableAgent.RecordState" />
     protected void RecordState(string message,
         HostedServiceState? newState,
-        Exception? exception = null)
+        Exception? exception = null,
+        LogLevel? givenLogLevel = null)
     {
-        ObservableInfo.RecordState(message, newState, exception);
+        ObservableInfo.Agent.RecordState(message, newState, exception, givenLogLevel);
     }
 
     /// <summary>

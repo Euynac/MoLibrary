@@ -104,8 +104,8 @@ public class JobConcurrencyGuardHostedService(
         }
 
         // 4. Subscribe to lifecycle events
-        _eventSubscriptions.Add(eventBus.Subscribe<JobStartedEvent>(OnJobStartedAsync));
-        _eventSubscriptions.Add(eventBus.Subscribe<JobCompletedEvent>(OnJobCompletedAsync));
+        _eventSubscriptions.Add(await eventBus.SubscribeAsync<JobStartedEvent>(OnJobStartedAsync));
+        _eventSubscriptions.Add(await eventBus.SubscribeAsync<JobCompletedEvent>(OnJobCompletedAsync));
 
         // 5. Subscribe to RegisterCentre offline event (if available)
         if (registerCentreServer != null)

@@ -37,11 +37,11 @@ public class TriggeredJobScheduler(
     public async Task InitializeAsync(IMoEventBus eventBus, bool debugMode, CancellationToken cancellationToken = default)
     {
         // Subscribe to job triggered event
-        _triggeredJobSubscription = eventBus.Subscribe<JobTriggeredEvent>(OnJobTriggeredAsync);
+        _triggeredJobSubscription = await eventBus.SubscribeAsync<JobTriggeredEvent>(OnJobTriggeredAsync);
         logger.LogDebug("Subscribed to JobTriggeredEvent");
 
         // Subscribe to job cancellation event
-        _cancellationSubscription = eventBus.Subscribe<JobCancellationRequestedEvent>(OnJobCancellationRequestedAsync);
+        _cancellationSubscription = await eventBus.SubscribeAsync<JobCancellationRequestedEvent>(OnJobCancellationRequestedAsync);
         logger.LogDebug("Subscribed to JobCancellationRequestedEvent");
 
         if (!debugMode)

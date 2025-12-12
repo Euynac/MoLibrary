@@ -48,7 +48,7 @@ public class JobSchedulerHostedService(
         await triggeredJobScheduler.InitializeAsync(eventBus, _options.TriggeredJobDebugMode, cancellationToken);
 
         // Subscribe to job definitions changed event (recurring jobs only)
-        _definitionsChangedSubscription = eventBus.Subscribe<JobDefinitionsChangedEvent>(
+        _definitionsChangedSubscription = await eventBus.SubscribeAsync<JobDefinitionsChangedEvent>(
             recurringJobScheduler.OnJobDefinitionsChangedAsync);
         logger.LogDebug("Subscribed to JobDefinitionsChangedEvent");
     } 

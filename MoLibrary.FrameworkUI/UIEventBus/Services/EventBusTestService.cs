@@ -94,31 +94,35 @@ public sealed class EventBusTestService(
                 {
                     return Res.Fail("已存在活动订阅，请先停止当前订阅");
                 }
+            }
 
-                // 订阅主题
-                _activeSubscription = distributedEventBus.Subscribe<TestEventMessage>(async eventData =>
+            // 订阅主题
+            var subscription = await distributedEventBus.SubscribeAsync<TestEventMessage>(async eventData =>
+            {
+                var receivedMessage = new ReceivedTestMessage
                 {
-                    var receivedMessage = new ReceivedTestMessage
-                    {
-                        EventData = eventData,
-                        ReceivedAt = DateTime.Now, // 使用本地时间
-                        TopicName = topicName
-                    };
+                    EventData = eventData,
+                    ReceivedAt = DateTime.Now, // 使用本地时间
+                    TopicName = topicName
+                };
 
-                    _receivedMessages.Enqueue(receivedMessage);
+                _receivedMessages.Enqueue(receivedMessage);
 
-                    // 限制队列大小
-                    while (_receivedMessages.Count > MaxMessageCount)
-                    {
-                        _receivedMessages.TryDequeue(out _);
-                    }
+                // 限制队列大小
+                while (_receivedMessages.Count > MaxMessageCount)
+                {
+                    _receivedMessages.TryDequeue(out _);
+                }
 
-                    logger.LogInformation("收到测试消息: {MessageId} from topic {TopicName}",
-                        eventData.MessageId, topicName);
+                logger.LogInformation("收到测试消息: {MessageId} from topic {TopicName}",
+                    eventData.MessageId, topicName);
 
-                    await Task.CompletedTask;
-                }, topicName);
+                await Task.CompletedTask;
+            }, topicName);
 
+            lock (_subscriptionLock)
+            {
+                _activeSubscription = subscription;
                 CurrentTopicName = topicName;
             }
 

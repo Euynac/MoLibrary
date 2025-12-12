@@ -149,10 +149,4 @@ public class HostedServiceObservableInfo
     public TimeSpan? Uptime => StartedAt.HasValue && StoppedAt == null
         ? DateTime.UtcNow - StartedAt.Value
         : null;
-
-    /// <inheritdoc cref="ObservableAgent.RecordState" />
-    public void RecordState(string message, HostedServiceState? newState = null, Exception? exception = null)
-    {
-        _agent.RecordState(message, newState, exception);
-    }
 }
