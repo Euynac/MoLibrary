@@ -91,7 +91,6 @@ public class DaprSidecarHealthCoordinator(
         // Phase 1: Initial health check with retry and exponential backoff
         Status = DaprHealthStatus.Checking;
         RecordState("Checking Dapr sidecar health", HostedServiceState.Starting);
-        Logger.LogInformation("Starting initial Dapr sidecar health check");
 
         var retryCount = _options.InitialRetryTimes;
         var currentDelay = _options.InitialRetryInterval;
@@ -109,7 +108,6 @@ public class DaprSidecarHealthCoordinator(
                     _consecutiveFailures = 0;
                     Status = DaprHealthStatus.Healthy;
                     RecordState("Dapr sidecar is healthy", HostedServiceState.Running);
-                    Logger.LogInformation("Dapr sidecar is healthy");
                     _initialHealthCompletionSource.TrySetResult(true);
 
                     // Phase 2: Start periodic monitoring
@@ -146,7 +144,6 @@ public class DaprSidecarHealthCoordinator(
         // Failed to become healthy after all initial retries
         Status = DaprHealthStatus.Failed;
         RecordState($"Failed to connect to Dapr sidecar after {_options.InitialRetryTimes} attempts", HostedServiceState.Faulted);
-        Logger.LogError("Failed to connect to Dapr sidecar after {Attempts} attempts", _options.InitialRetryTimes);
         _initialHealthCompletionSource.TrySetResult(false);
 
         // If fail-fast is enabled, trigger graceful application shutdown for K8s recreation
@@ -184,7 +181,6 @@ public class DaprSidecarHealthCoordinator(
                     {
                         Status = DaprHealthStatus.Healthy;
                         RecordState("Dapr sidecar recovered to healthy state", HostedServiceState.Running);
-                        Logger.LogInformation("Dapr sidecar recovered to healthy state");
                     }
                 }
                 else
@@ -211,13 +207,11 @@ public class DaprSidecarHealthCoordinator(
                     {
                         Status = DaprHealthStatus.Unhealthy;
                         RecordState($"Dapr sidecar is unhealthy (consecutive failures: {_consecutiveFailures})", HostedServiceState.Degraded);
-                        Logger.LogError("Dapr sidecar is unhealthy (consecutive failures: {Count})", _consecutiveFailures);
                     }
                     else if (_consecutiveFailures >= _options.DegradedThreshold)
                     {
                         Status = DaprHealthStatus.Degraded;
                         RecordState($"Dapr sidecar is degraded (consecutive failures: {_consecutiveFailures})", HostedServiceState.Degraded);
-                        Logger.LogWarning("Dapr sidecar is degraded (consecutive failures: {Count})", _consecutiveFailures);
                     }
                 }
             }
@@ -248,13 +242,11 @@ public class DaprSidecarHealthCoordinator(
                 {
                     Status = DaprHealthStatus.Unhealthy;
                     RecordState($"Dapr sidecar is unhealthy (consecutive failures: {_consecutiveFailures})", HostedServiceState.Degraded);
-                    Logger.LogError("Dapr sidecar is unhealthy (consecutive failures: {Count})", _consecutiveFailures);
                 }
                 else if (_consecutiveFailures >= _options.DegradedThreshold)
                 {
                     Status = DaprHealthStatus.Degraded;
                     RecordState($"Dapr sidecar is degraded (consecutive failures: {_consecutiveFailures})", HostedServiceState.Degraded);
-                    Logger.LogWarning("Dapr sidecar is degraded (consecutive failures: {Count})", _consecutiveFailures);
                 }
             }
         }

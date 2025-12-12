@@ -19,6 +19,11 @@ public class HostedServiceObservableInfo
         _agent = agent ?? throw new ArgumentNullException(nameof(agent));
     }
 
+    /// <summary>
+    /// Gets the underlying ObservableAgent for advanced operations
+    /// </summary>
+    public ObservableAgent Agent => _agent;
+
     // Service Identity (delegates to agent)
 
     /// <summary>

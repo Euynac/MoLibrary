@@ -26,7 +26,7 @@ public class ObservableInstanceManager(IOptions<ModuleObservableInstanceOption> 
         var globalOption = globalOptions.Value;
         var maxHistorySize = instanceOption.MaxHistorySize ?? globalOption.DefaultMaxHistorySize;
 
-        var agent = new ObservableAgent(instanceId, maxHistorySize)
+        var agent = new ObservableAgent(instanceId, maxHistorySize, instanceOption)
         {
             InstanceName = instanceOption.InstanceName ?? instanceId,
             InstanceType = instanceOption.InstanceType,

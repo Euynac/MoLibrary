@@ -79,7 +79,6 @@ public abstract class CoordinatedLeaderService(
 
             // Step 5: Mark as successfully initialized
             RecordState("Leader initialized successfully", HostedServiceState.Running);
-            Logger.LogInformation("{ServiceName} initialized successfully", ServiceName);
 
             // Step 6: Optional post-initialization hook
             await OnAfterInitialization(stoppingToken);
@@ -96,7 +95,6 @@ public abstract class CoordinatedLeaderService(
         {
             // Initialization failure - capture error and rethrow
             RecordState("Initialization failed", HostedServiceState.Faulted, ex);
-            Logger.LogError(ex, "{ServiceName} initialization failed", ServiceName);
             throw; // Rethrow to let the host handle the failure
         }
     }

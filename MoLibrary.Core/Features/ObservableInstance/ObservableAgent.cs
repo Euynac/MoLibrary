@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+
 namespace MoLibrary.Core.Features.ObservableInstance;
 
 /// <summary>
@@ -8,6 +10,11 @@ public class ObservableAgent : IDisposable
 {
     private readonly List<ObservableStateHistory> _stateHistory = [];
     private readonly ReaderWriterLockSlim _lock = new();
+    private readonly ILogger? _logger;
+    private LogLevel? _defaultLogLevel;
+
+    // Log level mappings storage (type-erased for multi-enum support)
+    private readonly Dictionary<Type, Dictionary<object, LogLevel>> _logLevelMappings = new();
 
     // Identity
     /// <summary>
@@ -130,7 +137,8 @@ public class ObservableAgent : IDisposable
     /// </summary>
     /// <param name="instanceId">Unique instance identifier</param>
     /// <param name="maxHistorySize">Maximum number of history entries to retain</param>
-    public ObservableAgent(string instanceId, int maxHistorySize)
+    /// <param name="option">Configuration options for logger and log level mappings</param>
+    internal ObservableAgent(string instanceId, int maxHistorySize, ObservableAgentOption option)
     {
         if (string.IsNullOrEmpty(instanceId))
             throw new ArgumentException("Instance ID cannot be empty", nameof(instanceId));
@@ -139,6 +147,8 @@ public class ObservableAgent : IDisposable
 
         InstanceId = instanceId;
         MaxHistorySize = maxHistorySize;
+        _logger = option?.Logger;
+        _defaultLogLevel = option?.DefaultLogLevel;
         RegisteredAt = DateTime.UtcNow;
         StateChangedAt = DateTime.UtcNow;
     }
@@ -146,6 +156,7 @@ public class ObservableAgent : IDisposable
     /// <summary>
     /// Records a state change with optional message and exception.
     /// This is the unified method that handles both state transitions and exception tracking.
+    /// Automatically logs to ILogger if configured with log level mappings.
     /// </summary>
     /// <param name="message">Descriptive message about the state change</param>
     /// <param name="newState">The new state to transition to (null if state not changing)</param>
@@ -170,7 +181,7 @@ public class ObservableAgent : IDisposable
                 _stateHistory.RemoveAt(0);
             }
 
-            if(newState != null) 
+            if(newState != null)
             {
                 CurrentState = newState;
             }
@@ -179,6 +190,16 @@ public class ObservableAgent : IDisposable
             if (exception != null)
             {
                 TotalExceptions++;
+            }
+
+            // Auto-log based on state mapping
+            if (_logger != null && newState != null)
+            {
+                var logLevel = GetLogLevel(newState);
+                if (logLevel.HasValue)
+                {
+                    LogStateChange(logLevel.Value, message, newState, exception);
+                }
             }
         }
         finally
@@ -289,6 +310,152 @@ public class ObservableAgent : IDisposable
             _lock.ExitWriteLock();
         }
     }
+
+    #region Status log Mapping
+
+    /// <summary>
+    /// Checks if the current state is mapped to Debug log level
+    /// </summary>
+    public bool IsDebug() => CheckLogLevel(LogLevel.Debug);
+
+    /// <summary>
+    /// Checks if the current state is mapped to Information log level
+    /// </summary>
+    public bool IsInformation() => CheckLogLevel(LogLevel.Information);
+
+    /// <summary>
+    /// Checks if the current state is mapped to Warning log level
+    /// </summary>
+    public bool IsWarning() => CheckLogLevel(LogLevel.Warning);
+
+    /// <summary>
+    /// Checks if the current state is mapped to Error log level
+    /// </summary>
+    public bool IsError() => CheckLogLevel(LogLevel.Error);
+
+    /// <summary>
+    /// Checks if the current state is mapped to Critical log level
+    /// </summary>
+    public bool IsCritical() => CheckLogLevel(LogLevel.Critical);
+
+    /// <summary>
+    /// Checks if the current state is unhealthy (Warning, Error, or Critical)
+    /// </summary>
+    public bool IsUnhealthy() => IsWarning() || IsError() || IsCritical();
+
+    /// <summary>
+    /// Maps specific state enum values to a log level
+    /// </summary>
+    /// <typeparam name="TState">The enum type representing states</typeparam>
+    /// <param name="logLevel">The Microsoft.Extensions.Logging.LogLevel to use</param>
+    /// <param name="states">One or more state values to map to this log level</param>
+    /// <returns>This agent instance for fluent chaining</returns>
+    public ObservableAgent SetLogLevel<TState>(LogLevel logLevel, params TState[] states)
+        where TState : struct, Enum
+    {
+        if (states == null || states.Length == 0)
+            throw new ArgumentException("At least one state must be provided", nameof(states));
+
+        var stateType = typeof(TState);
+        if (!_logLevelMappings.ContainsKey(stateType))
+        {
+            _logLevelMappings[stateType] = new Dictionary<object, LogLevel>();
+        }
+
+        foreach (var state in states)
+        {
+            _logLevelMappings[stateType][state] = logLevel;
+        }
+
+        return this;
+    }
+
+    /// <summary>
+    /// Maps states to Debug log level
+    /// </summary>
+    public ObservableAgent SetDebugStates<TState>(params TState[] states)
+        where TState : struct, Enum
+        => SetLogLevel(LogLevel.Debug, states);
+
+    /// <summary>
+    /// Maps states to Information log level
+    /// </summary>
+    public ObservableAgent SetInformationStates<TState>(params TState[] states)
+        where TState : struct, Enum
+        => SetLogLevel(LogLevel.Information, states);
+
+    /// <summary>
+    /// Maps states to Warning log level
+    /// </summary>
+    public ObservableAgent SetWarningStates<TState>(params TState[] states)
+        where TState : struct, Enum
+        => SetLogLevel(LogLevel.Warning, states);
+
+    /// <summary>
+    /// Maps states to Error log level
+    /// </summary>
+    public ObservableAgent SetErrorStates<TState>(params TState[] states)
+        where TState : struct, Enum
+        => SetLogLevel(LogLevel.Error, states);
+
+    /// <summary>
+    /// Maps states to Critical log level
+    /// </summary>
+    public ObservableAgent SetCriticalStates<TState>(params TState[] states)
+        where TState : struct, Enum
+        => SetLogLevel(LogLevel.Critical, states);
+
+    /// <summary>
+    /// Sets the default log level for unmapped states
+    /// </summary>
+    public ObservableAgent SetDefaultLogLevel(LogLevel? logLevel)
+    {
+        _defaultLogLevel = logLevel;
+        return this;
+    }
+
+    private bool CheckLogLevel(LogLevel targetLevel)
+    {
+        var currentLogLevel = GetLogLevel(CurrentState);
+        return currentLogLevel == targetLevel;
+    }
+
+    /// <summary>
+    /// Gets the log level for a given state
+    /// </summary>
+    private LogLevel? GetLogLevel(object? state)
+    {
+        if (state == null) return _defaultLogLevel;
+
+        var stateType = state.GetType();
+        if (_logLevelMappings.TryGetValue(stateType, out var mappings))
+        {
+            if (mappings.TryGetValue(state, out var logLevel))
+            {
+                return logLevel;
+            }
+        }
+
+        return _defaultLogLevel;
+    }
+
+    private void LogStateChange(LogLevel logLevel, string message, object state, Exception? exception)
+    {
+        // Use structured logging with state information
+        var logMessage = "[{InstanceName}] {Message} (State: {State})";
+
+        if (exception != null)
+        {
+            _logger!.Log(logLevel, exception, logMessage, InstanceName, message, state);
+        }
+        else
+        {
+            _logger!.Log(logLevel, logMessage, InstanceName, message, state);
+        }
+    }
+
+    #endregion
+    
 
     /// <summary>
     /// Disposes resources used by this ObservableAgent

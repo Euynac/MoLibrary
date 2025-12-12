@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+
 namespace MoLibrary.Core.Features.ObservableInstance;
 
 /// <summary>
@@ -35,4 +37,15 @@ public class ObservableAgentOption
     /// Group ID (optional, for grouping related instances)
     /// </summary>
     public string? GroupId { get; set; }
+
+    /// <summary>
+    /// Optional logger to automatically log state changes based on configured log levels
+    /// </summary>
+    public ILogger? Logger { get; set; }
+
+    /// <summary>
+    /// Default log level to use when a state is not explicitly mapped.
+    /// If null, unmapped states will not be logged automatically.
+    /// </summary>
+    public LogLevel? DefaultLogLevel { get; set; }
 }

@@ -50,15 +50,38 @@ public abstract class MoHostedService(
     internal void InitializeObservableInfo()
     {
         var agentId = $"HostedService_{ServiceName}_{Guid.NewGuid():N}";
-        ObservableInfo = new HostedServiceObservableInfo(observableManager.Create(agentId, opt =>
+        var agent = observableManager.Create(agentId, opt =>
         {
             opt.MaxHistorySize = MaxHistorySize;
             opt.InstanceName = ServiceName;
             opt.InstanceType = GetType();
-        }))
+            opt.Logger = Logger;
+        });
+
+        // Configure log level mappings on the agent
+        ConfigureStateLogLevels(agent);
+
+        ObservableInfo = new HostedServiceObservableInfo(agent)
         {
             HeartbeatInterval = HeartbeatInterval
         };
+    }
+
+    /// <summary>
+    /// Configures default log level mappings for HostedServiceState.
+    /// Override to customize per service.
+    /// </summary>
+    protected virtual void ConfigureStateLogLevels(ObservableAgent agent)
+    {
+        agent.SetDebugStates(HostedServiceState.NotStarted, HostedServiceState.Starting);
+        agent.SetInformationStates(
+            HostedServiceState.Running,
+            HostedServiceState.Executing,
+            HostedServiceState.Stopping,
+            HostedServiceState.Stopped
+        );
+        agent.SetWarningStates(HostedServiceState.Degraded);
+        agent.SetErrorStates(HostedServiceState.Faulted);
     }
 
     /// <inheritdoc cref="ObservableAgent.RecordState" />
@@ -81,14 +104,18 @@ public abstract class MoHostedService(
 
             await OnStartingAsync(cancellationToken);
 
-            RecordState("Service started successfully", HostedServiceState.Running);
+            // Only transition to Running if not already unhealthy
+            if (!ObservableInfo.Agent.IsUnhealthy())
+            {
+                RecordState("Service started successfully", HostedServiceState.Running);
+            }
+            // If unhealthy, preserve the state set during OnStartingAsync
 
             await OnStartedAsync(cancellationToken);
         }
         catch (Exception ex)
         {
             RecordState("Service start failed", HostedServiceState.Faulted, ex);
-            Logger.LogError(ex, "{ServiceName} failed to start", ServiceName);
 
             if (_options.FailFastOnStartupError)
             {
@@ -116,7 +143,6 @@ public abstract class MoHostedService(
         catch (Exception ex)
         {
             RecordState("Service stop failed", HostedServiceState.Faulted, ex);
-            Logger.LogError(ex, "{ServiceName} failed to stop gracefully", ServiceName);
         }
     }
 
