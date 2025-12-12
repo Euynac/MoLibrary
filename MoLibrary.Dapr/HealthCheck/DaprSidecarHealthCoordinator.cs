@@ -23,16 +23,14 @@ public class DaprSidecarHealthCoordinator(
     IOptions<ModuleDaprClientOption> clientOptions,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
     ILogger<DaprSidecarHealthCoordinator> logger)
-    : MoHostedService(observableManager, hostedServiceOptions, logger), IDaprSidecarHealthCoordinator
+    : MoBackgroundService(observableManager, hostedServiceOptions, logger), IDaprSidecarHealthCoordinator
 {
     private readonly ModuleDaprClientOption _options = clientOptions.Value;
-    private readonly IHostApplicationLifetime _applicationLifetime = applicationLifetime;
 
     // State management
     private DaprHealthStatus _status = DaprHealthStatus.NotStarted;
     private readonly object _statusLock = new();
     private readonly TaskCompletionSource<bool> _initialHealthCompletionSource = new();
-    private CancellationTokenSource? _periodicCheckCts;
     private DateTime? _lastHealthyAt;
     private int _consecutiveFailures;
 
@@ -66,33 +64,6 @@ public class DaprSidecarHealthCoordinator(
     public override string ServiceName => "DaprSidecarHealthCoordinator";
 
     /// <summary>
-    /// Called during service startup. Starts initial health check in background.
-    /// </summary>
-    protected override Task OnStartingAsync(CancellationToken cancellationToken)
-    {
-        RecordStateChange(HostedServiceState.Starting, "Starting Dapr sidecar health check coordinator");
-
-        // Fire-and-forget initial health check (LongRunning task)
-        _ = Task.Factory.StartNew(
-            async () => await RunInitialHealthCheckAsync(cancellationToken),
-            cancellationToken,
-            TaskCreationOptions.LongRunning,
-            TaskScheduler.Default);
-
-        return Task.CompletedTask;
-    }
-
-    /// <summary>
-    /// Called during service shutdown. Stops periodic health checks.
-    /// </summary>
-    protected override Task OnStoppingAsync(CancellationToken cancellationToken)
-    {
-        RecordStateChange(HostedServiceState.Stopping, "Stopping Dapr sidecar health check coordinator");
-        _periodicCheckCts?.Cancel();
-        return Task.CompletedTask;
-    }
-
-    /// <summary>
     /// Waits for the Dapr sidecar to become healthy or timeout.
     /// </summary>
     public async Task<bool> WaitForHealthyAsync(TimeSpan timeout, CancellationToken ct)
@@ -113,10 +84,11 @@ public class DaprSidecarHealthCoordinator(
     }
 
     /// <summary>
-    /// Runs initial health check with retry and exponential backoff.
+    /// Executes the background health check work: initial retries + continuous periodic monitoring.
     /// </summary>
-    private async Task RunInitialHealthCheckAsync(CancellationToken ct)
+    protected override async Task ExecuteBackgroundAsync(CancellationToken stoppingToken)
     {
+        // Phase 1: Initial health check with retry and exponential backoff
         Status = DaprHealthStatus.Checking;
         RecordStateChange(HostedServiceState.Starting, "Checking Dapr sidecar health");
         Logger.LogInformation("Starting initial Dapr sidecar health check");
@@ -124,12 +96,12 @@ public class DaprSidecarHealthCoordinator(
         var retryCount = _options.InitialRetryTimes;
         var currentDelay = _options.InitialRetryInterval;
 
-        while (retryCount > 0 && !ct.IsCancellationRequested)
+        while (retryCount > 0 && !stoppingToken.IsCancellationRequested)
         {
             try
             {
                 // Use Dapr SDK's CheckOutboundHealthAsync method
-                var isHealthy = await daprClient.CheckOutboundHealthAsync(ct);
+                var isHealthy = await daprClient.CheckOutboundHealthAsync(stoppingToken);
 
                 if (isHealthy)
                 {
@@ -140,8 +112,8 @@ public class DaprSidecarHealthCoordinator(
                     Logger.LogInformation("Dapr sidecar is healthy");
                     _initialHealthCompletionSource.TrySetResult(true);
 
-                    // Start periodic monitoring
-                    StartPeriodicHealthCheck();
+                    // Phase 2: Start periodic monitoring
+                    await RunPeriodicHealthCheckAsync(stoppingToken);
                     return;
                 }
             }
@@ -162,7 +134,7 @@ public class DaprSidecarHealthCoordinator(
             retryCount--;
             if (retryCount > 0)
             {
-                await Task.Delay(currentDelay, ct);
+                await Task.Delay(currentDelay, stoppingToken);
                 // Exponential backoff
                 currentDelay = TimeSpan.FromMilliseconds(
                     currentDelay.TotalMilliseconds * _options.BackoffMultiplier);
@@ -178,44 +150,30 @@ public class DaprSidecarHealthCoordinator(
         _initialHealthCompletionSource.TrySetResult(false);
 
         // If fail-fast is enabled, trigger graceful application shutdown for K8s recreation
-        if (_options.EnableFailFast && _consecutiveFailures >= _options.FailFastThreshold)
+        // During initial startup, we use InitialRetryTimes exhaustion as the trigger (not FailFastThreshold)
+        if (_options.EnableFailFast)
         {
             Logger.LogCritical(
-                "Fail-fast enabled: {Failures} consecutive failures reached threshold ({Threshold}). Initiating graceful application shutdown",
-                _consecutiveFailures, _options.FailFastThreshold);
+                "Fail-fast enabled: Failed to connect to Dapr sidecar after {Attempts} initial attempts. Initiating graceful application shutdown",
+                _options.InitialRetryTimes);
             RecordStateChange(HostedServiceState.Faulted, "Initiating graceful shutdown (fail-fast mode)");
-            _applicationLifetime.StopApplication();
+            applicationLifetime.StopApplication();
         }
-    }
-
-    /// <summary>
-    /// Starts periodic health check in background.
-    /// </summary>
-    private void StartPeriodicHealthCheck()
-    {
-        _periodicCheckCts?.Cancel();
-        _periodicCheckCts = new CancellationTokenSource();
-
-        _ = Task.Factory.StartNew(
-            async () => await RunPeriodicHealthCheckAsync(_periodicCheckCts.Token),
-            _periodicCheckCts.Token,
-            TaskCreationOptions.LongRunning,
-            TaskScheduler.Default);
     }
 
     /// <summary>
     /// Runs periodic health check with state transitions and fail-fast support.
     /// </summary>
-    private async Task RunPeriodicHealthCheckAsync(CancellationToken ct)
+    private async Task RunPeriodicHealthCheckAsync(CancellationToken stoppingToken)
     {
-        while (!ct.IsCancellationRequested)
+        while (!stoppingToken.IsCancellationRequested)
         {
-            await Task.Delay(_options.PeriodicCheckInterval, ct);
+            await Task.Delay(_options.PeriodicCheckInterval, stoppingToken);
 
             try
             {
                 // Use Dapr SDK's CheckOutboundHealthAsync method
-                var isHealthy = await daprClient.CheckOutboundHealthAsync(ct);
+                var isHealthy = await daprClient.CheckOutboundHealthAsync(stoppingToken);
 
                 if (isHealthy)
                 {
@@ -237,6 +195,7 @@ public class DaprSidecarHealthCoordinator(
                         _consecutiveFailures);
 
                     // Check fail-fast threshold first (most severe)
+                    // During runtime periodic checks, we use FailFastThreshold (not InitialRetryTimes)
                     if (_options.EnableFailFast && _consecutiveFailures >= _options.FailFastThreshold)
                     {
                         Status = DaprHealthStatus.Failed;
@@ -246,7 +205,7 @@ public class DaprSidecarHealthCoordinator(
                         Logger.LogCritical(
                             "Fail-fast enabled: {Failures} consecutive runtime failures reached threshold ({Threshold}). Initiating graceful application shutdown",
                             _consecutiveFailures, _options.FailFastThreshold);
-                        _applicationLifetime.StopApplication();
+                        applicationLifetime.StopApplication();
                         return; // Exit periodic check - app is shutting down
                     }
                     // Otherwise check degraded/unhealthy thresholds
@@ -263,6 +222,11 @@ public class DaprSidecarHealthCoordinator(
                         Logger.LogWarning("Dapr sidecar is degraded (consecutive failures: {Count})", _consecutiveFailures);
                     }
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                // Normal shutdown scenario - exit cleanly
+                break;
             }
             catch (Exception ex)
             {
@@ -281,7 +245,7 @@ public class DaprSidecarHealthCoordinator(
                     Logger.LogCritical(
                         "Fail-fast enabled: {Failures} consecutive runtime failures reached threshold ({Threshold}). Initiating graceful application shutdown",
                         _consecutiveFailures, _options.FailFastThreshold);
-                    _applicationLifetime.StopApplication();
+                    applicationLifetime.StopApplication();
                     return;
                 }
                 else if (_consecutiveFailures >= _options.UnhealthyThreshold)

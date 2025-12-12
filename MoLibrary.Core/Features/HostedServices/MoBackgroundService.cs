@@ -20,7 +20,6 @@ public abstract class MoBackgroundService(
     ILogger? logger = null) : BackgroundService, IMoHostedService
 {
     protected readonly ILogger Logger = logger ?? NullLogger.Instance;
-    private readonly IObservableInstanceManager _observableManager = observableManager;
     private readonly ModuleHostedServiceOption _options = options.Value;
 
     // Heartbeat mechanism
@@ -55,7 +54,7 @@ public abstract class MoBackgroundService(
     internal void InitializeObservableInfo()
     {
         var agentId = $"HostedService_{ServiceName}_{Guid.NewGuid():N}";
-        ObservableInfo = new HostedServiceObservableInfo(_observableManager.Create(agentId, opt =>
+        ObservableInfo = new HostedServiceObservableInfo(observableManager.Create(agentId, opt =>
         {
             opt.MaxHistorySize = MaxHistorySize;
             opt.InstanceName = ServiceName;
@@ -154,7 +153,7 @@ public abstract class MoBackgroundService(
         {
             RecordStateChange(HostedServiceState.Stopping, "Service stopping");
 
-            _heartbeatCts?.Cancel();
+            await _heartbeatCts?.CancelAsync();
             if (_heartbeatTask != null)
             {
                 await _heartbeatTask;

@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using Dapr.Messaging.PublishSubscribe;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MoLibrary.Core.Features.HostedServices.Models;
@@ -22,7 +23,8 @@ namespace MoLibrary.Dapr.EventBus;
 /// </summary>
 internal class DaprEventBusSubscriptionHostedService(
     DaprPublishSubscribeClient daprClient,
-    ISubscriptionManager subscriptionManager,
+    ISubscriptionManager subscriptionManager, 
+    IHostApplicationLifetime applicationLifetime,
     IMoDistributedEventBus eventBus,
     IObservableInstanceManager observableManager,
     IDaprSidecarHealthCoordinator healthCoordinator,
@@ -73,7 +75,7 @@ internal class DaprEventBusSubscriptionHostedService(
 
             if (_options.FailFastOnSidecarUnavailable)
             {
-                throw new InvalidOperationException(message);
+                applicationLifetime.StopApplication();
             }
             return; // Don't call base - skip subscription creation
         }
