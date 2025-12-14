@@ -101,9 +101,23 @@ public class JobRegistry(
 
         logger.LogInformation("Starting job definition reconciliation for {Count} current job(s)", currentDefinitions.Count);
 
+        // Extract current project name
+        var currentProjectName = currentDefinitions.FirstOrDefault()?.FromProject;
+        if (string.IsNullOrWhiteSpace(currentProjectName))
+        {
+            logger.LogWarning("No current project name found, skipping reconciliation");
+            return new JobReconciliationResult();
+        }
+
         // Get all existing non-deleted job definitions from cache (initializes cache if needed)
         var existingDefinitions = await cacheService.GetAllJobDefinitionsAsync(cancellationToken);
-        var existingJobKeys = existingDefinitions.Select(d => d.JobKey).ToHashSet();
+
+        // Filter to only this project's jobs
+        var existingProjectJobs = existingDefinitions
+            .Where(d => d.FromProject == currentProjectName)
+            .ToList();
+
+        var existingJobKeys = existingProjectJobs.Select(d => d.JobKey).ToHashSet();
         var currentJobKeys = currentDefinitions.Select(d => d.JobKey).ToHashSet();
 
         // Find jobs to add: in current definitions but not in metadata store
@@ -111,7 +125,7 @@ public class JobRegistry(
             .Where(d => !existingJobKeys.Contains(d.JobKey))
             .ToList();
 
-        // Find jobs to soft delete: in metadata store but not in current definitions
+        // Find jobs to soft delete: in metadata store but not in current definitions (scoped to current project)
         var jobKeysToDelete = existingJobKeys
             .Where(key => !currentJobKeys.Contains(key))
             .ToList();
