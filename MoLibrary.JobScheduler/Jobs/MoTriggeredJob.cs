@@ -41,7 +41,7 @@ namespace MoLibrary.JobScheduler.Jobs;
 /// Implementations should respect the cancellation token and exit gracefully when signaled.
 /// </para>
 /// </remarks>
-public abstract class MoTriggeredJob<TParam> where TParam : class, IMoTriggeredJob<TParam>
+public abstract class MoTriggeredJob<TParam> where TParam : class
 {
     /// <summary>
     /// Executes the triggered job logic with the provided parameters.
