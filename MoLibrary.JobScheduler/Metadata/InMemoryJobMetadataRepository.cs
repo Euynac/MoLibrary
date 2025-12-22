@@ -167,6 +167,9 @@ public class InMemoryJobMetadataRepository(ILogger<InMemoryJobMetadataRepository
         if (!string.IsNullOrEmpty(query.JobKeyContains))
             items = items.Where(i => i.JobKey.Contains(query.JobKeyContains, StringComparison.OrdinalIgnoreCase));
 
+        if (!string.IsNullOrEmpty(query.InstanceIdContains))
+            items = items.Where(i => i.InstanceId.Contains(query.InstanceIdContains, StringComparison.OrdinalIgnoreCase));
+
         if (query.State.HasValue)
             items = items.Where(i => i.State == query.State.Value);
 

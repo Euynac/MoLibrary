@@ -23,6 +23,7 @@ public class JobInstanceQueryService(
             var query = new JobInstanceQuery
             {
                 JobKey = filter.JobKey,
+                InstanceIdContains = filter.InstanceId,
                 State = filter.State,
                 CreatedAfter = filter.StartTime,
                 CreatedBefore = filter.EndTime,
@@ -33,21 +34,7 @@ public class JobInstanceQueryService(
 
             var result = await metadataRepository.QueryInstancesAsync(query, cancellationToken);
 
-            // Apply InstanceId fuzzy search in-memory (if specified)
-            var items = result.Items;
-            var totalCount = result.TotalCount;
-
-            if (!string.IsNullOrEmpty(filter.InstanceId))
-            {
-                items = items
-                    .Where(i => i.InstanceId.Contains(
-                        filter.InstanceId,
-                        StringComparison.OrdinalIgnoreCase))
-                    .ToList();
-                totalCount = items.Count;
-            }
-
-            return new ResPaged<JobInstance>(totalCount, items, filter.PageNumber, filter.PageSize);
+            return new ResPaged<JobInstance>(result.TotalCount, result.Items, filter.PageNumber, filter.PageSize);
         }
         catch (Exception ex)
         {

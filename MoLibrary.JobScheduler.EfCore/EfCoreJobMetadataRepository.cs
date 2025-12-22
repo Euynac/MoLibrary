@@ -199,6 +199,11 @@ public class EfCoreJobMetadataRepository(
             queryable = queryable.Where(i => EF.Functions.Like(i.JobKey, $"%{query.JobKeyContains}%"));
         }
 
+        if (!string.IsNullOrEmpty(query.InstanceIdContains))
+        {
+            queryable = queryable.Where(i => EF.Functions.Like(i.InstanceId, $"%{query.InstanceIdContains}%"));
+        }
+
         if (query.State.HasValue)
         {
             queryable = queryable.Where(i => i.State == query.State.Value);

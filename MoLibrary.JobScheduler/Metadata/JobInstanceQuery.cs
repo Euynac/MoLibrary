@@ -18,6 +18,11 @@ public record JobInstanceQuery
     public string? JobKeyContains { get; init; }
 
     /// <summary>
+    /// InstanceId 模糊匹配（包含关系，不区分大小写）
+    /// </summary>
+    public string? InstanceIdContains { get; init; }
+
+    /// <summary>
     /// 按状态过滤
     /// </summary>
     public JobState? State { get; init; }
