@@ -11,6 +11,10 @@ public enum ResponseCode
     /// </summary>
     Ok = 200,
     /// <summary>
+    /// 请求+新建资源
+    /// </summary>
+    Created = 201,
+    /// <summary>
     /// 请求错误
     /// </summary>
     BadRequest = 400,

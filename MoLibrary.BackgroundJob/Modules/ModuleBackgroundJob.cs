@@ -274,6 +274,7 @@ public class ModuleBackgroundJob(ModuleBackgroundJobOption option) : MoModule<Mo
             AppPath = "#",
             DisplayStorageConnectionString = Option.DisplayStorageConnectionString,  //是否显示数据库连接信息
             DashboardTitle = Option.DashboardTitle,
+            IgnoreAntiforgeryToken = true,
             IsReadOnlyFunc = context =>
             {
                 var isReadonly = false;
