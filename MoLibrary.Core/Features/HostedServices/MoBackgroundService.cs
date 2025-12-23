@@ -170,7 +170,10 @@ public abstract class MoBackgroundService(
         {
             RecordState("Service stopping", HostedServiceState.Stopping);
 
-            await _heartbeatCts?.CancelAsync();
+            if (_heartbeatCts != null)
+            {
+                await _heartbeatCts.CancelAsync();
+            }
             if (_heartbeatTask != null)
             {
                 await _heartbeatTask;
