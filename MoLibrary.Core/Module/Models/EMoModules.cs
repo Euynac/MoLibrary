@@ -38,6 +38,10 @@ public enum EMoModules
     GlobalJson,
     Mediator,
     Swagger,
+    /// <summary>
+    /// Swagger UI 增强模块
+    /// </summary>
+    SwaggerUI,
     Seeder,
     DynamicProxy,
     SnowflakeId,

@@ -11,6 +11,7 @@ using MoLibrary.Core.Module.TypeFinder;
 using MoLibrary.DomainDrivenDesign.Swagger;
 using MoLibrary.Tool.Extensions;
 using Swashbuckle.AspNetCore.SwaggerGen;
+using Swashbuckle.AspNetCore.SwaggerUI;
 using Unchase.Swashbuckle.AspNetCore.Extensions.Extensions;
 
 namespace MoLibrary.DomainDrivenDesign.Modules;
@@ -30,15 +31,20 @@ public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger,
             c.SwaggerEndpoint($"/swagger/{Option.Version}/swagger.json",
                 $"{Option.AppName ?? "Unknown"} {Option.Version}");
             c.DocumentTitle = Option.AppName ?? "Swagger UI";
-            //c.RoutePrefix = string.Empty; // 设置根路径访问Swagger UI
-            //c.InjectStylesheet("/swagger-ui/custom.css"); // 可选：自定义样式表
-            //c.InjectJavascript("/swagger-ui/custom.js"); // 可选：自定义JavaScript
+            c.RoutePrefix = Option.RoutePrefix;
+
+            // Allow other modules to extend SwaggerUI configuration
+            Option.ExtendSwaggerUIAction?.Invoke(c);
         });
     }
 
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
-        app.UseEndpoints(endpoints => { endpoints.MapGet("/", () => Results.LocalRedirect("~/swagger")); });
+        if (Option.EnableRootRedirect)
+        {
+            var redirectUrl = $"~/{Option.RoutePrefix}";
+            app.UseEndpoints(endpoints => { endpoints.MapGet("/", () => Results.LocalRedirect(redirectUrl)); });
+        }
     }
 
     public override void ConfigureServices(IServiceCollection services)
@@ -149,14 +155,17 @@ public static class ModuleSwaggerBuilderExtensions
 
 public class ModuleSwaggerGuide : MoModuleGuide<ModuleSwagger, ModuleSwaggerOption, ModuleSwaggerGuide>
 {
-
-
 }
 
 
 public class ModuleSwaggerOption : MoModuleOption<ModuleSwagger>
 {
     public Action<SwaggerGenOptions>? ExtendSwaggerGenAction { get; set; }
+
+    /// <summary>
+    /// 扩展 Swagger UI 配置的回调，允许其他模块（如 SwaggerUI 模块）自定义 Swagger UI 的行为
+    /// </summary>
+    public Action<SwaggerUIOptions>? ExtendSwaggerUIAction { get; set; }
 
     /// <summary>
     /// 应用名
@@ -187,6 +196,8 @@ public class ModuleSwaggerOption : MoModuleOption<ModuleSwagger>
     /// 是否禁用自动使用模块系统加载的相关程序集作为Swagger文档生成的入口。
     /// </summary>
     public bool DisableAutoIncludeModuleSystemRelatedAsDocumentAssembly { get; set; }
+    
+    
 
     /// <summary>
     /// 是否使用认证
@@ -198,4 +209,13 @@ public class ModuleSwaggerOption : MoModuleOption<ModuleSwagger>
     /// </summary>
     public bool DisableInheritDocFilter { get; set; }
 
+    /// <summary>
+    /// Swagger UI的路由前缀，默认为"swagger"。设置为空字符串可在根路径访问Swagger UI。
+    /// </summary>
+    public string RoutePrefix { get; set; } = "swagger";
+
+    /// <summary>
+    /// 是否启用根路径重定向到Swagger UI。启用后，访问根路径"/"将自动重定向到RoutePrefix指定的路径。
+    /// </summary>
+    public bool EnableRootRedirect { get; set; }
 }
