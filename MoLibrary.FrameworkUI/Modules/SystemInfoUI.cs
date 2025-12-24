@@ -9,6 +9,7 @@ using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.Core.Modules;
 using MoLibrary.FrameworkUI.Pages;
+using MoLibrary.FrameworkUI.UISystemInfo.Models;
 using MoLibrary.FrameworkUI.UISystemInfo.Services;
 using MoLibrary.UI.Modules;
 using MudBlazor;
@@ -87,15 +88,56 @@ public class ModuleSystemInfoUI(ModuleSystemInfoUIOption option)
 /// </summary>
 public class ModuleSystemInfoUIGuide : MoModuleGuide<ModuleSystemInfoUI, ModuleSystemInfoUIOption, ModuleSystemInfoUIGuide>
 {
+    /// <summary>
+    /// 添加自定义快捷链接到系统信息页面
+    /// </summary>
+    /// <param name="name">链接显示名称</param>
+    /// <param name="url">链接URL（支持相对路径如 "/swagger" 或绝对URL如 "https://example.com"）</param>
+    /// <param name="icon">MudBlazor Material Icon 字符串（默认为链接图标）</param>
+    /// <param name="description">链接描述/提示文本</param>
+    /// <param name="category">分类/分组名称（相同分类的链接会分组显示）</param>
+    /// <param name="order">显示顺序（数字越小越靠前，默认为0）</param>
+    /// <param name="target">链接打开方式（默认 _blank 新标签页）</param>
+    /// <returns></returns>
+    public ModuleSystemInfoUIGuide AddCustomLink(
+        string name,
+        string url,
+        string? icon = null,
+        string? description = null,
+        string? category = null,
+        int order = 0,
+        string target = "_blank")
+    {
+        ConfigureModuleOption(option =>
+        {
+            option.CustomLinks.Add(new SystemInfoCustomLink
+            {
+                Name = name,
+                Url = url,
+                Icon = icon ?? Icons.Material.Filled.Link,
+                Description = description,
+                Category = category,
+                Order = order,
+                Target = target
+            });
+        }, secondKey: name);
+
+        return this;
+    }
 }
 
 /// <summary>
 /// SystemInfoUI模块选项
 /// </summary>
 public class ModuleSystemInfoUIOption : MoModuleControllerOption<ModuleSystemInfoUI>
-{ 
+{
     /// <summary>
     /// 是否禁用系统信息页面
     /// </summary>
     public bool DisableUISystemInfoPage { get; set; }
+
+    /// <summary>
+    /// 自定义快捷链接列表，显示在系统信息页面卡片中
+    /// </summary>
+    public List<SystemInfoCustomLink> CustomLinks { get; set; } = new();
 } 

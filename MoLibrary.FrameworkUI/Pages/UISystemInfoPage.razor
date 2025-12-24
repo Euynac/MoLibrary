@@ -4,8 +4,11 @@
 @using MoLibrary.Tool.Extensions
 @using MoLibrary.Tool.MoResponse
 @using MudBlazor
+@using Microsoft.Extensions.Options
+@using MoLibrary.FrameworkUI.Modules
 @inject SystemInfoService SystemInfoService
 @inject ISnackbar Snackbar
+@inject IOptions<ModuleSystemInfoUIOption> SystemInfoUIOptions
 
 <PageTitle>系统信息</PageTitle>
 
@@ -241,6 +244,99 @@
                         </MudCardContent>
                     </MudCard>
                 </MudItem>
+            }
+
+            @* 快捷链接卡片 *@
+            @{
+                var customLinks = SystemInfoUIOptions.Value.CustomLinks
+                    .Where(l => l.Enabled)
+                    .OrderBy(l => l.Order)
+                    .ThenBy(l => l.Name)
+                    .ToList();
+
+                if (customLinks.Any())
+                {
+                    <MudItem xs="12" md="6" lg="4">
+                        <MudCard Style="height: 100%; display: flex; flex-direction: column;" Elevation="2">
+                            <MudCardHeader Class="pb-2">
+                                <CardHeaderContent>
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                        <MudIcon Icon="@Icons.Material.Filled.Link" Color="Color.Primary" />
+                                        <MudText Typo="Typo.h6" Style="font-weight: 500;">快捷链接</MudText>
+                                    </MudStack>
+                                </CardHeaderContent>
+                            </MudCardHeader>
+                            <MudCardContent Style="flex: 1; padding-top: 8px;">
+                                @if (customLinks.Any(l => !string.IsNullOrEmpty(l.Category)))
+                                {
+                                    @* 分组显示 *@
+                                    var groupedLinks = customLinks
+                                        .GroupBy(l => l.Category ?? "其他")
+                                        .OrderBy(g => g.Key);
+
+                                    <MudStack Spacing="3">
+                                        @foreach (var group in groupedLinks)
+                                        {
+                                            <div class="custom-link-group">
+                                                <MudText Typo="Typo.subtitle2" Color="Color.Primary" Class="mb-2 custom-link-category-title">
+                                                    <strong>@group.Key</strong>
+                                                </MudText>
+                                                <MudStack Spacing="2">
+                                                    @foreach (var link in group)
+                                                    {
+                                                        <div class="custom-link-item">
+                                                            <MudLink Href="@link.Url"
+                                                                    Target="@link.Target"
+                                                                    Typo="Typo.body2"
+                                                                    Class="custom-link">
+                                                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                                                    <MudIcon Icon="@link.Icon" Size="Size.Small" Color="Color.Info" />
+                                                                    <MudText>@link.Name</MudText>
+                                                                </MudStack>
+                                                            </MudLink>
+                                                            @if (!string.IsNullOrEmpty(link.Description))
+                                                            {
+                                                                <MudText Typo="Typo.caption" Style="color: #888; margin-left: 32px;">
+                                                                    @link.Description
+                                                                </MudText>
+                                                            }
+                                                        </div>
+                                                    }
+                                                </MudStack>
+                                            </div>
+                                        }
+                                    </MudStack>
+                                }
+                                else
+                                {
+                                    @* 无分组显示 *@
+                                    <MudStack Spacing="2">
+                                        @foreach (var link in customLinks)
+                                        {
+                                            <div class="custom-link-item">
+                                                <MudLink Href="@link.Url"
+                                                        Target="@link.Target"
+                                                        Typo="Typo.body2"
+                                                        Class="custom-link">
+                                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                                        <MudIcon Icon="@link.Icon" Size="Size.Small" Color="Color.Info" />
+                                                        <MudText>@link.Name</MudText>
+                                                    </MudStack>
+                                                </MudLink>
+                                                @if (!string.IsNullOrEmpty(link.Description))
+                                                {
+                                                    <MudText Typo="Typo.caption" Style="color: #888; margin-left: 32px;">
+                                                        @link.Description
+                                                    </MudText>
+                                                }
+                                            </div>
+                                        }
+                                    </MudStack>
+                                }
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+                }
             }
         </MudGrid>
     }

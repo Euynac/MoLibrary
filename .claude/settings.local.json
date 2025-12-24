@@ -49,7 +49,8 @@
       "Bash(dotnet test:*)",
       "Bash(git branch:*)",
       "Bash(xargs:*)",
-      "Bash(tee:*)"
+      "Bash(tee:*)",
+      "Bash(echo:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

@@ -1,0 +1,63 @@
+/* 快捷链接容器 */
+.custom-link-item {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+    transition: background-color 0.2s ease, padding-left 0.2s ease;
+}
+
+.custom-link-item:last-child {
+    border-bottom: none;
+}
+
+.custom-link-item:hover {
+    background-color: var(--mud-palette-action-default-hover);
+    border-radius: 4px;
+    padding-left: 8px;
+}
+
+/* 链接样式 */
+.custom-link-item ::deep .custom-link {
+    display: block;
+    text-decoration: none;
+    color: var(--mud-palette-text-primary);
+    transition: color 0.2s ease;
+}
+
+.custom-link-item:hover ::deep .custom-link {
+    color: var(--mud-palette-primary);
+}
+
+/* 图标颜色过渡 */
+.custom-link-item ::deep .mud-icon-root {
+    transition: color 0.2s ease;
+}
+
+.custom-link-item:hover ::deep .mud-icon-root {
+    color: var(--mud-palette-primary) !important;
+}
+
+/* 描述文本样式 */
+.custom-link-item ::deep .mud-typography-caption {
+    line-height: 1.4;
+    margin-top: 4px;
+}
+
+/* 分组标题样式 */
+.custom-link-group ::deep .custom-link-category-title {
+    margin-top: 8px;
+}
+
+.custom-link-group:first-child ::deep .custom-link-category-title {
+    margin-top: 0;
+}
+
+/* 响应式设计 */
+@media (max-width: 960px) {
+    .custom-link-item {
+        padding: 12px 8px;
+    }
+
+    .custom-link-item:hover {
+        padding-left: 12px;
+    }
+}
