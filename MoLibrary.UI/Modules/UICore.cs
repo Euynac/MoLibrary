@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MoLibrary.Core.Module;
@@ -134,6 +135,22 @@ public class ModuleUICoreGuide : MoModuleGuide<ModuleUICore, ModuleUICoreOption,
     }
 
     /// <summary>
+    /// 添加路由重定向规则
+    /// </summary>
+    /// <param name="fromPath">源路径（例如 "/"）</param>
+    /// <param name="toPath">目标路径（例如 "/swagger" 或 "~/swagger"）</param>
+    /// <returns>配置引导器</returns>
+    public ModuleUICoreGuide AddRouteRedirect(string fromPath, string toPath)
+    {
+        ConfigureModuleOption(option =>
+        {
+            option.RouteRedirects[fromPath] = toPath;
+        }, secondKey: fromPath);
+
+        return this;
+    }
+
+    /// <summary>
     /// 添加UI基础中间件
     /// 注意：这些中间件应该由宿主应用程序调用
     /// </summary>
@@ -164,7 +181,7 @@ public class ModuleUICoreGuide : MoModuleGuide<ModuleUICore, ModuleUICoreOption,
         }, EMoModuleApplicationMiddlewaresOrder.AfterUseRouting);
 
 
-        
+
         ConfigureEndpoints(builder =>
         {
             var registry = builder.ApplicationBuilder.ApplicationServices.GetRequiredService<IUIComponentRegistry>();
@@ -177,6 +194,14 @@ public class ModuleUICoreGuide : MoModuleGuide<ModuleUICore, ModuleUICoreOption,
             // 初始化主题服务
             var themeService = builder.ApplicationBuilder.ApplicationServices.GetRequiredService<MoThemeService>();
             themeService.Initialize();
+
+            // 配置路由重定向
+            foreach (var redirect in builder.ModuleOption.RouteRedirects)
+            {
+                var fromPath = redirect.Key;
+                var toPath = redirect.Value;
+                builder.WebApplication.MapGet(fromPath, () => Results.LocalRedirect(toPath));
+            }
 
             builder.WebApplication.MapRazorComponents<MoApp>()
                 .AddInteractiveServerRenderMode().AddAdditionalAssemblies(registry.GetAdditionalAssemblies());
@@ -226,5 +251,10 @@ public class ModuleUICoreOption : MoModuleOption<ModuleUICore>
     /// 是否启用导航栏搜索功能
     /// </summary>
     public bool EnableNavBarSearch { get; set; } = true;
+
+    /// <summary>
+    /// 路由重定向规则集合，键为源路径，值为目标路径
+    /// </summary>
+    internal Dictionary<string, string> RouteRedirects { get; set; } = new();
 
 }

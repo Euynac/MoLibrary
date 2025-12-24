@@ -38,14 +38,6 @@ public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger,
         });
     }
 
-    public override void ConfigureEndpoints(IApplicationBuilder app)
-    {
-        if (Option.EnableRootRedirect)
-        {
-            var redirectUrl = $"~/{Option.RoutePrefix}";
-            app.UseEndpoints(endpoints => { endpoints.MapGet("/", () => Results.LocalRedirect(redirectUrl)); });
-        }
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -213,9 +205,4 @@ public class ModuleSwaggerOption : MoModuleOption<ModuleSwagger>
     /// Swagger UI的路由前缀，默认为"swagger"。设置为空字符串可在根路径访问Swagger UI。
     /// </summary>
     public string RoutePrefix { get; set; } = "swagger";
-
-    /// <summary>
-    /// 是否启用根路径重定向到Swagger UI。启用后，访问根路径"/"将自动重定向到RoutePrefix指定的路径。
-    /// </summary>
-    public bool EnableRootRedirect { get; set; }
 }
