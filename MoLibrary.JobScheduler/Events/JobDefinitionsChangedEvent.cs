@@ -25,6 +25,16 @@ public class JobDefinitionsChangedEvent
     public required IReadOnlyList<string> DeletedJobKeys { get; init; }
 
     /// <summary>
+    /// Job definitions that were updated (property changes like IsDisabled, CronExpression, etc.)
+    /// </summary>
+    public IReadOnlyList<JobDefinition> UpdatedDefinitions { get; init; } = [];
+
+    /// <summary>
+    /// Job keys that were updated
+    /// </summary>
+    public IReadOnlyList<string> UpdatedJobKeys { get; init; } = [];
+
+    /// <summary>
     /// Timestamp when the reconciliation occurred
     /// </summary>
     public required DateTime ReconciledAt { get; init; }

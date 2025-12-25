@@ -84,7 +84,7 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
         services.AddSingleton<JobRegistry>();
         services.AddSingleton<JobInstanceManager>();
         services.AddSingleton<JobDispatcher>();
-        services.AddSingleton<IJobDefinitionCacheService, JobDefinitionCacheServiceDisabled>();
+        services.AddSingleton<IJobDefinitionCacheService, JobDefinitionCacheServiceDefault>();
         services.AddSingleton<JobOrchestrator>();
         services.AddSingleton<IMoTriggeredJobManager, TriggeredJobManager>();
 

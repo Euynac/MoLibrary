@@ -225,9 +225,9 @@ public class JobSchedulerApiService(
                 return Res.Fail($"Job {jobKey} is not a recurring job");
             }
 
-            // Update definition via cache service (write-through)
+            // Update definition via cache service (write-through) and publish event
             definition.IsDisabled = true;
-            await cacheService.SaveDefinitionAsync(definition, cancellationToken);
+            await cacheService.SaveJobDefinitionAsync(definition, publishChangeEvent: true, cancellationToken);
 
             logger.LogInformation("Recurring job paused: {JobKey}", jobKey);
             return Res.Ok("Recurring job paused successfully");
@@ -257,9 +257,9 @@ public class JobSchedulerApiService(
                 return Res.Fail($"Job {jobKey} is not a recurring job");
             }
 
-            // Update definition via cache service (write-through)
+            // Update definition via cache service (write-through) and publish event
             definition.IsDisabled = false;
-            await cacheService.SaveDefinitionAsync(definition, cancellationToken);
+            await cacheService.SaveJobDefinitionAsync(definition, publishChangeEvent: true, cancellationToken);
 
             logger.LogInformation("Recurring job resumed: {JobKey}", jobKey);
             return Res.Ok("Recurring job resumed successfully");

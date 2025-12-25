@@ -60,11 +60,11 @@ public class RecurringJobScheduler(
         try
         {
             logger.LogInformation(
-                "Received JobDefinitionsChangedEvent from {FromProject}: {AddedCount} added, {DeletedCount} deleted, {TotalCount} total definitions",
+                "Received JobDefinitionsChangedEvent from {FromProject}: {AddedCount} added, {UpdatedCount} updated, {DeletedCount} deleted",
                 evt.FromProject,
                 evt.AddedJobKeys.Count,
-                evt.DeletedJobKeys.Count,
-                evt.AddedDefinitions.Count);
+                evt.UpdatedJobKeys.Count,
+                evt.DeletedJobKeys.Count);
 
             // 1. Remove schedules for deleted jobs
             foreach (var deletedJobKey in evt.DeletedJobKeys)
@@ -73,12 +73,44 @@ public class RecurringJobScheduler(
                 await RemoveSchedule(deletedJobKey);
             }
 
-            // 2. Get current recurring job definitions
+            // 2. Handle updated recurring jobs
+            var updatedRecurringJobs = evt.UpdatedDefinitions
+                .Where(d => d.JobType == JobType.Recurring)
+                .ToList();
+
+            oreach (var updatedDefinition in updatedRecurringJobs)
+            {
+                // Remove existing schedule if present
+                if (_inFlightRecurringSchedules.ContainsKey(updatedDefinition.JobKey))
+                {
+                    await RemoveSchedule(updatedDefinition.JobKey);
+                    logger.LogInformation("Removed schedule for updated job: {JobKey}", updatedDefinition.JobKey);
+                }
+
+                // Reschedule only if job is not disabled and has valid cron expression
+                if (!updatedDefinition.IsDisabled && !string.IsNullOrWhiteSpace(updatedDefinition.CronExpression))
+                {
+                    ScheduleRecurringJob(updatedDefinition);
+                    logger.LogInformation(
+                        "Rescheduled updated job: {JobKey} with cron: {CronExpression}",
+                        updatedDefinition.JobKey,
+                        updatedDefinition.CronExpression);
+                }
+                else
+                {
+                    logger.LogInformation(
+                        "Skipped rescheduling for job: {JobKey} (IsDisabled={IsDisabled})",
+                        updatedDefinition.JobKey,
+                        updatedDefinition.IsDisabled);
+                }
+            }
+
+            // 3. Get current recurring job definitions
             var recurringJobs = evt.AddedDefinitions
                 .Where(d => d.JobType == JobType.Recurring)
                 .ToList();
 
-            // 3. Update or add schedules for current recurring jobs
+            // 4. Update or add schedules for current recurring jobs
             foreach (var jobDefinition in recurringJobs)
             {
                 if (_inFlightRecurringSchedules.ContainsKey(jobDefinition.JobKey))
@@ -88,7 +120,11 @@ public class RecurringJobScheduler(
                 }
                 ScheduleRecurringJob(jobDefinition);
             }
-            logger.LogInformation("JobDefinitionsChangedEvent completed. Scheduled {Count} new recurring jobs", recurringJobs.Count);
+
+            logger.LogInformation(
+                "JobDefinitionsChangedEvent completed. Scheduled {AddedCount} added jobs, {UpdatedCount} updated jobs",
+                recurringJobs.Count,
+                updatedRecurringJobs.Count);
         }
         finally
         {

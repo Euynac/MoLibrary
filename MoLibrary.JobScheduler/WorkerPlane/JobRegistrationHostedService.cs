@@ -95,6 +95,8 @@ public class JobRegistrationHostedService(
                 AddedDefinitions = jobDefinitions.Where(d => result.AddedJobKeys.Contains(d.JobKey)).ToList(),
                 AddedJobKeys = result.AddedJobKeys.ToList(),
                 DeletedJobKeys = result.DeletedJobKeys.ToList(),
+                UpdatedDefinitions = [],  // Reconciliation does not handle updates
+                UpdatedJobKeys = [],      // Reconciliation does not handle updates
                 ReconciledAt = DateTime.UtcNow
             }, cancellationToken: cancellationToken);
 

@@ -34,14 +34,20 @@ public interface IJobDefinitionCacheService
     /// <summary>
     /// Saves a job definition with write-through semantics.
     /// Immediately persists to metadata store, updates cache, and marks as updated in StateStore.
+    /// Optionally publishes JobDefinitionsChangedEvent to notify schedulers of the update.
     /// </summary>
     /// <param name="definition">The job definition to save</param>
+    /// <param name="publishChangeEvent">Whether to publish JobDefinitionsChangedEvent (default: false)</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    Task SaveJobDefinitionAsync(JobDefinition definition, CancellationToken cancellationToken = default);
+    Task SaveJobDefinitionAsync(
+        JobDefinition definition,
+        bool publishChangeEvent = false,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Alias for SaveJobDefinitionAsync for consistency with repository naming
+    /// Alias for SaveJobDefinitionAsync for consistency with repository naming.
+    /// Note: Does not support publishChangeEvent parameter. Use SaveJobDefinitionAsync directly for event publishing.
     /// </summary>
     Task SaveDefinitionAsync(JobDefinition definition, CancellationToken cancellationToken = default)
-        => SaveJobDefinitionAsync(definition, cancellationToken);
+        => SaveJobDefinitionAsync(definition, publishChangeEvent: false, cancellationToken);
 }
