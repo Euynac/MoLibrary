@@ -5,6 +5,7 @@ using MoLibrary.Core.GlobalJson;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
+using MoLibrary.Core.Modules;
 
 namespace MoLibrary.Dapr.Modules;
 
@@ -46,6 +47,7 @@ public class ModuleDaprClient(ModuleDaprClientOption option)
     public override void ClaimDependencies()
     {
         DependsOnModule<ModuleDaprGuide>().Register();
+        DependsOnModule<ModuleHostedServiceGuide>().Register();
     }
 }
 
