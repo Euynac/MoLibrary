@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Events;
 using MoLibrary.JobScheduler.Models;
+using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.JobScheduler.ControlPlane;
 
@@ -77,41 +78,14 @@ public class RecurringJobScheduler(
             var updatedRecurringJobs = evt.UpdatedDefinitions
                 .Where(d => d.JobType == JobType.Recurring)
                 .ToList();
-
-            oreach (var updatedDefinition in updatedRecurringJobs)
-            {
-                // Remove existing schedule if present
-                if (_inFlightRecurringSchedules.ContainsKey(updatedDefinition.JobKey))
-                {
-                    await RemoveSchedule(updatedDefinition.JobKey);
-                    logger.LogInformation("Removed schedule for updated job: {JobKey}", updatedDefinition.JobKey);
-                }
-
-                // Reschedule only if job is not disabled and has valid cron expression
-                if (!updatedDefinition.IsDisabled && !string.IsNullOrWhiteSpace(updatedDefinition.CronExpression))
-                {
-                    ScheduleRecurringJob(updatedDefinition);
-                    logger.LogInformation(
-                        "Rescheduled updated job: {JobKey} with cron: {CronExpression}",
-                        updatedDefinition.JobKey,
-                        updatedDefinition.CronExpression);
-                }
-                else
-                {
-                    logger.LogInformation(
-                        "Skipped rescheduling for job: {JobKey} (IsDisabled={IsDisabled})",
-                        updatedDefinition.JobKey,
-                        updatedDefinition.IsDisabled);
-                }
-            }
-
+            
             // 3. Get current recurring job definitions
-            var recurringJobs = evt.AddedDefinitions
+            var addedRecurringJobs = evt.AddedDefinitions
                 .Where(d => d.JobType == JobType.Recurring)
                 .ToList();
 
             // 4. Update or add schedules for current recurring jobs
-            foreach (var jobDefinition in recurringJobs)
+            foreach (var jobDefinition in addedRecurringJobs.CombineForeach(updatedRecurringJobs))
             {
                 if (_inFlightRecurringSchedules.ContainsKey(jobDefinition.JobKey))
                 {
@@ -123,7 +97,7 @@ public class RecurringJobScheduler(
 
             logger.LogInformation(
                 "JobDefinitionsChangedEvent completed. Scheduled {AddedCount} added jobs, {UpdatedCount} updated jobs",
-                recurringJobs.Count,
+                addedRecurringJobs.Count,
                 updatedRecurringJobs.Count);
         }
         finally
@@ -211,6 +185,7 @@ public class RecurringJobScheduler(
     /// </summary>
     /// <param name="jobKey">Job key</param>
     /// <param name="scheduledOccurrence">The occurrence time this timer was scheduled for</param>
+    // ReSharper disable once AsyncVoidMethod
     private async void OnRecurringJobTimerCallback(string jobKey, DateTime scheduledOccurrence)
     {
         Thread.Sleep(1);
