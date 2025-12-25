@@ -64,6 +64,10 @@ public class EfCoreJobMetadataRepository(
         {
             // Update existing
             JobMetadataMapper.ToEntity(definition, existingEntity);
+            if (existingEntity.IsDeleted)
+            {
+                existingEntity.JobKey =  $"[deleted-{Guid.NewGuid()}]{existingEntity.JobKey}";
+            }
 
             logger.LogInformation(
                 "Job definition updated: {JobKey} ({JobName})",
@@ -82,17 +86,10 @@ public class EfCoreJobMetadataRepository(
 
         var dbContext = await dbContextProvider.GetDbContextAsync();
 
-        IQueryable<JobDefinitionEntity> queryable = dbContext.JobDefinitions.AsNoTracking();
+        var queryable = dbContext.JobDefinitions.AsNoTracking();
 
         // Apply soft delete filter conditionally
-        if (!query.IncludeDeleted)
-        {
-            queryable = queryable.Where(d => !d.IsDeleted);
-        }
-        else
-        {
-            queryable = queryable.IgnoreQueryFilters();
-        }
+        queryable = !query.IncludeDeleted ? queryable.Where(d => !d.IsDeleted) : queryable.IgnoreQueryFilters();
 
         // Apply project filter
         if (!string.IsNullOrEmpty(query.FromProject))
@@ -186,7 +183,7 @@ public class EfCoreJobMetadataRepository(
 
         var dbContext = await dbContextProvider.GetDbContextAsync();
 
-        IQueryable<JobInstanceEntity> queryable = dbContext.JobInstances.AsNoTracking();
+        var queryable = dbContext.JobInstances.AsNoTracking();
 
         // Apply filters
         if (!string.IsNullOrEmpty(query.JobKey))

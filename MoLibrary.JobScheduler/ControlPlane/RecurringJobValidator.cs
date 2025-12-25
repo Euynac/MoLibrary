@@ -13,6 +13,79 @@ public class RecurringJobValidator(
     ILogger<RecurringJobValidator> logger)
 {
     /// <summary>
+    /// Validates a recurring job definition for scheduling.
+    /// Returns null if job is invalid, disabled, or outside time constraints.
+    /// </summary>
+    /// <param name="definition">Job definition to validate</param>
+    /// <param name="onInvalidScheduleRemoval">Callback to remove schedule when validation fails</param>
+    /// <param name="onBeforeStartTime">Callback when job is before start time (for rescheduling)</param>
+    /// <returns>Valid job definition or null</returns>
+    public async Task<JobDefinition?> ValidateRecurringJobAsync(
+        JobDefinition definition,
+        Func<string, Task> onInvalidScheduleRemoval,
+        Func<JobDefinition, Task>? onBeforeStartTime = null)
+    {
+        if (definition.IsDeleted)
+        {
+            logger.LogWarning(
+                "Recurring job {JobKey} is deleted. Removing from schedule.",
+                definition.JobKey);
+            await onInvalidScheduleRemoval(definition.JobKey);
+            return null;
+        }
+        
+        if (string.IsNullOrWhiteSpace(definition.CronExpression))
+        {
+            logger.LogWarning(
+                "Recurring job {JobKey} has no cron expression. Skipping automatic scheduling.",
+                definition.JobKey);
+            await onInvalidScheduleRemoval(definition.JobKey);
+            return null;
+        }
+
+        if (definition.IsDisabled)
+        {
+            logger.LogWarning(
+                "Recurring job {JobKey} is disabled. Skipping scheduling.",
+                definition.JobKey);
+            await onInvalidScheduleRemoval(definition.JobKey);
+            return null;
+        }
+
+        var now = DateTime.UtcNow;
+
+        // Check start/end time constraints
+        if (definition.StartTime.HasValue && now < definition.StartTime.Value)
+        {
+            logger.LogDebug(
+                "Recurring job {JobKey} schedule skipped (before start time {StartTime})",
+                definition.JobKey,
+                definition.StartTime.Value);
+
+            // Notify caller for rescheduling if callback provided
+            if (onBeforeStartTime != null)
+            {
+                await onBeforeStartTime(definition);
+            }
+
+            await onInvalidScheduleRemoval(definition.JobKey);
+            return null;
+        }
+
+        if (definition.EndTime.HasValue && now > definition.EndTime.Value)
+        {
+            logger.LogInformation(
+                "Recurring job {JobKey} has passed end time {EndTime}. Removing from schedule.",
+                definition.JobKey,
+                definition.EndTime.Value);
+            await onInvalidScheduleRemoval(definition.JobKey);
+            return null;
+        }
+
+        return definition;
+    }
+
+    /// <summary>
     /// Gets and validates a recurring job definition for scheduling.
     /// Returns null if job is invalid, missing, disabled, or outside time constraints.
     /// </summary>
@@ -37,54 +110,6 @@ public class RecurringJobValidator(
             return null;
         }
 
-        if (string.IsNullOrWhiteSpace(definition.CronExpression))
-        {
-            logger.LogWarning(
-                "Recurring job {JobKey} has no cron expression. Skipping automatic scheduling.",
-                definition.JobKey);
-            await onInvalidScheduleRemoval(jobKey);
-            return null;
-        }
-
-        if (definition.IsDisabled)
-        {
-            logger.LogWarning(
-                "Recurring job {JobKey} is disabled. Skipping scheduling.",
-                definition.JobKey);
-            await onInvalidScheduleRemoval(jobKey);
-            return null;
-        }
-
-        var now = DateTime.UtcNow;
-
-        // Check start/end time constraints
-        if (definition.StartTime.HasValue && now < definition.StartTime.Value)
-        {
-            logger.LogDebug(
-                "Recurring job {JobKey} schedule skipped (before start time {StartTime})",
-                jobKey,
-                definition.StartTime.Value);
-
-            // Notify caller for rescheduling if callback provided
-            if (onBeforeStartTime != null)
-            {
-                await onBeforeStartTime(definition);
-            }
-
-            await onInvalidScheduleRemoval(jobKey);
-            return null;
-        }
-
-        if (definition.EndTime.HasValue && now > definition.EndTime.Value)
-        {
-            logger.LogInformation(
-                "Recurring job {JobKey} has passed end time {EndTime}. Removing from schedule.",
-                jobKey,
-                definition.EndTime.Value);
-            await onInvalidScheduleRemoval(jobKey);
-            return null;
-        }
-
-        return definition;
+        return await ValidateRecurringJobAsync(definition, onInvalidScheduleRemoval, onBeforeStartTime);
     }
 }

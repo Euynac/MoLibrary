@@ -112,12 +112,32 @@ public class RecurringJobScheduler(
     /// </summary>
     /// <param name="definition">Job definition to schedule</param>
     /// <param name="lastOccurrence">Last occurrence time (used when rescheduling to ensure we get the next occurrence)</param>
-    private void ScheduleRecurringJob(JobDefinition definition, DateTime? lastOccurrence = null)
+    private async void ScheduleRecurringJob(JobDefinition definition, DateTime? lastOccurrence = null)
     {
         try
         {
+            var validatedDefinition = definition;
+            if (lastOccurrence == null)
+            {
+                // Validate the job definition before scheduling
+                validatedDefinition = await validator.ValidateRecurringJobAsync(
+                    definition,
+                    RemoveSchedule,
+                    def =>
+                    {
+                        ScheduleRecurringJob(def);
+                        return Task.CompletedTask;
+                    });
+
+                if (validatedDefinition == null)
+                {
+                    return;
+                }
+            }
+          
+
             // Parse cron expression (with seconds support)
-            var cronExpression = CronExpression.Parse(definition.CronExpression, CronFormat.IncludeSeconds);
+            var cronExpression = CronExpression.Parse(validatedDefinition.CronExpression, CronFormat.IncludeSeconds);
 
             // Calculate next occurrence with minimum buffer to avoid timer accumulation
             // IMPORTANT: Add 100ms buffer to current time to prevent dueTime from being too small
@@ -135,8 +155,8 @@ public class RecurringJobScheduler(
             {
                 logger.LogWarning(
                     "Cron expression for job {JobKey} has no future occurrences: {CronExpression}",
-                    definition.JobKey,
-                    definition.CronExpression);
+                    validatedDefinition.JobKey,
+                    validatedDefinition.CronExpression);
                 return;
             }
 
@@ -149,24 +169,24 @@ public class RecurringJobScheduler(
 
             // Create timer for next occurrence
             var timer = new Timer(
-                _ => OnRecurringJobTimerCallback(definition.JobKey, nextOccurrence.Value),
+                _ => OnRecurringJobTimerCallback(validatedDefinition.JobKey, nextOccurrence.Value),
                 null,
                 dueTime,
                 Timeout.InfiniteTimeSpan); // One-shot timer
 
             var schedule = new RecurringJobSchedule
             {
-                JobKey = definition.JobKey,
+                JobKey = validatedDefinition.JobKey,
                 CronExpression = cronExpression,
                 Timer = timer,
                 NextOccurrence = nextOccurrence.Value
             };
 
-            _inFlightRecurringSchedules[definition.JobKey] = schedule;
+            _inFlightRecurringSchedules[validatedDefinition.JobKey] = schedule;
 
             logger.LogDebug(
                 "Scheduled recurring job {JobKey}, next execution at {NextExecution} (in {DueTime})",
-                definition.JobKey,
+                validatedDefinition.JobKey,
                 nextOccurrence.Value,
                 dueTime);
         }

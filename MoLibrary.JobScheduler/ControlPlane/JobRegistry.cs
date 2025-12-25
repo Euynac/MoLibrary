@@ -169,7 +169,6 @@ public class JobRegistry(
                 }
                 definition.IsDeleted = true;
                 definition.DeletedAt = DateTime.UtcNow;
-                definition.JobKey =  $"[deleted]{jobKey}";
                 
                 await metadataRepository.SaveDefinitionAsync(definition, cancellationToken);
                 deletedJobKeys.Add(jobKey);
