@@ -71,5 +71,15 @@ public interface IMoJobMetadataRepository
         JobInstanceQuery query,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// 批量获取多个作业的最后一次执行实例（优化N+1查询问题）
+    /// </summary>
+    /// <param name="jobKeys">作业键集合</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>字典，Key为JobKey，Value为最后一次执行实例（如果没有则为null）</returns>
+    Task<Dictionary<string, JobInstance?>> GetLatestInstancesAsync(
+        IEnumerable<string> jobKeys,
+        CancellationToken cancellationToken = default);
+
     #endregion
 }

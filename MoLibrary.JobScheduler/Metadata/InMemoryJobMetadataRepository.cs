@@ -179,10 +179,15 @@ public class InMemoryJobMetadataRepository(ILogger<InMemoryJobMetadataRepository
         if (query.CreatedBefore.HasValue)
             items = items.Where(i => i.CreatedAt <= query.CreatedBefore.Value);
 
-        // 排序
-        items = query.SortByCreatedAt == SortDirection.Descending
-            ? items.OrderByDescending(i => i.CreatedAt)
-            : items.OrderBy(i => i.CreatedAt);
+        // 排序 (flexible approach)
+        if (!string.IsNullOrEmpty(query.SortBy))
+        {
+            items = ApplyInstanceSorting(items, query.SortBy, query.SortDescending);
+        }
+        else
+        {
+            items = items.OrderByDescending(i => i.CreatedAt);
+        }
 
         var list = items.ToList();
         var totalCount = list.Count;
@@ -201,6 +206,85 @@ public class InMemoryJobMetadataRepository(ILogger<InMemoryJobMetadataRepository
             query.PageSize);
 
         return Task.FromResult(new QueryResult<JobInstance>(paged, totalCount));
+    }
+
+    /// <summary>
+    /// 批量获取多个作业的最后一次执行实例（避免N+1查询问题）
+    /// </summary>
+    public Task<Dictionary<string, JobInstance?>> GetLatestInstancesAsync(
+        IEnumerable<string> jobKeys,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(jobKeys);
+
+        var jobKeyList = jobKeys.ToList();
+        var result = new Dictionary<string, JobInstance?>();
+
+        if (jobKeyList.Count == 0)
+        {
+            return Task.FromResult(result);
+        }
+
+        // 对每个JobKey找到最后一次执行实例
+        foreach (var jobKey in jobKeyList)
+        {
+            var latestInstance = _instances.Values
+                .Where(i => i.JobKey == jobKey)
+                .OrderByDescending(i => i.CreatedAt)
+                .FirstOrDefault();
+
+            result[jobKey] = latestInstance;
+        }
+
+        logger.LogDebug(
+            "GetLatestInstancesAsync: Retrieved latest instances for {Count} jobs, found {FoundCount} instances",
+            jobKeyList.Count,
+            result.Count(r => r.Value != null));
+
+        return Task.FromResult(result);
+    }
+
+    /// <summary>
+    /// Applies dynamic sorting to JobInstance enumerable based on field name
+    /// </summary>
+    private static IEnumerable<JobInstance> ApplyInstanceSorting(
+        IEnumerable<JobInstance> items,
+        string sortBy,
+        bool descending)
+    {
+        return sortBy switch
+        {
+            "InstanceId" => descending
+                ? items.OrderByDescending(i => i.InstanceId)
+                : items.OrderBy(i => i.InstanceId),
+            "JobKey" => descending
+                ? items.OrderByDescending(i => i.JobKey)
+                : items.OrderBy(i => i.JobKey),
+            "State" => descending
+                ? items.OrderByDescending(i => i.State)
+                : items.OrderBy(i => i.State),
+            "CreatedAt" => descending
+                ? items.OrderByDescending(i => i.CreatedAt)
+                : items.OrderBy(i => i.CreatedAt),
+            "StartedAt" => descending
+                ? items.OrderByDescending(i => i.StartedAt ?? DateTime.MinValue)
+                : items.OrderBy(i => i.StartedAt ?? DateTime.MinValue),
+            "CompletedAt" => descending
+                ? items.OrderByDescending(i => i.CompletedAt ?? DateTime.MinValue)
+                : items.OrderBy(i => i.CompletedAt ?? DateTime.MinValue),
+            "Duration" => descending
+                ? items.OrderByDescending(i =>
+                    i.CompletedAt.HasValue && i.StartedAt.HasValue
+                        ? (i.CompletedAt.Value - i.StartedAt.Value).TotalSeconds
+                        : (i.StartedAt.HasValue ? (DateTime.UtcNow - i.StartedAt.Value).TotalSeconds : 0))
+                : items.OrderBy(i =>
+                    i.CompletedAt.HasValue && i.StartedAt.HasValue
+                        ? (i.CompletedAt.Value - i.StartedAt.Value).TotalSeconds
+                        : (i.StartedAt.HasValue ? (DateTime.UtcNow - i.StartedAt.Value).TotalSeconds : 0)),
+            _ => descending
+                ? items.OrderByDescending(i => i.CreatedAt)
+                : items.OrderBy(i => i.CreatedAt)
+        };
     }
 
     #endregion

@@ -43,6 +43,16 @@ public record JobInstanceQuery
     public SortDirection SortByCreatedAt { get; init; } = SortDirection.Descending;
 
     /// <summary>
+    /// 排序字段名称（支持: InstanceId, JobKey, State, CreatedAt, StartedAt, CompletedAt, Duration）
+    /// </summary>
+    public string? SortBy { get; init; }
+
+    /// <summary>
+    /// 是否降序排序
+    /// </summary>
+    public bool SortDescending { get; init; } = true;
+
+    /// <summary>
     /// 页码（从 1 开始）
     /// </summary>
     public int PageNumber { get; init; } = 1;

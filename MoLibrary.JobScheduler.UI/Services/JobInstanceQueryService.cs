@@ -22,14 +22,15 @@ public class JobInstanceQueryService(
         {
             var query = new JobInstanceQuery
             {
-                JobKey = filter.JobKey,
+                JobKeyContains = filter.JobKey,
                 InstanceIdContains = filter.InstanceId,
                 State = filter.State,
                 CreatedAfter = filter.StartTime,
                 CreatedBefore = filter.EndTime,
                 PageNumber = filter.PageNumber,
                 PageSize = filter.PageSize,
-                SortByCreatedAt = SortDirection.Descending
+                SortBy = filter.SortBy,
+                SortDescending = filter.SortDescending
             };
 
             var result = await metadataRepository.QueryInstancesAsync(query, cancellationToken);
@@ -70,7 +71,9 @@ public class JobInstanceQueryService(
                 JobKey = jobKey,
                 State = JobState.Processing,
                 PageNumber = 1,
-                PageSize = int.MaxValue
+                PageSize = int.MaxValue,
+                SortBy = "CreatedAt",
+                SortDescending = true
             };
 
             var result = await metadataRepository.QueryInstancesAsync(query, cancellationToken);

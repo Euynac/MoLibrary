@@ -219,10 +219,16 @@ public class EfCoreJobMetadataRepository(
         // Get total count
         var totalCount = await queryable.CountAsync(cancellationToken);
 
-        // Apply sorting
-        queryable = query.SortByCreatedAt == SortDirection.Descending
-            ? queryable.OrderByDescending(i => i.CreatedAt)
-            : queryable.OrderBy(i => i.CreatedAt);
+        // Apply sorting (flexible approach)
+        if (!string.IsNullOrEmpty(query.SortBy))
+        {
+            queryable = ApplyInstanceSorting(queryable, query.SortBy, query.SortDescending);
+        }
+        else
+        {
+            // Default: sort by CreatedAt descending
+            queryable = queryable.OrderByDescending(i => i.CreatedAt);
+        }
 
         // Apply pagination
         var entities = await queryable
@@ -240,6 +246,107 @@ public class EfCoreJobMetadataRepository(
             query.PageSize);
 
         return new QueryResult<JobInstance>(items, totalCount);
+    }
+
+    /// <summary>
+    /// 批量获取多个作业的最后一次执行实例（一次查询，避免N+1问题）
+    /// </summary>
+    public async Task<Dictionary<string, JobInstance?>> GetLatestInstancesAsync(
+        IEnumerable<string> jobKeys,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(jobKeys);
+
+        var jobKeyList = jobKeys.ToList();
+        if (jobKeyList.Count == 0)
+        {
+            return new Dictionary<string, JobInstance?>();
+        }
+
+        var dbContext = await dbContextProvider.GetDbContextAsync();
+
+        // 使用子查询方式：先分组找到每个JobKey的最大CreatedAt，然后关联查询
+        var latestInstances = await dbContext.JobInstances
+            .AsNoTracking()
+            .Where(i => jobKeyList.Contains(i.JobKey))
+            .GroupBy(i => i.JobKey)
+            .Select(g => g.OrderByDescending(i => i.CreatedAt).First())
+            .ToListAsync(cancellationToken);
+
+        // 转换为字典
+        var result = new Dictionary<string, JobInstance?>();
+        foreach (var jobKey in jobKeyList)
+        {
+            var instance = latestInstances.FirstOrDefault(i => i.JobKey == jobKey);
+            result[jobKey] = instance == null ? null : JobMetadataMapper.ToModel(instance);
+        }
+
+        logger.LogDebug(
+            "GetLatestInstancesAsync: Retrieved latest instances for {Count} jobs, found {FoundCount} instances",
+            jobKeyList.Count,
+            latestInstances.Count);
+
+        return result;
+    }
+
+    /// <summary>
+    /// Applies dynamic sorting to JobInstance queryable based on field name
+    /// </summary>
+    private static IQueryable<JobInstanceEntity> ApplyInstanceSorting(
+        IQueryable<JobInstanceEntity> queryable,
+        string sortBy,
+        bool descending)
+    {
+        return sortBy switch
+        {
+            "InstanceId" => descending
+                ? queryable.OrderByDescending(i => i.InstanceId)
+                : queryable.OrderBy(i => i.InstanceId),
+            "JobKey" => descending
+                ? queryable.OrderByDescending(i => i.JobKey)
+                : queryable.OrderBy(i => i.JobKey),
+            "State" => descending
+                ? queryable.OrderByDescending(i => i.State)
+                : queryable.OrderBy(i => i.State),
+            "CreatedAt" => descending
+                ? queryable.OrderByDescending(i => i.CreatedAt)
+                : queryable.OrderBy(i => i.CreatedAt),
+            "StartedAt" => descending
+                ? queryable.OrderByDescending(i => i.StartedAt)
+                : queryable.OrderBy(i => i.StartedAt),
+            "CompletedAt" => descending
+                ? queryable.OrderByDescending(i => i.CompletedAt)
+                : queryable.OrderBy(i => i.CompletedAt),
+            "Duration" => ApplyDurationSorting(queryable, descending),
+            _ => descending
+                ? queryable.OrderByDescending(i => i.CreatedAt)
+                : queryable.OrderBy(i => i.CreatedAt)
+        };
+    }
+
+    /// <summary>
+    /// Applies duration-based sorting using database-agnostic expressions.
+    /// Completed jobs are sorted by their actual duration, running jobs by elapsed time.
+    /// </summary>
+    private static IQueryable<JobInstanceEntity> ApplyDurationSorting(
+        IQueryable<JobInstanceEntity> queryable,
+        bool descending)
+    {
+        // Sort by duration in seconds: (EndTime - StartTime).TotalSeconds
+        // EndTime is CompletedAt for finished jobs or current UTC time for running jobs
+        // EF Core translates this to provider-specific SQL (TIMESTAMPDIFF for MySQL, DATEDIFF for SQL Server, etc.)
+        if (descending)
+        {
+            return queryable.OrderByDescending(i =>
+                i.StartedAt != null
+                    ? ((i.CompletedAt ?? DateTime.UtcNow) - i.StartedAt.Value).TotalSeconds
+                    : 0);
+        }
+
+        return queryable.OrderBy(i =>
+            i.StartedAt != null
+                ? ((i.CompletedAt ?? DateTime.UtcNow) - i.StartedAt.Value).TotalSeconds
+                : 0);
     }
 
     #endregion

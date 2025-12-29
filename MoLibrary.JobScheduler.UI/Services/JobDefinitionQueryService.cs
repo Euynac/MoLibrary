@@ -30,6 +30,8 @@ public class JobDefinitionQueryService(
                 filter.JobType,
                 filter.PageNumber,
                 filter.PageSize,
+                filter.SortBy,
+                filter.SortDescending,
                 cancellationToken);
         }
         catch (Exception ex)
@@ -82,6 +84,8 @@ public class JobDefinitionQueryService(
                 filter.JobType,
                 filter.PageNumber,
                 filter.PageSize,
+                filter.SortBy,
+                filter.SortDescending,
                 cancellationToken);
 
             if (definitionsResult.IsFailed(out var error, out var pageData))
@@ -89,18 +93,23 @@ public class JobDefinitionQueryService(
                 return Res.Fail($"Failed to query job definitions: {error.Message}");
             }
 
+            var definitions = pageData.Items ?? [];
+
+            // 批量获取所有作业的最后执行实例（一次查询，避免N+1问题）
+            var jobKeys = definitions.Select(d => d.JobKey).ToList();
+            var lastExecutionMap = await metadataRepository.GetLatestInstancesAsync(jobKeys, cancellationToken);
+
             var enhancedJobs = new List<JobDefinitionWithLastExecution>();
 
-            foreach (var definition in pageData.Items ?? [])
+            foreach (var definition in definitions)
             {
                 var enhanced = new JobDefinitionWithLastExecution
                 {
                     Definition = definition
                 };
 
-                // 获取上次执行实例
-                var lastInstance = await GetLastExecutionInstanceAsync(definition.JobKey, cancellationToken);
-                enhanced.LastExecution = lastInstance;
+                // 从批量查询结果中获取上次执行实例
+                enhanced.LastExecution = lastExecutionMap.GetValueOrDefault(definition.JobKey);
 
                 // 计算下次执行时间（仅针对 RecurringJob）
                 if (definition.JobType == JobType.Recurring && !string.IsNullOrEmpty(definition.CronExpression))
@@ -121,31 +130,6 @@ public class JobDefinitionQueryService(
         {
             logger.LogError(ex, "Failed to query job definitions with last execution");
             return Res.Fail($"Failed to query job definitions: {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// 获取指定作业的上次执行实例
-    /// </summary>
-    private async Task<JobInstance?> GetLastExecutionInstanceAsync(string jobKey, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var query = new JobInstanceQuery
-            {
-                JobKey = jobKey,
-                PageNumber = 1,
-                PageSize = 1,
-                SortByCreatedAt = SortDirection.Descending
-            };
-
-            var result = await metadataRepository.QueryInstancesAsync(query, cancellationToken);
-            return result.Items.FirstOrDefault();
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Failed to get last execution for job {JobKey}", jobKey);
-            return null;
         }
     }
 

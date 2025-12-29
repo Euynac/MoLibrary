@@ -4,7 +4,11 @@
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject IJSRuntime JSRuntime
 @using MudBlazor
+@using System.Text.Json
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
 
 <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
     <MudText Typo="Typo.h4" Class="mb-4">作业定义</MudText>
@@ -58,18 +62,22 @@
     </MudPaper>
 
     <!-- Tabs -->
-    <MudTabs @bind-ActivePanelIndex="_activeTabIndex"
-             Elevation="2"
-             Rounded="true"
-             ApplyEffectsToContainer="true"
-             PanelClass="pa-6">
-        <MudTabPanel Text="RecurringJob" Icon="@Icons.Material.Filled.Schedule">
+    @if (_stateLoaded)
+    {
+        <MudTabs @bind-ActivePanelIndex="_activeTabIndex"
+                 Elevation="2"
+                 Rounded="true"
+                 ApplyEffectsToContainer="true"
+                 PanelClass="pa-6">
+            <MudTabPanel Text="RecurringJob" Icon="@Icons.Material.Filled.Schedule">
             <MudTable @ref="_recurringTable"
                       T="JobDefinitionWithLastExecution"
                       ServerData="LoadRecurringJobsAsync"
+                      RowsPerPage="@_recurringPageSize"
                       Hover="true"
                       Striped="true"
-                      Elevation="0">
+                      Elevation="0"
+                      SortMode="SortMode.Single">
                 <ToolBarContent>
                     <MudText Typo="Typo.h6">周期性作业</MudText>
                     <MudSpacer />
@@ -78,13 +86,13 @@
                                    OnClick="RefreshRecurringJobsAsync" />
                 </ToolBarContent>
                 <HeaderContent>
-                    <MudTh>来源项目</MudTh>
-                    <MudTh>作业键</MudTh>
-                    <MudTh>作业名称</MudTh>
-                    <MudTh>Cron表达式</MudTh>
-                    <MudTh>下次执行时间</MudTh>
-                    <MudTh>上次执行时间</MudTh>
-                    <MudTh>状态</MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="FromProject" T="JobDefinitionWithLastExecution">来源项目</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="JobKey" T="JobDefinitionWithLastExecution">作业键</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="JobName" T="JobDefinitionWithLastExecution">作业名称</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="CronExpression" T="JobDefinitionWithLastExecution">Cron表达式</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="NextExecutionTime" T="JobDefinitionWithLastExecution">下次执行时间</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="LastExecution" T="JobDefinitionWithLastExecution">上次执行时间</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="IsDisabled" T="JobDefinitionWithLastExecution">状态</MudTableSortLabel></MudTh>
                     <MudTh>操作</MudTh>
                 </HeaderContent>
                 <RowTemplate>
@@ -177,9 +185,11 @@
             <MudTable @ref="_triggerTable"
                       T="JobDefinitionWithLastExecution"
                       ServerData="LoadTriggerJobsAsync"
+                      RowsPerPage="@_triggerPageSize"
                       Hover="true"
                       Striped="true"
-                      Elevation="0">
+                      Elevation="0"
+                      SortMode="SortMode.Single">
                 <ToolBarContent>
                     <MudText Typo="Typo.h6">触发型作业</MudText>
                     <MudSpacer />
@@ -188,10 +198,10 @@
                                    OnClick="RefreshTriggerJobsAsync" />
                 </ToolBarContent>
                 <HeaderContent>
-                    <MudTh>来源项目</MudTh>
-                    <MudTh>作业键</MudTh>
-                    <MudTh>作业名称</MudTh>
-                    <MudTh>上次执行时间</MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="FromProject" T="JobDefinitionWithLastExecution">来源项目</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="JobKey" T="JobDefinitionWithLastExecution">作业键</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="JobName" T="JobDefinitionWithLastExecution">作业名称</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="LastExecution" T="JobDefinitionWithLastExecution">上次执行时间</MudTableSortLabel></MudTh>
                     <MudTh>操作</MudTh>
                 </HeaderContent>
                 <RowTemplate>
@@ -243,8 +253,18 @@
                     <MudTablePager PageSizeOptions="new int[] { 10, 20, 50, 100 }" />
                 </PagerContent>
             </MudTable>
-        </MudTabPanel>
-    </MudTabs>
+            </MudTabPanel>
+        </MudTabs>
+    }
+    else
+    {
+        <MudPaper Class="pa-6" Elevation="2">
+            <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Class="py-8">
+                <MudProgressCircular Indeterminate="true" />
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">加载中...</MudText>
+            </MudStack>
+        </MudPaper>
+    }
 </MudContainer>
 
 @code {
@@ -258,8 +278,119 @@
     private string? _filterJobKey;
     private string? _filterJobName;
 
+    // Table state persistence
+    private IJSObjectReference? _tableStateModule;
+
+    // RecurringJob table state
+    private string? _recurringSortBy;
+    private bool _recurringSortDescending;
+    private int _recurringPageSize = 10;
+
+    // TriggerJob table state
+    private string? _triggerSortBy;
+    private bool _triggerSortDescending;
+    private int _triggerPageSize = 10;
+
+    // State loading flag - controls conditional rendering of MudTabs
+    private bool _stateLoaded = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // 1. Load JS module
+            _tableStateModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "import",
+                "./_content/MoLibrary.JobScheduler.UI/js/table-state-helper.js"
+            ).ConfigureAwait(false);
+
+            // 2. Load state from localStorage
+            await LoadTableStatesAsync();
+
+            // 3. Mark state as loaded and trigger re-render
+            // MudTable will automatically call ServerData when rendered, no manual call needed
+            _stateLoaded = true;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task LoadTableStatesAsync()
+    {
+        if (_tableStateModule == null) return;
+
+        try
+        {
+            // Load RecurringJob state
+            var recurringState = await _tableStateModule.InvokeAsync<JsonElement?>(
+                "getTableState",
+                "job-definitions-recurring"
+            );
+
+            if (recurringState.HasValue && recurringState.Value.ValueKind == JsonValueKind.Object)
+            {
+                if (recurringState.Value.TryGetProperty("sortBy", out var sortBy) && sortBy.ValueKind == JsonValueKind.String)
+                    _recurringSortBy = sortBy.GetString();
+                if (recurringState.Value.TryGetProperty("sortDirection", out var sortDir) && sortDir.ValueKind == JsonValueKind.String)
+                    _recurringSortDescending = sortDir.GetString() == "descending";
+                if (recurringState.Value.TryGetProperty("pageSize", out var pageSize) && pageSize.ValueKind == JsonValueKind.Number)
+                {
+                    var size = pageSize.GetInt32();
+                    // Validate against allowed page sizes
+                    if (new[] { 10, 20, 50, 100 }.Contains(size))
+                        _recurringPageSize = size;
+                }
+            }
+
+            // Load TriggerJob state
+            var triggerState = await _tableStateModule.InvokeAsync<JsonElement?>(
+                "getTableState",
+                "job-definitions-trigger"
+            );
+
+            if (triggerState.HasValue && triggerState.Value.ValueKind == JsonValueKind.Object)
+            {
+                if (triggerState.Value.TryGetProperty("sortBy", out var sortBy) && sortBy.ValueKind == JsonValueKind.String)
+                    _triggerSortBy = sortBy.GetString();
+                if (triggerState.Value.TryGetProperty("sortDirection", out var sortDir) && sortDir.ValueKind == JsonValueKind.String)
+                    _triggerSortDescending = sortDir.GetString() == "descending";
+                if (triggerState.Value.TryGetProperty("pageSize", out var pageSize) && pageSize.ValueKind == JsonValueKind.Number)
+                {
+                    var size = pageSize.GetInt32();
+                    // Validate against allowed page sizes
+                    if (new[] { 10, 20, 50, 100 }.Contains(size))
+                        _triggerPageSize = size;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Silently fail - use default values
+            Console.WriteLine($"Failed to load table states: {ex.Message}");
+        }
+    }
+
     private async Task<TableData<JobDefinitionWithLastExecution>> LoadRecurringJobsAsync(TableState state, CancellationToken cancellationToken)
     {
+        // Extract sorting from TableState
+        string? sortBy = null;
+        bool sortDescending = false;
+
+        if (!string.IsNullOrEmpty(state.SortLabel))
+        {
+            sortBy = MapSortLabelToField(state.SortLabel);
+            sortDescending = state.SortDirection == SortDirection.Descending;
+
+            // Save sort state
+            _recurringSortBy = state.SortLabel;
+            _recurringSortDescending = sortDescending;
+        }
+
+        // Save page size if changed
+        if (state.PageSize != _recurringPageSize)
+        {
+            _recurringPageSize = state.PageSize;
+        }
+
         var filter = new JobDefinitionFilterRequest
         {
             FromProject = _filterFromProject,
@@ -267,7 +398,9 @@
             JobName = _filterJobName,
             JobType = JobType.Recurring,
             PageNumber = state.Page + 1,
-            PageSize = state.PageSize
+            PageSize = state.PageSize,
+            SortBy = sortBy,
+            SortDescending = sortDescending
         };
 
         var result = await UIService.GetJobDefinitionsWithLastExecutionAsync(filter, cancellationToken);
@@ -278,15 +411,45 @@
             return new TableData<JobDefinitionWithLastExecution> { Items = Array.Empty<JobDefinitionWithLastExecution>(), TotalItems = 0 };
         }
 
+        // Apply client-side sorting for computed fields
+        var items = data.Items ?? Array.Empty<JobDefinitionWithLastExecution>();
+        if (!string.IsNullOrEmpty(state.SortLabel))
+        {
+            items = ApplyClientSideSorting(items, state.SortLabel, sortDescending).ToArray();
+        }
+
+        // Save state to localStorage
+        await SaveRecurringTableStateAsync();
+
         return new TableData<JobDefinitionWithLastExecution>
         {
-            Items = data.Items ?? Array.Empty<JobDefinitionWithLastExecution>(),
+            Items = items,
             TotalItems = data.Sum ?? 0
         };
     }
 
     private async Task<TableData<JobDefinitionWithLastExecution>> LoadTriggerJobsAsync(TableState state, CancellationToken cancellationToken)
     {
+        // Extract sorting from TableState
+        string? sortBy = null;
+        bool sortDescending = false;
+
+        if (!string.IsNullOrEmpty(state.SortLabel))
+        {
+            sortBy = MapSortLabelToField(state.SortLabel);
+            sortDescending = state.SortDirection == SortDirection.Descending;
+
+            // Save sort state
+            _triggerSortBy = state.SortLabel;
+            _triggerSortDescending = sortDescending;
+        }
+
+        // Save page size if changed
+        if (state.PageSize != _triggerPageSize)
+        {
+            _triggerPageSize = state.PageSize;
+        }
+
         var filter = new JobDefinitionFilterRequest
         {
             FromProject = _filterFromProject,
@@ -294,7 +457,9 @@
             JobName = _filterJobName,
             JobType = JobType.Triggered,
             PageNumber = state.Page + 1,
-            PageSize = state.PageSize
+            PageSize = state.PageSize,
+            SortBy = sortBy,
+            SortDescending = sortDescending
         };
 
         var result = await UIService.GetJobDefinitionsWithLastExecutionAsync(filter, cancellationToken);
@@ -305,9 +470,19 @@
             return new TableData<JobDefinitionWithLastExecution> { Items = Array.Empty<JobDefinitionWithLastExecution>(), TotalItems = 0 };
         }
 
+        // Apply client-side sorting for computed fields
+        var items = data.Items ?? Array.Empty<JobDefinitionWithLastExecution>();
+        if (!string.IsNullOrEmpty(state.SortLabel))
+        {
+            items = ApplyClientSideSorting(items, state.SortLabel, sortDescending).ToArray();
+        }
+
+        // Save state to localStorage
+        await SaveTriggerTableStateAsync();
+
         return new TableData<JobDefinitionWithLastExecution>
         {
-            Items = data.Items ?? Array.Empty<JobDefinitionWithLastExecution>(),
+            Items = items,
             TotalItems = data.Sum ?? 0
         };
     }
@@ -423,5 +598,107 @@
     private Color GetDisabledStateColor(bool isDisabled)
     {
         return isDisabled ? Color.Warning : Color.Success;
+    }
+
+    // Helper methods for sorting and state management
+
+    /// <summary>
+    /// Maps MudTable SortLabel to API field name
+    /// </summary>
+    private static string? MapSortLabelToField(string sortLabel)
+    {
+        return sortLabel switch
+        {
+            "FromProject" => "FromProject",
+            "JobKey" => "JobKey",
+            "JobName" => "JobName",
+            "CronExpression" => "CronExpression",
+            "IsDisabled" => "IsDisabled",
+            // NextExecutionTime and LastExecution are client-side sorted
+            "NextExecutionTime" => null,
+            "LastExecution" => null,
+            _ => null
+        };
+    }
+
+    /// <summary>
+    /// Applies client-side sorting for computed fields
+    /// </summary>
+    private static IEnumerable<JobDefinitionWithLastExecution> ApplyClientSideSorting(
+        IEnumerable<JobDefinitionWithLastExecution> items,
+        string sortLabel,
+        bool descending)
+    {
+        IOrderedEnumerable<JobDefinitionWithLastExecution>? sorted = sortLabel switch
+        {
+            "NextExecutionTime" => descending
+                ? items.OrderByDescending(x => x.NextExecutionTime ?? DateTime.MinValue)
+                : items.OrderBy(x => x.NextExecutionTime ?? DateTime.MinValue),
+            "LastExecution" => descending
+                ? items.OrderByDescending(x => x.LastExecution?.CreatedAt ?? DateTime.MinValue)
+                : items.OrderBy(x => x.LastExecution?.CreatedAt ?? DateTime.MinValue),
+            _ => null
+        };
+
+        return sorted ?? items;
+    }
+
+    /// <summary>
+    /// Saves RecurringJob table state to localStorage
+    /// </summary>
+    private async Task SaveRecurringTableStateAsync()
+    {
+        if (_tableStateModule == null) return;
+
+        try
+        {
+            await _tableStateModule.InvokeVoidAsync("saveTableState",
+                "job-definitions-recurring",
+                new
+                {
+                    sortBy = _recurringSortBy,
+                    sortDirection = _recurringSortDescending ? "descending" : "ascending",
+                    pageSize = _recurringPageSize
+                });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to save RecurringJob table state: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Saves TriggerJob table state to localStorage
+    /// </summary>
+    private async Task SaveTriggerTableStateAsync()
+    {
+        if (_tableStateModule == null) return;
+
+        try
+        {
+            await _tableStateModule.InvokeVoidAsync("saveTableState",
+                "job-definitions-trigger",
+                new
+                {
+                    sortBy = _triggerSortBy,
+                    sortDirection = _triggerSortDescending ? "descending" : "ascending",
+                    pageSize = _triggerPageSize
+                });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to save TriggerJob table state: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Disposes the JavaScript module reference
+    /// </summary>
+    public async ValueTask DisposeAsync()
+    {
+        if (_tableStateModule != null)
+        {
+            await _tableStateModule.DisposeAsync();
+        }
     }
 }

@@ -100,6 +100,8 @@ public class JobSchedulerApiService(
         JobType? jobType = null,
         int pageNumber = 1,
         int pageSize = 20,
+        string? sortBy = null,
+        bool sortDescending = false,
         CancellationToken cancellationToken = default)
     {
         try
@@ -125,6 +127,14 @@ public class JobSchedulerApiService(
 
             if (jobType.HasValue)
                 filtered = filtered.Where(d => d.JobType == jobType.Value);
+
+            // Apply sorting
+            if (!string.IsNullOrEmpty(sortBy))
+            {
+                filtered = sortDescending
+                    ? filtered.OrderByDescending(GetSortSelector(sortBy))
+                    : filtered.OrderBy(GetSortSelector(sortBy));
+            }
 
             var totalCount = filtered.Count();
             var items = filtered
@@ -294,5 +304,21 @@ public class JobSchedulerApiService(
             logger.LogError(ex, "Failed to update job config for {JobKey}", jobKey);
             return Res.Fail($"Failed to update job configuration: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Gets the sort selector function for a given field name.
+    /// </summary>
+    private static Func<JobDefinition, object> GetSortSelector(string sortBy)
+    {
+        return sortBy.ToLowerInvariant() switch
+        {
+            "fromproject" => d => d.FromProject,
+            "jobkey" => d => d.JobKey,
+            "jobname" => d => d.JobName,
+            "cronexpression" => d => d.CronExpression ?? string.Empty,
+            "isdisabled" => d => d.IsDisabled,
+            _ => d => d.JobKey // Default fallback
+        };
     }
 }

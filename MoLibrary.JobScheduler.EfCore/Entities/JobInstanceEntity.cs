@@ -88,6 +88,12 @@ public class JobInstanceEntity : MoEntity<long>, IHasEntitySelfConfig<JobInstanc
         builder.HasIndex(e => new { e.JobKey, e.State, e.CreatedAt })
             .HasDatabaseName("IX_JobInstances_JobKey_State_CreatedAt");
 
+        // Composite index optimized for fetching latest instance per job (descending order)
+        // This index is critical for batch queries in GetLatestInstancesAsync
+        builder.HasIndex(e => new { e.JobKey, e.CreatedAt })
+            .IsDescending(false, true) // JobKey ASC, CreatedAt DESC
+            .HasDatabaseName("IX_JobInstances_JobKey_CreatedAt_Desc");
+
         builder.Property(e => e.InstanceId)
             .IsRequired()
             .HasMaxLength(50);

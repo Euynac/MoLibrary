@@ -4,7 +4,11 @@
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject IJSRuntime JSRuntime
 @using MudBlazor
+@using System.Text.Json
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
 
 <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
     <MudText Typo="Typo.h4" Class="mb-4">作业实例</MudText>
@@ -94,30 +98,34 @@
         </MudGrid>
     </MudPaper>
 
-    <!-- 数据表格 -->
-    <MudTable @ref="_table"
-              T="JobInstance"
-              ServerData="LoadDataAsync"
-              Hover="true"
-              Striped="true"
-              Elevation="2">
-        <ToolBarContent>
-            <MudText Typo="Typo.h6">实例列表</MudText>
-            <MudSpacer />
-            <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                           Color="Color.Primary"
-                           OnClick="RefreshAsync" />
-        </ToolBarContent>
-        <HeaderContent>
-            <MudTh>实例ID</MudTh>
-            <MudTh>作业键</MudTh>
-            <MudTh>状态</MudTh>
-            <MudTh>创建时间</MudTh>
-            <MudTh>开始时间</MudTh>
-            <MudTh>结束时间</MudTh>
-            <MudTh>执行时长</MudTh>
-            <MudTh>操作</MudTh>
-        </HeaderContent>
+    <!-- 数据表格 with deferred rendering -->
+    @if (_stateLoaded)
+    {
+        <MudTable @ref="_table"
+                  T="JobInstance"
+                  ServerData="LoadDataAsync"
+                  RowsPerPage="@_pageSize"
+                  Hover="true"
+                  Striped="true"
+                  Elevation="2"
+                  SortMode="SortMode.Single">
+            <ToolBarContent>
+                <MudText Typo="Typo.h6">实例列表</MudText>
+                <MudSpacer />
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                               Color="Color.Primary"
+                               OnClick="RefreshAsync" />
+            </ToolBarContent>
+            <HeaderContent>
+                <MudTh><MudTableSortLabel SortLabel="InstanceId" T="JobInstance">实例ID</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortLabel="JobKey" T="JobInstance">作业键</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortLabel="State" T="JobInstance">状态</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortLabel="CreatedAt" T="JobInstance">创建时间</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortLabel="StartedAt" T="JobInstance">开始时间</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortLabel="CompletedAt" T="JobInstance">结束时间</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortLabel="Duration" T="JobInstance">执行时长</MudTableSortLabel></MudTh>
+                <MudTh>操作</MudTh>
+            </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="实例ID">
                 <MudText Typo="Typo.body2" Style="font-family: monospace;">
@@ -170,10 +178,20 @@
         <LoadingContent>
             <MudProgressCircular Indeterminate="true" />
         </LoadingContent>
-        <PagerContent>
-            <MudTablePager PageSizeOptions="new int[] { 10, 20, 50, 100 }" />
-        </PagerContent>
-    </MudTable>
+            <PagerContent>
+                <MudTablePager PageSizeOptions="new int[] { 10, 20, 50, 100 }" />
+            </PagerContent>
+        </MudTable>
+    }
+    else
+    {
+        <MudPaper Class="pa-6" Elevation="2">
+            <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Class="py-8">
+                <MudProgressCircular Indeterminate="true" />
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">加载中...</MudText>
+            </MudStack>
+        </MudPaper>
+    }
 </MudContainer>
 
 @code {
@@ -194,6 +212,41 @@
     private DateTime? _filterEndDate;
     private string _timeRangePreset = string.Empty;
 
+    // Table state persistence
+    private TableStateHelper? _stateHelper;
+    private string? _sortBy;
+    private bool _sortDescending;
+    private int _pageSize = 10;
+    private bool _stateLoaded = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _stateHelper = new TableStateHelper(JSRuntime);
+            await LoadTableStateAsync();
+            _stateLoaded = true;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task LoadTableStateAsync()
+    {
+        if (_stateHelper == null) return;
+
+        try
+        {
+            var state = await _stateHelper.LoadStateAsync("job-instances");
+            _sortBy = state.SortBy;
+            _sortDescending = state.SortDescending;
+            _pageSize = state.PageSize;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to load table state: {ex.Message}");
+        }
+    }
+
     protected override void OnInitialized()
     {
         _filterJobKey = InitialJobKey;
@@ -210,6 +263,24 @@
 
     private async Task<TableData<JobInstance>> LoadDataAsync(TableState state, CancellationToken cancellationToken)
     {
+        // Extract sorting from TableState
+        string? sortBy = null;
+        bool sortDescending = false;
+
+        if (!string.IsNullOrEmpty(state.SortLabel))
+        {
+            sortBy = MapSortLabelToField(state.SortLabel);
+            sortDescending = state.SortDirection == SortDirection.Descending;
+
+            _sortBy = state.SortLabel;
+            _sortDescending = sortDescending;
+        }
+
+        if (state.PageSize != _pageSize)
+        {
+            _pageSize = state.PageSize;
+        }
+
         var (startTime, endTime) = GetTimeRange();
 
         var filter = new JobInstanceFilterRequest
@@ -220,7 +291,9 @@
             StartTime = startTime,
             EndTime = endTime,
             PageNumber = state.Page + 1,
-            PageSize = state.PageSize
+            PageSize = state.PageSize,
+            SortBy = sortBy,
+            SortDescending = sortDescending
         };
 
         var result = await UIService.GetJobInstancesAsync(filter, cancellationToken);
@@ -231,9 +304,14 @@
             return new TableData<JobInstance> { Items = Array.Empty<JobInstance>(), TotalItems = 0 };
         }
 
+        // No client-side sorting needed - all sorting is done server-side
+        var items = data.Items ?? Array.Empty<JobInstance>();
+
+        await SaveTableStateAsync();
+
         return new TableData<JobInstance>
         {
-            Items = data.Items ?? Array.Empty<JobInstance>(),
+            Items = items,
             TotalItems = data.Sum ?? 0
         };
     }
@@ -334,5 +412,46 @@
         if (duration.TotalSeconds >= 1)
             return $"{duration.TotalSeconds:F2}s";
         return $"{duration.TotalMilliseconds:F0}ms";
+    }
+
+    private static string? MapSortLabelToField(string sortLabel)
+    {
+        return sortLabel switch
+        {
+            "InstanceId" => "InstanceId",
+            "JobKey" => "JobKey",
+            "State" => "State",
+            "CreatedAt" => "CreatedAt",
+            "StartedAt" => "StartedAt",
+            "CompletedAt" => "CompletedAt",
+            "Duration" => "Duration",
+            _ => null
+        };
+    }
+
+    private async Task SaveTableStateAsync()
+    {
+        if (_stateHelper == null) return;
+
+        try
+        {
+            await _stateHelper.SaveStateAsync("job-instances", new TablePersistenceState(
+                SortBy: _sortBy,
+                SortDescending: _sortDescending,
+                PageSize: _pageSize
+            ));
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to save table state: {ex.Message}");
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_stateHelper != null)
+        {
+            await _stateHelper.DisposeAsync();
+        }
     }
 }
