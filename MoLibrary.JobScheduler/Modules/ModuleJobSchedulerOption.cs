@@ -178,4 +178,53 @@ public class ModuleJobSchedulerOption : MoModuleOption<ModuleJobScheduler>
     /// Requires RegisterCentre integration. If RegisterCentre is unavailable, this setting is ignored.
     /// </remarks>
     public bool CheckWorkerHealthBeforeZombieDetection { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to enable long-interval scheduler service.
+    /// When enabled, recurring jobs with cron intervals exceeding the timer threshold will use Scheduled mode.
+    /// Default is <c>true</c>.
+    /// </summary>
+    /// <value>
+    /// <c>true</c> to enable long-interval job support; otherwise, <c>false</c>.
+    /// Default is <c>true</c>.
+    /// </value>
+    /// <remarks>
+    /// When disabled, recurring jobs with long intervals will log warnings but still attempt to use Timer,
+    /// which may fail if the interval exceeds .NET Timer's maximum limit (~24.8 days).
+    /// </remarks>
+    public bool EnableLongIntervalScheduler { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the scan interval for long-interval jobs.
+    /// The LongIntervalSchedulerService runs periodically to check Scheduled jobs and convert them to Timer mode when appropriate.
+    /// </summary>
+    /// <value>
+    /// The interval between scans.
+    /// Default is 8 days. Recommended: 1/3 of TimerSafetyThresholdDays to provide sufficient buffer.
+    /// </value>
+    /// <remarks>
+    /// Setting this too low increases database queries. Setting this too high may delay job execution.
+    /// A good balance is 1/3 of the timer threshold (e.g., 8 days for 24-day threshold).
+    /// </remarks>
+    public TimeSpan LongIntervalScanInterval { get; set; } = TimeSpan.FromDays(8);
+
+    /// <summary>
+    /// Gets or sets the Timer safety threshold in days.
+    /// Jobs with intervals exceeding this threshold will use Scheduled mode instead of Timer.
+    /// </summary>
+    /// <value>
+    /// The threshold in days.
+    /// Default is 24 days (safe for .NET Timer's ~24.8 day limit).
+    /// </value>
+    /// <remarks>
+    /// <para>
+    /// .NET Timer has a maximum interval of uint.MaxValue milliseconds (~4.2 billion ms ≈ 24.8 days).
+    /// This threshold provides a safety margin to prevent Timer overflow.
+    /// </para>
+    /// <para>
+    /// Setting this too low may unnecessarily use Scheduled mode for jobs that could use Timer.
+    /// Setting this too high risks Timer overflow failures.
+    /// </para>
+    /// </remarks>
+    public int TimerSafetyThresholdDays { get; set; } = 24;
 }

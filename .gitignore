@@ -363,3 +363,4 @@ MigrationBackup/
 FodyWeavers.xsd
 /NuGet.Config
 /rules/mudblazor/src
+.auto-claude

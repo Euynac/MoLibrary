@@ -106,6 +106,20 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
             services.AddHostedService(provider => provider.GetRequiredService<IJobConcurrencyGuard>() as JobConcurrencyGuardHostedService
                                                   ?? throw new InvalidOperationException("JobConcurrencyGuard must be registered as IJobConcurrencyGuard"));
 
+            // Register long-interval scheduler service (conditional)
+            if (Option.EnableLongIntervalScheduler)
+            {
+                services.AddHostedService<LongIntervalSchedulerService>();
+                Logger.LogInformation(
+                    "Long-interval scheduler enabled with scan interval: {Interval}, threshold: {Threshold} days",
+                    Option.LongIntervalScanInterval,
+                    Option.TimerSafetyThresholdDays);
+            }
+            else
+            {
+                Logger.LogWarning("Long-interval scheduler disabled. Jobs with intervals >24 days may fail.");
+            }
+
             // Register zombie detection service (conditional)
             if (Option.EnableZombieDetection)
             {

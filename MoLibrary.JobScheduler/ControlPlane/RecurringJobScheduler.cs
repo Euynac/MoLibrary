@@ -1,9 +1,11 @@
 using System.Collections.Concurrent;
 using Cronos;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Events;
 using MoLibrary.JobScheduler.Models;
+using MoLibrary.JobScheduler.Modules;
 using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.JobScheduler.ControlPlane;
@@ -17,10 +19,16 @@ public class RecurringJobScheduler(
     JobInstanceManager jobInstanceManager,
     JobDispatcher jobDispatcher,
     RecurringJobValidator validator,
+    IOptions<ModuleJobSchedulerOption> options,
     ILogger<RecurringJobScheduler> logger)
 {
+    private readonly ModuleJobSchedulerOption _options = options.Value;
+
     // Recurring job scheduling state
     private readonly ConcurrentDictionary<string, RecurringJobSchedule> _inFlightRecurringSchedules = new();
+
+    // Long-interval job tracking (for jobs exceeding Timer threshold)
+    private readonly ConcurrentDictionary<string, LongIntervalRecurringSchedule> _longIntervalSchedules = new();
 
     // Synchronization for updating schedules
     private readonly SemaphoreSlim _scheduleLock = new(1, 1);
@@ -167,6 +175,25 @@ public class RecurringJobScheduler(
                 dueTime = TimeSpan.Zero;
             }
 
+            // Check if interval exceeds Timer safety threshold
+            var timerThreshold = TimeSpan.FromDays(_options.TimerSafetyThresholdDays);
+            if (dueTime > timerThreshold)
+            {
+                logger.LogInformation(
+                    "Recurring job {JobKey} interval ({Days} days) exceeds timer threshold ({ThresholdDays} days). Deferring to long-interval scheduler. Next execution: {NextTime}",
+                    validatedDefinition.JobKey,
+                    dueTime.TotalDays,
+                    _options.TimerSafetyThresholdDays,
+                    nextOccurrence.Value);
+
+                // Record to memory dictionary, handled by LongIntervalScheduler
+                RecordLongIntervalSchedule(validatedDefinition.JobKey, nextOccurrence.Value);
+                return;
+            }
+
+            // If previously was long-interval, now转回Timer mode, clear from tracking
+            _longIntervalSchedules.TryRemove(validatedDefinition.JobKey, out _);
+
             // Create timer for next occurrence
             var timer = new Timer(
                 _ => OnRecurringJobTimerCallback(validatedDefinition.JobKey, nextOccurrence.Value),
@@ -261,6 +288,84 @@ public class RecurringJobScheduler(
         {
             await timer.DisposeAsync();
         }
+
+        // Also remove from long-interval tracking
+        _longIntervalSchedules.TryRemove(jobKey, out _);
+    }
+
+    /// <summary>
+    /// Records a long-interval recurring job in memory.
+    /// Used when cron interval exceeds Timer safety threshold.
+    /// </summary>
+    private void RecordLongIntervalSchedule(string jobKey, DateTime nextOccurrence)
+    {
+        // Remove existing Timer (if any)
+        if (_inFlightRecurringSchedules.TryRemove(jobKey, out var existingSchedule))
+        {
+            existingSchedule.Timer?.Dispose();
+            logger.LogDebug("Removed existing timer for long-interval job {JobKey}", jobKey);
+        }
+
+        // Record to memory dictionary
+        var schedule = new LongIntervalRecurringSchedule
+        {
+            JobKey = jobKey,
+            NextScheduledTime = nextOccurrence,
+            CalculatedAt = DateTime.UtcNow
+        };
+
+        _longIntervalSchedules.AddOrUpdate(jobKey, schedule, (_, _) => schedule);
+
+        logger.LogDebug(
+            "Recorded long-interval schedule for {JobKey}. Next execution: {NextTime}",
+            jobKey,
+            nextOccurrence);
+    }
+
+    /// <summary>
+    /// Gets all long-interval recurring schedules for scanning.
+    /// Called by LongIntervalSchedulerService.
+    /// </summary>
+    internal IReadOnlyCollection<LongIntervalRecurringSchedule> GetLongIntervalSchedules()
+    {
+        return _longIntervalSchedules.Values.ToList();
+    }
+
+    /// <summary>
+    /// Transitions a long-interval recurring job to Timer mode.
+    /// Called by LongIntervalSchedulerService when job is close to execution time.
+    /// </summary>
+    internal async Task TransitionToTimerModeAsync(string jobKey, CancellationToken cancellationToken = default)
+    {
+        if (!_longIntervalSchedules.TryGetValue(jobKey, out var schedule))
+        {
+            logger.LogWarning(
+                "Attempted to transition {JobKey} to Timer mode but it's not in long-interval tracking",
+                jobKey);
+            return;
+        }
+
+        // Get Definition
+        var definition = await cacheService.GetDefinitionAsync(jobKey, cancellationToken);
+        if (definition == null)
+        {
+            logger.LogWarning(
+                "Definition not found for long-interval job {JobKey}, removing from tracking",
+                jobKey);
+            _longIntervalSchedules.TryRemove(jobKey, out _);
+            return;
+        }
+
+        logger.LogInformation(
+            "Transitioning {JobKey} from long-interval to Timer mode. Execution in {Minutes} minutes",
+            jobKey,
+            (schedule.NextScheduledTime - DateTime.UtcNow).TotalMinutes);
+
+        // Remove from long-interval dictionary (ScheduleRecurringJob will automatically use Timer based on interval)
+        _longIntervalSchedules.TryRemove(jobKey, out _);
+
+        // Reschedule (will automatically use Timer mode because interval is now <24 days)
+        ScheduleRecurringJob(definition, lastOccurrence: null);
     }
 
     /// <summary>

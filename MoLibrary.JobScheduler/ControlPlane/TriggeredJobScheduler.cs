@@ -1,10 +1,12 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MoLibrary.Core.Extensions;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Events;
 using MoLibrary.JobScheduler.Models;
+using MoLibrary.JobScheduler.Modules;
 
 namespace MoLibrary.JobScheduler.ControlPlane;
 
@@ -18,8 +20,11 @@ public class TriggeredJobScheduler(
     JobDispatcher jobDispatcher,
     IMoJobMetadataRepository metadataRepository,
     DelayedJobRecoveryService recoveryService,
+    IOptions<ModuleJobSchedulerOption> options,
     ILogger<TriggeredJobScheduler> logger)
 {
+    private readonly ModuleJobSchedulerOption _options = options.Value;
+
     // Delayed triggered job scheduling state
     private readonly ConcurrentDictionary<string, DelayedJobSchedule> _inFlightDelayedSchedules = new();
 
@@ -96,9 +101,9 @@ public class TriggeredJobScheduler(
                 initialState,
                 scheduledTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "Immediate");
 
-            if (evt.Delay.HasValue)
+            if (scheduledTime is not null)
             {
-                ScheduleDelayedJob(instance, definition, scheduledTime!.Value);
+                ScheduleDelayedJob(instance, definition, scheduledTime.Value);
             }
             else
             {
@@ -115,7 +120,7 @@ public class TriggeredJobScheduler(
     /// <summary>
     /// Schedules a delayed job using a one-shot timer.
     /// </summary>
-    private void ScheduleDelayedJob(JobInstance instance, JobDefinition definition, DateTime scheduledTime)
+    internal void ScheduleDelayedJob(JobInstance instance, JobDefinition definition, DateTime scheduledTime)
     {
         try
         {
@@ -129,6 +134,23 @@ public class TriggeredJobScheduler(
                     "Scheduled time in past for {InstanceId}, executing immediately",
                     instance.InstanceId);
                 dueTime = TimeSpan.Zero;
+            }
+
+            // Check if delay exceeds Timer safety threshold
+            var timerThreshold = TimeSpan.FromDays(_options.TimerSafetyThresholdDays);
+            if (dueTime > timerThreshold)
+            {
+                logger.LogInformation(
+                    "Triggered job instance {InstanceId} (JobKey: {JobKey}) delay ({Days} days) exceeds timer threshold ({ThresholdDays} days). Will be handled by long-interval scheduler. Scheduled time: {ScheduledTime}",
+                    instance.InstanceId,
+                    definition.JobKey,
+                    dueTime.TotalDays,
+                    _options.TimerSafetyThresholdDays,
+                    scheduledTime);
+
+                // Don't create Timer, will be handled by LongIntervalSchedulerService
+                // The JobInstance is already in Scheduled state and persisted to database
+                return;
             }
 
             var timer = new Timer(
