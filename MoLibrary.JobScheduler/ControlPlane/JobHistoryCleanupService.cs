@@ -44,8 +44,16 @@ public class JobHistoryCleanupService(
         {
             try
             {
+#if DEBUG
+                await Task.Delay(10000, cancellationToken);
                 await CleanupHistoryAsync(cancellationToken);
                 await Task.Delay(_jobSchedulerOptions.HistoryCleanupInterval, cancellationToken);
+#else
+                await Task.Delay(_jobSchedulerOptions.HistoryCleanupInterval, cancellationToken);
+                await CleanupHistoryAsync(cancellationToken);
+#endif
+
+
             }
             catch (OperationCanceledException)
             {

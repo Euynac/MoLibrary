@@ -264,13 +264,15 @@ public class JobConcurrencyGuardHostedService(
 
         try
         {
-            var released = statistic.ReleaseReservation(instanceId);
-            if (released)
+            var (removedFromPending, removedFromRunning) = statistic.RemoveInstanceFromTracking(instanceId);
+            if (removedFromPending || removedFromRunning)
             {
                 logger.LogDebug(
-                    "Released reserved slot for job {JobKey} instance {InstanceId}",
+                    "Released slot for job {JobKey} instance {InstanceId} (pending: {WasPending}, running: {WasRunning})",
                     jobKey,
-                    instanceId);
+                    instanceId,
+                    removedFromPending,
+                    removedFromRunning);
             }
         }
         finally
@@ -345,22 +347,24 @@ public class JobConcurrencyGuardHostedService(
 
         try
         {
-            var removed = statistic.RemoveInstance(evt.InstanceId);
+            var (removedFromPending, removedFromRunning) = statistic.RemoveInstanceFromTracking(evt.InstanceId);
 
-            if (removed)
+            if (removedFromPending || removedFromRunning)
             {
                 logger.LogDebug(
-                    "Job {JobKey} instance {InstanceId} completed with state {FinalState}, current executing: {Current}/{Max}",
+                    "Job {JobKey} instance {InstanceId} completed with state {FinalState} and removed from tracking (pending: {WasPending}, running: {WasRunning}), current executing: {Current}/{Max}",
                     evt.JobKey,
                     evt.InstanceId,
                     evt.FinalState,
+                    removedFromPending,
+                    removedFromRunning,
                     statistic.CurrentExecutingCount,
                     statistic.MaxConcurrency);
             }
             else
             {
                 logger.LogWarning(
-                    "Job {JobKey} instance {InstanceId} completed but was not found in running instances",
+                    "Job {JobKey} instance {InstanceId} completed but was not found in tracking",
                     evt.JobKey,
                     evt.InstanceId);
             }
@@ -426,65 +430,5 @@ public class JobConcurrencyGuardHostedService(
             "Cleaned up {OrphanedCount} orphaned job instances from offline worker {InstanceId}",
             orphanedCount,
             evt.InstanceId);
-    }
-
-    protected override async Task LeaderExecuteBackgroundAsync(CancellationToken cancellationToken)
-    {
-        while (!cancellationToken.IsCancellationRequested)
-        {
-            try
-            {
-                await Task.Delay(TimeSpan.FromMinutes(1), cancellationToken);
-                await CleanupStaleReservationsAsync(cancellationToken);
-            }
-            catch (OperationCanceledException)
-            {
-                break;
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error in concurrency guard background cleanup");
-            }
-        }
-    }
-
-    private async Task CleanupStaleReservationsAsync(CancellationToken cancellationToken)
-    {
-        var staleThreshold = DateTime.UtcNow.AddMinutes(-5); // 5 minutes
-        var cleanupCount = 0;
-
-        foreach (var (jobKey, statistic) in _statistics)
-        {
-            var semaphore = _jobLocks.GetOrAdd(jobKey, _ => new SemaphoreSlim(1, 1));
-            await semaphore.WaitAsync(cancellationToken);
-
-            try
-            {
-                var staleIds = statistic.PendingReservations
-                    .Where(r => r.Value < staleThreshold)
-                    .Select(r => r.Key)
-                    .ToList();
-
-                foreach (var instanceId in staleIds)
-                {
-                    statistic.ReleaseReservation(instanceId);
-                    cleanupCount++;
-
-                    logger.LogWarning(
-                        "Cleaned up stale reservation: job {JobKey}, instance {InstanceId}",
-                        jobKey,
-                        instanceId);
-                }
-            }
-            finally
-            {
-                semaphore.Release();
-            }
-        }
-
-        if (cleanupCount > 0)
-        {
-            logger.LogInformation("Cleaned up {Count} stale reservations", cleanupCount);
-        }
     }
 }

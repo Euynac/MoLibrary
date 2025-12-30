@@ -81,6 +81,19 @@ public class JobExecutionStatistic
     }
 
     /// <summary>
+    /// Removes an instance from tracking (checks both pending reservations and running instances).
+    /// This is the preferred method for cleanup as it handles instances in either state.
+    /// </summary>
+    /// <param name="instanceId">Instance ID to remove</param>
+    /// <returns>Tuple indicating whether the instance was removed from pending and/or running collections</returns>
+    public (bool RemovedFromPending, bool RemovedFromRunning) RemoveInstanceFromTracking(string instanceId)
+    {
+        var removedFromPending = PendingReservations.Remove(instanceId);
+        var removedFromRunning = RunningInstances.RemoveAll(i => i.InstanceId == instanceId) > 0;
+        return (removedFromPending, removedFromRunning);
+    }
+
+    /// <summary>
     /// Removes all instances running on a specific worker client
     /// </summary>
     public List<RunningJobInfo> RemoveInstancesByWorker(string workerClientId)
