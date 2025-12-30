@@ -81,6 +81,20 @@ public class JobDefinition
     /// </summary>
     public DateTime? DeletedAt { get; set; }
 
+    /// <summary>
+    /// Gets or sets the maximum number of retained history records for this job.
+    /// When exceeded, the oldest records will be deleted during cleanup.
+    /// Default is 100. Set to 0 or negative value to disable limit.
+    /// </summary>
+    public int MaxRetainedHistoryRecords { get; set; } = 100;
+
+    /// <summary>
+    /// Gets or sets the maximum retention period in days for job execution history.
+    /// Records older than this will be deleted during cleanup.
+    /// Null means no time-based retention limit (only count-based limit applies).
+    /// </summary>
+    public int? MaxRetentionDays { get; set; }
+
     // Recurring job specific properties
 
     /// <summary>

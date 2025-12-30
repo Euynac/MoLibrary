@@ -245,6 +245,129 @@ public class InMemoryJobMetadataRepository(ILogger<InMemoryJobMetadataRepository
     }
 
     /// <summary>
+    /// 批量删除 Job 实例（内存实现）
+    /// </summary>
+    public Task<int> DeleteInstancesAsync(
+        IEnumerable<string> instanceIds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(instanceIds);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var instanceIdList = instanceIds.ToList();
+        var deletedCount = 0;
+
+        foreach (var instanceId in instanceIdList)
+        {
+            if (_instances.TryRemove(instanceId, out var removedInstance))
+            {
+                deletedCount++;
+                logger.LogDebug(
+                    "Deleted job instance: {InstanceId} for {JobKey}",
+                    instanceId,
+                    removedInstance.JobKey);
+            }
+        }
+
+        logger.LogInformation(
+            "Batch deleted {DeletedCount}/{RequestedCount} job instances",
+            deletedCount,
+            instanceIdList.Count);
+
+        return Task.FromResult(deletedCount);
+    }
+
+    /// <summary>
+    /// 查询需要清理的实例ID列表（优化的批量清理查询）
+    /// </summary>
+    public Task<List<string>> GetCleanupCandidatesAsync(
+        IReadOnlyDictionary<string, (int MaxRecords, int? MaxDays)> retentionPolicies,
+        int maxRetainedOrphanedInstances = 10,
+        int maxDeletionsPerCycle = 0,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(retentionPolicies);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var terminalStates = new HashSet<JobState>
+        {
+            JobState.Succeeded, JobState.Terminated,
+            JobState.Cancelled, JobState.Skipped, JobState.Failed
+        };
+
+        var now = DateTime.UtcNow;
+        var candidateIds = new HashSet<string>();
+
+        // Single pass: group by JobKey, project only needed fields
+        var groupedInstances = _instances.Values
+            .Where(i => terminalStates.Contains(i.State))
+            .GroupBy(i => i.JobKey)
+            .Select(g => new
+            {
+                JobKey = g.Key,
+                Instances = g.Select(i => new
+                {
+                    i.InstanceId,
+                    SortDate = i.CompletedAt ?? i.CreatedAt
+                }).OrderByDescending(x => x.SortDate).ToList()
+            });
+
+        foreach (var group in groupedInstances)
+        {
+            int maxRecords;
+            int? maxDays;
+
+            if (retentionPolicies.TryGetValue(group.JobKey, out var policy))
+            {
+                maxRecords = policy.MaxRecords > 0 ? policy.MaxRecords : int.MaxValue;
+                maxDays = policy.MaxDays;
+            }
+            else
+            {
+                // Orphaned - use default
+                maxRecords = maxRetainedOrphanedInstances > 0 ? maxRetainedOrphanedInstances : int.MaxValue;
+                maxDays = null;
+            }
+
+            var cutoffDate = maxDays.HasValue ? now.AddDays(-maxDays.Value) : (DateTime?)null;
+
+            for (var i = 0; i < group.Instances.Count; i++)
+            {
+                var instance = group.Instances[i];
+                var shouldDelete = false;
+
+                // Count-based: beyond maxRecords limit
+                if (i >= maxRecords)
+                {
+                    shouldDelete = true;
+                }
+                // Time-based: older than cutoff
+                else if (cutoffDate.HasValue && instance.SortDate < cutoffDate.Value)
+                {
+                    shouldDelete = true;
+                }
+
+                if (shouldDelete)
+                {
+                    candidateIds.Add(instance.InstanceId);
+                }
+            }
+        }
+
+        // Apply per-cycle limit
+        var result = maxDeletionsPerCycle > 0 && candidateIds.Count > maxDeletionsPerCycle
+            ? candidateIds.Take(maxDeletionsPerCycle).ToList()
+            : candidateIds.ToList();
+
+        logger.LogDebug(
+            "GetCleanupCandidatesAsync: Found {Count} candidates (limit: {Limit})",
+            result.Count,
+            maxDeletionsPerCycle > 0 ? maxDeletionsPerCycle.ToString() : "unlimited");
+
+        return Task.FromResult(result);
+    }
+
+    /// <summary>
     /// Applies dynamic sorting to JobInstance enumerable based on field name
     /// </summary>
     private static IEnumerable<JobInstance> ApplyInstanceSorting(

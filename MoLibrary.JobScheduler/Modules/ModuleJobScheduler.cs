@@ -132,6 +132,19 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
             {
                 Logger.LogInformation("Zombie detection disabled");
             }
+
+            // Register history cleanup service (conditional)
+            if (Option.EnableHistoryCleanup)
+            {
+                services.AddHostedService<JobHistoryCleanupService>();
+                Logger.LogInformation(
+                    "History cleanup enabled with interval: {Interval}",
+                    Option.HistoryCleanupInterval);
+            }
+            else
+            {
+                Logger.LogInformation("History cleanup disabled");
+            }
         }
 
         // Register health check for monitoring initialization status

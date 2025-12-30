@@ -81,5 +81,39 @@ public interface IMoJobMetadataRepository
         IEnumerable<string> jobKeys,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// 批量删除 Job 实例
+    /// </summary>
+    /// <param name="instanceIds">要删除的实例 ID 集合</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>成功删除的实例数量</returns>
+    /// <remarks>
+    /// 实现应优雅处理部分失败，不存在的实例应被静默忽略
+    /// </remarks>
+    Task<int> DeleteInstancesAsync(
+        IEnumerable<string> instanceIds,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 查询需要清理的实例ID列表（优化的批量清理查询）
+    /// </summary>
+    /// <param name="retentionPolicies">作业保留策略字典 (JobKey -> (MaxRecords, MaxDays))</param>
+    /// <param name="maxRetainedOrphanedInstances">孤立实例的最大保留记录数（默认10）</param>
+    /// <param name="maxDeletionsPerCycle">每次清理最大删除数量限制（0=无限制）</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>需要删除的实例ID列表</returns>
+    /// <remarks>
+    /// 实现应在数据库层面完成以下过滤：
+    /// 1. 只考虑终态实例 (Succeeded, Terminated, Cancelled, Skipped, Failed)
+    /// 2. 对每个JobKey，保留最近N条记录（N=MaxRecords）
+    /// 3. 删除超过MaxDays天的记录
+    /// 4. 孤立实例（JobKey不在retentionPolicies中）保留最近maxRetainedOrphanedInstances条
+    /// </remarks>
+    Task<List<string>> GetCleanupCandidatesAsync(
+        IReadOnlyDictionary<string, (int MaxRecords, int? MaxDays)> retentionPolicies,
+        int maxRetainedOrphanedInstances = 10,
+        int maxDeletionsPerCycle = 0,
+        CancellationToken cancellationToken = default);
+
     #endregion
 }

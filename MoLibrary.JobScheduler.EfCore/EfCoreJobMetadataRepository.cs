@@ -290,6 +290,139 @@ public class EfCoreJobMetadataRepository(
     }
 
     /// <summary>
+    /// 批量删除 Job 实例（EF Core 实现）
+    /// </summary>
+    public async Task<int> DeleteInstancesAsync(
+        IEnumerable<string> instanceIds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(instanceIds);
+
+        var instanceIdList = instanceIds.ToList();
+        if (instanceIdList.Count == 0)
+        {
+            return 0;
+        }
+
+        var dbContext = await dbContextProvider.GetDbContextAsync();
+
+        // Use ExecuteDeleteAsync for efficient batch deletion (EF Core 7+)
+        // This generates a single DELETE statement without loading entities into memory
+        var deletedCount = await dbContext.JobInstances
+            .Where(i => instanceIdList.Contains(i.InstanceId))
+            .ExecuteDeleteAsync(cancellationToken);
+
+        logger.LogInformation(
+            "Batch deleted {DeletedCount} job instances (requested {RequestedCount})",
+            deletedCount,
+            instanceIdList.Count);
+
+        return deletedCount;
+    }
+
+    /// <summary>
+    /// 查询需要清理的实例ID列表（优化的批量清理查询）
+    /// </summary>
+    public async Task<List<string>> GetCleanupCandidatesAsync(
+        IReadOnlyDictionary<string, (int MaxRecords, int? MaxDays)> retentionPolicies,
+        int maxRetainedOrphanedInstances = 10,
+        int maxDeletionsPerCycle = 0,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(retentionPolicies);
+
+        var dbContext = await dbContextProvider.GetDbContextAsync();
+
+        var terminalStates = new[]
+        {
+            JobState.Succeeded, JobState.Terminated,
+            JobState.Cancelled, JobState.Skipped, JobState.Failed
+        };
+
+        var now = DateTime.UtcNow;
+
+        // Step 1: Query terminal instances with projection (only needed fields)
+        // This avoids loading large StateHistory strings
+        var rankedQuery = dbContext.JobInstances
+            .AsNoTracking()
+            .Where(i => terminalStates.Contains(i.State))
+            .Select(i => new
+            {
+                i.InstanceId,
+                i.JobKey,
+                SortDate = i.CompletedAt ?? i.CreatedAt
+            });
+
+        // Materialize with projection (much lighter than full entities)
+        var allInstances = await rankedQuery.ToListAsync(cancellationToken);
+
+        // Step 2: In-memory ranking and filtering (on lightweight objects)
+        var candidateIds = new HashSet<string>();
+
+        var groupedInstances = allInstances
+            .GroupBy(i => i.JobKey)
+            .Select(g => new
+            {
+                JobKey = g.Key,
+                Instances = g.OrderByDescending(x => x.SortDate).ToList()
+            });
+
+        foreach (var group in groupedInstances)
+        {
+            int maxRecords;
+            int? maxDays;
+
+            if (retentionPolicies.TryGetValue(group.JobKey, out var policy))
+            {
+                maxRecords = policy.MaxRecords > 0 ? policy.MaxRecords : int.MaxValue;
+                maxDays = policy.MaxDays;
+            }
+            else
+            {
+                // Orphaned - use default
+                maxRecords = maxRetainedOrphanedInstances > 0 ? maxRetainedOrphanedInstances : int.MaxValue;
+                maxDays = null;
+            }
+
+            var cutoffDate = maxDays.HasValue ? now.AddDays(-maxDays.Value) : (DateTime?)null;
+
+            for (var i = 0; i < group.Instances.Count; i++)
+            {
+                var instance = group.Instances[i];
+                var shouldDelete = false;
+
+                // Count-based: beyond maxRecords limit
+                if (i >= maxRecords)
+                {
+                    shouldDelete = true;
+                }
+                // Time-based: older than cutoff
+                else if (cutoffDate.HasValue && instance.SortDate < cutoffDate.Value)
+                {
+                    shouldDelete = true;
+                }
+
+                if (shouldDelete)
+                {
+                    candidateIds.Add(instance.InstanceId);
+                }
+            }
+        }
+
+        // Apply per-cycle limit
+        var result = maxDeletionsPerCycle > 0 && candidateIds.Count > maxDeletionsPerCycle
+            ? candidateIds.Take(maxDeletionsPerCycle).ToList()
+            : candidateIds.ToList();
+
+        logger.LogInformation(
+            "GetCleanupCandidatesAsync: Found {Count} cleanup candidates from {TotalInstances} terminal instances",
+            result.Count,
+            allInstances.Count);
+
+        return result;
+    }
+
+    /// <summary>
     /// Applies dynamic sorting to JobInstance queryable based on field name
     /// </summary>
     private static IQueryable<JobInstanceEntity> ApplyInstanceSorting(
