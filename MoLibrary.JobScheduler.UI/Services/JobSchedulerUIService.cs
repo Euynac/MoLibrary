@@ -85,4 +85,15 @@ public class JobSchedulerUIService(
         string jobKey,
         CancellationToken cancellationToken = default)
         => healthMetricsService.CalculateHealthMetricsAsync(jobKey, cancellationToken);
+
+    // Batch Operations
+    public Task<Res<BatchJobOperationResult>> BatchPauseJobsAsync(
+        IReadOnlyList<string> jobKeys,
+        CancellationToken cancellationToken = default)
+        => apiService.BatchUpdateJobStateAsync(jobKeys, isDisabled: true, cancellationToken);
+
+    public Task<Res<BatchJobOperationResult>> BatchResumeJobsAsync(
+        IReadOnlyList<string> jobKeys,
+        CancellationToken cancellationToken = default)
+        => apiService.BatchUpdateJobStateAsync(jobKeys, isDisabled: false, cancellationToken);
 }

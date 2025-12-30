@@ -1,0 +1,85 @@
+@using MoLibrary.JobScheduler.Models
+
+<MudDialog>
+    <DialogContent>
+        <MudContainer MaxWidth="MaxWidth.False" Class="pa-0">
+            <div class="result-grid-wrapper">
+                <MudGrid Class="mb-3">
+                <MudItem xs="4">
+                    <MudPaper Class="pa-3" Elevation="0">
+                        <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                            <MudIcon Icon="@Icons.Material.Filled.Assignment"
+                                    Color="Color.Default" Size="Size.Large" />
+                            <MudText Typo="Typo.h5">@Result.TotalRequested</MudText>
+                            <MudText Typo="Typo.caption">总数</MudText>
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="4">
+                    <MudPaper Class="pa-3 success-card" Elevation="0">
+                        <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle"
+                                    Color="Color.Success" Size="Size.Large" />
+                            <MudText Typo="Typo.h5">@Result.SuccessCount</MudText>
+                            <MudText Typo="Typo.caption">成功</MudText>
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="4">
+                    <MudPaper Class="pa-3 error-card" Elevation="0">
+                        <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                            <MudIcon Icon="@Icons.Material.Filled.Error"
+                                    Color="Color.Error" Size="Size.Large" />
+                            <MudText Typo="Typo.h5">@Result.FailedCount</MudText>
+                            <MudText Typo="Typo.caption">失败</MudText>
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+            </div>
+
+            @if (Result.FailedCount > 0)
+            {
+                <div class="error-details-wrapper">
+                    <MudCard Outlined="true">
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.subtitle1" Color="Color.Error">
+                                    失败项详情
+                                </MudText>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            <MudList T="string" Dense="true" Class="error-list">
+                            @foreach (var item in Result.Results.Where(r => !r.Success))
+                            {
+                                <MudListItem T="string">
+                                    <MudStack Spacing="1">
+                                        <MudText Typo="Typo.body2">@item.JobKey</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Error">
+                                            @item.ErrorMessage
+                                        </MudText>
+                                    </MudStack>
+                                </MudListItem>
+                                <MudDivider />
+                            }
+                        </MudList>
+                    </MudCardContent>
+                </MudCard>
+                </div>
+            }
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close" Variant="Variant.Filled" Color="Color.Primary">
+            关闭
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance? MudDialog { get; set; }
+    [Parameter] public BatchJobOperationResult Result { get; set; } = new();
+
+    private void Close() => MudDialog?.Close();
+}

@@ -282,6 +282,108 @@ public class JobSchedulerApiService(
     }
 
     /// <summary>
+    /// Batch update job state (pause/resume multiple jobs).
+    /// </summary>
+    /// <param name="jobKeys">List of job keys to update</param>
+    /// <param name="isDisabled">Target disabled state (true = pause, false = resume)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Batch operation result with detailed status for each job</returns>
+    public async Task<Res<BatchJobOperationResult>> BatchUpdateJobStateAsync(
+        IReadOnlyList<string> jobKeys,
+        bool isDisabled,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            logger.LogInformation("Batch {Operation} requested for {Count} jobs",
+                isDisabled ? "pause" : "resume", jobKeys.Count);
+
+            var result = new BatchJobOperationResult
+            {
+                TotalRequested = jobKeys.Count
+            };
+
+            // Use SemaphoreSlim to limit concurrent operations
+            var semaphore = new SemaphoreSlim(10, 10);
+            var tasks = jobKeys.Select(async jobKey =>
+            {
+                await semaphore.WaitAsync(cancellationToken);
+                try
+                {
+                    var definition = await cacheService.GetDefinitionAsync(jobKey, cancellationToken);
+
+                    if (definition == null)
+                    {
+                        return new JobOperationResultItem
+                        {
+                            JobKey = jobKey,
+                            Success = false,
+                            ErrorMessage = $"Job {jobKey} not found"
+                        };
+                    }
+
+                    if (definition.JobType != JobType.Recurring)
+                    {
+                        return new JobOperationResultItem
+                        {
+                            JobKey = jobKey,
+                            Success = false,
+                            ErrorMessage = $"Job {jobKey} is not a recurring job"
+                        };
+                    }
+
+                    // Update definition via cache service (write-through + event publishing)
+                    definition.IsDisabled = isDisabled;
+                    await cacheService.SaveJobDefinitionAsync(definition, publishChangeEvent: true, cancellationToken);
+
+                    logger.LogDebug("Job {JobKey} {Operation} successfully",
+                        jobKey, isDisabled ? "paused" : "resumed");
+
+                    return new JobOperationResultItem
+                    {
+                        JobKey = jobKey,
+                        Success = true
+                    };
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Failed to {Operation} job {JobKey}",
+                        isDisabled ? "pause" : "resume", jobKey);
+
+                    return new JobOperationResultItem
+                    {
+                        JobKey = jobKey,
+                        Success = false,
+                        ErrorMessage = ex.Message
+                    };
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            });
+
+            var itemResults = await Task.WhenAll(tasks);
+            result.Results = itemResults.ToList();
+            result.SuccessCount = itemResults.Count(r => r.Success);
+            result.FailedCount = itemResults.Count(r => !r.Success);
+
+            logger.LogInformation(
+                "Batch {Operation} completed: {Success} succeeded, {Failed} failed",
+                isDisabled ? "pause" : "resume",
+                result.SuccessCount,
+                result.FailedCount);
+
+            return Res.Ok(result);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Batch update job state failed");
+            return Res.Fail($"Batch operation failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
     /// Updates job configuration.
     /// </summary>
     public async Task<Res> UpdateJobConfigAsync(

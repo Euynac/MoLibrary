@@ -1,0 +1,71 @@
+@using MoLibrary.JobScheduler.Models
+
+<MudDialog>
+    <DialogContent>
+        <MudContainer MaxWidth="MaxWidth.False" Class="pa-0">
+            <MudAlert Severity="@GetSeverity()" Class="mb-3">
+                <MudText>
+                    您即将@(OperationType == BatchOperationType.Pause ? "暂停" : "继续")
+                    <strong>@JobKeys.Count</strong> 个作业，请确认操作。
+                </MudText>
+            </MudAlert>
+
+            <div class="job-list-wrapper">
+                <MudCard Outlined="true" Class="mb-3">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.subtitle1">作业列表</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudList T="string" Dense="true" Class="batch-job-list">
+                        @foreach (var jobKey in JobKeys.Take(10))
+                        {
+                            <MudListItem T="string">
+                                <MudText Typo="Typo.body2">@jobKey</MudText>
+                            </MudListItem>
+                        }
+                        @if (JobKeys.Count > 10)
+                        {
+                            <MudListItem T="string">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                    ... 还有 @(JobKeys.Count - 10) 个作业
+                                </MudText>
+                            </MudListItem>
+                        }
+                    </MudList>
+                </MudCardContent>
+            </MudCard>
+            </div>
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">
+            取消
+        </MudButton>
+        <MudButton OnClick="Confirm"
+                  Variant="Variant.Filled"
+                  Color="@GetColor()"
+                  StartIcon="@GetIcon()">
+            确认@(OperationType == BatchOperationType.Pause ? "暂停" : "继续")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance? MudDialog { get; set; }
+    [Parameter] public List<string> JobKeys { get; set; } = [];
+    [Parameter] public BatchOperationType OperationType { get; set; }
+
+    private void Cancel() => MudDialog?.Cancel();
+    private void Confirm() => MudDialog?.Close(DialogResult.Ok(true));
+
+    private Severity GetSeverity() => OperationType == BatchOperationType.Pause
+        ? Severity.Warning : Severity.Info;
+
+    private Color GetColor() => OperationType == BatchOperationType.Pause
+        ? Color.Warning : Color.Success;
+
+    private string GetIcon() => OperationType == BatchOperationType.Pause
+        ? Icons.Material.Filled.Pause : Icons.Material.Filled.PlayArrow;
+}

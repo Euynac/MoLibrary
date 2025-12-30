@@ -8,6 +8,8 @@
 @using MudBlazor
 @using System.Text.Json
 @using Microsoft.JSInterop
+@using MoLibrary.JobScheduler.Models
+@using MoLibrary.JobScheduler.UI.Components
 @implements IAsyncDisposable
 
 <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
@@ -61,6 +63,43 @@
         </MudGrid>
     </MudPaper>
 
+    <!-- 批量操作工具栏（仅在 RecurringJob 选项卡且有选择时显示） -->
+    @if (_selectedRecurringJobs.Any() && _activeTabIndex == 0)
+    {
+        <MudPaper Class="pa-3 mb-3 batch-toolbar" Elevation="2">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Primary" />
+                    <MudText Typo="Typo.body1">
+                        已选择 <strong>@_selectedRecurringJobs.Count</strong> 个作业
+                    </MudText>
+                </MudStack>
+                <MudStack Row="true" Spacing="2">
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Warning"
+                               StartIcon="@Icons.Material.Filled.Pause"
+                               OnClick="BatchPauseJobsAsync"
+                               Disabled="_isProcessingBatch">
+                        批量暂停
+                    </MudButton>
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Success"
+                               StartIcon="@Icons.Material.Filled.PlayArrow"
+                               OnClick="BatchResumeJobsAsync"
+                               Disabled="_isProcessingBatch">
+                        批量继续
+                    </MudButton>
+                    <MudButton Variant="Variant.Text"
+                               Color="Color.Default"
+                               StartIcon="@Icons.Material.Filled.Clear"
+                               OnClick="ClearSelection">
+                        清除选择
+                    </MudButton>
+                </MudStack>
+            </MudStack>
+        </MudPaper>
+    }
+
     <!-- Tabs -->
     @if (_stateLoaded)
     {
@@ -74,6 +113,9 @@
                       T="JobDefinitionWithLastExecution"
                       ServerData="LoadRecurringJobsAsync"
                       RowsPerPage="@_recurringPageSize"
+                      MultiSelection="true"
+                      @bind-SelectedItems="_selectedRecurringJobs"
+                      SelectOnRowClick="false"
                       Hover="true"
                       Striped="true"
                       Elevation="0"
@@ -277,6 +319,10 @@
     private string? _filterFromProject;
     private string? _filterJobKey;
     private string? _filterJobName;
+
+    // Batch operation state
+    private HashSet<JobDefinitionWithLastExecution> _selectedRecurringJobs = [];
+    private bool _isProcessingBatch = false;
 
     // Table state persistence
     private IJSObjectReference? _tableStateModule;
@@ -689,6 +735,111 @@
         {
             Console.WriteLine($"Failed to save TriggerJob table state: {ex.Message}");
         }
+    }
+
+    // Batch operation methods
+
+    private async Task BatchPauseJobsAsync()
+    {
+        await ExecuteBatchOperationAsync(BatchOperationType.Pause);
+    }
+
+    private async Task BatchResumeJobsAsync()
+    {
+        await ExecuteBatchOperationAsync(BatchOperationType.Resume);
+    }
+
+    private async Task ExecuteBatchOperationAsync(BatchOperationType operationType)
+    {
+        var jobKeys = _selectedRecurringJobs
+            .Select(j => j.Definition.JobKey)
+            .ToList();
+
+        // Show confirmation dialog
+        var confirmParams = new DialogParameters<BatchOperationConfirmDialog>
+        {
+            { x => x.JobKeys, jobKeys },
+            { x => x.OperationType, operationType }
+        };
+
+        var confirmOptions = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true,
+            CloseButton = true,
+            BackdropClick = false
+        };
+
+        var confirmDialog = await DialogService.ShowAsync<BatchOperationConfirmDialog>(
+            "确认批量操作", confirmParams, confirmOptions);
+
+        var confirmResult = await confirmDialog.Result;
+
+        if (confirmResult.Canceled)
+            return;
+
+        // Execute batch operation
+        _isProcessingBatch = true;
+        StateHasChanged();
+
+        try
+        {
+            Res<BatchJobOperationResult> result = operationType == BatchOperationType.Pause
+                ? await UIService.BatchPauseJobsAsync(jobKeys)
+                : await UIService.BatchResumeJobsAsync(jobKeys);
+
+            if (result.IsFailed(out var error, out var data))
+            {
+                Snackbar.Add($"批量操作失败: {error.Message}", Severity.Error);
+                return;
+            }
+
+            // Show result dialog
+            var resultParams = new DialogParameters<BatchOperationResultDialog>
+            {
+                { x => x.Result, data }
+            };
+
+            var resultOptions = new DialogOptions
+            {
+                MaxWidth = MaxWidth.Medium,
+                FullWidth = true,
+                CloseButton = true
+            };
+
+            await DialogService.ShowAsync<BatchOperationResultDialog>(
+                "批量操作结果", resultParams, resultOptions);
+
+            // Show summary snackbar
+            if (data.FailedCount == 0)
+            {
+                Snackbar.Add($"批量操作成功: {data.SuccessCount} 个作业已更新", Severity.Success);
+            }
+            else if (data.SuccessCount > 0)
+            {
+                Snackbar.Add(
+                    $"批量操作完成: {data.SuccessCount} 成功, {data.FailedCount} 失败",
+                    Severity.Warning);
+            }
+            else
+            {
+                Snackbar.Add($"批量操作失败: 所有操作均失败", Severity.Error);
+            }
+
+            // Clear selection and refresh
+            _selectedRecurringJobs.Clear();
+            await RefreshRecurringJobsAsync();
+        }
+        finally
+        {
+            _isProcessingBatch = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ClearSelection()
+    {
+        _selectedRecurringJobs.Clear();
     }
 
     /// <summary>
