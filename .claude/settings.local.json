@@ -50,7 +50,9 @@
       "Bash(git branch:*)",
       "Bash(xargs:*)",
       "Bash(tee:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "mcp__graphiti-memory__search_nodes",
+      "mcp__graphiti-memory__search_memory_facts"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

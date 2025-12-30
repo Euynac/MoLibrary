@@ -75,6 +75,36 @@
                         当前超时: @_timeoutHours 小时 @_timeoutMinutes 分钟（默认: 1小时）
                     </MudText>
 
+                    <!-- History Retention Section -->
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mt-2">
+                        <MudText Typo="Typo.subtitle2" Color="Color.Primary">历史记录保留策略</MudText>
+                        <MudTooltip Text="这两个设置共同控制作业执行历史的自动清理。当记录数超过最大数量或超过保留天数时，最旧的记录将被自动删除">
+                            <MudIcon Icon="@Icons.Material.Filled.Info"
+                                     Size="Size.Small"
+                                     Color="Color.Info"
+                                     Style="font-size: 16px;" />
+                        </MudTooltip>
+                    </MudStack>
+
+                    <!-- MaxRetainedHistoryRecords -->
+                    <MudNumericField @bind-Value="@_maxRetainedHistoryRecords"
+                                     T="int"
+                                     Label="最大历史记录数"
+                                     Variant="Variant.Outlined"
+                                     Min="0"
+                                     Required="true"
+                                     RequiredError="最大历史记录数不能为空"
+                                     HelperText="保留的历史记录最大数量。默认值为100，设置为0或负数表示不限制记录数量" />
+
+                    <!-- MaxRetentionDays -->
+                    <MudNumericField @bind-Value="@_maxRetentionDays"
+                                     T="int?"
+                                     Label="历史保留天数"
+                                     Variant="Variant.Outlined"
+                                     Min="1"
+                                     Clearable="true"
+                                     HelperText="历史记录保留的最大天数。留空表示不启用基于时间的清理策略" />
+
                     <!-- Recurring Job Specific Fields -->
                     @if (JobDefinition?.JobType == JobType.Recurring)
                     {
@@ -133,6 +163,8 @@
     private int _retryCount = 0;
     private int _timeoutHours = 1;
     private int _timeoutMinutes = 0;
+    private int _maxRetainedHistoryRecords = 100;
+    private int? _maxRetentionDays;
     private DateTime? _startDate;
     private TimeSpan? _startTime;
     private DateTime? _endDate;
@@ -153,6 +185,10 @@
         var totalMinutes = (int)JobDefinition.MaxExecutionTimeout.TotalMinutes;
         _timeoutHours = totalMinutes / 60;
         _timeoutMinutes = totalMinutes % 60;
+
+        // Initialize retention fields
+        _maxRetainedHistoryRecords = JobDefinition.MaxRetainedHistoryRecords;
+        _maxRetentionDays = JobDefinition.MaxRetentionDays;
 
         // Set StartTime and EndTime for Recurring jobs
         if (JobDefinition.JobType == JobType.Recurring)
@@ -202,6 +238,13 @@
             return;
         }
 
+        // Validation for retention fields
+        if (_maxRetentionDays.HasValue && _maxRetentionDays.Value < 1)
+        {
+            Snackbar.Add("历史保留天数必须大于等于1", Severity.Warning);
+            return;
+        }
+
         _isLoading = true;
 
         try
@@ -211,6 +254,10 @@
             JobDefinition.Description = _description;
             JobDefinition.MaxConcurrency = _maxConcurrency;
             JobDefinition.RetryCount = _retryCount;
+
+            // Update retention fields
+            JobDefinition.MaxRetainedHistoryRecords = _maxRetainedHistoryRecords;
+            JobDefinition.MaxRetentionDays = _maxRetentionDays;
 
             // Convert hours and minutes back to TimeSpan
             JobDefinition.MaxExecutionTimeout = new TimeSpan(_timeoutHours, _timeoutMinutes, 0);

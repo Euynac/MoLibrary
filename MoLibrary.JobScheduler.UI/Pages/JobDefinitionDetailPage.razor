@@ -254,6 +254,36 @@
                     </MudStack>
                     <MudText Typo="Typo.body1">@_jobDefinition.MaxExecutionTimeout</MudText>
                 </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudStack Row="true" AlignItems="AlignItems.Center">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">最大历史记录数</MudText>
+                        <MudTooltip Text="保留的历史执行记录最大数量。当超过此数量时，最旧的记录将被自动清理。设置为0或负数表示不限制记录数量。">
+                            <MudIcon Icon="@Icons.Material.Filled.Info"
+                                     Size="Size.Small"
+                                     Color="Color.Info"
+                                     Class="ml-1"
+                                     Style="font-size: 14px;" />
+                        </MudTooltip>
+                    </MudStack>
+                    <MudText Typo="Typo.body1">
+                        @(_jobDefinition.MaxRetainedHistoryRecords <= 0 ? "无限制" : _jobDefinition.MaxRetainedHistoryRecords.ToString())
+                    </MudText>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudStack Row="true" AlignItems="AlignItems.Center">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">历史保留天数</MudText>
+                        <MudTooltip Text="历史执行记录的最大保留天数。超过此天数的记录将被自动清理。未设置表示不启用基于时间的清理策略。">
+                            <MudIcon Icon="@Icons.Material.Filled.Info"
+                                     Size="Size.Small"
+                                     Color="Color.Info"
+                                     Class="ml-1"
+                                     Style="font-size: 14px;" />
+                        </MudTooltip>
+                    </MudStack>
+                    <MudText Typo="Typo.body1">
+                        @(_jobDefinition.MaxRetentionDays.HasValue ? $"{_jobDefinition.MaxRetentionDays.Value} 天" : "未设置")
+                    </MudText>
+                </MudItem>
                 @if (_jobDefinition.JobType == JobType.Recurring)
                 {
                     @if (_jobDefinition.StartTime.HasValue)
