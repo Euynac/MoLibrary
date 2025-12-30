@@ -70,17 +70,9 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
             services.AddTransient(job.JobClrType);
             Logger.LogDebug("Discovered {JobType}Job: {JobKey} ({TypeName})", job.JobType, job.JobKey, job.JobName);
         }
-
-        Logger.LogInformation("Discovered {Count} job type(s) for registration", _jobDefinitions.Count);
-
-        if (_jobDefinitions.Count == 0)
-        {
-            Logger.LogInformation("No jobs discovered. Job scheduler will run without any registered jobs.");
-            return;
-        }
-
-        services.AddSingleton<JobExecutor>();
+        
         services.AddSingleton<JobSchedulerApiService>();
+        services.AddSingleton<JobExecutor>();
         services.AddSingleton<JobRegistry>();
         services.AddSingleton<JobInstanceManager>();
         services.AddSingleton<JobDispatcher>();
@@ -96,6 +88,15 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
         services.AddSingleton<RecurringJobScheduler>();
         services.AddSingleton<TriggeredJobScheduler>();
 
+        Logger.LogInformation("Discovered {Count} job type(s) for registration", _jobDefinitions.Count);
+
+        if (_jobDefinitions.Count == 0)
+        {
+            Logger.LogInformation("No jobs discovered. Job scheduler will run without any registered jobs.");
+            return;
+        }
+
+       
         services.AddHostedService<JobRegistrationHostedService>(provider => ActivatorUtilities.CreateInstance<JobRegistrationHostedService>(provider, _jobDefinitions));
 
         services.AddHostedService<JobWorkerManagerHostedService>(provider => ActivatorUtilities.CreateInstance<JobWorkerManagerHostedService>(provider, _jobDefinitions));
