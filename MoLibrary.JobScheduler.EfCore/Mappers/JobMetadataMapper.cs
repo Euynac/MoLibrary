@@ -33,6 +33,8 @@ public static class JobMetadataMapper
         entity.CronExpression = model.CronExpression;
         entity.StartTime = model.StartTime;
         entity.EndTime = model.EndTime;
+        entity.MaxRetainedHistoryRecords = model.MaxRetainedHistoryRecords;
+        entity.MaxRetentionDays = model.MaxRetentionDays;
 
         return entity;
     }
@@ -60,7 +62,9 @@ public static class JobMetadataMapper
             DeletedAt = entity.DeletedAt,
             CronExpression = entity.CronExpression,
             StartTime = entity.StartTime,
-            EndTime = entity.EndTime
+            EndTime = entity.EndTime,
+            MaxRetainedHistoryRecords = entity.MaxRetainedHistoryRecords,
+            MaxRetentionDays = entity.MaxRetentionDays
             // Note: JobClrType and JobArgsClrType are not persisted
             // They are set by the module when loading job types at startup
         };
