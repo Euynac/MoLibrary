@@ -98,12 +98,10 @@
                     <MudItem xs="12" sm="6">
                         <div>
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Cron表达式</MudText>
-                            <MudChip T="string"
-                                     Color="Color.Primary"
-                                     OnClick="OpenCronEditorDialog"
-                                     Style="cursor: pointer; font-family: monospace; margin-top: 4px;">
-                                @_jobDefinition.CronExpression
-                            </MudChip>
+                            <CronExpressionDisplay Expression="@_jobDefinition.CronExpression"
+                                                   DisplayMode="CronDisplayMode.Full"
+                                                   ChipColor="Color.Primary"
+                                                   OnClick="OpenCronEditorDialog" />
                         </div>
                     </MudItem>
                 }

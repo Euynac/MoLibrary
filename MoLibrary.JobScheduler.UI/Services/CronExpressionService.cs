@@ -254,3 +254,19 @@ public class SimpleSettings
     public string Month { get; set; } = "*";
     public string DayOfWeek { get; set; } = "*";
 }
+
+/// <summary>
+/// Cron 表达式显示模式
+/// </summary>
+public enum CronDisplayMode
+{
+    /// <summary>
+    /// 紧凑模式：悬浮显示描述
+    /// </summary>
+    Compact,
+
+    /// <summary>
+    /// 完整模式：直接显示描述
+    /// </summary>
+    Full
+}

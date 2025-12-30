@@ -142,12 +142,8 @@
                     <MudTd DataLabel="作业键">@context.Definition.JobKey</MudTd>
                     <MudTd DataLabel="作业名称">@context.Definition.JobName</MudTd>
                     <MudTd DataLabel="Cron表达式">
-                        <MudChip T="string"
-                                 Size="Size.Small"
-                                 Color="Color.Info"
-                                 Class="font-monospace">
-                            @context.Definition.CronExpression
-                        </MudChip>
+                        <CronExpressionDisplay Expression="@context.Definition.CronExpression"
+                                               DisplayMode="CronDisplayMode.Compact" />
                     </MudTd>
                     <MudTd DataLabel="下次执行时间">
                         @if (context.NextExecutionTime.HasValue)

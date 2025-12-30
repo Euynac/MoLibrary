@@ -1,0 +1,40 @@
+/* Compact mode wrapper */
+.cron-compact-wrapper ::deep .mud-chip {
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', 'Monaco', monospace !important;
+    cursor: default;
+}
+
+.cron-compact-wrapper ::deep .mud-chip-content {
+    display: flex;
+    align-items: center;
+}
+
+.cron-compact-wrapper ::deep .mud-icon {
+    opacity: 0.7;
+    font-size: 14px !important;
+    margin-left: 4px;
+}
+
+/* Full mode wrapper */
+.cron-full-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.cron-full-wrapper ::deep .mud-chip {
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', 'Monaco', monospace !important;
+    cursor: pointer;
+    margin-top: 4px;
+}
+
+.cron-full-wrapper ::deep .mud-text {
+    margin-top: 4px;
+    font-size: 0.875rem;
+}
+
+.cron-full-wrapper .loading-text {
+    display: flex;
+    align-items: center;
+    margin-top: 4px;
+}
