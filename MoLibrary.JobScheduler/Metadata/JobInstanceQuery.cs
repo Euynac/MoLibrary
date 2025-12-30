@@ -13,6 +13,11 @@ public record JobInstanceQuery
     public string? JobKey { get; init; }
 
     /// <summary>
+    /// JobKey 批量精确匹配（优先级高于 JobKey 属性）
+    /// </summary>
+    public List<string>? JobKeys { get; init; }
+
+    /// <summary>
     /// JobKey 模糊匹配（包含关系，不区分大小写）
     /// </summary>
     public string? JobKeyContains { get; init; }

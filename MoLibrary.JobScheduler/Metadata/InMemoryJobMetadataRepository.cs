@@ -161,8 +161,15 @@ public class InMemoryJobMetadataRepository(ILogger<InMemoryJobMetadataRepository
         var items = _instances.Values.AsEnumerable();
 
         // 应用过滤
-        if (!string.IsNullOrEmpty(query.JobKey))
+        // Support both single JobKey and multiple JobKeys filtering (JobKeys takes priority)
+        if (query.JobKeys is { Count: > 0 })
+        {
+            items = items.Where(i => query.JobKeys.Contains(i.JobKey));
+        }
+        else if (!string.IsNullOrEmpty(query.JobKey))
+        {
             items = items.Where(i => i.JobKey == query.JobKey);
+        }
 
         if (!string.IsNullOrEmpty(query.JobKeyContains))
             items = items.Where(i => i.JobKey.Contains(query.JobKeyContains, StringComparison.OrdinalIgnoreCase));

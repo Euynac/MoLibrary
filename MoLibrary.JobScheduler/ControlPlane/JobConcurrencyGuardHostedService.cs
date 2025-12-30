@@ -66,21 +66,43 @@ public class JobConcurrencyGuardHostedService(
         }
 
         // 3. Scan all Enqueued and Processing state instances to recover in-memory state
-        foreach (var definition in definitions)
+        // Use single batch query instead of N queries (one per definition)
+        var allJobKeys = definitions.Select(d => d.JobKey).ToList();
+        logger.LogDebug("Querying instances for {Count} job definitions in batch", allJobKeys.Count);
+
+        var batchQuery = new JobInstanceQuery
         {
-            var query = new JobInstanceQuery
+            JobKeys = allJobKeys,
+            States = [JobState.Enqueued, JobState.Processing],
+            PageNumber = 1,
+            PageSize = int.MaxValue
+        };
+
+        var batchResult = await metadataRepository.QueryInstancesAsync(batchQuery, cancellationToken);
+        var allInstances = batchResult.Items;
+
+        logger.LogDebug(
+            "Retrieved {InstanceCount} active instances ({EnqueuedCount} Enqueued, {ProcessingCount} Processing)",
+            allInstances.Count,
+            allInstances.Count(i => i.State == JobState.Enqueued),
+            allInstances.Count(i => i.State == JobState.Processing));
+
+        // Group instances by JobKey for efficient recovery
+        var instancesByJob = allInstances.GroupBy(i => i.JobKey);
+
+        foreach (var group in instancesByJob)
+        {
+            var jobKey = group.Key;
+
+            if (!_statistics.TryGetValue(jobKey, out var statistic))
             {
-                JobKey = definition.JobKey,
-                States = [JobState.Enqueued, JobState.Processing],
-                PageNumber = 1,
-                PageSize = int.MaxValue
-            };
-            var result = await metadataRepository.QueryInstancesAsync(query, cancellationToken);
-            var instances = result.Items;
+                logger.LogWarning(
+                    "Found instances for unknown job {JobKey} during recovery, skipping",
+                    jobKey);
+                continue;
+            }
 
-            var statistic = _statistics[definition.JobKey];
-
-            foreach (var instance in instances)
+            foreach (var instance in group)
             {
                 if (instance.State == JobState.Enqueued)
                 {
@@ -90,7 +112,7 @@ public class JobConcurrencyGuardHostedService(
                     logger.LogDebug(
                         "Recovered pending reservation for instance {InstanceId} of job {JobKey}",
                         instance.InstanceId,
-                        definition.JobKey);
+                        jobKey);
                 }
                 else if (instance.State == JobState.Processing)
                 {
@@ -113,7 +135,7 @@ public class JobConcurrencyGuardHostedService(
                     logger.LogDebug(
                         "Recovered running instance {InstanceId} for job {JobKey} on worker {WorkerId}",
                         instance.InstanceId,
-                        definition.JobKey,
+                        jobKey,
                         instance.RunningClientId);
                 }
             }

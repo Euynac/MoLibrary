@@ -186,7 +186,12 @@ public class EfCoreJobMetadataRepository(
         var queryable = dbContext.JobInstances.AsNoTracking();
 
         // Apply filters
-        if (!string.IsNullOrEmpty(query.JobKey))
+        // Support both single JobKey and multiple JobKeys filtering (JobKeys takes priority)
+        if (query.JobKeys is { Count: > 0 })
+        {
+            queryable = queryable.Where(i => query.JobKeys.Contains(i.JobKey));
+        }
+        else if (!string.IsNullOrEmpty(query.JobKey))
         {
             queryable = queryable.Where(i => i.JobKey == query.JobKey);
         }
