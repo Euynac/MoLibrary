@@ -201,7 +201,12 @@ public class EfCoreJobMetadataRepository(
             queryable = queryable.Where(i => EF.Functions.Like(i.InstanceId, $"%{query.InstanceIdContains}%"));
         }
 
-        if (query.State.HasValue)
+        // Support both single state and multiple states filtering (States takes priority)
+        if (query.States is { Count: > 0 })
+        {
+            queryable = queryable.Where(i => query.States.Contains(i.State));
+        }
+        else if (query.State.HasValue)
         {
             queryable = queryable.Where(i => i.State == query.State.Value);
         }

@@ -65,41 +65,57 @@ public class JobConcurrencyGuardHostedService(
             _jobLocks[definition.JobKey] = new SemaphoreSlim(1, 1);
         }
 
-        // 3. Scan all Processing state instances to recover in-memory state
+        // 3. Scan all Enqueued and Processing state instances to recover in-memory state
         foreach (var definition in definitions)
         {
             var query = new JobInstanceQuery
             {
                 JobKey = definition.JobKey,
-                State = JobState.Processing,
+                States = [JobState.Enqueued, JobState.Processing],
                 PageNumber = 1,
                 PageSize = int.MaxValue
             };
             var result = await metadataRepository.QueryInstancesAsync(query, cancellationToken);
-            var processingInstances = result.Items;
+            var instances = result.Items;
 
-            foreach (var instance in processingInstances)
+            var statistic = _statistics[definition.JobKey];
+
+            foreach (var instance in instances)
             {
-                if (string.IsNullOrEmpty(instance.RunningClientId) || !instance.StartedAt.HasValue)
+                if (instance.State == JobState.Enqueued)
                 {
-                    logger.LogWarning(
-                        "Found Processing instance {InstanceId} with missing client ID or started time, skipping recovery",
-                        instance.InstanceId);
-                    continue;
+                    // Recover pending reservation
+                    statistic.ReserveSlot(instance.InstanceId);
+
+                    logger.LogDebug(
+                        "Recovered pending reservation for instance {InstanceId} of job {JobKey}",
+                        instance.InstanceId,
+                        definition.JobKey);
                 }
-
-                _statistics[definition.JobKey].AddInstance(new RunningJobInfo
+                else if (instance.State == JobState.Processing)
                 {
-                    InstanceId = instance.InstanceId,
-                    WorkerClientId = instance.RunningClientId,
-                    StartedAt = instance.StartedAt.Value
-                });
+                    // Recover running instance
+                    if (string.IsNullOrEmpty(instance.RunningClientId) || !instance.StartedAt.HasValue)
+                    {
+                        logger.LogWarning(
+                            "Found Processing instance {InstanceId} with missing client ID or started time, skipping recovery",
+                            instance.InstanceId);
+                        continue;
+                    }
 
-                logger.LogDebug(
-                    "Recovered running instance {InstanceId} for job {JobKey} on worker {WorkerId}",
-                    instance.InstanceId,
-                    definition.JobKey,
-                    instance.RunningClientId);
+                    statistic.AddInstance(new RunningJobInfo
+                    {
+                        InstanceId = instance.InstanceId,
+                        WorkerClientId = instance.RunningClientId,
+                        StartedAt = instance.StartedAt.Value
+                    });
+
+                    logger.LogDebug(
+                        "Recovered running instance {InstanceId} for job {JobKey} on worker {WorkerId}",
+                        instance.InstanceId,
+                        definition.JobKey,
+                        instance.RunningClientId);
+                }
             }
         }
 
@@ -119,9 +135,10 @@ public class JobConcurrencyGuardHostedService(
         }
 
         logger.LogInformation(
-            "JobConcurrencyGuard initialized with {DefinitionCount} job definitions and {RunningCount} recovered running instances",
+            "JobConcurrencyGuard initialized with {DefinitionCount} job definitions, {PendingCount} pending reservations, and {RunningCount} running instances",
             _statistics.Count,
-            _statistics.Values.Sum(s => s.CurrentExecutingCount));
+            _statistics.Values.Sum(s => s.PendingReservations.Count),
+            _statistics.Values.Sum(s => s.RunningInstances.Count));
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)

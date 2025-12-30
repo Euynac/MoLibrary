@@ -23,9 +23,14 @@ public record JobInstanceQuery
     public string? InstanceIdContains { get; init; }
 
     /// <summary>
-    /// 按状态过滤
+    /// 按状态过滤（单一状态）
     /// </summary>
     public JobState? State { get; init; }
+
+    /// <summary>
+    /// 按多个状态过滤（优先级高于 State 属性）
+    /// </summary>
+    public List<JobState>? States { get; init; }
 
     /// <summary>
     /// 创建时间起始（包含）

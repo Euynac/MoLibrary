@@ -170,7 +170,10 @@ public class InMemoryJobMetadataRepository(ILogger<InMemoryJobMetadataRepository
         if (!string.IsNullOrEmpty(query.InstanceIdContains))
             items = items.Where(i => i.InstanceId.Contains(query.InstanceIdContains, StringComparison.OrdinalIgnoreCase));
 
-        if (query.State.HasValue)
+        // Support both single state and multiple states filtering (States takes priority)
+        if (query.States is { Count: > 0 })
+            items = items.Where(i => query.States.Contains(i.State));
+        else if (query.State.HasValue)
             items = items.Where(i => i.State == query.State.Value);
 
         if (query.CreatedAfter.HasValue)
