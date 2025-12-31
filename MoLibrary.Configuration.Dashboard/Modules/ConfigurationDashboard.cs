@@ -12,8 +12,8 @@ using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
-using MoLibrary.RegisterCentre.Interfaces;
 using MoLibrary.RegisterCentre.Modules;
+using MoLibrary.RegisterCentre.ServiceInvocation.Modules;
 
 namespace MoLibrary.Configuration.Dashboard.Modules;
 
@@ -29,6 +29,7 @@ public class ModuleConfigurationDashboard(ModuleConfigurationDashboardOption opt
     {
         DependsOnModule<ModuleRegisterCentreGuide>().Register();
         DependsOnModule<ModuleConfigurationGuide>().Register();
+        DependsOnModule<ModuleServiceInvocationGuide>().Register();
     }
 
     public override void ConfigureServices(IServiceCollection services)
@@ -170,16 +171,16 @@ public class ModuleConfigurationDashboardGuide : MoModuleGuide<ModuleConfigurati
 
     public ModuleConfigurationDashboardGuide SetAsDashboard()
     {
+        // Configure RegisterCentre and mark this as a centre server (for endpoint routing)
         DependsOnModule<ModuleRegisterCentreGuide>().Register().SetAsCentreServer();
+
         ConfigureServices(context =>
         {
             context.Services.TryAddSingleton<IMoConfigurationDashboard, DefaultArrangeDashboard>();
             context.Services.AddSingleton<MemoryProviderForConfigCentre>();
-            context.Services.AddSingleton(p =>
-                ((IRegisterCentreServer?) p.GetService(typeof(MemoryProviderForConfigCentre)))!);
-            context.Services.AddSingleton(p =>
-                ((IMoConfigurationCentre?) p.GetService(typeof(MemoryProviderForConfigCentre)))!);
-           
+            context.Services.AddSingleton<IMoConfigurationCentre>(p =>
+                p.GetRequiredService<MemoryProviderForConfigCentre>());
+
             context.Services.TryAddTransient<IMoConfigurationStores, MoConfigurationDefaultMemoryStore>();
             context.Services.AddSingleton<IMoConfigurationModifier, MoConfigurationJsonFileModifier>();
         });

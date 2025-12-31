@@ -10,6 +10,7 @@
 @inject IOptions<ModuleRegisterCentreOption> Options
 @inject IServiceProvider ServiceProvider
 @inject ISnackbar Snackbar
+@inject MoLibrary.Configuration.Services.ModuleConfigurationService ModuleConfigurationService
 
 <PageTitle>配置面板</PageTitle>
 
@@ -18,7 +19,7 @@
     
     @if (Options.Value.IsCentreServer)
     {
-        <MudTabs Elevation="4" Rounded="true" Color="Color.Primary" ActivePanelIndexChanged="OnTabChanged">
+        <MudTabs Elevation="4" Rounded="true" Color="Color.Primary" @bind-ActivePanelIndex="activeTabIndex" @bind-ActivePanelIndex:after="OnTabChangedAsync">
             <MudTabPanel Text="配置状态">
                 <div class="pa-4">
                     <MudGrid>
@@ -59,6 +60,18 @@
                     <ConfigurationOverview />
                 </div>
             </MudTabPanel>
+
+			<MudTabPanel Text="调试视图">
+                <div class="pa-4">
+                    <ConfigurationDebugView @ref="debugViewComponent" />
+                </div>
+            </MudTabPanel>
+
+			<MudTabPanel Text="配置提供者">
+                <div class="pa-4">
+                    <ConfigurationProviderView @ref="providerViewComponent" />
+                </div>
+            </MudTabPanel>
         </MudTabs>
     }
     else
@@ -75,10 +88,15 @@
 
 @code {
     public const string PAGE_URL = "/configuration-dashboard";
-    
+
     private List<DtoDomainConfigs>? configStatus;
     private bool isLoading = false;
     private ConfigurationDashboardService? configurationDashboardService;
+    private int activeTabIndex = 0;
+
+    // Component references
+    private ConfigurationDebugView? debugViewComponent;
+    private ConfigurationProviderView? providerViewComponent;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -130,9 +148,23 @@
         }
     }
     
-    private void OnTabChanged(int activeTabIndex)
+    private async Task OnTabChangedAsync()
     {
-        // Tab切换时不需要特殊处理，因为ConfigurationExplorer组件会保持状态
-        // 这个方法预留给未来可能的扩展需求
+        // Lazy load when switching to new tabs
+        switch (activeTabIndex)
+        {
+            case 3: // 调试视图
+                if (debugViewComponent != null)
+                {
+                    await debugViewComponent.LoadDebugViewAsync();
+                }
+                break;
+            case 4: // 配置提供者
+                if (providerViewComponent != null)
+                {
+                    await providerViewComponent.LoadProvidersAsync();
+                }
+                break;
+        }
     }
 }

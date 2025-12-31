@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MoLibrary.Core.Extensions;
@@ -9,7 +8,6 @@ using MoLibrary.Core.Modules;
 using MoLibrary.JobScheduler.Modules;
 using MoLibrary.RegisterCentre.Interfaces;
 using MoLibrary.RegisterCentre.Models;
-using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.JobScheduler.Core;
 
@@ -18,7 +16,7 @@ namespace MoLibrary.JobScheduler.Core;
 /// Handles registration wait, leader status verification, and initialization state management using the Template Method pattern.
 /// </summary>
 public abstract class CoordinatedLeaderService(
-    ILeaderService leaderService,
+    ILeaderElectionService leaderService,
     IOptions<ModuleJobSchedulerOption> options,
     ILogger logger,
     IServiceRegistrationCoordinator coordinator,
@@ -66,7 +64,7 @@ public abstract class CoordinatedLeaderService(
 
             // Step 3: Verify this instance is the leader
             RecordState("Checking leader status", HostedServiceState.Starting);
-            if (!await EnsureIsLeaderAsync(stoppingToken))
+            if (!EnsureIsLeader())
             {
                 // Follower instances mark as running without doing work
                 RecordState("Follower instance - no work to do", HostedServiceState.Running);
@@ -126,20 +124,13 @@ public abstract class CoordinatedLeaderService(
     /// Only leader instances should perform initialization.
     /// </summary>
     /// <returns>True if the instance is leader and should initialize, false otherwise</returns>
-    private async Task<bool> EnsureIsLeaderAsync(CancellationToken cancellationToken)
+    private bool EnsureIsLeader()
     {
-        var statusResult = await leaderService.GetCurrentLeaderStatusAsync();
+        var status = leaderService.CurrentStatus;
 
-        if (statusResult.IsFailed(out var error, out var data))
+        if (status != LeaderStatus.Leader)
         {
-            var exception = new InvalidOperationException($"Failed to get leader status: {error.Message}");
-            RecordState("Failed to get leader status", HostedServiceState.Faulted, exception);
-            return false;
-        }
-
-        if (data.Status != LeaderStatus.Leader)
-        {
-            RecordState($"Not leader (status: {data.Status}), skipping initialization", HostedServiceState.Starting);
+            RecordState($"Not leader (status: {status}), skipping initialization", HostedServiceState.Starting);
             return false;
         }
 

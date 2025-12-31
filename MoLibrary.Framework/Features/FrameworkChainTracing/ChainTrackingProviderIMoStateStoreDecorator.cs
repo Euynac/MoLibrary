@@ -262,10 +262,45 @@ public class ChainTrackingProviderIMoStateStoreDecorator(
     {
         var extraInfo = new { Type = typeof(T).Name, Prefix = prefix };
         return await ExecuteWithTracing(
-            "GetStateAndVersionAsync", 
-            () => stateStore.GetStateAndVersionAsync<T>(key, prefix, cancellationToken), 
-            key, 
-            prefix, 
+            "GetStateAndVersionAsync",
+            () => stateStore.GetStateAndVersionAsync<T>(key, prefix, cancellationToken),
+            key,
+            prefix,
+            extraInfo);
+    }
+
+    public override async Task<(bool Success, string? NewETag)> TrySaveStateWithETagAsync<T>(string key, T value, string expectedETag,
+        string? prefix, CancellationToken cancellationToken = default, TimeSpan? ttl = null)
+    {
+        var extraInfo = new
+        {
+            Type = typeof(T).Name,
+            Prefix = prefix,
+            ExpectedETag = expectedETag,
+            TTL = ttl?.ToString()
+        };
+        return await ExecuteWithTracing(
+            "TrySaveStateWithETagAsync",
+            () => stateStore.TrySaveStateWithETagAsync(key, value, expectedETag, prefix, cancellationToken, ttl),
+            key,
+            prefix,
+            extraInfo);
+    }
+
+    public override async Task<bool> TrySaveStateIfNotExistsAsync<T>(string key, T value, string? prefix,
+        CancellationToken cancellationToken = default, TimeSpan? ttl = null)
+    {
+        var extraInfo = new
+        {
+            Type = typeof(T).Name,
+            Prefix = prefix,
+            TTL = ttl?.ToString()
+        };
+        return await ExecuteWithTracing(
+            "TrySaveStateIfNotExistsAsync",
+            () => stateStore.TrySaveStateIfNotExistsAsync(key, value, prefix, cancellationToken, ttl),
+            key,
+            prefix,
             extraInfo);
     }
 

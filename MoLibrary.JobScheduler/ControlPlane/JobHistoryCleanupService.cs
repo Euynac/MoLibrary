@@ -18,7 +18,7 @@ namespace MoLibrary.JobScheduler.ControlPlane;
 public class JobHistoryCleanupService(
     IMoJobMetadataRepository metadataRepository,
     ILogger<JobHistoryCleanupService> logger,
-    ILeaderService leaderService,
+    ILeaderElectionService leaderService,
     IOptions<ModuleJobSchedulerOption> options,
     IServiceRegistrationCoordinator coordinator,
     IObservableInstanceManager observableManager,

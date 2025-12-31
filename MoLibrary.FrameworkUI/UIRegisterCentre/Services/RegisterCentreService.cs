@@ -12,17 +12,19 @@ public class RegisterCentreService(
 {
     private static readonly Dictionary<string, string> _domainColors = new();
     private static List<DomainInfo> _cachedDomains = [];
+
     public async Task<Res<List<RegisteredServiceStatus>>> GetServicesStatusAsync()
     {
         try
         {
-            var registerCentreServer = serviceProvider.GetService<IRegisterCentreServer>();
-            if (registerCentreServer == null)
+            var stateManager = serviceProvider.GetService<IRegistrationStateManager>();
+            if (stateManager == null)
             {
-                return "当前服务未配置为注册中心服务端";
+                return "当前服务未配置注册中心状态管理器";
             }
 
-            return await registerCentreServer.GetServicesStatus();
+            var instances = await stateManager.GetAllInstancesAsync();
+            return ConvertToRegisteredServiceStatus(instances);
         }
         catch (Exception ex)
         {
@@ -31,63 +33,53 @@ public class RegisterCentreService(
         }
     }
 
-    public async Task<Res> UnregisterAllAsync()
+    /// <summary>
+    /// 将 InstanceState 列表转换为 RegisteredServiceStatus 列表（按 AppId 分组）
+    /// </summary>
+    private static List<RegisteredServiceStatus> ConvertToRegisteredServiceStatus(List<InstanceState> instances)
     {
-        try
+        var result = new List<RegisteredServiceStatus>();
+
+        // 按 AppId 分组（从 RegisterInfo 获取）
+        var groupedByAppId = instances
+            .Where(i => i.RegisterInfo != null)
+            .GroupBy(i => i.RegisterInfo!.AppId);
+
+        foreach (var group in groupedByAppId)
         {
-            var registerCentreServer = serviceProvider.GetService<IRegisterCentreServer>();
-            if (registerCentreServer == null)
+            var firstInstance = group.First();
+            var registerInfo = firstInstance.RegisterInfo!;
+
+            var serviceStatus = new RegisteredServiceStatus
             {
-                return "当前服务未配置为注册中心服务端";
+                AppId = registerInfo.AppId,
+                AppName = registerInfo.AppName,
+                DomainName = registerInfo.DomainName,
+                ProjectName = registerInfo.ProjectName,
+                DependentSubDomains = registerInfo.DependentSubDomains,
+                Instances = new Dictionary<string, ServiceInstance>()
+            };
+
+            // 添加每个实例
+            foreach (var instanceState in group)
+            {
+                var serviceInstance = new ServiceInstance
+                {
+                    InstanceId = instanceState.InstanceId,
+                    RegisterInfo = instanceState.RegisterInfo!,
+                    Status = ServiceStatus.Running, // 存在于 StateStore 中即表示在线
+                    LastHeartbeatTime = instanceState.LastHeartbeatTime,
+                    RegistrationTime = instanceState.RegistrationTime, 
+                    IsLeader = false // 将由 LeaderElectionService 另行处理
+                };
+
+                serviceStatus.Instances[instanceState.InstanceId] = serviceInstance;
             }
 
-            return await registerCentreServer.UnregisterAll();
+            result.Add(serviceStatus);
         }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "清空所有注册失败");
-            return $"清空所有注册失败: {ex.Message}";
-        }
-    }
 
-    public async Task<Res> RegisterServiceAsync(ServiceRegisterInfo info)
-    {
-        try
-        {
-            var registerCentreServer = serviceProvider.GetService<IRegisterCentreServer>();
-            if (registerCentreServer == null)
-            {
-                return "当前服务未配置为注册中心服务端";
-            }
-
-            return await registerCentreServer.Register(info);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "注册服务失败");
-            return $"注册服务失败: {ex.Message}";
-        }
-    }
-
-    public async Task<Res> TestReconnectAsync()
-    {
-        try
-        {
-            var connector = serviceProvider.GetService<IRegisterCentreServerConnector>();
-            var client = serviceProvider.GetService<IRegisterCentreClientInfo>();
-            
-            if (connector == null || client == null)
-            {
-                return "当前服务未配置为注册中心客户端";
-            }
-
-            return await connector.Register(client.GetServiceStatus());
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "测试重连失败");
-            return $"测试重连失败: {ex.Message}";
-        }
+        return result;
     }
 
     /// <summary>
@@ -98,17 +90,15 @@ public class RegisterCentreService(
     {
         try
         {
-            var registerCentreServer = serviceProvider.GetService<IRegisterCentreServer>();
+            var stateManager = serviceProvider.GetService<IRegistrationStateManager>();
             var infoProvider = serviceProvider.GetService<IRegisterCentreCatalogProvider>();
 
             // 获取已注册的服务状态
             List<RegisteredServiceStatus> registeredServices = [];
-            if (registerCentreServer != null)
+            if (stateManager != null)
             {
-                if (!(await registerCentreServer.GetServicesStatus()).IsFailed(out _, out var data))
-                {
-                    registeredServices = data ?? [];
-                }
+                var instances = await stateManager.GetAllInstancesAsync();
+                registeredServices = ConvertToRegisteredServiceStatus(instances);
             }
 
             // 获取预定义的服务信息
@@ -161,9 +151,9 @@ public class RegisterCentreService(
             }
 
             var domains = await infoProvider.GetAllDomainsAsync();
-           
+
             // 检查是否需要重新初始化颜色分配
-            if (_cachedDomains.Count != domains.Count || 
+            if (_cachedDomains.Count != domains.Count ||
                 !domains.All(d => _cachedDomains.Any(c => c.Name == d.Name)))
             {
                 _cachedDomains = domains.ToList();
@@ -323,6 +313,29 @@ public class RegisterCentreService(
         {
             logger.LogError(ex, "获取域详细信息失败");
             return $"获取域详细信息失败: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// 获取当前 Leader 状态信息
+    /// </summary>
+    /// <returns>Leader 状态信息</returns>
+    public async Task<Res<LeaderState?>> GetLeaderStateAsync()
+    {
+        try
+        {
+            var stateManager = serviceProvider.GetService<IRegistrationStateManager>();
+            if (stateManager == null)
+            {
+                return "当前服务未配置注册中心状态管理器";
+            }
+
+            return await stateManager.GetLeaderStateAsync();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "获取Leader状态失败");
+            return $"获取Leader状态失败: {ex.Message}";
         }
     }
 }

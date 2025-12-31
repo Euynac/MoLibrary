@@ -1,18 +1,18 @@
 using MoLibrary.Configuration.Dashboard.Interfaces;
 using MoLibrary.Configuration.Dashboard.Model;
 using MoLibrary.Configuration.Model;
-using MoLibrary.RegisterCentre.Interfaces;
+using MoLibrary.RegisterCentre.ServiceInvocation.Interfaces;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Configuration.Dashboard.Implements;
 
 /// <summary>
 /// Distributed provider for <see cref="IConfigurationCentreServiceInvoker"/>.
-/// Uses <see cref="IRegisterCentreServerInvocationConnector"/> to invoke remote services
+/// Uses <see cref="IServiceInvocationConnector"/> to invoke remote services
 /// and aggregate their configuration data.
 /// </summary>
 public class ConfigurationCentreServiceInvokerDistributedProvider(
-    IRegisterCentreServerInvocationConnector connector) : IConfigurationCentreServiceInvoker
+    IServiceInvocationConnector connector) : IConfigurationCentreServiceInvoker
 {
     public async Task<Res<List<DtoDomainConfigs>>> GetRegisteredServicesConfigsAsync(List<string> appIds)
     {

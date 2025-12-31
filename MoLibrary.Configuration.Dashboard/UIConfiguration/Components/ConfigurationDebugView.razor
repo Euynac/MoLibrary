@@ -1,0 +1,72 @@
+@using MoLibrary.Tool.MoResponse
+@inject MoLibrary.Configuration.Services.ModuleConfigurationService ModuleConfigurationService
+@inject ISnackbar Snackbar
+
+<MudCard>
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">
+                <MudIcon Icon="@Icons.Material.Filled.BugReport" Class="mr-2" Style="vertical-align: text-bottom;" />
+                配置调试视图
+            </MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            <MudButton Variant="Variant.Outlined"
+                      StartIcon="@Icons.Material.Filled.Refresh"
+                      OnClick="LoadDebugViewAsync"
+                      Disabled="@isLoading">
+                刷新
+            </MudButton>
+        </CardHeaderActions>
+    </MudCardHeader>
+    <MudCardContent>
+        @if (debugView != null && debugView.Any())
+        {
+            <MudTable T="string" Items="debugView" Dense="true" Hover="true" FixedHeader="true" Height="90vh" Style="width: 100%;">
+                <HeaderContent>
+                    <MudTh Style="width: 100%;">调试信息</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="调试信息" Style="width: 100%; word-break: break-all;">
+                        <MudText Typo="Typo.body2" Style="font-family: monospace; white-space: pre-wrap; word-wrap: break-word;">@context</MudText>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+        else if (isLoading)
+        {
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        }
+        else if (debugView != null && !debugView.Any())
+        {
+            <MudAlert Severity="Severity.Info">暂无调试信息</MudAlert>
+        }
+        else
+        {
+            <MudText Class="text-muted">加载中...</MudText>
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    private string[]? debugView;
+    private bool isLoading = false;
+
+    public async Task LoadDebugViewAsync()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        if ((await ModuleConfigurationService.GetDebugViewAsync()).IsFailed(out var error, out var data))
+        {
+            Snackbar.Add($"加载调试视图失败: {error}", Severity.Error);
+        }
+        else
+        {
+            debugView = data;
+        }
+
+        isLoading = false;
+        StateHasChanged();
+    }
+}

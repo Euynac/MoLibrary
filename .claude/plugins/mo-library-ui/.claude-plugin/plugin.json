@@ -1,0 +1,6 @@
+{
+  "name": "mo-library-ui",
+  "displayName": "MoLibrary UI Development",
+  "description": "Provides guidance for developing Blazor UI components with MudBlazor in the MoLibrary framework",
+  "version": "1.0.0"
+}

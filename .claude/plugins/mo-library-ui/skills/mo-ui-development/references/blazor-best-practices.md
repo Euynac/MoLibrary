@@ -1,59 +1,65 @@
-# Blazor UI 最佳实践
+# Blazor UI Best Practices
 
-## 概述
-本文档定义了在MoLibrary框架中开发Blazor UI的最佳实践，旨在提高代码质量、可维护性和用户体验。
+## Overview
 
-## 1. 组件架构原则
+This document defines best practices for developing Blazor UI in the MoLibrary framework, focusing on code quality, maintainability, and user experience.
 
-### 1.1 组件层次结构
-- **基础组件（Common）**: 可复用的原子组件
-- **业务组件（Business）**: 特定功能的组合组件
-- **页面组件（Pages）**: 完整的页面级组件
+## 1. Component Architecture Principles
 
-### 1.2 单一职责原则
-- 每个组件只负责一个特定功能
-- 复杂功能通过组合多个简单组件实现
-- 避免在单个组件中混合展示逻辑和业务逻辑
+### 1.1 Component Hierarchy
 
-### 1.3 组件通信
-- 使用参数（Parameters）进行父子组件通信
-- 使用事件回调（EventCallback）向上传递事件
-- 复杂状态使用状态容器（State Container）管理
+- **Base Components (Common)**: Reusable atomic components
+- **Business Components (Business)**: Feature-specific composite components
+- **Page Components (Pages)**: Complete page-level components
 
-## 2. 生命周期最佳实践
+### 1.2 Single Responsibility Principle
 
-### 2.1 避免在OnInitializedAsync中进行耗时操作
+- Each component handles one specific function
+- Complex features combine multiple simple components
+- Separate presentation logic from business logic
+
+### 1.3 Component Communication
+
+- Use Parameters for parent-to-child communication
+- Use EventCallback for child-to-parent events
+- Use state containers for complex state management
+
+## 2. Lifecycle Best Practices
+
+### 2.1 Avoid Time-Consuming Operations in OnInitializedAsync
+
 ```csharp
-// ❌ 错误示例
+// Wrong
 protected override async Task OnInitializedAsync()
 {
-    // 不要在这里进行耗时的数据加载
+    // Never perform time-consuming data loading here
     await LoadLargeDataSetAsync();
-    // 不要在这里进行JavaScript互操作
+    // Never perform JavaScript interop here
     await JSRuntime.InvokeVoidAsync("initializeChart");
 }
 
-// ✅ 正确示例
+// Correct
 protected override async Task OnAfterRenderAsync(bool firstRender)
 {
     if (firstRender)
     {
-        // 在首次渲染后加载数据
+        // Load data after first render
         await LoadLargeDataSetAsync();
-        // JavaScript互操作也应该在这里
+        // JavaScript interop belongs here
         await JSRuntime.InvokeVoidAsync("initializeChart");
         StateHasChanged();
     }
 }
 ```
 
-### 2.2 使用CancellationToken管理异步操作
+### 2.2 Use CancellationToken for Async Operations
+
 ```csharp
 @implements IAsyncDisposable
 
 @code {
     private CancellationTokenSource? _cts;
-    
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -62,7 +68,7 @@ protected override async Task OnAfterRenderAsync(bool firstRender)
             await LoadDataAsync(_cts.Token);
         }
     }
-    
+
     private async Task LoadDataAsync(CancellationToken cancellationToken)
     {
         try
@@ -72,10 +78,10 @@ protected override async Task OnAfterRenderAsync(bool firstRender)
         }
         catch (OperationCanceledException)
         {
-            // 处理取消操作
+            // Handle cancellation
         }
     }
-    
+
     public async ValueTask DisposeAsync()
     {
         _cts?.Cancel();
@@ -84,9 +90,10 @@ protected override async Task OnAfterRenderAsync(bool firstRender)
 }
 ```
 
-## 3. 性能优化
+## 3. Performance Optimization
 
-### 3.1 使用@key优化列表渲染
+### 3.1 Use @key for List Rendering
+
 ```razor
 @foreach (var item in Items)
 {
@@ -96,17 +103,19 @@ protected override async Task OnAfterRenderAsync(bool firstRender)
 }
 ```
 
-### 3.2 避免不必要的重渲染
+### 3.2 Avoid Unnecessary Rerenders
+
 ```csharp
-// 使用ShouldRender控制渲染
+// Control rendering with ShouldRender
 protected override bool ShouldRender()
 {
-    // 只在数据真正改变时才重新渲染
+    // Only rerender when data actually changes
     return _hasDataChanged;
 }
 ```
 
-### 3.3 大数据集使用虚拟化
+### 3.3 Use Virtualization for Large Data Sets
+
 ```razor
 <MudVirtualize Items="@LargeDataSet" Context="item">
     <ItemTemplate>
@@ -115,9 +124,10 @@ protected override bool ShouldRender()
 </MudVirtualize>
 ```
 
-## 4. 样式管理
+## 4. Style Management
 
-### 4.1 使用CSS变量
+### 4.1 Use CSS Variables
+
 ```css
 :root {
     --mo-primary-color: #7e6fff;
@@ -131,12 +141,14 @@ protected override bool ShouldRender()
 }
 ```
 
-### 4.2 组件样式隔离
-- 使用 `.razor.css` 文件进行组件样式隔离
-- 避免使用全局样式选择器
-- 使用BEM命名规范或CSS Modules
+### 4.2 Component Style Isolation
 
-### 4.3 响应式设计
+- Use `.razor.css` files for component style isolation
+- Avoid global style selectors
+- Use BEM naming convention or CSS Modules
+
+### 4.3 Responsive Design
+
 ```css
 .mo-container {
     display: grid;
@@ -151,16 +163,17 @@ protected override bool ShouldRender()
 }
 ```
 
-## 5. 状态管理
+## 5. State Management
 
-### 5.1 使用状态容器
+### 5.1 Use State Containers
+
 ```csharp
 public class AppStateContainer
 {
     private string _userName = string.Empty;
-    
-    public string UserName 
-    { 
+
+    public string UserName
+    {
         get => _userName;
         set
         {
@@ -168,14 +181,15 @@ public class AppStateContainer
             NotifyStateChanged();
         }
     }
-    
+
     public event Action? OnChange;
-    
+
     private void NotifyStateChanged() => OnChange?.Invoke();
 }
 ```
 
-### 5.2 组件中使用状态容器
+### 5.2 Use State Containers in Components
+
 ```csharp
 @inject AppStateContainer AppState
 @implements IDisposable
@@ -185,7 +199,7 @@ public class AppStateContainer
     {
         AppState.OnChange += StateHasChanged;
     }
-    
+
     public void Dispose()
     {
         AppState.OnChange -= StateHasChanged;
@@ -193,9 +207,10 @@ public class AppStateContainer
 }
 ```
 
-## 6. 错误处理
+## 6. Error Handling
 
-### 6.1 使用ErrorBoundary
+### 6.1 Use ErrorBoundary
+
 ```razor
 <ErrorBoundary>
     <ChildContent>
@@ -203,13 +218,14 @@ public class AppStateContainer
     </ChildContent>
     <ErrorContent Context="exception">
         <MudAlert Severity="Severity.Error">
-            发生错误: @exception.Message
+            Error: @exception.Message
         </MudAlert>
     </ErrorContent>
 </ErrorBoundary>
 ```
 
-### 6.2 服务层错误处理
+### 6.2 Service Layer Error Handling
+
 ```csharp
 public async Task<Res<TData>> GetDataAsync()
 {
@@ -220,72 +236,77 @@ public async Task<Res<TData>> GetDataAsync()
     }
     catch (Exception ex)
     {
-        Logger.LogError(ex, "获取数据失败");
-        return Res.Fail($"获取数据失败: {ex.Message}");
+        Logger.LogError(ex, "Failed to get data");
+        return Res.Fail($"Failed to get data: {ex.Message}");
     }
 }
 ```
 
-## 7. 表单处理
+## 7. Form Handling
 
-### 7.1 使用EditForm和验证
+### 7.1 Use EditForm with Validation
+
 ```razor
 <EditForm Model="@model" OnValidSubmit="@HandleValidSubmit">
     <DataAnnotationsValidator />
     <ValidationSummary />
-    
-    <MudTextField @bind-Value="model.Name" 
-                  Label="名称" 
+
+    <MudTextField @bind-Value="model.Name"
+                  Label="Name"
                   For="@(() => model.Name)" />
-    
-    <MudButton ButtonType="ButtonType.Submit" 
-               Variant="Variant.Filled" 
+
+    <MudButton ButtonType="ButtonType.Submit"
+               Variant="Variant.Filled"
                Color="Color.Primary">
-        提交
+        Submit
     </MudButton>
 </EditForm>
 ```
 
-### 7.2 自定义验证
+### 7.2 Custom Validation
+
 ```csharp
 public class CustomValidator : ComponentBase
 {
     [CascadingParameter]
     private EditContext? CurrentEditContext { get; set; }
-    
+
     protected override void OnInitialized()
     {
         if (CurrentEditContext is null)
         {
-            throw new InvalidOperationException($"{nameof(CustomValidator)} requires a cascading parameter of type {nameof(EditContext)}.");
+            throw new InvalidOperationException(
+                $"{nameof(CustomValidator)} requires a cascading parameter of type {nameof(EditContext)}.");
         }
-        
+
         CurrentEditContext.OnValidationRequested += ValidateModel;
     }
-    
+
     private void ValidateModel(object? sender, ValidationRequestedEventArgs e)
     {
-        // 自定义验证逻辑
+        // Custom validation logic
     }
 }
 ```
 
-## 8. 可访问性（Accessibility）
+## 8. Accessibility
 
-### 8.1 使用语义化HTML
+### 8.1 Use Semantic HTML
+
 ```razor
-<nav aria-label="主导航">
+<nav aria-label="Main navigation">
     <ul>
-        <li><a href="/">首页</a></li>
-        <li><a href="/about">关于</a></li>
+        <li><a href="/">Home</a></li>
+        <li><a href="/about">About</a></li>
     </ul>
 </nav>
 ```
 
-### 8.2 提供键盘导航支持
+### 8.2 Keyboard Navigation Support
+
 ```razor
 <div @onkeydown="HandleKeyDown" tabindex="0">
-    <!-- 可键盘导航的内容 -->
+    <!-- Keyboard navigable content -->
 </div>
 
 @code {
@@ -294,19 +315,20 @@ public class CustomValidator : ComponentBase
         switch (e.Key)
         {
             case "ArrowUp":
-                // 处理向上导航
+                // Handle up navigation
                 break;
             case "ArrowDown":
-                // 处理向下导航
+                // Handle down navigation
                 break;
         }
     }
 }
 ```
 
-## 9. 组件复用模式
+## 9. Component Reuse Patterns
 
-### 9.1 泛型组件
+### 9.1 Generic Components
+
 ```razor
 @typeparam TItem
 
@@ -318,17 +340,18 @@ public class CustomValidator : ComponentBase
 </div>
 
 @code {
-    [Parameter, EditorRequired] 
+    [Parameter, EditorRequired]
     public IEnumerable<TItem> Items { get; set; } = Enumerable.Empty<TItem>();
-    
-    [Parameter, EditorRequired] 
+
+    [Parameter, EditorRequired]
     public RenderFragment<TItem> ItemTemplate { get; set; } = null!;
 }
 ```
 
-### 9.2 组合优于继承
+### 9.2 Composition Over Inheritance
+
 ```razor
-<!-- 基础卡片组件 -->
+<!-- Base card component -->
 <MoCard>
     <Header>
         @HeaderContent
@@ -341,45 +364,48 @@ public class CustomValidator : ComponentBase
     </Footer>
 </MoCard>
 
-<!-- 特定业务卡片 -->
+<!-- Specific business card -->
 <UserCard User="@user">
     <Actions>
-        <MudButton>编辑</MudButton>
-        <MudButton>删除</MudButton>
+        <MudButton>Edit</MudButton>
+        <MudButton>Delete</MudButton>
     </Actions>
 </UserCard>
 ```
 
-## 10. MudBlazor特定最佳实践
+## 10. MudBlazor Specific Best Practices
 
-### 10.1 正确使用Icon属性
+### 10.1 Correct Icon Property Usage
+
 ```razor
-<!-- ✅ 正确：使用@前缀 -->
+<!-- Correct: Use @ prefix -->
 <MudIconButton Icon="@Icons.Material.Filled.Add" />
 
-<!-- ❌ 错误：缺少@前缀 -->
+<!-- Wrong: Missing @ prefix -->
 <MudIconButton Icon="Icons.Material.Filled.Add" />
 ```
 
-### 10.2 泛型组件显式指定类型
+### 10.2 Explicit Type Parameters for Generic Components
+
 ```razor
-<!-- ✅ 正确：显式指定T类型 -->
+<!-- Correct: Explicitly specify T type -->
 <MudSwitch T="bool" @bind-Checked="@IsEnabled" />
 <MudChip T="string" Value="@chipValue" />
 
-<!-- ❌ 错误：未指定类型参数 -->
+<!-- Wrong: Missing type parameter -->
 <MudSwitch @bind-Checked="@IsEnabled" />
 ```
 
-### 10.3 使用MudBlazor主题系统
+### 10.3 Use MudBlazor Theme System
+
 ```csharp
-// 在布局组件中配置主题
+// Configure theme in layout component
 <MudThemeProvider Theme="@_theme" IsDarkMode="@_isDarkMode" />
 
 @code {
     private MudTheme _theme = new()
     {
-        Palette = new PaletteLight()
+        PaletteLight = new PaletteLight()
         {
             Primary = "#7e6fff",
             Secondary = "#ff4081"
@@ -388,10 +414,12 @@ public class CustomValidator : ComponentBase
 }
 ```
 
-## 11. 模块开发最佳实践
+## 11. Module Development Best Practices
 
-### 11.1 依赖注入配置
-使用模块Option时，直接注入 `IOptions<TModuleOption>` 或 `IOptionsSnapshot<TModuleOption>` 使用：
+### 11.1 Dependency Injection Configuration
+
+Use module options by injecting `IOptions<TModuleOption>` or `IOptionsSnapshot<TModuleOption>`:
+
 ```csharp
 @inject IOptions<ModuleUIOption> Options
 
@@ -403,23 +431,26 @@ public class CustomValidator : ComponentBase
 }
 ```
 
-### 11.2 代码复用策略
-- 相似功能的组件要抽象出公共基类或接口
-- 通用的UI交互逻辑封装成可复用的服务
-- 统一的样式和主题使用MudBlazor组件库
+### 11.2 Code Reuse Strategy
 
-### 11.3 性能优化技巧
-- 大组件拆分为小组件，减少重渲染范围
-- 使用 `@key` 指令优化列表渲染
-- 避免在模板中进行复杂计算
+- Abstract common base classes or interfaces for similar components
+- Encapsulate common UI interaction logic into reusable services
+- Use MudBlazor component library for unified styles and themes
 
-### 11.4 统一错误处理
-- 使用 `IMoSnackbar` 显示用户友好的错误信息（将来会封装 ISnackbar）
-- 记录详细的调试日志供开发排查
-- 实现统一的错误处理机制
+### 11.3 Performance Tips
+
+- Split large components into smaller ones to reduce rerender scope
+- Use `@key` directive to optimize list rendering
+- Avoid complex calculations in templates
+
+### 11.4 Unified Error Handling
+
+- Use `ISnackbar` to display user-friendly error messages
+- Log detailed debug information for troubleshooting
+- Implement unified error handling mechanisms
 
 ```csharp
-@inject ISnackbar Snackbar  // 将来改为 IMoSnackbar
+@inject ISnackbar Snackbar
 
 private async Task HandleOperation()
 {
@@ -428,42 +459,46 @@ private async Task HandleOperation()
         Snackbar.Add(error.Message, Severity.Error);
         return;
     }
-    
-    Snackbar.Add("操作成功", Severity.Success);
+
+    Snackbar.Add("Operation successful", Severity.Success);
 }
 ```
 
-## 12. 服务层最佳实践
+## 12. Service Layer Best Practices
 
-### 12.1 服务返回值规范
-- 所有服务方法的返回值必须不为空，使用 `Res<T>` 或 `Res` 类型
-- 成功时返回 `Res.Ok(data)`，失败时返回 `Res.Fail(errorMessage)`
-- 异常情况必须捕获并返回 `Res.Fail`
+### 12.1 Return Value Standards
 
-### 12.2 服务调用模式
+- All service method return values must not be null, use `Res<T>` or `Res` types
+- Return `Res.Ok(data)` on success, `Res.Fail(errorMessage)` on failure
+- Exceptions must be caught and return `Res.Fail`
+
+### 12.2 Service Call Pattern
+
 ```csharp
-// 在Blazor页面中注入服务
+// Inject service in Blazor page
 @inject UserService UserService
 
 @code {
     private async Task LoadDataAsync()
     {
-        // 使用IsFailed方法检查结果并获取数据或错误
+        // Use IsFailed method to check result and get data or error
         if ((await UserService.GetDataAsync(parameter)).IsFailed(out var error, out var data))
         {
-            // 处理错误情况
-            Snackbar.Add($"操作失败: {error.Message}", Severity.Error);
+            // Handle error case
+            Snackbar.Add($"Operation failed: {error.Message}", Severity.Error);
             return;
         }
 
-        // 处理成功情况，data不为null
+        // Handle success case, data is not null
         ProcessData(data);
     }
 }
 ```
 
-### 12.3 服务注册
-在模块的 `ConfigureServices` 方法中注册服务：
+### 12.3 Service Registration
+
+Register services in module's `ConfigureServices` method:
+
 ```csharp
 public override void ConfigureServices(IServiceCollection services)
 {
@@ -471,17 +506,20 @@ public override void ConfigureServices(IServiceCollection services)
 }
 ```
 
-## 13. 数据模型管理
+## 13. Data Model Management
 
-### 13.1 模型组织
-- 页面相关的数据模型放在 `UI{ModuleName}/Models/` 目录下
-- 使用强类型模型，避免动态类型
-- 模型命名要清晰表达其用途
+### 13.1 Model Organization
 
-### 13.2 模型命名约定
-- 请求模型：`{Feature}Request`
-- 响应模型：`{Feature}Response`
-- 视图模型：`{Feature}ViewModel`
+- Place page-related data models in `UI{ModuleName}/Models/` directory
+- Use strongly-typed models, avoid dynamic types
+- Model naming should clearly express purpose
 
-## 总结
-遵循这些最佳实践将帮助您构建高质量、可维护、性能优异的Blazor应用。记住，这些是指导原则，应根据具体项目需求灵活应用。
+### 13.2 Model Naming Conventions
+
+- Request models: `{Feature}Request`
+- Response models: `{Feature}Response`
+- View models: `{Feature}ViewModel`
+
+## Summary
+
+Following these best practices helps build high-quality, maintainable, and high-performance Blazor applications. These are guiding principles that should be flexibly applied based on specific project requirements.

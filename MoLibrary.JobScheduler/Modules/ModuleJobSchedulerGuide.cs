@@ -78,7 +78,7 @@ public class ModuleJobSchedulerGuide
             .AddKeyedCommonEventBus(nameof(ModuleJobScheduler), useDistributed: false);
         DependsOnModule<ModuleCancellationManagerGuide>().Register()
             .AddKeyedCancellationManager(nameof(ModuleJobScheduler), useDistributed: false);
-        DependsOnModule<ModuleRegisterCentreGuide>().Register().UseInMemoryProvider();
+        DependsOnModule<ModuleRegisterCentreGuide>().Register().UseInMemoryStateStore();
         return this;
     }
 }

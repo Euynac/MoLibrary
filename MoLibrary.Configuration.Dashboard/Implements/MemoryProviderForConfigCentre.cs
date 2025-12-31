@@ -1,50 +1,43 @@
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Options;
 using MoLibrary.Configuration.Dashboard.Interfaces;
 using MoLibrary.Configuration.Dashboard.Model;
 using MoLibrary.Configuration.Interfaces;
 using MoLibrary.Configuration.Model;
-using MoLibrary.RegisterCentre.Implements;
 using MoLibrary.RegisterCentre.Interfaces;
-using MoLibrary.RegisterCentre.Models;
-using MoLibrary.RegisterCentre.Modules;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Configuration.Dashboard.Implements;
 
 /// <summary>
-/// Represents a memory-based provider for managing configuration in the configuration center.
+/// Configuration center provider that uses RegisterCentre's registration state manager
+/// to get the list of registered services and invoke their configuration endpoints.
 /// </summary>
 /// <remarks>
-/// This class extends <see cref="MemoryProviderForRegisterCentre"/> 
-/// and implements <see cref="IMoConfigurationCentre"/>.
-/// It provides functionality for registering services, retrieving registered service configurations, 
+/// This class implements <see cref="IMoConfigurationCentre"/>.
+/// It provides functionality for retrieving registered service configurations,
 /// updating configurations, and rolling back configurations.
 /// </remarks>
-/// <seealso cref="MemoryProviderForRegisterCentre"/>
-/// <seealso cref="IMoConfigurationCentre"/>
 public class MemoryProviderForConfigCentre(
-    IHttpContextAccessor accessor, IMoConfigurationModifier modifier,
-    IMoConfigurationStores stores, IMoConfigurationCardManager manager, IConfigurationCentreServiceInvoker invoker,
-    IRegisterCentreServerInvocationConnector connector,
-    IOptions<ModuleRegisterCentreOption> options) : MemoryProviderForRegisterCentre(accessor, connector, options), IMoConfigurationCentre
+    IMoConfigurationModifier modifier,
+    IMoConfigurationStores stores,
+    IMoConfigurationCardManager manager,
+    IConfigurationCentreServiceInvoker invoker,
+    IRegistrationStateManager stateManager) : IMoConfigurationCentre
 {
     private static List<DtoDomainConfigs>? _cache;
-
-
-    public override Task<Res> Register(ServiceRegisterInfo req)
-    {
-        _cache = null;
-        return base.Register(req);
-    }
 
     public async Task<Res<List<DtoDomainConfigs>>> GetRegisteredServicesConfigsAsync()
     {
         if (_cache != null) return _cache;
 
-        //这里通过构建时间排序，来保证最新版本的微服务配置优先读取。在最后Distinct的时候优先被选择。
-        var list = Services.Values.Select(p => p.GetValidInstanceInfo()).Where(p => p != null)
-            .OrderByDescending(p => p!.RegisterInfo.BuildTime).Select(p => p!.RegisterInfo.AppId).ToList();
+        // Get all instances from the state manager
+        var instances = await stateManager.GetAllLeaderInstancesAsync();
+
+        // Extract AppIds, ordered by build time (newest first) so newest version is selected in Distinct
+        var list = instances
+            .Where(i => i.RegisterInfo != null)
+            .OrderByDescending(i => i.RegisterInfo!.BuildTime)
+            .Select(i => i.RegisterInfo!.AppId)
+            .ToList();
 
         var res = await invoker.GetRegisteredServicesConfigsAsync(list);
         if (res.IsFailed(out var error, out var statusList)) return error;
@@ -97,43 +90,26 @@ public class MemoryProviderForConfigCentre(
         return await stores.SaveUpdate(data);
     }
 
-
-
     public async Task<Res> UpdateConfig(DtoUpdateConfig req)
     {
         _cache = null;
-        //如果中心节点有配置项，直接通过本地修改
+        // If configuration center node has the config item, modify it locally
         if ((await modifier.IsOptionExist(req.Key)).IsOk(out var option))
         {
-            if ((await SaveHistory(await modifier.UpdateOption(option, req.Value), req.AppId)).IsFailed(out var error))
-                return error;
-            return Res.Ok("路由到中心节点保存成功");
+            return (await SaveHistory(await modifier.UpdateOption(option, req.Value), req.AppId)).IsFailed(out var error) ? error : Res.Ok("路由到中心节点保存成功");
         }
 
         if ((await modifier.IsConfigExist(req.Key)).IsOk(out var config))
         {
-            if ((await SaveHistory(await modifier.UpdateConfig(config, req.Value), req.AppId)).IsFailed(out var error))
-                return error;
-            return Res.Ok("路由到中心节点保存成功");
-
+            return (await SaveHistory(await modifier.UpdateConfig(config, req.Value), req.AppId)).IsFailed(out var error) ? error : Res.Ok("路由到中心节点保存成功");
         }
+        if ((await invoker.UpdateRemoteConfigAsync(req.AppId, req))
+            .IsFailed(out var remoteError, out var data)) return remoteError;
 
-
-        //否则调用相应服务修改
-        if (Services.Values.Select(p => p.GetValidInstanceInfo()).Where(p => p != null).Select(p => p!.RegisterInfo)
-                .FirstOrDefault(p => p.AppId.Equals(req.AppId)) is { } service)
-        {
-            if ((await invoker.UpdateRemoteConfigAsync(service.AppId, req))
-                .IsFailed(out var error, out var data)) return error;
-
-            if ((await SaveHistory(Res.Ok(data), req.AppId)).IsFailed(out error)) return error;
-            return Res.Ok($"路由到{service.AppId}节点保存成功");
-        }
-
-        return $"找不到{req.AppId}所对应的微服务";
+        return (await SaveHistory(Res.Ok(data), req.AppId)).IsFailed(out var historyErr) ? historyErr : Res.Ok($"路由到{req.AppId}节点保存成功");
     }
 
-    public async Task<Res<List<DtoDomainConfigs>>> WashDomainConfigs(List<DtoDomainConfigs> configs)
+    public Task<Res<List<DtoDomainConfigs>>> WashDomainConfigs(List<DtoDomainConfigs> configs)
     {
         var group = configs.GroupBy(p => p.Name).ToDictionary(g => g.Key, g => g.ToList());
         var finalDomainConfigs = new List<DtoDomainConfigs>();
@@ -144,6 +120,6 @@ public class MemoryProviderForConfigCentre(
             finalDomainConfigs.Add(tmp);
         }
 
-        return finalDomainConfigs;
+        return Task.FromResult<Res<List<DtoDomainConfigs>>>(finalDomainConfigs);
     }
 }

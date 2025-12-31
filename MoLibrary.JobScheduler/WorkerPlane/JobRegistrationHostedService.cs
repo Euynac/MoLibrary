@@ -23,7 +23,7 @@ public class JobRegistrationHostedService(
     JobRegistry jobRegistry,
     IReadOnlyList<JobDefinition> jobDefinitions,
     ILogger<JobRegistrationHostedService> logger,
-    ILeaderService leaderService,
+    ILeaderElectionService leaderService,
     [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
     IOptions<ModuleJobSchedulerOption> option,
     IServiceRegistrationCoordinator coordinator,

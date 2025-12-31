@@ -21,6 +21,10 @@ public enum EMoModules
     Authentication,
     ConfigurationDashboard,
     RegisterCentre,
+    /// <summary>
+    /// 服务调用模块
+    /// </summary>
+    ServiceInvocation,
     DataChannel,
     FrameworkMonitor,
     Locker,

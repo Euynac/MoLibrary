@@ -9,8 +9,6 @@ using MoLibrary.JobScheduler.Metadata;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.JobScheduler.Modules;
 using MoLibrary.RegisterCentre.Interfaces;
-using MoLibrary.RegisterCentre.Models;
-using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.JobScheduler.ControlPlane;
 
@@ -24,19 +22,19 @@ public class JobZombieDetectorService(
     IJobDefinitionCacheService cacheService,
     JobInstanceManager instanceManager,
     ILogger<JobZombieDetectorService> logger,
-    ILeaderService leaderService,
+    ILeaderElectionService leaderService,
     IOptions<ModuleJobSchedulerOption> options,
     IServiceRegistrationCoordinator coordinator,
     IObservableInstanceManager observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
-    IRegisterCentreServer? registerCentreServer = null
+    IRegistrationStateManager? registrationStateManager = null
 ) : CoordinatedLeaderService(leaderService, options, logger, coordinator, observableManager, hostedServiceOptions)
 {
     private readonly ModuleJobSchedulerOption _jobSchedulerOptions = options.Value;
 
     public override string ServiceName => nameof(JobZombieDetectorService);
 
-    
+
     protected override Task LeaderInitializeAsync(CancellationToken cancellationToken)
     {
         RecordState($"Zombie detector configured: Interval={_jobSchedulerOptions.ZombieDetectionInterval}, ProcessingMultiplier={_jobSchedulerOptions.ProcessingTimeoutMultiplier}, EnqueuedTimeout={_jobSchedulerOptions.EnqueuedStateTimeout}", givenLogLevel: LogLevel.Information);
@@ -226,7 +224,7 @@ public class JobZombieDetectorService(
 
         // Check if worker is still online (if enabled)
         if (_jobSchedulerOptions.CheckWorkerHealthBeforeZombieDetection &&
-            registerCentreServer != null &&
+            registrationStateManager != null &&
             !string.IsNullOrEmpty(instance.RunningClientId))
         {
             var isWorkerOnline = await IsWorkerOnlineAsync(instance.RunningClientId, cancellationToken);
@@ -304,35 +302,29 @@ public class JobZombieDetectorService(
     }
 
     /// <summary>
-    /// Checks if a worker is online via RegisterCentre.
+    /// Checks if a worker is online via RegisterCentre's registration state manager.
     /// </summary>
     private async Task<bool> IsWorkerOnlineAsync(string workerId, CancellationToken cancellationToken)
     {
         try
         {
-            if (registerCentreServer == null)
+            if (registrationStateManager == null)
             {
                 return true; // Assume online if RegisterCentre unavailable
             }
 
-            if ((await registerCentreServer.GetServicesStatus()).IsFailed(out var error, out var data))
+            var instances = await registrationStateManager.GetAllInstancesAsync(cancellationToken);
+
+            // Check if worker instance exists in registered instances
+            var workerExists = instances.Any(i => i.InstanceId == workerId);
+
+            if (!workerExists)
             {
-                RecordState($"Failed to get services status from RegisterCentre: {error}", givenLogLevel: LogLevel.Warning);
-                return true; // Assume online on error
+                // Worker not found in RegisterCentre - it's offline
+                return false;
             }
 
-            // Check if worker instance exists in any service
-            foreach (var serviceStatus in data)
-            {
-                if (serviceStatus.Instances.TryGetValue(workerId, out var instance))
-                {
-                    // Consider worker online if status is not Offline
-                    return instance.Status != ServiceStatus.Offline;
-                }
-            }
-
-            // Worker not found in RegisterCentre
-            return false;
+            return true;
         }
         catch (Exception ex)
         {
@@ -340,5 +332,4 @@ public class JobZombieDetectorService(
             return true; // Assume online on error
         }
     }
-
 }

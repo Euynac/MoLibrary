@@ -11,7 +11,6 @@ using MoLibrary.JobScheduler.Events;
 using MoLibrary.JobScheduler.Metadata;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.JobScheduler.Modules;
-using MoLibrary.RegisterCentre.Events;
 using MoLibrary.RegisterCentre.Interfaces;
 
 namespace MoLibrary.JobScheduler.ControlPlane;
@@ -26,12 +25,12 @@ public class JobConcurrencyGuardHostedService(
     [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
     JobInstanceManager instanceManager,
     ILogger<JobConcurrencyGuardHostedService> logger,
-    ILeaderService leaderService,
+    ILeaderElectionService leaderService,
     IOptions<ModuleJobSchedulerOption> options,
     IServiceRegistrationCoordinator coordinator,
     IObservableInstanceManager observableManager,
-    IOptions<ModuleHostedServiceOption> hostedServiceOptions,
-    IRegisterCentreServer? registerCentreServer = null) : CoordinatedLeaderService(leaderService, options, logger, coordinator, observableManager, hostedServiceOptions), IJobConcurrencyGuard
+    IOptions<ModuleHostedServiceOption> hostedServiceOptions
+) : CoordinatedLeaderService(leaderService, options, logger, coordinator, observableManager, hostedServiceOptions), IJobConcurrencyGuard
 {
     private readonly ConcurrentDictionary<string, JobExecutionStatistic> _statistics = new();
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _jobLocks = new();
@@ -145,16 +144,8 @@ public class JobConcurrencyGuardHostedService(
         _eventSubscriptions.Add(await eventBus.SubscribeAsync<JobStartedEvent>(OnJobStartedAsync));
         _eventSubscriptions.Add(await eventBus.SubscribeAsync<JobCompletedEvent>(OnJobCompletedAsync));
 
-        // 5. Subscribe to RegisterCentre offline event (if available)
-        if (registerCentreServer != null)
-        {
-            registerCentreServer.ServiceInstanceOffline += OnServiceInstanceOfflineHandler;
-            logger.LogDebug("Subscribed to RegisterCentre ServiceInstanceOffline event");
-        }
-        else
-        {
-            logger.LogWarning("RegisterCentre server is not available, worker offline detection will not work");
-        }
+        // Note: Worker offline detection is now handled by the zombie detector service through timeout-based detection
+        // The previous RegisterCentre server-based offline event mechanism has been removed in the StateStore refactoring
 
         logger.LogInformation(
             "JobConcurrencyGuard initialized with {DefinitionCount} job definitions, {PendingCount} pending reservations, and {RunningCount} running instances",
@@ -178,12 +169,6 @@ public class JobConcurrencyGuardHostedService(
                 await subscription.DisposeAsync();
             }
             _eventSubscriptions.Clear();
-
-            // Unsubscribe from RegisterCentre event
-            if (registerCentreServer != null)
-            {
-                registerCentreServer.ServiceInstanceOffline -= OnServiceInstanceOfflineHandler;
-            }
 
             // Dispose all semaphores
             foreach (var semaphore in _jobLocks.Values)
@@ -412,62 +397,5 @@ public class JobConcurrencyGuardHostedService(
         {
             semaphore.Release();
         }
-    }
-
-    /// <summary>
-    /// Handler for RegisterCentre's C# event
-    /// </summary>
-    private void OnServiceInstanceOfflineHandler(object? sender, ServiceInstanceOfflineEvent evt)
-    {
-        // Call the async method without awaiting (fire-and-forget)
-        // Since this is an event handler, we can't await
-        _ = OnWorkerOfflineAsync(evt);
-    }
-
-    private async Task OnWorkerOfflineAsync(ServiceInstanceOfflineEvent evt)
-    {
-        logger.LogWarning(
-            "Worker instance {InstanceId} from project {ProjectName} went offline, cleaning up orphaned jobs",
-            evt.InstanceId,
-            evt.ProjectName);
-
-        var orphanedCount = 0;
-
-        foreach (var (jobKey, statistic) in _statistics)
-        {
-            var semaphore = _jobLocks.GetOrAdd(jobKey, _ => new SemaphoreSlim(1, 1));
-            await semaphore.WaitAsync();
-
-            try
-            {
-                var orphanedInstances = statistic.RemoveInstancesByWorker(evt.InstanceId);
-
-                foreach (var orphaned in orphanedInstances)
-                {
-                    // Mark the orphaned instance as Failed
-                    await instanceManager.UpdateStateAsync(
-                        orphaned.InstanceId,
-                        JobState.Failed,
-                        message: $"Worker instance {evt.InstanceId} went offline at {evt.OfflineTime:yyyy-MM-dd HH:mm:ss} UTC");
-
-                    logger.LogWarning(
-                        "Marked orphaned job instance {InstanceId} (job {JobKey}) as Failed due to worker {WorkerId} offline",
-                        orphaned.InstanceId,
-                        jobKey,
-                        evt.InstanceId);
-
-                    orphanedCount++;
-                }
-            }
-            finally
-            {
-                semaphore.Release();
-            }
-        }
-
-        logger.LogInformation(
-            "Cleaned up {OrphanedCount} orphaned job instances from offline worker {InstanceId}",
-            orphanedCount,
-            evt.InstanceId);
     }
 }

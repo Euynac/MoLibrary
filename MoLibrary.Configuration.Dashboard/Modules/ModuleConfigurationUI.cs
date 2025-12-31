@@ -35,24 +35,15 @@ public class ModuleConfigurationUI(ModuleConfigurationUIOption option)
 
             // 依赖UI核心模块并注册UI组件
             DependsOnModule<ModuleUICoreGuide>().Register()
-                .RegisterUIComponents(registry => 
+                .RegisterUIComponents(registry =>
                 {
-                    // 注册客户端配置页面
-                    registry.RegisterComponent<UIConfigurationClientPage>(
-                        UIConfigurationClientPage.PAGE_URL, 
-                        "配置客户端", 
-                        Icons.Material.Filled.Devices, 
-                        "系统管理", 
-                        addToNav: true, 
-                        navOrder: 100);
-                    
                     // 注册面板配置页面
                     registry.RegisterComponent<UIConfigurationDashboardPage>(
-                        UIConfigurationDashboardPage.PAGE_URL, 
-                        "配置面板", 
-                        Icons.Material.Filled.Dashboard, 
-                        "系统管理", 
-                        addToNav: true, 
+                        UIConfigurationDashboardPage.PAGE_URL,
+                        "配置面板",
+                        Icons.Material.Filled.Dashboard,
+                        "系统管理",
+                        addToNav: true,
                         navOrder: 101);
                 });
         }

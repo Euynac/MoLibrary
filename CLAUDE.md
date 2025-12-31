@@ -71,70 +71,25 @@ Static web assets (wwwroot) are handled through:
   - More details can be read in @rules\primary-constructor.mdc
 - After defining `Module{Name}Option`, to use the module options, simply inject `IOptions<TModuleOption>` or `IOptionsSnapshot<TModuleOption>` for usage.  
 
-## Blazor and MudBlazor Notes
-- When using the MudBlazor Icon property in Blazor, you must reference it with an "@" prefix, for example, Icon="@Icons.Material.Filled.Info", instead of Icon="Icons.Material.Filled.Info". Omitting the "@" prefix will cause the Icon not to work.
-- In Blazor, JavaScript interop calls cannot be made in OnInitializedAsync because, during static rendering, JavaScript interop calls can only be executed in OnAfterRenderAsync lifecycle method. Additionally, most time-consuming interface initialization tasks should not be placed in OnInitializedAsync, as this can cause page blocking and blank waiting. The correct approach is to perform JavaScript interop and time-consuming initialization in OnAfterRenderAsync(bool firstRender), using the firstRender parameter to ensure execution only during the first render.
-- When using MudBlazor's generic components (such as MudSwitch, MudChip, MudTextField), you must explicitly specify the type parameter `T`. Otherwise, type inference errors may occur, or you may encounter the "cannot convert from 'method group' to 'Microsoft.AspNetCore.Components.EventCallback'" error.  
+## **Blazor and MudBlazor UI Development**
 
-- The current UI module of the project uses MudBlazor **8.9.0**.  
-- Do not use `<style>` tags; **CSS isolation** must be used instead.
+For comprehensive guidance on Blazor UI development with MudBlazor in MoLibrary, use the **MoLibrary UI Development** skill located at `.claude/plugins/mo-library-ui/`.
 
-### CSS Isolation and `::deep` Selector
-- **CSS isolation scope**: CSS isolation only applies to HTML elements, NOT to Razor components. This is a critical distinction.
-- **Using `::deep` with child components**: When applying styles to child components (especially MudBlazor components), you must:
-  1. Wrap the component with a container element (e.g., `<div class="wrapper">`)
-  2. Use the pattern: `.wrapper ::deep selector` in your `.razor.css` file
-  3. The `::deep` pseudo-element only works with descendant relationships
-- **How `::deep` works**: The selector `div ::deep > a` is transformed to `div[b-{STRING}] > a` where `{STRING}` is a unique identifier. Without the wrapper element, the descendant relationship is broken and styles won't apply.
-- **Example for MudTable styling**:
-  ```razor
-  <div class="config-table-wrapper">
-      <MudTable ...>
-      </MudTable>
-  </div>
-  ```
-  ```css
-  .config-table-wrapper ::deep tr.mud-selected {
-      background-color: var(--mud-palette-action-default-hover) !important;
-  }
-  ```
+The skill covers:
+- CSS isolation patterns and `::deep` selector usage
+- MudBlazor component best practices (Icon prefix, type parameters)
+- Component lifecycle (OnAfterRenderAsync patterns)
+- Theme customization and CSS variables
+- MudBlazor 8.9.0 migration guide
+- Offline/intranet requirements
 
-**⚠️ CRITICAL**: CSS isolation 无法直接穿透 MudBlazor 组件。必须使用 wrapper div + `::deep` 模式，否则样式不会生效。
+**Current MudBlazor version**: 8.9.0
 
-## **Interface Return Value Guidelines**  
-- For the return value definitions of frontend APIs (used by Controllers and Blazor), always use the **unified response model `Res`**. Refer to `@rules\mo-framework-res-type.mdc` for usage details.  
-
-## **MudBlazor Development Notes**  
-
-- 开发界面以及Component时，颜色尽量基于MudBlazor变量（@rules\ui\mudblazor-css-variables.md），需要自定义颜色的，则必须要考虑日夜间模式的切换
-
-- When writing MudBlazor-related code, you must refer to the migration documentation to stay updated on the latest APIs. Currently, guidance documents and source code are available for reference.  
-  - **Migration documentation reference paths:**  
-    - `@rules\mudblazor\CLAUDE_MUDBLAZOR_OFFICIAL_MIGRATION.md`  
-    - `@rules\mudblazor\CLAUDE_MIGRATION_GUIDE.md`  
-    - `@rules\mudblazor\CLAUDE_COMPONENT_REFERENCE.md`  
-  - **Source code path:** `@rules\mudblazor\src`
+## **Interface Return Value Guidelines**
+- For the return value definitions of frontend APIs (used by Controllers and Blazor), always use the **unified response model `Res`**. Refer to `@rules\mo-framework-res-type.mdc` for usage details.
 
 ## Available MCP Servers
 - **mcp__microsoft-docs__microsoft_docs_search**: MCP Server for searching Microsoft/Azure official documentation. This is particularly useful for finding ASP.NET Core, Blazor, and related documentation and best practices.
-
-## Offline Runtime Requirements
-**All UI modules and components MUST support offline/intranet environments:**
-
-### Font Management
-- **禁止使用在线字体CDN**：不得直接引用 Google Fonts、Adobe Fonts 等在线字体服务
-- **本地字体优先**：所有字体文件必须存储在 `wwwroot/fonts/` 目录下
-- **字体工具使用**：使用 `@scripts/font-downloader/` 中的工具下载和管理字体文件
-
-### 其他离线要求
-- 所有静态资源（CSS、JS、图片等）必须本地化
-- 不得依赖任何外部CDN或在线服务
-- 必须考虑内网环境下的可用性
-
-### 字体更新流程
-1. 使用字体下载器：`python @scripts/font-downloader/font_downloader.py`
-2. 将下载的字体文件复制到对应UI模块的 `wwwroot/fonts/` 目录
-3. 在主题CSS中配置 `@font-face` 规则引用本地字体文件
 
 ## Development Phase & Optimization Policy
 - **Development Stage**: This project is in internal development and has not been released. Backward compatibility is not a concern unless explicitly instructed otherwise.

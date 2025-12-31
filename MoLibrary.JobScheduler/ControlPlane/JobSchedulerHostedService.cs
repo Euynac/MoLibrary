@@ -21,7 +21,7 @@ public class JobSchedulerHostedService(
     RecurringJobScheduler recurringJobScheduler,
     TriggeredJobScheduler triggeredJobScheduler,
     [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
-    ILeaderService leaderService,
+    ILeaderElectionService leaderService,
     ILogger<JobSchedulerHostedService> logger,
     IServiceRegistrationCoordinator coordinator,
     IObservableInstanceManager observableManager,
