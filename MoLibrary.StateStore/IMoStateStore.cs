@@ -174,4 +174,56 @@ public interface IMoStateStore
     /// <returns>返回包含状态值和版本标识的元组</returns>
     Task<(T value, string etag)> GetStateAndVersionAsync<T>(string key, string? prefix,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 使用 ETag 验证保存状态（乐观锁），仅当 ETag 匹配时保存成功
+    /// </summary>
+    /// <typeparam name="T">状态数据类型</typeparam>
+    /// <param name="key">状态键</param>
+    /// <param name="value">状态值</param>
+    /// <param name="expectedETag">预期的 ETag 值</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <param name="ttl">生存时间</param>
+    /// <returns>返回元组：Success 表示是否保存成功，NewETag 为新的版本标识</returns>
+    Task<(bool Success, string? NewETag)> TrySaveStateWithETagAsync<T>(string key, T value, string expectedETag,
+        CancellationToken cancellationToken = default, TimeSpan? ttl = null);
+
+    /// <summary>
+    /// 使用 ETag 验证保存状态（乐观锁），仅当 ETag 匹配时保存成功，使用指定的键前缀
+    /// </summary>
+    /// <typeparam name="T">状态数据类型</typeparam>
+    /// <param name="key">状态键</param>
+    /// <param name="value">状态值</param>
+    /// <param name="expectedETag">预期的 ETag 值</param>
+    /// <param name="prefix">键前缀</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <param name="ttl">生存时间</param>
+    /// <returns>返回元组：Success 表示是否保存成功，NewETag 为新的版本标识</returns>
+    Task<(bool Success, string? NewETag)> TrySaveStateWithETagAsync<T>(string key, T value, string expectedETag,
+        string? prefix, CancellationToken cancellationToken = default, TimeSpan? ttl = null);
+
+    /// <summary>
+    /// 仅当 Key 不存在时保存状态（SetIfNotExists）
+    /// </summary>
+    /// <typeparam name="T">状态数据类型</typeparam>
+    /// <param name="key">状态键</param>
+    /// <param name="value">状态值</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <param name="ttl">生存时间</param>
+    /// <returns>成功返回 true（Key 不存在且保存成功），失败返回 false（Key 已存在）</returns>
+    Task<bool> TrySaveStateIfNotExistsAsync<T>(string key, T value,
+        CancellationToken cancellationToken = default, TimeSpan? ttl = null);
+
+    /// <summary>
+    /// 仅当 Key 不存在时保存状态（SetIfNotExists），使用指定的键前缀
+    /// </summary>
+    /// <typeparam name="T">状态数据类型</typeparam>
+    /// <param name="key">状态键</param>
+    /// <param name="value">状态值</param>
+    /// <param name="prefix">键前缀</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <param name="ttl">生存时间</param>
+    /// <returns>成功返回 true（Key 不存在且保存成功），失败返回 false（Key 已存在）</returns>
+    Task<bool> TrySaveStateIfNotExistsAsync<T>(string key, T value, string? prefix,
+        CancellationToken cancellationToken = default, TimeSpan? ttl = null);
 }

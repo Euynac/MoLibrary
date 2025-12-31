@@ -130,23 +130,8 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         var finalKey = GetKey(key, prefix);
         try
         {
-            var ttlSeconds = ttl?.Seconds;
-            switch (ttlSeconds)
-            {
-                case < 0:
-                    throw new InvalidOperationException("ttl can not smaller than zero");
-                case 0:
-                    await dapr.SaveStateAsync(StateStoreName, finalKey, (object?) value, cancellationToken: cancellationToken,
-                        metadata: new Dictionary<string, string> { { "ttlInSeconds", "-1" } });
-                    break;
-                case { } seconds:
-                    await dapr.SaveStateAsync(StateStoreName, finalKey, (object?) value, cancellationToken: cancellationToken,
-                        metadata: new Dictionary<string, string> { { "ttlInSeconds", seconds.ToString() } });
-                    break;
-                default:
-                    await dapr.SaveStateAsync(StateStoreName, finalKey,(object?) value, cancellationToken: cancellationToken);
-                    break;
-            }
+            var metadata = BuildTtlMetadata(ttl);
+            await dapr.SaveStateAsync(StateStoreName, finalKey, (object?)value, metadata: metadata, cancellationToken: cancellationToken);
         }
         catch (Exception e)
         {
@@ -199,5 +184,84 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         }
     }
 
- 
+    public override async Task<(bool Success, string? NewETag)> TrySaveStateWithETagAsync<T>(string key, T value, string expectedETag,
+        string? prefix, CancellationToken cancellationToken = default, TimeSpan? ttl = null)
+    {
+        var finalKey = GetKey(key, prefix);
+        try
+        {
+            var metadata = BuildTtlMetadata(ttl);
+
+            // 使用 Dapr 的 TrySaveStateAsync 进行乐观锁保存
+            var success = await dapr.TrySaveStateAsync(StateStoreName, finalKey, value, expectedETag,
+                metadata: metadata, cancellationToken: cancellationToken);
+
+            if (success)
+            {
+                // 保存成功，获取新的 ETag
+                var (_, newETag) = await dapr.GetStateAndETagAsync<T>(StateStoreName, finalKey,
+                    cancellationToken: cancellationToken);
+                return (true, newETag);
+            }
+
+            Logger.LogDebug("ETag mismatch for key: {Key}. Expected: {Expected}", finalKey, expectedETag);
+            return (false, null);
+        }
+        catch (Exception e)
+        {
+            throw e.CreateException(Logger, "ERROR TrySaveStateWithETag to {0} with key: {1}", StateStoreName, finalKey);
+        }
+    }
+
+    public override async Task<bool> TrySaveStateIfNotExistsAsync<T>(string key, T value, string? prefix,
+        CancellationToken cancellationToken = default, TimeSpan? ttl = null)
+    {
+        var finalKey = GetKey(key, prefix);
+        try
+        {
+            // 先检查 key 是否存在
+            var (existingValue, existingETag) = await dapr.GetStateAndETagAsync<T>(StateStoreName, finalKey,
+                cancellationToken: cancellationToken);
+
+            // 如果 ETag 不为空，说明 key 已存在
+            if (!string.IsNullOrEmpty(existingETag))
+            {
+                Logger.LogDebug("Key already exists, cannot save: {Key}", finalKey);
+                return false;
+            }
+
+            // Key 不存在，尝试保存（使用空 ETag 确保是新建操作）
+            var metadata = BuildTtlMetadata(ttl);
+
+            // 使用空 ETag 进行保存，如果同时有其他进程创建了这个 key，会失败
+            var success = await dapr.TrySaveStateAsync(StateStoreName, finalKey, value, "",
+                metadata: metadata, cancellationToken: cancellationToken);
+
+            if (success)
+            {
+                Logger.LogDebug("Saved state (if not exists) with key: {Key}", finalKey);
+                return true;
+            }
+
+            // 可能在检查和保存之间有其他进程创建了这个 key
+            Logger.LogDebug("Failed to save state (race condition), key: {Key}", finalKey);
+            return false;
+        }
+        catch (Exception e)
+        {
+            throw e.CreateException(Logger, "ERROR TrySaveStateIfNotExists to {0} with key: {1}", StateStoreName, finalKey);
+        }
+    }
+
+    private static Dictionary<string, string>? BuildTtlMetadata(TimeSpan? ttl)
+    {
+        var ttlSeconds = ttl?.TotalSeconds;
+        return ttlSeconds switch
+        {
+            < 0 => throw new InvalidOperationException("ttl can not be smaller than zero"),
+            0 => new Dictionary<string, string> { { "ttlInSeconds", "-1" } },
+            { } seconds => new Dictionary<string, string> { { "ttlInSeconds", ((int)seconds).ToString() } },
+            _ => null
+        };
+    }
 }

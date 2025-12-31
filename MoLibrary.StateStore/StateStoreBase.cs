@@ -75,6 +75,18 @@ public abstract class StateStoreBase(ILogger logger) : IMoStateStore
         return await GetStateAndVersionAsync<T>(key, GetAutoPrefixFromType(typeof(T)), cancellationToken);
     }
 
+    public virtual async Task<(bool Success, string? NewETag)> TrySaveStateWithETagAsync<T>(string key, T value, string expectedETag,
+        CancellationToken cancellationToken = default, TimeSpan? ttl = null)
+    {
+        return await TrySaveStateWithETagAsync(key, value, expectedETag, GetAutoPrefixFromType(typeof(T)), cancellationToken, ttl);
+    }
+
+    public virtual async Task<bool> TrySaveStateIfNotExistsAsync<T>(string key, T value,
+        CancellationToken cancellationToken = default, TimeSpan? ttl = null)
+    {
+        return await TrySaveStateIfNotExistsAsync(key, value, GetAutoPrefixFromType(typeof(T)), cancellationToken, ttl);
+    }
+
     #endregion
 
     #region 核心抽象方法
@@ -94,6 +106,12 @@ public abstract class StateStoreBase(ILogger logger) : IMoStateStore
 
     public abstract Task<(T value, string etag)> GetStateAndVersionAsync<T>(string key, string? prefix,
         CancellationToken cancellationToken = default);
+
+    public abstract Task<(bool Success, string? NewETag)> TrySaveStateWithETagAsync<T>(string key, T value, string expectedETag,
+        string? prefix, CancellationToken cancellationToken = default, TimeSpan? ttl = null);
+
+    public abstract Task<bool> TrySaveStateIfNotExistsAsync<T>(string key, T value, string? prefix,
+        CancellationToken cancellationToken = default, TimeSpan? ttl = null);
 
     #endregion
 
