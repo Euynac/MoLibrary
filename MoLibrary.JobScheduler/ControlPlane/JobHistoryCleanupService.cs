@@ -7,6 +7,7 @@ using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Core;
 using MoLibrary.JobScheduler.Metadata;
 using MoLibrary.JobScheduler.Modules;
+using MoLibrary.RegisterCentre.Events;
 using MoLibrary.RegisterCentre.Interfaces;
 
 namespace MoLibrary.JobScheduler.ControlPlane;
@@ -14,6 +15,7 @@ namespace MoLibrary.JobScheduler.ControlPlane;
 /// <summary>
 /// Background service that cleans up old job execution history based on retention policies.
 /// Extends CoordinatedLeaderService for leader-only execution to prevent duplicate cleanup operations.
+/// Supports dynamic leader status changes - stops cleanup loop on leader loss and resumes on leader gain.
 /// </summary>
 public class JobHistoryCleanupService(
     IMoJobMetadataRepository metadataRepository,
@@ -34,6 +36,16 @@ public class JobHistoryCleanupService(
         RecordState(
             $"History cleanup configured: Interval={_jobSchedulerOptions.HistoryCleanupInterval}, MaxDeletionsPerJob={_jobSchedulerOptions.MaxDeletionsPerJobPerCycle}",
             givenLogLevel: LogLevel.Information);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Logs when leader status is lost. The background cleanup loop will automatically stop
+    /// because the leader token is cancelled.
+    /// </summary>
+    protected override Task OnLeaderLostAsync(LeaderLostReason reason)
+    {
+        logger.LogInformation("History cleanup service stopped after losing leader status (reason: {Reason})", reason);
         return Task.CompletedTask;
     }
 

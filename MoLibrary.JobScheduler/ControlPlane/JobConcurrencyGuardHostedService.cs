@@ -11,6 +11,7 @@ using MoLibrary.JobScheduler.Events;
 using MoLibrary.JobScheduler.Metadata;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.JobScheduler.Modules;
+using MoLibrary.RegisterCentre.Events;
 using MoLibrary.RegisterCentre.Interfaces;
 
 namespace MoLibrary.JobScheduler.ControlPlane;
@@ -18,6 +19,7 @@ namespace MoLibrary.JobScheduler.ControlPlane;
 /// <summary>
 /// Manages job concurrency limits by tracking running instances and listening to lifecycle events.
 /// Extends CoordinatedLeaderService for consistent initialization with RegisterCentre coordination and leader-only execution.
+/// Supports dynamic leader status changes - cleans up subscriptions on leader loss and re-initializes on leader gain.
 /// </summary>
 public class JobConcurrencyGuardHostedService(
     IJobDefinitionCacheService cacheService,
@@ -32,9 +34,9 @@ public class JobConcurrencyGuardHostedService(
     IOptions<ModuleHostedServiceOption> hostedServiceOptions
 ) : CoordinatedLeaderService(leaderService, options, logger, coordinator, observableManager, hostedServiceOptions), IJobConcurrencyGuard
 {
-    private readonly ConcurrentDictionary<string, JobExecutionStatistic> _statistics = new();
-    private readonly ConcurrentDictionary<string, SemaphoreSlim> _jobLocks = new();
-    private readonly List<IAsyncDisposable> _eventSubscriptions = [];
+    private ConcurrentDictionary<string, JobExecutionStatistic> _statistics = new();
+    private ConcurrentDictionary<string, SemaphoreSlim> _jobLocks = new();
+    private List<IAsyncDisposable> _eventSubscriptions = [];
 
     public override string ServiceName => nameof(JobConcurrencyGuardHostedService);
 
@@ -154,36 +156,32 @@ public class JobConcurrencyGuardHostedService(
             _statistics.Values.Sum(s => s.RunningInstances.Count));
     }
 
-    public override async Task StopAsync(CancellationToken cancellationToken)
+    /// <summary>
+    /// Cleans up event subscriptions and in-memory state when leader status is lost.
+    /// This allows for proper re-initialization when leader status is re-gained.
+    /// </summary>
+    protected override async Task OnLeaderLostAsync(LeaderLostReason reason)
     {
-        logger.LogInformation("JobConcurrencyGuard is stopping...");
+        logger.LogInformation("JobConcurrencyGuard cleaning up after losing leader status (reason: {Reason})", reason);
 
-        try
+        // Unsubscribe from EventBus events
+        foreach (var subscription in _eventSubscriptions)
         {
-            // Call base to stop ExecuteAsync
-            await base.StopAsync(cancellationToken);
-
-            // Unsubscribe from EventBus events
-            foreach (var subscription in _eventSubscriptions)
-            {
-                await subscription.DisposeAsync();
-            }
-            _eventSubscriptions.Clear();
-
-            // Dispose all semaphores
-            foreach (var semaphore in _jobLocks.Values)
-            {
-                semaphore.Dispose();
-            }
-            _jobLocks.Clear();
-
-            logger.LogInformation("JobConcurrencyGuard stopped");
+            await subscription.DisposeAsync();
         }
-        catch (Exception ex)
+        _eventSubscriptions = [];
+
+        // Dispose all semaphores
+        foreach (var semaphore in _jobLocks.Values)
         {
-            logger.LogError(ex, "Error during JobConcurrencyGuard shutdown");
-            throw;
+            semaphore.Dispose();
         }
+
+        // Reset state for potential re-initialization
+        _jobLocks = new ConcurrentDictionary<string, SemaphoreSlim>();
+        _statistics = new ConcurrentDictionary<string, JobExecutionStatistic>();
+
+        logger.LogInformation("JobConcurrencyGuard cleanup completed");
     }
 
     public async Task<bool> CanExecuteJobAsync(string jobKey, CancellationToken cancellationToken = default)

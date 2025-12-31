@@ -10,6 +10,7 @@ using MoLibrary.JobScheduler.Core;
 using MoLibrary.JobScheduler.Events;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.JobScheduler.Modules;
+using MoLibrary.RegisterCentre.Events;
 using MoLibrary.RegisterCentre.Interfaces;
 
 namespace MoLibrary.JobScheduler.WorkerPlane;
@@ -18,6 +19,7 @@ namespace MoLibrary.JobScheduler.WorkerPlane;
 /// Background service that registers discovered job definitions to the JobRegistry during application startup.
 /// Extends CoordinatedLeaderService for consistent initialization with RegisterCentre coordination and leader-only execution.
 /// Publishes JobDefinitionsChangedEvent after reconciliation to notify subscribers of changes.
+/// Supports dynamic leader status changes - re-registers job definitions when leader status is re-gained.
 /// </summary>
 public class JobRegistrationHostedService(
     JobRegistry jobRegistry,
@@ -31,6 +33,16 @@ public class JobRegistrationHostedService(
     IOptions<ModuleHostedServiceOption> hostedServiceOptions) : CoordinatedLeaderService(leaderService, option, logger, coordinator, observableManager, hostedServiceOptions)
 {
     public override string ServiceName => nameof(JobRegistrationHostedService);
+
+    /// <summary>
+    /// Logs when leader status is lost. Job registration is a one-time operation per leader election,
+    /// so no cleanup is needed. The jobs will be re-registered when leader status is re-gained.
+    /// </summary>
+    protected override Task OnLeaderLostAsync(LeaderLostReason reason)
+    {
+        logger.LogInformation("Job registration service lost leader status (reason: {Reason}). Jobs will be re-registered on next leader election.", reason);
+        return Task.CompletedTask;
+    }
 
     protected override async Task LeaderInitializeAsync(CancellationToken cancellationToken)
     {

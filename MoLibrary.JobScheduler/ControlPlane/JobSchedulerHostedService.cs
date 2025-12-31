@@ -7,6 +7,7 @@ using MoLibrary.EventBus.Abstractions;
 using MoLibrary.JobScheduler.Core;
 using MoLibrary.JobScheduler.Events;
 using MoLibrary.JobScheduler.Modules;
+using MoLibrary.RegisterCentre.Events;
 using MoLibrary.RegisterCentre.Interfaces;
 
 namespace MoLibrary.JobScheduler.ControlPlane;
@@ -15,6 +16,7 @@ namespace MoLibrary.JobScheduler.ControlPlane;
 /// Central orchestrator for job scheduling and execution requests.
 /// Extends CoordinatedLeaderService for consistent initialization with RegisterCentre coordination and leader-only execution.
 /// Coordinates RecurringJobScheduler and TriggeredJobScheduler.
+/// Supports dynamic leader status changes - stops schedulers on leader loss and re-initializes on leader gain.
 /// </summary>
 public class JobSchedulerHostedService(
     IOptions<ModuleJobSchedulerOption> options,
@@ -51,36 +53,27 @@ public class JobSchedulerHostedService(
         _definitionsChangedSubscription = await eventBus.SubscribeAsync<JobDefinitionsChangedEvent>(
             recurringJobScheduler.OnJobDefinitionsChangedAsync);
         logger.LogDebug("Subscribed to JobDefinitionsChangedEvent");
-    } 
+    }
 
     /// <summary>
-    /// Stops the job scheduler gracefully, coordinating shutdown of all schedulers.
+    /// Cleans up schedulers and event subscriptions when leader status is lost.
+    /// This allows for proper re-initialization when leader status is re-gained.
     /// </summary>
-    public override async Task StopAsync(CancellationToken cancellationToken)
+    protected override async Task OnLeaderLostAsync(LeaderLostReason reason)
     {
-        logger.LogInformation("JobScheduler stopping...");
+        logger.LogInformation("JobScheduler cleaning up after losing leader status (reason: {Reason})", reason);
 
-        try
+        // Unsubscribe from events
+        if (_definitionsChangedSubscription != null)
         {
-            // Call base to stop ExecuteAsync
-            await base.StopAsync(cancellationToken);
-
-            // Unsubscribe from events
-            if (_definitionsChangedSubscription != null)
-            {
-                await _definitionsChangedSubscription.DisposeAsync();
-            }
-
-            // Stop schedulers
-            await recurringJobScheduler.StopAsync(cancellationToken);
-            await triggeredJobScheduler.StopAsync(cancellationToken);
-
-            logger.LogInformation("JobScheduler stopped");
+            await _definitionsChangedSubscription.DisposeAsync();
+            _definitionsChangedSubscription = null;
         }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error during JobScheduler shutdown");
-            throw;
-        }
+
+        // Stop schedulers (they will be re-initialized when leader status is re-gained)
+        await recurringJobScheduler.StopAsync(CancellationToken.None);
+        await triggeredJobScheduler.StopAsync(CancellationToken.None);
+
+        logger.LogInformation("JobScheduler cleanup completed");
     }
 }

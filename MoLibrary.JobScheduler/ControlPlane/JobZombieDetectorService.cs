@@ -8,6 +8,7 @@ using MoLibrary.JobScheduler.Core;
 using MoLibrary.JobScheduler.Metadata;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.JobScheduler.Modules;
+using MoLibrary.RegisterCentre.Events;
 using MoLibrary.RegisterCentre.Interfaces;
 
 namespace MoLibrary.JobScheduler.ControlPlane;
@@ -16,6 +17,7 @@ namespace MoLibrary.JobScheduler.ControlPlane;
 /// Background service that detects and cleans up zombie job instances.
 /// Zombie instances are jobs stuck in Processing or Enqueued states beyond their timeout limits.
 /// Extends CoordinatedLeaderService for leader-only execution.
+/// Supports dynamic leader status changes - stops scanning on leader loss and resumes on leader gain.
 /// </summary>
 public class JobZombieDetectorService(
     IMoJobMetadataRepository metadataRepository,
@@ -38,6 +40,16 @@ public class JobZombieDetectorService(
     protected override Task LeaderInitializeAsync(CancellationToken cancellationToken)
     {
         RecordState($"Zombie detector configured: Interval={_jobSchedulerOptions.ZombieDetectionInterval}, ProcessingMultiplier={_jobSchedulerOptions.ProcessingTimeoutMultiplier}, EnqueuedTimeout={_jobSchedulerOptions.EnqueuedStateTimeout}", givenLogLevel: LogLevel.Information);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Logs when leader status is lost. The background scanning loop will automatically stop
+    /// because the leader token is cancelled.
+    /// </summary>
+    protected override Task OnLeaderLostAsync(LeaderLostReason reason)
+    {
+        logger.LogInformation("Zombie detector stopped after losing leader status (reason: {Reason})", reason);
         return Task.CompletedTask;
     }
 
