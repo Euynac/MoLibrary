@@ -13,14 +13,9 @@ public interface IRegisterCentreClientInfo
     const string LISTENING_ADDRESS_METADATA_KEY = "LISTENING_ADDRESS";
 
     /// <summary>
-    /// 获取当前微服务状态
+    /// 获取当前微服务实例的完整状态信息
     /// </summary>
-    /// <param name="isHeartbeatInfo"></param>
-    /// <returns></returns>
-    ServiceRegisterInfo GetServiceStatus(bool isHeartbeatInfo = false);
-    /// <summary>
-    /// 获取注册中心APPID
-    /// </summary>
-    /// <returns></returns>
-    string GetRegisterCentreAppId();
+    /// <param name="isHeartbeatInfo">是否为心跳信息（心跳时不包含环境变量和监听地址元数据）</param>
+    /// <returns>实例状态信息</returns>
+    InstanceState GetServiceStatus(bool isHeartbeatInfo = false);
 }

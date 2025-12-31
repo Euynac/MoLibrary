@@ -33,9 +33,18 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModuleW
         DependsOnModule<ModuleHostedServiceGuide>().Register();
 
         // Depend on StateStore module for state management
-        DependsOnModule<ModuleStateStoreGuide>()
-            .Register()
-            .AddKeyedCommonStateStore(nameof(ModuleRegisterCentre), option.UseDistributedStateStore);
+        // Only register common state store if not using custom keyed provider
+        if (!option.UseCustomKeyedStateStore)
+        {
+            DependsOnModule<ModuleStateStoreGuide>()
+                .Register()
+                .AddKeyedCommonStateStore(nameof(ModuleRegisterCentre), !option.IsStandaloneMode);
+        }
+        else
+        {
+            // Just register the StateStore module dependency without adding keyed store
+            DependsOnModule<ModuleStateStoreGuide>().Register();
+        }
     }
 
     public override void ConfigureServices(IServiceCollection services)
@@ -111,10 +120,10 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModuleW
                 {
                     CurrentInstance = new
                     {
-                        ServiceInfo = clientInfo.GetServiceStatus(),
-                        IsLeader = leaderService.IsLeader,
+                        InstanceInfo = clientInfo.GetServiceStatus(),
+                        leaderService.IsLeader,
                         LeaderStatus = leaderService.CurrentStatus.ToString(),
-                        LeaderBecomeTime = leaderService.LeaderBecomeTime
+                        leaderService.LeaderBecomeTime
                     },
                     RegisteredInstances = instances,
                     LeaderInfo = leaderState != null ? new
@@ -191,7 +200,6 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
         ConfigureModuleOption(o =>
         {
             o.IsStandaloneMode = true;
-            o.UseDistributedStateStore = false;
         });
         return this;
     }
@@ -208,28 +216,7 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
         ConfigureModuleOption(o =>
         {
             o.IsStandaloneMode = false;
-            o.UseDistributedStateStore = true;
         });
-        return this;
-    }
-
-    /// <summary>
-    /// 配置 Leader 选举参数
-    /// </summary>
-    /// <param name="configure">配置委托</param>
-    public ModuleRegisterCentreGuide ConfigureElection(Action<ElectionConfig> configure)
-    {
-        ConfigureModuleOption(o => configure(o.Election));
-        return this;
-    }
-
-    /// <summary>
-    /// 设置孤立处理模式
-    /// </summary>
-    /// <param name="mode">处理模式</param>
-    public ModuleRegisterCentreGuide SetIsolationHandling(EIsolationHandlingMode mode)
-    {
-        ConfigureModuleOption(o => o.IsolationHandlingMode = mode);
         return this;
     }
 
@@ -290,6 +277,29 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
         ConfigureModuleOption(o => o.DependentSubDomains = domains);
         return this;
     }
+
+    /// <summary>
+    /// 使用自定义的 Keyed StateStore 提供者
+    /// </summary>
+    /// <param name="configureKeyedServices">配置 Keyed 服务的委托</param>
+    /// <remarks>
+    /// 此方法允许外部模块（如 MoLibrary.Dapr）为 RegisterCentre 注册自定义的 StateStore 实现。
+    /// 调用此方法后，ClaimDependencies 将不再自动注册默认的 Keyed StateStore。
+    /// </remarks>
+    public ModuleRegisterCentreGuide UseKeyedStateStore(Action<IServiceCollection> configureKeyedServices)
+    {
+        ConfigureEmpty(SET_STATE_STORE);
+        ConfigureModuleOption(o =>
+        {
+            o.UseCustomKeyedStateStore = true;
+            o.IsStandaloneMode = false;
+        });
+        ConfigureServices(context =>
+        {
+            configureKeyedServices(context.Services);
+        });
+        return this;
+    }
 }
 public static class ModuleRegisterCentreBuilderExtensions
 {
@@ -313,48 +323,6 @@ public class ModuleRegisterCentreOption : MoModuleControllerOption<ModuleRegiste
     public bool IsStandaloneMode { get; internal set; }
    
     /// <summary>
-    /// TODO 最大并发执行数量
-    /// </summary>
-    public int MaxParallelInvokerCount { get; set; }
-
-    /// <summary>
-    /// 客户端心跳间隔（单位：秒）
-    /// </summary>
-    public int HeartbeatInterval { get; set; } = 10;
-
-    /// <summary>
-    /// 客户端注册中心重试次数
-    /// </summary>
-    public int ClientRetryTimes { get; set; } = 0;
-    /// <summary>
-    /// 客户端注册重试间隔（单位：秒）
-    /// </summary>
-    public int InitialRetryInterval { get; set; } = 5;
-    
-    /// <summary>
-    /// 服务端心跳检查间隔（单位：秒）
-    /// </summary>
-    public int ServerHeartbeatCheckInterval { get; set; } = 5;
-
-    /// <summary>
-    /// 不健康阈值倍数 - 心跳超过 (HeartbeatInterval × UnhealthyThresholdMultiplier) 秒后实例被标记为Unhealthy
-    /// 默认值：1.5（即 10秒心跳间隔 × 1.5 = 15秒后标记为不健康）
-    /// </summary>
-    public double UnhealthyThresholdMultiplier { get; set; } = 1.5;
-
-    /// <summary>
-    /// 离线阈值倍数 - 心跳超过 (HeartbeatInterval × OfflineThresholdMultiplier) 秒后实例被标记为Offline
-    /// 默认值：2.5（即 10秒心跳间隔 × 2.5 = 25秒后标记为离线）
-    /// </summary>
-    public double OfflineThresholdMultiplier { get; set; } = 2.5;
-
-    /// <summary>
-    /// 驱逐阈值倍数 - 心跳超过 (HeartbeatInterval × ExpelThresholdMultiplier) 秒后实例被从注册中心移除
-    /// 默认值：5.0（即 10秒心跳间隔 × 5.0 = 50秒后从注册中心移除）
-    /// </summary>
-    public double ExpelThresholdMultiplier { get; set; } = 5.0;
-
-    /// <summary>
     /// 需要读取作为元数据的环境变量Key列表
     /// </summary>
     public List<string> MetadataEnvironmentVariables { get; set; } = new();
@@ -363,13 +331,7 @@ public class ModuleRegisterCentreOption : MoModuleControllerOption<ModuleRegiste
     /// 是否获取监听地址作为元数据
     /// </summary>
     public bool IncludeListeningAddresses { get; set; } = true;
-
-    /// <summary>
-    /// 是否启用领导者选举功能
-    /// <para>启用后，注册中心会自动为每个AppId的实例进行领导者选举</para>
-    /// <para>选举规则：注册时间最早的Running状态实例被选为领导者</para>
-    /// </summary>
-    public bool EnableLeaderElection { get; set; } = true;
+    
 
     // === Service Identity Configuration ===
 
@@ -423,20 +385,12 @@ public class ModuleRegisterCentreOption : MoModuleControllerOption<ModuleRegiste
     /// </summary>
     public List<string>? DependentSubDomains { get; set; }
 
-    // === Distributed Mode Configuration ===
-
-    /// <summary>
-    /// 注册中心服务的AppId（分布式模式下连接的注册中心标识）
-    /// 使用UseDistributedProvider时必须配置
-    /// </summary>
-    public string? RegisterCentreAppId { get; set; }
-
     // === 新架构配置 ===
 
     /// <summary>
     /// Leader 选举配置
     /// </summary>
-    public Models.ElectionConfig Election { get; set; } = new();
+    public ElectionConfig Election { get; set; } = new();
 
     /// <summary>
     /// 孤立处理模式
@@ -444,9 +398,10 @@ public class ModuleRegisterCentreOption : MoModuleControllerOption<ModuleRegiste
     public EIsolationHandlingMode IsolationHandlingMode { get; set; } = EIsolationHandlingMode.ContinueRunning;
 
     /// <summary>
-    /// 是否使用分布式状态存储
+    /// 是否使用自定义的 Keyed StateStore 提供者
+    /// 当为 true 时，ClaimDependencies 不会自动注册 Keyed StateStore
     /// </summary>
-    public bool UseDistributedStateStore { get; internal set; }
+    public bool UseCustomKeyedStateStore { get; internal set; }
 }
 
 /// <summary>

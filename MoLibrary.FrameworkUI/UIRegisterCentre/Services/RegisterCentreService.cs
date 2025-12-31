@@ -34,44 +34,38 @@ public class RegisterCentreService(
     }
 
     /// <summary>
-    /// 将 InstanceState 列表转换为 RegisteredServiceStatus 列表（按 AppId 分组）
+    /// 将 InstanceState 列表转换为 RegisteredServiceStatus 列表（按 ServiceName 分组）
     /// </summary>
     private static List<RegisteredServiceStatus> ConvertToRegisteredServiceStatus(List<InstanceState> instances)
     {
         var result = new List<RegisteredServiceStatus>();
 
-        // 按 AppId 分组（从 RegisterInfo 获取）
+        // 按 ServiceName（即 AppId）分组
         var groupedByAppId = instances
-            .Where(i => i.RegisterInfo != null)
-            .GroupBy(i => i.RegisterInfo!.AppId);
+            .GroupBy(i => i.ServiceName);
 
         foreach (var group in groupedByAppId)
         {
             var firstInstance = group.First();
-            var registerInfo = firstInstance.RegisterInfo!;
 
             var serviceStatus = new RegisteredServiceStatus
             {
-                AppId = registerInfo.AppId,
-                AppName = registerInfo.AppName,
-                DomainName = registerInfo.DomainName,
-                ProjectName = registerInfo.ProjectName,
-                DependentSubDomains = registerInfo.DependentSubDomains,
+                AppId = firstInstance.ServiceName,
+                AppName = firstInstance.AppName,
+                DomainName = firstInstance.DomainName,
+                ProjectName = firstInstance.ProjectName,
+                DependentSubDomains = firstInstance.DependentSubDomains,
                 Instances = new Dictionary<string, ServiceInstance>()
             };
 
             // 添加每个实例
             foreach (var instanceState in group)
             {
-                var serviceInstance = new ServiceInstance
-                {
-                    InstanceId = instanceState.InstanceId,
-                    RegisterInfo = instanceState.RegisterInfo!,
-                    Status = ServiceStatus.Running, // 存在于 StateStore 中即表示在线
-                    LastHeartbeatTime = instanceState.LastHeartbeatTime,
-                    RegistrationTime = instanceState.RegistrationTime, 
-                    IsLeader = false // 将由 LeaderElectionService 另行处理
-                };
+                var serviceInstance = ServiceInstance.FromInstanceState(
+                    instanceState,
+                    ServiceStatus.Running, // 存在于 StateStore 中即表示在线
+                    isLeader: false // 将由 LeaderElectionService 另行处理
+                );
 
                 serviceStatus.Instances[instanceState.InstanceId] = serviceInstance;
             }

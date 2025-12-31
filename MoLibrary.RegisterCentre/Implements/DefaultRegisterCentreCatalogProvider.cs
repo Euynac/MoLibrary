@@ -22,8 +22,8 @@ public class DefaultRegisterCentreCatalogProvider(IRegistrationStateManager? sta
             var instances = await stateManager.GetAllInstancesAsync();
 
             var domainNames = instances
-                .Where(s => s.RegisterInfo != null && !string.IsNullOrWhiteSpace(s.RegisterInfo.DomainName))
-                .Select(s => s.RegisterInfo!.DomainName!)
+                .Where(s => !string.IsNullOrWhiteSpace(s.DomainName))
+                .Select(s => s.DomainName!)
                 .Distinct()
                 .ToList();
 

@@ -19,65 +19,47 @@ public class DefaultRegisterCentreClientInfo(
     private readonly ModuleRegisterCentreOption _options = options.Value;
 
     // 延迟初始化基础服务信息（避免重复执行昂贵操作）
-    private readonly Lazy<ServiceRegisterInfo> _baseServiceInfo = new(
+    private readonly Lazy<InstanceState> _baseServiceInfo = new(
         () => BuildBaseServiceInfo(options.Value));
 
-    public ServiceRegisterInfo GetServiceStatus(bool isHeartbeatInfo = false)
+    public InstanceState GetServiceStatus(bool isHeartbeatInfo = false)
     {
         // 克隆基础信息以避免修改缓存的实例
-        var serviceInfo = CloneServiceInfo(_baseServiceInfo.Value);
+        var instanceState = CloneInstanceState(_baseServiceInfo.Value);
 
         if (isHeartbeatInfo)
         {
-            return serviceInfo;
+            return instanceState;
         }
 
         // 为完整注册添加元数据（心跳时不添加）
-        AddEnvironmentVariablesMetadata(serviceInfo);
-        AddListeningAddressesMetadata(serviceInfo);
+        AddEnvironmentVariablesMetadata(instanceState);
+        AddListeningAddressesMetadata(instanceState);
 
-        return serviceInfo;
-    }
-
-    public string GetRegisterCentreAppId()
-    {
-        // 单实例内存模式返回特殊标识
-        if (_options.IsStandaloneMode)
-        {
-            return "InMemory";
-        }
-
-        // 分布式模式必须配置RegisterCentreAppId
-        if (string.IsNullOrWhiteSpace(_options.RegisterCentreAppId))
-        {
-            throw new InvalidOperationException(
-                "RegisterCentreAppId must be configured in ModuleRegisterCentreOption when using distributed mode. " +
-                "Set it via: ConfigModuleRegisterCentre(o => o.RegisterCentreAppId = \"YourRegistryCentreAppId\")");
-        }
-
-        return _options.RegisterCentreAppId;
+        return instanceState;
     }
 
     /// <summary>
-    /// 从配置选项构建基础服务信息，使用自动检测作为回退
+    /// 从配置选项构建基础实例状态信息，使用自动检测作为回退
     /// </summary>
-    private static ServiceRegisterInfo BuildBaseServiceInfo(ModuleRegisterCentreOption options)
+    private static InstanceState BuildBaseServiceInfo(ModuleRegisterCentreOption options)
     {
         var entryAssembly = Assembly.GetEntryAssembly();
         var assemblyName = entryAssembly?.GetName().Name ?? "Unknown";
 
-        return new ServiceRegisterInfo
+        return new InstanceState
         {
-            DomainName = options.DomainName,
-            AppId = options.AppId ?? assemblyName,
+            ServiceName = options.AppId ?? assemblyName,
+            InstanceId = options.FromInstance ?? GenerateFromInstance(),
             AppName = options.AppName ?? assemblyName,
             ProjectName = options.ProjectName ?? assemblyName,
+            DomainName = options.DomainName,
             BuildTime = options.BuildTime ?? GetBuildTime(entryAssembly),
             AssemblyVersion = options.AssemblyVersion ?? GetAssemblyVersion(entryAssembly),
             ReleaseVersion = options.ReleaseVersion,
-            FromInstance = options.FromInstance ?? GenerateFromInstance(),
             DependentSubDomains = options.DependentSubDomains,
-            UpdateTime = DateTime.Now
+            RegistrationTime = DateTime.MinValue,
+            LastHeartbeatTime = DateTime.MinValue
         };
     }
 
@@ -135,22 +117,23 @@ public class DefaultRegisterCentreClientInfo(
     }
 
     /// <summary>
-    /// 克隆ServiceRegisterInfo以避免修改缓存的实例
+    /// 克隆 InstanceState 以避免修改缓存的实例
     /// </summary>
-    private static ServiceRegisterInfo CloneServiceInfo(ServiceRegisterInfo original)
+    private static InstanceState CloneInstanceState(InstanceState original)
     {
-        return new ServiceRegisterInfo
+        return new InstanceState
         {
-            DomainName = original.DomainName,
-            AppId = original.AppId,
+            ServiceName = original.ServiceName,
+            InstanceId = original.InstanceId,
             AppName = original.AppName,
             ProjectName = original.ProjectName,
+            DomainName = original.DomainName,
             BuildTime = original.BuildTime,
             AssemblyVersion = original.AssemblyVersion,
             ReleaseVersion = original.ReleaseVersion,
-            FromInstance = original.FromInstance,
             DependentSubDomains = original.DependentSubDomains?.ToList(),
-            UpdateTime = DateTime.Now, // 总是使用当前时间
+            RegistrationTime = original.RegistrationTime,
+            LastHeartbeatTime = original.LastHeartbeatTime,
             Metadata = new Dictionary<string, string>() // 从空元数据开始
         };
     }
@@ -158,14 +141,14 @@ public class DefaultRegisterCentreClientInfo(
     /// <summary>
     /// 根据配置将环境变量添加为元数据
     /// </summary>
-    private void AddEnvironmentVariablesMetadata(ServiceRegisterInfo serviceInfo)
+    private void AddEnvironmentVariablesMetadata(InstanceState instanceState)
     {
         foreach (var envKey in _options.MetadataEnvironmentVariables)
         {
             var envValue = Environment.GetEnvironmentVariable(envKey);
             if (!string.IsNullOrEmpty(envValue))
             {
-                serviceInfo.Metadata[envKey] = envValue;
+                instanceState.Metadata[envKey] = envValue;
             }
         }
     }
@@ -173,14 +156,14 @@ public class DefaultRegisterCentreClientInfo(
     /// <summary>
     /// 如果配置启用，将监听地址添加为元数据
     /// </summary>
-    private void AddListeningAddressesMetadata(ServiceRegisterInfo serviceInfo)
+    private void AddListeningAddressesMetadata(InstanceState instanceState)
     {
         if (_options.IncludeListeningAddresses &&
             serverAddressesFeature?.Addresses != null &&
             serverAddressesFeature.Addresses.Any())
         {
             var addresses = string.Join(";", serverAddressesFeature.Addresses);
-            serviceInfo.Metadata[IRegisterCentreClientInfo.LISTENING_ADDRESS_METADATA_KEY] = addresses;
+            instanceState.Metadata[IRegisterCentreClientInfo.LISTENING_ADDRESS_METADATA_KEY] = addresses;
         }
     }
 }

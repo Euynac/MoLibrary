@@ -39,14 +39,15 @@ public class RegistrationStateManager(
             var regKey = GetRegistrationKey();
             var now = DateTime.UtcNow;
 
-            var instanceState = new InstanceState
-            {
-                ServiceName = _option.AppId!,
-                InstanceId = _option.FromInstance!,
-                RegistrationTime = now,
-                LastHeartbeatTime = now,
-                RegisterInfo = clientInfo.GetServiceStatus()
-            };
+            // 获取基础实例状态（包含所有服务信息和元数据）
+            var instanceState = clientInfo.GetServiceStatus();
+
+            // 获取现有状态以保留原始注册时间
+            var existingState = await stateStore.GetStateAsync<InstanceState>(regKey, REG_PREFIX, ct);
+
+            // 设置运行时状态字段
+            instanceState.RegistrationTime = existingState?.RegistrationTime ?? now;
+            instanceState.LastHeartbeatTime = now;
 
             await stateStore.SaveStateAsync(
                 regKey,

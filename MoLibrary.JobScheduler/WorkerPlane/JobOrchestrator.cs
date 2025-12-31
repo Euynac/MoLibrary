@@ -61,7 +61,7 @@ public class JobOrchestrator(
                 instance.InstanceId);
 
             // Step 3: Update state to Processing (will automatically publish JobStartedEvent)
-            var workerClientId = client.GetServiceStatus().FromInstance;
+            var workerClientId = client.GetServiceStatus().InstanceId;
 
             if(workerClientId == null) throw new InvalidOperationException("Worker client id is null. Check if the register centre module is properly configured.");
             await jobInstanceManager.UpdateStateAsync(

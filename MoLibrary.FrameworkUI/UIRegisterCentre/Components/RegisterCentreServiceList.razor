@@ -75,7 +75,7 @@
 					var runningInstance = context.Item.GetValidInstanceInfo();
 				}
 				<MudText Typo="Typo.body2">
-					@(runningInstance?.RegisterInfo.AssemblyVersion ?? "N/A")
+					@(runningInstance?.AssemblyVersion ?? "N/A")
 				</MudText>
 			</CellTemplate>
 		</TemplateColumn>
@@ -84,9 +84,9 @@
 				@{
 					var runningInstance = context.Item.GetValidInstanceInfo();
 				}
-				<MudTooltip Text="@(runningInstance?.RegisterInfo.BuildTime.ToString("yyyy-MM-dd HH:mm:ss") ?? "N/A")">
+				<MudTooltip Text="@(runningInstance?.BuildTime.ToString("yyyy-MM-dd HH:mm:ss") ?? "N/A")">
 					<MudText Typo="Typo.body2">
-						@(runningInstance?.RegisterInfo.BuildTime.ToString("MM-dd HH:mm") ?? "N/A")
+						@(runningInstance?.BuildTime.ToString("MM-dd HH:mm") ?? "N/A")
 					</MudText>
 				</MudTooltip>
 			</CellTemplate>
@@ -97,7 +97,7 @@
 				<CellTemplate>
 					@{
 						var runningInstance = context.Item.GetValidInstanceInfo();
-						var metadataValue = runningInstance?.RegisterInfo.Metadata.GetValueOrDefault(metadataKey) ?? "N/A";
+						var metadataValue = runningInstance?.Metadata.GetValueOrDefault(metadataKey) ?? "N/A";
 					}
 					<MetadataValueDisplay Value="@metadataValue" IsCompactMode="true" />
 				</CellTemplate>
@@ -278,8 +278,8 @@
         var hasMetadata = Services.Any(service =>
         {
             var runningInstance = service.GetValidInstanceInfo();
-            return runningInstance?.RegisterInfo.Metadata != null &&
-                   configuredKeys.Any(key => runningInstance.RegisterInfo.Metadata.ContainsKey(key));
+            return runningInstance?.Metadata != null &&
+                   configuredKeys.Any(key => runningInstance.Metadata.ContainsKey(key));
         });
 
         return hasMetadata ? configuredKeys : [];

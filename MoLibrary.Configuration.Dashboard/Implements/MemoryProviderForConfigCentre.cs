@@ -34,9 +34,8 @@ public class MemoryProviderForConfigCentre(
 
         // Extract AppIds, ordered by build time (newest first) so newest version is selected in Distinct
         var list = instances
-            .Where(i => i.RegisterInfo != null)
-            .OrderByDescending(i => i.RegisterInfo!.BuildTime)
-            .Select(i => i.RegisterInfo!.AppId)
+            .OrderByDescending(i => i.BuildTime)
+            .Select(i => i.ServiceName)
             .ToList();
 
         var res = await invoker.GetRegisteredServicesConfigsAsync(list);
