@@ -7,5 +7,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\MoLibrary.Core\MoLibrary.Core.csproj" />
+    <ProjectReference Include="..\MoLibrary.StateStore\MoLibrary.StateStore.csproj" />
   </ItemGroup>
 </Project>

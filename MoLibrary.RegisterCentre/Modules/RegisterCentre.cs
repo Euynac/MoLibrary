@@ -12,8 +12,10 @@ using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.Core.Modules;
 using MoLibrary.RegisterCentre.Implements;
+using MoLibrary.RegisterCentre.Implements.StateStore;
 using MoLibrary.RegisterCentre.Interfaces;
 using MoLibrary.RegisterCentre.Models;
+using MoLibrary.StateStore.Modules;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.RegisterCentre.Modules;
@@ -29,6 +31,11 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModuleW
     {
         // Depend on HostedService module for MoBackgroundService base class
         DependsOnModule<ModuleHostedServiceGuide>().Register();
+
+        // Depend on StateStore module for state management
+        DependsOnModule<ModuleStateStoreGuide>()
+            .Register()
+            .AddKeyedCommonStateStore(nameof(ModuleRegisterCentre), option.UseDistributedStateStore);
     }
 
     public override void ConfigureServices(IServiceCollection services)
@@ -48,6 +55,10 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModuleW
         // 使用TryAddSingleton允许用户在需要时提供自定义实现
         services.TryAddSingleton<IRegisterCentreClientInfo, DefaultRegisterCentreClientInfo>();
 
+        // 注册新的 StateStore 基础服务
+        services.TryAddSingleton<IRegistrationStateManager, RegistrationStateManager>();
+        services.TryAddSingleton<ILeaderElectionService, LeaderElectionService>();
+
         // 注册 RegisterCentreClientHostedService 为单例并同时作为 HostedService 和 Coordinator
         services.AddSingleton<RegisterCentreClientHostedService>();
         services.AddSingleton<IServiceRegistrationCoordinator>(provider =>
@@ -61,87 +72,97 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModuleW
 
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
-        if (option.IsCentreServer)
-        {
-            app.UseEndpoints(endpoints =>
-            {
-                var tagGroup = new List<OpenApiTag> { new() { Name = option.GetApiGroupName(), Description = "注册中心" } };
-                endpoints.MapPost(RegisterCentreConventions.ServerCentreRegister, async (ServiceRegisterInfo req, [FromServices] IRegisterCentreServer centre) =>
-                {
-                    if ((await centre.Register(req)).IsFailed(out var error)) return error;
-                    return Res.Ok("注册成功");
-                }).WithName("微服务注册").WithOpenApi(operation =>
-                {
-                    operation.Summary = "微服务注册";
-                    operation.Description = "注册微服务到注册中心";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
-                
-                endpoints.MapPost(RegisterCentreConventions.ServerCentreHeartbeat, async (ServiceHeartbeat req, [FromServices] IRegisterCentreServer centre) =>
-                {
-                    if ((await centre.Heartbeat(req)).IsFailed(out var error, out var data))
-                        return error.GetResponse();
-                    return Res.Create(data, ResponseCode.Ok).GetResponse();
-                }).WithName("微服务心跳").WithOpenApi(operation =>
-                {
-                    operation.Summary = "微服务心跳";
-                    operation.Description = "发送心跳到注册中心";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
-
-                endpoints.MapPost(RegisterCentreConventions.ServerCentreLeaderStatus, async (LeaderStatusRequest req, [FromServices] IRegisterCentreServer centre) =>
-                {
-                    if ((await centre.GetLeaderStatus(req)).IsFailed(out var error, out var data))
-                        return error.GetResponse();
-                    return Res.Create(data, ResponseCode.Ok).GetResponse();
-                }).WithName("查询领导者状态").WithOpenApi(operation =>
-                {
-                    operation.Summary = "查询领导者状态";
-                    operation.Description = "查询指定实例在服务集群中的领导者状态（Leader/Follower/Looking）";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
-
-                endpoints.MapGet(RegisterCentreConventions.ServerCentreGetServicesStatus, async ([FromServices] IRegisterCentreServer centre) =>
-                {
-                    if ((await centre.GetServicesStatus()).IsFailed(out var error, out var data))
-                        return error.GetResponse();
-                    return Res.Create(data, ResponseCode.Ok).GetResponse();
-                }).WithName("获取所有微服务状态").WithOpenApi(operation =>
-                {
-                    operation.Summary = "获取所有微服务状态";
-                    operation.Description = "获取所有微服务状态";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
-
-
-                endpoints.MapGet(RegisterCentreConventions.ServerCentreUnregisterAll, async ([FromServices] IRegisterCentreServer centre) =>
-                {
-                    var res = await centre.UnregisterAll();
-                    return res.GetResponse();
-                }).WithName("清空所有注册").WithOpenApi(operation =>
-                {
-                    operation.Summary = "清空所有注册";
-                    operation.Description = "清空所有注册";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
-
-            });
-        }
         app.UseEndpoints(endpoints =>
         {
-            var tagGroup = new List<OpenApiTag> { new() { Name = option.GetApiGroupName(), Description = "注册中心客户端相关内置接口" } };
-            endpoints.MapGet(RegisterCentreConventions.ClientReconnectCentre, async (HttpResponse response, HttpContext context, [FromServices] IRegisterCentreServerConnector connector, [FromServices] IRegisterCentreClientInfo client) =>
+            var tagGroup = new List<OpenApiTag> { new() { Name = option.GetApiGroupName(), Description = "注册中心" } };
+
+            // 获取当前实例的 Leader 状态
+            endpoints.MapGet(RegisterCentreConventions.ServerCentreLeaderStatus,
+                ([FromServices] ILeaderElectionService leaderService,
+                 [FromServices] IRegistrationStateManager stateManager) =>
+                {
+                    var response = new LeaderStatusResponse
+                    {
+                        Status = leaderService.CurrentStatus,
+                        LeaderInstanceId = leaderService.IsLeader ? option.FromInstance : null,
+                        LeaderRegistrationTime = leaderService.LeaderBecomeTime,
+                        RunningInstanceCount = 1, // 单实例当前只能获取自身信息
+                        Message = leaderService.IsLeader ? "当前实例是 Leader" : "当前实例不是 Leader"
+                    };
+                    return Res.Create(response, ResponseCode.Ok).GetResponse();
+                }).WithName("查询Leader状态").WithOpenApi(operation =>
             {
-                return await connector.Register(client.GetServiceStatus());
-            }).WithName("测试重连配置中心").WithOpenApi(operation =>
+                operation.Summary = "查询 Leader 状态";
+                operation.Description = "查询当前实例在服务集群中的 Leader 状态";
+                operation.Tags = tagGroup;
+                return operation;
+            });
+
+            // 获取当前实例的注册状态
+            endpoints.MapGet(RegisterCentreConventions.ServerCentreGetServicesStatus, async (
+                [FromServices] IRegistrationStateManager stateManager,
+                [FromServices] ILeaderElectionService leaderService,
+                [FromServices] IRegisterCentreClientInfo clientInfo) =>
             {
-                operation.Summary = "测试重连配置中心";
-                operation.Description = "测试重连配置中心";
+                var instances = await stateManager.GetAllInstancesAsync();
+                var leaderState = await stateManager.GetLeaderStateAsync();
+
+                var result = new
+                {
+                    CurrentInstance = new
+                    {
+                        ServiceInfo = clientInfo.GetServiceStatus(),
+                        IsLeader = leaderService.IsLeader,
+                        LeaderStatus = leaderService.CurrentStatus.ToString(),
+                        LeaderBecomeTime = leaderService.LeaderBecomeTime
+                    },
+                    RegisteredInstances = instances,
+                    LeaderInfo = leaderState != null ? new
+                    {
+                        leaderState.InstanceId,
+                        leaderState.BecomeLeaderTime,
+                        leaderState.ServiceName
+                    } : null
+                };
+
+                return Res.Create(result, ResponseCode.Ok).GetResponse();
+            }).WithName("获取服务状态").WithOpenApi(operation =>
+            {
+                operation.Summary = "获取服务状态";
+                operation.Description = "获取当前实例的注册状态和 Leader 信息";
+                operation.Tags = tagGroup;
+                return operation;
+            });
+
+            // 强制释放 Leader（用于调试/管理）
+            endpoints.MapPost("/centre-server/release-leader", async (
+                [FromServices] ILeaderElectionService leaderService,
+                [FromServices] IRegistrationStateManager stateManager) =>
+            {
+                if (!leaderService.IsLeader)
+                {
+                    return Res.Fail("当前实例不是 Leader").GetResponse();
+                }
+
+                leaderService.TriggerLeaderLost(Events.LeaderLostReason.GracefulShutdown);
+                await stateManager.DeleteLeaderKeyAsync();
+                return Res.Ok("已释放 Leader 状态").GetResponse();
+            }).WithName("释放Leader状态").WithOpenApi(operation =>
+            {
+                operation.Summary = "释放 Leader 状态";
+                operation.Description = "强制当前实例释放 Leader 状态（用于调试/管理）";
+                operation.Tags = tagGroup;
+                return operation;
+            });
+
+            // 获取选举配置
+            endpoints.MapGet("/centre-server/election-config", () =>
+            {
+                return Res.Create(option.Election, ResponseCode.Ok).GetResponse();
+            }).WithName("获取选举配置").WithOpenApi(operation =>
+            {
+                operation.Summary = "获取选举配置";
+                operation.Description = "获取当前实例的 Leader 选举配置参数";
                 operation.Tags = tagGroup;
                 return operation;
             });
@@ -151,73 +172,83 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModuleW
 
 public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, ModuleRegisterCentreOption, ModuleRegisterCentreGuide>
 {
-    private const string SET_PROVIDER =  nameof(SET_PROVIDER);
+    private const string SET_STATE_STORE = nameof(SET_STATE_STORE);
+
     protected override string[] GetRequestedConfigMethodKeys()
     {
-        return [nameof(SET_PROVIDER)];
+        return [SET_STATE_STORE];
     }
 
     /// <summary>
-    /// 使用单实例内存模式
+    /// 使用内存状态存储（单实例模式）
     /// </summary>
-    /// <returns></returns>
-    public ModuleRegisterCentreGuide UseInMemoryProvider()
+    /// <remarks>
+    /// 适用于单实例部署或开发环境
+    /// </remarks>
+    public ModuleRegisterCentreGuide UseInMemoryStateStore()
     {
-        ConfigureEmpty(SET_PROVIDER);
+        ConfigureEmpty(SET_STATE_STORE);
         ConfigureModuleOption(o =>
         {
             o.IsStandaloneMode = true;
-        });
-        SetAsCentreServer();
-        ConfigureServices(context =>
-        {
-            context.Services.TryAddSingleton<ILeaderService, ClientSideLeaderService>();
-            context.Services.TryAddSingleton<IRegisterCentreServerConnector, RegisterCentreServerConnectorStandaloneProvider>();
-            context.Services.TryAddSingleton<IRegisterCentreServerInvocationConnector, RegisterCentreServerInvocationConnectorStandaloneProvider>();
+            o.UseDistributedStateStore = false;
         });
         return this;
     }
 
     /// <summary>
-    /// 使用分布式模式(多实例场景)
+    /// 使用分布式状态存储（多实例模式）
     /// </summary>
-    /// <typeparam name="TProvider"></typeparam>
-    /// <returns></returns>
-    public ModuleRegisterCentreGuide UseDistributedProvider<TProvider>()
-        where TProvider : class, IRegisterCentreServerInvocationConnector
+    /// <remarks>
+    /// 适用于多实例部署，需要配置分布式 StateStore（如 Redis）
+    /// </remarks>
+    public ModuleRegisterCentreGuide UseDistributedStateStore()
     {
-        ConfigureEmpty(SET_PROVIDER);
-        ConfigureServices(context =>
-        {
-            context.Services.TryAddSingleton<ILeaderService, ClientSideLeaderService>();
-            context.Services.TryAddSingleton<IRegisterCentreServerInvocationConnector, TProvider>();
-            context.Services.TryAddSingleton<IRegisterCentreServerConnector, RegisterCentreServerConnectorDistributedProvider>();
-        });
-        return this;
-    }
-    /// <summary>
-    /// 设置当前服务为注册中心服务端
-    /// </summary>
-    /// <returns></returns>
-    public ModuleRegisterCentreGuide SetAsCentreServer()
-    {
+        ConfigureEmpty(SET_STATE_STORE);
         ConfigureModuleOption(o =>
         {
-            o.IsCentreServer = true;
-        });
-
-        ConfigureServices(context =>
-        {
-            context.Services.TryAddSingleton<IRegisterCentreServer, MemoryProviderForRegisterCentre>();
+            o.IsStandaloneMode = false;
+            o.UseDistributedStateStore = true;
         });
         return this;
     }
-   
+
+    /// <summary>
+    /// 配置 Leader 选举参数
+    /// </summary>
+    /// <param name="configure">配置委托</param>
+    public ModuleRegisterCentreGuide ConfigureElection(Action<ElectionConfig> configure)
+    {
+        ConfigureModuleOption(o => configure(o.Election));
+        return this;
+    }
+
+    /// <summary>
+    /// 设置孤立处理模式
+    /// </summary>
+    /// <param name="mode">处理模式</param>
+    public ModuleRegisterCentreGuide SetIsolationHandling(EIsolationHandlingMode mode)
+    {
+        ConfigureModuleOption(o => o.IsolationHandlingMode = mode);
+        return this;
+    }
+
+    /// <summary>
+    /// 将当前服务设置为注册中心服务器
+    /// </summary>
+    /// <remarks>
+    /// 设置后，服务将作为配置中心或其他服务的注册管理中心
+    /// </remarks>
+    public ModuleRegisterCentreGuide SetAsCentreServer()
+    {
+        ConfigureModuleOption(o => o.IsCentreServer = true);
+        return this;
+    }
+
     /// <summary>
     /// 设置注册中心服务端目录提供者服务
     /// </summary>
     /// <typeparam name="TInfoProvider">目录提供者服务实现类型</typeparam>
-    /// <returns></returns>
     public ModuleRegisterCentreGuide ConfigServerCatalog<TInfoProvider>()
         where TInfoProvider : class, IRegisterCentreCatalogProvider
     {
@@ -233,7 +264,6 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
     /// </summary>
     /// <typeparam name="TEnum">标记了Flags特性的枚举类型</typeparam>
     /// <param name="domainFlags">包含多个域标志的枚举值</param>
-    /// <returns></returns>
     public ModuleRegisterCentreGuide SetDependentSubDomains<TEnum>(TEnum domainFlags)
         where TEnum : struct, Enum
     {
@@ -400,4 +430,37 @@ public class ModuleRegisterCentreOption : MoModuleControllerOption<ModuleRegiste
     /// 使用UseDistributedProvider时必须配置
     /// </summary>
     public string? RegisterCentreAppId { get; set; }
+
+    // === 新架构配置 ===
+
+    /// <summary>
+    /// Leader 选举配置
+    /// </summary>
+    public Models.ElectionConfig Election { get; set; } = new();
+
+    /// <summary>
+    /// 孤立处理模式
+    /// </summary>
+    public EIsolationHandlingMode IsolationHandlingMode { get; set; } = EIsolationHandlingMode.ContinueRunning;
+
+    /// <summary>
+    /// 是否使用分布式状态存储
+    /// </summary>
+    public bool UseDistributedStateStore { get; internal set; }
+}
+
+/// <summary>
+/// 孤立处理模式
+/// </summary>
+public enum EIsolationHandlingMode
+{
+    /// <summary>
+    /// 继续运行（降级模式，不参与 Leader 选举）
+    /// </summary>
+    ContinueRunning,
+
+    /// <summary>
+    /// 快速下线
+    /// </summary>
+    FastShutdown
 }

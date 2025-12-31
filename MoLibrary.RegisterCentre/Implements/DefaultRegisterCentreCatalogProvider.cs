@@ -1,35 +1,32 @@
 using System.ComponentModel;
 using MoLibrary.RegisterCentre.Interfaces;
-using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.RegisterCentre.Implements;
 
 /// <summary>
 /// 默认注册中心预定义信息提供者实现
 /// </summary>
-public class DefaultRegisterCentreCatalogProvider(IRegisterCentreServer? registerCentreServer = null) : IRegisterCentreCatalogProvider
+public class DefaultRegisterCentreCatalogProvider(IRegistrationStateManager? stateManager = null) : IRegisterCentreCatalogProvider
 {
     /// <summary>
-    /// 获取所有领域信息（默认实现通过IRegisterCentreServer获取已注册的DomainName列表）
+    /// 获取所有领域信息（默认实现通过 StateStore 获取已注册的 DomainName 列表）
     /// </summary>
     /// <returns>所有领域信息列表</returns>
     public virtual async Task<List<DomainInfo>> GetAllDomainsAsync()
     {
-        if (registerCentreServer == null)
+        if (stateManager == null)
             return [];
-            
+
         try
         {
-            var servicesResult = await registerCentreServer.GetServicesStatus();
-            if (servicesResult.IsFailed(out _, out var services))
-                return [];
-            
-            var domainNames = services
-                .Where(s => !string.IsNullOrWhiteSpace(s.DomainName))
-                .Select(s => s.DomainName!)
+            var instances = await stateManager.GetAllInstancesAsync();
+
+            var domainNames = instances
+                .Where(s => s.RegisterInfo != null && !string.IsNullOrWhiteSpace(s.RegisterInfo.DomainName))
+                .Select(s => s.RegisterInfo!.DomainName!)
                 .Distinct()
                 .ToList();
-            
+
             return domainNames.Select(name => new DomainInfo
             {
                 Name = name,
