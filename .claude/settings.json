@@ -2,6 +2,7 @@
   "enabledPlugins": {
     "context7@claude-plugins-official": true,
     "csharp-lsp@claude-plugins-official": true,
-    "frontend-design@claude-plugins-official": true
+    "frontend-design@claude-plugins-official": true,
+    "plugin-dev@claude-plugins-official": true
   }
 }
