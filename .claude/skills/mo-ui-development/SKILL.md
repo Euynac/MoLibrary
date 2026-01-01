@@ -311,9 +311,9 @@ Use `ErrorBoundary` for graceful error handling:
 </ErrorBoundary>
 ```
 
-## Reference Files
+## Additional Resources
 
-### Detailed Documentation
+### Reference Files
 
 For comprehensive guidance, consult these reference files:
 
@@ -324,6 +324,12 @@ For comprehensive guidance, consult these reference files:
 - **`references/migration-guide.md`** - Complete v8.9.0 breaking changes and migration patterns
 - **`references/css-isolation-fix-workflow.md`** - Step-by-step workflow for fixing CSS isolation issues
 - **`references/offline-requirements.md`** - Font management and offline environment requirements
+
+### Scripts
+
+Utility scripts for common operations:
+
+- **`scripts/font_downloader.py`** - Download Google Fonts for offline use. Supports single URL download, batch download (`--download-all`), weight filtering (`--weights`), and custom output directory. See `references/offline-requirements.md` for detailed usage.
 
 ### Quick Search Patterns
 

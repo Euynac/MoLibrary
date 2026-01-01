@@ -71,17 +71,31 @@ Must consider environments without internet access:
 
 ### Font Downloader Tool
 
-Use the font downloader tool to download and manage fonts:
+This skill includes a font downloader script at `scripts/font_downloader.py`.
+
+**Usage:**
 
 ```bash
-python scripts/font-downloader/font_downloader.py
+# Download a single font from Google Fonts CSS URL
+python font_downloader.py "https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+
+# Download all project fonts (predefined in script)
+python font_downloader.py --download-all
+
+# Specify output directory
+python font_downloader.py "CSS_URL" -o ./fonts
+
+# Filter specific font weights
+python font_downloader.py "CSS_URL" --weights 400,500,600
 ```
+
+**Requirements:** Python 3.6+, requests library (`pip install requests`)
 
 ### Font Configuration
 
 #### Step 1: Download fonts
 
-Use the font downloader tool to download required fonts from Google Fonts or other sources.
+Run the font downloader script to download required fonts from Google Fonts.
 
 #### Step 2: Copy font files
 
