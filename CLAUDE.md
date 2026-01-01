@@ -73,7 +73,7 @@ Static web assets (wwwroot) are handled through:
 
 ## **Blazor and MudBlazor UI Development**
 
-For comprehensive guidance on Blazor UI development with MudBlazor in MoLibrary, use the **MoLibrary UI Development** skill located at `.claude/plugins/mo-library-ui/`.
+For comprehensive guidance on Blazor UI development with MudBlazor in MoLibrary, use the **MoLibrary UI Development** skill.
 
 The skill covers:
 - CSS isolation patterns and `::deep` selector usage

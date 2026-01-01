@@ -2,11 +2,6 @@ namespace MoLibrary.RegisterCentre.Models;
 
 public enum ServiceStatus
 {
-    /// <summary>
-    /// 未知状态
-    /// </summary>
-    Unknown,
-    
     /// <summary>运行中</summary>
     Running,
 

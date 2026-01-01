@@ -1,4 +1,5 @@
 @using Microsoft.Extensions.Options
+@using MoLibrary.FrameworkUI.UIRegisterCentre.Extensions
 @using MoLibrary.RegisterCentre
 @using MoLibrary.RegisterCentre.Interfaces
 @using MoLibrary.RegisterCentre.Models
@@ -35,8 +36,8 @@
                         <MudText Typo="Typo.h6" Class="mb-3">服务状态</MudText>
                         <MudGrid>
                             <MudItem xs="12" sm="4">
-                                <MudChip T="string" Color="@GetOverallStatusColor()" Icon="@GetOverallStatusIcon()" Size="Size.Large">
-                                    @GetOverallStatusText()
+                                <MudChip T="string" Color="@Service.OverallStatus.GetColor()" Icon="@Service.OverallStatus.GetIcon()" Size="Size.Large">
+                                    @Service.OverallStatus.GetText()
                                 </MudChip>
                             </MudItem>
                             <MudItem xs="12" sm="4">
@@ -75,11 +76,8 @@
                     </TemplateColumn>
                     <TemplateColumn Title="状态">
                         <CellTemplate>
-                            @{
-                                var (color, text, icon) = GetInstanceStatusInfo(context.Item.Status);
-                            }
-                            <MudChip T="string" Color="@color" Size="Size.Small" Icon="@icon">
-                                @text
+                            <MudChip T="string" Color="@context.Item.Status.GetColor()" Size="Size.Small" Icon="@context.Item.Status.GetIcon()">
+                                @context.Item.Status.GetText()
                             </MudChip>
                         </CellTemplate>
                     </TemplateColumn>
@@ -242,8 +240,8 @@
                         <MudStack Spacing="3">
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                 <MudText Typo="Typo.subtitle1">状态:</MudText>
-                                <MudChip T="string" Color="@GetLeaderStatusColor()" Size="Size.Medium" Icon="@GetLeaderStatusIcon()">
-                                    @GetLeaderStatusText()
+                                <MudChip T="string" Color="@LeaderElectionService.CurrentStatus.GetColor()" Size="Size.Medium" Icon="@LeaderElectionService.CurrentStatus.GetIcon()">
+                                    @LeaderElectionService.CurrentStatus.GetText()
                                 </MudChip>
                             </MudStack>
                             @if (LeaderElectionService.IsLeader)
@@ -305,11 +303,8 @@
                                 <MudText Typo="Typo.h6">
                                     实例 @instance.InstanceId 元数据
                                 </MudText>
-                                @{
-                                    var (color, text, icon) = GetInstanceStatusInfo(instance.Status);
-                                }
-                                <MudChip T="string" Color="@color" Size="Size.Small" Icon="@icon">
-                                    @text
+                                <MudChip T="string" Color="@instance.Status.GetColor()" Size="Size.Small" Icon="@instance.Status.GetIcon()">
+                                    @instance.Status.GetText()
                                 </MudChip>
                                 @if (instance.IsLeader)
                                 {
@@ -351,59 +346,7 @@
 
 @code {
     [Parameter] public RegisteredServiceStatus Service { get; set; } = null!;
-    
-    private Color GetOverallStatusColor()
-    {
-        return Service.OverallStatus switch
-        {
-            ServiceStatus.Running => Color.Success,
-            ServiceStatus.Updating => Color.Info,
-            ServiceStatus.Unhealthy => Color.Warning,
-            ServiceStatus.Offline => Color.Default,
-            ServiceStatus.Error => Color.Error,
-            _ => Color.Default
-        };
-    }
 
-    private string GetOverallStatusIcon()
-    {
-        return Service.OverallStatus switch
-        {
-            ServiceStatus.Running => Icons.Material.Filled.CheckCircle,
-            ServiceStatus.Updating => Icons.Material.Filled.Update,
-            ServiceStatus.Unhealthy => Icons.Material.Filled.HealthAndSafety,
-            ServiceStatus.Offline => Icons.Material.Filled.CloudOff,
-            ServiceStatus.Error => Icons.Material.Filled.Error,
-            _ => Icons.Material.Filled.Help
-        };
-    }
-
-    private string GetOverallStatusText()
-    {
-        return Service.OverallStatus switch
-        {
-            ServiceStatus.Running => "运行中",
-            ServiceStatus.Updating => "更新中",
-            ServiceStatus.Unhealthy => "不健康",
-            ServiceStatus.Offline => "离线",
-            ServiceStatus.Error => "异常",
-            _ => "未知"
-        };
-    }
-
-    private (Color color, string text, string icon) GetInstanceStatusInfo(ServiceStatus status)
-    {
-        return status switch
-        {
-            ServiceStatus.Running => (Color.Success, "运行中", Icons.Material.Filled.CheckCircle),
-            ServiceStatus.Updating => (Color.Info, "更新中", Icons.Material.Filled.Update),
-            ServiceStatus.Unhealthy => (Color.Warning, "不健康", Icons.Material.Filled.HealthAndSafety),
-            ServiceStatus.Offline => (Color.Default, "离线", Icons.Material.Filled.CloudOff),
-            ServiceStatus.Error => (Color.Error, "异常", Icons.Material.Filled.Error),
-            _ => (Color.Default, "未知", Icons.Material.Filled.Help)
-        };
-    }
-    
     private string GetHeartbeatHealthText(TimeSpan timeSinceHeartbeat)
     {
         // Use new TTL-based thresholds from Election config
@@ -440,39 +383,6 @@
         {
             EIsolationHandlingMode.ContinueRunning => "继续运行 (降级模式)",
             EIsolationHandlingMode.FastShutdown => "快速下线",
-            _ => "未知"
-        };
-    }
-
-    private Color GetLeaderStatusColor()
-    {
-        return LeaderElectionService.CurrentStatus switch
-        {
-            LeaderStatus.Leader => Color.Warning,
-            LeaderStatus.Follower => Color.Default,
-            LeaderStatus.Looking => Color.Info,
-            _ => Color.Default
-        };
-    }
-
-    private string GetLeaderStatusIcon()
-    {
-        return LeaderElectionService.CurrentStatus switch
-        {
-            LeaderStatus.Leader => Icons.Material.Filled.Star,
-            LeaderStatus.Follower => Icons.Material.Filled.Circle,
-            LeaderStatus.Looking => Icons.Material.Filled.Search,
-            _ => Icons.Material.Filled.Help
-        };
-    }
-
-    private string GetLeaderStatusText()
-    {
-        return LeaderElectionService.CurrentStatus switch
-        {
-            LeaderStatus.Leader => "Leader",
-            LeaderStatus.Follower => "Follower",
-            LeaderStatus.Looking => "Looking",
             _ => "未知"
         };
     }

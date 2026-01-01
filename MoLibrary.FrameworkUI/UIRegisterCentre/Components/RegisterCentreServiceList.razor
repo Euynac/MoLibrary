@@ -1,4 +1,5 @@
 @using Microsoft.Extensions.Options
+@using MoLibrary.FrameworkUI.UIRegisterCentre.Extensions
 @using MoLibrary.RegisterCentre
 @using MoLibrary.RegisterCentre.Models
 @using MoLibrary.RegisterCentre.Modules
@@ -24,48 +25,8 @@
 		</TemplateColumn>
 		<TemplateColumn Title="整体状态">
 			<CellTemplate>
-				@{
-					var status = context.Item.OverallStatus;
-					Color statusColor;
-					string statusText;
-					string statusIcon;
-
-					switch (status)
-					{
-						case ServiceStatus.Running:
-							statusColor = Color.Success;
-							statusText = "运行中";
-							statusIcon = Icons.Material.Filled.CheckCircle;
-							break;
-						case ServiceStatus.Updating:
-							statusColor = Color.Info;
-							statusText = "更新中";
-							statusIcon = Icons.Material.Filled.Update;
-							break;
-						case ServiceStatus.Unhealthy:
-							statusColor = Color.Warning;
-							statusText = "不健康";
-							statusIcon = Icons.Material.Filled.HealthAndSafety;
-							break;
-						case ServiceStatus.Offline:
-							statusColor = Color.Default;
-							statusText = "离线";
-							statusIcon = Icons.Material.Filled.CloudOff;
-							break;
-						case ServiceStatus.Error:
-							statusColor = Color.Error;
-							statusText = "异常";
-							statusIcon = Icons.Material.Filled.Error;
-							break;
-						default:
-							statusColor = Color.Default;
-							statusText = "未知";
-							statusIcon = Icons.Material.Filled.Help;
-							break;
-					}
-				}
-				<MudChip T="string" Color="@statusColor" Size="Size.Small" Icon="@statusIcon">
-					@statusText
+				<MudChip T="string" Color="@context.Item.OverallStatus.GetColor()" Size="Size.Small" Icon="@context.Item.OverallStatus.GetIcon()">
+					@context.Item.OverallStatus.GetText()
 				</MudChip>
 			</CellTemplate>
 		</TemplateColumn>
@@ -120,21 +81,12 @@
 				<MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
 					@foreach (var instance in context.Item.Instances.Values.Take(3))
 					{
-						var instanceColor = instance.Status switch
-						{
-							ServiceStatus.Running => Color.Success,
-							ServiceStatus.Updating => Color.Info,
-							ServiceStatus.Unhealthy => Color.Warning,
-							ServiceStatus.Offline => Color.Default,
-							ServiceStatus.Error => Color.Error,
-							_ => Color.Default
-						};
 						var leaderBadge = instance.IsLeader ? " 👑 Leader" : "";
-						var tooltipText = $"{instance.InstanceId}: {instance.Status}{leaderBadge}";
+						var tooltipText = $"{instance.InstanceId}: {instance.Status.GetText()}{leaderBadge}";
 
 						<MudStack Row="false" Spacing="0" AlignItems="AlignItems.Center" Style="position: relative;">
 							<MudTooltip Text="@tooltipText">
-								<MudIcon Icon="@Icons.Material.Filled.Circle" Color="@instanceColor" Size="Size.Small" />
+								<MudIcon Icon="@Icons.Material.Filled.Circle" Color="@instance.Status.GetColor()" Size="Size.Small" />
 							</MudTooltip>
 							@if (instance.IsLeader)
 							{

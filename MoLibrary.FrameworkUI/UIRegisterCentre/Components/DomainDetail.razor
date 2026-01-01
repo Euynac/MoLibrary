@@ -1,3 +1,4 @@
+@using MoLibrary.FrameworkUI.UIRegisterCentre.Extensions
 @using MoLibrary.FrameworkUI.UIRegisterCentre.Services
 @using MoLibrary.RegisterCentre.Interfaces
 @using MoLibrary.RegisterCentre.Models
@@ -260,7 +261,7 @@ else
                 <MudStack Spacing="1">
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                         <MudText Typo="Typo.h6">@service.AppName</MudText>
-                        <MudChip T="string" Size="Size.Small" Color="@GetServiceStatusColor(service.OverallStatus)" Text="@GetServiceStatusText(service.OverallStatus)" />
+                        <MudChip T="string" Size="Size.Small" Color="@service.OverallStatus.GetColor()" Text="@service.OverallStatus.GetText()" />
                         @if (!isOwnedService)
                         {
                             <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="外部依赖" />
@@ -305,30 +306,6 @@ else
             </MudStack>
         </MudCardContent>
     </MudCard>;
-
-    private Color GetServiceStatusColor(ServiceStatus status)
-    {
-        return status switch
-        {
-            ServiceStatus.Running => Color.Success,
-            ServiceStatus.Error => Color.Error,
-            ServiceStatus.Updating => Color.Warning,
-            ServiceStatus.Offline => Color.Default,
-            _ => Color.Default
-        };
-    }
-
-    private string GetServiceStatusText(ServiceStatus status)
-    {
-        return status switch
-        {
-            ServiceStatus.Running => "运行中",
-            ServiceStatus.Error => "错误",
-            ServiceStatus.Updating => "更新中",
-            ServiceStatus.Offline => "离线",
-            _ => "未知"
-        };
-    }
 
     private async Task HandleServiceDetailClick(RegisteredServiceStatus service)
     {

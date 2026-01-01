@@ -1,3 +1,4 @@
+@using MoLibrary.FrameworkUI.UIRegisterCentre.Extensions
 @using MoLibrary.RegisterCentre.Models
 @using System.Linq
 
@@ -36,15 +37,15 @@
                         SelectedValuesChanged="OnSelectedStatusesChanged">
                 @foreach (var status in AllStatuses)
                 {
-                    var color = GetStatusColor(status);
+                    var color = status.GetHexColor();
                     var isSelected = SelectedStatuses.Contains(status);
-                    <MudChip T="ServiceStatus" 
+                    <MudChip T="ServiceStatus"
                              Value="status"
-                             Style="@(isSelected 
-                                 ? $"background-color: {color}; border-color: {color}; color: white" 
+                             Style="@(isSelected
+                                 ? $"background-color: {color}; border-color: {color}; color: white"
                                  : $"background-color: {color}20; border-color: {color}; color: {color}")"
                              Size="Size.Small">
-                        @GetStatusText(status)
+                        @status.GetText()
                     </MudChip>
                 }
             </MudChipSet>
@@ -180,29 +181,5 @@
         ShowOnlyWithInstances = value;
         await ShowOnlyWithInstancesChanged.InvokeAsync(value);
         await OnFiltersChanged.InvokeAsync();
-    }
-    
-    private string GetStatusColor(ServiceStatus status)
-    {
-        return status switch
-        {
-            ServiceStatus.Running => "#4caf50",
-            ServiceStatus.Error => "#f44336",
-            ServiceStatus.Updating => "#ff9800",
-            ServiceStatus.Offline => "#9e9e9e",
-            _ => "#757575"
-        };
-    }
-    
-    private string GetStatusText(ServiceStatus status)
-    {
-        return status switch
-        {
-            ServiceStatus.Running => "运行中",
-            ServiceStatus.Error => "错误",
-            ServiceStatus.Updating => "更新中",
-            ServiceStatus.Offline => "离线",
-            _ => "未知"
-        };
     }
 }
