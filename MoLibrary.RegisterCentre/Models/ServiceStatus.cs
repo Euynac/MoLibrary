@@ -2,18 +2,23 @@ namespace MoLibrary.RegisterCentre.Models;
 
 public enum ServiceStatus
 {
+    /// <summary>
+    /// 未知状态
+    /// </summary>
+    Unknown,
+    
     /// <summary>运行中</summary>
-    Running = 0,
+    Running,
 
     /// <summary>更新中</summary>
-    Updating = 1,
+    Updating,
 
     /// <summary>离线</summary>
-    Offline = 2,
+    Offline,
 
     /// <summary>异常</summary>
-    Error = 3,
+    Error,
 
     /// <summary>不健康（心跳超时但未达到离线阈值）</summary>
-    Unhealthy = 4
+    Unhealthy
 }

@@ -41,8 +41,7 @@ public class RegisterCentreService(
         var result = new List<RegisteredServiceStatus>();
 
         // 按 ServiceName（即 AppId）分组
-        var groupedByAppId = instances
-            .GroupBy(i => i.ServiceName);
+        var groupedByAppId = instances.GroupBy(i => i.ServiceName);
 
         foreach (var group in groupedByAppId)
         {
@@ -55,20 +54,15 @@ public class RegisterCentreService(
                 DomainName = firstInstance.DomainName,
                 ProjectName = firstInstance.ProjectName,
                 DependentSubDomains = firstInstance.DependentSubDomains,
-                Instances = new Dictionary<string, ServiceInstance>()
+                Instances = group.ToDictionary(
+                    i => i.InstanceId,
+                    i =>
+                    {
+                        // 存在于 StateStore 中即表示在线
+                        i.Status = ServiceStatus.Running;
+                        return i;
+                    })
             };
-
-            // 添加每个实例
-            foreach (var instanceState in group)
-            {
-                var serviceInstance = ServiceInstance.FromInstanceState(
-                    instanceState,
-                    ServiceStatus.Running, // 存在于 StateStore 中即表示在线
-                    isLeader: false // 将由 LeaderElectionService 另行处理
-                );
-
-                serviceStatus.Instances[instanceState.InstanceId] = serviceInstance;
-            }
 
             result.Add(serviceStatus);
         }

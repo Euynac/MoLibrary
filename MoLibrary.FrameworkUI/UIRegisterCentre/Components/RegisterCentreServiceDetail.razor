@@ -52,7 +52,7 @@
         </MudTabPanel>
         
         <MudTabPanel Text="@($"实例列表 ({Service.TotalInstanceCount})")">
-            <MudDataGrid T="ServiceInstance" Items="@Service.Instances.Values" Hover="true" Dense="true">
+            <MudDataGrid T="InstanceState" Items="@Service.Instances.Values" Hover="true" Dense="true">
                 <Columns>
                     <TemplateColumn Title="实例ID">
                         <CellTemplate>

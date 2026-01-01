@@ -14,6 +14,7 @@ namespace MoLibrary.RegisterCentre.Implements.StateStore;
 public class RegistrationStateManager(
     [FromKeyedServices(nameof(ModuleRegisterCentre))] IMoStateStore stateStore,
     IRegisterCentreClientInfo clientInfo,
+    ILeaderElectionService leaderElectionService,
     IOptions<ModuleRegisterCentreOption> options,
     ILogger<RegistrationStateManager> logger) : IRegistrationStateManager
 {
@@ -48,6 +49,7 @@ public class RegistrationStateManager(
             // 设置运行时状态字段
             instanceState.RegistrationTime = existingState?.RegistrationTime ?? now;
             instanceState.LastHeartbeatTime = now;
+            instanceState.IsLeader = leaderElectionService.IsLeader;
 
             await stateStore.SaveStateAsync(
                 regKey,

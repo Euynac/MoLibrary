@@ -9,6 +9,17 @@ namespace MoLibrary.RegisterCentre.Models;
 public class InstanceState
 {
     /// <summary>
+    /// 是否为领导者（心跳时从内存更新）
+    /// </summary>
+    public bool IsLeader { get; set; }
+
+    /// <summary>
+    /// 实例状态（按需计算，不持久化）
+    /// </summary>
+    [JsonIgnore]
+    public ServiceStatus Status { get; set; }
+
+    /// <summary>
     /// 服务名称（对应 AppId）
     /// </summary>
     public required string ServiceName { get; set; }

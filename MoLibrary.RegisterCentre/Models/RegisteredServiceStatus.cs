@@ -19,8 +19,8 @@ public class RegisteredServiceStatus
     /// 依赖子域列表
     /// </summary>
     public List<string>? DependentSubDomains { get; set; }
-    /// <summary>服务实例字典（Key: FromClient, Value: ServiceInstance）</summary>
-    public Dictionary<string, ServiceInstance> Instances { get; set; } = new();
+    /// <summary>服务实例字典（Key: FromClient, Value: InstanceState）</summary>
+    public Dictionary<string, InstanceState> Instances { get; set; } = new();
     
     /// <summary>获取运行中的实例数量</summary>
     public int RunningInstanceCount => 
@@ -36,7 +36,7 @@ public class RegisteredServiceStatus
     /// 获取有效的服务实例信息
     /// </summary>
     /// <returns></returns>
-    public ServiceInstance? GetValidInstanceInfo() => Instances.Values.FirstOrDefault(x => x.Status is not ServiceStatus.Offline);
+    public InstanceState? GetValidInstanceInfo() => Instances.Values.FirstOrDefault(x => x.Status is not ServiceStatus.Offline);
 
     private ServiceStatus DetermineOverallStatus()
     {
