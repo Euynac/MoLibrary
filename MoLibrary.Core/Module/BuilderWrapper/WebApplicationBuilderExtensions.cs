@@ -36,9 +36,38 @@ public static class WebApplicationBuilderExtensions
 
     public static WebApplicationBuilder? WebApplicationBuilderInstance;
 
+    /// <summary>
+    /// Internal method to trigger BeforeBuild event from Harmony patches.
+    /// </summary>
+    internal static void TriggerBeforeBuild(WebApplicationBuilder builder) => BeforeBuild?.Invoke(builder);
+
+    /// <summary>
+    /// Internal method to trigger AfterBuild event from Harmony patches.
+    /// </summary>
+    internal static void TriggerAfterBuild(WebApplication app) => AfterBuild?.Invoke(app);
+
+    /// <summary>
+    /// Internal method to trigger BeforeUseRouting event from Harmony patches.
+    /// </summary>
+    internal static void TriggerBeforeUseRouting(IApplicationBuilder app) => BeforeUseRouting?.Invoke(app);
+
+    /// <summary>
+    /// Internal method to trigger AfterUseRouting event from Harmony patches.
+    /// </summary>
+    internal static void TriggerAfterUseRouting(IApplicationBuilder app) => AfterUseRouting?.Invoke(app);
+
+    /// <summary>
+    /// Internal method to trigger BeginUseEndpoints event from Harmony patches.
+    /// </summary>
+    internal static void TriggerBeginUseEndpoints(IApplicationBuilder app) => BeginUseEndpoints?.Invoke(app);
+
     public static void ConfigMoModule(this WebApplicationBuilder builder, Action<ModuleCoreOption>? moduleCoreOption = null, Action<ModuleCoreOptionTypeFinder>? typeFinderConfigure = null)
     {
         builder.Services.ConfigActionWrapper(moduleCoreOption, out var option);
+
+        // Initialize Harmony patches to intercept native ASP.NET Core methods
+        HarmonyPatchManager.EnsurePatched();
+
         if (option.EnableRegisterInstantly)
         {
             WebApplicationBuilderInstance = builder;
@@ -51,15 +80,23 @@ public static class WebApplicationBuilderExtensions
     /// </summary>
     /// <param name="builder">The WebApplicationBuilder instance.</param>
     /// <returns>The built WebApplication.</returns>
+    [Obsolete("This method is obsolete. Call builder.Build() directly instead. " +
+              "The module system now uses Harmony patches to intercept native ASP.NET Core methods automatically. " +
+              "This method will be removed in a future version.")]
     public static WebApplication MoBuild(this WebApplicationBuilder builder)
     {
-        // Trigger BeforeBuild event
-        BeforeBuild?.Invoke(builder);
+        // Fallback: manually trigger events if Harmony patching failed
+        if (!HarmonyPatchManager.IsPatchingSuccessful)
+        {
+            BeforeBuild?.Invoke(builder);
+        }
 
         var app = builder.Build();
 
-        // Trigger AfterBuild event
-        AfterBuild?.Invoke(app);
+        if (!HarmonyPatchManager.IsPatchingSuccessful)
+        {
+            AfterBuild?.Invoke(app);
+        }
 
         return app;
     }
@@ -83,24 +120,37 @@ public static class WebApplicationBuilderExtensions
     /// <see cref="Microsoft.AspNetCore.Http.Endpoint"/> associated with the <see cref="Microsoft.AspNetCore.Http.HttpContext"/>.
     /// </para>
     /// </remarks>
+    [Obsolete("This method is obsolete. Call app.UseRouting() directly instead. " +
+              "The module system now uses Harmony patches to intercept native ASP.NET Core methods automatically. " +
+              "This method will be removed in a future version.")]
     public static IApplicationBuilder UseMoRouting(this IApplicationBuilder builder)
     {
-        // Trigger BeforeUseRouting event
-        BeforeUseRouting?.Invoke(builder);
+        // Fallback: manually trigger events if Harmony patching failed
+        if (!HarmonyPatchManager.IsPatchingSuccessful)
+        {
+            BeforeUseRouting?.Invoke(builder);
+        }
 
         builder.UseRouting();
 
-        // Trigger AfterUseRouting event
-        AfterUseRouting?.Invoke(builder);
+        if (!HarmonyPatchManager.IsPatchingSuccessful)
+        {
+            AfterUseRouting?.Invoke(builder);
+        }
 
         return builder;
     }
 
-  
+    [Obsolete("This method is obsolete. Call app.UseEndpoints() directly instead. " +
+              "The module system now uses Harmony patches to intercept native ASP.NET Core methods automatically. " +
+              "This method will be removed in a future version.")]
     public static IApplicationBuilder UseMoEndpoints(this IApplicationBuilder builder)
     {
-        // Trigger BeginUseEndpoints event
-        BeginUseEndpoints?.Invoke(builder);
+        // Fallback: manually trigger events if Harmony patching failed
+        if (!HarmonyPatchManager.IsPatchingSuccessful)
+        {
+            BeginUseEndpoints?.Invoke(builder);
+        }
         return builder;
     }
 }
