@@ -67,13 +67,12 @@ public class RedisStateStore : DistributedStateStoreBase
         }
     }
 
-    public override async Task<List<string>> GetAllKeysByPrefixAsync(string prefix, CancellationToken cancellationToken = default)
+    public override async Task<List<string>> ScanKeysAsync(string pattern, CancellationToken cancellationToken = default)
     {
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var pattern = $"{prefix}&&*";
             var keys = new List<string>();
             var server = _connectionFactory.GetPrimaryServer(_connection);
 
@@ -82,22 +81,20 @@ public class RedisStateStore : DistributedStateStoreBase
                 pattern: pattern).WithCancellation(cancellationToken))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var keyStr = key.ToString();
-                var cleanKey = RemovePrefix(keyStr, prefix);
-                keys.Add(cleanKey);
+                keys.Add(key.ToString());
             }
 
-            Logger.LogDebug("Found {Count} keys with prefix: {Prefix}", keys.Count, prefix);
+            Logger.LogDebug("Found {Count} keys matching pattern: {Pattern}", keys.Count, pattern);
             return keys;
         }
         catch (OperationCanceledException)
         {
-            Logger.LogDebug("GetAllKeysByPrefixAsync was cancelled");
+            Logger.LogDebug("ScanKeysAsync was cancelled");
             throw;
         }
         catch (Exception ex)
         {
-            throw ex.CreateException(Logger, "ERROR getting all keys by prefix {0}", prefix);
+            throw ex.CreateException(Logger, "ERROR scanning keys with pattern {0}", pattern);
         }
     }
 

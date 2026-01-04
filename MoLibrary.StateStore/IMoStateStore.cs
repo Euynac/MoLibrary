@@ -70,16 +70,6 @@ public interface IMoStateStore
     /// <returns>返回状态数据，获取失败返回null</returns>
     Task<T?> GetStateAsync<T>(string key, string? prefix, CancellationToken cancellationToken = default);
 
-
-
-    /// <summary>
-    /// 获取指定类型的系统级单例状态数据，使用类型名作为键
-    /// </summary>
-    /// <typeparam name="T">状态数据类型</typeparam>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>返回状态数据，获取失败返回null</returns>
-    Task<T?> GetSingleStateAsync<T>(CancellationToken cancellationToken = default) where T : class;
-
     /// <summary>
     /// 保存状态数据，使用类型名作为键前缀
     /// </summary>
@@ -103,17 +93,6 @@ public interface IMoStateStore
     Task SaveStateAsync<T>(string key, T value, string? prefix, CancellationToken cancellationToken = default, TimeSpan? ttl = null);
 
     /// <summary>
-    /// 保存指定类型的系统级单例状态数据，使用类型名作为键
-    /// </summary>
-    /// <typeparam name="T">状态数据类型</typeparam>
-    /// <param name="value">状态值</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <param name="ttl">生存时间，填入0代表永久存储，不受全局设置影响</param>
-    /// <returns>保存失败抛出异常</returns>
-    Task SaveSingleStateAsync<T>(T value, CancellationToken cancellationToken = default, TimeSpan? ttl = null)
-        where T : class;
-
-    /// <summary>
     /// 删除指定键的状态数据
     /// </summary>
     /// <param name="key">状态键</param>
@@ -129,14 +108,6 @@ public interface IMoStateStore
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>删除操作的任务</returns>
     Task DeleteStateAsync(string key, string? prefix, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// 删除指定类型的系统级单例状态数据，使用类型名作为键
-    /// </summary>
-    /// <typeparam name="T">状态数据类型</typeparam>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>删除操作的任务</returns>
-    Task DeleteSingleStateAsync<T>(CancellationToken cancellationToken = default) where T : class;
 
     /// <summary>
     /// 批量删除状态数据，不使用键前缀
@@ -228,10 +199,10 @@ public interface IMoStateStore
         CancellationToken cancellationToken = default, TimeSpan? ttl = null);
  
     /// <summary>
-    /// 获取指定前缀下的所有键
+    /// 使用 glob pattern 扫描匹配的 Keys
     /// </summary>
-    /// <param name="prefix">键前缀</param>
+    /// <param name="pattern">Glob pattern (使用 * 和 ? 通配符，如 "user:*"、"session:*:data")</param>
     /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>返回指定前缀下的所有键列表（已移除前缀）</returns>
-    Task<List<string>> GetAllKeysByPrefixAsync(string prefix, CancellationToken cancellationToken = default);
+    /// <returns>返回匹配的原始 Key 列表</returns>
+    Task<List<string>> ScanKeysAsync(string pattern, CancellationToken cancellationToken = default);
 }

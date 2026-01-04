@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
@@ -196,15 +197,25 @@ public class MemoryCacheProvider(IMemoryCache memoryCache, ILogger<MemoryCachePr
         }
     }
 
-    public override Task<List<string>> GetAllKeysByPrefixAsync(string prefix, CancellationToken cancellationToken = default)
+    public override Task<List<string>> ScanKeysAsync(string pattern, CancellationToken cancellationToken = default)
     {
-        var prefixPattern = $"{prefix}&&";
+        var regex = GlobToRegex(pattern);
         var keys = _keyRegistry.Keys
-            .Where(k => k.StartsWith(prefixPattern))
-            .Select(k => RemovePrefix(k, prefix))
+            .Where(k => regex.IsMatch(k))
             .ToList();
 
-        Logger.LogDebug("Found {Count} keys with prefix: {Prefix}", keys.Count, prefix);
+        Logger.LogDebug("Found {Count} keys matching pattern: {Pattern}", keys.Count, pattern);
         return Task.FromResult(keys);
+    }
+
+    /// <summary>
+    /// 将 glob pattern 转换为正则表达式
+    /// </summary>
+    private static Regex GlobToRegex(string pattern)
+    {
+        var regexPattern = "^" + Regex.Escape(pattern)
+            .Replace("\\*", ".*")
+            .Replace("\\?", ".") + "$";
+        return new Regex(regexPattern, RegexOptions.Compiled);
     }
 } 

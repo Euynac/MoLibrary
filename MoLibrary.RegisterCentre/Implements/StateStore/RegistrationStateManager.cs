@@ -195,14 +195,17 @@ public class RegistrationStateManager(
     {
         try
         {
-            // 步骤 1：获取所有 reg 前缀下的 key
-            var instanceKeys = await stateStore.GetAllKeysByPrefixAsync(REG_PREFIX, ct);
+            // 步骤 1：使用 glob pattern 扫描所有 reg 前缀下的 key
+            var rawKeys = await stateStore.ScanKeysAsync($"{REG_PREFIX}&&*", ct);
 
-            if (instanceKeys.Count == 0)
+            if (rawKeys.Count == 0)
             {
                 logger.LogDebug("未找到任何实例");
                 return [];
             }
+
+            // 提取无前缀的 keys
+            var instanceKeys = ExtractKeysWithoutPrefix(rawKeys, REG_PREFIX);
 
             // 步骤 2：批量获取所有 InstanceState
             var instances = await stateStore.GetBulkStateAsync<InstanceState>(
@@ -231,14 +234,17 @@ public class RegistrationStateManager(
     {
         try
         {
-            // 步骤 1：获取所有 leader 前缀下的 key
-            var leaderKeys = await stateStore.GetAllKeysByPrefixAsync(LEADER_PREFIX, ct);
+            // 步骤 1：使用 glob pattern 扫描所有 leader 前缀下的 key
+            var rawKeys = await stateStore.ScanKeysAsync($"{LEADER_PREFIX}&&*", ct);
 
-            if (leaderKeys.Count == 0)
+            if (rawKeys.Count == 0)
             {
                 logger.LogDebug("未找到任何 Leader");
                 return [];
             }
+
+            // 提取无前缀的 keys
+            var leaderKeys = ExtractKeysWithoutPrefix(rawKeys, LEADER_PREFIX);
 
             // 步骤 2：批量获取所有 LeaderState
             var leaderStates = await stateStore.GetBulkStateAsync<LeaderState>(
@@ -275,5 +281,14 @@ public class RegistrationStateManager(
             logger.LogError(ex, "获取所有 Leader 实例失败");
             return [];
         }
+    }
+
+    /// <summary>
+    /// 从原始 Key 列表中提取无前缀的 Key
+    /// </summary>
+    private static List<string> ExtractKeysWithoutPrefix(IEnumerable<string> rawKeys, string prefix)
+    {
+        var prefixLen = prefix.Length + 2; // prefix + "&&"
+        return rawKeys.Select(k => k[prefixLen..]).ToList();
     }
 }

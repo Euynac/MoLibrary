@@ -253,10 +253,10 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         }
     }
 
-    public override Task<List<string>> GetAllKeysByPrefixAsync(string prefix, CancellationToken cancellationToken = default)
+    public override Task<List<string>> ScanKeysAsync(string pattern, CancellationToken cancellationToken = default)
     {
         throw new NotImplementedException(
-            "Dapr state store does not support listing all keys by prefix. " +
+            "Dapr state store does not support scanning keys by pattern. " +
             "Please use RedisStateStore or another implementation that supports this operation.");
     }
 

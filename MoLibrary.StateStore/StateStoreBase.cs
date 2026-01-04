@@ -37,11 +37,7 @@ public abstract class StateStoreBase(ILogger logger) : IMoStateStore
         return await GetStateAsync<T>(key, GetAutoPrefixFromType(typeof(T)), cancellationToken);
     }
 
-  
-    public virtual async Task<T?> GetSingleStateAsync<T>(CancellationToken cancellationToken = default) where T : class
-    {
-        return await GetStateAsync<T>(GetAutoPrefixFromType(typeof(T)), null, cancellationToken);
-    }
+    
 
     public virtual async Task SaveStateAsync<T>(string key, T value, 
         CancellationToken cancellationToken = default, TimeSpan? ttl = null)
@@ -49,19 +45,9 @@ public abstract class StateStoreBase(ILogger logger) : IMoStateStore
         await SaveStateAsync(key, value, GetAutoPrefixFromType(typeof(T)), cancellationToken, ttl);
     }
 
-    public virtual async Task SaveSingleStateAsync<T>(T value, CancellationToken cancellationToken = default, TimeSpan? ttl = null) where T : class
-    {
-        await SaveStateAsync(GetAutoPrefixFromType(typeof(T)), value, GetAutoPrefixFromType(typeof(T)), cancellationToken, ttl);
-    }
-
     public virtual async Task DeleteStateAsync(string key, CancellationToken cancellationToken = default)
     {
         await DeleteStateAsync(key, null, cancellationToken);
-    }
-
-    public virtual async Task DeleteSingleStateAsync<T>(CancellationToken cancellationToken = default) where T : class
-    {
-        await DeleteStateAsync(GetAutoPrefixFromType(typeof(T)), null, cancellationToken);
     }
 
     public virtual async Task DeleteBulkStateAsync(IReadOnlyList<string> keys, CancellationToken cancellationToken = default)
@@ -152,5 +138,5 @@ public abstract class StateStoreBase(ILogger logger) : IMoStateStore
 
     #endregion
 
-    public abstract Task<List<string>> GetAllKeysByPrefixAsync(string prefix, CancellationToken cancellationToken = default);
+    public abstract Task<List<string>> ScanKeysAsync(string pattern, CancellationToken cancellationToken = default);
 } 
