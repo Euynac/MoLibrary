@@ -23,31 +23,26 @@ public static class ModuleDaprStateStoreBuilderExtensions
     }
     
     /// <summary>
-    /// 使用独立的 Dapr 状态存储配置作为 RegisterCentre 的状态存储提供者
+    /// 添加 Dapr 状态存储作为 Keyed StateStore 提供者
     /// </summary>
-    /// <remarks>
-    /// 此方法允许 RegisterCentre 使用独立的 Dapr StateStore 配置（如不同的 StateStoreName），
-    /// 与全局 IDistributedStateStore 配置分离。适用于需要将 RegisterCentre 数据存储在
-    /// 专用 StateStore 中的场景。
-    /// </remarks>
-    /// <param name="guide">RegisterCentre 模块指南</param>
+    /// <param name="guide">StateStore 模块指南</param>
+    /// <param name="serviceKey">服务键，用于标识此 StateStore 实例</param>
     /// <param name="configureOptions">Dapr 状态存储配置委托</param>
-    /// <returns>模块指南实例以支持链式调用</returns>
-    public static ModuleRegisterCentreGuide UseDaprKeyedStateStoreProvider(
-        this ModuleRegisterCentreGuide guide,
+    /// <returns>StateStore 模块指南实例以支持链式调用</returns>
+    public static ModuleStateStoreGuide AddKeyedDaprStateStore(
+        this ModuleStateStoreGuide guide,
+        string serviceKey,
         Action<ModuleDaprStateStoreOption> configureOptions)
     {
+        ArgumentNullException.ThrowIfNull(serviceKey);
         ArgumentNullException.ThrowIfNull(configureOptions);
 
-        const string serviceKey = nameof(ModuleRegisterCentre);
- 
-        // Use the public method to configure keyed state store
-        return guide.UseDistributedStateStore().UseKeyedStateStore(services =>
+        return guide.ConfigureKeyedStateStore(services =>
         {
-            // Register keyed options
+            // 注册 keyed options
             services.Configure(serviceKey, configureOptions);
 
-            // Register keyed DaprStateStore
+            // 注册 keyed DaprStateStore
             services.AddKeyedSingleton<IMoStateStore>(serviceKey, (sp, _) =>
             {
                 var optionsSnapshot = sp.GetRequiredService<IOptionsSnapshot<ModuleDaprStateStoreOption>>();

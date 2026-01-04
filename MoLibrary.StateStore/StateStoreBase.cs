@@ -151,4 +151,6 @@ public abstract class StateStoreBase(ILogger logger) : IMoStateStore
     }
 
     #endregion
+
+    public abstract Task<List<string>> GetAllKeysByPrefixAsync(string prefix, CancellationToken cancellationToken = default);
 } 

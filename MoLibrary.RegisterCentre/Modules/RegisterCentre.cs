@@ -13,6 +13,7 @@ using MoLibrary.Core.Module.Models;
 using MoLibrary.Core.Modules;
 using MoLibrary.RegisterCentre.Implements;
 using MoLibrary.RegisterCentre.Implements.StateStore;
+using MoLibrary.StateStore;
 using MoLibrary.RegisterCentre.Interfaces;
 using MoLibrary.RegisterCentre.Models;
 using MoLibrary.StateStore.Modules;
@@ -49,6 +50,15 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModuleW
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        // 如果使用自定义 Keyed StateStore，将其代理到 RegisterCentre 的 serviceKey
+        if (option.UseCustomKeyedStateStore && !string.IsNullOrEmpty(option.CustomStateStoreServiceKey))
+        {
+            if (option.CustomStateStoreServiceKey != nameof(ModuleRegisterCentre))
+            {
+                services.AddKeyedSingleton<IMoStateStore>(nameof(ModuleRegisterCentre), (sp, _) => sp.GetRequiredKeyedService<IMoStateStore>(option.CustomStateStoreServiceKey));
+            }
+        }
+
         if (option is { IncludeListeningAddresses: true})
         {
             // 注册 IServerAddressesFeature 以获取监听地址
@@ -209,7 +219,7 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
     /// 使用分布式状态存储（多实例模式）
     /// </summary>
     /// <remarks>
-    /// 适用于多实例部署，需要配置分布式 StateStore（如 Redis）
+    /// 适用于多实例部署，需要配置 Common 分布式 StateStore（如 Redis）
     /// </remarks>
     public ModuleRegisterCentreGuide UseDistributedStateStore()
     {
@@ -278,26 +288,25 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
         ConfigureModuleOption(o => o.DependentSubDomains = domains);
         return this;
     }
-
+    
     /// <summary>
-    /// 使用自定义的 Keyed StateStore 提供者
+    /// 使用已注册的 Keyed StateStore（通过指定 serviceKey）
     /// </summary>
-    /// <param name="configureKeyedServices">配置 Keyed 服务的委托</param>
+    /// <param name="serviceKey">StateStore 的服务键，用于从 DI 容器中获取对应的 StateStore 实例</param>
+    /// <returns>模块指南实例以支持链式调用</returns>
     /// <remarks>
-    /// 此方法允许外部模块（如 MoLibrary.Dapr）为 RegisterCentre 注册自定义的 StateStore 实现。
-    /// 调用此方法后，ClaimDependencies 将不再自动注册默认的 Keyed StateStore。
+    /// 使用此方法前，需要先在 ModuleStateStoreGuide 中通过 AddKeyedRedisStateStore 或 AddKeyedDaprStateStore 等方法注册对应 serviceKey 的 StateStore。
+    /// 默认情况下，可以使用 nameof(ModuleRegisterCentre) 作为 serviceKey。
     /// </remarks>
-    public ModuleRegisterCentreGuide UseKeyedStateStore(Action<IServiceCollection> configureKeyedServices)
+    public ModuleRegisterCentreGuide UseCustomKeyedStateStore(string serviceKey = nameof(ModuleRegisterCentre))
     {
+        ArgumentNullException.ThrowIfNull(serviceKey);
+
         ConfigureEmpty(SET_STATE_STORE);
         ConfigureModuleOption(o =>
         {
-            o.UseCustomKeyedStateStore = true;
             o.IsStandaloneMode = false;
-        });
-        ConfigureServices(context =>
-        {
-            configureKeyedServices(context.Services);
+            o.CustomStateStoreServiceKey = serviceKey;
         });
         return this;
     }
@@ -402,7 +411,13 @@ public class ModuleRegisterCentreOption : MoModuleControllerOption<ModuleRegiste
     /// 是否使用自定义的 Keyed StateStore 提供者
     /// 当为 true 时，ClaimDependencies 不会自动注册 Keyed StateStore
     /// </summary>
-    public bool UseCustomKeyedStateStore { get; internal set; }
+    public bool UseCustomKeyedStateStore => CustomStateStoreServiceKey != null;
+
+    /// <summary>
+    /// 自定义 StateStore 的服务键
+    /// 用于从 DI 容器中获取指定 serviceKey 的 StateStore 实例
+    /// </summary>
+    public string? CustomStateStoreServiceKey { get; internal set; }
 }
 
 /// <summary>

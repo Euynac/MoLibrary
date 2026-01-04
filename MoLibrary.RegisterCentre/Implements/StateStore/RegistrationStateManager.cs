@@ -193,14 +193,32 @@ public class RegistrationStateManager(
 
     public async Task<List<InstanceState>> GetAllInstancesAsync(CancellationToken ct = default)
     {
-        // 在分布式模式下，需要通过查询获取所有实例
-        // 这里简化实现，只返回当前实例
-        // 完整实现需要使用 QueryStateAsync 或其他机制
         try
         {
-            var regKey = GetRegistrationKey();
-            var state = await stateStore.GetStateAsync<InstanceState>(regKey, REG_PREFIX, ct);
-            return state != null ? [state] : [];
+            // 步骤 1：获取所有 reg 前缀下的 key
+            var instanceKeys = await stateStore.GetAllKeysByPrefixAsync(REG_PREFIX, ct);
+
+            if (instanceKeys.Count == 0)
+            {
+                logger.LogDebug("未找到任何实例");
+                return [];
+            }
+
+            // 步骤 2：批量获取所有 InstanceState
+            var instances = await stateStore.GetBulkStateAsync<InstanceState>(
+                instanceKeys,
+                REG_PREFIX,
+                removePrefix: true,
+                removeEmptyValue: true,
+                ct);
+
+            var serviceName = clientInfo.GetServiceStatus().ServiceName;
+
+            // 步骤 3：过滤当前服务的实例，并按 LastHeartbeatTime 降序排序
+            return instances.Values
+                .Where(x => x != null && x.ServiceName == serviceName)
+                .OrderByDescending(x => x.LastHeartbeatTime)
+                .ToList()!;
         }
         catch (Exception ex)
         {
@@ -209,8 +227,53 @@ public class RegistrationStateManager(
         }
     }
 
-    public Task<List<InstanceState>> GetAllLeaderInstancesAsync(CancellationToken ct = default)
+    public async Task<List<InstanceState>> GetAllLeaderInstancesAsync(CancellationToken ct = default)
     {
-        throw new NotImplementedException();
+        try
+        {
+            // 步骤 1：获取所有 leader 前缀下的 key
+            var leaderKeys = await stateStore.GetAllKeysByPrefixAsync(LEADER_PREFIX, ct);
+
+            if (leaderKeys.Count == 0)
+            {
+                logger.LogDebug("未找到任何 Leader");
+                return [];
+            }
+
+            // 步骤 2：批量获取所有 LeaderState
+            var leaderStates = await stateStore.GetBulkStateAsync<LeaderState>(
+                leaderKeys,
+                LEADER_PREFIX,
+                removePrefix: true,
+                removeEmptyValue: true,
+                ct);
+
+            // 步骤 3：构建 InstanceState 的 key 列表
+            var instanceKeys = leaderStates.Values
+                .Where(ls => ls != null && !string.IsNullOrEmpty(ls.ServiceName))
+                .Select(ls => $"{ls!.ServiceName}:{ls.InstanceId}")
+                .ToList();
+
+            if (instanceKeys.Count == 0)
+            {
+                logger.LogDebug("未找到有效的 Leader 实例键");
+                return [];
+            }
+
+            // 步骤 4：批量获取所有 Leader 的 InstanceState
+            var instances = await stateStore.GetBulkStateAsync<InstanceState>(
+                instanceKeys,
+                REG_PREFIX,
+                removePrefix: true,
+                removeEmptyValue: true,
+                ct);
+
+            return instances.Values.Where(x => x != null).ToList()!;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "获取所有 Leader 实例失败");
+            return [];
+        }
     }
 }

@@ -253,6 +253,13 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         }
     }
 
+    public override Task<List<string>> GetAllKeysByPrefixAsync(string prefix, CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException(
+            "Dapr state store does not support listing all keys by prefix. " +
+            "Please use RedisStateStore or another implementation that supports this operation.");
+    }
+
     private static Dictionary<string, string>? BuildTtlMetadata(TimeSpan? ttl)
     {
         var ttlSeconds = ttl?.TotalSeconds;

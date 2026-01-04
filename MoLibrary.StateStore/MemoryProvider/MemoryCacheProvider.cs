@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
@@ -9,6 +10,8 @@ namespace MoLibrary.StateStore.MemoryProvider;
 public class MemoryCacheProvider(IMemoryCache memoryCache, ILogger<MemoryCacheProvider> logger)
     : StateStoreBase(logger), IMemoryStateStore
 {
+    private readonly ConcurrentDictionary<string, byte> _keyRegistry = new();
+
     public override Task<Dictionary<string, T?>> GetBulkStateAsync<T>(IReadOnlyList<string> keys, string? prefix,
         bool removePrefix = true, bool removeEmptyValue = true, CancellationToken cancellationToken = default) where T : default
     {
@@ -52,6 +55,9 @@ public class MemoryCacheProvider(IMemoryCache memoryCache, ILogger<MemoryCachePr
     {
         var fullKey = GetKey(key, prefix);
 
+        // 注册 key
+        _keyRegistry.TryAdd(fullKey, 0);
+
         StateEntry<T> stateEntry;
 
         if (memoryCache.TryGetValue(fullKey, out var existingEntry) && existingEntry is StateEntry<T> existing)
@@ -80,8 +86,12 @@ public class MemoryCacheProvider(IMemoryCache memoryCache, ILogger<MemoryCachePr
     public override Task DeleteStateAsync(string key, string? prefix, CancellationToken cancellationToken = default)
     {
         var fullKey = GetKey(key, prefix);
+
+        // 移除 key 注册
+        _keyRegistry.TryRemove(fullKey, out _);
+
         memoryCache.Remove(fullKey);
-        
+
         Logger.LogDebug("Deleted state with key: {Key}", fullKey);
         return Task.CompletedTask;
     }
@@ -91,9 +101,13 @@ public class MemoryCacheProvider(IMemoryCache memoryCache, ILogger<MemoryCachePr
         foreach (var key in keys)
         {
             var fullKey = GetKey(key, prefix);
+
+            // 移除 key 注册
+            _keyRegistry.TryRemove(fullKey, out _);
+
             memoryCache.Remove(fullKey);
         }
-        
+
         Logger.LogDebug("Deleted {Count} states", keys.Count);
         return Task.CompletedTask;
     }
@@ -173,9 +187,24 @@ public class MemoryCacheProvider(IMemoryCache memoryCache, ILogger<MemoryCachePr
                 options.AbsoluteExpirationRelativeToNow = ttl.Value;
             }
 
+            // 注册 key
+            _keyRegistry.TryAdd(fullKey, 0);
+
             memoryCache.Set(fullKey, stateEntry, options);
             Logger.LogDebug("Saved state (if not exists) with key: {Key}", fullKey);
             return Task.FromResult(true);
         }
+    }
+
+    public override Task<List<string>> GetAllKeysByPrefixAsync(string prefix, CancellationToken cancellationToken = default)
+    {
+        var prefixPattern = $"{prefix}&&";
+        var keys = _keyRegistry.Keys
+            .Where(k => k.StartsWith(prefixPattern))
+            .Select(k => RemovePrefix(k, prefix))
+            .ToList();
+
+        Logger.LogDebug("Found {Count} keys with prefix: {Prefix}", keys.Count, prefix);
+        return Task.FromResult(keys);
     }
 } 

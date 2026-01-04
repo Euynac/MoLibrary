@@ -32,6 +32,10 @@ public enum EMoModules
     Mapper,
     SignalR,
     StateStore,
+    /// <summary>
+    /// Redis 状态存储模块
+    /// </summary>
+    RedisStateStore,
     Dapr,
     DaprClient,
     DaprStateStore,

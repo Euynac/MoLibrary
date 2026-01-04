@@ -226,4 +226,12 @@ public interface IMoStateStore
     /// <returns>成功返回 true（Key 不存在且保存成功），失败返回 false（Key 已存在）</returns>
     Task<bool> TrySaveStateIfNotExistsAsync<T>(string key, T value, string? prefix,
         CancellationToken cancellationToken = default, TimeSpan? ttl = null);
+ 
+    /// <summary>
+    /// 获取指定前缀下的所有键
+    /// </summary>
+    /// <param name="prefix">键前缀</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>返回指定前缀下的所有键列表（已移除前缀）</returns>
+    Task<List<string>> GetAllKeysByPrefixAsync(string prefix, CancellationToken cancellationToken = default);
 }

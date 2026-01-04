@@ -55,4 +55,18 @@ public class ModuleStateStoreGuide : MoModuleGuide<ModuleStateStore, ModuleState
         ConfigureServices(services => { services.Services.AddKeyedSingleton<IMoStateStore, TProvider>(key); });
         return this;
     }
+
+    /// <summary>
+    /// 配置自定义的 Keyed StateStore 服务注册
+    /// </summary>
+    /// <param name="configureKeyedServices">服务配置委托</param>
+    /// <returns>返回当前模块指南实例以支持链式调用</returns>
+    public ModuleStateStoreGuide ConfigureKeyedStateStore(Action<IServiceCollection> configureKeyedServices)
+    {
+        ConfigureServices(context =>
+        {
+            configureKeyedServices(context.Services);
+        });
+        return this;
+    }
 }
