@@ -1,6 +1,6 @@
-using MoLibrary.BackgroundJob.Hangfire.Workers;
 using MoLibrary.Framework.Core.Interfaces;
 using MoLibrary.Framework.Modules;
+using MoLibrary.JobScheduler.Jobs;
 
 namespace MoLibrary.Framework.Core.Model;
 
@@ -16,7 +16,7 @@ public class UnitBackgroundWorker(Type type) : ProjectUnit(type, EProjectUnitTyp
     }
     protected override bool VerifyTypeConstrain()
     {
-        return Type.IsClass && Type.IsSubclassOf(typeof(MoHangfireBackgroundWorker));
+        return Type.IsClass && Type.IsSubclassOf(typeof(MoRecurringJob));
     }
 
     protected override UnitNameConventionOption? DefaultConventionOption()

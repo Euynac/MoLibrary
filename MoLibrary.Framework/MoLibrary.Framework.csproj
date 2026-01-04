@@ -27,7 +27,6 @@
 	<ItemGroup>
 	  <ProjectReference Include="..\MoLibrary.Authority\MoLibrary.Authority.csproj" />
 	  <ProjectReference Include="..\MoLibrary.AutoModel\MoLibrary.AutoModel.csproj" />
-	  <ProjectReference Include="..\MoLibrary.BackgroundJob\MoLibrary.BackgroundJob.csproj" />
 	  <ProjectReference Include="..\MoLibrary.Configuration.Dashboard\MoLibrary.Configuration.Dashboard.csproj">
 	    <TreatAsUsed>true</TreatAsUsed>
 	  </ProjectReference>

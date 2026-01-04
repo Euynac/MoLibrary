@@ -1,6 +1,6 @@
-using MoLibrary.BackgroundJob.Abstract.Jobs;
 using MoLibrary.Framework.Core.Interfaces;
 using MoLibrary.Framework.Modules;
+using MoLibrary.JobScheduler.Jobs;
 using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.Framework.Core.Model;
@@ -19,7 +19,7 @@ public class UnitBackgroundJob(Type type) : ProjectUnit(type, EProjectUnitType.B
     }
     protected override bool VerifyTypeConstrain()
     {
-        return Type.IsClass && Type.IsSubclassOfRawGeneric(typeof(MoBackgroundJob<>));
+        return Type.IsClass && Type.IsSubclassOfRawGeneric(typeof(MoTriggeredJob<>));
     }
 
     protected override UnitNameConventionOption? DefaultConventionOption()
@@ -34,10 +34,9 @@ public class UnitBackgroundJob(Type type) : ProjectUnit(type, EProjectUnitType.B
     {
         var type = context.Type;
         var unit = new UnitBackgroundJob(type);
-        if (!type.IsClass || !type.IsSubclassOfRawGeneric(typeof(MoBackgroundJob<>), out var genericType) || genericType?.FullName is null) return null;
+        if (!type.IsClass || !type.IsSubclassOfRawGeneric(typeof(MoTriggeredJob<>), out var genericType) || genericType?.FullName is null) return null;
         unit.CheckNameConventionMode();
         unit.JobArgsType = genericType.GetGenericArguments().First();
-        IMoBackgroundJobManager.RegisterJob(type, unit.JobArgsType);
         return unit;
     }
 }
