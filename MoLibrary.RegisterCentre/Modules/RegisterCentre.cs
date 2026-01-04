@@ -88,12 +88,13 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModuleW
             // 获取当前实例的 Leader 状态
             endpoints.MapGet(RegisterCentreConventions.ServerCentreLeaderStatus,
                 ([FromServices] ILeaderElectionService leaderService,
-                 [FromServices] IRegistrationStateManager stateManager) =>
+                 [FromServices] IRegistrationStateManager stateManager,
+                 [FromServices] IRegisterCentreClientInfo clientInfo) =>
                 {
                     var response = new LeaderStatusResponse
                     {
                         Status = leaderService.CurrentStatus,
-                        LeaderInstanceId = leaderService.IsLeader ? option.FromInstance : null,
+                        LeaderInstanceId = leaderService.IsLeader ? clientInfo.GetServiceStatus().InstanceId : null,
                         LeaderRegistrationTime = leaderService.LeaderBecomeTime,
                         RunningInstanceCount = 1, // 单实例当前只能获取自身信息
                         Message = leaderService.IsLeader ? "当前实例是 Leader" : "当前实例不是 Leader"

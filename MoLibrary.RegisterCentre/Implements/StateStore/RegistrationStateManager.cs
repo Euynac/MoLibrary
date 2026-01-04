@@ -26,12 +26,13 @@ public class RegistrationStateManager(
     /// <summary>
     /// 获取注册 Key
     /// </summary>
-    private string GetRegistrationKey() => $"{_option.AppId}:{_option.FromInstance}";
+    private string GetRegistrationKey() =>
+        $"{(clientInfo.GetServiceStatus() is { } status ? $"{status.ServiceName}:{status.InstanceId}" : throw new InvalidOperationException("InstanceId is required"))}";
 
     /// <summary>
     /// 获取 Leader Key
     /// </summary>
-    private string GetLeaderKey() => _option.AppId ?? throw new InvalidOperationException("AppId is required");
+    private string GetLeaderKey() => clientInfo.GetServiceStatus().ServiceName;
 
     public async Task<RegistrationResult> RegisterOrHeartbeatAsync(CancellationToken ct = default)
     {
@@ -102,12 +103,13 @@ public class RegistrationStateManager(
         {
             var leaderKey = GetLeaderKey();
             var now = DateTime.UtcNow;
+            var serviceStatus = clientInfo.GetServiceStatus();
 
             var leaderState = new LeaderState
             {
-                InstanceId = _option.FromInstance!,
+                InstanceId = serviceStatus.InstanceId,
                 BecomeLeaderTime = now,
-                ServiceName = _option.AppId
+                ServiceName = serviceStatus.ServiceName
             };
 
             // 尝试仅在 Key 不存在时保存
@@ -122,7 +124,7 @@ public class RegistrationStateManager(
             {
                 // 获取 ETag
                 var (_, eTag) = await stateStore.GetStateAndVersionAsync<LeaderState>(leaderKey, LEADER_PREFIX, ct);
-                logger.LogInformation("成功成为 Leader: {InstanceId}", _option.FromInstance);
+                logger.LogInformation("成功成为 Leader: {InstanceId}", serviceStatus.InstanceId);
                 return (true, leaderState, eTag);
             }
 
@@ -142,12 +144,13 @@ public class RegistrationStateManager(
         {
             var leaderKey = GetLeaderKey();
             var now = DateTime.UtcNow;
+            var serviceStatus = clientInfo.GetServiceStatus();
 
             var leaderState = new LeaderState
             {
-                InstanceId = _option.FromInstance!,
+                InstanceId = serviceStatus.InstanceId,
                 BecomeLeaderTime = now,
-                ServiceName = _option.AppId
+                ServiceName = serviceStatus.ServiceName
             };
 
             var (success, newETag) = await stateStore.TrySaveStateWithETagAsync(

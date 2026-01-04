@@ -11,6 +11,7 @@ namespace MoLibrary.RegisterCentre.Implements.StateStore;
 /// Leader 选举服务实现
 /// </summary>
 public class LeaderElectionService(
+    IRegisterCentreClientInfo clientInfo,
     IOptions<ModuleRegisterCentreOption> options,
     ILogger<LeaderElectionService> logger) : ILeaderElectionService
 {
@@ -63,10 +64,11 @@ public class LeaderElectionService(
         logger.LogInformation("成为 Leader，时间: {Time}", becomeTime);
 
         // 触发事件
+        var serviceStatus = clientInfo.GetServiceStatus();
         OnLeaderGained?.Invoke(this, new LeaderGainedEvent
         {
-            ServiceName = _option.AppId!,
-            InstanceId = _option.FromInstance!,
+            ServiceName = serviceStatus.ServiceName,
+            InstanceId = serviceStatus.InstanceId,
             BecomeLeaderTime = becomeTime
         });
     }
@@ -99,10 +101,11 @@ public class LeaderElectionService(
         logger.LogWarning("失去 Leader 地位，原因: {Reason}", reason);
 
         // 触发事件
+        var serviceStatus = clientInfo.GetServiceStatus();
         OnLeaderLost?.Invoke(this, new LeaderLostEvent
         {
-            ServiceName = _option.AppId!,
-            InstanceId = _option.FromInstance!,
+            ServiceName = serviceStatus.ServiceName,
+            InstanceId = serviceStatus.InstanceId,
             LostTime = lostTime,
             Reason = reason
         });

@@ -18,6 +18,7 @@ namespace MoLibrary.RegisterCentre.Implements;
 public class RegisterCentreClientHostedService(
     IRegistrationStateManager stateManager,
     ILeaderElectionService leaderService,
+    IRegisterCentreClientInfo clientInfo,
     ILogger<RegisterCentreClientHostedService> logger,
     IOptions<ModuleRegisterCentreOption> option,
     IObservableInstanceManager observableManager,
@@ -256,7 +257,8 @@ public class RegisterCentreClientHostedService(
 
             // 检查当前 Leader 状态
             var leaderState = await stateManager.GetLeaderStateAsync(ct);
-            if (leaderState != null && leaderState.InstanceId != _option.FromInstance)
+            var currentInstanceId = clientInfo.GetServiceStatus().InstanceId;
+            if (leaderState != null && leaderState.InstanceId != currentInstanceId)
             {
                 // 其他实例已成为 Leader
                 leaderService.TriggerLeaderLost(LeaderLostReason.LeaderKeyTakenByOther);
