@@ -1,24 +1,42 @@
 using MoLibrary.Core.Module.Interfaces;
+using MoLibrary.StateStore.StackExchange.Connection;
 
 namespace MoLibrary.StateStore.StackExchange.Modules;
 
 /// <summary>
-/// Redis 状态存储模块配置选项
+/// Redis state store module configuration options
 /// </summary>
 public class ModuleRedisStateStoreOption : MoModuleOption<ModuleRedisStateStore>
 {
     /// <summary>
-    /// Redis 连接字符串
+    /// Redis connection type (Normal, Sentinel, Cluster). Default: Normal
     /// </summary>
-    public string ConnectionString { get; set; } = "localhost:6379";
+    public ERedisConnectionType ConnectionType { get; set; } = ERedisConnectionType.Normal;
 
     /// <summary>
-    /// 键前缀（可选）
+    /// Simple Redis connection string (for backward compatibility).
+    /// If set and Connection is null, this will be used directly.
+    /// </summary>
+    public string? ConnectionString { get; set; }
+
+    /// <summary>
+    /// Detailed connection configuration (for all connection modes).
+    /// Takes precedence over ConnectionString when both are set.
+    /// </summary>
+    public RedisConnectionConfiguration? Connection { get; set; }
+
+    /// <summary>
+    /// Key prefix for all state store keys (optional)
     /// </summary>
     public string? KeyPrefix { get; set; }
 
     /// <summary>
-    /// 默认 TTL（可选）
+    /// Default TTL for state entries (optional, null = no expiration)
     /// </summary>
     public TimeSpan? DefaultTTL { get; set; }
+
+    /// <summary>
+    /// Redis database index to use (default: 0)
+    /// </summary>
+    public int DatabaseIndex { get; set; } = 0;
 }

@@ -3,7 +3,7 @@ using Microsoft.Extensions.Options;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
-using MoLibrary.RegisterCentre.Modules;
+using MoLibrary.StateStore.StackExchange.Connection;
 using StackExchange.Redis;
 
 namespace MoLibrary.StateStore.StackExchange.Modules;
@@ -18,14 +18,18 @@ public class ModuleRedisStateStore(ModuleRedisStateStoreOption option)
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        // 注册 Redis 连接
+        // Register connection factory
+        services.AddSingleton<IRedisConnectionFactory, RedisConnectionFactory>();
+
+        // Register Redis connection using factory
         services.AddSingleton<IConnectionMultiplexer>(sp =>
         {
+            var factory = sp.GetRequiredService<IRedisConnectionFactory>();
             var options = sp.GetRequiredService<IOptions<ModuleRedisStateStoreOption>>().Value;
-            return ConnectionMultiplexer.Connect(options.ConnectionString);
+            return factory.CreateConnection(options);
         });
 
-        // 注册 RedisStateStore 为 IDistributedStateStore
+        // Register RedisStateStore as IDistributedStateStore
         services.AddSingleton<IDistributedStateStore, RedisStateStore>();
     }
 }

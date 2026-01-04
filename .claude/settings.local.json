@@ -52,7 +52,8 @@
       "Bash(tee:*)",
       "Bash(echo:*)",
       "mcp__graphiti-memory__search_nodes",
-      "mcp__graphiti-memory__search_memory_facts"
+      "mcp__graphiti-memory__search_memory_facts",
+      "Bash(wc:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"
