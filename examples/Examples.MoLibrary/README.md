@@ -19,7 +19,7 @@ This project contains examples for using the various MoLibrary modules. Each dir
 - `Logging/` - Examples for using the MoLibrary.Logging module
 - `StateStore/` - Examples for using the MoLibrary.StateStore module
 - `Validation/` - Examples for using the MoLibrary.Validation module
-- `Configuration.Dashboard/` - Examples for using the MoLibrary.Configuration.Dashboard module
+- `Configuration.Dashboard/` - Examples for using the MoLibrary.Configuration.UI module
 - `Configuration/` - Examples for using the MoLibrary.Configuration module
 - `DependencyInjection/` - Examples for using the MoLibrary.DependencyInjection module
 - `Tool/` - Examples for using the MoLibrary.Tool module

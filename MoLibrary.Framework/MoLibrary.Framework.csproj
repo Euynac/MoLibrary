@@ -27,7 +27,7 @@
 	<ItemGroup>
 	  <ProjectReference Include="..\MoLibrary.Authority\MoLibrary.Authority.csproj" />
 	  <ProjectReference Include="..\MoLibrary.AutoModel\MoLibrary.AutoModel.csproj" />
-	  <ProjectReference Include="..\MoLibrary.Configuration.Dashboard\MoLibrary.Configuration.Dashboard.csproj">
+	  <ProjectReference Include="..\MoLibrary.Configuration.UI\MoLibrary.Configuration.UI.csproj">
 	    <TreatAsUsed>true</TreatAsUsed>
 	  </ProjectReference>
 	  <ProjectReference Include="..\MoLibrary.Configuration\MoLibrary.Configuration.csproj">

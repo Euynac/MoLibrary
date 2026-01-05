@@ -1,0 +1,51 @@
+using MoLibrary.Configuration.UI.Pages;
+using MoLibrary.Configuration.Modules;
+using MoLibrary.Core.Module;
+using MoLibrary.Core.Module.Models;
+using MoLibrary.Core.Modules;
+using MoLibrary.UI.Modules;
+using MudBlazor;
+
+namespace MoLibrary.Configuration.UI.Modules;
+
+/// <summary>
+/// 配置管理UI模块
+/// </summary>
+public class ModuleConfigurationUI(ModuleConfigurationUIOption option)
+    : MoModuleWithDependencies<ModuleConfigurationUI, ModuleConfigurationUIOption, ModuleConfigurationUIGuide>(option)
+{
+    public override EMoModules CurModuleEnum()
+    {
+        return EMoModules.ConfigurationUI;
+    }
+
+
+    public override void ClaimDependencies()
+    {
+        if (!Option.DisableConfigurationPage)
+        {
+            // 依赖配置模块
+            DependsOnModule<ModuleConfigurationGuide>().Register();
+
+            // 依赖差异对比模块
+            DependsOnModule<ModuleDiffHighlightGuide>().Register();
+
+            // 依赖配置仪表板模块
+            DependsOnModule<ModuleConfigurationDashboardGuide>().Register();
+
+            // 依赖UI核心模块并注册UI组件
+            DependsOnModule<ModuleUICoreGuide>().Register()
+                .RegisterUIComponents(registry =>
+                {
+                    // 注册面板配置页面
+                    registry.RegisterComponent<UIConfigurationDashboardPage>(
+                        UIConfigurationDashboardPage.PAGE_URL,
+                        "配置面板",
+                        Icons.Material.Filled.Dashboard,
+                        "系统管理",
+                        addToNav: true,
+                        navOrder: 101);
+                });
+        }
+    }
+}

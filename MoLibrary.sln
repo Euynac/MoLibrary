@@ -39,7 +39,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.EventBus", "MoLib
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.Configuration", "MoLibrary.Configuration\MoLibrary.Configuration.csproj", "{24780ED6-16D2-4E44-A0CD-398CF9EF9001}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.Configuration.Dashboard", "MoLibrary.Configuration.Dashboard\MoLibrary.Configuration.Dashboard.csproj", "{51DE73A1-EEAE-48EF-1014-65FC30B4384A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.Configuration.UI", "MoLibrary.Configuration.UI\MoLibrary.Configuration.UI.csproj", "{51DE73A1-EEAE-48EF-1014-65FC30B4384A}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.SignalR", "MoLibrary.SignalR\MoLibrary.SignalR.csproj", "{956FE653-4D44-C45A-8DF3-3879BE6017DF}"
 EndProject

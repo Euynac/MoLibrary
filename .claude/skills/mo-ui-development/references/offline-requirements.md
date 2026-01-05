@@ -279,7 +279,7 @@ Framework-level UI components. Should reference fonts from MoLibrary.UI or inclu
 
 Job scheduler UI module. Should ensure all charting/visualization libraries are local.
 
-### MoLibrary.Configuration.Dashboard
+### MoLibrary.Configuration.UI
 
 Configuration dashboard. Should ensure all form and data display components work offline.
 

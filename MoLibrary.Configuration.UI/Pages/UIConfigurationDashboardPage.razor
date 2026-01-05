@@ -1,0 +1,170 @@
+@attribute [Route(PAGE_URL)]
+@using MoLibrary.Configuration.UI.UIConfiguration.Components
+@using MoLibrary.Configuration.UI.Services
+@using MoLibrary.Configuration.Model
+@using MoLibrary.Configuration.UI.Model
+@using Microsoft.Extensions.Options
+@using MoLibrary.Tool.MoResponse
+@using Microsoft.Extensions.DependencyInjection
+@using MoLibrary.RegisterCentre.Modules
+@inject IOptions<ModuleRegisterCentreOption> Options
+@inject IServiceProvider ServiceProvider
+@inject ISnackbar Snackbar
+@inject MoLibrary.Configuration.Services.ModuleConfigurationService ModuleConfigurationService
+
+<PageTitle>配置面板</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
+    <MudText Typo="Typo.h4" Class="mb-4">配置面板</MudText>
+    
+    @if (Options.Value.IsCentreServer)
+    {
+        <MudTabs Elevation="4" Rounded="true" Color="Color.Primary" @bind-ActivePanelIndex="activeTabIndex" @bind-ActivePanelIndex:after="OnTabChangedAsync">
+            <MudTabPanel Text="配置状态">
+                <div class="pa-4">
+                    <MudGrid>
+                        <MudItem xs="12">
+                            <MudCard>
+                                <MudCardHeader>
+                                    <CardHeaderContent>
+                                        <MudText Typo="Typo.h6">配置状态</MudText>
+                                    </CardHeaderContent>
+                                    <CardHeaderActions>
+                                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadConfigStatusAsync">刷新</MudButton>
+                                    </CardHeaderActions>
+                                </MudCardHeader>
+                                <MudCardContent>
+                                    @if (configStatus != null)
+                                    {
+                                        <ConfigurationExplorer Configs="configStatus" OnConfigUpdate="HandleConfigUpdate" />
+                                    }
+                                    else if (isLoading)
+                                    {
+                                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                                    }
+                                </MudCardContent>
+                            </MudCard>
+                        </MudItem>
+                    </MudGrid>
+                </div>
+            </MudTabPanel>
+            
+            <MudTabPanel Text="配置历史">
+                <div class="pa-4">
+                    <ConfigurationHistory />
+                </div>
+            </MudTabPanel>
+
+			<MudTabPanel Text="配置概览">
+                <div class="pa-4">
+                    <ConfigurationOverview />
+                </div>
+            </MudTabPanel>
+
+			<MudTabPanel Text="调试视图">
+                <div class="pa-4">
+                    <ConfigurationDebugView @ref="debugViewComponent" />
+                </div>
+            </MudTabPanel>
+
+			<MudTabPanel Text="配置提供者">
+                <div class="pa-4">
+                    <ConfigurationProviderView @ref="providerViewComponent" />
+                </div>
+            </MudTabPanel>
+        </MudTabs>
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Info" Class="ma-4">
+            <MudText Typo="Typo.h6">当前非面板服务</MudText>
+            <MudText Typo="Typo.body1">当前服务未配置为配置面板服务，无法显示配置面板功能。</MudText>
+            <MudText Typo="Typo.body2" Class="mt-2">
+                如需启用配置面板功能，请在应用程序配置中设置 ThisIsDashboard 为 true。
+            </MudText>
+        </MudAlert>
+    }
+</MudContainer>
+
+@code {
+    public const string PAGE_URL = "/configuration-dashboard";
+
+    private List<DtoDomainConfigs>? configStatus;
+    private bool isLoading = false;
+    private ConfigurationDashboardService? configurationDashboardService;
+    private int activeTabIndex = 0;
+
+    // Component references
+    private ConfigurationDebugView? debugViewComponent;
+    private ConfigurationProviderView? providerViewComponent;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            if (Options.Value.IsCentreServer)
+            {
+				configurationDashboardService = ServiceProvider.GetService<ConfigurationDashboardService>();
+                if (configurationDashboardService != null)
+                {
+                    await LoadConfigStatusAsync();
+                }
+            }
+        }
+    }
+
+    private async Task LoadConfigStatusAsync()
+    {
+        if (configurationDashboardService == null) return;
+        
+        isLoading = true;
+        StateHasChanged();
+
+        if ((await configurationDashboardService.GetAllConfigStatusAsync()).IsFailed(out var error, out var data))
+        {
+            Snackbar.Add($"加载配置状态失败: {error}", Severity.Error);
+        }
+        else
+        {
+            configStatus = data;
+        }
+
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task HandleConfigUpdate(DtoUpdateConfig updateRequest)
+    {
+        if (configurationDashboardService == null) return;
+        
+        if ((await configurationDashboardService.UpdateConfigAsync(updateRequest)).IsFailed(out var error))
+        {
+            Snackbar.Add($"配置更新失败: {error}", Severity.Error);
+        }
+        else
+        {
+            Snackbar.Add("配置更新成功", Severity.Success);
+            await LoadConfigStatusAsync();
+        }
+    }
+    
+    private async Task OnTabChangedAsync()
+    {
+        // Lazy load when switching to new tabs
+        switch (activeTabIndex)
+        {
+            case 3: // 调试视图
+                if (debugViewComponent != null)
+                {
+                    await debugViewComponent.LoadDebugViewAsync();
+                }
+                break;
+            case 4: // 配置提供者
+                if (providerViewComponent != null)
+                {
+                    await providerViewComponent.LoadProvidersAsync();
+                }
+                break;
+        }
+    }
+}
