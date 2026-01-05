@@ -122,7 +122,7 @@ public class RegistrationStateManager(
             if (success)
             {
                 // 获取 ETag
-                var (_, eTag) = await stateStore.GetStateAndVersionAsync<LeaderState>(LEADER_PREFIX + leaderKey, ct);
+                var (_, eTag) = await stateStore.GetStateAndETagAsync<LeaderState>(LEADER_PREFIX + leaderKey, ct);
                 logger.LogInformation("成功成为 Leader: {InstanceId}", serviceStatus.InstanceId);
                 return (true, leaderState, eTag);
             }

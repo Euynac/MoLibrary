@@ -13,7 +13,10 @@ namespace MoLibrary.StateStore.StackExchange;
 
 /// <summary>
 /// Redis state store implementation based on StackExchange.Redis.
-/// Supports Normal, Sentinel, and Cluster connection modes.
+/// Uses Hash storage format with fields: data, version
+/// ETag = version.ToString() (increments on each save)
+/// TTL is set atomically within Lua scripts via EXPIRE command
+/// Reference: Dapr components-contrib/state/redis/redis.go
 /// </summary>
 public class RedisStateStore : DistributedStateStoreBase
 {
@@ -24,7 +27,10 @@ public class RedisStateStore : DistributedStateStoreBase
 
     // Cached loaded scripts for performance
     private LoadedLuaScript? _getWithETagScript;
+    private LoadedLuaScript? _saveStateScript;
     private LoadedLuaScript? _compareAndSwapScript;
+    private LoadedLuaScript? _deleteWithETagScript;
+    private LoadedLuaScript? _saveIfNotExistsScript;
     private bool _scriptsInitialized;
     private readonly object _scriptLock = new();
 
@@ -41,7 +47,8 @@ public class RedisStateStore : DistributedStateStoreBase
     }
 
     /// <summary>
-    /// Initialize Lua scripts on first use (lazy initialization)
+    /// Initialize Lua scripts on first use (lazy initialization).
+    /// Throws exception if scripts cannot be loaded.
     /// </summary>
     private void EnsureScriptsLoaded()
     {
@@ -51,18 +58,14 @@ public class RedisStateStore : DistributedStateStoreBase
         {
             if (_scriptsInitialized) return;
 
-            try
-            {
-                var server = _connectionFactory.GetPrimaryServer(_connection);
-                _getWithETagScript = RedisLuaScripts.GetGetWithETagScript().Load(server);
-                _compareAndSwapScript = RedisLuaScripts.GetCompareAndSwapScript().Load(server);
-                _scriptsInitialized = true;
-                Logger.LogDebug("Redis Lua scripts loaded successfully");
-            }
-            catch (Exception ex)
-            {
-                Logger.LogWarning(ex, "Failed to load Lua scripts, will use fallback implementation");
-            }
+            var server = _connectionFactory.GetPrimaryServer(_connection);
+            _getWithETagScript = RedisLuaScripts.GetGetWithETagScript().Load(server);
+            _saveStateScript = RedisLuaScripts.GetSaveStateScript().Load(server);
+            _compareAndSwapScript = RedisLuaScripts.GetCompareAndSwapScript().Load(server);
+            _deleteWithETagScript = RedisLuaScripts.GetDeleteWithETagScript().Load(server);
+            _saveIfNotExistsScript = RedisLuaScripts.GetSaveIfNotExistsScript().Load(server);
+            _scriptsInitialized = true;
+            Logger.LogDebug("Redis Lua scripts loaded successfully");
         }
     }
 
@@ -136,10 +139,15 @@ public class RedisStateStore : DistributedStateStoreBase
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var redisKeys = keys.Select(k => (RedisKey)GetRedisKey(k)).ToArray();
+        if (keys.Count == 0) return new Dictionary<string, string>();
+
         try
         {
-            var values = await _database.StringGetAsync(redisKeys);
+            // Use batch/pipeline for efficient Hash field retrieval
+            var batch = _database.CreateBatch();
+            var tasks = keys.Select(k => batch.HashGetAsync(GetRedisKey(k), "data")).ToList();
+            batch.Execute();
+            var values = await Task.WhenAll(tasks);
 
             var result = new Dictionary<string, string>();
             for (int i = 0; i < keys.Count; i++)
@@ -150,7 +158,14 @@ public class RedisStateStore : DistributedStateStoreBase
                 if (!value.HasValue && removeEmptyValue)
                     continue;
 
-                result[keys[i]] = value.ToString();
+                if (value.HasValue)
+                {
+                    result[keys[i]] = value.ToString();
+                }
+                else if (!removeEmptyValue)
+                {
+                    result[keys[i]] = string.Empty;
+                }
             }
 
             return result;
@@ -172,10 +187,15 @@ public class RedisStateStore : DistributedStateStoreBase
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var redisKeys = keys.Select(k => (RedisKey)GetRedisKey(k)).ToArray();
+        if (keys.Count == 0) return new Dictionary<string, T?>();
+
         try
         {
-            var values = await _database.StringGetAsync(redisKeys);
+            // Use batch/pipeline for efficient Hash field retrieval
+            var batch = _database.CreateBatch();
+            var tasks = keys.Select(k => batch.HashGetAsync(GetRedisKey(k), "data")).ToList();
+            batch.Execute();
+            var values = await Task.WhenAll(tasks);
 
             var result = new Dictionary<string, T?>();
             for (int i = 0; i < keys.Count; i++)
@@ -188,16 +208,7 @@ public class RedisStateStore : DistributedStateStoreBase
 
                 if (value.HasValue)
                 {
-                    try
-                    {
-                        var deserialized = JsonSerializer.Deserialize<T>(value.ToString());
-                        result[keys[i]] = deserialized;
-                    }
-                    catch (Exception ex)
-                    {
-                        throw ex.CreateException(Logger, "Failed to deserialize value for key {0} to type {1}",
-                            keys[i], typeof(T).FullName);
-                    }
+                    result[keys[i]] = JsonSerializer.Deserialize<T>(value.ToString());
                 }
             }
 
@@ -220,11 +231,11 @@ public class RedisStateStore : DistributedStateStoreBase
         var redisKey = GetRedisKey(key);
         try
         {
-            var value = await _database.StringGetAsync(redisKey);
-            if (!value.HasValue)
+            var data = await _database.HashGetAsync(redisKey, "data");
+            if (!data.HasValue)
                 return default;
 
-            return JsonSerializer.Deserialize<T>(value.ToString());
+            return JsonSerializer.Deserialize<T>(data.ToString());
         }
         catch (OperationCanceledException)
         {
@@ -243,8 +254,11 @@ public class RedisStateStore : DistributedStateStoreBase
         var redisKey = GetRedisKey(key);
         try
         {
-            var value = await _database.StringGetAsync(redisKey);
-            return value.HasValue ? value.ToString() : null;
+            var data = await _database.HashGetAsync(redisKey, "data");
+            if (!data.HasValue)
+                return null;
+
+            return data.ToString();
         }
         catch (OperationCanceledException)
         {
@@ -263,10 +277,22 @@ public class RedisStateStore : DistributedStateStoreBase
         var redisKey = GetRedisKey(key);
         try
         {
+            EnsureScriptsLoaded();
+
             var json = JsonSerializer.Serialize(value);
             var expiry = BuildTtl(ttl);
+            var ttlSeconds = (int)(expiry?.TotalSeconds ?? 0);
 
-            await _database.StringSetAsync(redisKey, json, expiry);
+            // Execute Lua script with TTL included
+            await _database.ScriptEvaluateAsync(
+                _saveStateScript!,
+                new
+                {
+                    key = (RedisKey)redisKey,
+                    data = json,
+                    etag = "0", // Skip ETag check for regular save
+                    ttl = ttlSeconds
+                });
         }
         catch (OperationCanceledException)
         {
@@ -316,7 +342,7 @@ public class RedisStateStore : DistributedStateStoreBase
         }
     }
 
-    public override async Task<(T? Value, string ETag)> GetStateAndVersionAsync<T>(string key, CancellationToken cancellationToken = default) where T : default
+    public override async Task<(T? Value, string ETag)> GetStateAndETagAsync<T>(string key, CancellationToken cancellationToken = default) where T : default
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -325,26 +351,19 @@ public class RedisStateStore : DistributedStateStoreBase
         {
             EnsureScriptsLoaded();
 
-            // Use Lua script for atomic get with ETag
-            if (_getWithETagScript != null)
-            {
-                var result = await _database.ScriptEvaluateAsync(
-                    _getWithETagScript,
-                    new { key = (RedisKey)redisKey });
+            var result = await _database.ScriptEvaluateAsync(
+                _getWithETagScript!,
+                new { key = (RedisKey)redisKey });
 
-                var results = (RedisResult[])result!;
-                var valueStr = (string?)results[0];
-                var etag = (string)results[1]!;
+            var results = (RedisResult[])result!;
+            var dataJson = (string?)results[0];
+            var etag = (string)results[1]!;
 
-                if (valueStr == null)
-                    return (default, string.Empty);
+            if (dataJson == null || etag == "0")
+                return (default, string.Empty);
 
-                var deserialized = JsonSerializer.Deserialize<T>(valueStr);
-                return (deserialized, etag);
-            }
-
-            // Fallback: use non-atomic approach (for compatibility)
-            return await GetStateAndVersionFallbackAsync<T>(redisKey);
+            var deserialized = JsonSerializer.Deserialize<T>(dataJson);
+            return (deserialized, etag);
         }
         catch (OperationCanceledException)
         {
@@ -352,22 +371,8 @@ public class RedisStateStore : DistributedStateStoreBase
         }
         catch (Exception ex)
         {
-            throw ex.CreateException(Logger, "ERROR getting state and version with key: {0}", key);
+            throw ex.CreateException(Logger, "ERROR getting state and ETag with key: {0}", key);
         }
-    }
-
-    private async Task<(T? Value, string ETag)> GetStateAndVersionFallbackAsync<T>(string redisKey)
-    {
-        var value = await _database.StringGetAsync(redisKey);
-        if (!value.HasValue)
-            return (default, string.Empty);
-
-        var valueStr = value.ToString();
-        var deserialized = JsonSerializer.Deserialize<T>(valueStr);
-        // Use SHA1 hash for stable ETag
-        var etag = ComputeSha1Hash(valueStr);
-
-        return (deserialized, etag);
     }
 
     public override async Task<(bool Success, string? NewETag)> TrySaveStateWithETagAsync<T>(
@@ -386,34 +391,27 @@ public class RedisStateStore : DistributedStateStoreBase
 
             var json = JsonSerializer.Serialize(value);
             var expiry = BuildTtl(ttl);
-            var ttlSeconds = expiry?.TotalSeconds ?? -1;
+            var ttlSeconds = (int)(expiry?.TotalSeconds ?? 0);
 
-            // Use Lua script for atomic compare-and-swap
-            if (_compareAndSwapScript != null)
-            {
-                var result = await _database.ScriptEvaluateAsync(
-                    _compareAndSwapScript,
-                    new
-                    {
-                        key = (RedisKey)redisKey,
-                        arg1 = expectedETag,
-                        arg2 = json,
-                        arg3 = (int)ttlSeconds
-                    });
-
-                if (result.IsNull)
+            // Execute CAS script with TTL included
+            var result = await _database.ScriptEvaluateAsync(
+                _compareAndSwapScript!,
+                new
                 {
-                    Logger.LogDebug("ETag mismatch for key: {Key}. Expected: {Expected}", key, expectedETag);
-                    return (false, null);
-                }
+                    key = (RedisKey)redisKey,
+                    etag = expectedETag,
+                    data = json,
+                    ttl = ttlSeconds
+                });
 
-                var newETag = (string)result!;
-                Logger.LogDebug("Saved state with ETag: {ETag} for key: {Key}", newETag, key);
-                return (true, newETag);
+            if (result.IsNull)
+            {
+                Logger.LogDebug("ETag mismatch for key: {Key}. Expected: {Expected}", key, expectedETag);
+                return (false, null);
             }
 
-            // Fallback: use transaction-based approach
-            return await TrySaveStateWithETagFallbackAsync(redisKey, json, expectedETag, expiry);
+            var newETag = (string)result!;
+            return (true, newETag);
         }
         catch (OperationCanceledException)
         {
@@ -423,40 +421,6 @@ public class RedisStateStore : DistributedStateStoreBase
         {
             throw ex.CreateException(Logger, "ERROR saving state with ETag for key: {0}", key);
         }
-    }
-
-    private async Task<(bool Success, string? NewETag)> TrySaveStateWithETagFallbackAsync(
-        string redisKey,
-        string json,
-        string expectedETag,
-        TimeSpan? expiry)
-    {
-        // Fallback using WATCH + MULTI + EXEC
-        var transaction = _database.CreateTransaction();
-
-        var currentValue = await _database.StringGetAsync(redisKey);
-        var currentETag = currentValue.HasValue ? ComputeSha1Hash(currentValue.ToString()) : string.Empty;
-
-        if (currentETag != expectedETag)
-        {
-            Logger.LogDebug("ETag mismatch for key: {Key}. Expected: {Expected}, Actual: {Actual}",
-                redisKey, expectedETag, currentETag);
-            return (false, null);
-        }
-
-        transaction.AddCondition(Condition.StringEqual(redisKey, currentValue));
-        _ = transaction.StringSetAsync(redisKey, json, expiry);
-
-        var success = await transaction.ExecuteAsync();
-
-        if (success)
-        {
-            var newETag = ComputeSha1Hash(json);
-            Logger.LogDebug("Saved state with ETag: {ETag} for key: {Key}", newETag, redisKey);
-            return (true, newETag);
-        }
-
-        return (false, null);
     }
 
     public override async Task<bool> TrySaveStateIfNotExistsAsync<T>(
@@ -470,11 +434,23 @@ public class RedisStateStore : DistributedStateStoreBase
         var redisKey = GetRedisKey(key);
         try
         {
-            var json = JsonSerializer.Serialize(value);
-            var expiry = BuildTtl(ttl);
+            EnsureScriptsLoaded();
 
-            // Use SET NX (only if not exists)
-            var success = await _database.StringSetAsync(redisKey, json, expiry, When.NotExists);
+            var dataJson = JsonSerializer.Serialize(value);
+            var expiry = BuildTtl(ttl);
+            var ttlSeconds = (int)(expiry?.TotalSeconds ?? 0);
+
+            // Use atomic Lua script for first-write with TTL included
+            var result = await _database.ScriptEvaluateAsync(
+                _saveIfNotExistsScript!,
+                new
+                {
+                    key = (RedisKey)redisKey,
+                    data = dataJson,
+                    ttl = ttlSeconds
+                });
+
+            var success = (int)result == 1;
 
             if (success)
             {
@@ -512,16 +488,101 @@ public class RedisStateStore : DistributedStateStoreBase
         return ttl;
     }
 
-    /// <summary>
-    /// Compute SHA1 hash for stable ETag generation
-    /// </summary>
-    private static string ComputeSha1Hash(string value)
+    public override async Task SaveBulkStateAsync<T>(
+        IReadOnlyList<(string Key, T Value)> items,
+        CancellationToken cancellationToken = default,
+        TimeSpan? ttl = null)
     {
-        if (string.IsNullOrEmpty(value))
-            return string.Empty;
+        if (items.Count == 0) return;
 
-        var bytes = System.Text.Encoding.UTF8.GetBytes(value);
-        var hash = System.Security.Cryptography.SHA1.HashData(bytes);
-        return Convert.ToHexString(hash).ToLowerInvariant();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        try
+        {
+            EnsureScriptsLoaded();
+
+            var expiry = BuildTtl(ttl);
+            var ttlSeconds = (int)(expiry?.TotalSeconds ?? 0);
+
+            // Use batch/pipeline for better performance
+            var batch = _database.CreateBatch();
+            var saveTasks = new List<Task>(items.Count);
+
+            // Execute Lua scripts with TTL included
+            foreach (var (key, value) in items)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var redisKey = GetRedisKey(key);
+                var json = JsonSerializer.Serialize(value);
+
+                var task = batch.ScriptEvaluateAsync(
+                    _saveStateScript!,
+                    new
+                    {
+                        key = (RedisKey)redisKey,
+                        data = json,
+                        etag = "0", // Skip ETag check for regular save
+                        ttl = ttlSeconds
+                    });
+                saveTasks.Add(task);
+            }
+
+            batch.Execute();
+            await Task.WhenAll(saveTasks);
+
+            Logger.LogDebug("Saved {Count} states in bulk", items.Count);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw ex.CreateException(Logger, "ERROR saving bulk state with {0} items", items.Count);
+        }
+    }
+
+    public override async Task<bool> TryDeleteStateWithETagAsync(
+        string key,
+        string expectedETag,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var redisKey = GetRedisKey(key);
+        try
+        {
+            EnsureScriptsLoaded();
+
+            var result = await _database.ScriptEvaluateAsync(
+                _deleteWithETagScript!,
+                new
+                {
+                    key = (RedisKey)redisKey,
+                    etag = expectedETag
+                });
+
+            var success = (int)result == 1;
+
+            if (success)
+            {
+                Logger.LogDebug("Deleted state with ETag for key: {Key}", key);
+            }
+            else
+            {
+                Logger.LogDebug("ETag mismatch for delete, key: {Key}. Expected: {Expected}", key, expectedETag);
+            }
+
+            return success;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw ex.CreateException(Logger, "ERROR deleting state with ETag for key: {0}", key);
+        }
     }
 }

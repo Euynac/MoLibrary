@@ -101,7 +101,7 @@ public class MemoryCacheProvider(IMemoryCache memoryCache, ILogger<MemoryCachePr
         return Task.CompletedTask;
     }
 
-    public override Task<(T? Value, string ETag)> GetStateAndVersionAsync<T>(string key,
+    public override Task<(T? Value, string ETag)> GetStateAndETagAsync<T>(string key,
         CancellationToken cancellationToken = default) where T : default
     {
         if (memoryCache.TryGetValue(key, out var entry) && entry is StateEntry<T> stateEntry)
@@ -188,6 +188,82 @@ public class MemoryCacheProvider(IMemoryCache memoryCache, ILogger<MemoryCachePr
 
         Logger.LogDebug("Found {Count} keys matching pattern: {Pattern}", keys.Count, pattern);
         return Task.FromResult(keys);
+    }
+
+    public override Task SaveBulkStateAsync<T>(
+        IReadOnlyList<(string Key, T Value)> items,
+        CancellationToken cancellationToken = default,
+        TimeSpan? ttl = null)
+    {
+        foreach (var (key, value) in items)
+        {
+            // Register key
+            _keyRegistry.TryAdd(key, 0);
+
+            StateEntry<T> stateEntry;
+
+            if (memoryCache.TryGetValue(key, out var existingEntry) && existingEntry is StateEntry<T> existing)
+            {
+                existing.Update(value);
+                stateEntry = existing;
+            }
+            else
+            {
+                stateEntry = new StateEntry<T>(value, 0);
+            }
+
+            var options = new MemoryCacheEntryOptions();
+            if (ttl.HasValue)
+            {
+                options.AbsoluteExpirationRelativeToNow = ttl.Value;
+            }
+
+            memoryCache.Set(key, stateEntry, options);
+        }
+
+        Logger.LogDebug("Saved {Count} states in bulk", items.Count);
+        return Task.CompletedTask;
+    }
+
+    public override Task<bool> TryDeleteStateWithETagAsync(
+        string key,
+        string expectedETag,
+        CancellationToken cancellationToken = default)
+    {
+        lock (memoryCache)
+        {
+            if (memoryCache.TryGetValue(key, out var entry))
+            {
+                // Get the version from the entry regardless of type
+                var entryType = entry.GetType();
+                var etagProperty = entryType.GetProperty("ETag");
+                if (etagProperty != null)
+                {
+                    var actualETag = etagProperty.GetValue(entry)?.ToString() ?? "";
+                    if (actualETag != expectedETag)
+                    {
+                        Logger.LogDebug("ETag mismatch for delete, key: {Key}. Expected: {Expected}, Actual: {Actual}",
+                            key, expectedETag, actualETag);
+                        return Task.FromResult(false);
+                    }
+                }
+
+                // ETag matches, delete the key
+                _keyRegistry.TryRemove(key, out _);
+                memoryCache.Remove(key);
+                Logger.LogDebug("Deleted state with ETag for key: {Key}", key);
+                return Task.FromResult(true);
+            }
+
+            // Key doesn't exist, allow delete if ETag is "0" or empty
+            if (expectedETag == "0" || string.IsNullOrEmpty(expectedETag))
+            {
+                return Task.FromResult(true);
+            }
+
+            Logger.LogDebug("Key not found for ETag delete: {Key}", key);
+            return Task.FromResult(false);
+        }
     }
 
     /// <summary>

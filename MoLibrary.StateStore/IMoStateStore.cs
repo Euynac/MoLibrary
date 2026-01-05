@@ -59,13 +59,13 @@ public interface IMoStateStore
     Task DeleteBulkStateAsync(IReadOnlyList<string> keys, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Get state data with version (ETag) for optimistic concurrency
+    /// Get state data with ETag for optimistic concurrency
     /// </summary>
     /// <typeparam name="T">State data type</typeparam>
     /// <param name="key">State key</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Tuple of value and ETag</returns>
-    Task<(T? Value, string ETag)> GetStateAndVersionAsync<T>(string key, CancellationToken cancellationToken = default);
+    Task<(T? Value, string ETag)> GetStateAndETagAsync<T>(string key, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Save state with ETag verification (optimistic locking)
@@ -99,4 +99,25 @@ public interface IMoStateStore
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of matching keys</returns>
     Task<List<string>> ScanKeysAsync(string pattern, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Save multiple states in bulk
+    /// </summary>
+    /// <typeparam name="T">State data type</typeparam>
+    /// <param name="items">List of key-value pairs to save</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <param name="ttl">Time to live for all items</param>
+    Task SaveBulkStateAsync<T>(IReadOnlyList<(string Key, T Value)> items,
+        CancellationToken cancellationToken = default,
+        TimeSpan? ttl = null);
+
+    /// <summary>
+    /// Delete state with ETag verification (optimistic locking)
+    /// </summary>
+    /// <param name="key">State key</param>
+    /// <param name="expectedETag">Expected ETag value</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>True if deleted successfully, false if ETag mismatch</returns>
+    Task<bool> TryDeleteStateWithETagAsync(string key, string expectedETag,
+        CancellationToken cancellationToken = default);
 }

@@ -155,7 +155,7 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         }
     }
 
-    public override async Task<(T? Value, string ETag)> GetStateAndVersionAsync<T>(string key,
+    public override async Task<(T? Value, string ETag)> GetStateAndETagAsync<T>(string key,
         CancellationToken cancellationToken = default) where T : default
     {
         try
@@ -164,7 +164,7 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         }
         catch (Exception e)
         {
-            throw e.CreateException(Logger, "ERROR Getting state and version from {0} with key: {1}", StateStoreName, key);
+            throw e.CreateException(Logger, "ERROR Getting state and ETag from {0} with key: {1}", StateStoreName, key);
         }
     }
 
@@ -240,6 +240,54 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         throw new NotImplementedException(
             "Dapr state store does not support scanning keys by pattern. " +
             "Please use RedisStateStore or another implementation that supports this operation.");
+    }
+
+    public override async Task SaveBulkStateAsync<T>(
+        IReadOnlyList<(string Key, T Value)> items,
+        CancellationToken cancellationToken = default,
+        TimeSpan? ttl = null)
+    {
+        if (items.Count == 0) return;
+
+        try
+        {
+            var metadata = BuildTtlMetadata(ttl);
+
+            var saveItems = items.Select(item => new SaveStateItem<T>(
+                item.Key,
+                item.Value,
+                string.Empty,
+                null,
+                metadata)).ToList();
+
+            await dapr.SaveBulkStateAsync(StateStoreName, saveItems, cancellationToken);
+        }
+        catch (Exception e)
+        {
+            throw e.CreateException(Logger, "ERROR SaveBulkState to {0} with {1} items", StateStoreName, items.Count);
+        }
+    }
+
+    public override async Task<bool> TryDeleteStateWithETagAsync(
+        string key,
+        string expectedETag,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var success = await dapr.TryDeleteStateAsync(StateStoreName, key, expectedETag, cancellationToken: cancellationToken);
+
+            if (!success)
+            {
+                Logger.LogDebug("ETag mismatch for delete, key: {Key}. Expected: {Expected}", key, expectedETag);
+            }
+
+            return success;
+        }
+        catch (Exception e)
+        {
+            throw e.CreateException(Logger, "ERROR TryDeleteStateWithETag from {0} with key: {1}", StateStoreName, key);
+        }
     }
 
     private static Dictionary<string, string>? BuildTtlMetadata(TimeSpan? ttl)
