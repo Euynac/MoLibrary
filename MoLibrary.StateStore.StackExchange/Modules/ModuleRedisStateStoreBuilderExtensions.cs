@@ -18,6 +18,18 @@ public static class ModuleRedisStateStoreBuilderExtensions
         Action<ModuleRedisStateStoreOption>? action = null)
     {
         guide.SetCommonDistributedStateStoreProvider<RedisStateStore>();
+
+        // Register global IConnectionMultiplexer for common provider
+        guide.ConfigureStateStoreServices(services =>
+        {
+            services.AddSingleton<IConnectionMultiplexer>(sp =>
+            {
+                var factory = sp.GetRequiredService<IRedisConnectionFactory>();
+                var options = sp.GetRequiredService<IOptions<ModuleRedisStateStoreOption>>().Value;
+                return factory.CreateConnection(options);
+            });
+        });
+
         return new ModuleRedisStateStoreGuide().Register(action);
     }
 
@@ -35,8 +47,9 @@ public static class ModuleRedisStateStoreBuilderExtensions
     {
         ArgumentNullException.ThrowIfNull(serviceKey);
         ArgumentNullException.ThrowIfNull(configureOptions);
-
-        return guide.ConfigureKeyedStateStore(services =>
+        
+        new ModuleRedisStateStoreGuide().Register();
+        return guide.ConfigureStateStoreServices(services =>
         {
             // Register keyed options
             services.Configure(serviceKey, configureOptions);
@@ -58,6 +71,6 @@ public static class ModuleRedisStateStoreBuilderExtensions
                 var keyedConnection = sp.GetRequiredKeyedService<IConnectionMultiplexer>(serviceKey);
                 return ActivatorUtilities.CreateInstance<RedisStateStore>(sp, keyedConnection, keyedOptions);
             });
-        });
+        }, serviceKey);
     }
 }

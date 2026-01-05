@@ -57,16 +57,17 @@ public class ModuleStateStoreGuide : MoModuleGuide<ModuleStateStore, ModuleState
     }
 
     /// <summary>
-    /// Configure custom keyed StateStore service registration
+    /// Configure custom StateStore service registration
     /// </summary>
-    /// <param name="configureKeyedServices">Service configuration delegate</param>
+    /// <param name="configureServices">Service configuration delegate</param>
+    /// <param name="key">Optional key to differentiate multiple calls (used as secondKey in module system)</param>
     /// <returns>Current module guide instance for chaining</returns>
-    public ModuleStateStoreGuide ConfigureKeyedStateStore(Action<IServiceCollection> configureKeyedServices)
+    public ModuleStateStoreGuide ConfigureStateStoreServices(Action<IServiceCollection> configureServices, string? key = null)
     {
         ConfigureServices(context =>
         {
-            configureKeyedServices(context.Services);
-        });
+            configureServices(context.Services);
+        }, secondKey: key);
         return this;
     }
 }

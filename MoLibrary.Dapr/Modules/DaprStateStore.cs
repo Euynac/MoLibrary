@@ -36,8 +36,8 @@ public static class ModuleDaprStateStoreBuilderExtensions
     {
         ArgumentNullException.ThrowIfNull(serviceKey);
         ArgumentNullException.ThrowIfNull(configureOptions);
-
-        return guide.ConfigureKeyedStateStore(services =>
+        new ModuleDaprStateStoreGuide().Register();
+        return guide.ConfigureStateStoreServices(services =>
         {
             // 注册 keyed options
             services.Configure(serviceKey, configureOptions);
@@ -49,7 +49,7 @@ public static class ModuleDaprStateStoreBuilderExtensions
                 var keyedOptions = Options.Create(optionsSnapshot.Get(serviceKey));
                 return ActivatorUtilities.CreateInstance<DaprStateStore>(sp, keyedOptions);
             });
-        });
+        }, serviceKey);
     }
 }
 
