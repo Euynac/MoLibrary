@@ -26,19 +26,24 @@ public class DistributedCancellationManager(
     ILogger<DistributedCancellationManager> logger,
     IOptions<ModuleCancellationManagerOption> options) : IMoCancellationManager
 {
-    private const string StateKeyPrefix = "DistributedCancellation";
+    private const string StateKeyPrefix = "DistributedCancellation:";
 
     private readonly ModuleCancellationManagerOption _options = options.Value;
-    
+
     /// <summary>
     /// 本地取消令牌源缓存，避免重复轮询状态存储
     /// </summary>
     private readonly ConcurrentDictionary<string, CancellationTokenSource> _localTokenSources = new();
-    
+
     /// <summary>
     /// 轮询任务缓存，每个键对应一个后台轮询任务
     /// </summary>
     private readonly ConcurrentDictionary<string, Task> _pollingTasks = new();
+
+    /// <summary>
+    /// Get prefixed key for storage
+    /// </summary>
+    private static string GetPrefixedKey(string key) => StateKeyPrefix + key;
 
     /// <summary>
     /// 创建或获取指定键的分布式取消令牌
@@ -64,7 +69,7 @@ public class DistributedCancellationManager(
         _localTokenSources.AddOrUpdate(key, tokenSource, (_, _) => tokenSource);
 
         // 初始化或获取分布式状态
-        var state = await stateStore.GetStateAsync<DistributedCancellationTokenState>(key, StateKeyPrefix, cancellationToken);
+        var state = await stateStore.GetStateAsync<DistributedCancellationTokenState>(GetPrefixedKey(key), cancellationToken);
         if (state == null)
         {
             // 创建新的分布式状态
@@ -76,8 +81,8 @@ public class DistributedCancellationManager(
                 LastUpdatedAt = DateTime.Now,
                 Version = 1
             };
-            
-            await stateStore.SaveStateAsync(key, state, StateKeyPrefix, cancellationToken, _options.StateTtl);
+
+            await stateStore.SaveStateAsync(GetPrefixedKey(key), state, cancellationToken, _options.StateTtl);
             logger.LogInformation("Created new distributed cancellation token for key: {Key}", key);
         }
 
@@ -108,14 +113,14 @@ public class DistributedCancellationManager(
         try
         {
             // 更新分布式状态
-            var state = await stateStore.GetStateAsync<DistributedCancellationTokenState>(key, StateKeyPrefix, cancellationToken);
+            var state = await stateStore.GetStateAsync<DistributedCancellationTokenState>(GetPrefixedKey(key), cancellationToken);
             if (state != null)
             {
                 state.IsCancelled = true;
                 state.LastUpdatedAt = DateTime.Now;
                 state.Version++;
-                
-                await stateStore.SaveStateAsync(key, state, StateKeyPrefix, cancellationToken, _options.StateTtl);
+
+                await stateStore.SaveStateAsync(GetPrefixedKey(key), state, cancellationToken, _options.StateTtl);
                 logger.LogInformation("Cancelled distributed cancellation token for key: {Key}", key);
             }
 
@@ -142,7 +147,7 @@ public class DistributedCancellationManager(
         if (string.IsNullOrWhiteSpace(key))
             throw new ArgumentException("Token key cannot be null or empty", nameof(key));
 
-        var state = await stateStore.GetStateAsync<DistributedCancellationTokenState>(key, StateKeyPrefix, cancellationToken);
+        var state = await stateStore.GetStateAsync<DistributedCancellationTokenState>(GetPrefixedKey(key), cancellationToken);
         return state?.IsCancelled ?? false;
     }
 
@@ -159,14 +164,14 @@ public class DistributedCancellationManager(
         try
         {
             // 重置分布式状态
-            var state = await stateStore.GetStateAsync<DistributedCancellationTokenState>(key, StateKeyPrefix, cancellationToken);
+            var state = await stateStore.GetStateAsync<DistributedCancellationTokenState>(GetPrefixedKey(key), cancellationToken);
             if (state != null)
             {
                 state.IsCancelled = false;
                 state.LastUpdatedAt = DateTime.Now;
                 state.Version++;
-                
-                await stateStore.SaveStateAsync(key, state, StateKeyPrefix, cancellationToken, _options.StateTtl);
+
+                await stateStore.SaveStateAsync(GetPrefixedKey(key), state, cancellationToken, _options.StateTtl);
             }
 
             // 重置本地令牌源
@@ -197,7 +202,7 @@ public class DistributedCancellationManager(
         try
         {
             // 删除分布式状态
-            await stateStore.DeleteStateAsync(key, StateKeyPrefix, cancellationToken);
+            await stateStore.DeleteStateAsync(GetPrefixedKey(key), cancellationToken);
 
             // 清理本地资源
             if (_localTokenSources.TryRemove(key, out var tokenSource))
@@ -226,26 +231,26 @@ public class DistributedCancellationManager(
             // 由于StateStore的QueryBuilder不支持通用的前缀查询，我们需要通过其他方式获取所有状态
             // 这里采用简化的实现，实际使用中可能需要根据具体的IStateStore实现调整
             var result = new List<string>();
-            
+
             // 这是一个权宜之计，实际生产环境中应该通过更高效的方式实现
             // 例如：维护一个活动token键的索引，或者使用支持前缀查询的存储实现
             logger.LogWarning("GetActiveTokenKeysAsync is using a simplified implementation. " +
                              "Consider implementing a more efficient solution for production use.");
-            
+
             // 返回当前本地缓存中的活动令牌键
             foreach (var kvp in _localTokenSources)
             {
                 if (!kvp.Value.Token.IsCancellationRequested)
                 {
                     // 双重检查分布式状态
-                    var state = await stateStore.GetStateAsync<DistributedCancellationTokenState>(kvp.Key, StateKeyPrefix, cancellationToken);
+                    var state = await stateStore.GetStateAsync<DistributedCancellationTokenState>(GetPrefixedKey(kvp.Key), cancellationToken);
                     if (state != null && !state.IsCancelled)
                     {
                         result.Add(kvp.Key);
                     }
                 }
             }
-            
+
             return result;
         }
         catch (Exception ex)
@@ -289,7 +294,7 @@ public class DistributedCancellationManager(
             {
                 try
                 {
-                    var state = await stateStore.GetStateAsync<DistributedCancellationTokenState>(key, StateKeyPrefix);
+                    var state = await stateStore.GetStateAsync<DistributedCancellationTokenState>(GetPrefixedKey(key));
                     if (state == null)
                     {
                         // 分布式状态已被删除，清理本地资源
@@ -307,7 +312,7 @@ public class DistributedCancellationManager(
                     if (state.Version > lastVersion)
                     {
                         lastVersion = state.Version;
-                        
+
                         if (state.IsCancelled && !tokenSource.Token.IsCancellationRequested)
                         {
                             await tokenSource.CancelAsync();
@@ -372,5 +377,3 @@ public class DistributedCancellationManager(
         public long Version { get; set; } = 1;
     }
 }
-
-

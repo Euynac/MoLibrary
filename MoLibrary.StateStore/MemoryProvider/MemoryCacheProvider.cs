@@ -6,45 +6,39 @@ using Microsoft.Extensions.Logging;
 namespace MoLibrary.StateStore.MemoryProvider;
 
 /// <summary>
-/// 基于MemoryCache的状态存储实现
+/// Memory cache based state store implementation
 /// </summary>
 public class MemoryCacheProvider(IMemoryCache memoryCache, ILogger<MemoryCacheProvider> logger)
     : StateStoreBase(logger), IMemoryStateStore
 {
     private readonly ConcurrentDictionary<string, byte> _keyRegistry = new();
 
-    public override Task<Dictionary<string, T?>> GetBulkStateAsync<T>(IReadOnlyList<string> keys, string? prefix,
-        bool removePrefix = true, bool removeEmptyValue = true, CancellationToken cancellationToken = default) where T : default
+    public override Task<Dictionary<string, T?>> GetBulkStateAsync<T>(IReadOnlyList<string> keys,
+        bool removeEmptyValue = true, CancellationToken cancellationToken = default) where T : default
     {
         var result = new Dictionary<string, T?>();
 
         foreach (var key in keys)
         {
-            var fullKey = GetKey(key, prefix);
-            if (memoryCache.TryGetValue(fullKey, out var entry) && entry is StateEntry<T> stateEntry)
+            if (memoryCache.TryGetValue(key, out var entry) && entry is StateEntry<T> stateEntry)
             {
-                var resultKey = removePrefix ? RemovePrefix(fullKey, prefix) : fullKey;
-                
                 if (!removeEmptyValue || stateEntry.Value != null)
                 {
-                    result[resultKey] = stateEntry.Value;
+                    result[key] = stateEntry.Value;
                 }
             }
             else if (!removeEmptyValue)
             {
-                var resultKey = removePrefix ? key : fullKey;
-                result[resultKey] = default(T);
+                result[key] = default;
             }
         }
 
         return Task.FromResult(result);
     }
 
-    public override Task<T?> GetStateAsync<T>(string key, string? prefix, CancellationToken cancellationToken = default) where T : default
+    public override Task<T?> GetStateAsync<T>(string key, CancellationToken cancellationToken = default) where T : default
     {
-        var fullKey = GetKey(key, prefix);
-        
-        if (memoryCache.TryGetValue(fullKey, out var entry) && entry is StateEntry<T> stateEntry)
+        if (memoryCache.TryGetValue(key, out var entry) && entry is StateEntry<T> stateEntry)
         {
             return Task.FromResult(stateEntry.Value);
         }
@@ -52,24 +46,22 @@ public class MemoryCacheProvider(IMemoryCache memoryCache, ILogger<MemoryCachePr
         return Task.FromResult(default(T));
     }
 
-    public override Task SaveStateAsync<T>(string key, T value, string? prefix, CancellationToken cancellationToken = default, TimeSpan? ttl = null)
+    public override Task SaveStateAsync<T>(string key, T value, CancellationToken cancellationToken = default, TimeSpan? ttl = null)
     {
-        var fullKey = GetKey(key, prefix);
-
-        // 注册 key
-        _keyRegistry.TryAdd(fullKey, 0);
+        // Register key
+        _keyRegistry.TryAdd(key, 0);
 
         StateEntry<T> stateEntry;
 
-        if (memoryCache.TryGetValue(fullKey, out var existingEntry) && existingEntry is StateEntry<T> existing)
+        if (memoryCache.TryGetValue(key, out var existingEntry) && existingEntry is StateEntry<T> existing)
         {
-            // 更新现有条目
+            // Update existing entry
             existing.Update(value);
             stateEntry = existing;
         }
         else
         {
-            // 创建新条目
+            // Create new entry
             stateEntry = new StateEntry<T>(value, 0);
         }
 
@@ -79,72 +71,64 @@ public class MemoryCacheProvider(IMemoryCache memoryCache, ILogger<MemoryCachePr
             options.AbsoluteExpirationRelativeToNow = ttl.Value;
         }
 
-        memoryCache.Set(fullKey, stateEntry, options);
-        Logger.LogDebug("Saved state with key: {Key}", fullKey);
+        memoryCache.Set(key, stateEntry, options);
+        Logger.LogDebug("Saved state with key: {Key}", key);
         return Task.CompletedTask;
     }
 
-    public override Task DeleteStateAsync(string key, string? prefix, CancellationToken cancellationToken = default)
+    public override Task DeleteStateAsync(string key, CancellationToken cancellationToken = default)
     {
-        var fullKey = GetKey(key, prefix);
+        // Remove key from registry
+        _keyRegistry.TryRemove(key, out _);
 
-        // 移除 key 注册
-        _keyRegistry.TryRemove(fullKey, out _);
+        memoryCache.Remove(key);
 
-        memoryCache.Remove(fullKey);
-
-        Logger.LogDebug("Deleted state with key: {Key}", fullKey);
+        Logger.LogDebug("Deleted state with key: {Key}", key);
         return Task.CompletedTask;
     }
 
-    public override Task DeleteBulkStateAsync(IReadOnlyList<string> keys, string? prefix, CancellationToken cancellationToken = default)
+    public override Task DeleteBulkStateAsync(IReadOnlyList<string> keys, CancellationToken cancellationToken = default)
     {
         foreach (var key in keys)
         {
-            var fullKey = GetKey(key, prefix);
+            // Remove key from registry
+            _keyRegistry.TryRemove(key, out _);
 
-            // 移除 key 注册
-            _keyRegistry.TryRemove(fullKey, out _);
-
-            memoryCache.Remove(fullKey);
+            memoryCache.Remove(key);
         }
 
         Logger.LogDebug("Deleted {Count} states", keys.Count);
         return Task.CompletedTask;
     }
 
-    public override Task<(T value, string etag)> GetStateAndVersionAsync<T>(string key, string? prefix,
-        CancellationToken cancellationToken = default)
+    public override Task<(T? Value, string ETag)> GetStateAndVersionAsync<T>(string key,
+        CancellationToken cancellationToken = default) where T : default
     {
-        var fullKey = GetKey(key, prefix);
-
-        if (memoryCache.TryGetValue(fullKey, out var entry) && entry is StateEntry<T> stateEntry)
+        if (memoryCache.TryGetValue(key, out var entry) && entry is StateEntry<T> stateEntry)
         {
-            return Task.FromResult((stateEntry.Value!, stateEntry.ETag));
+            return Task.FromResult<(T?, string)>((stateEntry.Value, stateEntry.ETag));
         }
 
-        return Task.FromResult((default(T)!, ""));
+        return Task.FromResult<(T?, string)>((default(T), ""));
     }
 
     public override Task<(bool Success, string? NewETag)> TrySaveStateWithETagAsync<T>(string key, T value, string expectedETag,
-        string? prefix, CancellationToken cancellationToken = default, TimeSpan? ttl = null)
+        CancellationToken cancellationToken = default, TimeSpan? ttl = null)
     {
-        var fullKey = GetKey(key, prefix);
-
-        // 使用锁确保原子性操作
+        // Use lock for atomic operation
         lock (memoryCache)
         {
-            if (memoryCache.TryGetValue(fullKey, out var entry) && entry is StateEntry<T> existing)
+            if (memoryCache.TryGetValue(key, out var entry) && entry is StateEntry<T> existing)
             {
-                // 验证 ETag 是否匹配
+                // Verify ETag matches
                 if (existing.ETag != expectedETag)
                 {
                     Logger.LogDebug("ETag mismatch for key: {Key}. Expected: {Expected}, Actual: {Actual}",
-                        fullKey, expectedETag, existing.ETag);
+                        key, expectedETag, existing.ETag);
                     return Task.FromResult<(bool, string?)>((false, null));
                 }
 
-                // ETag 匹配，更新条目
+                // ETag matches, update entry
                 existing.Update(value);
 
                 var options = new MemoryCacheEntryOptions();
@@ -153,33 +137,31 @@ public class MemoryCacheProvider(IMemoryCache memoryCache, ILogger<MemoryCachePr
                     options.AbsoluteExpirationRelativeToNow = ttl.Value;
                 }
 
-                memoryCache.Set(fullKey, existing, options);
-                Logger.LogDebug("Updated state with ETag verification for key: {Key}, NewETag: {ETag}", fullKey, existing.ETag);
+                memoryCache.Set(key, existing, options);
+                Logger.LogDebug("Updated state with ETag verification for key: {Key}, NewETag: {ETag}", key, existing.ETag);
                 return Task.FromResult<(bool, string?)>((true, existing.ETag));
             }
 
-            // Key 不存在，ETag 验证失败
-            Logger.LogDebug("Key not found for ETag verification: {Key}", fullKey);
+            // Key doesn't exist, ETag verification failed
+            Logger.LogDebug("Key not found for ETag verification: {Key}", key);
             return Task.FromResult<(bool, string?)>((false, null));
         }
     }
 
-    public override Task<bool> TrySaveStateIfNotExistsAsync<T>(string key, T value, string? prefix,
+    public override Task<bool> TrySaveStateIfNotExistsAsync<T>(string key, T value,
         CancellationToken cancellationToken = default, TimeSpan? ttl = null)
     {
-        var fullKey = GetKey(key, prefix);
-
-        // 使用锁确保原子性操作
+        // Use lock for atomic operation
         lock (memoryCache)
         {
-            if (memoryCache.TryGetValue(fullKey, out _))
+            if (memoryCache.TryGetValue(key, out _))
             {
-                // Key 已存在，返回失败
-                Logger.LogDebug("Key already exists, cannot save: {Key}", fullKey);
+                // Key already exists, return failure
+                Logger.LogDebug("Key already exists, cannot save: {Key}", key);
                 return Task.FromResult(false);
             }
 
-            // Key 不存在，创建新条目
+            // Key doesn't exist, create new entry
             var stateEntry = new StateEntry<T>(value, 0);
 
             var options = new MemoryCacheEntryOptions();
@@ -188,11 +170,11 @@ public class MemoryCacheProvider(IMemoryCache memoryCache, ILogger<MemoryCachePr
                 options.AbsoluteExpirationRelativeToNow = ttl.Value;
             }
 
-            // 注册 key
-            _keyRegistry.TryAdd(fullKey, 0);
+            // Register key
+            _keyRegistry.TryAdd(key, 0);
 
-            memoryCache.Set(fullKey, stateEntry, options);
-            Logger.LogDebug("Saved state (if not exists) with key: {Key}", fullKey);
+            memoryCache.Set(key, stateEntry, options);
+            Logger.LogDebug("Saved state (if not exists) with key: {Key}", key);
             return Task.FromResult(true);
         }
     }
@@ -209,7 +191,7 @@ public class MemoryCacheProvider(IMemoryCache memoryCache, ILogger<MemoryCachePr
     }
 
     /// <summary>
-    /// 将 glob pattern 转换为正则表达式
+    /// Convert glob pattern to regex
     /// </summary>
     private static Regex GlobToRegex(string pattern)
     {
@@ -218,4 +200,4 @@ public class MemoryCacheProvider(IMemoryCache memoryCache, ILogger<MemoryCachePr
             .Replace("\\?", ".") + "$";
         return new Regex(regexPattern, RegexOptions.Compiled);
     }
-} 
+}

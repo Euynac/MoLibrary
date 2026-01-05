@@ -19,14 +19,14 @@ namespace MoLibrary.JobScheduler.Cache;
 /// </summary>
 public class JobDefinitionCacheService : JobDefinitionCacheServiceDefault, IDisposable, IAsyncDisposable
 {
-    private readonly IMoStateStore _stateStore;
+    private readonly IMoStateStore _staleStore;
+    private const string STALE_PREFIX = "JobDefinition:Updated:";
 
     private readonly ConcurrentDictionary<string, JobDefinition> _cache = new();
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _jobLocks = new();
     private readonly SemaphoreSlim _initLock = new(1, 1);
     private IAsyncDisposable? _eventSubscription;
 
-    private const string STALE_FLAG_PREFIX = "JobDefinition:Updated";
     private static readonly TimeSpan _staleFlagTtl = TimeSpan.FromHours(1);
     private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(5);
 
@@ -37,7 +37,7 @@ public class JobDefinitionCacheService : JobDefinitionCacheServiceDefault, IDisp
         ILogger<JobDefinitionCacheService> logger)
         : base(metadataRepository, eventBus, logger)
     {
-        _stateStore = stateStore;
+        _staleStore = stateStore;
 
         // Subscribe to JobDefinitionsChangedEvent for cache invalidation
         _eventSubscription = eventBus.SubscribeAsync<JobDefinitionsChangedEvent>(OnJobDefinitionsChangedAsync).GetAwaiter().GetResult();
@@ -69,7 +69,7 @@ public class JobDefinitionCacheService : JobDefinitionCacheServiceDefault, IDisp
                 bool isStale = false;
                 try
                 {
-                    isStale = await _stateStore.ExistAsync<bool>(jobKey, STALE_FLAG_PREFIX, cancellationToken);
+                    isStale = await _staleStore.ExistAsync(STALE_PREFIX + jobKey, cancellationToken);
                 }
                 catch (Exception ex)
                 {
@@ -97,7 +97,7 @@ public class JobDefinitionCacheService : JobDefinitionCacheServiceDefault, IDisp
                     // Clear staleness flag
                     try
                     {
-                        await _stateStore.DeleteStateAsync(jobKey, STALE_FLAG_PREFIX, cancellationToken);
+                        await _staleStore.DeleteStateAsync(STALE_PREFIX + jobKey, cancellationToken);
                     }
                     catch (Exception ex)
                     {
@@ -206,10 +206,9 @@ public class JobDefinitionCacheService : JobDefinitionCacheServiceDefault, IDisp
             // Mark as stale in StateStore for distributed scenarios
             try
             {
-                await _stateStore.SaveStateAsync(
-                    definition.JobKey,
+                await _staleStore.SaveStateAsync(
+                    STALE_PREFIX + definition.JobKey,
                     true,
-                    STALE_FLAG_PREFIX,
                     cancellationToken,
                     _staleFlagTtl);
             }
@@ -242,10 +241,9 @@ public class JobDefinitionCacheService : JobDefinitionCacheServiceDefault, IDisp
         {
             try
             {
-                await _stateStore.SaveStateAsync(
-                    jobKey,
+                await _staleStore.SaveStateAsync(
+                    STALE_PREFIX + jobKey,
                     true,
-                    STALE_FLAG_PREFIX,
                     ttl: _staleFlagTtl);
 
                 Logger.LogDebug("Marked job {JobKey} as stale", jobKey);
@@ -264,7 +262,7 @@ public class JobDefinitionCacheService : JobDefinitionCacheServiceDefault, IDisp
 
             try
             {
-                await _stateStore.DeleteStateAsync(jobKey, STALE_FLAG_PREFIX);
+                await _staleStore.DeleteStateAsync(STALE_PREFIX + jobKey);
             }
             catch (Exception ex)
             {

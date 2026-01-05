@@ -17,9 +17,13 @@ public class MoProgressBarService(
     [FromKeyedServices(nameof(ModuleProgressBar))] IMoStateStore stateStore,
     [FromKeyedServices(nameof(ModuleProgressBar))]
     IMoCancellationManager cancellationManager,
-    ILogger<MoProgressBarService> logger, IOptions<ModuleProgressBarOption> options)
+    ILogger<MoProgressBarService> logger,
+    IOptions<ModuleProgressBarOption> options)
     : BackgroundService, IMoProgressBarService
 {
+    private const string SETTING_PREFIX = "ProgressBar:Setting:";
+    private const string STATUS_PREFIX = "ProgressBar:Status:";
+
     public ModuleProgressBarOption Options { get; } = options.Value;
     private readonly ConcurrentDictionary<string, ProgressBarAutoUpdateInfo> _autoUpdateTasks = new();
 
@@ -31,17 +35,19 @@ public class MoProgressBarService(
     public async Task<ProgressBar?> FetchDistributedProgressBar(string id)
     {
         return await FetchDistributedProgressBar<ProgressBar, ProgressBarStatus>(id);
-
     }
-    public async Task<TCustomProgressBar?> FetchDistributedProgressBar<TCustomProgressBar, TCustomStatus>(string id) where TCustomProgressBar : ProgressBar where TCustomStatus : ProgressBarStatus
+
+    public async Task<TCustomProgressBar?> FetchDistributedProgressBar<TCustomProgressBar, TCustomStatus>(string id)
+        where TCustomProgressBar : ProgressBar
+        where TCustomStatus : ProgressBarStatus
     {
-        var setting = await stateStore.GetStateAsync<ProgressBarSetting>(id);
+        var setting = await stateStore.GetStateAsync<ProgressBarSetting>(SETTING_PREFIX + id);
         if (setting == null) return null;
 
         var status = await GetProgressBarStatusAsync<TCustomStatus>(id);
 
         // 创建进度条实例
-        var progressBar = (TCustomProgressBar) Activator.CreateInstance(typeof(TCustomProgressBar), setting, this, id)!;
+        var progressBar = (TCustomProgressBar)Activator.CreateInstance(typeof(TCustomProgressBar), setting, this, id)!;
 
         // 获取或创建分布式取消令牌
         var cancellationToken = await cancellationManager.GetOrCreateTokenAsync(id);
@@ -78,7 +84,6 @@ public class MoProgressBarService(
 
             // 保存初始状态
             await SaveProgressBarStateAsync(progressBar, saveInstantly: true);
-            
 
             // 设置自动更新
             if (setting.AutoUpdateDuration.HasValue)
@@ -94,8 +99,6 @@ public class MoProgressBarService(
             throw e.CreateException(logger, "Failed to create progress bar task: {0}", taskId);
         }
     }
-
-  
 
     public virtual string GenerateDistributedStamp()
     {
@@ -114,7 +117,7 @@ public class MoProgressBarService(
     {
         try
         {
-            var status = await stateStore.GetStateAsync<ProgressBarStatus>(id);
+            var status = await stateStore.GetStateAsync<ProgressBarStatus>(STATUS_PREFIX + id);
             return status;
         }
         catch (Exception e)
@@ -133,7 +136,7 @@ public class MoProgressBarService(
     {
         try
         {
-            var status = await stateStore.GetStateAsync<T>(id);
+            var status = await stateStore.GetStateAsync<T>(STATUS_PREFIX + id);
             return status;
         }
         catch (Exception e)
@@ -150,7 +153,7 @@ public class MoProgressBarService(
             if (progressBar.Setting.UseDistributedProgressBar)
             {
                 progressBar.Setting.DistributedStamp = progressBar.DistributedStamp;
-                await stateStore.SaveStateAsync(progressBar.TaskId, progressBar.Setting, ttl: progressBar.Setting.TimeToLive);
+                await stateStore.SaveStateAsync(SETTING_PREFIX + progressBar.TaskId, progressBar.Setting, ttl: progressBar.Setting.TimeToLive);
             }
 
             // 如果设置了自动更新且不要求立即保存，则跳过保存
@@ -160,11 +163,9 @@ public class MoProgressBarService(
                 return;
             }
 
-            await stateStore.SaveStateAsync(progressBar.TaskId, progressBar.Status, ttl: isComplete ? progressBar.Setting.CompletedTimeToLive : progressBar.Setting.TimeToLive);
+            await stateStore.SaveStateAsync(STATUS_PREFIX + progressBar.TaskId, progressBar.Status, ttl: isComplete ? progressBar.Setting.CompletedTimeToLive : progressBar.Setting.TimeToLive);
 
-         
-
-            logger.LogDebug("Saved progress bar state: {TaskId}, Progress: {Progress}%", 
+            logger.LogDebug("Saved progress bar state: {TaskId}, Progress: {Progress}%",
                 progressBar.TaskId, progressBar.Status.Percentage);
         }
         catch (Exception e)
@@ -210,7 +211,7 @@ public class MoProgressBarService(
             await cancellationManager.CancelTokenAsync(progressBar.TaskId);
 
             await SaveProgressBarStateAsync(progressBar, true, true);
-            
+
             logger.LogInformation("Cancelled progress bar task: {TaskId}, Reason: {Reason}", progressBar.TaskId, reason);
         }
         catch (Exception e)
@@ -229,7 +230,7 @@ public class MoProgressBarService(
             ProgressBar = progressBar,
             Timer = new Timer(async _ => await AutoUpdateCallback(progressBar), null, interval, interval)
         };
-        
+
         _autoUpdateTasks.TryAdd(progressBar.TaskId, info);
         logger.LogDebug("Setup auto-update for progress bar: {TaskId}, Interval: {Interval}", progressBar.TaskId, interval);
     }
@@ -268,7 +269,7 @@ public class MoProgressBarService(
             // 自动更新时强制保存
             await SaveProgressBarStateAsync(progressBar, true);
 
-            logger.LogTrace("Auto-updated progress bar state: {TaskId}, Progress: {Progress}%", 
+            logger.LogTrace("Auto-updated progress bar state: {TaskId}, Progress: {Progress}%",
                 progressBar.TaskId, progressBar.Status.Percentage);
         }
         catch (Exception e)
@@ -306,7 +307,7 @@ public class MoProgressBarService(
             info.Timer?.Dispose();
         }
         _autoUpdateTasks.Clear();
-        
+
         base.Dispose();
     }
 }

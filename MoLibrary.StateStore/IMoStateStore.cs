@@ -1,208 +1,102 @@
 namespace MoLibrary.StateStore;
 
-
+/// <summary>
+/// Core state store interface - pure key-value operations without prefix concept
+/// </summary>
 public interface IMoStateStore
 {
     /// <summary>
-    /// 判断指定键的状态是否存在，使用泛型T的类型名作为键前缀
+    /// Check if a key exists
     /// </summary>
-    /// <typeparam name="T">状态数据类型</typeparam>
-    /// <param name="key">状态键</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>存在返回true，不存在返回false</returns>
-    Task<bool> ExistAsync<T>(string key, CancellationToken cancellationToken = default);
+    /// <param name="key">State key</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>True if exists, false otherwise</returns>
+    Task<bool> ExistAsync(string key, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 判断指定键的状态是否存在，使用指定的键前缀
+    /// Get state data by key
     /// </summary>
-    /// <typeparam name="T">状态数据类型</typeparam>
-    /// <param name="key">状态键</param>
-    /// <param name="prefix">键前缀</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>存在返回true，不存在返回false</returns>
-    Task<bool> ExistAsync<T>(string key, string? prefix, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// 批量获取指定类型的状态数据，使用泛型T的类型名作为键前缀
-    /// </summary>
-    /// <typeparam name="T">状态数据类型</typeparam>
-    /// <param name="keys">状态键列表</param>
-    /// <param name="removePrefix">返回时是否自动移除Key前缀</param>
-    /// <param name="removeEmptyValue">是否移除空值</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>返回状态字典，获取失败返回空字典</returns>
-    Task<Dictionary<string, T?>> GetBulkStateAsync<T>(IReadOnlyList<string> keys,
-        bool removePrefix = true,
-        bool removeEmptyValue = true,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// 批量获取指定类型的状态数据，使用指定的键前缀
-    /// </summary>
-    /// <typeparam name="T">状态数据类型</typeparam>
-    /// <param name="keys">状态键列表</param>
-    /// <param name="prefix">键前缀</param>
-    /// <param name="removePrefix">返回时是否自动移除Key前缀</param>
-    /// <param name="removeEmptyValue">是否移除空值</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>返回状态字典，获取失败返回空字典</returns>
-    Task<Dictionary<string, T?>> GetBulkStateAsync<T>(IReadOnlyList<string> keys, string? prefix,
-        bool removePrefix = true,
-        bool removeEmptyValue = true,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// 获取指定类型的单个状态数据，使用泛型T的类型名作为键前缀
-    /// </summary>
-    /// <typeparam name="T">状态数据类型</typeparam>
-    /// <param name="key">状态键</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>返回状态数据，获取失败返回null</returns>
+    /// <typeparam name="T">State data type</typeparam>
+    /// <param name="key">State key</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>State data or null if not found</returns>
     Task<T?> GetStateAsync<T>(string key, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 获取指定类型的单个状态数据，使用指定的键前缀
+    /// Save state data
     /// </summary>
-    /// <typeparam name="T">状态数据类型</typeparam>
-    /// <param name="key">状态键</param>
-    /// <param name="prefix">键前缀</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>返回状态数据，获取失败返回null</returns>
-    Task<T?> GetStateAsync<T>(string key, string? prefix, CancellationToken cancellationToken = default);
+    /// <typeparam name="T">State data type</typeparam>
+    /// <param name="key">State key</param>
+    /// <param name="value">State value</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <param name="ttl">Time to live. Use TimeSpan.Zero for permanent storage</param>
+    Task SaveStateAsync<T>(string key, T value, CancellationToken cancellationToken = default, TimeSpan? ttl = null);
 
     /// <summary>
-    /// 保存状态数据，使用类型名作为键前缀
+    /// Delete state by key
     /// </summary>
-    /// <param name="key">状态键</param>
-    /// <param name="value">状态值</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <param name="ttl">生存时间，填入0代表永久存储，不受全局设置影响</param>
-    /// <returns>保存失败抛出异常</returns>
-    Task SaveStateAsync<T>(string key, T value,
-        CancellationToken cancellationToken = default, TimeSpan? ttl = null);
-
-    /// <summary>
-    /// 保存状态数据，使用指定的键前缀
-    /// </summary>
-    /// <param name="key">状态键</param>
-    /// <param name="value">状态值</param>
-    /// <param name="prefix">键前缀</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <param name="ttl">生存时间，填入0代表永久存储，不受全局设置影响</param>
-    /// <returns>保存失败抛出异常</returns>
-    Task SaveStateAsync<T>(string key, T value, string? prefix, CancellationToken cancellationToken = default, TimeSpan? ttl = null);
-
-    /// <summary>
-    /// 删除指定键的状态数据
-    /// </summary>
-    /// <param name="key">状态键</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>删除操作的任务</returns>
+    /// <param name="key">State key</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     Task DeleteStateAsync(string key, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 删除指定键的状态数据，使用指定的键前缀
+    /// Get multiple states by keys
     /// </summary>
-    /// <param name="key">状态键</param>
-    /// <param name="prefix">键前缀</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>删除操作的任务</returns>
-    Task DeleteStateAsync(string key, string? prefix, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// 批量删除状态数据，不使用键前缀
-    /// </summary>
-    /// <param name="keys">状态键列表</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>删除操作的任务</returns>
-    Task DeleteBulkStateAsync(IReadOnlyList<string> keys, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// 批量删除状态数据，使用指定的键前缀
-    /// </summary>
-    /// <param name="keys">状态键列表</param>
-    /// <param name="prefix">键前缀</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>删除操作的任务</returns>
-    Task DeleteBulkStateAsync(IReadOnlyList<string> keys, string? prefix, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// 获取状态数据及其版本标识，使用泛型T的类型名作为键前缀
-    /// </summary>
-    /// <typeparam name="T">状态数据类型</typeparam>
-    /// <param name="key">状态键</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>返回包含状态值和版本标识的元组</returns>
-    Task<(T value, string etag)> GetStateAndVersionAsync<T>(string key, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// 获取状态数据及其版本标识，使用指定的键前缀
-    /// </summary>
-    /// <typeparam name="T">状态数据类型</typeparam>
-    /// <param name="key">状态键</param>
-    /// <param name="prefix">键前缀</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>返回包含状态值和版本标识的元组</returns>
-    Task<(T value, string etag)> GetStateAndVersionAsync<T>(string key, string? prefix,
+    /// <typeparam name="T">State data type</typeparam>
+    /// <param name="keys">State keys</param>
+    /// <param name="removeEmptyValue">Whether to remove empty values from result</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Dictionary of key-value pairs</returns>
+    Task<Dictionary<string, T?>> GetBulkStateAsync<T>(IReadOnlyList<string> keys,
+        bool removeEmptyValue = true,
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 使用 ETag 验证保存状态（乐观锁），仅当 ETag 匹配时保存成功
+    /// Delete multiple states by keys
     /// </summary>
-    /// <typeparam name="T">状态数据类型</typeparam>
-    /// <param name="key">状态键</param>
-    /// <param name="value">状态值</param>
-    /// <param name="expectedETag">预期的 ETag 值</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <param name="ttl">生存时间</param>
-    /// <returns>返回元组：Success 表示是否保存成功，NewETag 为新的版本标识</returns>
+    /// <param name="keys">State keys</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    Task DeleteBulkStateAsync(IReadOnlyList<string> keys, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Get state data with version (ETag) for optimistic concurrency
+    /// </summary>
+    /// <typeparam name="T">State data type</typeparam>
+    /// <param name="key">State key</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Tuple of value and ETag</returns>
+    Task<(T? Value, string ETag)> GetStateAndVersionAsync<T>(string key, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Save state with ETag verification (optimistic locking)
+    /// </summary>
+    /// <typeparam name="T">State data type</typeparam>
+    /// <param name="key">State key</param>
+    /// <param name="value">State value</param>
+    /// <param name="expectedETag">Expected ETag value</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <param name="ttl">Time to live</param>
+    /// <returns>Tuple of success flag and new ETag</returns>
     Task<(bool Success, string? NewETag)> TrySaveStateWithETagAsync<T>(string key, T value, string expectedETag,
         CancellationToken cancellationToken = default, TimeSpan? ttl = null);
 
     /// <summary>
-    /// 使用 ETag 验证保存状态（乐观锁），仅当 ETag 匹配时保存成功，使用指定的键前缀
+    /// Save state only if key does not exist (SetIfNotExists)
     /// </summary>
-    /// <typeparam name="T">状态数据类型</typeparam>
-    /// <param name="key">状态键</param>
-    /// <param name="value">状态值</param>
-    /// <param name="expectedETag">预期的 ETag 值</param>
-    /// <param name="prefix">键前缀</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <param name="ttl">生存时间</param>
-    /// <returns>返回元组：Success 表示是否保存成功，NewETag 为新的版本标识</returns>
-    Task<(bool Success, string? NewETag)> TrySaveStateWithETagAsync<T>(string key, T value, string expectedETag,
-        string? prefix, CancellationToken cancellationToken = default, TimeSpan? ttl = null);
-
-    /// <summary>
-    /// 仅当 Key 不存在时保存状态（SetIfNotExists）
-    /// </summary>
-    /// <typeparam name="T">状态数据类型</typeparam>
-    /// <param name="key">状态键</param>
-    /// <param name="value">状态值</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <param name="ttl">生存时间</param>
-    /// <returns>成功返回 true（Key 不存在且保存成功），失败返回 false（Key 已存在）</returns>
+    /// <typeparam name="T">State data type</typeparam>
+    /// <param name="key">State key</param>
+    /// <param name="value">State value</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <param name="ttl">Time to live</param>
+    /// <returns>True if saved (key didn't exist), false if key already exists</returns>
     Task<bool> TrySaveStateIfNotExistsAsync<T>(string key, T value,
         CancellationToken cancellationToken = default, TimeSpan? ttl = null);
 
     /// <summary>
-    /// 仅当 Key 不存在时保存状态（SetIfNotExists），使用指定的键前缀
+    /// Scan keys matching a glob pattern
     /// </summary>
-    /// <typeparam name="T">状态数据类型</typeparam>
-    /// <param name="key">状态键</param>
-    /// <param name="value">状态值</param>
-    /// <param name="prefix">键前缀</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <param name="ttl">生存时间</param>
-    /// <returns>成功返回 true（Key 不存在且保存成功），失败返回 false（Key 已存在）</returns>
-    Task<bool> TrySaveStateIfNotExistsAsync<T>(string key, T value, string? prefix,
-        CancellationToken cancellationToken = default, TimeSpan? ttl = null);
- 
-    /// <summary>
-    /// 使用 glob pattern 扫描匹配的 Keys
-    /// </summary>
-    /// <param name="pattern">Glob pattern (使用 * 和 ? 通配符，如 "user:*"、"session:*:data")</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>返回匹配的原始 Key 列表</returns>
+    /// <param name="pattern">Glob pattern (e.g., "user:*", "session:*:data")</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of matching keys</returns>
     Task<List<string>> ScanKeysAsync(string pattern, CancellationToken cancellationToken = default);
 }

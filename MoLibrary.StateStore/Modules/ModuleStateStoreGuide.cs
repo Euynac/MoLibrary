@@ -7,10 +7,10 @@ namespace MoLibrary.StateStore.Modules;
 public class ModuleStateStoreGuide : MoModuleGuide<ModuleStateStore, ModuleStateStoreOption, ModuleStateStoreGuide>
 {
     /// <summary>
-    /// 注册统一分布式状态存储服务提供者
+    /// Register a common distributed state store provider
     /// </summary>
-    /// <typeparam name="TProvider">分布式状态存储服务提供者类型</typeparam>
-    /// <returns>返回当前模块指南实例以支持链式调用</returns>
+    /// <typeparam name="TProvider">Distributed state store provider type</typeparam>
+    /// <returns>Current module guide instance for chaining</returns>
     public ModuleStateStoreGuide SetCommonDistributedStateStoreProvider<TProvider>()
         where TProvider : class, IDistributedStateStore
     {
@@ -19,11 +19,11 @@ public class ModuleStateStoreGuide : MoModuleGuide<ModuleStateStore, ModuleState
     }
 
     /// <summary>
-    /// 添加指定键的状态存储服务，使用统一的提供者
+    /// Add a keyed state store using the common provider
     /// </summary>
-    /// <param name="key">服务键</param>
-    /// <param name="useDistributed">是否使用分布式存储，false则使用内存存储</param>
-    /// <returns>返回当前模块指南实例以支持链式调用</returns>
+    /// <param name="key">Service key</param>
+    /// <param name="useDistributed">Whether to use distributed storage, false uses memory storage</param>
+    /// <returns>Current module guide instance for chaining</returns>
     public ModuleStateStoreGuide AddKeyedCommonStateStore(string key, bool useDistributed = false)
     {
         ConfigureServices(context =>
@@ -45,11 +45,11 @@ public class ModuleStateStoreGuide : MoModuleGuide<ModuleStateStore, ModuleState
     }
 
     /// <summary>
-    /// 添加Keyed抽象状态存储Provider
+    /// Add a keyed abstract state store provider
     /// </summary>
-    /// <typeparam name="TProvider"></typeparam>
-    /// <param name="key">服务键</param>
-    /// <returns></returns>
+    /// <typeparam name="TProvider">State store provider type</typeparam>
+    /// <param name="key">Service key</param>
+    /// <returns>Current module guide instance for chaining</returns>
     public ModuleStateStoreGuide AddKeyedStateStore<TProvider>(string key) where TProvider : class, IMoStateStore
     {
         ConfigureServices(services => { services.Services.AddKeyedSingleton<IMoStateStore, TProvider>(key); });
@@ -57,10 +57,10 @@ public class ModuleStateStoreGuide : MoModuleGuide<ModuleStateStore, ModuleState
     }
 
     /// <summary>
-    /// 配置自定义的 Keyed StateStore 服务注册
+    /// Configure custom keyed StateStore service registration
     /// </summary>
-    /// <param name="configureKeyedServices">服务配置委托</param>
-    /// <returns>返回当前模块指南实例以支持链式调用</returns>
+    /// <param name="configureKeyedServices">Service configuration delegate</param>
+    /// <returns>Current module guide instance for chaining</returns>
     public ModuleStateStoreGuide ConfigureKeyedStateStore(Action<IServiceCollection> configureKeyedServices)
     {
         ConfigureServices(context =>
