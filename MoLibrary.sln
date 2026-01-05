@@ -3,12 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.13.35806.99
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hangfire.HttpJob", "lib\Hangfire.HttpJob\Hangfire.HttpJob.csproj", "{0A4D2E8F-5152-0584-8C3E-555ABDE53DA6}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hangfire.Redis.StackExchange", "lib\Hangfire.Redis.StackExchange\Hangfire.Redis.StackExchange.csproj", "{BDFA526C-FEC5-7A2B-36F9-DA8CCD10EBB4}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "lib", "lib", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.Framework", "MoLibrary.Framework\MoLibrary.Framework.csproj", "{4F36108F-9E25-7893-B605-DEAE1A7D14A2}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.Generators.AutoController", "MoLibrary.Generators.AutoController\MoLibrary.Generators.AutoController.csproj", "{58948CB7-D569-A6B7-A410-79571D0A7D19}"
@@ -45,8 +39,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.EventBus", "MoLib
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.Configuration", "MoLibrary.Configuration\MoLibrary.Configuration.csproj", "{24780ED6-16D2-4E44-A0CD-398CF9EF9001}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.BackgroundJob", "MoLibrary.BackgroundJob\MoLibrary.BackgroundJob.csproj", "{CA0D9059-7EEC-4DAE-84DE-68641292CD44}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.Configuration.Dashboard", "MoLibrary.Configuration.Dashboard\MoLibrary.Configuration.Dashboard.csproj", "{51DE73A1-EEAE-48EF-1014-65FC30B4384A}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.SignalR", "MoLibrary.SignalR\MoLibrary.SignalR.csproj", "{956FE653-4D44-C45A-8DF3-3879BE6017DF}"
@@ -75,20 +67,14 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.JobScheduler.UI",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.JobScheduler.EfCore", "MoLibrary.JobScheduler.EfCore\MoLibrary.JobScheduler.EfCore.csproj", "{D0F5939F-53F5-490F-B124-95AA196D61C8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.StateStore.StackExchange", "MoLibrary.StateStore.StackExchange\MoLibrary.StateStore.StackExchange.csproj", "{F2842EF6-95DC-4CD3-B6EC-8F53F49C48C4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{0A4D2E8F-5152-0584-8C3E-555ABDE53DA6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0A4D2E8F-5152-0584-8C3E-555ABDE53DA6}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0A4D2E8F-5152-0584-8C3E-555ABDE53DA6}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0A4D2E8F-5152-0584-8C3E-555ABDE53DA6}.Release|Any CPU.Build.0 = Release|Any CPU
-		{BDFA526C-FEC5-7A2B-36F9-DA8CCD10EBB4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{BDFA526C-FEC5-7A2B-36F9-DA8CCD10EBB4}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{BDFA526C-FEC5-7A2B-36F9-DA8CCD10EBB4}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{BDFA526C-FEC5-7A2B-36F9-DA8CCD10EBB4}.Release|Any CPU.Build.0 = Release|Any CPU
 		{4F36108F-9E25-7893-B605-DEAE1A7D14A2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{4F36108F-9E25-7893-B605-DEAE1A7D14A2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4F36108F-9E25-7893-B605-DEAE1A7D14A2}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -153,10 +139,6 @@ Global
 		{24780ED6-16D2-4E44-A0CD-398CF9EF9001}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{24780ED6-16D2-4E44-A0CD-398CF9EF9001}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{24780ED6-16D2-4E44-A0CD-398CF9EF9001}.Release|Any CPU.Build.0 = Release|Any CPU
-		{CA0D9059-7EEC-4DAE-84DE-68641292CD44}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{CA0D9059-7EEC-4DAE-84DE-68641292CD44}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{CA0D9059-7EEC-4DAE-84DE-68641292CD44}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{CA0D9059-7EEC-4DAE-84DE-68641292CD44}.Release|Any CPU.Build.0 = Release|Any CPU
 		{51DE73A1-EEAE-48EF-1014-65FC30B4384A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{51DE73A1-EEAE-48EF-1014-65FC30B4384A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{51DE73A1-EEAE-48EF-1014-65FC30B4384A}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -213,13 +195,15 @@ Global
 		{D0F5939F-53F5-490F-B124-95AA196D61C8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D0F5939F-53F5-490F-B124-95AA196D61C8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D0F5939F-53F5-490F-B124-95AA196D61C8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F2842EF6-95DC-4CD3-B6EC-8F53F49C48C4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F2842EF6-95DC-4CD3-B6EC-8F53F49C48C4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F2842EF6-95DC-4CD3-B6EC-8F53F49C48C4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F2842EF6-95DC-4CD3-B6EC-8F53F49C48C4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{0A4D2E8F-5152-0584-8C3E-555ABDE53DA6} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
-		{BDFA526C-FEC5-7A2B-36F9-DA8CCD10EBB4} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{5E4D5CE7-912D-4743-BD03-F0238697F69D} = {241C163A-658A-4DEA-ABDC-77726E95E33D}
 		{B2C3A927-5DDB-4FFD-BD84-8AFF2A5561D7} = {F9A67D81-AB54-4E56-A5E1-2C7AA87A4E4E}
 		{31CAFE44-235F-EDA1-FB30-8CF968971150} = {241C163A-658A-4DEA-ABDC-77726E95E33D}
