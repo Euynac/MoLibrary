@@ -12,15 +12,8 @@ public class RedisConnectionFactory(ILogger<RedisConnectionFactory> logger) : IR
     /// <inheritdoc />
     public IConnectionMultiplexer CreateConnection(ModuleRedisStateStoreOption options)
     {
-        // Backward compatibility: if ConnectionString is set and no Connection config
-        if (!string.IsNullOrEmpty(options.ConnectionString) && options.Connection == null)
-        {
-            logger.LogInformation("Creating Redis connection using connection string");
-            return ConnectionMultiplexer.Connect(options.ConnectionString);
-        }
-
         var config = options.Connection
-            ?? throw new InvalidOperationException("Redis connection configuration is required when ConnectionString is not set");
+            ?? throw new InvalidOperationException("Redis connection configuration is required");
 
         return options.ConnectionType switch
         {

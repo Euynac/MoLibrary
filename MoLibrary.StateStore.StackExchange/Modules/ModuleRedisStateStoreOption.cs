@@ -14,14 +14,7 @@ public class ModuleRedisStateStoreOption : MoModuleOption<ModuleRedisStateStore>
     public ERedisConnectionType ConnectionType { get; set; } = ERedisConnectionType.Normal;
 
     /// <summary>
-    /// Simple Redis connection string (for backward compatibility).
-    /// If set and Connection is null, this will be used directly.
-    /// </summary>
-    public string? ConnectionString { get; set; }
-
-    /// <summary>
     /// Detailed connection configuration (for all connection modes).
-    /// Takes precedence over ConnectionString when both are set.
     /// </summary>
     public RedisConnectionConfiguration? Connection { get; set; }
 
