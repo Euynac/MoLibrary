@@ -1,0 +1,59 @@
+@using MoLibrary.Framework.UI.UIEventBus.Models
+@using MoLibrary.EventBus.Models
+
+@if (Subscription != null && Subscription.State != SubscriptionState.Disposed)
+{
+    <MudStack Row="true" Spacing="1">
+        @if (Subscription.State == SubscriptionState.Active)
+        {
+            <!-- 活跃状态：显示停用和移除按钮 -->
+            <MudTooltip Text="停用订阅">
+                <MudIconButton Icon="@Icons.Material.Filled.PauseCircle"
+                             Color="Color.Warning"
+                             Size="Size.Small"
+                             OnClick="() => OnDeactivate.InvokeAsync()" />
+            </MudTooltip>
+            <MudTooltip Text="移除订阅">
+                <MudIconButton Icon="@Icons.Material.Filled.DeleteForever"
+                             Color="Color.Error"
+                             Size="Size.Small"
+                             OnClick="() => OnUnsubscribe.InvokeAsync()" />
+            </MudTooltip>
+        }
+        else if (Subscription.State == SubscriptionState.Inactive || Subscription.State == SubscriptionState.Pending)
+        {
+            <!-- 未激活/待激活状态：显示激活和移除按钮 -->
+            <MudTooltip Text="激活订阅">
+                <MudIconButton Icon="@Icons.Material.Filled.PlayCircle"
+                             Color="Color.Success"
+                             Size="Size.Small"
+                             OnClick="() => OnActivate.InvokeAsync()" />
+            </MudTooltip>
+            <MudTooltip Text="移除订阅">
+                <MudIconButton Icon="@Icons.Material.Filled.DeleteForever"
+                             Color="Color.Error"
+                             Size="Size.Small"
+                             OnClick="() => OnUnsubscribe.InvokeAsync()" />
+            </MudTooltip>
+        }
+    </MudStack>
+}
+else if (Subscription?.State == SubscriptionState.Disposed)
+{
+    <!-- 已释放状态：不显示任何按钮 -->
+    <MudChip T="string" Color="Color.Default" Size="Size.Small">已释放</MudChip>
+}
+
+@code {
+    [Parameter]
+    public SubscriptionViewModel? Subscription { get; set; }
+
+    [Parameter]
+    public EventCallback OnActivate { get; set; }
+
+    [Parameter]
+    public EventCallback OnDeactivate { get; set; }
+
+    [Parameter]
+    public EventCallback OnUnsubscribe { get; set; }
+}

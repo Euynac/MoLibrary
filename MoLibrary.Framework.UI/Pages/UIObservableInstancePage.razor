@@ -1,0 +1,376 @@
+@attribute [Route(PAGE_URL)]
+@using MoLibrary.Framework.UI.UIObservableInstance.Services
+@using MoLibrary.Framework.UI.UIObservableInstance.Models
+@using MoLibrary.Framework.UI.UIObservableInstance.Components
+@using MoLibrary.Tool.Extensions
+@using MoLibrary.Tool.MoResponse
+@inject ObservableInstanceMonitorService MonitorService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Observable Instance 监控</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
+    <!-- Header -->
+    <MudPaper Class="pa-4 mb-4" Style="background: linear-gradient(45deg, #667eea 30%, #764ba2 90%); color: white;">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                <MudIcon Icon="@Icons.Material.Filled.Inventory" Size="Size.Large" />
+                <MudText Typo="Typo.h4" Style="font-weight: 500; margin: 0;">Observable Instance 监控</MudText>
+            </MudStack>
+            <MudStack Row="true" Spacing="2">
+                <MudButton StartIcon="@Icons.Material.Filled.Refresh"
+                          Color="Color.Inherit"
+                          Variant="Variant.Outlined"
+                          OnClick="RefreshAsync"
+                          Size="Size.Medium"
+                          Style="border-color: white; color: white;">
+                    刷新
+                </MudButton>
+            </MudStack>
+        </MudStack>
+    </MudPaper>
+
+    @if (_loading && _allInstances.Count == 0)
+    {
+        <MudStack AlignItems="AlignItems.Center" Spacing="4" Class="pa-8">
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+            <MudText Typo="Typo.h6" Color="Color.Primary">正在加载实例信息...</MudText>
+        </MudStack>
+    }
+    else
+    {
+        <!-- Tabs -->
+        <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4">
+            <!-- Overview Tab -->
+            <MudTabPanel Text="总览" Icon="@Icons.Material.Filled.Dashboard">
+                <ObservableInstanceStatisticsCard Statistics="_statistics" />
+
+                @if (_exceptionsPreview.Any())
+                {
+                    <MudPaper Class="pa-4 mt-4" Elevation="2">
+                        <MudStack Spacing="2">
+                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" />
+                                    <MudText Typo="Typo.h6">最近异常</MudText>
+                                </MudStack>
+                                <MudChip T="string" Color="Color.Error" Size="Size.Small">
+                                    @_exceptionsPreview.Count 个实例有异常
+                                </MudChip>
+                            </MudStack>
+
+                            <MudTable T="ObservableInstanceViewModel"
+                                     Items="@_exceptionsPreview.Take(10)"
+                                     Dense="true"
+                                     Hover="true"
+                                     OnRowClick="async (args) => await ShowInstanceDetail(args.Item)"
+                                     Style="cursor: pointer;">
+                                <HeaderContent>
+                                    <MudTh>实例ID</MudTh>
+                                    <MudTh>名称</MudTh>
+                                    <MudTh>异常数</MudTh>
+                                    <MudTh>最后更新</MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    <MudTd>
+                                        <MudText Typo="Typo.body2" Style="font-family: monospace;">
+                                            @(context.InstanceId.Length > 12 ? context.InstanceId[..12] + "..." : context.InstanceId)
+                                        </MudText>
+                                    </MudTd>
+                                    <MudTd>@context.InstanceName</MudTd>
+                                    <MudTd>
+                                        <MudChip T="string" Color="Color.Error" Size="Size.Small">@context.ExceptionCount</MudChip>
+                                    </MudTd>
+                                    <MudTd>@context.StateChangedAtDisplay</MudTd>
+                                </RowTemplate>
+                            </MudTable>
+                        </MudStack>
+                    </MudPaper>
+                }
+            </MudTabPanel>
+
+            <!-- All Instances Tab -->
+            <MudTabPanel Text="全部实例" Icon="@Icons.Material.Filled.List">
+                <ObservableInstanceFilterPanel Filter="_filter" OnFilterChanged="ApplyFilterAsync" />
+
+                <ObservableInstanceTable Instances="_displayedInstances"
+                                        Loading="_loading"
+                                        OnRowClick="ShowInstanceDetail"
+                                        OnClearHistory="ClearInstanceHistoryWithConfirmAsync" />
+            </MudTabPanel>
+
+            <!-- By Type Tab -->
+            <MudTabPanel Text="按类型" Icon="@Icons.Material.Filled.Category">
+                @if (_instancesByType.Any())
+                {
+                    <MudStack Spacing="3">
+                        @foreach (var typeGroup in _instancesByType)
+                        {
+                            <MudPaper Class="pa-3" Elevation="2">
+                                <MudStack Spacing="2">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                            <MudIcon Icon="@Icons.Material.Filled.Category" Color="Color.Secondary" />
+                                            <MudTooltip Text="@typeGroup.Key">
+                                                <MudText Typo="Typo.h6">@(typeGroup.Value.FirstOrDefault()?.InstanceTypeDisplay ?? "Unknown")</MudText>
+                                            </MudTooltip>
+                                        </MudStack>
+                                        <MudChip T="string" Color="Color.Secondary" Size="Size.Small">
+                                            @typeGroup.Value.Count 个实例
+                                        </MudChip>
+                                    </MudStack>
+                                    <ObservableInstanceTable Instances="typeGroup.Value"
+                                                            Compact="true"
+                                                            OnRowClick="ShowInstanceDetail"
+                                                            OnClearHistory="ClearInstanceHistoryWithConfirmAsync" />
+                                </MudStack>
+                            </MudPaper>
+                        }
+                    </MudStack>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Info">暂无实例</MudAlert>
+                }
+            </MudTabPanel>
+
+            <!-- By Group Tab -->
+            <MudTabPanel Text="按组" Icon="@Icons.Material.Filled.Group">
+                @if (_instancesByGroup.Any())
+                {
+                    <MudStack Spacing="3">
+                        @foreach (var groupPair in _instancesByGroup)
+                        {
+                            <MudPaper Class="pa-3" Elevation="2">
+                                <MudStack Spacing="2">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                            <MudIcon Icon="@Icons.Material.Filled.Group" Color="Color.Tertiary" />
+                                            <MudText Typo="Typo.h6">@groupPair.Key</MudText>
+                                        </MudStack>
+                                        <MudChip T="string" Color="Color.Tertiary" Size="Size.Small">
+                                            @groupPair.Value.Count 个实例
+                                        </MudChip>
+                                    </MudStack>
+                                    <ObservableInstanceTable Instances="groupPair.Value"
+                                                            Compact="true"
+                                                            OnRowClick="ShowInstanceDetail"
+                                                            OnClearHistory="ClearInstanceHistoryWithConfirmAsync" />
+                                </MudStack>
+                            </MudPaper>
+                        }
+                    </MudStack>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Info">暂无分组实例</MudAlert>
+                }
+            </MudTabPanel>
+
+            <!-- Exceptions Only Tab -->
+            <MudTabPanel Text="仅异常" Icon="@Icons.Material.Filled.Error" BadgeData="@_exceptionsPreview.Count" BadgeColor="@(_exceptionsPreview.Any() ? Color.Error : Color.Default)">
+                <ObservableInstanceTable Instances="_exceptionsPreview"
+                                        Loading="_loading"
+                                        OnRowClick="ShowInstanceDetail"
+                                        OnClearHistory="ClearInstanceHistoryWithConfirmAsync" />
+            </MudTabPanel>
+        </MudTabs>
+    }
+</MudContainer>
+
+@code {
+    public const string PAGE_URL = "/ui/observable-instance";
+
+    private bool _loading = true;
+
+    // Data
+    private List<ObservableInstanceViewModel> _allInstances = new();
+    private List<ObservableInstanceViewModel> _displayedInstances = new();
+    private List<ObservableInstanceViewModel> _exceptionsPreview = new();
+    private ObservableInstanceStatistics? _statistics;
+
+    // Grouping
+    private Dictionary<string, List<ObservableInstanceViewModel>> _instancesByType = new();
+    private Dictionary<string, List<ObservableInstanceViewModel>> _instancesByGroup = new();
+
+    // Filter
+    private ObservableInstanceFilter _filter = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadDataAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        try
+        {
+            // Load instances
+            if ((await MonitorService.GetAllInstancesAsync()).IsFailed(out var error, out var instances))
+            {
+                Snackbar.Add("加载实例列表失败: " + error, Severity.Error);
+            }
+            else
+            {
+                _allInstances = instances ?? new();
+                await ApplyFilterAsync();
+            }
+
+            // Load statistics
+            if ((await MonitorService.GetStatisticsAsync()).IsFailed(out var statsError, out var stats))
+            {
+                Snackbar.Add("加载统计信息失败: " + statsError, Severity.Error);
+            }
+            else
+            {
+                _statistics = stats;
+            }
+
+            // Load exceptions preview
+            if ((await MonitorService.GetInstancesWithExceptionsAsync()).IsFailed(out var excError, out var exceptions))
+            {
+                Snackbar.Add("加载异常实例失败: " + excError, Severity.Error);
+            }
+            else
+            {
+                _exceptionsPreview = exceptions ?? new();
+            }
+
+            // Group instances
+            GroupInstances();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"加载数据时发生错误: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefreshAsync()
+    {
+        await LoadDataAsync();
+        Snackbar.Add("数据已刷新", Severity.Success);
+    }
+
+    private Task ApplyFilterAsync()
+    {
+        if (_filter.HasAnyFilter)
+        {
+            _displayedInstances = _allInstances.Where(instance =>
+            {
+                if (!string.IsNullOrWhiteSpace(_filter.SearchText))
+                {
+                    var searchText = _filter.SearchText.ToLowerInvariant();
+                    if (!instance.InstanceId.ToLowerInvariant().Contains(searchText) &&
+                        !instance.InstanceName.ToLowerInvariant().Contains(searchText))
+                        return false;
+                }
+
+                if (_filter.InstanceType != null && instance.InstanceType != _filter.InstanceType)
+                    return false;
+
+                if (!string.IsNullOrWhiteSpace(_filter.GroupId) && instance.GroupId != _filter.GroupId)
+                    return false;
+
+                // Health state filter
+                if (_filter.HealthStateFilter.HasValue && instance.HealthState != _filter.HealthStateFilter.Value)
+                    return false;
+
+                // Log level filter
+                if (_filter.LogLevels?.Any() == true && (!instance.CurrentLogLevel.HasValue || !_filter.LogLevels.Contains(instance.CurrentLogLevel.Value)))
+                    return false;
+
+                // Quick filter: Critical/Error only
+                if (_filter.ShowCriticalErrorOnly &&
+                    instance.CurrentLogLevel != Microsoft.Extensions.Logging.LogLevel.Critical &&
+                    instance.CurrentLogLevel != Microsoft.Extensions.Logging.LogLevel.Error)
+                    return false;
+
+                // Quick filter: Unhealthy only
+                if (_filter.ShowUnhealthyOnly && !instance.IsUnhealthy)
+                    return false;
+
+                return true;
+            }).ToList();
+        }
+        else
+        {
+            _displayedInstances = _allInstances;
+        }
+
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private void GroupInstances()
+    {
+        // Group by type
+        _instancesByType = _allInstances
+            .Where(i => i.InstanceType != null)
+            .GroupBy(i => i.InstanceTypeFullName)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        // Group by GroupId
+        _instancesByGroup = _allInstances
+            .Where(i => i.HasGroup)
+            .GroupBy(i => i.GroupIdDisplay)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        // Add ungrouped instances as separate group
+        var ungrouped = _allInstances.Where(i => !i.HasGroup).ToList();
+        if (ungrouped.Any())
+        {
+            _instancesByGroup["Ungrouped"] = ungrouped;
+        }
+    }
+
+    private async Task ShowInstanceDetail(ObservableInstanceViewModel instance)
+    {
+        var parameters = new DialogParameters
+        {
+            ["Instance"] = instance
+        };
+
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            Position = DialogPosition.Center,
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true
+        };
+
+        await DialogService.ShowAsync<ObservableInstanceDetailDialog>($"实例详情 - {instance.InstanceName}", parameters, options);
+    }
+
+    private async Task ClearInstanceHistoryWithConfirmAsync(ObservableInstanceViewModel instance)
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            "确认",
+            $"确定要清除实例 '{instance.InstanceName}' 的历史记录吗？",
+            yesText: "确定", cancelText: "取消");
+
+        if (result == true)
+        {
+            if ((await MonitorService.ClearInstanceHistoryAsync(instance.InstanceId)).IsFailed(out var error))
+            {
+                Snackbar.Add("清除历史失败: " + error, Severity.Error);
+                return;
+            }
+
+            Snackbar.Add("历史记录已清除", Severity.Success);
+            await RefreshAsync();
+        }
+    }
+}

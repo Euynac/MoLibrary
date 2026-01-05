@@ -19,12 +19,12 @@ alwaysApply: false
 ## 1. 模块文件结构
 
 ### 1.1 创建UI模块类文件
-- 文件位置：`MoLibrary.FrameworkUI/Modules/$ModuleUIName$.cs`
+- 文件位置：`MoLibrary.Framework.UI/Modules/$ModuleUIName$.cs`
 - 文件命名：以模块名+UI的格式命名，如 `SignalrUI.cs`
 - 类命名：`Module$ModuleUIName$`
 
 ### 1.2 创建UI模块文件夹
-- 文件夹位置：`MoLibrary.FrameworkUI/$UIFolderName$/`
+- 文件夹位置：`MoLibrary.Framework.UI/$UIFolderName$/`
 - 文件夹命名：UI+模块名，如 `UISignalr`
 - 子文件夹结构：
   ```
@@ -35,7 +35,7 @@ alwaysApply: false
   ```
 
 ### 1.3 创建页面文件
-- 文件位置：`MoLibrary.FrameworkUI/Pages/$PageName$.razor`
+- 文件位置：`MoLibrary.Framework.UI/Pages/$PageName$.razor`
 - 文件命名：UI+模块名+Page，如 `UISignalRPage.razor`
 
 ## 2. 代码结构规范
@@ -85,9 +85,9 @@ public class Module$ModuleUIName$(Module$ModuleUIName$Option option)
 
 ### 2.3 页面依赖注入
 ```csharp
-@using MoLibrary.FrameworkUI.$UIFolderName$.Components
-@using MoLibrary.FrameworkUI.$UIFolderName$.Services
-@using MoLibrary.FrameworkUI.$UIFolderName$.Models
+@using MoLibrary.Framework.UI.$UIFolderName$.Components
+@using MoLibrary.Framework.UI.$UIFolderName$.Services
+@using MoLibrary.Framework.UI.$UIFolderName$.Models
 @inject $ModuleName$Service $ModuleName$Service
 ```
 

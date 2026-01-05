@@ -1,0 +1,87 @@
+@using MoLibrary.Framework.UI.UIEventBus.Models
+
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.List" />
+            <MudText Typo="Typo.h6">@Title</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        @if (Subscriptions != null && Subscriptions.Any())
+        {
+            <MudTable T="SubscriptionViewModel"
+                     Items="@Subscriptions"
+                     Dense="true"
+                     Hover="true"
+                     OnRowClick="async (args) => await OnSubscriptionClick(args.Item)"
+                     Style="cursor: pointer;">
+                <HeaderContent>
+                    <MudTh>事件类型</MudTh>
+                    <MudTh>主题名称</MudTh>
+                    <MudTh>处理器</MudTh>
+                    <MudTh>范围</MudTh>
+                    <MudTh>状态</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="事件类型">
+                        <MudTooltip Text="@context.EventType">
+                            <MudText Typo="Typo.body2">@context.EventTypeShortName</MudText>
+                        </MudTooltip>
+                    </MudTd>
+                    <MudTd DataLabel="主题名称">
+                        <MudText Typo="Typo.body2">@context.TopicName</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="处理器">
+                        <MudText Typo="Typo.body2">@context.HandlerDisplay</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="范围">
+                        <MudChip T="string" Color="@context.ScopeColor" Size="Size.Small">
+                            @context.ScopeDisplay
+                        </MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="状态">
+                        <MudChip T="string" Color="@context.StateColor" Size="Size.Small">
+                            @context.StateColor
+                        </MudChip>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Info">暂无订阅</MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close" Color="Color.Primary">关闭</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    public IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public string Title { get; set; } = "订阅列表";
+
+    [Parameter]
+    public List<SubscriptionViewModel>? Subscriptions { get; set; }
+
+    [Parameter]
+    public EventCallback<SubscriptionViewModel> OnSubscriptionSelected { get; set; }
+
+    private async Task OnSubscriptionClick(SubscriptionViewModel subscription)
+    {
+        if (OnSubscriptionSelected.HasDelegate)
+        {
+            await OnSubscriptionSelected.InvokeAsync(subscription);
+        }
+        MudDialog.Close();
+    }
+
+    private void Close()
+    {
+        MudDialog.Close();
+    }
+}

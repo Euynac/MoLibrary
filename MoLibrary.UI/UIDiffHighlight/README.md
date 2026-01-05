@@ -28,7 +28,7 @@ builder.ConfigModuleDiffHighlightUI();
 ### 3. 使用DiffViewer组件
 
 ```razor
-@using MoLibrary.FrameworkUI.UIDiffHighlight.Components
+@using MoLibrary.Framework.UI.UIDiffHighlight.Components
 
 <DiffViewer OriginText="@originText" 
            NewText="@newText" 

@@ -271,7 +271,7 @@ Any results should be reviewed and potentially replaced with local resources.
 
 Main UI module containing core themes and styles. All base fonts and icon fonts should be here.
 
-### MoLibrary.FrameworkUI
+### MoLibrary.Framework.UI
 
 Framework-level UI components. Should reference fonts from MoLibrary.UI or include its own copies.
 

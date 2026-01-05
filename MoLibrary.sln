@@ -55,7 +55,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.MoLibrary.Core", "test
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.UI", "MoLibrary.UI\MoLibrary.UI.csproj", "{3FD23151-EDFE-4BDB-B8E6-060CEE211855}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.FrameworkUI", "MoLibrary.FrameworkUI\MoLibrary.FrameworkUI.csproj", "{DBF82951-B054-4400-A5DE-6F0A62BE14F7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.Framework.UI", "MoLibrary.Framework.UI\MoLibrary.Framework.UI.csproj", "{DBF82951-B054-4400-A5DE-6F0A62BE14F7}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.JobScheduler", "MoLibrary.JobScheduler\MoLibrary.JobScheduler.csproj", "{D00581F5-587E-4356-1DF3-A38E26B3B0E7}"
 EndProject

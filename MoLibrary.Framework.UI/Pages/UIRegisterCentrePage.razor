@@ -1,0 +1,227 @@
+@attribute [Route(REGISTERCENTRE_DEBUG_URL)]
+@using MoLibrary.Framework.UI.UIRegisterCentre.Components
+@using MoLibrary.Framework.UI.UIRegisterCentre.Services
+@using MoLibrary.RegisterCentre.Models
+@using MoLibrary.RegisterCentre.Interfaces
+@using MoLibrary.Tool.MoResponse
+@inject RegisterCentreService RegisterCentreService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@implements IDisposable
+
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
+    <MudText Typo="Typo.h4" Class="mb-4">注册中心管理</MudText>
+    
+    <MudTabs @bind-ActivePanelIndex="_activeTabIndex" Elevation="4" Rounded="true" Color="Color.Primary" PanelClass="pa-4">
+        <MudTabPanel Text="服务列表" Icon="@Icons.Material.Filled.List">
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudPaper Class="pa-4">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                                <MudText Typo="Typo.h6">服务列表（包含预定义服务）</MudText>
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                    <MudSwitch T="bool" @bind-Value="_autoRefreshEnabled" @bind-Value:after="OnAutoRefreshToggled" Color="Color.Primary" Label="自动刷新" />
+                                    <MudNumericField T="int" @bind-Value="_refreshInterval" @bind-Value:after="OnRefreshIntervalChanged" Label="刷新间隔(秒)" Min="1" Max="60" 
+                                                   Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 120px" 
+                                                   Disabled="!_autoRefreshEnabled" Immediate="true" />
+                                </MudStack>
+                            </MudStack>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => RefreshServicesAsync())" Disabled="@_isLoading">
+                                <MudIcon Icon="@Icons.Material.Filled.Refresh" Class="mr-1" />
+                                刷新
+                            </MudButton>
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+                
+                <MudItem xs="12">
+                    <RegisterCentreServiceList Services="_services" OnRefresh="@(() => RefreshServicesAsync())" IsLoading="_isLoading" />
+                    
+                    @if (!_isLoading && !_services.Any())
+                    {
+                        <MudPaper Class="pa-4 mt-2">
+                            <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary">
+                                暂无服务信息
+                            </MudText>
+                        </MudPaper>
+                    }
+                </MudItem>
+            </MudGrid>
+        </MudTabPanel>
+        
+        <MudTabPanel Text="微服务架构图" Icon="@Icons.Material.Filled.AccountTree">
+            <ServiceVisualization OnServiceClick="OnServiceClickFromVisualization" />
+        </MudTabPanel>
+        
+        <MudTabPanel Text="子域依赖图" Icon="@Icons.Material.Filled.Hub">
+            <DomainDependencyVisualization OnDomainClick="OnDomainClickFromVisualization" />
+        </MudTabPanel>
+        
+        <MudTabPanel Text="子域管理" Icon="@Icons.Material.Filled.Domain">
+            @if (_selectedDomain == null)
+            {
+                <DomainList OnDomainSelected="OnDomainSelected" />
+            }
+            else
+            {
+                <DomainDetail DomainName="@_selectedDomain.Name" OnBackClick="OnBackToDomainList" OnServiceDetailClick="OnServiceDetailFromDomain" />
+            }
+        </MudTabPanel>
+    </MudTabs>
+</MudContainer>
+
+@code {
+    public const string REGISTERCENTRE_DEBUG_URL = "/register-centre-manage";
+    
+    private bool _isLoading = false;
+    private List<RegisteredServiceStatus> _services = new();
+    private bool _autoRefreshEnabled = true;
+    private int _refreshInterval = 3;
+    private Timer? _refreshTimer;
+    private DomainInfo? _selectedDomain;
+    private int _activeTabIndex = 0;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await RefreshServicesAsync();
+            SetupAutoRefresh();
+        }
+    }
+    
+    private void SetupAutoRefresh()
+    {
+        _refreshTimer?.Dispose();
+        if (_autoRefreshEnabled)
+        {
+            _refreshTimer = new Timer(async _ => await InvokeAsync(() => RefreshServicesAsync(false, false)), null, 
+                TimeSpan.FromSeconds(_refreshInterval), TimeSpan.FromSeconds(_refreshInterval));
+        }
+    }
+    
+    private void OnAutoRefreshToggled()
+    {
+        SetupAutoRefresh();
+    }
+    
+    private void OnRefreshIntervalChanged()
+    {
+        if (_autoRefreshEnabled)
+        {
+            SetupAutoRefresh();
+        }
+    }
+
+    private async Task RefreshServicesAsync(bool showNotification = true, bool showLoading = true)
+    {
+        if (showLoading)
+        {
+            _isLoading = true;
+            StateHasChanged();
+        }
+
+        if ((await RegisterCentreService.GetMergedServicesStatusAsync()).IsFailed(out var error, out var data))
+        {
+            if (showNotification)
+                Snackbar.Add($"获取服务列表失败: {error.Message}", Severity.Error);
+            _services = new List<RegisteredServiceStatus>();
+        }
+        else
+        {
+            _services = data ?? new List<RegisteredServiceStatus>();
+            if (showNotification)
+                Snackbar.Add("服务列表已刷新", Severity.Success);
+        }
+
+        if (showLoading)
+        {
+            _isLoading = false;
+        }
+        StateHasChanged();
+    }
+
+    private async Task OnServiceClickFromVisualization(RegisteredServiceStatus service)
+    {
+        // 使用现有的服务详情对话框组件
+        var parameters = new DialogParameters
+        {
+            ["Service"] = service
+        };
+
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            Position = DialogPosition.Center,
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true
+        };
+
+        await DialogService.ShowAsync<RegisterCentreServiceDetailDialog>($"服务详情 - {service.AppName}", parameters, options);
+    }
+    
+    private async Task OnDomainSelected(DomainInfo domain)
+    {
+        _selectedDomain = domain;
+        StateHasChanged();
+        await Task.CompletedTask;
+    }
+    
+    private async Task OnBackToDomainList()
+    {
+        _selectedDomain = null;
+        StateHasChanged();
+        await Task.CompletedTask;
+    }
+    
+    private async Task OnServiceDetailFromDomain(RegisteredServiceStatus service)
+    {
+        // 使用相同的服务详情对话框组件
+        var parameters = new DialogParameters
+        {
+            ["Service"] = service
+        };
+
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            Position = DialogPosition.Center,
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true
+        };
+
+        await DialogService.ShowAsync<RegisterCentreServiceDetailDialog>($"服务详情 - {service.AppName}", parameters, options);
+    }
+    
+    private async Task OnDomainClickFromVisualization(string domainName)
+    {
+        // 从可视化图表点击领域时，切换到领域详情页面
+        // 首先需要获取完整的领域信息
+        if (!(await RegisterCentreService.GetDomainsWithColorsAsync()).IsFailed(out var error, out var domains))
+        {
+            var domain = domains?.FirstOrDefault(d => d.Name == domainName);
+            if (domain != null)
+            {
+                _selectedDomain = domain;
+                _activeTabIndex = 3; // 切换到子域管理标签页（索引从0开始，第4个标签页）
+                StateHasChanged();
+                Snackbar.Add($"切换到领域详情: {domain.DisplayName ?? domain.Name}", Severity.Info);
+            }
+            else
+            {
+                Snackbar.Add($"未找到领域: {domainName}", Severity.Warning);
+            }
+        }
+        else
+        {
+            Snackbar.Add($"获取领域信息失败: {error.Message}", Severity.Error);
+        }
+        await Task.CompletedTask;
+    }
+    
+    public void Dispose()
+    {
+        _refreshTimer?.Dispose();
+    }
+}

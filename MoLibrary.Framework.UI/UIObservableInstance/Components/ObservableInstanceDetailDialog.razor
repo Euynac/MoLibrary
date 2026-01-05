@@ -1,0 +1,36 @@
+@using MoLibrary.Framework.UI.UIObservableInstance.Models
+
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.Info" />
+            <MudText Typo="Typo.h6">实例详情</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        @if (Instance != null)
+        {
+            <ObservableInstanceDetailPanel Instance="Instance" />
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Info">未选择实例</MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close" Color="Color.Primary">关闭</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    public IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public ObservableInstanceViewModel? Instance { get; set; }
+
+    private void Close()
+    {
+        MudDialog.Close();
+    }
+}
