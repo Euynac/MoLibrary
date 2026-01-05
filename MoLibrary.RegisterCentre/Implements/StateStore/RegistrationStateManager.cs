@@ -207,13 +207,9 @@ public class RegistrationStateManager(
                 instanceKeys,
                 removeEmptyValue: true,
                 cancellationToken: ct);
-
-            var serviceName = clientInfo.GetServiceStatus().ServiceName;
-
-            // 步骤 3：过滤当前服务的实例，并按 LastHeartbeatTime 降序排序
+            
             return instances.Values
-                .Where(x => x != null && x.ServiceName == serviceName)
-                .OrderByDescending(x => x.LastHeartbeatTime)
+                .Where(x => x != null)
                 .ToList()!;
         }
         catch (Exception ex)
