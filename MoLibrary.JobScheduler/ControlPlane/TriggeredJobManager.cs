@@ -15,9 +15,10 @@ public class TriggeredJobManager(
     [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
     IMoJobMetadataRepository metadataRepository,
     JobRegistry registry,
+    IJobCancellationTokenManager jobCancellationManager,
     ILogger<TriggeredJobManager> logger) : IMoTriggeredJobManager
 {
-    public async Task<string> EnqueueAsync<TArgs>(TArgs args, TimeSpan? delay = null)
+    public async Task<string> EnqueueAsync<TArgs>(TArgs args, TimeSpan? delay = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(args);
 
@@ -29,8 +30,8 @@ public class TriggeredJobManager(
         var argsType = typeof(TArgs);
         var jobArgsKey = argsType.FullName
             ?? throw new InvalidOperationException($"Job args type must have full name");
-        
-        var definition = await cacheService.GetDefinitionAsync(registry.GetTriggeredJobClrType(jobArgsKey)?.FullName ?? throw new InvalidOperationException($"Job args type {argsType.GetCleanFullName()} not found in JobRegistry"));
+
+        var definition = await cacheService.GetDefinitionAsync(registry.GetTriggeredJobClrType(jobArgsKey)?.FullName ?? throw new InvalidOperationException($"Job args type {argsType.GetCleanFullName()} not found in JobRegistry"), cancellationToken);
       
         if (definition == null)
         {
@@ -62,7 +63,7 @@ public class TriggeredJobManager(
             TriggeredAt = DateTime.UtcNow
         };
 
-        await eventBus.PublishAsync(triggeredEvent);
+        await eventBus.PublishAsync(triggeredEvent, null, cancellationToken);
 
         logger.LogInformation(
             "Triggered job enqueued: {JobKey}, InstanceId: {InstanceId}, Delay: {Delay}",
@@ -91,6 +92,9 @@ public class TriggeredJobManager(
                 instance.State);
             return false;
         }
+
+        // Cancel the distributed cancellation token
+        await jobCancellationManager.CancelJobTokenAsync(instanceId);
 
         // Publish event to notify JobSchedulerHostedService to cancel timer
         await eventBus.PublishAsync(new JobCancellationRequestedEvent

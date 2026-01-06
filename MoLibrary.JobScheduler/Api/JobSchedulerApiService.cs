@@ -1,11 +1,8 @@
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using MoLibrary.StateStore.CancellationManager;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.ControlPlane;
 using MoLibrary.JobScheduler.Metadata;
 using MoLibrary.JobScheduler.Models;
-using MoLibrary.JobScheduler.Modules;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.JobScheduler.Api;
@@ -21,7 +18,7 @@ namespace MoLibrary.JobScheduler.Api;
 public class JobSchedulerApiService(
     IJobDefinitionCacheService cacheService,
     IMoJobMetadataRepository metadataRepository,
-    [FromKeyedServices(nameof(ModuleJobScheduler))] IMoCancellationManager cancellationManager,
+    IJobCancellationTokenManager jobCancellationManager,
     JobInstanceManager jobInstanceManager,
     JobDispatcher jobDispatcher,
     ILogger<JobSchedulerApiService> logger)
@@ -199,7 +196,7 @@ public class JobSchedulerApiService(
             logger.LogInformation("API: CancelJobInstance requested for {InstanceId}", instanceId);
 
             // Cancel the distributed cancellation token
-            await cancellationManager.CancelTokenAsync(instanceId, cancellationToken);
+            await jobCancellationManager.CancelJobTokenAsync(instanceId, cancellationToken);
 
             // Update instance state to Cancelled
             await jobInstanceManager.UpdateStateAsync(

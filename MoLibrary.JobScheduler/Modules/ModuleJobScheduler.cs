@@ -80,6 +80,7 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
         services.AddSingleton<IJobDefinitionCacheService, JobDefinitionCacheServiceDefault>();
         services.AddSingleton<JobOrchestrator>();
         services.AddSingleton<IMoTriggeredJobManager, TriggeredJobManager>();
+        services.AddSingleton<IJobCancellationTokenManager, JobCancellationTokenManager>();
 
         services.AddSingleton<IJobConcurrencyGuard, JobConcurrencyGuardHostedService>();
 

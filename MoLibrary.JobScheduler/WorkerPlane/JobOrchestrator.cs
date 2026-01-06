@@ -1,11 +1,10 @@
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using MoLibrary.StateStore.CancellationManager;
+using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.ControlPlane;
 using MoLibrary.JobScheduler.Events;
 using MoLibrary.JobScheduler.Models;
-using MoLibrary.JobScheduler.Modules;
 using MoLibrary.RegisterCentre.Interfaces;
 
 namespace MoLibrary.JobScheduler.WorkerPlane;
@@ -18,7 +17,7 @@ namespace MoLibrary.JobScheduler.WorkerPlane;
 public class JobOrchestrator(
     IServiceProvider serviceProvider,
     JobInstanceManager jobInstanceManager,
-    [FromKeyedServices(nameof(ModuleJobScheduler))] IMoCancellationManager cancellationManager,
+    IJobCancellationTokenManager jobCancellationManager,
     JobExecutor jobExecutor,
     JobRegistry jobRegistry,
     IRegisterCentreClientInfo client,
@@ -52,7 +51,7 @@ public class JobOrchestrator(
             scope = serviceProvider.CreateScope();
 
             // Step 2: Get or create distributed cancellation token
-            var jobCancellationToken = await cancellationManager.GetOrCreateTokenAsync(
+            var jobCancellationToken = await jobCancellationManager.GetOrCreateJobTokenAsync(
                 instance.InstanceId,
                 cancellationToken);
 
@@ -92,7 +91,7 @@ public class JobOrchestrator(
                     executionEvent.MaxExecutionTimeout);
 
                 // Cancel the distributed token (propagates to all workers if distributed)
-                await cancellationManager.CancelTokenAsync(instance.InstanceId, cancellationToken);
+                await jobCancellationManager.CancelJobTokenAsync(instance.InstanceId, cancellationToken);
 
                 // Wait a brief moment for graceful cancellation
                 await Task.WhenAny(executionTask, Task.Delay(TimeSpan.FromSeconds(2)));
@@ -188,7 +187,7 @@ public class JobOrchestrator(
             // Step 10: Always cleanup cancellation token
             try
             {
-                await cancellationManager.DeleteTokenAsync(instance.InstanceId, CancellationToken.None);
+                await jobCancellationManager.DeleteJobTokenAsync(instance.InstanceId, CancellationToken.None);
                 logger.LogDebug(
                     "Cleaned up cancellation token for instance {InstanceId}",
                     instance.InstanceId);
