@@ -16,6 +16,6 @@ public class TriggeredJobExecutionException : Exception
     {
     }
 
-    public required object JobArgs { get; set; } 
+    public required object? JobArgs { get; set; } 
     public required string JobType { get; set; } 
 }

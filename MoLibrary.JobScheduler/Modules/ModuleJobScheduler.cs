@@ -46,8 +46,9 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
                     var jobDefinition = ExtractJobDefinition(type, JobType.Recurring);
                     _jobDefinitions.Add(jobDefinition);
                 }
-                else if (type.IsImplementInterfaceGeneric(typeof(IMoTriggeredJob<>), out var argsType))
+                else if (type.IsImplementInterfaceGeneric(typeof(IMoTriggeredJob<>), out var genericTypeDefinition))
                 {
+                    var argsType = genericTypeDefinition.GenericTypeArguments[0];
                     var jobDefinition = ExtractJobDefinition(type, JobType.Triggered);
                     jobDefinition.JobArgsClrType = argsType;
                     jobDefinition.JobArgsKey = argsType.FullName ?? throw new InvalidOperationException($"Job type {type.Name}'s argument type {argsType.Name} must have full name.");

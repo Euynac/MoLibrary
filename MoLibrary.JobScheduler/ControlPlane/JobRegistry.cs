@@ -102,7 +102,7 @@ public class JobRegistry(
         logger.LogInformation("Starting job definition reconciliation for {Count} current job(s)", currentDefinitions.Count);
 
         // Extract current project name
-        var currentProjectName = currentDefinitions.FirstOrDefault()?.FromProject;
+        var currentProjectName = currentDefinitions.ElementAtOrDefault(0)?.FromProject;
         if (string.IsNullOrWhiteSpace(currentProjectName))
         {
             logger.LogWarning("No current project name found, skipping reconciliation");
