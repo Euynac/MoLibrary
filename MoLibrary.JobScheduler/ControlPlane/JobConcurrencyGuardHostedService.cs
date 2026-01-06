@@ -225,15 +225,16 @@ public class JobConcurrencyGuardHostedService(
         }
     }
 
-    public async Task<bool> TryReserveExecutionSlotAsync(
+    public async Task<ReservationResult> TryReserveExecutionSlotAsync(
         string jobKey,
         string instanceId,
         CancellationToken cancellationToken = default)
     {
         if (!_statistics.TryGetValue(jobKey, out var statistic))
         {
-            logger.LogWarning("Job {JobKey} not found in concurrency guard statistics", jobKey);
-            return false;
+            var reason = $"Job {jobKey} not found in concurrency guard statistics";
+            logger.LogWarning("{Reason}", reason);
+            return ReservationResult.Failure(reason);
         }
 
         // Get job-specific lock to ensure thread-safety
@@ -244,13 +245,14 @@ public class JobConcurrencyGuardHostedService(
         {
             if (!statistic.CanExecute)
             {
+                var reason = $"Job {jobKey} exceeded MaxConcurrency limit: {statistic.CurrentExecutingCount}/{statistic.MaxConcurrency}";
                 logger.LogWarning(
                     "Job {JobKey} instance {InstanceId} exceeded MaxConcurrency: {Current}/{Max}",
                     jobKey,
                     instanceId,
                     statistic.CurrentExecutingCount,
                     statistic.MaxConcurrency);
-                return false;
+                return ReservationResult.Failure(reason);
             }
 
             // Reserve the slot
@@ -263,7 +265,7 @@ public class JobConcurrencyGuardHostedService(
                 statistic.CurrentExecutingCount,
                 statistic.MaxConcurrency);
 
-            return true;
+            return ReservationResult.Success();
         }
         finally
         {

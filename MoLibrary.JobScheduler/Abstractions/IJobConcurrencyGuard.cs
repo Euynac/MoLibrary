@@ -1,6 +1,18 @@
 namespace MoLibrary.JobScheduler.Abstractions;
 
 /// <summary>
+/// Result of execution slot reservation attempt.
+/// </summary>
+public sealed class ReservationResult
+{
+    public bool Reserved { get; private init; }
+    public string? Reason { get; private init; }
+
+    public static ReservationResult Success() => new() { Reserved = true };
+    public static ReservationResult Failure(string reason) => new() { Reserved = false, Reason = reason };
+}
+
+/// <summary>
 /// Manages job concurrency limits and tracks running job instances
 /// </summary>
 public interface IJobConcurrencyGuard
@@ -20,8 +32,8 @@ public interface IJobConcurrencyGuard
     /// <param name="jobKey">The job definition key</param>
     /// <param name="instanceId">The job instance ID to reserve for</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>True if reservation succeeded, false otherwise</returns>
-    Task<bool> TryReserveExecutionSlotAsync(
+    /// <returns>ReservationResult indicating success or failure with specific reason</returns>
+    Task<ReservationResult> TryReserveExecutionSlotAsync(
         string jobKey,
         string instanceId,
         CancellationToken cancellationToken = default);

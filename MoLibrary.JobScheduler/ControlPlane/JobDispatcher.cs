@@ -32,24 +32,24 @@ public class JobDispatcher(
         try
         {
             // Atomically reserve execution slot (with local lock)
-            var reserved = await concurrencyGuard.TryReserveExecutionSlotAsync(
+            var reservationResult = await concurrencyGuard.TryReserveExecutionSlotAsync(
                 definition.JobKey,
                 instance.InstanceId,
                 cancellationToken);
 
-            if (!reserved)
+            if (!reservationResult.Reserved)
             {
                 logger.LogDebug(
-                    "Job {JobKey} instance {InstanceId} could not reserve execution slot (MaxConcurrency: {MaxConcurrency})",
+                    "Job {JobKey} instance {InstanceId} could not reserve execution slot: {Reason}",
                     definition.JobKey,
                     instance.InstanceId,
-                    definition.MaxConcurrency);
+                    reservationResult.Reason);
 
-                // Mark instance as Skipped
+                // Mark instance as Skipped with specific reason
                 await jobInstanceManager.UpdateStateAsync(
                     instance.InstanceId,
                     JobState.Skipped,
-                    $"Could not reserve execution slot (MaxConcurrency: {definition.MaxConcurrency})",
+                    reservationResult.Reason!,
                     cancellationToken);
 
                 return;
