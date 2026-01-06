@@ -335,7 +335,7 @@ public class JobInstance
             JobState.Processing => newState is JobState.Succeeded or JobState.Failed or JobState.Cancelled,
 
             // Failed can transition to Processing (retry) or Terminated (no retries)
-            JobState.Failed => newState is JobState.Processing or JobState.Terminated,
+            JobState.Failed => newState is JobState.Processing or JobState.Terminated or JobState.Failed,
 
             // Terminal states cannot transition to any other state
             JobState.Succeeded => false,

@@ -36,6 +36,17 @@ public class JobZombieDetectorService(
 
     public override string ServiceName => nameof(JobZombieDetectorService);
 
+    /// <summary>
+    /// Result of zombie detection check.
+    /// </summary>
+    private sealed class ZombieDetectionResult
+    {
+        public bool IsZombie { get; private init; }
+        public string? Reason { get; private init; }
+
+        public static ZombieDetectionResult NotZombie() => new() { IsZombie = false };
+        public static ZombieDetectionResult Zombie(string reason) => new() { IsZombie = true, Reason = reason };
+    }
 
     protected override Task LeaderInitializeAsync(CancellationToken cancellationToken)
     {
@@ -139,9 +150,10 @@ public class JobZombieDetectorService(
             {
                 try
                 {
-                    if (await IsProcessingZombieAsync(instance, cancellationToken))
+                    var detectionResult = await IsProcessingZombieAsync(instance, cancellationToken);
+                    if (detectionResult.IsZombie)
                     {
-                        await MarkAsZombieAsync(instance, cancellationToken);
+                        await MarkAsZombieAsync(instance, detectionResult.Reason!, cancellationToken);
                         zombieCount++;
                     }
                 }
@@ -191,9 +203,10 @@ public class JobZombieDetectorService(
             {
                 try
                 {
-                    if (IsEnqueuedZombie(instance))
+                    var detectionResult = IsEnqueuedZombie(instance);
+                    if (detectionResult.IsZombie)
                     {
-                        await MarkAsZombieAsync(instance, cancellationToken);
+                        await MarkAsZombieAsync(instance, detectionResult.Reason!, cancellationToken);
                         zombieCount++;
                     }
                 }
@@ -218,20 +231,22 @@ public class JobZombieDetectorService(
     /// <summary>
     /// Checks if a Processing instance is a zombie.
     /// </summary>
-    private async Task<bool> IsProcessingZombieAsync(JobInstance instance, CancellationToken cancellationToken)
+    private async Task<ZombieDetectionResult> IsProcessingZombieAsync(JobInstance instance, CancellationToken cancellationToken)
     {
         // Get job definition to determine timeout
         var definition = await cacheService.GetJobDefinitionAsync(instance.JobKey, cancellationToken);
         if (definition == null)
         {
-            RecordState($"Zombie detected: Instance {instance.InstanceId} - definition not found for job {instance.JobKey}", givenLogLevel: LogLevel.Warning);
-            return true;
+            var reason = $"Job definition not found for job {instance.JobKey}";
+            RecordState($"Zombie detected: Instance {instance.InstanceId} - {reason}", givenLogLevel: LogLevel.Warning);
+            return ZombieDetectionResult.Zombie(reason);
         }
 
         if (definition.IsDisabled)
         {
-            RecordState($"Zombie detected: Instance {instance.InstanceId} - job {instance.JobKey} is disabled", givenLogLevel: LogLevel.Warning);
-            return true;
+            var reason = $"Job {instance.JobKey} is disabled";
+            RecordState($"Zombie detected: Instance {instance.InstanceId} - {reason}", givenLogLevel: LogLevel.Warning);
+            return ZombieDetectionResult.Zombie(reason);
         }
 
         // Check if worker is still online (if enabled)
@@ -242,16 +257,18 @@ public class JobZombieDetectorService(
             var isWorkerOnline = await IsWorkerOnlineAsync(instance.RunningClientId, cancellationToken);
             if (!isWorkerOnline)
             {
-                RecordState($"Zombie detected: Instance {instance.InstanceId} - worker {instance.RunningClientId} is offline", givenLogLevel: LogLevel.Warning);
-                return true;
+                var reason = $"Worker {instance.RunningClientId} is offline";
+                RecordState($"Zombie detected: Instance {instance.InstanceId} - {reason}", givenLogLevel: LogLevel.Warning);
+                return ZombieDetectionResult.Zombie(reason);
             }
         }
 
         // Calculate timeout
         if (!instance.StartedAt.HasValue)
         {
-            RecordState($"Zombie detected: Instance {instance.InstanceId} - no StartedAt timestamp", givenLogLevel: LogLevel.Warning);
-            return true;
+            var reason = "StartedAt is null for Processing instance";
+            RecordState($"Zombie detected: Instance {instance.InstanceId} - {reason}", givenLogLevel: LogLevel.Warning);
+            return ZombieDetectionResult.Zombie(reason);
         }
 
         var effectiveTimeout = TimeSpan.FromTicks(
@@ -260,41 +277,37 @@ public class JobZombieDetectorService(
 
         if (elapsed > effectiveTimeout)
         {
-            RecordState($"Zombie detected: Instance {instance.InstanceId}, Job {instance.JobKey}, Elapsed {elapsed:hh\\:mm\\:ss}, Timeout {effectiveTimeout:hh\\:mm\\:ss}", givenLogLevel: LogLevel.Warning);
-            return true;
+            var reason = $"Execution timeout after {elapsed:hh\\:mm\\:ss} (limit: {effectiveTimeout:hh\\:mm\\:ss})";
+            RecordState($"Zombie detected: Instance {instance.InstanceId} - {reason}", givenLogLevel: LogLevel.Warning);
+            return ZombieDetectionResult.Zombie(reason);
         }
 
-        return false;
+        return ZombieDetectionResult.NotZombie();
     }
 
     /// <summary>
     /// Checks if an Enqueued instance is a zombie.
     /// </summary>
-    private bool IsEnqueuedZombie(JobInstance instance)
+    private ZombieDetectionResult IsEnqueuedZombie(JobInstance instance)
     {
         var elapsed = DateTime.UtcNow - instance.CreatedAt;
 
         if (elapsed > _jobSchedulerOptions.EnqueuedStateTimeout)
         {
-            RecordState($"Zombie detected: Instance {instance.InstanceId}, Job {instance.JobKey}, Enqueued, Elapsed {elapsed:hh\\:mm\\:ss}, Timeout {_jobSchedulerOptions.EnqueuedStateTimeout:hh\\:mm\\:ss}", givenLogLevel: LogLevel.Warning);
-            return true;
+            var reason = $"Job stuck in Enqueued state for {elapsed:hh\\:mm\\:ss} (limit: {_jobSchedulerOptions.EnqueuedStateTimeout:hh\\:mm\\:ss})";
+            RecordState($"Zombie detected: Instance {instance.InstanceId} - {reason}", givenLogLevel: LogLevel.Warning);
+            return ZombieDetectionResult.Zombie(reason);
         }
 
-        return false;
+        return ZombieDetectionResult.NotZombie();
     }
 
     /// <summary>
-    /// Marks a zombie instance as Failed.
+    /// Marks a zombie instance as Failed with the specified reason.
     /// </summary>
-    private async Task MarkAsZombieAsync(JobInstance instance, CancellationToken cancellationToken)
+    private async Task MarkAsZombieAsync(JobInstance instance, string reason, CancellationToken cancellationToken)
     {
-        var elapsed = instance.State == JobState.Processing && instance.StartedAt.HasValue
-            ? DateTime.UtcNow - instance.StartedAt.Value
-            : DateTime.UtcNow - instance.CreatedAt;
-
-        var message = instance.State == JobState.Processing
-            ? $"Execution timeout after {elapsed:hh\\:mm\\:ss}. Marked as zombie by detector."
-            : $"Job stuck in {instance.State} state for {elapsed:hh\\:mm\\:ss}. Marked as zombie by detector.";
+        var message = $"{reason}. Marked as zombie by detector.";
 
         try
         {
