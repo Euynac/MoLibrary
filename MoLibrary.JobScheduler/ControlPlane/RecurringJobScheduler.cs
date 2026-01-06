@@ -37,11 +37,10 @@ public class RecurringJobScheduler(
     /// Initializes the recurring job scheduler.
     /// Loads and schedules all recurring job definitions.
     /// </summary>
-    /// <param name="debugMode">If true, jobs will not be automatically scheduled</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    public async Task InitializeAsync(bool debugMode, CancellationToken cancellationToken = default)
+    public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
-        if (debugMode)
+        if (_options.RecurringJobDebugMode)
         {
             logger.LogWarning("RecurringJobDebugMode is enabled. Jobs will not be automatically scheduled.");
             return;

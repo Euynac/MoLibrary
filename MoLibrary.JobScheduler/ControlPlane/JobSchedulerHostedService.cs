@@ -38,16 +38,10 @@ public class JobSchedulerHostedService(
 
     protected override async Task LeaderInitializeAsync(CancellationToken cancellationToken)
     {
-        logger.LogInformation(
-            "JobScheduler starting. RecurringJobDebugMode: {RecurringDebug}, TriggeredJobDebugMode: {TriggeredDebug}",
-            _options.RecurringJobDebugMode,
-            _options.TriggeredJobDebugMode);
-
-        // Initialize recurring job scheduler
-        await recurringJobScheduler.InitializeAsync(_options.RecurringJobDebugMode, cancellationToken);
+        await recurringJobScheduler.InitializeAsync(cancellationToken);
 
         // Initialize triggered job scheduler
-        await triggeredJobScheduler.InitializeAsync(eventBus, _options.TriggeredJobDebugMode, cancellationToken);
+        await triggeredJobScheduler.InitializeAsync(eventBus, cancellationToken);
 
         // Subscribe to job definitions changed event (recurring jobs only)
         _definitionsChangedSubscription = await eventBus.SubscribeAsync<JobDefinitionsChangedEvent>(

@@ -37,9 +37,8 @@ public class TriggeredJobScheduler(
     /// Subscribes to events and recovers scheduled jobs.
     /// </summary>
     /// <param name="eventBus">Event bus for job events</param>
-    /// <param name="debugMode">If true, skips automatic recovery</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    public async Task InitializeAsync(IMoEventBus eventBus, bool debugMode, CancellationToken cancellationToken = default)
+    public async Task InitializeAsync(IMoEventBus eventBus, CancellationToken cancellationToken = default)
     {
         // Subscribe to job triggered event
         _triggeredJobSubscription = await eventBus.SubscribeAsync<JobTriggeredEvent>(OnJobTriggeredAsync);
@@ -49,7 +48,7 @@ public class TriggeredJobScheduler(
         _cancellationSubscription = await eventBus.SubscribeAsync<JobCancellationRequestedEvent>(OnJobCancellationRequestedAsync);
         logger.LogDebug("Subscribed to JobCancellationRequestedEvent");
 
-        if (!debugMode)
+        if (!_options.TriggeredJobDebugMode)
         {
             // Recover and reschedule delayed jobs
             await recoveryService.RecoverScheduledJobsAsync(
@@ -59,6 +58,10 @@ public class TriggeredJobScheduler(
                     return Task.CompletedTask;
                 },
                 cancellationToken);
+        }
+        else
+        {
+            logger.LogWarning("TriggeredJobDebugMode is enabled. Jobs will not be automatically scheduled.");
         }
     }
 
