@@ -218,7 +218,14 @@
                         </MudGrid>
                     </div>
                 </MudTabPanel>
-                
+
+                <MudTabPanel Text="配置选项" Icon="@Icons.Material.Filled.Settings">
+                    <div class="tab-content">
+                        <ModuleOptionDisplay OptionType="@ModuleOptionType"
+                                           OptionInstance="@ModuleOptionInstance" />
+                    </div>
+                </MudTabPanel>
+
                 @if (SelectedModuleDetail.Errors.Any())
                 {
                     <MudTabPanel Text="错误信息" Icon="@Icons.Material.Filled.Error">
@@ -268,6 +275,16 @@
     /// 选中的模块详情
     /// </summary>
     [Parameter] public ModuleDetailInfo? SelectedModuleDetail { get; set; }
+
+    /// <summary>
+    /// 模块选项类型
+    /// </summary>
+    [Parameter] public Type? ModuleOptionType { get; set; }
+
+    /// <summary>
+    /// 模块选项实例
+    /// </summary>
+    [Parameter] public object? ModuleOptionInstance { get; set; }
 
     /// <summary>
     /// 对话框选项

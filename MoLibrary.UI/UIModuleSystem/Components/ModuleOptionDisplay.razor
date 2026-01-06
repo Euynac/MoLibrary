@@ -1,0 +1,389 @@
+@using System.Reflection
+@using MoLibrary.Tool.General
+@using MudBlazor
+
+<div class="module-option-display">
+    @if (OptionType == null || OptionInstance == null)
+    {
+        <div class="alert-wrapper">
+            <MudAlert Severity="Severity.Info" Class="mb-4">
+                <MudText>此模块没有可配置的选项</MudText>
+            </MudAlert>
+        </div>
+    }
+    else
+    {
+        <div class="header-wrapper">
+            <MudText Typo="Typo.subtitle1" Class="mb-3" Color="Color.Secondary">
+                <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" Class="mr-1" />
+                @OptionType.Name
+            </MudText>
+        </div>
+
+        <div class="grid-wrapper">
+            <MudGrid Spacing="3">
+                @foreach (var property in GetDisplayProperties())
+                {
+                    <MudItem xs="12" sm="6">
+                        <MudPaper Class="pa-4 option-card" Elevation="2">
+                            <div class="d-flex align-center mb-2">
+                                <MudIcon Icon="@GetPropertyIcon(property)"
+                                       Color="@GetPropertyIconColor(property)"
+                                       Size="Size.Small" Class="mr-2" />
+                                <MudText Typo="Typo.subtitle2" Style="font-weight: 500;">
+                                    @property.Name
+                                </MudText>
+                            </div>
+
+                            <div class="d-flex justify-space-between align-center mt-2">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @FormatTypeName(property.PropertyType)
+                                </MudText>
+                                <div class="value-wrapper">
+                                    @RenderValue(property)
+                                </div>
+                            </div>
+                        </MudPaper>
+                    </MudItem>
+                }
+            </MudGrid>
+        </div>
+
+        @if (!GetDisplayProperties().Any())
+        {
+            <div class="alert-wrapper">
+                <MudAlert Severity="Severity.Info" Class="mt-4">
+                    <MudText>此模块选项类型没有可显示的属性</MudText>
+                </MudAlert>
+            </div>
+        }
+    }
+</div>
+
+<!-- JSON详情对话框 -->
+<div class="dialog-wrapper">
+    <MudDialog @bind-Visible="_showJsonDialog" Options="_dialogOptions">
+        <TitleContent>
+            <div class="d-flex align-center">
+                <MudIcon Icon="@Icons.Material.Filled.DataObject" Class="mr-2" />
+                <MudText Typo="Typo.h6">@_selectedPropertyName</MudText>
+            </div>
+        </TitleContent>
+        <DialogContent>
+            <MudPaper Class="pa-4 json-content" Elevation="0">
+                <pre class="json-pre">@_selectedJsonContent</pre>
+            </MudPaper>
+        </DialogContent>
+        <DialogActions>
+            <MudButton Color="Color.Primary" OnClick="CloseJsonDialog">关闭</MudButton>
+        </DialogActions>
+    </MudDialog>
+</div>
+
+@code {
+    /// <summary>
+    /// 模块选项类型
+    /// </summary>
+    [Parameter] public Type? OptionType { get; set; }
+
+    /// <summary>
+    /// 模块选项实例
+    /// </summary>
+    [Parameter] public object? OptionInstance { get; set; }
+
+    private bool _showJsonDialog;
+    private string _selectedPropertyName = "";
+    private string _selectedJsonContent = "";
+
+    private readonly DialogOptions _dialogOptions = new()
+    {
+        CloseButton = true,
+        CloseOnEscapeKey = true,
+        MaxWidth = MaxWidth.Medium,
+        FullWidth = true
+    };
+
+    private static readonly HashSet<Type> NumericTypes =
+    [
+        typeof(int), typeof(int?), typeof(long), typeof(long?),
+        typeof(double), typeof(double?), typeof(float), typeof(float?),
+        typeof(decimal), typeof(decimal?)
+    ];
+
+    /// <summary>
+    /// 获取需要显示的属性列表
+    /// </summary>
+    private IEnumerable<PropertyInfo> GetDisplayProperties()
+    {
+        if (OptionType == null) return [];
+
+        return OptionType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(p => p.CanRead && !IsIgnoredProperty(p))
+            .OrderBy(p => p.Name);
+    }
+
+    /// <summary>
+    /// 判断是否为需要忽略的属性
+    /// </summary>
+    private static bool IsIgnoredProperty(PropertyInfo property)
+    {
+        // 忽略基类中的Logger等属性
+        return property.Name is "Logger" or "Item";
+    }
+
+    /// <summary>
+    /// 获取属性的图标
+    /// </summary>
+    private string GetPropertyIcon(PropertyInfo property)
+    {
+        var type = GetUnderlyingType(property.PropertyType);
+
+        if (type == typeof(bool)) return Icons.Material.Filled.ToggleOn;
+        if (NumericTypes.Contains(property.PropertyType) || IsNumericType(type)) return Icons.Material.Filled.Numbers;
+        if (type == typeof(string)) return Icons.Material.Filled.TextFields;
+        if (type == typeof(DateTime)) return Icons.Material.Filled.CalendarToday;
+        if (type == typeof(TimeSpan)) return Icons.Material.Filled.Timer;
+        if (type.IsEnum) return Icons.Material.Filled.List;
+        if (IsCollectionType(property.PropertyType)) return Icons.Material.Filled.ViewList;
+        if (type.IsClass && type != typeof(string)) return Icons.Material.Filled.DataObject;
+
+        return Icons.Material.Filled.Code;
+    }
+
+    /// <summary>
+    /// 获取属性图标颜色
+    /// </summary>
+    private Color GetPropertyIconColor(PropertyInfo property)
+    {
+        var type = GetUnderlyingType(property.PropertyType);
+
+        if (type == typeof(bool)) return Color.Success;
+        if (NumericTypes.Contains(property.PropertyType) || IsNumericType(type)) return Color.Info;
+        if (type == typeof(string)) return Color.Primary;
+        if (type == typeof(TimeSpan)) return Color.Warning;
+        if (type.IsEnum) return Color.Tertiary;
+
+        return Color.Secondary;
+    }
+
+    /// <summary>
+    /// 判断是否为复杂类型（需要点击查看JSON）
+    /// </summary>
+    private bool IsComplexType(PropertyInfo property)
+    {
+        var type = GetUnderlyingType(property.PropertyType);
+        return IsCollectionType(property.PropertyType) || (type.IsClass && type != typeof(string));
+    }
+
+    /// <summary>
+    /// 显示JSON详情
+    /// </summary>
+    private void ShowJsonDetail(PropertyInfo property)
+    {
+        var value = OptionInstance != null ? property.GetValue(OptionInstance) : null;
+        _selectedPropertyName = property.Name;
+        _selectedJsonContent = value?.ToJsonStringForce() ?? "null";
+        _showJsonDialog = true;
+    }
+
+    /// <summary>
+    /// 关闭JSON对话框
+    /// </summary>
+    private void CloseJsonDialog()
+    {
+        _showJsonDialog = false;
+    }
+
+    /// <summary>
+    /// 渲染属性值
+    /// </summary>
+    private RenderFragment RenderValue(PropertyInfo property) => builder =>
+    {
+        var value = OptionInstance != null ? property.GetValue(OptionInstance) : null;
+        var type = GetUnderlyingType(property.PropertyType);
+
+        if (value == null)
+        {
+            builder.OpenComponent<MudChip<string>>(0);
+            builder.AddAttribute(1, "T", typeof(string));
+            builder.AddAttribute(2, "Size", Size.Small);
+            builder.AddAttribute(3, "Variant", Variant.Outlined);
+            builder.AddAttribute(4, "Color", Color.Default);
+            builder.AddAttribute(5, "ChildContent", (RenderFragment)(b => b.AddContent(0, "null")));
+            builder.CloseComponent();
+            return;
+        }
+
+        if (type == typeof(bool))
+        {
+            var isTrue = (bool)value;
+            builder.OpenComponent<MudChip<string>>(0);
+            builder.AddAttribute(1, "T", typeof(string));
+            builder.AddAttribute(2, "Size", Size.Small);
+            builder.AddAttribute(3, "Color", isTrue ? Color.Success : Color.Default);
+            builder.AddAttribute(4, "Icon", isTrue ? Icons.Material.Filled.Check : Icons.Material.Filled.Close);
+            builder.AddAttribute(5, "ChildContent", (RenderFragment)(b => b.AddContent(0, isTrue ? "True" : "False")));
+            builder.CloseComponent();
+            return;
+        }
+
+        if (type.IsEnum)
+        {
+            builder.OpenComponent<MudChip<string>>(0);
+            builder.AddAttribute(1, "T", typeof(string));
+            builder.AddAttribute(2, "Size", Size.Small);
+            builder.AddAttribute(3, "Color", Color.Tertiary);
+            builder.AddAttribute(4, "ChildContent", (RenderFragment)(b => b.AddContent(0, value.ToString())));
+            builder.CloseComponent();
+            return;
+        }
+
+        // 集合类型 - 可点击查看JSON
+        if (IsCollectionType(property.PropertyType))
+        {
+            var count = GetCollectionCount(value);
+            builder.OpenComponent<MudChip<string>>(0);
+            builder.AddAttribute(1, "T", typeof(string));
+            builder.AddAttribute(2, "Size", Size.Small);
+            builder.AddAttribute(3, "Color", Color.Info);
+            builder.AddAttribute(4, "Variant", Variant.Outlined);
+            builder.AddAttribute(5, "OnClick", EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.MouseEventArgs>(this, () => ShowJsonDetail(property)));
+            builder.AddAttribute(6, "Class", "clickable-chip");
+            builder.AddAttribute(7, "ChildContent", (RenderFragment)(b => b.AddContent(0, $"[{count} items] 点击查看")));
+            builder.CloseComponent();
+            return;
+        }
+
+        // 复杂对象类型 - 可点击查看JSON
+        if (type.IsClass && type != typeof(string))
+        {
+            builder.OpenComponent<MudChip<string>>(0);
+            builder.AddAttribute(1, "T", typeof(string));
+            builder.AddAttribute(2, "Size", Size.Small);
+            builder.AddAttribute(3, "Color", Color.Secondary);
+            builder.AddAttribute(4, "Variant", Variant.Outlined);
+            builder.AddAttribute(5, "OnClick", EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.MouseEventArgs>(this, () => ShowJsonDetail(property)));
+            builder.AddAttribute(6, "Class", "clickable-chip");
+            builder.AddAttribute(7, "ChildContent", (RenderFragment)(b => b.AddContent(0, "(object) 点击查看")));
+            builder.CloseComponent();
+            return;
+        }
+
+        // 默认文本显示
+        var displayValue = FormatValue(value, type);
+        builder.OpenElement(0, "span");
+        builder.AddAttribute(1, "class", "option-value");
+        builder.AddAttribute(2, "title", displayValue);
+        builder.AddContent(3, TruncateValue(displayValue, 30));
+        builder.CloseElement();
+    };
+
+    /// <summary>
+    /// 格式化类型名称
+    /// </summary>
+    private static string FormatTypeName(Type type)
+    {
+        if (type.IsGenericType)
+        {
+            var genericDef = type.GetGenericTypeDefinition();
+            if (genericDef == typeof(Nullable<>))
+            {
+                return $"{FormatTypeName(type.GetGenericArguments()[0])}?";
+            }
+
+            var baseName = type.Name.Split('`')[0];
+            var args = string.Join(", ", type.GetGenericArguments().Select(FormatTypeName));
+            return $"{baseName}<{args}>";
+        }
+
+        return type.Name;
+    }
+
+    /// <summary>
+    /// 获取底层类型（处理Nullable）
+    /// </summary>
+    private static Type GetUnderlyingType(Type type)
+    {
+        if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
+        {
+            return type.GetGenericArguments()[0];
+        }
+        return type;
+    }
+
+    /// <summary>
+    /// 判断是否为集合类型
+    /// </summary>
+    private static bool IsCollectionType(Type type)
+    {
+        if (type == typeof(string)) return false;
+        return type.IsArray ||
+               (type.IsGenericType &&
+                (type.GetGenericTypeDefinition() == typeof(List<>) ||
+                 type.GetGenericTypeDefinition() == typeof(Dictionary<,>) ||
+                 type.GetGenericTypeDefinition() == typeof(HashSet<>)));
+    }
+
+    /// <summary>
+    /// 获取集合元素数量
+    /// </summary>
+    private static int GetCollectionCount(object? value)
+    {
+        if (value == null) return 0;
+
+        if (value is System.Collections.ICollection collection)
+        {
+            return collection.Count;
+        }
+
+        if (value is System.Collections.IEnumerable enumerable)
+        {
+            return enumerable.Cast<object>().Count();
+        }
+
+        return 0;
+    }
+
+    /// <summary>
+    /// 格式化值显示
+    /// </summary>
+    private static string FormatValue(object? value, Type type)
+    {
+        if (value == null) return "null";
+
+        if (type == typeof(TimeSpan))
+        {
+            var ts = (TimeSpan)value;
+            if (ts.TotalDays >= 1) return $"{ts.TotalDays:F1}d";
+            if (ts.TotalHours >= 1) return $"{ts.TotalHours:F1}h";
+            if (ts.TotalMinutes >= 1) return $"{ts.TotalMinutes:F1}m";
+            return $"{ts.TotalSeconds:F1}s";
+        }
+
+        if (type == typeof(DateTime))
+        {
+            return ((DateTime)value).ToString("yyyy-MM-dd HH:mm:ss");
+        }
+
+        return value.ToString() ?? "null";
+    }
+
+    /// <summary>
+    /// 截断过长的值
+    /// </summary>
+    private static string TruncateValue(string value, int maxLength)
+    {
+        if (value.Length <= maxLength) return value;
+        return value[..(maxLength - 3)] + "...";
+    }
+
+    /// <summary>
+    /// 判断是否为数值类型
+    /// </summary>
+    private static bool IsNumericType(Type type)
+    {
+        return type == typeof(int) || type == typeof(long) || type == typeof(double) ||
+               type == typeof(float) || type == typeof(decimal) || type == typeof(short) ||
+               type == typeof(byte) || type == typeof(uint) || type == typeof(ulong);
+    }
+}

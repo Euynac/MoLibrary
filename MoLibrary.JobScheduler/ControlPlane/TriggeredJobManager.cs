@@ -17,8 +17,6 @@ public class TriggeredJobManager(
     JobRegistry registry,
     ILogger<TriggeredJobManager> logger) : IMoTriggeredJobManager
 {
-    private static readonly TimeSpan _maxRecommendedDelay = TimeSpan.FromDays(24);
-
     public async Task<string> EnqueueAsync<TArgs>(TArgs args, TimeSpan? delay = null)
     {
         ArgumentNullException.ThrowIfNull(args);

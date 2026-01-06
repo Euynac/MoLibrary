@@ -53,7 +53,8 @@
       "Bash(echo:*)",
       "mcp__graphiti-memory__search_nodes",
       "mcp__graphiti-memory__search_memory_facts",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Skill(mo-ui-development)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

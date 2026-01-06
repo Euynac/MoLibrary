@@ -55,8 +55,10 @@
 </MudContainer>
 
 <!-- 模块详情对话框 -->
-<ModuleDetailDialog @bind-IsVisible="showModuleDetail" 
-                   SelectedModuleDetail="selectedModuleDetail" />
+<ModuleDetailDialog @bind-IsVisible="showModuleDetail"
+                   SelectedModuleDetail="selectedModuleDetail"
+                   ModuleOptionType="selectedModuleOptionType"
+                   ModuleOptionInstance="selectedModuleOptionInstance" />
 
 
 @code {
@@ -67,6 +69,8 @@
     private ModuleRegistrationInfo? registrationInfo;
     private ModuleDependencyGraph? dependencyGraph;
     private ModuleDetailInfo? selectedModuleDetail;
+    private Type? selectedModuleOptionType;
+    private object? selectedModuleOptionInstance;
     private bool showModuleDetail = false;
 
    
@@ -113,6 +117,11 @@
             selectedModuleDetail = StatusService.GetModuleDetail(moduleEnum);
             if (selectedModuleDetail != null)
             {
+                // 获取模块选项信息
+                var optionData = StatusService.GetModuleOptionInstance(moduleEnum);
+                selectedModuleOptionType = optionData?.optionType;
+                selectedModuleOptionInstance = optionData?.optionInstance;
+
                 showModuleDetail = true;
             }
             else

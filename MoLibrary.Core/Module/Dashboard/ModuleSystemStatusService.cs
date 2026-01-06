@@ -279,6 +279,21 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
     }
 
     /// <summary>
+    /// 获取指定模块的选项实例。
+    /// </summary>
+    /// <param name="moduleEnum">模块枚举</param>
+    /// <returns>选项类型和选项实例的元组，如果模块不存在则返回null</returns>
+    public (Type optionType, object? optionInstance)? GetModuleOptionInstance(EMoModules moduleEnum)
+    {
+        var snapshot = MoModuleRegisterCentre.ModuleSnapshots.FirstOrDefault(s => s.ModuleEnum == moduleEnum);
+        if (snapshot == null) return null;
+
+        var optionType = snapshot.RegisterInfo.ModuleOptionType;
+        snapshot.RegisterInfo.FinalConfigures.TryGetValue(optionType, out var optionInstance);
+        return (optionType, optionInstance);
+    }
+
+    /// <summary>
     /// 获取模块系统的健康状态检查结果。
     /// </summary>
     /// <returns>健康状态检查结果</returns>
