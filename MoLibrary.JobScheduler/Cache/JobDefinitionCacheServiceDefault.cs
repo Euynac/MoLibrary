@@ -25,7 +25,7 @@ public class JobDefinitionCacheServiceDefault(
     protected readonly IMoEventBus EventBus = eventBus;
     protected readonly ILogger Logger = logger;
 
-    public virtual async Task<JobDefinition?> GetJobDefinitionAsync(string jobKey,
+    public virtual async Task<JobDefinition?> GetDefinitionAsync(string jobKey,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(jobKey))
@@ -36,7 +36,7 @@ public class JobDefinitionCacheServiceDefault(
         return await MetadataRepository.GetDefinitionAsync(jobKey, cancellationToken);
     }
 
-    public virtual async Task<IReadOnlyList<JobDefinition>> GetAllJobDefinitionsAsync(
+    public virtual async Task<IReadOnlyList<JobDefinition>> GetAllDefinitionsAsync(
         CancellationToken cancellationToken = default)
     {
         var query = new JobDefinitionQuery
@@ -49,7 +49,7 @@ public class JobDefinitionCacheServiceDefault(
         return result.Items;
     }
 
-    public virtual async Task SaveJobDefinitionAsync(
+    public virtual async Task SaveDefinitionAsync(
         JobDefinition definition,
         bool publishChangeEvent = false,
         CancellationToken cancellationToken = default)

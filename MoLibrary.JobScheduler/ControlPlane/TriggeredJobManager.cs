@@ -6,6 +6,7 @@ using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Events;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.JobScheduler.Modules;
+using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.JobScheduler.ControlPlane;
 
@@ -13,6 +14,7 @@ public class TriggeredJobManager(
     IJobDefinitionCacheService cacheService,
     [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
     IMoJobMetadataRepository metadataRepository,
+    JobRegistry registry,
     ILogger<TriggeredJobManager> logger) : IMoTriggeredJobManager
 {
     private static readonly TimeSpan _maxRecommendedDelay = TimeSpan.FromDays(24);
@@ -26,22 +28,12 @@ public class TriggeredJobManager(
             throw new ArgumentException("Delay cannot be negative", nameof(delay));
         }
 
-        // Warn about Timer limitations (not enforced per user request)
-        if (delay.HasValue && delay.Value > _maxRecommendedDelay)
-        {
-            logger.LogWarning(
-                "Delay {Delay} exceeds recommended maximum {Max}. .NET Timer has ~24.8 day limit.",
-                delay,
-                _maxRecommendedDelay);
-        }
-
         var argsType = typeof(TArgs);
         var jobArgsKey = argsType.FullName
             ?? throw new InvalidOperationException($"Job args type must have full name");
-
-        var allDefinitions = await cacheService.GetAllJobDefinitionsAsync();
-        var definition = allDefinitions.FirstOrDefault(d => d.JobArgsKey == jobArgsKey);
-
+        
+        var definition = await cacheService.GetDefinitionAsync(registry.GetTriggeredJobClrType(jobArgsKey)?.FullName ?? throw new InvalidOperationException($"Job args type {argsType.GetCleanFullName()} not found in JobRegistry"));
+      
         if (definition == null)
         {
             throw new InvalidOperationException(

@@ -16,7 +16,7 @@ public class JobRegistry(
     IMoJobMetadataRepository metadataRepository,
     ILogger<JobRegistry> logger)
 {
-    private readonly Dictionary<Type, Type> _triggeredJobMapping = new();
+    private readonly Dictionary<string, Type> _triggeredJobMapping = new();
     private readonly Dictionary<string, Type> _jobDefinitionTypeMap = new();
     private readonly Dictionary<string, Type> _triggeredJobArgsTypeMap = new();
 
@@ -50,7 +50,7 @@ public class JobRegistry(
         {
             if (jobDefinition.JobArgsClrType == null)
                 throw new JobRegistrationException(jobDefinition.JobKey, "ParameterClrType is null");
-            _triggeredJobMapping.Add(jobDefinition.JobArgsClrType, jobDefinition.JobClrType);
+            _triggeredJobMapping.Add(jobDefinition.JobArgsClrType.FullName!, jobDefinition.JobClrType);
             _triggeredJobArgsTypeMap.Add(jobDefinition.JobArgsClrType.FullName!, jobDefinition.JobArgsClrType);
             logger.LogDebug(
                 "Triggered job details - JobKey: {JobKey}, ParameterType: {ParameterType}",
@@ -69,6 +69,16 @@ public class JobRegistry(
     public Type? GetJobClrType(string jobKey)
     {
         return _jobDefinitionTypeMap.TryGetValue(jobKey, out var type) ? type : null;
+    }
+    
+    /// <summary>
+    /// Retrieves the CLR type for a triggered job by its job args key.
+    /// </summary>
+    /// <param name="jobArgsKey"></param>
+    /// <returns></returns>
+    public Type? GetTriggeredJobClrType(string jobArgsKey)
+    {
+        return _triggeredJobMapping.TryGetValue(jobArgsKey, out var type) ? type : null;
     }
 
     /// <summary>
@@ -110,7 +120,7 @@ public class JobRegistry(
         }
 
         // Get all existing non-deleted job definitions from cache (initializes cache if needed)
-        var existingDefinitions = await cacheService.GetAllJobDefinitionsAsync(cancellationToken);
+        var existingDefinitions = await cacheService.GetAllDefinitionsAsync(cancellationToken);
 
         // Filter to only this project's jobs
         var existingProjectJobs = existingDefinitions

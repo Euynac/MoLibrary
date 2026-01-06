@@ -34,7 +34,7 @@ public class JobSchedulerApiService(
         try
         {
             logger.LogDebug("API: GetAllJobs requested");
-            var jobs = await cacheService.GetAllJobDefinitionsAsync(cancellationToken);
+            var jobs = await cacheService.GetAllDefinitionsAsync(cancellationToken);
             return Res.Ok(jobs);
         }
         catch (Exception ex)
@@ -108,7 +108,7 @@ public class JobSchedulerApiService(
         {
             logger.LogDebug("API: GetJobDefinitions requested with filters");
 
-            var allDefinitions = await cacheService.GetAllJobDefinitionsAsync(cancellationToken);
+            var allDefinitions = await cacheService.GetAllDefinitionsAsync(cancellationToken);
 
             // Apply filters in-memory
             var filtered = allDefinitions.AsEnumerable();
@@ -237,7 +237,7 @@ public class JobSchedulerApiService(
 
             // Update definition via cache service (write-through) and publish event
             definition.IsDisabled = true;
-            await cacheService.SaveJobDefinitionAsync(definition, publishChangeEvent: true, cancellationToken);
+            await cacheService.SaveDefinitionAsync(definition, publishChangeEvent: true, cancellationToken);
 
             logger.LogInformation("Recurring job paused: {JobKey}", jobKey);
             return Res.Ok("Recurring job paused successfully");
@@ -269,7 +269,7 @@ public class JobSchedulerApiService(
 
             // Update definition via cache service (write-through) and publish event
             definition.IsDisabled = false;
-            await cacheService.SaveJobDefinitionAsync(definition, publishChangeEvent: true, cancellationToken);
+            await cacheService.SaveDefinitionAsync(definition, publishChangeEvent: true, cancellationToken);
 
             logger.LogInformation("Recurring job resumed: {JobKey}", jobKey);
             return Res.Ok("Recurring job resumed successfully");
@@ -334,7 +334,7 @@ public class JobSchedulerApiService(
 
                     // Update definition via cache service (write-through + event publishing)
                     definition.IsDisabled = isDisabled;
-                    await cacheService.SaveJobDefinitionAsync(definition, publishChangeEvent: true, cancellationToken);
+                    await cacheService.SaveDefinitionAsync(definition, publishChangeEvent: true, cancellationToken);
 
                     logger.LogDebug("Job {JobKey} {Operation} successfully",
                         jobKey, isDisabled ? "paused" : "resumed");
@@ -396,7 +396,7 @@ public class JobSchedulerApiService(
             logger.LogInformation("API: UpdateJobConfig requested for {JobKey}", jobKey);
 
             // Update via cache service (write-through)
-            await cacheService.SaveDefinitionAsync(updatedDefinition, cancellationToken);
+            await cacheService.SaveDefinitionAsync(updatedDefinition, true, cancellationToken);
 
             logger.LogInformation("Job {JobKey} configuration updated", jobKey);
             return Res.Ok("Job configuration updated successfully");

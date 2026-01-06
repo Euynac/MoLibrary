@@ -25,7 +25,7 @@ public class JobDefinitionCacheService : JobDefinitionCacheServiceDefault, IDisp
     private readonly ConcurrentDictionary<string, JobDefinition> _cache = new();
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _jobLocks = new();
     private readonly SemaphoreSlim _initLock = new(1, 1);
-    private IAsyncDisposable? _eventSubscription;
+    private readonly IAsyncDisposable? _eventSubscription;
 
     private static readonly TimeSpan _staleFlagTtl = TimeSpan.FromHours(1);
     private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(5);
@@ -45,7 +45,7 @@ public class JobDefinitionCacheService : JobDefinitionCacheServiceDefault, IDisp
     }
 
     /// <inheritdoc />
-    public override async Task<JobDefinition?> GetJobDefinitionAsync(string jobKey, CancellationToken cancellationToken = default)
+    public override async Task<JobDefinition?> GetDefinitionAsync(string jobKey, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(jobKey))
         {
@@ -129,7 +129,7 @@ public class JobDefinitionCacheService : JobDefinitionCacheServiceDefault, IDisp
     }
 
     /// <inheritdoc />
-    public override async Task<IReadOnlyList<JobDefinition>> GetAllJobDefinitionsAsync(CancellationToken cancellationToken = default)
+    public override async Task<IReadOnlyList<JobDefinition>> GetAllDefinitionsAsync(CancellationToken cancellationToken = default)
     {
         // If cache is empty, initialize it
         if (_cache.IsEmpty)
@@ -172,7 +172,7 @@ public class JobDefinitionCacheService : JobDefinitionCacheServiceDefault, IDisp
     }
 
     /// <inheritdoc />
-    public override async Task SaveJobDefinitionAsync(
+    public override async Task SaveDefinitionAsync(
         JobDefinition definition,
         bool publishChangeEvent = false,
         CancellationToken cancellationToken = default)
@@ -198,7 +198,7 @@ public class JobDefinitionCacheService : JobDefinitionCacheServiceDefault, IDisp
         try
         {
             // Write-through: persist to metadata store first (calls base method with event publishing)
-            await base.SaveJobDefinitionAsync(definition, publishChangeEvent, cancellationToken);
+            await base.SaveDefinitionAsync(definition, publishChangeEvent, cancellationToken);
 
             // Update cache
             _cache[definition.JobKey] = definition;

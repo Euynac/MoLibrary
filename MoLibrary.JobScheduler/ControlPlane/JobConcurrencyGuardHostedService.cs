@@ -50,7 +50,7 @@ public class JobConcurrencyGuardHostedService(
         logger.LogInformation("JobConcurrencyGuard is initializing...");
 
         // 1. Load all job definitions from cache
-        var definitions = await cacheService.GetAllJobDefinitionsAsync(cancellationToken);
+        var definitions = await cacheService.GetAllDefinitionsAsync(cancellationToken);
         logger.LogDebug("Loaded {Count} job definitions", definitions.Count);
 
         // 2. Initialize statistics for each job definition

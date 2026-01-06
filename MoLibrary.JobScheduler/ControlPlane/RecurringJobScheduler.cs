@@ -48,7 +48,7 @@ public class RecurringJobScheduler(
         }
 
         // Load all recurring job definitions from cache
-        var allDefinitions = await cacheService.GetAllJobDefinitionsAsync(cancellationToken);
+        var allDefinitions = await cacheService.GetAllDefinitionsAsync(cancellationToken);
         var recurringJobs = allDefinitions.Where(d => d.JobType == JobType.Recurring).ToList();
 
         logger.LogInformation("Loaded {Count} recurring job definitions", recurringJobs.Count);

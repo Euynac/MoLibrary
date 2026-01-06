@@ -16,20 +16,14 @@ public interface IJobDefinitionCacheService
     /// <param name="jobKey">The unique job key</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>The job definition, or null if not found</returns>
-    Task<JobDefinition?> GetJobDefinitionAsync(string jobKey, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Alias for GetJobDefinitionAsync for consistency with repository naming
-    /// </summary>
-    Task<JobDefinition?> GetDefinitionAsync(string jobKey, CancellationToken cancellationToken = default)
-        => GetJobDefinitionAsync(jobKey, cancellationToken);
-
+    Task<JobDefinition?> GetDefinitionAsync(string jobKey, CancellationToken cancellationToken = default);
+    
     /// <summary>
     /// Gets all cached job definitions. Returns current cache snapshot without invalidation checks.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Read-only list of all cached job definitions</returns>
-    Task<IReadOnlyList<JobDefinition>> GetAllJobDefinitionsAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<JobDefinition>> GetAllDefinitionsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Saves a job definition with write-through semantics.
@@ -39,15 +33,9 @@ public interface IJobDefinitionCacheService
     /// <param name="definition">The job definition to save</param>
     /// <param name="publishChangeEvent">Whether to publish JobDefinitionsChangedEvent (default: false)</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    Task SaveJobDefinitionAsync(
+    Task SaveDefinitionAsync(
         JobDefinition definition,
         bool publishChangeEvent = false,
         CancellationToken cancellationToken = default);
 
-    /// <summary>
-    /// Alias for SaveJobDefinitionAsync for consistency with repository naming.
-    /// Note: Does not support publishChangeEvent parameter. Use SaveJobDefinitionAsync directly for event publishing.
-    /// </summary>
-    Task SaveDefinitionAsync(JobDefinition definition, CancellationToken cancellationToken = default)
-        => SaveJobDefinitionAsync(definition, publishChangeEvent: false, cancellationToken);
 }

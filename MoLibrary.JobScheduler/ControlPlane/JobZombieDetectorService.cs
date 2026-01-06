@@ -234,7 +234,7 @@ public class JobZombieDetectorService(
     private async Task<ZombieDetectionResult> IsProcessingZombieAsync(JobInstance instance, CancellationToken cancellationToken)
     {
         // Get job definition to determine timeout
-        var definition = await cacheService.GetJobDefinitionAsync(instance.JobKey, cancellationToken);
+        var definition = await cacheService.GetDefinitionAsync(instance.JobKey, cancellationToken);
         if (definition == null)
         {
             var reason = $"Job definition not found for job {instance.JobKey}";
