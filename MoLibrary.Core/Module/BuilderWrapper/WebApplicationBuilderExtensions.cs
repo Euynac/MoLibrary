@@ -34,17 +34,7 @@ public static class WebApplicationBuilderExtensions
     /// </summary>
     public static event Action<IApplicationBuilder>? BeginUseEndpoints;
 
-    public static WebApplicationBuilder? WebApplicationBuilderInstance;
-
-    public static void ConfigMoModule(this WebApplicationBuilder builder, Action<ModuleCoreOption>? moduleCoreOption = null, Action<ModuleCoreOptionTypeFinder>? typeFinderConfigure = null)
-    {
-        builder.Services.ConfigActionWrapper(moduleCoreOption, out var option);
-        if (option.EnableRegisterInstantly)
-        {
-            WebApplicationBuilderInstance = builder;
-        }
-        builder.Services.GetOrCreateMoModuleSystemTypeFinder(typeFinderConfigure);
-    }
+    
 
     /// <summary>
     /// Builds the WebApplication with Mo module integration by triggering the BeforeBuild and AfterBuild events.

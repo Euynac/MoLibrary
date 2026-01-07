@@ -9,6 +9,6 @@ public class MoModuleControllerOption<TModule> : MoModuleOption<TModule>, IMoMod
     /// </summary>
     public string? ApiGroup { get; set; }
     public bool? IsMinimalApiDisabled { get; set; }
-    public string GetApiGroupName() => ApiGroup ?? ModuleCoreOption.DefaultModuleApiGroupName ?? typeof(TModule).Name;
-    public bool GetIsEndpointsDisabled() => IsMinimalApiDisabled ?? ModuleCoreOption.DefaultMinimalApiDisabled ?? false;
+    public string GetApiGroupName() => ApiGroup ?? Mo.Options.DefaultModuleApiGroupName ?? typeof(TModule).Name;
+    public bool GetIsEndpointsDisabled() => IsMinimalApiDisabled ?? Mo.Options.DefaultMinimalApiDisabled ?? false;
 }

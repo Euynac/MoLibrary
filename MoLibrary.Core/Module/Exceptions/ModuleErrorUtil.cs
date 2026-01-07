@@ -182,7 +182,7 @@ public static class ModuleErrorUtil
             // Check if the module has DisableModuleIfHasException set
             var moduleOption = requestInfo.ModuleOption;
 
-            if (moduleOption.DisableModuleIfHasException ?? ModuleCoreOption.DisableModuleIfHasException)
+            if (moduleOption.DisableModuleIfHasException ?? Mo.Options.DisableModuleIfHasException)
             {
                 // Disable the module
                 if (ModuleManager.DisableModule(requestInfo))

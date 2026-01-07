@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Logging;
 using MoLibrary.Core.Features.MoLogProvider;
 using MoLibrary.Core.Module.BuilderWrapper;
@@ -98,16 +99,7 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     
   
 
-    public void RegisterInstantly()
-    {
-        if (WebApplicationBuilderExtensions.WebApplicationBuilderInstance == null)
-        {
-            throw new InvalidOperationException($"WebApplicationBuilderInstance is not initialized. Please use {nameof(WebApplicationBuilderExtensions.ConfigMoModule)} method to enable module instantly registration.");
-        }
-        MoModuleRegisterCentre.RegisterServices(WebApplicationBuilderExtensions.WebApplicationBuilderInstance);
-    }
-
-
+   
     #region 注册到注册中心
 
     /// <summary>
@@ -162,11 +154,11 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
             ConfigureModuleOption(config);
         }
 
-        var targetModule = new TModuleGuideSelf().GetTargetModuleEnum();
+        var targetModule = GetTargetModuleEnum();
 
         RegisterModule();
 
-        return new TModuleGuideSelf();
+        return (TModuleGuideSelf)this;
     }
 
 

@@ -75,7 +75,7 @@ public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger,
                 var documentAssemblies = (Option.DocumentAssemblies ?? []).ToList();
                 if (!Option.DisableAutoIncludeModuleSystemRelatedAsDocumentAssembly)
                 {
-                    documentAssemblies.AddRange(services.GetOrCreateMoModuleSystemTypeFinder().GetAssemblies().Select(p => p.GetName().Name!));
+                    documentAssemblies.AddRange(Mo.Options.GlobalTypeFinder.GetAssemblies().Select(p => p.GetName().Name!));
                 }
 
                 var xmlFilePaths = new List<string>();

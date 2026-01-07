@@ -318,7 +318,7 @@ public static class MoModuleRegisterCentre
         ModuleProfiler.StopPhase(nameof(EMoModuleConfigMethods.ConfigureEndpoints));
         ModuleProfiler.StopModuleSystem();
 
-        if (ModuleCoreOption.EnableLoggingModuleSummary)
+        if (Mo.Options.EnableLoggingModuleSummary)
         {
             // Log performance summary details
             Logger.LogInformation("Module system performance summary:\n{PerformanceSummary}",
