@@ -137,7 +137,7 @@ public class RegistrationStateManager(
         }
     }
 
-    public async Task<(bool Success, string? NewETag)> RenewLeaderLeaseAsync(string expectedETag, CancellationToken ct = default)
+    public async Task<(bool Success, string? NewETag, LeaderState? ActualState, string? ActualETag)> RenewLeaderLeaseAsync(string expectedETag, CancellationToken ct = default)
     {
         try
         {
@@ -162,16 +162,19 @@ public class RegistrationStateManager(
             if (success)
             {
                 logger.LogDebug("Leader 续约成功: {ETag}", newETag);
-                return (true, newETag);
+                return (true, newETag, null, null);
             }
 
-            logger.LogWarning("Leader 续约失败，ETag 不匹配");
-            return (false, null);
+            // 续约失败，获取当前 StateStore 中的实际状态和 ETag
+            var (actualState, actualETag) = await stateStore.GetStateAndETagAsync<LeaderState>(LEADER_PREFIX + leaderKey, ct);
+            logger.LogWarning("Leader 续约失败，ETag 不匹配。本地 ETag: {ExpectedETag}, 实际 ETag: {ActualETag}",
+                expectedETag, actualETag);
+            return (false, null, actualState, actualETag);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Leader 续约异常");
-            return (false, null);
+            return (false, null, null, null);
         }
     }
 

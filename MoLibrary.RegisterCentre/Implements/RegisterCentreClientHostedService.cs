@@ -58,7 +58,7 @@ public class RegisterCentreClientHostedService(
         }
         catch (OperationCanceledException)
         {
-            logger.LogWarning("等待注册完成超时 ({Timeout})", timeout);
+            RecordState($"等待注册完成超时 ({timeout})", givenLogLevel: LogLevel.Warning);
             return false;
         }
     }
@@ -78,7 +78,7 @@ public class RegisterCentreClientHostedService(
         }
         else
         {
-            logger.LogWarning("首次心跳失败: {Error}", firstHeartbeat.ErrorMessage);
+            RecordState($"首次心跳失败: {firstHeartbeat.ErrorMessage}", givenLogLevel: LogLevel.Warning);
         }
 
         // 主循环
@@ -104,7 +104,6 @@ public class RegisterCentreClientHostedService(
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "心跳循环异常");
                 RecordState("心跳循环异常", HostedServiceState.Degraded, ex);
             }
 
@@ -127,7 +126,7 @@ public class RegisterCentreClientHostedService(
         // 优雅关闭 - 如果是 Leader，触发 LeaderLost
         if (leaderService.IsLeader)
         {
-            logger.LogInformation("服务关闭，触发 Leader 丢失");
+            RecordState("服务关闭，触发 Leader 丢失", givenLogLevel: LogLevel.Information);
             leaderService.TriggerLeaderLost(LeaderLostReason.GracefulShutdown);
 
             // 尝试删除 Leader Key，让其他实例更快接管
@@ -137,7 +136,7 @@ public class RegisterCentreClientHostedService(
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "删除 Leader Key 失败");
+                RecordState("删除 Leader Key 失败", exception: ex, givenLogLevel: LogLevel.Warning);
             }
         }
     }
@@ -153,7 +152,6 @@ public class RegisterCentreClientHostedService(
             _isStruggling = false;
             _struggleStartTime = null;
             _struggleCts?.Cancel();
-            logger.LogInformation("从挣扎状态恢复");
             RecordState("从挣扎状态恢复", HostedServiceState.Running);
         }
 
@@ -175,7 +173,6 @@ public class RegisterCentreClientHostedService(
     /// </summary>
     private async Task HandleFailedHeartbeatAsync(string? errorMessage, CancellationToken ct)
     {
-        logger.LogWarning("心跳失败: {Error}", errorMessage);
         RecordState($"心跳失败: {errorMessage}", HostedServiceState.Degraded);
 
         // 如果是 Leader，进入挣扎模式
@@ -200,7 +197,7 @@ public class RegisterCentreClientHostedService(
             }
             else
             {
-                logger.LogDebug("Leader 已存在，保持 Follower 状态");
+                RecordState("Leader 已存在，保持 Follower 状态", givenLogLevel: LogLevel.Debug);
             }
         }
         else
@@ -215,7 +212,7 @@ public class RegisterCentreClientHostedService(
     /// </summary>
     private async Task CompeteForLeaderAsync(CancellationToken ct)
     {
-        logger.LogDebug("尝试竞争 Leader");
+        RecordState("尝试竞争 Leader", givenLogLevel: LogLevel.Debug);
 
         var (success, state, eTag) = await stateManager.TryBecomeLeaderAsync(ct);
 
@@ -226,7 +223,7 @@ public class RegisterCentreClientHostedService(
         }
         else
         {
-            logger.LogDebug("Leader 竞争失败，其他实例可能已成为 Leader");
+            RecordState("Leader 竞争失败，其他实例可能已成为 Leader", givenLogLevel: LogLevel.Debug);
         }
     }
 
@@ -238,35 +235,39 @@ public class RegisterCentreClientHostedService(
         var currentETag = leaderService.CurrentETag;
         if (string.IsNullOrEmpty(currentETag))
         {
-            logger.LogWarning("无法续约 Leader：ETag 为空");
+            RecordState("无法续约 Leader：ETag 为空", givenLogLevel: LogLevel.Warning);
             leaderService.TriggerLeaderLost(LeaderLostReason.NetworkIsolation);
             return;
         }
 
-        var (success, newETag) = await stateManager.RenewLeaderLeaseAsync(currentETag, ct);
+        var (success, newETag, actualState, actualETag) = await stateManager.RenewLeaderLeaseAsync(currentETag, ct);
 
         if (success && !string.IsNullOrEmpty(newETag))
         {
             leaderService.UpdateETag(newETag);
-            logger.LogDebug("Leader 续约成功");
+            RecordState("Leader 续约成功", givenLogLevel: LogLevel.Debug);
         }
         else
         {
-            // 续约失败，可能是 ETag 不匹配（被其他实例抢占）
-            logger.LogWarning("Leader 续约失败");
-
-            // 检查当前 Leader 状态
-            var leaderState = await stateManager.GetLeaderStateAsync(ct);
             var currentInstanceId = clientInfo.GetServiceStatus().InstanceId;
-            if (leaderState != null && leaderState.InstanceId != currentInstanceId)
+
+            if (actualState != null && actualState.InstanceId != currentInstanceId)
             {
                 // 其他实例已成为 Leader
                 leaderService.TriggerLeaderLost(LeaderLostReason.LeaderKeyTakenByOther);
-                RecordState("Leader 被其他实例抢占", HostedServiceState.Running);
+                RecordState($"Leader 被其他实例 ({actualState.InstanceId}) 抢占", HostedServiceState.Running);
+            }
+            else if (actualState != null && actualState.InstanceId == currentInstanceId && !string.IsNullOrEmpty(actualETag))
+            {
+                // 关键修复：我们仍是 Leader，但 ETag 过期了 → 刷新 ETag
+                RecordState($"ETag 不一致但仍为 Leader，刷新 ETag: {currentETag} -> {actualETag}", givenLogLevel: LogLevel.Information);
+                leaderService.UpdateETag(actualETag);
+                // 不进入挣扎模式，下次心跳时用新 ETag 续约即可
             }
             else if (!_isStruggling)
             {
-                // 网络问题，进入挣扎模式
+                // Leader key 不存在或获取失败，进入挣扎模式
+                RecordState("Leader 续约失败且无法获取当前状态", HostedServiceState.Degraded, givenLogLevel: LogLevel.Warning);
                 await StartStruggleAsync(ct);
             }
         }
@@ -283,7 +284,6 @@ public class RegisterCentreClientHostedService(
         _struggleStartTime = DateTime.UtcNow;
         _struggleCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
 
-        logger.LogWarning("进入挣扎模式");
         RecordState("进入挣扎模式", HostedServiceState.Degraded);
 
         // 启动挣扎循环
@@ -305,8 +305,6 @@ public class RegisterCentreClientHostedService(
                 var struggleDuration = DateTime.UtcNow - _struggleStartTime;
                 if (struggleDuration >= _option.Election.GiveUpStruggleThreshold)
                 {
-                    logger.LogWarning("挣扎超时，放弃 Leader 状态");
-
                     if (leaderService.IsLeader)
                     {
                         leaderService.TriggerLeaderLost(LeaderLostReason.StruggleTimeout);
@@ -318,7 +316,7 @@ public class RegisterCentreClientHostedService(
                     // 根据隔离处理模式决定后续行为
                     if (_option.IsolationHandlingMode == EIsolationHandlingMode.FastShutdown)
                     {
-                        logger.LogWarning("隔离处理模式为 FastShutdown，触发服务隔离事件");
+                        RecordState("隔离处理模式为 FastShutdown，触发服务隔离事件", givenLogLevel: LogLevel.Warning);
                         // 可以在这里触发更多的隔离处理逻辑
                     }
 
@@ -329,7 +327,6 @@ public class RegisterCentreClientHostedService(
                 var result = await stateManager.RegisterOrHeartbeatAsync(ct);
                 if (result.Success)
                 {
-                    logger.LogInformation("挣扎期间心跳恢复成功");
                     _isStruggling = false;
                     _struggleStartTime = null;
                     RecordState("挣扎恢复成功", HostedServiceState.Running);
@@ -343,7 +340,7 @@ public class RegisterCentreClientHostedService(
                     break;
                 }
 
-                logger.LogDebug("挣扎中，心跳仍然失败，等待 {Period} 后重试", _option.Election.StrugglePeriod);
+                RecordState($"挣扎中，心跳仍然失败，等待 {_option.Election.StrugglePeriod} 后重试", givenLogLevel: LogLevel.Debug);
                 await Task.Delay(_option.Election.StrugglePeriod, ct);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -352,7 +349,7 @@ public class RegisterCentreClientHostedService(
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "挣扎循环异常");
+                RecordState("挣扎循环异常", exception: ex, givenLogLevel: LogLevel.Error);
             }
         }
     }

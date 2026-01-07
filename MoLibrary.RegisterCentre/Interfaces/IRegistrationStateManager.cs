@@ -38,8 +38,11 @@ public interface IRegistrationStateManager
     /// </summary>
     /// <param name="expectedETag">预期的 ETag</param>
     /// <param name="ct">取消令牌</param>
-    /// <returns>成功时返回 (true, NewETag)，失败返回 (false, null)</returns>
-    Task<(bool Success, string? NewETag)> RenewLeaderLeaseAsync(string expectedETag, CancellationToken ct = default);
+    /// <returns>
+    /// 成功时返回 (true, NewETag, null, null)
+    /// 失败时返回 (false, null, ActualState, ActualETag) - 包含当前 StateStore 中的实际状态和 ETag
+    /// </returns>
+    Task<(bool Success, string? NewETag, LeaderState? ActualState, string? ActualETag)> RenewLeaderLeaseAsync(string expectedETag, CancellationToken ct = default);
 
     /// <summary>
     /// 删除 Leader Key（优雅关闭时使用）

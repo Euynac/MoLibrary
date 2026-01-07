@@ -60,7 +60,7 @@ public class TriggeredJobManager(
             JobKey = definition.JobKey,
             JobArgs = jobArgs,
             Delay = delay,
-            TriggeredAt = DateTime.UtcNow
+            TriggeredAt = DateTime.UtcNow,
         };
 
         await eventBus.PublishAsync(triggeredEvent, null, cancellationToken);
