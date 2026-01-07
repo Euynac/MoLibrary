@@ -46,7 +46,7 @@ public class ModuleProfiling(ModuleProfilingOption option)
     /// <param name="app">应用程序构建器</param>
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
-        app.UseEndpoints(endpoints =>
+        UseEndpoints(app, endpoints =>
         {
             var tagGroup = new List<OpenApiTag> { new() { Name = option.GetApiGroupName(), Description = "程序性能监测接口" } };
 

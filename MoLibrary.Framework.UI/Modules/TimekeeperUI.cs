@@ -62,7 +62,7 @@ public class ModuleTimekeeperUI(ModuleTimekeeperUIOption option)
 
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
-        app.UseEndpoints(endpoints =>
+        UseEndpoints(app, endpoints =>
         {
             var tagGroup = new List<OpenApiTag> { new() { Name = Option.GetApiGroupName(), Description = "Timekeeper相关接口" } };
 

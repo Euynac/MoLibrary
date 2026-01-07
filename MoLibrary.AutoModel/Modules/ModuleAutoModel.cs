@@ -34,7 +34,7 @@ public class ModuleAutoModel(ModuleAutoModelOption option) : MoModuleWithDepende
 
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
-        app.UseEndpoints(endpoints =>
+        UseEndpoints(app, endpoints =>
         {
             var tagGroup = new List<OpenApiTag>
             {

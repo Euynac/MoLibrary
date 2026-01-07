@@ -41,7 +41,7 @@ public partial class ModuleDapr(ModuleDaprOption option) : MoModule<ModuleDapr, 
 
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
-        app.UseEndpoints(endpoints =>
+        UseEndpoints(app, endpoints =>
         {
             var tagGroup = new List<OpenApiTag>
             {

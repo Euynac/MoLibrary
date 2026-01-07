@@ -49,7 +49,7 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
     {
         DataChannelCentral.ConfigEndpoints(app);
 
-        app.UseEndpoints(endpoints =>
+        UseEndpoints(app, endpoints =>
         {
             var tagGroup = new List<OpenApiTag> { new() { Name = Option.GetApiGroupName(), Description = "数据通道相关接口" } };
 

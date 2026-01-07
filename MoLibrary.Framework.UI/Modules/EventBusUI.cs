@@ -69,12 +69,7 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
 
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
-        if (Option.DisableAPIEndpoints)
-        {
-            return;
-        }
-
-        app.UseEndpoints(endpoints =>
+        UseEndpoints(app, endpoints =>
         {
             var tagGroup = new List<OpenApiTag>
             {
@@ -198,9 +193,4 @@ public class ModuleEventBusUIOption : MoModuleControllerOption<ModuleEventBusUI>
     /// 是否禁用事件总线监控页面
     /// </summary>
     public bool DisableUIEventBusPage { get; set; }
-
-    /// <summary>
-    /// 是否禁用API端点
-    /// </summary>
-    public bool DisableAPIEndpoints { get; set; }
 }

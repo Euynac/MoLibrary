@@ -34,7 +34,7 @@ public class ModuleAutoControllers(ModuleAutoControllersOption option)
     }
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
-        app.UseEndpoints(endpoints =>
+        UseEndpoints(app, endpoints =>
         {
             endpoints.MapControllers();
         });

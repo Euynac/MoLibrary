@@ -72,7 +72,7 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
     }
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
-        app.UseEndpoints(endpoints =>
+        UseEndpoints(app, endpoints =>
         {
             var tagGroup = new List<OpenApiTag> { new() { Name = option.GetApiGroupName(), Description = "热配置相关内置接口" } };
             endpoints.MapGet(MoConfigurationConventions.GetConfigStatus, async (

@@ -23,7 +23,7 @@ public class ModuleSignalR(ModuleSignalROption option) : MoModule<ModuleSignalR,
 
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
-        app.UseEndpoints(endpoints =>
+        UseEndpoints(app, endpoints =>
         {
             var tagGroup = new List<OpenApiTag>
             {

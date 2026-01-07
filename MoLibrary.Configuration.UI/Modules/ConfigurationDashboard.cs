@@ -54,7 +54,7 @@ public class ModuleConfigurationDashboard(ModuleConfigurationDashboardOption opt
     {
         if (GetOptions<ModuleRegisterCentreOption>().IsCentreServer)
         {
-            app.UseEndpoints(endpoints =>
+            UseEndpoints(app, endpoints =>
             {
                 var tagGroup = new List<OpenApiTag> { new() { Name = option.GetApiGroupName(), Description = "配置中心" } };
                 endpoints.MapGet(MoConfigurationConventions.DashboardCentreConfigHistory,

@@ -65,12 +65,7 @@ public class ModuleObservableInstanceUI(ModuleObservableInstanceUIOption option)
 
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
-        if (Option.DisableAPIEndpoints)
-        {
-            return;
-        }
-
-        app.UseEndpoints(endpoints =>
+        UseEndpoints(app, endpoints =>
         {
             var tagGroup = new List<OpenApiTag>
             {
@@ -206,9 +201,4 @@ public class ModuleObservableInstanceUIOption : MoModuleControllerOption<ModuleO
     /// Whether to disable Observable Instance monitoring page
     /// </summary>
     public bool DisableUIObservableInstancePage { get; set; }
-
-    /// <summary>
-    /// Whether to disable API endpoints
-    /// </summary>
-    public bool DisableAPIEndpoints { get; set; }
 }

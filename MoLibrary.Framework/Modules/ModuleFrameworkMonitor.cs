@@ -87,7 +87,7 @@ public class ModuleFrameworkMonitor(ModuleFrameworkMonitorOption option)
     
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
-        app.UseEndpoints(endpoints =>
+        UseEndpoints(app, endpoints =>
         {
             var tagGroup = new List<OpenApiTag> { new() { Name = option.GetApiGroupName(), Description = "系统框架内置接口" } };
 

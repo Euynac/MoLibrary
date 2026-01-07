@@ -47,9 +47,7 @@ public class ModuleXmlDocumentation(ModuleXmlDocumentationOption option)
     /// <param name="app">应用程序构建器</param>
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
-        if (!Option.EnableEndpoints) return;
-
-        app.UseEndpoints(endpoints =>
+        UseEndpoints(app, endpoints =>
         {
             var tagGroup = new List<OpenApiTag> { new() { Name = Option.GetApiGroupName(), Description = "XML文档服务接口" } };
 
