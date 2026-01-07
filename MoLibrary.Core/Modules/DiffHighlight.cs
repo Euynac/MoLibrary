@@ -55,13 +55,13 @@ public class ModuleDiffHighlight(ModuleDiffHighlightOption option) : MoModule<Mo
     /// <param name="app">应用构建器</param>
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
-        if (option.GetIsControllerDisabled())
+        if (option.GetIsEndpointsDisabled())
         {
             Logger.LogDebug("差异对比高亮模块控制器已禁用，跳过端点配置");
             return;
         }
         
-        app.UseEndpoints(endpoints =>
+        UseEndpoints(app, endpoints =>
         {
             var tagGroup = new List<OpenApiTag>
             {

@@ -13,7 +13,7 @@ public static class ConfigExtensions
     public static void ConfigActionWrapper<TConfig>(this IServiceCollection services, Action<TConfig>? configAction)
         where TConfig : class, new()
     {
-        ConfigActionWrapper(services, configAction, out _);
+        services.ConfigActionWrapper(configAction, out _);
     }
     /// <summary>
     /// 辅助设置配置

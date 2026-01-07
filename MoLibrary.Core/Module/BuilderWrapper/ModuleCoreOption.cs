@@ -49,46 +49,18 @@ public class ModuleCoreOption
     {
         DefaultModuleApiGroupName = swaggerGroupName;
     }
+    
 
     /// <summary>
-    /// 设置模块的默认路由前缀，默认情况下以模块名为路由前缀。
+    /// 设置模块的默认Minimal Api禁用状态，默认情况下不禁用。
     /// </summary>
-    public static string? DefaultRoutePrefix { get; set; }
+    public static bool? DefaultMinimalApiDisabled { get; set; }
 
     /// <summary>
-    /// 设置模块的默认路由前缀
+    /// 设置模块的Minimal Api禁用状态
     /// </summary>
-    /// <param name="routePrefix">路由前缀</param>
-    public void SetDefaultRoutePrefix(string routePrefix)
-    {
-        DefaultRoutePrefix = routePrefix;
-    }
-
-    /// <summary>
-    /// 设置模块的默认控制器禁用状态，默认情况下不禁用控制器。
-    /// </summary>
-    public static bool? DefaultDisableControllers { get; set; }
-
-    /// <summary>
-    /// 设置模块的默认控制器禁用状态
-    /// </summary>
-    /// <param name="disableControllers">是否禁用控制器</param>
     public void SetDefaultDisableControllers(bool disableControllers)
     {
-        DefaultDisableControllers = disableControllers;
-    }
-
-    /// <summary>
-    /// 设置模块的默认Swagger可见性，默认情况下在Swagger中可见。
-    /// </summary>
-    public static bool? DefaultIsVisibleInSwagger { get; set; }
-
-    /// <summary>
-    /// 设置模块的默认Swagger可见性
-    /// </summary>
-    /// <param name="isVisibleInSwagger">是否在Swagger中可见</param>
-    public void SetDefaultIsVisibleInSwagger(bool isVisibleInSwagger)
-    {
-        DefaultIsVisibleInSwagger = isVisibleInSwagger;
+        DefaultMinimalApiDisabled = disableControllers;
     }
 }

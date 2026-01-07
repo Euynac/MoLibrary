@@ -1,12 +1,11 @@
 using MoLibrary.Core.Module.Interfaces;
-using MoLibrary.Core.Module.ModuleController;
 
 namespace MoLibrary.Configuration.UI.Modules;
 
 /// <summary>
 /// 配置管理UI模块选项
 /// </summary>
-public class ModuleConfigurationUIOption : MoModuleControllerOption<ModuleConfigurationUI>
+public class ModuleConfigurationUIOption : MoModuleOption<ModuleConfigurationUI>
 {
     /// <summary>
     /// 是否禁用配置管理页面

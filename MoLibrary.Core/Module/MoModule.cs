@@ -1,5 +1,7 @@
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MoLibrary.Core.Module.Features;
@@ -123,6 +125,15 @@ public abstract class MoModule<TModuleSelf, TModuleOption, TModuleGuide>(TModule
     public void CheckRequiredMethod(string methodName, string? errorDetail = null)
     {
         new TModuleGuide().CheckRequiredMethod(methodName, errorDetail);
+    }
+
+    protected void UseEndpoints(IApplicationBuilder builder, Action<IEndpointRouteBuilder> configure)
+    {
+        if (Option is IMoModuleControllerOption option && option.GetIsEndpointsDisabled())
+        {
+            return;
+        }
+        builder.UseEndpoints(configure);
     }
 }
 

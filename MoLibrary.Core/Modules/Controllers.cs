@@ -1,11 +1,9 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
-using MoLibrary.Core.Module.ModuleController;
 
 namespace MoLibrary.Core.Modules;
 
@@ -48,12 +46,6 @@ public class ModuleControllers(ModuleControllersOption option)
                 action(o, serviceProvider);
             });
         }
-   
-        mvcBuilder.ConfigureApplicationPartManager(manager =>
-        {
-            // 动态控制Controller的启用
-            manager.FeatureProviders.Add(new ConditionalControllerFeatureProvider(Option.EnabledMoModuleControllers));
-        });
     }
 
     public override EMoModules CurModuleEnum()
@@ -88,25 +80,6 @@ public class ModuleControllersGuide : MoModuleGuide<ModuleControllers, ModuleCon
         }, secondKey: Guid.NewGuid().ToString());
         return this;
     }
-    public ModuleControllersGuide RegisterMoControllers<TController>(IMoModuleControllerOption options) where TController : MoModuleControllerBase
-    {
-        if (options.GetIsControllerDisabled())
-        {
-            Logger.LogWarning("MoModuleController {Controller} is disabled", typeof(TController).Name);
-            return this;
-        }
-
-        ConfigureModuleOption(o =>
-        {
-            o.EnabledMoModuleControllers.Add(typeof(TController));
-            o.AddMvcOptionAction((mvcOptions, provider) =>
-            {
-                mvcOptions.Conventions.Add(new ModuleControllerModelConvention<TController>(options));
-            });
-        }, secondKey: typeof(TController).Name);
-
-        return this;
-    }
 }
 
 public class ModuleControllersOption : MoModuleOption<ModuleControllers>
@@ -114,7 +87,7 @@ public class ModuleControllersOption : MoModuleOption<ModuleControllers>
     internal List<Action<IMvcBuilder, IServiceProvider>> MvcBuilderActions { get; set; } = [];
     internal List<Action<MvcOptions, IServiceProvider>> MvcOptionActions { get; set; } = [];
     internal List<Action<IServiceCollection>> DependentServicesActions { get; set; } = [];
-    internal HashSet<Type> EnabledMoModuleControllers { get; set; } = [];
+
     public void AddMvcBuilderAction(Action<IMvcBuilder, IServiceProvider> action)
     {
         MvcBuilderActions.Add(action);

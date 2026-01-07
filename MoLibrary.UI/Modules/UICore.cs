@@ -104,9 +104,6 @@ public class ModuleUICore(ModuleUICoreOption option)
 
         // 注册用户上下文服务
         services.AddScoped<MoUserContextService>();
-
-        // 注册通用Controller调用器
-        services.AddScoped(typeof(IUIControllerInvoker<>), typeof(UIControllerInvokerHttpClientProvider<>));
     }
 }
 
