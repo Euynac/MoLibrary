@@ -417,14 +417,28 @@
 
     private async Task ExecuteJobAsync()
     {
-        var result = await UIService.ExecuteJobAsync(JobKey);
-        if (result.IsFailed(out var error))
+        if (_jobDefinition == null) return;
+
+        // 显示执行确认对话框
+        var parameters = new DialogParameters<JobExecuteDialog>
         {
-            Snackbar.Add($"执行失败: {error.Message}", Severity.Error);
-        }
-        else
+            { x => x.JobDefinition, _jobDefinition }
+        };
+
+        var options = new DialogOptions
         {
-            Snackbar.Add("作业已触发执行", Severity.Success);
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            CloseButton = true,
+            BackdropClick = false
+        };
+
+        var dialog = await DialogService.ShowAsync<JobExecuteDialog>("执行作业", parameters, options);
+        var dialogResult = await dialog.Result;
+
+        // 执行结果已在对话框中处理，刷新实例列表
+        if (dialogResult is { Canceled: false })
+        {
             await RefreshRunningInstancesAsync();
         }
     }

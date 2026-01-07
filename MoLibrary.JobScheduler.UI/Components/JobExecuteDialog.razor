@@ -1,0 +1,230 @@
+@using MoLibrary.JobScheduler.Models
+@using MoLibrary.JobScheduler.UI.Services
+@using MoLibrary.JobScheduler.ControlPlane
+@inject JobSchedulerUIService UIService
+@inject JobArgsSchemaService SchemaService
+@inject JobRegistry JobRegistry
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        @if (_isLoading)
+        {
+            <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="pa-4">
+                <MudProgressCircular Indeterminate="true" />
+                <MudText>加载中...</MudText>
+            </MudStack>
+        }
+        else
+        {
+            <MudStack Spacing="3">
+                <!-- Job Info Header -->
+                <div class="job-info-header">
+                    <MudGrid>
+                        <MudItem xs="12" sm="@(_hasArgsType ? 6 : 12)">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">作业</MudText>
+                            <MudText Typo="Typo.body1">@JobDefinition.JobName</MudText>
+                        </MudItem>
+                        @if (_hasArgsType)
+                        {
+                            <MudItem xs="12" sm="6">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">参数类型</MudText>
+                                <MudText Typo="Typo.body1" Class="type-name">
+                                    @_argsTypeName
+                                </MudText>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                </div>
+
+                @if (_hasArgsType)
+                {
+                    <!-- JSON Editor -->
+                    <div class="json-editor-container">
+                        <MudTextField @bind-Value="@_jsonInput"
+                                      T="string"
+                                      Label="JSON 参数"
+                                      Variant="Variant.Outlined"
+                                      Lines="12"
+                                      AutoGrow="true"
+                                      Immediate="true"
+                                      DebounceInterval="300"
+                                      OnDebounceIntervalElapsed="ValidateJson"
+                                      Class="json-input"
+                                      Error="@_hasValidationError"
+                                      ErrorText="@_validationError" />
+                    </div>
+
+                    <!-- Validation Status -->
+                    @if (!_hasValidationError && !string.IsNullOrEmpty(_jsonInput) && _jsonInput != "null")
+                    {
+                        <MudAlert Severity="Severity.Success" Dense="true" Icon="@Icons.Material.Filled.CheckCircle">
+                            JSON 验证通过，可以执行
+                        </MudAlert>
+                    }
+
+                    <!-- Type Reference (Expandable) -->
+                    @if (!string.IsNullOrEmpty(_typeReference))
+                    {
+                        <MudExpansionPanels Elevation="0">
+                            <MudExpansionPanel Text="类型参考" Dense="true" Icon="@Icons.Material.Filled.Info">
+                                <div class="type-reference">
+                                    <pre>@_typeReference</pre>
+                                </div>
+                            </MudExpansionPanel>
+                        </MudExpansionPanels>
+                    }
+                }
+                else
+                {
+                    <!-- No Args - Simple Confirmation -->
+                    <MudAlert Severity="Severity.Info" Dense="true" Icon="@Icons.Material.Filled.Info">
+                        此作业不需要参数，点击执行按钮立即触发
+                    </MudAlert>
+                }
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">取消</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   OnClick="Execute"
+                   Disabled="@(_isLoading || _isExecuting || (_hasArgsType && _hasValidationError))">
+            @if (_isExecuting)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>执行中...</span>
+            }
+            else
+            {
+                <span>执行</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public JobDefinition JobDefinition { get; set; } = null!;
+
+    private string _jsonInput = string.Empty;
+    private string _argsTypeName = string.Empty;
+    private string _typeReference = string.Empty;
+    private string _validationError = string.Empty;
+    private bool _hasValidationError;
+    private bool _hasArgsType;
+    private bool _isLoading = true;
+    private bool _isExecuting;
+    private object? _deserializedArgs;
+    private Type? _argsClrType;
+
+    protected override void OnInitialized()
+    {
+        // 通过 JobRegistry 获取实际的 CLR Type
+        if (!string.IsNullOrEmpty(JobDefinition.JobArgsKey))
+        {
+            _argsClrType = JobRegistry.GetJobArgsClrType(JobDefinition.JobArgsKey);
+        }
+
+        _hasArgsType = _argsClrType != null;
+        _argsTypeName = _argsClrType?.Name ?? "无";
+
+        if (_hasArgsType)
+        {
+            _typeReference = SchemaService.GenerateTypeReference(_argsClrType);
+
+            var jsonResult = SchemaService.GenerateDefaultJson(_argsClrType);
+            if (jsonResult.IsFailed(out var error))
+            {
+                _jsonInput = "{}";
+                Snackbar.Add($"生成默认 JSON 失败: {error.Message}", Severity.Warning);
+            }
+            else
+            {
+                _jsonInput = jsonResult.Data!;
+            }
+
+            ValidateJson();
+        }
+
+        _isLoading = false;
+    }
+
+    private void ValidateJson()
+    {
+        if (!_hasArgsType)
+        {
+            _hasValidationError = false;
+            _deserializedArgs = null;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_jsonInput))
+        {
+            _hasValidationError = true;
+            _validationError = "JSON 不能为空";
+            _deserializedArgs = null;
+            return;
+        }
+
+        var result = SchemaService.ValidateAndDeserialize(_jsonInput, _argsClrType);
+        if (result.IsFailed(out var error))
+        {
+            _hasValidationError = true;
+            _validationError = error.Message;
+            _deserializedArgs = null;
+        }
+        else
+        {
+            _hasValidationError = false;
+            _validationError = string.Empty;
+            _deserializedArgs = result.Data;
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private async Task Execute()
+    {
+        // Final validation before execution (only for jobs with args)
+        if (_hasArgsType)
+        {
+            ValidateJson();
+            if (_hasValidationError)
+            {
+                return;
+            }
+        }
+
+        _isExecuting = true;
+
+        try
+        {
+            var result = await UIService.ExecuteJobAsync(JobDefinition.JobKey, _deserializedArgs);
+            if (result.IsFailed(out var error))
+            {
+                Snackbar.Add($"执行失败: {error.Message}", Severity.Error);
+            }
+            else
+            {
+                Snackbar.Add($"作业 {JobDefinition.JobName} 已触发执行", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"执行失败: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isExecuting = false;
+        }
+    }
+}

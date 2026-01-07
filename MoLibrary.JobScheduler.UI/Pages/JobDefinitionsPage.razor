@@ -601,14 +601,41 @@
 
     private async Task ExecuteJobAsync(string jobKey)
     {
-        var result = await UIService.ExecuteJobAsync(jobKey);
-        if (result.IsFailed(out var error))
+        // 获取 JobDefinition
+        var defResult = await UIService.GetJobDefinitionAsync(jobKey);
+        if (defResult.IsFailed(out var error, out var definition))
         {
-            Snackbar.Add($"执行失败: {error.Message}", Severity.Error);
+            Snackbar.Add($"获取作业定义失败: {error.Message}", Severity.Error);
+            return;
         }
-        else
+
+        if (definition == null)
         {
-            Snackbar.Add($"作业 {jobKey} 已触发执行", Severity.Success);
+            Snackbar.Add("作业定义不存在", Severity.Error);
+            return;
+        }
+
+        // 显示执行确认对话框
+        var parameters = new DialogParameters<JobExecuteDialog>
+        {
+            { x => x.JobDefinition, definition }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            CloseButton = true,
+            BackdropClick = false
+        };
+
+        var dialog = await DialogService.ShowAsync<JobExecuteDialog>("执行作业", parameters, options);
+        var dialogResult = await dialog.Result;
+
+        // 执行结果已在对话框中处理，刷新列表
+        if (dialogResult is { Canceled: false })
+        {
+            await RefreshTriggerJobsAsync();
         }
     }
 

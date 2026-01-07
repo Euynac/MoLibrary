@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Dynamic;
 using System.Text.Json.Serialization;
+using MoLibrary.Tool.Extensions;
 using MoLibrary.Tool.General;
 
 namespace MoLibrary.Tool.MoResponse;
@@ -240,9 +241,9 @@ public record Res<T> : IMoResponse
     {
         if (ExtraInfo is not null)
         {
-            return $"{Message}({Code})\n{ExtraInfo.ToJsonString()!}";
+            return $"{Message}({Code}) Data: {Data?.ToJsonStringForce()?.LimitMaxLength(500, "...")}\n{ExtraInfo.ToJsonString()?.LimitMaxLength(500, "...")}";
         }
 
-        return $"{Message}({Code})";
+        return $"{Message}({Code}) Data: {Data?.ToJsonStringForce()?.LimitMaxLength(500, "...")}";
     }
 }
