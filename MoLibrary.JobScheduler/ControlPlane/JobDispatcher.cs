@@ -61,6 +61,7 @@ public class JobDispatcher(
                 InstanceId = instance.InstanceId,
                 JobKey = definition.JobKey,
                 JobArgs = parameters?.ToString(), // Already JSON string or null
+                JobArgsKey = definition.JobArgsKey,
                 RequestedAt = DateTime.UtcNow,
                 MaxExecutionTimeout = definition.MaxExecutionTimeout,
                 JobType = definition.JobType,
