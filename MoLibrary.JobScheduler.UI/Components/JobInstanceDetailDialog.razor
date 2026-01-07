@@ -49,14 +49,26 @@
                         <MudText Typo="Typo.body1">@_jobInstance.JobKey</MudText>
                     </MudItem>
                     <MudItem xs="12" sm="6" md="4">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">运行客户端</MudText>
+                        <MudText Typo="Typo.body1" Style="font-family: monospace;">@(_jobInstance.RunningClientId ?? "-")</MudText>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="4">
                         <MudText Typo="Typo.caption" Color="Color.Secondary">状态</MudText>
                         <MudChip T="string" Size="Size.Small" Color="@ColorService.GetStateColor(_jobInstance.State)">
                             @_jobInstance.State
                         </MudChip>
                     </MudItem>
                     <MudItem xs="12" sm="6" md="4">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">重试次数</MudText>
+                        <MudText Typo="Typo.body1" Color="@(_jobInstance.RetryAttempt > 0 ? Color.Warning : Color.Default)">@_jobInstance.RetryAttempt</MudText>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="4">
                         <MudText Typo="Typo.caption" Color="Color.Secondary">创建时间</MudText>
                         <MudText Typo="Typo.body1">@_jobInstance.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">计划执行时间</MudText>
+                        <MudText Typo="Typo.body1">@(_jobInstance.ScheduledExecutionTime?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "-")</MudText>
                     </MudItem>
                     <MudItem xs="12" sm="6" md="4">
                         <MudText Typo="Typo.caption" Color="Color.Secondary">开始时间</MudText>
