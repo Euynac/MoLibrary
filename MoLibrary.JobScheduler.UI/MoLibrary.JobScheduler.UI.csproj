@@ -1,10 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <Import Project="..\common.xml"/>
+
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
     <GenerateStaticWebAssetsManifest>true</GenerateStaticWebAssetsManifest>
-    <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1998</NoWarn>
   </PropertyGroup>
 

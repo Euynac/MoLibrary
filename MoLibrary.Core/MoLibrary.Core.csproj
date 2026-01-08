@@ -1,10 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+  <Import Project="..\common.xml"/>
+
 
   <ItemGroup>
     <PackageReference Include="Mapster.DependencyInjection" Version="1.0.1" />
@@ -18,6 +15,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MoLibrary.Tool\MoLibrary.Tool.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Modules\ModuleSnowflakeId.cs" />
+    <Compile Remove="Modules\ModuleGlobalJson.cs" />
+    <Compile Remove="Modules\ModuleGlobalExceptionHandler.cs" />
+    <Compile Remove="Modules\ModuleDiffHighlight.cs" />
   </ItemGroup>
 
 </Project>

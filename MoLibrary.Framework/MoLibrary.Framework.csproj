@@ -2,10 +2,6 @@
 
 	<Import Project="..\common.xml"></Import>
 
-	<PropertyGroup>
-		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-	</PropertyGroup>
-
 	<ItemGroup>
 	  <Compile Remove="Databases\**" />
 	  <EmbeddedResource Remove="Databases\**" />
