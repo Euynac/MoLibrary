@@ -1,3 +1,4 @@
+using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -10,25 +11,19 @@ using MoLibrary.Authority.Authentication;
 using MoLibrary.Authority.Implements.Security;
 using MoLibrary.Authority.Security;
 using MoLibrary.Core.Module;
+using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 
 namespace MoLibrary.Authority.Modules;
 
-public class CustomAuthorizeFilter : IAuthorizationFilter
+public static class ModuleAuthenticationBuilderExtensions
 {
-    public void OnAuthorization(AuthorizationFilterContext context)
+    public static ModuleAuthenticationGuide ConfigModuleAuthentication(this WebApplicationBuilder builder, Action<ModuleAuthenticationOption>? action = null)
     {
-        if (context.HttpContext.User.Identity == null)
-        {
-            return;
-        }
-
-        if (!context.HttpContext.User.Identity.IsAuthenticated)
-        {
-            return;
-        }
+        return new ModuleAuthenticationGuide().Register(action);
     }
 }
+
 public class ModuleAuthentication(ModuleAuthenticationOption option) : MoModule<ModuleAuthentication, ModuleAuthenticationOption, ModuleAuthenticationGuide>(option)
 {
     public override EMoModules CurModuleEnum()
@@ -139,5 +134,69 @@ public class ModuleAuthentication(ModuleAuthenticationOption option) : MoModule<
     public override void ConfigureApplicationBuilder(IApplicationBuilder app)
     {
         app.UseAuthentication();
+    }
+}
+
+public class ModuleAuthenticationGuide : MoModuleGuide<ModuleAuthentication, ModuleAuthenticationOption, ModuleAuthenticationGuide>
+{
+    protected override string[] GetRequestedConfigMethodKeys()
+    {
+        return [nameof(ConfigSystemUser)];
+    }
+    public ModuleAuthenticationGuide ConfigSystemUser<T>(T curSystemEnum, Action<MoSystemUserOptions>? action = null) where T : struct, Enum
+    {
+        ConfigureServices(context =>
+        {
+            context.Services.Configure((MoSystemUserOptions o) =>
+            {
+                o.SetCurSystemUser(curSystemEnum);
+                action?.Invoke(o);
+            });
+            context.Services.AddSingleton<IMoSystemUserManager, MoSystemUserManager>();
+        });
+        return this;
+        
+    }
+
+    public ModuleAuthenticationGuide ConfigDefaultSystemUser(Action<MoSystemUserOptions>? action = null)
+    {
+        return ConfigSystemUser(EMoDefaultSystemUser.System, action);
+    }
+}
+
+public class ModuleAuthenticationOption : MoModuleOptionWithMinimalApi<ModuleAuthentication>
+{
+    //巨坑：Secret的长度必须大于128bit，否则需要补全到该长度。而且Secret必须一致，不可动态生成
+    public SymmetricSecurityKey SecurityKey => new(Encoding.ASCII.GetBytes(Secret.PadRight(512 / 8, '\0')));
+    public string Secret { get; set; } = nameof(Secret) + nameof(Secret);
+    /// <summary>
+    /// Can not be null or empty if validate Issuer.
+    /// </summary>
+    public string Issuer { get; set; } = nameof(Issuer);
+
+    /// <summary>
+    /// Can not be null or empty if validate audience.
+    /// </summary>
+    public string Audience { get; set; } = nameof(Audience);
+
+    public int AccessTokenExpiration { get; set; } = 60;
+
+    public int RefreshTokenExpiration { get; set; } = 120;
+    public bool IsDebugging { get; set; }
+}
+
+public class CustomAuthorizeFilter : IAuthorizationFilter
+{
+    public void OnAuthorization(AuthorizationFilterContext context)
+    {
+        if (context.HttpContext.User.Identity == null)
+        {
+            return;
+        }
+
+        if (!context.HttpContext.User.Identity.IsAuthenticated)
+        {
+            return;
+        }
     }
 }

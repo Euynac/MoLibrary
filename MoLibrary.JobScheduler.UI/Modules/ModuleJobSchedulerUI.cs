@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Module;
+using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.JobScheduler.Modules;
 using MoLibrary.JobScheduler.UI.Pages;
@@ -10,6 +11,22 @@ using MoLibrary.UI.UIStackTrace.Services;
 using MudBlazor;
 
 namespace MoLibrary.JobScheduler.UI.Modules;
+
+/// <summary>
+/// JobScheduler UI 模块注册扩展方法
+/// </summary>
+public static class ModuleJobSchedulerUIBuilderExtensions
+{
+    /// <summary>
+    /// 配置 JobScheduler UI 模块
+    /// </summary>
+    public static ModuleJobSchedulerUIGuide ConfigModuleJobSchedulerUI(
+        this WebApplicationBuilder builder,
+        Action<ModuleJobSchedulerUIOption>? action = null)
+    {
+        return new ModuleJobSchedulerUIGuide().Register(action);
+    }
+}
 
 /// <summary>
 /// JobScheduler UI 模块实现
@@ -71,4 +88,53 @@ public class ModuleJobSchedulerUI(ModuleJobSchedulerUIOption option)
                 });
         }
     }
+}
+
+/// <summary>
+/// JobScheduler UI 模块配置指南
+/// </summary>
+public class ModuleJobSchedulerUIGuide
+    : MoModuleGuide<ModuleJobSchedulerUI, ModuleJobSchedulerUIOption, ModuleJobSchedulerUIGuide>
+{
+    // 配置方法可在后续需要时添加
+    // 目前通过 ConfigModuleJobSchedulerUI(options => { ... }) 直接配置即可
+}
+
+/// <summary>
+/// JobScheduler UI 模块配置选项
+/// </summary>
+public class ModuleJobSchedulerUIOption : MoModuleOption<ModuleJobSchedulerUI>
+{
+    /// <summary>
+    /// 禁用 JobScheduler UI 页面
+    /// </summary>
+    public bool DisableJobSchedulerPages { get; set; } = false;
+
+    /// <summary>
+    /// 健康指标时间窗口（默认 30 天）
+    /// 配置统计近 x 时间健康度
+    /// </summary>
+    public TimeSpan HealthMetricsWindow { get; set; } = TimeSpan.FromDays(30);
+
+    /// <summary>
+    /// 健康指标中显示的最近失败实例数量（默认 5）
+    /// 配置显示最近 x 个失败实例记录
+    /// </summary>
+    public int HealthMetricsFailedInstancesLimit { get; set; } = 5;
+
+    /// <summary>
+    /// 表格默认分页大小（默认 20）
+    /// </summary>
+    public int DefaultPageSize { get; set; } = 20;
+
+    /// <summary>
+    /// 自动刷新间隔（默认 5 秒）
+    /// 设置为更高值（如 10 秒）以减少服务器负载
+    /// </summary>
+    public TimeSpan AutoRefreshInterval { get; set; } = TimeSpan.FromSeconds(5);
+
+    /// <summary>
+    /// 默认启用自动刷新
+    /// </summary>
+    public bool EnableAutoRefreshByDefault { get; set; } = true;
 }

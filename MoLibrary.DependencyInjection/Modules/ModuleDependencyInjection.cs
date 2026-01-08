@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
@@ -7,6 +8,15 @@ using MoLibrary.DependencyInjection.CoreInterfaces;
 using MoLibrary.DependencyInjection.Implements;
 
 namespace MoLibrary.DependencyInjection.Modules;
+
+public static class ModuleDependencyInjectionBuilderExtensions
+{
+    public static ModuleDependencyInjectionGuide ConfigModuleDependencyInjection(this WebApplicationBuilder builder,
+        Action<ModuleDependencyInjectionOption>? action = null)
+    {
+        return new ModuleDependencyInjectionGuide().Register(action);
+    }
+}
 
 public class ModuleDependencyInjection(ModuleDependencyInjectionOption option)
     : MoModule<ModuleDependencyInjection, ModuleDependencyInjectionOption, ModuleDependencyInjectionGuide>(option), IWantIterateBusinessTypes
@@ -48,4 +58,19 @@ public class ModuleDependencyInjection(ModuleDependencyInjectionOption option)
             yield return type;
         }
     }
+}
+
+public class ModuleDependencyInjectionGuide : MoModuleGuide<ModuleDependencyInjection, ModuleDependencyInjectionOption,
+    ModuleDependencyInjectionGuide>
+{
+  
+}
+
+public class ModuleDependencyInjectionOption : MoModuleOption<ModuleDependencyInjection>
+{
+    /// <summary>
+    /// 相关项目单元所在程序集名，使用名称包含查找。如若不配置，则默认仅扫描Entry程序集。
+    /// </summary>
+    public string[]? RelatedAssemblies { get; set; }
+    public bool EnableDebug { get; set; }
 }

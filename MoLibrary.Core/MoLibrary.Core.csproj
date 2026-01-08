@@ -17,11 +17,5 @@
     <ProjectReference Include="..\MoLibrary.Tool\MoLibrary.Tool.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Compile Remove="Modules\ModuleSnowflakeId.cs" />
-    <Compile Remove="Modules\ModuleGlobalJson.cs" />
-    <Compile Remove="Modules\ModuleGlobalExceptionHandler.cs" />
-    <Compile Remove="Modules\ModuleDiffHighlight.cs" />
-  </ItemGroup>
 
 </Project>
