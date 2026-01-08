@@ -93,7 +93,7 @@ public abstract class MoModule<TModuleSelf, TModuleOption, TModuleGuide>(TModule
     }
     internal override void ConvertToRegisterRequest()
     {
-        var guide = new TModuleGuide();
+        var guide = new TModuleGuide(); //TODO 这里并未能得到注册来源
 
         guide.ConfigureBuilder(context =>
         {

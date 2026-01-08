@@ -27,6 +27,7 @@ public class MoModuleGuide
 
     public MoModuleGuide()
     {
+        GuideFrom = EMoModules.Developer;
         _loggerLazy = new Lazy<ILogger>(() => LogProvider.For(GetType()));
     }
 
@@ -50,10 +51,10 @@ public class MoModuleGuide
         where TDependsModuleGuide : MoModuleGuide, new()
     {
         // Add dependency to the list if it's not already there
-        var dependsOnEnum = new TDependsModuleGuide().GetTargetModuleEnum();
+        var dependsOnModule = new TDependsModuleGuide().GetTargetModuleEnum();
 
         // Register this dependency relationship in the ModuleAnalyser
-        ModuleAnalyser.AddDependency(fromModule, dependsOnEnum);
+        ModuleAnalyser.AddDependency(fromModule, dependsOnModule);
 
         return new TDependsModuleGuide()
         {
@@ -69,7 +70,7 @@ public class MoModuleGuide
     public TOtherModuleGuide DependsOnModule<TOtherModuleGuide>()
         where TOtherModuleGuide : MoModuleGuide, new()
     {
-        return DeclareDependency<TOtherModuleGuide>(GetTargetModuleEnum(), GuideFrom);
+        return DeclareDependency<TOtherModuleGuide>(GetTargetModuleEnum(), GetTargetModuleEnum());
     }
 }
 public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleGuide, IMoModuleGuide, IMoModuleGuideBridge
@@ -191,7 +192,10 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     /// <param name="key">配置方法的唯一标识符</param>
     protected internal void ConfigureEmpty([CallerMemberName] string key = "")
     {
-        RegisterModule(new ModuleRegisterRequest(key));
+        RegisterModule(new ModuleRegisterRequest(key)
+        {
+            RequestFrom = GuideFrom
+        });
     }
 
     /// <summary>
