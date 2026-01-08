@@ -169,7 +169,7 @@ public class ModuleDataChannelGuide : MoModuleGuide<ModuleDataChannel, ModuleDat
 /// 用于配置数据通道的全局设置和选项
 /// 实现了IMoModuleOptions接口，支持模块化配置
 /// </summary>
-public class ModuleDataChannelOption : MoModuleControllerOption<ModuleDataChannel>
+public class ModuleDataChannelOption : MoModuleOptionWithMinimalApi<ModuleDataChannel>
 {
     /// <summary>
     /// 最近异常保留数量

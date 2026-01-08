@@ -129,7 +129,7 @@ public abstract class MoModule<TModuleSelf, TModuleOption, TModuleGuide>(TModule
 
     protected void UseEndpoints(IApplicationBuilder builder, Action<IEndpointRouteBuilder> configure)
     {
-        if (Option is IMoModuleControllerOption option && option.GetIsEndpointsDisabled())
+        if (Option is IMoModuleOptionWithMinimalApi option && option.GetIsMinimalApiDisabled())
         {
             return;
         }

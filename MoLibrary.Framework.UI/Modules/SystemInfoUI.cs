@@ -129,7 +129,7 @@ public class ModuleSystemInfoUIGuide : MoModuleGuide<ModuleSystemInfoUI, ModuleS
 /// <summary>
 /// SystemInfoUI模块选项
 /// </summary>
-public class ModuleSystemInfoUIOption : MoModuleControllerOption<ModuleSystemInfoUI>
+public class ModuleSystemInfoUIOption : MoModuleOptionWithMinimalApi<ModuleSystemInfoUI>
 {
     /// <summary>
     /// 是否禁用系统信息页面

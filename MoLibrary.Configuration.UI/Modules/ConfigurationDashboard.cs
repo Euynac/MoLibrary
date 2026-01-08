@@ -207,6 +207,6 @@ public static class ModuleConfigurationDashboardBuilderExtensions
     }
 }
 
-public class ModuleConfigurationDashboardOption : MoModuleControllerOption<ModuleConfigurationDashboard>
+public class ModuleConfigurationDashboardOption : MoModuleOptionWithMinimalApi<ModuleConfigurationDashboard>
 {
 }

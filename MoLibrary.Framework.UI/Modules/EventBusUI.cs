@@ -187,7 +187,7 @@ public class ModuleEventBusUIGuide : MoModuleGuide<ModuleEventBusUI, ModuleEvent
 /// <summary>
 /// EventBusUI模块选项
 /// </summary>
-public class ModuleEventBusUIOption : MoModuleControllerOption<ModuleEventBusUI>
+public class ModuleEventBusUIOption : MoModuleOptionWithMinimalApi<ModuleEventBusUI>
 {
     /// <summary>
     /// 是否禁用事件总线监控页面

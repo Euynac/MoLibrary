@@ -3,7 +3,7 @@ namespace MoLibrary.Core.Module.Interfaces;
 /// <summary>
 /// Defines the options for a module in the MoLibrary.
 /// </summary>
-public interface IMoModuleControllerOption
+public interface IMoModuleOptionWithMinimalApi
 {
     /// <summary>
     /// Gets the Swagger group name for the module.
@@ -14,5 +14,5 @@ public interface IMoModuleControllerOption
     /// Gets a value indicating whether controllers are disabled for the module.
     /// </summary>
     /// <returns><c>true</c> if controllers are disabled; otherwise, <c>false</c>.</returns>
-    public bool GetIsEndpointsDisabled();
+    public bool GetIsMinimalApiDisabled();
 }

@@ -5,7 +5,7 @@ namespace MoLibrary.SignalR.Modules;
 /// <summary>
 /// SignalR模块配置选项
 /// </summary>
-public class ModuleSignalROption : MoModuleControllerOption<ModuleSignalR>
+public class ModuleSignalROption : MoModuleOptionWithMinimalApi<ModuleSignalR>
 {
     /// <summary>
     /// 注册的Hub类型

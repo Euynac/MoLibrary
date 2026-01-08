@@ -82,6 +82,6 @@ public class ModuleProfilingGuide : MoModuleGuide<ModuleProfiling, ModuleProfili
 {
 }
 
-public class ModuleProfilingOption : MoModuleControllerOption<ModuleProfiling>
+public class ModuleProfilingOption : MoModuleOptionWithMinimalApi<ModuleProfiling>
 {
 }

@@ -84,7 +84,7 @@ public class ModuleDaprEventBusGuide : MoModuleGuide<ModuleDaprEventBus, ModuleD
     }
 }
 
-public class ModuleDaprEventBusOption : MoModuleControllerOption<ModuleDaprEventBus>
+public class ModuleDaprEventBusOption : MoModuleOptionWithMinimalApi<ModuleDaprEventBus>
 {
     public string PubSubName { get; set; } = "pubsub";
 

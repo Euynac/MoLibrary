@@ -4,7 +4,7 @@ using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.Framework.Modules;
 
-public class ModuleFrameworkMonitorOption : MoModuleControllerOption<ModuleFrameworkMonitor>
+public class ModuleFrameworkMonitorOption : MoModuleOptionWithMinimalApi<ModuleFrameworkMonitor>
 {
     /// <summary>
     /// 惯例命名设置

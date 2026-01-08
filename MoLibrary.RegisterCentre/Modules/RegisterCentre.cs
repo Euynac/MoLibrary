@@ -319,7 +319,7 @@ public static class ModuleRegisterCentreBuilderExtensions
     }
 }
 
-public class ModuleRegisterCentreOption : MoModuleControllerOption<ModuleRegisterCentre>
+public class ModuleRegisterCentreOption : MoModuleOptionWithMinimalApi<ModuleRegisterCentre>
 {
     /// <summary>
     /// 当前微服务是注册中心

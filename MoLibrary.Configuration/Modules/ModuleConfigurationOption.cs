@@ -5,7 +5,7 @@ using MoLibrary.Core.Module.Interfaces;
 
 namespace MoLibrary.Configuration.Modules;
 
-public class ModuleConfigurationOption : MoModuleControllerOption<ModuleConfiguration>
+public class ModuleConfigurationOption : MoModuleOptionWithMinimalApi<ModuleConfiguration>
 {
 
     /// <summary>

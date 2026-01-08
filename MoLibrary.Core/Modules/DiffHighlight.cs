@@ -161,7 +161,7 @@ public class ModuleDiffHighlightGuide : MoModuleGuide<ModuleDiffHighlight, Modul
 /// <summary>
 /// 差异对比高亮模块配置选项
 /// </summary>
-public class ModuleDiffHighlightOption : MoModuleControllerOption<ModuleDiffHighlight>
+public class ModuleDiffHighlightOption : MoModuleOptionWithMinimalApi<ModuleDiffHighlight>
 {
     /// <summary>
     /// 默认对比模式

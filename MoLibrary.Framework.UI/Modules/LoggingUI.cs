@@ -142,7 +142,7 @@ public class ModuleLoggingUIGuide : MoModuleGuide<ModuleLoggingUI, ModuleLogging
 /// <summary>
 /// Logging UI 模块选项
 /// </summary>
-public class ModuleLoggingUIOption : MoModuleControllerOption<ModuleLoggingUI>
+public class ModuleLoggingUIOption : MoModuleOptionWithMinimalApi<ModuleLoggingUI>
 {
     /// <summary>
     /// 是否禁用日志监控页面

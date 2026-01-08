@@ -195,7 +195,7 @@ public class ModuleObservableInstanceUIGuide : MoModuleGuide<ModuleObservableIns
 /// <summary>
 /// ObservableInstanceUI module options
 /// </summary>
-public class ModuleObservableInstanceUIOption : MoModuleControllerOption<ModuleObservableInstanceUI>
+public class ModuleObservableInstanceUIOption : MoModuleOptionWithMinimalApi<ModuleObservableInstanceUI>
 {
     /// <summary>
     /// Whether to disable Observable Instance monitoring page

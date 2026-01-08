@@ -107,7 +107,7 @@ public class ModuleTimekeeperUIGuide : MoModuleGuide<ModuleTimekeeperUI, ModuleT
 /// <summary>
 /// TimekeeperUI模块选项
 /// </summary>
-public class ModuleTimekeeperUIOption : MoModuleControllerOption<ModuleTimekeeperUI>
+public class ModuleTimekeeperUIOption : MoModuleOptionWithMinimalApi<ModuleTimekeeperUI>
 { 
     /// <summary>
     /// 是否禁用Timekeeper调试页面

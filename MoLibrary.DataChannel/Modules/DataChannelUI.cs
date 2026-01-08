@@ -97,7 +97,7 @@ public class ModuleDataChannelUIGuide : MoModuleGuide<ModuleDataChannelUI, Modul
 /// <summary>
 /// DataChannel UI模块选项
 /// </summary>
-public class ModuleDataChannelUIOption : MoModuleControllerOption<ModuleDataChannelUI>
+public class ModuleDataChannelUIOption : MoModuleOptionWithMinimalApi<ModuleDataChannelUI>
 {
     /// <summary>
     /// 是否禁用DataChannel页面

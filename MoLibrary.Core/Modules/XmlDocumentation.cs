@@ -104,7 +104,7 @@ public class ModuleXmlDocumentationGuide : MoModuleGuide<ModuleXmlDocumentation,
 {
 }
 
-public class ModuleXmlDocumentationOption : MoModuleControllerOption<ModuleXmlDocumentation>
+public class ModuleXmlDocumentationOption : MoModuleOptionWithMinimalApi<ModuleXmlDocumentation>
 {
     /// <summary>
     /// 是否启用端点（默认禁用）

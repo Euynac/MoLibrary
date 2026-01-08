@@ -106,7 +106,7 @@ public class ModuleDaprGuide : MoModuleGuide<ModuleDapr, ModuleDaprOption, Modul
 
 }
 
-public class ModuleDaprOption : MoModuleControllerOption<ModuleDapr>
+public class ModuleDaprOption : MoModuleOptionWithMinimalApi<ModuleDapr>
 {
     
 }

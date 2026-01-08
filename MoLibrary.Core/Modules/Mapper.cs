@@ -162,7 +162,7 @@ public class ModuleMapperGuide : MoModuleGuide<ModuleMapper, ModuleMapperOption,
 }
 
 
-public class ModuleMapperOption : MoModuleControllerOption<ModuleMapper>
+public class ModuleMapperOption : MoModuleOptionWithMinimalApi<ModuleMapper>
 {
     /// <summary>
     /// 启用对Mapper进行调试（暂时仅支持手动调试）

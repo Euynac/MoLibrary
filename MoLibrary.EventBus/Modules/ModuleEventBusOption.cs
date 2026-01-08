@@ -3,7 +3,7 @@ using MoLibrary.EventBus.Abstractions.Handlers;
 
 namespace MoLibrary.EventBus.Modules;
 
-public class ModuleEventBusOption : MoModuleControllerOption<ModuleEventBus>
+public class ModuleEventBusOption : MoModuleOptionWithMinimalApi<ModuleEventBus>
 {
     /// <summary>
     /// 是否禁止自动注册实现了 <see cref="IMoDistributedEventHandler{TEvent}"/>以及 <see cref="IMoLocalEventHandler{TEvent}"/> 的类型
