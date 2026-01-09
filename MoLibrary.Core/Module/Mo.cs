@@ -1,11 +1,33 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Logging;
+using MoLibrary.Core.Module.BuilderWrapper;
 using MoLibrary.Core.Module.TypeFinder;
 
 namespace MoLibrary.Core.Module;
 
 public static class Mo
 {
+    /// <summary>
+    /// Initializes the Mo module system with Harmony patches for ASP.NET Core lifecycle interception.
+    /// This should be called early in the application startup, typically before configuring services.
+    /// </summary>
+    /// <param name="builder">The WebApplicationBuilder instance.</param>
+    /// <param name="typeFinderConfigure">Optional configuration for the type finder.</param>
+    public static void Initialize(WebApplicationBuilder builder, Action<ModuleCoreOptionTypeFinder>? typeFinderConfigure = null)
+    {
+        // Initialize Harmony patches to intercept native ASP.NET Core methods
+        HarmonyPatchManager.EnsurePatched();
+
+        // Store the builder instance for instant registration support
+        WebApplicationBuilderExtensions.WebApplicationBuilderInstance = builder;
+
+        // Configure the type finder if provided
+        if (typeFinderConfigure != null)
+        {
+            Options.ConfigTypeFinder(typeFinderConfigure);
+        }
+    }
+
     /// <summary>
     /// 已加载的模块立即进行注册，如一些模块有需要在注册期间进行使用的，如Configuration、Logging模块等。注意对于有嵌套依赖的模块注册慎用，会使得后续的这些模块配置失效，因为已经被注册。
     /// </summary>
