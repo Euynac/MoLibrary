@@ -5,7 +5,7 @@
 
   <ItemGroup>
     <PackageReference Include="Apache.NMS.ActiveMQ" Version="2.2.0" />
-    <PackageReference Include="Confluent.Kafka" Version="2.11.1" />
+    <PackageReference Include="Confluent.Kafka" Version="2.13.0" />
   </ItemGroup>
 
   <ItemGroup>
