@@ -1,0 +1,74 @@
+@using MoLibrary.JobScheduler.UI.Models
+
+<div class="health-banner-wrapper">
+    <MudPaper Class="@GetBannerClass()" Elevation="0">
+        <div class="health-content">
+            <div class="health-icon">
+                <MudIcon Icon="@GetHealthIcon()" Size="Size.Large" />
+            </div>
+            <div class="health-info">
+                <div class="health-status">@GetStatusText()</div>
+                @if (!string.IsNullOrEmpty(Message))
+                {
+                    <div class="health-message">@Message</div>
+                }
+            </div>
+            <div class="health-indicator">
+                <div class="pulse-dot @GetPulseClass()"></div>
+            </div>
+        </div>
+    </MudPaper>
+</div>
+
+@code {
+    [Parameter]
+    public SystemHealthStatus Status { get; set; } = SystemHealthStatus.Healthy;
+
+    [Parameter]
+    public string? Message { get; set; }
+
+    private string GetBannerClass()
+    {
+        var baseClass = "health-banner";
+        return Status switch
+        {
+            SystemHealthStatus.Healthy => $"{baseClass} health-healthy",
+            SystemHealthStatus.Degraded => $"{baseClass} health-degraded",
+            SystemHealthStatus.Unhealthy => $"{baseClass} health-unhealthy",
+            _ => baseClass
+        };
+    }
+
+    private string GetHealthIcon()
+    {
+        return Status switch
+        {
+            SystemHealthStatus.Healthy => Icons.Material.Filled.CheckCircle,
+            SystemHealthStatus.Degraded => Icons.Material.Filled.Warning,
+            SystemHealthStatus.Unhealthy => Icons.Material.Filled.Error,
+            _ => Icons.Material.Filled.Help
+        };
+    }
+
+    private string GetStatusText()
+    {
+        return Status switch
+        {
+            SystemHealthStatus.Healthy => "系统运行正常",
+            SystemHealthStatus.Degraded => "系统部分降级",
+            SystemHealthStatus.Unhealthy => "系统异常",
+            _ => "未知状态"
+        };
+    }
+
+    private string GetPulseClass()
+    {
+        return Status switch
+        {
+            SystemHealthStatus.Healthy => "pulse-healthy",
+            SystemHealthStatus.Degraded => "pulse-degraded",
+            SystemHealthStatus.Unhealthy => "pulse-unhealthy",
+            _ => ""
+        };
+    }
+}

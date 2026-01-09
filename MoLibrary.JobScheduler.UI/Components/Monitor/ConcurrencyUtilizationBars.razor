@@ -1,0 +1,90 @@
+@using MoLibrary.JobScheduler.UI.Models
+
+@inject NavigationManager NavigationManager
+
+<div class="concurrency-bars-wrapper">
+    <MudPaper Class="concurrency-card" Elevation="0">
+        <div class="card-header">
+            <div class="header-title">
+                <MudIcon Icon="@Icons.Material.Filled.Memory" Size="Size.Small" Color="Color.Secondary" />
+                <MudText Typo="Typo.h6">并发利用率</MudText>
+            </div>
+            <MudTooltip Text="显示当前有活跃执行的任务的并发槽位使用情况">
+                <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Default" />
+            </MudTooltip>
+        </div>
+
+        @if (Usages.Count > 0)
+        {
+            <div class="bars-container">
+                @foreach (var usage in Usages.Take(10))
+                {
+                    <div class="usage-item" @onclick="() => ViewJob(usage.JobKey)">
+                        <div class="usage-header">
+                            <span class="job-name" title="@usage.JobKey">@usage.JobName</span>
+                            <span class="usage-text">
+                                @usage.CurrentExecuting / @usage.MaxConcurrency
+                            </span>
+                        </div>
+                        <div class="usage-bar">
+                            <MudProgressLinear Value="@usage.UtilizationPercent"
+                                               Max="100"
+                                               Color="@GetUtilizationColor(usage)"
+                                               Size="Size.Medium" />
+                        </div>
+                        <div class="usage-detail">
+                            @if (usage.CurrentRunning > 0)
+                            {
+                                <span class="running">@usage.CurrentRunning 运行中</span>
+                            }
+                            @if (usage.PendingCount > 0)
+                            {
+                                <span class="pending">@usage.PendingCount 等待中</span>
+                            }
+                            @if (usage.IsAtCapacity)
+                            {
+                                <MudChip T="string" Color="Color.Warning" Size="Size.Small" Variant="Variant.Outlined">
+                                    已满
+                                </MudChip>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            @if (Usages.Count > 10)
+            {
+                <div class="show-more">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        还有 @(Usages.Count - 10) 个任务...
+                    </MudText>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="empty-state">
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircleOutline" Size="Size.Large" Color="Color.Success" />
+                <MudText Typo="Typo.body2" Color="Color.Secondary">当前无活跃任务</MudText>
+            </div>
+        }
+    </MudPaper>
+</div>
+
+@code {
+    [Parameter]
+    public List<ConcurrencyUsage> Usages { get; set; } = [];
+
+    private void ViewJob(string jobKey)
+    {
+        NavigationManager.NavigateTo($"/job-scheduler/definitions/{Uri.EscapeDataString(jobKey)}");
+    }
+
+    private static Color GetUtilizationColor(ConcurrencyUsage usage)
+    {
+        if (usage.IsAtCapacity) return Color.Error;
+        if (usage.UtilizationPercent >= 80) return Color.Warning;
+        if (usage.UtilizationPercent >= 50) return Color.Info;
+        return Color.Success;
+    }
+}

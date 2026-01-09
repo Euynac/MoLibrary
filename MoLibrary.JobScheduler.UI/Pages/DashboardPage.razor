@@ -1,0 +1,222 @@
+@page "/job-scheduler"
+@page "/job-scheduler/dashboard"
+
+@using MoLibrary.JobScheduler.UI.Components.Dashboard
+@using MoLibrary.JobScheduler.UI.Models
+@using MoLibrary.JobScheduler.UI.Services
+
+@inject JobDashboardService DashboardService
+@inject ISnackbar Snackbar
+
+@implements IAsyncDisposable
+
+<PageTitle>任务调度 - 总览</PageTitle>
+
+<div class="dashboard-page">
+    @if (_isLoading)
+    {
+        <div class="loading-container">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            <MudText Typo="Typo.body2" Color="Color.Secondary">加载中...</MudText>
+        </div>
+    }
+    else if (_loadError != null)
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4">
+            @_loadError
+            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="LoadDataAsync">重试</MudButton>
+        </MudAlert>
+    }
+    else if (_summary != null)
+    {
+        @* System Health Banner *@
+        <SystemHealthBanner Status="_summary.HealthStatus" Message="_summary.HealthMessage" />
+
+        @* Metrics Summary Cards *@
+        <MetricsSummaryCards TotalJobs="_summary.TotalJobs"
+                              RecurringJobCount="_summary.RecurringJobCount"
+                              TriggeredJobCount="_summary.TriggeredJobCount"
+                              DisabledJobCount="_summary.DisabledJobCount"
+                              RunningNow="_summary.RunningNow"
+                              SuccessRate="_summary.SuccessRate"
+                              ThroughputPerHour="_summary.ThroughputPerHour"
+                              TimeWindowText="@GetTimeWindowText()" />
+
+        @* Main Content Grid *@
+        <MudGrid Spacing="3">
+            @* State Distribution Chart *@
+            <MudItem xs="12" md="6">
+                <JobStateDistributionChart StateDistribution="_summary.StateDistribution"
+                                           TimeWindowText="@GetTimeWindowText()" />
+            </MudItem>
+
+            @* Recent Activity Timeline *@
+            <MudItem xs="12" md="6">
+                <RecentActivityTimeline Activities="_recentActivities" />
+            </MudItem>
+
+            @* Problem Jobs Panel *@
+            <MudItem xs="12">
+                <ProblemJobsPanel Problems="_problemJobs" />
+            </MudItem>
+        </MudGrid>
+
+        @* Auto Refresh Indicator *@
+        @if (_autoRefreshEnabled)
+        {
+            <div class="refresh-indicator">
+                <MudTooltip Text="@($"自动刷新已启用 (每{_autoRefreshInterval}秒)")">
+                    <MudIcon Icon="@Icons.Material.Filled.Autorenew"
+                             Size="Size.Small"
+                             Class="@(_isRefreshing ? "rotating" : "")" />
+                </MudTooltip>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    public const string PAGE_URL = "/job-scheduler";
+
+    private bool _isLoading = true;
+    private bool _isRefreshing;
+    private string? _loadError;
+
+    private DashboardSummary? _summary;
+    private List<RecentActivity> _recentActivities = [];
+    private ProblemJobs? _problemJobs;
+
+    private bool _autoRefreshEnabled = true;
+    private int _autoRefreshInterval = 30; // seconds
+    private System.Timers.Timer? _refreshTimer;
+    private CancellationTokenSource? _cts;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _cts = new CancellationTokenSource();
+            await LoadDataAsync();
+
+            if (_autoRefreshEnabled)
+            {
+                StartAutoRefresh();
+            }
+        }
+    }
+
+    private async Task LoadDataAsync()
+    {
+        try
+        {
+            _isLoading = true;
+            _loadError = null;
+            StateHasChanged();
+
+            var token = _cts?.Token ?? CancellationToken.None;
+
+            // Load all data in parallel
+            var summaryTask = DashboardService.GetDashboardSummaryAsync(token);
+            var activitiesTask = DashboardService.GetRecentActivitiesAsync(15, token);
+            var problemsTask = DashboardService.GetProblemJobsAsync(token);
+
+            await Task.WhenAll(summaryTask, activitiesTask, problemsTask);
+
+            var summaryResult = await summaryTask;
+            var activitiesResult = await activitiesTask;
+            var problemsResult = await problemsTask;
+
+            if (summaryResult.IsFailed(out var error, out _))
+            {
+                _loadError = error.Message;
+            }
+            else
+            {
+                _summary = summaryResult.Data;
+            }
+
+            if (activitiesResult.IsOk(out var activities))
+            {
+                _recentActivities = activities;
+            }
+
+            if (problemsResult.IsOk(out var problems))
+            {
+                _problemJobs = problems;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignore cancellation
+        }
+        catch (Exception ex)
+        {
+            _loadError = $"加载数据失败: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefreshDataAsync()
+    {
+        if (_isRefreshing) return;
+
+        try
+        {
+            _isRefreshing = true;
+            StateHasChanged();
+
+            await LoadDataAsync();
+        }
+        finally
+        {
+            _isRefreshing = false;
+            StateHasChanged();
+        }
+    }
+
+    private void StartAutoRefresh()
+    {
+        _refreshTimer?.Dispose();
+        _refreshTimer = new System.Timers.Timer(_autoRefreshInterval * 1000);
+        _refreshTimer.Elapsed += async (_, _) =>
+        {
+            await InvokeAsync(RefreshDataAsync);
+        };
+        _refreshTimer.AutoReset = true;
+        _refreshTimer.Start();
+    }
+
+    private void StopAutoRefresh()
+    {
+        _refreshTimer?.Stop();
+        _refreshTimer?.Dispose();
+        _refreshTimer = null;
+    }
+
+    private string GetTimeWindowText()
+    {
+        if (_summary == null) return "";
+
+        var window = _summary.MetricsEndTime - _summary.MetricsStartTime;
+        if (window.TotalDays >= 30)
+            return $"最近{(int)window.TotalDays}天";
+        if (window.TotalDays >= 7)
+            return $"最近{(int)window.TotalDays}天";
+        if (window.TotalHours >= 24)
+            return $"最近{(int)window.TotalDays}天";
+        return $"最近{(int)window.TotalHours}小时";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        StopAutoRefresh();
+        _cts?.Cancel();
+        _cts?.Dispose();
+
+        await ValueTask.CompletedTask;
+    }
+}

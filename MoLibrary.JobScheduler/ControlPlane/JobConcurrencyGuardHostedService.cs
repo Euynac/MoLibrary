@@ -321,6 +321,22 @@ public class JobConcurrencyGuardHostedService(
         return Task.FromResult(0);
     }
 
+    public Task<IReadOnlyDictionary<string, JobExecutionStatisticSnapshot>> GetAllExecutionStatisticsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var snapshots = _statistics.ToDictionary(
+            kvp => kvp.Key,
+            kvp => new JobExecutionStatisticSnapshot
+            {
+                JobKey = kvp.Key,
+                MaxConcurrency = kvp.Value.MaxConcurrency,
+                RunningCount = kvp.Value.RunningInstances.Count,
+                PendingCount = kvp.Value.PendingReservations.Count
+            });
+
+        return Task.FromResult<IReadOnlyDictionary<string, JobExecutionStatisticSnapshot>>(snapshots);
+    }
+
     private async Task OnJobStartedAsync(JobStartedEvent evt)
     {
         if (!_statistics.TryGetValue(evt.JobKey, out var statistic))

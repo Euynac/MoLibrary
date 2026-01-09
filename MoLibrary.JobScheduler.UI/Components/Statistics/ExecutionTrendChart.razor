@@ -1,0 +1,114 @@
+@using MoLibrary.JobScheduler.UI.Models
+
+<div class="trend-chart-wrapper">
+    <MudPaper Class="trend-card" Elevation="0">
+        <div class="card-header">
+            <MudText Typo="Typo.h6">执行趋势</MudText>
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-dot success"></div>
+                    <span>成功</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot failed"></div>
+                    <span>失败</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot skipped"></div>
+                    <span>跳过</span>
+                </div>
+            </div>
+        </div>
+
+        @if (TrendData.Count > 0)
+        {
+            <div class="chart-container">
+                <MudChart ChartType="ChartType.Line"
+                          ChartSeries="@GetChartSeries()"
+                          XAxisLabels="@GetXAxisLabels()"
+                          Width="100%"
+                          Height="300px"
+                          ChartOptions="@_chartOptions" />
+            </div>
+
+            <div class="summary-row">
+                <div class="summary-item">
+                    <span class="label">总执行</span>
+                    <span class="value">@TrendData.Sum(d => d.TotalCount)</span>
+                </div>
+                <div class="summary-item success">
+                    <span class="label">成功</span>
+                    <span class="value">@TrendData.Sum(d => d.SucceededCount)</span>
+                </div>
+                <div class="summary-item failed">
+                    <span class="label">失败</span>
+                    <span class="value">@TrendData.Sum(d => d.FailedCount)</span>
+                </div>
+                <div class="summary-item skipped">
+                    <span class="label">跳过</span>
+                    <span class="value">@TrendData.Sum(d => d.SkippedCount)</span>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <MudIcon Icon="@Icons.Material.Filled.ShowChart" Size="Size.Large" Color="Color.Default" />
+                <MudText Typo="Typo.body2" Color="Color.Secondary">暂无趋势数据</MudText>
+            </div>
+        }
+    </MudPaper>
+</div>
+
+@code {
+    [Parameter]
+    public List<ExecutionTrendPoint> TrendData { get; set; } = [];
+
+    [Parameter]
+    public TimeGranularity Granularity { get; set; } = TimeGranularity.Hourly;
+
+    private ChartOptions _chartOptions = new()
+    {
+        YAxisTicks = 5,
+        LineStrokeWidth = 2
+    };
+
+    private List<ChartSeries> GetChartSeries()
+    {
+        return
+        [
+            new ChartSeries
+            {
+                Name = "成功",
+                Data = TrendData.Select(d => (double)d.SucceededCount).ToArray()
+            },
+            new ChartSeries
+            {
+                Name = "失败",
+                Data = TrendData.Select(d => (double)d.FailedCount).ToArray()
+            },
+            new ChartSeries
+            {
+                Name = "跳过",
+                Data = TrendData.Select(d => (double)d.SkippedCount).ToArray()
+            }
+        ];
+    }
+
+    private string[] GetXAxisLabels()
+    {
+        return TrendData.Select(d => FormatTimestamp(d.Timestamp)).ToArray();
+    }
+
+    private string FormatTimestamp(DateTime timestamp)
+    {
+        var local = timestamp.ToLocalTime();
+        return Granularity switch
+        {
+            TimeGranularity.Hourly => local.ToString("HH:mm"),
+            TimeGranularity.Daily => local.ToString("MM-dd"),
+            TimeGranularity.Weekly => local.ToString("MM-dd"),
+            _ => local.ToString("HH:mm")
+        };
+    }
+}

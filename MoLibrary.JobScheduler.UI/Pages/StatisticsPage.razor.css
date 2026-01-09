@@ -1,0 +1,30 @@
+.statistics-page {
+    padding: 24px;
+    max-width: 1600px;
+    margin: 0 auto;
+}
+
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    gap: 16px;
+}
+
+.section {
+    margin-bottom: 24px;
+}
+
+@media (max-width: 960px) {
+    .statistics-page {
+        padding: 16px;
+    }
+}
+
+@media (max-width: 600px) {
+    .statistics-page {
+        padding: 12px;
+    }
+}

@@ -1,0 +1,132 @@
+@using MoLibrary.JobScheduler.Models
+@using MoLibrary.JobScheduler.UI.Models
+@using MoLibrary.JobScheduler.UI.Services
+
+@inject JobStateColorService StateColorService
+@inject NavigationManager NavigationManager
+
+<div class="activity-timeline-wrapper">
+    <MudPaper Class="activity-card" Elevation="0">
+        <div class="card-header">
+            <MudText Typo="Typo.h6">最近活动</MudText>
+            <MudButton Variant="Variant.Text"
+                       Size="Size.Small"
+                       EndIcon="@Icons.Material.Filled.ArrowForward"
+                       OnClick="@ViewAllInstances">
+                查看全部
+            </MudButton>
+        </div>
+
+        @if (Activities.Count > 0)
+        {
+            <div class="timeline-container">
+                @foreach (var activity in Activities)
+                {
+                    <div class="timeline-item" @onclick="() => ViewInstance(activity.InstanceId)">
+                        <div class="timeline-indicator">
+                            <div class="state-dot @GetStateDotClass(activity.State)"></div>
+                            <div class="timeline-line"></div>
+                        </div>
+                        <div class="timeline-content">
+                            <div class="activity-header">
+                                <span class="job-name" title="@activity.JobKey">@activity.JobName</span>
+                                <MudChip T="string"
+                                         Size="Size.Small"
+                                         Color="@StateColorService.GetStateColor(activity.State)"
+                                         Variant="Variant.Outlined">
+                                    @GetStateLabel(activity.State)
+                                </MudChip>
+                            </div>
+                            <div class="activity-details">
+                                <span class="timestamp">@FormatTimestamp(activity.Timestamp)</span>
+                                @if (activity.Duration.HasValue)
+                                {
+                                    <span class="separator">·</span>
+                                    <span class="duration">@FormatDuration(activity.Duration.Value)</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Large" Color="Color.Default" />
+                <MudText Typo="Typo.body2" Color="Color.Secondary">暂无活动记录</MudText>
+            </div>
+        }
+    </MudPaper>
+</div>
+
+@code {
+    [Parameter]
+    public List<RecentActivity> Activities { get; set; } = [];
+
+    private void ViewAllInstances()
+    {
+        NavigationManager.NavigateTo("/job-scheduler/instances");
+    }
+
+    private void ViewInstance(string instanceId)
+    {
+        NavigationManager.NavigateTo($"/job-scheduler/instances?instanceId={Uri.EscapeDataString(instanceId)}");
+    }
+
+    private string GetStateDotClass(JobState state)
+    {
+        return state switch
+        {
+            JobState.Succeeded => "dot-success",
+            JobState.Failed or JobState.Terminated => "dot-error",
+            JobState.Processing => "dot-processing",
+            JobState.Cancelled => "dot-warning",
+            JobState.Skipped => "dot-skip",
+            _ => "dot-default"
+        };
+    }
+
+    private static string GetStateLabel(JobState state)
+    {
+        return state switch
+        {
+            JobState.Succeeded => "成功",
+            JobState.Failed => "失败",
+            JobState.Terminated => "终止",
+            JobState.Processing => "执行中",
+            JobState.Enqueued => "等待中",
+            JobState.Scheduled => "已调度",
+            JobState.Skipped => "已跳过",
+            JobState.Cancelled => "已取消",
+            _ => state.ToString()
+        };
+    }
+
+    private static string FormatTimestamp(DateTime timestamp)
+    {
+        var local = timestamp.ToLocalTime();
+        var now = DateTime.Now;
+
+        if (local.Date == now.Date)
+            return local.ToString("HH:mm:ss");
+
+        if (local.Date == now.Date.AddDays(-1))
+            return $"昨天 {local:HH:mm}";
+
+        return local.ToString("MM-dd HH:mm");
+    }
+
+    private static string FormatDuration(TimeSpan duration)
+    {
+        if (duration.TotalDays >= 1)
+            return $"{duration.TotalDays:F1}天";
+        if (duration.TotalHours >= 1)
+            return $"{duration.TotalHours:F1}小时";
+        if (duration.TotalMinutes >= 1)
+            return $"{duration.TotalMinutes:F1}分钟";
+        if (duration.TotalSeconds >= 1)
+            return $"{duration.TotalSeconds:F1}秒";
+        return $"{duration.TotalMilliseconds:F0}毫秒";
+    }
+}

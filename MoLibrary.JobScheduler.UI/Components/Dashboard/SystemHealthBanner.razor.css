@@ -1,0 +1,122 @@
+.health-banner-wrapper {
+    margin-bottom: 24px;
+}
+
+.health-banner-wrapper ::deep .health-banner {
+    border-radius: 8px;
+    padding: 16px 24px;
+    transition: all 0.3s ease;
+}
+
+.health-banner-wrapper ::deep .health-healthy {
+    background: linear-gradient(135deg,
+        rgba(var(--mud-palette-success-rgb), 0.15) 0%,
+        rgba(var(--mud-palette-success-rgb), 0.05) 100%);
+    border: 1px solid rgba(var(--mud-palette-success-rgb), 0.3);
+}
+
+.health-banner-wrapper ::deep .health-degraded {
+    background: linear-gradient(135deg,
+        rgba(var(--mud-palette-warning-rgb), 0.15) 0%,
+        rgba(var(--mud-palette-warning-rgb), 0.05) 100%);
+    border: 1px solid rgba(var(--mud-palette-warning-rgb), 0.3);
+}
+
+.health-banner-wrapper ::deep .health-unhealthy {
+    background: linear-gradient(135deg,
+        rgba(var(--mud-palette-error-rgb), 0.15) 0%,
+        rgba(var(--mud-palette-error-rgb), 0.05) 100%);
+    border: 1px solid rgba(var(--mud-palette-error-rgb), 0.3);
+}
+
+.health-banner-wrapper ::deep .health-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.health-banner-wrapper ::deep .health-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.health-banner-wrapper ::deep .health-healthy .health-icon {
+    color: var(--mud-palette-success);
+}
+
+.health-banner-wrapper ::deep .health-degraded .health-icon {
+    color: var(--mud-palette-warning);
+}
+
+.health-banner-wrapper ::deep .health-unhealthy .health-icon {
+    color: var(--mud-palette-error);
+}
+
+.health-banner-wrapper ::deep .health-info {
+    flex: 1;
+}
+
+.health-banner-wrapper ::deep .health-status {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--mud-palette-text-primary);
+}
+
+.health-banner-wrapper ::deep .health-message {
+    font-size: 0.875rem;
+    color: var(--mud-palette-text-secondary);
+    margin-top: 4px;
+}
+
+.health-banner-wrapper ::deep .health-indicator {
+    display: flex;
+    align-items: center;
+}
+
+.health-banner-wrapper ::deep .pulse-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+.health-banner-wrapper ::deep .pulse-healthy {
+    background-color: var(--mud-palette-success);
+    box-shadow: 0 0 0 0 rgba(var(--mud-palette-success-rgb), 0.7);
+}
+
+.health-banner-wrapper ::deep .pulse-degraded {
+    background-color: var(--mud-palette-warning);
+    box-shadow: 0 0 0 0 rgba(var(--mud-palette-warning-rgb), 0.7);
+}
+
+.health-banner-wrapper ::deep .pulse-unhealthy {
+    background-color: var(--mud-palette-error);
+    box-shadow: 0 0 0 0 rgba(var(--mud-palette-error-rgb), 0.7);
+    animation: pulse-error 1s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(var(--mud-palette-success-rgb), 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(var(--mud-palette-success-rgb), 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(var(--mud-palette-success-rgb), 0);
+    }
+}
+
+@keyframes pulse-error {
+    0% {
+        box-shadow: 0 0 0 0 rgba(var(--mud-palette-error-rgb), 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(var(--mud-palette-error-rgb), 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(var(--mud-palette-error-rgb), 0);
+    }
+}

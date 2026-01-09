@@ -1,0 +1,216 @@
+@page "/job-scheduler/statistics"
+
+@using MoLibrary.JobScheduler.UI.Components.Statistics
+@using MoLibrary.JobScheduler.UI.Models
+@using MoLibrary.JobScheduler.UI.Services
+
+@inject JobAnalyticsService AnalyticsService
+@inject ISnackbar Snackbar
+
+@implements IAsyncDisposable
+
+<PageTitle>任务调度 - 统计分析</PageTitle>
+
+<div class="statistics-page">
+    @* Time Range Selector *@
+    <TimeRangeSelector Preset="@_preset"
+                       PresetChanged="@OnPresetChanged"
+                       CustomStartTime="@_customStartTime"
+                       CustomStartTimeChanged="@(v => _customStartTime = v)"
+                       CustomEndTime="@_customEndTime"
+                       CustomEndTimeChanged="@(v => _customEndTime = v)"
+                       OnRangeChanged="@LoadDataAsync" />
+
+    @if (_isLoading)
+    {
+        <div class="loading-container">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            <MudText Typo="Typo.body2" Color="Color.Secondary">加载统计数据...</MudText>
+        </div>
+    }
+    else if (_loadError != null)
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4">
+            @_loadError
+            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="LoadDataAsync">重试</MudButton>
+        </MudAlert>
+    }
+    else
+    {
+        @* Execution Trend Chart *@
+        <div class="section">
+            <ExecutionTrendChart TrendData="@_trendData" Granularity="@GetGranularity()" />
+        </div>
+
+        <MudGrid Spacing="3">
+            @* Duration Percentiles *@
+            <MudItem xs="12" md="6">
+                <DurationPercentilesCard Percentiles="@_percentiles" />
+            </MudItem>
+
+            @* Top Jobs by Execution Count *@
+            <MudItem xs="12" md="6">
+                <TopJobsRanking Title="执行次数排行" Rankings="@_topByExecution" />
+            </MudItem>
+
+            @* Top Jobs by Failure Count *@
+            <MudItem xs="12" md="6">
+                <TopJobsRanking Title="失败次数排行" Rankings="@_topByFailure" />
+            </MudItem>
+
+            @* Failure Analysis *@
+            <MudItem xs="12" md="6">
+                <FailureAnalysisPanel Analysis="@_failureAnalysis" />
+            </MudItem>
+        </MudGrid>
+    }
+</div>
+
+@code {
+    public const string PAGE_URL = "/job-scheduler/statistics";
+
+    private bool _isLoading = true;
+    private string? _loadError;
+
+    private TimeRangePreset _preset = TimeRangePreset.Today;
+    private DateTime? _customStartTime;
+    private DateTime? _customEndTime;
+
+    private List<ExecutionTrendPoint> _trendData = [];
+    private DurationPercentiles _percentiles = new();
+    private List<JobRanking> _topByExecution = [];
+    private List<JobRanking> _topByFailure = [];
+    private FailureAnalysis? _failureAnalysis;
+
+    private CancellationTokenSource? _cts;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _cts = new CancellationTokenSource();
+            await LoadDataAsync();
+        }
+    }
+
+    private async Task OnPresetChanged(TimeRangePreset preset)
+    {
+        _preset = preset;
+    }
+
+    private async Task LoadDataAsync()
+    {
+        try
+        {
+            _isLoading = true;
+            _loadError = null;
+            StateHasChanged();
+
+            var token = _cts?.Token ?? CancellationToken.None;
+            var (startTime, endTime) = GetEffectiveTimeRange();
+            var granularity = GetGranularity();
+
+            // Load all data in parallel
+            var trendTask = AnalyticsService.GetExecutionTrendAsync(startTime, endTime, granularity, token);
+            var percentilesTask = AnalyticsService.GetDurationPercentilesAsync(startTime, endTime, null, token);
+            var topExecutionTask = AnalyticsService.GetTopJobsAsync(startTime, endTime, 10, RankingType.ExecutionCount, token);
+            var topFailureTask = AnalyticsService.GetTopJobsAsync(startTime, endTime, 10, RankingType.FailureCount, token);
+            var failureTask = AnalyticsService.GetFailureAnalysisAsync(startTime, endTime, token);
+
+            await Task.WhenAll(trendTask, percentilesTask, topExecutionTask, topFailureTask, failureTask);
+
+            var trendResult = await trendTask;
+            var percentilesResult = await percentilesTask;
+            var topExecutionResult = await topExecutionTask;
+            var topFailureResult = await topFailureTask;
+            var failureResult = await failureTask;
+
+            // Handle results
+            if (trendResult.IsOk(out var trend))
+                _trendData = trend;
+
+            if (percentilesResult.IsOk(out var percentiles))
+                _percentiles = percentiles;
+
+            if (topExecutionResult.IsOk(out var topExecution))
+                _topByExecution = topExecution;
+
+            if (topFailureResult.IsOk(out var topFailure))
+                _topByFailure = topFailure;
+
+            if (failureResult.IsOk(out var failure))
+                _failureAnalysis = failure;
+
+            // Check for any errors
+            if (trendResult.IsFailed(out var error, out _))
+            {
+                _loadError = error.Message;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignore cancellation
+        }
+        catch (Exception ex)
+        {
+            _loadError = $"加载统计数据失败: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private (DateTime start, DateTime end) GetEffectiveTimeRange()
+    {
+        if (_preset == TimeRangePreset.Custom && _customStartTime.HasValue && _customEndTime.HasValue)
+        {
+            return (_customStartTime.Value.ToUniversalTime(), _customEndTime.Value.ToUniversalTime());
+        }
+
+        var now = DateTime.UtcNow;
+        return _preset switch
+        {
+            TimeRangePreset.Today => (now.Date, now),
+            TimeRangePreset.Last24Hours => (now.AddHours(-24), now),
+            TimeRangePreset.Last7Days => (now.AddDays(-7), now),
+            TimeRangePreset.Last30Days => (now.AddDays(-30), now),
+            _ => (now.Date, now)
+        };
+    }
+
+    private TimeGranularity GetGranularity()
+    {
+        return _preset switch
+        {
+            TimeRangePreset.Today => TimeGranularity.Hourly,
+            TimeRangePreset.Last24Hours => TimeGranularity.Hourly,
+            TimeRangePreset.Last7Days => TimeGranularity.Daily,
+            TimeRangePreset.Last30Days => TimeGranularity.Daily,
+            TimeRangePreset.Custom => GetCustomGranularity(),
+            _ => TimeGranularity.Hourly
+        };
+    }
+
+    private TimeGranularity GetCustomGranularity()
+    {
+        if (!_customStartTime.HasValue || !_customEndTime.HasValue)
+            return TimeGranularity.Hourly;
+
+        var range = _customEndTime.Value - _customStartTime.Value;
+        if (range.TotalDays > 30)
+            return TimeGranularity.Weekly;
+        if (range.TotalDays > 7)
+            return TimeGranularity.Daily;
+        return TimeGranularity.Hourly;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+
+        await ValueTask.CompletedTask;
+    }
+}

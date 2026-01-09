@@ -1,0 +1,114 @@
+@using MoLibrary.JobScheduler.UI.Models
+
+<div class="refresh-control-wrapper">
+    <MudPaper Class="refresh-control" Elevation="0">
+        <div class="control-item">
+            <MudSwitch T="bool"
+                       Value="@IsEnabled"
+                       ValueChanged="@OnEnabledChanged"
+                       Color="Color.Primary"
+                       Label="自动刷新" />
+        </div>
+
+        <MudDivider Vertical="true" FlexItem="true" Class="mx-2" />
+
+        <div class="control-item">
+            <MudSelect T="RefreshInterval"
+                       Value="@Interval"
+                       ValueChanged="@OnIntervalChanged"
+                       Label="刷新间隔"
+                       Variant="Variant.Outlined"
+                       Dense="true"
+                       Margin="Margin.Dense"
+                       Disabled="@(!IsEnabled)"
+                       Style="min-width: 120px;">
+                <MudSelectItem T="RefreshInterval" Value="RefreshInterval.ThreeSeconds">3 秒</MudSelectItem>
+                <MudSelectItem T="RefreshInterval" Value="RefreshInterval.FiveSeconds">5 秒</MudSelectItem>
+                <MudSelectItem T="RefreshInterval" Value="RefreshInterval.TenSeconds">10 秒</MudSelectItem>
+                <MudSelectItem T="RefreshInterval" Value="RefreshInterval.ThirtySeconds">30 秒</MudSelectItem>
+            </MudSelect>
+        </div>
+
+        <MudDivider Vertical="true" FlexItem="true" Class="mx-2" />
+
+        <div class="control-item">
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Refresh"
+                       OnClick="@OnManualRefresh"
+                       Disabled="@IsRefreshing">
+                @if (IsRefreshing)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    <span>刷新中...</span>
+                }
+                else
+                {
+                    <span>刷新</span>
+                }
+            </MudButton>
+        </div>
+
+        @if (LastRefreshTime.HasValue)
+        {
+            <div class="last-refresh">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    上次刷新: @FormatLastRefresh(LastRefreshTime.Value)
+                </MudText>
+            </div>
+        }
+    </MudPaper>
+</div>
+
+@code {
+    [Parameter]
+    public bool IsEnabled { get; set; } = true;
+
+    [Parameter]
+    public EventCallback<bool> IsEnabledChanged { get; set; }
+
+    [Parameter]
+    public RefreshInterval Interval { get; set; } = RefreshInterval.FiveSeconds;
+
+    [Parameter]
+    public EventCallback<RefreshInterval> IntervalChanged { get; set; }
+
+    [Parameter]
+    public bool IsRefreshing { get; set; }
+
+    [Parameter]
+    public DateTime? LastRefreshTime { get; set; }
+
+    [Parameter]
+    public EventCallback OnRefreshRequested { get; set; }
+
+    private async Task OnEnabledChanged(bool value)
+    {
+        await IsEnabledChanged.InvokeAsync(value);
+    }
+
+    private async Task OnIntervalChanged(RefreshInterval value)
+    {
+        await IntervalChanged.InvokeAsync(value);
+    }
+
+    private async Task OnManualRefresh()
+    {
+        await OnRefreshRequested.InvokeAsync();
+    }
+
+    private static string FormatLastRefresh(DateTime time)
+    {
+        var local = time.ToLocalTime();
+        var diff = DateTime.Now - local;
+
+        if (diff.TotalSeconds < 10)
+            return "刚刚";
+        if (diff.TotalSeconds < 60)
+            return $"{(int)diff.TotalSeconds}秒前";
+        if (diff.TotalMinutes < 60)
+            return $"{(int)diff.TotalMinutes}分钟前";
+
+        return local.ToString("HH:mm:ss");
+    }
+}

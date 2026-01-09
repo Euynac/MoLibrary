@@ -1,0 +1,95 @@
+.concurrency-bars-wrapper ::deep .concurrency-card {
+    padding: 20px;
+    border-radius: 12px;
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-lines-default);
+    height: 100%;
+}
+
+.concurrency-bars-wrapper ::deep .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.concurrency-bars-wrapper ::deep .header-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.concurrency-bars-wrapper ::deep .bars-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.concurrency-bars-wrapper ::deep .usage-item {
+    padding: 12px;
+    border-radius: 8px;
+    background: var(--mud-palette-background);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.concurrency-bars-wrapper ::deep .usage-item:hover {
+    background: var(--mud-palette-action-default-hover);
+    transform: translateX(4px);
+}
+
+.concurrency-bars-wrapper ::deep .usage-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.concurrency-bars-wrapper ::deep .job-name {
+    font-weight: 500;
+    color: var(--mud-palette-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+
+.concurrency-bars-wrapper ::deep .usage-text {
+    font-family: monospace;
+    font-size: 0.875rem;
+    color: var(--mud-palette-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+.concurrency-bars-wrapper ::deep .usage-bar {
+    margin-bottom: 6px;
+}
+
+.concurrency-bars-wrapper ::deep .usage-detail {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.75rem;
+}
+
+.concurrency-bars-wrapper ::deep .running {
+    color: var(--mud-palette-info);
+}
+
+.concurrency-bars-wrapper ::deep .pending {
+    color: var(--mud-palette-warning);
+}
+
+.concurrency-bars-wrapper ::deep .show-more {
+    text-align: center;
+    padding-top: 8px;
+}
+
+.concurrency-bars-wrapper ::deep .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    gap: 12px;
+}
