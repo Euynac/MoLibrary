@@ -151,7 +151,11 @@ public class RegisterCentreClientHostedService(
         {
             _isStruggling = false;
             _struggleStartTime = null;
-            _struggleCts?.Cancel();
+            if (_struggleCts?.Token.CanBeCanceled is true)
+            {
+                await _struggleCts.CancelAsync();
+            }
+                
             RecordState("从挣扎状态恢复", HostedServiceState.Running);
         }
 
@@ -356,7 +360,10 @@ public class RegisterCentreClientHostedService(
 
     public override void Dispose()
     {
-        _struggleCts?.Cancel();
+        if (_struggleCts?.Token.CanBeCanceled is true)
+        {
+            _struggleCts.Cancel();
+        }
         _struggleCts?.Dispose();
         base.Dispose();
     }

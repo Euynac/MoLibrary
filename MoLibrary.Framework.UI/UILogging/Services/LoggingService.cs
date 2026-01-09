@@ -84,7 +84,10 @@ public sealed class LoggingService(
 
         try
         {
-            _tailCts?.Cancel();
+            if (_tailCts?.Token.CanBeCanceled is true)
+            {
+                await _tailCts.CancelAsync();
+            }
             if (_tailTask is { } task)
             {
                 try

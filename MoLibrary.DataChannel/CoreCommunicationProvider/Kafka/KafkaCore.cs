@@ -154,7 +154,10 @@ public class KafkaCore(MetadataForKafka metadata, ILogger<KafkaCore> logger) : C
         try
         {
             // Cancel consumer loop
-            _consumerCts?.Cancel();
+            if (_consumerCts?.Token.CanBeCanceled is true)
+            {
+                await _consumerCts.CancelAsync();
+            }
             
             // Wait for consumer task to complete
             if (_consumerTask != null)
