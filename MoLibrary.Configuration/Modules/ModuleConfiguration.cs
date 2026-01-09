@@ -1,14 +1,11 @@
 using System.Reflection;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
-using Dapr.Client;
-using Dapr.Extensions.Configuration;
 using MoLibrary.Configuration.Annotations;
 using MoLibrary.Configuration.Interfaces;
 using MoLibrary.Configuration.Model;
@@ -18,8 +15,6 @@ using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
-using MoLibrary.Core.Modules;
-using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Configuration.Modules;
 
@@ -51,16 +46,16 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
         services.AddSingleton<IMoConfigurationServiceInfo, MoConfigurationServiceInfoDefault>();
         services.AddScoped<ModuleConfigurationService>();
 
-        if (Option is { UseDaprProvider: true, AppConfiguration: ConfigurationManager manager})
-        {
-            Logger.LogDebug($"[MoConfiguration] Using Dapr Configuration Provider. StoreName: {Option.DaprStoreName}");
-            //TODO 1.考虑使用JsonSerializer进行配置序列化存储 2.使用单例DaprClient
-            var client = new DaprClientBuilder().Build();
-            manager.AddDaprConfigurationStore(Option.DaprStoreName!, [], client,
-                TimeSpan.FromSeconds(10));
-            manager.AddStreamingDaprConfigurationStore(Option.DaprStoreName!, [], client,
-                TimeSpan.FromSeconds(10));
-        }
+        // if (Option is { UseDaprProvider: true, AppConfiguration: ConfigurationManager manager})
+        // {
+        //     Logger.LogDebug($"[MoConfiguration] Using Dapr Configuration Provider. StoreName: {Option.DaprStoreName}");
+        //     //TODO 1.考虑使用JsonSerializer进行配置序列化存储 2.使用单例DaprClient
+        //     var client = new DaprClientBuilder().Build();
+        //     manager.AddDaprConfigurationStore(Option.DaprStoreName!, [], client,
+        //         TimeSpan.FromSeconds(10));
+        //     manager.AddStreamingDaprConfigurationStore(Option.DaprStoreName!, [], client,
+        //         TimeSpan.FromSeconds(10));
+        // }
 
 
         //use reflection to call AddOptions<T> and Bind
@@ -217,15 +212,6 @@ public class ModuleConfigurationOption : MoModuleOptionWithMinimalApi<ModuleConf
     /// 启用当使用<see cref="ConfigurationAttribute"/>时，其配置参数必须同时使用<see cref="OptionSettingAttribute"/>，否则抛出异常
     /// </summary>
     public bool ErrorOnNoTagOptionAttribute { get; set; }
-    /// <summary>
-    /// 增加Dapr Configuration作为配置Provider
-    /// </summary>
-    internal bool UseDaprProvider => DaprStoreName != null;
-
-    /// <summary>
-    /// Dapr Configuration Store Name，用于Dapr Configuration Provider
-    /// </summary>
-    public string? DaprStoreName { get; set; }
 
     /// <summary>
     /// 开启配置读取日志
