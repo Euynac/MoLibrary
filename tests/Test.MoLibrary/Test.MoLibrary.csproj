@@ -1,16 +1,23 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-<Import Project="..\..\common.xml"/>
-  <ItemGroup>
-    <PackageReference Include="coverlet.collector" Version="6.0.0" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
-    <PackageReference Include="NUnit" Version="4.0.1" />
-    <PackageReference Include="NUnit.Analyzers" Version="3.10.0" />
-    <PackageReference Include="NUnit3TestAdapter" Version="4.5.0" />
-    <PackageReference Include="Moq" Version="4.20.70" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.4" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.4" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\MoLibrary.Framework\MoLibrary.Framework.csproj" />
-  </ItemGroup>
+	<Import Project="..\..\common.xml"/>
+	<ItemGroup>
+		<PackageReference Include="coverlet.collector" Version="6.0.0"/>
+		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0"/>
+		<PackageReference Include="NUnit" Version="4.0.1"/>
+		<PackageReference Include="NUnit.Analyzers" Version="3.10.0"/>
+		<PackageReference Include="NUnit3TestAdapter" Version="4.5.0"/>
+		<PackageReference Include="Moq" Version="4.20.70"/>
+		<PackageReference Include="NSubstitute" Version="5.1.0"/>
+		<PackageReference Include="FluentAssertions" Version="6.12.0"/>
+		<PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.4"/>
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.4"/>
+		<PackageReference Include="xunit" Version="2.9.3"/>
+		<PackageReference Include="xunit.runner.visualstudio" Version="3.1.1">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\..\MoLibrary.Framework\MoLibrary.Framework.csproj"/>
+	</ItemGroup>
 </Project>

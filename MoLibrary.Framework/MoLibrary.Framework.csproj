@@ -8,16 +8,7 @@
 	  <None Remove="Databases\**" />
 	</ItemGroup>
 	<ItemGroup>
-    
-    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.0" />
-    <PackageReference Include="Minio" Version="6.0.3" />
-    <PackageReference Include="protobuf-net.BuildTools" Version="3.2.33">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="protobuf-net.Core" Version="3.2.30" />
-    <PackageReference Include="protobuf-net.Grpc.Reflection" Version="1.1.1" />
-   
+		
 	</ItemGroup>
 	<ItemGroup>
 	  <ProjectReference Include="..\MoLibrary.Authority\MoLibrary.Authority.csproj" />
