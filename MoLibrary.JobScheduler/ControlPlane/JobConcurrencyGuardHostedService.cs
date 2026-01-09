@@ -146,6 +146,9 @@ public class JobConcurrencyGuardHostedService(
         _eventSubscriptions.Add(await eventBus.SubscribeAsync<JobStartedEvent>(OnJobStartedAsync));
         _eventSubscriptions.Add(await eventBus.SubscribeAsync<JobCompletedEvent>(OnJobCompletedAsync));
 
+        // 5. Subscribe to job definitions changed event to handle dynamically registered jobs
+        _eventSubscriptions.Add(await eventBus.SubscribeAsync<JobDefinitionsChangedEvent>(OnJobDefinitionsChangedAsync));
+
         // Note: Worker offline detection is now handled by the zombie detector service through timeout-based detection
         // The previous RegisterCentre server-based offline event mechanism has been removed in the StateStore refactoring
 
@@ -203,10 +206,11 @@ public class JobConcurrencyGuardHostedService(
             if (!canExecute)
             {
                 logger.LogWarning(
-                    "Job {JobKey} exceeded MaxConcurrency limit: {Current}/{Max}",
+                    "Job {JobKey} exceeded MaxConcurrency limit: {Current}/{Max}. Running instances (up to 5): {RunningDetails}",
                     jobKey,
                     statistic.CurrentExecutingCount,
-                    statistic.MaxConcurrency);
+                    statistic.MaxConcurrency,
+                    GetRunningInstancesSummary(statistic));
             }
             else
             {
@@ -245,13 +249,15 @@ public class JobConcurrencyGuardHostedService(
         {
             if (!statistic.CanExecute)
             {
-                var reason = $"Job {jobKey} exceeded MaxConcurrency limit: {statistic.CurrentExecutingCount}/{statistic.MaxConcurrency}";
+                var runningDetails = GetRunningInstancesSummary(statistic);
+                var reason = $"Job {jobKey} exceeded MaxConcurrency limit: {statistic.CurrentExecutingCount}/{statistic.MaxConcurrency}. Running instances (up to 5): {runningDetails}";
                 logger.LogWarning(
-                    "Job {JobKey} instance {InstanceId} exceeded MaxConcurrency: {Current}/{Max}",
+                    "Job {JobKey} instance {InstanceId} exceeded MaxConcurrency: {Current}/{Max}. Running instances (up to 5): {RunningDetails}",
                     jobKey,
                     instanceId,
                     statistic.CurrentExecutingCount,
-                    statistic.MaxConcurrency);
+                    statistic.MaxConcurrency,
+                    runningDetails);
                 return ReservationResult.Failure(reason);
             }
 
@@ -397,5 +403,79 @@ public class JobConcurrencyGuardHostedService(
         {
             semaphore.Release();
         }
+    }
+
+    /// <summary>
+    /// Handles JobDefinitionsChangedEvent to add/update concurrency tracking for dynamically registered jobs.
+    /// This resolves the race condition where JobConcurrencyGuardHostedService may initialize before
+    /// JobRegistrationHostedService has saved job definitions to the repository.
+    /// </summary>
+    private Task OnJobDefinitionsChangedAsync(JobDefinitionsChangedEvent evt)
+    {
+        logger.LogDebug(
+            "Received JobDefinitionsChangedEvent: {AddedCount} added, {UpdatedCount} updated, {DeletedCount} deleted",
+            evt.AddedJobKeys.Count,
+            evt.UpdatedJobKeys.Count,
+            evt.DeletedJobKeys.Count);
+
+        // 1. Add statistics for newly added jobs
+        foreach (var definition in evt.AddedDefinitions)
+        {
+            if (!_statistics.ContainsKey(definition.JobKey))
+            {
+                _statistics[definition.JobKey] = new JobExecutionStatistic
+                {
+                    JobKey = definition.JobKey,
+                    MaxConcurrency = definition.MaxConcurrency,
+                    RunningInstances = []
+                };
+                _jobLocks[definition.JobKey] = new SemaphoreSlim(1, 1);
+
+                logger.LogDebug(
+                    "Added concurrency tracking for new job: {JobKey} (MaxConcurrency: {MaxConcurrency})",
+                    definition.JobKey,
+                    definition.MaxConcurrency);
+            }
+        }
+
+        // 2. Handle updated jobs (update MaxConcurrency if changed)
+        foreach (var definition in evt.UpdatedDefinitions)
+        {
+            if (_statistics.TryGetValue(definition.JobKey, out var statistic))
+            {
+                statistic.MaxConcurrency = definition.MaxConcurrency;
+                logger.LogDebug(
+                    "Updated MaxConcurrency for job {JobKey} to {MaxConcurrency}",
+                    definition.JobKey,
+                    definition.MaxConcurrency);
+            }
+        }
+
+        // Note: We don't remove deleted jobs immediately to allow running instances to complete gracefully
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Generates a summary of currently running instances for diagnostic logging.
+    /// </summary>
+    private static string GetRunningInstancesSummary(JobExecutionStatistic statistic)
+    {
+        var runningInfos = statistic.RunningInstances
+            .Take(5)
+            .Select(i => i.ToString());
+
+        var pendingInfos = statistic.PendingReservations
+            .Take(Math.Max(0, 5 - statistic.RunningInstances.Count))
+            .Select(p => $"{p.Key}[Pending since {p.Value}]");
+
+        var allInfos = runningInfos.Concat(pendingInfos).ToList();
+
+        if (allInfos.Count == 0)
+        {
+            return "(none)";
+        }
+
+        return string.Join("\n", allInfos);
     }
 }
