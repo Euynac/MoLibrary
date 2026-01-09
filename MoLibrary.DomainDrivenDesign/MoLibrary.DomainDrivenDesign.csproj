@@ -1,17 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <Import Project="..\common.xml"/>
+	<Import Project="..\common.xml"/>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.DynamicLinq" Version="8.3.13" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />     
-    <PackageReference Include="Unchase.Swashbuckle.AspNetCore.Extensions" Version="2.7.1" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\MoLibrary.Authority\MoLibrary.Authority.csproj" />
-    <ProjectReference Include="..\MoLibrary.AutoModel\MoLibrary.AutoModel.csproj" />
-    <ProjectReference Include="..\MoLibrary.Core\MoLibrary.Core.csproj" />
-    <ProjectReference Include="..\MoLibrary.DependencyInjection\MoLibrary.DependencyInjection.csproj" />
-    <ProjectReference Include="..\MoLibrary.Repository\MoLibrary.Repository.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Microsoft.EntityFrameworkCore.DynamicLinq" Version="8.3.13"/>
+		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0"/>
+		<PackageReference Include="Unchase.Swashbuckle.AspNetCore.Extensions" Version="2.7.1"/>
+		<PackageReference Include="System.Linq.Async" Version="6.0.1"/>
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\MoLibrary.Authority\MoLibrary.Authority.csproj"/>
+		<ProjectReference Include="..\MoLibrary.AutoModel\MoLibrary.AutoModel.csproj"/>
+		<ProjectReference Include="..\MoLibrary.Core\MoLibrary.Core.csproj"/>
+		<ProjectReference Include="..\MoLibrary.DependencyInjection\MoLibrary.DependencyInjection.csproj"/>
+		<ProjectReference Include="..\MoLibrary.Repository\MoLibrary.Repository.csproj"/>
+	</ItemGroup>
 </Project>
