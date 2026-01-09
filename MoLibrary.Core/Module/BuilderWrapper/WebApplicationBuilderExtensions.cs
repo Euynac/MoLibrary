@@ -32,8 +32,6 @@ public static class WebApplicationBuilderExtensions
     /// </summary>
     public static event Action<IApplicationBuilder>? BeginUseEndpoints;
 
-    public static WebApplicationBuilder? WebApplicationBuilderInstance;
-
     /// <summary>
     /// Internal method to trigger BeforeBuild event from Harmony patches.
     /// </summary>

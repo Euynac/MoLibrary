@@ -176,11 +176,11 @@ public static class UseRouting_Patch
     /// Triggers BeforeUseRouting event to configure middleware with Order <= -1.
     /// </summary>
     [HarmonyPrefix]
-    private static void Prefix(IApplicationBuilder app)
+    private static void Prefix(IApplicationBuilder __0)
     {
         try
         {
-            var state = HarmonyPatchManager.GetOrCreateRoutingState(app);
+            var state = HarmonyPatchManager.GetOrCreateRoutingState(__0);
 
             if (state.BeforeRoutingProcessed)
             {
@@ -193,7 +193,7 @@ public static class UseRouting_Patch
             Logger.LogDebug("Intercepted UseRouting() - triggering middleware configuration (before routing)");
 
             // Trigger the BeforeUseRouting event via internal method
-            WebApplicationBuilderExtensions.TriggerBeforeUseRouting(app);
+            WebApplicationBuilderExtensions.TriggerBeforeUseRouting(__0);
         }
         catch (Exception ex)
         {
@@ -207,11 +207,11 @@ public static class UseRouting_Patch
     /// Triggers AfterUseRouting event to configure middleware with Order > -1.
     /// </summary>
     [HarmonyPostfix]
-    private static void Postfix(IApplicationBuilder app)
+    private static void Postfix(IApplicationBuilder __0)
     {
         try
         {
-            var state = HarmonyPatchManager.GetOrCreateRoutingState(app);
+            var state = HarmonyPatchManager.GetOrCreateRoutingState(__0);
 
             if (state.AfterRoutingProcessed)
             {
@@ -224,7 +224,7 @@ public static class UseRouting_Patch
             Logger.LogDebug("UseRouting() completed - triggering middleware configuration (after routing)");
 
             // Trigger the AfterUseRouting event via internal method
-            WebApplicationBuilderExtensions.TriggerAfterUseRouting(app);
+            WebApplicationBuilderExtensions.TriggerAfterUseRouting(__0);
         }
         catch (Exception ex)
         {
@@ -247,11 +247,11 @@ public static class UseEndpoints_Patch
     /// Triggers BeginUseEndpoints event to configure module endpoints.
     /// </summary>
     [HarmonyPrefix]
-    private static void Prefix(IApplicationBuilder endpoints)
+    private static void Prefix(IApplicationBuilder __0)
     {
         try
         {
-            var state = HarmonyPatchManager.GetOrCreateRoutingState(endpoints);
+            var state = HarmonyPatchManager.GetOrCreateRoutingState(__0);
 
             if (state.EndpointsProcessed)
             {
@@ -264,7 +264,7 @@ public static class UseEndpoints_Patch
             Logger.LogDebug("Intercepted UseEndpoints() - triggering endpoint configuration");
 
             // Trigger the BeginUseEndpoints event via internal method
-            WebApplicationBuilderExtensions.TriggerBeginUseEndpoints(endpoints);
+            WebApplicationBuilderExtensions.TriggerBeginUseEndpoints(__0);
         }
         catch (Exception ex)
         {
