@@ -9,6 +9,7 @@ namespace MoLibrary.EventBus.Abstractions;
 /// Base class for local (in-process) event bus implementations.
 /// Publishes events by directly triggering handlers in the same process.
 /// </summary>
+/// TODO Use build-in Channel to implement.
 public abstract class LocalEventBusBase(
     IServiceScopeFactory serviceScopeFactory,
     IEventHandlerInvoker eventHandlerInvoker,
