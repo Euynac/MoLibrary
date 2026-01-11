@@ -24,19 +24,17 @@ using MoLibrary.Tool.Utils;
 
 namespace MoLibrary.Repository;
 
-public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> options, IMoServiceProvider serviceProvider) : DbContext(options), IMoDbContext, ITransientDependency, IMoServiceProviderAccessor
+public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> options, ICachedServiceProvider serviceProvider) : DbContext(options), IMoDbContext, ITransientDependency
     where TDbContext : DbContext
 {
+    protected ICachedServiceProvider CachedServiceProvider { get; } = serviceProvider;
 
-    public IServiceProvider ServiceProvider { get; set; } = serviceProvider.ServiceProvider;
+    protected IMoAuditPropertySetter AuditPropertySetter => CachedServiceProvider.GetRequiredService<IMoAuditPropertySetter>();
+    protected IMoScopedData? ScopedData => CachedServiceProvider.GetKeyedService<IMoScopedData>(nameof(ModuleRepository));
 
-    public IMoAuditPropertySetter AuditPropertySetter => ServiceProvider.GetRequiredService<IMoAuditPropertySetter>();
-    public IMoScopedData? ScopedData => ServiceProvider.GetKeyedService<IMoScopedData>(nameof(ModuleRepository));
+    protected ILogger<MoDbContext<TDbContext>> Logger => CachedServiceProvider.GetService<ILogger<MoDbContext<TDbContext>>>() ?? NullLogger<MoDbContext<TDbContext>>.Instance;
 
-    public ILogger<MoDbContext<TDbContext>> Logger => ServiceProvider.GetService<ILogger<MoDbContext<TDbContext>>>() ?? NullLogger<MoDbContext<TDbContext>>.Instance;
-
-    public ModuleRepositoryOption Options =>
-        ServiceProvider.GetRequiredService<IOptions<ModuleRepositoryOption>>().Value;
+    protected ModuleRepositoryOption Options => CachedServiceProvider.GetRequiredService<IOptions<ModuleRepositoryOption>>().Value;
 
     public bool HasInit { get; protected set; }
 
@@ -280,7 +278,7 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
         PublishEventsForTrackedEntity(e.Entry);
     }
 
-    protected IAsyncLocalEventPublisher? Publisher => ServiceProvider.GetRequiredService<IAsyncLocalEventPublisher>();
+    protected IAsyncLocalEventPublisher? Publisher => CachedServiceProvider.GetService<IAsyncLocalEventPublisher>();
 
 
     #region 触发跟踪增删改时，审计等自动属性设置
@@ -496,7 +494,7 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
         //    !mutableEntityType.IsOwned())
         //{
 
-        //    //if (LazyServiceProvider == null || Clock == null)
+        //    //if (CachedServiceProvider == null || Clock == null)
         //    //{
         //    //    return;
         //    //}

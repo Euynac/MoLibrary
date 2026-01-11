@@ -6,8 +6,8 @@ namespace Test.MoLibrary.Repository
 {
     public class ComplexEntityDbContext(
         DbContextOptions<ComplexEntityDbContext> options,
-        IMoServiceProvider serviceProvider)
-        : MoDbContext<ComplexEntityDbContext>(options, serviceProvider)
+        ILazyServiceProvider lazyServiceProvider)
+        : MoDbContext<ComplexEntityDbContext>(options, lazyServiceProvider)
     {
         public DbSet<Department> Departments { get; set; }
         public DbSet<Employee> Employees { get; set; }

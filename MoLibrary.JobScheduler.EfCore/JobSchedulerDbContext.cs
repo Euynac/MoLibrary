@@ -10,7 +10,7 @@ namespace MoLibrary.JobScheduler.EfCore;
 /// </summary>
 public class JobSchedulerDbContext(
     DbContextOptions<JobSchedulerDbContext> options,
-    IMoServiceProvider serviceProvider)
+    ICachedServiceProvider serviceProvider)
     : MoDbContext<JobSchedulerDbContext>(options, serviceProvider)
 {
     public DbSet<JobDefinitionEntity> JobDefinitions => Set<JobDefinitionEntity>();

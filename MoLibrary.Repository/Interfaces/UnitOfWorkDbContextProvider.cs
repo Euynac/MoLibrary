@@ -41,7 +41,7 @@ public class UnitOfWorkDbContextProvider<TDbContext>(
     {
         var dbContext = unitOfWork.Options.IsTransactional
             ? await CreateDbContextWithTransactionAsync(unitOfWork)
-            : unitOfWork.ServiceProvider.GetRequiredService<TDbContext>();
+            : unitOfWork.CachedServiceProvider.GetRequiredService<TDbContext>();
         if (dbContext is IMoDbContext moDbContext)
         {
             moDbContext.Initialize(unitOfWork);
@@ -53,7 +53,7 @@ public class UnitOfWorkDbContextProvider<TDbContext>(
 
     protected virtual async Task<TDbContext> CreateDbContextWithTransactionAsync(IMoUnitOfWork unitOfWork, CancellationToken token = default)
     {
-        var dbContext = unitOfWork.ServiceProvider.GetRequiredService<TDbContext>();
+        var dbContext = unitOfWork.CachedServiceProvider.GetRequiredService<TDbContext>();
 
         try
         {

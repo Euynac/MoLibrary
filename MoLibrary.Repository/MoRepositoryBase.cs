@@ -12,14 +12,13 @@ using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.Repository;
 
-public abstract class MoRepositoryBase<TEntity> : IMoBasicRepository<TEntity>, IMoServiceProviderInjector
+public abstract class MoRepositoryBase<TEntity> : IMoBasicRepository<TEntity>, ICachedServiceProviderInjector
     where TEntity : class, IMoEntity
 {
-    public IMoServiceProvider MoProvider { get; set; }
-    public IServiceProvider ServiceProvider => MoProvider.ServiceProvider;
+    public ICachedServiceProvider ServiceProvider { get; set; } = null!;
 
-    public ILogger Logger => ServiceProvider.GetRequiredService<ILogger<MoRepositoryBase<TEntity>>>();
-    public IMoUnitOfWorkManager UnitOfWorkManager => ServiceProvider.GetRequiredService<IMoUnitOfWorkManager>();
+    protected ILogger Logger => ServiceProvider.GetRequiredService<ILogger<MoRepositoryBase<TEntity>>>();
+    protected IMoUnitOfWorkManager UnitOfWorkManager => ServiceProvider.GetRequiredService<IMoUnitOfWorkManager>();
 
     public abstract Task<TEntity> InsertAsync(TEntity entity, bool autoSave = false, CancellationToken cancellationToken = default);
 

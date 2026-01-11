@@ -5,13 +5,9 @@ namespace MoLibrary.DomainDrivenDesign;
 
 public abstract class MoDomainService : IMoDomainService
 {
-    public IMoServiceProvider MoProvider { get; set; }
-
-    public IServiceProvider ServiceProvider => MoProvider.ServiceProvider;
-
 }
 
-public abstract class MoDomainService<TSelf> : MoDomainService, IMoServiceProviderInjector where TSelf : MoDomainService<TSelf>
+public abstract class MoDomainService<TSelf> : MoDomainService, ICachedServiceProviderInjector where TSelf : MoDomainService<TSelf>
 {
-   
+    public ICachedServiceProvider ServiceProvider { get; set; } = null!;
 }

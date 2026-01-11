@@ -14,7 +14,7 @@ namespace Test.MoLibrary.Repository
     public class ComplexEntityRepositoryTests
     {
         private Mock<IDbContextProvider<ComplexEntityDbContext>> _dbContextProviderMock;
-        private Mock<IMoServiceProvider> _serviceProviderMock;
+        private Mock<ILazyServiceProvider> _serviceProviderMock;
         private Mock<IMoUnitOfWorkManager> _unitOfWorkManagerMock;
         private Mock<IMoUnitOfWork> _unitOfWorkMock;
         private Mock<IServiceProvider> _serviceProviderFactoryMock;
@@ -41,7 +41,7 @@ namespace Test.MoLibrary.Repository
 
             // Setup mocks first
             _dbContextProviderMock = new Mock<IDbContextProvider<ComplexEntityDbContext>>();
-            _serviceProviderMock = new Mock<IMoServiceProvider>();
+            _serviceProviderMock = new Mock<ILazyServiceProvider>();
             _unitOfWorkManagerMock = new Mock<IMoUnitOfWorkManager>();
             _unitOfWorkMock = new Mock<IMoUnitOfWork>();
             _serviceProviderFactoryMock = new Mock<IServiceProvider>();
@@ -82,22 +82,22 @@ namespace Test.MoLibrary.Repository
             // Create repositories with mocked dependencies
             _departmentRepository = new DepartmentRepository(_dbContextProviderMock.Object)
             {
-                MoProvider = _serviceProviderMock.Object
+                LazyServiceProvider = _serviceProviderMock.Object
             };
 
             _employeeRepository = new EmployeeRepository(_dbContextProviderMock.Object)
             {
-                MoProvider = _serviceProviderMock.Object
+                LazyServiceProvider = _serviceProviderMock.Object
             };
 
             _projectRepository = new ProjectRepository(_dbContextProviderMock.Object)
             {
-                MoProvider = _serviceProviderMock.Object
+                LazyServiceProvider = _serviceProviderMock.Object
             };
 
             _taskRepository = new TaskRepository(_dbContextProviderMock.Object)
             {
-                MoProvider = _serviceProviderMock.Object
+                LazyServiceProvider = _serviceProviderMock.Object
             };
         }
 

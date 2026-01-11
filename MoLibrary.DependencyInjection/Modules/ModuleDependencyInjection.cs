@@ -31,7 +31,7 @@ public class ModuleDependencyInjection(ModuleDependencyInjectionOption option)
     public override void ConfigureServices(IServiceCollection services)
     {
         _registrar = new DefaultConventionalRegistrar(Option);
-        services.AddTransient<IMoServiceProvider, DefaultMoServiceProvider>();
+        services.AddScoped<ICachedServiceProvider, CachedServiceProvider>();
         _services = services;
     }
 
