@@ -56,9 +56,6 @@ Static web assets (wwwroot) are handled through:
 - Automatic merging during build
 - MudBlazor components in UI modules
 
-## Development Guidelines
-
-- When creating new UI, always follow the rule in @rules\mo-framework-ui-module-rule.mdc
 
 ## Code Quality Principles
 - Write reusable, low-coupling and high-cohesion implementations with multiple abstractions

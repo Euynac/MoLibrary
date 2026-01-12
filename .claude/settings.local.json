@@ -55,7 +55,8 @@
       "mcp__graphiti-memory__search_memory_facts",
       "Bash(wc:*)",
       "Skill(mo-ui-development)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Skill(plugin-dev:create-plugin)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

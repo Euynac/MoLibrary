@@ -1,7 +1,7 @@
 {
   "enabledPlugins": {
     "frontend-design@claude-plugins-official": true,
-    "plugin-dev@claude-plugins-official": false,
+    "plugin-dev@claude-plugins-official": true,
     "claude-mem@thedotmack": false,
     "code-simplifier@claude-plugins-official": true
   }

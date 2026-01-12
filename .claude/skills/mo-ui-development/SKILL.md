@@ -1,6 +1,6 @@
 ---
 name: MoLibrary UI Development
-description: This skill should be used when the user asks to "create UI component", "build Blazor page", "add MudBlazor component", "style MudBlazor", "fix CSS isolation", "use ::deep selector", "customize theme", "support dark mode", "migrate MudBlazor v8", "use OnAfterRenderAsync", or needs guidance on Blazor component lifecycle, MudBlazor styling patterns, CSS isolation, theme customization, or offline UI requirements in the MoLibrary framework.
+description: This skill should be used when the user asks to "create UI component", "build Blazor page", "add MudBlazor component", "style MudBlazor", "fix CSS isolation", "use ::deep selector", "customize theme", "support dark mode", "migrate MudBlazor v8", "use OnAfterRenderAsync", "create UI module", "module file structure", "UI folder structure", "service layer pattern", "refactor Minimal API", or needs guidance on Blazor component lifecycle, MudBlazor styling patterns, CSS isolation, theme customization, offline UI requirements, or MoFramework UI module structure in the MoLibrary framework.
 version: 1.0.0
 ---
 
@@ -311,12 +311,26 @@ Use `ErrorBoundary` for graceful error handling:
 </ErrorBoundary>
 ```
 
+## MoFramework UI Module Development
+
+When creating new UI modules in MoFramework, follow the standardized structure and patterns.
+
+For complete module structure guide including:
+- Variable naming conventions (`$ModuleName$`, `$ModuleUIName$`, `$UIFolderName$`, `$PageName$`, `$RouteURL$`)
+- File and folder structure
+- Module class implementation with `MoModuleWithDependencies`
+- Service layer patterns
+- Minimal API refactoring to service layer
+
+See `references/module-structure-guide.md`.
+
 ## Additional Resources
 
 ### Reference Files
 
 For comprehensive guidance, consult these reference files:
 
+- **`references/module-structure-guide.md`** - MoFramework UI module structure, naming conventions, service layer patterns, Minimal API refactoring
 - **`references/blazor-best-practices.md`** - Component architecture, lifecycle, state management, form handling, accessibility patterns
 - **`references/theme-css-guide.md`** - Theme architecture, CSS variable naming, special effects (glassmorphic, gradients), responsive design
 - **`references/mudblazor-css-variables.md`** - Complete palette properties, shadows, layout properties, typography CSS variables

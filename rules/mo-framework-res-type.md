@@ -1,26 +1,42 @@
-# 统一返回模型Res
+# 统一接口返回模型Res
+
+如需要查看完整定义，位于`MoLibrary.Tool/MoResponse/Res.cs`
 
 ## `Res<T>`泛型类型介绍
 
-该类型定了许多隐式转换：
+该类型定了许多隐式转换，支持以下隐式转换
 
-- 当类型返回值是 `Res<T>` 时：
+- 当方法返回值是 `Res<T>` 时：
 ```cs
-//以下T当作实例
-return T; // 实例T => Res<T>，Code 200
-
-return "error desc"; // string => Res<T> ，但 Data 为 null，含有错误描述和Code 400代码
+//返回错误
+return "error desc"; // string => Res<T> ，Data 为 null，含有错误描述和Code 400代码
 //等同于：
-return Res.Fail(""); // Res => Res<T> ，但 Data 为 null，含有错误描述和Code 400代码
+return Res.Fail("error desc"); // Res => Res<T> ，Data 为 null，含有错误描述和Code 400代码
 
+//返回正确
+return T; // 实例T => Res<T>，Code 200
 ```
-- 当类型返回值是 `Res` 时：
+- 当方法返回值是 `Res` 时：
 ```cs
+//返回错误
 return "error desc"; // string => Res，含有错误描述和Code 400代码
-
-//要返回正确
+//等同于：
+return Res.Fail("error desc")
+    
+//返回正确
 return Res.Ok("正确描述");
 ```
+
+- 当方法返回值是`Res<string>`时要注意：
+
+```cs
+//返回错误
+return Res.Fail("error desc");
+
+//返回正确
+return Res.Ok<string>("Data string value");
+```
+
 
 
 ### 最佳实践
@@ -43,7 +59,7 @@ public override async Task<Res<ResponseUserCheck>> CheckUser(QueryUserCheck requ
 }
 ```
 
-使用`Res<T>`返回值方法时，判断响应是否正常、获取响应数据、错误等请使用以下模式：
+使用`Res<T>`返回值方法时，判断响应是否正常、获取响应数据、错误等请使用以下模式（**无需定义新的result类型**）：
 
 ```cs
 if ((await userManger.CheckUser(req)).IsFailed(out var error, out var data)) return error;
@@ -64,64 +80,9 @@ public override async Task<Res> Exist(User user,
 }
 ```
 
-要在调用返回Res类型的方法后快速获取错误，请使用以下模式：
+要在调用返回Res类型的方法后快速获取错误，请使用以下模式（**无需定义新的result类型**）：
 
 ```csharp
 if ((await userManger.Exist(user)).IsFailed(out var error)) return error;
 ```
 
-
-
-
-### `Res<T>`的基本定义
-
-```csharp
-public record Res<T> : IServiceResponse
-{
-    public string? Message { get; set; }
-    public ResponseCode? Code { get; set; }
-    public T? Data { get; set; }
-
-    public Res() { Message = ""; }
-    public Res(T data) { Data = data; Code = ResponseCode.Ok; }
-    public Res(string message, ResponseCode code) { Message = message; Code = code; }
-    public Res(Exception e) { Message = $"服务出现异常：{e}"; Code = ResponseCode.InternalError; }
-
-    public static implicit operator Res<T>(string res) => new(res, ResponseCode.BadRequest);
-    public static implicit operator Res<T>(T data) => new(data);
-    public static implicit operator string(Res<T> res) => res.Message ?? "";
-}
-
-public record Res : IServiceResponse
-{
-    public string? Message { get; set; }
-    public ResponseCode? Code { get; set; }
-
-    public Res(string message, ResponseCode code) { Message = message; Code = code; }
-
-    public static Res Ok(string? hint = null) => new Res(hint ?? "", ResponseCode.Ok);
-    public static Res Ok([StringSyntax("CompositeFormat")] string format, params object?[] args) => new Res(string.Format(format, args), ResponseCode.Ok);
-    public static Res Fail(ResponseCode code, [StringSyntax("CompositeFormat")] string format, params object?[] args) => new Res(string.Format(format, args), code);
-    public static Res Fail(string failDesc, ResponseCode code = ResponseCode.BadRequest) => new Res(failDesc, code);
-    public static Res<T> Ok<T>(T data) => new Res<T>(data);
-    public static Res<T> Create<T>(T data, ResponseCode code) => new Res<T>(data) { Code = code };
-}
-
-public static class ServiceResponseHelper
-{
-    public static bool IsOk(this IServiceResponse res) => res.Code == ResponseCode.Ok;
-    public static bool IsFailed<T>(this Res<T> res, [NotNullWhen(true)] out Res? error, [NotNullWhen(false)] out T? data)
-    {
-        error = null;
-        if (res.IsOk(out data)) return false;
-        error = res.Message;
-        return true;
-    }
-      public static bool IsFailed<T>(this Res<T> res, [NotNullWhen(true)] out Res? error)
-    {
-        error = null;
-        if (res.IsOk()) return false;
-        error = res.Message;
-        return true;
-    }
-}
