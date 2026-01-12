@@ -10,27 +10,27 @@ namespace MoLibrary.DependencyInjection.Implements;
 /// </summary>
 public class CachedServiceProvider : ICachedServiceProvider
 {
-    protected IServiceProvider ServiceProvider { get; }
+    public IServiceProvider NoCachedProvider { get; }
     protected ConcurrentDictionary<ServiceIdentifier, Lazy<object?>> CachedServices { get; }
 
     public CachedServiceProvider(IServiceProvider serviceProvider)
     {
-        ServiceProvider = serviceProvider;
+        NoCachedProvider = serviceProvider;
         CachedServices = new ConcurrentDictionary<ServiceIdentifier, Lazy<object?>>();
-        CachedServices.TryAdd(new ServiceIdentifier(typeof(IServiceProvider)), new Lazy<object?>(() => ServiceProvider));
+        CachedServices.TryAdd(new ServiceIdentifier(typeof(IServiceProvider)), new Lazy<object?>(() => NoCachedProvider));
     }
 
     public object? GetService(Type serviceType)
     {
         return CachedServices.GetOrAdd(
             new ServiceIdentifier(serviceType),
-            _ => new Lazy<object?>(() => ServiceProvider.GetService(serviceType))
+            _ => new Lazy<object?>(() => NoCachedProvider.GetService(serviceType))
         ).Value;
     }
 
     public object? GetKeyedService(Type serviceType, object? serviceKey)
     {
-        if (ServiceProvider is not IKeyedServiceProvider keyedServiceProvider)
+        if (NoCachedProvider is not IKeyedServiceProvider keyedServiceProvider)
         {
             throw new InvalidOperationException("This container does not support keyed services.");
         }
@@ -45,7 +45,7 @@ public class CachedServiceProvider : ICachedServiceProvider
     {
         return CachedServices.GetOrAdd(
             new ServiceIdentifier(serviceKey, serviceType),
-            _ => new Lazy<object?>(() => ServiceProvider.GetRequiredKeyedService(serviceType, serviceKey))
+            _ => new Lazy<object?>(() => NoCachedProvider.GetRequiredKeyedService(serviceType, serviceKey))
         ).Value!;
     }
 }

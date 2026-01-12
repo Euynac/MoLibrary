@@ -11,7 +11,11 @@ namespace MoLibrary.DependencyInjection.AppInterfaces;
 /// Since this provider is registered as Scoped, the cache is per-request/scope.
 /// </remarks>
 public interface ICachedServiceProvider : IKeyedServiceProvider
-{
+{ 
+    /// <summary>
+    /// No cached service provider.
+    /// </summary>
+    IServiceProvider NoCachedProvider { get; }
 }
 
 /// <summary>

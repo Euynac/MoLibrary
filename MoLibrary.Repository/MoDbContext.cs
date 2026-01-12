@@ -27,7 +27,7 @@ namespace MoLibrary.Repository;
 public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> options, ICachedServiceProvider serviceProvider) : DbContext(options), IMoDbContext, ITransientDependency
     where TDbContext : DbContext
 {
-    protected ICachedServiceProvider CachedServiceProvider { get; } = serviceProvider;
+    public ICachedServiceProvider CachedServiceProvider { get; } = serviceProvider;
 
     protected IMoAuditPropertySetter AuditPropertySetter => CachedServiceProvider.GetRequiredService<IMoAuditPropertySetter>();
     protected IMoScopedData? ScopedData => CachedServiceProvider.GetKeyedService<IMoScopedData>(nameof(ModuleRepository));
