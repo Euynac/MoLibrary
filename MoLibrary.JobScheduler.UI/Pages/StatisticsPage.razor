@@ -2,8 +2,6 @@
 
 @using MoLibrary.JobScheduler.Abstractions
 @using MoLibrary.JobScheduler.UI.Components.Statistics
-@using MoLibrary.JobScheduler.UI.Models
-@using MoLibrary.JobScheduler.UI.Services
 
 @inject JobAnalyticsService AnalyticsService
 @inject IJobDefinitionCacheService CacheService
@@ -113,11 +111,9 @@
             var granularity = GetGranularity();
 
             // Step 1: Single query with projection (no StateHistory/JobArgs loaded)
-            var instancesResult = await AnalyticsService.GetInstanceStatisticsAsync(startTime, endTime, token);
-            if (!instancesResult.IsOk(out var instances))
+            if ((await AnalyticsService.GetInstanceStatisticsAsync(startTime, endTime, token)).IsFailed(out var error, out var instances))
             {
-                if (instancesResult.IsFailed(out var error, out _))
-                    _loadError = error.Message;
+                _loadError = error.Message;
                 return;
             }
 
@@ -126,25 +122,65 @@
             var jobNameMap = definitions.ToDictionary(d => d.JobKey, d => d.JobName);
 
             // Step 3: Pure in-memory calculations (synchronous, no additional DB queries)
-            var trendResult = AnalyticsService.CalculateExecutionTrend(instances, startTime, endTime, granularity);
-            if (trendResult.IsOk(out var trend))
+            // Use IsFailed pattern consistently for all Res responses
+            var errors = new List<string>();
+
+            if (AnalyticsService.CalculateExecutionTrend(instances, startTime, endTime, granularity)
+                .IsFailed(out var trendError, out var trend))
+            {
+                errors.Add($"执行趋势: {trendError.Message}");
+            }
+            else
+            {
                 _trendData = trend;
+            }
 
-            var percentilesResult = AnalyticsService.CalculateDurationPercentiles(instances);
-            if (percentilesResult.IsOk(out var percentiles))
+            if (AnalyticsService.CalculateDurationPercentiles(instances)
+                .IsFailed(out var percentilesError, out var percentiles))
+            {
+                errors.Add($"耗时分布: {percentilesError.Message}");
+            }
+            else
+            {
                 _percentiles = percentiles;
+            }
 
-            var topExecutionResult = AnalyticsService.CalculateTopJobs(instances, jobNameMap, 10, RankingType.ExecutionCount);
-            if (topExecutionResult.IsOk(out var topExecution))
+            if (AnalyticsService.CalculateTopJobs(instances, jobNameMap, 10, RankingType.ExecutionCount)
+                .IsFailed(out var topExecutionError, out var topExecution))
+            {
+                errors.Add($"执行排行: {topExecutionError.Message}");
+            }
+            else
+            {
                 _topByExecution = topExecution;
+            }
 
-            var topFailureResult = AnalyticsService.CalculateTopJobs(instances, jobNameMap, 10, RankingType.FailureCount);
-            if (topFailureResult.IsOk(out var topFailure))
+            if (AnalyticsService.CalculateTopJobs(instances, jobNameMap, 10, RankingType.FailureCount)
+                .IsFailed(out var topFailureError, out var topFailure))
+            {
+                errors.Add($"失败排行: {topFailureError.Message}");
+            }
+            else
+            {
                 _topByFailure = topFailure;
+            }
 
-            var failureResult = AnalyticsService.CalculateFailureAnalysis(instances, jobNameMap, startTime, endTime);
-            if (failureResult.IsOk(out var failure))
+            if (AnalyticsService.CalculateFailureAnalysis(instances, jobNameMap, startTime, endTime)
+                .IsFailed(out var failureError, out var failure))
+            {
+                errors.Add($"失败分析: {failureError.Message}");
+            }
+            else
+            {
                 _failureAnalysis = failure;
+            }
+
+            // Display partial errors as warnings if any calculation failed
+            if (errors.Count > 0)
+            {
+                var message = $"部分统计数据计算失败:\n{string.Join("\n", errors)}";
+                Snackbar.Add(message, Severity.Warning);
+            }
         }
         catch (OperationCanceledException)
         {
