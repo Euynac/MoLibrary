@@ -1,6 +1,6 @@
 ---
 name: MoLibrary UI Development
-description: This skill should be used when the user asks to "create UI component", "build Blazor page", "add MudBlazor component", "style MudBlazor", "fix CSS isolation", "use ::deep selector", "customize theme", "support dark mode", "migrate MudBlazor v8", "use OnAfterRenderAsync", "create UI module", "module file structure", "UI folder structure", "service layer pattern", "refactor Minimal API", or needs guidance on Blazor component lifecycle, MudBlazor styling patterns, CSS isolation, theme customization, offline UI requirements, or MoFramework UI module structure in the MoLibrary framework.
+description: This skill should be used when the user asks to "create UI component", "build Blazor page", "add MudBlazor component", "style MudBlazor", "fix CSS isolation", "use ::deep selector", "customize theme", "support dark mode", "migrate MudBlazor v8", "use OnAfterRenderAsync", "create UI module", "module file structure", "UI folder structure", "refactor Minimal API", or needs guidance on Blazor component lifecycle, MudBlazor styling patterns, CSS isolation, theme customization, offline UI requirements, or MoFramework UI module structure in the MoLibrary framework.
 version: 1.0.0
 ---
 
@@ -222,27 +222,11 @@ For font management workflow, see `references/offline-requirements.md`.
 
 ## Service Layer Patterns
 
-### Return Value Convention
+For service layer patterns including `Res<T>` return values and the `IsFailed` handling pattern, see the **MoLibrary Development** skill.
 
-Use unified response model `Res<T>`:
+### Service Call Pattern in Blazor Components
 
-```csharp
-public async Task<Res<UserData>> GetUserAsync(int id)
-{
-    try
-    {
-        var user = await _repository.GetByIdAsync(id);
-        return Res.Ok(user);
-    }
-    catch (Exception ex)
-    {
-        Logger.LogError(ex, "Failed to get user");
-        return Res.Fail($"Failed to get user: {ex.Message}");
-    }
-}
-```
-
-### Service Call Pattern
+When calling services from Blazor components, handle errors with user feedback:
 
 ```csharp
 private async Task LoadDataAsync()
