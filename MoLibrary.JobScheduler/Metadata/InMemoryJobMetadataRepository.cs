@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Linq.Expressions;
 using Microsoft.Extensions.Logging;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Models;
@@ -158,55 +159,13 @@ public class InMemoryJobMetadataRepository(ILogger<InMemoryJobMetadataRepository
         ArgumentNullException.ThrowIfNull(query);
         cancellationToken.ThrowIfCancellationRequested();
 
-        var items = _instances.Values.AsEnumerable();
-
-        // 应用过滤
-        // Support both single JobKey and multiple JobKeys filtering (JobKeys takes priority)
-        if (query.JobKeys is { Count: > 0 })
-        {
-            items = items.Where(i => query.JobKeys.Contains(i.JobKey));
-        }
-        else if (!string.IsNullOrEmpty(query.JobKey))
-        {
-            items = items.Where(i => i.JobKey == query.JobKey);
-        }
-
-        if (!string.IsNullOrEmpty(query.JobKeyContains))
-            items = items.Where(i => i.JobKey.Contains(query.JobKeyContains, StringComparison.OrdinalIgnoreCase));
-
-        if (!string.IsNullOrEmpty(query.InstanceIdContains))
-            items = items.Where(i => i.InstanceId.Contains(query.InstanceIdContains, StringComparison.OrdinalIgnoreCase));
-
-        // Support both single state and multiple states filtering (States takes priority)
-        if (query.States is { Count: > 0 })
-            items = items.Where(i => query.States.Contains(i.State));
-        else if (query.State.HasValue)
-            items = items.Where(i => i.State == query.State.Value);
-
-        if (query.CreatedAfter.HasValue)
-            items = items.Where(i => i.CreatedAt >= query.CreatedAfter.Value);
-
-        if (query.CreatedBefore.HasValue)
-            items = items.Where(i => i.CreatedAt <= query.CreatedBefore.Value);
-
-        // 排序 (flexible approach)
-        if (!string.IsNullOrEmpty(query.SortBy))
-        {
-            items = ApplyInstanceSorting(items, query.SortBy, query.SortDescending);
-        }
-        else
-        {
-            items = items.OrderByDescending(i => i.CreatedAt);
-        }
+        var items = _instances.Values
+            .ApplyFilters(query)
+            .ApplySorting(query.SortBy, query.SortDescending);
 
         var list = items.ToList();
         var totalCount = list.Count;
-
-        // 分页
-        var paged = list
-            .Skip((query.PageNumber - 1) * query.PageSize)
-            .Take(query.PageSize)
-            .ToList();
+        var paged = list.ApplyPagination(query.PageNumber, query.PageSize);
 
         logger.LogDebug(
             "QueryInstancesAsync: Returned {Count}/{Total} instances (Page {PageNumber}, Size {PageSize})",
@@ -216,6 +175,71 @@ public class InMemoryJobMetadataRepository(ILogger<InMemoryJobMetadataRepository
             query.PageSize);
 
         return Task.FromResult(new QueryResult<JobInstance>(paged, totalCount));
+    }
+
+    /// <summary>
+    /// 查询 Job 实例列表并投影到自定义类型
+    /// </summary>
+    public Task<QueryResult<TResult>> QueryInstancesAsync<TResult>(
+        JobInstanceQuery query,
+        Expression<Func<JobInstance, TResult>> selector,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        ArgumentNullException.ThrowIfNull(selector);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var items = _instances.Values
+            .ApplyFilters(query)
+            .ApplySorting(query.SortBy, query.SortDescending);
+
+        var list = items.ToList();
+        var totalCount = list.Count;
+
+        // Compile and apply projection
+        var compiled = selector.Compile();
+        var projected = list
+            .ApplyPagination(query.PageNumber, query.PageSize)
+            .Select(compiled)
+            .ToList();
+
+        logger.LogDebug(
+            "QueryInstancesAsync<TResult>: Returned {Count}/{Total} projected instances (Page {PageNumber}, Size {PageSize})",
+            projected.Count,
+            totalCount,
+            query.PageNumber,
+            query.PageSize);
+
+        return Task.FromResult(new QueryResult<TResult>(projected, totalCount));
+    }
+
+    /// <summary>
+    /// 获取指定时间范围内各状态的实例统计数量
+    /// </summary>
+    public Task<Dictionary<JobState, int>> GetStateStatisticsAsync(
+        DateTime? startTime = null,
+        DateTime? endTime = null,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var statistics = _instances.Values
+            .ApplyTimeRangeFilter(startTime, endTime)
+            .GroupBy(i => i.State)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        // Ensure all states are represented
+        var result = new Dictionary<JobState, int>();
+        foreach (var state in Enum.GetValues<JobState>())
+        {
+            result[state] = statistics.GetValueOrDefault(state, 0);
+        }
+
+        logger.LogDebug(
+            "GetStateStatisticsAsync: Retrieved statistics for time range, total {TotalCount} instances",
+            result.Values.Sum());
+
+        return Task.FromResult(result);
     }
 
     /// <summary>
@@ -375,49 +399,6 @@ public class InMemoryJobMetadataRepository(ILogger<InMemoryJobMetadataRepository
             maxDeletionsPerCycle > 0 ? maxDeletionsPerCycle.ToString() : "unlimited");
 
         return Task.FromResult(result);
-    }
-
-    /// <summary>
-    /// Applies dynamic sorting to JobInstance enumerable based on field name
-    /// </summary>
-    private static IEnumerable<JobInstance> ApplyInstanceSorting(
-        IEnumerable<JobInstance> items,
-        string sortBy,
-        bool descending)
-    {
-        return sortBy switch
-        {
-            "InstanceId" => descending
-                ? items.OrderByDescending(i => i.InstanceId)
-                : items.OrderBy(i => i.InstanceId),
-            "JobKey" => descending
-                ? items.OrderByDescending(i => i.JobKey)
-                : items.OrderBy(i => i.JobKey),
-            "State" => descending
-                ? items.OrderByDescending(i => i.State)
-                : items.OrderBy(i => i.State),
-            "CreatedAt" => descending
-                ? items.OrderByDescending(i => i.CreatedAt)
-                : items.OrderBy(i => i.CreatedAt),
-            "StartedAt" => descending
-                ? items.OrderByDescending(i => i.StartedAt ?? DateTime.MinValue)
-                : items.OrderBy(i => i.StartedAt ?? DateTime.MinValue),
-            "CompletedAt" => descending
-                ? items.OrderByDescending(i => i.CompletedAt ?? DateTime.MinValue)
-                : items.OrderBy(i => i.CompletedAt ?? DateTime.MinValue),
-            "Duration" => descending
-                ? items.OrderByDescending(i =>
-                    i.CompletedAt.HasValue && i.StartedAt.HasValue
-                        ? (i.CompletedAt.Value - i.StartedAt.Value).TotalSeconds
-                        : (i.StartedAt.HasValue ? (DateTime.UtcNow - i.StartedAt.Value).TotalSeconds : 0))
-                : items.OrderBy(i =>
-                    i.CompletedAt.HasValue && i.StartedAt.HasValue
-                        ? (i.CompletedAt.Value - i.StartedAt.Value).TotalSeconds
-                        : (i.StartedAt.HasValue ? (DateTime.UtcNow - i.StartedAt.Value).TotalSeconds : 0)),
-            _ => descending
-                ? items.OrderByDescending(i => i.CreatedAt)
-                : items.OrderBy(i => i.CreatedAt)
-        };
     }
 
     #endregion

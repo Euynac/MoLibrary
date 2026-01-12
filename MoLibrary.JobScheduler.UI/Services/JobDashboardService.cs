@@ -42,46 +42,33 @@ public class JobDashboardService(
             var disabledCount = definitions.Count(d => d.IsDisabled && !d.IsDeleted);
             var totalJobs = definitions.Count(d => !d.IsDeleted);
 
-            // 3. Get instances for state distribution and metrics
-            var instanceQuery = new JobInstanceQuery
-            {
-                CreatedAfter = metricsStartTime,
-                CreatedBefore = now,
-                PageNumber = 1,
-                PageSize = int.MaxValue
-            };
+            // 3. Get state distribution using optimized GROUP BY query (no full entity load)
+            var stateDistribution = await metadataRepository.GetStateStatisticsAsync(
+                metricsStartTime, now, cancellationToken);
 
-            var instanceResult = await metadataRepository.QueryInstancesAsync(instanceQuery, cancellationToken);
-            var instances = instanceResult.Items;
-
-            // 4. Calculate state distribution
-            var stateDistribution = instances
-                .GroupBy(i => i.State)
-                .ToDictionary(g => g.Key, g => g.Count());
-
-            // 5. Get currently running count from concurrency guard
+            // 4. Get currently running count from concurrency guard
             var executionStats = await concurrencyGuard.GetAllExecutionStatisticsAsync(cancellationToken);
             var runningNow = executionStats.Values.Sum(s => s.RunningCount);
 
-            // 6. Calculate success rate
+            // 5. Calculate success rate from state distribution counts
             var terminalStates = new[]
             {
                 JobState.Succeeded, JobState.Failed, JobState.Terminated,
                 JobState.Cancelled, JobState.Skipped
             };
-            var completedInstances = instances.Where(i => terminalStates.Contains(i.State)).ToList();
-            var succeededCount = completedInstances.Count(i => i.State == JobState.Succeeded);
-            var successRate = completedInstances.Count > 0
-                ? ((double)succeededCount / completedInstances.Count) * 100
+            var completedCount = terminalStates.Sum(s => stateDistribution.GetValueOrDefault(s, 0));
+            var succeededCount = stateDistribution.GetValueOrDefault(JobState.Succeeded, 0);
+            var successRate = completedCount > 0
+                ? ((double)succeededCount / completedCount) * 100
                 : 100;
 
-            // 7. Calculate throughput (per hour)
+            // 6. Calculate throughput (per hour)
             var hoursInWindow = _options.HealthMetricsWindow.TotalHours;
             var throughputPerHour = hoursInWindow > 0
-                ? (int)Math.Round(completedInstances.Count / hoursInWindow)
+                ? (int)Math.Round(completedCount / hoursInWindow)
                 : 0;
 
-            // 8. Get system health status
+            // 7. Get system health status
             var (healthStatus, healthMessage) = await GetSystemHealthStatusAsync(cancellationToken);
 
             return Res.Ok(new DashboardSummary

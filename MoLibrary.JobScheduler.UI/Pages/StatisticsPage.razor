@@ -1,10 +1,12 @@
 @page "/job-scheduler/statistics"
 
+@using MoLibrary.JobScheduler.Abstractions
 @using MoLibrary.JobScheduler.UI.Components.Statistics
 @using MoLibrary.JobScheduler.UI.Models
 @using MoLibrary.JobScheduler.UI.Services
 
 @inject JobAnalyticsService AnalyticsService
+@inject IJobDefinitionCacheService CacheService
 @inject ISnackbar Snackbar
 
 @implements IAsyncDisposable
@@ -110,42 +112,39 @@
             var (startTime, endTime) = GetEffectiveTimeRange();
             var granularity = GetGranularity();
 
-            // Load all data in parallel
-            var trendTask = AnalyticsService.GetExecutionTrendAsync(startTime, endTime, granularity, token);
-            var percentilesTask = AnalyticsService.GetDurationPercentilesAsync(startTime, endTime, null, token);
-            var topExecutionTask = AnalyticsService.GetTopJobsAsync(startTime, endTime, 10, RankingType.ExecutionCount, token);
-            var topFailureTask = AnalyticsService.GetTopJobsAsync(startTime, endTime, 10, RankingType.FailureCount, token);
-            var failureTask = AnalyticsService.GetFailureAnalysisAsync(startTime, endTime, token);
+            // Step 1: Single query with projection (no StateHistory/JobArgs loaded)
+            var instancesResult = await AnalyticsService.GetInstanceStatisticsAsync(startTime, endTime, token);
+            if (!instancesResult.IsOk(out var instances))
+            {
+                if (instancesResult.IsFailed(out var error, out _))
+                    _loadError = error.Message;
+                return;
+            }
 
-            await Task.WhenAll(trendTask, percentilesTask, topExecutionTask, topFailureTask, failureTask);
+            // Step 2: Get job names for display
+            var definitions = await CacheService.GetAllDefinitionsAsync(token);
+            var jobNameMap = definitions.ToDictionary(d => d.JobKey, d => d.JobName);
 
-            var trendResult = await trendTask;
-            var percentilesResult = await percentilesTask;
-            var topExecutionResult = await topExecutionTask;
-            var topFailureResult = await topFailureTask;
-            var failureResult = await failureTask;
-
-            // Handle results
+            // Step 3: Pure in-memory calculations (synchronous, no additional DB queries)
+            var trendResult = AnalyticsService.CalculateExecutionTrend(instances, startTime, endTime, granularity);
             if (trendResult.IsOk(out var trend))
                 _trendData = trend;
 
+            var percentilesResult = AnalyticsService.CalculateDurationPercentiles(instances);
             if (percentilesResult.IsOk(out var percentiles))
                 _percentiles = percentiles;
 
+            var topExecutionResult = AnalyticsService.CalculateTopJobs(instances, jobNameMap, 10, RankingType.ExecutionCount);
             if (topExecutionResult.IsOk(out var topExecution))
                 _topByExecution = topExecution;
 
+            var topFailureResult = AnalyticsService.CalculateTopJobs(instances, jobNameMap, 10, RankingType.FailureCount);
             if (topFailureResult.IsOk(out var topFailure))
                 _topByFailure = topFailure;
 
+            var failureResult = AnalyticsService.CalculateFailureAnalysis(instances, jobNameMap, startTime, endTime);
             if (failureResult.IsOk(out var failure))
                 _failureAnalysis = failure;
-
-            // Check for any errors
-            if (trendResult.IsFailed(out var error, out _))
-            {
-                _loadError = error.Message;
-            }
         }
         catch (OperationCanceledException)
         {

@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MoLibrary.JobScheduler.Abstractions;
@@ -183,68 +184,17 @@ public class EfCoreJobMetadataRepository(
 
         var dbContext = await dbContextProvider.GetDbContextAsync();
 
-        var queryable = dbContext.JobInstances.AsNoTracking();
-
-        // Apply filters
-        // Support both single JobKey and multiple JobKeys filtering (JobKeys takes priority)
-        if (query.JobKeys is { Count: > 0 })
-        {
-            queryable = queryable.Where(i => query.JobKeys.Contains(i.JobKey));
-        }
-        else if (!string.IsNullOrEmpty(query.JobKey))
-        {
-            queryable = queryable.Where(i => i.JobKey == query.JobKey);
-        }
-
-        if (!string.IsNullOrEmpty(query.JobKeyContains))
-        {
-            queryable = queryable.Where(i => EF.Functions.Like(i.JobKey, $"%{query.JobKeyContains}%"));
-        }
-
-        if (!string.IsNullOrEmpty(query.InstanceIdContains))
-        {
-            queryable = queryable.Where(i => EF.Functions.Like(i.InstanceId, $"%{query.InstanceIdContains}%"));
-        }
-
-        // Support both single state and multiple states filtering (States takes priority)
-        if (query.States is { Count: > 0 })
-        {
-            queryable = queryable.Where(i => query.States.Contains(i.State));
-        }
-        else if (query.State.HasValue)
-        {
-            queryable = queryable.Where(i => i.State == query.State.Value);
-        }
-
-        if (query.CreatedAfter.HasValue)
-        {
-            queryable = queryable.Where(i => i.CreatedAt >= query.CreatedAfter.Value);
-        }
-
-        if (query.CreatedBefore.HasValue)
-        {
-            queryable = queryable.Where(i => i.CreatedAt <= query.CreatedBefore.Value);
-        }
+        var queryable = dbContext.JobInstances
+            .AsNoTracking()
+            .ApplyFilters(query);
 
         // Get total count
         var totalCount = await queryable.CountAsync(cancellationToken);
 
-        // Apply sorting (flexible approach)
-        if (!string.IsNullOrEmpty(query.SortBy))
-        {
-            queryable = ApplyInstanceSorting(queryable, query.SortBy, query.SortDescending);
-        }
-        else
-        {
-            // Default: sort by CreatedAt descending
-            queryable = queryable.OrderByDescending(i => i.CreatedAt);
-        }
-
-        // Apply pagination
+        // Apply sorting and pagination
         var entities = await queryable
-            .Skip((query.PageNumber - 1) * query.PageSize)
-            .Take(query.PageSize)
-            .ToListAsync(cancellationToken);
+            .ApplySorting(query.SortBy, query.SortDescending)
+            .ApplyPaginationAsync(query.PageNumber, query.PageSize, cancellationToken);
 
         var items = entities.Select(JobMetadataMapper.ToModel).ToList();
 
@@ -256,6 +206,82 @@ public class EfCoreJobMetadataRepository(
             query.PageSize);
 
         return new QueryResult<JobInstance>(items, totalCount);
+    }
+
+    /// <summary>
+    /// 查询 Job 实例列表并投影到自定义类型（使用数据库端 SELECT 投影）
+    /// </summary>
+    public async Task<QueryResult<TResult>> QueryInstancesAsync<TResult>(
+        JobInstanceQuery query,
+        Expression<Func<JobInstance, TResult>> selector,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        ArgumentNullException.ThrowIfNull(selector);
+
+        var dbContext = await dbContextProvider.GetDbContextAsync();
+
+        var queryable = dbContext.JobInstances
+            .AsNoTracking()
+            .ApplyFilters(query);
+
+        // Get total count before projection
+        var totalCount = await queryable.CountAsync(cancellationToken);
+
+        // Apply sorting
+        queryable = queryable.ApplySorting(query.SortBy, query.SortDescending);
+
+        // Rewrite expression from JobInstance to JobInstanceEntity for database-side projection
+        var entitySelector = JobInstanceExpressionRewriter.Rewrite(selector);
+
+        // Apply pagination and projection (database-side SELECT)
+        var items = await queryable
+            .Skip((query.PageNumber - 1) * query.PageSize)
+            .Take(query.PageSize)
+            .Select(entitySelector)
+            .ToListAsync(cancellationToken);
+
+        logger.LogDebug(
+            "QueryInstancesAsync<TResult>: Returned {Count}/{Total} projected instances (Page {PageNumber}, Size {PageSize})",
+            items.Count,
+            totalCount,
+            query.PageNumber,
+            query.PageSize);
+
+        return new QueryResult<TResult>(items, totalCount);
+    }
+
+    /// <summary>
+    /// 获取指定时间范围内各状态的实例统计数量（使用数据库端 GROUP BY）
+    /// </summary>
+    public async Task<Dictionary<JobState, int>> GetStateStatisticsAsync(
+        DateTime? startTime = null,
+        DateTime? endTime = null,
+        CancellationToken cancellationToken = default)
+    {
+        var dbContext = await dbContextProvider.GetDbContextAsync();
+
+        // Database-side GROUP BY - generates efficient SQL
+        var statistics = await dbContext.JobInstances
+            .AsNoTracking()
+            .ApplyTimeRangeFilter(startTime, endTime)
+            .GroupBy(i => i.State)
+            .Select(g => new { State = g.Key, Count = g.Count() })
+            .ToListAsync(cancellationToken);
+
+        // Convert to dictionary, ensuring all states are represented
+        var result = new Dictionary<JobState, int>();
+        foreach (var state in Enum.GetValues<JobState>())
+        {
+            result[state] = statistics.FirstOrDefault(s => s.State == state)?.Count ?? 0;
+        }
+
+        logger.LogDebug(
+            "GetStateStatisticsAsync: Retrieved statistics for {StateCount} states, total {TotalCount} instances",
+            statistics.Count,
+            statistics.Sum(s => s.Count));
+
+        return result;
     }
 
     /// <summary>
@@ -430,66 +456,6 @@ public class EfCoreJobMetadataRepository(
             allInstances.Count);
 
         return result;
-    }
-
-    /// <summary>
-    /// Applies dynamic sorting to JobInstance queryable based on field name
-    /// </summary>
-    private static IQueryable<JobInstanceEntity> ApplyInstanceSorting(
-        IQueryable<JobInstanceEntity> queryable,
-        string sortBy,
-        bool descending)
-    {
-        return sortBy switch
-        {
-            "InstanceId" => descending
-                ? queryable.OrderByDescending(i => i.InstanceId)
-                : queryable.OrderBy(i => i.InstanceId),
-            "JobKey" => descending
-                ? queryable.OrderByDescending(i => i.JobKey)
-                : queryable.OrderBy(i => i.JobKey),
-            "State" => descending
-                ? queryable.OrderByDescending(i => i.State)
-                : queryable.OrderBy(i => i.State),
-            "CreatedAt" => descending
-                ? queryable.OrderByDescending(i => i.CreatedAt)
-                : queryable.OrderBy(i => i.CreatedAt),
-            "StartedAt" => descending
-                ? queryable.OrderByDescending(i => i.StartedAt)
-                : queryable.OrderBy(i => i.StartedAt),
-            "CompletedAt" => descending
-                ? queryable.OrderByDescending(i => i.CompletedAt)
-                : queryable.OrderBy(i => i.CompletedAt),
-            "Duration" => ApplyDurationSorting(queryable, descending),
-            _ => descending
-                ? queryable.OrderByDescending(i => i.CreatedAt)
-                : queryable.OrderBy(i => i.CreatedAt)
-        };
-    }
-
-    /// <summary>
-    /// Applies duration-based sorting using database-agnostic expressions.
-    /// Completed jobs are sorted by their actual duration, running jobs by elapsed time.
-    /// </summary>
-    private static IQueryable<JobInstanceEntity> ApplyDurationSorting(
-        IQueryable<JobInstanceEntity> queryable,
-        bool descending)
-    {
-        // Sort by duration in seconds: (EndTime - StartTime).TotalSeconds
-        // EndTime is CompletedAt for finished jobs or current UTC time for running jobs
-        // EF Core translates this to provider-specific SQL (TIMESTAMPDIFF for MySQL, DATEDIFF for SQL Server, etc.)
-        if (descending)
-        {
-            return queryable.OrderByDescending(i =>
-                i.StartedAt != null
-                    ? ((i.CompletedAt ?? DateTime.UtcNow) - i.StartedAt.Value).TotalSeconds
-                    : 0);
-        }
-
-        return queryable.OrderBy(i =>
-            i.StartedAt != null
-                ? ((i.CompletedAt ?? DateTime.UtcNow) - i.StartedAt.Value).TotalSeconds
-                : 0);
     }
 
     #endregion

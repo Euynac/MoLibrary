@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using MoLibrary.JobScheduler.Metadata;
 using MoLibrary.JobScheduler.Models;
 
@@ -69,6 +70,35 @@ public interface IMoJobMetadataRepository
     /// <returns>查询结果，包含项列表和总数</returns>
     Task<QueryResult<JobInstance>> QueryInstancesAsync(
         JobInstanceQuery query,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 查询 Job 实例列表并投影到自定义类型（支持数据库端 SELECT 投影）
+    /// </summary>
+    /// <typeparam name="TResult">投影结果类型</typeparam>
+    /// <param name="query">查询条件</param>
+    /// <param name="selector">投影表达式，基于 JobInstance 属性</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>查询结果，包含投影后的项列表和总数</returns>
+    /// <remarks>
+    /// 对于 EF Core 实现，投影在数据库端执行（生成对应的 SELECT 语句）
+    /// 支持的属性：InstanceId, JobKey, State, CreatedAt, StartedAt, CompletedAt, RetryAttempt 等
+    /// </remarks>
+    Task<QueryResult<TResult>> QueryInstancesAsync<TResult>(
+        JobInstanceQuery query,
+        Expression<Func<JobInstance, TResult>> selector,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 获取指定时间范围内各状态的实例统计数量（使用数据库端 GROUP BY）
+    /// </summary>
+    /// <param name="startTime">起始时间（可选）</param>
+    /// <param name="endTime">结束时间（可选）</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>各状态对应的实例数量字典</returns>
+    Task<Dictionary<JobState, int>> GetStateStatisticsAsync(
+        DateTime? startTime = null,
+        DateTime? endTime = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
