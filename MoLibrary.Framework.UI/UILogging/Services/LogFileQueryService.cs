@@ -150,7 +150,13 @@ public sealed class LogFileQueryService(
         }
     }
 
-    private string ResolveFilePath(string relativePath)
+    /// <summary>
+    /// 将相对路径解析为完整的日志文件路径
+    /// </summary>
+    /// <param name="relativePath">相对于日志目录的路径</param>
+    /// <returns>完整的文件路径</returns>
+    /// <exception cref="InvalidOperationException">当路径试图访问日志目录之外的位置时抛出</exception>
+    public string ResolveFilePath(string relativePath)
     {
         var combined = Path.Combine(_logDirectory, relativePath);
         var fullPath = Path.GetFullPath(combined);

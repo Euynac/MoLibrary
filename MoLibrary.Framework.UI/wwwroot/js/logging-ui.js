@@ -128,6 +128,9 @@
         }
     };
 
+    // 存储滚动监听器引用，用于后续移除
+    const scrollListenerMap = new WeakMap();
+
     /**
      * 添加滚动事件监听，检测滚动到顶部
      * @param {HTMLElement} container - 滚动容器元素
@@ -139,6 +142,9 @@
         if (!container || !dotNetRef) {
             return;
         }
+
+        // 如果已有监听器，先移除
+        window.MoLogging.removeScrollListener(container);
 
         let isLoading = false;
         let lastScrollTop = container.scrollTop;
@@ -163,6 +169,23 @@
         };
 
         container.addEventListener('scroll', handleScroll, { passive: true });
+        scrollListenerMap.set(container, handleScroll);
+    };
+
+    /**
+     * 移除滚动事件监听
+     * @param {HTMLElement} container - 滚动容器元素
+     */
+    window.MoLogging.removeScrollListener = function (container) {
+        if (!container) {
+            return;
+        }
+
+        const handleScroll = scrollListenerMap.get(container);
+        if (handleScroll) {
+            container.removeEventListener('scroll', handleScroll);
+            scrollListenerMap.delete(container);
+        }
     };
 
     /**

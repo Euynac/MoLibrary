@@ -36,6 +36,25 @@
             <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="tab-content">
                 <MudTabPanel Text="实时日志" Icon="@Icons.Material.Filled.Timeline">
                     <div class="realtime-log-panel">
+                        @if (!_logFileExists)
+                        {
+                            <MudAlert Severity="Severity.Warning" Class="mb-2" Dense="true">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Style="width: 100%">
+                                    <MudText Typo="Typo.body2">
+                                        <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Class="mr-1" Style="vertical-align: middle;" />
+                                        日志文件不存在：<strong>@(_currentLogFilePath ?? "未配置")</strong>
+                                    </MudText>
+                                    <MudButton Variant="Variant.Outlined"
+                                               Color="Color.Warning"
+                                               Size="Size.Small"
+                                               StartIcon="@Icons.Material.Filled.SwapHoriz"
+                                               OnClick="OpenFileSwitchDialog">
+                                        切换日志文件
+                                    </MudButton>
+                                </MudStack>
+                            </MudAlert>
+                        }
+
                         <div class="file-info">
                             <MudStack Row="true" Spacing="4" AlignItems="AlignItems.Center">
                                 <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
@@ -43,6 +62,11 @@
                                     <MudText Typo="Typo.caption" Color="Color.Secondary">
                                         当前监听日志文件：<strong>@(_currentLogFilePath ?? "未检测到")</strong>
                                     </MudText>
+                                    <MudIconButton Icon="@Icons.Material.Filled.SwapHoriz"
+                                                   Size="Size.Small"
+                                                   Color="Color.Primary"
+                                                   OnClick="OpenFileSwitchDialog"
+                                                   Title="切换日志文件" />
                                 </MudStack>
                                 <MudDivider Vertical="true" FlexItem="true" />
                                 <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
@@ -130,6 +154,64 @@
     }
 </div>
 
+@* File Switch Dialog *@
+<MudDialog @bind-Visible="_fileSwitchDialogVisible">
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.SwapHoriz" />
+            <MudText>选择日志文件</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        @if (_filesLoading)
+        {
+            <MudStack AlignItems="AlignItems.Center" Class="pa-4">
+                <MudProgressCircular Indeterminate="true" Size="Size.Medium" />
+                <MudText Typo="Typo.body2" Color="Color.Secondary">正在加载文件列表...</MudText>
+            </MudStack>
+        }
+        else if (_logFiles.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info" Dense="true">
+                未找到任何日志文件
+            </MudAlert>
+        }
+        else
+        {
+            <MudList T="LogFileDescriptor" Clickable="true" @bind-SelectedValue="_selectedSwitchFile" Dense="true" Class="file-list">
+                @foreach (var file in _logFiles)
+                {
+                    <MudListItem T="LogFileDescriptor" Value="file" Class="@(file == _selectedSwitchFile ? "selected-file" : "")">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Style="width: 100%">
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.body2">@file.FileName</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@file.RelativePath</MudText>
+                            </MudStack>
+                            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default">
+                                    @FormatFileSize(file.Size)
+                                </MudChip>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @file.LastModified.ToString("MM-dd HH:mm")
+                                </MudText>
+                            </MudStack>
+                        </MudStack>
+                    </MudListItem>
+                }
+            </MudList>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseFileSwitchDialog">取消</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   OnClick="SwitchToSelectedFile"
+                   Disabled="@(_selectedSwitchFile == null)">
+            确定
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
 @code {
     public const string LOGGING_MONITOR_URL = "/logging-monitor";
 
@@ -145,6 +227,11 @@
     private bool _filesLoading;
     private string? _logDirectory;
     private string? _currentLogFilePath;
+    private bool _logFileExists = true;
+
+    // File switch dialog state
+    private bool _fileSwitchDialogVisible;
+    private LogFileDescriptor? _selectedSwitchFile;
 
     private LoggingSubscription? _subscription;
     private CancellationTokenSource? _subscriptionCts;
@@ -176,6 +263,7 @@
             _onlyCapture = options.DefaultOnlyCapture;
             _logDirectory = LoggingService.LogDirectory;
             _currentLogFilePath = LoggingService.CurrentLogFilePath;
+            _logFileExists = LoggingService.LogFileExists;
 
             _subscription = LoggingService.Subscribe();
             _subscriptionCts = new CancellationTokenSource();
@@ -183,6 +271,24 @@
 
             await InitializeSnapshotAsync();
             await RefreshFilesAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "初始化日志页面失败");
+            Snackbar.Add($"初始化失败: {ex.Message}", Severity.Error);
+
+            // 清理已创建的订阅
+            if (_subscriptionCts != null)
+            {
+                await _subscriptionCts.CancelAsync();
+                _subscriptionCts.Dispose();
+                _subscriptionCts = null;
+            }
+            if (_subscription != null)
+            {
+                await _subscription.DisposeAsync();
+                _subscription = null;
+            }
         }
         finally
         {
@@ -523,6 +629,74 @@
             Logger.LogError(ex, "加载更多日志时发生异常");
             Snackbar.Add($"加载失败: {ex.Message}", Severity.Error);
         }
+    }
+
+    private async Task OpenFileSwitchDialog()
+    {
+        _selectedSwitchFile = null;
+        _fileSwitchDialogVisible = true;
+        await RefreshFilesAsync();
+    }
+
+    private void CloseFileSwitchDialog()
+    {
+        _fileSwitchDialogVisible = false;
+        _selectedSwitchFile = null;
+    }
+
+    private async Task SwitchToSelectedFile()
+    {
+        if (_selectedSwitchFile == null)
+        {
+            return;
+        }
+
+        var selectedFile = _selectedSwitchFile;
+        _fileSwitchDialogVisible = false;
+        _isInitializing = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await LoggingService.SwitchToFileAsync(selectedFile.RelativePath, _selectedLineLimit);
+            if (result.IsFailed(out var error, out var snapshot))
+            {
+                Snackbar.Add(error.Message ?? "切换日志文件失败", Severity.Error);
+                return;
+            }
+
+            _snapshot = snapshot;
+            _currentLogFilePath = LoggingService.CurrentLogFilePath;
+            _logFileExists = LoggingService.LogFileExists;
+            _totalFileLineCount = LoggingService.TotalFileLineCount;
+            _isRunning = false;
+
+            Snackbar.Add($"已切换到: {selectedFile.FileName}", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "切换日志文件失败");
+            Snackbar.Add($"切换失败: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isInitializing = false;
+            _selectedSwitchFile = null;
+            StateHasChanged();
+        }
+    }
+
+    private static string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        var order = 0;
+        double size = bytes;
+        while (size >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            size /= 1024;
+        }
+        return $"{size:0.##} {sizes[order]}";
     }
 
     public async ValueTask DisposeAsync()

@@ -24,7 +24,7 @@ public sealed class LogTailService(
     IOptions<ModuleLoggingUIOption> uiOptions,
     ILogger<LogTailService> logger)
 {
-    private readonly string _logFilePath = ResolveLogFilePath(loggingOptions.Value, uiOptions.Value);
+    private string _logFilePath = ResolveLogFilePath(loggingOptions.Value, uiOptions.Value);
     private readonly TimeSpan _pollingInterval = uiOptions.Value.PollingInterval;
     private readonly object _syncRoot = new();
 
@@ -33,6 +33,11 @@ public sealed class LogTailService(
     private bool _isInitialized;
 
     public string LogFilePath => _logFilePath;
+
+    /// <summary>
+    /// 当前日志文件是否存在
+    /// </summary>
+    public bool LogFileExists => File.Exists(_logFilePath);
 
     public string LogDirectory => Path.GetDirectoryName(_logFilePath) ?? AppContext.BaseDirectory;
 
@@ -62,6 +67,23 @@ public sealed class LogTailService(
                 return _currentLineNumber;
             }
         }
+    }
+
+    /// <summary>
+    /// 切换到新的日志文件
+    /// </summary>
+    /// <param name="newFilePath">新的日志文件完整路径</param>
+    public void SwitchToFile(string newFilePath)
+    {
+        lock (_syncRoot)
+        {
+            _logFilePath = newFilePath;
+            _lastPosition = 0;
+            _currentLineNumber = 0;
+            _isInitialized = false;
+        }
+
+        logger.LogInformation("已切换到日志文件: {FilePath}", newFilePath);
     }
 
     /// <summary>
