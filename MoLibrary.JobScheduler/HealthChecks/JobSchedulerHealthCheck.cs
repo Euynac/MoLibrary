@@ -23,7 +23,7 @@ public class JobSchedulerHealthCheck(IMoHostedServiceManager serviceManager) : I
         };
 
         var services = serviceTypes
-            .Select(type => serviceManager.GetService(type))
+            .Select(serviceManager.GetService)
             .Where(info => info != null)
             .ToList();
 

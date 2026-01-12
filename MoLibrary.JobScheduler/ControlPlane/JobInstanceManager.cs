@@ -130,13 +130,14 @@ public class JobInstanceManager(
                     instance.InstanceId);
             }
             // Publish JobCompletedEvent when job reaches a terminal state from processing.
-            else if (oldState == JobState.Processing && IsTerminalState(newState))
+            else if (IsTerminalState(newState))
             {
                 if (string.IsNullOrEmpty(instance.RunningClientId))
                 {
                     logger.LogWarning(
-                        "Job instance {InstanceId} reached terminal state {State} without RunningClientId",
+                        "Job instance {InstanceId} from {OldState} reached terminal state {State} without RunningClientId",
                         instance.InstanceId,
+                        oldState,
                         newState);
                     return;
                 }
@@ -151,8 +152,9 @@ public class JobInstanceManager(
                 });
 
                 logger.LogDebug(
-                    "Published JobCompletedEvent for instance {InstanceId} with state {State}",
+                    "Published JobCompletedEvent for instance {InstanceId} from {OldState} to {State}",
                     instance.InstanceId,
+                    oldState,
                     newState);
             }
         }

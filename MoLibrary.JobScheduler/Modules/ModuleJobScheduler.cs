@@ -110,17 +110,11 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
 
         Logger.LogInformation("Discovered {Count} job type(s) for registration", _jobDefinitions.Count);
 
-        if (_jobDefinitions.Count == 0)
-        {
-            Logger.LogInformation("No jobs discovered. Job scheduler will run without any registered jobs.");
-            return;
-        }
+        // Register health check for monitoring initialization status (always register regardless of job count)
+        services.AddHealthChecks()
+            .AddCheck<JobSchedulerHealthCheck>("JobScheduler", tags: ["ready", "scheduler"]);
 
-       
-        services.AddHostedService<JobRegistrationHostedService>(provider => ActivatorUtilities.CreateInstance<JobRegistrationHostedService>(provider, _jobDefinitions));
-
-        services.AddHostedService<JobWorkerManagerHostedService>(provider => ActivatorUtilities.CreateInstance<JobWorkerManagerHostedService>(provider, _jobDefinitions));
-
+        
         if (GetOptions<ModuleRegisterCentreOption>().IsCentreServer)
         {
             services.AddHostedService<JobSchedulerHostedService>();
@@ -167,12 +161,19 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
                 Logger.LogInformation("History cleanup disabled");
             }
         }
+        
+        if (_jobDefinitions.Count == 0)
+        {
+            Logger.LogInformation("No jobs discovered. Job scheduler will run without any registered jobs.");
+            return;
+        }
 
-        // Register health check for monitoring initialization status
-        services.AddHealthChecks()
-            .AddCheck<JobSchedulerHealthCheck>("job-scheduler", tags: ["ready", "scheduler"]);
+       
+        services.AddHostedService<JobRegistrationHostedService>(provider => ActivatorUtilities.CreateInstance<JobRegistrationHostedService>(provider, _jobDefinitions));
+
+        services.AddHostedService<JobWorkerManagerHostedService>(provider => ActivatorUtilities.CreateInstance<JobWorkerManagerHostedService>(provider, _jobDefinitions));
     }
-    
+
     /// <summary>
     /// Extracts JobDefinition from a job type using reflection and JobConfigAttribute.
     /// </summary>
