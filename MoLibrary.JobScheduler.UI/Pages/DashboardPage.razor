@@ -24,13 +24,13 @@
     {
         <MudAlert Severity="Severity.Error" Class="mb-4">
             @_loadError
-            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="LoadDataAsync">重试</MudButton>
+            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="@(() => LoadDataAsync())">重试</MudButton>
         </MudAlert>
     }
     else if (_summary != null)
     {
         @* System Health Banner *@
-        <SystemHealthBanner Status="_summary.HealthStatus" Message="_summary.HealthMessage" />
+        <SystemHealthBanner Status="_summary.HealthStatus" Message="@_summary.HealthMessage" />
 
         @* Metrics Summary Cards *@
         <MetricsSummaryCards TotalJobs="_summary.TotalJobs"
@@ -44,20 +44,18 @@
 
         @* Main Content Grid *@
         <MudGrid Spacing="3">
-            @* State Distribution Chart *@
+            @* Left Column: State Distribution + Problem Jobs *@
             <MudItem xs="12" md="6">
-                <JobStateDistributionChart StateDistribution="_summary.StateDistribution"
-                                           TimeWindowText="@GetTimeWindowText()" />
+                <MudStack Spacing="3">
+                    <JobStateDistributionChart StateDistribution="_summary.StateDistribution"
+                                               TimeWindowText="@GetTimeWindowText()" />
+                    <ProblemJobsPanel Problems="_problemJobs" />
+                </MudStack>
             </MudItem>
 
-            @* Recent Activity Timeline *@
+            @* Right Column: Recent Activity Timeline *@
             <MudItem xs="12" md="6">
                 <RecentActivityTimeline Activities="_recentActivities" />
-            </MudItem>
-
-            @* Problem Jobs Panel *@
-            <MudItem xs="12">
-                <ProblemJobsPanel Problems="_problemJobs" />
             </MudItem>
         </MudGrid>
 
@@ -105,13 +103,16 @@
         }
     }
 
-    private async Task LoadDataAsync()
+    private async Task LoadDataAsync(bool showLoading = true)
     {
         try
         {
-            _isLoading = true;
-            _loadError = null;
-            StateHasChanged();
+            if (showLoading)
+            {
+                _isLoading = true;
+                _loadError = null;
+                StateHasChanged();
+            }
 
             var token = _cts?.Token ?? CancellationToken.None;
 
@@ -155,7 +156,10 @@
         }
         finally
         {
-            _isLoading = false;
+            if (showLoading)
+            {
+                _isLoading = false;
+            }
             StateHasChanged();
         }
     }
@@ -169,7 +173,8 @@
             _isRefreshing = true;
             StateHasChanged();
 
-            await LoadDataAsync();
+            // 自动刷新时不显示加载指示器，静默更新
+            await LoadDataAsync(showLoading: false);
         }
         finally
         {
