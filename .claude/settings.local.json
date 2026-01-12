@@ -56,7 +56,8 @@
       "Bash(wc:*)",
       "Skill(mo-ui-development)",
       "Bash(python3:*)",
-      "Skill(plugin-dev:create-plugin)"
+      "Skill(plugin-dev:create-plugin)",
+      "Skill(mo-development)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"
