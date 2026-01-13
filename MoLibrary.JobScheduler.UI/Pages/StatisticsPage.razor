@@ -45,7 +45,7 @@
         <MudGrid Spacing="3">
             @* Duration Percentiles *@
             <MudItem xs="12" md="6">
-                <DurationPercentilesCard Percentiles="@_percentiles" />
+                <DurationPercentilesCard Percentiles="@_percentiles" SlowestInstances="@_slowestInstances" />
             </MudItem>
 
             @* Top Jobs by Execution Count *@
@@ -78,6 +78,7 @@
 
     private List<ExecutionTrendPoint> _trendData = [];
     private DurationPercentiles _percentiles = new();
+    private List<SlowestInstance> _slowestInstances = [];
     private List<JobRanking> _topByExecution = [];
     private List<JobRanking> _topByFailure = [];
     private FailureAnalysis? _failureAnalysis;
@@ -143,6 +144,16 @@
             else
             {
                 _percentiles = percentiles;
+            }
+
+            if (AnalyticsService.CalculateSlowestInstances(instances, jobNameMap, 10)
+                .IsFailed(out var slowestError, out var slowestInstances))
+            {
+                errors.Add($"最慢实例: {slowestError.Message}");
+            }
+            else
+            {
+                _slowestInstances = slowestInstances;
             }
 
             if (AnalyticsService.CalculateTopJobs(instances, jobNameMap, 10, RankingType.ExecutionCount)

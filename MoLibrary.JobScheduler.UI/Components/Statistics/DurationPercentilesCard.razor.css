@@ -86,6 +86,54 @@
     gap: 12px;
 }
 
+.percentiles-wrapper ::deep .slowest-section {
+    margin-top: 4px;
+}
+
+.percentiles-wrapper ::deep .slowest-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.percentiles-wrapper ::deep .slowest-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.percentiles-wrapper ::deep .slowest-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: var(--mud-palette-background);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.percentiles-wrapper ::deep .slowest-item:hover {
+    background: rgba(var(--mud-palette-primary-rgb), 0.08);
+}
+
+.percentiles-wrapper ::deep .slowest-job-name {
+    font-size: 0.875rem;
+    color: var(--mud-palette-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 60%;
+}
+
+.percentiles-wrapper ::deep .slowest-duration {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--mud-palette-warning);
+    font-variant-numeric: tabular-nums;
+}
+
 @media (max-width: 600px) {
     .percentiles-wrapper ::deep .percentiles-grid {
         grid-template-columns: repeat(2, 1fr);

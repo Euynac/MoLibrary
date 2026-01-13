@@ -285,6 +285,37 @@ public enum TimeRangePreset
 }
 
 /// <summary>
+/// 最慢实例信息（用于 Top N 展示）
+/// </summary>
+public class SlowestInstance
+{
+    /// <summary>
+    /// 实例ID
+    /// </summary>
+    public required string InstanceId { get; set; }
+
+    /// <summary>
+    /// 作业键
+    /// </summary>
+    public required string JobKey { get; set; }
+
+    /// <summary>
+    /// 作业名称
+    /// </summary>
+    public required string JobName { get; set; }
+
+    /// <summary>
+    /// 执行耗时
+    /// </summary>
+    public TimeSpan Duration { get; set; }
+
+    /// <summary>
+    /// 完成时间
+    /// </summary>
+    public DateTime CompletedAt { get; set; }
+}
+
+/// <summary>
 /// 统计页面请求参数
 /// </summary>
 public class StatisticsRequest

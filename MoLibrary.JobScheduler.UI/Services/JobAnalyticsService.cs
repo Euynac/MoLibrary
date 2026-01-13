@@ -338,5 +338,53 @@ public class JobAnalyticsService(
         }
     }
 
+    /// <summary>
+    /// 计算最慢的 N 个实例（每个 JobKey 只取最慢的一个）
+    /// </summary>
+    public Res<List<SlowestInstance>> CalculateSlowestInstances(
+        List<JobInstanceStatistics> instances,
+        Dictionary<string, string> jobNameMap,
+        int topN = 5)
+    {
+        try
+        {
+            // Filter completed instances with valid duration
+            var completedWithDuration = instances
+                .Where(i => i.StartedAt.HasValue && i.CompletedAt.HasValue)
+                .Where(i => i.State == JobState.Succeeded || i.State == JobState.Failed || i.State == JobState.Terminated)
+                .Select(i => new
+                {
+                    i.InstanceId,
+                    i.JobKey,
+                    Duration = i.CompletedAt!.Value - i.StartedAt!.Value,
+                    CompletedAt = i.CompletedAt.Value
+                })
+                .ToList();
+
+            // Group by JobKey and take the slowest instance for each
+            var slowestByJob = completedWithDuration
+                .GroupBy(i => i.JobKey)
+                .Select(g => g.OrderByDescending(i => i.Duration).First())
+                .OrderByDescending(i => i.Duration)
+                .Take(topN)
+                .Select(i => new SlowestInstance
+                {
+                    InstanceId = i.InstanceId,
+                    JobKey = i.JobKey,
+                    JobName = jobNameMap.GetValueOrDefault(i.JobKey, i.JobKey),
+                    Duration = i.Duration,
+                    CompletedAt = i.CompletedAt
+                })
+                .ToList();
+
+            return Res.Ok(slowestByJob);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to calculate slowest instances");
+            return Res.Fail($"计算最慢实例失败: {ex.Message}");
+        }
+    }
+
     #endregion
 }
