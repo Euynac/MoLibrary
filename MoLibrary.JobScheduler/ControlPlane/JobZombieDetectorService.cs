@@ -63,7 +63,7 @@ public class JobZombieDetectorService(
     /// </summary>
     protected override Task OnLeaderLostAsync(LeaderLostReason reason)
     {
-        logger.LogInformation("Zombie detector stopped after losing leader status (reason: {Reason})", reason);
+        RecordState($"Zombie detector stopped after losing leader status (reason: {reason})", givenLogLevel: LogLevel.Information);
         return Task.CompletedTask;
     }
 

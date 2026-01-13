@@ -47,7 +47,7 @@ public class JobHistoryCleanupService(
     /// </summary>
     protected override Task OnLeaderLostAsync(LeaderLostReason reason)
     {
-        logger.LogInformation("History cleanup service stopped after losing leader status (reason: {Reason})", reason);
+        RecordState($"History cleanup service stopped after losing leader status (reason: {reason})", givenLogLevel: LogLevel.Information);
         return Task.CompletedTask;
     }
 

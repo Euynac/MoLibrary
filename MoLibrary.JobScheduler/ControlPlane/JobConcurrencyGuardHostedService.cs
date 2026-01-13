@@ -49,11 +49,11 @@ public class JobConcurrencyGuardHostedService(
 
     private async Task InitializeConcurrencyTrackingAsync(CancellationToken cancellationToken)
     {
-        logger.LogInformation("JobConcurrencyGuard is initializing...");
+        RecordState("JobConcurrencyGuard is initializing...", givenLogLevel: LogLevel.Information);
 
         // 1. Load all job definitions from cache
         var definitions = await cacheService.GetAllDefinitionsAsync(cancellationToken);
-        logger.LogDebug("Loaded {Count} job definitions", definitions.Count);
+        RecordState($"Loaded {definitions.Count} job definitions", givenLogLevel: LogLevel.Debug);
 
         // 2. Initialize statistics for each job definition
         foreach (var definition in definitions)
@@ -71,7 +71,7 @@ public class JobConcurrencyGuardHostedService(
         // 3. Scan all Enqueued and Processing state instances to recover in-memory state
         // Use single batch query instead of N queries (one per definition)
         var allJobKeys = definitions.Select(d => d.JobKey).ToList();
-        logger.LogDebug("Querying instances for {Count} job definitions in batch", allJobKeys.Count);
+        RecordState($"Querying instances for {allJobKeys.Count} job definitions in batch", givenLogLevel: LogLevel.Debug);
 
         var batchQuery = new JobInstanceQuery
         {
@@ -84,11 +84,9 @@ public class JobConcurrencyGuardHostedService(
         var batchResult = await metadataRepository.QueryInstancesAsync(batchQuery, cancellationToken);
         var allInstances = batchResult.Items;
 
-        logger.LogDebug(
-            "Retrieved {InstanceCount} active instances ({EnqueuedCount} Enqueued, {ProcessingCount} Processing)",
-            allInstances.Count,
-            allInstances.Count(i => i.State == JobState.Enqueued),
-            allInstances.Count(i => i.State == JobState.Processing));
+        RecordState(
+            $"Retrieved {allInstances.Count} active instances ({allInstances.Count(i => i.State == JobState.Enqueued)} Enqueued, {allInstances.Count(i => i.State == JobState.Processing)} Processing)",
+            givenLogLevel: LogLevel.Debug);
 
         // Group instances by JobKey for efficient recovery
         var instancesByJob = allInstances.GroupBy(i => i.JobKey);
@@ -99,9 +97,9 @@ public class JobConcurrencyGuardHostedService(
 
             if (!_statistics.TryGetValue(jobKey, out var statistic))
             {
-                logger.LogWarning(
-                    "Found instances for unknown job {JobKey} during recovery, skipping",
-                    jobKey);
+                RecordState(
+                    $"Found instances for unknown job {jobKey} during recovery, skipping",
+                    givenLogLevel: LogLevel.Warning);
                 continue;
             }
 
@@ -112,19 +110,18 @@ public class JobConcurrencyGuardHostedService(
                     // Recover pending reservation
                     statistic.ReserveSlot(instance.InstanceId);
 
-                    logger.LogDebug(
-                        "Recovered pending reservation for instance {InstanceId} of job {JobKey}",
-                        instance.InstanceId,
-                        jobKey);
+                    RecordState(
+                        $"Recovered pending reservation for instance {instance.InstanceId} of job {jobKey}",
+                        givenLogLevel: LogLevel.Debug);
                 }
                 else if (instance.State == JobState.Processing)
                 {
                     // Recover running instance
                     if (string.IsNullOrEmpty(instance.RunningClientId) || !instance.StartedAt.HasValue)
                     {
-                        logger.LogWarning(
-                            "Found Processing instance {InstanceId} with missing client ID or started time, skipping recovery",
-                            instance.InstanceId);
+                        RecordState(
+                            $"Found Processing instance {instance.InstanceId} with missing client ID or started time, skipping recovery",
+                            givenLogLevel: LogLevel.Warning);
                         continue;
                     }
 
@@ -135,11 +132,9 @@ public class JobConcurrencyGuardHostedService(
                         StartedAt = instance.StartedAt.Value
                     });
 
-                    logger.LogDebug(
-                        "Recovered running instance {InstanceId} for job {JobKey} on worker {WorkerId}",
-                        instance.InstanceId,
-                        jobKey,
-                        instance.RunningClientId);
+                    RecordState(
+                        $"Recovered running instance {instance.InstanceId} for job {jobKey} on worker {instance.RunningClientId}",
+                        givenLogLevel: LogLevel.Debug);
                 }
             }
         }
@@ -154,11 +149,9 @@ public class JobConcurrencyGuardHostedService(
         // Note: Worker offline detection is now handled by the zombie detector service through timeout-based detection
         // The previous RegisterCentre server-based offline event mechanism has been removed in the StateStore refactoring
 
-        logger.LogInformation(
-            "JobConcurrencyGuard initialized with {DefinitionCount} job definitions, {PendingCount} pending reservations, and {RunningCount} running instances",
-            _statistics.Count,
-            _statistics.Values.Sum(s => s.PendingReservations.Count),
-            _statistics.Values.Sum(s => s.RunningInstances.Count));
+        RecordState(
+            $"JobConcurrencyGuard initialized with {_statistics.Count} job definitions, {_statistics.Values.Sum(s => s.PendingReservations.Count)} pending reservations, and {_statistics.Values.Sum(s => s.RunningInstances.Count)} running instances",
+            givenLogLevel: LogLevel.Information);
     }
 
     /// <summary>
@@ -167,7 +160,7 @@ public class JobConcurrencyGuardHostedService(
     /// </summary>
     protected override async Task OnLeaderLostAsync(LeaderLostReason reason)
     {
-        logger.LogInformation("JobConcurrencyGuard cleaning up after losing leader status (reason: {Reason})", reason);
+        RecordState($"JobConcurrencyGuard cleaning up after losing leader status (reason: {reason})", givenLogLevel: LogLevel.Information);
 
         // Unsubscribe from EventBus events
         foreach (var subscription in _eventSubscriptions)
@@ -186,14 +179,14 @@ public class JobConcurrencyGuardHostedService(
         _jobLocks = new ConcurrentDictionary<string, SemaphoreSlim>();
         _statistics = new ConcurrentDictionary<string, JobExecutionStatistic>();
 
-        logger.LogInformation("JobConcurrencyGuard cleanup completed");
+        RecordState("JobConcurrencyGuard cleanup completed", givenLogLevel: LogLevel.Information);
     }
 
     public async Task<bool> CanExecuteJobAsync(string jobKey, CancellationToken cancellationToken = default)
     {
         if (!_statistics.TryGetValue(jobKey, out var statistic))
         {
-            logger.LogWarning("Job {JobKey} not found in concurrency guard statistics", jobKey);
+            RecordState($"Job {jobKey} not found in concurrency guard statistics", givenLogLevel: LogLevel.Warning);
             return false;
         }
 
@@ -207,20 +200,15 @@ public class JobConcurrencyGuardHostedService(
 
             if (!canExecute)
             {
-                logger.LogWarning(
-                    "Job {JobKey} exceeded MaxConcurrency limit: {Current}/{Max}. Running instances (up to 5): {RunningDetails}",
-                    jobKey,
-                    statistic.CurrentExecutingCount,
-                    statistic.MaxConcurrency,
-                    GetRunningInstancesSummary(statistic));
+                RecordState(
+                    $"Job {jobKey} exceeded MaxConcurrency limit: {statistic.CurrentExecutingCount}/{statistic.MaxConcurrency}. Running instances (up to 5): {GetRunningInstancesSummary(statistic)}",
+                    givenLogLevel: LogLevel.Warning);
             }
             else
             {
-                logger.LogDebug(
-                    "Job {JobKey} can execute: {Current}/{Max}",
-                    jobKey,
-                    statistic.CurrentExecutingCount,
-                    statistic.MaxConcurrency);
+                RecordState(
+                    $"Job {jobKey} can execute: {statistic.CurrentExecutingCount}/{statistic.MaxConcurrency}",
+                    givenLogLevel: LogLevel.Debug);
             }
 
             return canExecute;
@@ -239,7 +227,7 @@ public class JobConcurrencyGuardHostedService(
         if (!_statistics.TryGetValue(jobKey, out var statistic))
         {
             var reason = $"Job {jobKey} not found in concurrency guard statistics";
-            logger.LogWarning("{Reason}", reason);
+            RecordState(reason, givenLogLevel: LogLevel.Warning);
             return ReservationResult.Failure(reason);
         }
 
@@ -253,25 +241,18 @@ public class JobConcurrencyGuardHostedService(
             {
                 var runningDetails = GetRunningInstancesSummary(statistic);
                 var reason = $"Job {jobKey} exceeded MaxConcurrency limit: {statistic.CurrentExecutingCount}/{statistic.MaxConcurrency}. Running instances (up to 5): {runningDetails}";
-                logger.LogWarning(
-                    "Job {JobKey} instance {InstanceId} exceeded MaxConcurrency: {Current}/{Max}. Running instances (up to 5): {RunningDetails}",
-                    jobKey,
-                    instanceId,
-                    statistic.CurrentExecutingCount,
-                    statistic.MaxConcurrency,
-                    runningDetails);
+                RecordState(
+                    $"Job {jobKey} instance {instanceId} exceeded MaxConcurrency: {statistic.CurrentExecutingCount}/{statistic.MaxConcurrency}. Running instances (up to 5): {runningDetails}",
+                    givenLogLevel: LogLevel.Warning);
                 return ReservationResult.Failure(reason);
             }
 
             // Reserve the slot
             statistic.ReserveSlot(instanceId);
 
-            logger.LogDebug(
-                "Reserved execution slot for job {JobKey} instance {InstanceId}: {Current}/{Max}",
-                jobKey,
-                instanceId,
-                statistic.CurrentExecutingCount,
-                statistic.MaxConcurrency);
+            RecordState(
+                $"Reserved execution slot for job {jobKey} instance {instanceId}: {statistic.CurrentExecutingCount}/{statistic.MaxConcurrency}",
+                givenLogLevel: LogLevel.Debug);
 
             return ReservationResult.Success();
         }
@@ -299,12 +280,9 @@ public class JobConcurrencyGuardHostedService(
             var (removedFromPending, removedFromRunning) = statistic.RemoveInstanceFromTracking(instanceId);
             if (removedFromPending || removedFromRunning)
             {
-                logger.LogDebug(
-                    "Released slot for job {JobKey} instance {InstanceId} (pending: {WasPending}, running: {WasRunning})",
-                    jobKey,
-                    instanceId,
-                    removedFromPending,
-                    removedFromRunning);
+                RecordState(
+                    $"Released slot for job {jobKey} instance {instanceId} (pending: {removedFromPending}, running: {removedFromRunning})",
+                    givenLogLevel: LogLevel.Debug);
             }
         }
         finally
@@ -442,8 +420,7 @@ public class JobConcurrencyGuardHostedService(
             // 1. Check state before reconciliation
             var stateBefore = await CheckConsistencyAsync(cancellationToken);
 
-            logger.LogInformation("Starting reconciliation. Current deviation: {Deviation}",
-                stateBefore.TotalDeviation);
+            RecordState($"Starting reconciliation. Current deviation: {stateBefore.TotalDeviation}", givenLogLevel: LogLevel.Information);
 
             // 2. Acquire all job locks to prevent concurrent modifications
             var allLocks = _jobLocks.Values.ToList();
@@ -517,18 +494,16 @@ public class JobConcurrencyGuardHostedService(
 
             stopwatch.Stop();
 
-            logger.LogInformation(
-                "Reconciliation completed in {Duration}ms. Deviation before: {Before}, after: {After}",
-                stopwatch.ElapsedMilliseconds,
-                stateBefore.TotalDeviation,
-                stateAfter.TotalDeviation);
+            RecordState(
+                $"Reconciliation completed in {stopwatch.ElapsedMilliseconds}ms. Deviation before: {stateBefore.TotalDeviation}, after: {stateAfter.TotalDeviation}",
+                givenLogLevel: LogLevel.Information);
 
             return ReconcileResult.Ok(stateBefore, stateAfter, stopwatch.Elapsed);
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
-            logger.LogError(ex, "Reconciliation failed after {Duration}ms", stopwatch.ElapsedMilliseconds);
+            RecordState($"Reconciliation failed after {stopwatch.ElapsedMilliseconds}ms", givenLogLevel: LogLevel.Error, exception: ex);
             return ReconcileResult.Fail($"Reconciliation failed: {ex.Message}");
         }
     }
@@ -537,10 +512,9 @@ public class JobConcurrencyGuardHostedService(
     {
         if (!_statistics.TryGetValue(evt.JobKey, out var statistic))
         {
-            logger.LogWarning(
-                "Received JobStartedEvent for unknown job {JobKey}, instance {InstanceId}",
-                evt.JobKey,
-                evt.InstanceId);
+            RecordState(
+                $"Received JobStartedEvent for unknown job {evt.JobKey}, instance {evt.InstanceId}",
+                givenLogLevel: LogLevel.Warning);
             return;
         }
 
@@ -559,13 +533,9 @@ public class JobConcurrencyGuardHostedService(
             // Confirm reservation (move from pending to running)
             statistic.ConfirmReservation(evt.InstanceId, info);
 
-            logger.LogDebug(
-                "Job {JobKey} instance {InstanceId} started on worker {WorkerId}, current executing: {Current}/{Max}",
-                evt.JobKey,
-                evt.InstanceId,
-                evt.WorkerClientId,
-                statistic.CurrentExecutingCount,
-                statistic.MaxConcurrency);
+            RecordState(
+                $"Job {evt.JobKey} instance {evt.InstanceId} started on worker {evt.WorkerClientId}, current executing: {statistic.CurrentExecutingCount}/{statistic.MaxConcurrency}",
+                givenLogLevel: LogLevel.Debug);
         }
         finally
         {
@@ -577,10 +547,9 @@ public class JobConcurrencyGuardHostedService(
     {
         if (!_statistics.TryGetValue(evt.JobKey, out var statistic))
         {
-            logger.LogWarning(
-                "Received JobCompletedEvent for unknown job {JobKey}, instance {InstanceId}",
-                evt.JobKey,
-                evt.InstanceId);
+            RecordState(
+                $"Received JobCompletedEvent for unknown job {evt.JobKey}, instance {evt.InstanceId}",
+                givenLogLevel: LogLevel.Warning);
             return;
         }
 
@@ -593,22 +562,15 @@ public class JobConcurrencyGuardHostedService(
 
             if (removedFromPending || removedFromRunning)
             {
-                logger.LogDebug(
-                    "Job {JobKey} instance {InstanceId} completed with state {FinalState} and removed from tracking (pending: {WasPending}, running: {WasRunning}), current executing: {Current}/{Max}",
-                    evt.JobKey,
-                    evt.InstanceId,
-                    evt.FinalState,
-                    removedFromPending,
-                    removedFromRunning,
-                    statistic.CurrentExecutingCount,
-                    statistic.MaxConcurrency);
+                RecordState(
+                    $"Job {evt.JobKey} instance {evt.InstanceId} completed with state {evt.FinalState} and removed from tracking (pending: {removedFromPending}, running: {removedFromRunning}), current executing: {statistic.CurrentExecutingCount}/{statistic.MaxConcurrency}",
+                    givenLogLevel: LogLevel.Debug);
             }
             else
             {
-                logger.LogWarning(
-                    "Job {JobKey} instance {InstanceId} completed but was not found in tracking",
-                    evt.JobKey,
-                    evt.InstanceId);
+                RecordState(
+                    $"Job {evt.JobKey} instance {evt.InstanceId} completed but was not found in tracking",
+                    givenLogLevel: LogLevel.Warning);
             }
         }
         finally
@@ -624,11 +586,9 @@ public class JobConcurrencyGuardHostedService(
     /// </summary>
     private Task OnJobDefinitionsChangedAsync(JobDefinitionsChangedEvent evt)
     {
-        logger.LogDebug(
-            "Received JobDefinitionsChangedEvent: {AddedCount} added, {UpdatedCount} updated, {DeletedCount} deleted",
-            evt.AddedJobKeys.Count,
-            evt.UpdatedJobKeys.Count,
-            evt.DeletedJobKeys.Count);
+        RecordState(
+            $"Received JobDefinitionsChangedEvent: {evt.AddedJobKeys.Count} added, {evt.UpdatedJobKeys.Count} updated, {evt.DeletedJobKeys.Count} deleted",
+            givenLogLevel: LogLevel.Debug);
 
         // 1. Add statistics for newly added jobs
         foreach (var definition in evt.AddedDefinitions)
@@ -643,10 +603,9 @@ public class JobConcurrencyGuardHostedService(
                 };
                 _jobLocks[definition.JobKey] = new SemaphoreSlim(1, 1);
 
-                logger.LogDebug(
-                    "Added concurrency tracking for new job: {JobKey} (MaxConcurrency: {MaxConcurrency})",
-                    definition.JobKey,
-                    definition.MaxConcurrency);
+                RecordState(
+                    $"Added concurrency tracking for new job: {definition.JobKey} (MaxConcurrency: {definition.MaxConcurrency})",
+                    givenLogLevel: LogLevel.Debug);
             }
         }
 
@@ -656,10 +615,9 @@ public class JobConcurrencyGuardHostedService(
             if (_statistics.TryGetValue(definition.JobKey, out var statistic))
             {
                 statistic.MaxConcurrency = definition.MaxConcurrency;
-                logger.LogDebug(
-                    "Updated MaxConcurrency for job {JobKey} to {MaxConcurrency}",
-                    definition.JobKey,
-                    definition.MaxConcurrency);
+                RecordState(
+                    $"Updated MaxConcurrency for job {definition.JobKey} to {definition.MaxConcurrency}",
+                    givenLogLevel: LogLevel.Debug);
             }
         }
 
