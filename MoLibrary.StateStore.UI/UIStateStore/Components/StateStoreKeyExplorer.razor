@@ -1,0 +1,482 @@
+@using MoLibrary.StateStore.UI.Services
+@using MoLibrary.StateStore.UI.Models
+@using MoLibrary.StateStore.UI.Modules
+@using MoLibrary.Tool.MoResponse
+@inject StateStoreUIService StateStoreService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<MudGrid>
+    @* Provider 选择和搜索 *@
+    <MudItem xs="12">
+        <MudPaper Class="pa-4">
+            <MudGrid>
+                <MudItem xs="12" md="4">
+                    <MudSelect T="StateStoreProviderInfo"
+                               Label="选择 Provider"
+                               @bind-Value="selectedProvider"
+                               @bind-Value:after="OnProviderChanged"
+                               Variant="Variant.Outlined">
+                        @foreach (var provider in Providers)
+                        {
+                            <MudSelectItem Value="provider">
+                                <div class="d-flex align-center">
+                                    <MudIcon Icon="@GetProviderIcon(provider)"
+                                             Size="Size.Small" Class="mr-2" />
+                                    @provider.DisplayName
+                                    <MudChip T="string" Size="Size.Small" Class="ml-2"
+                                             Color="@GetProviderColor(provider)">
+                                        @provider.ProviderTypeName
+                                    </MudChip>
+                                </div>
+                            </MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="12" md="5">
+                    <MudTextField @bind-Value="searchPattern"
+                                  Label="@GetSearchLabel()"
+                                  Placeholder="@GetSearchPlaceholder()"
+                                  Variant="Variant.Outlined"
+                                  Adornment="Adornment.End"
+                                  AdornmentIcon="@Icons.Material.Filled.Search"
+                                  OnAdornmentClick="SearchKeysAsync"
+                                  OnKeyDown="OnSearchKeyDown" />
+                </MudItem>
+
+                <MudItem xs="12" md="3" Class="d-flex align-center gap-2">
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Search"
+                               OnClick="SearchKeysAsync"
+                               Disabled="@(selectedProvider == null || isSearching)">
+                        @GetSearchButtonText()
+                    </MudButton>
+
+                    @if (Options.AllowKeyCreation)
+                    {
+                        <MudButton Variant="Variant.Outlined"
+                                   Color="Color.Success"
+                                   StartIcon="@Icons.Material.Filled.Add"
+                                   OnClick="OpenCreateKeyDialog"
+                                   Disabled="@(selectedProvider == null)">
+                            新建
+                        </MudButton>
+                    }
+                </MudItem>
+            </MudGrid>
+
+            @if (selectedProvider != null && !selectedProvider.SupportsKeyScanning)
+            {
+                <MudAlert Severity="Severity.Warning" Class="mt-3">
+                    <MudText>
+                        <strong>此 Provider 不支持 Key 扫描</strong>，请输入完整 Key 名称进行查询。
+                    </MudText>
+                </MudAlert>
+            }
+        </MudPaper>
+    </MudItem>
+
+    @* Key 表格 *@
+    <MudItem xs="12">
+        <MudPaper Class="pa-4">
+            @if (isSearching)
+            {
+                <div class="d-flex justify-center pa-4">
+                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                </div>
+            }
+            else if (searchError != null)
+            {
+                <MudAlert Severity="Severity.Error">@searchError</MudAlert>
+            }
+            else if (keys.Any())
+            {
+                <div class="d-flex justify-space-between align-center mb-3">
+                    <MudText Typo="Typo.subtitle1">
+                        找到 @scanResult.TotalCount 个 Key
+                        @if (scanResult.HasMore)
+                        {
+                            <span class="ml-1">(显示前 @keys.Count 个)</span>
+                        }
+                    </MudText>
+
+                    @if (selectedKeys.Any() && Options.AllowKeyDeletion)
+                    {
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Error"
+                                   StartIcon="@Icons.Material.Filled.Delete"
+                                   OnClick="DeleteSelectedKeys">
+                            删除选中 (@selectedKeys.Count)
+                        </MudButton>
+                    }
+                </div>
+
+                <MudTable T="StateStoreKeyInfo"
+                          Items="keys"
+                          Dense="true"
+                          Hover="true"
+                          MultiSelection="@Options.AllowKeyDeletion"
+                          @bind-SelectedItems="selectedKeys"
+                          Loading="isLoadingValues">
+                    <HeaderContent>
+                        <MudTh>Key 名称</MudTh>
+                        <MudTh>值预览</MudTh>
+                        <MudTh Style="width: 150px;">操作</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Key">
+                            <MudText Typo="Typo.body2" Style="font-family: monospace; word-break: break-all;">
+                                @context.Key
+                            </MudText>
+                        </MudTd>
+                        <MudTd DataLabel="值">
+                            <KeyValuePreviewCell KeyInfo="context"
+                                                 OnLoadValue="() => LoadKeyValueAsync(context)" />
+                        </MudTd>
+                        <MudTd DataLabel="操作">
+                            <div class="d-flex gap-1">
+                                <MudTooltip Text="查看">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                                   Size="Size.Small"
+                                                   Color="Color.Info"
+                                                   OnClick="() => ViewKey(context)" />
+                                </MudTooltip>
+
+                                @if (Options.AllowKeyEditing)
+                                {
+                                    <MudTooltip Text="编辑">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                       Size="Size.Small"
+                                                       Color="Color.Primary"
+                                                       OnClick="() => EditKey(context)" />
+                                    </MudTooltip>
+                                }
+
+                                @if (Options.AllowKeyDeletion)
+                                {
+                                    <MudTooltip Text="删除">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                       Size="Size.Small"
+                                                       Color="Color.Error"
+                                                       OnClick="() => DeleteKey(context)" />
+                                    </MudTooltip>
+                                }
+                            </div>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+            else if (hasSearched)
+            {
+                <MudAlert Severity="Severity.Info">未找到匹配的 Key</MudAlert>
+            }
+            else
+            {
+                <MudText Class="text-center pa-4" Color="Color.Secondary">
+                    选择一个 Provider 并输入搜索条件开始查询
+                </MudText>
+            }
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter] public List<StateStoreProviderInfo> Providers { get; set; } = [];
+    [Parameter] public ModuleStateStoreUIOption Options { get; set; } = new();
+
+    private StateStoreProviderInfo? selectedProvider;
+    private string searchPattern = "*";
+    private List<StateStoreKeyInfo> keys = [];
+    private HashSet<StateStoreKeyInfo> selectedKeys = [];
+    private KeyScanResult scanResult = new();
+    private bool isSearching = false;
+    private bool isLoadingValues = false;
+    private bool hasSearched = false;
+    private string? searchError = null;
+
+    protected override void OnParametersSet()
+    {
+        if (selectedProvider == null && Providers.Any())
+        {
+            selectedProvider = Providers.First();
+        }
+    }
+
+    private void OnProviderChanged()
+    {
+        keys.Clear();
+        selectedKeys.Clear();
+        searchError = null;
+        hasSearched = false;
+        searchPattern = selectedProvider?.SupportsKeyScanning == true ? "*" : "";
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SearchKeysAsync();
+        }
+    }
+
+    private string GetSearchLabel()
+    {
+        return selectedProvider?.SupportsKeyScanning == true
+            ? "Key 模式 (例如: user:*, session:*)"
+            : "Key 名称 (完整名称)";
+    }
+
+    private string GetSearchPlaceholder()
+    {
+        return selectedProvider?.SupportsKeyScanning == true
+            ? "*"
+            : "输入完整 Key 名称";
+    }
+
+    private string GetSearchButtonText()
+    {
+        return selectedProvider?.SupportsKeyScanning == true ? "扫描" : "查询";
+    }
+
+    private async Task SearchKeysAsync()
+    {
+        if (selectedProvider == null || string.IsNullOrWhiteSpace(searchPattern)) return;
+
+        isSearching = true;
+        searchError = null;
+        hasSearched = true;
+        keys.Clear();
+        selectedKeys.Clear();
+        StateHasChanged();
+
+        try
+        {
+            // 对于不支持扫描的 Provider，使用精确查询
+            if (!selectedProvider.SupportsKeyScanning)
+            {
+                var existsResult = await StateStoreService.KeyExistsAsync(
+                    selectedProvider.ServiceKey,
+                    searchPattern);
+
+                if (existsResult.IsOk(out var exists) && exists)
+                {
+                    var keyResult = await StateStoreService.GetKeyAsync(
+                        selectedProvider.ServiceKey,
+                        searchPattern);
+
+                    if (keyResult.IsOk(out var keyInfo))
+                    {
+                        keys = [keyInfo];
+                        scanResult = new KeyScanResult { Keys = [searchPattern], TotalCount = 1 };
+                    }
+                }
+                else
+                {
+                    scanResult = new KeyScanResult();
+                }
+            }
+            else
+            {
+                var result = await StateStoreService.ScanKeysAsync(
+                    selectedProvider.ServiceKey,
+                    searchPattern,
+                    Options.MaxKeysPerPage);
+
+                if (result.IsFailed(out var error))
+                {
+                    searchError = error.Message;
+                }
+                else
+                {
+                    scanResult = result.Data!;
+                    keys = scanResult.Keys
+                        .Select(k => new StateStoreKeyInfo { Key = k })
+                        .ToList();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            searchError = ex.Message;
+        }
+        finally
+        {
+            isSearching = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadKeyValueAsync(StateStoreKeyInfo keyInfo)
+    {
+        if (keyInfo.IsValueLoaded || selectedProvider == null) return;
+
+        var result = await StateStoreService.GetKeyAsync(
+            selectedProvider.ServiceKey,
+            keyInfo.Key);
+
+        if (result.IsOk(out var loadedKey))
+        {
+            keyInfo.RawValue = loadedKey.RawValue;
+            keyInfo.ETag = loadedKey.ETag;
+            keyInfo.IsValueLoaded = true;
+            keyInfo.Error = loadedKey.Error;
+        }
+        else
+        {
+            keyInfo.Error = result.Message;
+            keyInfo.IsValueLoaded = true;
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task ViewKey(StateStoreKeyInfo keyInfo)
+    {
+        if (!keyInfo.IsValueLoaded)
+        {
+            await LoadKeyValueAsync(keyInfo);
+        }
+
+        var parameters = new DialogParameters<KeyEditorDialog>
+        {
+            { x => x.KeyInfo, keyInfo },
+            { x => x.ReadOnly, true }
+        };
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true };
+        await DialogService.ShowAsync<KeyEditorDialog>($"查看 Key: {keyInfo.Key}", parameters, options);
+    }
+
+    private async Task EditKey(StateStoreKeyInfo keyInfo)
+    {
+        if (!keyInfo.IsValueLoaded)
+        {
+            await LoadKeyValueAsync(keyInfo);
+        }
+
+        var parameters = new DialogParameters<KeyEditorDialog>
+        {
+            { x => x.KeyInfo, keyInfo },
+            { x => x.ServiceKey, selectedProvider?.ServiceKey },
+            { x => x.ReadOnly, false },
+            { x => x.OnSaved, EventCallback.Factory.Create<StateStoreKeyInfo>(this, OnKeySaved) }
+        };
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true };
+        await DialogService.ShowAsync<KeyEditorDialog>($"编辑 Key: {keyInfo.Key}", parameters, options);
+    }
+
+    private void OnKeySaved(StateStoreKeyInfo updatedKey)
+    {
+        var existing = keys.FirstOrDefault(k => k.Key == updatedKey.Key);
+        if (existing != null)
+        {
+            existing.RawValue = updatedKey.RawValue;
+            existing.ETag = updatedKey.ETag;
+        }
+
+        Snackbar.Add("Key 保存成功", Severity.Success);
+        StateHasChanged();
+    }
+
+    private async Task OpenCreateKeyDialog()
+    {
+        var parameters = new DialogParameters<KeyCreateDialog>
+        {
+            { x => x.ServiceKey, selectedProvider?.ServiceKey },
+            { x => x.OnCreated, EventCallback.Factory.Create<StateStoreKeyInfo>(this, OnKeyCreated) }
+        };
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true };
+        await DialogService.ShowAsync<KeyCreateDialog>("新建 Key", parameters, options);
+    }
+
+    private void OnKeyCreated(StateStoreKeyInfo newKey)
+    {
+        keys.Insert(0, newKey);
+        scanResult = scanResult with { TotalCount = scanResult.TotalCount + 1 };
+        Snackbar.Add("Key 创建成功", Severity.Success);
+        StateHasChanged();
+    }
+
+    private async Task DeleteKey(StateStoreKeyInfo keyInfo)
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "删除 Key",
+            $"确定要删除 Key '{keyInfo.Key}' 吗？",
+            "删除",
+            "取消");
+
+        if (confirmed == true && selectedProvider != null)
+        {
+            var result = await StateStoreService.DeleteKeyAsync(
+                selectedProvider.ServiceKey,
+                keyInfo.Key,
+                keyInfo.ETag);
+
+            if (result.IsFailed(out var error))
+            {
+                Snackbar.Add($"删除 Key 失败: {error.Message}", Severity.Error);
+            }
+            else
+            {
+                keys.Remove(keyInfo);
+                scanResult = scanResult with { TotalCount = scanResult.TotalCount - 1 };
+                Snackbar.Add("Key 删除成功", Severity.Success);
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task DeleteSelectedKeys()
+    {
+        if (!selectedKeys.Any() || selectedProvider == null) return;
+
+        var confirmed = await DialogService.ShowMessageBox(
+            "批量删除 Key",
+            $"确定要删除选中的 {selectedKeys.Count} 个 Key 吗？",
+            "全部删除",
+            "取消");
+
+        if (confirmed == true)
+        {
+            var result = await StateStoreService.DeleteKeysAsync(
+                selectedProvider.ServiceKey,
+                selectedKeys.Select(k => k.Key).ToList());
+
+            if (result.IsFailed(out var error))
+            {
+                Snackbar.Add($"批量删除 Key 失败: {error.Message}", Severity.Error);
+            }
+            else
+            {
+                foreach (var key in selectedKeys.ToList())
+                {
+                    keys.Remove(key);
+                }
+                scanResult = scanResult with { TotalCount = scanResult.TotalCount - selectedKeys.Count };
+                selectedKeys.Clear();
+                Snackbar.Add(result.Message ?? "删除成功", Severity.Success);
+                StateHasChanged();
+            }
+        }
+    }
+
+    private static string GetProviderIcon(StateStoreProviderInfo provider) => provider.ProviderType switch
+    {
+        EStateStoreProviderType.Redis => Icons.Material.Filled.Storage,
+        EStateStoreProviderType.Dapr => Icons.Material.Filled.Cloud,
+        EStateStoreProviderType.Memory => Icons.Material.Filled.Memory,
+        _ => Icons.Material.Filled.Help
+    };
+
+    private static Color GetProviderColor(StateStoreProviderInfo provider) => provider.ProviderType switch
+    {
+        EStateStoreProviderType.Redis => Color.Error,
+        EStateStoreProviderType.Dapr => Color.Info,
+        EStateStoreProviderType.Memory => Color.Success,
+        _ => Color.Default
+    };
+}

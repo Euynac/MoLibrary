@@ -133,5 +133,9 @@ public enum EMoModules
     /// <summary>
     /// HostedService 可观测性模块
     /// </summary>
-    HostedService
+    HostedService,
+    /// <summary>
+    /// 状态存储 UI 管理模块
+    /// </summary>
+    StateStoreUI
 }

@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <Import Project="..\common.xml"/>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MoLibrary.StateStore\MoLibrary.StateStore.csproj" />
+    <ProjectReference Include="..\MoLibrary.StateStore.StackExchange\MoLibrary.StateStore.StackExchange.csproj" />
+    <ProjectReference Include="..\MoLibrary.Dapr\MoLibrary.Dapr.csproj" />
+    <ProjectReference Include="..\MoLibrary.UI\MoLibrary.UI.csproj" />
+  </ItemGroup>
+
+</Project>

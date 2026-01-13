@@ -1,0 +1,54 @@
+@using MoLibrary.StateStore.UI.Models
+
+@if (!KeyInfo.IsValueLoaded)
+{
+    <MudButton Size="Size.Small"
+               Variant="Variant.Text"
+               Color="Color.Primary"
+               OnClick="OnLoadValue">
+        加载值
+    </MudButton>
+}
+else if (KeyInfo.Error != null)
+{
+    <MudText Typo="Typo.body2" Color="Color.Error">
+        @KeyInfo.Error
+    </MudText>
+}
+else if (KeyInfo.RawValue == null)
+{
+    <MudText Typo="Typo.body2" Color="Color.Secondary">
+        (空)
+    </MudText>
+}
+else
+{
+    <MudTooltip Text="@KeyInfo.RawValue" Placement="Placement.Top">
+        <MudText Typo="Typo.body2"
+                 Style="font-family: monospace; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            @GetPreviewValue()
+        </MudText>
+    </MudTooltip>
+}
+
+@code {
+    [Parameter] public StateStoreKeyInfo KeyInfo { get; set; } = null!;
+    [Parameter] public EventCallback OnLoadValue { get; set; }
+
+    private string GetPreviewValue()
+    {
+        if (KeyInfo.RawValue == null) return "";
+
+        var value = KeyInfo.RawValue;
+        // 移除换行符以便预览
+        value = value.Replace("\n", " ").Replace("\r", "");
+
+        // 截断过长的值
+        if (value.Length > 100)
+        {
+            return value[..100] + "...";
+        }
+
+        return value;
+    }
+}

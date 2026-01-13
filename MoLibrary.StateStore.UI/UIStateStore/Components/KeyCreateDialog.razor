@@ -1,0 +1,177 @@
+@using MoLibrary.StateStore.UI.Services
+@using MoLibrary.StateStore.UI.Models
+@using MoLibrary.Tool.MoResponse
+@inject StateStoreUIService StateStoreService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="3">
+            @* Key 名称 *@
+            <MudTextField @bind-Value="keyName"
+                          Label="Key 名称"
+                          Variant="Variant.Outlined"
+                          Required="true"
+                          RequiredError="请输入 Key 名称"
+                          Style="font-family: monospace;"
+                          Placeholder="例如: user:123, session:abc" />
+
+            @* TTL *@
+            <MudNumericField @bind-Value="ttlSeconds"
+                             Label="TTL (秒, 0 表示永久)"
+                             Variant="Variant.Outlined"
+                             Min="0"
+                             Adornment="Adornment.End"
+                             AdornmentText="秒" />
+
+            @* JSON 值编辑器 *@
+            <MudTextField @bind-Value="jsonValue"
+                          Label="JSON 值"
+                          Variant="Variant.Outlined"
+                          Lines="10"
+                          Style="font-family: monospace;"
+                          HelperText="输入有效的 JSON 值"
+                          Placeholder='例如: {"name": "test", "count": 1}' />
+
+            <div class="d-flex gap-2">
+                <MudButton Variant="Variant.Text"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.FormatIndentIncrease"
+                           OnClick="FormatJson"
+                           Size="Size.Small">
+                    格式化 JSON
+                </MudButton>
+                <MudButton Variant="Variant.Text"
+                           Color="Color.Secondary"
+                           StartIcon="@Icons.Material.Filled.Compress"
+                           OnClick="MinifyJson"
+                           Size="Size.Small">
+                    压缩 JSON
+                </MudButton>
+            </div>
+
+            @if (errorMessage != null)
+            {
+                <MudAlert Severity="Severity.Error">@errorMessage</MudAlert>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">取消</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   OnClick="CreateAsync"
+                   Disabled="@(isSaving || string.IsNullOrWhiteSpace(keyName))">
+            @if (isSaving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            创建
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public string? ServiceKey { get; set; }
+    [Parameter] public EventCallback<StateStoreKeyInfo> OnCreated { get; set; }
+
+    private string keyName = "";
+    private string jsonValue = "{}";
+    private int ttlSeconds = 0;
+    private bool isSaving = false;
+    private string? errorMessage;
+
+    private void FormatJson()
+    {
+        try
+        {
+            var obj = System.Text.Json.JsonSerializer.Deserialize<object>(jsonValue);
+            jsonValue = System.Text.Json.JsonSerializer.Serialize(obj, new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+            errorMessage = null;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"JSON 格式化失败: {ex.Message}";
+        }
+    }
+
+    private void MinifyJson()
+    {
+        try
+        {
+            var obj = System.Text.Json.JsonSerializer.Deserialize<object>(jsonValue);
+            jsonValue = System.Text.Json.JsonSerializer.Serialize(obj);
+            errorMessage = null;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"JSON 压缩失败: {ex.Message}";
+        }
+    }
+
+    private async Task CreateAsync()
+    {
+        if (string.IsNullOrWhiteSpace(keyName))
+        {
+            errorMessage = "请输入 Key 名称";
+            return;
+        }
+
+        isSaving = true;
+        errorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            // 检查 Key 是否已存在
+            var existsResult = await StateStoreService.KeyExistsAsync(ServiceKey, keyName);
+            if (existsResult.IsOk(out var exists) && exists)
+            {
+                errorMessage = "Key 已存在，请使用其他名称或编辑现有 Key";
+                isSaving = false;
+                StateHasChanged();
+                return;
+            }
+
+            var request = new StateStoreKeyUpdateRequest
+            {
+                Key = keyName,
+                Value = jsonValue,
+                TTL = ttlSeconds > 0 ? TimeSpan.FromSeconds(ttlSeconds) : null
+            };
+
+            var result = await StateStoreService.SaveKeyAsync(ServiceKey, request);
+
+            if (result.IsFailed(out var error))
+            {
+                errorMessage = error.Message;
+            }
+            else
+            {
+                var newKey = new StateStoreKeyInfo
+                {
+                    Key = keyName,
+                    RawValue = jsonValue,
+                    IsValueLoaded = true
+                };
+                await OnCreated.InvokeAsync(newKey);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

@@ -1,0 +1,127 @@
+@using MoLibrary.StateStore.UI.Models
+@using System.Text.Json
+
+<MudCard Elevation="2">
+    <MudCardHeader>
+        <CardHeaderAvatar>
+            <MudAvatar Color="@GetProviderColor()" Size="Size.Large">
+                <MudIcon Icon="@GetProviderIcon()" />
+            </MudAvatar>
+        </CardHeaderAvatar>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">@Provider.DisplayName</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@Provider.ImplementationType</MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            <MudChip T="string" Color="@GetProviderColor()" Size="Size.Small">
+                @Provider.ProviderTypeName
+            </MudChip>
+        </CardHeaderActions>
+    </MudCardHeader>
+
+    <MudCardContent>
+        <MudStack Spacing="2">
+            @* 能力标签 *@
+            <div class="d-flex flex-wrap gap-1">
+                @if (Provider.SupportsKeyScanning)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">
+                        <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Small" Class="mr-1" />
+                        Key 扫描
+                    </MudChip>
+                }
+                else
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
+                        <MudIcon Icon="@Icons.Material.Filled.SearchOff" Size="Size.Small" Class="mr-1" />
+                        不支持扫描
+                    </MudChip>
+                }
+
+                @if (Provider.IsDistributed)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
+                        <MudIcon Icon="@Icons.Material.Filled.Cloud" Size="Size.Small" Class="mr-1" />
+                        分布式
+                    </MudChip>
+                }
+            </div>
+
+            @* 配置信息 *@
+            @if (Provider.Configuration != null)
+            {
+                <MudDivider Class="my-2" />
+                <MudText Typo="Typo.subtitle2" Color="Color.Secondary">配置信息</MudText>
+
+                <MudSimpleTable Dense="true" Hover="true" Style="overflow-x: auto;">
+                    <tbody>
+                        @foreach (var prop in GetConfigurationProperties())
+                        {
+                            <tr>
+                                <td style="font-weight: 500; white-space: nowrap;">@prop.Key</td>
+                                <td>
+                                    <MudText Typo="Typo.body2" Style="word-break: break-all;">
+                                        @(prop.Value ?? "-")
+                                    </MudText>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            }
+        </MudStack>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public StateStoreProviderInfo Provider { get; set; } = null!;
+
+    private string GetProviderIcon() => Provider.ProviderType switch
+    {
+        EStateStoreProviderType.Redis => Icons.Material.Filled.Storage,
+        EStateStoreProviderType.Dapr => Icons.Material.Filled.Cloud,
+        EStateStoreProviderType.Memory => Icons.Material.Filled.Memory,
+        _ => Icons.Material.Filled.Help
+    };
+
+    private Color GetProviderColor() => Provider.ProviderType switch
+    {
+        EStateStoreProviderType.Redis => Color.Error,
+        EStateStoreProviderType.Dapr => Color.Info,
+        EStateStoreProviderType.Memory => Color.Success,
+        _ => Color.Default
+    };
+
+    private Dictionary<string, string?> GetConfigurationProperties()
+    {
+        if (Provider.Configuration == null)
+            return new Dictionary<string, string?>();
+
+        var result = new Dictionary<string, string?>();
+        var type = Provider.Configuration.GetType();
+
+        foreach (var prop in type.GetProperties())
+        {
+            var value = prop.GetValue(Provider.Configuration);
+            result[GetPropertyDisplayName(prop.Name)] = value?.ToString();
+        }
+
+        return result;
+    }
+
+    private static string GetPropertyDisplayName(string propertyName)
+    {
+        return propertyName switch
+        {
+            "ConnectionType" => "连接类型",
+            "Host" => "主机",
+            "Port" => "端口",
+            "KeyPrefix" => "Key 前缀",
+            "DefaultTTL" => "默认 TTL",
+            "DatabaseIndex" => "数据库索引",
+            "StateStoreName" => "StateStore 名称",
+            "DefaultBulkParallelism" => "默认批量并行度",
+            _ => propertyName
+        };
+    }
+}
