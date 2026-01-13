@@ -93,7 +93,7 @@ public class ModuleCancellationManagerGuide : MoModuleGuide<ModuleCancellationMa
             // 使用分布式实现，需要依赖StateStore
             DependsOnModule<ModuleStateStoreGuide>().Register().AddKeyedCommonStateStore(key, true);
         }
-        
+
         ConfigureServices(context =>
         {
             context.Services.AddKeyedSingleton<IMoCancellationManager>(key, (serviceProvider, _) =>
@@ -111,6 +111,7 @@ public class ModuleCancellationManagerGuide : MoModuleGuide<ModuleCancellationMa
                 }
             });
         });
+        RecordKeyedServiceKey(key);
         return this;
     }
 

@@ -50,9 +50,9 @@ public static class ModuleRedisStateStoreBuilderExtensions
     {
         ArgumentNullException.ThrowIfNull(serviceKey);
         ArgumentNullException.ThrowIfNull(configureOptions);
-        
+
         new ModuleRedisStateStoreGuide().Register();
-        return guide.ConfigureStateStoreServices(services =>
+        guide.ConfigureStateStoreServices(services =>
         {
             // Register keyed options
             services.Configure(serviceKey, configureOptions);
@@ -75,6 +75,9 @@ public static class ModuleRedisStateStoreBuilderExtensions
                 return ActivatorUtilities.CreateInstance<RedisStateStore>(sp, keyedConnection, keyedOptions);
             });
         }, serviceKey);
+
+        guide.RecordKeyedServiceKey(serviceKey);
+        return guide;
     }
 }
 

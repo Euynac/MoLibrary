@@ -80,6 +80,7 @@ public class ModuleDaprEventBusGuide : MoModuleGuide<ModuleDaprEventBus, ModuleD
             });
         }, secondKey: key);
 
+        RecordKeyedServiceKey(key);
         return this;
     }
 }

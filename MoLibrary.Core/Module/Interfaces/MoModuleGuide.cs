@@ -165,7 +165,7 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     /// </summary>
     /// <param name="serviceKey">Keyed 服务的键</param>
     /// <returns>模块引导实例</returns>
-    protected internal TModuleGuideSelf RecordKeyedServiceKey(string serviceKey)
+    public TModuleGuideSelf RecordKeyedServiceKey(string serviceKey)
     {
         var requestInfo = RegisterModule();
         requestInfo.KeyedServiceKeys.Add(serviceKey);

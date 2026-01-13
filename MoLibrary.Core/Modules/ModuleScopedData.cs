@@ -71,6 +71,7 @@ public class ModuleScopedDataGuide : MoModuleGuide<ModuleScopedData, ModuleScope
                 context.Services.AddKeyedScoped<IMoScopedData, T>(key);
             }, secondKey: key);
 
+        RecordKeyedServiceKey(key);
         return this;
     }
 

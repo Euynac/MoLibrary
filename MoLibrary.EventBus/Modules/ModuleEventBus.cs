@@ -164,6 +164,7 @@ public class ModuleEventBusGuide : MoModuleGuide<ModuleEventBus, ModuleEventBusO
             }
         }, secondKey: key);
 
+        RecordKeyedServiceKey(key);
         return this;
     }
 
@@ -185,6 +186,7 @@ public class ModuleEventBusGuide : MoModuleGuide<ModuleEventBus, ModuleEventBusO
                     serviceKey: key));
         }, secondKey: key);
 
+        RecordKeyedServiceKey(key);
         return this;
     }
 }
