@@ -5,12 +5,11 @@ using MoLibrary.Core.Features.HostedServices;
 using MoLibrary.Core.Features.HostedServices.Models;
 using MoLibrary.Core.Features.ObservableInstance;
 using MoLibrary.Core.Modules;
-using MoLibrary.JobScheduler.Modules;
 using MoLibrary.RegisterCentre.Events;
 using MoLibrary.RegisterCentre.Interfaces;
-using MoLibrary.RegisterCentre.Models;
+using MoLibrary.RegisterCentre.Modules;
 
-namespace MoLibrary.JobScheduler.Core;
+namespace MoLibrary.RegisterCentre.Core;
 
 /// <summary>
 /// Abstract base class for background services that coordinate with RegisterCentre and only run on leader instances.
@@ -19,7 +18,7 @@ namespace MoLibrary.JobScheduler.Core;
 /// </summary>
 public abstract class CoordinatedLeaderService(
     ILeaderElectionService leaderService,
-    IOptions<ModuleJobSchedulerOption> options,
+    IOptions<ModuleRegisterCentreOption> options,
     ILogger logger,
     IServiceRegistrationCoordinator coordinator,
     IObservableInstanceManager observableManager,
@@ -28,7 +27,7 @@ public abstract class CoordinatedLeaderService(
     /// <summary>
     /// Module configuration options
     /// </summary>
-    protected readonly ModuleJobSchedulerOption Options = options.Value;
+    protected readonly ModuleRegisterCentreOption Options = options.Value;
 
     /// <summary>
     /// Leader election service for status tracking and event subscriptions

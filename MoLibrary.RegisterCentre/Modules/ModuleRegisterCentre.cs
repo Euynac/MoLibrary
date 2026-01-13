@@ -418,6 +418,20 @@ public class ModuleRegisterCentreOption : MoModuleOptionWithMinimalApi<ModuleReg
     /// 用于从 DI 容器中获取指定 serviceKey 的 StateStore 实例
     /// </summary>
     public string? CustomStateStoreServiceKey { get; internal set; }
+
+    #region CoordinatedLeaderService Configuration 
+    /// <summary>
+    /// Skips waiting for RegisterCentre registration when enabled.
+    /// Useful for development and standalone mode. Default: false.
+    /// </summary>
+    public bool SkipRegistrationWait { get; set; } = false;
+
+    /// <summary>
+    /// Maximum time to wait for RegisterCentre registration before starting scheduler services.
+    /// Default: 5 minutes.
+    /// </summary>
+    public TimeSpan RegistrationWaitTimeout { get; set; } = TimeSpan.FromMinutes(5);
+    #endregion
 }
 
 /// <summary>

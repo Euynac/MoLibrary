@@ -6,10 +6,11 @@ using MoLibrary.Core.Features.ObservableInstance;
 using MoLibrary.Core.Modules;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.JobScheduler.ControlPlane;
-using MoLibrary.JobScheduler.Core;
 using MoLibrary.JobScheduler.Events;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.JobScheduler.Modules;
+using MoLibrary.RegisterCentre.Modules;
+using MoLibrary.RegisterCentre.Core;
 using MoLibrary.RegisterCentre.Events;
 using MoLibrary.RegisterCentre.Interfaces;
 
@@ -30,8 +31,11 @@ public class JobRegistrationHostedService(
     IOptions<ModuleJobSchedulerOption> option,
     IServiceRegistrationCoordinator coordinator,
     IObservableInstanceManager observableManager,
-    IOptions<ModuleHostedServiceOption> hostedServiceOptions) : CoordinatedLeaderService(leaderService, option, logger, coordinator, observableManager, hostedServiceOptions)
+    IOptions<ModuleHostedServiceOption> hostedServiceOptions,
+    IOptions<ModuleRegisterCentreOption> registerCentreOptions) : CoordinatedLeaderService(leaderService, registerCentreOptions, logger, coordinator, observableManager, hostedServiceOptions)
 {
+    private readonly ModuleJobSchedulerOption _jobSchedulerOptions = option.Value;
+
     public override string ServiceName => nameof(JobRegistrationHostedService);
 
     /// <summary>
@@ -80,7 +84,7 @@ public class JobRegistrationHostedService(
             await jobRegistry.RegisterJob(definition, status);
         }
 
-        if (Options.RecurringJobDebugMode)
+        if (_jobSchedulerOptions.RecurringJobDebugMode)
         {
             logger.LogDebug("Received JobDefinitionsChangedEvent in debug mode, skipping schedule updates");
             return;

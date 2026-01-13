@@ -4,10 +4,11 @@ using Microsoft.Extensions.Options;
 using MoLibrary.Core.Features.ObservableInstance;
 using MoLibrary.Core.Modules;
 using MoLibrary.JobScheduler.Abstractions;
-using MoLibrary.JobScheduler.Core;
 using MoLibrary.JobScheduler.Metadata;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.JobScheduler.Modules;
+using MoLibrary.RegisterCentre.Modules;
+using MoLibrary.RegisterCentre.Core;
 using MoLibrary.RegisterCentre.Events;
 using MoLibrary.RegisterCentre.Interfaces;
 
@@ -30,8 +31,9 @@ public class JobZombieDetectorService(
     IServiceRegistrationCoordinator coordinator,
     IObservableInstanceManager observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
+    IOptions<ModuleRegisterCentreOption> registerCentreOptions,
     IRegistrationStateManager? registrationStateManager = null
-) : CoordinatedLeaderService(leaderService, options, logger, coordinator, observableManager, hostedServiceOptions)
+) : CoordinatedLeaderService(leaderService, registerCentreOptions, logger, coordinator, observableManager, hostedServiceOptions)
 {
     private readonly ModuleJobSchedulerOption _jobSchedulerOptions = options.Value;
 
