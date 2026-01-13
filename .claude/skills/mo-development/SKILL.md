@@ -1,6 +1,6 @@
 ---
 name: MoLibrary Development
-description: This skill should be used when the user asks to "create module", "add module", "module structure", "use Res type", "return Res", "Res.Ok", "Res.Fail", "IsFailed pattern", "module registration", "module dependencies", "module pattern", "MoLibrary architecture", "service layer pattern", "create service", "add service", or needs guidance on MoLibrary module architecture, the unified response model Res, module registration patterns, or service layer return value conventions.
+description: This skill should be used when the user asks to "create module", "add module", "module structure", "use Res type", "return Res", "Res.Ok", "Res.Fail", "IsFailed pattern", "module registration", "module dependencies", "module pattern", "MoLibrary architecture", "service layer pattern", "create service", "add service", "create hosted service", "add background service", "MoBackgroundService", "MoHostedService", "RecordState", "hosted service observability", "service state tracking", "CoordinatedLeaderService", or needs guidance on MoLibrary module architecture, the unified response model Res, module registration patterns, service layer return value conventions, or hosted service development with observability.
 version: 1.0.0
 ---
 
@@ -147,14 +147,76 @@ ProcessData(data);
 
 For complete module structure patterns, see `references/module-patterns.md`.
 
+## Hosted Service Development
+
+MoLibrary provides `MoBackgroundService` as a base class for background services with built-in observability.
+
+### Key Principle: Use RecordState, Not Logger
+
+**Use `RecordState` instead of direct Logger calls** for observability. The base class already configures a Logger internally, so direct logging would be redundant.
+
+```csharp
+// CORRECT: Use RecordState with explicit LogLevel
+RecordState("Operation started", givenLogLevel: LogLevel.Information);
+RecordState("Error occurred", givenLogLevel: LogLevel.Error, exception: ex);
+
+// AVOID: Don't use Logger directly (redundant)
+// Logger.LogInformation("...");  // Already handled by RecordState
+```
+
+### Quick Reference
+
+```csharp
+public class MyMonitorService(
+    IObservableInstanceManager observableManager,
+    IOptions<ModuleHostedServiceOption> hostedServiceOptions,
+    ILogger<MyMonitorService> logger,
+    IMyDependency dependency
+) : MoBackgroundService(observableManager, hostedServiceOptions, logger)
+{
+    public override string ServiceName => nameof(MyMonitorService);
+
+    protected override async Task ExecuteBackgroundAsync(CancellationToken stoppingToken)
+    {
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+                RecordState("Starting work cycle", givenLogLevel: LogLevel.Information);
+                await DoWorkAsync(stoppingToken);
+            }
+            catch (OperationCanceledException) { break; }
+            catch (Exception ex)
+            {
+                RecordState("Work cycle failed", givenLogLevel: LogLevel.Error, exception: ex);
+            }
+        }
+    }
+}
+```
+
+### Required Dependencies
+
+| Dependency | Purpose |
+|------------|---------|
+| `IObservableInstanceManager` | Manages observable state tracking |
+| `IOptions<ModuleHostedServiceOption>` | Service configuration options |
+| `ILogger<T>` | Optional, passed to base for internal use |
+
+For detailed hosted service patterns including `CoordinatedLeaderService` for leader-aware services, see `references/hosted-service-guide.md`.
+
 ## Additional Resources
 
 ### Reference Files
 
 - **`references/res-type-guide.md`** - Complete Res type documentation with implicit conversions and best practices
 - **`references/module-patterns.md`** - Module naming conventions, file structure, and implementation patterns
+- **`references/hosted-service-guide.md`** - MoBackgroundService patterns, RecordState usage, and CoordinatedLeaderService
 
 ### Source Code Reference
 
 - **Res type definition**: `MoLibrary.Tool/MoResponse/Res.cs`
 - **Module base class**: `MoLibrary.Core/Module/MoModule.cs`
+- **MoBackgroundService**: `MoLibrary.Core/Features/HostedServices/MoBackgroundService.cs`
+- **CoordinatedLeaderService**: `MoLibrary.RegisterCentre/Core/CoordinatedLeaderService.cs`
