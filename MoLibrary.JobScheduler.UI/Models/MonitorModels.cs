@@ -1,5 +1,7 @@
 namespace MoLibrary.JobScheduler.UI.Models;
 
+using MoLibrary.JobScheduler.Abstractions;
+using MoLibrary.JobScheduler.ControlPlane;
 using MoLibrary.JobScheduler.Models;
 
 /// <summary>
@@ -190,3 +192,56 @@ public class MonitorState
     /// </summary>
     public DateTime LastRefreshTime { get; set; }
 }
+
+#region Concurrency Monitor Models
+
+/// <summary>
+/// 带 JobName 的并发状态（用于 UI 显示）
+/// </summary>
+public class ConcurrencyStatusWithName
+{
+    /// <summary>
+    /// 任务名称
+    /// </summary>
+    public required string JobName { get; set; }
+
+    /// <summary>
+    /// 原始统计数据
+    /// </summary>
+    public required JobExecutionStatistic Statistic { get; set; }
+
+    /// <summary>
+    /// 利用率百分比
+    /// </summary>
+    public double UtilizationPercent => Statistic.MaxConcurrency > 0
+        ? Math.Min(100, (double)Statistic.CurrentExecutingCount / Statistic.MaxConcurrency * 100)
+        : 0;
+
+    /// <summary>
+    /// 是否达到最大并发
+    /// </summary>
+    public bool IsAtCapacity => Statistic.CurrentExecutingCount >= Statistic.MaxConcurrency;
+}
+
+/// <summary>
+/// 并发监控状态（包含详细信息和一致性检测）
+/// </summary>
+public class ConcurrencyMonitorState
+{
+    /// <summary>
+    /// 详细的并发状态列表（带名称）
+    /// </summary>
+    public List<ConcurrencyStatusWithName> Details { get; set; } = [];
+
+    /// <summary>
+    /// 一致性检测结果
+    /// </summary>
+    public required ConsistencyCheckResult Consistency { get; set; }
+
+    /// <summary>
+    /// 上次刷新时间
+    /// </summary>
+    public DateTime LastRefreshTime { get; set; }
+}
+
+#endregion

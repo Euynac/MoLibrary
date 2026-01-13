@@ -337,6 +337,200 @@ public class JobConcurrencyGuardHostedService(
         return Task.FromResult<IReadOnlyDictionary<string, JobExecutionStatisticSnapshot>>(snapshots);
     }
 
+    public Task<IReadOnlyDictionary<string, JobExecutionStatistic>> GetDetailedExecutionStatisticsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        // Return a shallow copy of statistics to prevent external modification
+        var copy = _statistics.ToDictionary(
+            kvp => kvp.Key,
+            kvp => kvp.Value);
+
+        return Task.FromResult<IReadOnlyDictionary<string, JobExecutionStatistic>>(copy);
+    }
+
+    public async Task<ConsistencyCheckResult> CheckConsistencyAsync(CancellationToken cancellationToken = default)
+    {
+        // 1. Get current in-memory state snapshot
+        var memoryState = await GetAllExecutionStatisticsAsync(cancellationToken);
+
+        // 2. Query database for actual Processing and Enqueued counts per job
+        var allJobKeys = memoryState.Keys.ToList();
+
+        if (allJobKeys.Count == 0)
+        {
+            return new ConsistencyCheckResult
+            {
+                TotalDeviation = 0,
+                Deviations = []
+            };
+        }
+
+        var batchQuery = new JobInstanceQuery
+        {
+            JobKeys = allJobKeys,
+            States = [JobState.Enqueued, JobState.Processing],
+            PageNumber = 1,
+            PageSize = int.MaxValue
+        };
+
+        var dbResult = await metadataRepository.QueryInstancesAsync(batchQuery, cancellationToken);
+
+        // Group by JobKey and State
+        var dbCounts = dbResult.Items
+            .GroupBy(i => i.JobKey)
+            .ToDictionary(
+                g => g.Key,
+                g => (
+                    Processing: g.Count(i => i.State == JobState.Processing),
+                    Enqueued: g.Count(i => i.State == JobState.Enqueued)
+                ));
+
+        // 3. Compare and build deviations
+        var deviations = new List<JobConsistencyDeviation>();
+
+        foreach (var kvp in memoryState)
+        {
+            var jobKey = kvp.Key;
+            var memoryStats = kvp.Value;
+            var dbStats = dbCounts.GetValueOrDefault(jobKey, (Processing: 0, Enqueued: 0));
+
+            var deviation = new JobConsistencyDeviation
+            {
+                JobKey = jobKey,
+                MemoryRunningCount = memoryStats.RunningCount,
+                DatabaseProcessingCount = dbStats.Processing,
+                MemoryPendingCount = memoryStats.PendingCount,
+                DatabaseEnqueuedCount = dbStats.Enqueued
+            };
+
+            if (deviation.HasDeviation)
+            {
+                deviations.Add(deviation);
+            }
+        }
+
+        // Also check for jobs in DB but not in memory
+        foreach (var jobKey in dbCounts.Keys.Except(memoryState.Keys))
+        {
+            var dbStats = dbCounts[jobKey];
+            deviations.Add(new JobConsistencyDeviation
+            {
+                JobKey = jobKey,
+                MemoryRunningCount = 0,
+                DatabaseProcessingCount = dbStats.Processing,
+                MemoryPendingCount = 0,
+                DatabaseEnqueuedCount = dbStats.Enqueued
+            });
+        }
+
+        return new ConsistencyCheckResult
+        {
+            TotalDeviation = deviations.Sum(d => Math.Abs(d.RunningDeviation) + Math.Abs(d.PendingDeviation)),
+            Deviations = deviations,
+            CheckedAt = DateTime.UtcNow
+        };
+    }
+
+    public async Task<ReconcileResult> ReconcileAsync(CancellationToken cancellationToken = default)
+    {
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        try
+        {
+            // 1. Check state before reconciliation
+            var stateBefore = await CheckConsistencyAsync(cancellationToken);
+
+            logger.LogInformation("Starting reconciliation. Current deviation: {Deviation}",
+                stateBefore.TotalDeviation);
+
+            // 2. Acquire all job locks to prevent concurrent modifications
+            var allLocks = _jobLocks.Values.ToList();
+            foreach (var semaphore in allLocks)
+            {
+                await semaphore.WaitAsync(cancellationToken);
+            }
+
+            try
+            {
+                // 3. Clear current in-memory state (but preserve MaxConcurrency settings)
+                foreach (var stat in _statistics.Values)
+                {
+                    stat.RunningInstances.Clear();
+                    stat.PendingReservations.Clear();
+                }
+
+                // 4. Reload from database
+                var allJobKeys = _statistics.Keys.ToList();
+
+                if (allJobKeys.Count > 0)
+                {
+                    var batchQuery = new JobInstanceQuery
+                    {
+                        JobKeys = allJobKeys,
+                        States = [JobState.Enqueued, JobState.Processing],
+                        PageNumber = 1,
+                        PageSize = int.MaxValue
+                    };
+
+                    var batchResult = await metadataRepository.QueryInstancesAsync(batchQuery, cancellationToken);
+                    var instancesByJob = batchResult.Items.GroupBy(i => i.JobKey);
+
+                    foreach (var group in instancesByJob)
+                    {
+                        if (!_statistics.TryGetValue(group.Key, out var statistic))
+                            continue;
+
+                        foreach (var instance in group)
+                        {
+                            if (instance.State == JobState.Enqueued)
+                            {
+                                statistic.ReserveSlot(instance.InstanceId);
+                            }
+                            else if (instance.State == JobState.Processing &&
+                                     !string.IsNullOrEmpty(instance.RunningClientId) &&
+                                     instance.StartedAt.HasValue)
+                            {
+                                statistic.AddInstance(new RunningJobInfo
+                                {
+                                    InstanceId = instance.InstanceId,
+                                    WorkerClientId = instance.RunningClientId,
+                                    StartedAt = instance.StartedAt.Value
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                // 5. Release all locks
+                foreach (var semaphore in allLocks)
+                {
+                    semaphore.Release();
+                }
+            }
+
+            // 6. Check state after reconciliation
+            var stateAfter = await CheckConsistencyAsync(cancellationToken);
+
+            stopwatch.Stop();
+
+            logger.LogInformation(
+                "Reconciliation completed in {Duration}ms. Deviation before: {Before}, after: {After}",
+                stopwatch.ElapsedMilliseconds,
+                stateBefore.TotalDeviation,
+                stateAfter.TotalDeviation);
+
+            return ReconcileResult.Ok(stateBefore, stateAfter, stopwatch.Elapsed);
+        }
+        catch (Exception ex)
+        {
+            stopwatch.Stop();
+            logger.LogError(ex, "Reconciliation failed after {Duration}ms", stopwatch.ElapsedMilliseconds);
+            return ReconcileResult.Fail($"Reconciliation failed: {ex.Message}");
+        }
+    }
+
     private async Task OnJobStartedAsync(JobStartedEvent evt)
     {
         if (!_statistics.TryGetValue(evt.JobKey, out var statistic))

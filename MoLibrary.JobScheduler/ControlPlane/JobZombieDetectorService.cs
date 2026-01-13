@@ -23,6 +23,7 @@ public class JobZombieDetectorService(
     IMoJobMetadataRepository metadataRepository,
     IJobDefinitionCacheService cacheService,
     JobInstanceManager instanceManager,
+    IJobConcurrencyGuard concurrencyGuard,
     ILogger<JobZombieDetectorService> logger,
     ILeaderElectionService leaderService,
     IOptions<ModuleJobSchedulerOption> options,
@@ -99,6 +100,31 @@ public class JobZombieDetectorService(
 
         try
         {
+            // Check consistency before zombie detection
+            var consistencyResult = await concurrencyGuard.CheckConsistencyAsync(cancellationToken);
+
+            if (!consistencyResult.IsConsistent)
+            {
+                RecordState(
+                    $"Concurrency state inconsistency detected (deviation: {consistencyResult.TotalDeviation}). Triggering reconciliation before zombie detection.",
+                    givenLogLevel: LogLevel.Warning);
+
+                var reconcileResult = await concurrencyGuard.ReconcileAsync(cancellationToken);
+
+                if (reconcileResult.Success)
+                {
+                    RecordState(
+                        $"Reconciliation completed in {reconcileResult.Duration.TotalMilliseconds:F0}ms. Deviation reduced from {reconcileResult.StateBefore?.TotalDeviation} to {reconcileResult.StateAfter?.TotalDeviation}",
+                        givenLogLevel: LogLevel.Information);
+                }
+                else
+                {
+                    RecordState(
+                        $"Reconciliation failed: {reconcileResult.ErrorMessage}",
+                        givenLogLevel: LogLevel.Error);
+                }
+            }
+
             // Detect Processing state zombies
             processingZombieCount = await DetectProcessingZombiesAsync(cancellationToken);
 

@@ -197,4 +197,69 @@ public class JobMonitorService(
             return Res.Fail($"获取监控状态失败: {ex.Message}");
         }
     }
+
+    /// <summary>
+    /// 获取详细的并发监控状态（包含实例列表和一致性检测）
+    /// </summary>
+    public async Task<Res<ConcurrencyMonitorState>> GetConcurrencyMonitorStateAsync(
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            // Get detailed statistics from concurrency guard
+            var detailedStats = await concurrencyGuard.GetDetailedExecutionStatisticsAsync(cancellationToken);
+
+            // Get job definitions for names
+            var definitions = await cacheService.GetAllDefinitionsAsync(cancellationToken);
+            var jobNameMap = definitions.ToDictionary(d => d.JobKey, d => d.JobName);
+
+            // Check consistency
+            var consistencyResult = await concurrencyGuard.CheckConsistencyAsync(cancellationToken);
+
+            var details = detailedStats
+                .Where(kvp => kvp.Value.CurrentExecutingCount > 0)
+                .Select(kvp => new ConcurrencyStatusWithName
+                {
+                    JobName = jobNameMap.GetValueOrDefault(kvp.Key, kvp.Key),
+                    Statistic = kvp.Value
+                })
+                .OrderByDescending(u => u.UtilizationPercent)
+                .ToList();
+
+            return Res.Ok(new ConcurrencyMonitorState
+            {
+                Details = details,
+                Consistency = consistencyResult,
+                LastRefreshTime = DateTime.UtcNow
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to get concurrency monitor state");
+            return Res.Fail($"获取并发监控状态失败: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 触发并发状态同步
+    /// </summary>
+    public async Task<Res<ReconcileResult>> ReconcileAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await concurrencyGuard.ReconcileAsync(cancellationToken);
+
+            if (result.Success)
+            {
+                return Res.Ok(result);
+            }
+
+            return Res.Fail(result.ErrorMessage ?? "同步失败");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to reconcile concurrency state");
+            return Res.Fail($"同步失败: {ex.Message}");
+        }
+    }
 }

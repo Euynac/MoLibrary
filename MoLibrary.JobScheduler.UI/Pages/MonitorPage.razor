@@ -1,5 +1,6 @@
 @page "/job-scheduler/monitor"
 
+@using MoLibrary.JobScheduler.Abstractions
 @using MoLibrary.JobScheduler.UI.Components.Monitor
 @using MoLibrary.JobScheduler.UI.Models
 @using MoLibrary.JobScheduler.UI.Services
@@ -50,9 +51,12 @@
                 <QueueStatusCard Status="@_state.QueueStatus" />
             </MudItem>
 
-            @* Concurrency Utilization *@
+            @* Concurrency Utilization - New Design *@
             <MudItem xs="12" md="6">
-                <ConcurrencyUtilizationBars Usages="@_state.ConcurrencyUsages" />
+                <ConcurrencyUtilizationBars Details="@(_concurrencyState?.Details ?? [])"
+                                            Consistency="@(_concurrencyState?.Consistency ?? new ConsistencyCheckResult { TotalDeviation = 0, Deviations = [] })"
+                                            OnReconcileRequested="@HandleReconcileAsync"
+                                            IsReconciling="@_isReconciling" />
             </MudItem>
         </MudGrid>
     }
@@ -63,9 +67,11 @@
 
     private bool _isLoading = true;
     private bool _isRefreshing;
+    private bool _isReconciling;
     private string? _loadError;
 
     private MonitorState? _state;
+    private ConcurrencyMonitorState? _concurrencyState;
     private DateTime? _lastRefreshTime;
 
     private bool _autoRefreshEnabled = true;
@@ -97,16 +103,28 @@
 
             var token = _cts?.Token ?? CancellationToken.None;
 
-            var result = await MonitorService.GetMonitorStateAsync(token);
+            // Load both monitor state and concurrency state in parallel
+            var monitorTask = MonitorService.GetMonitorStateAsync(token);
+            var concurrencyTask = MonitorService.GetConcurrencyMonitorStateAsync(token);
 
-            if (result.IsFailed(out var error, out _))
+            await Task.WhenAll(monitorTask, concurrencyTask);
+
+            var monitorResult = await monitorTask;
+            var concurrencyResult = await concurrencyTask;
+
+            if (monitorResult.IsFailed(out var error, out _))
             {
                 _loadError = error.Message;
             }
             else
             {
-                _state = result.Data;
+                _state = monitorResult.Data;
                 _lastRefreshTime = _state?.LastRefreshTime ?? DateTime.UtcNow;
+            }
+
+            if (concurrencyResult.IsOk(out var concurrencyState))
+            {
+                _concurrencyState = concurrencyState;
             }
         }
         catch (OperationCanceledException)
@@ -134,13 +152,26 @@
             StateHasChanged();
 
             var token = _cts?.Token ?? CancellationToken.None;
-            var result = await MonitorService.GetMonitorStateAsync(token);
 
-            if (result.IsOk(out var state))
+            // Refresh both in parallel
+            var monitorTask = MonitorService.GetMonitorStateAsync(token);
+            var concurrencyTask = MonitorService.GetConcurrencyMonitorStateAsync(token);
+
+            await Task.WhenAll(monitorTask, concurrencyTask);
+
+            var monitorResult = await monitorTask;
+            var concurrencyResult = await concurrencyTask;
+
+            if (monitorResult.IsOk(out var state))
             {
                 _state = state;
                 _lastRefreshTime = state.LastRefreshTime;
                 _loadError = null;
+            }
+
+            if (concurrencyResult.IsOk(out var concurrencyState))
+            {
+                _concurrencyState = concurrencyState;
             }
         }
         catch (OperationCanceledException)
@@ -154,6 +185,42 @@
         finally
         {
             _isRefreshing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleReconcileAsync()
+    {
+        if (_isReconciling) return;
+
+        try
+        {
+            _isReconciling = true;
+            StateHasChanged();
+
+            var result = await MonitorService.ReconcileAsync(_cts?.Token ?? CancellationToken.None);
+
+            if (result.IsOk(out var reconcileResult))
+            {
+                Snackbar.Add(
+                    $"同步完成 (耗时: {reconcileResult.Duration.TotalMilliseconds:F0}ms, 偏差: {reconcileResult.StateBefore?.TotalDeviation} -> {reconcileResult.StateAfter?.TotalDeviation})",
+                    Severity.Success);
+
+                // Refresh data after reconciliation
+                await RefreshDataAsync();
+            }
+            else if (result.IsFailed(out var error, out _))
+            {
+                Snackbar.Add($"同步失败: {error.Message}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"同步失败: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isReconciling = false;
             StateHasChanged();
         }
     }
