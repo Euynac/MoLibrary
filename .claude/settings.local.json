@@ -57,7 +57,8 @@
       "Skill(mo-ui-development)",
       "Bash(python3:*)",
       "Skill(plugin-dev:create-plugin)",
-      "Skill(mo-development)"
+      "Skill(mo-development)",
+      "WebFetch(domain:mudblazor.com)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

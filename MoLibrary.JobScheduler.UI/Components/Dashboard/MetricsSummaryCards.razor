@@ -31,14 +31,7 @@
                         <div class="metric-value">@RunningNow</div>
                         <div class="metric-label">正在运行</div>
                         <div class="metric-detail">
-                            @if (DisabledJobCount > 0)
-                            {
-                                <span class="disabled">@DisabledJobCount 已禁用</span>
-                            }
-                            else
-                            {
-                                <span>&nbsp;</span>
-                            }
+                            <span class="disabled">@DisabledJobCount 已禁用</span>
                         </div>
                     </div>
                     @if (RunningNow > 0)

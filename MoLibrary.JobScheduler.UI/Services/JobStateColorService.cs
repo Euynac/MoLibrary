@@ -29,4 +29,26 @@ public class JobStateColorService
             _ => Color.Default
         };
     }
+
+    /// <summary>
+    /// 获取作业状态对应的十六进制颜色值
+    /// 用于图表等需要精确颜色控制的场景
+    /// </summary>
+    /// <param name="state">作业状态</param>
+    /// <returns>十六进制颜色值</returns>
+    public string GetStateColorHex(JobState state)
+    {
+        return state switch
+        {
+            JobState.Succeeded => "#4caf50",   // Success green
+            JobState.Failed => "#f44336",       // Error red
+            JobState.Terminated => "#ff5722",   // Deep orange
+            JobState.Processing => "#2196f3",   // Primary blue
+            JobState.Enqueued => "#00bcd4",     // Info cyan
+            JobState.Scheduled => "#9c27b0",    // Purple
+            JobState.Skipped => "#ff9800",      // Warning orange
+            JobState.Cancelled => "#9e9e9e",    // Grey
+            _ => "#757575"
+        };
+    }
 }

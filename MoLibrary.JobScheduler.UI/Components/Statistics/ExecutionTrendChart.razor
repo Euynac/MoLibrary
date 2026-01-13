@@ -1,4 +1,8 @@
+@using MoLibrary.JobScheduler.Models
 @using MoLibrary.JobScheduler.UI.Models
+@using MoLibrary.JobScheduler.UI.Services
+
+@inject JobStateColorService StateColorService
 
 <div class="trend-chart-wrapper">
     <MudPaper Class="trend-card" Elevation="0">
@@ -28,7 +32,7 @@
                           XAxisLabels="@GetXAxisLabels()"
                           Width="100%"
                           Height="300px"
-                          ChartOptions="@_chartOptions" />
+                          ChartOptions="@ChartOptionsWithPalette" />
             </div>
 
             <div class="summary-row">
@@ -67,10 +71,17 @@
     [Parameter]
     public TimeGranularity Granularity { get; set; } = TimeGranularity.Hourly;
 
-    private ChartOptions _chartOptions = new()
+    private ChartOptions ChartOptionsWithPalette => new()
     {
         YAxisTicks = 5,
-        LineStrokeWidth = 2
+        LineStrokeWidth = 2,
+        ShowLegend = false,
+        ChartPalette =
+        [
+            StateColorService.GetStateColorHex(JobState.Succeeded),
+            StateColorService.GetStateColorHex(JobState.Failed),
+            StateColorService.GetStateColorHex(JobState.Skipped)
+        ]
     };
 
     private List<ChartSeries> GetChartSeries()

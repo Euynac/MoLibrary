@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
@@ -82,7 +83,8 @@ public class ModuleJobSchedulerUI(ModuleJobSchedulerUIOption option)
                         Icons.Material.Filled.Dashboard,
                         "任务调度",
                         addToNav: true,
-                        navOrder: 99);
+                        navOrder: 99,
+                        navLinkMatch: NavLinkMatch.All);
 
                     // 实时监控
                     p.RegisterComponent<MonitorPage>(
