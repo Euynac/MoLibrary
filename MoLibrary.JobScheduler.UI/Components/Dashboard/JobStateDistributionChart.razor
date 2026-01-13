@@ -57,7 +57,6 @@
 
     private ChartOptions ChartOptionsWithPalette => new()
     {
-        ShowLegend = false,
         ChartPalette = OrderedStates
             .Where(s => StateDistribution.GetValueOrDefault(s, 0) > 0)
             .Select(s => StateColorService.GetStateColorHex(s))

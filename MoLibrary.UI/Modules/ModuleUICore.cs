@@ -101,6 +101,7 @@ public class ModuleUICore(ModuleUICoreOption option)
 
         // 注册主题服务
         services.AddSingleton<MoThemeService>();
+        services.AddSingleton<IMoThemeService>(sp => sp.GetRequiredService<MoThemeService>());
 
         // 注册用户上下文服务
         services.AddScoped<MoUserContextService>();

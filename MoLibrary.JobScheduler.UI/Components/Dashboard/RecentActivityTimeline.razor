@@ -4,6 +4,7 @@
 
 @inject JobStateColorService StateColorService
 @inject NavigationManager NavigationManager
+@inject IDialogService DialogService
 
 <div class="activity-timeline-wrapper">
     <MudPaper Class="activity-card" Elevation="0">
@@ -22,7 +23,7 @@
             <div class="timeline-container">
                 @foreach (var activity in Activities)
                 {
-                    <div class="timeline-item" @onclick="() => ViewInstance(activity.InstanceId)">
+                    <div class="timeline-item" @onclick="() => ViewInstanceAsync(activity.InstanceId)">
                         <div class="timeline-indicator">
                             <div class="state-dot @GetStateDotClass(activity.State)"></div>
                             <div class="timeline-line"></div>
@@ -69,9 +70,24 @@
         NavigationManager.NavigateTo("/job-scheduler/instances");
     }
 
-    private void ViewInstance(string instanceId)
+    private async Task ViewInstanceAsync(string instanceId)
     {
-        NavigationManager.NavigateTo($"/job-scheduler/instances?instanceId={Uri.EscapeDataString(instanceId)}");
+        var parameters = new DialogParameters<JobInstanceDetailDialog>
+        {
+            { x => x.InstanceId, instanceId },
+            { x => x.ShowJobDefinitionButton, true }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.ExtraLarge,
+            FullWidth = true,
+            CloseButton = true,
+            BackdropClick = false,
+            Position = DialogPosition.Center
+        };
+
+        await DialogService.ShowAsync<JobInstanceDetailDialog>("作业实例详情", parameters, options);
     }
 
     private string GetStateDotClass(JobState state)
