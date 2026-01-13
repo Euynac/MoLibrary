@@ -64,6 +64,18 @@ public static class MoModuleRegisterCentre
     }
 
     /// <summary>
+    /// 获取指定模块注册的所有 Keyed 服务键。
+    /// </summary>
+    /// <param name="moduleType">模块类型</param>
+    /// <returns>Keyed 服务键集合，若模块不存在则返回空集合</returns>
+    public static IReadOnlySet<string> GetKeyedServiceKeys(Type moduleType)
+    {
+        return TryGetModuleRequestInfo(moduleType, out var info)
+            ? info.KeyedServiceKeys
+            : new HashSet<string>();
+    }
+
+    /// <summary>
     /// 添加模块注册上下文
     /// </summary>
     /// <param name="moduleType">模块类型</param>

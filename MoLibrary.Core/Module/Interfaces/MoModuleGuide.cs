@@ -1,8 +1,6 @@
 using System.Runtime.CompilerServices;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Logging;
 using MoLibrary.Core.Features.MoLogProvider;
-using MoLibrary.Core.Module.BuilderWrapper;
 using MoLibrary.Core.Module.Features;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.Tool.Extensions;
@@ -162,6 +160,17 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
         return (TModuleGuideSelf)this;
     }
 
+    /// <summary>
+    /// 记录模块提供的 Keyed 服务键，用于后续发现模块提供的 Keyed 服务。
+    /// </summary>
+    /// <param name="serviceKey">Keyed 服务的键</param>
+    /// <returns>模块引导实例</returns>
+    protected internal TModuleGuideSelf RecordKeyedServiceKey(string serviceKey)
+    {
+        var requestInfo = RegisterModule();
+        requestInfo.KeyedServiceKeys.Add(serviceKey);
+        return (TModuleGuideSelf)this;
+    }
 
     #region 额外配置Module
 

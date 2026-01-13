@@ -54,6 +54,11 @@ public class ModuleRegisterInfo(Type moduleType)
     public List<string> RequiredConfigMethodKeys { get; set; } = [];
 
     /// <summary>
+    /// 模块注册的 Keyed 服务键集合，用于后续发现模块提供的 Keyed 服务。
+    /// </summary>
+    public HashSet<string> KeyedServiceKeys { get; } = [];
+
+    /// <summary>
     /// 模块单例，初始化模块配置阶段设置
     /// </summary>
     public MoModule? ModuleSingleton { get; internal set; }
