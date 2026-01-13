@@ -3,7 +3,7 @@
 @using MoLibrary.JobScheduler.UI.Services
 
 @inject JobStateColorService StateColorService
-@inject NavigationManager NavigationManager
+@inject IDialogService DialogService
 
 <div class="live-grid-wrapper">
     <MudPaper Class="live-grid-card" Elevation="0">
@@ -112,9 +112,22 @@
     [Parameter]
     public EventCallback<string> OnCancelRequested { get; set; }
 
-    private void ViewInstance(string instanceId)
+    private async Task ViewInstance(string instanceId)
     {
-        NavigationManager.NavigateTo($"/job-scheduler/instances?instanceId={Uri.EscapeDataString(instanceId)}");
+        var parameters = new DialogParameters<JobInstanceDetailDialog>
+        {
+            { x => x.InstanceId, instanceId },
+            { x => x.ShowJobDefinitionButton, true }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.ExtraLarge,
+            FullWidth = true,
+            CloseButton = true
+        };
+
+        await DialogService.ShowAsync<JobInstanceDetailDialog>("作业实例详情", parameters, options);
     }
 
     private static string GetStateIcon(JobState state)
