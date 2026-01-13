@@ -46,12 +46,6 @@ public class JobRegistrationHostedService(
 
     protected override async Task LeaderInitializeAsync(CancellationToken cancellationToken)
     {
-        if (jobDefinitions.Count == 0)
-        {
-            logger.LogInformation("No job definitions to register");
-            return;
-        }
-
         // Perform job registration
         await RegisterJobsAsync(cancellationToken);
     }

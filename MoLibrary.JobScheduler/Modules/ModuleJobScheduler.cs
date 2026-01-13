@@ -161,13 +161,6 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
                 Logger.LogInformation("History cleanup disabled");
             }
         }
-        
-        if (_jobDefinitions.Count == 0)
-        {
-            Logger.LogInformation("No jobs discovered. Job scheduler will run without any registered jobs.");
-            return;
-        }
-
        
         services.AddHostedService<JobRegistrationHostedService>(provider => ActivatorUtilities.CreateInstance<JobRegistrationHostedService>(provider, _jobDefinitions));
 
@@ -195,7 +188,7 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
             MaxExecutionTimeout = attribute?.MaxExecutionTimeout ?? TimeSpan.FromHours(1),
             IsDisabled = attribute?.IsDisabledBridge ?? false,
             JobClrType = jobType,
-            FromProject = Assembly.GetEntryAssembly()?.GetName().Name ?? throw new InvalidOperationException("Entry assembly must have name for getting job source project.")
+            FromProject = Option.ProjectName
         };
 
         // Extract recurring job specific properties
@@ -314,6 +307,13 @@ public class ModuleJobSchedulerGuide
 /// </summary>
 public class ModuleJobSchedulerOption : MoModuleOption<ModuleJobScheduler>
 {
+    /// <summary>
+    /// The project name used for job reconciliation and identification.
+    /// Default: Entry Assembly Name.
+    /// </summary>
+    public string ProjectName { get; set; } = Assembly.GetEntryAssembly()?.GetName().Name
+        ?? throw new InvalidOperationException("Entry assembly must have name for project identification.");
+
     /// <summary>
     /// Disables automatic recurring job scheduling when enabled.
     /// Jobs can still be triggered manually via the API. Default: false.

@@ -1,7 +1,9 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Exceptions;
 using MoLibrary.JobScheduler.Models;
+using MoLibrary.JobScheduler.Modules;
 using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.JobScheduler.ControlPlane;
@@ -14,6 +16,7 @@ namespace MoLibrary.JobScheduler.ControlPlane;
 public class JobRegistry(
     IJobDefinitionCacheService cacheService,
     IMoJobMetadataRepository metadataRepository,
+    IOptions<ModuleJobSchedulerOption> options,
     ILogger<JobRegistry> logger)
 {
     private readonly Dictionary<string, Type> _triggeredJobMapping = new();
@@ -68,7 +71,7 @@ public class JobRegistry(
     /// <returns>The CLR type of the job, or null if not found.</returns>
     public Type? GetJobClrType(string jobKey)
     {
-        return _jobDefinitionTypeMap.TryGetValue(jobKey, out var type) ? type : null;
+        return _jobDefinitionTypeMap.GetValueOrDefault(jobKey);
     }
     
     /// <summary>
@@ -78,7 +81,7 @@ public class JobRegistry(
     /// <returns></returns>
     public Type? GetTriggeredJobClrType(string jobArgsKey)
     {
-        return _triggeredJobMapping.TryGetValue(jobArgsKey, out var type) ? type : null;
+        return _triggeredJobMapping.GetValueOrDefault(jobArgsKey);
     }
 
     /// <summary>
@@ -88,7 +91,7 @@ public class JobRegistry(
     /// <returns>The CLR type of the job arguments, or null if not found.</returns>
     public Type? GetJobArgsClrType(string jobArgsKey)
     {
-        return _triggeredJobArgsTypeMap.TryGetValue(jobArgsKey, out var type) ? type : null;
+        return _triggeredJobArgsTypeMap.GetValueOrDefault(jobArgsKey);
     }
 
   
@@ -111,13 +114,7 @@ public class JobRegistry(
 
         logger.LogInformation("Starting job definition reconciliation for {Count} current job(s)", currentDefinitions.Count);
 
-        // Extract current project name
-        var currentProjectName = currentDefinitions.ElementAtOrDefault(0)?.FromProject;
-        if (string.IsNullOrWhiteSpace(currentProjectName))
-        {
-            logger.LogWarning("No current project name found, skipping reconciliation");
-            return new JobReconciliationResult();
-        }
+        var currentProjectName = options.Value.ProjectName;
 
         // Get all existing non-deleted job definitions from cache (initializes cache if needed)
         var existingDefinitions = await cacheService.GetAllDefinitionsAsync(cancellationToken);
