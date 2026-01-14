@@ -34,14 +34,28 @@
         @foreach (var provider in Providers)
         {
             <MudItem xs="12" md="6" lg="4">
-                <StateStoreProviderCard Provider="provider" />
+                <StateStoreProviderCard Provider="provider"
+                                       OnViewDetailsClicked="HandleViewDetails" />
             </MudItem>
         }
     }
 </MudGrid>
 
+<!-- Provider 详情对话框 -->
+<StateStoreProviderDetailDialog @bind-IsVisible="_showProviderDetail"
+                               Provider="_selectedProvider" />
+
 @code {
     [Parameter] public List<StateStoreProviderInfo> Providers { get; set; } = [];
     [Parameter] public EventCallback OnRefresh { get; set; }
     [Parameter] public bool IsLoading { get; set; }
+
+    private bool _showProviderDetail;
+    private StateStoreProviderInfo? _selectedProvider;
+
+    private void HandleViewDetails(StateStoreProviderInfo provider)
+    {
+        _selectedProvider = provider;
+        _showProviderDetail = true;
+    }
 }

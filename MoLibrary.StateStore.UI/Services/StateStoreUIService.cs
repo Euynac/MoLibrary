@@ -94,7 +94,7 @@ public class StateStoreUIService(
     {
         var providerType = DetectProviderType(provider);
         var capabilities = DetectCapabilities(provider, providerType);
-        var configuration = GetProviderConfiguration(serviceKey, providerType);
+        var (optionType, optionInstance) = GetProviderOptionInfo(serviceKey, providerType);
 
         return new StateStoreProviderInfo
         {
@@ -102,7 +102,8 @@ public class StateStoreUIService(
             ProviderType = providerType,
             Capabilities = capabilities,
             IsDistributed = provider is IDistributedStateStore,
-            Configuration = configuration,
+            OptionType = optionType,
+            OptionInstance = optionInstance,
             ImplementationType = provider.GetType().Name
         };
     }
@@ -145,17 +146,17 @@ public class StateStoreUIService(
         return capabilities;
     }
 
-    private object? GetProviderConfiguration(string? serviceKey, EStateStoreProviderType type)
+    private (Type? optionType, object? optionInstance) GetProviderOptionInfo(string? serviceKey, EStateStoreProviderType type)
     {
         return type switch
         {
-            EStateStoreProviderType.Redis => GetRedisConfig(serviceKey),
-            EStateStoreProviderType.Dapr => GetDaprConfig(serviceKey),
-            _ => null
+            EStateStoreProviderType.Redis => GetRedisOptionInfo(serviceKey),
+            EStateStoreProviderType.Dapr => GetDaprOptionInfo(serviceKey),
+            _ => (null, null)
         };
     }
 
-    private object? GetRedisConfig(string? serviceKey)
+    private (Type?, object?) GetRedisOptionInfo(string? serviceKey)
     {
         try
         {
@@ -164,29 +165,16 @@ public class StateStoreUIService(
                 ? snapshot?.Get(serviceKey)
                 : serviceProvider.GetService<IOptions<ModuleRedisStateStoreOption>>()?.Value;
 
-            if (options?.Connection != null)
-            {
-                return new
-                {
-                    ConnectionType = options.ConnectionType.ToString(),
-                    options.Connection.Host,
-                    options.Connection.Port,
-                    options.KeyPrefix,
-                    DefaultTTL = options.DefaultTTL?.ToString(),
-                    options.DatabaseIndex
-                };
-            }
-
-            return null;
+            return (typeof(ModuleRedisStateStoreOption), options);
         }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "获取 Redis 配置失败: {ServiceKey}", serviceKey);
-            return null;
+            return (null, null);
         }
     }
 
-    private object? GetDaprConfig(string? serviceKey)
+    private (Type?, object?) GetDaprOptionInfo(string? serviceKey)
     {
         try
         {
@@ -195,21 +183,12 @@ public class StateStoreUIService(
                 ? snapshot?.Get(serviceKey)
                 : serviceProvider.GetService<IOptions<ModuleDaprStateStoreOption>>()?.Value;
 
-            if (options != null)
-            {
-                return new
-                {
-                    options.StateStoreName,
-                    options.DefaultBulkParallelism
-                };
-            }
-
-            return null;
+            return (typeof(ModuleDaprStateStoreOption), options);
         }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "获取 Dapr 配置失败: {ServiceKey}", serviceKey);
-            return null;
+            return (null, null);
         }
     }
 

@@ -89,9 +89,14 @@ public class StateStoreProviderInfo
     public bool IsDistributed { get; init; }
 
     /// <summary>
-    /// Provider 特定配置 (JSON 可序列化)
+    /// Provider Option 的类型
     /// </summary>
-    public object? Configuration { get; init; }
+    public Type? OptionType { get; init; }
+
+    /// <summary>
+    /// Provider Option 的实例
+    /// </summary>
+    public object? OptionInstance { get; init; }
 
     /// <summary>
     /// 实现类型名称

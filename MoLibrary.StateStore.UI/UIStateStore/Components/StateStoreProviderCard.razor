@@ -1,5 +1,4 @@
 @using MoLibrary.StateStore.UI.Models
-@using System.Text.Json
 
 <MudCard Elevation="2">
     <MudCardHeader>
@@ -45,36 +44,32 @@
                         分布式
                     </MudChip>
                 }
+
+                @if (Provider.OptionType != null)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Outlined">
+                        <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" Class="mr-1" />
+                        有配置项
+                    </MudChip>
+                }
             </div>
-
-            @* 配置信息 *@
-            @if (Provider.Configuration != null)
-            {
-                <MudDivider Class="my-2" />
-                <MudText Typo="Typo.subtitle2" Color="Color.Secondary">配置信息</MudText>
-
-                <MudSimpleTable Dense="true" Hover="true" Style="overflow-x: auto;">
-                    <tbody>
-                        @foreach (var prop in GetConfigurationProperties())
-                        {
-                            <tr>
-                                <td style="font-weight: 500; white-space: nowrap;">@prop.Key</td>
-                                <td>
-                                    <MudText Typo="Typo.body2" Style="word-break: break-all;">
-                                        @(prop.Value ?? "-")
-                                    </MudText>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </MudSimpleTable>
-            }
         </MudStack>
     </MudCardContent>
+
+    <MudCardActions>
+        <MudButton Variant="Variant.Text"
+                   Color="Color.Primary"
+                   EndIcon="@Icons.Material.Filled.OpenInNew"
+                   OnClick="OnViewDetails">
+            查看详情
+        </MudButton>
+    </MudCardActions>
 </MudCard>
 
 @code {
     [Parameter] public StateStoreProviderInfo Provider { get; set; } = null!;
+
+    [Parameter] public EventCallback<StateStoreProviderInfo> OnViewDetailsClicked { get; set; }
 
     private string GetProviderIcon() => Provider.ProviderType switch
     {
@@ -92,36 +87,8 @@
         _ => Color.Default
     };
 
-    private Dictionary<string, string?> GetConfigurationProperties()
+    private async Task OnViewDetails()
     {
-        if (Provider.Configuration == null)
-            return new Dictionary<string, string?>();
-
-        var result = new Dictionary<string, string?>();
-        var type = Provider.Configuration.GetType();
-
-        foreach (var prop in type.GetProperties())
-        {
-            var value = prop.GetValue(Provider.Configuration);
-            result[GetPropertyDisplayName(prop.Name)] = value?.ToString();
-        }
-
-        return result;
-    }
-
-    private static string GetPropertyDisplayName(string propertyName)
-    {
-        return propertyName switch
-        {
-            "ConnectionType" => "连接类型",
-            "Host" => "主机",
-            "Port" => "端口",
-            "KeyPrefix" => "Key 前缀",
-            "DefaultTTL" => "默认 TTL",
-            "DatabaseIndex" => "数据库索引",
-            "StateStoreName" => "StateStore 名称",
-            "DefaultBulkParallelism" => "默认批量并行度",
-            _ => propertyName
-        };
+        await OnViewDetailsClicked.InvokeAsync(Provider);
     }
 }

@@ -52,8 +52,7 @@ public class RedisConnectionFactory(ILogger<RedisConnectionFactory> logger) : IR
         logger.LogInformation("Creating normal Redis connection to {Host}:{Port}", config.Host, config.Port);
 
         var options = BuildBaseOptions(config);
-        options.AbortOnConnectFail = true;
-
+      
         return ConnectionMultiplexer.Connect(options);
     }
 
