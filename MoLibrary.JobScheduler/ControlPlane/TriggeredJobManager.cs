@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Events;
@@ -16,6 +17,7 @@ public class TriggeredJobManager(
     IMoJobMetadataRepository metadataRepository,
     JobRegistry registry,
     IJobCancellationTokenManager jobCancellationManager,
+    IOptions<ModuleJobSchedulerOption> options,
     ILogger<TriggeredJobManager> logger) : IMoTriggeredJobManager
 {
     public async Task<string> EnqueueAsync<TArgs>(TArgs args, TimeSpan? delay = null, CancellationToken cancellationToken = default)
@@ -52,7 +54,7 @@ public class TriggeredJobManager(
 
         // Pre-generate instance ID for immediate return
         var instanceId = Guid.NewGuid().ToString();
-        var jobArgs = JsonSerializer.Serialize(args);
+        var jobArgs = JsonSerializer.Serialize(args, options.Value.JobArgsSerializerOptions);
 
         var triggeredEvent = new JobTriggeredEvent
         {

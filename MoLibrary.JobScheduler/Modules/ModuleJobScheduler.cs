@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -403,4 +404,10 @@ public class ModuleJobSchedulerOption : MoModuleOption<ModuleJobScheduler>
     /// Orphaned instances are those without matching active job definitions. Default: 10 (0 for unlimited).
     /// </summary>
     public int MaxRetainedOrphanedInstances { get; set; } = 10;
+
+    /// <summary>
+    /// JSON serializer options used for serializing and deserializing job arguments.
+    /// Default: null (uses System.Text.Json defaults).
+    /// </summary>
+    public JsonSerializerOptions? JobArgsSerializerOptions { get; set; }
 }

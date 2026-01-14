@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Events;
@@ -17,6 +18,7 @@ namespace MoLibrary.JobScheduler.ControlPlane;
 public class JobInstanceManager(
     IMoJobMetadataRepository metadataRepository,
     [FromKeyedServices(nameof(ModuleJobScheduler))]IMoEventBus eventBus,
+    IOptions<ModuleJobSchedulerOption> options,
     ILogger<JobInstanceManager> logger)
 {
     /// <summary>
@@ -43,7 +45,7 @@ public class JobInstanceManager(
             InstanceId = instanceId,
             JobKey = definition.JobKey,
             State = initialState,
-            JobArgs = parameters != null ? JsonSerializer.Serialize(parameters) : null,
+            JobArgs = parameters != null ? JsonSerializer.Serialize(parameters, options.Value.JobArgsSerializerOptions) : null,
             CreatedAt = now,
             RetryAttempt = 0
         };
