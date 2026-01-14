@@ -53,6 +53,7 @@ public class ModuleJobSchedulerUI(ModuleJobSchedulerUIOption option)
         services.AddSingleton<JobArgsSchemaService>();
 
         // 注册仪表盘、监控、分析服务
+        services.AddSingleton<DashboardDataLoader>();
         services.AddSingleton<JobDashboardService>();
         services.AddSingleton<JobMonitorService>();
         services.AddSingleton<JobAnalyticsService>();

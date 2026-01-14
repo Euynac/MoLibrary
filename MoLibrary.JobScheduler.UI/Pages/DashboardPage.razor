@@ -5,6 +5,7 @@
 @using MoLibrary.JobScheduler.UI.Models
 @using MoLibrary.JobScheduler.UI.Services
 
+@inject DashboardDataLoader DataLoader
 @inject JobDashboardService DashboardService
 @inject ISnackbar Snackbar
 
@@ -116,16 +117,13 @@
 
             var token = _cts?.Token ?? CancellationToken.None;
 
-            // Load all data in parallel
-            var summaryTask = DashboardService.GetDashboardSummaryAsync(token);
-            var activitiesTask = DashboardService.GetRecentActivitiesAsync(15, token);
-            var problemsTask = DashboardService.GetProblemJobsAsync(token);
+            // Single coordinated load - only ~3 database queries
+            var context = await DataLoader.LoadAsync(token);
 
-            await Task.WhenAll(summaryTask, activitiesTask, problemsTask);
-
-            var summaryResult = await summaryTask;
-            var activitiesResult = await activitiesTask;
-            var problemsResult = await problemsTask;
+            // All processing is now in-memory
+            var summaryResult = await DashboardService.BuildDashboardSummaryAsync(context, token);
+            var activitiesResult = DashboardService.BuildRecentActivities(context, 15);
+            var problemsResult = DashboardService.FindProblemJobs(context);
 
             if (summaryResult.IsFailed(out var error, out _))
             {

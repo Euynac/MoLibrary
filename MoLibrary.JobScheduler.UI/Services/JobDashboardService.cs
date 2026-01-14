@@ -2,7 +2,6 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MoLibrary.JobScheduler.Abstractions;
-using MoLibrary.JobScheduler.Metadata;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.JobScheduler.UI.Models;
 using MoLibrary.JobScheduler.UI.Modules;
@@ -11,11 +10,9 @@ using MoLibrary.Tool.MoResponse;
 namespace MoLibrary.JobScheduler.UI.Services;
 
 /// <summary>
-/// 仪表盘数据服务
+/// 仪表盘数据服务 - 基于预加载数据进行纯内存处理
 /// </summary>
 public class JobDashboardService(
-    IMoJobMetadataRepository metadataRepository,
-    IJobDefinitionCacheService cacheService,
     IJobConcurrencyGuard concurrencyGuard,
     HealthCheckService healthCheckService,
     IOptions<ModuleJobSchedulerUIOption> uiOptions,
@@ -24,33 +21,29 @@ public class JobDashboardService(
     private readonly ModuleJobSchedulerUIOption _options = uiOptions.Value;
 
     /// <summary>
-    /// 获取仪表盘总览数据
+    /// 构建仪表盘总览数据（基于预加载数据，纯内存处理）
     /// </summary>
-    public async Task<Res<DashboardSummary>> GetDashboardSummaryAsync(CancellationToken cancellationToken = default)
+    public async Task<Res<DashboardSummary>> BuildDashboardSummaryAsync(
+        DashboardDataContext context,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            var now = DateTime.UtcNow;
-            var metricsStartTime = now - _options.HealthMetricsWindow;
-
-            // 1. Get all job definitions
-            var definitions = await cacheService.GetAllDefinitionsAsync(cancellationToken);
-
-            // 2. Count by type
+            // 1. Count by type (from pre-loaded definitions)
+            var definitions = context.Definitions;
             var recurringCount = definitions.Count(d => d.JobType == JobType.Recurring && !d.IsDeleted);
             var triggeredCount = definitions.Count(d => d.JobType == JobType.Triggered && !d.IsDeleted);
             var disabledCount = definitions.Count(d => d.IsDisabled && !d.IsDeleted);
             var totalJobs = definitions.Count(d => !d.IsDeleted);
 
-            // 3. Get state distribution using optimized GROUP BY query (no full entity load)
-            var stateDistribution = await metadataRepository.GetStateStatisticsAsync(
-                metricsStartTime, now, cancellationToken);
+            // 2. Use pre-loaded state distribution
+            var stateDistribution = context.StateDistribution.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
-            // 4. Get currently running count from concurrency guard
+            // 3. Get currently running count from concurrency guard (real-time data)
             var executionStats = await concurrencyGuard.GetAllExecutionStatisticsAsync(cancellationToken);
             var runningNow = executionStats.Values.Sum(s => s.RunningCount);
 
-            // 5. Calculate success rate from state distribution counts
+            // 4. Calculate success rate from state distribution counts
             var terminalStates = new[]
             {
                 JobState.Succeeded, JobState.Failed, JobState.Terminated,
@@ -62,13 +55,13 @@ public class JobDashboardService(
                 ? ((double)succeededCount / completedCount) * 100
                 : 100;
 
-            // 6. Calculate throughput (per hour)
+            // 5. Calculate throughput (per hour)
             var hoursInWindow = _options.HealthMetricsWindow.TotalHours;
             var throughputPerHour = hoursInWindow > 0
                 ? (int)Math.Round(completedCount / hoursInWindow)
                 : 0;
 
-            // 7. Get system health status
+            // 6. Get system health status (real-time data)
             var (healthStatus, healthMessage) = await GetSystemHealthStatusAsync(cancellationToken);
 
             return Res.Ok(new DashboardSummary
@@ -83,99 +76,72 @@ public class JobDashboardService(
                 StateDistribution = stateDistribution,
                 HealthStatus = healthStatus,
                 HealthMessage = healthMessage,
-                MetricsStartTime = metricsStartTime,
-                MetricsEndTime = now
+                MetricsStartTime = context.MetricsStartTime,
+                MetricsEndTime = context.MetricsEndTime
             });
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to get dashboard summary");
-            return Res.Fail($"获取仪表盘数据失败: {ex.Message}");
+            logger.LogError(ex, "Failed to build dashboard summary");
+            return Res.Fail($"构建仪表盘数据失败: {ex.Message}");
         }
     }
 
     /// <summary>
-    /// 获取最近活动
+    /// 构建最近活动列表（基于预加载数据，纯内存处理）
     /// </summary>
-    public async Task<Res<List<RecentActivity>>> GetRecentActivitiesAsync(
-        int count = 20,
-        CancellationToken cancellationToken = default)
+    public Res<List<RecentActivity>> BuildRecentActivities(
+        DashboardDataContext context,
+        int count = 20)
     {
         try
         {
-            // Get recent instances ordered by activity time
-            var query = new JobInstanceQuery
-            {
-                PageNumber = 1,
-                PageSize = count,
-                SortBy = "CompletedAt",
-                SortDescending = true
-            };
-
-            var result = await metadataRepository.QueryInstancesAsync(query, cancellationToken);
-
-            // Get job definitions for names
-            var definitions = await cacheService.GetAllDefinitionsAsync(cancellationToken);
-            var jobNameMap = definitions.ToDictionary(d => d.JobKey, d => d.JobName);
-
-            var activities = result.Items.Select(instance => new RecentActivity
-            {
-                InstanceId = instance.InstanceId,
-                JobKey = instance.JobKey,
-                JobName = jobNameMap.GetValueOrDefault(instance.JobKey, instance.JobKey),
-                State = instance.State,
-                Timestamp = instance.CompletedAt ?? instance.StartedAt ?? instance.CreatedAt,
-                Duration = instance.StartedAt.HasValue && instance.CompletedAt.HasValue
-                    ? instance.CompletedAt.Value - instance.StartedAt.Value
-                    : null
-            }).ToList();
+            // Filter and sort from pre-loaded instances
+            var activities = context.AllInstances
+                .OrderByDescending(i => i.CompletedAt ?? i.StartedAt ?? i.CreatedAt)
+                .Take(count)
+                .Select(i => new RecentActivity
+                {
+                    InstanceId = i.InstanceId,
+                    JobKey = i.JobKey,
+                    JobName = context.JobNameMap.GetValueOrDefault(i.JobKey, i.JobKey),
+                    State = i.State,
+                    Timestamp = i.CompletedAt ?? i.StartedAt ?? i.CreatedAt,
+                    Duration = i.StartedAt.HasValue && i.CompletedAt.HasValue
+                        ? i.CompletedAt.Value - i.StartedAt.Value
+                        : null
+                })
+                .ToList();
 
             return Res.Ok(activities);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to get recent activities");
-            return Res.Fail($"获取最近活动失败: {ex.Message}");
+            logger.LogError(ex, "Failed to build recent activities");
+            return Res.Fail($"构建最近活动失败: {ex.Message}");
         }
     }
 
     /// <summary>
-    /// 获取问题任务
+    /// 查找问题任务（基于预加载数据，纯内存处理）
     /// </summary>
-    public async Task<Res<ProblemJobs>> GetProblemJobsAsync(CancellationToken cancellationToken = default)
+    public Res<ProblemJobs> FindProblemJobs(DashboardDataContext context)
     {
         try
         {
-            var now = DateTime.UtcNow;
-            var metricsStartTime = now - _options.HealthMetricsWindow;
-
-            var definitions = await cacheService.GetAllDefinitionsAsync(cancellationToken);
-            var jobNameMap = definitions.ToDictionary(d => d.JobKey, d => d.JobName);
-            var jobConfigMap = definitions.ToDictionary(d => d.JobKey, d => d);
-
-            var problemJobs = new ProblemJobs();
-
-            // 1. Find consecutive failures (jobs with last N executions all failed)
-            var consecutiveFailures = await FindConsecutiveFailuresAsync(
-                definitions.ToList(), jobNameMap, cancellationToken);
-            problemJobs.ConsecutiveFailures = consecutiveFailures;
-
-            // 2. Find long running jobs
-            var longRunning = await FindLongRunningJobsAsync(
-                jobNameMap, jobConfigMap, cancellationToken);
-            problemJobs.LongRunning = longRunning;
-
-            // 3. Find high skip rate jobs
-            var highSkipRate = await FindHighSkipRateJobsAsync(
-                metricsStartTime, now, jobNameMap, jobConfigMap, cancellationToken);
-            problemJobs.HighSkipRate = highSkipRate;
+            var problemJobs = new ProblemJobs
+            {
+                ConsecutiveFailures = FindConsecutiveFailures(context),
+                LongRunning = FindLongRunningJobs(context),
+                HighSkipRate = FindHighSkipRateJobs(context)
+            };
 
             return Res.Ok(problemJobs);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to get problem jobs");
-            return Res.Fail($"获取问题任务失败: {ex.Message}");
+            logger.LogError(ex, "Failed to find problem jobs");
+            return Res.Fail($"查找问题任务失败: {ex.Message}");
         }
     }
 
@@ -209,31 +175,28 @@ public class JobDashboardService(
         }
     }
 
-    private async Task<List<ConsecutiveFailureJob>> FindConsecutiveFailuresAsync(
-        List<JobDefinition> definitions,
-        Dictionary<string, string> jobNameMap,
-        CancellationToken cancellationToken)
+    /// <summary>
+    /// 查找连续失败的任务（纯内存处理）
+    /// </summary>
+    private List<ConsecutiveFailureJob> FindConsecutiveFailures(DashboardDataContext context)
     {
         var result = new List<ConsecutiveFailureJob>();
         const int consecutiveThreshold = 3;
 
-        foreach (var definition in definitions.Where(d => !d.IsDeleted && !d.IsDisabled))
+        // Group instances by JobKey and sort by CreatedAt descending
+        var instancesByJob = context.AllInstances
+            .GroupBy(i => i.JobKey)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(i => i.CreatedAt).ToList());
+
+        foreach (var definition in context.Definitions.Where(d => !d.IsDeleted && !d.IsDisabled))
         {
-            var query = new JobInstanceQuery
-            {
-                JobKey = definition.JobKey,
-                PageNumber = 1,
-                PageSize = consecutiveThreshold,
-                SortBy = "CreatedAt",
-                SortDescending = true
-            };
-
-            var instances = await metadataRepository.QueryInstancesAsync(query, cancellationToken);
-
-            if (instances.Items.Count < consecutiveThreshold)
+            if (!instancesByJob.TryGetValue(definition.JobKey, out var instances))
                 continue;
 
-            var recentInstances = instances.Items.Take(consecutiveThreshold).ToList();
+            if (instances.Count < consecutiveThreshold)
+                continue;
+
+            var recentInstances = instances.Take(consecutiveThreshold).ToList();
             var allFailed = recentInstances.All(i =>
                 i.State == JobState.Failed || i.State == JobState.Terminated);
 
@@ -243,7 +206,7 @@ public class JobDashboardService(
                 result.Add(new ConsecutiveFailureJob
                 {
                     JobKey = definition.JobKey,
-                    JobName = jobNameMap.GetValueOrDefault(definition.JobKey, definition.JobKey),
+                    JobName = context.JobNameMap.GetValueOrDefault(definition.JobKey, definition.JobKey),
                     ConsecutiveFailureCount = consecutiveThreshold,
                     LastFailureTime = lastFailure.CompletedAt ?? lastFailure.CreatedAt,
                     LastFailureInstanceId = lastFailure.InstanceId
@@ -254,28 +217,22 @@ public class JobDashboardService(
         return result.OrderByDescending(j => j.LastFailureTime).Take(10).ToList();
     }
 
-    private async Task<List<LongRunningJob>> FindLongRunningJobsAsync(
-        Dictionary<string, string> jobNameMap,
-        Dictionary<string, JobDefinition> jobConfigMap,
-        CancellationToken cancellationToken)
+    /// <summary>
+    /// 查找长时间运行的任务（纯内存处理）
+    /// </summary>
+    private List<LongRunningJob> FindLongRunningJobs(DashboardDataContext context)
     {
         var result = new List<LongRunningJob>();
         var now = DateTime.UtcNow;
 
-        // Get all processing instances
-        var query = new JobInstanceQuery
-        {
-            States = [JobState.Processing],
-            PageNumber = 1,
-            PageSize = 100
-        };
+        // Filter processing instances from pre-loaded data
+        var processingInstances = context.AllInstances
+            .Where(i => i.State == JobState.Processing && i.StartedAt.HasValue);
 
-        var instances = await metadataRepository.QueryInstancesAsync(query, cancellationToken);
-
-        foreach (var instance in instances.Items.Where(i => i.StartedAt.HasValue))
+        foreach (var instance in processingInstances)
         {
             var elapsed = now - instance.StartedAt!.Value;
-            var maxTimeout = jobConfigMap.TryGetValue(instance.JobKey, out var def)
+            var maxTimeout = context.JobConfigMap.TryGetValue(instance.JobKey, out var def)
                 ? def.MaxExecutionTimeout
                 : TimeSpan.FromHours(1);
 
@@ -286,7 +243,7 @@ public class JobDashboardService(
                 {
                     InstanceId = instance.InstanceId,
                     JobKey = instance.JobKey,
-                    JobName = jobNameMap.GetValueOrDefault(instance.JobKey, instance.JobKey),
+                    JobName = context.JobNameMap.GetValueOrDefault(instance.JobKey, instance.JobKey),
                     ElapsedTime = elapsed,
                     MaxExecutionTimeout = maxTimeout,
                     StartedAt = instance.StartedAt.Value
@@ -297,27 +254,16 @@ public class JobDashboardService(
         return result.OrderByDescending(j => j.TimeoutPercentage).Take(10).ToList();
     }
 
-    private async Task<List<HighSkipRateJob>> FindHighSkipRateJobsAsync(
-        DateTime startTime,
-        DateTime endTime,
-        Dictionary<string, string> jobNameMap,
-        Dictionary<string, JobDefinition> jobConfigMap,
-        CancellationToken cancellationToken)
+    /// <summary>
+    /// 查找跳过率过高的任务（纯内存处理）
+    /// </summary>
+    private List<HighSkipRateJob> FindHighSkipRateJobs(DashboardDataContext context)
     {
         var result = new List<HighSkipRateJob>();
         const double skipRateThreshold = 10.0; // 10%
 
-        var query = new JobInstanceQuery
-        {
-            CreatedAfter = startTime,
-            CreatedBefore = endTime,
-            PageNumber = 1,
-            PageSize = int.MaxValue
-        };
-
-        var instances = await metadataRepository.QueryInstancesAsync(query, cancellationToken);
-
-        var groupedByJob = instances.Items
+        // Group from pre-loaded instances and calculate skip rate
+        var groupedByJob = context.AllInstances
             .GroupBy(i => i.JobKey)
             .Select(g => new
             {
@@ -335,10 +281,10 @@ public class JobDashboardService(
                 result.Add(new HighSkipRateJob
                 {
                     JobKey = group.JobKey,
-                    JobName = jobNameMap.GetValueOrDefault(group.JobKey, group.JobKey),
+                    JobName = context.JobNameMap.GetValueOrDefault(group.JobKey, group.JobKey),
                     SkippedCount = group.SkippedCount,
                     TotalCount = group.TotalCount,
-                    MaxConcurrency = jobConfigMap.TryGetValue(group.JobKey, out var def)
+                    MaxConcurrency = context.JobConfigMap.TryGetValue(group.JobKey, out var def)
                         ? def.MaxConcurrency
                         : 1
                 });

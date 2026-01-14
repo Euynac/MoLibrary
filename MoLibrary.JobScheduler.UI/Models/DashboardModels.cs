@@ -265,3 +265,56 @@ public class HighSkipRateJob
     /// </summary>
     public int MaxConcurrency { get; set; }
 }
+
+/// <summary>
+/// Pre-loaded data context for dashboard operations.
+/// All data is loaded once and passed to service methods for in-memory processing.
+/// </summary>
+public class DashboardDataContext
+{
+    /// <summary>
+    /// All job definitions (from cache)
+    /// </summary>
+    public required IReadOnlyList<JobDefinition> Definitions { get; init; }
+
+    /// <summary>
+    /// Job name lookup map
+    /// </summary>
+    public required IReadOnlyDictionary<string, string> JobNameMap { get; init; }
+
+    /// <summary>
+    /// Job config lookup map
+    /// </summary>
+    public required IReadOnlyDictionary<string, JobDefinition> JobConfigMap { get; init; }
+
+    /// <summary>
+    /// State distribution statistics (from optimized GROUP BY)
+    /// </summary>
+    public required IReadOnlyDictionary<JobState, int> StateDistribution { get; init; }
+
+    /// <summary>
+    /// All instances in metrics window (lightweight projection)
+    /// </summary>
+    public required IReadOnlyList<InstanceProjection> AllInstances { get; init; }
+
+    /// <summary>
+    /// Metrics time window start
+    /// </summary>
+    public required DateTime MetricsStartTime { get; init; }
+
+    /// <summary>
+    /// Metrics time window end
+    /// </summary>
+    public required DateTime MetricsEndTime { get; init; }
+}
+
+/// <summary>
+/// Lightweight projection for instance data - only fields needed for analysis
+/// </summary>
+public record InstanceProjection(
+    string InstanceId,
+    string JobKey,
+    JobState State,
+    DateTime CreatedAt,
+    DateTime? StartedAt,
+    DateTime? CompletedAt);
