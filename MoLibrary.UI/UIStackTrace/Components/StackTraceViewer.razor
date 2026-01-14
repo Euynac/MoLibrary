@@ -1,8 +1,20 @@
 @using MoLibrary.UI.UIStackTrace.Models
 @using MoLibrary.UI.UIStackTrace.Services
+@using Microsoft.JSInterop
+@using MudBlazor
 @inject StackTraceParserService ParserService
+@inject IJSRuntime JS
 
 <div class="stack-trace-container">
+    @if (!string.IsNullOrWhiteSpace(Message))
+    {
+        <div class="copy-button-wrapper">
+            <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
+                           Size="Size.Small"
+                           OnClick="CopyToClipboard"
+                           Title="复制堆栈信息" />
+        </div>
+    }
     @if (_parseResult?.Success == true && _parseResult.Lines.Count > 0)
     {
         @foreach (var (line, level) in GetLinesWithLevel(_parseResult.Lines))
@@ -198,5 +210,16 @@
     private bool IsEndOfInnerException(string? content)
     {
         return content?.Contains("--- End of inner exception") == true;
+    }
+
+    /// <summary>
+    /// 复制堆栈信息到剪贴板
+    /// </summary>
+    private async Task CopyToClipboard()
+    {
+        if (!string.IsNullOrEmpty(Message))
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", Message);
+        }
     }
 }

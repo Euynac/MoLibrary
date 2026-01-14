@@ -2,6 +2,7 @@
 
 /* 整体容器 */
 .stack-trace-container {
+    position: relative;
     background-color: var(--mud-palette-surface-variant);
     border-left: 4px solid var(--mud-palette-error);
     border-radius: 4px;
@@ -13,6 +14,25 @@
     overflow-x: auto;
     max-height: 400px;
     overflow-y: auto;
+}
+
+/* 复制按钮包装器 */
+.copy-button-wrapper {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 10;
+}
+
+/* 使用 ::deep 选择器穿透 CSS 隔离来样式化 MudIconButton */
+.copy-button-wrapper ::deep .mud-icon-button {
+    opacity: 0.3;
+    transition: opacity 0.2s ease;
+    background-color: var(--mud-palette-surface);
+}
+
+.copy-button-wrapper ::deep .mud-icon-button:hover {
+    opacity: 1;
 }
 
 /* 异常头部 */
