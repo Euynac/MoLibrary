@@ -7,37 +7,6 @@ using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.Logging.Middlewares;
 
-
-public static class MiddlewareExtensions
-{
-    public static void AddRequestResponseLogging(this IServiceCollection services)
-    {
-        services.AddTransient<RequestLoggingMiddleware>();
-        services.AddTransient<ResponseLoggingMiddleware>();
-    }
-    /// <summary>
-    ///  注册请求响应日志中间件
-    ///  </summary>
-    ///  <param name="builder"></param>
-    /// <param name="disableResponse"></param>
-    /// <param name="disableRequest"></param>
-    /// <returns></returns>
-    public static void UseRequestResponseLogging(this IApplicationBuilder builder, bool disableResponse = false, bool disableRequest = false)
-    {
-        if (!disableRequest)
-        {
-            builder.UseMiddleware<RequestLoggingMiddleware>();
-        }
-
-        if (!disableResponse)
-        {
-            builder.UseMiddleware<ResponseLoggingMiddleware>();
-        }
-
-        //builder.UseHttpLogging(); //asp.net 8后启用
-    }
-}
-
 /// <summary>
 /// Middleware for logging request body and query string
 /// </summary>
