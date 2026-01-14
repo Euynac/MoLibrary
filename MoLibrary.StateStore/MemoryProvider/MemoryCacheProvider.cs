@@ -112,6 +112,18 @@ public class MemoryCacheProvider(IMemoryCache memoryCache, ILogger<MemoryCachePr
         return Task.FromResult<(T?, string)>((default(T), ""));
     }
 
+    /// <inheritdoc />
+    public Task<(object? Value, string ETag)> GetStateAndETagRawAsync(string key,
+        CancellationToken cancellationToken = default)
+    {
+        if (memoryCache.TryGetValue(key, out var entry) && entry is IStateEntry stateEntry)
+        {
+            return Task.FromResult<(object?, string)>((stateEntry.Value, stateEntry.ETag));
+        }
+
+        return Task.FromResult<(object?, string)>((null, ""));
+    }
+
     public override Task<(bool Success, string? NewETag)> TrySaveStateWithETagAsync<T>(string key, T value, string expectedETag,
         CancellationToken cancellationToken = default, TimeSpan? ttl = null)
     {
@@ -232,20 +244,13 @@ public class MemoryCacheProvider(IMemoryCache memoryCache, ILogger<MemoryCachePr
     {
         lock (memoryCache)
         {
-            if (memoryCache.TryGetValue(key, out var entry))
+            if (memoryCache.TryGetValue(key, out var entry) && entry is IStateEntry stateEntry)
             {
-                // Get the version from the entry regardless of type
-                var entryType = entry.GetType();
-                var etagProperty = entryType.GetProperty("ETag");
-                if (etagProperty != null)
+                if (stateEntry.ETag != expectedETag)
                 {
-                    var actualETag = etagProperty.GetValue(entry)?.ToString() ?? "";
-                    if (actualETag != expectedETag)
-                    {
-                        Logger.LogDebug("ETag mismatch for delete, key: {Key}. Expected: {Expected}, Actual: {Actual}",
-                            key, expectedETag, actualETag);
-                        return Task.FromResult(false);
-                    }
+                    Logger.LogDebug("ETag mismatch for delete, key: {Key}. Expected: {Expected}, Actual: {Actual}",
+                        key, expectedETag, stateEntry.ETag);
+                    return Task.FromResult(false);
                 }
 
                 // ETag matches, delete the key

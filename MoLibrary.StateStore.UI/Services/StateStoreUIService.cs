@@ -267,16 +267,23 @@ public class StateStoreUIService(
             string? rawValue = null;
             string? etag = null;
 
-            // 尝试获取原始��符串值 (如果是分布式 Provider)
+            // 尝试获取原始字符串值 (如果是分布式 Provider)
             if (provider is IDistributedStateStore distributed)
             {
                 rawValue = await distributed.GetStateAsync(key, cancellationToken);
                 var (_, etagValue) = await provider.GetStateAndETagAsync<object>(key, cancellationToken);
                 etag = etagValue;
             }
+            else if (provider is IMemoryStateStore memoryStore)
+            {
+                // 对于内存 Provider，使用非泛型方法获取值
+                var (value, etagValue) = await memoryStore.GetStateAndETagRawAsync(key, cancellationToken);
+                rawValue = value != null ? JsonSerializer.Serialize(value, new JsonSerializerOptions { WriteIndented = true }) : null;
+                etag = etagValue;
+            }
             else
             {
-                // 对于非分布式 Provider，获取对象并序列化
+                // 对于其他 Provider，尝试使用泛型方法
                 var (value, etagValue) = await provider.GetStateAndETagAsync<object>(key, cancellationToken);
                 rawValue = value != null ? JsonSerializer.Serialize(value, new JsonSerializerOptions { WriteIndented = true }) : null;
                 etag = etagValue;
