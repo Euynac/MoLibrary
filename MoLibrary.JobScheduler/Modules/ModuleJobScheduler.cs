@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Cronos;
 using MoLibrary.Core.Module;
+using MoLibrary.JobScheduler.Helpers;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.Core.Modules;
@@ -204,7 +205,7 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
             {
                 try
                 {
-                    CronExpression.Parse(definition.CronExpression, CronFormat.IncludeSeconds);
+                    CronHelper.Parse(definition.CronExpression);
                 }
                 catch (Exception ex)
                 {
