@@ -256,25 +256,14 @@
             // 对于不支持扫描的 Provider，使用精确查询
             if (!selectedProvider.SupportsKeyScanning)
             {
-                var existsResult = await StateStoreService.KeyExistsAsync(
+                var keyResult = await StateStoreService.GetKeyAsync(
                     selectedProvider.ServiceKey,
                     searchPattern);
 
-                if (existsResult.IsOk(out var exists) && exists)
+                if (keyResult.IsOk(out var keyInfo))
                 {
-                    var keyResult = await StateStoreService.GetKeyAsync(
-                        selectedProvider.ServiceKey,
-                        searchPattern);
-
-                    if (keyResult.IsOk(out var keyInfo))
-                    {
-                        keys = [keyInfo];
-                        scanResult = new KeyScanResult { Keys = [searchPattern], TotalCount = 1 };
-                    }
-                }
-                else
-                {
-                    scanResult = new KeyScanResult();
+                    keys = [keyInfo];
+                    scanResult = new KeyScanResult { Keys = [searchPattern], TotalCount = 1 };
                 }
             }
             else
