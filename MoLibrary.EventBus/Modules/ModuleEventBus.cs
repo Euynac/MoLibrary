@@ -41,9 +41,7 @@ public class ModuleEventBus(ModuleEventBusOption option)
         // Register core EventBus services (shared across all EventBus instances)
         services.AddSingleton<ISubscriptionManager, SubscriptionManager>();
         services.AddSingleton<IEventHandlerInvoker, EventHandlerInvoker>();
-
-        services.AddSingleton<LocalEventBus>();
-        services.AddSingleton<IMoLocalEventBus>(sp => sp.GetRequiredService<LocalEventBus>());
+        services.AddSingleton<IMoLocalEventBus, LocalEventBus>();
     }
 
     public override void ConfigureApplicationBuilder(IApplicationBuilder app)
@@ -178,12 +176,7 @@ public class ModuleEventBusGuide : MoModuleGuide<ModuleEventBus, ModuleEventBusO
         {
             // Register keyed LocalEventBus with the specified serviceKey
             context.Services.AddKeyedSingleton<IMoLocalEventBus>(key, (sp, _) =>
-                new LocalEventBus(
-                    sp.GetRequiredService<IServiceScopeFactory>(),
-                    sp.GetRequiredService<IEventHandlerInvoker>(),
-                    sp.GetRequiredService<ISubscriptionManager>(),
-                    sp.GetRequiredService<ILogger<LocalEventBus>>(),
-                    serviceKey: key));
+                ActivatorUtilities.CreateInstance<LocalEventBus>(sp, key));
         }, secondKey: key);
 
         RecordKeyedServiceKey(key);

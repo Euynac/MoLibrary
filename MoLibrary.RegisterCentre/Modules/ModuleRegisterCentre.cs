@@ -211,6 +211,7 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
         ConfigureModuleOption(o =>
         {
             o.IsStandaloneMode = true;
+            o.IsCentreServer = true;
         });
         return this;
     }
