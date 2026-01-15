@@ -123,7 +123,7 @@ public static class DebugJsonTool
         /// Creates a new instance of ForceSerializeConverter.
         /// </summary>
         /// <param name="maxDepth">Maximum recursion depth.</param>
-        public ForceSerializeConverter(int maxDepth = 32)
+        public ForceSerializeConverter(int maxDepth = 8)
         {
             _maxDepth = maxDepth;
         }
@@ -164,11 +164,11 @@ public static class DebugJsonTool
                 return;
             }
 
-            // // Handle primitives and strings directly
-            // if (TryWritePrimitive(writer, value, type))
-            // {
-            //     return;
-            // }
+            // Handle primitives and strings directly
+            if (TryWritePrimitive(writer, value, type))
+            {
+                return;
+            }
 
             // Handle special types that need custom serialization
             if (TryWriteSpecialType(writer, value, type, options))
@@ -186,73 +186,73 @@ public static class DebugJsonTool
             WriteObjectProperties(writer, value, type, options);
         }
 
-//         private static bool TryWritePrimitive(Utf8JsonWriter writer, object value, Type type)
-//         {
-//             switch (value)
-//             {
-//                 case string s:
-//                     writer.WriteStringValue(s);
-//                     return true;
-//                 case bool b:
-//                     writer.WriteBooleanValue(b);
-//                     return true;
-//                 case int i:
-//                     writer.WriteNumberValue(i);
-//                     return true;
-//                 case long l:
-//                     writer.WriteNumberValue(l);
-//                     return true;
-//                 case double d:
-//                     writer.WriteNumberValue(d);
-//                     return true;
-//                 case float f:
-//                     writer.WriteNumberValue(f);
-//                     return true;
-//                 case decimal dec:
-//                     writer.WriteNumberValue(dec);
-//                     return true;
-//                 case byte by:
-//                     writer.WriteNumberValue(by);
-//                     return true;
-//                 case short sh:
-//                     writer.WriteNumberValue(sh);
-//                     return true;
-//                 case uint ui:
-//                     writer.WriteNumberValue(ui);
-//                     return true;
-//                 case ulong ul:
-//                     writer.WriteNumberValue(ul);
-//                     return true;
-//                 case DateTime dt:
-//                     writer.WriteStringValue(dt.ToString("O"));
-//                     return true;
-//                 case DateTimeOffset dto:
-//                     writer.WriteStringValue(dto.ToString("O"));
-//                     return true;
-//                 case Guid g:
-//                     writer.WriteStringValue(g.ToString());
-//                     return true;
-//                 case Enum e:
-//                     writer.WriteStringValue(e.ToString());
-//                     return true;
-//                 case char c:
-//                     writer.WriteStringValue(c.ToString());
-//                     return true;
-//                 case TimeSpan ts:
-//                     writer.WriteStringValue(ts.ToString());
-//                     return true;
-// #if NET6_0_OR_GREATER
-//                 case DateOnly dateOnly:
-//                     writer.WriteStringValue(dateOnly.ToString("O"));
-//                     return true;
-//                 case TimeOnly timeOnly:
-//                     writer.WriteStringValue(timeOnly.ToString("O"));
-//                     return true;
-// #endif
-//                 default:
-//                     return false;
-//             }
-//         }
+        private static bool TryWritePrimitive(Utf8JsonWriter writer, object value, Type type)
+        {
+            switch (value)
+            {
+                case string s:
+                    writer.WriteStringValue(s);
+                    return true;
+                case bool b:
+                    writer.WriteBooleanValue(b);
+                    return true;
+                case int i:
+                    writer.WriteNumberValue(i);
+                    return true;
+                case long l:
+                    writer.WriteNumberValue(l);
+                    return true;
+                case double d:
+                    writer.WriteNumberValue(d);
+                    return true;
+                case float f:
+                    writer.WriteNumberValue(f);
+                    return true;
+                case decimal dec:
+                    writer.WriteNumberValue(dec);
+                    return true;
+                case byte by:
+                    writer.WriteNumberValue(by);
+                    return true;
+                case short sh:
+                    writer.WriteNumberValue(sh);
+                    return true;
+                case uint ui:
+                    writer.WriteNumberValue(ui);
+                    return true;
+                case ulong ul:
+                    writer.WriteNumberValue(ul);
+                    return true;
+                case DateTime dt:
+                    writer.WriteStringValue(dt.ToString("O"));
+                    return true;
+                case DateTimeOffset dto:
+                    writer.WriteStringValue(dto.ToString("O"));
+                    return true;
+                case Guid g:
+                    writer.WriteStringValue(g.ToString());
+                    return true;
+                case Enum e:
+                    writer.WriteStringValue(e.ToString());
+                    return true;
+                case char c:
+                    writer.WriteStringValue(c.ToString());
+                    return true;
+                case TimeSpan ts:
+                    writer.WriteStringValue(ts.ToString());
+                    return true;
+#if NET6_0_OR_GREATER
+                case DateOnly dateOnly:
+                    writer.WriteStringValue(dateOnly.ToString("O"));
+                    return true;
+                case TimeOnly timeOnly:
+                    writer.WriteStringValue(timeOnly.ToString("O"));
+                    return true;
+#endif
+                default:
+                    return false;
+            }
+        }
 
         private bool TryWriteSpecialType(Utf8JsonWriter writer, object value, Type type, JsonSerializerOptions options)
         {
@@ -423,7 +423,7 @@ public static class DebugJsonTool
                 IgnoreReadOnlyProperties = options.IgnoreReadOnlyProperties,
                 IgnoreReadOnlyFields = options.IgnoreReadOnlyFields,
                 IncludeFields = options.IncludeFields,
-                MaxDepth = options.MaxDepth > 0 ? options.MaxDepth : 64
+                MaxDepth = options.MaxDepth > 0 ? options.MaxDepth : 16
             };
 
             // Copy converters except ForceSerializeConverterFactory
