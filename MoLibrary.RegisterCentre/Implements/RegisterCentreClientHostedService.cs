@@ -334,13 +334,7 @@ public class RegisterCentreClientHostedService(
                     _isStruggling = false;
                     _struggleStartTime = null;
                     RecordState("挣扎恢复成功", HostedServiceState.Running);
-
-                    // 如果是 Leader，尝试续约
-                    if (leaderService.IsLeader)
-                    {
-                        await RenewLeaderLeaseAsync(ct);
-                    }
-
+                    // Leader 续约将由主心跳循环在下次迭代时处理，避免在此处调用导致递归循环
                     break;
                 }
 
