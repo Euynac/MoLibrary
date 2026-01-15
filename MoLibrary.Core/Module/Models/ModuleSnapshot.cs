@@ -1,4 +1,5 @@
 using MoLibrary.Core.Module.Features;
+using MoLibrary.Core.Module.Interfaces;
 
 namespace MoLibrary.Core.Module.Models;
 
@@ -12,7 +13,7 @@ public class ModuleSnapshot(MoModule moduleInstance, ModuleRegisterInfo register
     /// <summary>
     /// 模块实例
     /// </summary>
-    public MoModule ModuleInstance { get; set; } = moduleInstance;
+    public IMoModule ModuleInstance { get; set; } = moduleInstance;
     
     /// <summary>
     /// 模块请求信息
@@ -28,8 +29,7 @@ public class ModuleSnapshot(MoModule moduleInstance, ModuleRegisterInfo register
     /// 获取模块对应的枚举值
     /// </summary>
     public EMoModules ModuleEnum =>
-        ModuleAnalyser.ModuleTypeToEnumMap.TryGetValue(ModuleType, out var moduleEnum) ? moduleEnum :
-            EMoModules.Developer;
+        ModuleAnalyser.ModuleTypeToEnumMap.GetValueOrDefault(ModuleType, EMoModules.Developer);
 
     /// <summary>
     /// 获取模块的总初始化耗时（毫秒）

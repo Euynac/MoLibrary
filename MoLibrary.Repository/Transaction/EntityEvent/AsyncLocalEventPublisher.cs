@@ -70,7 +70,7 @@ public class AsyncLocalEventStore(IMoUnitOfWorkManager uow) : IAsyncLocalEventSt
     public AsyncEventBuffer GetOrNewBuffer()
     {
         using var u = uow.Begin();
-        return (u.Items.GetOrAdd(nameof(AsyncLocalEventStore), () => new AsyncEventBuffer()) as AsyncEventBuffer)!;
+        return (u.Items.GetOrAdd(nameof(AsyncLocalEventStore), (key) => new AsyncEventBuffer()) as AsyncEventBuffer)!;
     }
 }
 

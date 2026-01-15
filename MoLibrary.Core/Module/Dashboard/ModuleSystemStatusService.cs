@@ -126,9 +126,7 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
         var disabledModuleTypes = ModuleManager.GetDisabledModuleTypes();
         foreach (var moduleType in disabledModuleTypes)
         {
-            var moduleEnum = ModuleAnalyser.ModuleTypeToEnumMap.TryGetValue(moduleType, out var enumValue) 
-                ? enumValue 
-                : EMoModules.Developer;
+            var moduleEnum = ModuleAnalyser.ModuleTypeToEnumMap.GetValueOrDefault(moduleType, EMoModules.Developer);
 
             var basicInfo = new ModuleBasicInfo
             {
@@ -217,9 +215,7 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
         // 创建节点
         foreach (var module in graph.Nodes)
         {
-            var moduleType = ModuleAnalyser.ModuleEnumToTypeDict.TryGetValue(module, out var type) 
-                ? type 
-                : null;
+            var moduleType = ModuleAnalyser.ModuleEnumToTypeDict.GetValueOrDefault(module);
 
             var isEnabled = moduleType != null && !ModuleManager.IsModuleDisabled(moduleType);
             var status = GetModuleStatus(module, moduleType);

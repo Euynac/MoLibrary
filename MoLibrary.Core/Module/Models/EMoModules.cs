@@ -9,6 +9,7 @@ public enum EMoModules
     /// 用户自身设置
     /// </summary>
     Developer,
+    ThirdPartyModule,
     Authority,
     EventBus,
     BackgroundJob,

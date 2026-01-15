@@ -96,7 +96,7 @@ public class UIComponentRegistry : IUIComponentRegistry
     /// </summary>
     public Type? GetComponentType(string name)
     {
-        return _components.TryGetValue(name, out var type) ? type : null;
+        return _components.GetValueOrDefault(name);
     }
 
     /// <summary>

@@ -83,7 +83,7 @@ public static class HasExtraPropertiesExtensions
 
     public static object? GetProperty(this IHasExtraProperties source, string name, object? defaultValue = null)
     {
-        return source.ExtraProperties.GetOrDefault(name)
+        return source.ExtraProperties.GetValueOrDefault(name)
                ?? defaultValue;
     }
 

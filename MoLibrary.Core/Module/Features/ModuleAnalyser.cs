@@ -402,9 +402,7 @@ public class ModuleAnalyser
             foreach (var disabledModuleType in disabledModuleTypes)
             {
                 // 获取模块枚举值
-                var moduleEnum = ModuleTypeToEnumMap.TryGetValue(disabledModuleType, out var enumValue) 
-                    ? enumValue 
-                    : EMoModules.Developer;
+                var moduleEnum = ModuleTypeToEnumMap.GetValueOrDefault(disabledModuleType, EMoModules.Developer);
                 
                 sb.AppendLine($"{moduleEnum} ({disabledModuleType.Name}) [DISABLED]");
                 

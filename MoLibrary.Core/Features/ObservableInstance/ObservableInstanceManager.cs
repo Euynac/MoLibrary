@@ -51,7 +51,7 @@ public class ObservableInstanceManager(IOptions<ModuleObservableInstanceOption> 
     /// </summary>
     public ObservableAgent? GetInstance(string instanceId)
     {
-        return _instances.TryGetValue(instanceId, out var agent) ? agent : null;
+        return _instances.GetValueOrDefault(instanceId);
     }
 
     /// <summary>
