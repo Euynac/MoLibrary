@@ -69,6 +69,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.JobScheduler.EfCo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.StateStore.StackExchange", "MoLibrary.StateStore.StackExchange\MoLibrary.StateStore.StackExchange.csproj", "{F2842EF6-95DC-4CD3-B6EC-8F53F49C48C4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.Profiling", "MoLibrary.Profiling\MoLibrary.Profiling.csproj", "{A7BE5C82-3156-4ABF-B23C-2F3D4A0C5BF7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -199,6 +201,10 @@ Global
 		{F2842EF6-95DC-4CD3-B6EC-8F53F49C48C4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F2842EF6-95DC-4CD3-B6EC-8F53F49C48C4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F2842EF6-95DC-4CD3-B6EC-8F53F49C48C4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A7BE5C82-3156-4ABF-B23C-2F3D4A0C5BF7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A7BE5C82-3156-4ABF-B23C-2F3D4A0C5BF7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A7BE5C82-3156-4ABF-B23C-2F3D4A0C5BF7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A7BE5C82-3156-4ABF-B23C-2F3D4A0C5BF7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

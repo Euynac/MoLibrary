@@ -7,10 +7,10 @@ using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
-using MoLibrary.Framework.Features.MoProfiling;
+using MoLibrary.Profiling.Profiling;
 using MoLibrary.Tool.MoResponse;
 
-namespace MoLibrary.Framework.Modules;
+namespace MoLibrary.Profiling.Modules;
 
 
 public static class ModuleProfilingBuilderExtensions
@@ -37,7 +37,7 @@ public class ModuleProfiling(ModuleProfilingOption option)
     public override void ConfigureServices(IServiceCollection services)
     {
         // 注册MoProfiling服务为单例
-        services.AddSingleton<IMoProfiling, MoProfiling>();
+        services.AddSingleton<IMoProfiling, Profiling.MoProfiling>();
     }
 
     /// <summary>

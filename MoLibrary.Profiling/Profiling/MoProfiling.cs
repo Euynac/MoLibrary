@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.Tracing;
 
-namespace MoLibrary.Framework.Features.MoProfiling;
+namespace MoLibrary.Profiling.Profiling;
 
 /// <summary>
 /// 程序性能监测实现类

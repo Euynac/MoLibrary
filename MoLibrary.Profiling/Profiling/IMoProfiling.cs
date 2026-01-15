@@ -1,4 +1,4 @@
-namespace MoLibrary.Framework.Features.MoProfiling;
+namespace MoLibrary.Profiling.Profiling;
 
 /// <summary>
 /// 程序性能监测接口
