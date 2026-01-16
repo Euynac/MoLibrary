@@ -35,7 +35,7 @@ public class LiveExecution
     public DateTime CreatedAt { get; set; }
 
     /// <summary>
-    /// ���始执行时间（仅Processing状态）
+    /// 开始执行时间（仅Processing状态）
     /// </summary>
     public DateTime? StartedAt { get; set; }
 
