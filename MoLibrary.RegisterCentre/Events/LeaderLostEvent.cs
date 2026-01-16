@@ -23,7 +23,12 @@ public enum LeaderLostReason
     /// <summary>
     /// 挣扎超时
     /// </summary>
-    StruggleTimeout
+    StruggleTimeout,
+
+    /// <summary>
+    /// Leader Key 已过期或被删除
+    /// </summary>
+    LeaderKeyExpired
 }
 
 /// <summary>

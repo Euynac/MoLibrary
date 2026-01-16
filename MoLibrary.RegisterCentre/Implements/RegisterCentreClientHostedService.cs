@@ -68,20 +68,7 @@ public class RegisterCentreClientHostedService(
         RecordState("开始 StateStore 心跳循环", HostedServiceState.Starting);
         Status = RegistrationStatus.InProgress;
 
-        // 首次心跳
-        var firstHeartbeat = await stateManager.RegisterOrHeartbeatAsync(stoppingToken);
-        if (firstHeartbeat.Success)
-        {
-            Status = RegistrationStatus.Completed;
-            _registrationCompletionSource.TrySetResult(true);
-            RecordState("首次心跳成功", HostedServiceState.Running);
-        }
-        else
-        {
-            RecordState($"首次心跳失败: {firstHeartbeat.ErrorMessage}", givenLogLevel: LogLevel.Warning);
-        }
-
-        // 主循环
+        // 主循环 - 第一次迭代充当"首次心跳"
         while (!stoppingToken.IsCancellationRequested)
         {
             try
@@ -250,30 +237,31 @@ public class RegisterCentreClientHostedService(
         {
             leaderService.UpdateETag(newETag);
             RecordState("Leader 续约成功", givenLogLevel: LogLevel.Debug);
+            return;
         }
-        else
-        {
-            var currentInstanceId = clientInfo.GetServiceStatus().InstanceId;
 
-            if (actualState != null && actualState.InstanceId != currentInstanceId)
+        var currentInstanceId = clientInfo.GetServiceStatus().InstanceId;
+
+        if (actualState != null)
+        {
+            if (actualState.InstanceId != currentInstanceId)
             {
                 // 其他实例已成为 Leader
                 leaderService.TriggerLeaderLost(LeaderLostReason.LeaderKeyTakenByOther);
                 RecordState($"Leader 被其他实例 ({actualState.InstanceId}) 抢占", HostedServiceState.Running);
             }
-            else if (actualState != null && actualState.InstanceId == currentInstanceId && !string.IsNullOrEmpty(actualETag))
+            else
             {
-                // 关键修复：我们仍是 Leader，但 ETag 过期了 → 刷新 ETag
+                // 我们仍是 Leader，但 ETag 过期了 → 刷新 ETag
                 RecordState($"ETag 不一致但仍为 Leader，刷新 ETag: {currentETag} -> {actualETag}", givenLogLevel: LogLevel.Information);
                 leaderService.UpdateETag(actualETag);
-                // 不进入挣扎模式，下次心跳时用新 ETag 续约即可
             }
-            else if (!_isStruggling)
-            {
-                // Leader key 不存在或获取失败，进入挣扎模式
-                RecordState("Leader 续约失败且无法获取当前状态", HostedServiceState.Degraded, givenLogLevel: LogLevel.Warning);
-                await StartStruggleAsync(ct);
-            }
+        }
+        else
+        {
+            RecordState("Leader Key 已过期或被删除，重新竞争 Leader", givenLogLevel: LogLevel.Information);
+            leaderService.TriggerLeaderLost(LeaderLostReason.LeaderKeyExpired);
+            await CompeteForLeaderAsync(ct);
         }
     }
 

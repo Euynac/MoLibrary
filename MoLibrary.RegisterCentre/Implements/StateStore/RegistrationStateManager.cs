@@ -24,6 +24,10 @@ public class RegistrationStateManager(
     private const string REG_PREFIX = "reg:";
     private const string LEADER_PREFIX = "leader:";
 
+    // Cached registration time to avoid unnecessary Get operations on every heartbeat
+    private DateTime? _cachedRegistrationTime;
+    private readonly object _registrationTimeLock = new();
+
     /// <summary>
     /// 获取注册 Key
     /// </summary>
@@ -45,11 +49,15 @@ public class RegistrationStateManager(
             // 获取基础实例状态（包含所有服务信息和元数据）
             var instanceState = clientInfo.GetServiceStatus();
 
-            // 获取现有状态以保留原始注册时间
-            var existingState = await stateStore.GetStateAsync<InstanceState>(REG_PREFIX + regKey, ct);
+            // 使用缓存的注册时间，避免每次心跳都进行 Get 操作
+            DateTime registrationTime;
+            lock (_registrationTimeLock)
+            {
+                registrationTime = _cachedRegistrationTime ?? now;
+            }
 
             // 设置运行时状态字段
-            instanceState.RegistrationTime = existingState?.RegistrationTime ?? now;
+            instanceState.RegistrationTime = registrationTime;
             instanceState.LastHeartbeatTime = now;
             instanceState.IsLeader = leaderElectionService.IsLeader;
 
@@ -58,6 +66,12 @@ public class RegistrationStateManager(
                 instanceState,
                 ct,
                 _option.Election.RegistrationTTL);
+
+            // 首次成功保存后缓存注册时间
+            lock (_registrationTimeLock)
+            {
+                _cachedRegistrationTime ??= registrationTime;
+            }
 
             logger.LogDebug("心跳成功: {Key}", regKey);
             return new RegistrationResult(true, now, null);
