@@ -165,10 +165,13 @@ public class RegistrationStateManager(
                 return (true, newETag, null, null);
             }
 
-            // 续约失败，获取当前 StateStore 中的实际状态和 ETag
+            
             var (actualState, actualETag) = await stateStore.GetStateAndETagAsync<LeaderState>(LEADER_PREFIX + leaderKey, ct);
-            logger.LogWarning("Leader 续约失败，ETag 不匹配。本地 ETag: {ExpectedETag}, 实际 ETag: {ActualETag}",
+            if(actualState is not null)
+                logger.LogWarning("Leader 续约失败，ETag 不匹配。本地 ETag: {ExpectedETag}, 实际 ETag: {ActualETag}",
                 expectedETag, actualETag);
+            else 
+                logger.LogWarning("Leader 续约失败，未找到 Leader 状态");
             return (false, null, actualState, actualETag);
         }
         catch (Exception ex)
@@ -189,6 +192,20 @@ public class RegistrationStateManager(
         catch (Exception ex)
         {
             logger.LogError(ex, "删除 Leader Key 失败");
+        }
+    }
+
+    public async Task ForceDeleteLeaderKeyAsync(string serviceName, CancellationToken ct = default)
+    {
+        try
+        {
+            await stateStore.DeleteStateAsync(LEADER_PREFIX + serviceName, ct);
+            logger.LogInformation("已强制删除 Leader Key: {ServiceName}", serviceName);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "强制删除 Leader Key 失败: {ServiceName}", serviceName);
+            throw;
         }
     }
 
