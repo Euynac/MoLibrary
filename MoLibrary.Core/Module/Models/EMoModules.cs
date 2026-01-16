@@ -138,5 +138,9 @@ public enum EMoModules
     /// <summary>
     /// 状态存储 UI 管理模块
     /// </summary>
-    StateStoreUI
+    StateStoreUI,
+    /// <summary>
+    /// 性能分析 UI 模块
+    /// </summary>
+    ProfilingUI
 }

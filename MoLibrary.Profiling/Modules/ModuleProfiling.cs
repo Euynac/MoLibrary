@@ -12,7 +12,6 @@ using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Profiling.Modules;
 
-
 public static class ModuleProfilingBuilderExtensions
 {
     public static ModuleProfilingGuide ConfigModuleProfiling(this WebApplicationBuilder builder,
@@ -31,43 +30,44 @@ public class ModuleProfiling(ModuleProfilingOption option)
     }
 
     /// <summary>
-    /// 配置服务
+    ///     配置服务
     /// </summary>
     /// <param name="services">服务集合</param>
     public override void ConfigureServices(IServiceCollection services)
     {
         // 注册MoProfiling服务为单例
-        services.AddSingleton<IMoProfiling, Profiling.MoProfiling>();
+        services.AddSingleton<IMoProfiling, MoProfiling>();
     }
 
     /// <summary>
-    /// 配置端点
+    ///     配置端点
     /// </summary>
     /// <param name="app">应用程序构建器</param>
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
         UseEndpoints(app, endpoints =>
         {
-            var tagGroup = new List<OpenApiTag> { new() { Name = option.GetApiGroupName(), Description = "程序性能监测接口" } };
+            var tagGroup = new List<OpenApiTag> {new() {Name = option.GetApiGroupName(), Description = "程序性能监测接口"}};
 
             // 获取系统性能信息
-            endpoints.MapGet("/profiling/simple", async ([FromServices] IMoProfiling profiling, HttpResponse response, HttpContext context) =>
-            {
-                try
+            endpoints.MapGet("/profiling/simple",
+                async ([FromServices] IMoProfiling profiling, HttpResponse response, HttpContext context) =>
                 {
-                    var cpuUsage = await profiling.GetCpuUsageAsync();
-                    var memoryUsage = await profiling.GetMemoryUsageAsync();
-                    return Res.Ok(new
+                    try
                     {
-                        CpuUsage = cpuUsage,
-                        MemoryUsage = $"{memoryUsage:0.##}MB"
-                    }).GetResponse();
-                }
-                catch (Exception ex)
-                {
-                    return Res.Fail($"获取系统性能信息失败: {ex.Message}").GetResponse();
-                }
-            }).WithName("获取系统性能信息").WithOpenApi(operation =>
+                        var cpuUsage = await profiling.GetCpuUsageAsync();
+                        var memoryUsage = await profiling.GetMemoryUsageAsync();
+                        return Res.Ok(new
+                        {
+                            CpuUsage = cpuUsage,
+                            MemoryUsage = $"{memoryUsage:0.##}MB"
+                        }).GetResponse();
+                    }
+                    catch (Exception ex)
+                    {
+                        return Res.Fail($"获取系统性能信息失败: {ex.Message}").GetResponse();
+                    }
+                }).WithName("获取系统性能信息").WithOpenApi(operation =>
             {
                 operation.Summary = "获取系统性能信息";
                 operation.Description = "获取当前进程的CPU使用率和内存使用情况";
