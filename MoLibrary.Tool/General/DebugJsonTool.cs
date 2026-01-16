@@ -57,7 +57,7 @@ public static class DebugJsonTool
     /// <returns>Not support to deserialize, only use to print Exception or other type info.</returns>
     public static string? ToJsonStringForce<T>(this T? s, bool writeIndented = true, bool relaxedEscaping = true, JsonSerializerOptions? customOptions = null)
     {
-        return ToJsonStringForce(s, null, writeIndented, relaxedEscaping, customOptions);
+        return s.ToJsonStringForce(null, writeIndented, relaxedEscaping, customOptions);
     }
 
     /// <summary>
@@ -187,17 +187,7 @@ public class ForceSerializeConverter<T> : JsonConverter<T>
     {
         _options = options ?? ForceSerializeOptions.Default;
     }
-
-    /// <summary>
-    /// Creates a new instance of ForceSerializeConverter.
-    /// </summary>
-    /// <param name="maxDepth">Maximum recursion depth.</param>
-    [Obsolete("Use ForceSerializeOptions instead")]
-    public ForceSerializeConverter(int maxDepth = 32)
-    {
-        _options = new ForceSerializeOptions { MaxDepth = maxDepth };
-    }
-
+    
     /// <inheritdoc />
     public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
@@ -259,6 +249,12 @@ public class ForceSerializeConverter<T> : JsonConverter<T>
             jsonElement.WriteTo(writer);
             return;
         }
+        
+        // Handle special types that need custom serialization
+        if (TryWriteSpecialType(writer, value, type, options))
+        {
+            return;
+        }
 
         // Check for types that should be skipped entirely
         if (ShouldSkipType(type))
@@ -274,12 +270,7 @@ public class ForceSerializeConverter<T> : JsonConverter<T>
             return;
         }
 
-        // Handle special types that need custom serialization
-        if (TryWriteSpecialType(writer, value, type, options))
-        {
-            return;
-        }
-
+      
         // Try normal serialization first (without our converter to avoid infinite recursion)
         if (TryNormalSerialization(writer, value, type, options))
         {
@@ -333,14 +324,6 @@ public class ForceSerializeConverter<T> : JsonConverter<T>
         if (typeof(Delegate).IsAssignableFrom(type) && type != typeof(Delegate)) return false; // Delegate is handled specially
         if (typeof(IServiceProvider).IsAssignableFrom(type)) return true;
         if (typeof(IAsyncDisposable).IsAssignableFrom(type) && !typeof(Exception).IsAssignableFrom(type)) return true;
-
-        // Skip compiler-generated types
-        if (Attribute.IsDefined(type, typeof(CompilerGeneratedAttribute))) return true;
-
-        // Skip types with names suggesting internal/infrastructure use
-        var typeName = type.Name;
-        if (typeName.StartsWith("<", StringComparison.Ordinal)) return true; // Anonymous types, closures
-        if (typeName.Contains("__")) return true; // Compiler-generated
 
         return false;
     }
