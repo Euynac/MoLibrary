@@ -39,6 +39,15 @@
             </div>
         </MudTabPanel>
 
+        @if (Options.Value.EnableTypeAllocationTracking)
+        {
+            <MudTabPanel Text="类型分配" Icon="@Icons.Material.Filled.Category">
+                <div class="pa-4">
+                    <TypeAllocationCard IsLoading="isLoading"/>
+                </div>
+            </MudTabPanel>
+        }
+
         <MudTabPanel Text="诊断操作" Icon="@Icons.Material.Filled.Build">
             <div class="pa-4">
                 <DiagnosticActionsCard Options="Options.Value"

@@ -66,6 +66,26 @@ public class ModuleProfilingUI(ModuleProfilingUIOption option)
 
         // 注册内存分析服务为 Scoped
         services.AddScoped<IMemoryAnalysisService, MemoryAnalysisService>();
+
+        // 注册类型分配跟踪服务 (如果启用)
+        if (Option.EnableTypeAllocationTracking)
+        {
+            services.AddSingleton(sp =>
+            {
+                var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<TypeAllocationCollector>>();
+                return new TypeAllocationCollector(
+                    logger,
+                    maxTrackedTypes: Option.MaxTrackedTypes,
+                    autoStopAfter: Option.AutoStopAfter);
+            });
+            services.AddScoped<ITypeAllocationService, TypeAllocationService>();
+
+            // 注册自动启动服务 (如果启用)
+            if (Option.AutoStartCollection)
+            {
+                services.AddHostedService<TypeAllocationAutoStartService>();
+            }
+        }
     }
 }
 
@@ -106,4 +126,29 @@ public class ModuleProfilingUIOption : MoModuleOption<ModuleProfilingUI>
     ///     允许生成 GC Dump
     /// </summary>
     public bool AllowGcDump { get; set; } = true;
+
+    /// <summary>
+    ///     启用类型分配跟踪功能
+    /// </summary>
+    public bool EnableTypeAllocationTracking { get; set; } = true;
+
+    /// <summary>
+    ///     应用启动时自动开始收集分配事件
+    /// </summary>
+    public bool AutoStartCollection { get; set; } = true;
+
+    /// <summary>
+    ///     默认采样模式 (用于自动启动时)
+    /// </summary>
+    public Models.AllocationSamplingMode DefaultSamplingMode { get; set; } = Models.AllocationSamplingMode.High;
+
+    /// <summary>
+    ///     最大跟踪类型数量
+    /// </summary>
+    public int MaxTrackedTypes { get; set; } = 500;
+
+    /// <summary>
+    ///     自动停止收集时间，null 表示不自动停止
+    /// </summary>
+    public TimeSpan? AutoStopAfter { get; set; } = TimeSpan.FromMinutes(10);
 }
