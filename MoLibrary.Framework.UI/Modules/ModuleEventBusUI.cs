@@ -61,9 +61,9 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
                     UIEventBusPage.PAGE_URL,
                     "事件总线监控",
                     Icons.Material.Filled.Hub,
-                    "系统管理",
+                    "监控",
                     addToNav: true,
-                    navOrder: 150));
+                    navOrder: 40));
         }
     }
 

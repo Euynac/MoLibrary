@@ -53,9 +53,9 @@ public class ModuleSystemInfoUI(ModuleSystemInfoUIOption option)
                     UISystemInfoPage.PAGE_URL,
                     "系统信息",
                     Icons.Material.Filled.Info,
-                    "系统管理",
+                    "监控",
                     addToNav: true,
-                    navOrder: 10));
+                    navOrder: 50));
         }
     }
 

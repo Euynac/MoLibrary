@@ -54,9 +54,9 @@ public class ModuleTimekeeperUI(ModuleTimekeeperUIOption option)
                     UITimekeeperPage.PAGE_URL,
                     "Timekeeper调试",
                     Icons.Material.Filled.Timer,
-                    "系统管理",
+                    "调试",
                     addToNav: true,
-                    navOrder: 50));
+                    navOrder: 30));
         }
     }
 

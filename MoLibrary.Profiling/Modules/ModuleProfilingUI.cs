@@ -52,17 +52,17 @@ public class ModuleProfilingUI(ModuleProfilingUIOption option)
                         UIQuickMonitorPage.PAGE_URL,
                         "快速监控",
                         Icons.Material.Filled.Speed,
-                        "系统管理",
+                        "监控",
                         addToNav: true,
-                        navOrder: 102);
+                        navOrder: 10);
 
                     registry.RegisterComponent<UIProfilingDashboardPage>(
                         UIProfilingDashboardPage.PAGE_URL,
                         "内存分析",
                         Icons.Material.Filled.Memory,
-                        "系统管理",
+                        "监控",
                         addToNav: true,
-                        navOrder: 103);
+                        navOrder: 60);
                 });
         }
     }

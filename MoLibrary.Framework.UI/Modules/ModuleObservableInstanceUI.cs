@@ -57,9 +57,9 @@ public class ModuleObservableInstanceUI(ModuleObservableInstanceUIOption option)
                     UIObservableInstancePage.PAGE_URL,
                     "Observable Instance",
                     Icons.Material.Filled.Inventory,
-                    "系统管理",
+                    "调试",
                     addToNav: true,
-                    navOrder: 140));
+                    navOrder: 50));
         }
     }
 

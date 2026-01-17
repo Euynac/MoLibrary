@@ -54,9 +54,9 @@ public class ModuleDataChannelUI(ModuleDataChannelUIOption option)
                     UIDataChannelPage.PAGE_URL,
                     "DataChannel管理",
                     Icons.Material.Filled.DataObject,
-                    "系统管理",
+                    "配置",
                     addToNav: true,
-                    navOrder: 200));
+                    navOrder: 30));
         }
     }
 }

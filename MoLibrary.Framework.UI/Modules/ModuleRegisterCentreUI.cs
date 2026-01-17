@@ -32,12 +32,12 @@ public class ModuleRegisterCentreUI(ModuleRegisterCentreUIOption option)
             DependsOnModule<ModuleRegisterCentreGuide>().Register();
             DependsOnModule<ModuleUICoreGuide>().Register()
                 .RegisterUIComponents(p => p.RegisterComponent<UIRegisterCentrePage>(
-                    UIRegisterCentrePage.REGISTERCENTRE_DEBUG_URL, 
-                    "注册中心", 
-                    Icons.Material.Filled.CloudQueue, 
-                    "系统管理", 
-                    addToNav: true, 
-                    navOrder: 90));
+                    UIRegisterCentrePage.REGISTERCENTRE_DEBUG_URL,
+                    "注册中心",
+                    Icons.Material.Filled.CloudQueue,
+                    "调试",
+                    addToNav: true,
+                    navOrder: 40));
         }
     }
 }

@@ -57,9 +57,9 @@ public class ModuleConfigurationUI(ModuleConfigurationUIOption option)
                         UIConfigurationDashboardPage.PAGE_URL,
                         "配置面板",
                         Icons.Material.Filled.Dashboard,
-                        "系统管理",
+                        "配置",
                         addToNav: true,
-                        navOrder: 101);
+                        navOrder: 10);
                 });
         }
     }

@@ -44,12 +44,12 @@ public class ModuleDiffHighlightUI(ModuleDiffHighlightUIOption option)
             DependsOnModule<ModuleDiffHighlightGuide>().Register();
             DependsOnModule<ModuleUICoreGuide>().Register()
                 .RegisterUIComponents(p => p.RegisterComponent<UIDiffHighlightPage>(
-                    UIDiffHighlightPage.DIFF_HIGHLIGHT_URL, 
-                    "文本差异对比", 
-                    Icons.Material.Filled.Compare, 
-                    "开发工具", 
-                    addToNav: true, 
-                    navOrder: 110));
+                    UIDiffHighlightPage.DIFF_HIGHLIGHT_URL,
+                    "文本差异对比",
+                    Icons.Material.Filled.Compare,
+                    "调试",
+                    addToNav: true,
+                    navOrder: 60));
         }
     }
 }
