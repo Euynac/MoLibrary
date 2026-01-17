@@ -37,9 +37,9 @@ public static class ModuleLoggingUIBuilderExtensions
 public class ModuleLoggingUI(ModuleLoggingUIOption option)
     : MoModuleWithDependencies<ModuleLoggingUI, ModuleLoggingUIOption, ModuleLoggingUIGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.LoggingUI;
+        return EMoModuleKey.LoggingUI;
     }
 
     public override void ConfigureServices(IServiceCollection services)

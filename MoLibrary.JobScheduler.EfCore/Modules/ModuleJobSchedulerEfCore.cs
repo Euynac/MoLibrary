@@ -68,7 +68,7 @@ public class ModuleJobSchedulerEfCoreGuide
 public class ModuleJobSchedulerEfCore(ModuleJobSchedulerEfCoreOption option)
     : MoModuleWithDependencies<ModuleJobSchedulerEfCore, ModuleJobSchedulerEfCoreOption, ModuleJobSchedulerEfCoreGuide>(option)
 {
-    public override EMoModules CurModuleEnum() => EMoModules.JobSchedulerEfCore;
+    public override ModuleKey GetModuleKey() => EMoModuleKey.JobSchedulerEfCore;
 
     public override void ConfigureServices(IServiceCollection services)
     {

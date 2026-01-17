@@ -141,13 +141,16 @@
                                 </TemplateColumn>
                                 <TemplateColumn Title="操作">
                                     <CellTemplate>
-                                        <MudButton Variant="Variant.Text" 
-                                                 Color="Color.Primary" 
-                                                 Size="Size.Small"
-                                                 StartIcon="@Icons.Material.Filled.Info"
-                                                 OnClick="@(() => OnModuleDetailClicked.InvokeAsync(context.Item.ModuleEnum))">
-                                            详情
-                                        </MudButton>
+                                        @if (context.Item.ModuleKey.HasValue)
+                                        {
+                                            <MudButton Variant="Variant.Text"
+                                                       Color="Color.Primary"
+                                                       Size="Size.Small"
+                                                       StartIcon="@Icons.Material.Filled.Info"
+                                                       OnClick="@(() => OnModuleDetailClicked.InvokeAsync(context.Item.ModuleKey!.Value))">
+                                                详情
+                                            </MudButton>
+                                        }
                                     </CellTemplate>
                                 </TemplateColumn>
                             </Columns>
@@ -199,7 +202,7 @@
     /// <summary>
     /// 查看模块详情事件
     /// </summary>
-    [Parameter] public EventCallback<EMoModules> OnModuleDetailClicked { get; set; }
+    [Parameter] public EventCallback<ModuleKey> OnModuleDetailClicked { get; set; }
 
     /// <summary>
     /// 处理刷新按钮点击事件

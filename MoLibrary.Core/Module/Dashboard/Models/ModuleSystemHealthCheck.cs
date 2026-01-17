@@ -76,7 +76,7 @@ public class HealthCheckItem
     /// <summary>
     /// 相关的模块（如果适用）
     /// </summary>
-    public EMoModules? RelatedModule { get; set; }
+    public ModuleKey? RelatedModule { get; set; }
 }
 
 /// <summary>
@@ -102,7 +102,7 @@ public class HealthIssue
     /// <summary>
     /// 相关的模块
     /// </summary>
-    public EMoModules? AffectedModule { get; set; }
+    public ModuleKey? AffectedModule { get; set; }
 
     /// <summary>
     /// 问题类型

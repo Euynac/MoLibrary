@@ -18,9 +18,9 @@ namespace MoLibrary.Core.Modules;
 /// </summary>
 public class ModuleDiffHighlight(ModuleDiffHighlightOption option) : MoModule<ModuleDiffHighlight, ModuleDiffHighlightOption, ModuleDiffHighlightGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.DiffHighlight;
+        return EMoModuleKey.DiffHighlight;
     }
     
     /// <summary>

@@ -22,9 +22,9 @@ public static class ModuleDaprClientBuilderExtensions
 public class ModuleDaprClient(ModuleDaprClientOption option)
     : MoModuleWithDependencies<ModuleDaprClient, ModuleDaprClientOption, ModuleDaprClientGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.DaprClient;
+        return EMoModuleKey.DaprClient;
     }
 
     public override void ConfigureServices(IServiceCollection services)

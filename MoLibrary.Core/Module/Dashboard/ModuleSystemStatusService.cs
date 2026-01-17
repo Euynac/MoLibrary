@@ -72,7 +72,7 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
                 var modulePerf = new ModulePerformanceInfo
                 {
                     ModuleTypeName = snapshot.ModuleType.Name,
-                    ModuleEnum = snapshot.ModuleEnum,
+                    ModuleKey = snapshot.ModuleKey,
                     TotalDurationMs = profile.GetTotalDuration(),
                     PhaseDurations = profile.GetPhaseDurations()
                 };
@@ -126,17 +126,17 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
         var disabledModuleTypes = ModuleManager.GetDisabledModuleTypes();
         foreach (var moduleType in disabledModuleTypes)
         {
-            var moduleEnum = ModuleAnalyser.ModuleTypeToEnumMap.GetValueOrDefault(moduleType, EMoModules.Developer);
+            var moduleKey = ModuleAnalyser.ModuleTypeToKeyMap.GetValueOrDefault(moduleType);
 
             var basicInfo = new ModuleBasicInfo
             {
                 ModuleTypeName = moduleType.Name,
                 ModuleFullTypeName = moduleType.FullName ?? moduleType.Name,
-                ModuleEnum = moduleEnum,
+                ModuleKey = moduleKey.Value != null ? moduleKey : null,
                 Order = int.MaxValue, // 禁用模块没有顺序
                 Status = EMoModuleConfigMethods.Disabled,
-                Dependencies = ModuleAnalyser.ModuleDependencyMap.TryGetValue(moduleEnum, out var deps) 
-                    ? [.. deps] 
+                Dependencies = moduleKey.Value != null && ModuleAnalyser.ModuleDependencyMap.TryGetValue(moduleKey, out var deps)
+                    ? [.. deps]
                     : [],
                 InitializationTimeMs = 0,
                 IsDisabled = true,
@@ -189,11 +189,11 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
     /// <summary>
     /// 获取指定模块的详细信息。
     /// </summary>
-    /// <param name="moduleEnum">模块枚举</param>
+    /// <param name="moduleKey">模块键</param>
     /// <returns>模块详细信息，如果模块不存在则返回null</returns>
-    public ModuleDetailInfo? GetModuleDetail(EMoModules moduleEnum)
+    public ModuleDetailInfo? GetModuleDetail(ModuleKey moduleKey)
     {
-        var snapshot = MoModuleRegisterCentre.ModuleSnapshots.FirstOrDefault(s => s.ModuleEnum == moduleEnum);
+        var snapshot = MoModuleRegisterCentre.ModuleSnapshots.FirstOrDefault(s => s.ModuleKey == moduleKey);
         if (snapshot == null)
         {
             return null;
@@ -213,31 +213,31 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
         var edges = new List<ModuleDependencyEdge>();
 
         // 创建节点
-        foreach (var module in graph.Nodes)
+        foreach (var moduleKey in graph.Nodes)
         {
-            var moduleType = ModuleAnalyser.ModuleEnumToTypeDict.GetValueOrDefault(module);
+            var moduleType = ModuleAnalyser.ModuleKeyToTypeDict.GetValueOrDefault(moduleKey);
 
             var isEnabled = moduleType != null && !ModuleManager.IsModuleDisabled(moduleType);
-            var status = GetModuleStatus(module, moduleType);
+            var status = GetModuleStatus(moduleKey, moduleType);
 
-            var dependencies = ModuleAnalyser.CalculateModuleDependencies(module);
-            var directDeps = ModuleAnalyser.ModuleDependencyMap.TryGetValue(module, out var directDependencies) 
-                ? directDependencies.Count 
+            var dependencies = ModuleAnalyser.CalculateModuleDependencies(moduleKey);
+            var directDeps = ModuleAnalyser.ModuleDependencyMap.TryGetValue(moduleKey, out var directDependencies)
+                ? directDependencies.Count
                 : 0;
 
-            var dependentCount = ModuleAnalyser.ModuleDependencyMap.Values.Count(deps => deps.Contains(module));
-            var cyclePath = ModuleAnalyser.FindCycleInvolvingModule(module);
+            var dependentCount = ModuleAnalyser.ModuleDependencyMap.Values.Count(deps => deps.Contains(moduleKey));
+            var cyclePath = ModuleAnalyser.FindCycleInvolvingModule(moduleKey);
 
             nodes.Add(new ModuleDependencyNode
             {
-                Module = module,
-                ModuleName = module.ToString(),
+                Module = moduleKey,
+                ModuleName = moduleKey.ToString(),
                 ModuleTypeName = moduleType?.Name ?? "Unknown",
                 IsEnabled = isEnabled,
                 DirectDependencyCount = directDeps,
                 TotalDependencyCount = dependencies.Count,
                 DependentModuleCount = dependentCount,
-                Layer = CalculateModuleLayer(module),
+                Layer = CalculateModuleLayer(moduleKey),
                 IsPartOfCycle = cyclePath.Count > 0,
                 Status = status
             });
@@ -277,11 +277,11 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
     /// <summary>
     /// 获取指定模块的选项实例。
     /// </summary>
-    /// <param name="moduleEnum">模块枚举</param>
+    /// <param name="moduleKey">模块键</param>
     /// <returns>选项类型和选项实例的元组，如果模块不存在则返回null</returns>
-    public (Type optionType, object? optionInstance)? GetModuleOptionInstance(EMoModules moduleEnum)
+    public (Type optionType, object? optionInstance)? GetModuleOptionInstance(ModuleKey moduleKey)
     {
-        var snapshot = MoModuleRegisterCentre.ModuleSnapshots.FirstOrDefault(s => s.ModuleEnum == moduleEnum);
+        var snapshot = MoModuleRegisterCentre.ModuleSnapshots.FirstOrDefault(s => s.ModuleKey == moduleKey);
         if (snapshot == null) return null;
 
         var optionType = snapshot.RegisterInfo.ModuleOptionType;
@@ -385,7 +385,8 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
 
     private static ModuleBasicInfo CreateModuleBasicInfo(ModuleSnapshot snapshot)
     {
-        var dependencies = ModuleAnalyser.ModuleDependencyMap.TryGetValue(snapshot.ModuleEnum, out var deps) 
+        var moduleKey = snapshot.ModuleKey;
+        var dependencies = moduleKey != null && ModuleAnalyser.ModuleDependencyMap.TryGetValue(moduleKey.Value, out var deps)
             ? deps.ToList()
             : [];
 
@@ -395,7 +396,7 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
         {
             ModuleTypeName = snapshot.ModuleType.Name,
             ModuleFullTypeName = snapshot.ModuleType.FullName ?? snapshot.ModuleType.Name,
-            ModuleEnum = snapshot.ModuleEnum,
+            ModuleKey = moduleKey,
             Order = snapshot.RegisterInfo.Order,
             Status = snapshot.RegisterInfo.ModulePhase,
             Dependencies = dependencies,
@@ -408,17 +409,20 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
     private static ModuleDetailInfo CreateModuleDetailInfo(ModuleSnapshot snapshot)
     {
         var basicInfo = CreateModuleBasicInfo(snapshot);
-        
+
         var profile = ModuleProfiler.GetModuleProfile(snapshot.ModuleType);
         var performanceInfo = new ModulePerformanceInfo
         {
             ModuleTypeName = snapshot.ModuleType.Name,
-            ModuleEnum = snapshot.ModuleEnum,
+            ModuleKey = snapshot.ModuleKey,
             TotalDurationMs = profile?.GetTotalDuration() ?? 0,
             PhaseDurations = profile?.GetPhaseDurations() ?? []
         };
 
-        var dependencyInfo = ModuleAnalyser.GetModuleDependencyInfo(snapshot.ModuleEnum);
+        var moduleKey = snapshot.ModuleKey;
+        var dependencyInfo = moduleKey != null
+            ? ModuleAnalyser.GetModuleDependencyInfo(moduleKey.Value)
+            : new ModuleDependencyInfo();
 
         var configInfo = new ModuleConfigInfo
         {
@@ -452,25 +456,25 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
         };
     }
 
-    private static EMoModuleConfigMethods GetModuleStatus(EMoModules moduleEnum, Type? moduleType)
+    private static EMoModuleConfigMethods GetModuleStatus(ModuleKey moduleKey, Type? moduleType)
     {
         if (moduleType == null || ModuleManager.IsModuleDisabled(moduleType))
         {
             return EMoModuleConfigMethods.Disabled;
         }
 
-        var snapshot = MoModuleRegisterCentre.ModuleSnapshots.FirstOrDefault(s => s.ModuleEnum == moduleEnum);
+        var snapshot = MoModuleRegisterCentre.ModuleSnapshots.FirstOrDefault(s => s.ModuleKey == moduleKey);
         return snapshot?.RegisterInfo.ModulePhase ?? EMoModuleConfigMethods.None;
     }
 
-    private static int CalculateModuleLayer(EMoModules module)
+    private static int CalculateModuleLayer(ModuleKey moduleKey)
     {
         // 计算模块在依赖图中的层级
-        var dependencies = ModuleAnalyser.CalculateModuleDependencies(module);
+        var dependencies = ModuleAnalyser.CalculateModuleDependencies(moduleKey);
         return dependencies.Count;
     }
 
-    private static DependencyType DetermineEdgeType(EMoModules source, EMoModules target)
+    private static DependencyType DetermineEdgeType(ModuleKey source, ModuleKey target)
     {
         // 检查是否是直接依赖
         if (ModuleAnalyser.ModuleDependencyMap.TryGetValue(source, out var directDeps) && directDeps.Contains(target))
@@ -487,18 +491,18 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
         return DependencyType.Transitive;
     }
 
-    private static bool IsEdgePartOfCycle(EMoModules source, EMoModules target)
+    private static bool IsEdgePartOfCycle(ModuleKey source, ModuleKey target)
     {
         var sourceCycle = ModuleAnalyser.FindCycleInvolvingModule(source);
         var targetCycle = ModuleAnalyser.FindCycleInvolvingModule(target);
-        return sourceCycle.Count > 0 && targetCycle.Count > 0 && 
+        return sourceCycle.Count > 0 && targetCycle.Count > 0 &&
                sourceCycle.Contains(target) && targetCycle.Contains(source);
     }
 
-    private static List<List<EMoModules>> FindAllCircularPaths()
+    private static List<List<ModuleKey>> FindAllCircularPaths()
     {
-        var circularPaths = new List<List<EMoModules>>();
-        var processedModules = new HashSet<EMoModules>();
+        var circularPaths = new List<List<ModuleKey>>();
+        var processedModules = new HashSet<ModuleKey>();
 
         foreach (var module in ModuleAnalyser.ModuleDependencyMap.Keys)
         {
@@ -515,9 +519,9 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
         return circularPaths;
     }
 
-    private static Dictionary<int, List<EMoModules>> CalculateModuleLayers(List<ModuleDependencyNode> nodes)
+    private static Dictionary<int, List<ModuleKey>> CalculateModuleLayers(List<ModuleDependencyNode> nodes)
     {
-        var layers = new Dictionary<int, List<EMoModules>>();
+        var layers = new Dictionary<int, List<ModuleKey>>();
 
         foreach (var node in nodes)
         {

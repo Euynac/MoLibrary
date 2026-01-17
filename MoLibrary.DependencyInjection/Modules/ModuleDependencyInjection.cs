@@ -23,9 +23,9 @@ public class ModuleDependencyInjection(ModuleDependencyInjectionOption option)
 {
     private IConventionalRegistrar? _registrar;
     private IServiceCollection? _services;
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.DependencyInjection;
+        return EMoModuleKey.DependencyInjection;
     }
 
     public override void ConfigureServices(IServiceCollection services)

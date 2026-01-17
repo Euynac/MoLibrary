@@ -29,9 +29,9 @@ public static class ModuleConfigurationUIBuilderExtensions
 public class ModuleConfigurationUI(ModuleConfigurationUIOption option)
     : MoModuleWithDependencies<ModuleConfigurationUI, ModuleConfigurationUIOption, ModuleConfigurationUIGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.ConfigurationUI;
+        return EMoModuleKey.ConfigurationUI;
     }
 
 

@@ -18,9 +18,9 @@ namespace MoLibrary.DomainDrivenDesign.Modules;
 
 public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger, ModuleSwaggerOption, ModuleSwaggerGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.Swagger;
+        return EMoModuleKey.Swagger;
     }
 
     public override void ConfigureApplicationBuilder(IApplicationBuilder app)

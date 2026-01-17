@@ -106,13 +106,16 @@ public class ModuleRegisterRequest(string key)
     /// 相同Key的配置只执行一次
     /// </summary>
     public string Key { get; set; } = key;
-    public EMoModules? RequestFrom { get; set; }
+    /// <summary>
+    /// 请求来源模块。null 表示开发者直接配置。
+    /// </summary>
+    public ModuleKey? RequestFrom { get; set; }
     public EMoModuleConfigMethods? RequestMethod { get; set; }
     public int Order { get; set; }
     /// <summary>
     /// 模块请求来源进一步描述
     /// </summary>
-    public string? SourceDesc { get; set; }    
+    public string? SourceDesc { get; set; }
 
     public override string ToString()
     {

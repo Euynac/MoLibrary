@@ -23,9 +23,9 @@ public static class ModuleUnitOfWorkBuilderExtensions
 public class ModuleUnitOfWork(ModuleUnitOfWorkOption option)
     : MoModule<ModuleUnitOfWork, ModuleUnitOfWorkOption, ModuleUnitOfWorkGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.UnitOfWork;
+        return EMoModuleKey.UnitOfWork;
     }
 
     public override void ConfigureServices(IServiceCollection services)

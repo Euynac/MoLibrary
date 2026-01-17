@@ -59,9 +59,9 @@ public static class ModuleDaprStateStoreBuilderExtensions
 public class ModuleDaprStateStore(ModuleDaprStateStoreOption option)
     : MoModuleWithDependencies<ModuleDaprStateStore, ModuleDaprStateStoreOption, ModuleDaprStateStoreGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.DaprStateStore;
+        return EMoModuleKey.DaprStateStore;
     }
 
     public override void ClaimDependencies()

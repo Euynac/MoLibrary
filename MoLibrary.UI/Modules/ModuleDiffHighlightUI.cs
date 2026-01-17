@@ -27,9 +27,9 @@ public static class ModuleDiffHighlightUIBuilderExtensions
 public class ModuleDiffHighlightUI(ModuleDiffHighlightUIOption option)
     : MoModuleWithDependencies<ModuleDiffHighlightUI, ModuleDiffHighlightUIOption, ModuleDiffHighlightUIGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.DiffHighlightUI;
+        return EMoModuleKey.DiffHighlightUI;
     }
 
     public override void ConfigureServices(IServiceCollection services)

@@ -26,9 +26,9 @@ public static class ModuleAuthenticationBuilderExtensions
 
 public class ModuleAuthentication(ModuleAuthenticationOption option) : MoModule<ModuleAuthentication, ModuleAuthenticationOption, ModuleAuthenticationGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.Authentication;
+        return EMoModuleKey.Authentication;
     }
 
     public override void ConfigureServices(IServiceCollection services)

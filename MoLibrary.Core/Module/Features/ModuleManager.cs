@@ -67,39 +67,36 @@ public static class ModuleManager
     /// <param name="moduleType">The module type that other modules might depend on</param>
     internal static void CascadeDisableModulesThatDependOn(Type moduleType)
     {
-        // Find the module enum for the disabled module
-        EMoModules? disabledModuleEnum = null;
-        if (ModuleAnalyser.ModuleTypeToEnumMap.TryGetValue(moduleType, out var moduleEnum))
+        // Find the module key for the disabled module
+        if (!ModuleAnalyser.ModuleTypeToKeyMap.TryGetValue(moduleType, out var disabledModuleKey))
         {
-            disabledModuleEnum = moduleEnum;
+            return;
         }
-        
-        if (disabledModuleEnum == null) return;
-        
+
         // Get all modules that depend on this module from the dependency map
-        var dependentModuleEnums = new HashSet<EMoModules>();
+        var dependentModuleKeys = new HashSet<ModuleKey>();
         foreach (var entry in ModuleAnalyser.ModuleDependencyMap)
         {
-            if (entry.Value.Contains(disabledModuleEnum.Value))
+            if (entry.Value.Contains(disabledModuleKey))
             {
-                dependentModuleEnums.Add(entry.Key);
+                dependentModuleKeys.Add(entry.Key);
             }
         }
-        
+
         // Disable all dependent modules
-        foreach (var dependentModuleEnum in dependentModuleEnums)
+        foreach (var dependentModuleKey in dependentModuleKeys)
         {
-            // Skip if not registered in the enum-to-type map
-            if (!ModuleAnalyser.ModuleEnumToTypeDict.TryGetValue(dependentModuleEnum, out var dependentModuleType))
+            // Skip if not registered in the key-to-type map
+            if (!ModuleAnalyser.ModuleKeyToTypeDict.TryGetValue(dependentModuleKey, out var dependentModuleType))
                 continue;
-            
+
             if (DisableModule(dependentModuleType))
             {
                 Logger.LogWarning(
                     "Module {ModuleName} was disabled because it depends on disabled module {DisabledModuleName}",
                     dependentModuleType.Name,
                     moduleType.Name);
-                
+
                 // Recursively cascade disable
                 CascadeDisableModulesThatDependOn(dependentModuleType);
             }

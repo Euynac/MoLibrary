@@ -32,9 +32,9 @@ public static class ModuleProfilingUIBuilderExtensions
 public class ModuleProfilingUI(ModuleProfilingUIOption option)
     : MoModuleWithDependencies<ModuleProfilingUI, ModuleProfilingUIOption, ModuleProfilingUIGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.ProfilingUI;
+        return EMoModuleKey.ProfilingUI;
     }
 
     public override void ClaimDependencies()

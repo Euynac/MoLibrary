@@ -36,9 +36,9 @@ public class ModuleCancellationManager(ModuleCancellationManagerOption option)
     /// 获取当前模块枚举值
     /// </summary>
     /// <returns>返回取消令牌管理器模块枚举</returns>
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.CancellationManager;
+        return EMoModuleKey.CancellationManager;
     }
 
     /// <summary>

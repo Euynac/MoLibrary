@@ -28,9 +28,9 @@ public static class ModuleLoggingBuilderExtensions
 
 public class ModuleLogging(ModuleLoggingOption option) : MoModule<ModuleLogging, ModuleLoggingOption, ModuleLoggingGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.Logging;
+        return EMoModuleKey.Logging;
     }
 
     public override void ConfigureBuilder(WebApplicationBuilder builder)

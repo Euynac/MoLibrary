@@ -24,10 +24,10 @@
                                 <MudPaper Class="pa-4 detail-card" Elevation="2">
                                     <div class="d-flex align-center mb-2">
                                         <MudIcon Icon="@Icons.Material.Filled.Category" Color="Color.Primary" Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">模块枚举</MudText>
+                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">模块键</MudText>
                                     </div>
                                     <MudText Typo="Typo.body1" Color="Color.Secondary">
-                                        @SelectedModuleDetail.BasicInfo.ModuleEnum.ToString()
+                                        @(SelectedModuleDetail.BasicInfo.ModuleKey?.ToString() ?? "Unknown")
                                     </MudText>
                                 </MudPaper>
                             </MudItem>
@@ -311,11 +311,11 @@
     /// 获取传递依赖列表
     /// </summary>
     /// <returns></returns>
-    private IEnumerable<EMoModules> GetTransitiveDependencies()
+    private IEnumerable<ModuleKey> GetTransitiveDependencies()
     {
         if (SelectedModuleDetail?.DependencyInfo == null) return [];
-        
-        var transitive = new HashSet<EMoModules>(SelectedModuleDetail.DependencyInfo.AllDependencies);
+
+        var transitive = new HashSet<ModuleKey>(SelectedModuleDetail.DependencyInfo.AllDependencies);
         transitive.ExceptWith(SelectedModuleDetail.DependencyInfo.DirectDependencies);
         return transitive;
     }

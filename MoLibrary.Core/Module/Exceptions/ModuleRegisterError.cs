@@ -25,9 +25,9 @@ public class ModuleRegisterError
     public ModuleRegisterErrorType ErrorType { get; set; } = ModuleRegisterErrorType.General;
     
     /// <summary>
-    /// The module enum that was being guided from when the error occurred.
+    /// The module key that was being guided from when the error occurred.
     /// </summary>
-    public EMoModules? GuideFrom { get; set; }
+    public ModuleKey? GuideFrom { get; set; }
     
     /// <summary>
     /// The configuration phase where the error occurred.

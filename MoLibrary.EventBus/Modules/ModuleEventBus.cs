@@ -31,9 +31,9 @@ public class ModuleEventBus(ModuleEventBusOption option)
 {
     private readonly List<EventHandlerRegisterInfo> _autoDiscoveredHandlers = [];
 
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.EventBus;
+        return EMoModuleKey.EventBus;
     }
 
     public override void ConfigureServices(IServiceCollection services)

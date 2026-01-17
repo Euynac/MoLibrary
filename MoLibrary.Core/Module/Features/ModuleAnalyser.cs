@@ -9,46 +9,46 @@ namespace MoLibrary.Core.Module.Features;
 public class ModuleAnalyser
 {
     /// <summary>
-    /// Dictionary mapping module types to their enum representations.
+    /// Dictionary mapping module types to their ModuleKey representations.
     /// </summary>
-    public static Dictionary<Type, EMoModules> ModuleTypeToEnumMap { get; set; } = new();
+    public static Dictionary<Type, ModuleKey> ModuleTypeToKeyMap { get; set; } = new();
 
     /// <summary>
-    /// Dictionary mapping module enums to their type representations.
+    /// Dictionary mapping ModuleKey to their type representations.
     /// </summary>
-    public static Dictionary<EMoModules, Type> ModuleEnumToTypeDict { get; set; } = new();
+    public static Dictionary<ModuleKey, Type> ModuleKeyToTypeDict { get; set; } = new();
 
     /// <summary>
-    /// Dictionary mapping module enums to their dependencies.
+    /// Dictionary mapping ModuleKey to their dependencies.
     /// </summary>
-    public static Dictionary<EMoModules, HashSet<EMoModules>> ModuleDependencyMap { get; set; } = new();
+    public static Dictionary<ModuleKey, HashSet<ModuleKey>> ModuleDependencyMap { get; set; } = new();
 
     /// <summary>
-    /// Maps a module enum to its type.
+    /// Maps a module key to its type.
     /// </summary>
     /// <param name="moduleType">The module type.</param>
-    /// <param name="moduleEnum">The module enum.</param>
-    public static void RegisterModuleMapping(Type moduleType, EMoModules moduleEnum)
+    /// <param name="moduleKey">The module key.</param>
+    public static void RegisterModuleMapping(Type moduleType, ModuleKey moduleKey)
     {
-        ModuleTypeToEnumMap[moduleType] = moduleEnum;
-        ModuleEnumToTypeDict[moduleEnum] = moduleType;
+        ModuleTypeToKeyMap[moduleType] = moduleKey;
+        ModuleKeyToTypeDict[moduleKey] = moduleType;
     }
 
     /// <summary>
     /// Adds a dependency relationship between modules.
     /// </summary>
-    /// <param name="moduleEnum">The module that depends on another module.</param>
-    /// <param name="dependsOnEnum">The module being depended upon.</param>
-    public static void AddDependency(EMoModules moduleEnum, EMoModules dependsOnEnum)
+    /// <param name="moduleKey">The module that depends on another module.</param>
+    /// <param name="dependsOnKey">The module being depended upon.</param>
+    public static void AddDependency(ModuleKey moduleKey, ModuleKey dependsOnKey)
     {
-        if (!ModuleDependencyMap.ContainsKey(moduleEnum))
+        if (!ModuleDependencyMap.ContainsKey(moduleKey))
         {
-            ModuleDependencyMap[moduleEnum] = [];
+            ModuleDependencyMap[moduleKey] = [];
         }
-        
-        if (moduleEnum != dependsOnEnum) // Prevent self-dependency
+
+        if (moduleKey != dependsOnKey) // Prevent self-dependency
         {
-            ModuleDependencyMap[moduleEnum].Add(dependsOnEnum);
+            ModuleDependencyMap[moduleKey].Add(dependsOnKey);
         }
     }
 
@@ -60,14 +60,14 @@ public class ModuleAnalyser
         // 获取拓扑排序的模块顺序
         var orderedModules = GetModulesInDependencyOrder();
         orderedModules.Reverse();
-        
+
         // 为每个模块分配Order值，依赖的模块获得更小的Order值
         for (int i = 0; i < orderedModules.Count; i++)
         {
-            var moduleEnum = orderedModules[i];
-            
+            var moduleKey = orderedModules[i];
+
             // 查找对应的模块类型
-            if (ModuleEnumToTypeDict.TryGetValue(moduleEnum, out var moduleType))
+            if (ModuleKeyToTypeDict.TryGetValue(moduleKey, out var moduleType))
             {
                 // 查找模块注册上下文并更新Order
                 if (MoModuleRegisterCentre.TryGetModuleRequestInfo(moduleType, out var requestInfo))
@@ -97,25 +97,25 @@ public class ModuleAnalyser
     /// <summary>
     /// Calculates all dependencies for a specific module, including transitive dependencies.
     /// </summary>
-    /// <param name="moduleEnum">The module to calculate dependencies for.</param>
+    /// <param name="moduleKey">The module to calculate dependencies for.</param>
     /// <returns>A set of all direct and indirect dependencies of the module.</returns>
-    public static HashSet<EMoModules> CalculateModuleDependencies(EMoModules moduleEnum)
+    public static HashSet<ModuleKey> CalculateModuleDependencies(ModuleKey moduleKey)
     {
-        var allDependencies = new HashSet<EMoModules>();
-        if (!ModuleDependencyMap.ContainsKey(moduleEnum))
+        var allDependencies = new HashSet<ModuleKey>();
+        if (!ModuleDependencyMap.ContainsKey(moduleKey))
         {
             return allDependencies;
         }
 
-        var visited = new HashSet<EMoModules>();
-        var toVisit = new Queue<EMoModules>();
-        
+        var visited = new HashSet<ModuleKey>();
+        var toVisit = new Queue<ModuleKey>();
+
         // Start with direct dependencies
-        foreach (var dependency in ModuleDependencyMap[moduleEnum])
+        foreach (var dependency in ModuleDependencyMap[moduleKey])
         {
             toVisit.Enqueue(dependency);
         }
-        
+
         // Process the dependency graph breadth-first
         while (toVisit.Count > 0)
         {
@@ -126,7 +126,7 @@ public class ModuleAnalyser
             }
 
             allDependencies.Add(current);
-            
+
             // Add dependencies of the current module if any
             if (ModuleDependencyMap.TryGetValue(current, out var dependencies))
             {
@@ -136,7 +136,7 @@ public class ModuleAnalyser
                 }
             }
         }
-        
+
         return allDependencies;
     }
 
@@ -144,16 +144,16 @@ public class ModuleAnalyser
     /// Calculates the complete dependency graph for all modules.
     /// </summary>
     /// <returns>A DirectedGraph representation of the module dependencies.</returns>
-    public static DirectedGraph<EMoModules> CalculateCompleteModuleDependencyGraph()
+    public static DirectedGraph<ModuleKey> CalculateCompleteModuleDependencyGraph()
     {
-        var graph = new DirectedGraph<EMoModules>();
-        
+        var graph = new DirectedGraph<ModuleKey>();
+
         // Add all modules as nodes
-        foreach (var module in ModuleEnumToTypeDict.Keys)
+        foreach (var module in ModuleKeyToTypeDict.Keys)
         {
             graph.AddNode(module);
         }
-        
+
         // Add all edges (dependencies)
         foreach (var kvp in ModuleDependencyMap)
         {
@@ -163,7 +163,7 @@ public class ModuleAnalyser
                 graph.AddEdge(sourceModule, targetModule);
             }
         }
-        
+
         return graph;
     }
 
@@ -181,7 +181,7 @@ public class ModuleAnalyser
     /// Gets a topological sort of modules based on their dependencies.
     /// </summary>
     /// <returns>A list of modules in dependency order (if no cycles exist).</returns>
-    public static List<EMoModules> GetModulesInDependencyOrder()
+    public static List<ModuleKey> GetModulesInDependencyOrder()
     {
         var graph = CalculateCompleteModuleDependencyGraph();
         return graph.TopologicalSort();
@@ -190,61 +190,61 @@ public class ModuleAnalyser
     /// <summary>
     /// Gets detailed information about a module's dependencies.
     /// </summary>
-    /// <param name="moduleEnum">The module to analyze.</param>
+    /// <param name="moduleKey">The module to analyze.</param>
     /// <returns>Detailed dependency information for the module.</returns>
-    public static ModuleDependencyInfo GetModuleDependencyInfo(EMoModules moduleEnum)
+    public static ModuleDependencyInfo GetModuleDependencyInfo(ModuleKey moduleKey)
     {
         var info = new ModuleDependencyInfo
         {
-            Module = moduleEnum
+            Module = moduleKey
         };
-        
+
         // Get direct dependencies
-        if (ModuleDependencyMap.TryGetValue(moduleEnum, out var directDeps))
+        if (ModuleDependencyMap.TryGetValue(moduleKey, out var directDeps))
         {
             info.DirectDependencies = [..directDeps];
         }
-        
+
         // Get all dependencies
-        info.AllDependencies = CalculateModuleDependencies(moduleEnum);
-        
+        info.AllDependencies = CalculateModuleDependencies(moduleKey);
+
         // Get modules that depend on this module
         foreach (var kvp in ModuleDependencyMap)
         {
-            if (kvp.Value.Contains(moduleEnum))
+            if (kvp.Value.Contains(moduleKey))
             {
                 info.DependedByModules.Add(kvp.Key);
             }
         }
-        
+
         // Check for cycles involving this module
-        var cyclePath = FindCycleInvolvingModule(moduleEnum);
+        var cyclePath = FindCycleInvolvingModule(moduleKey);
         if (cyclePath.Count > 0)
         {
             info.IsPartOfCycle = true;
             info.CyclePath = cyclePath;
         }
-        
+
         return info;
     }
     
     /// <summary>
     /// Finds a cycle in the dependency graph that involves the specified module.
     /// </summary>
-    /// <param name="moduleEnum">The module to check for involvement in a cycle.</param>
+    /// <param name="moduleKey">The module to check for involvement in a cycle.</param>
     /// <returns>A list representing the cycle path, or an empty list if no cycle exists.</returns>
-    public static List<EMoModules> FindCycleInvolvingModule(EMoModules moduleEnum)
+    public static List<ModuleKey> FindCycleInvolvingModule(ModuleKey moduleKey)
     {
-        if (!ModuleDependencyMap.ContainsKey(moduleEnum))
+        if (!ModuleDependencyMap.ContainsKey(moduleKey))
         {
             return [];
         }
-        
-        var visited = new HashSet<EMoModules>();
-        var path = new List<EMoModules>();
-        var inPath = new HashSet<EMoModules>();
-        
-        bool DFS(EMoModules current)
+
+        var visited = new HashSet<ModuleKey>();
+        var path = new List<ModuleKey>();
+        var inPath = new HashSet<ModuleKey>();
+
+        bool DFS(ModuleKey current)
         {
             if (inPath.Contains(current))
             {
@@ -252,7 +252,7 @@ public class ModuleAnalyser
                 int cycleStart = path.IndexOf(current);
                 return true;
             }
-            
+
             if (!visited.Add(current))
             {
                 return false;
@@ -260,7 +260,7 @@ public class ModuleAnalyser
 
             inPath.Add(current);
             path.Add(current);
-            
+
             if (ModuleDependencyMap.TryGetValue(current, out var dependencies))
             {
                 foreach (var dependency in dependencies)
@@ -271,20 +271,20 @@ public class ModuleAnalyser
                     }
                 }
             }
-            
+
             inPath.Remove(current);
             path.RemoveAt(path.Count - 1);
             return false;
         }
-        
+
         // Start DFS from the module we're interested in
-        DFS(moduleEnum);
-        
+        DFS(moduleKey);
+
         // Extract the cycle path if one was found
-        var cyclePath = new List<EMoModules>();
+        var cyclePath = new List<ModuleKey>();
         for (int i = 0; i < path.Count; i++)
         {
-            if (path[i] == moduleEnum)
+            if (path[i] == moduleKey)
             {
                 var cycleStart = i;
                 for (int j = cycleStart; j < path.Count; j++)
@@ -294,51 +294,51 @@ public class ModuleAnalyser
                 break;
             }
         }
-        
+
         return cyclePath;
     }
     
     /// <summary>
-    /// Gets dependency information for all modules.
+    /// Gets dependency information for all registered modules.
     /// </summary>
     /// <returns>A dictionary mapping each module to its dependency information.</returns>
-    public static Dictionary<EMoModules, ModuleDependencyInfo> GetAllModuleDependencyInfo()
+    public static Dictionary<ModuleKey, ModuleDependencyInfo> GetAllModuleDependencyInfo()
     {
-        var result = new Dictionary<EMoModules, ModuleDependencyInfo>();
-        
-        foreach (var module in Enum.GetValues(typeof(EMoModules)).Cast<EMoModules>())
+        var result = new Dictionary<ModuleKey, ModuleDependencyInfo>();
+
+        foreach (var moduleKey in ModuleKeyToTypeDict.Keys)
         {
-            result[module] = GetModuleDependencyInfo(module);
+            result[moduleKey] = GetModuleDependencyInfo(moduleKey);
         }
-        
+
         return result;
     }
 
     /// <summary>
     /// 获取所有已注册模块的当前注册顺序信息。
     /// </summary>
-    /// <returns>包含模块类型、枚举值和注册顺序的字典</returns>
-    public static Dictionary<Type, (EMoModules ModuleEnum, int Order)> GetModuleRegistrationOrder()
+    /// <returns>包含模块类型、ModuleKey和注册顺序的字典</returns>
+    public static Dictionary<Type, (ModuleKey? ModuleKey, int Order)> GetModuleRegistrationOrder()
     {
-        var result = new Dictionary<Type, (EMoModules, int)>();
-        
+        var result = new Dictionary<Type, (ModuleKey?, int)>();
+
         foreach (var kvp in MoModuleRegisterCentre.ModuleRegisterContextDict)
         {
             var moduleType = kvp.Key;
             var requestInfo = kvp.Value;
-            
-            // 查找对应的模块枚举
-            if (ModuleTypeToEnumMap.TryGetValue(moduleType, out var moduleEnum))
+
+            // 查找对应的模块键
+            if (ModuleTypeToKeyMap.TryGetValue(moduleType, out var moduleKey))
             {
-                result[moduleType] = (moduleEnum, requestInfo.Order);
+                result[moduleType] = (moduleKey, requestInfo.Order);
             }
             else
             {
-                // 如果没有找到对应的枚举，使用Developer作为默认值
-                result[moduleType] = (EMoModules.Developer, requestInfo.Order);
+                // 如果没有找到对应的键，返回null
+                result[moduleType] = (null, requestInfo.Order);
             }
         }
-        
+
         return result;
     }
 
@@ -349,36 +349,37 @@ public class ModuleAnalyser
     public static string GetModuleRegistrationSummary()
     {
         var sb = new StringBuilder();
-        
+
         sb.AppendLine("Module Registration Summary:");
         sb.AppendLine("=====================================");
-        
+
         // 从 ModuleSnapshots 获取信息并按 Order 排序（这些都是启用的模块）
         var moduleInfos = MoModuleRegisterCentre.ModuleSnapshots
             .OrderBy(snapshot => snapshot.RegisterInfo.Order)
             .ToList();
-        
+
         // 从 ModuleManager 获取所有禁用的模块类型
         var disabledModuleTypes = ModuleManager.GetDisabledModuleTypes();
-        
+
         // 显示启用的模块
         if (moduleInfos.Count > 0)
         {
             sb.AppendLine("Enabled Modules:");
             sb.AppendLine("----------------");
-            
+
             foreach (var snapshot in moduleInfos)
             {
-                var moduleEnum = snapshot.ModuleEnum;
+                var moduleKey = snapshot.ModuleKey;
                 var order = snapshot.RegisterInfo.Order;
                 var moduleTypeName = snapshot.ModuleType.Name;
                 var initDuration = snapshot.TotalInitializationDurationMs;
-                
+
                 // 显示模块基本信息
-                sb.AppendLine($"Order {order:D4}: {moduleEnum} ({moduleTypeName})");
-                
+                var moduleKeyDisplay = moduleKey?.ToString() ?? "Unknown";
+                sb.AppendLine($"Order {order:D4}: {moduleKeyDisplay} ({moduleTypeName})");
+
                 // 显示依赖关系
-                if (ModuleDependencyMap.TryGetValue(moduleEnum, out var dependencies) && dependencies.Count > 0)
+                if (moduleKey != null && ModuleDependencyMap.TryGetValue(moduleKey.Value, out var dependencies) && dependencies.Count > 0)
                 {
                     sb.AppendLine($"           Dependencies: {string.Join(", ", dependencies)}");
                 }
@@ -391,35 +392,36 @@ public class ModuleAnalyser
         {
             sb.AppendLine("No enabled modules found.");
         }
-        
+
         // 显示禁用的模块
         if (disabledModuleTypes.Count > 0)
         {
             sb.AppendLine();
             sb.AppendLine("Disabled Modules:");
             sb.AppendLine("-----------------");
-            
+
             foreach (var disabledModuleType in disabledModuleTypes)
             {
-                // 获取模块枚举值
-                var moduleEnum = ModuleTypeToEnumMap.GetValueOrDefault(disabledModuleType, EMoModules.Developer);
-                
-                sb.AppendLine($"{moduleEnum} ({disabledModuleType.Name}) [DISABLED]");
-                
+                // 获取模块键
+                var moduleKey = ModuleTypeToKeyMap.GetValueOrDefault(disabledModuleType);
+                var moduleKeyDisplay = moduleKey.Value != null ? moduleKey.ToString() : disabledModuleType.Name;
+
+                sb.AppendLine($"{moduleKeyDisplay} ({disabledModuleType.Name}) [DISABLED]");
+
                 // 显示依赖关系（如果有的话）
-                if (ModuleDependencyMap.TryGetValue(moduleEnum, out var dependencies) && dependencies.Count > 0)
+                if (moduleKey.Value != null && ModuleDependencyMap.TryGetValue(moduleKey, out var dependencies) && dependencies.Count > 0)
                 {
                     sb.AppendLine($"           Dependencies: {string.Join(", ", dependencies)}");
                 }
             }
         }
-        
+
         // 添加统计信息
         var totalEnabledModules = moduleInfos.Count;
         var totalDisabledModules = disabledModuleTypes.Count;
         var totalModules = totalEnabledModules + totalDisabledModules;
         var totalInitTime = moduleInfos.Sum(s => s.TotalInitializationDurationMs);
-        
+
         sb.AppendLine();
         sb.AppendLine("Statistics:");
         sb.AppendLine("===========");
@@ -427,23 +429,24 @@ public class ModuleAnalyser
         sb.AppendLine($"  Enabled modules: {totalEnabledModules}");
         sb.AppendLine($"  Disabled modules: {totalDisabledModules}");
         sb.AppendLine($"  Total initialization time: {totalInitTime}ms");
-        
+
         // 显示耗时最多的前5个模块（只显示启用的模块）
         var slowestModules = moduleInfos
             .Where(s => s.TotalInitializationDurationMs > 0)
             .OrderByDescending(s => s.TotalInitializationDurationMs)
             .Take(5)
             .ToList();
-            
+
         if (slowestModules.Count > 0)
         {
             sb.AppendLine($"  Slowest modules:");
             foreach (var module in slowestModules)
             {
-                sb.AppendLine($"    {module.ModuleEnum}: {module.TotalInitializationDurationMs}ms");
+                var moduleKeyDisplay = module.ModuleKey?.ToString() ?? "Unknown";
+                sb.AppendLine($"    {moduleKeyDisplay}: {module.TotalInitializationDurationMs}ms");
             }
         }
-        
+
         return sb.ToString();
     }
 }

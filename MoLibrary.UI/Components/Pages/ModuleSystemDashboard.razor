@@ -108,17 +108,17 @@
     /// <summary>
     /// 查看模块详情
     /// </summary>
-    /// <param name="moduleEnum">模块枚举</param>
+    /// <param name="moduleKey">模块键</param>
     /// <returns></returns>
-    private async Task ViewModuleDetail(EMoModules moduleEnum)
+    private async Task ViewModuleDetail(ModuleKey moduleKey)
     {
         try
         {
-            selectedModuleDetail = StatusService.GetModuleDetail(moduleEnum);
+            selectedModuleDetail = StatusService.GetModuleDetail(moduleKey);
             if (selectedModuleDetail != null)
             {
                 // 获取模块选项信息
-                var optionData = StatusService.GetModuleOptionInstance(moduleEnum);
+                var optionData = StatusService.GetModuleOptionInstance(moduleKey);
                 selectedModuleOptionType = optionData?.optionType;
                 selectedModuleOptionInstance = optionData?.optionInstance;
 

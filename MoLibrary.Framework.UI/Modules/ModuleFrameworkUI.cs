@@ -19,9 +19,9 @@ public static class ModuleFrameworkUIBuilderExtensions
 public class ModuleFrameworkUI(ModuleFrameworkUIOption option)
     : MoModuleWithDependencies<ModuleFrameworkUI, ModuleFrameworkUIOption, ModuleFrameworkUIGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.FrameworkUI;
+        return EMoModuleKey.FrameworkUI;
     }
 
     public override void ClaimDependencies()

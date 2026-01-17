@@ -20,9 +20,9 @@ public static class ModuleMediatorBuilderExtensions
 
 public class ModuleMediator(ModuleMediatorOption option) : MoModule<ModuleMediator, ModuleMediatorOption, ModuleMediatorGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.Mediator;
+        return EMoModuleKey.Mediator;
     }
 
     public override void ConfigureServices(IServiceCollection services)

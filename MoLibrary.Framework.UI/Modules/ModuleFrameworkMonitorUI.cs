@@ -29,9 +29,9 @@ public static class ModuleFrameworkMonitorUIBuilderExtensions
 public class ModuleFrameworkMonitorUI(ModuleFrameworkMonitorUIOption option)
     : MoModuleWithDependencies<ModuleFrameworkMonitorUI, ModuleFrameworkMonitorUIOption, ModuleFrameworkMonitorUIGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.FrameworkMonitorUI;
+        return EMoModuleKey.FrameworkMonitorUI;
     }
 
     public override void ConfigureServices(IServiceCollection services)

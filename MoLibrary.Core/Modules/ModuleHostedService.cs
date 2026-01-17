@@ -35,9 +35,9 @@ public static class ModuleHostedServiceBuilderExtensions
 public class ModuleHostedService(ModuleHostedServiceOption option)
     : MoModuleWithDependencies<ModuleHostedService, ModuleHostedServiceOption, ModuleHostedServiceGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.HostedService;
+        return EMoModuleKey.HostedService;
     }
 
     public override void ClaimDependencies()

@@ -29,9 +29,9 @@ public static class ModuleDaprEventBusBuilderExtensions
 public class ModuleDaprEventBus(ModuleDaprEventBusOption option)
     : MoModuleWithDependencies<ModuleDaprEventBus, ModuleDaprEventBusOption, ModuleDaprEventBusGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.DaprEventBus;
+        return EMoModuleKey.DaprEventBus;
     }
 
     public override void ConfigureServices(IServiceCollection services)

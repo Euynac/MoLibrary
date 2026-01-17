@@ -20,9 +20,9 @@ namespace MoLibrary.Configuration.UI.Modules;
 public class ModuleConfigurationDashboard(ModuleConfigurationDashboardOption option)
     : MoModuleWithDependencies<ModuleConfigurationDashboard, ModuleConfigurationDashboardOption, ModuleConfigurationDashboardGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.ConfigurationDashboard;
+        return EMoModuleKey.ConfigurationDashboard;
     }
 
     public override void ClaimDependencies()

@@ -14,7 +14,7 @@ namespace MoLibrary.RegisterCentre.ServiceInvocation.Modules;
 public class ModuleServiceInvocation(ModuleServiceInvocationOption option)
     : MoModuleWithDependencies<ModuleServiceInvocation, ModuleServiceInvocationOption, ModuleServiceInvocationGuide>(option)
 {
-    public override EMoModules CurModuleEnum() => EMoModules.ServiceInvocation;
+    public override ModuleKey GetModuleKey() => EMoModuleKey.ServiceInvocation;
 
     public override void ClaimDependencies()
     {

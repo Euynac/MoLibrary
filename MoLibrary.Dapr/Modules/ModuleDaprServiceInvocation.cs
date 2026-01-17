@@ -36,7 +36,7 @@ public class ModuleDaprServiceInvocation(ModuleDaprServiceInvocationOption optio
     : MoModuleWithDependencies<ModuleDaprServiceInvocation, ModuleDaprServiceInvocationOption,
         ModuleDaprServiceInvocationGuide>(option)
 {
-    public override EMoModules CurModuleEnum() => EMoModules.DaprProviderClientConnector;
+    public override ModuleKey GetModuleKey() => EMoModuleKey.DaprProviderClientConnector;
 
     public override void ClaimDependencies()
     {

@@ -1,20 +1,16 @@
 namespace MoLibrary.Core.Module.Models;
 
 /// <summary>
-/// MoLibraryModule列表
+/// MoLibrary 内置模块键枚举。第三方开发者请勿在此添加。
+/// 注意：不包含 "Developer"，开发者配置用 GuideFrom = null 表示。
 /// </summary>
-public enum EMoModules
+public enum EMoModuleKey
 {
-    /// <summary>
-    /// 用户自身设置
-    /// </summary>
-    Developer,
-    ThirdPartyModule,
     Authority,
     EventBus,
     BackgroundJob,
     Repository,
-    Logging, 
+    Logging,
     DependencyInjection,
     AutoModel,
     DomainDrivenDesign,

@@ -84,9 +84,9 @@ public static class ModuleRedisStateStoreBuilderExtensions
 public class ModuleRedisStateStore(ModuleRedisStateStoreOption option)
     : MoModule<ModuleRedisStateStore, ModuleRedisStateStoreOption, ModuleRedisStateStoreGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.RedisStateStore;
+        return EMoModuleKey.RedisStateStore;
     }
 
     public override void ConfigureServices(IServiceCollection services)

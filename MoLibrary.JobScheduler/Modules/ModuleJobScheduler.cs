@@ -49,7 +49,7 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
 {
     private readonly List<JobDefinition> _jobDefinitions = [];
 
-    public override EMoModules CurModuleEnum() => EMoModules.JobScheduler;
+    public override ModuleKey GetModuleKey() => EMoModuleKey.JobScheduler;
 
     /// <summary>
     /// Iterates through business types to discover and collect job types.

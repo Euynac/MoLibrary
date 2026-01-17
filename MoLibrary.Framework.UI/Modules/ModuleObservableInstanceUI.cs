@@ -33,9 +33,9 @@ public static class ModuleObservableInstanceUIBuilderExtensions
 public class ModuleObservableInstanceUI(ModuleObservableInstanceUIOption option)
     : MoModuleWithDependencies<ModuleObservableInstanceUI, ModuleObservableInstanceUIOption, ModuleObservableInstanceUIGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.ObservableInstanceUI;
+        return EMoModuleKey.ObservableInstanceUI;
     }
 
     public override void ConfigureServices(IServiceCollection services)

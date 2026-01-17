@@ -19,9 +19,9 @@ public static class ModuleDaprProviderRpcClientBuilderExtensions
 public class ModuleDaprProviderRpcClient(ModuleDaprProviderRpcClientOption option)
     : MoModuleWithDependencies<ModuleDaprProviderRpcClient, ModuleDaprProviderRpcClientOption, ModuleDaprProviderRpcClientGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.DaprProviderRpcClient;
+        return EMoModuleKey.DaprProviderRpcClient;
     }
 
     public override void ClaimDependencies()

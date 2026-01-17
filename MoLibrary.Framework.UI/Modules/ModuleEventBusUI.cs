@@ -34,9 +34,9 @@ public static class ModuleEventBusUIBuilderExtensions
 public class ModuleEventBusUI(ModuleEventBusUIOption option)
     : MoModuleWithDependencies<ModuleEventBusUI, ModuleEventBusUIOption, ModuleEventBusUIGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.EventBusUI;
+        return EMoModuleKey.EventBusUI;
     }
 
     public override void ConfigureServices(IServiceCollection services)

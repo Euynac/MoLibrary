@@ -47,9 +47,9 @@ public class ModuleScopedData(ModuleScopedDataOption option)
     /// 获取当前模块枚举
     /// </summary>
     /// <returns>模块枚举值</returns>
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.ScopedData;
+        return EMoModuleKey.ScopedData;
     }
 }
 

@@ -9,15 +9,15 @@ namespace MoLibrary.Core.Module.Interfaces;
 public class MoModuleGuide
 {
     /// <summary>
-    /// 指示模块配置来源
+    /// 指示模块配置来源。null 表示开发者直接配置。
     /// </summary>
-    public EMoModules? GuideFrom { get; set; }
+    public ModuleKey? GuideFrom { get; set; }
 
     /// <summary>
     /// Lazy-loaded logger instance for this module guide.
     /// </summary>
     private readonly Lazy<ILogger> _loggerLazy;
-    
+
     /// <summary>
     /// Gets the logger instance for this module guide.
     /// </summary>
@@ -25,15 +25,15 @@ public class MoModuleGuide
 
     public MoModuleGuide()
     {
-        GuideFrom = EMoModules.Developer;
+        GuideFrom = null; // null = 开发者直接配置
         _loggerLazy = new Lazy<ILogger>(() => LogProvider.For(GetType()));
     }
 
     /// <summary>
-    /// Gets the target module enum this guide is for.
+    /// Gets the target module key this guide is for.
     /// </summary>
-    /// <returns>The enum representation of the target module.</returns>
-    public virtual EMoModules GetTargetModuleEnum()
+    /// <returns>The ModuleKey representation of the target module.</returns>
+    public virtual ModuleKey GetTargetModuleKey()
     {
         // Default implementation returns a placeholder value
         // This should be overridden in specific module guides
@@ -45,11 +45,11 @@ public class MoModuleGuide
     /// </summary>
     /// <typeparam name="TDependsModuleGuide">Type of the module guide for the dependent module.</typeparam>
     /// <returns>A module guide for configuring the dependent module.</returns>
-    internal static TDependsModuleGuide DeclareDependency<TDependsModuleGuide>(EMoModules fromModule, EMoModules? guideFrom)
+    internal static TDependsModuleGuide DeclareDependency<TDependsModuleGuide>(ModuleKey fromModule, ModuleKey? guideFrom)
         where TDependsModuleGuide : MoModuleGuide, new()
     {
         // Add dependency to the list if it's not already there
-        var dependsOnModule = new TDependsModuleGuide().GetTargetModuleEnum();
+        var dependsOnModule = new TDependsModuleGuide().GetTargetModuleKey();
 
         // Register this dependency relationship in the ModuleAnalyser
         ModuleAnalyser.AddDependency(fromModule, dependsOnModule);
@@ -68,7 +68,7 @@ public class MoModuleGuide
     public TOtherModuleGuide DependsOnModule<TOtherModuleGuide>()
         where TOtherModuleGuide : MoModuleGuide, new()
     {
-        return DeclareDependency<TOtherModuleGuide>(GetTargetModuleEnum(), GetTargetModuleEnum());
+        return DeclareDependency<TOtherModuleGuide>(GetTargetModuleKey(), GetTargetModuleKey());
     }
 }
 public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleGuide, IMoModuleGuide, IMoModuleGuideBridge
@@ -76,15 +76,15 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     where TModuleGuideSelf : MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf>, new()
     where TModule : MoModule<TModule, TModuleOption, TModuleGuideSelf>, IMoModuleStaticInfo
 {
-    public override EMoModules GetTargetModuleEnum()
+    public override ModuleKey GetTargetModuleKey()
     {
-        if(ModuleAnalyser.ModuleTypeToEnumMap.TryGetValue(typeof(TModule), out var moduleEnum))
+        if (ModuleAnalyser.ModuleTypeToKeyMap.TryGetValue(typeof(TModule), out var moduleKey))
         {
-            return moduleEnum;
+            return moduleKey;
         }
-        moduleEnum = TModule.GetModuleEnum();
-        ModuleAnalyser.RegisterModuleMapping(typeof(TModule), moduleEnum);
-        return moduleEnum;
+        moduleKey = TModule.GetStaticModuleKey();
+        ModuleAnalyser.RegisterModuleMapping(typeof(TModule), moduleKey);
+        return moduleKey;
     }
 
     /// <summary>
@@ -152,8 +152,6 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
         {
             ConfigureModuleOption(config);
         }
-
-        var targetModule = GetTargetModuleEnum();
 
         RegisterModule();
 

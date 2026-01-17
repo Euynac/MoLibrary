@@ -29,9 +29,9 @@ public static class ModuleMapperUIBuilderExtensions
 public class ModuleMapperUI(ModuleMapperUIOption option)
     : MoModuleWithDependencies<ModuleMapperUI, ModuleMapperUIOption, ModuleMapperUIGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.MapperUI;
+        return EMoModuleKey.MapperUI;
     }
 
     public override void ClaimDependencies()

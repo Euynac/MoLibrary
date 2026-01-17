@@ -20,9 +20,9 @@ public static class ModuleProgressBarBuilderExtensions
 public class ModuleProgressBar(ModuleProgressBarOption option)
     : MoModuleWithDependencies<ModuleProgressBar, ModuleProgressBarOption, ModuleProgressBarGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.ProgressBar;
+        return EMoModuleKey.ProgressBar;
     }
 
     public override void ConfigureServices(IServiceCollection services)

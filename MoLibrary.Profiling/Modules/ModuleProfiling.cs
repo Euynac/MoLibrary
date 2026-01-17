@@ -24,9 +24,9 @@ public static class ModuleProfilingBuilderExtensions
 public class ModuleProfiling(ModuleProfilingOption option)
     : MoModule<ModuleProfiling, ModuleProfilingOption, ModuleProfilingGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.Profiling;
+        return EMoModuleKey.Profiling;
     }
 
     /// <summary>

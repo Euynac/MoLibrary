@@ -20,9 +20,9 @@ public static class ModuleStateStoreBuilderExtensions
 public class ModuleStateStore(ModuleStateStoreOption option)
     : MoModule<ModuleStateStore, ModuleStateStoreOption, ModuleStateStoreGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.StateStore;
+        return EMoModuleKey.StateStore;
     }
 
     public override void ConfigureServices(IServiceCollection services)

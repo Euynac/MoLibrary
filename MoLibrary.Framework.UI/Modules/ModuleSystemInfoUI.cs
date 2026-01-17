@@ -34,9 +34,9 @@ public static class ModuleSystemInfoUIBuilderExtensions
 public class ModuleSystemInfoUI(ModuleSystemInfoUIOption option)
     : MoModuleWithDependencies<ModuleSystemInfoUI, ModuleSystemInfoUIOption, ModuleSystemInfoUIGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.SystemInfoUI;
+        return EMoModuleKey.SystemInfoUI;
     }
 
     public override void ConfigureServices(IServiceCollection services)

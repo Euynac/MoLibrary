@@ -26,9 +26,9 @@ public static class ModuleSignalrUIBuilderExtensions
 public class ModuleSignalrUI(ModuleSignalrUIOption option)
     : MoModuleWithDependencies<ModuleSignalrUI, ModuleSignalrUIOption, ModuleSignalrUIGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.SignalrUI;
+        return EMoModuleKey.SignalrUI;
     }
 
     public override void ConfigureServices(IServiceCollection services)

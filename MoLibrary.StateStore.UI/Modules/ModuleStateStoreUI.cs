@@ -33,7 +33,7 @@ public static class ModuleStateStoreUIBuilderExtensions
 public class ModuleStateStoreUI(ModuleStateStoreUIOption option)
     : MoModuleWithDependencies<ModuleStateStoreUI, ModuleStateStoreUIOption, ModuleStateStoreUIGuide>(option)
 {
-    public override EMoModules CurModuleEnum() => EMoModules.StateStoreUI;
+    public override ModuleKey GetModuleKey() => EMoModuleKey.StateStoreUI;
 
     public override void ClaimDependencies()
     {

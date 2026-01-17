@@ -23,9 +23,9 @@ namespace MoLibrary.RegisterCentre.Modules;
 
 public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModuleWithDependencies<ModuleRegisterCentre, ModuleRegisterCentreOption, ModuleRegisterCentreGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.RegisterCentre;
+        return EMoModuleKey.RegisterCentre;
     }
 
     public override void ClaimDependencies()

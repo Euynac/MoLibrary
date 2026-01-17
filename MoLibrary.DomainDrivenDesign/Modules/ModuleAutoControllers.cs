@@ -28,9 +28,9 @@ public static class ModuleAutoControllersBuilderExtensions
 public class ModuleAutoControllers(ModuleAutoControllersOption option)
     : MoModuleWithDependencies<ModuleAutoControllers, ModuleAutoControllersOption, ModuleAutoControllersGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.AutoControllers;
+        return EMoModuleKey.AutoControllers;
     }
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {

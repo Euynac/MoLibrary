@@ -14,22 +14,21 @@ public class ModuleSnapshot(MoModule moduleInstance, ModuleRegisterInfo register
     /// 模块实例
     /// </summary>
     public IMoModule ModuleInstance { get; set; } = moduleInstance;
-    
+
     /// <summary>
     /// 模块请求信息
     /// </summary>
     public ModuleRegisterInfo RegisterInfo { get; set; } = registerInfo;
-    
+
     /// <summary>
     /// 模块类型
     /// </summary>
     public Type ModuleType { get; set; } = moduleInstance.GetType();
-    
+
     /// <summary>
-    /// 获取模块对应的枚举值
+    /// 获取模块对应的ModuleKey。对于未注册模块返回 null。
     /// </summary>
-    public EMoModules ModuleEnum =>
-        ModuleAnalyser.ModuleTypeToEnumMap.GetValueOrDefault(ModuleType, EMoModules.Developer);
+    public ModuleKey? ModuleKey => ModuleAnalyser.ModuleTypeToKeyMap.GetValueOrDefault(ModuleType);
 
     /// <summary>
     /// 获取模块的总初始化耗时（毫秒）
@@ -40,6 +39,7 @@ public class ModuleSnapshot(MoModule moduleInstance, ModuleRegisterInfo register
 
     public override string ToString()
     {
-        return $"[{ModuleEnum}] {RegisterInfo}";
+        var moduleKeyDisplay = ModuleKey?.ToString() ?? "Unknown";
+        return $"[{moduleKeyDisplay}] {RegisterInfo}";
     }
 }

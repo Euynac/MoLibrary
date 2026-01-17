@@ -47,9 +47,9 @@ public class ModuleUICore(ModuleUICoreOption option)
     /// 获取当前模块枚举
     /// </summary>
     /// <returns>UI核心模块枚举</returns>
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.UICore;
+        return EMoModuleKey.UICore;
     }
 
     public override void ConfigureBuilder(WebApplicationBuilder builder)

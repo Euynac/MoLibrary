@@ -36,9 +36,9 @@ public static class ModuleJobSchedulerUIBuilderExtensions
 public class ModuleJobSchedulerUI(ModuleJobSchedulerUIOption option)
     : MoModuleWithDependencies<ModuleJobSchedulerUI, ModuleJobSchedulerUIOption, ModuleJobSchedulerUIGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.JobSchedulerUI;
+        return EMoModuleKey.JobSchedulerUI;
     }
 
     public override void ConfigureServices(IServiceCollection services)

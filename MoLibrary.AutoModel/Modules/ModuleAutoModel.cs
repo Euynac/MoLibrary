@@ -37,9 +37,9 @@ public class ModuleAutoModel(ModuleAutoModelOption option) : MoModuleWithDepende
         services.AddTransient<IAutoModelTypeConverter, AutoModelTypeConverter>();
     }
 
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.AutoModel;
+        return EMoModuleKey.AutoModel;
     }
 
     public override void ConfigureEndpoints(IApplicationBuilder app)

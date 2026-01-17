@@ -32,9 +32,9 @@ public static class ModuleTimekeeperUIBuilderExtensions
 public class ModuleTimekeeperUI(ModuleTimekeeperUIOption option)
     : MoModuleWithDependencies<ModuleTimekeeperUI, ModuleTimekeeperUIOption, ModuleTimekeeperUIGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.TimekeeperUI;
+        return EMoModuleKey.TimekeeperUI;
     }
 
     public override void ConfigureServices(IServiceCollection services)
