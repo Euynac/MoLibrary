@@ -135,7 +135,7 @@ public class ModuleProfilingUIOption : MoModuleOption<ModuleProfilingUI>
     /// <summary>
     ///     应用启动时自动开始收集分配事件
     /// </summary>
-    public bool AutoStartCollection { get; set; } = true;
+    public bool AutoStartCollection { get; set; } = false;
 
     /// <summary>
     ///     默认采样模式 (用于自动启动时)

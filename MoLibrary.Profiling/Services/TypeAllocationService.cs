@@ -96,8 +96,7 @@ public class TypeAllocationService(
                 var startTime = DateTime.UtcNow;
 
                 using var dataTarget = DataTarget.AttachToProcess(
-                    Environment.ProcessId,
-                    suspend: true);
+                    Environment.ProcessId, false);
 
                 var runtime = dataTarget.ClrVersions.FirstOrDefault()?.CreateRuntime();
                 if (runtime == null)

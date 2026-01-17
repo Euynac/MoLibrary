@@ -112,27 +112,35 @@
         <MudPaper Class="pa-4" Elevation="2">
             <div class="d-flex justify-space-between align-center mb-3">
                 <MudText Typo="Typo.h6">内存占用类型排名</MudText>
-                <MudNumericField T="int" @bind-Value="topN"
-                                 Label="显示数量"
-                                 Min="5" Max="200"
-                                 Style="width: 120px;"
-                                 Variant="Variant.Outlined"
-                                 Margin="Margin.Dense"/>
+                <div class="d-flex align-center gap-2">
+                    <MudTooltip Text="@(showFullTypeName ? "显示简短类型名" : "显示完整类型名")">
+                        <MudToggleIconButton @bind-Toggled="showFullTypeName"
+                                             Icon="@Icons.Material.Filled.ShortText"
+                                             ToggledIcon="@Icons.Material.Filled.Subject"
+                                             ToggledColor="Color.Primary"/>
+                    </MudTooltip>
+                    <MudNumericField T="int" @bind-Value="topN"
+                                     Label="显示数量"
+                                     Min="5" Max="200"
+                                     Style="width: 120px;"
+                                     Variant="Variant.Outlined"
+                                     Margin="Margin.Dense"/>
+                </div>
             </div>
 
             @if (snapshot?.Types.Count > 0)
             {
                 <MudSimpleTable Dense="true" Hover="true" FixedHeader="true"
-                               Style="max-height: 500px; overflow-y: auto;">
+                               Style="max-height: 500px; overflow-y: auto; table-layout: fixed; width: 100%;">
                     <thead>
                         <tr>
-                            <th style="width: 50px;">#</th>
-                            <th>类型名称</th>
-                            <th style="text-align: right; width: 100px;">实例数</th>
-                            <th style="text-align: right; width: 100px;">总大小</th>
-                            <th style="text-align: right; width: 100px;">平均大小</th>
-                            <th style="text-align: right; width: 150px;">占比</th>
-                            <th style="width: 60px;">LOH</th>
+                            <th style="width: 40px;">#</th>
+                            <th style="width: auto;">类型名称</th>
+                            <th style="text-align: right; width: 80px;">实例数</th>
+                            <th style="text-align: right; width: 80px;">总大小</th>
+                            <th style="text-align: right; width: 80px;">平均大小</th>
+                            <th style="text-align: right; width: 140px;">占比</th>
+                            <th style="width: 50px;">LOH</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -141,10 +149,10 @@
                         {
                             <tr>
                                 <td>@rank</td>
-                                <td>
+                                <td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                                     <MudTooltip Text="@type.TypeName" Placement="Placement.Right">
-                                        <span class="type-name" style="font-family: monospace; font-size: 0.9em;">
-                                            @type.ShortTypeName
+                                        <span style="font-family: monospace; font-size: 0.85em;">
+                                            @(showFullTypeName ? type.TypeName : type.ShortTypeName)
                                         </span>
                                     </MudTooltip>
                                 </td>
@@ -231,6 +239,7 @@
     private int topN = 30;
     private Action? unsubscribe;
     private bool isSnapshotting;
+    private bool showFullTypeName;
 
     protected override void OnInitialized()
     {
