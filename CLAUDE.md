@@ -30,6 +30,22 @@ Invoke when:
 
 **Current MudBlazor version**: 8.9.0
 
+### /microsoft-docs:microsoft-code-reference
+
+Invoke when:
+- Working with Azure SDKs, .NET libraries, or Microsoft APIs
+- Need to verify method signatures or find correct class/method names
+- Looking for working code samples before writing SDK code
+- Troubleshooting errors like "method not found", wrong signatures, or deprecated patterns
+
+### /microsoft-docs:microsoft-docs
+
+Invoke when:
+- Understanding Azure/Microsoft concepts, architecture, or service behavior
+- Finding tutorials, quickstarts, or step-by-step guides
+- Looking up configuration options, limits, or quotas
+- Need official best practices for Azure/.NET development
+
 ## Code Quality Principles
 
 - Write reusable, low-coupling and high-cohesion implementations with multiple abstractions
@@ -42,10 +58,6 @@ Invoke when:
 - Always use primary constructor when creating a class with single constructor using dependency injection
   - More details can be read in @rules\primary-constructor.mdc
 - After defining `Module{Name}Option`, to use the module options, simply inject `IOptions<TModuleOption>` or `IOptionsSnapshot<TModuleOption>` for usage.
-
-## Available MCP Servers
-
-- **mcp__microsoft-docs__microsoft_docs_search**: MCP Server for searching Microsoft/Azure official documentation. This is particularly useful for finding ASP.NET Core, Blazor, and related documentation and best practices.
 
 ## Development Phase & Optimization Policy
 
