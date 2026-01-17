@@ -1,62 +1,6 @@
+using MoLibrary.StateStore.Providers;
+
 namespace MoLibrary.StateStore.UI.Models;
-
-/// <summary>
-/// StateStore Provider 类型枚举
-/// </summary>
-public enum EStateStoreProviderType
-{
-    /// <summary>
-    /// 内存缓存 Provider
-    /// </summary>
-    Memory,
-
-    /// <summary>
-    /// Redis Provider
-    /// </summary>
-    Redis,
-
-    /// <summary>
-    /// Dapr StateStore Provider
-    /// </summary>
-    Dapr,
-
-    /// <summary>
-    /// 未知类型
-    /// </summary>
-    Unknown
-}
-
-/// <summary>
-/// StateStore Provider 能力标志
-/// </summary>
-[Flags]
-public enum EStateStoreCapabilities
-{
-    /// <summary>
-    /// 无特殊能力
-    /// </summary>
-    None = 0,
-
-    /// <summary>
-    /// 支持 Key 扫描 (ScanKeysAsync)
-    /// </summary>
-    KeyScanning = 1 << 0,
-
-    /// <summary>
-    /// 支持原始字符串检索
-    /// </summary>
-    RawStringRetrieval = 1 << 1,
-
-    /// <summary>
-    /// 支持查询状态 (QueryStateAsync)
-    /// </summary>
-    QueryState = 1 << 2,
-
-    /// <summary>
-    /// 支持批量操作
-    /// </summary>
-    BulkOperations = 1 << 3
-}
 
 /// <summary>
 /// 表示已注册的 StateStore Provider 信息

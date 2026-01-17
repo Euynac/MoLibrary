@@ -9,6 +9,7 @@ using MoLibrary.Dapr.StateStore;
 using MoLibrary.RegisterCentre.Modules;
 using MoLibrary.StateStore;
 using MoLibrary.StateStore.Modules;
+using MoLibrary.StateStore.Providers;
 
 namespace MoLibrary.Dapr.Modules;
 
@@ -57,7 +58,8 @@ public static class ModuleDaprStateStoreBuilderExtensions
 }
 
 public class ModuleDaprStateStore(ModuleDaprStateStoreOption option)
-    : MoModuleWithDependencies<ModuleDaprStateStore, ModuleDaprStateStoreOption, ModuleDaprStateStoreGuide>(option)
+    : MoModuleWithDependencies<ModuleDaprStateStore, ModuleDaprStateStoreOption, ModuleDaprStateStoreGuide>(option),
+      IStateStoreModuleProvider
 {
     public override ModuleKey GetModuleKey()
     {
@@ -69,6 +71,21 @@ public class ModuleDaprStateStore(ModuleDaprStateStoreOption option)
         DependsOnModule<ModuleDaprClientGuide>().Register();
         DependsOnModule<ModuleStateStoreGuide>().Register();
     }
+
+    #region IStateStoreModuleProvider Implementation
+
+    public ModuleKey ProvidesFor => EMoModuleKey.StateStore;
+
+    public EStateStoreProviderType ProviderType => EStateStoreProviderType.Dapr;
+
+    public EStateStoreCapabilities Capabilities =>
+        EStateStoreCapabilities.RawStringRetrieval |
+        EStateStoreCapabilities.QueryState |
+        EStateStoreCapabilities.BulkOperations;
+
+    public string DisplayName => "Dapr";
+
+    #endregion
 }
 
 public class

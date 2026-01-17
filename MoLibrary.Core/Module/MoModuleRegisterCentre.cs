@@ -341,4 +341,33 @@ public static class MoModuleRegisterCentre
 
         ModuleErrorUtil.RaiseModuleErrors();
     }
+
+    /// <summary>
+    /// Gets all module snapshots that are providers for a specific target module.
+    /// </summary>
+    /// <param name="targetModuleKey">The ModuleKey of the target module to find providers for</param>
+    /// <returns>List of ModuleSnapshots for modules that provide for the target module</returns>
+    public static List<ModuleSnapshot> GetModuleProviders(ModuleKey targetModuleKey)
+    {
+        return ModuleSnapshots
+            .Where(s => s.ModuleInstance is IMoModuleProvider provider
+                        && provider.ProvidesFor == targetModuleKey)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Gets all module providers of a specific type for a target module.
+    /// </summary>
+    /// <typeparam name="TProvider">The provider interface type</typeparam>
+    /// <param name="targetModuleKey">The ModuleKey of the target module to find providers for</param>
+    /// <returns>List of provider instances</returns>
+    public static List<TProvider> GetModuleProviders<TProvider>(ModuleKey targetModuleKey)
+        where TProvider : IMoModuleProvider
+    {
+        return ModuleSnapshots
+            .Where(s => s.ModuleInstance is TProvider provider
+                        && provider.ProvidesFor == targetModuleKey)
+            .Select(s => (TProvider)s.ModuleInstance)
+            .ToList();
+    }
 }

@@ -1,11 +1,10 @@
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using MoLibrary.Core.Module;
-using MoLibrary.Dapr.Modules;
+using MoLibrary.Core.Module.Models;
 using MoLibrary.StateStore.Modules;
-using MoLibrary.StateStore.StackExchange.Modules;
+using MoLibrary.StateStore.Providers;
 using MoLibrary.StateStore.UI.Models;
 using MoLibrary.Tool.MoResponse;
 
@@ -18,6 +17,17 @@ public class StateStoreUIService(
     IServiceProvider serviceProvider,
     ILogger<StateStoreUIService> logger)
 {
+    /// <summary>
+    /// Cached provider snapshots for efficient lookup
+    /// </summary>
+    private List<ModuleSnapshot>? _providerSnapshots;
+
+    /// <summary>
+    /// Gets or initializes the cached provider snapshots
+    /// </summary>
+    private List<ModuleSnapshot> ProviderSnapshots =>
+        _providerSnapshots ??= MoModuleRegisterCentre.GetModuleProviders(EMoModuleKey.StateStore);
+
     #region Provider Discovery
 
     /// <summary>
@@ -92,9 +102,8 @@ public class StateStoreUIService(
 
     private StateStoreProviderInfo CreateProviderInfo(string? serviceKey, IMoStateStore provider)
     {
-        var providerType = DetectProviderType(provider);
-        var capabilities = DetectCapabilities(provider, providerType);
-        var (optionType, optionInstance) = GetProviderOptionInfo(serviceKey, providerType);
+        var (providerType, capabilities, displayName) = GetProviderMetadata(provider);
+        var (optionType, optionInstance) = GetProviderOptionInfo(serviceKey, provider);
 
         return new StateStoreProviderInfo
         {
@@ -108,86 +117,64 @@ public class StateStoreUIService(
         };
     }
 
-    private static EStateStoreProviderType DetectProviderType(IMoStateStore provider)
+    /// <summary>
+    /// Gets provider metadata from the registered IStateStoreModuleProvider
+    /// </summary>
+    private (EStateStoreProviderType providerType, EStateStoreCapabilities capabilities, string displayName) GetProviderMetadata(IMoStateStore provider)
     {
-        var typeName = provider.GetType().FullName ?? "";
+        // Try to find the matching provider module based on the provider's type name
+        var providerTypeName = provider.GetType().FullName ?? "";
 
-        if (typeName.Contains("Redis", StringComparison.OrdinalIgnoreCase))
-            return EStateStoreProviderType.Redis;
-        if (typeName.Contains("Dapr", StringComparison.OrdinalIgnoreCase))
-            return EStateStoreProviderType.Dapr;
-        if (provider is IMemoryStateStore)
-            return EStateStoreProviderType.Memory;
-
-        return EStateStoreProviderType.Unknown;
-    }
-
-    private static EStateStoreCapabilities DetectCapabilities(IMoStateStore provider, EStateStoreProviderType providerType)
-    {
-        var capabilities = EStateStoreCapabilities.BulkOperations;
-
-        // Dapr 不支持 Key 扫描
-        if (providerType != EStateStoreProviderType.Dapr)
+        foreach (var snapshot in ProviderSnapshots)
         {
-            capabilities |= EStateStoreCapabilities.KeyScanning;
-        }
+            if (snapshot.ModuleInstance is not IStateStoreModuleProvider moduleProvider) continue;
 
-        if (provider is IDistributedStateStore)
-        {
-            capabilities |= EStateStoreCapabilities.RawStringRetrieval;
-
-            // Dapr 支持 QueryState, Redis 不支持
-            if (providerType == EStateStoreProviderType.Dapr)
+            // Match by checking if the provider type name contains the module's display name
+            if (providerTypeName.Contains(moduleProvider.DisplayName, StringComparison.OrdinalIgnoreCase))
             {
-                capabilities |= EStateStoreCapabilities.QueryState;
+                return (moduleProvider.ProviderType, moduleProvider.Capabilities, moduleProvider.DisplayName);
             }
         }
 
-        return capabilities;
-    }
-
-    private (Type? optionType, object? optionInstance) GetProviderOptionInfo(string? serviceKey, EStateStoreProviderType type)
-    {
-        return type switch
+        // Fallback for memory provider or unknown types
+        if (provider is IMemoryStateStore)
         {
-            EStateStoreProviderType.Redis => GetRedisOptionInfo(serviceKey),
-            EStateStoreProviderType.Dapr => GetDaprOptionInfo(serviceKey),
-            _ => (null, null)
-        };
+            return (EStateStoreProviderType.Memory,
+                    EStateStoreCapabilities.KeyScanning | EStateStoreCapabilities.BulkOperations,
+                    "Memory");
+        }
+
+        return (EStateStoreProviderType.Unknown, EStateStoreCapabilities.BulkOperations, "Unknown");
     }
 
-    private (Type?, object?) GetRedisOptionInfo(string? serviceKey)
+    /// <summary>
+    /// Gets provider option information using ModuleSnapshot's generic option retrieval
+    /// </summary>
+    private (Type? optionType, object? optionInstance) GetProviderOptionInfo(string? serviceKey, IMoStateStore provider)
     {
         try
         {
-            var snapshot = serviceProvider.GetService<IOptionsSnapshot<ModuleRedisStateStoreOption>>();
-            var options = serviceKey != null
-                ? snapshot?.Get(serviceKey)
-                : serviceProvider.GetService<IOptions<ModuleRedisStateStoreOption>>()?.Value;
+            var providerTypeName = provider.GetType().FullName ?? "";
 
-            return (typeof(ModuleRedisStateStoreOption), options);
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "获取 Redis 配置失败: {ServiceKey}", serviceKey);
+            // Find the matching provider module snapshot
+            foreach (var snapshot in ProviderSnapshots)
+            {
+                if (snapshot.ModuleInstance is not IStateStoreModuleProvider moduleProvider) continue;
+
+                // Match by checking if the provider type name contains the module's display name
+                if (providerTypeName.Contains(moduleProvider.DisplayName, StringComparison.OrdinalIgnoreCase))
+                {
+                    // Use ModuleSnapshot's generic GetKeyedOption method
+                    var (optionType, optionInstance) = snapshot.GetKeyedOption(serviceProvider, serviceKey);
+                    return (optionType, optionInstance);
+                }
+            }
+
             return (null, null);
         }
-    }
-
-    private (Type?, object?) GetDaprOptionInfo(string? serviceKey)
-    {
-        try
-        {
-            var snapshot = serviceProvider.GetService<IOptionsSnapshot<ModuleDaprStateStoreOption>>();
-            var options = serviceKey != null
-                ? snapshot?.Get(serviceKey)
-                : serviceProvider.GetService<IOptions<ModuleDaprStateStoreOption>>()?.Value;
-
-            return (typeof(ModuleDaprStateStoreOption), options);
-        }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "获取 Dapr 配置失败: {ServiceKey}", serviceKey);
+            logger.LogWarning(ex, "获取 Provider 配置失败: {ServiceKey}", serviceKey);
             return (null, null);
         }
     }

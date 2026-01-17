@@ -1,3 +1,5 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using MoLibrary.Core.Module.Features;
 using MoLibrary.Core.Module.Interfaces;
 
@@ -41,5 +43,37 @@ public class ModuleSnapshot(MoModule moduleInstance, ModuleRegisterInfo register
     {
         var moduleKeyDisplay = ModuleKey?.ToString() ?? "Unknown";
         return $"[{moduleKeyDisplay}] {RegisterInfo}";
+    }
+
+    /// <summary>
+    /// Gets the keyed option for this module from DI container.
+    /// Uses ModuleOptionType from RegisterInfo and IOptionsSnapshot for retrieval.
+    /// </summary>
+    /// <param name="serviceProvider">The service provider</param>
+    /// <param name="serviceKey">The keyed service key, or null for default option</param>
+    /// <returns>Tuple of option type and option instance</returns>
+    public (Type OptionType, object? OptionInstance) GetKeyedOption(
+        IServiceProvider serviceProvider,
+        string? serviceKey)
+    {
+        var optionType = RegisterInfo.ModuleOptionType;
+
+        if (serviceKey == null)
+        {
+            // For non-keyed (default) option, use IOptions<T>
+            var optionsType = typeof(IOptions<>).MakeGenericType(optionType);
+            var options = serviceProvider.GetService(optionsType);
+            var value = options?.GetType().GetProperty("Value")?.GetValue(options);
+            return (optionType, value);
+        }
+
+        // For keyed option, use IOptionsSnapshot<T>.Get(key)
+        var snapshotType = typeof(IOptionsSnapshot<>).MakeGenericType(optionType);
+        var snapshot = serviceProvider.GetService(snapshotType);
+        if (snapshot == null) return (optionType, null);
+
+        var getMethod = snapshotType.GetMethod("Get");
+        var instance = getMethod?.Invoke(snapshot, [serviceKey]);
+        return (optionType, instance);
     }
 }

@@ -4,6 +4,7 @@ using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.StateStore.Modules;
+using MoLibrary.StateStore.Providers;
 using MoLibrary.StateStore.StackExchange.Connection;
 using StackExchange.Redis;
 
@@ -82,7 +83,8 @@ public static class ModuleRedisStateStoreBuilderExtensions
 }
 
 public class ModuleRedisStateStore(ModuleRedisStateStoreOption option)
-    : MoModule<ModuleRedisStateStore, ModuleRedisStateStoreOption, ModuleRedisStateStoreGuide>(option)
+    : MoModule<ModuleRedisStateStore, ModuleRedisStateStoreOption, ModuleRedisStateStoreGuide>(option),
+      IStateStoreModuleProvider
 {
     public override ModuleKey GetModuleKey()
     {
@@ -95,6 +97,21 @@ public class ModuleRedisStateStore(ModuleRedisStateStoreOption option)
         // IConnectionMultiplexer and IDistributedStateStore are registered in UseRedisStateStoreProvider
         services.AddSingleton<IRedisConnectionFactory, RedisConnectionFactory>();
     }
+
+    #region IStateStoreModuleProvider Implementation
+
+    public ModuleKey ProvidesFor => EMoModuleKey.StateStore;
+
+    public EStateStoreProviderType ProviderType => EStateStoreProviderType.Redis;
+
+    public EStateStoreCapabilities Capabilities =>
+        EStateStoreCapabilities.KeyScanning |
+        EStateStoreCapabilities.RawStringRetrieval |
+        EStateStoreCapabilities.BulkOperations;
+
+    public string DisplayName => "Redis";
+
+    #endregion
 }
 
 public class ModuleRedisStateStoreGuide : MoModuleGuide<ModuleRedisStateStore, ModuleRedisStateStoreOption, ModuleRedisStateStoreGuide>
