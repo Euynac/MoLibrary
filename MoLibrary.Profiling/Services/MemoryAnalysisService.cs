@@ -11,7 +11,7 @@ namespace MoLibrary.Profiling.Services;
 ///     内存分析服务实现
 /// </summary>
 public class MemoryAnalysisService(
-    MemoryMetricsCollector metricsCollector,
+    ProfilingMetricsCollector metricsCollector,
     ILogger<MemoryAnalysisService> logger) : IMemoryAnalysisService
 {
     /// <inheritdoc />

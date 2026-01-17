@@ -5,23 +5,25 @@ using MoLibrary.Profiling.Models;
 namespace MoLibrary.Profiling.Services;
 
 /// <summary>
-///     内存指标收集器
-///     使用 EventCounters 实时收集内存相关指标，并维护历史数据用于趋势分析
+///     性能指标收集器
+///     使用 System.Runtime EventCounters 实时收集运行时性能指标（内存、CPU、GC、线程池等），
+///     并维护历史数据用于趋势分析和实时监控
 /// </summary>
-public class MemoryMetricsCollector : EventListener, IDisposable
+public class ProfilingMetricsCollector : EventListener, IDisposable
 {
     private readonly ConcurrentDictionary<string, double> _counters = new();
     private readonly ConcurrentQueue<MemoryDataPoint> _history = new();
     private readonly int _maxHistoryPoints;
     private readonly Timer _snapshotTimer;
     private volatile bool _isDisposed;
+    private volatile MemoryDataPoint? _latestDataPoint;
 
     /// <summary>
-    ///     初始化内存指标收集器
+    ///     初始化性能指标收集器
     /// </summary>
     /// <param name="maxHistoryPoints">最大历史数据点数 (默认 300 = 5 分钟)</param>
     /// <param name="sampleIntervalMs">采样间隔毫秒数 (默认 1000ms)</param>
-    public MemoryMetricsCollector(int maxHistoryPoints = 300, int sampleIntervalMs = 1000)
+    public ProfilingMetricsCollector(int maxHistoryPoints = 300, int sampleIntervalMs = 1000)
     {
         _maxHistoryPoints = maxHistoryPoints;
         SampleIntervalMs = sampleIntervalMs;
@@ -121,9 +123,12 @@ public class MemoryMetricsCollector : EventListener, IDisposable
             WorkingSetMB = GetCounter("working-set"),
             Gen0GcCount = GetCounter("gen-0-gc-count"),
             Gen1GcCount = GetCounter("gen-1-gc-count"),
-            Gen2GcCount = GetCounter("gen-2-gc-count")
+            Gen2GcCount = GetCounter("gen-2-gc-count"),
+            CpuUsagePercent = GetCounter("cpu-usage"),
+            ThreadCount = (int)GetCounter("threadpool-thread-count")
         };
 
+        _latestDataPoint = dataPoint;
         _history.Enqueue(dataPoint);
 
         // 维护最大历史点数
@@ -143,10 +148,7 @@ public class MemoryMetricsCollector : EventListener, IDisposable
     /// <summary>
     ///     获取当前最新的数据点
     /// </summary>
-    public MemoryDataPoint? GetCurrentDataPoint()
-    {
-        return _history.TryPeek(out var last) ? last : null;
-    }
+    public MemoryDataPoint? GetCurrentDataPoint() => _latestDataPoint;
 
     /// <summary>
     ///     获取历史数据

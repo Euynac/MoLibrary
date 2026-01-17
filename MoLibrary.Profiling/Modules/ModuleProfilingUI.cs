@@ -48,6 +48,14 @@ public class ModuleProfilingUI(ModuleProfilingUIOption option)
             DependsOnModule<ModuleUICoreGuide>().Register()
                 .RegisterUIComponents(registry =>
                 {
+                    registry.RegisterComponent<UIQuickMonitorPage>(
+                        UIQuickMonitorPage.PAGE_URL,
+                        "快速监控",
+                        Icons.Material.Filled.Speed,
+                        "系统管理",
+                        addToNav: true,
+                        navOrder: 102);
+
                     registry.RegisterComponent<UIProfilingDashboardPage>(
                         UIProfilingDashboardPage.PAGE_URL,
                         "内存分析",
@@ -61,8 +69,7 @@ public class ModuleProfilingUI(ModuleProfilingUIOption option)
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        // 注册内存指标收集器为单例 (维护历史数据)
-        services.AddSingleton<MemoryMetricsCollector>();
+        // ProfilingMetricsCollector 已在 ModuleProfiling 中注册
 
         // 注册内存分析服务为 Scoped
         services.AddScoped<IMemoryAnalysisService, MemoryAnalysisService>();

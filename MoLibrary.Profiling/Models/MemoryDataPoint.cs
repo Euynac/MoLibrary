@@ -61,6 +61,16 @@ public class MemoryDataPoint
     public double WorkingSetMB { get; init; }
 
     /// <summary>
+    ///     CPU 使用率 (%)
+    /// </summary>
+    public double CpuUsagePercent { get; init; }
+
+    /// <summary>
+    ///     线程数
+    /// </summary>
+    public int ThreadCount { get; init; }
+
+    /// <summary>
     ///     Gen0 回收次数 (增量)
     /// </summary>
     public double Gen0GcCount { get; init; }

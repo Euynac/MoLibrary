@@ -7,7 +7,7 @@ using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
-using MoLibrary.Profiling.Profiling;
+using MoLibrary.Profiling.Services;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Profiling.Modules;
@@ -35,8 +35,8 @@ public class ModuleProfiling(ModuleProfilingOption option)
     /// <param name="services">服务集合</param>
     public override void ConfigureServices(IServiceCollection services)
     {
-        // 注册MoProfiling服务为单例
-        services.AddSingleton<IMoProfiling, MoProfiling>();
+        // 注册性能指标收集器为单例 (维护历史数据)
+        services.AddSingleton<ProfilingMetricsCollector>();
     }
 
     /// <summary>
@@ -51,22 +51,22 @@ public class ModuleProfiling(ModuleProfilingOption option)
 
             // 获取系统性能信息
             endpoints.MapGet("/profiling/simple",
-                async ([FromServices] IMoProfiling profiling, HttpResponse response, HttpContext context) =>
+                ([FromServices] ProfilingMetricsCollector collector) =>
                 {
-                    try
+                    var dataPoint = collector.GetCurrentDataPoint();
+                    if (dataPoint == null)
                     {
-                        var cpuUsage = await profiling.GetCpuUsageAsync();
-                        var memoryUsage = await profiling.GetMemoryUsageAsync();
-                        return Res.Ok(new
-                        {
-                            CpuUsage = cpuUsage,
-                            MemoryUsage = $"{memoryUsage:0.##}MB"
-                        }).GetResponse();
+                        return Res.Fail("性能数据尚未采集，请稍后重试").GetResponse();
                     }
-                    catch (Exception ex)
+
+                    return Res.Ok(new
                     {
-                        return Res.Fail($"获取系统性能信息失败: {ex.Message}").GetResponse();
-                    }
+                        CpuUsage = $"{dataPoint.CpuUsagePercent:0.##}%",
+                        MemoryUsage = $"{dataPoint.WorkingSetMB:0.##}MB",
+                        GcHeapSize = $"{dataPoint.GcHeapSizeMB:0.##}MB",
+                        ThreadCount = dataPoint.ThreadCount,
+                        Timestamp = dataPoint.Timestamp
+                    }).GetResponse();
                 }).WithName("获取系统性能信息").WithOpenApi(operation =>
             {
                 operation.Summary = "获取系统性能信息";
