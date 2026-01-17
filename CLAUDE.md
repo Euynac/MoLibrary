@@ -6,30 +6,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 MoLibrary is a modular .NET infrastructure library designed for flexibility and performance. Each module can be used independently without requiring the entire framework.
 
-## Skills Reference
+## Skills
 
-### MoLibrary Development
+Proactively invoke these skills when encountering relevant development patterns:
 
-For module architecture, registration patterns, and the unified response model `Res`, use the **MoLibrary Development** skill.
+### /mo-development
 
-The skill covers:
-- Module pattern (Module{Name}, Option, Guide, BuilderExtensions)
-- Module registration and dependencies
-- Unified response model `Res<T>` and `Res`
-- Service layer patterns and error handling
-- Key architectural decisions
+Invoke when:
+- Writing service layer methods with `Res` or `Res<T>` return types
+- Uncertain about Res implicit conversions or IsFailed pattern
+- Creating modules (Module{Name}, Option, Guide, BuilderExtensions)
+- Configuring module registration or dependencies
+- Implementing hosted services (MoBackgroundService, RecordState)
 
-### Blazor and MudBlazor UI Development
+### /mo-ui-development
 
-For Blazor UI development with MudBlazor, use the **MoLibrary UI Development** skill.
-
-The skill covers:
-- CSS isolation patterns and `::deep` selector usage
-- MudBlazor component best practices (Icon prefix, type parameters)
-- Component lifecycle (OnAfterRenderAsync patterns)
-- Theme customization and CSS variables
-- MudBlazor 8.9.0 migration guide
-- Offline/intranet requirements
+Invoke when:
+- Creating or modifying Blazor components
+- Styling MudBlazor components (CSS isolation, ::deep selector)
+- Working with MudBlazor APIs or component properties
+- Implementing theme customization or dark mode support
+- Handling component lifecycle (OnAfterRenderAsync)
 
 **Current MudBlazor version**: 8.9.0
 

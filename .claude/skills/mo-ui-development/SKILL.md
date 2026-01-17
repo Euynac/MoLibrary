@@ -1,5 +1,5 @@
 ---
-name: MoLibrary UI Development
+name: mo-ui-development
 description: This skill should be used when the user asks to "create UI component", "build Blazor page", "add MudBlazor component", "style MudBlazor", "fix CSS isolation", "use ::deep selector", "customize theme", "support dark mode", "migrate MudBlazor v8", "use OnAfterRenderAsync", "create UI module", "module file structure", "UI folder structure", "refactor Minimal API", or needs guidance on Blazor component lifecycle, MudBlazor styling patterns, CSS isolation, theme customization, offline UI requirements, or MoFramework UI module structure in the MoLibrary framework.
 version: 1.0.0
 ---
@@ -222,7 +222,7 @@ For font management workflow, see `references/offline-requirements.md`.
 
 ## Service Layer Patterns
 
-For service layer patterns including `Res<T>` return values and the `IsFailed` handling pattern, see the **MoLibrary Development** skill.
+For service layer patterns including `Res<T>` return values and the `IsFailed` handling pattern, see the **mo-development** skill.
 
 ### Service Call Pattern in Blazor Components
 

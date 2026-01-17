@@ -1,5 +1,5 @@
 ---
-name: MoLibrary Development
+name: mo-development
 description: This skill should be used when the user asks to "create module", "add module", "module structure", "use Res type", "return Res", "Res.Ok", "Res.Fail", "IsFailed pattern", "module registration", "module dependencies", "module pattern", "MoLibrary architecture", "service layer pattern", "create service", "add service", "create hosted service", "add background service", "MoBackgroundService", "MoHostedService", "RecordState", "hosted service observability", "service state tracking", "CoordinatedLeaderService", or needs guidance on MoLibrary module architecture, the unified response model Res, module registration patterns, service layer return value conventions, or hosted service development with observability.
 version: 1.0.0
 ---
