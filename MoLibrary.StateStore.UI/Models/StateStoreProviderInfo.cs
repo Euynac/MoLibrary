@@ -33,6 +33,11 @@ public class StateStoreProviderInfo
     public bool IsDistributed { get; init; }
 
     /// <summary>
+    /// 是否为 IMoStateStore 的默认实现（用户直接注入 IMoStateStore 时获得的实例）
+    /// </summary>
+    public bool IsDefaultIMoStateStore { get; init; }
+
+    /// <summary>
     /// Provider Option 的类型
     /// </summary>
     public Type? OptionType { get; init; }

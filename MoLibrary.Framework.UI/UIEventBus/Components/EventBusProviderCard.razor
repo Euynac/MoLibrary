@@ -1,0 +1,108 @@
+@using MoLibrary.EventBus.Providers
+@using MoLibrary.Framework.UI.UIEventBus.Models
+
+<MudCard Elevation="2">
+    <MudCardHeader>
+        <CardHeaderAvatar>
+            <MudAvatar Color="@GetProviderColor()" Size="Size.Large">
+                <MudIcon Icon="@GetProviderIcon()" />
+            </MudAvatar>
+        </CardHeaderAvatar>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">@Provider.DisplayName</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@Provider.ImplementationType</MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            <MudStack Row="true" Spacing="1">
+                <MudChip T="string" Color="@GetProviderColor()" Size="Size.Small">
+                    @Provider.ProviderTypeName
+                </MudChip>
+                <MudChip T="string" Color="@(Provider.IsDistributed ? Color.Info : Color.Success)" Size="Size.Small">
+                    @(Provider.IsDistributed ? "分布式" : "本地")
+                </MudChip>
+            </MudStack>
+        </CardHeaderActions>
+    </MudCardHeader>
+
+    <MudCardContent>
+        <MudStack Spacing="2">
+            @* 订阅统计 *@
+            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                <MudIcon Icon="@Icons.Material.Filled.Subscriptions" Size="Size.Small" Color="Color.Primary" />
+                <MudText Typo="Typo.body2">
+                    订阅: <strong>@Provider.SubscriptionCount</strong>
+                    (活跃: <span style="color: var(--mud-palette-success);">@Provider.ActiveSubscriptionCount</span>)
+                </MudText>
+            </MudStack>
+
+            @* 能力标签 *@
+            <div class="d-flex flex-wrap gap-1">
+                @if (Provider.SupportsBulkPublish)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                        <MudIcon Icon="@Icons.Material.Filled.DynamicFeed" Size="Size.Small" Class="mr-1" />
+                        批量发布
+                    </MudChip>
+                }
+
+                @if (Provider.SupportsStreaming)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
+                        <MudIcon Icon="@Icons.Material.Filled.Stream" Size="Size.Small" Class="mr-1" />
+                        流式订阅
+                    </MudChip>
+                }
+
+                @if (Provider.SupportsDeadLetterQueue)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
+                        <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Small" Class="mr-1" />
+                        死信队列
+                    </MudChip>
+                }
+
+                @if (Provider.OptionType != null)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Outlined">
+                        <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" Class="mr-1" />
+                        有配置项
+                    </MudChip>
+                }
+            </div>
+        </MudStack>
+    </MudCardContent>
+
+    <MudCardActions>
+        <MudButton Variant="Variant.Text"
+                   Color="Color.Primary"
+                   EndIcon="@Icons.Material.Filled.OpenInNew"
+                   OnClick="OnViewDetails">
+            查看详情
+        </MudButton>
+    </MudCardActions>
+</MudCard>
+
+@code {
+    [Parameter] public EventBusProviderInfo Provider { get; set; } = null!;
+
+    [Parameter] public EventCallback<EventBusProviderInfo> OnViewDetailsClicked { get; set; }
+
+    private string GetProviderIcon() => Provider.ProviderType switch
+    {
+        EEventBusProviderType.Local => Icons.Material.Filled.Memory,
+        EEventBusProviderType.Dapr => Icons.Material.Filled.Cloud,
+        _ => Icons.Material.Filled.Help
+    };
+
+    private Color GetProviderColor() => Provider.ProviderType switch
+    {
+        EEventBusProviderType.Local => Color.Success,
+        EEventBusProviderType.Dapr => Color.Info,
+        _ => Color.Default
+    };
+
+    private async Task OnViewDetails()
+    {
+        await OnViewDetailsClicked.InvokeAsync(Provider);
+    }
+}

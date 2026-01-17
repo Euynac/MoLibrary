@@ -8,6 +8,7 @@
 @using MoLibrary.EventBus.Models
 @inject EventBusMonitorService MonitorService
 @inject EventBusTestService TestService
+@inject EventBusProviderDiscoveryService ProviderDiscoveryService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 
@@ -89,8 +90,17 @@
                 }
             </MudTabPanel>
 
+            <MudTabPanel Text="Provider" Icon="@Icons.Material.Filled.Hub" BadgeData="@_providers.Count.ToString()" BadgeColor="Color.Primary">
+                <EventBusProviderList Providers="_providers"
+                                     AllSubscriptions="_subscriptions"
+                                     IsLoading="_loading"
+                                     OnRefresh="RefreshProvidersAsync" />
+            </MudTabPanel>
+
             <MudTabPanel Text="订阅浏览" Icon="@Icons.Material.Filled.List">
-                <SubscriptionFilterPanel Filter="_filter" OnFilterChanged="ApplyFilterAsync" />
+                <SubscriptionFilterPanel Filter="_filter"
+                                        Providers="_providers"
+                                        OnFilterChanged="ApplyFilterAsync" />
 
                 <SubscriptionTable Subscriptions="_displayedSubscriptions"
                                   Loading="_loading"
@@ -118,6 +128,7 @@
     private List<SubscriptionViewModel> _displayedSubscriptions = new();
     private SubscriptionStatistics? _statistics;
     private List<SubscriptionChangeViewModel> _recentChanges = new();
+    private List<EventBusProviderInfo> _providers = new();
 
     // 过滤器
     private SubscriptionFilter _filter = new();
@@ -162,6 +173,16 @@
             {
                 _statistics = stats;
             }
+
+            // 加载 Provider 列表
+            if (ProviderDiscoveryService.GetRegisteredProviders().IsFailed(out var providerError, out var providers))
+            {
+                Snackbar.Add("加载 Provider 列表失败: " + providerError, Severity.Error);
+            }
+            else
+            {
+                _providers = providers ?? new();
+            }
         }
         catch (Exception ex)
         {
@@ -203,6 +224,17 @@
                         return false;
                 }
 
+                // Provider filter
+                if (_filter.SelectedProvider != null)
+                {
+                    var keyMatches = s.ServiceKey == _filter.SelectedProvider.ServiceKey;
+                    var scopeMatches = _filter.SelectedProvider.IsDistributed
+                        ? s.Scope == SubscriptionScope.Distributed
+                        : s.Scope == SubscriptionScope.Local;
+                    if (!keyMatches || !scopeMatches)
+                        return false;
+                }
+
                 return true;
             }).ToList();
         }
@@ -213,6 +245,20 @@
 
         StateHasChanged();
         return Task.CompletedTask;
+    }
+
+    private async Task RefreshProvidersAsync()
+    {
+        if (ProviderDiscoveryService.GetRegisteredProviders().IsFailed(out var providerError, out var providers))
+        {
+            Snackbar.Add("刷新 Provider 列表失败: " + providerError, Severity.Error);
+        }
+        else
+        {
+            _providers = providers ?? new();
+            Snackbar.Add("Provider 列表已刷新", Severity.Success);
+            StateHasChanged();
+        }
     }
 
     private async Task ListenToChangesAsync(CancellationToken ct)

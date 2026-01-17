@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.StateStore.Modules;
@@ -15,6 +16,7 @@ namespace MoLibrary.StateStore.UI.Services;
 /// </summary>
 public class StateStoreUIService(
     IServiceProvider serviceProvider,
+    IOptions<ModuleStateStoreOption> stateStoreOption,
     ILogger<StateStoreUIService> logger)
 {
     /// <summary>
@@ -105,12 +107,22 @@ public class StateStoreUIService(
         var (providerType, capabilities, displayName) = GetProviderMetadata(provider);
         var (optionType, optionInstance) = GetProviderOptionInfo(serviceKey, provider);
 
+        // Determine if this is the default IMoStateStore (only for non-keyed providers)
+        var isDefaultIMoStateStore = false;
+        if (serviceKey == null)
+        {
+            var useDistributed = stateStoreOption.Value.UseDistributedProviderAsDefault;
+            var isDistributed = provider is IDistributedStateStore;
+            isDefaultIMoStateStore = useDistributed == isDistributed;
+        }
+
         return new StateStoreProviderInfo
         {
             ServiceKey = serviceKey,
             ProviderType = providerType,
             Capabilities = capabilities,
             IsDistributed = provider is IDistributedStateStore,
+            IsDefaultIMoStateStore = isDefaultIMoStateStore,
             OptionType = optionType,
             OptionInstance = optionInstance,
             ImplementationType = provider.GetType().Name

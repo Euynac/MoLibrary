@@ -21,8 +21,29 @@
         </MudStack>
 
         <MudGrid Spacing="2">
+            <!-- Provider 选择器 -->
+            @if (Providers.Any())
+            {
+                <MudItem xs="12" sm="6" md="3">
+                    <MudSelect T="EventBusProviderInfo?"
+                              Label="Provider"
+                              @bind-Value="Filter!.SelectedProvider"
+                              Clearable="true"
+                              OnClearButtonClick="@(() => ApplyFilterAsync())"
+                              OnClose="@(() => ApplyFilterAsync())"
+                              ToStringFunc="@(p => p == null ? "" : $"{p.DisplayName} ({p.ProviderTypeName})")">
+                        @foreach (var provider in Providers)
+                        {
+                            <MudSelectItem T="EventBusProviderInfo?" Value="@provider">
+                                @provider.DisplayName (@provider.ProviderTypeName, @(provider.IsDistributed ? "分布式" : "本地"))
+                            </MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+            }
+
             <!-- 状态过滤 -->
-            <MudItem xs="12" sm="6" md="3">
+            <MudItem xs="12" sm="6" md="@(Providers.Any() ? 2 : 3)">
                 <MudSelect T="SubscriptionState?"
                           Label="状态"
                           @bind-Value="Filter!.State"
@@ -37,7 +58,7 @@
             </MudItem>
 
             <!-- 范围过滤 -->
-            <MudItem xs="12" sm="6" md="3">
+            <MudItem xs="12" sm="6" md="@(Providers.Any() ? 2 : 3)">
                 <MudSelect T="SubscriptionScope?"
                           Label="范围"
                           @bind-Value="Filter!.Scope"
@@ -50,7 +71,7 @@
             </MudItem>
 
             <!-- 自动发现过滤 -->
-            <MudItem xs="12" sm="6" md="3">
+            <MudItem xs="12" sm="6" md="@(Providers.Any() ? 2 : 3)">
                 <MudSelect T="bool?"
                           Label="发现方式"
                           @bind-Value="Filter!.IsAutoDiscovered"
@@ -96,6 +117,9 @@
     [Parameter]
     public EventCallback OnFilterChanged { get; set; }
 
+    [Parameter]
+    public List<EventBusProviderInfo> Providers { get; set; } = [];
+
     private async Task ApplyFilterAsync()
     {
         await OnFilterChanged.InvokeAsync();
@@ -116,6 +140,7 @@
         if (Filter.Scope.HasValue) count++;
         if (Filter.IsAutoDiscovered.HasValue) count++;
         if (!string.IsNullOrWhiteSpace(Filter.SearchText)) count++;
+        if (Filter.SelectedProvider != null) count++;
 
         return count;
     }

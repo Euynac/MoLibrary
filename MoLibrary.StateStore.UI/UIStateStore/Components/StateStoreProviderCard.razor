@@ -23,6 +23,14 @@
         <MudStack Spacing="2">
             @* 能力标签 *@
             <div class="d-flex flex-wrap gap-1">
+                @if (Provider.IsDefaultIMoStateStore)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled">
+                        <MudIcon Icon="@Icons.Material.Filled.Star" Size="Size.Small" Class="mr-1" />
+                        IMoStateStore
+                    </MudChip>
+                }
+
                 @if (Provider.SupportsKeyScanning)
                 {
                     <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">

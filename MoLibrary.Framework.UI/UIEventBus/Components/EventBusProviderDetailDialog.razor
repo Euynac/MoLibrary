@@ -1,0 +1,221 @@
+@using MoLibrary.EventBus.Providers
+@using MoLibrary.Framework.UI.UIEventBus.Models
+@using MoLibrary.UI.UIModuleSystem.Components
+
+<MudDialog @bind-Visible="IsVisible" Options="DialogOptions">
+    <DialogContent>
+        @if (Provider != null)
+        {
+            <div class="provider-detail-header mb-4">
+                <MudText Typo="Typo.h4" Color="Color.Primary" Class="mb-2">
+                    <MudAvatar Color="@GetProviderColor()" Size="Size.Medium" Class="mr-2">
+                        <MudIcon Icon="@GetProviderIcon()" />
+                    </MudAvatar>
+                    @Provider.DisplayName
+                </MudText>
+                <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+                    @Provider.ImplementationType
+                </MudText>
+            </div>
+
+            <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true">
+                <MudTabPanel Text="Provider 信息" Icon="@Icons.Material.Filled.Info">
+                    <div class="tab-content pa-4">
+                        <MudGrid Spacing="3">
+                            <MudItem xs="12" sm="6">
+                                <MudPaper Class="pa-4" Elevation="2">
+                                    <div class="d-flex align-center mb-2">
+                                        <MudIcon Icon="@Icons.Material.Filled.Category" Color="Color.Primary" Size="Size.Small" Class="mr-2" />
+                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">Provider 类型</MudText>
+                                    </div>
+                                    <MudChip T="string" Color="@GetProviderColor()" Size="Size.Small">
+                                        @Provider.ProviderTypeName
+                                    </MudChip>
+                                </MudPaper>
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudPaper Class="pa-4" Elevation="2">
+                                    <div class="d-flex align-center mb-2">
+                                        <MudIcon Icon="@Icons.Material.Filled.Key" Color="Color.Info" Size="Size.Small" Class="mr-2" />
+                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">服务键</MudText>
+                                    </div>
+                                    <MudText Typo="Typo.body1" Color="Color.Secondary">
+                                        @(Provider.ServiceKey ?? "默认 (无键)")
+                                    </MudText>
+                                </MudPaper>
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudPaper Class="pa-4" Elevation="2">
+                                    <div class="d-flex align-center mb-2">
+                                        <MudIcon Icon="@(Provider.IsDistributed ? Icons.Material.Filled.Cloud : Icons.Material.Filled.Memory)"
+                                                 Color="@(Provider.IsDistributed ? Color.Info : Color.Success)"
+                                                 Size="Size.Small" Class="mr-2" />
+                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">事件总线模式</MudText>
+                                    </div>
+                                    <MudChip T="string"
+                                             Color="@(Provider.IsDistributed ? Color.Info : Color.Success)"
+                                             Size="Size.Small">
+                                        @(Provider.IsDistributed ? "分布式" : "本��")
+                                    </MudChip>
+                                </MudPaper>
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudPaper Class="pa-4" Elevation="2">
+                                    <div class="d-flex align-center mb-2">
+                                        <MudIcon Icon="@Icons.Material.Filled.Code" Color="Color.Secondary" Size="Size.Small" Class="mr-2" />
+                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">实现类型</MudText>
+                                    </div>
+                                    <MudText Typo="Typo.body1" Color="Color.Secondary">
+                                        @Provider.ImplementationType
+                                    </MudText>
+                                </MudPaper>
+                            </MudItem>
+                            <MudItem xs="12">
+                                <MudPaper Class="pa-4" Elevation="2">
+                                    <div class="d-flex align-center mb-3">
+                                        <MudIcon Icon="@Icons.Material.Filled.Extension" Color="Color.Tertiary" Size="Size.Small" Class="mr-2" />
+                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">支持的能力</MudText>
+                                    </div>
+                                    <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                                        @if (Provider.SupportsBulkPublish)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                                                <MudIcon Icon="@Icons.Material.Filled.DynamicFeed" Size="Size.Small" Class="mr-1" />
+                                                批量发布
+                                            </MudChip>
+                                        }
+                                        @if (Provider.SupportsStreaming)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
+                                                <MudIcon Icon="@Icons.Material.Filled.Stream" Size="Size.Small" Class="mr-1" />
+                                                流式订阅
+                                            </MudChip>
+                                        }
+                                        @if (Provider.SupportsDeadLetterQueue)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
+                                                <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Small" Class="mr-1" />
+                                                死信队列
+                                            </MudChip>
+                                        }
+                                        @if (Provider.Capabilities == EEventBusCapabilities.None)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">
+                                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-1" />
+                                                基础功能
+                                            </MudChip>
+                                        }
+                                    </MudStack>
+                                </MudPaper>
+                            </MudItem>
+                        </MudGrid>
+                    </div>
+                </MudTabPanel>
+
+                <MudTabPanel Text="配置选项" Icon="@Icons.Material.Filled.Settings">
+                    <div class="tab-content pa-4">
+                        <ModuleOptionDisplay OptionType="@Provider.OptionType"
+                                           OptionInstance="@Provider.OptionInstance" />
+                    </div>
+                </MudTabPanel>
+
+                <MudTabPanel Text="订阅列表" Icon="@Icons.Material.Filled.Subscriptions" BadgeData="@Subscriptions.Count.ToString()" BadgeColor="Color.Primary">
+                    <div class="tab-content pa-4">
+                        @if (!Subscriptions.Any())
+                        {
+                            <MudAlert Severity="Severity.Info">
+                                该 Provider 没有关联的订阅
+                            </MudAlert>
+                        }
+                        else
+                        {
+                            <MudDataGrid T="SubscriptionViewModel" Items="@Subscriptions" Dense="true" Hover="true">
+                                <Columns>
+                                    <PropertyColumn Property="x => x.EventTypeShortName" Title="事件类型" />
+                                    <PropertyColumn Property="x => x.TopicName" Title="主题" />
+                                    <TemplateColumn Title="状态">
+                                        <CellTemplate>
+                                            <MudChip T="string" Size="Size.Small" Color="@context.Item.StateColor">
+                                                @context.Item.StateDisplay
+                                            </MudChip>
+                                        </CellTemplate>
+                                    </TemplateColumn>
+                                    <TemplateColumn Title="发现方式">
+                                        <CellTemplate>
+                                            <MudChip T="string" Size="Size.Small"
+                                                     Color="@(context.Item.IsAutoDiscovered ? Color.Info : Color.Secondary)"
+                                                     Variant="Variant.Outlined">
+                                                @(context.Item.IsAutoDiscovered ? "自动发现" : "手动订阅")
+                                            </MudChip>
+                                        </CellTemplate>
+                                    </TemplateColumn>
+                                </Columns>
+                            </MudDataGrid>
+                        }
+                    </div>
+                </MudTabPanel>
+            </MudTabs>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Primary" OnClick="OnClose" StartIcon="@Icons.Material.Filled.Close">
+            关闭
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    /// <summary>
+    /// 是否显示对话框
+    /// </summary>
+    [Parameter] public bool IsVisible { get; set; }
+
+    /// <summary>
+    /// 是否显示对话框改变事件
+    /// </summary>
+    [Parameter] public EventCallback<bool> IsVisibleChanged { get; set; }
+
+    /// <summary>
+    /// Provider 信息
+    /// </summary>
+    [Parameter] public EventBusProviderInfo? Provider { get; set; }
+
+    /// <summary>
+    /// 该 Provider 的订阅列表
+    /// </summary>
+    [Parameter] public List<SubscriptionViewModel> Subscriptions { get; set; } = [];
+
+    /// <summary>
+    /// 对话框选项
+    /// </summary>
+    private DialogOptions DialogOptions = new()
+    {
+        CloseButton = true,
+        CloseOnEscapeKey = true,
+        FullWidth = true,
+        MaxWidth = MaxWidth.Large
+    };
+
+    /// <summary>
+    /// 关闭对话框
+    /// </summary>
+    private async Task OnClose()
+    {
+        IsVisible = false;
+        await IsVisibleChanged.InvokeAsync(IsVisible);
+    }
+
+    private string GetProviderIcon() => Provider?.ProviderType switch
+    {
+        EEventBusProviderType.Local => Icons.Material.Filled.Memory,
+        EEventBusProviderType.Dapr => Icons.Material.Filled.Cloud,
+        _ => Icons.Material.Filled.Help
+    };
+
+    private Color GetProviderColor() => Provider?.ProviderType switch
+    {
+        EEventBusProviderType.Local => Color.Success,
+        EEventBusProviderType.Dapr => Color.Info,
+        _ => Color.Default
+    };
+}

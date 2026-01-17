@@ -46,6 +46,9 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
 
         // 注册测试服务，用于分布式事件总线测试
         services.AddSingleton<EventBusTestService>();
+
+        // 注册 Provider 发现服务
+        services.AddScoped<EventBusProviderDiscoveryService>();
     }
 
     public override void ClaimDependencies()
