@@ -133,23 +133,11 @@
                                             ReadOnly="true"
                                             HelperText="实例定期发送心跳的间隔" />
                             </MudItem>
-                            <MudItem xs="12" sm="3">
+                            <MudItem xs="12" sm="6">
                                 <MudTextField T="int" Label="心跳抖动 (毫秒)"
                                             Value="@RegisterCentreOptions.Value.Election.HeartbeatJitterMilliseconds"
                                             ReadOnly="true"
                                             HelperText="心跳发送时的随机抖动范围" />
-                            </MudItem>
-                            <MudItem xs="12" sm="3">
-                                <MudTextField T="int" Label="挣扎周期 (秒)"
-                                            Value="@RegisterCentreOptions.Value.Election.StrugglePeriodSeconds"
-                                            ReadOnly="true"
-                                            HelperText="心跳失败后的重试间隔" />
-                            </MudItem>
-                            <MudItem xs="12" sm="3">
-                                <MudTextField T="int" Label="放弃挣扎阈值 (秒)"
-                                            Value="@RegisterCentreOptions.Value.Election.GiveUpStruggleThresholdSeconds"
-                                            ReadOnly="true"
-                                            HelperText="挣扎超时后释放Leader" />
                             </MudItem>
                         </MudGrid>
                     </MudPaper>
@@ -228,8 +216,7 @@
                         <MudDivider Class="my-4" />
                         <MudAlert Severity="Severity.Info" Dense="true" Class="mt-2">
                             <MudText Typo="Typo.body2">
-                                状态转换: 心跳成功 → 正常运行 | 心跳失败 → 挣扎模式 (@RegisterCentreOptions.Value.Election.StrugglePeriodSeconds 秒重试) |
-                                挣扎超时 (@RegisterCentreOptions.Value.Election.GiveUpStruggleThresholdSeconds 秒) → 释放Leader → 触发孤立处理
+                                状态转换: 心跳成功 → 正常运行 | 心跳失败 → Polly 重试策略 → 重试耗尽 → 释放 Leader → 触发孤立处理
                             </MudText>
                         </MudAlert>
                     </MudPaper>

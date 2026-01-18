@@ -1,99 +1,73 @@
 namespace MoLibrary.RegisterCentre.Models;
 
 /// <summary>
-/// Leader 选举配置
+/// Leader election configuration
 /// </summary>
 public class ElectionConfig
 {
     /// <summary>
-    /// 心跳周期（秒），默认 15 秒
+    /// Heartbeat period in seconds. Default: 15 seconds
     /// </summary>
     public int HeartbeatPeriodSeconds { get; set; } = 15;
 
     /// <summary>
-    /// 注册下线 TTL 倍率，默认 3 倍
+    /// Registration offline TTL multiplier. Default: 3x
     /// </summary>
     public double RegistrationOfflineTTLMultiplier { get; set; } = 3;
 
     /// <summary>
-    /// 注册下线 TTL 附加秒数，默认 1 秒
+    /// Additional seconds for registration offline TTL. Default: 1 second
     /// </summary>
     public int RegistrationOfflineTTLAdditionalSeconds { get; set; } = 1;
 
     /// <summary>
-    /// Leader 下线 TTL 倍率，默认 2 倍
+    /// Leader offline TTL multiplier. Default: 2x
     /// </summary>
     public double LeaderOfflineTTLMultiplier { get; set; } = 2;
 
     /// <summary>
-    /// Leader 下线 TTL 附加秒数，默认 1 秒
+    /// Additional seconds for leader offline TTL. Default: 1 second
     /// </summary>
     public int LeaderOfflineTTLAdditionalSeconds { get; set; } = 1;
 
     /// <summary>
-    /// 挣扎周期（秒），默认 3 秒
-    /// </summary>
-    public int StrugglePeriodSeconds { get; set; } = 3;
-
-    /// <summary>
-    /// 放弃挣扎阈值（秒），必须大于挣扎周期，默认 5 秒
-    /// </summary>
-    public int GiveUpStruggleThresholdSeconds { get; set; } = 5;
-
-    /// <summary>
-    /// 心跳抖动范围（毫秒），默认 1000 毫秒
+    /// Heartbeat jitter range in milliseconds. Default: 1000 milliseconds
     /// </summary>
     public int HeartbeatJitterMilliseconds { get; set; } = 1000;
 
-    #region 计算属性
+    #region Computed Properties
 
     /// <summary>
-    /// 心跳周期
+    /// Heartbeat period
     /// </summary>
     public TimeSpan HeartbeatPeriod => TimeSpan.FromSeconds(HeartbeatPeriodSeconds);
 
     /// <summary>
-    /// 注册下线 TTL
+    /// Registration offline TTL
     /// </summary>
     public TimeSpan RegistrationTTL => TimeSpan.FromSeconds(
         HeartbeatPeriodSeconds * RegistrationOfflineTTLMultiplier + RegistrationOfflineTTLAdditionalSeconds);
 
     /// <summary>
-    /// Leader 下线 TTL
+    /// Leader offline TTL
     /// </summary>
     public TimeSpan LeaderTTL => TimeSpan.FromSeconds(
         HeartbeatPeriodSeconds * LeaderOfflineTTLMultiplier + LeaderOfflineTTLAdditionalSeconds);
 
-    /// <summary>
-    /// 挣扎周期
-    /// </summary>
-    public TimeSpan StrugglePeriod => TimeSpan.FromSeconds(StrugglePeriodSeconds);
-
-    /// <summary>
-    /// 放弃挣扎阈值
-    /// </summary>
-    public TimeSpan GiveUpStruggleThreshold => TimeSpan.FromSeconds(GiveUpStruggleThresholdSeconds);
-
     #endregion
 
     /// <summary>
-    /// 验证配置有效性
+    /// Validate configuration
     /// </summary>
     public void Validate()
     {
         if (HeartbeatPeriodSeconds <= 0)
-            throw new ArgumentException("心跳周期必须大于0", nameof(HeartbeatPeriodSeconds));
+            throw new ArgumentException("Heartbeat period must be greater than 0", nameof(HeartbeatPeriodSeconds));
 
         if (RegistrationOfflineTTLMultiplier <= 0)
-            throw new ArgumentException("注册下线 TTL 倍率必须大于0", nameof(RegistrationOfflineTTLMultiplier));
+            throw new ArgumentException("Registration offline TTL multiplier must be greater than 0", nameof(RegistrationOfflineTTLMultiplier));
 
         if (LeaderOfflineTTLMultiplier <= 0)
-            throw new ArgumentException("Leader 下线 TTL 倍率必须大于0", nameof(LeaderOfflineTTLMultiplier));
-
-        if (StrugglePeriodSeconds <= 0)
-            throw new ArgumentException("挣扎周期必须大于0", nameof(StrugglePeriodSeconds));
-
-        if (GiveUpStruggleThresholdSeconds <= StrugglePeriodSeconds)
-            throw new ArgumentException("放弃挣扎阈值必须大于挣扎周期", nameof(GiveUpStruggleThresholdSeconds));
+            throw new ArgumentException("Leader offline TTL multiplier must be greater than 0", nameof(LeaderOfflineTTLMultiplier));
     }
 }

@@ -8,12 +8,15 @@ using MoLibrary.RegisterCentre.Events;
 using MoLibrary.RegisterCentre.Interfaces;
 using MoLibrary.RegisterCentre.Models;
 using MoLibrary.RegisterCentre.Modules;
+using MoLibrary.Resilience.Modules;
+using Polly;
+using Polly.Registry;
 
 namespace MoLibrary.RegisterCentre.Implements;
 
 /// <summary>
-/// 基于 StateStore 的注册中心客户端服务
-/// 实现心跳、Leader 选举和挣扎逻辑
+/// StateStore-based RegisterCentre client service.
+/// Implements heartbeat, leader election using Polly resilience pipelines.
 /// </summary>
 public class RegisterCentreClientHostedService(
     IRegistrationStateManager stateManager,
@@ -22,18 +25,18 @@ public class RegisterCentreClientHostedService(
     ILogger<RegisterCentreClientHostedService> logger,
     IOptions<ModuleRegisterCentreOption> option,
     IObservableInstanceManager observableManager,
-    IOptions<ModuleHostedServiceOption> hostedServiceOptions)
+    IOptions<ModuleHostedServiceOption> hostedServiceOptions,
+    ResiliencePipelineProvider<string> pipelineProvider)
     : MoBackgroundService(observableManager, hostedServiceOptions, logger), IServiceRegistrationCoordinator
 {
     private readonly ModuleRegisterCentreOption _option = option.Value;
     private readonly TaskCompletionSource<bool> _registrationCompletionSource = new();
     private readonly object _statusLock = new();
     private readonly Random _random = new();
+    private readonly ResiliencePipeline _heartbeatPipeline = pipelineProvider.GetPipeline(ResiliencePipelineNames.RegisterCentre);
 
     private RegistrationStatus _status = RegistrationStatus.NotStarted;
-    private bool _isStruggling;
-    private DateTime? _struggleStartTime;
-    private CancellationTokenSource? _struggleCts;
+    private int _consecutiveFailures;
 
     public override string ServiceName => "RegisterCentreClient";
     public override TimeSpan? HeartbeatInterval => null;
@@ -58,32 +61,21 @@ public class RegisterCentreClientHostedService(
         }
         catch (OperationCanceledException)
         {
-            RecordState($"等待注册完成超时 ({timeout})", givenLogLevel: LogLevel.Warning);
+            RecordState($"Waiting for registration timed out ({timeout})", givenLogLevel: LogLevel.Warning);
             return false;
         }
     }
 
     protected override async Task ExecuteBackgroundAsync(CancellationToken stoppingToken)
     {
-        RecordState("开始 StateStore 心跳循环", HostedServiceState.Starting);
+        RecordState("Starting StateStore heartbeat loop", HostedServiceState.Starting);
         Status = RegistrationStatus.InProgress;
 
-        // 主循环 - 第一次迭代充当"首次心跳"
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                // 执行心跳
-                var result = await stateManager.RegisterOrHeartbeatAsync(stoppingToken);
-
-                if (result.Success)
-                {
-                    await HandleSuccessfulHeartbeatAsync(stoppingToken);
-                }
-                else
-                {
-                    await HandleFailedHeartbeatAsync(result.ErrorMessage, stoppingToken);
-                }
+                await ExecuteHeartbeatWithResilienceAsync(stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -91,10 +83,10 @@ public class RegisterCentreClientHostedService(
             }
             catch (Exception ex)
             {
-                RecordState("心跳循环异常", HostedServiceState.Degraded, ex);
+                RecordState("Heartbeat loop exception", HostedServiceState.Degraded, ex);
             }
 
-            // 添加抖动的等待
+            // Wait with jitter
             var jitter = _random.Next(
                 -_option.Election.HeartbeatJitterMilliseconds,
                 _option.Election.HeartbeatJitterMilliseconds);
@@ -110,77 +102,103 @@ public class RegisterCentreClientHostedService(
             }
         }
 
-        // 优雅关闭 - 如果是 Leader，触发 LeaderLost
+        // Graceful shutdown - trigger LeaderLost if we're the Leader
         if (leaderService.IsLeader)
         {
-            RecordState("服务关闭，触发 Leader 丢失", givenLogLevel: LogLevel.Information);
+            RecordState("Service shutting down, triggering Leader lost", givenLogLevel: LogLevel.Information);
             leaderService.TriggerLeaderLost(LeaderLostReason.GracefulShutdown);
 
-            // 尝试删除 Leader Key，让其他实例更快接管
             try
             {
                 await stateManager.DeleteLeaderKeyAsync(CancellationToken.None);
             }
             catch (Exception ex)
             {
-                RecordState("删除 Leader Key 失败", exception: ex, givenLogLevel: LogLevel.Warning);
+                RecordState("Failed to delete Leader key", exception: ex, givenLogLevel: LogLevel.Warning);
             }
         }
     }
 
     /// <summary>
-    /// 处理心跳成功的情况
+    /// Execute heartbeat with Polly resilience pipeline.
+    /// The pipeline handles retries automatically.
+    /// </summary>
+    private async Task ExecuteHeartbeatWithResilienceAsync(CancellationToken ct)
+    {
+        try
+        {
+            await _heartbeatPipeline.ExecuteAsync(async token =>
+            {
+                var result = await stateManager.RegisterOrHeartbeatAsync(token);
+                if (!result.Success)
+                {
+                    throw new HeartbeatFailedException(result.ErrorMessage ?? "Heartbeat failed");
+                }
+            }, ct);
+
+            // Heartbeat succeeded (possibly after retries)
+            await HandleSuccessfulHeartbeatAsync(ct);
+        }
+        catch (HeartbeatFailedException ex)
+        {
+            // All retries exhausted - handle persistent failure
+            await HandlePersistentHeartbeatFailureAsync(ex.Message, ct);
+        }
+    }
+
+    /// <summary>
+    /// Handle successful heartbeat
     /// </summary>
     private async Task HandleSuccessfulHeartbeatAsync(CancellationToken ct)
     {
-        // 如果之前在挣扎，现在恢复了
-        if (_isStruggling)
-        {
-            _isStruggling = false;
-            _struggleStartTime = null;
-            if (_struggleCts?.Token.CanBeCanceled is true)
-            {
-                await _struggleCts.CancelAsync();
-            }
-                
-            RecordState("从挣扎状态恢复", HostedServiceState.Running);
-        }
+        // Reset consecutive failures on success
+        _consecutiveFailures = 0;
 
-        // 确保注册状态是完成的
+        // Ensure registration status is completed
         if (Status != RegistrationStatus.Completed)
         {
             Status = RegistrationStatus.Completed;
             _registrationCompletionSource.TrySetResult(true);
         }
 
-        RecordState("心跳成功", HostedServiceState.Running);
+        RecordState("Heartbeat successful", HostedServiceState.Running);
 
-        // 检查或维护 Leader 状态
+        // Check or maintain Leader status
         await CheckOrMaintainLeaderAsync(ct);
     }
 
     /// <summary>
-    /// 处理心跳失败的情况
+    /// Handle persistent heartbeat failure (after all retries exhausted)
     /// </summary>
-    private async Task HandleFailedHeartbeatAsync(string? errorMessage, CancellationToken ct)
+    private async Task HandlePersistentHeartbeatFailureAsync(string? errorMessage, CancellationToken ct)
     {
-        RecordState($"心跳失败: {errorMessage}", HostedServiceState.Degraded);
+        _consecutiveFailures++;
+        RecordState($"Heartbeat failed after retries: {errorMessage}, consecutive failures: {_consecutiveFailures}", HostedServiceState.Degraded);
 
-        // 如果是 Leader，进入挣扎模式
-        if (leaderService.IsLeader && !_isStruggling)
+        // If we're the Leader and heartbeat consistently fails, we should give up leadership
+        if (leaderService.IsLeader)
         {
-            await StartStruggleAsync(ct);
+            RecordState("Leader heartbeat failed after retries, giving up leadership", givenLogLevel: LogLevel.Warning);
+            leaderService.TriggerLeaderLost(LeaderLostReason.NetworkIsolation);
+
+            // Handle based on isolation mode
+            if (_option.IsolationHandlingMode == EIsolationHandlingMode.FastShutdown)
+            {
+                RecordState("Isolation handling mode is FastShutdown, triggering service isolation event", givenLogLevel: LogLevel.Warning);
+            }
         }
+
+        await Task.CompletedTask;
     }
 
     /// <summary>
-    /// 检查或维护 Leader 状态
+    /// Check or maintain Leader status
     /// </summary>
     private async Task CheckOrMaintainLeaderAsync(CancellationToken ct)
     {
         if (!leaderService.IsLeader)
         {
-            // 当前不是 Leader，检查是否需要竞争
+            // Not currently Leader, check if we should compete
             var leaderExists = await stateManager.LeaderExistsAsync(ct);
             if (!leaderExists)
             {
@@ -188,45 +206,45 @@ public class RegisterCentreClientHostedService(
             }
             else
             {
-                RecordState("Leader 已存在，保持 Follower 状态", givenLogLevel: LogLevel.Debug);
+                RecordState("Leader exists, staying as Follower", givenLogLevel: LogLevel.Debug);
             }
         }
         else
         {
-            // 当前是 Leader，续约
+            // Currently Leader, renew lease
             await RenewLeaderLeaseAsync(ct);
         }
     }
 
     /// <summary>
-    /// 竞争成为 Leader
+    /// Compete to become Leader
     /// </summary>
     private async Task CompeteForLeaderAsync(CancellationToken ct)
     {
-        RecordState("尝试竞争 Leader", givenLogLevel: LogLevel.Debug);
+        RecordState("Attempting to compete for Leader", givenLogLevel: LogLevel.Debug);
 
         var (success, state, eTag) = await stateManager.TryBecomeLeaderAsync(ct);
 
         if (success && state != null && eTag != null)
         {
             leaderService.SetAsLeader(state.BecomeLeaderTime, eTag);
-            RecordState("成功成为 Leader", HostedServiceState.Running);
+            RecordState("Successfully became Leader", HostedServiceState.Running);
         }
         else
         {
-            RecordState("Leader 竞争失败，其他实例可能已成为 Leader", givenLogLevel: LogLevel.Debug);
+            RecordState("Leader competition failed, another instance may have become Leader", givenLogLevel: LogLevel.Debug);
         }
     }
 
     /// <summary>
-    /// 续约 Leader 租约
+    /// Renew Leader lease
     /// </summary>
     private async Task RenewLeaderLeaseAsync(CancellationToken ct)
     {
         var currentETag = leaderService.CurrentETag;
         if (string.IsNullOrEmpty(currentETag))
         {
-            RecordState("无法续约 Leader：ETag 为空", givenLogLevel: LogLevel.Warning);
+            RecordState("Cannot renew Leader: ETag is empty", givenLogLevel: LogLevel.Warning);
             leaderService.TriggerLeaderLost(LeaderLostReason.NetworkIsolation);
             return;
         }
@@ -236,7 +254,7 @@ public class RegisterCentreClientHostedService(
         if (success && !string.IsNullOrEmpty(newETag))
         {
             leaderService.UpdateETag(newETag);
-            RecordState("Leader 续约成功", givenLogLevel: LogLevel.Debug);
+            RecordState("Leader lease renewed successfully", givenLogLevel: LogLevel.Debug);
             return;
         }
 
@@ -246,107 +264,27 @@ public class RegisterCentreClientHostedService(
         {
             if (actualState.InstanceId != currentInstanceId)
             {
-                // 其他实例已成为 Leader
+                // Another instance became Leader
                 leaderService.TriggerLeaderLost(LeaderLostReason.LeaderKeyTakenByOther);
-                RecordState($"Leader 被其他实例 ({actualState.InstanceId}) 抢占", HostedServiceState.Running);
+                RecordState($"Leader taken by another instance ({actualState.InstanceId})", HostedServiceState.Running);
             }
             else
             {
-                // 我们仍是 Leader，但 ETag 过期了 → 刷新 ETag
-                RecordState($"ETag 不一致但仍为 Leader，刷新 ETag: {currentETag} -> {actualETag}", givenLogLevel: LogLevel.Information);
+                // We're still Leader but ETag is stale - refresh
+                RecordState($"ETag mismatch but still Leader, refreshing ETag: {currentETag} -> {actualETag}", givenLogLevel: LogLevel.Information);
                 leaderService.UpdateETag(actualETag);
             }
         }
         else
         {
-            RecordState("Leader Key 已过期或被删除，重新竞争 Leader", givenLogLevel: LogLevel.Information);
+            RecordState("Leader key expired or deleted, competing for Leader again", givenLogLevel: LogLevel.Information);
             leaderService.TriggerLeaderLost(LeaderLostReason.LeaderKeyExpired);
             await CompeteForLeaderAsync(ct);
         }
     }
 
     /// <summary>
-    /// 开始挣扎模式
+    /// Internal exception for heartbeat failures
     /// </summary>
-    private async Task StartStruggleAsync(CancellationToken ct)
-    {
-        if (_isStruggling) return;
-
-        _isStruggling = true;
-        _struggleStartTime = DateTime.UtcNow;
-        _struggleCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-
-        RecordState("进入挣扎模式", HostedServiceState.Degraded);
-
-        // 启动挣扎循环
-        _ = RunStruggleLoopAsync(_struggleCts.Token);
-
-        await Task.CompletedTask;
-    }
-
-    /// <summary>
-    /// 挣扎循环
-    /// </summary>
-    private async Task RunStruggleLoopAsync(CancellationToken ct)
-    {
-        while (_isStruggling && !ct.IsCancellationRequested)
-        {
-            try
-            {
-                // 检查是否超过放弃挣扎阈值
-                var struggleDuration = DateTime.UtcNow - _struggleStartTime;
-                if (struggleDuration >= _option.Election.GiveUpStruggleThreshold)
-                {
-                    if (leaderService.IsLeader)
-                    {
-                        leaderService.TriggerLeaderLost(LeaderLostReason.StruggleTimeout);
-                    }
-
-                    _isStruggling = false;
-                    RecordState("挣扎超时，放弃 Leader", HostedServiceState.Running);
-
-                    // 根据隔离处理模式决定后续行为
-                    if (_option.IsolationHandlingMode == EIsolationHandlingMode.FastShutdown)
-                    {
-                        RecordState("隔离处理模式为 FastShutdown，触发服务隔离事件", givenLogLevel: LogLevel.Warning);
-                        // 可以在这里触发更多的隔离处理逻辑
-                    }
-
-                    break;
-                }
-
-                // 尝试恢复心跳
-                var result = await stateManager.RegisterOrHeartbeatAsync(ct);
-                if (result.Success)
-                {
-                    _isStruggling = false;
-                    _struggleStartTime = null;
-                    RecordState("挣扎恢复成功", HostedServiceState.Running);
-                    // Leader 续约将由主心跳循环在下次迭代时处理，避免在此处调用导致递归循环
-                    break;
-                }
-
-                RecordState($"挣扎中，心跳仍然失败，等待 {_option.Election.StrugglePeriod} 后重试", givenLogLevel: LogLevel.Debug);
-                await Task.Delay(_option.Election.StrugglePeriod, ct);
-            }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested)
-            {
-                break;
-            }
-            catch (Exception ex)
-            {
-                RecordState("挣扎循环异常", exception: ex, givenLogLevel: LogLevel.Error);
-            }
-        }
-    }
-
-    public override void Dispose()
-    {
-        if (_struggleCts?.Token.CanBeCanceled is true)
-        {
-            _struggleCts.Cancel();
-        }
-        _struggleCts?.Dispose();
-        base.Dispose();
-    }
+    private sealed class HeartbeatFailedException(string message) : Exception(message);
 }

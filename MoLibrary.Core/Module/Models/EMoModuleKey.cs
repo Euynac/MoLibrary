@@ -1,8 +1,7 @@
 namespace MoLibrary.Core.Module.Models;
 
 /// <summary>
-/// MoLibrary 内置模块键枚举。第三方开发者请勿在此添加。
-/// 注意：不包含 "Developer"，开发者配置用 GuideFrom = null 表示。
+/// MoLibrary 内置模块键枚举。
 /// </summary>
 public enum EMoModuleKey
 {
@@ -138,5 +137,9 @@ public enum EMoModuleKey
     /// <summary>
     /// 性能分析 UI 模块
     /// </summary>
-    ProfilingUI
+    ProfilingUI,
+    /// <summary>
+    /// 弹性策略模块 (Polly)
+    /// </summary>
+    Resilience
 }

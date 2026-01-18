@@ -73,6 +73,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.Profiling", "MoLi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.MoLibrary.Tool", "tests\Test.MoLibrary.Tool\Test.MoLibrary.Tool.csproj", "{00B3C9BB-5E28-4D3B-AC05-4CBE37B0633C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoLibrary.Resilience", "MoLibrary.Resilience\MoLibrary.Resilience.csproj", "{B8C4D2F1-3A5E-4B9C-8D7F-6E2A1C0B9F4D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -211,6 +213,10 @@ Global
 		{00B3C9BB-5E28-4D3B-AC05-4CBE37B0633C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{00B3C9BB-5E28-4D3B-AC05-4CBE37B0633C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{00B3C9BB-5E28-4D3B-AC05-4CBE37B0633C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B8C4D2F1-3A5E-4B9C-8D7F-6E2A1C0B9F4D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B8C4D2F1-3A5E-4B9C-8D7F-6E2A1C0B9F4D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B8C4D2F1-3A5E-4B9C-8D7F-6E2A1C0B9F4D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B8C4D2F1-3A5E-4B9C-8D7F-6E2A1C0B9F4D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

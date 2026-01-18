@@ -5,5 +5,6 @@
   <ItemGroup>
     <ProjectReference Include="..\MoLibrary.Core\MoLibrary.Core.csproj" />
     <ProjectReference Include="..\MoLibrary.StateStore\MoLibrary.StateStore.csproj" />
+    <ProjectReference Include="..\MoLibrary.Resilience\MoLibrary.Resilience.csproj" />
   </ItemGroup>
 </Project>

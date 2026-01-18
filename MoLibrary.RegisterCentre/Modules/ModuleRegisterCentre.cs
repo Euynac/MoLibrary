@@ -18,6 +18,9 @@ using MoLibrary.RegisterCentre.Interfaces;
 using MoLibrary.RegisterCentre.Models;
 using MoLibrary.StateStore.Modules;
 using MoLibrary.Tool.MoResponse;
+using MoLibrary.Resilience.Modules;
+using Polly;
+using Polly.Retry;
 
 namespace MoLibrary.RegisterCentre.Modules;
 
@@ -32,6 +35,18 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModuleW
     {
         // Depend on HostedService module for MoBackgroundService base class
         DependsOnModule<ModuleHostedServiceGuide>().Register();
+
+        // Depend on Resilience module for heartbeat retry pipelines
+        DependsOnModule<ModuleResilienceGuide>()
+            .Register()
+            .AddResiliencePipeline(ResiliencePipelineNames.RegisterCentre, builder =>
+                builder.AddRetry(new RetryStrategyOptions
+                {
+                    MaxRetryAttempts = 5,
+                    Delay = TimeSpan.FromSeconds(2),
+                    BackoffType = DelayBackoffType.Exponential,
+                    UseJitter = true
+                }));
 
         // Depend on StateStore module for state management
         // Only register common state store if not using custom keyed provider
