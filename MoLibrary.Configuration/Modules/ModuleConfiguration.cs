@@ -30,9 +30,9 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
 {
     private IServiceCollection _services = null!;
     private MethodInfo _method = null!;
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.Configuration;
+        return EMoModuleKey.Configuration;
     }
 
     public override void ConfigureServices(IServiceCollection services)

@@ -34,9 +34,9 @@ public static class ModuleEventBusUIBuilderExtensions
 public class ModuleEventBusUI(ModuleEventBusUIOption option)
     : MoModuleWithDependencies<ModuleEventBusUI, ModuleEventBusUIOption, ModuleEventBusUIGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.EventBusUI;
+        return EMoModuleKey.EventBusUI;
     }
 
     public override void ConfigureServices(IServiceCollection services)
@@ -46,6 +46,9 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
 
         // 注册测试服务，用于分布式事件总线测试
         services.AddSingleton<EventBusTestService>();
+
+        // 注册 Provider 发现服务
+        services.AddScoped<EventBusProviderDiscoveryService>();
     }
 
     public override void ClaimDependencies()
@@ -61,9 +64,9 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
                     UIEventBusPage.PAGE_URL,
                     "事件总线监控",
                     Icons.Material.Filled.Hub,
-                    "系统管理",
+                    "监控",
                     addToNav: true,
-                    navOrder: 150));
+                    navOrder: 40));
         }
     }
 

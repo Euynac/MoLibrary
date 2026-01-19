@@ -36,9 +36,9 @@ public class ModuleCancellationManager(ModuleCancellationManagerOption option)
     /// 获取当前模块枚举值
     /// </summary>
     /// <returns>返回取消令牌管理器模块枚举</returns>
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.CancellationManager;
+        return EMoModuleKey.CancellationManager;
     }
 
     /// <summary>
@@ -93,7 +93,7 @@ public class ModuleCancellationManagerGuide : MoModuleGuide<ModuleCancellationMa
             // 使用分布式实现，需要依赖StateStore
             DependsOnModule<ModuleStateStoreGuide>().Register().AddKeyedCommonStateStore(key, true);
         }
-        
+
         ConfigureServices(context =>
         {
             context.Services.AddKeyedSingleton<IMoCancellationManager>(key, (serviceProvider, _) =>
@@ -111,6 +111,7 @@ public class ModuleCancellationManagerGuide : MoModuleGuide<ModuleCancellationMa
                 }
             });
         });
+        RecordKeyedServiceKey(key);
         return this;
     }
 

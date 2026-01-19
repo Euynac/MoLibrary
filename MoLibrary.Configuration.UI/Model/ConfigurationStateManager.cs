@@ -46,7 +46,7 @@ public class ConfigurationStateManager
     /// </summary>
     public ConfigurationViewModel? GetConfiguration(string configName)
     {
-        return _configurations.TryGetValue(configName, out var config) ? config : null;
+        return _configurations.GetValueOrDefault(configName);
     }
     
     /// <summary>

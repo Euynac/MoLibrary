@@ -27,9 +27,9 @@ public static class ModuleSwaggerUIBuilderExtensions
 public class ModuleSwaggerUI(ModuleSwaggerUIOption option)
     : MoModuleWithDependencies<ModuleSwaggerUI, ModuleSwaggerUIOption, ModuleSwaggerUIGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.SwaggerUI;
+        return EMoModuleKey.SwaggerUI;
     }
 
     public override void ClaimDependencies()

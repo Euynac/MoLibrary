@@ -188,7 +188,7 @@ internal static class RpcClientCodeGenerator
         sb.AppendLine();
 
         // Implementation declaration
-        sb.AppendLine($"public class {implementationName}(HttpClient httpClient, IMoServiceProvider provider) : {baseTypeName}(provider, httpClient), {interfaceName}");
+        sb.AppendLine($"public class {implementationName}(HttpClient httpClient, ICachedServiceProvider serviceProvider) : {baseTypeName}(serviceProvider, httpClient), {interfaceName}");
         sb.AppendLine("{");
 
         // Generate implementation methods

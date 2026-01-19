@@ -33,6 +33,11 @@ public class SubscriptionFilter
     public string? SearchText { get; set; }
 
     /// <summary>
+    /// 选中的 Provider（用于按 Provider 过滤）
+    /// </summary>
+    public EventBusProviderInfo? SelectedProvider { get; set; }
+
+    /// <summary>
     /// 是否有任何过滤条件
     /// </summary>
     public bool HasAnyFilter =>
@@ -40,7 +45,8 @@ public class SubscriptionFilter
         Scope.HasValue ||
         !string.IsNullOrWhiteSpace(ServiceKey) ||
         IsAutoDiscovered.HasValue ||
-        !string.IsNullOrWhiteSpace(SearchText);
+        !string.IsNullOrWhiteSpace(SearchText) ||
+        SelectedProvider != null;
 
     /// <summary>
     /// 清空所有过滤条件
@@ -52,6 +58,7 @@ public class SubscriptionFilter
         ServiceKey = null;
         IsAutoDiscovered = null;
         SearchText = null;
+        SelectedProvider = null;
     }
 
     /// <summary>
@@ -65,7 +72,8 @@ public class SubscriptionFilter
             Scope = Scope,
             ServiceKey = ServiceKey,
             IsAutoDiscovered = IsAutoDiscovered,
-            SearchText = SearchText
+            SearchText = SearchText,
+            SelectedProvider = SelectedProvider
         };
     }
 }

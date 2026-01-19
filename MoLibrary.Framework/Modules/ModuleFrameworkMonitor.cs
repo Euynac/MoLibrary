@@ -50,9 +50,9 @@ public class ModuleFrameworkMonitor(ModuleFrameworkMonitorOption option)
                         p.HasExplicitDefinedStaticConstructor()).Do(p => p.RunStaticConstructor());
     }
 
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.FrameworkMonitor;
+        return EMoModuleKey.FrameworkMonitor;
     }
 
     private IServiceCollection _services = null!;

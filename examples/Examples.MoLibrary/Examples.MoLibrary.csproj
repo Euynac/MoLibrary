@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <Import Project="..\..\common.xml"></Import>
+  <Import Project="..\..\common.xml"/>
 
 
   <ItemGroup>

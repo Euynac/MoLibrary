@@ -23,15 +23,15 @@ public class ModuleDependencyInjection(ModuleDependencyInjectionOption option)
 {
     private IConventionalRegistrar? _registrar;
     private IServiceCollection? _services;
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.DependencyInjection;
+        return EMoModuleKey.DependencyInjection;
     }
 
     public override void ConfigureServices(IServiceCollection services)
     {
         _registrar = new DefaultConventionalRegistrar(Option);
-        services.AddTransient<IMoServiceProvider, DefaultMoServiceProvider>();
+        services.AddScoped<ICachedServiceProvider, CachedServiceProvider>();
         _services = services;
     }
 
@@ -68,9 +68,5 @@ public class ModuleDependencyInjectionGuide : MoModuleGuide<ModuleDependencyInje
 
 public class ModuleDependencyInjectionOption : MoModuleOption<ModuleDependencyInjection>
 {
-    /// <summary>
-    /// 相关项目单元所在程序集名，使用名称包含查找。如若不配置，则默认仅扫描Entry程序集。
-    /// </summary>
-    public string[]? RelatedAssemblies { get; set; }
     public bool EnableDebug { get; set; }
 }

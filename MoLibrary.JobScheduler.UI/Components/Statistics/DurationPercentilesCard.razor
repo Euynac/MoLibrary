@@ -1,0 +1,128 @@
+@using MoLibrary.JobScheduler.UI.Models
+
+@inject IDialogService DialogService
+
+<div class="percentiles-wrapper">
+    <MudPaper Class="percentiles-card" Elevation="0">
+        <div class="card-header">
+            <MudText Typo="Typo.h6">执行耗时分布</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">样本: @Percentiles.SampleCount</MudText>
+        </div>
+
+        @if (Percentiles.SampleCount > 0)
+        {
+            <div class="percentiles-grid">
+                <div class="percentile-item">
+                    <div class="percentile-label">P50</div>
+                    <div class="percentile-value">@FormatDuration(Percentiles.P50)</div>
+                    <div class="percentile-desc">中位数</div>
+                </div>
+                <div class="percentile-item">
+                    <div class="percentile-label">P90</div>
+                    <div class="percentile-value">@FormatDuration(Percentiles.P90)</div>
+                    <div class="percentile-desc">90%分位</div>
+                </div>
+                <div class="percentile-item">
+                    <div class="percentile-label">P95</div>
+                    <div class="percentile-value">@FormatDuration(Percentiles.P95)</div>
+                    <div class="percentile-desc">95%分位</div>
+                </div>
+                <div class="percentile-item highlight">
+                    <div class="percentile-label">P99</div>
+                    <div class="percentile-value">@FormatDuration(Percentiles.P99)</div>
+                    <div class="percentile-desc">99%分位</div>
+                </div>
+            </div>
+
+            <MudDivider Class="my-3" />
+
+            <div class="stats-row">
+                <div class="stat-item">
+                    <MudIcon Icon="@Icons.Material.Filled.Timer" Size="Size.Small" Color="Color.Default" />
+                    <span class="stat-label">平均:</span>
+                    <span class="stat-value">@FormatDuration(Percentiles.Average)</span>
+                </div>
+                <div class="stat-item">
+                    <MudIcon Icon="@Icons.Material.Filled.Speed" Size="Size.Small" Color="Color.Success" />
+                    <span class="stat-label">最快:</span>
+                    <span class="stat-value">@FormatDuration(Percentiles.Min)</span>
+                </div>
+                <div class="stat-item">
+                    <MudIcon Icon="@Icons.Material.Filled.Timelapse" Size="Size.Small" Color="Color.Warning" />
+                    <span class="stat-label">最慢:</span>
+                    <span class="stat-value">@FormatDuration(Percentiles.Max)</span>
+                </div>
+            </div>
+
+            @if (SlowestInstances.Count > 0)
+            {
+                <MudDivider Class="my-3" />
+
+                <div class="slowest-section">
+                    <div class="slowest-header">
+                        <MudText Typo="Typo.subtitle2">最慢实例 Top @SlowestInstances.Count</MudText>
+                        <MudTooltip Text="统计不同作业的最慢执行实例（每个作业仅显示最慢的一条）">
+                            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Default" />
+                        </MudTooltip>
+                    </div>
+                    <div class="slowest-list">
+                        @foreach (var instance in SlowestInstances)
+                        {
+                            <div class="slowest-item" @onclick="() => ShowInstanceDetail(instance.InstanceId)">
+                                <div class="slowest-job-name" title="@instance.JobKey">@instance.JobName</div>
+                                <div class="slowest-duration">@FormatDuration(instance.Duration)</div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="empty-state">
+                <MudIcon Icon="@Icons.Material.Filled.AccessTime" Size="Size.Large" Color="Color.Default" />
+                <MudText Typo="Typo.body2" Color="Color.Secondary">暂无耗时数据</MudText>
+            </div>
+        }
+    </MudPaper>
+</div>
+
+@code {
+    [Parameter]
+    public DurationPercentiles Percentiles { get; set; } = new();
+
+    [Parameter]
+    public List<SlowestInstance> SlowestInstances { get; set; } = [];
+
+    private async Task ShowInstanceDetail(string instanceId)
+    {
+        var parameters = new DialogParameters<JobInstanceDetailDialog>
+        {
+            { x => x.InstanceId, instanceId },
+            { x => x.ShowJobDefinitionButton, true }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.ExtraLarge,
+            FullWidth = true,
+            CloseButton = true,
+            BackdropClick = false
+        };
+
+        await DialogService.ShowAsync<JobInstanceDetailDialog>("作业实例详情", parameters, options);
+    }
+
+    private static string FormatDuration(TimeSpan duration)
+    {
+        if (duration.TotalDays >= 1)
+            return $"{duration.TotalDays:F1}天";
+        if (duration.TotalHours >= 1)
+            return $"{duration.TotalHours:F1}小时";
+        if (duration.TotalMinutes >= 1)
+            return $"{duration.TotalMinutes:F1}分钟";
+        if (duration.TotalSeconds >= 1)
+            return $"{duration.TotalSeconds:F2}秒";
+        return $"{duration.TotalMilliseconds:F0}毫秒";
+    }
+}

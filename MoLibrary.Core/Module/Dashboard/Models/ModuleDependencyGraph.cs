@@ -25,17 +25,17 @@ public class ModuleDependencyGraph
     /// <summary>
     /// 循环依赖路径（如果存在）
     /// </summary>
-    public List<List<EMoModules>> CircularDependencyPaths { get; set; } = [];
+    public List<List<ModuleKey>> CircularDependencyPaths { get; set; } = [];
 
     /// <summary>
     /// 拓扑排序结果（依赖顺序）
     /// </summary>
-    public List<EMoModules> TopologicalOrder { get; set; } = [];
+    public List<ModuleKey> TopologicalOrder { get; set; } = [];
 
     /// <summary>
     /// 模块层级信息（根据依赖深度分层）
     /// </summary>
-    public Dictionary<int, List<EMoModules>> ModuleLayers { get; set; } = [];
+    public Dictionary<int, List<ModuleKey>> ModuleLayers { get; set; } = [];
 }
 
 /// <summary>
@@ -44,9 +44,9 @@ public class ModuleDependencyGraph
 public class ModuleDependencyNode
 {
     /// <summary>
-    /// 模块枚举
+    /// 模块键
     /// </summary>
-    public EMoModules Module { get; set; }
+    public ModuleKey Module { get; set; }
 
     /// <summary>
     /// 模块名称
@@ -102,12 +102,12 @@ public class ModuleDependencyEdge
     /// <summary>
     /// 源模块（依赖者）
     /// </summary>
-    public EMoModules SourceModule { get; set; }
+    public ModuleKey SourceModule { get; set; }
 
     /// <summary>
     /// 目标模块（被依赖者）
     /// </summary>
-    public EMoModules TargetModule { get; set; }
+    public ModuleKey TargetModule { get; set; }
 
     /// <summary>
     /// 依赖类型

@@ -37,9 +37,9 @@ public static class ModuleLoggingUIBuilderExtensions
 public class ModuleLoggingUI(ModuleLoggingUIOption option)
     : MoModuleWithDependencies<ModuleLoggingUI, ModuleLoggingUIOption, ModuleLoggingUIGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.LoggingUI;
+        return EMoModuleKey.LoggingUI;
     }
 
     public override void ConfigureServices(IServiceCollection services)
@@ -61,9 +61,9 @@ public class ModuleLoggingUI(ModuleLoggingUIOption option)
                     UILoggingPage.LOGGING_MONITOR_URL,
                     "日志监控",
                     Icons.Material.Filled.Article,
-                    "系统管理",
+                    "监控",
                     addToNav: true,
-                    navOrder: 60));
+                    navOrder: 30));
         }
     }
 

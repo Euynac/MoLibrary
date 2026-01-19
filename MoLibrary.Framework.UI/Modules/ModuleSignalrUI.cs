@@ -26,9 +26,9 @@ public static class ModuleSignalrUIBuilderExtensions
 public class ModuleSignalrUI(ModuleSignalrUIOption option)
     : MoModuleWithDependencies<ModuleSignalrUI, ModuleSignalrUIOption, ModuleSignalrUIGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.SignalrUI;
+        return EMoModuleKey.SignalrUI;
     }
 
     public override void ConfigureServices(IServiceCollection services)
@@ -41,7 +41,7 @@ public class ModuleSignalrUI(ModuleSignalrUIOption option)
         if (!Option.DisableUISingalrPage)
         {
             DependsOnModule<ModuleSignalRGuide>().Register();
-            DependsOnModule<ModuleUICoreGuide>().Register().RegisterUIComponents(p => p.RegisterComponent<UISignalRPage>(UISignalRPage.UI_SIGNALR_URL, "SignalR调试", Icons.Material.Filled.Settings, "系统管理", addToNav: true, navOrder: 100));
+            DependsOnModule<ModuleUICoreGuide>().Register().RegisterUIComponents(p => p.RegisterComponent<UISignalRPage>(UISignalRPage.UI_SIGNALR_URL, "SignalR调试", Icons.Material.Filled.Settings, "调试", addToNav: true, navOrder: 20));
         }
     }
 }

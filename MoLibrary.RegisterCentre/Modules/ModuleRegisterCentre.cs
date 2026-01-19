@@ -18,20 +18,35 @@ using MoLibrary.RegisterCentre.Interfaces;
 using MoLibrary.RegisterCentre.Models;
 using MoLibrary.StateStore.Modules;
 using MoLibrary.Tool.MoResponse;
+using MoLibrary.Resilience.Modules;
+using Polly;
+using Polly.Retry;
 
 namespace MoLibrary.RegisterCentre.Modules;
 
 public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModuleWithDependencies<ModuleRegisterCentre, ModuleRegisterCentreOption, ModuleRegisterCentreGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.RegisterCentre;
+        return EMoModuleKey.RegisterCentre;
     }
 
     public override void ClaimDependencies()
     {
         // Depend on HostedService module for MoBackgroundService base class
         DependsOnModule<ModuleHostedServiceGuide>().Register();
+
+        // Depend on Resilience module for heartbeat retry pipelines
+        DependsOnModule<ModuleResilienceGuide>()
+            .Register()
+            .AddResiliencePipeline(ResiliencePipelineNames.RegisterCentre, builder =>
+                builder.AddRetry(new RetryStrategyOptions
+                {
+                    MaxRetryAttempts = 5,
+                    Delay = TimeSpan.FromSeconds(2),
+                    BackoffType = DelayBackoffType.Exponential,
+                    UseJitter = true
+                }));
 
         // Depend on StateStore module for state management
         // Only register common state store if not using custom keyed provider
@@ -211,6 +226,7 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
         ConfigureModuleOption(o =>
         {
             o.IsStandaloneMode = true;
+            o.IsCentreServer = true;
         });
         return this;
     }
@@ -418,6 +434,20 @@ public class ModuleRegisterCentreOption : MoModuleOptionWithMinimalApi<ModuleReg
     /// 用于从 DI 容器中获取指定 serviceKey 的 StateStore 实例
     /// </summary>
     public string? CustomStateStoreServiceKey { get; internal set; }
+
+    #region CoordinatedLeaderService Configuration 
+    /// <summary>
+    /// Skips waiting for RegisterCentre registration when enabled.
+    /// Useful for development and standalone mode. Default: false.
+    /// </summary>
+    public bool SkipRegistrationWait { get; set; } = false;
+
+    /// <summary>
+    /// Maximum time to wait for RegisterCentre registration before starting scheduler services.
+    /// Default: 5 minutes.
+    /// </summary>
+    public TimeSpan RegistrationWaitTimeout { get; set; } = TimeSpan.FromMinutes(5);
+    #endregion
 }
 
 /// <summary>

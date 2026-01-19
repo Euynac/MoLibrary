@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Cronos;
 using Microsoft.Extensions.Logging;
+using MoLibrary.JobScheduler.Helpers;
 using Microsoft.Extensions.Options;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Events;
@@ -143,8 +144,8 @@ public class RecurringJobScheduler(
             }
           
 
-            // Parse cron expression (with seconds support)
-            var cronExpression = CronExpression.Parse(validatedDefinition.CronExpression, CronFormat.IncludeSeconds);
+            // Parse cron expression (supports both 5-segment standard and 6-segment with seconds)
+            var cronExpression = CronHelper.Parse(validatedDefinition.CronExpression);
 
             // Calculate next occurrence with minimum buffer to avoid timer accumulation
             // IMPORTANT: Add 100ms buffer to current time to prevent dueTime from being too small

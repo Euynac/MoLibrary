@@ -1,0 +1,239 @@
+<MudGrid Spacing="3">
+    @* 最后 GC 信息 *@
+    <MudItem xs="12" lg="6">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6" Class="mb-3">最后 GC 详情</MudText>
+            @if (GCInfo != null)
+            {
+            <MudSimpleTable Dense="true" Hover="true" Bordered="true">
+                <tbody>
+                <tr>
+                    <td><strong>GC 索引</strong></td>
+                    <td>@GCInfo.GCIndex</td>
+                </tr>
+                <tr>
+                    <td><strong>触发代数</strong></td>
+                    <td>
+                        <MudChip T="string" Size="Size.Small" Color="@GetGenerationColor(GCInfo.Generation)">
+                            Gen @GCInfo.Generation
+                        </MudChip>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>类型</strong></td>
+                    <td>
+                        @if (GCInfo.WasConcurrent)
+                        {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Info">并发</MudChip>
+                        }
+                        @if (GCInfo.WasCompacting)
+                        {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Warning">压缩</MudChip>
+                        }
+                        @if (!GCInfo.WasConcurrent && !GCInfo.WasCompacting)
+                        {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default">阻塞</MudChip>
+                        }
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>暂停时间</strong></td>
+                    <td>@GCInfo.PauseDuration.TotalMilliseconds.ToString("F2") ms</td>
+                </tr>
+                <tr>
+                    <td><strong>GC 时间占比</strong></td>
+                    <td>
+                        <MudProgressLinear Color="@GetPauseColor(GCInfo.PauseTimePercentage)"
+                                           Value="@GCInfo.PauseTimePercentage"
+                                           Max="100"
+                                           Class="my-1"/>
+                        @GCInfo.PauseTimePercentage.ToString("F2")%
+                    </td>
+                </tr>
+                </tbody>
+            </MudSimpleTable>
+            }
+            else if (!IsLoading)
+            {
+            <MudAlert Severity="Severity.Info">暂无 GC 数据</MudAlert>
+            }
+        </MudPaper>
+    </MudItem>
+
+    @* 内存统计 *@
+    <MudItem xs="12" lg="6">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6" Class="mb-3">内存统计</MudText>
+            @if (GCInfo != null)
+            {
+            <MudSimpleTable Dense="true" Hover="true" Bordered="true">
+                <tbody>
+                <tr>
+                    <td><strong>堆大小</strong></td>
+                    <td>@FormatBytes(GCInfo.HeapSizeBytes)</td>
+                </tr>
+                <tr>
+                    <td><strong>碎片化</strong></td>
+                    <td>
+                        @FormatBytes(GCInfo.FragmentedBytes)
+                        <MudChip T="string" Size="Size.Small"
+                                 Color="@GetFragmentationColor(GCInfo.FragmentationPercent)">
+                            @GCInfo.FragmentationPercent.ToString("F1")%
+                        </MudChip>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>已提交</strong></td>
+                    <td>@FormatBytes(GCInfo.CommittedBytes)</td>
+                </tr>
+                <tr>
+                    <td><strong>提升字节</strong></td>
+                    <td>@FormatBytes(GCInfo.PromotedBytes)</td>
+                </tr>
+                <tr>
+                    <td><strong>固定对象</strong></td>
+                    <td>@GCInfo.PinnedObjectsCount</td>
+                </tr>
+                <tr>
+                    <td><strong>待终结对象</strong></td>
+                    <td>
+                                <span class="@(GCInfo.FinalizationPendingCount > 100 ? "mud-error-text" : "")">
+                                    @GCInfo.FinalizationPendingCount
+                                </span>
+                    </td>
+                </tr>
+                </tbody>
+            </MudSimpleTable>
+            }
+        </MudPaper>
+    </MudItem>
+
+    @* 系统内存 *@
+    <MudItem xs="12" lg="6">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6" Class="mb-3">系统内存</MudText>
+            @if (GCInfo != null && GCInfo.TotalAvailableMemoryBytes > 0)
+            {
+            var memoryUsagePercent = (double)GCInfo.MemoryLoadBytes / GCInfo.TotalAvailableMemoryBytes * 100;
+            <MudStack Spacing="2">
+                <div class="d-flex justify-space-between">
+                    <MudText>总可用内存</MudText>
+                    <MudText>@FormatBytes(GCInfo.TotalAvailableMemoryBytes)</MudText>
+                </div>
+                <div class="d-flex justify-space-between">
+                    <MudText>当前内存负载</MudText>
+                    <MudText>@FormatBytes(GCInfo.MemoryLoadBytes)</MudText>
+                </div>
+                <MudProgressLinear Color="@GetMemoryLoadColor(memoryUsagePercent)"
+                                   Value="@memoryUsagePercent"
+                                   Max="100"/>
+                <div class="d-flex justify-space-between">
+                    <MudText>高内存阈值</MudText>
+                    <MudText>@FormatBytes(GCInfo.HighMemoryLoadThresholdBytes)</MudText>
+                </div>
+            </MudStack>
+            }
+            else
+            {
+            <MudAlert Severity="Severity.Info">系统内存信息不可用</MudAlert>
+            }
+        </MudPaper>
+    </MudItem>
+
+    @* 各代详情 *@
+    <MudItem xs="12" lg="6">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6" Class="mb-3">各代详情 (最后 GC)</MudText>
+            @if (GCInfo?.GenerationDetails?.Length > 0)
+            {
+            <MudSimpleTable Dense="true" Hover="true" Bordered="true">
+                <thead>
+                <tr>
+                    <th>代</th>
+                    <th>GC 前</th>
+                    <th>GC 后</th>
+                    <th>回收</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var gen in GCInfo.GenerationDetails)
+                {
+                <tr>
+                    <td>
+                        <MudChip T="string" Size="Size.Small" Color="@GetGenerationColor(gen.Generation)">
+                            @gen.GenerationName
+                        </MudChip>
+                    </td>
+                    <td>@FormatBytes(gen.SizeBeforeBytes)</td>
+                    <td>@FormatBytes(gen.SizeAfterBytes)</td>
+                    <td>
+                        @if (gen.CollectedBytes > 0)
+                        {
+                        <span class="mud-success-text">@FormatBytes(gen.CollectedBytes)</span>
+                        }
+                        else
+                        {
+                        <span>-</span>
+                        }
+                    </td>
+                </tr>
+                }
+                </tbody>
+            </MudSimpleTable>
+            }
+            else
+            {
+            <MudAlert Severity="Severity.Info">暂无各代详情数据</MudAlert>
+            }
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+[Parameter] public DetailedGCInfo? GCInfo { get; set; }
+[Parameter] public bool IsLoading { get; set; }
+
+private static string FormatBytes(long bytes)
+{
+string[] suffixes = ["B", "KB", "MB", "GB", "TB"];
+int counter = 0;
+decimal number = bytes;
+while (Math.Round(number / 1024) >= 1 && counter < suffixes.Length - 1)
+{
+number /= 1024;
+counter++;
+}
+return $"{number:N1} {suffixes[counter]}";
+}
+
+private static Color GetGenerationColor(int generation) => generation switch
+{
+0 => Color.Primary,
+1 => Color.Info,
+2 => Color.Warning,
+3 => Color.Error, // LOH
+4 => Color.Dark,  // POH
+_ => Color.Default
+};
+
+private static Color GetPauseColor(double percent)
+{
+if (percent < 5) return Color.Success;
+if (percent < 15) return Color.Warning;
+return Color.Error;
+}
+
+private static Color GetFragmentationColor(double percent)
+{
+if (percent < 10) return Color.Success;
+if (percent < 25) return Color.Warning;
+return Color.Error;
+}
+
+private static Color GetMemoryLoadColor(double percent)
+{
+if (percent < 70) return Color.Success;
+if (percent < 85) return Color.Warning;
+return Color.Error;
+}
+}

@@ -6,10 +6,11 @@ using MoLibrary.Core.Features.ObservableInstance;
 using MoLibrary.Core.Modules;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.JobScheduler.ControlPlane;
-using MoLibrary.JobScheduler.Core;
 using MoLibrary.JobScheduler.Events;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.JobScheduler.Modules;
+using MoLibrary.RegisterCentre.Modules;
+using MoLibrary.RegisterCentre.Core;
 using MoLibrary.RegisterCentre.Events;
 using MoLibrary.RegisterCentre.Interfaces;
 
@@ -30,8 +31,11 @@ public class JobRegistrationHostedService(
     IOptions<ModuleJobSchedulerOption> option,
     IServiceRegistrationCoordinator coordinator,
     IObservableInstanceManager observableManager,
-    IOptions<ModuleHostedServiceOption> hostedServiceOptions) : CoordinatedLeaderService(leaderService, option, logger, coordinator, observableManager, hostedServiceOptions)
+    IOptions<ModuleHostedServiceOption> hostedServiceOptions,
+    IOptions<ModuleRegisterCentreOption> registerCentreOptions) : CoordinatedLeaderService(leaderService, registerCentreOptions, logger, coordinator, observableManager, hostedServiceOptions)
 {
+    private readonly ModuleJobSchedulerOption _jobSchedulerOptions = option.Value;
+
     public override string ServiceName => nameof(JobRegistrationHostedService);
 
     /// <summary>
@@ -40,42 +44,34 @@ public class JobRegistrationHostedService(
     /// </summary>
     protected override Task OnLeaderLostAsync(LeaderLostReason reason)
     {
-        logger.LogInformation("Job registration service lost leader status (reason: {Reason}). Jobs will be re-registered on next leader election.", reason);
+        RecordState($"Job registration service lost leader status (reason: {reason}). Jobs will be re-registered on next leader election.", givenLogLevel: LogLevel.Information);
         return Task.CompletedTask;
     }
 
     protected override async Task LeaderInitializeAsync(CancellationToken cancellationToken)
     {
-        if (jobDefinitions.Count == 0)
-        {
-            logger.LogInformation("No job definitions to register");
-            return;
-        }
-
         // Perform job registration
         await RegisterJobsAsync(cancellationToken);
     }
 
     private async Task RegisterJobsAsync(CancellationToken cancellationToken)
     {
-        logger.LogInformation("Starting job reconciliation for {Count} job(s)", jobDefinitions.Count);
+        RecordState($"Starting job reconciliation for {jobDefinitions.Count} job(s)", givenLogLevel: LogLevel.Information);
 
         // Reconcile job definitions (add new jobs and soft delete removed jobs)
         var result = await jobRegistry.ReconcileJobDefinitionsAsync(jobDefinitions, cancellationToken);
 
         // Log reconciliation summary
-        logger.LogInformation(
-            "Job reconciliation completed: {AddedCount} job(s) added, {DeletedCount} job(s) soft deleted, {UnchangedCount} job(s) unchanged",
-            result.AddedCount,
-            result.DeletedCount,
-            jobDefinitions.Count - result.AddedCount);
+        RecordState(
+            $"Job reconciliation completed: {result.AddedCount} job(s) added, {result.DeletedCount} job(s) soft deleted, {jobDefinitions.Count - result.AddedCount} job(s) unchanged",
+            givenLogLevel: LogLevel.Information);
 
         // Log deleted jobs if any
         if (result.DeletedCount > 0)
         {
             foreach (var deletedKey in result.DeletedJobKeys)
             {
-                logger.LogWarning("[Deleted] Job: {JobKey} - No longer exists in code", deletedKey);
+                RecordState($"[Deleted] Job: {deletedKey} - No longer exists in code", givenLogLevel: LogLevel.Warning);
             }
         }
 
@@ -86,9 +82,9 @@ public class JobRegistrationHostedService(
             await jobRegistry.RegisterJob(definition, status);
         }
 
-        if (Options.RecurringJobDebugMode)
+        if (_jobSchedulerOptions.RecurringJobDebugMode)
         {
-            logger.LogDebug("Received JobDefinitionsChangedEvent in debug mode, skipping schedule updates");
+            RecordState("Received JobDefinitionsChangedEvent in debug mode, skipping schedule updates", givenLogLevel: LogLevel.Debug);
             return;
         }
 
@@ -97,7 +93,7 @@ public class JobRegistrationHostedService(
         {
             if (result is { AddedCount: 0, DeletedCount: 0 })
             {
-                logger.LogInformation("No job definitions changed, skipping event publication");
+                RecordState("No job definitions changed, skipping event publication", givenLogLevel: LogLevel.Information);
                 return;
             }
 
@@ -112,12 +108,12 @@ public class JobRegistrationHostedService(
                 ReconciledAt = DateTime.UtcNow
             }, cancellationToken: cancellationToken);
 
-            logger.LogInformation("Published JobDefinitionsChangedEvent to notify subscribers of reconciliation");
+            RecordState("Published JobDefinitionsChangedEvent to notify subscribers of reconciliation", givenLogLevel: LogLevel.Information);
         }
         catch (Exception eventEx)
         {
             // Log error but don't fail startup if event publishing fails
-            logger.LogError(eventEx, "Failed to publish JobDefinitionsChangedEvent, but continuing startup");
+            RecordState("Failed to publish JobDefinitionsChangedEvent, but continuing startup", givenLogLevel: LogLevel.Error, exception: eventEx);
         }
     }
 }

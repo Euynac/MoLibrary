@@ -4,9 +4,10 @@ using Microsoft.Extensions.Options;
 using MoLibrary.Core.Features.ObservableInstance;
 using MoLibrary.Core.Modules;
 using MoLibrary.JobScheduler.Abstractions;
-using MoLibrary.JobScheduler.Core;
 using MoLibrary.JobScheduler.Metadata;
 using MoLibrary.JobScheduler.Modules;
+using MoLibrary.RegisterCentre.Modules;
+using MoLibrary.RegisterCentre.Core;
 using MoLibrary.RegisterCentre.Events;
 using MoLibrary.RegisterCentre.Interfaces;
 
@@ -24,8 +25,9 @@ public class JobHistoryCleanupService(
     IOptions<ModuleJobSchedulerOption> options,
     IServiceRegistrationCoordinator coordinator,
     IObservableInstanceManager observableManager,
-    IOptions<ModuleHostedServiceOption> hostedServiceOptions
-) : CoordinatedLeaderService(leaderService, options, logger, coordinator, observableManager, hostedServiceOptions)
+    IOptions<ModuleHostedServiceOption> hostedServiceOptions,
+    IOptions<ModuleRegisterCentreOption> registerCentreOptions
+) : CoordinatedLeaderService(leaderService, registerCentreOptions, logger, coordinator, observableManager, hostedServiceOptions)
 {
     private readonly ModuleJobSchedulerOption _jobSchedulerOptions = options.Value;
 
@@ -45,7 +47,7 @@ public class JobHistoryCleanupService(
     /// </summary>
     protected override Task OnLeaderLostAsync(LeaderLostReason reason)
     {
-        logger.LogInformation("History cleanup service stopped after losing leader status (reason: {Reason})", reason);
+        RecordState($"History cleanup service stopped after losing leader status (reason: {reason})", givenLogLevel: LogLevel.Information);
         return Task.CompletedTask;
     }
 

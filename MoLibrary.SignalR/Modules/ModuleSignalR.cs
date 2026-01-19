@@ -28,9 +28,9 @@ public static class ModuleSignalRBuilderExtensions
 
 public class ModuleSignalR(ModuleSignalROption option) : MoModule<ModuleSignalR, ModuleSignalROption, ModuleSignalRGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.SignalR;
+        return EMoModuleKey.SignalR;
     }
 
     public override void ConfigureServices(IServiceCollection services)

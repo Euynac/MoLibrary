@@ -6,11 +6,6 @@ namespace MoLibrary.RegisterCentre.Interfaces;
 public interface IServiceRegistrationCoordinator
 {
     /// <summary>
-    /// Gets the current registration status
-    /// </summary>
-    RegistrationStatus Status { get; }
-
-    /// <summary>
     /// Gets whether the service is successfully registered
     /// </summary>
     bool IsRegistered { get; }
@@ -22,30 +17,4 @@ public interface IServiceRegistrationCoordinator
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>True if registration completed successfully, false if timed out or failed</returns>
     Task<bool> WaitForRegistrationAsync(TimeSpan timeout, CancellationToken cancellationToken = default);
-}
-
-/// <summary>
-/// Represents the status of service registration
-/// </summary>
-public enum RegistrationStatus
-{
-    /// <summary>
-    /// Registration has not started yet
-    /// </summary>
-    NotStarted,
-
-    /// <summary>
-    /// Registration is in progress
-    /// </summary>
-    InProgress,
-
-    /// <summary>
-    /// Registration completed successfully
-    /// </summary>
-    Completed,
-
-    /// <summary>
-    /// Registration failed after all retry attempts
-    /// </summary>
-    Failed
 }

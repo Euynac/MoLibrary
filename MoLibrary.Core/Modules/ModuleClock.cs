@@ -21,9 +21,9 @@ public static class ModuleClockBuilderExtensions
 
 public class ModuleClock(ModuleClockOption option) : MoModule<ModuleClock, ModuleClockOption, ModuleClockGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.Clock;
+        return EMoModuleKey.Clock;
     }
 
     public override void ConfigureServices(IServiceCollection services)

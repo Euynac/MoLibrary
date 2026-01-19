@@ -15,7 +15,7 @@ namespace Test.MoLibrary.Repository
     public class MoRepositoryTests
     {
         private Mock<IDbContextProvider<TestDbContext>> _dbContextProviderMock;
-        private Mock<IMoServiceProvider> _serviceProviderMock;
+        private Mock<ILazyServiceProvider> _serviceProviderMock;
         private Mock<IMoUnitOfWorkManager> _unitOfWorkManagerMock;
         private Mock<IMoUnitOfWork> _unitOfWorkMock;
         private Mock<IServiceProvider> _serviceProviderFactoryMock;
@@ -34,7 +34,7 @@ namespace Test.MoLibrary.Repository
 
             // Setup mocks
             _dbContextProviderMock = new Mock<IDbContextProvider<TestDbContext>>();
-            _serviceProviderMock = new Mock<IMoServiceProvider>();
+            _serviceProviderMock = new Mock<ILazyServiceProvider>();
             _unitOfWorkManagerMock = new Mock<IMoUnitOfWorkManager>();
             _unitOfWorkMock = new Mock<IMoUnitOfWork>();
             _serviceProviderFactoryMock = new Mock<IServiceProvider>();
@@ -60,7 +60,7 @@ namespace Test.MoLibrary.Repository
             // Create repository with mocked dependencies
             _repository = new TestRepository(_dbContextProviderMock.Object)
             {
-                MoProvider = _serviceProviderMock.Object
+                LazyServiceProvider = _serviceProviderMock.Object
             };
               _dbContext = new TestDbContext(_dbContextOptions, _serviceProviderMock.Object);
             // Setup dbContextProvider to return our in-memory context
@@ -529,7 +529,7 @@ namespace Test.MoLibrary.Repository
         }
     }
 
-    public class TestDbContext(DbContextOptions<TestDbContext> options, IMoServiceProvider serviceProvider)
+    public class TestDbContext(DbContextOptions<TestDbContext> options, ILazyServiceProvider serviceProvider)
         : MoDbContext<TestDbContext>(options, serviceProvider)
     {
         public DbSet<TestEntity> TestEntities { get; set; }

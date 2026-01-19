@@ -26,7 +26,7 @@ public class OptionItem
         if (info is null && MoConfigurationManager.Setting.ErrorOnNoTagOptionAttribute)
         {
             throw new InvalidOperationException(
-                $"李振主任要求：每个配置项必须要写中文名称，有备注必须写备注，请负责各个配置类的人完善;Property {property.Name} of Type {property.DeclaringType?.FullName} is not tagged with {typeof(OptionSettingAttribute)}.");
+                $"要求：每个配置项必须要写中文名称，有备注必须写备注，请负责各个配置类的人完善;Property {property.Name} of Type {property.DeclaringType?.FullName} is not tagged with {typeof(OptionSettingAttribute)}.");
         }
     }
 

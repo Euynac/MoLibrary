@@ -10,33 +10,33 @@ public class ModuleDependencyInfo
     /// <summary>
     /// The module being analyzed.
     /// </summary>
-    public EMoModules Module { get; set; }
-    
+    public ModuleKey Module { get; set; }
+
     /// <summary>
     /// Direct dependencies of the module.
     /// </summary>
-    public HashSet<EMoModules> DirectDependencies { get; set; } = new();
-    
+    public HashSet<ModuleKey> DirectDependencies { get; set; } = new();
+
     /// <summary>
     /// All dependencies of the module (direct and transitive).
     /// </summary>
-    public HashSet<EMoModules> AllDependencies { get; set; } = new();
-    
+    public HashSet<ModuleKey> AllDependencies { get; set; } = new();
+
     /// <summary>
     /// A list of modules that depend on this module.
     /// </summary>
-    public HashSet<EMoModules> DependedByModules { get; set; } = new();
-    
+    public HashSet<ModuleKey> DependedByModules { get; set; } = new();
+
     /// <summary>
     /// Information about the dependency path that formed a cycle, if any.
     /// </summary>
-    public List<EMoModules> CyclePath { get; set; } = new();
-    
+    public List<ModuleKey> CyclePath { get; set; } = new();
+
     /// <summary>
     /// Indicates whether this module is part of a dependency cycle.
     /// </summary>
     public bool IsPartOfCycle { get; set; }
-    
+
     /// <summary>
     /// Creates a formatted string description of the dependencies.
     /// </summary>
@@ -44,7 +44,7 @@ public class ModuleDependencyInfo
     public override string ToString()
     {
         var result = $"Module {Module} dependencies:";
-        
+
         if (DirectDependencies.Count > 0)
         {
             result += $"\n  Direct dependencies: {string.Join(", ", DirectDependencies)}";
@@ -53,24 +53,24 @@ public class ModuleDependencyInfo
         {
             result += "\n  No direct dependencies";
         }
-        
+
         if (AllDependencies.Count > DirectDependencies.Count)
         {
-            var transitive = new HashSet<EMoModules>(AllDependencies);
+            var transitive = new HashSet<ModuleKey>(AllDependencies);
             transitive.ExceptWith(DirectDependencies);
             result += $"\n  Transitive dependencies: {string.Join(", ", transitive)}";
         }
-        
+
         if (DependedByModules.Count > 0)
         {
             result += $"\n  Depended on by: {string.Join(", ", DependedByModules)}";
         }
-        
+
         if (IsPartOfCycle && CyclePath.Count > 0)
         {
             result += $"\n  Part of dependency cycle: {string.Join(" → ", CyclePath)} → {Module}";
         }
-        
+
         return result;
     }
 } 

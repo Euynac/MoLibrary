@@ -20,12 +20,9 @@ public class MemoryCacheProvider(IMemoryCache memoryCache, ILogger<MemoryCachePr
 
         foreach (var key in keys)
         {
-            if (memoryCache.TryGetValue(key, out var entry) && entry is StateEntry<T> stateEntry)
+            if (memoryCache.TryGetValue(key, out var entry) && entry is IStateEntry {Value: T value})
             {
-                if (!removeEmptyValue || stateEntry.Value != null)
-                {
-                    result[key] = stateEntry.Value;
-                }
+                result[key] = value;
             }
             else if (!removeEmptyValue)
             {
@@ -38,9 +35,9 @@ public class MemoryCacheProvider(IMemoryCache memoryCache, ILogger<MemoryCachePr
 
     public override Task<T?> GetStateAsync<T>(string key, CancellationToken cancellationToken = default) where T : default
     {
-        if (memoryCache.TryGetValue(key, out var entry) && entry is StateEntry<T> stateEntry)
+        if (memoryCache.TryGetValue(key, out var entry) && entry is IStateEntry {Value: T value})
         {
-            return Task.FromResult(stateEntry.Value);
+            return Task.FromResult(value);
         }
 
         return Task.FromResult(default(T));
@@ -104,13 +101,14 @@ public class MemoryCacheProvider(IMemoryCache memoryCache, ILogger<MemoryCachePr
     public override Task<(T? Value, string ETag)> GetStateAndETagAsync<T>(string key,
         CancellationToken cancellationToken = default) where T : default
     {
-        if (memoryCache.TryGetValue(key, out var entry) && entry is StateEntry<T> stateEntry)
+        if (memoryCache.TryGetValue(key, out var entry) && entry is IStateEntry {Value: T value} stateEntry)
         {
-            return Task.FromResult<(T?, string)>((stateEntry.Value, stateEntry.ETag));
+            return Task.FromResult<(T?, string)>((value, stateEntry.ETag));
         }
 
         return Task.FromResult<(T?, string)>((default(T), ""));
     }
+
 
     public override Task<(bool Success, string? NewETag)> TrySaveStateWithETagAsync<T>(string key, T value, string expectedETag,
         CancellationToken cancellationToken = default, TimeSpan? ttl = null)
@@ -232,20 +230,13 @@ public class MemoryCacheProvider(IMemoryCache memoryCache, ILogger<MemoryCachePr
     {
         lock (memoryCache)
         {
-            if (memoryCache.TryGetValue(key, out var entry))
+            if (memoryCache.TryGetValue(key, out var entry) && entry is IStateEntry stateEntry)
             {
-                // Get the version from the entry regardless of type
-                var entryType = entry.GetType();
-                var etagProperty = entryType.GetProperty("ETag");
-                if (etagProperty != null)
+                if (stateEntry.ETag != expectedETag)
                 {
-                    var actualETag = etagProperty.GetValue(entry)?.ToString() ?? "";
-                    if (actualETag != expectedETag)
-                    {
-                        Logger.LogDebug("ETag mismatch for delete, key: {Key}. Expected: {Expected}, Actual: {Actual}",
-                            key, expectedETag, actualETag);
-                        return Task.FromResult(false);
-                    }
+                    Logger.LogDebug("ETag mismatch for delete, key: {Key}. Expected: {Expected}, Actual: {Actual}",
+                        key, expectedETag, stateEntry.ETag);
+                    return Task.FromResult(false);
                 }
 
                 // ETag matches, delete the key

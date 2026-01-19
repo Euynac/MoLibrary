@@ -120,7 +120,7 @@
                 <MudTh><MudTableSortLabel SortLabel="InstanceId" T="JobInstance">实例ID</MudTableSortLabel></MudTh>
                 <MudTh><MudTableSortLabel SortLabel="JobKey" T="JobInstance">作业键</MudTableSortLabel></MudTh>
                 <MudTh><MudTableSortLabel SortLabel="State" T="JobInstance">状态</MudTableSortLabel></MudTh>
-                <MudTh><MudTableSortLabel SortLabel="CreatedAt" T="JobInstance">创建时间</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortLabel="CreatedAt" T="JobInstance" InitialDirection="SortDirection.Descending">创建时间</MudTableSortLabel></MudTh>
                 <MudTh><MudTableSortLabel SortLabel="StartedAt" T="JobInstance">开始时间</MudTableSortLabel></MudTh>
                 <MudTh><MudTableSortLabel SortLabel="CompletedAt" T="JobInstance">结束时间</MudTableSortLabel></MudTh>
                 <MudTh><MudTableSortLabel SortLabel="Duration" T="JobInstance">执行时长</MudTableSortLabel></MudTh>
@@ -214,8 +214,8 @@
 
     // Table state persistence
     private TableStateHelper? _stateHelper;
-    private string? _sortBy;
-    private bool _sortDescending;
+    private string? _sortBy = "CreatedAt";
+    private bool _sortDescending = true;
     private int _pageSize = 10;
     private bool _stateLoaded = false;
 
@@ -237,8 +237,11 @@
         try
         {
             var state = await _stateHelper.LoadStateAsync("job-instances");
-            _sortBy = state.SortBy;
-            _sortDescending = state.SortDescending;
+            if (!string.IsNullOrEmpty(state.SortBy))
+            {
+                _sortBy = state.SortBy;
+                _sortDescending = state.SortDescending;
+            }
             _pageSize = state.PageSize;
         }
         catch (Exception ex)

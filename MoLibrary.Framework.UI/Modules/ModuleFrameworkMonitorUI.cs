@@ -29,9 +29,9 @@ public static class ModuleFrameworkMonitorUIBuilderExtensions
 public class ModuleFrameworkMonitorUI(ModuleFrameworkMonitorUIOption option)
     : MoModuleWithDependencies<ModuleFrameworkMonitorUI, ModuleFrameworkMonitorUIOption, ModuleFrameworkMonitorUIGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.FrameworkMonitorUI;
+        return EMoModuleKey.FrameworkMonitorUI;
     }
 
     public override void ConfigureServices(IServiceCollection services)
@@ -46,12 +46,12 @@ public class ModuleFrameworkMonitorUI(ModuleFrameworkMonitorUIOption option)
             DependsOnModule<ModuleFrameworkMonitorGuide>().Register();
             DependsOnModule<ModuleUICoreGuide>().Register()
                 .RegisterUIComponents(p => p.RegisterComponent<UIFrameworkMonitorPage>(
-                    UIFrameworkMonitorPage.FRAMEWORK_MONITOR_DEBUG_URL, 
-                    "框架监控", 
-                    Icons.Material.Filled.Monitor, 
-                    "系统管理", 
-                    addToNav: true, 
-                    navOrder: 200));
+                    UIFrameworkMonitorPage.FRAMEWORK_MONITOR_DEBUG_URL,
+                    "框架监控",
+                    Icons.Material.Filled.Monitor,
+                    "监控",
+                    addToNav: true,
+                    navOrder: 20));
         }
     }
 }

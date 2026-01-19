@@ -12,23 +12,18 @@ namespace MoLibrary.DomainDrivenDesign;
 /// Base class for application services, providing common properties and methods.
 /// </summary>
 public abstract class MoApplicationService :
-    IMoServiceProviderInjector, IMoApplicationService,
+    ICachedServiceProviderInjector, IMoApplicationService,
     ITransientDependency
 {
     /// <summary>
+    /// Gets or sets the lazy service provider.
+    /// </summary>
+    public ICachedServiceProvider ServiceProvider { get; set; } = null!;
+
+    /// <summary>
     /// Gets the object mapper.
     /// </summary>
-    public IMoMapper ObjectMapper => MoProvider.ServiceProvider.GetRequiredService<IMoMapper>();
-
-    /// <summary>
-    /// Gets or sets the service provider.
-    /// </summary>
-    public IMoServiceProvider MoProvider { get; set; }
-
-    /// <summary>
-    /// Gets the service provider.
-    /// </summary>
-    public IServiceProvider ServiceProvider => MoProvider.ServiceProvider;
+    protected IMoMapper ObjectMapper => ServiceProvider.GetRequiredService<IMoMapper>();
 }
 
 /// <summary>

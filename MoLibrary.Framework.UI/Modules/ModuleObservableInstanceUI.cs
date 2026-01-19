@@ -33,9 +33,9 @@ public static class ModuleObservableInstanceUIBuilderExtensions
 public class ModuleObservableInstanceUI(ModuleObservableInstanceUIOption option)
     : MoModuleWithDependencies<ModuleObservableInstanceUI, ModuleObservableInstanceUIOption, ModuleObservableInstanceUIGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.ObservableInstanceUI;
+        return EMoModuleKey.ObservableInstanceUI;
     }
 
     public override void ConfigureServices(IServiceCollection services)
@@ -57,9 +57,9 @@ public class ModuleObservableInstanceUI(ModuleObservableInstanceUIOption option)
                     UIObservableInstancePage.PAGE_URL,
                     "Observable Instance",
                     Icons.Material.Filled.Inventory,
-                    "系统管理",
+                    "调试",
                     addToNav: true,
-                    navOrder: 140));
+                    navOrder: 50));
         }
     }
 

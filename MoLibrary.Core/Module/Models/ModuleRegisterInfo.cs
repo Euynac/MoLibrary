@@ -54,6 +54,11 @@ public class ModuleRegisterInfo(Type moduleType)
     public List<string> RequiredConfigMethodKeys { get; set; } = [];
 
     /// <summary>
+    /// 模块注册的 Keyed 服务键集合，用于后续发现模块提供的 Keyed 服务。
+    /// </summary>
+    public HashSet<string> KeyedServiceKeys { get; } = [];
+
+    /// <summary>
     /// 模块单例，初始化模块配置阶段设置
     /// </summary>
     public MoModule? ModuleSingleton { get; internal set; }
@@ -157,10 +162,10 @@ public class ModuleRegisterInfo(Type moduleType)
     /// <typeparam name="TOption">模块选项类型。</typeparam>
     /// <param name="order">配置操作执行顺序。</param>
     /// <param name="optionAction">配置操作委托。</param>
-    /// <param name="guideFrom"></param>
+    /// <param name="guideFrom">配置来源模块。null 表示开发者直接配置。</param>
     /// <param name="key"></param>
     /// <param name="secondKey"></param>
-    public void AddConfigureAction<TOption>(int order, Action<TOption> optionAction, EMoModules? guideFrom,
+    public void AddConfigureAction<TOption>(int order, Action<TOption> optionAction, ModuleKey? guideFrom,
         string? secondKey, string key) where TOption : class, IMoModuleOptionBase, new()
     {
         RegisterRequests.Add(
@@ -171,7 +176,7 @@ public class ModuleRegisterInfo(Type moduleType)
                     context.Services!.Configure(optionAction);
                 },
                 RequestMethod = EMoModuleConfigMethods.ConfigureServices,
-                Order = guideFrom != EMoModules.Developer ? order - 1 : order, //来自模块级联注册的Option的优先级始终比用户Order低1
+                Order = guideFrom != null ? order - 1 : order, //来自模块级联注册的Option的优先级始终比用户Order低1
                 RequestFrom = guideFrom,
                 SourceDesc = $"ConfigOption<{typeof(TOption).Name}>"
             });

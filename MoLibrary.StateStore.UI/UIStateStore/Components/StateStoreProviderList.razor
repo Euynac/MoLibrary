@@ -1,0 +1,61 @@
+@using MoLibrary.StateStore.UI.Models
+
+<MudGrid>
+    <MudItem xs="12">
+        <div class="d-flex justify-space-between align-center mb-4">
+            <MudText Typo="Typo.h6">已注册的 StateStore Provider</MudText>
+            <MudButton Variant="Variant.Outlined"
+                       StartIcon="@Icons.Material.Filled.Refresh"
+                       OnClick="OnRefresh"
+                       Disabled="IsLoading">
+                刷新
+            </MudButton>
+        </div>
+    </MudItem>
+
+    @if (IsLoading)
+    {
+        <MudItem xs="12">
+            <div class="d-flex justify-center pa-4">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            </div>
+        </MudItem>
+    }
+    else if (!Providers.Any())
+    {
+        <MudItem xs="12">
+            <MudAlert Severity="Severity.Info">
+                未发现已注册的 StateStore Provider
+            </MudAlert>
+        </MudItem>
+    }
+    else
+    {
+        @foreach (var provider in Providers)
+        {
+            <MudItem xs="12" md="6" lg="4">
+                <StateStoreProviderCard Provider="provider"
+                                       OnViewDetailsClicked="HandleViewDetails" />
+            </MudItem>
+        }
+    }
+</MudGrid>
+
+<!-- Provider 详情对话框 -->
+<StateStoreProviderDetailDialog @bind-IsVisible="_showProviderDetail"
+                               Provider="_selectedProvider" />
+
+@code {
+    [Parameter] public List<StateStoreProviderInfo> Providers { get; set; } = [];
+    [Parameter] public EventCallback OnRefresh { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+
+    private bool _showProviderDetail;
+    private StateStoreProviderInfo? _selectedProvider;
+
+    private void HandleViewDetails(StateStoreProviderInfo provider)
+    {
+        _selectedProvider = provider;
+        _showProviderDetail = true;
+    }
+}

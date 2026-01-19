@@ -48,9 +48,9 @@ public class ModuleControllers(ModuleControllersOption option)
         }
     }
 
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.Controllers;
+        return EMoModuleKey.Controllers;
     }
 }
 

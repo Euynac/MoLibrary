@@ -1,7 +1,5 @@
 using System.Reflection;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Extensions.DependencyInjection;
-using MoLibrary.DependencyInjection.DynamicProxy;
 
 namespace MoLibrary.Authority.Implements.Authorization;
 
@@ -10,24 +8,6 @@ namespace MoLibrary.Authority.Implements.Authorization;
 /// </summary>
 public static class AuthorizationInterceptorRegistrar
 {
-    [Obsolete("使用模块")]
-    public static void AddAuthorizationInterceptor(this IServiceCollection services)
-    {
-        services.AddMoInterceptor<AuthorizationInterceptor>().CreateProxyWhenSatisfy((descriptor) =>
-        {
-            if (ShouldIntercept(descriptor.ImplementationType))
-            {
-                //TODO 支持对Controller、OurCRUD进行权限验证
-                //TODO 输出日志
-                //GlobalLog.LogInformation("注入权限验证：{name}", descriptor.ImplementationType.Name);
-                return true;
-            }
-
-            return false;
-        });
-
-    }
-
     public static bool ShouldIntercept(Type type)
     {
         return type.IsDefined(typeof(AuthorizeAttribute), true) || AnyMethodHasAuthorizeAttribute(type);

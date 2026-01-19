@@ -25,9 +25,9 @@ public static class ModuleTimekeeperBuilderExtensions
 public class ModuleTimekeeper(ModuleTimekeeperOption option)
     : MoModule<ModuleTimekeeper, ModuleTimekeeperOption, ModuleTimekeeperGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.Timekeeper;
+        return EMoModuleKey.Timekeeper;
     }
 
     public override void ConfigureServices(IServiceCollection services)

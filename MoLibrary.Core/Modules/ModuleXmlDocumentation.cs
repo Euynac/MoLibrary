@@ -24,9 +24,9 @@ public class ModuleXmlDocumentation(ModuleXmlDocumentationOption option)
     : MoModule<ModuleXmlDocumentation, ModuleXmlDocumentationOption, ModuleXmlDocumentationGuide>(option)
 {
     public static IXmlDocumentationService? Singleton { get; private set; }
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.XmlDocumentation;
+        return EMoModuleKey.XmlDocumentation;
     }
 
     /// <summary>

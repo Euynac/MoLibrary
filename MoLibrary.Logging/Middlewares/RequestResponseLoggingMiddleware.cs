@@ -7,37 +7,6 @@ using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.Logging.Middlewares;
 
-
-public static class MiddlewareExtensions
-{
-    public static void AddRequestResponseLogging(this IServiceCollection services)
-    {
-        services.AddTransient<RequestLoggingMiddleware>();
-        services.AddTransient<ResponseLoggingMiddleware>();
-    }
-    /// <summary>
-    ///  注册请求响应日志中间件
-    ///  </summary>
-    ///  <param name="builder"></param>
-    /// <param name="disableResponse"></param>
-    /// <param name="disableRequest"></param>
-    /// <returns></returns>
-    public static void UseRequestResponseLogging(this IApplicationBuilder builder, bool disableResponse = false, bool disableRequest = false)
-    {
-        if (!disableRequest)
-        {
-            builder.UseMiddleware<RequestLoggingMiddleware>();
-        }
-
-        if (!disableResponse)
-        {
-            builder.UseMiddleware<ResponseLoggingMiddleware>();
-        }
-
-        //builder.UseHttpLogging(); //asp.net 8后启用
-    }
-}
-
 /// <summary>
 /// Middleware for logging request body and query string
 /// </summary>
@@ -103,8 +72,18 @@ internal sealed class RequestLoggingMiddleware : IMiddleware
 /// </summary>
 internal sealed class ResponseLoggingMiddleware : IMiddleware
 {
+    private const int MaxResponseSizeForLogging = 1024 * 1024; // 1MB
+    private const int LogDisplayLimit = 3072;
+
     public async Task InvokeAsync(HttpContext context, RequestDelegate next)
     {
+        // Pre-check: Skip response logging for known file download paths
+        if (ShouldSkipByPath(context.Request.Path.Value))
+        {
+            await next(context);
+            return;
+        }
+
         var originalBodyStream = context.Response.Body;
 
         try
@@ -116,6 +95,18 @@ internal sealed class ResponseLoggingMiddleware : IMiddleware
             // Hand over to the next middleware and wait for the call to return
             await next(context);
 
+            // Post-check: Skip logging for file downloads or large responses
+            if (IsFileDownloadResponse(context) || memoryStream.Length > MaxResponseSizeForLogging)
+            {
+                // Skip logging but still copy the response to the client
+                memoryStream.Position = 0;
+                await memoryStream.CopyToAsync(originalBodyStream);
+
+                var logger = context.RequestServices.GetRequiredService<ILogger<ResponseLoggingMiddleware>>();
+                logger.LogDebug("[Response] {StatusCode} {ContentType} - Skipped logging (file download or large response: {Size} bytes)",
+                    context.Response.StatusCode, context.Response.ContentType, memoryStream.Length);
+                return;
+            }
 
             // Log response body
             var sb = new StringBuilder();
@@ -123,42 +114,53 @@ internal sealed class ResponseLoggingMiddleware : IMiddleware
             sb.AppendLine($"[Body]");
             // Read response body from memory stream
             memoryStream.Position = 0;
-            //var reader = new StreamReader(memoryStream);
             using var reader = new StreamReader(
                 memoryStream,
                 Encoding.UTF8,
                 detectEncodingFromByteOrderMarks: false,
                 bufferSize: 512, leaveOpen: true);
-            var limit = 3072;
-            //if stream length greater than limit, only read part of it
-            if (context.Response.ContentLength > limit)
+
+            // If stream length greater than limit, only read part of it
+            if (context.Response.ContentLength > LogDisplayLimit)
             {
-                var buffer = new char[limit];
-                await reader.ReadAsync(buffer, 0, limit);
+                var buffer = new char[LogDisplayLimit];
+                await reader.ReadAsync(buffer, 0, LogDisplayLimit);
                 var responseBody = new string(buffer);
-                context.Request.Body.Position = 0;
-                sb.AppendLine($"[Too large to display, only read part of it: {limit}/{context.Request.ContentLength}]\n{responseBody}");
-                
+                memoryStream.Position = 0;
+                sb.AppendLine($"[Too large to display, only read part of it: {LogDisplayLimit}/{context.Response.ContentLength}]\n{responseBody}");
             }
             else
             {
-                var requestBody = await reader.ReadToEndAsync();
-                sb.AppendLine(requestBody);
+                var responseBody = await reader.ReadToEndAsync();
+                sb.AppendLine(responseBody);
             }
-
-           
 
             // Copy body back to so its available to the user agent
             memoryStream.Position = 0;
             await memoryStream.CopyToAsync(originalBodyStream);
 
-         
-            var logger = context.RequestServices.GetRequiredService<ILogger<ResponseLoggingMiddleware>>();
-            logger.LogDebug(sb.ToString());
+            var loggerInstance = context.RequestServices.GetRequiredService<ILogger<ResponseLoggingMiddleware>>();
+            loggerInstance.LogDebug(sb.ToString());
         }
         finally
         {
             context.Response.Body = originalBodyStream;
         }
+    }
+
+    private static bool ShouldSkipByPath(string? path)
+    {
+        if (string.IsNullOrEmpty(path)) return false;
+
+        // Skip logging for file download endpoints
+        return path.StartsWith("/logging-ui/files/", StringComparison.OrdinalIgnoreCase) ||
+               path.StartsWith("/logging-ui/current/export", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsFileDownloadResponse(HttpContext context)
+    {
+        var contentDisposition = context.Response.Headers.ContentDisposition.ToString();
+        return !string.IsNullOrEmpty(contentDisposition) &&
+               contentDisposition.Contains("attachment", StringComparison.OrdinalIgnoreCase);
     }
 }

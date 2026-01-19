@@ -23,9 +23,9 @@ public static class ModuleDaprLockerBuilderExtensions
 public class ModuleDaprLocker(ModuleDaprLockerOption option)
     : MoModuleWithDependencies<ModuleDaprLocker, ModuleDaprLockerOption, ModuleDaprLockerGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.DaprLocker;
+        return EMoModuleKey.DaprLocker;
     }
 
     public override void ConfigureServices(IServiceCollection services)

@@ -10,6 +10,7 @@ using MoLibrary.Core.Modules;
 using MoLibrary.Dapr.EventBus;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.EventBus.Modules;
+using MoLibrary.EventBus.Providers;
 
 namespace MoLibrary.Dapr.Modules;
 
@@ -27,12 +28,32 @@ public static class ModuleDaprEventBusBuilderExtensions
 }
 
 public class ModuleDaprEventBus(ModuleDaprEventBusOption option)
-    : MoModuleWithDependencies<ModuleDaprEventBus, ModuleDaprEventBusOption, ModuleDaprEventBusGuide>(option)
+    : MoModuleWithDependencies<ModuleDaprEventBus, ModuleDaprEventBusOption, ModuleDaprEventBusGuide>(option),
+      IEventBusModuleProvider
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.DaprEventBus;
+        return EMoModuleKey.DaprEventBus;
     }
+
+    #region IEventBusModuleProvider
+
+    /// <inheritdoc />
+    public ModuleKey ProvidesFor => EMoModuleKey.EventBus;
+
+    /// <inheritdoc />
+    public EEventBusProviderType ProviderType => EEventBusProviderType.Dapr;
+
+    /// <inheritdoc />
+    public EEventBusCapabilities Capabilities =>
+        EEventBusCapabilities.BulkPublish |
+        EEventBusCapabilities.Streaming |
+        EEventBusCapabilities.DeadLetterQueue;
+
+    /// <inheritdoc />
+    public string DisplayName => "Dapr";
+
+    #endregion
 
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -80,6 +101,7 @@ public class ModuleDaprEventBusGuide : MoModuleGuide<ModuleDaprEventBus, ModuleD
             });
         }, secondKey: key);
 
+        RecordKeyedServiceKey(key);
         return this;
     }
 }

@@ -13,16 +13,15 @@ using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.RegisterCentre.Modules;
-using MoLibrary.RegisterCentre.ServiceInvocation.Modules;
 
 namespace MoLibrary.Configuration.UI.Modules;
 
 public class ModuleConfigurationDashboard(ModuleConfigurationDashboardOption option)
     : MoModuleWithDependencies<ModuleConfigurationDashboard, ModuleConfigurationDashboardOption, ModuleConfigurationDashboardGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.ConfigurationDashboard;
+        return EMoModuleKey.ConfigurationDashboard;
     }
 
     public override void ClaimDependencies()

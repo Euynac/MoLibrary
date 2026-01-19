@@ -1,8 +1,11 @@
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.ControlPlane;
 using MoLibrary.JobScheduler.Metadata;
 using MoLibrary.JobScheduler.Models;
+using MoLibrary.JobScheduler.Modules;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.JobScheduler.Api;
@@ -21,6 +24,7 @@ public class JobSchedulerApiService(
     IJobCancellationTokenManager jobCancellationManager,
     JobInstanceManager jobInstanceManager,
     JobDispatcher jobDispatcher,
+    IOptions<ModuleJobSchedulerOption> options,
     ILogger<JobSchedulerApiService> logger)
 {
     /// <summary>
@@ -59,18 +63,23 @@ public class JobSchedulerApiService(
                 return Res.Fail($"Job {jobKey} not found");
             }
             
-            // Create instance via JobInstanceManager
+            // Serialize job arguments
+            var jobArgsJson = jobArgs != null
+                ? JsonSerializer.Serialize(jobArgs, options.Value.JobArgsSerializerOptions)
+                : null;
+
+            // Create instance via JobInstanceManager (pass original object for serialization)
             var instance = await jobInstanceManager.CreateInstanceAsync(
                 definition,
                 jobArgs,
                 JobState.Enqueued,
                 cancellationToken);
 
-            // Publish to event bus for worker pickup via JobDispatcher
+            // Publish to event bus for worker pickup via JobDispatcher (pass pre-serialized JSON)
             await jobDispatcher.PublishJobExecutionEventAsync(
                 instance,
                 definition,
-                jobArgs,
+                jobArgsJson,
                 cancellationToken);
 
             logger.LogInformation(

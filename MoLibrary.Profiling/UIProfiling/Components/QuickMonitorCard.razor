@@ -1,0 +1,151 @@
+@* 快速监控指标卡片 - 显示6个关键指标 *@
+<MudGrid Spacing="3">
+    @* CPU 使用率 *@
+    <MudItem xs="12" sm="6" md="4">
+        <MudPaper Class="pa-4" Elevation="2">
+            <div class="d-flex justify-space-between align-center">
+                <div>
+                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">CPU 使用率</MudText>
+                    <MudText Typo="Typo.h5" Color="@GetCpuColor(DataPoint?.CpuUsagePercent ?? 0)">
+                        @(IsLoading ? "..." : $"{DataPoint?.CpuUsagePercent ?? 0:F1}%")
+                    </MudText>
+                </div>
+                <MudIcon Icon="@Icons.Material.Filled.Speed" Color="@GetCpuColor(DataPoint?.CpuUsagePercent ?? 0)" Size="Size.Large"/>
+            </div>
+            <MudProgressLinear Color="@GetCpuColor(DataPoint?.CpuUsagePercent ?? 0)"
+                               Value="@(DataPoint?.CpuUsagePercent ?? 0)"
+                               Class="mt-2"
+                               Rounded="true"/>
+        </MudPaper>
+    </MudItem>
+
+    @* 工作集 *@
+    <MudItem xs="12" sm="6" md="4">
+        <MudPaper Class="pa-4" Elevation="2">
+            <div class="d-flex justify-space-between align-center">
+                <div>
+                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">工作集</MudText>
+                    <MudText Typo="Typo.h5" Color="Color.Primary">
+                        @(IsLoading ? "..." : $"{DataPoint?.WorkingSetMB ?? 0:F1} MB")
+                    </MudText>
+                </div>
+                <MudIcon Icon="@Icons.Material.Filled.Storage" Color="Color.Primary" Size="Size.Large"/>
+            </div>
+            @if (PreviousDataPoint != null && DataPoint != null)
+            {
+                var delta = DataPoint.WorkingSetMB - PreviousDataPoint.WorkingSetMB;
+                <div class="d-flex align-center mt-2">
+                    <MudIcon Icon="@(delta >= 0 ? Icons.Material.Filled.TrendingUp : Icons.Material.Filled.TrendingDown)"
+                             Color="@(delta >= 0 ? Color.Warning : Color.Success)"
+                             Size="Size.Small"/>
+                    <MudText Typo="Typo.caption" Color="@(delta >= 0 ? Color.Warning : Color.Success)" Class="ml-1">
+                        @(delta >= 0 ? "+" : "")@delta.ToString("F1") MB
+                    </MudText>
+                </div>
+            }
+        </MudPaper>
+    </MudItem>
+
+    @* 线程数 *@
+    <MudItem xs="12" sm="6" md="4">
+        <MudPaper Class="pa-4" Elevation="2">
+            <div class="d-flex justify-space-between align-center">
+                <div>
+                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">线程数</MudText>
+                    <MudText Typo="Typo.h5" Color="Color.Info">
+                        @(IsLoading ? "..." : (DataPoint?.ThreadCount ?? 0).ToString())
+                    </MudText>
+                </div>
+                <MudIcon Icon="@Icons.Material.Filled.AccountTree" Color="Color.Info" Size="Size.Large"/>
+            </div>
+        </MudPaper>
+    </MudItem>
+
+    @* GC 时间占比 *@
+    <MudItem xs="12" sm="6" md="4">
+        <MudPaper Class="pa-4" Elevation="2">
+            <div class="d-flex justify-space-between align-center">
+                <div>
+                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">GC 时间 %</MudText>
+                    <MudText Typo="Typo.h5" Color="@GetGcTimeColor(DataPoint?.TimeInGcPercent ?? 0)">
+                        @(IsLoading ? "..." : $"{DataPoint?.TimeInGcPercent ?? 0:F1}%")
+                    </MudText>
+                </div>
+                <MudIcon Icon="@Icons.Material.Filled.CleaningServices" Color="@GetGcTimeColor(DataPoint?.TimeInGcPercent ?? 0)" Size="Size.Large"/>
+            </div>
+            <MudProgressLinear Color="@GetGcTimeColor(DataPoint?.TimeInGcPercent ?? 0)"
+                               Value="@Math.Min(DataPoint?.TimeInGcPercent ?? 0, 100)"
+                               Class="mt-2"
+                               Rounded="true"/>
+        </MudPaper>
+    </MudItem>
+
+    @* 分配速率 *@
+    <MudItem xs="12" sm="6" md="4">
+        <MudPaper Class="pa-4" Elevation="2">
+            <div class="d-flex justify-space-between align-center">
+                <div>
+                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">分配速率</MudText>
+                    <MudText Typo="Typo.h5" Color="Color.Warning">
+                        @(IsLoading ? "..." : FormatBytesPerSec(DataPoint?.AllocationRateBps ?? 0))
+                    </MudText>
+                </div>
+                <MudIcon Icon="@Icons.Material.Filled.Speed" Color="Color.Warning" Size="Size.Large"/>
+            </div>
+        </MudPaper>
+    </MudItem>
+
+    @* GC 堆大小 *@
+    <MudItem xs="12" sm="6" md="4">
+        <MudPaper Class="pa-4" Elevation="2">
+            <div class="d-flex justify-space-between align-center">
+                <div>
+                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">GC 堆</MudText>
+                    <MudText Typo="Typo.h5" Color="Color.Success">
+                        @(IsLoading ? "..." : $"{DataPoint?.GcHeapSizeMB ?? 0:F1} MB")
+                    </MudText>
+                </div>
+                <MudIcon Icon="@Icons.Material.Filled.Memory" Color="Color.Success" Size="Size.Large"/>
+            </div>
+            @if (PreviousDataPoint != null && DataPoint != null)
+            {
+                var delta = DataPoint.GcHeapSizeMB - PreviousDataPoint.GcHeapSizeMB;
+                <div class="d-flex align-center mt-2">
+                    <MudIcon Icon="@(delta >= 0 ? Icons.Material.Filled.TrendingUp : Icons.Material.Filled.TrendingDown)"
+                             Color="@(delta >= 0 ? Color.Warning : Color.Success)"
+                             Size="Size.Small"/>
+                    <MudText Typo="Typo.caption" Color="@(delta >= 0 ? Color.Warning : Color.Success)" Class="ml-1">
+                        @(delta >= 0 ? "+" : "")@delta.ToString("F1") MB
+                    </MudText>
+                </div>
+            }
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter] public MemoryDataPoint? DataPoint { get; set; }
+    [Parameter] public MemoryDataPoint? PreviousDataPoint { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+
+    private static Color GetCpuColor(double cpuPercent)
+    {
+        if (cpuPercent < 50) return Color.Success;
+        if (cpuPercent < 80) return Color.Warning;
+        return Color.Error;
+    }
+
+    private static Color GetGcTimeColor(double gcTimePercent)
+    {
+        if (gcTimePercent < 5) return Color.Success;
+        if (gcTimePercent < 15) return Color.Warning;
+        return Color.Error;
+    }
+
+    private static string FormatBytesPerSec(double bytesPerSec)
+    {
+        if (bytesPerSec < 1024) return $"{bytesPerSec:F0} B/s";
+        if (bytesPerSec < 1024 * 1024) return $"{bytesPerSec / 1024:F1} KB/s";
+        return $"{bytesPerSec / 1024 / 1024:F1} MB/s";
+    }
+}

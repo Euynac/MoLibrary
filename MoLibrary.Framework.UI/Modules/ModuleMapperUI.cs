@@ -29,9 +29,9 @@ public static class ModuleMapperUIBuilderExtensions
 public class ModuleMapperUI(ModuleMapperUIOption option)
     : MoModuleWithDependencies<ModuleMapperUI, ModuleMapperUIOption, ModuleMapperUIGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.MapperUI;
+        return EMoModuleKey.MapperUI;
     }
 
     public override void ClaimDependencies()
@@ -42,12 +42,12 @@ public class ModuleMapperUI(ModuleMapperUIOption option)
             DependsOnModule<ModuleUICoreGuide>().Register()
                 .ConfigureModuleOption(o=>o.EnableMarkdown = true)
                 .RegisterUIComponents(p => p.RegisterComponent<UIMapperPage>(
-                    UIMapperPage.MAPPER_DEBUG_URL, 
-                    "Mapper调试", 
-                    Icons.Material.Filled.Code, 
-                    "系统管理", 
-                    addToNav: true, 
-                    navOrder: 90));
+                    UIMapperPage.MAPPER_DEBUG_URL,
+                    "Mapper调试",
+                    Icons.Material.Filled.Code,
+                    "调试",
+                    addToNav: true,
+                    navOrder: 10));
         }
     }
 }

@@ -254,7 +254,7 @@ public static class ModuleProfiler
     /// <returns>The ModuleProfileInfo for the specified module type, or null if not found.</returns>
     public static ModuleProfileInfo? GetModuleProfile(Type moduleType)
     {
-        return ModuleProfiles.TryGetValue(moduleType, out var profile) ? profile : null;
+        return ModuleProfiles.GetValueOrDefault(moduleType);
     }
 
     /// <summary>

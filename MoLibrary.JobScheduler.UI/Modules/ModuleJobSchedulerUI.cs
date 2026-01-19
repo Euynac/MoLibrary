@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
@@ -35,9 +36,9 @@ public static class ModuleJobSchedulerUIBuilderExtensions
 public class ModuleJobSchedulerUI(ModuleJobSchedulerUIOption option)
     : MoModuleWithDependencies<ModuleJobSchedulerUI, ModuleJobSchedulerUIOption, ModuleJobSchedulerUIGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.JobSchedulerUI;
+        return EMoModuleKey.JobSchedulerUI;
     }
 
     public override void ConfigureServices(IServiceCollection services)
@@ -50,6 +51,12 @@ public class ModuleJobSchedulerUI(ModuleJobSchedulerUIOption option)
         services.AddSingleton<JobStateColorService>();
         services.AddSingleton<CronExpressionService>();
         services.AddSingleton<JobArgsSchemaService>();
+
+        // 注册仪表盘、监控、分析服务
+        services.AddSingleton<DashboardDataLoader>();
+        services.AddSingleton<JobDashboardService>();
+        services.AddSingleton<JobMonitorService>();
+        services.AddSingleton<JobAnalyticsService>();
 
         // 注册 Scoped 门面服务（Blazor Circuit）
         services.AddScoped<JobSchedulerUIService>();
@@ -70,21 +77,49 @@ public class ModuleJobSchedulerUI(ModuleJobSchedulerUIOption option)
             DependsOnModule<ModuleUICoreGuide>().Register()
                 .RegisterUIComponents(p =>
                 {
+                    // 总览仪表盘
+                    p.RegisterComponent<DashboardPage>(
+                        DashboardPage.PAGE_URL,
+                        "总览",
+                        Icons.Material.Filled.Dashboard,
+                        "任务调度",
+                        addToNav: true,
+                        navOrder: 99,
+                        navLinkMatch: NavLinkMatch.All);
+
+                    // 实时监控
+                    p.RegisterComponent<MonitorPage>(
+                        MonitorPage.PAGE_URL,
+                        "实时监控",
+                        Icons.Material.Filled.Monitor,
+                        "任务调度",
+                        addToNav: true,
+                        navOrder: 100);
+
                     p.RegisterComponent<JobDefinitionsPage>(
                         JobDefinitionsPage.PAGE_URL,
                         "任务定义",
                         Icons.Material.Filled.WorkOutline,
                         "任务调度",
                         addToNav: true,
-                        navOrder: 100);
-        
+                        navOrder: 101);
+
                     p.RegisterComponent<JobInstancesPage>(
                         JobInstancesPage.PAGE_URL,
                         "任务实例",
                         Icons.Material.Filled.PlaylistPlay,
                         "任务调度",
                         addToNav: true,
-                        navOrder: 101);
+                        navOrder: 102);
+
+                    // 统计分析
+                    p.RegisterComponent<StatisticsPage>(
+                        StatisticsPage.PAGE_URL,
+                        "统计分析",
+                        Icons.Material.Filled.Analytics,
+                        "任务调度",
+                        addToNav: true,
+                        navOrder: 103);
                 });
         }
     }

@@ -63,13 +63,9 @@
     private object? GetValue(string propertyName)
     {
         // 从解析出的实际值中获取指定属性的值（使用JSON对象的属性名）
-        if (currentValue.TryGetValue(propertyName, out var value))
-        {
-            return value;
-        }
-        
+        return currentValue.GetValueOrDefault(propertyName);
+
         // 如果当前值中没有该属性，返回null（BasicTypeEditor会处理默认值）
-        return null;
     }
 
     private async Task SetValue(string propertyName, object? value)

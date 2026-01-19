@@ -1,0 +1,132 @@
+@using MoLibrary.JobScheduler.UI.Models
+
+<div class="metrics-cards-wrapper">
+    <MudGrid Spacing="3">
+        <MudItem xs="12" sm="6" md="3">
+            <div class="metric-card-container">
+                <MudPaper Class="metric-card" Elevation="0">
+                    <div class="metric-icon total">
+                        <MudIcon Icon="@Icons.Material.Filled.WorkOutline" />
+                    </div>
+                    <div class="metric-content">
+                        <div class="metric-value">@TotalJobs</div>
+                        <div class="metric-label">任务总数</div>
+                        <div class="metric-detail">
+                            <span class="recurring">@RecurringJobCount 周期</span>
+                            <span class="separator">·</span>
+                            <span class="triggered">@TriggeredJobCount 触发</span>
+                        </div>
+                    </div>
+                </MudPaper>
+            </div>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <div class="metric-card-container">
+                <MudPaper Class="metric-card running" Elevation="0">
+                    <div class="metric-icon running">
+                        <MudIcon Icon="@Icons.Material.Filled.PlayCircleFilled" />
+                    </div>
+                    <div class="metric-content">
+                        <div class="metric-value">@RunningNow</div>
+                        <div class="metric-label">正在运行</div>
+                        <div class="metric-detail">
+                            <span class="disabled">@DisabledJobCount 已禁用</span>
+                        </div>
+                    </div>
+                </MudPaper>
+            </div>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <div class="metric-card-container">
+                <MudPaper Class="@GetSuccessRateCardClass()" Elevation="0">
+                    <div class="metric-icon @GetSuccessRateIconClass()">
+                        <MudIcon Icon="@GetSuccessRateIcon()" />
+                    </div>
+                    <div class="metric-content">
+                        <div class="metric-value">@SuccessRate.ToString("F1")%</div>
+                        <div class="metric-label">成功率</div>
+                        <div class="metric-detail">
+                            <span>@TimeWindowText</span>
+                        </div>
+                    </div>
+                </MudPaper>
+            </div>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <div class="metric-card-container">
+                <MudPaper Class="metric-card" Elevation="0">
+                    <div class="metric-icon throughput">
+                        <MudIcon Icon="@Icons.Material.Filled.Speed" />
+                    </div>
+                    <div class="metric-content">
+                        <div class="metric-value">@FormatThroughput(ThroughputPerHour)</div>
+                        <div class="metric-label">吞吐量</div>
+                        <div class="metric-detail">
+                            <span>每小时执行</span>
+                        </div>
+                    </div>
+                </MudPaper>
+            </div>
+        </MudItem>
+    </MudGrid>
+</div>
+
+@code {
+    [Parameter]
+    public int TotalJobs { get; set; }
+
+    [Parameter]
+    public int RecurringJobCount { get; set; }
+
+    [Parameter]
+    public int TriggeredJobCount { get; set; }
+
+    [Parameter]
+    public int DisabledJobCount { get; set; }
+
+    [Parameter]
+    public int RunningNow { get; set; }
+
+    [Parameter]
+    public double SuccessRate { get; set; }
+
+    [Parameter]
+    public int ThroughputPerHour { get; set; }
+
+    [Parameter]
+    public string TimeWindowText { get; set; } = "最近30天";
+
+    private string GetSuccessRateCardClass()
+    {
+        var baseClass = "metric-card";
+        if (SuccessRate >= 95)
+            return $"{baseClass} success-high";
+        if (SuccessRate >= 80)
+            return $"{baseClass} success-medium";
+        return $"{baseClass} success-low";
+    }
+
+    private string GetSuccessRateIconClass()
+    {
+        if (SuccessRate >= 95) return "success";
+        if (SuccessRate >= 80) return "warning";
+        return "error";
+    }
+
+    private string GetSuccessRateIcon()
+    {
+        if (SuccessRate >= 95) return Icons.Material.Filled.CheckCircle;
+        if (SuccessRate >= 80) return Icons.Material.Filled.Warning;
+        return Icons.Material.Filled.Error;
+    }
+
+    private static string FormatThroughput(int value)
+    {
+        if (value >= 1000)
+            return $"{value / 1000.0:F1}k";
+        return value.ToString();
+    }
+}

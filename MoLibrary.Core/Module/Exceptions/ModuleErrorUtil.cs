@@ -89,20 +89,20 @@ public static class ModuleErrorUtil
         if (ModuleAnalyser.HasCircularDependencies())
         {
             // Find modules involved in cycles
-            foreach (var module in Enum.GetValues(typeof(EMoModules)).Cast<EMoModules>())
+            foreach (var moduleKey in ModuleAnalyser.ModuleKeyToTypeDict.Keys)
             {
-                var dependencyInfo = ModuleAnalyser.GetModuleDependencyInfo(module);
-                
+                var dependencyInfo = ModuleAnalyser.GetModuleDependencyInfo(moduleKey);
+
                 if (dependencyInfo.IsPartOfCycle)
                 {
-                    // Get module type from enum using the direct mapping
-                    if (!ModuleAnalyser.ModuleEnumToTypeDict.TryGetValue(module, out var moduleType) || moduleType == null)
+                    // Get module type from key using the direct mapping
+                    if (!ModuleAnalyser.ModuleKeyToTypeDict.TryGetValue(moduleKey, out var moduleType) || moduleType == null)
                         continue;
-                    
+
                     ModuleRegisterErrors.Add(new ModuleRegisterError
                     {
                         ModuleType = moduleType,
-                        ErrorMessage = $"Module is part of a circular dependency chain: {string.Join(" → ", dependencyInfo.CyclePath)} → {module}",
+                        ErrorMessage = $"Module is part of a circular dependency chain: {string.Join(" → ", dependencyInfo.CyclePath)} → {moduleKey}",
                         ErrorType = ModuleRegisterErrorType.CircularDependency,
                         DependencyInfo = dependencyInfo
                     });

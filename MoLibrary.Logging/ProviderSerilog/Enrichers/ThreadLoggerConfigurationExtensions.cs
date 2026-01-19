@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Serilog;
 using Serilog.Configuration;
 
@@ -33,5 +34,22 @@ public static class ThreadLoggerConfigurationExtensions
     {
         if (enrichmentConfiguration == null) throw new ArgumentNullException(nameof(enrichmentConfiguration));
         return enrichmentConfiguration.With<ThreadNameEnricher>();
+    }
+
+    /// <summary>
+    /// Enrich log events with a TraceId property containing the <see cref="Activity.Current"/> <see cref="Activity.TraceId"/>
+    /// </summary>
+    /// <param name="enrichmentConfiguration"></param>
+    /// <returns>Configuration object allowing method chaining.</returns>
+    /// <exception cref="ArgumentNullException">If <paramref name="enrichmentConfiguration"/> is null.</exception>
+    public static LoggerConfiguration WithTraceId(
+        this LoggerEnrichmentConfiguration enrichmentConfiguration)
+    {
+        if (enrichmentConfiguration == null)
+        {
+            throw new ArgumentException(nameof(enrichmentConfiguration));
+        }
+
+        return enrichmentConfiguration.With<TraceIdEnricher>();
     }
 }

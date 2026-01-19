@@ -1,10 +1,12 @@
 using System.Reflection;
+using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Cronos;
 using MoLibrary.Core.Module;
+using MoLibrary.JobScheduler.Helpers;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.Core.Modules;
@@ -47,7 +49,7 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
 {
     private readonly List<JobDefinition> _jobDefinitions = [];
 
-    public override EMoModules CurModuleEnum() => EMoModules.JobScheduler;
+    public override ModuleKey GetModuleKey() => EMoModuleKey.JobScheduler;
 
     /// <summary>
     /// Iterates through business types to discover and collect job types.
@@ -110,17 +112,11 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
 
         Logger.LogInformation("Discovered {Count} job type(s) for registration", _jobDefinitions.Count);
 
-        if (_jobDefinitions.Count == 0)
-        {
-            Logger.LogInformation("No jobs discovered. Job scheduler will run without any registered jobs.");
-            return;
-        }
+        // Register health check for monitoring initialization status (always register regardless of job count)
+        services.AddHealthChecks()
+            .AddCheck<JobSchedulerHealthCheck>("JobScheduler", tags: ["ready", "scheduler"]);
 
-       
-        services.AddHostedService<JobRegistrationHostedService>(provider => ActivatorUtilities.CreateInstance<JobRegistrationHostedService>(provider, _jobDefinitions));
-
-        services.AddHostedService<JobWorkerManagerHostedService>(provider => ActivatorUtilities.CreateInstance<JobWorkerManagerHostedService>(provider, _jobDefinitions));
-
+        
         if (GetOptions<ModuleRegisterCentreOption>().IsCentreServer)
         {
             services.AddHostedService<JobSchedulerHostedService>();
@@ -167,12 +163,12 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
                 Logger.LogInformation("History cleanup disabled");
             }
         }
+       
+        services.AddHostedService<JobRegistrationHostedService>(provider => ActivatorUtilities.CreateInstance<JobRegistrationHostedService>(provider, _jobDefinitions));
 
-        // Register health check for monitoring initialization status
-        services.AddHealthChecks()
-            .AddCheck<JobSchedulerHealthCheck>("job-scheduler", tags: ["ready", "scheduler"]);
+        services.AddHostedService<JobWorkerManagerHostedService>(provider => ActivatorUtilities.CreateInstance<JobWorkerManagerHostedService>(provider, _jobDefinitions));
     }
-    
+
     /// <summary>
     /// Extracts JobDefinition from a job type using reflection and JobConfigAttribute.
     /// </summary>
@@ -194,7 +190,7 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
             MaxExecutionTimeout = attribute?.MaxExecutionTimeout ?? TimeSpan.FromHours(1),
             IsDisabled = attribute?.IsDisabledBridge ?? false,
             JobClrType = jobType,
-            FromProject = Assembly.GetEntryAssembly()?.GetName().Name ?? throw new InvalidOperationException("Entry assembly must have name for getting job source project.")
+            FromProject = Option.ProjectName
         };
 
         // Extract recurring job specific properties
@@ -209,7 +205,7 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
             {
                 try
                 {
-                    CronExpression.Parse(definition.CronExpression, CronFormat.IncludeSeconds);
+                    CronHelper.Parse(definition.CronExpression);
                 }
                 catch (Exception ex)
                 {
@@ -314,6 +310,13 @@ public class ModuleJobSchedulerGuide
 public class ModuleJobSchedulerOption : MoModuleOption<ModuleJobScheduler>
 {
     /// <summary>
+    /// The project name used for job reconciliation and identification.
+    /// Default: Entry Assembly Name.
+    /// </summary>
+    public string ProjectName { get; set; } = Assembly.GetEntryAssembly()?.GetName().Name
+        ?? throw new InvalidOperationException("Entry assembly must have name for project identification.");
+
+    /// <summary>
     /// Disables automatic recurring job scheduling when enabled.
     /// Jobs can still be triggered manually via the API. Default: false.
     /// </summary>
@@ -331,17 +334,8 @@ public class ModuleJobSchedulerOption : MoModuleOption<ModuleJobScheduler>
     /// </summary>
     public int? MaxWorkerExecutionThreads { get; set; } = null;
 
-    /// <summary>
-    /// Maximum time to wait for RegisterCentre registration before starting scheduler services.
-    /// Default: 5 minutes.
-    /// </summary>
-    public TimeSpan RegistrationWaitTimeout { get; set; } = TimeSpan.FromMinutes(5);
 
-    /// <summary>
-    /// Skips waiting for RegisterCentre registration when enabled.
-    /// Useful for development and standalone mode. Default: false.
-    /// </summary>
-    public bool SkipRegistrationWait { get; set; } = false;
+   
 
     /// <summary>
     /// Enables periodic scanning for stuck jobs in Processing or Enqueued states.
@@ -411,4 +405,10 @@ public class ModuleJobSchedulerOption : MoModuleOption<ModuleJobScheduler>
     /// Orphaned instances are those without matching active job definitions. Default: 10 (0 for unlimited).
     /// </summary>
     public int MaxRetainedOrphanedInstances { get; set; } = 10;
+
+    /// <summary>
+    /// JSON serializer options used for serializing and deserializing job arguments.
+    /// Default: null (uses System.Text.Json defaults).
+    /// </summary>
+    public JsonSerializerOptions? JobArgsSerializerOptions { get; set; }
 }

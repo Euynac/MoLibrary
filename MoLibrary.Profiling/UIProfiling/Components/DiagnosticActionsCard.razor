@@ -1,0 +1,148 @@
+<MudGrid Spacing="3">
+    @* 强制 GC *@
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.CleaningServices" Class="mr-2"/>
+                强制垃圾回收
+            </MudText>
+            @if (Options?.AllowManualGC == true)
+            {
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+                手动触发垃圾回收可以帮助分析内存是否能够被正常回收。
+                注意：这会暂停应用程序，请谨慎使用。
+            </MudText>
+            <MudStack Spacing="2">
+                <MudButtonGroup Variant="Variant.Outlined" Color="Color.Primary">
+                    <MudButton OnClick="@(() => OnForceGC.InvokeAsync(0))"
+                               Disabled="IsLoading"
+                               StartIcon="@Icons.Material.Filled.LooksOne">
+                        Gen 0
+                    </MudButton>
+                    <MudButton OnClick="@(() => OnForceGC.InvokeAsync(1))"
+                               Disabled="IsLoading"
+                               StartIcon="@Icons.Material.Filled.LooksTwo">
+                        Gen 1
+                    </MudButton>
+                    <MudButton OnClick="@(() => OnForceGC.InvokeAsync(2))"
+                               Disabled="IsLoading"
+                               StartIcon="@Icons.Material.Filled.Looks3">
+                        Gen 2
+                    </MudButton>
+                </MudButtonGroup>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Warning"
+                           OnClick="@(() => OnForceGC.InvokeAsync(-1))"
+                           Disabled="IsLoading"
+                           StartIcon="@Icons.Material.Filled.DeleteSweep"
+                           FullWidth="true">
+                    完整 GC (所有代)
+                </MudButton>
+            </MudStack>
+            }
+            else
+            {
+            <MudAlert Severity="Severity.Warning">手动 GC 已被配置禁用</MudAlert>
+            }
+        </MudPaper>
+    </MudItem>
+
+    @* GC Dump *@
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Download" Class="mr-2"/>
+                创建 GC Dump
+            </MudText>
+            @if (Options?.AllowGcDump == true)
+            {
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+                创建 GC Dump 文件用于离线分析。可以使用 Visual Studio 或 PerfView 打开分析。
+            </MudText>
+            <MudAlert Severity="Severity.Info" Class="mb-3">
+                需要安装 dotnet-gcdump 工具：<br/>
+                <code>dotnet tool install -g dotnet-gcdump</code>
+            </MudAlert>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       OnClick="OnCreateDump"
+                       Disabled="IsLoading"
+                       StartIcon="@Icons.Material.Filled.SaveAlt"
+                       FullWidth="true">
+                创建 GC Dump
+            </MudButton>
+            }
+            else
+            {
+            <MudAlert Severity="Severity.Warning">GC Dump 已被配置禁用</MudAlert>
+            }
+        </MudPaper>
+    </MudItem>
+
+    @* 内存分析提示 *@
+    <MudItem xs="12">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Lightbulb" Class="mr-2"/>
+                内存泄漏分析提示
+            </MudText>
+            <MudExpansionPanels>
+                <MudExpansionPanel Text="如何识别内存泄漏">
+                    <MudList T="string" Dense="true">
+                        <MudListItem Icon="@Icons.Material.Filled.TrendingUp">
+                            <strong>持续增长的堆大小</strong>：如果托管堆大小持续增长且不回落，可能存在内存泄漏
+                        </MudListItem>
+                        <MudListItem Icon="@Icons.Material.Filled.Warning">
+                            <strong>高 Gen 2 回收频率</strong>：频繁的 Gen 2 GC 表示有大量长生命周期对象
+                        </MudListItem>
+                        <MudListItem Icon="@Icons.Material.Filled.PushPin">
+                            <strong>固定对象数量</strong>：大量固定对象会导致堆碎片化
+                        </MudListItem>
+                        <MudListItem Icon="@Icons.Material.Filled.HourglassBottom">
+                            <strong>待终结对象</strong>：大量待终结对象可能表示 Finalizer 队列阻塞
+                        </MudListItem>
+                    </MudList>
+                </MudExpansionPanel>
+                <MudExpansionPanel Text="常见内存泄漏原因">
+                    <MudList T="string" Dense="true">
+                        <MudListItem Icon="@Icons.Material.Filled.Event">
+                            <strong>事件处理器未取消订阅</strong>：订阅事件后忘记取消会导致对象无法回收
+                        </MudListItem>
+                        <MudListItem Icon="@Icons.Material.Filled.AllInclusive">
+                            <strong>静态集合持有引用</strong>：静态字段持有的对象永远不会被回收
+                        </MudListItem>
+                        <MudListItem Icon="@Icons.Material.Filled.Cached">
+                            <strong>缓存没有清理策略</strong>：无限增长的缓存会导致内存耗尽
+                        </MudListItem>
+                        <MudListItem Icon="@Icons.Material.Filled.Lock">
+                            <strong>IDisposable 未正确释放</strong>：忘记调用 Dispose 会导致非托管资源泄漏
+                        </MudListItem>
+                    </MudList>
+                </MudExpansionPanel>
+                <MudExpansionPanel Text="分析工具推荐">
+                    <MudList T="string" Dense="true">
+                        <MudListItem Icon="@Icons.Material.Filled.Code">
+                            <strong>Visual Studio 诊断工具</strong>：内置的内存分析器，支持 dump 分析
+                        </MudListItem>
+                        <MudListItem Icon="@Icons.Material.Filled.Speed">
+                            <strong>PerfView</strong>：微软开源的高级性能分析工具
+                        </MudListItem>
+                        <MudListItem Icon="@Icons.Material.Filled.Memory">
+                            <strong>dotMemory</strong>：JetBrains 的商业内存分析工具
+                        </MudListItem>
+                        <MudListItem Icon="@Icons.Material.Filled.Terminal">
+                            <strong>dotnet-dump / dotnet-gcdump</strong>：命令行诊断工具
+                        </MudListItem>
+                    </MudList>
+                </MudExpansionPanel>
+            </MudExpansionPanels>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+[Parameter] public ModuleProfilingUIOption? Options { get; set; }
+[Parameter] public EventCallback<int> OnForceGC { get; set; }
+[Parameter] public EventCallback OnCreateDump { get; set; }
+[Parameter] public bool IsLoading { get; set; }
+}

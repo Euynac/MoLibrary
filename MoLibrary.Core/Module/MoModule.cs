@@ -31,7 +31,7 @@ public abstract class MoModule : IMoModule
     {
     }
 
-    public abstract EMoModules CurModuleEnum();
+    public abstract ModuleKey GetModuleKey();
     internal abstract void ConvertToRegisterRequest();
 }
 
@@ -47,22 +47,22 @@ public abstract class MoModule<TModuleSelf, TModuleOption, TModuleGuide>(TModule
 {
     public TModuleOption Option { get; } = option;
     public ILogger Logger { get;  } = option.Logger;
-    
+
     /// <summary>
-    /// Gets the enum value representing this module type.
-    /// This static method creates a temporary instance to access the CurModuleEnum method.
+    /// Gets the module key representing this module type.
+    /// This static method creates a temporary instance to access the GetModuleKey method.
     /// </summary>
-    /// <returns>The EMoModules value representing this module.</returns>
-    public static EMoModules GetModuleEnum()
+    /// <returns>The ModuleKey representing this module.</returns>
+    public static ModuleKey GetStaticModuleKey()
     {
-        // Create a temporary instance with default options to get the module enum
+        // Create a temporary instance with default options to get the module key
         var instance = Activator.CreateInstance(typeof(TModuleSelf), new TModuleOption()) as TModuleSelf;
-        var moduleEnum = instance!.CurModuleEnum();
-        
-        // Register the mapping between module type and enum
-        ModuleAnalyser.RegisterModuleMapping(typeof(TModuleSelf), moduleEnum);
-        
-        return moduleEnum;
+        var moduleKey = instance!.GetModuleKey();
+
+        // Register the mapping between module type and key
+        ModuleAnalyser.RegisterModuleMapping(typeof(TModuleSelf), moduleKey);
+
+        return moduleKey;
     }
 
     /// <summary>
@@ -146,10 +146,10 @@ public abstract class MoModuleWithDependencies<TModuleSelf, TModuleOption, TModu
 
 
     [MustUseReturnValue]
-    protected TOtherModuleGuide DependsOnModule<TOtherModuleGuide>()  
+    protected TOtherModuleGuide DependsOnModule<TOtherModuleGuide>()
         where TOtherModuleGuide : MoModuleGuide, new()
     {
-        return MoModuleGuide.DeclareDependency<TOtherModuleGuide>(CurModuleEnum(), CurModuleEnum());
+        return MoModuleGuide.DeclareDependency<TOtherModuleGuide>(GetModuleKey(), GetModuleKey());
     }
 }
 

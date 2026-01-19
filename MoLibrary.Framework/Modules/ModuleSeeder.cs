@@ -20,9 +20,9 @@ public static class ModuleSeederBuilderExtensions
 public class ModuleSeeder(ModuleSeederOption option) : MoModule<ModuleSeeder, ModuleSeederOption, ModuleSeederGuide>(option), IWantIterateBusinessTypes
 {
     private readonly List<Type> _seedTypes = [];
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.Seeder;
+        return EMoModuleKey.Seeder;
     }
 
     public override void ConfigureApplicationBuilder(IApplicationBuilder app)

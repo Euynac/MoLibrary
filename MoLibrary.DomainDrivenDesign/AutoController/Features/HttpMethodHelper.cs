@@ -30,7 +30,7 @@ public static class HttpMethodHelper
 
     public static string RemoveHttpMethodPrefix(string methodName, string httpMethod)
     {
-        var prefixes = ConventionalPrefixes.GetOrDefault(httpMethod);
+        var prefixes = ConventionalPrefixes.GetValueOrDefault(httpMethod);
         if (prefixes.IsNullOrEmptySet())
         {
             return methodName;

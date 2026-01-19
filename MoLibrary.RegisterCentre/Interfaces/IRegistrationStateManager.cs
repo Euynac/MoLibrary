@@ -57,4 +57,9 @@ public interface IRegistrationStateManager
     /// 获取所有Leader实例状态
     /// </summary>
     Task<List<InstanceState>> GetAllLeaderInstancesAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// 强制删除指定服务的 Leader Key（用于管理/调试）
+    /// </summary>
+    Task ForceDeleteLeaderKeyAsync(string serviceName, CancellationToken ct = default);
 }

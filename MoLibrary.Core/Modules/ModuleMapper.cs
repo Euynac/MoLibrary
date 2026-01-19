@@ -82,9 +82,9 @@ public static class ModuleMapperBuilderExtensions
 
 public class ModuleMapper(ModuleMapperOption option) : MoModule<ModuleMapper, ModuleMapperOption, ModuleMapperGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.Mapper;
+        return EMoModuleKey.Mapper;
     }
 
     public override void ConfigureServices(IServiceCollection services)

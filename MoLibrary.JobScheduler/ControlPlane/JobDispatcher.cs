@@ -23,10 +23,14 @@ public class JobDispatcher(
     /// Publishes a job execution event to the event bus.
     /// Atomically reserves a slot before publishing to prevent race conditions.
     /// </summary>
+    /// <param name="instance">The job instance to publish.</param>
+    /// <param name="definition">The job definition.</param>
+    /// <param name="jobArgsJson">Pre-serialized JSON string of job arguments, or null for jobs without arguments.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     public async Task PublishJobExecutionEventAsync(
         JobInstance instance,
         JobDefinition definition,
-        object? parameters,
+        string? jobArgsJson,
         CancellationToken cancellationToken = default)
     {
         try
@@ -60,7 +64,7 @@ public class JobDispatcher(
             {
                 InstanceId = instance.InstanceId,
                 JobKey = definition.JobKey,
-                JobArgs = parameters?.ToString(), // Already JSON string or null
+                JobArgs = jobArgsJson,
                 JobArgsKey = definition.JobArgsKey,
                 RequestedAt = DateTime.UtcNow,
                 MaxExecutionTimeout = definition.MaxExecutionTimeout,

@@ -24,9 +24,9 @@ public static class ModuleGlobalJsonBuilderExtensions
 public class ModuleGlobalJson(ModuleGlobalJsonOption option)
     : MoModule<ModuleGlobalJson, ModuleGlobalJsonOption, ModuleGlobalJsonGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.GlobalJson;
+        return EMoModuleKey.GlobalJson;
     }
 
     public override void ConfigureServices(IServiceCollection services)

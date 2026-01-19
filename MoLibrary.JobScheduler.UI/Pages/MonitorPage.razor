@@ -1,0 +1,299 @@
+@page "/job-scheduler/monitor"
+
+@using MoLibrary.JobScheduler.Abstractions
+@using MoLibrary.JobScheduler.UI.Components.Monitor
+@using MoLibrary.JobScheduler.UI.Models
+@using MoLibrary.JobScheduler.UI.Services
+
+@inject JobMonitorService MonitorService
+@inject JobSchedulerUIService UIService
+@inject ISnackbar Snackbar
+
+@implements IAsyncDisposable
+
+<PageTitle>任务调度 - 实时监控</PageTitle>
+
+<div class="monitor-page">
+    @* Auto Refresh Control *@
+    <AutoRefreshControl IsEnabled="@_autoRefreshEnabled"
+                         IsEnabledChanged="@OnAutoRefreshToggle"
+                         Interval="@_refreshInterval"
+                         IntervalChanged="@OnIntervalChanged"
+                         IsRefreshing="@_isRefreshing"
+                         LastRefreshTime="@_lastRefreshTime"
+                         OnRefreshRequested="@RefreshDataAsync" />
+
+    @if (_isLoading)
+    {
+        <div class="loading-container">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            <MudText Typo="Typo.body2" Color="Color.Secondary">加载中...</MudText>
+        </div>
+    }
+    else if (_loadError != null)
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4">
+            @_loadError
+            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="RefreshDataAsync">重试</MudButton>
+        </MudAlert>
+    }
+    else if (_state != null)
+    {
+        <MudGrid Spacing="3">
+            @* Live Execution Grid - Full Width *@
+            <MudItem xs="12">
+                <LiveExecutionGrid Executions="@_state.LiveExecutions"
+                                   OnCancelRequested="@CancelInstanceAsync" />
+            </MudItem>
+
+            @* Queue Status *@
+            <MudItem xs="12" md="6">
+                <QueueStatusCard Status="@_state.QueueStatus" />
+            </MudItem>
+
+            @* Concurrency Utilization - New Design *@
+            <MudItem xs="12" md="6">
+                <ConcurrencyUtilizationBars Details="@(_concurrencyState?.Details ?? [])"
+                                            Consistency="@(_concurrencyState?.Consistency ?? new ConsistencyCheckResult { TotalDeviation = 0, Deviations = [] })"
+                                            OnReconcileRequested="@HandleReconcileAsync"
+                                            IsReconciling="@_isReconciling" />
+            </MudItem>
+        </MudGrid>
+    }
+</div>
+
+@code {
+    public const string PAGE_URL = "/job-scheduler/monitor";
+
+    private bool _isLoading = true;
+    private bool _isRefreshing;
+    private bool _isReconciling;
+    private string? _loadError;
+
+    private MonitorState? _state;
+    private ConcurrencyMonitorState? _concurrencyState;
+    private DateTime? _lastRefreshTime;
+
+    private bool _autoRefreshEnabled = true;
+    private RefreshInterval _refreshInterval = RefreshInterval.FiveSeconds;
+    private System.Timers.Timer? _refreshTimer;
+    private CancellationTokenSource? _cts;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _cts = new CancellationTokenSource();
+            await LoadDataAsync();
+
+            if (_autoRefreshEnabled)
+            {
+                StartAutoRefresh();
+            }
+        }
+    }
+
+    private async Task LoadDataAsync()
+    {
+        try
+        {
+            _isLoading = true;
+            _loadError = null;
+            StateHasChanged();
+
+            var token = _cts?.Token ?? CancellationToken.None;
+
+            // Load both monitor state and concurrency state in parallel
+            var monitorTask = MonitorService.GetMonitorStateAsync(token);
+            var concurrencyTask = MonitorService.GetConcurrencyMonitorStateAsync(token);
+
+            await Task.WhenAll(monitorTask, concurrencyTask);
+
+            var monitorResult = await monitorTask;
+            var concurrencyResult = await concurrencyTask;
+
+            if (monitorResult.IsFailed(out var error, out _))
+            {
+                _loadError = error.Message;
+            }
+            else
+            {
+                _state = monitorResult.Data;
+                _lastRefreshTime = _state?.LastRefreshTime ?? DateTime.UtcNow;
+            }
+
+            if (concurrencyResult.IsOk(out var concurrencyState))
+            {
+                _concurrencyState = concurrencyState;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignore cancellation
+        }
+        catch (Exception ex)
+        {
+            _loadError = $"加载数据失败: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefreshDataAsync()
+    {
+        if (_isRefreshing) return;
+
+        try
+        {
+            _isRefreshing = true;
+            StateHasChanged();
+
+            var token = _cts?.Token ?? CancellationToken.None;
+
+            // Refresh both in parallel
+            var monitorTask = MonitorService.GetMonitorStateAsync(token);
+            var concurrencyTask = MonitorService.GetConcurrencyMonitorStateAsync(token);
+
+            await Task.WhenAll(monitorTask, concurrencyTask);
+
+            var monitorResult = await monitorTask;
+            var concurrencyResult = await concurrencyTask;
+
+            if (monitorResult.IsOk(out var state))
+            {
+                _state = state;
+                _lastRefreshTime = state.LastRefreshTime;
+                _loadError = null;
+            }
+
+            if (concurrencyResult.IsOk(out var concurrencyState))
+            {
+                _concurrencyState = concurrencyState;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignore
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"刷新失败: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isRefreshing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleReconcileAsync()
+    {
+        if (_isReconciling) return;
+
+        try
+        {
+            _isReconciling = true;
+            StateHasChanged();
+
+            var result = await MonitorService.ReconcileAsync(_cts?.Token ?? CancellationToken.None);
+
+            if (result.IsOk(out var reconcileResult))
+            {
+                Snackbar.Add(
+                    $"同步完成 (耗时: {reconcileResult.Duration.TotalMilliseconds:F0}ms, 偏差: {reconcileResult.StateBefore?.TotalDeviation} -> {reconcileResult.StateAfter?.TotalDeviation})",
+                    Severity.Success);
+
+                // Refresh data after reconciliation
+                await RefreshDataAsync();
+            }
+            else if (result.IsFailed(out var error, out _))
+            {
+                Snackbar.Add($"同步失败: {error.Message}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"同步失败: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isReconciling = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CancelInstanceAsync(string instanceId)
+    {
+        try
+        {
+            var result = await UIService.CancelInstanceAsync(instanceId);
+            if (result.IsFailed(out var error))
+            {
+                Snackbar.Add($"取消失败: {error.Message}", Severity.Error);
+            }
+            else
+            {
+                Snackbar.Add("任务已请求取消", Severity.Success);
+                await RefreshDataAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"取消失败: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void OnAutoRefreshToggle(bool enabled)
+    {
+        _autoRefreshEnabled = enabled;
+        if (enabled)
+        {
+            StartAutoRefresh();
+        }
+        else
+        {
+            StopAutoRefresh();
+        }
+    }
+
+    private void OnIntervalChanged(RefreshInterval interval)
+    {
+        _refreshInterval = interval;
+        if (_autoRefreshEnabled)
+        {
+            StopAutoRefresh();
+            StartAutoRefresh();
+        }
+    }
+
+    private void StartAutoRefresh()
+    {
+        StopAutoRefresh();
+        _refreshTimer = new System.Timers.Timer((int)_refreshInterval);
+        _refreshTimer.Elapsed += async (_, _) =>
+        {
+            await InvokeAsync(RefreshDataAsync);
+        };
+        _refreshTimer.AutoReset = true;
+        _refreshTimer.Start();
+    }
+
+    private void StopAutoRefresh()
+    {
+        _refreshTimer?.Stop();
+        _refreshTimer?.Dispose();
+        _refreshTimer = null;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        StopAutoRefresh();
+        _cts?.Cancel();
+        _cts?.Dispose();
+
+        await ValueTask.CompletedTask;
+    }
+}

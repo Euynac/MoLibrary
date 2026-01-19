@@ -18,9 +18,9 @@ namespace MoLibrary.DataChannel.Modules;
 public class ModuleDataChannel(ModuleDataChannelOption option)
     : MoModuleWithDependencies<ModuleDataChannel, ModuleDataChannelOption, ModuleDataChannelGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.DataChannel;
+        return EMoModuleKey.DataChannel;
     }
 
     public override void ConfigureServices(IServiceCollection services)

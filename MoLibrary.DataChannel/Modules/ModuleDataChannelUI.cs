@@ -20,9 +20,9 @@ public class ModuleDataChannelUI(ModuleDataChannelUIOption option)
     /// 获取当前模块枚举
     /// </summary>
     /// <returns>DataChannelUI模块枚举</returns>
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.DataChannelUI;
+        return EMoModuleKey.DataChannelUI;
     }
 
     /// <summary>
@@ -54,9 +54,9 @@ public class ModuleDataChannelUI(ModuleDataChannelUIOption option)
                     UIDataChannelPage.PAGE_URL,
                     "DataChannel管理",
                     Icons.Material.Filled.DataObject,
-                    "系统管理",
+                    "监控",
                     addToNav: true,
-                    navOrder: 200));
+                    navOrder: 30));
         }
     }
 }

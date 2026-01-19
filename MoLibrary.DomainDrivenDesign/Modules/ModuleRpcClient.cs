@@ -25,9 +25,9 @@ public class ModuleRpcClient(ModuleRpcClientOption option) :
 {
     public List<Type> RelatedTypes { get; set; } = [];
 
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.RpcClient;
+        return EMoModuleKey.RpcClient;
     }
 
     public override void ConfigureServices(IServiceCollection services)

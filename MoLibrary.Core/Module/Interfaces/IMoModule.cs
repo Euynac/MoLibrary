@@ -6,7 +6,7 @@ namespace MoLibrary.Core.Module.Interfaces;
 
 public interface IMoModuleStaticInfo
 {
-    static abstract EMoModules GetModuleEnum();
+    static abstract ModuleKey GetStaticModuleKey();
 }
 
 /// <summary>
@@ -40,5 +40,5 @@ public interface IMoModule
     /// <param name="app"></param>
     void ConfigureApplicationBuilder(IApplicationBuilder app);
 
-    EMoModules CurModuleEnum();
+    ModuleKey GetModuleKey();
 }

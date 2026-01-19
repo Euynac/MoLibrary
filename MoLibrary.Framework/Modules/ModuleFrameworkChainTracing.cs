@@ -22,9 +22,9 @@ public static class ModuleFrameworkChainTracingBuilderExtensions
 public class ModuleFrameworkChainTracing(ModuleFrameworkChainTracingOption option)
     : MoModuleWithDependencies<ModuleFrameworkChainTracing, ModuleFrameworkChainTracingOption, ModuleFrameworkChainTracingGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.FrameworkChainTracing;
+        return EMoModuleKey.FrameworkChainTracing;
     }
 
     public override void ClaimDependencies()

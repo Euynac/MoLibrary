@@ -11,7 +11,6 @@ using MoLibrary.Core.Module.Models;
 using MoLibrary.Core.Modules;
 using MoLibrary.RegisterCentre.Modules;
 using MoLibrary.RegisterCentre.ServiceInvocation.Interfaces;
-using MoLibrary.RegisterCentre.ServiceInvocation.Modules;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Dapr.Modules;
@@ -36,7 +35,7 @@ public class ModuleDaprServiceInvocation(ModuleDaprServiceInvocationOption optio
     : MoModuleWithDependencies<ModuleDaprServiceInvocation, ModuleDaprServiceInvocationOption,
         ModuleDaprServiceInvocationGuide>(option)
 {
-    public override EMoModules CurModuleEnum() => EMoModules.DaprProviderClientConnector;
+    public override ModuleKey GetModuleKey() => EMoModuleKey.DaprProviderClientConnector;
 
     public override void ClaimDependencies()
     {

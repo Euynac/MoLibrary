@@ -19,11 +19,14 @@ public class JobSchedulerHealthCheck(IMoHostedServiceManager serviceManager) : I
             typeof(JobConcurrencyGuardHostedService),
             typeof(JobSchedulerHostedService),
             typeof(JobRegistrationHostedService),
-            typeof(JobWorkerManagerHostedService)
+            typeof(JobWorkerManagerHostedService),
+            typeof(LongIntervalSchedulerService),
+            typeof(JobZombieDetectorService),
+            typeof(JobHistoryCleanupService)
         };
 
         var services = serviceTypes
-            .Select(type => serviceManager.GetService(type))
+            .Select(serviceManager.GetService)
             .Where(info => info != null)
             .ToList();
 

@@ -92,7 +92,7 @@
                                                 </MudAvatar>
                                                 <div>
                                                     <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@module.ModuleTypeName</MudText>
-                                                    <MudText Typo="Typo.body2" Color="Color.Secondary">@module.ModuleEnum.ToString()</MudText>
+                                                    <MudText Typo="Typo.body2" Color="Color.Secondary">@(module.ModuleKey?.ToString() ?? "Unknown")</MudText>
                                                 </div>
                                             </div>
                                             <div class="text-right">

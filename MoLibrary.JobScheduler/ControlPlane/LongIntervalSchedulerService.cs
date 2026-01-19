@@ -37,19 +37,16 @@ public class LongIntervalSchedulerService(
     {
         if (!_options.EnableLongIntervalScheduler)
         {
-            RecordState("Long-interval scheduler disabled in configuration", HostedServiceState.Stopped);
-            logger.LogInformation("LongIntervalScheduler is disabled, exiting");
+            RecordState("Long-interval scheduler disabled in configuration", HostedServiceState.Stopped, givenLogLevel: LogLevel.Information);
             return;
         }
 
         using var periodicTimer = new PeriodicTimer(_options.LongIntervalScanInterval);
 
-        logger.LogInformation(
-            "LongIntervalScheduler started. Scan interval: {Interval}, Timer threshold: {Threshold} days",
-            _options.LongIntervalScanInterval,
-            _options.TimerSafetyThresholdDays);
-
-        RecordState("Long-interval scheduler started", HostedServiceState.Running);
+        RecordState(
+            $"LongIntervalScheduler started. Scan interval: {_options.LongIntervalScanInterval}, Timer threshold: {_options.TimerSafetyThresholdDays} days",
+            HostedServiceState.Running,
+            givenLogLevel: LogLevel.Information);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -67,7 +64,7 @@ public class LongIntervalSchedulerService(
             }
             catch (OperationCanceledException)
             {
-                logger.LogInformation("LongIntervalScheduler scan cancelled");
+                RecordState("LongIntervalScheduler scan cancelled", givenLogLevel: LogLevel.Information);
                 break;
             }
             catch (Exception ex)
@@ -130,11 +127,9 @@ public class LongIntervalSchedulerService(
             }
             else
             {
-                // Keep logger for detailed debug info - doesn't need state tracking
-                logger.LogDebug(
-                    "Long-interval recurring job {JobKey} still has {Days} days until execution, no transition needed",
-                    schedule.JobKey,
-                    timeUntilExecution.TotalDays);
+                RecordState(
+                    $"Long-interval recurring job {schedule.JobKey} still has {timeUntilExecution.TotalDays:F1} days until execution, no transition needed",
+                    givenLogLevel: LogLevel.Debug);
             }
         }
 
@@ -218,11 +213,9 @@ public class LongIntervalSchedulerService(
             }
             else
             {
-                // Keep logger for detailed debug info - doesn't need state tracking
-                logger.LogDebug(
-                    "Scheduled instance {InstanceId} still has {Days} days until execution, no transition needed",
-                    instance.InstanceId,
-                    timeUntilExecution.TotalDays);
+                RecordState(
+                    $"Scheduled instance {instance.InstanceId} still has {timeUntilExecution.TotalDays:F1} days until execution, no transition needed",
+                    givenLogLevel: LogLevel.Debug);
             }
         }
 

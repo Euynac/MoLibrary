@@ -37,6 +37,11 @@ public sealed class LoggingService(
     public long TotalFileLineCount => logTailService.TotalFileLineCount;
 
     /// <summary>
+    /// 当前日志文件是否存在
+    /// </summary>
+    public bool LogFileExists => logTailService.LogFileExists;
+
+    /// <summary>
     /// 初始化日志缓冲池
     /// </summary>
     public async Task<Res<ScreenLogSnapshot>> InitializeAsync(int requestedLines, CancellationToken cancellationToken = default)
@@ -64,6 +69,9 @@ public sealed class LoggingService(
             return Task.FromResult(Res.Ok("日志监听已在运行"));
         }
 
+        // 确保释放旧的 CancellationTokenSource
+        _tailCts?.Dispose();
+
         var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _tailCts = linked;
         _tailTask = Task.Run(() => TailLoopAsync(linked.Token));
@@ -84,7 +92,10 @@ public sealed class LoggingService(
 
         try
         {
-            _tailCts?.Cancel();
+            if (_tailCts?.Token.CanBeCanceled is true)
+            {
+                await _tailCts.CancelAsync();
+            }
             if (_tailTask is { } task)
             {
                 try
@@ -207,15 +218,37 @@ public sealed class LoggingService(
     }
 
     /// <summary>
+    /// 切换到指定的日志文件
+    /// </summary>
+    /// <param name="relativePath">相对于日志目录的文件路径</param>
+    /// <param name="initialLines">初始加载的行数</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>新文件的日志快照</returns>
+    public async Task<Res<ScreenLogSnapshot>> SwitchToFileAsync(string relativePath, int initialLines, CancellationToken cancellationToken = default)
+    {
+        // 暂停当前监听
+        await PauseAsync();
+
+        // 解析完整路径并切换
+        var fullPath = logFileQueryService.ResolveFilePath(relativePath);
+        logTailService.SwitchToFile(fullPath);
+
+        // 重新初始化
+        return await InitializeAsync(initialLines, cancellationToken);
+    }
+
+    /// <summary>
     /// 创建日志订阅
     /// </summary>
     public LoggingSubscription Subscribe()
     {
-        var channel = Channel.CreateUnbounded<ScreenLogSnapshot>(new UnboundedChannelOptions
+        // 使用有界 Channel，防止内存无限增长
+        var channel = Channel.CreateBounded<ScreenLogSnapshot>(new BoundedChannelOptions(100)
         {
             SingleReader = true,
             SingleWriter = false,
-            AllowSynchronousContinuations = false
+            AllowSynchronousContinuations = false,
+            FullMode = BoundedChannelFullMode.DropOldest
         });
 
         lock (_subscriberLock)
@@ -233,11 +266,10 @@ public sealed class LoggingService(
     {
         lock (_subscriberLock)
         {
-            if (_subscribers.Remove(channel))
-            {
-                channel.Writer.TryComplete();
-            }
+            _subscribers.Remove(channel);
         }
+        // 总是尝试完成 channel，确保资源释放
+        channel.Writer.TryComplete();
     }
 
     private async Task TailLoopAsync(CancellationToken cancellationToken)

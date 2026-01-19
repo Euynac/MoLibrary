@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MoLibrary.EventBus.Abstractions;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.Events;
@@ -17,6 +18,7 @@ namespace MoLibrary.JobScheduler.ControlPlane;
 public class JobInstanceManager(
     IMoJobMetadataRepository metadataRepository,
     [FromKeyedServices(nameof(ModuleJobScheduler))]IMoEventBus eventBus,
+    IOptions<ModuleJobSchedulerOption> options,
     ILogger<JobInstanceManager> logger)
 {
     /// <summary>
@@ -43,7 +45,7 @@ public class JobInstanceManager(
             InstanceId = instanceId,
             JobKey = definition.JobKey,
             State = initialState,
-            JobArgs = parameters != null ? JsonSerializer.Serialize(parameters) : null,
+            JobArgs = parameters != null ? JsonSerializer.Serialize(parameters, options.Value.JobArgsSerializerOptions) : null,
             CreatedAt = now,
             RetryAttempt = 0
         };
@@ -130,13 +132,14 @@ public class JobInstanceManager(
                     instance.InstanceId);
             }
             // Publish JobCompletedEvent when job reaches a terminal state from processing.
-            else if (oldState == JobState.Processing && IsTerminalState(newState))
+            else if (IsTerminalState(newState))
             {
                 if (string.IsNullOrEmpty(instance.RunningClientId))
                 {
                     logger.LogWarning(
-                        "Job instance {InstanceId} reached terminal state {State} without RunningClientId",
+                        "Job instance {InstanceId} from {OldState} reached terminal state {State} without RunningClientId",
                         instance.InstanceId,
+                        oldState,
                         newState);
                     return;
                 }
@@ -151,8 +154,9 @@ public class JobInstanceManager(
                 });
 
                 logger.LogDebug(
-                    "Published JobCompletedEvent for instance {InstanceId} with state {State}",
+                    "Published JobCompletedEvent for instance {InstanceId} from {OldState} to {State}",
                     instance.InstanceId,
+                    oldState,
                     newState);
             }
         }

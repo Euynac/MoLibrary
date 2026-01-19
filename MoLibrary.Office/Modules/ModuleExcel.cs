@@ -26,9 +26,9 @@ public static class ModuleExcelBuilderExtensions
 
 public class ModuleExcel(ModuleExcelOption option) : MoModuleWithDependencies<ModuleExcel, ModuleExcelOption, ModuleExcelGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.Excel;
+        return EMoModuleKey.Excel;
     }
 
     public override void ClaimDependencies()

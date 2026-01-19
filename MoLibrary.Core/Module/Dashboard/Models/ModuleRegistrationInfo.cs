@@ -44,9 +44,9 @@ public class ModuleBasicInfo
     public string ModuleFullTypeName { get; set; } = string.Empty;
 
     /// <summary>
-    /// 模块枚举
+    /// 模块键
     /// </summary>
-    public EMoModules ModuleEnum { get; set; }
+    public ModuleKey? ModuleKey { get; set; }
 
     /// <summary>
     /// 注册顺序
@@ -61,7 +61,7 @@ public class ModuleBasicInfo
     /// <summary>
     /// 直接依赖的模块列表
     /// </summary>
-    public List<EMoModules> Dependencies { get; set; } = [];
+    public List<ModuleKey> Dependencies { get; set; } = [];
 
     /// <summary>
     /// 初始化耗时（毫秒）

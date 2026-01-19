@@ -1,11 +1,16 @@
 @using Microsoft.Extensions.Options
 @using MoLibrary.Framework.UI.UIRegisterCentre.Extensions
+@using MoLibrary.Framework.UI.UIRegisterCentre.Services
 @using MoLibrary.RegisterCentre
 @using MoLibrary.RegisterCentre.Interfaces
 @using MoLibrary.RegisterCentre.Models
 @using MoLibrary.RegisterCentre.Modules
+@using MoLibrary.Tool.MoResponse
 @inject IOptionsSnapshot<ModuleRegisterCentreOption> RegisterCentreOptions
 @inject ILeaderElectionService LeaderElectionService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject RegisterCentreService RegisterCentreService
 
 @if (Service != null)
 {
@@ -128,23 +133,11 @@
                                             ReadOnly="true"
                                             HelperText="实例定期发送心跳的间隔" />
                             </MudItem>
-                            <MudItem xs="12" sm="3">
+                            <MudItem xs="12" sm="6">
                                 <MudTextField T="int" Label="心跳抖动 (毫秒)"
                                             Value="@RegisterCentreOptions.Value.Election.HeartbeatJitterMilliseconds"
                                             ReadOnly="true"
                                             HelperText="心跳发送时的随机抖动范围" />
-                            </MudItem>
-                            <MudItem xs="12" sm="3">
-                                <MudTextField T="int" Label="挣扎周期 (秒)"
-                                            Value="@RegisterCentreOptions.Value.Election.StrugglePeriodSeconds"
-                                            ReadOnly="true"
-                                            HelperText="心跳失败后的重试间隔" />
-                            </MudItem>
-                            <MudItem xs="12" sm="3">
-                                <MudTextField T="int" Label="放弃挣扎阈值 (秒)"
-                                            Value="@RegisterCentreOptions.Value.Election.GiveUpStruggleThresholdSeconds"
-                                            ReadOnly="true"
-                                            HelperText="挣扎超时后释放Leader" />
                             </MudItem>
                         </MudGrid>
                     </MudPaper>
@@ -223,8 +216,7 @@
                         <MudDivider Class="my-4" />
                         <MudAlert Severity="Severity.Info" Dense="true" Class="mt-2">
                             <MudText Typo="Typo.body2">
-                                状态转换: 心跳成功 → 正常运行 | 心跳失败 → 挣扎模式 (@RegisterCentreOptions.Value.Election.StrugglePeriodSeconds 秒重试) |
-                                挣扎超时 (@RegisterCentreOptions.Value.Election.GiveUpStruggleThresholdSeconds 秒) → 释放Leader → 触发孤立处理
+                                状态转换: 心跳成功 → 正常运行 | 心跳失败 → Polly 重试策略 → 重试耗尽 → 释放 Leader → 触发孤立处理
                             </MudText>
                         </MudAlert>
                     </MudPaper>
@@ -291,6 +283,21 @@
                     </MudPaper>
                 </MudItem>
             </MudGrid>
+            <MudDivider Class="my-4" />
+            <MudPaper Class="pa-4" Elevation="0">
+                <MudText Typo="Typo.h6" Class="mb-3">Leader 管理操作</MudText>
+                <MudAlert Severity="Severity.Warning" Class="mb-3">
+                    强制删除 Leader 将导致当前 Leader 实例丢失 Leader 状态，并触发新一轮选举。
+                    此操作主要用于开发测试 Leader 变更场景。
+                </MudAlert>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Error"
+                           StartIcon="@Icons.Material.Filled.DeleteForever"
+                           OnClick="OnForceDeleteLeaderClicked"
+                           Disabled="@(!HasLeader)">
+                    强制删除 Leader
+                </MudButton>
+            </MudPaper>
         </MudTabPanel>
 
         <MudTabPanel Text="元数据信息">
@@ -346,6 +353,25 @@
 
 @code {
     [Parameter] public RegisteredServiceStatus Service { get; set; } = null!;
+
+    private bool HasLeader => Service?.Instances.Values.Any(i => i.IsLeader) ?? false;
+
+    private async Task OnForceDeleteLeaderClicked()
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            "确认操作",
+            $"确定要强制删除服务 '{Service.AppName}' 的 Leader 吗？此操作将触发新一轮 Leader 选举。",
+            yesText: "确定删除", cancelText: "取消");
+
+        if (result != true) return;
+
+        var res = await RegisterCentreService.ForceDeleteLeaderAsync(Service.AppId);
+
+        if (res.IsFailed(out var error))
+            Snackbar.Add($"删除 Leader 失败: {error}", Severity.Error);
+        else
+            Snackbar.Add("已成功删除 Leader，新一轮选举即将开始", Severity.Success);
+    }
 
     private string GetHeartbeatHealthText(TimeSpan timeSinceHeartbeat)
     {

@@ -8,6 +8,8 @@
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 
+@implements IAsyncDisposable
+
 <div class="log-viewer-wrapper">
     <div class="log-viewer-header">
         <MudText Typo="Typo.subtitle1">实时日志</MudText>
@@ -154,7 +156,7 @@
 
     // Load more state
     private bool _isLoadingMore = false;
-    private IJSObjectReference? _scrollListenerRef;
+    private DotNetObjectReference<LogViewer>? _dotNetRef;
 
     // Selected line state
     private int? _selectedLineIndex = null;
@@ -230,13 +232,14 @@
     {
         try
         {
-            // Create a DotNetObjectReference to pass to JavaScript
-            var dotNetRef = DotNetObjectReference.Create(this);
+            // Dispose previous reference if exists
+            _dotNetRef?.Dispose();
+            _dotNetRef = DotNetObjectReference.Create(this);
 
             // Add scroll listener with callback
             await JsRuntime.InvokeVoidAsync("MoLogging.addScrollTopListener",
                 _scrollContainer,
-                dotNetRef,
+                _dotNetRef,
                 nameof(HandleScrollToTop),
                 50); // 50px threshold
         }
@@ -546,5 +549,23 @@
         }
 
         return builder.ToString();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JsRuntime.InvokeVoidAsync("MoLogging.removeScrollListener", _scrollContainer);
+        }
+        catch (JSDisconnectedException)
+        {
+            // Circuit is disconnected, JS call is not possible
+        }
+        catch (Exception)
+        {
+            // Ignore other JS errors during disposal
+        }
+
+        _dotNetRef?.Dispose();
     }
 }

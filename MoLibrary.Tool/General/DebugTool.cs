@@ -1,6 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Collections;
+using System.Reflection;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -22,70 +21,7 @@ namespace MoLibrary.Tool.General
         /// </summary>
         public static bool IsDebugging { get; set; }
 
-        /// <summary>
-        /// Use <see cref="System.Text.Json.JsonSerializer"/> to serialize given object.
-        /// </summary>
-        /// <param name="s"></param>
-        /// <param name="writeIndented">A value that defines whether JSON should use pretty printing.
-        /// <see langword="true" /> if JSON should pretty print on serialization; otherwise, <see langword="false" />. The default is <see langword="false" />.
-        /// </param>
-        /// <param name="includeFields">default behavior will not serialize field.</param>
-        /// <param name="customOptions"></param>
-        /// <remarks>Not support serialize <see cref="Exception"/> and <see cref="Type"/>. See <see href="https://github.com/dotnet/runtime/issues/43026"/> and <see href="https://github.com/dotnet/runtime/issues/31567#issuecomment-558335944"/></remarks>
-        /// <returns></returns>
-        public static string? ToJsonString(this object? s, bool writeIndented = true, bool includeFields = false, JsonSerializerOptions? customOptions = null)
-        {
-            if (s == null) return null;
-            if (customOptions is not null)
-            {
-                return JsonSerializer.Serialize(s, customOptions);
-            }
-            var options = new JsonSerializerOptions
-            {
-                WriteIndented = writeIndented,
-                IncludeFields = includeFields
-            };
-
-            if (writeIndented)
-            {
-                options.Encoder = JavaScriptEncoder.Create(UnicodeRanges.All);
-            }
-
-            var json = JsonSerializer.Serialize(s, options);
-            return writeIndented ? Regex.Unescape(json) : json;
-        }
-
-        /// <summary>
-        /// Force <see cref="System.Text.Json.JsonSerializer"/> to serialize given object when normally encounter exception.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="s"></param>
-        /// <param name="writeIndented"></param>
-        /// <param name="relaxedEscaping">unicode character including chinese will not escape</param>
-        /// <param name="customOptions"></param>
-        /// <remarks><see cref="System.Text.Json.JsonSerializer"/> is not support to serialize <see cref="Exception"/> and <see cref="Type"/>. See <see href="https://github.com/dotnet/runtime/issues/43026"/> and <see href="https://github.com/dotnet/runtime/issues/31567#issuecomment-558335944"/></remarks>
-        /// <returns>Not support to deserialize, only use to print Exception or other type info.</returns>
-        public static string? ToJsonStringForce<T>(this T? s, bool writeIndented = true, bool relaxedEscaping = true, JsonSerializerOptions? customOptions = null)
-        {
-            if (s == null) return null;
-            if (customOptions is not null)
-            {
-                return JsonSerializer.Serialize(s, customOptions);
-            }
-            var options = new JsonSerializerOptions
-            {
-                WriteIndented = writeIndented
-            };
-
-            if (relaxedEscaping)
-            {
-                options.Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
-            }
-
-            options.Converters.Add(new AnyConverter<T>());
-            var json = JsonSerializer.Serialize(s, options);
-            return writeIndented ? Regex.Unescape(json) : json;
-        }
+      
         /// <summary>
         /// Do given action given times.
         /// </summary>
@@ -188,81 +124,7 @@ namespace MoLibrary.Tool.General
             if (IsDebugging) PrintLn(dictionary);
         }
     }
-
-    /// <summary>
-    /// Any property not supported to serialize will simply call ToString() instead.
-    /// </summary>
-    /// <typeparam name="TAnyType"></typeparam>
-    public class AnyConverter<TAnyType> : JsonConverter<TAnyType>
-    {
-        public override TAnyType Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-        {
-            throw new NotSupportedException("Deserializing exceptions is not allowed");
-        }
-
-        public override void Write(Utf8JsonWriter writer, TAnyType value, JsonSerializerOptions options)
-        {
-            if (value is JsonElement json)
-            {
-                json.WriteTo(writer);
-                return;
-            }
-
-            var properties = value!.GetType()
-                .GetProperties()
-                .Where(p => p.CanRead).Select(p =>
-                {
-                    object? valueObj;
-                    try
-                    {
-                        valueObj = p.GetValue(value);
-                    }
-                    catch (Exception)
-                    {
-                        valueObj = $"[FORCE]{value.ToString()}";
-                    }
-
-                    return new { p.Name, Value = valueObj };
-                });
-
-            if (options.DefaultIgnoreCondition == JsonIgnoreCondition.WhenWritingNull)
-            {
-                properties = properties.Where(p => p.Value != null);
-            }
-
-            var propList = properties.ToList();
-
-            if (propList.Count == 0)
-            {
-                // Nothing to write
-                return;
-            }
-
-            writer.WriteStartObject();
-            var newOptions = new JsonSerializerOptions().CloneParameters(options, nameof(options.Converters));
-            foreach (var prop in propList)
-            {
-                if (prop.Value == null)
-                {
-                    writer.WriteString(prop.Name, "null");
-                    continue;
-                }
-                string serializedPropValue;
-
-                try
-                {
-                    serializedPropValue = JsonSerializer.Serialize(prop.Value, newOptions);
-                }
-                catch (Exception)
-                {
-                    serializedPropValue = $"[FORCE]{prop.Value}";
-                }
-                writer.WriteString(prop.Name, serializedPropValue);
-            }
-
-            writer.WriteEndObject();
-        }
-    }
+    
     /// <summary>
     /// Update the display without flicker
     /// </summary>

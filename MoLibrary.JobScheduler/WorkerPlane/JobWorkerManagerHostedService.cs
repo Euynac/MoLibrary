@@ -44,7 +44,7 @@ public class JobWorkerManagerHostedService(
         // Unsubscribe from all events
         if (_eventSubscriptions.Count > 0)
         {
-            RecordState($"Unsubscribing from {_eventSubscriptions.Count} topic(s)");
+            RecordState($"Unsubscribing from {_eventSubscriptions.Count} topic(s)", givenLogLevel: LogLevel.Information);
 
             foreach (var subscription in _eventSubscriptions)
             {
@@ -54,7 +54,7 @@ public class JobWorkerManagerHostedService(
             _eventSubscriptions.Clear();
             _subscribedProjects.Clear();
 
-            RecordState("All subscriptions disposed");
+            RecordState("All subscriptions disposed", givenLogLevel: LogLevel.Information);
         }
 
         // TODO Print all in-flight jobs
@@ -79,11 +79,12 @@ public class JobWorkerManagerHostedService(
                 _options.MaxWorkerExecutionThreads.Value);
 
             RecordState(
-                $"Worker thread limit configured: {_options.MaxWorkerExecutionThreads.Value} concurrent executions");
+                $"Worker thread limit configured: {_options.MaxWorkerExecutionThreads.Value} concurrent executions",
+                givenLogLevel: LogLevel.Information);
         }
         else
         {
-            RecordState("Worker thread limit: unlimited");
+            RecordState("Worker thread limit: unlimited", givenLogLevel: LogLevel.Information);
         }
 
         // Extract unique FromProject values from registered job definitions
@@ -103,7 +104,8 @@ public class JobWorkerManagerHostedService(
         }
 
         RecordState(
-            $"Subscribing to JobExecutionEvent from {projectsToSubscribe.Count} project(s): {string.Join(", ", projectsToSubscribe)}");
+            $"Subscribing to JobExecutionEvent from {projectsToSubscribe.Count} project(s): {string.Join(", ", projectsToSubscribe)}",
+            givenLogLevel: LogLevel.Information);
 
         // Subscribe to each project's topic
         foreach (var fromProject in projectsToSubscribe)
@@ -119,7 +121,7 @@ public class JobWorkerManagerHostedService(
                 givenLogLevel: LogLevel.Debug);
         }
 
-        RecordState($"JobWorkerManager started with {_eventSubscriptions.Count} subscription(s)");
+        RecordState($"JobWorkerManager started with {_eventSubscriptions.Count} subscription(s)", givenLogLevel: LogLevel.Information);
     }
 
     /// <summary>

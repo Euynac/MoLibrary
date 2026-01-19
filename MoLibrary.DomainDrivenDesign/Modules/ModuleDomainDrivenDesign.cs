@@ -21,9 +21,9 @@ namespace MoLibrary.DomainDrivenDesign.Modules;
 
 public class ModuleDomainDrivenDesign(ModuleDomainDrivenDesignOption option) : MoModuleWithDependencies<ModuleDomainDrivenDesign, ModuleDomainDrivenDesignOption, ModuleDomainDrivenDesignGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.DomainDrivenDesign;
+        return EMoModuleKey.DomainDrivenDesign;
     }
 
     public override void ConfigureServices(IServiceCollection services)

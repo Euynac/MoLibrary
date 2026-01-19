@@ -29,9 +29,9 @@ public static class ModuleUIStackTraceBuilderExtensions
 public class ModuleUIStackTrace(ModuleUIStackTraceOption option)
     : MoModule<ModuleUIStackTrace, ModuleUIStackTraceOption, ModuleUIStackTraceGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.UIStackTrace;
+        return EMoModuleKey.UIStackTrace;
     }
 
     public override void ConfigureServices(IServiceCollection services)

@@ -1,0 +1,116 @@
+.ranking-wrapper ::deep .ranking-card {
+    padding: 20px;
+    border-radius: 12px;
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-lines-default);
+    height: 100%;
+}
+
+.ranking-wrapper ::deep .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.ranking-wrapper ::deep .ranking-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.ranking-wrapper ::deep .ranking-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--mud-palette-background);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.ranking-wrapper ::deep .ranking-item:hover {
+    background: var(--mud-palette-action-default-hover);
+    transform: translateX(4px);
+}
+
+.ranking-wrapper ::deep .rank-badge {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.875rem;
+    background: var(--mud-palette-surface);
+    color: var(--mud-palette-text-secondary);
+    flex-shrink: 0;
+}
+
+.ranking-wrapper ::deep .rank-badge.gold {
+    background: linear-gradient(135deg, #ffd700, #ffb300);
+    color: #fff;
+    box-shadow: 0 2px 4px rgba(255, 215, 0, 0.3);
+}
+
+.ranking-wrapper ::deep .rank-badge.silver {
+    background: linear-gradient(135deg, #c0c0c0, #a0a0a0);
+    color: #fff;
+    box-shadow: 0 2px 4px rgba(192, 192, 192, 0.3);
+}
+
+.ranking-wrapper ::deep .rank-badge.bronze {
+    background: linear-gradient(135deg, #cd7f32, #b87333);
+    color: #fff;
+    box-shadow: 0 2px 4px rgba(205, 127, 50, 0.3);
+}
+
+.ranking-wrapper ::deep .job-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.ranking-wrapper ::deep .job-name {
+    display: block;
+    font-weight: 500;
+    color: var(--mud-palette-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 6px;
+}
+
+.ranking-wrapper ::deep .rank-progress {
+    height: 6px;
+    border-radius: 3px;
+}
+
+.ranking-wrapper ::deep .rank-value {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    flex-shrink: 0;
+}
+
+.ranking-wrapper ::deep .rank-value .value {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--mud-palette-text-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+.ranking-wrapper ::deep .rank-value .percent {
+    font-size: 0.75rem;
+    color: var(--mud-palette-text-secondary);
+}
+
+.ranking-wrapper ::deep .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    gap: 12px;
+}

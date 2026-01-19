@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Headers;
+using System.Net.Http.Headers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Authority.Security;
@@ -10,10 +10,10 @@ public abstract class MoHttpApi : MoRpcApi
 {
     protected readonly HttpClient HttpClient;
 
-    protected IMoSystemUserManager SystemUserManager => ServiceProvider.GetRequiredService<IMoSystemUserManager>()!;
-    protected IHttpContextAccessor HttpContextAccessor => ServiceProvider.GetRequiredService<IHttpContextAccessor>()!;
+    protected IMoSystemUserManager SystemUserManager => CachedServiceProvider.GetRequiredService<IMoSystemUserManager>();
+    protected IHttpContextAccessor HttpContextAccessor => CachedServiceProvider.GetRequiredService<IHttpContextAccessor>();
 
-    protected MoHttpApi(IMoServiceProvider provider, HttpClient httpClient) : base(provider)
+    protected MoHttpApi(ICachedServiceProvider serviceProvider, HttpClient httpClient) : base(serviceProvider)
     {
         HttpClient = httpClient;
         //传递Header

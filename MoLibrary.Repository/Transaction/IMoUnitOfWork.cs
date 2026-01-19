@@ -3,9 +3,10 @@ using MoLibrary.DependencyInjection.AppInterfaces;
 
 namespace MoLibrary.Repository.Transaction;
 
-public interface IMoUnitOfWork : IDisposable, IMoServiceProviderAccessor
+public interface IMoUnitOfWork : IDisposable
 {
     Guid Id { get; }
+    ICachedServiceProvider CachedServiceProvider { get; }
     public bool IsDisposed { get; }
 
     Dictionary<string, object?> Items { get; }

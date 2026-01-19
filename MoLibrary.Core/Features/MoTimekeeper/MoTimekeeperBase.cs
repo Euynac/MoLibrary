@@ -127,8 +127,7 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
 
     public TimekeeperStatistics? GetRecords(string key)
     {
-        if (_recordDict.TryGetValue(key, out var value)) return value;
-        return null;
+        return _recordDict.GetValueOrDefault(key);
     }
     public void ResetRecords(string key)
     {

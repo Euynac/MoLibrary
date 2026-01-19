@@ -20,9 +20,9 @@ public static class ModuleStateStoreBuilderExtensions
 public class ModuleStateStore(ModuleStateStoreOption option)
     : MoModule<ModuleStateStore, ModuleStateStoreOption, ModuleStateStoreGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.StateStore;
+        return EMoModuleKey.StateStore;
     }
 
     public override void ConfigureServices(IServiceCollection services)
@@ -79,6 +79,7 @@ public class ModuleStateStoreGuide : MoModuleGuide<ModuleStateStore, ModuleState
             }
         }, secondKey: key);
 
+        RecordKeyedServiceKey(key);
         return this;
     }
 
@@ -91,6 +92,7 @@ public class ModuleStateStoreGuide : MoModuleGuide<ModuleStateStore, ModuleState
     public ModuleStateStoreGuide AddKeyedStateStore<TProvider>(string key) where TProvider : class, IMoStateStore
     {
         ConfigureServices(services => { services.Services.AddKeyedSingleton<IMoStateStore, TProvider>(key); });
+        RecordKeyedServiceKey(key);
         return this;
     }
 

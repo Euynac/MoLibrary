@@ -85,9 +85,9 @@ public class ModulePerformanceInfo
     public string ModuleTypeName { get; set; } = string.Empty;
 
     /// <summary>
-    /// 模块枚举
+    /// 模块键
     /// </summary>
-    public EMoModules ModuleEnum { get; set; }
+    public ModuleKey? ModuleKey { get; set; }
 
     /// <summary>
     /// 模块总耗时（毫秒）

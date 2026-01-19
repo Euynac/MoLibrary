@@ -12,24 +12,23 @@ public static class DynamicExtensions
 
     public static bool Exist(this ExpandoObject obj, string name)
     {
-        var dict = (IDictionary<string, object>) obj!;
+        IDictionary<string, object> dict = obj!;
         return dict.ContainsKey(name);
     }
     public static void Set(this ExpandoObject obj, string name, object? info)
     {
-        var dict = (IDictionary<string, object>) obj!;
+        IDictionary<string, object> dict = obj!;
         dict[name] = info ?? "<null>";
     }
-    public static object? GetOrDefault(this ExpandoObject obj, string name, object? defaultValue = default)
+    public static object? GetOrDefault(this ExpandoObject obj, string name, object? defaultValue = null)
     {
-        var dict = (IDictionary<string, object>) obj!;
-        if (dict.TryGetValue(name, out var data)) return data;
-        return defaultValue;
+        IDictionary<string, object> dict = obj!;
+        return dict.TryGetValue(name, out var data) ? data : defaultValue;
     }
     public static void Copy(this ExpandoObject obj, ExpandoObject copyFrom)
     {
-        var dict = (IDictionary<string, object>) obj!;
-        var from = (IDictionary<string, object>) copyFrom!;
+        IDictionary<string, object> dict = obj!;
+        IDictionary<string, object> from = copyFrom!;
         foreach (var o in from)
         {
             dict[o.Key] = o.Value;
@@ -37,7 +36,7 @@ public static class DynamicExtensions
     }
     public static void Merge(this ExpandoObject obj, ExpandoObject copyFrom)
     {
-        var from = (IDictionary<string, object>)copyFrom!;
+        IDictionary<string, object> from = copyFrom!;
         foreach (var o in from)
         {
             obj.Append(o.Key, o.Value);
@@ -45,7 +44,7 @@ public static class DynamicExtensions
     }
     public static void Append(this ExpandoObject obj, string name, object? info)
     {
-        var dict = (IDictionary<string, object>) obj!;
+        IDictionary<string, object> dict = obj!;
         var index = 0;
         var finalKey = name;
         while (dict.ContainsKey(finalKey))

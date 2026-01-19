@@ -20,9 +20,9 @@ public static class ModuleSnowflakeIdBuilderExtensions
 public class ModuleSnowflakeId(ModuleSnowflakeIdOption option)
     : MoModule<ModuleSnowflakeId, ModuleSnowflakeIdOption, ModuleSnowflakeIdGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.SnowflakeId;
+        return EMoModuleKey.SnowflakeId;
     }
 
     public override void ConfigureServices(IServiceCollection services)

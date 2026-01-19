@@ -1,8 +1,8 @@
-﻿using MoLibrary.DependencyInjection.AppInterfaces;
+using MoLibrary.DependencyInjection.AppInterfaces;
 
 namespace MoLibrary.DomainDrivenDesign.AutoController.MoRpc;
 
-public abstract class MoRpcApi(IMoServiceProvider provider) : IMoRpcApi
+public abstract class MoRpcApi(ICachedServiceProvider serviceProvider) : IMoRpcApi
 {
-    protected IServiceProvider ServiceProvider => provider.ServiceProvider;
+    protected ICachedServiceProvider CachedServiceProvider { get; } = serviceProvider;
 }

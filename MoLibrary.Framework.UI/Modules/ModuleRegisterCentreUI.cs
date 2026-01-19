@@ -15,9 +15,9 @@ namespace MoLibrary.Framework.UI.Modules;
 public class ModuleRegisterCentreUI(ModuleRegisterCentreUIOption option)
     : MoModuleWithDependencies<ModuleRegisterCentreUI, ModuleRegisterCentreUIOption, ModuleRegisterCentreUIGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.RegisterCentreUI;
+        return EMoModuleKey.RegisterCentreUI;
     }
 
     public override void ConfigureServices(IServiceCollection services)
@@ -32,12 +32,12 @@ public class ModuleRegisterCentreUI(ModuleRegisterCentreUIOption option)
             DependsOnModule<ModuleRegisterCentreGuide>().Register();
             DependsOnModule<ModuleUICoreGuide>().Register()
                 .RegisterUIComponents(p => p.RegisterComponent<UIRegisterCentrePage>(
-                    UIRegisterCentrePage.REGISTERCENTRE_DEBUG_URL, 
-                    "注册中心", 
-                    Icons.Material.Filled.CloudQueue, 
-                    "系统管理", 
-                    addToNav: true, 
-                    navOrder: 90));
+                    UIRegisterCentrePage.REGISTERCENTRE_DEBUG_URL,
+                    "注册中心",
+                    Icons.Material.Filled.CloudQueue,
+                    "调试",
+                    addToNav: true,
+                    navOrder: 40));
         }
     }
 }

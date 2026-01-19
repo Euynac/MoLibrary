@@ -326,6 +326,29 @@ public class RegisterCentreService(
             return $"获取Leader状态失败: {ex.Message}";
         }
     }
+
+    /// <summary>
+    /// 强制删除指定服务的 Leader（用于触发重新选举）
+    /// </summary>
+    /// <param name="serviceName">服务名称（AppId）</param>
+    /// <returns>操作结果</returns>
+    public async Task<Res> ForceDeleteLeaderAsync(string serviceName)
+    {
+        try
+        {
+            var stateManager = serviceProvider.GetService<IRegistrationStateManager>();
+            if (stateManager == null)
+                return "当前服务未配置注册中心状态管理器";
+
+            await stateManager.ForceDeleteLeaderKeyAsync(serviceName);
+            return Res.Ok();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "强制删除 Leader 失败: {ServiceName}", serviceName);
+            return $"强制删除 Leader 失败: {ex.Message}";
+        }
+    }
 }
 
 /// <summary>

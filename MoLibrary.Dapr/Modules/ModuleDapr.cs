@@ -26,9 +26,9 @@ public static class ModuleDaprBuilderExtensions
 
 public partial class ModuleDapr(ModuleDaprOption option) : MoModule<ModuleDapr, ModuleDaprOption, ModuleDaprGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.Dapr;
+        return EMoModuleKey.Dapr;
     }
 
     public override void ConfigureServices(IServiceCollection services)

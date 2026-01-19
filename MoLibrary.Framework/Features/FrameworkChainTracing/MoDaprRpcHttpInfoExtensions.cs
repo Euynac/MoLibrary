@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -91,26 +92,35 @@ internal sealed class MoRpcApiHttpInfoMiddleware(IGlobalJsonOption jsonOption, I
             await next(context);
 
             memoryStream.Position = 0;
-            var originResponse =
-                await JsonSerializer.DeserializeAsync<Res>(memoryStream, jsonOption.GlobalOptions);
+            var jsonNode = await JsonSerializer.DeserializeAsync<JsonNode>(memoryStream, jsonOption.GlobalOptions);
 
             scope.EndWithSuccess();
 
             // 检查返回结果
-            if (tracing.GetCurrentChain() is { } chain )
+            if (tracing.GetCurrentChain() is { } chain)
             {
                 chain.MarkComplete();
 
-                originResponse!.AppendExtraInfo(MoChainContext.CHAIN_KEY, chain.Root);
-            }
+                if (jsonNode is JsonObject jsonObject)
+                {
+                    // 获取或创建 extraInfo 对象
+                    var extraInfoKey = jsonOption.UsingJsonNamePolicy(nameof(Res.ExtraInfo));
+                    var chainKey = jsonOption.UsingJsonNamePolicy(MoChainContext.CHAIN_KEY);
 
+                    if (!jsonObject.ContainsKey(extraInfoKey) || jsonObject[extraInfoKey] is not JsonObject)
+                    {
+                        jsonObject[extraInfoKey] = new JsonObject();
+                    }
+
+                    var extraInfoObj = jsonObject[extraInfoKey]!.AsObject();
+                    extraInfoObj[chainKey] = JsonSerializer.SerializeToNode(chain.Root, jsonOption.GlobalOptions);
+                }
+            }
 
             using var newResStream = new MemoryStream();
             context.Response.Body = newResStream;
 
-            
-
-            await context.Response.WriteAsJsonAsync(originResponse, jsonOption.GlobalOptions);
+            await context.Response.WriteAsJsonAsync(jsonNode, jsonOption.GlobalOptions);
 
             // Copy body back to so its available to the user agent
             newResStream.Position = 0;

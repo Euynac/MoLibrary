@@ -7,7 +7,7 @@ using MoLibrary.Repository.Transaction.EntityEvent;
 namespace MoLibrary.Repository.Transaction;
 
 public class MoUnitOfWork(
-    IMoServiceProvider serviceProvider,
+    ICachedServiceProvider serviceProvider,
     IAsyncLocalEventPublisher publisher,
     ILogger<MoUnitOfWork> logger)
     : IMoUnitOfWork
@@ -25,7 +25,7 @@ public class MoUnitOfWork(
     protected List<Func<Task>> CompletedHandlers { get; } = [];
     protected List<Action> DisposedHandlers { get; } = [];
 
-    public IServiceProvider ServiceProvider { get; set; } = serviceProvider.ServiceProvider;
+    public ICachedServiceProvider CachedServiceProvider { get; } = serviceProvider;
 
     public Dictionary<string, object?> Items { get; } = [];
 

@@ -1,5 +1,7 @@
 using MoLibrary.JobScheduler.Models;
+using MoLibrary.UI.Services;
 using MudBlazor;
+using MudBlazor.Utilities;
 
 namespace MoLibrary.JobScheduler.UI.Services;
 
@@ -7,7 +9,7 @@ namespace MoLibrary.JobScheduler.UI.Services;
 /// 作业状态颜色服务
 /// 提供统一的作业状态到 MudBlazor 颜色的映射
 /// </summary>
-public class JobStateColorService
+public class JobStateColorService(IMoThemeService themeService)
 {
     /// <summary>
     /// 获取作业状态对应的 MudBlazor 颜色
@@ -28,5 +30,17 @@ public class JobStateColorService
             JobState.Skipped => Color.Surface,
             _ => Color.Default
         };
+    }
+
+    /// <summary>
+    /// 获取作业状态对应的十六进制颜色值
+    /// 根据当前主题和明暗模式返回对应的颜色
+    /// </summary>
+    /// <param name="state">作业状态</param>
+    /// <returns>十六进制颜色值</returns>
+    public string GetStateColorHex(JobState state)
+    {
+        if(state == JobState.Skipped) return Colors.Gray.Lighten1;
+        return themeService.GetColorHex(GetStateColor(state));
     }
 }

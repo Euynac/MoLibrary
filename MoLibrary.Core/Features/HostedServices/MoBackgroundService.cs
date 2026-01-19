@@ -170,7 +170,7 @@ public abstract class MoBackgroundService(
         {
             RecordState("Service stopping", HostedServiceState.Stopping);
 
-            if (_heartbeatCts != null)
+            if (_heartbeatCts?.Token.CanBeCanceled is true)
             {
                 await _heartbeatCts.CancelAsync();
             }
@@ -221,7 +221,10 @@ public abstract class MoBackgroundService(
     /// </summary>
     public override void Dispose()
     {
-        _heartbeatCts?.Cancel();
+        if (_heartbeatCts?.Token.CanBeCanceled is true)
+        {
+            _heartbeatCts?.Cancel();
+        }
         _heartbeatCts?.Dispose();
         base.Dispose();
     }

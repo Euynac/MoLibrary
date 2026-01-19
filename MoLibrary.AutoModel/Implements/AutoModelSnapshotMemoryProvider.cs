@@ -202,7 +202,7 @@ public class AutoModelSnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel
     public AutoField? GetField(string fieldActivateName)
     {
         return _fieldDictionary!.TryGetValue(fieldActivateName, out var field) ? field :
-            _fieldDictionary.TryGetValue(fieldActivateName.ToLowerInvariant(), out var field2) ? field2 : null;
+            _fieldDictionary.GetValueOrDefault(fieldActivateName.ToLowerInvariant());
     }
 
     public IReadOnlyList<AutoField> GetFields(IReadOnlyList<string>? fieldActivateNames = null)

@@ -35,9 +35,9 @@ public class ModuleChainTracing(ModuleChainTracingOption option)
     : MoModuleWithDependencies<ModuleChainTracing, ModuleChainTracingOption, ModuleChainTracingGuide>(option)
 {
     
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.ChainTracing;
+        return EMoModuleKey.ChainTracing;
     }
 
     

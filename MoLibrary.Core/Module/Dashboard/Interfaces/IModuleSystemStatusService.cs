@@ -37,9 +37,9 @@ public interface IModuleSystemStatusService
     /// <summary>
     /// 获取指定模块的详细信息。
     /// </summary>
-    /// <param name="moduleEnum">模块枚举</param>
+    /// <param name="moduleKey">模块键</param>
     /// <returns>模块详细信息，如果模块不存在则返回null</returns>
-    ModuleDetailInfo? GetModuleDetail(EMoModules moduleEnum);
+    ModuleDetailInfo? GetModuleDetail(ModuleKey moduleKey);
 
     /// <summary>
     /// 获取模块依赖关系图信息。
@@ -56,7 +56,7 @@ public interface IModuleSystemStatusService
     /// <summary>
     /// 获取指定模块的选项实例。
     /// </summary>
-    /// <param name="moduleEnum">模块枚举</param>
+    /// <param name="moduleKey">模块键</param>
     /// <returns>选项类型和选项实例的元组，如果模块不存在则返回null</returns>
-    (Type optionType, object? optionInstance)? GetModuleOptionInstance(EMoModules moduleEnum);
+    (Type optionType, object? optionInstance)? GetModuleOptionInstance(ModuleKey moduleKey);
 } 

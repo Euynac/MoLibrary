@@ -8,6 +8,11 @@ public class RunningJobInfo
     public required string InstanceId { get; init; }
     public required string WorkerClientId { get; init; }
     public required DateTime StartedAt { get; init; }
+
+    public override string ToString()
+    {
+        return $"{InstanceId}[Worker: {WorkerClientId}] started at {StartedAt}";
+    }
 }
 
 /// <summary>
@@ -16,7 +21,7 @@ public class RunningJobInfo
 public class JobExecutionStatistic
 {
     public required string JobKey { get; init; }
-    public required int MaxConcurrency { get; init; }
+    public required int MaxConcurrency { get; set; }
     public List<RunningJobInfo> RunningInstances { get; init; } = [];
 
     /// <summary>

@@ -1,0 +1,89 @@
+.problem-jobs-wrapper ::deep .problem-card {
+    padding: 20px;
+    border-radius: 12px;
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-lines-default);
+    height: 100%;
+}
+
+.problem-jobs-wrapper ::deep .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.problem-jobs-wrapper ::deep .header-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.problem-jobs-wrapper ::deep .problems-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.problem-jobs-wrapper ::deep .problem-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.problem-jobs-wrapper ::deep .section-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--mud-palette-text-secondary);
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+.problem-jobs-wrapper ::deep .problem-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background-color: var(--mud-palette-background);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.problem-jobs-wrapper ::deep .problem-item:hover {
+    background-color: var(--mud-palette-action-default-hover);
+    transform: translateX(4px);
+}
+
+.problem-jobs-wrapper ::deep .problem-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+}
+
+.problem-jobs-wrapper ::deep .job-name {
+    font-weight: 500;
+    color: var(--mud-palette-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.problem-jobs-wrapper ::deep .problem-detail {
+    font-size: 0.75rem;
+    color: var(--mud-palette-text-secondary);
+}
+
+.problem-jobs-wrapper ::deep .no-problems {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    gap: 12px;
+}

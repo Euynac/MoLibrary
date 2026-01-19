@@ -34,9 +34,9 @@ public static class ModuleRepositoryBuilderExtensions
 public class ModuleRepository(ModuleRepositoryOption option)
     : MoModuleWithDependencies<ModuleRepository, ModuleRepositoryOption, ModuleRepositoryGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.Repository;
+        return EMoModuleKey.Repository;
     }
 
     public override void ClaimDependencies()

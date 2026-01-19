@@ -1,10 +1,13 @@
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using MoLibrary.Core.Extensions;
 using MoLibrary.JobScheduler.Abstractions;
 using MoLibrary.JobScheduler.ControlPlane;
 using MoLibrary.JobScheduler.Events;
 using MoLibrary.JobScheduler.Models;
+using MoLibrary.JobScheduler.Modules;
 using MoLibrary.RegisterCentre.Interfaces;
 
 namespace MoLibrary.JobScheduler.WorkerPlane;
@@ -21,6 +24,7 @@ public class JobOrchestrator(
     JobExecutor jobExecutor,
     JobRegistry jobRegistry,
     IRegisterCentreClientInfo client,
+    IOptions<ModuleJobSchedulerOption> options,
     ILogger<JobOrchestrator> logger)
 {
     /// <summary>
@@ -145,7 +149,7 @@ public class JobOrchestrator(
                         "Job {JobKey} instance {InstanceId} failed with exception: {Message}",
                         instance.JobKey,
                         instance.InstanceId,
-                        ex.Message);
+                        ex.GetMessageRecursively());
 
                     await jobInstanceManager.UpdateStateAsync(
                         instance.InstanceId,
@@ -163,7 +167,7 @@ public class JobOrchestrator(
                 "Critical error in JobOrchestrator for {JobKey} instance {InstanceId}: {Message}",
                 instance.JobKey,
                 instance.InstanceId,
-                ex.Message);
+                ex.GetMessageRecursively());
 
             try
             {
@@ -171,7 +175,7 @@ public class JobOrchestrator(
                 await jobInstanceManager.UpdateStateAsync(
                     instance.InstanceId,
                     JobState.Failed,
-                    $"Orchestrator error: {ex.GetType().Name}: {ex.Message}",
+                    $"Orchestrator error: {ex}",
                     cancellationToken);
             }
             catch (Exception updateEx)
@@ -241,7 +245,7 @@ public class JobOrchestrator(
                     {
                         throw new InvalidOperationException($"Job {executionEvent.JobKey} arguments cannot be null or empty");
                     }
-                    jobArgs = JsonSerializer.Deserialize(executionEvent.JobArgs, argsType);
+                    jobArgs = JsonSerializer.Deserialize(executionEvent.JobArgs, argsType, options.Value.JobArgsSerializerOptions);
                 }
                 catch (JsonException ex)
                 {

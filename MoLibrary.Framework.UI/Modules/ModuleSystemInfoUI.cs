@@ -34,9 +34,9 @@ public static class ModuleSystemInfoUIBuilderExtensions
 public class ModuleSystemInfoUI(ModuleSystemInfoUIOption option)
     : MoModuleWithDependencies<ModuleSystemInfoUI, ModuleSystemInfoUIOption, ModuleSystemInfoUIGuide>(option)
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.SystemInfoUI;
+        return EMoModuleKey.SystemInfoUI;
     }
 
     public override void ConfigureServices(IServiceCollection services)
@@ -53,9 +53,9 @@ public class ModuleSystemInfoUI(ModuleSystemInfoUIOption option)
                     UISystemInfoPage.PAGE_URL,
                     "系统信息",
                     Icons.Material.Filled.Info,
-                    "系统管理",
+                    "监控",
                     addToNav: true,
-                    navOrder: 10));
+                    navOrder: 50));
         }
     }
 

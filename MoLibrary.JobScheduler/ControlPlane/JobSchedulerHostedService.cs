@@ -4,9 +4,10 @@ using Microsoft.Extensions.Options;
 using MoLibrary.Core.Features.ObservableInstance;
 using MoLibrary.Core.Modules;
 using MoLibrary.EventBus.Abstractions;
-using MoLibrary.JobScheduler.Core;
 using MoLibrary.JobScheduler.Events;
 using MoLibrary.JobScheduler.Modules;
+using MoLibrary.RegisterCentre.Modules;
+using MoLibrary.RegisterCentre.Core;
 using MoLibrary.RegisterCentre.Events;
 using MoLibrary.RegisterCentre.Interfaces;
 
@@ -27,7 +28,8 @@ public class JobSchedulerHostedService(
     ILogger<JobSchedulerHostedService> logger,
     IServiceRegistrationCoordinator coordinator,
     IObservableInstanceManager observableManager,
-    IOptions<ModuleHostedServiceOption> hostedServiceOptions) : CoordinatedLeaderService(leaderService, options, logger, coordinator, observableManager, hostedServiceOptions)
+    IOptions<ModuleHostedServiceOption> hostedServiceOptions,
+    IOptions<ModuleRegisterCentreOption> registerCentreOptions) : CoordinatedLeaderService(leaderService, registerCentreOptions, logger, coordinator, observableManager, hostedServiceOptions)
 {
     private readonly ModuleJobSchedulerOption _options = options.Value;
 
@@ -46,7 +48,7 @@ public class JobSchedulerHostedService(
         // Subscribe to job definitions changed event (recurring jobs only)
         _definitionsChangedSubscription = await eventBus.SubscribeAsync<JobDefinitionsChangedEvent>(
             recurringJobScheduler.OnJobDefinitionsChangedAsync);
-        logger.LogDebug("Subscribed to JobDefinitionsChangedEvent");
+        RecordState("Subscribed to JobDefinitionsChangedEvent", givenLogLevel: LogLevel.Debug);
     }
 
     /// <summary>
@@ -55,7 +57,7 @@ public class JobSchedulerHostedService(
     /// </summary>
     protected override async Task OnLeaderLostAsync(LeaderLostReason reason)
     {
-        logger.LogInformation("JobScheduler cleaning up after losing leader status (reason: {Reason})", reason);
+        RecordState($"JobScheduler cleaning up after losing leader status (reason: {reason})", givenLogLevel: LogLevel.Information);
 
         // Unsubscribe from events
         if (_definitionsChangedSubscription != null)
@@ -68,6 +70,6 @@ public class JobSchedulerHostedService(
         await recurringJobScheduler.StopAsync(CancellationToken.None);
         await triggeredJobScheduler.StopAsync(CancellationToken.None);
 
-        logger.LogInformation("JobScheduler cleanup completed");
+        RecordState("JobScheduler cleanup completed", givenLogLevel: LogLevel.Information);
     }
 }

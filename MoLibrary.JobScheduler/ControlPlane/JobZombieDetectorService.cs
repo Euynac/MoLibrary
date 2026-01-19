@@ -4,10 +4,11 @@ using Microsoft.Extensions.Options;
 using MoLibrary.Core.Features.ObservableInstance;
 using MoLibrary.Core.Modules;
 using MoLibrary.JobScheduler.Abstractions;
-using MoLibrary.JobScheduler.Core;
 using MoLibrary.JobScheduler.Metadata;
 using MoLibrary.JobScheduler.Models;
 using MoLibrary.JobScheduler.Modules;
+using MoLibrary.RegisterCentre.Modules;
+using MoLibrary.RegisterCentre.Core;
 using MoLibrary.RegisterCentre.Events;
 using MoLibrary.RegisterCentre.Interfaces;
 
@@ -23,14 +24,16 @@ public class JobZombieDetectorService(
     IMoJobMetadataRepository metadataRepository,
     IJobDefinitionCacheService cacheService,
     JobInstanceManager instanceManager,
+    IJobConcurrencyGuard concurrencyGuard,
     ILogger<JobZombieDetectorService> logger,
     ILeaderElectionService leaderService,
     IOptions<ModuleJobSchedulerOption> options,
     IServiceRegistrationCoordinator coordinator,
     IObservableInstanceManager observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
+    IOptions<ModuleRegisterCentreOption> registerCentreOptions,
     IRegistrationStateManager? registrationStateManager = null
-) : CoordinatedLeaderService(leaderService, options, logger, coordinator, observableManager, hostedServiceOptions)
+) : CoordinatedLeaderService(leaderService, registerCentreOptions, logger, coordinator, observableManager, hostedServiceOptions)
 {
     private readonly ModuleJobSchedulerOption _jobSchedulerOptions = options.Value;
 
@@ -60,7 +63,7 @@ public class JobZombieDetectorService(
     /// </summary>
     protected override Task OnLeaderLostAsync(LeaderLostReason reason)
     {
-        logger.LogInformation("Zombie detector stopped after losing leader status (reason: {Reason})", reason);
+        RecordState($"Zombie detector stopped after losing leader status (reason: {reason})", givenLogLevel: LogLevel.Information);
         return Task.CompletedTask;
     }
 
@@ -99,6 +102,31 @@ public class JobZombieDetectorService(
 
         try
         {
+            // Check consistency before zombie detection
+            var consistencyResult = await concurrencyGuard.CheckConsistencyAsync(cancellationToken);
+
+            if (!consistencyResult.IsConsistent)
+            {
+                RecordState(
+                    $"Concurrency state inconsistency detected (deviation: {consistencyResult.TotalDeviation}). Triggering reconciliation before zombie detection.",
+                    givenLogLevel: LogLevel.Warning);
+
+                var reconcileResult = await concurrencyGuard.ReconcileAsync(cancellationToken);
+
+                if (reconcileResult.Success)
+                {
+                    RecordState(
+                        $"Reconciliation completed in {reconcileResult.Duration.TotalMilliseconds:F0}ms. Deviation reduced from {reconcileResult.StateBefore?.TotalDeviation} to {reconcileResult.StateAfter?.TotalDeviation}",
+                        givenLogLevel: LogLevel.Information);
+                }
+                else
+                {
+                    RecordState(
+                        $"Reconciliation failed: {reconcileResult.ErrorMessage}",
+                        givenLogLevel: LogLevel.Error);
+                }
+            }
+
             // Detect Processing state zombies
             processingZombieCount = await DetectProcessingZombiesAsync(cancellationToken);
 

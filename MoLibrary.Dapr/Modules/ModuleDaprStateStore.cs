@@ -9,6 +9,7 @@ using MoLibrary.Dapr.StateStore;
 using MoLibrary.RegisterCentre.Modules;
 using MoLibrary.StateStore;
 using MoLibrary.StateStore.Modules;
+using MoLibrary.StateStore.Providers;
 
 namespace MoLibrary.Dapr.Modules;
 
@@ -37,7 +38,7 @@ public static class ModuleDaprStateStoreBuilderExtensions
         ArgumentNullException.ThrowIfNull(serviceKey);
         ArgumentNullException.ThrowIfNull(configureOptions);
         new ModuleDaprStateStoreGuide().Register();
-        return guide.ConfigureStateStoreServices(services =>
+        guide.ConfigureStateStoreServices(services =>
         {
             // 注册 keyed options
             services.Configure(serviceKey, configureOptions);
@@ -50,15 +51,19 @@ public static class ModuleDaprStateStoreBuilderExtensions
                 return ActivatorUtilities.CreateInstance<DaprStateStore>(sp, keyedOptions);
             });
         }, serviceKey);
+
+        guide.RecordKeyedServiceKey(serviceKey);
+        return guide;
     }
 }
 
 public class ModuleDaprStateStore(ModuleDaprStateStoreOption option)
-    : MoModuleWithDependencies<ModuleDaprStateStore, ModuleDaprStateStoreOption, ModuleDaprStateStoreGuide>(option)
+    : MoModuleWithDependencies<ModuleDaprStateStore, ModuleDaprStateStoreOption, ModuleDaprStateStoreGuide>(option),
+      IStateStoreModuleProvider
 {
-    public override EMoModules CurModuleEnum()
+    public override ModuleKey GetModuleKey()
     {
-        return EMoModules.DaprStateStore;
+        return EMoModuleKey.DaprStateStore;
     }
 
     public override void ClaimDependencies()
@@ -66,6 +71,21 @@ public class ModuleDaprStateStore(ModuleDaprStateStoreOption option)
         DependsOnModule<ModuleDaprClientGuide>().Register();
         DependsOnModule<ModuleStateStoreGuide>().Register();
     }
+
+    #region IStateStoreModuleProvider Implementation
+
+    public ModuleKey ProvidesFor => EMoModuleKey.StateStore;
+
+    public EStateStoreProviderType ProviderType => EStateStoreProviderType.Dapr;
+
+    public EStateStoreCapabilities Capabilities =>
+        EStateStoreCapabilities.RawStringRetrieval |
+        EStateStoreCapabilities.QueryState |
+        EStateStoreCapabilities.BulkOperations;
+
+    public string DisplayName => "Dapr";
+
+    #endregion
 }
 
 public class

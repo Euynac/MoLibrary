@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using MoLibrary.DependencyInjection.AppInterfaces;
 using MoLibrary.Tool.Utils;
 
 namespace MoLibrary.Repository.Transaction;
@@ -30,7 +31,7 @@ internal class MoChildUnitOfWork : IMoUnitOfWork
 
     public bool IsCompleted => _parent.IsCompleted;
 
-    public IServiceProvider ServiceProvider => _parent.ServiceProvider;
+    public ICachedServiceProvider CachedServiceProvider => _parent.CachedServiceProvider;
 
     private readonly IMoUnitOfWork _parent;
 

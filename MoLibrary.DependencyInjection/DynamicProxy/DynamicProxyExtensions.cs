@@ -213,7 +213,7 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
 
             collection.RemoveAt(index);
 
-            var shouldInjectServiceProvider = implementType.IsImplementInterface<IMoServiceProviderInjector>();
+            var shouldInjectServiceProvider = implementType.IsImplementInterface<ICachedServiceProviderInjector>();
             var context = new RegisterContext(option, shouldInjectServiceProvider, oldDescriptor, implementType, interceptorTypes, way);
            
             switch (way)
@@ -236,7 +236,7 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
         {
             if (context.ShouldInjectServiceProvider)
             {
-                ((IMoServiceProviderInjector) proxiedObject).MoProvider = provider.GetRequiredService<IMoServiceProvider>();
+                ((ICachedServiceProviderInjector) proxiedObject).ServiceProvider = provider.GetRequiredService<ICachedServiceProvider>();
             }
         }
 

@@ -51,12 +51,12 @@ public class MoSignalRConnectionManager : IMoSignalRConnectionManager
 
     public IReadOnlyList<SignalRConnectionInfo> GetConnectionInfos()
     {
-        return [.. _connections.Values];
+        return _connections.Values.ToList();
     }
 
     public SignalRConnectionInfo? GetConnectionInfo(string connectionId)
     {
-        return _connections.TryGetValue(connectionId, out var info) ? info : null;
+        return _connections.GetValueOrDefault(connectionId);
     }
 }
 
