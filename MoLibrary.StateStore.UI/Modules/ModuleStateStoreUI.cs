@@ -50,7 +50,7 @@ public class ModuleStateStoreUI(ModuleStateStoreUIOption option)
                         UIStateStoreDashboardPage.PAGE_URL,
                         "状态存储管理",
                         Icons.Material.Filled.Storage,
-                        "配置",
+                        "调试",
                         addToNav: true,
                         navOrder: 20);
                 });
