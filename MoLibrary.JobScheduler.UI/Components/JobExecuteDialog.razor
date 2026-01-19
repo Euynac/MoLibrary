@@ -207,7 +207,7 @@
 
         try
         {
-            var result = await UIService.ExecuteJobAsync(JobDefinition.JobKey, _deserializedArgs);
+            var result = await UIService.ExecuteJobAsync(JobDefinition.JobKey, _deserializedArgs ?? new object());
             if (result.IsFailed(out var error))
             {
                 Snackbar.Add($"执行失败: {error.Message}", Severity.Error);
