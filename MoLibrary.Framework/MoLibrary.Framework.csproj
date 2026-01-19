@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-	<Import Project="..\common.xml"></Import>
+	<Import Project="..\common.xml" />
 
 	<ItemGroup>
 	  <Compile Remove="Databases\**" />
@@ -9,7 +9,7 @@
 	</ItemGroup>
 	<ItemGroup>
     
-    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.1" />
+
     <PackageReference Include="Minio" Version="7.0.0" />
     <PackageReference Include="Nito.AsyncEx.Coordination" Version="5.1.2" />
     <PackageReference Include="protobuf-net.BuildTools" Version="3.2.52">

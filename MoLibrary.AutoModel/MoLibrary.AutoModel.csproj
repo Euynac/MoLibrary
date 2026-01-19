@@ -3,8 +3,8 @@
   <Import Project="..\common.xml" />
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.1" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.1" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.2" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.2" />
     
     <PackageReference Include="System.Linq.Async" Version="7.0.0" />
     <PackageReference Include="System.Linq.Dynamic.Core" Version="1.7.1" />
