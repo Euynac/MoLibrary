@@ -1,0 +1,46 @@
+<MudListItem T="string"
+             Class="@($"session-item {(IsSelected ? "selected" : "")}")"
+             OnClick="@HandleClick">
+    <ChildContent>
+        <div class="session-content">
+            <div class="session-info">
+                <MudText Typo="Typo.body2" Class="session-title">@Session.Title</MudText>
+                <MudText Typo="Typo.caption" Class="session-time">
+                    @GetTimeDisplay()
+                </MudText>
+            </div>
+            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                           Size="Size.Small"
+                           Color="Color.Error"
+                           Class="delete-button"
+                           OnClick="@HandleDelete" />
+        </div>
+    </ChildContent>
+</MudListItem>
+
+@code {
+    [Parameter] public required ChatSessionInfo Session { get; set; }
+    [Parameter] public bool IsSelected { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+    [Parameter] public EventCallback OnDelete { get; set; }
+
+    private async Task HandleClick()
+    {
+        await OnClick.InvokeAsync();
+    }
+
+    private async Task HandleDelete(MouseEventArgs e)
+    {
+        await OnDelete.InvokeAsync();
+    }
+
+    private string GetTimeDisplay()
+    {
+        var diff = DateTimeOffset.UtcNow - Session.UpdatedAt;
+        return diff.TotalMinutes < 1 ? "刚刚" :
+               diff.TotalMinutes < 60 ? $"{(int)diff.TotalMinutes}分钟前" :
+               diff.TotalHours < 24 ? $"{(int)diff.TotalHours}小时前" :
+               diff.TotalDays < 7 ? $"{(int)diff.TotalDays}天前" :
+               Session.UpdatedAt.ToLocalTime().ToString("MM-dd");
+    }
+}

@@ -1,0 +1,47 @@
+@using MoLibrary.AI.Models
+
+<div class="message-list" @ref="_messageListRef">
+    @if (Messages.Count == 0 && StreamingContent == null)
+    {
+        <div class="empty-state">
+            <MudIcon Icon="@Icons.Material.Filled.Chat" Size="Size.Large" Color="Color.Default" />
+            <MudText Typo="Typo.h6" Color="Color.Default">开始新对话</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Default">向 AI 助手发送消息开始对话</MudText>
+        </div>
+    }
+    else
+    {
+        @foreach (var message in Messages)
+        {
+            <ChatMessageItem Message="@message" EnableMarkdown="@EnableMarkdown" />
+        }
+
+        @if (StreamingContent != null)
+        {
+            <StreamingMessageItem
+                StreamingContent="@StreamingContent"
+                EnableMarkdown="@EnableMarkdown"
+                OnStreamComplete="@HandleStreamComplete" />
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<AIChatMessage> Messages { get; set; } = [];
+    [Parameter] public IAsyncEnumerable<ChatResponseUpdate>? StreamingContent { get; set; }
+    [Parameter] public bool EnableMarkdown { get; set; } = true;
+    [Parameter] public EventCallback<string> OnStreamComplete { get; set; }
+
+    private ElementReference _messageListRef;
+
+    private async Task HandleStreamComplete(string content)
+    {
+        await OnStreamComplete.InvokeAsync(content);
+    }
+
+    public async Task ScrollToBottomAsync()
+    {
+        // 滚动到底部由外部组件通过 JS 实现
+        await Task.CompletedTask;
+    }
+}

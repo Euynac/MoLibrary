@@ -1,0 +1,46 @@
+@using MoLibrary.AI.Models
+
+<div class="provider-selector">
+    <MudSelect T="string"
+               Value="@SelectedProviderId"
+               ValueChanged="@HandleProviderChanged"
+               Label="AI 模型"
+               Variant="Variant.Outlined"
+               Dense="true"
+               Class="provider-select">
+        @foreach (var provider in Providers)
+        {
+            <MudSelectItem T="string" Value="@provider.ProviderId">
+                <div class="provider-item">
+                    <MudIcon Icon="@GetProviderIcon(provider)" Size="Size.Small" />
+                    <span>@provider.DisplayName</span>
+                    @if (provider.IsDefault)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Class="default-chip">默认</MudChip>
+                    }
+                </div>
+            </MudSelectItem>
+        }
+    </MudSelect>
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<AIProviderInfo> Providers { get; set; } = [];
+    [Parameter] public string? SelectedProviderId { get; set; }
+    [Parameter] public EventCallback<string> SelectedProviderIdChanged { get; set; }
+
+    private async Task HandleProviderChanged(string providerId)
+    {
+        await SelectedProviderIdChanged.InvokeAsync(providerId);
+    }
+
+    private string GetProviderIcon(AIProviderInfo provider)
+    {
+        return provider.ProviderType switch
+        {
+            "OpenAI" => Icons.Material.Filled.Psychology,
+            "Anthropic" => Icons.Material.Filled.AutoAwesome,
+            _ => Icons.Material.Filled.SmartToy
+        };
+    }
+}

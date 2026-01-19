@@ -1,0 +1,57 @@
+<div class="session-list">
+    <div class="session-header">
+        <MudText Typo="Typo.subtitle2">对话历史</MudText>
+        <MudIconButton Icon="@Icons.Material.Filled.Add"
+                       Size="Size.Small"
+                       Color="Color.Primary"
+                       OnClick="@HandleNewSession"
+                       Title="新建对话" />
+    </div>
+
+    <MudDivider />
+
+    <div class="session-list-content">
+        @if (Sessions.Count == 0)
+        {
+            <div class="empty-sessions">
+                <MudText Typo="Typo.body2" Color="Color.Default">暂无对话</MudText>
+            </div>
+        }
+        else
+        {
+            <MudList T="string" Dense="true" Class="session-list-items">
+                @foreach (var session in Sessions)
+                {
+                    <SessionListItem
+                        Session="@session"
+                        IsSelected="@(session.SessionId == CurrentSessionId)"
+                        OnClick="@(() => HandleSelectSession(session.SessionId))"
+                        OnDelete="@(() => HandleDeleteSession(session.SessionId))" />
+                }
+            </MudList>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<ChatSessionInfo> Sessions { get; set; } = [];
+    [Parameter] public string? CurrentSessionId { get; set; }
+    [Parameter] public EventCallback OnNewSession { get; set; }
+    [Parameter] public EventCallback<string> OnSelectSession { get; set; }
+    [Parameter] public EventCallback<string> OnDeleteSession { get; set; }
+
+    private async Task HandleNewSession()
+    {
+        await OnNewSession.InvokeAsync();
+    }
+
+    private async Task HandleSelectSession(string sessionId)
+    {
+        await OnSelectSession.InvokeAsync(sessionId);
+    }
+
+    private async Task HandleDeleteSession(string sessionId)
+    {
+        await OnDeleteSession.InvokeAsync(sessionId);
+    }
+}

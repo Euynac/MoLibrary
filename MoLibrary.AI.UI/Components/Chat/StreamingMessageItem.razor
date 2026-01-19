@@ -1,0 +1,85 @@
+@implements IAsyncDisposable
+
+<div class="message-wrapper assistant-message">
+    <MudStack Row="true" Spacing="2" Class="message-content-stack">
+        <MudAvatar Size="Size.Small" Color="Color.Secondary" Class="message-avatar">
+            <MudIcon Icon="@Icons.Material.Filled.SmartToy" />
+        </MudAvatar>
+        <div class="message-content assistant-bubble">
+            @if (EnableMarkdown && !string.IsNullOrEmpty(_content))
+            {
+                <MudMarkdown Value="@_content" />
+            }
+            else if (!string.IsNullOrEmpty(_content))
+            {
+                <MudText Typo="Typo.body1" Class="message-text">@_content</MudText>
+            }
+            @if (_isStreaming)
+            {
+                <span class="typing-indicator"></span>
+            }
+        </div>
+    </MudStack>
+</div>
+
+@code {
+    [Parameter] public IAsyncEnumerable<ChatResponseUpdate>? StreamingContent { get; set; }
+    [Parameter] public EventCallback<string> OnStreamComplete { get; set; }
+    [Parameter] public bool EnableMarkdown { get; set; } = true;
+
+    private string _content = string.Empty;
+    private bool _isStreaming = true;
+    private CancellationTokenSource? _cts;
+    private bool _hasStarted;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && StreamingContent != null && !_hasStarted)
+        {
+            _hasStarted = true;
+            _cts = new CancellationTokenSource();
+            _ = ConsumeStreamAsync();
+        }
+    }
+
+    private async Task ConsumeStreamAsync()
+    {
+        if (StreamingContent == null) return;
+
+        try
+        {
+            await foreach (var update in StreamingContent.WithCancellation(_cts!.Token))
+            {
+                if (!string.IsNullOrEmpty(update.Text))
+                {
+                    _content += update.Text;
+                    await InvokeAsync(StateHasChanged);
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // 取消是正常行为
+        }
+        catch (Exception)
+        {
+            // 忽略流式传输中的错误
+        }
+        finally
+        {
+            _isStreaming = false;
+            await InvokeAsync(StateHasChanged);
+            await OnStreamComplete.InvokeAsync(_content);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_cts != null)
+        {
+            await _cts.CancelAsync();
+            _cts.Dispose();
+            _cts = null;
+        }
+    }
+}

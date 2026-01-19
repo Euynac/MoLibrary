@@ -1,0 +1,23 @@
+.provider-selector {
+    padding: 8px 16px;
+}
+
+.provider-select {
+    width: 100%;
+}
+
+.provider-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.default-chip {
+    margin-left: auto;
+    font-size: 0.7rem;
+}
+
+/* 使用 ::deep 选择器样式化 MudBlazor 组件 */
+.provider-selector ::deep .mud-select {
+    margin-top: 0;
+}

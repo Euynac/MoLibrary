@@ -1,0 +1,45 @@
+.session-item {
+    border-radius: 8px;
+    margin: 4px 8px;
+    transition: background-color 0.2s ease;
+}
+
+.session-item:hover {
+    background-color: var(--mud-palette-action-default-hover);
+}
+
+.session-item.selected {
+    background-color: var(--mud-palette-primary-lighten);
+}
+
+.session-content {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    gap: 8px;
+}
+
+.session-info {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.session-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.session-time {
+    opacity: 0.7;
+}
+
+.delete-button {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.session-item:hover .delete-button {
+    opacity: 1;
+}

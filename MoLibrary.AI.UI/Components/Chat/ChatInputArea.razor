@@ -1,0 +1,64 @@
+<div class="input-area">
+    <MudPaper Elevation="2" Class="input-container">
+        <MudTextField @ref="_textFieldRef"
+                      @bind-Value="_inputText"
+                      Placeholder="@Placeholder"
+                      Variant="Variant.Text"
+                      Lines="1"
+                      AutoGrow="true"
+                      MaxLines="6"
+                      Disabled="@Disabled"
+                      Immediate="true"
+                      Class="input-field"
+                      OnKeyDown="@HandleKeyDown" />
+        <MudIconButton Icon="@Icons.Material.Filled.Send"
+                       Color="Color.Primary"
+                       Disabled="@(Disabled || string.IsNullOrWhiteSpace(_inputText))"
+                       OnClick="@HandleSend"
+                       Class="send-button" />
+    </MudPaper>
+    @if (ShowProviderInfo && !string.IsNullOrEmpty(ProviderName))
+    {
+        <MudText Typo="Typo.caption" Class="provider-info">
+            当前使用: @ProviderName
+        </MudText>
+    }
+</div>
+
+@code {
+    [Parameter] public string Placeholder { get; set; } = "输入消息...";
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public string? ProviderName { get; set; }
+    [Parameter] public bool ShowProviderInfo { get; set; } = true;
+    [Parameter] public EventCallback<string> OnSend { get; set; }
+
+    private string _inputText = string.Empty;
+    private MudTextField<string>? _textFieldRef;
+
+    private async Task HandleSend()
+    {
+        if (string.IsNullOrWhiteSpace(_inputText) || Disabled) return;
+
+        var message = _inputText.Trim();
+        _inputText = string.Empty;
+
+        await OnSend.InvokeAsync(message);
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        // Enter 发送，Shift+Enter 换行
+        if (e.Key == "Enter" && !e.ShiftKey)
+        {
+            await HandleSend();
+        }
+    }
+
+    public async Task FocusAsync()
+    {
+        if (_textFieldRef != null)
+        {
+            await _textFieldRef.FocusAsync();
+        }
+    }
+}

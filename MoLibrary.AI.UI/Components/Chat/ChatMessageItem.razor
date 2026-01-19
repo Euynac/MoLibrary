@@ -1,0 +1,46 @@
+@using MoLibrary.AI.Models
+
+<div class="message-wrapper @(IsUser ? "user-message" : "assistant-message")">
+    <MudStack Row="true" Spacing="2" Class="message-content-stack">
+        @if (!IsUser)
+        {
+            <MudAvatar Size="Size.Small" Color="Color.Secondary" Class="message-avatar">
+                <MudIcon Icon="@Icons.Material.Filled.SmartToy" />
+            </MudAvatar>
+        }
+        <div class="message-content @(IsUser ? "user-bubble" : "assistant-bubble")">
+            @if (EnableMarkdown && !IsUser)
+            {
+                <MudMarkdown Value="@Message.Content" />
+            }
+            else
+            {
+                <MudText Typo="Typo.body1" Class="message-text">@Message.Content</MudText>
+            }
+            <div class="message-meta">
+                <MudText Typo="Typo.caption" Class="message-time">
+                    @Message.CreatedAt.ToLocalTime().ToString("HH:mm")
+                </MudText>
+                @if (!IsUser && Message.Usage != null)
+                {
+                    <MudText Typo="Typo.caption" Class="message-tokens">
+                        @Message.Usage.TotalTokens tokens
+                    </MudText>
+                }
+            </div>
+        </div>
+        @if (IsUser)
+        {
+            <MudAvatar Size="Size.Small" Color="Color.Primary" Class="message-avatar">
+                <MudIcon Icon="@Icons.Material.Filled.Person" />
+            </MudAvatar>
+        }
+    </MudStack>
+</div>
+
+@code {
+    [Parameter] public required AIChatMessage Message { get; set; }
+    [Parameter] public bool EnableMarkdown { get; set; } = true;
+
+    private bool IsUser => Message.Role == AIChatRole.User;
+}

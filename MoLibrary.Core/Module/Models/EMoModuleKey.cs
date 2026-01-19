@@ -141,5 +141,13 @@ public enum EMoModuleKey
     /// <summary>
     /// 弹性策略模块 (Polly)
     /// </summary>
-    Resilience
+    Resilience,
+    /// <summary>
+    /// AI 模块 - 提供统一的 AI 服务抽象
+    /// </summary>
+    AI,
+    /// <summary>
+    /// AI UI 模块 - 提供 AI 聊天界面
+    /// </summary>
+    AIUI
 }

@@ -25,8 +25,7 @@ public class ModuleControllers(ModuleControllersOption option)
         var mvcBuilder = services.AddControllers().ConfigureApplicationPartManager(manager =>
             {
 
-            })
-            .AddControllersAsServices(); 
+            }); 
 
 
         if (Option.MvcBuilderActions.Count <= 0 && Option.MvcOptionActions.Count <= 0 && Option.DependentServicesActions.Count <= 0) return;

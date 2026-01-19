@@ -1,0 +1,47 @@
+@using MoLibrary.AI.Models
+
+<div class="chat-container">
+    <ChatMessageList
+        Messages="@Messages"
+        StreamingContent="@StreamingContent"
+        EnableMarkdown="@EnableMarkdown"
+        OnStreamComplete="@HandleStreamComplete" />
+
+    <ChatInputArea
+        @ref="_inputAreaRef"
+        Disabled="@IsSending"
+        ProviderName="@ProviderName"
+        ShowProviderInfo="@ShowProviderInfo"
+        OnSend="@HandleSend" />
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<AIChatMessage> Messages { get; set; } = [];
+    [Parameter] public IAsyncEnumerable<ChatResponseUpdate>? StreamingContent { get; set; }
+    [Parameter] public bool IsSending { get; set; }
+    [Parameter] public bool EnableMarkdown { get; set; } = true;
+    [Parameter] public string? ProviderName { get; set; }
+    [Parameter] public bool ShowProviderInfo { get; set; } = true;
+    [Parameter] public EventCallback<string> OnSendMessage { get; set; }
+    [Parameter] public EventCallback<string> OnStreamComplete { get; set; }
+
+    private ChatInputArea? _inputAreaRef;
+
+    private async Task HandleSend(string message)
+    {
+        await OnSendMessage.InvokeAsync(message);
+    }
+
+    private async Task HandleStreamComplete(string content)
+    {
+        await OnStreamComplete.InvokeAsync(content);
+    }
+
+    public async Task FocusInputAsync()
+    {
+        if (_inputAreaRef != null)
+        {
+            await _inputAreaRef.FocusAsync();
+        }
+    }
+}

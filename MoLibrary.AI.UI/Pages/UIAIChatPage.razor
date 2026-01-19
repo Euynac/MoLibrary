@@ -1,0 +1,223 @@
+@page "/ai-chat"
+@rendermode InteractiveServer
+@inject AIChatUIService ChatUIService
+@inject IOptions<ModuleAIUIOption> Options
+
+<div class="ai-chat-page">
+    @if (_options.ShowSessionList)
+    {
+        <div class="sidebar">
+            @if (_options.ShowProviderSelector)
+            {
+                <ProviderSelector
+                    Providers="@_providers"
+                    SelectedProviderId="@_currentProviderId"
+                    SelectedProviderIdChanged="@HandleProviderChanged" />
+                <MudDivider />
+            }
+
+            <SessionList
+                Sessions="@_sessionStorage.Sessions"
+                CurrentSessionId="@_sessionStorage.CurrentSessionId"
+                OnNewSession="@HandleNewSession"
+                OnSelectSession="@HandleSelectSession"
+                OnDeleteSession="@HandleDeleteSession" />
+        </div>
+    }
+
+    <div class="main-content">
+        <div class="chat-header">
+            <MudText Typo="Typo.h6">@_currentSessionTitle</MudText>
+            @if (!_options.ShowSessionList && _options.ShowProviderSelector)
+            {
+                <ProviderSelector
+                    Providers="@_providers"
+                    SelectedProviderId="@_currentProviderId"
+                    SelectedProviderIdChanged="@HandleProviderChanged" />
+            }
+        </div>
+
+        <ChatContainer
+            @ref="_chatContainerRef"
+            Messages="@_currentMessages"
+            StreamingContent="@_streamingContent"
+            IsSending="@_isSending"
+            EnableMarkdown="@_options.EnableMarkdown"
+            ProviderName="@_currentProviderName"
+            ShowProviderInfo="@(!_options.ShowProviderSelector)"
+            OnSendMessage="@HandleSendMessage"
+            OnStreamComplete="@HandleStreamComplete" />
+    </div>
+</div>
+
+@code {
+    public const string PAGE_URL = "/ai-chat";
+
+    private ModuleAIUIOption _options = null!;
+    private ChatSessionStorage _sessionStorage = null!;
+    private IReadOnlyList<AIProviderInfo> _providers = [];
+    private string? _currentProviderId;
+    private string _currentProviderName = string.Empty;
+    private string _currentSessionTitle = "新对话";
+    private IReadOnlyList<AIChatMessage> _currentMessages = [];
+    private IAsyncEnumerable<ChatResponseUpdate>? _streamingContent;
+    private bool _isSending;
+    private ChatContainer? _chatContainerRef;
+
+    protected override void OnInitialized()
+    {
+        _options = Options.Value;
+        _sessionStorage = ChatUIService.SessionStorage;
+        _providers = ChatUIService.GetProviders();
+
+        // 获取默认 Provider
+        var defaultProvider = ChatUIService.GetDefaultProvider();
+        _currentProviderId = defaultProvider?.ProviderId;
+        _currentProviderName = defaultProvider?.DisplayName ?? string.Empty;
+
+        // 订阅会话变更事件
+        _sessionStorage.CurrentSessionChanged += OnCurrentSessionChanged;
+        _sessionStorage.SessionsChanged += OnSessionsChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // 加载会话列表
+            ChatUIService.LoadSessions();
+
+            // 如果没有会话，创建一个新会话
+            if (_sessionStorage.Sessions.Count == 0)
+            {
+                ChatUIService.CreateSession(_currentProviderId);
+            }
+            else
+            {
+                // 选择第一个会话
+                _sessionStorage.CurrentSessionId = _sessionStorage.Sessions.First().SessionId;
+            }
+
+            UpdateCurrentSession();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void OnCurrentSessionChanged()
+    {
+        UpdateCurrentSession();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnSessionsChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void UpdateCurrentSession()
+    {
+        var currentSession = _sessionStorage.GetSession(_sessionStorage.CurrentSessionId ?? string.Empty);
+        if (currentSession != null)
+        {
+            _currentSessionTitle = currentSession.Title;
+            _currentMessages = currentSession.Messages;
+            _currentProviderId = currentSession.ProviderId ?? _currentProviderId;
+        }
+        else
+        {
+            _currentSessionTitle = "新对话";
+            _currentMessages = [];
+        }
+    }
+
+    private async Task HandleProviderChanged(string providerId)
+    {
+        _currentProviderId = providerId;
+        var provider = _providers.FirstOrDefault(p => p.ProviderId == providerId);
+        _currentProviderName = provider?.DisplayName ?? string.Empty;
+
+        // 更新当前会话的 Provider
+        var currentSession = _sessionStorage.GetSession(_sessionStorage.CurrentSessionId ?? string.Empty);
+        if (currentSession != null)
+        {
+            currentSession.ProviderId = providerId;
+        }
+
+        await Task.CompletedTask;
+    }
+
+    private void HandleNewSession()
+    {
+        ChatUIService.CreateSession(_currentProviderId);
+        UpdateCurrentSession();
+    }
+
+    private void HandleSelectSession(string sessionId)
+    {
+        ChatUIService.SwitchSession(sessionId);
+    }
+
+    private async Task HandleDeleteSession(string sessionId)
+    {
+        ChatUIService.DeleteSession(sessionId);
+
+        // 如果删除的是当前会话，创建新会话或切换到其他会话
+        if (sessionId == _sessionStorage.CurrentSessionId)
+        {
+            if (_sessionStorage.Sessions.Count == 0)
+            {
+                ChatUIService.CreateSession(_currentProviderId);
+            }
+            else
+            {
+                _sessionStorage.CurrentSessionId = _sessionStorage.Sessions.First().SessionId;
+            }
+        }
+
+        UpdateCurrentSession();
+        await Task.CompletedTask;
+    }
+
+    private async Task HandleSendMessage(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message) || _isSending) return;
+
+        var sessionId = _sessionStorage.CurrentSessionId;
+        if (string.IsNullOrEmpty(sessionId))
+        {
+            var session = ChatUIService.CreateSession(_currentProviderId);
+            sessionId = session.SessionId;
+        }
+
+        _isSending = true;
+        StateHasChanged();
+
+        try
+        {
+            // 使用流式响应
+            _streamingContent = ChatUIService.SendMessageStreamingAsync(sessionId, message);
+            UpdateCurrentSession();
+            StateHasChanged();
+        }
+        catch (Exception)
+        {
+            _isSending = false;
+            _streamingContent = null;
+            StateHasChanged();
+        }
+    }
+
+    private void HandleStreamComplete(string content)
+    {
+        _isSending = false;
+        _streamingContent = null;
+        UpdateCurrentSession();
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        _sessionStorage.CurrentSessionChanged -= OnCurrentSessionChanged;
+        _sessionStorage.SessionsChanged -= OnSessionsChanged;
+    }
+}
