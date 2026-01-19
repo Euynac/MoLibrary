@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.OpenApi.Models;
 using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Features.MoXmlDocumentation;
 using MoLibrary.Core.Module;
@@ -49,7 +49,7 @@ public class ModuleXmlDocumentation(ModuleXmlDocumentationOption option)
     {
         UseEndpoints(app, endpoints =>
         {
-            var tagGroup = new List<OpenApiTag> { new() { Name = Option.GetApiGroupName(), Description = "XML文档服务接口" } };
+            var tagName = Option.GetApiGroupName();
 
             // 获取缓存的XML文档信息
             endpoints.MapGet("/xml-docs/cache", ([FromServices] IXmlDocumentationService xmlService) =>
@@ -69,13 +69,11 @@ public class ModuleXmlDocumentation(ModuleXmlDocumentationOption option)
                 {
                     return Res.Fail($"获取XML文档缓存信息失败: {ex.Message}").GetResponse();
                 }
-            }).WithName("获取XML文档缓存信息").WithOpenApi(operation =>
-            {
-                operation.Summary = "获取XML文档缓存信息";
-                operation.Description = "获取当前缓存的所有XML文档信息，包括程序集名称、文件路径等";
-                operation.Tags = tagGroup;
-                return operation;
-            });
+            })
+            .WithName("获取XML文档缓存信息")
+            .WithTags(tagName)
+            .WithSummary("获取XML文档缓存信息")
+            .WithDescription("获取当前缓存的所有XML文档信息，包括程序集名称、文件路径等");
 
             // 清空缓存
             endpoints.MapPost("/xml-docs/cache/clear", ([FromServices] IXmlDocumentationService xmlService) =>
@@ -89,13 +87,11 @@ public class ModuleXmlDocumentation(ModuleXmlDocumentationOption option)
                 {
                     return Res.Fail($"清空XML文档缓存失败: {ex.Message}").GetResponse();
                 }
-            }).WithName("清空XML文档缓存").WithOpenApi(operation =>
-            {
-                operation.Summary = "清空XML文档缓存";
-                operation.Description = "清空所有缓存的XML文档，释放内存";
-                operation.Tags = tagGroup;
-                return operation;
-            });
+            })
+            .WithName("清空XML文档缓存")
+            .WithTags(tagName)
+            .WithSummary("清空XML文档缓存")
+            .WithDescription("清空所有缓存的XML文档，释放内存");
         });
     }
 }

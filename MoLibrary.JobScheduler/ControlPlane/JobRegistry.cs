@@ -71,7 +71,7 @@ public class JobRegistry(
     /// <returns>The CLR type of the job, or null if not found.</returns>
     public Type? GetJobClrType(string jobKey)
     {
-        return CollectionExtensions.GetValueOrDefault(_jobDefinitionTypeMap, jobKey);
+        return _jobDefinitionTypeMap.GetValueOrDefault(jobKey);
     }
     
     /// <summary>
@@ -81,7 +81,7 @@ public class JobRegistry(
     /// <returns></returns>
     public Type? GetTriggeredJobClrType(string jobArgsKey)
     {
-        return CollectionExtensions.GetValueOrDefault(_triggeredJobMapping, jobArgsKey);
+        return _triggeredJobMapping.GetValueOrDefault(jobArgsKey);
     }
 
     /// <summary>
@@ -91,7 +91,7 @@ public class JobRegistry(
     /// <returns>The CLR type of the job arguments, or null if not found.</returns>
     public Type? GetJobArgsClrType(string jobArgsKey)
     {
-        return CollectionExtensions.GetValueOrDefault(_triggeredJobArgsTypeMap, jobArgsKey);
+        return _triggeredJobArgsTypeMap.GetValueOrDefault(jobArgsKey);
     }
 
   

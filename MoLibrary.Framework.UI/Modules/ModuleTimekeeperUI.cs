@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.OpenApi.Models;
 using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
@@ -64,7 +64,7 @@ public class ModuleTimekeeperUI(ModuleTimekeeperUIOption option)
     {
         UseEndpoints(app, endpoints =>
         {
-            var tagGroup = new List<OpenApiTag> { new() { Name = Option.GetApiGroupName(), Description = "Timekeeper相关接口" } };
+            var tagName = Option.GetApiGroupName();
 
             endpoints.MapGet("/timekeeper/status",
                 async ([FromServices] TimekeeperService timekeeperService) =>
@@ -72,13 +72,10 @@ public class ModuleTimekeeperUI(ModuleTimekeeperUIOption option)
                     var result = await timekeeperService.GetTimekeeperStatusAsync();
                     return result.GetResponse();
                 })
-                .WithName("获取Timekeeper统计状态").WithOpenApi(operation =>
-                {
-                    operation.Summary = "获取Timekeeper统计状态";
-                    operation.Description = "获取Timekeeper统计信息列表";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
+                .WithName("获取Timekeeper统计状态")
+                .WithTags(tagName)
+                .WithSummary("获取Timekeeper统计状态")
+                .WithDescription("获取Timekeeper统计信息列表");
 
             endpoints.MapGet("/timekeeper/running",
                 async ([FromServices] TimekeeperService timekeeperService) =>
@@ -86,13 +83,10 @@ public class ModuleTimekeeperUI(ModuleTimekeeperUIOption option)
                     var result = await timekeeperService.GetRunningTimekeepersAsync();
                     return result.GetResponse();
                 })
-                .WithName("获取当前正在运行的Timekeeper").WithOpenApi(operation =>
-                {
-                    operation.Summary = "获取当前正在运行的Timekeeper";
-                    operation.Description = "获取正在运行的Timekeeper信息列表";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
+                .WithName("获取当前正在运行的Timekeeper")
+                .WithTags(tagName)
+                .WithSummary("获取当前正在运行的Timekeeper")
+                .WithDescription("获取正在运行的Timekeeper信息列表");
         });
     }
 }

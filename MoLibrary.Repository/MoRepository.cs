@@ -40,7 +40,7 @@ public class MoRepository<TDbContext, TEntity>(
     {
         return GetDbSetAsync();
     }
-    public virtual async Task<int> ExecuteUpdateAsync(Expression<Func<TEntity, bool>> predicate, Expression<Func<SetPropertyCalls<TEntity>, SetPropertyCalls<TEntity>>> setPropertyCalls,
+    public virtual async Task<int> ExecuteUpdateAsync(Expression<Func<TEntity, bool>> predicate, Action<UpdateSettersBuilder<TEntity>> setPropertyCalls,
         CancellationToken cancellationToken = default)
     {
         return await (await GetDbSetAsync()).AsQueryable().Where(predicate)

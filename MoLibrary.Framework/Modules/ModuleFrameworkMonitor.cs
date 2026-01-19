@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.OpenApi.Models;
 using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
@@ -98,79 +97,65 @@ public class ModuleFrameworkMonitor(ModuleFrameworkMonitorOption option)
     {
         UseEndpoints(app, endpoints =>
         {
-            var tagGroup = new List<OpenApiTag> { new() { Name = option.GetApiGroupName(), Description = "系统框架内置接口" } };
+            var tagName = option.GetApiGroupName();
 
-            endpoints.MapPost("/framework/units/domain-event/{eventKey}/publish", 
-                async ([FromRoute] string eventKey, 
+            endpoints.MapPost("/framework/units/domain-event/{eventKey}/publish",
+                async ([FromRoute] string eventKey,
                       [FromServices] IFrameworkMonitorService frameworkMonitorService,
                       [FromBody] JsonNode eventContent) =>
                 {
                     return await frameworkMonitorService.PublishDomainEventAsync(eventKey, eventContent);
                 })
-                .WithName("测试发布领域事件信息").WithOpenApi(operation =>
-                {
-                    operation.Summary = "测试发布领域事件信息";
-                    operation.Description = "测试发布领域事件信息";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
+                .WithName("测试发布领域事件信息")
+                .WithTags(tagName)
+                .WithSummary("测试发布领域事件信息")
+                .WithDescription("测试发布领域事件信息");
 
             if (ProjectUnit.Option.EnableRequestFilter)
             {
-                endpoints.MapPost("/framework/request-filter", 
-                    async ([FromBody] RequestFilterDto dto, 
+                endpoints.MapPost("/framework/request-filter",
+                    async ([FromBody] RequestFilterDto dto,
                           [FromServices] IFrameworkMonitorService frameworkMonitorService) =>
                     {
                         return await frameworkMonitorService.ManageRequestFilterAsync(dto.Urls, dto.Disable);
                     })
-                    .WithName("请求过滤中间件").WithOpenApi(operation =>
-                    {
-                        operation.Summary = "请求过滤中间件";
-                        operation.Description = "请求过滤中间件";
-                        operation.Tags = tagGroup;
-                        return operation;
-                    });
+                    .WithName("请求过滤中间件")
+                    .WithTags(tagName)
+                    .WithSummary("请求过滤中间件")
+                    .WithDescription("请求过滤中间件");
             }
 
 
-            endpoints.MapGet("/framework/units", 
+            endpoints.MapGet("/framework/units",
                 async ([FromServices] IFrameworkMonitorService frameworkMonitorService) =>
                 {
                     return await frameworkMonitorService.GetAllProjectUnitsAsync();
                 })
-                .WithName("获取所有项目单元信息").WithOpenApi(operation =>
-                {
-                    operation.Summary = "获取所有项目单元信息";
-                    operation.Description = "获取所有项目单元信息";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
+                .WithName("获取所有项目单元信息")
+                .WithTags(tagName)
+                .WithSummary("获取所有项目单元信息")
+                .WithDescription("获取所有项目单元信息");
 
-            endpoints.MapGet("/framework/units/domain-event", 
+            endpoints.MapGet("/framework/units/domain-event",
                 async ([FromServices] IFrameworkMonitorService frameworkMonitorService) =>
                 {
                     return await frameworkMonitorService.GetDomainEventsAsync();
                 })
-                .WithName("获取项目领域事件信息").WithOpenApi(operation =>
-                {
-                    operation.Summary = "获取项目领域事件信息";
-                    operation.Description = "获取项目领域事件信息";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
-            endpoints.MapGet("/framework/enum", 
-                async ([FromServices] IFrameworkMonitorService frameworkMonitorService, 
+                .WithName("获取项目领域事件信息")
+                .WithTags(tagName)
+                .WithSummary("获取项目领域事件信息")
+                .WithDescription("获取项目领域事件信息");
+
+            endpoints.MapGet("/framework/enum",
+                async ([FromServices] IFrameworkMonitorService frameworkMonitorService,
                       [FromQuery] string? name = null) =>
                 {
                     return await frameworkMonitorService.GetEnumInfoAsync(name);
                 })
-                .WithName("获取项目枚举信息").WithOpenApi(operation =>
-                {
-                    operation.Summary = "获取项目枚举信息";
-                    operation.Description = "获取项目枚举信息";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
+                .WithName("获取项目枚举信息")
+                .WithTags(tagName)
+                .WithSummary("获取项目枚举信息")
+                .WithDescription("获取项目枚举信息");
         });
     }
 }

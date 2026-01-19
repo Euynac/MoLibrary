@@ -3,7 +3,6 @@
 	<Import Project="..\common.xml"/>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.0"/>
 		<!-- For ETW/EventPipe allocation tracking -->
 		<PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.1.13"/>
 		<!-- For heap snapshot analysis -->

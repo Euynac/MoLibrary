@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
@@ -46,8 +46,8 @@ public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger,
             options.DocumentFilter<CustomDocumentFilter>();
             options.SchemaFilter<CustomSchemaFilter>();
             
-            // 添加GroupName到Tags的转换过滤器
-            options.OperationFilter<GroupNameToTagsOperationFilter>();
+            // // 添加GroupName到Tags的转换过滤器
+            // options.OperationFilter<GroupNameToTagsOperationFilter>();
             
             options.SwaggerDoc(Option.Version, new OpenApiInfo
             {
@@ -115,17 +115,12 @@ public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger,
                     In = ParameterLocation.Header,
                     Type = SecuritySchemeType.Http,
                     Scheme = "bearer", // must be lowercase
-                    BearerFormat = "JWT",
-                    Reference = new OpenApiReference
-                    {
-                        Id = JwtBearerDefaults.AuthenticationScheme,
-                        Type = ReferenceType.SecurityScheme
-                    }
+                    BearerFormat = "JWT"
                 };
-                options.AddSecurityDefinition(securityScheme.Reference.Id, securityScheme);
-                options.AddSecurityRequirement(new OpenApiSecurityRequirement
+                options.AddSecurityDefinition(JwtBearerDefaults.AuthenticationScheme, securityScheme);
+                options.AddSecurityRequirement(_ => new OpenApiSecurityRequirement
                 {
-                    {securityScheme, Array.Empty<string>()}
+                    {new OpenApiSecuritySchemeReference(JwtBearerDefaults.AuthenticationScheme), new List<string>()}
                 });
             }
 

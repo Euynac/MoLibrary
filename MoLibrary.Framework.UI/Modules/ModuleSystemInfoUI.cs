@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.OpenApi.Models;
 using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
@@ -63,7 +62,7 @@ public class ModuleSystemInfoUI(ModuleSystemInfoUIOption option)
     {
         UseEndpoints(app, endpoints =>
         {
-            var tagGroup = new List<OpenApiTag> { new() { Name = Option.GetApiGroupName(), Description = "系统信息相关接口" } };
+            var tagName = Option.GetApiGroupName();
 
             endpoints.MapGet("/system/info",
                 async ([FromQuery] bool? simple,
@@ -72,13 +71,10 @@ public class ModuleSystemInfoUI(ModuleSystemInfoUIOption option)
                     var result = await systemInfoService.GetSystemInfoAsync(simple);
                     return result.GetResponse();
                 })
-                .WithName("获取微服务信息").WithOpenApi(operation =>
-                {
-                    operation.Summary = "获取微服务信息";
-                    operation.Description = "获取微服务信息";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
+                .WithName("获取微服务信息")
+                .WithTags(tagName)
+                .WithSummary("获取微服务信息")
+                .WithDescription("获取微服务信息");
         });
     }
 }

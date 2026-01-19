@@ -45,7 +45,7 @@ public interface IMoRepository<TEntity> : IMoBasicRepository<TEntity>, IMoReposi
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
     Task<int> ExecuteUpdateAsync(Expression<Func<TEntity, bool>> predicate,
-        Expression<Func<SetPropertyCalls<TEntity>, SetPropertyCalls<TEntity>>> setPropertyCalls,
+        Action<UpdateSettersBuilder<TEntity>> setPropertyCalls,
         CancellationToken cancellationToken = default);
 
     /// <summary>

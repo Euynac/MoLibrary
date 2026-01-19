@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.OpenApi.Models;
 using MoLibrary.Configuration.Modules;
 using MoLibrary.Configuration.UI.Implements;
 using MoLibrary.Configuration.UI.Interfaces;
@@ -55,89 +55,78 @@ public class ModuleConfigurationDashboard(ModuleConfigurationDashboardOption opt
         {
             UseEndpoints(app, endpoints =>
             {
-                var tagGroup = new List<OpenApiTag> { new() { Name = option.GetApiGroupName(), Description = "配置中心" } };
+                var tagName = option.GetApiGroupName();
+
                 endpoints.MapGet(MoConfigurationConventions.DashboardCentreConfigHistory,
                     async ([FromQuery] string? key, [FromQuery] string? appid, [FromQuery] DateTime? start,
                         [FromQuery] DateTime? end, [FromServices] ConfigurationDashboardService dashboardService) =>
                     {
                         return (await dashboardService.GetConfigHistoryAsync(key, appid, start, end)).GetResponse();
-                    }).WithName("获取配置类历史").WithOpenApi(operation =>
-                    {
-                        operation.Summary = "获取配置类历史";
-                        operation.Description = "获取配置类历史";
-                        operation.Tags = tagGroup;
-                        return operation;
-                    });
+                    })
+                    .WithName("获取配置类历史")
+                    .WithTags(tagName)
+                    .WithSummary("获取配置类历史")
+                    .WithDescription("获取配置类历史");
 
 
                 endpoints.MapPost(MoConfigurationConventions.DashboardCentreConfigRollback,
                     async ([FromBody] RollbackRequest req, [FromServices] ConfigurationDashboardService dashboardService) =>
                     {
                         return (await dashboardService.RollbackConfigAsync(req.Key, req.AppId, req.Version)).GetResponse();
-
-                    }).WithName("回滚配置类").WithOpenApi(operation =>
-                    {
-                        operation.Summary = "回滚配置类";
-                        operation.Description = "回滚配置类";
-                        operation.Tags = tagGroup;
-                        return operation;
-                    });
+                    })
+                    .WithName("回滚配置类")
+                    .WithTags(tagName)
+                    .WithSummary("回滚配置类")
+                    .WithDescription("回滚配置类");
 
                 endpoints.MapPost(MoConfigurationConventions.DashboardCentreConfigUpdate, async (DtoUpdateConfig req,
                     [FromServices] ConfigurationDashboardService dashboardService) =>
                 {
                     return (await dashboardService.UpdateConfigAsync(req)).GetResponse();
-                }).WithName("更新指定配置").WithOpenApi(operation =>
-                {
-                    operation.Summary = "更新指定配置";
-                    operation.Description = "更新指定配置";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
+                })
+                .WithName("更新指定配置")
+                .WithTags(tagName)
+                .WithSummary("更新指定配置")
+                .WithDescription("更新指定配置");
 
                 endpoints.MapGet(MoConfigurationConventions.DashboardCentreOptionItemStatus,
                     async ([FromQuery] string? appid, [FromQuery] string key,
                         [FromServices] ConfigurationDashboardService dashboardService) =>
                     {
                         return (await dashboardService.GetOptionItemStatusAsync(appid, key)).GetResponse();
-                    }).WithName("获取指定配置状态").WithOpenApi(operation =>
-                    {
-                        operation.Summary = "获取指定配置状态";
-                        operation.Description = "获取指定配置状态";
-                        operation.Tags = tagGroup;
-                        return operation;
-                    });
+                    })
+                    .WithName("获取指定配置状态")
+                    .WithTags(tagName)
+                    .WithSummary("获取指定配置状态")
+                    .WithDescription("获取指定配置状态");
+
                 endpoints.MapGet(MoConfigurationConventions.DashboardCentreAllConfigStatus, async (
                     [FromQuery] string? mode,
                     [FromServices] ConfigurationDashboardService dashboardService) =>
                 {
                     return (await dashboardService.GetAllConfigStatusAsync(mode)).GetResponse();
-                }).WithName("获取所有微服务配置状态").WithOpenApi(operation =>
-                {
-                    operation.Summary = "获取所有微服务配置状态";
-                    operation.Description = "获取所有微服务配置状态";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
+                })
+                .WithName("获取所有微服务配置状态")
+                .WithTags(tagName)
+                .WithSummary("获取所有微服务配置状态")
+                .WithDescription("获取所有微服务配置状态");
             });
         }
         else
         {
             app.UseEndpoints(endpoints =>
             {
-                var tagGroup = new List<OpenApiTag>
-                    {new() {Name = option.GetApiGroupName(), Description = "热配置面板相关内置接口"}};
+                var tagName = option.GetApiGroupName();
+
                 endpoints.MapPost(MoConfigurationConventions.DashboardClientConfigUpdate,
                     async (DtoUpdateConfig req, [FromServices] ConfigurationClientService clientService) =>
                     {
                         return (await clientService.UpdateConfigAsync(req)).GetResponse();
-                    }).WithName("配置中心更新指定配置").WithOpenApi(operation =>
-                    {
-                        operation.Summary = "更新指定配置";
-                        operation.Description = "更新指定配置";
-                        operation.Tags = tagGroup;
-                        return operation;
-                    });
+                    })
+                    .WithName("配置中心更新指定配置")
+                    .WithTags(tagName)
+                    .WithSummary("更新指定配置")
+                    .WithDescription("更新指定配置");
             });
         }
     }

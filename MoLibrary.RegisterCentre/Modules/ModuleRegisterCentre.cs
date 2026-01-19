@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.OpenApi.Models;
 using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
@@ -108,7 +107,7 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModuleW
     {
         UseEndpoints(app, endpoints =>
         {
-            var tagGroup = new List<OpenApiTag> { new() { Name = option.GetApiGroupName(), Description = "注册中心" } };
+            var tagName = option.GetApiGroupName();
 
             // 获取当前实例的 Leader 状态
             endpoints.MapGet(RegisterCentreConventions.ServerCentreLeaderStatus,
@@ -125,13 +124,11 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModuleW
                         Message = leaderService.IsLeader ? "当前实例是 Leader" : "当前实例不是 Leader"
                     };
                     return Res.Create(response, ResponseCode.Ok).GetResponse();
-                }).WithName("查询Leader状态").WithOpenApi(operation =>
-            {
-                operation.Summary = "查询 Leader 状态";
-                operation.Description = "查询当前实例在服务集群中的 Leader 状态";
-                operation.Tags = tagGroup;
-                return operation;
-            });
+                })
+            .WithName("查询Leader状态")
+            .WithTags(tagName)
+            .WithSummary("查询 Leader 状态")
+            .WithDescription("查询当前实例在服务集群中的 Leader 状态");
 
             // 获取当前实例的注册状态
             endpoints.MapGet(RegisterCentreConventions.ServerCentreGetServicesStatus, async (
@@ -161,13 +158,11 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModuleW
                 };
 
                 return Res.Create(result, ResponseCode.Ok).GetResponse();
-            }).WithName("获取服务状态").WithOpenApi(operation =>
-            {
-                operation.Summary = "获取服务状态";
-                operation.Description = "获取当前实例的注册状态和 Leader 信息";
-                operation.Tags = tagGroup;
-                return operation;
-            });
+            })
+            .WithName("获取服务状态")
+            .WithTags(tagName)
+            .WithSummary("获取服务状态")
+            .WithDescription("获取当前实例的注册状态和 Leader 信息");
 
             // 强制释放 Leader（用于调试/管理）
             endpoints.MapPost("/centre-server/release-leader", async (
@@ -182,25 +177,21 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModuleW
                 leaderService.TriggerLeaderLost(Events.LeaderLostReason.GracefulShutdown);
                 await stateManager.DeleteLeaderKeyAsync();
                 return Res.Ok("已释放 Leader 状态").GetResponse();
-            }).WithName("释放Leader状态").WithOpenApi(operation =>
-            {
-                operation.Summary = "释放 Leader 状态";
-                operation.Description = "强制当前实例释放 Leader 状态（用于调试/管理）";
-                operation.Tags = tagGroup;
-                return operation;
-            });
+            })
+            .WithName("释放Leader状态")
+            .WithTags(tagName)
+            .WithSummary("释放 Leader 状态")
+            .WithDescription("强制当前实例释放 Leader 状态（用于调试/管理）");
 
             // 获取选举配置
             endpoints.MapGet("/centre-server/election-config", () =>
             {
                 return Res.Create(option.Election, ResponseCode.Ok).GetResponse();
-            }).WithName("获取选举配置").WithOpenApi(operation =>
-            {
-                operation.Summary = "获取选举配置";
-                operation.Description = "获取当前实例的 Leader 选举配置参数";
-                operation.Tags = tagGroup;
-                return operation;
-            });
+            })
+            .WithName("获取选举配置")
+            .WithTags(tagName)
+            .WithSummary("获取选举配置")
+            .WithDescription("获取当前实例的 Leader 选举配置参数");
         });
     }
 }

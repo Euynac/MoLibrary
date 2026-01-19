@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.OpenApi.Models;
 using MoLibrary.AutoModel.Implements;
 using MoLibrary.AutoModel.Interfaces;
 using MoLibrary.Core.ExceptionHandler;
@@ -46,10 +45,8 @@ public class ModuleAutoModel(ModuleAutoModelOption option) : MoModuleWithDepende
     {
         UseEndpoints(app, endpoints =>
         {
-            var tagGroup = new List<OpenApiTag>
-            {
-                new() { Name = option.GetApiGroupName(), Description = "AutoModel相关接口" }
-            };
+            var tagName = option.GetApiGroupName();
+
             endpoints.MapGet("/auto-model/status", async (HttpResponse response, HttpContext context, [FromQuery] string? specificEntity = null) =>
             {
                 var factory = app.ApplicationServices.GetRequiredService<IAutoModelSnapshotFactory>();
@@ -66,13 +63,11 @@ public class ModuleAutoModel(ModuleAutoModelOption option) : MoModuleWithDepende
                     })
                 };
                 await response.WriteAsJsonAsync(res);
-            }).WithName("获取AutoModel状态信息").WithOpenApi(operation =>
-            {
-                operation.Summary = "获取AutoModel状态信息";
-                operation.Description = "获取AutoModel状态信息";
-                operation.Tags = tagGroup;
-                return operation;
-            });
+            })
+            .WithName("获取AutoModel状态信息")
+            .WithTags(tagName)
+            .WithSummary("获取AutoModel状态信息")
+            .WithDescription("获取AutoModel状态信息");
         });
     }
 

@@ -1,11 +1,11 @@
 using System.Reflection;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
-using Microsoft.OpenApi.Models;
 using MoLibrary.Configuration.Annotations;
 using MoLibrary.Configuration.Interfaces;
 using MoLibrary.Configuration.Model;
@@ -77,46 +77,39 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
     {
         UseEndpoints(app, endpoints =>
         {
-            var tagGroup = new List<OpenApiTag> { new() { Name = option.GetApiGroupName(), Description = "热配置相关内置接口" } };
+            var tagName = option.GetApiGroupName();
+
             endpoints.MapGet(MoConfigurationConventions.GetConfigStatus, async (
                 [FromQuery] bool? onlyCurDomain,
                 [FromServices] ModuleConfigurationService service) =>
             {
                 var result = await service.GetConfigStatusAsync(onlyCurDomain);
                 return result.GetResponse();
-            }).WithName("获取热配置状态信息").WithOpenApi(operation =>
-            {
-                operation.Summary = "获取热配置状态信息";
-                operation.Description = "获取热配置状态信息";
-                operation.Tags = tagGroup;
-                return operation;
-            });
+            })
+            .WithName("获取热配置状态信息")
+            .WithTags(tagName)
+            .WithSummary("获取热配置状态信息")
+            .WithDescription("获取热配置状态信息");
 
             endpoints.MapGet("/option/debug", async ([FromServices] ModuleConfigurationService service) =>
             {
                 var result = await service.GetDebugViewAsync();
                 return result.GetResponse();
-            }).WithName("获取DebuggingView")
-                .WithOpenApi(operation =>
-                {
-                    operation.Summary = "获取DebuggingView";
-                    operation.Description = "展示配置项来源数据以及提供者";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
+            })
+            .WithName("获取DebuggingView")
+            .WithTags(tagName)
+            .WithSummary("获取DebuggingView")
+            .WithDescription("展示配置项来源数据以及提供者");
 
             endpoints.MapGet("/option/providers", async ([FromServices] ModuleConfigurationService service) =>
             {
                 var result = await service.GetProvidersAsync();
                 return result.GetResponse();
-            }).WithName("获取配置提供者")
-                .WithOpenApi(operation =>
-                {
-                    operation.Summary = "获取配置提供者";
-                    operation.Description = "获取配置提供者分组信息";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
+            })
+            .WithName("获取配置提供者")
+            .WithTags(tagName)
+            .WithSummary("获取配置提供者")
+            .WithDescription("获取配置提供者分组信息");
         });
     }
     public override void PostConfigureServices(IServiceCollection services)

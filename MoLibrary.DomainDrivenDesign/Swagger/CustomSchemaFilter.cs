@@ -1,4 +1,4 @@
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace MoLibrary.DomainDrivenDesign.Swagger;
@@ -8,7 +8,7 @@ namespace MoLibrary.DomainDrivenDesign.Swagger;
 /// </summary>
 internal class CustomSchemaFilter : ISchemaFilter
 {
-    public void Apply(OpenApiSchema schema, SchemaFilterContext context)
+    public void Apply(IOpenApiSchema schema, SchemaFilterContext context)
     {
         //for each schema name start with "Response", fetch its properties, and remove all properties name "code" and "message"
         if (context.Type.Name.StartsWith("Response"))

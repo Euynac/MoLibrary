@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.OpenApi.Models;
 using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
@@ -74,10 +73,7 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
     {
         UseEndpoints(app, endpoints =>
         {
-            var tagGroup = new List<OpenApiTag>
-            {
-                new() { Name = Option.GetApiGroupName(), Description = "事件总线监控接口" }
-            };
+            var tagName = Option.GetApiGroupName();
 
             // 获取所有订阅
             endpoints.MapGet("/eventbus-ui/subscriptions",
@@ -86,13 +82,10 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
                     var result = await service.GetAllSubscriptionsAsync();
                     return result.GetResponse();
                 })
-                .WithName("获取所有订阅").WithOpenApi(operation =>
-                {
-                    operation.Summary = "获取所有订阅";
-                    operation.Description = "获取所有EventBus订阅信息，包括本地和分布式订阅";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
+                .WithName("获取所有订阅")
+                .WithTags(tagName)
+                .WithSummary("获取所有订阅")
+                .WithDescription("获取所有EventBus订阅信息，包括本地和分布式订阅");
 
             // 获取订阅详情
             endpoints.MapGet("/eventbus-ui/subscriptions/{id:guid}",
@@ -103,13 +96,10 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
                     var result = await service.GetSubscriptionByIdAsync(subscriptionId);
                     return result.GetResponse();
                 })
-                .WithName("获取订阅详情").WithOpenApi(operation =>
-                {
-                    operation.Summary = "获取订阅详情";
-                    operation.Description = "根据订阅ID获取详细信息";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
+                .WithName("获取订阅详情")
+                .WithTags(tagName)
+                .WithSummary("获取订阅详情")
+                .WithDescription("根据订阅ID获取详细信息");
 
             // 获取统计信息
             endpoints.MapGet("/eventbus-ui/statistics",
@@ -118,13 +108,10 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
                     var result = await service.GetStatisticsAsync();
                     return result.GetResponse();
                 })
-                .WithName("获取订阅统计").WithOpenApi(operation =>
-                {
-                    operation.Summary = "获取订阅统计";
-                    operation.Description = "获取订阅的统计信息，包括总数、状态分布、范围分布等";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
+                .WithName("获取订阅统计")
+                .WithTags(tagName)
+                .WithSummary("获取订阅统计")
+                .WithDescription("获取订阅的统计信息，包括总数、状态分布、范围分布等");
 
             // 激活订阅
             endpoints.MapPost("/eventbus-ui/subscriptions/{id:guid}/activate",
@@ -135,13 +122,10 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
                     var result = await service.ActivateSubscriptionAsync(subscriptionId);
                     return result.GetResponse();
                 })
-                .WithName("激活订阅").WithOpenApi(operation =>
-                {
-                    operation.Summary = "激活订阅";
-                    operation.Description = "激活处于Pending或Inactive状态的订阅";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
+                .WithName("激活订阅")
+                .WithTags(tagName)
+                .WithSummary("激活订阅")
+                .WithDescription("激活处于Pending或Inactive状态的订阅");
 
             // 停用订阅
             endpoints.MapPost("/eventbus-ui/subscriptions/{id:guid}/deactivate",
@@ -152,13 +136,10 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
                     var result = await service.DeactivateSubscriptionAsync(subscriptionId);
                     return result.GetResponse();
                 })
-                .WithName("停用订阅").WithOpenApi(operation =>
-                {
-                    operation.Summary = "停用订阅";
-                    operation.Description = "停用活跃的订阅（不移除）";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
+                .WithName("停用订阅")
+                .WithTags(tagName)
+                .WithSummary("停用订阅")
+                .WithDescription("停用活跃的订阅（不移除）");
 
             // 移除订阅
             endpoints.MapDelete("/eventbus-ui/subscriptions/{id:guid}",
@@ -169,13 +150,10 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
                     var result = await service.UnsubscribeAsync(subscriptionId);
                     return result.GetResponse();
                 })
-                .WithName("移除订阅").WithOpenApi(operation =>
-                {
-                    operation.Summary = "移除订阅";
-                    operation.Description = "永久移除订阅";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
+                .WithName("移除订阅")
+                .WithTags(tagName)
+                .WithSummary("移除订阅")
+                .WithDescription("永久移除订阅");
         });
     }
 }

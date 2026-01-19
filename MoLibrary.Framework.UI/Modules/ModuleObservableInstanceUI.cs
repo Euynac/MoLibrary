@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.OpenApi.Models;
 using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
@@ -67,10 +66,7 @@ public class ModuleObservableInstanceUI(ModuleObservableInstanceUIOption option)
     {
         UseEndpoints(app, endpoints =>
         {
-            var tagGroup = new List<OpenApiTag>
-            {
-                new() { Name = Option.GetApiGroupName(), Description = "Observable Instance 监控接口" }
-            };
+            var tagName = Option.GetApiGroupName();
 
             // Get all instances
             endpoints.MapGet("/observable-instance-ui/instances",
@@ -79,13 +75,10 @@ public class ModuleObservableInstanceUI(ModuleObservableInstanceUIOption option)
                     var result = await service.GetAllInstancesAsync();
                     return result.GetResponse();
                 })
-                .WithName("获取所有Observable实例").WithOpenApi(operation =>
-                {
-                    operation.Summary = "获取所有Observable实例";
-                    operation.Description = "获取所有已注册的Observable Instance信息";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
+                .WithName("获取所有Observable实例")
+                .WithTags(tagName)
+                .WithSummary("获取所有Observable实例")
+                .WithDescription("获取所有已注册的Observable Instance信息");
 
             // Get instance by ID
             endpoints.MapGet("/observable-instance-ui/instances/{id}",
@@ -95,13 +88,10 @@ public class ModuleObservableInstanceUI(ModuleObservableInstanceUIOption option)
                     var result = await service.GetInstanceByIdAsync(id);
                     return result.GetResponse();
                 })
-                .WithName("获取Observable实例详情").WithOpenApi(operation =>
-                {
-                    operation.Summary = "获取Observable实例详情";
-                    operation.Description = "根据实例ID获取详细信息";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
+                .WithName("获取Observable实例详情")
+                .WithTags(tagName)
+                .WithSummary("获取Observable实例详情")
+                .WithDescription("根据实例ID获取详细信息");
 
             // Get instances with exceptions
             endpoints.MapGet("/observable-instance-ui/instances/with-exceptions",
@@ -110,13 +100,10 @@ public class ModuleObservableInstanceUI(ModuleObservableInstanceUIOption option)
                     var result = await service.GetInstancesWithExceptionsAsync();
                     return result.GetResponse();
                 })
-                .WithName("获取有异常的实例").WithOpenApi(operation =>
-                {
-                    operation.Summary = "获取有异常的实例";
-                    operation.Description = "获取所有包含异常记录的实例";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
+                .WithName("获取有异常的实例")
+                .WithTags(tagName)
+                .WithSummary("获取有异常的实例")
+                .WithDescription("获取所有包含异常记录的实例");
 
             // Get statistics
             endpoints.MapGet("/observable-instance-ui/statistics",
@@ -125,13 +112,10 @@ public class ModuleObservableInstanceUI(ModuleObservableInstanceUIOption option)
                     var result = await service.GetStatisticsAsync();
                     return result.GetResponse();
                 })
-                .WithName("获取Observable实例统计").WithOpenApi(operation =>
-                {
-                    operation.Summary = "获取Observable实例统计";
-                    operation.Description = "获取实例的统计信息，包括总数、异常分布等";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
+                .WithName("获取Observable实例统计")
+                .WithTags(tagName)
+                .WithSummary("获取Observable实例统计")
+                .WithDescription("获取实例的统计信息，包括总数、异常分布等");
 
             // Get instance history
             endpoints.MapGet("/observable-instance-ui/instances/{id}/history",
@@ -142,13 +126,10 @@ public class ModuleObservableInstanceUI(ModuleObservableInstanceUIOption option)
                     var result = await service.GetInstanceHistoryAsync(id, limit);
                     return result.GetResponse();
                 })
-                .WithName("获取实例历史").WithOpenApi(operation =>
-                {
-                    operation.Summary = "获取实例历史";
-                    operation.Description = "获取实例的状态变更历史";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
+                .WithName("获取实例历史")
+                .WithTags(tagName)
+                .WithSummary("获取实例历史")
+                .WithDescription("获取实例的状态变更历史");
 
             // Get instance exceptions
             endpoints.MapGet("/observable-instance-ui/instances/{id}/exceptions",
@@ -158,13 +139,10 @@ public class ModuleObservableInstanceUI(ModuleObservableInstanceUIOption option)
                     var result = await service.GetInstanceExceptionsAsync(id);
                     return result.GetResponse();
                 })
-                .WithName("获取实例异常").WithOpenApi(operation =>
-                {
-                    operation.Summary = "获取实例异常";
-                    operation.Description = "获取实例的所有异常记录";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
+                .WithName("获取实例异常")
+                .WithTags(tagName)
+                .WithSummary("获取实例异常")
+                .WithDescription("获取实例的所有异常记录");
 
             // Clear instance history
             endpoints.MapPost("/observable-instance-ui/instances/{id}/clear-history",
@@ -174,13 +152,10 @@ public class ModuleObservableInstanceUI(ModuleObservableInstanceUIOption option)
                     var result = await service.ClearInstanceHistoryAsync(id);
                     return result.GetResponse();
                 })
-                .WithName("清除实例历史").WithOpenApi(operation =>
-                {
-                    operation.Summary = "清除实例历史";
-                    operation.Description = "清除指定实例的状态历史记录";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
+                .WithName("清除实例历史")
+                .WithTags(tagName)
+                .WithSummary("清除实例历史")
+                .WithDescription("清除指定实例的状态历史记录");
         });
     }
 }

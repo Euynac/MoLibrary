@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.OpenApi.Models;
 using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
@@ -71,7 +70,7 @@ public class ModuleLoggingUI(ModuleLoggingUIOption option)
     {
         UseEndpoints(app, endpoints =>
         {
-            var tagGroup = new List<OpenApiTag> { new() { Name = Option.GetApiGroupName(), Description = "日志监控相关接口" } };
+            var tagName = Option.GetApiGroupName();
 
             endpoints.MapGet("/logging-ui/files",
                 async ([FromServices] LoggingService loggingService) =>
@@ -79,13 +78,10 @@ public class ModuleLoggingUI(ModuleLoggingUIOption option)
                     var result = await loggingService.ListFilesAsync();
                     return result.GetResponse();
                 })
-                .WithName("列出日志文件").WithOpenApi(operation =>
-                {
-                    operation.Summary = "列出日志文件";
-                    operation.Description = "获取所有可用的日志文件列表";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
+                .WithName("列出日志文件")
+                .WithTags(tagName)
+                .WithSummary("列出日志文件")
+                .WithDescription("获取所有可用的日志文件列表");
 
             endpoints.MapGet("/logging-ui/files/{*filePath}",
                 async ([FromRoute] string filePath,
@@ -102,13 +98,10 @@ public class ModuleLoggingUI(ModuleLoggingUIOption option)
                     var downloadName = Path.GetFileName(filePath);
                     return Results.File(stream, "text/plain", downloadName);
                 })
-                .WithName("下载日志文件").WithOpenApi(operation =>
-                {
-                    operation.Summary = "下载日志文件";
-                    operation.Description = "下载指定的日志文件";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
+                .WithName("下载日志文件")
+                .WithTags(tagName)
+                .WithSummary("下载日志文件")
+                .WithDescription("下载指定的日志文件");
 
             endpoints.MapGet("/logging-ui/current/export",
                 async ([FromServices] LoggingService loggingService) =>
@@ -121,13 +114,10 @@ public class ModuleLoggingUI(ModuleLoggingUIOption option)
 
                     return Results.File(export.Content, export.ContentType, export.FileName);
                 })
-                .WithName("导出当前日志").WithOpenApi(operation =>
-                {
-                    operation.Summary = "导出当前日志";
-                    operation.Description = "导出当前缓冲区中的日志";
-                    operation.Tags = tagGroup;
-                    return operation;
-                });
+                .WithName("导出当前日志")
+                .WithTags(tagName)
+                .WithSummary("导出当前日志")
+                .WithDescription("导出当前缓冲区中的日志");
         });
     }
 }

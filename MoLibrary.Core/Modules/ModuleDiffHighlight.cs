@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.OpenApi.Models;
 using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Features.MoDiffHighlight;
 using MoLibrary.Core.Features.MoDiffHighlight.Algorithms;
@@ -57,11 +57,8 @@ public class ModuleDiffHighlight(ModuleDiffHighlightOption option) : MoModule<Mo
     {
         UseEndpoints(app, endpoints =>
         {
-            var tagGroup = new List<OpenApiTag>
-            {
-                new() { Name = option.GetApiGroupName(), Description = "文本差异对比高亮相关接口" }
-            };
-            
+            var tagName = option.GetApiGroupName();
+
             // 文本差异对比端点
             endpoints.MapPost("/diff-highlight", async (DiffHighlightRequest request, DiffHighlightService service) =>
             {
@@ -69,14 +66,10 @@ public class ModuleDiffHighlight(ModuleDiffHighlightOption option) : MoModule<Mo
                 return result.GetResponse();
             })
             .WithName("文本差异对比")
-            .WithOpenApi(operation =>
-            {
-                operation.Summary = "执行文本差异对比并生成高亮结果";
-                operation.Description = "比较两个文本并生成带高亮的差异结果，支持多种输出格式";
-                operation.Tags = tagGroup;
-                return operation;
-            });
-            
+            .WithTags(tagName)
+            .WithSummary("执行文本差异对比并生成高亮结果")
+            .WithDescription("比较两个文本并生成带高亮的差异结果，支持多种输出格式");
+
             // 差异统计信息端点
             endpoints.MapPost("/diff-highlight/statistics", async (DiffHighlightRequest request, DiffHighlightService service) =>
             {
@@ -84,14 +77,10 @@ public class ModuleDiffHighlight(ModuleDiffHighlightOption option) : MoModule<Mo
                 return result.GetResponse();
             })
             .WithName("获取差异统计信息")
-            .WithOpenApi(operation =>
-            {
-                operation.Summary = "获取文本差异统计信息";
-                operation.Description = "获取两个文本之间的差异统计数据，如新增行数、删除行数等";
-                operation.Tags = tagGroup;
-                return operation;
-            });
-            
+            .WithTags(tagName)
+            .WithSummary("获取文本差异统计信息")
+            .WithDescription("获取两个文本之间的差异统计数据，如新增行数、删除行数等");
+
             // 文本相同性检查端点
             endpoints.MapPost("/diff-highlight/identical", async (DiffHighlightRequest request, DiffHighlightService service) =>
             {
@@ -99,13 +88,9 @@ public class ModuleDiffHighlight(ModuleDiffHighlightOption option) : MoModule<Mo
                 return result.GetResponse();
             })
             .WithName("检查文本相同性")
-            .WithOpenApi(operation =>
-            {
-                operation.Summary = "检查两个文本是否相同";
-                operation.Description = "快速检查两个文本是否完全相同（考虑配置的忽略选项）";
-                operation.Tags = tagGroup;
-                return operation;
-            });
+            .WithTags(tagName)
+            .WithSummary("检查两个文本是否相同")
+            .WithDescription("快速检查两个文本是否完全相同（考虑配置的忽略选项）");
         });
     }
 }

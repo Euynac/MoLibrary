@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
 using MoLibrary.Authority.Authentication;
 using MoLibrary.Authority.Implements.Security;
 using MoLibrary.Authority.Security;
@@ -102,10 +101,8 @@ public class ModuleAuthentication(ModuleAuthenticationOption option) : MoModule<
     {
         UseEndpoints(app, endpoints =>
         {
-            var tagGroup = new List<OpenApiTag>
-            {
-                new() { Name = option.GetApiGroupName(), Description = "JWT相关接口" }
-            };
+            var tagName = option.GetApiGroupName();
+
             endpoints.MapGet("/jwt/decode/{token}", async (HttpResponse response, HttpContext context, string token) =>
             {
                 var jwt = context.RequestServices.GetRequiredService<IMoJwtAuthManager>();
@@ -119,14 +116,11 @@ public class ModuleAuthentication(ModuleAuthenticationOption option) : MoModule<
                     }),
                     tokenInfo
                 });
-
-            }).WithName("JWT解码").WithOpenApi(operation =>
-            {
-                operation.Summary = "JWT解码";
-                operation.Description = "JWT解码";
-                operation.Tags = tagGroup;
-                return operation;
-            });
+            })
+            .WithName("JWT解码")
+            .WithTags(tagName)
+            .WithSummary("JWT解码")
+            .WithDescription("JWT解码");
         });
     }
 

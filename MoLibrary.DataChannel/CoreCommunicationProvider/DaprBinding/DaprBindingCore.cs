@@ -3,7 +3,6 @@ using Dapr.Client;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.OpenApi.Models;
 using MoLibrary.DataChannel.CoreCommunication;
 using MoLibrary.DataChannel.Interfaces;
 using MoLibrary.DataChannel.Pipeline;
@@ -44,17 +43,14 @@ public class DaprBindingCore(MetadataForDaprBinding metadata, DaprClient client)
             {
                 app.UseEndpoints(endpoints =>
                 {
-                    var tagGroup = new List<OpenApiTag> { new() { Name = "基础功能", Description = "DaprBinding路由" } };
                     endpoints.MapPost($"{metadata.InputListenerRoute}", async ([FromBody] JsonElement body, HttpResponse response, HttpContext context) =>
                     {
                         await SendDataAsync(new DataContext(EDataSource.Outer, body));
-                    }).WithName("DaprBinding路由").WithOpenApi(operation =>
-                    {
-                        operation.Summary = "DaprBinding路由";
-                        operation.Description = "DaprBinding路由";
-                        operation.Tags = tagGroup;
-                        return operation;
-                    });
+                    })
+                    .WithName("DaprBinding路由")
+                    .WithTags("基础功能")
+                    .WithSummary("DaprBinding路由")
+                    .WithDescription("DaprBinding路由");
                 });
             }
         }

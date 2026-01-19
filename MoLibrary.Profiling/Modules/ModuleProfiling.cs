@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.OpenApi.Models;
 using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
@@ -47,7 +46,7 @@ public class ModuleProfiling(ModuleProfilingOption option)
     {
         UseEndpoints(app, endpoints =>
         {
-            var tagGroup = new List<OpenApiTag> {new() {Name = option.GetApiGroupName(), Description = "程序性能监测接口"}};
+            var tagName = option.GetApiGroupName();
 
             // 获取系统性能信息
             endpoints.MapGet("/profiling/simple",
@@ -67,13 +66,11 @@ public class ModuleProfiling(ModuleProfilingOption option)
                         ThreadCount = dataPoint.ThreadCount,
                         Timestamp = dataPoint.Timestamp
                     }).GetResponse();
-                }).WithName("获取系统性能信息").WithOpenApi(operation =>
-            {
-                operation.Summary = "获取系统性能信息";
-                operation.Description = "获取当前进程的CPU使用率和内存使用情况";
-                operation.Tags = tagGroup;
-                return operation;
-            });
+                })
+            .WithName("获取系统性能信息")
+            .WithTags(tagName)
+            .WithSummary("获取系统性能信息")
+            .WithDescription("获取当前进程的CPU使用率和内存使用情况");
         });
     }
 }

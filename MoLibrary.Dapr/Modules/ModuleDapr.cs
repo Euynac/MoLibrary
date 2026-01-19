@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.OpenApi.Models;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
@@ -43,10 +42,8 @@ public partial class ModuleDapr(ModuleDaprOption option) : MoModule<ModuleDapr, 
     {
         UseEndpoints(app, endpoints =>
         {
-            var tagGroup = new List<OpenApiTag>
-            {
-                new() { Name = option.GetApiGroupName(), Description = "Dapr相关接口" }
-            };
+            var tagName = option.GetApiGroupName();
+
             endpoints.Map("/dapr/invocation/{*rest}", async (string rest, HttpResponse response, HttpContext context) =>
             {
                 var daprClient = context.RequestServices.GetRequiredService<DaprClient>();
@@ -71,28 +68,22 @@ public partial class ModuleDapr(ModuleDaprOption option) : MoModule<ModuleDapr, 
                 }
 
                 await context.Response.WriteAsJsonAsync(Res.Fail("调用方式错误"));
+            })
+            .WithName("Dapr服务间调用")
+            .WithTags(tagName)
+            .WithSummary("Dapr服务间调用")
+            .WithDescription("Dapr服务间调用(反向代理)");
 
-            }).WithName("Dapr服务间调用").WithOpenApi(operation =>
-            {
-                operation.Summary = "Dapr服务间调用";
-                operation.Description = "Dapr服务间调用(反向代理)";
-                operation.Tags = tagGroup;
-                return operation;
-            });
             endpoints.MapGet("/dapr/metadata", async (HttpResponse response, HttpContext context) =>
             {
                 var daprClient = context.RequestServices.GetRequiredService<DaprClient>();
                 var res = await daprClient.GetMetadataAsync();
                 await context.Response.WriteAsJsonAsync(res);
-            }).WithName("获取Dapr边车元数据").WithOpenApi(operation =>
-            {
-                operation.Summary = "获取Dapr边车元数据";
-                operation.Description = "获取Dapr边车元数据";
-                operation.Tags = tagGroup;
-                return operation;
-            });
-
-
+            })
+            .WithName("获取Dapr边车元数据")
+            .WithTags(tagName)
+            .WithSummary("获取Dapr边车元数据")
+            .WithDescription("获取Dapr边车元数据");
         });
     }
 

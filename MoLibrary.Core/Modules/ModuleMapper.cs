@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.OpenApi.Models;
 using MoLibrary.Core.Features.MoMapper;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
@@ -119,10 +118,8 @@ public class ModuleMapper(ModuleMapperOption option) : MoModule<ModuleMapper, Mo
     {
         UseEndpoints(app, endpoints =>
         {
-            var tagGroup = new List<OpenApiTag>
-            {
-                new() { Name = option.GetApiGroupName(), Description = "Mapper相关接口" }
-            };
+            var tagName = option.GetApiGroupName();
+
             endpoints.MapGet("/mapper/status", async (HttpResponse response, HttpContext context, MapperService mapperService) =>
             {
                 var result = await mapperService.GetMapperStatusAsync();
@@ -132,7 +129,7 @@ public class ModuleMapper(ModuleMapperOption option) : MoModule<ModuleMapper, Mo
                     await context.Response.WriteAsJsonAsync(new { error });
                     return;
                 }
-                
+
                 var res = new
                 {
                     count = data.Count,
@@ -144,13 +141,11 @@ public class ModuleMapper(ModuleMapperOption option) : MoModule<ModuleMapper, Mo
                     })
                 };
                 await context.Response.WriteAsJsonAsync(res);
-            }).WithName("获取Mapper状态信息").WithOpenApi(operation =>
-            {
-                operation.Summary = "获取Mapper状态信息";
-                operation.Description = "获取Mapper状态信息";
-                operation.Tags = tagGroup;
-                return operation;
-            });
+            })
+            .WithName("获取Mapper状态信息")
+            .WithTags(tagName)
+            .WithSummary("获取Mapper状态信息")
+            .WithDescription("获取Mapper状态信息");
         });
     }
 }
