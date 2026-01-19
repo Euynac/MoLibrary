@@ -6,7 +6,7 @@ using MoLibrary.Core.Module.Models;
 using MoLibrary.RegisterCentre.ServiceInvocation.Implements;
 using MoLibrary.RegisterCentre.ServiceInvocation.Interfaces;
 
-namespace MoLibrary.RegisterCentre.ServiceInvocation.Modules;
+namespace MoLibrary.RegisterCentre.Modules;
 
 /// <summary>
 /// 服务调用模块

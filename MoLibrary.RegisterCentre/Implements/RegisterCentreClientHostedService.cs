@@ -31,23 +31,15 @@ public class RegisterCentreClientHostedService(
 {
     private readonly ModuleRegisterCentreOption _option = option.Value;
     private readonly TaskCompletionSource<bool> _registrationCompletionSource = new();
-    private readonly object _statusLock = new();
     private readonly Random _random = new();
     private readonly ResiliencePipeline _heartbeatPipeline = pipelineProvider.GetPipeline(ResiliencePipelineNames.RegisterCentre);
 
-    private RegistrationStatus _status = RegistrationStatus.NotStarted;
     private int _consecutiveFailures;
 
     public override string ServiceName => "RegisterCentreClient";
     public override TimeSpan? HeartbeatInterval => null;
 
-    public RegistrationStatus Status
-    {
-        get { lock (_statusLock) { return _status; } }
-        private set { lock (_statusLock) { _status = value; } }
-    }
-
-    public bool IsRegistered => Status == RegistrationStatus.Completed;
+    public bool IsRegistered => ObservableInfo.CurrentState == HostedServiceState.Running;
 
     public async Task<bool> WaitForRegistrationAsync(TimeSpan timeout, CancellationToken cancellationToken = default)
     {
@@ -69,7 +61,6 @@ public class RegisterCentreClientHostedService(
     protected override async Task ExecuteBackgroundAsync(CancellationToken stoppingToken)
     {
         RecordState("Starting StateStore heartbeat loop", HostedServiceState.Starting);
-        Status = RegistrationStatus.InProgress;
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -155,9 +146,8 @@ public class RegisterCentreClientHostedService(
         _consecutiveFailures = 0;
 
         // Ensure registration status is completed
-        if (Status != RegistrationStatus.Completed)
+        if (ObservableInfo.CurrentState != HostedServiceState.Running)
         {
-            Status = RegistrationStatus.Completed;
             _registrationCompletionSource.TrySetResult(true);
         }
 
@@ -272,7 +262,7 @@ public class RegisterCentreClientHostedService(
             {
                 // We're still Leader but ETag is stale - refresh
                 RecordState($"ETag mismatch but still Leader, refreshing ETag: {currentETag} -> {actualETag}", givenLogLevel: LogLevel.Information);
-                leaderService.UpdateETag(actualETag);
+                leaderService.UpdateETag(actualETag!);
             }
         }
         else

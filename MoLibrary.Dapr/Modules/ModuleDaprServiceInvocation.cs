@@ -11,7 +11,6 @@ using MoLibrary.Core.Module.Models;
 using MoLibrary.Core.Modules;
 using MoLibrary.RegisterCentre.Modules;
 using MoLibrary.RegisterCentre.ServiceInvocation.Interfaces;
-using MoLibrary.RegisterCentre.ServiceInvocation.Modules;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Dapr.Modules;

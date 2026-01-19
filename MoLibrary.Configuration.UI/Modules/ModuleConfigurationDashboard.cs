@@ -13,7 +13,6 @@ using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.RegisterCentre.Modules;
-using MoLibrary.RegisterCentre.ServiceInvocation.Modules;
 
 namespace MoLibrary.Configuration.UI.Modules;
 
