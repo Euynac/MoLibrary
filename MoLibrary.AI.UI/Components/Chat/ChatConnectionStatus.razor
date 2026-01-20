@@ -1,0 +1,68 @@
+@if (IsVisible && Status != ConnectionStatus.Connected)
+{
+    <div class="connection-status-wrapper">
+        <MudAlert Severity="@GetSeverity()"
+                  Variant="Variant.Filled"
+                  Dense="true"
+                  Class="connection-status-alert">
+            <div class="status-content">
+                @if (Status == ConnectionStatus.Connecting)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Inherit" />
+                }
+                else
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.CloudOff" Size="Size.Small" />
+                }
+                <MudText Typo="Typo.body2">@GetStatusMessage()</MudText>
+                @if (Status == ConnectionStatus.Disconnected && ShowReconnect)
+                {
+                    <MudButton Variant="Variant.Text"
+                               Color="Color.Inherit"
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Refresh"
+                               OnClick="@HandleReconnect"
+                               Class="reconnect-button">
+                        Reconnect
+                    </MudButton>
+                }
+            </div>
+        </MudAlert>
+    </div>
+}
+
+@code {
+    [Parameter] public ConnectionStatus Status { get; set; } = ConnectionStatus.Connected;
+    [Parameter] public bool IsVisible { get; set; } = true;
+    [Parameter] public bool ShowReconnect { get; set; } = true;
+    [Parameter] public EventCallback OnReconnect { get; set; }
+
+    private Severity GetSeverity() => Status switch
+    {
+        ConnectionStatus.Connecting => Severity.Info,
+        ConnectionStatus.Disconnected => Severity.Warning,
+        ConnectionStatus.Error => Severity.Error,
+        _ => Severity.Normal
+    };
+
+    private string GetStatusMessage() => Status switch
+    {
+        ConnectionStatus.Connecting => "Connecting...",
+        ConnectionStatus.Disconnected => "Connection lost",
+        ConnectionStatus.Error => "Connection error",
+        _ => string.Empty
+    };
+
+    private async Task HandleReconnect()
+    {
+        await OnReconnect.InvokeAsync();
+    }
+
+    public enum ConnectionStatus
+    {
+        Connected,
+        Connecting,
+        Disconnected,
+        Error
+    }
+}

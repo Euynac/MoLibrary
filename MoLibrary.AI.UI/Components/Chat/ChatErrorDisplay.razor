@@ -1,0 +1,72 @@
+@if (_visible && !string.IsNullOrEmpty(ErrorMessage))
+{
+    <MudAlert Severity="Severity.Error"
+              Variant="Variant.Outlined"
+              Dense="true"
+              Class="chat-error-alert"
+              ShowCloseIcon="Dismissible"
+              CloseIconClicked="@HandleDismiss">
+        <div class="error-content">
+            <MudText Typo="Typo.body2">@ErrorMessage</MudText>
+            @if (ShowRetry)
+            {
+                <MudButton Variant="Variant.Text"
+                           Color="Color.Error"
+                           Size="Size.Small"
+                           StartIcon="@Icons.Material.Filled.Refresh"
+                           OnClick="@HandleRetry"
+                           Class="retry-button">
+                    Retry
+                </MudButton>
+            }
+        </div>
+    </MudAlert>
+}
+
+@code {
+    [Parameter] public string? ErrorMessage { get; set; }
+    [Parameter] public bool ShowRetry { get; set; }
+    [Parameter] public bool Dismissible { get; set; } = true;
+    [Parameter] public EventCallback OnRetry { get; set; }
+    [Parameter] public EventCallback OnDismissed { get; set; }
+
+    private bool _visible = true;
+
+    protected override void OnParametersSet()
+    {
+        // Reset visibility when error message changes
+        if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            _visible = true;
+        }
+    }
+
+    private async Task HandleRetry()
+    {
+        await OnRetry.InvokeAsync();
+    }
+
+    private async Task HandleDismiss()
+    {
+        _visible = false;
+        await OnDismissed.InvokeAsync();
+    }
+
+    /// <summary>
+    /// Programmatically show the error display
+    /// </summary>
+    public void Show()
+    {
+        _visible = true;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Programmatically hide the error display
+    /// </summary>
+    public void Hide()
+    {
+        _visible = false;
+        StateHasChanged();
+    }
+}

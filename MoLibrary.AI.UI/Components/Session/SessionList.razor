@@ -1,18 +1,19 @@
 <div class="session-list">
     <div class="session-header">
-        <MudText Typo="Typo.subtitle2">对话历史</MudText>
-        <MudIconButton Icon="@Icons.Material.Filled.Add"
-                       Size="Size.Small"
-                       Color="Color.Primary"
-                       OnClick="@HandleNewSession"
-                       Title="新建对话" />
+        <MudText Typo="Typo.subtitle2">Chat History</MudText>
+        <MudTooltip Text="New conversation">
+            <MudIconButton Icon="@Icons.Material.Filled.Add"
+                           Size="Size.Small"
+                           Color="Color.Primary"
+                           OnClick="@HandleNewSession" />
+        </MudTooltip>
     </div>
 
     <div class="session-list-content">
         @if (Sessions.Count == 0)
         {
             <div class="empty-sessions">
-                <MudText Typo="Typo.body2" Color="Color.Default">暂无对话</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Default">No conversations</MudText>
             </div>
         }
         else

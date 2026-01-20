@@ -79,37 +79,52 @@ public class ModuleAIUIGuide
 }
 
 /// <summary>
-/// AI UI 模块配置选项
+/// AI UI module configuration options
 /// </summary>
 public class ModuleAIUIOption : MoModuleOption<ModuleAIUI>
 {
     /// <summary>
-    /// 禁用 AI 聊天页面
+    /// Disable the AI chat page
     /// </summary>
     public bool DisableAIChatPage { get; set; }
 
     /// <summary>
-    /// 启用 Markdown 渲染
+    /// Enable Markdown rendering
     /// </summary>
     public bool EnableMarkdown { get; set; } = true;
 
     /// <summary>
-    /// 是否显示 Provider 选择器
+    /// Show provider selector
     /// </summary>
     public bool ShowProviderSelector { get; set; } = true;
 
     /// <summary>
-    /// 是否显示会话列表
+    /// Show session list
     /// </summary>
     public bool ShowSessionList { get; set; } = true;
 
     /// <summary>
-    /// 默认系统提示词（覆盖后端设置）
+    /// Default system prompt (overrides backend setting)
     /// </summary>
     public string? DefaultSystemPrompt { get; set; }
 
     /// <summary>
-    /// 消息气泡最大宽度
+    /// Maximum width for message bubbles
     /// </summary>
     public string MessageMaxWidth { get; set; } = "80%";
+
+    /// <summary>
+    /// Request timeout in milliseconds (0 = no timeout)
+    /// </summary>
+    public int RequestTimeoutMs { get; set; } = 60000;
+
+    /// <summary>
+    /// Show connection status indicator
+    /// </summary>
+    public bool ShowConnectionStatus { get; set; }
+
+    /// <summary>
+    /// Enable auto-scroll to bottom on new messages
+    /// </summary>
+    public bool EnableAutoScroll { get; set; } = true;
 }

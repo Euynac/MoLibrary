@@ -1,12 +1,13 @@
 @using MoLibrary.AI.Models
+@implements IAsyncDisposable
 
 <div class="message-list" @ref="_messageListRef">
     @if (Messages.Count == 0 && StreamingContent == null)
     {
         <div class="empty-state">
             <MudIcon Icon="@Icons.Material.Filled.Chat" Size="Size.Large" Color="Color.Default" />
-            <MudText Typo="Typo.h6" Color="Color.Default">开始新对话</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Default">向 AI 助手发送消息开始对话</MudText>
+            <MudText Typo="Typo.h6" Color="Color.Default">Start a conversation</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Default">Send a message to the AI assistant</MudText>
         </div>
     }
     else
@@ -19,29 +20,122 @@
         @if (StreamingContent != null)
         {
             <StreamingMessageItem
+                @ref="_streamingItemRef"
                 StreamingContent="@StreamingContent"
                 EnableMarkdown="@EnableMarkdown"
-                OnStreamComplete="@HandleStreamComplete" />
+                ExternalCancellationToken="@CancellationToken"
+                OnStreamComplete="@HandleStreamComplete"
+                OnStreamError="@HandleStreamError" />
         }
     }
 </div>
 
 @code {
+    [Inject] private IJSRuntime JSRuntime { get; set; } = null!;
+
     [Parameter] public IReadOnlyList<AIChatMessage> Messages { get; set; } = [];
     [Parameter] public IAsyncEnumerable<ChatResponseUpdate>? StreamingContent { get; set; }
     [Parameter] public bool EnableMarkdown { get; set; } = true;
+    [Parameter] public bool EnableAutoScroll { get; set; } = true;
+    [Parameter] public CancellationToken CancellationToken { get; set; }
     [Parameter] public EventCallback<string> OnStreamComplete { get; set; }
+    [Parameter] public EventCallback<string> OnStreamError { get; set; }
 
     private ElementReference _messageListRef;
+    private StreamingMessageItem? _streamingItemRef;
+    private IJSObjectReference? _jsModule;
+    private IJSObjectReference? _autoScrollInstance;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && EnableAutoScroll)
+        {
+            await InitializeAutoScrollAsync();
+        }
+    }
+
+    private async Task InitializeAutoScrollAsync()
+    {
+        try
+        {
+            _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "import",
+                "./_content/MoLibrary.AI.UI/Components/Chat/ChatMessageList.razor.js");
+
+            _autoScrollInstance = await _jsModule.InvokeAsync<IJSObjectReference>(
+                "initAutoScroll",
+                _messageListRef);
+        }
+        catch (JSException)
+        {
+            // JS interop may fail during prerendering, ignore silently
+        }
+    }
 
     private async Task HandleStreamComplete(string content)
     {
         await OnStreamComplete.InvokeAsync(content);
     }
 
+    private async Task HandleStreamError(string error)
+    {
+        await OnStreamError.InvokeAsync(error);
+    }
+
+    /// <summary>
+    /// Cancel the ongoing stream
+    /// </summary>
+    public async Task CancelStreamAsync()
+    {
+        if (_streamingItemRef != null)
+        {
+            await _streamingItemRef.CancelAsync();
+        }
+    }
+
+    /// <summary>
+    /// Scroll to the bottom of the message list
+    /// </summary>
     public async Task ScrollToBottomAsync()
     {
-        // 滚动到底部由外部组件通过 JS 实现
-        await Task.CompletedTask;
+        if (_jsModule != null && _autoScrollInstance != null)
+        {
+            try
+            {
+                await _jsModule.InvokeVoidAsync("scrollToBottom", _autoScrollInstance);
+            }
+            catch (JSDisconnectedException)
+            {
+                // Circuit disconnected, ignore
+            }
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_jsModule != null && _autoScrollInstance != null)
+        {
+            try
+            {
+                await _jsModule.InvokeVoidAsync("disposeAutoScroll", _autoScrollInstance);
+                await _autoScrollInstance.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+                // Circuit disconnected, ignore
+            }
+        }
+
+        if (_jsModule != null)
+        {
+            try
+            {
+                await _jsModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+                // Circuit disconnected, ignore
+            }
+        }
     }
 }

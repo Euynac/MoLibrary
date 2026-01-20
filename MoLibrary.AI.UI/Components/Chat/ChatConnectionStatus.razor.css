@@ -1,0 +1,18 @@
+.connection-status-wrapper {
+    padding: 8px 16px;
+}
+
+.connection-status-wrapper ::deep .connection-status-alert {
+    border-radius: 8px;
+}
+
+.status-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+}
+
+.status-content ::deep .reconnect-button {
+    margin-left: auto;
+}
