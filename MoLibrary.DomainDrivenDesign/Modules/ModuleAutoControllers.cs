@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.AutoModel.Modules;
 using MoLibrary.Core.Module;
@@ -12,6 +13,7 @@ using MoLibrary.DomainDrivenDesign.AutoController.Extensions;
 using MoLibrary.DomainDrivenDesign.AutoController.Features;
 using MoLibrary.DomainDrivenDesign.AutoController.Interfaces;
 using MoLibrary.DomainDrivenDesign.AutoController.Settings;
+using MoLibrary.Tool.Extensions;
 
 namespace MoLibrary.DomainDrivenDesign.Modules;
 
@@ -47,11 +49,19 @@ public class ModuleAutoControllers(ModuleAutoControllersOption option)
         {
             builder.ConfigureApplicationPartManager(manager =>
             {
-                //manager.ApplicationParts.RemoveAll();
-                //TODO 可能可以减少搜索Assembly以优化效率
-                //增加搜索assembly
-                //manager.ApplicationParts.AddIfNotContains();
+                var related = Mo.Options.RelatedAssemblies;
+                if (related.Length > 0)
+                {
+                    var partsToKeep = manager.ApplicationParts
+                        .Where(p => p is not AssemblyPart part ||
+                                    related.Any(r => part.Name.Contains(r, StringComparison.Ordinal)))
+                        .ToList();
 
+                    manager.ApplicationParts.Clear();
+                    foreach (var part in partsToKeep)
+                        manager.ApplicationParts.Add(part);
+                }
+                
                 //用于在ApplicationParts检测需要自定义添加的Controller
                 manager.FeatureProviders.Add(
                     ActivatorUtilities

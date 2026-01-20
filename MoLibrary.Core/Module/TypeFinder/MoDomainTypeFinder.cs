@@ -61,6 +61,8 @@ public class MoDomainTypeFinder(ModuleCoreOptionTypeFinder options) : IDomainTyp
         return _assemblies;
     }
 
+    public ModuleCoreOptionTypeFinder Options => options;
+
     /// <summary>
     /// 获取相关程序集所有类型
     /// </summary>

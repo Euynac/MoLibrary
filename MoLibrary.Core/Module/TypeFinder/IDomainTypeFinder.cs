@@ -18,4 +18,10 @@ public interface IDomainTypeFinder
     /// </summary>
     /// <returns>相关程序集集合</returns>
     IEnumerable<Assembly> GetAssemblies();
+    
+    /// <summary>
+    /// 类型查找器配置选项
+    /// </summary>
+    /// <returns>配置选项</returns>
+    ModuleCoreOptionTypeFinder Options { get; }
 } 

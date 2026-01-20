@@ -10,10 +10,14 @@ public static class AssemblyExtensions
     public static IEnumerable<Assembly> WithDomainAssemblies(this Assembly assembly, params string[]? relatedNames)
     {
         yield return assembly;
-        if (relatedNames is null) yield break;
-        foreach (var domainAssembly in AppDomain.CurrentDomain.GetAssemblies()
-                     .Where(p => p.GetName().FullName is { } name && relatedNames.Any(s => name.Contains(s))))
-            yield return domainAssembly;
+        if (relatedNames is null or { Length: 0 }) yield break;
+
+        foreach (var domainAssembly in AppDomain.CurrentDomain.GetAssemblies())
+        {
+            var name = domainAssembly.GetName().FullName;
+            if (relatedNames.Any(s => name.Contains(s, StringComparison.Ordinal)))
+                yield return domainAssembly;
+        }
     }
     /// <summary>
     /// Retrieves the related assemblies for the specified entry assembly, optionally filtered by related names. including the entry assembly and any related assemblies that match the specified filter criteria.
@@ -21,7 +25,7 @@ public static class AssemblyExtensions
     /// <param name="entryAssembly">
     /// The entry assembly for which related assemblies are to be retrieved.
     /// </param>
-    /// <param name="relatedNames">
+    /// <param name="relatedNames"> 4l
     /// An optional array of strings used to filter related assemblies by their names.
     /// </param>
     /// <returns>
@@ -31,13 +35,12 @@ public static class AssemblyExtensions
     public static IEnumerable<Assembly> GetRelatedAssemblies(this Assembly entryAssembly, params string[]? relatedNames)
     {
         yield return entryAssembly;
-        if (relatedNames is null) yield break;
+        if (relatedNames is null or { Length: 0 }) yield break;
 
-
-        foreach (var assembly in entryAssembly.GetReferencedAssemblies()
-                     .Where(p => relatedNames.Any(s => p.FullName.Contains(s))).Select(Assembly.Load))
+        foreach (var assemblyName in entryAssembly.GetReferencedAssemblies())
         {
-            yield return assembly;
+            if (relatedNames.Any(r => assemblyName.FullName.Contains(r, StringComparison.Ordinal)))
+                yield return Assembly.Load(assemblyName);
         }
 
 

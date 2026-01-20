@@ -61,8 +61,12 @@ public static class Mo
         /// 设置模块的默认Minimal Api禁用状态，默认情况下不禁用。
         /// </summary>
         public static bool? DefaultMinimalApiDisabled { get; set; }
-
-
+        
+        /// <summary>
+        /// 相关程序集名称，用于筛选要加载的程序集
+        /// </summary>
+        public static string[] RelatedAssemblies => GlobalTypeFinder.Options.RelatedAssemblies;
+        
         /// <summary>
         /// 全局类型查找器
         /// </summary>
