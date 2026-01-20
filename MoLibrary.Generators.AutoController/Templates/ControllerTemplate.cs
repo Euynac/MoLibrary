@@ -63,8 +63,6 @@ internal static class ControllerTemplate
 
         return $$"""
         {{documentationComment}}        [{{candidate.HttpMethodAttribute}}{{routeTemplate}}]
-                [{{GeneratorConstants.AttributeNames.ProducesResponseType}}((int) HttpStatusCode.Accepted)]
-                [{{GeneratorConstants.AttributeNames.ProducesResponseType}}((int) HttpStatusCode.BadRequest)]
                 [{{GeneratorConstants.AttributeNames.ProducesResponseType}}(typeof({{candidate.ResponseType}}), (int) HttpStatusCode.OK)]
                 public async Task<object> {{candidate.MethodName}}(
                     [{{bindingAttribute}}] {{candidate.RequestType}} dto)

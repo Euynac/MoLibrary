@@ -63,7 +63,9 @@
       "mcp__plugin_microsoft-docs_microsoft-learn__microsoft_docs_fetch",
       "mcp__plugin_microsoft-docs_microsoft-learn__microsoft_code_sample_search",
       "Skill(microsoft-docs:microsoft-code-reference)",
-      "Bash(dotnet sln:*)"
+      "Bash(dotnet sln:*)",
+      "mcp__plugin_context7_context7__resolve-library-id",
+      "mcp__plugin_context7_context7__get-library-docs"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

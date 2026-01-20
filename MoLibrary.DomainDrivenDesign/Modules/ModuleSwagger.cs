@@ -1,18 +1,15 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
-using MoLibrary.Core.Module.TypeFinder;
 using MoLibrary.DomainDrivenDesign.Swagger;
 using MoLibrary.Tool.Extensions;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using Swashbuckle.AspNetCore.SwaggerUI;
-using Unchase.Swashbuckle.AspNetCore.Extensions.Extensions;
 
 namespace MoLibrary.DomainDrivenDesign.Modules;
 
@@ -43,9 +40,6 @@ public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger,
     {
         services.AddSwaggerGen(options =>
         {
-            options.DocumentFilter<CustomDocumentFilter>();
-            options.SchemaFilter<CustomSchemaFilter>();
-            
             // // 添加GroupName到Tags的转换过滤器
             // options.OperationFilter<GroupNameToTagsOperationFilter>();
             
@@ -55,7 +49,7 @@ public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger,
                 Version = Option.Version,
                 Description = Option.Description ?? ""
             });
-            options.AddEnumsWithValuesFixFilters();//扩展支持Enum
+            options.AddEnumDocumentation();
 
             //巨坑： 这个方法其实是swagger右上角分组时判断是否显示的。但是如果不调用，会导致ABP(以及自己定义的CrudAutoController约定生成的)生成的所有的接口都不显示。
             options.DocInclusionPredicate((docName, description) => true);

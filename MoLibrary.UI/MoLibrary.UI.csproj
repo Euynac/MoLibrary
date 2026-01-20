@@ -20,4 +20,8 @@
     <ProjectReference Include="..\MoLibrary.Core\MoLibrary.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <_ContentIncludedByDefault Remove="Properties\launchSettings.json" />
+  </ItemGroup>
+
 </Project>

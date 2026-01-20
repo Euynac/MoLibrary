@@ -46,6 +46,14 @@ Invoke when:
 - Looking up configuration options, limits, or quotas
 - Need official best practices for Azure/.NET development
 
+### Context7 (MCP Tool)
+
+Use `resolve-library-id` then `get-library-docs` when:
+- Working with third-party libraries (e.g., Serilog, MediatR, FluentValidation, Polly)
+- Need up-to-date API documentation or code examples for external packages
+- Encountering API changes, deprecated methods, or version-specific behavior
+- Uncertain about correct usage patterns for NuGet packages
+
 ## Code Quality Principles
 
 - Write reusable, low-coupling and high-cohesion implementations with multiple abstractions

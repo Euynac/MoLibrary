@@ -49,12 +49,14 @@ public class ModuleAutoControllers(ModuleAutoControllersOption option)
         {
             builder.ConfigureApplicationPartManager(manager =>
             {
-                var related = Mo.Options.RelatedAssemblies;
-                if (related.Length > 0)
+                var related = Mo.Options.GlobalTypeFinder.GetAssemblies()
+                    .Select(p => p.GetName().Name!)
+                    .ToHashSet();
+                if (related.Count > 0)
                 {
                     var partsToKeep = manager.ApplicationParts
                         .Where(p => p is not AssemblyPart part ||
-                                    related.Any(r => part.Name.Contains(r, StringComparison.Ordinal)))
+                                    related.Contains(part.Name))
                         .ToList();
 
                     manager.ApplicationParts.Clear();
