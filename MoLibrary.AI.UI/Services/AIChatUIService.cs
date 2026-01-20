@@ -208,71 +208,124 @@ public class AIChatUIService(
     /// <summary>
     /// Edit a user message and resend (discards all messages after it)
     /// </summary>
-    public async IAsyncEnumerable<ChatResponseUpdate> EditMessageAsync(
+    /// <remarks>
+    /// Message removal is performed synchronously before returning the async enumerable,
+    /// ensuring the UI reflects changes immediately when the caller updates state.
+    /// </remarks>
+    public IAsyncEnumerable<ChatResponseUpdate> EditMessageAsync(
         string sessionId,
         string messageId,
         string newContent,
-        [EnumeratorCancellation] CancellationToken ct = default)
+        CancellationToken ct = default)
     {
+        // SYNCHRONOUS: This code runs IMMEDIATELY when method is called
         var sessionInfo = sessionStorage.GetSession(sessionId);
         if (sessionInfo == null)
         {
-            yield break;
+            return AsyncEnumerableEmpty<ChatResponseUpdate>();
         }
 
         // Find message index
         var index = sessionInfo.Messages.FindIndex(m => m.Id == messageId);
         if (index < 0)
         {
-            yield break;
+            return AsyncEnumerableEmpty<ChatResponseUpdate>();
         }
 
-        // Remove all messages from this index onwards
+        // Remove all messages from this index onwards - EXECUTES NOW
         sessionInfo.Messages.RemoveRange(index, sessionInfo.Messages.Count - index);
 
-        // Re-send the edited message
-        await foreach (var update in SendMessageStreamingAsync(sessionId, newContent, ct))
-        {
-            yield return update;
-        }
+        // Return async streaming (only this part is lazy)
+        return SendMessageStreamingAsync(sessionId, newContent, ct);
     }
 
     /// <summary>
     /// Retry an AI message (regenerate response for the previous user message)
     /// </summary>
-    public async IAsyncEnumerable<ChatResponseUpdate> RetryMessageAsync(
+    /// <remarks>
+    /// Message removal is performed synchronously before returning the async enumerable,
+    /// ensuring the UI reflects changes immediately when the caller updates state.
+    /// </remarks>
+    public IAsyncEnumerable<ChatResponseUpdate> RetryMessageAsync(
         string sessionId,
         string messageId,
-        [EnumeratorCancellation] CancellationToken ct = default)
+        CancellationToken ct = default)
     {
+        // SYNCHRONOUS: This code runs IMMEDIATELY when method is called
         var sessionInfo = sessionStorage.GetSession(sessionId);
         if (sessionInfo == null)
         {
-            yield break;
+            return AsyncEnumerableEmpty<ChatResponseUpdate>();
         }
 
         // Find the AI message index
         var index = sessionInfo.Messages.FindIndex(m => m.Id == messageId);
         if (index < 0)
         {
-            yield break;
+            return AsyncEnumerableEmpty<ChatResponseUpdate>();
         }
 
         // Find the previous user message
         var userMessage = sessionInfo.Messages.Take(index).LastOrDefault(m => m.Role == AIChatRole.User);
         if (userMessage == null)
         {
-            yield break;
+            return AsyncEnumerableEmpty<ChatResponseUpdate>();
         }
 
-        // Remove the AI message (and any after it)
+        // Remove the AI message (and any after it) - EXECUTES NOW
         sessionInfo.Messages.RemoveRange(index, sessionInfo.Messages.Count - index);
 
-        // Re-send the user message to get new AI response
-        await foreach (var update in SendMessageStreamingAsync(sessionId, userMessage.Content, ct))
+        // Stream new AI response without adding user message (it already exists)
+        return StreamResponseOnlyAsync(sessionId, userMessage.Content, sessionInfo, ct);
+    }
+
+    /// <summary>
+    /// Internal: Stream AI response without adding user message to local storage
+    /// (used by retry where user message already exists)
+    /// </summary>
+    private async IAsyncEnumerable<ChatResponseUpdate> StreamResponseOnlyAsync(
+        string sessionId,
+        string message,
+        ChatSessionInfo sessionInfo,
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        var request = new AIChatRequest
         {
+            SessionId = sessionId,
+            Message = message,
+            Streaming = true,
+            ProviderId = sessionInfo.ProviderId
+        };
+
+        var fullContent = string.Empty;
+
+        await foreach (var update in chatService.SendMessageStreamingAsync(request, ct))
+        {
+            if (!string.IsNullOrEmpty(update.Text))
+            {
+                fullContent += update.Text;
+            }
             yield return update;
         }
+
+        // Add only the assistant message to local storage
+        sessionInfo.Messages.Add(new AIChatMessage
+        {
+            Role = AIChatRole.Assistant,
+            Content = fullContent,
+            ProviderId = sessionInfo.ProviderId,
+            ModelName = sessionInfo.ModelName
+        });
+        sessionInfo.UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>
+    /// Helper to return an empty async enumerable
+    /// </summary>
+    private static async IAsyncEnumerable<T> AsyncEnumerableEmpty<T>()
+    {
+        await Task.CompletedTask;
+        yield break;
     }
 
     /// <summary>
