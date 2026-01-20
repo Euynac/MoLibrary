@@ -1,0 +1,47 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/examples/">
+    <Project Path="examples/Examples.MoLibrary/Examples.MoLibrary.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Test.MoLibrary.Core/Test.MoLibrary.Core.csproj" />
+    <Project Path="tests/Test.MoLibrary.Tool/Test.MoLibrary.Tool.csproj" />
+    <Project Path="tests/Test.MoLibrary/Test.MoLibrary.csproj" />
+  </Folder>
+  <Project Path="MoLibrary.AI.UI/MoLibrary.AI.UI.csproj" />
+  <Project Path="MoLibrary.AI/MoLibrary.AI.csproj" />
+  <Project Path="MoLibrary.Authority/MoLibrary.Authority.csproj" />
+  <Project Path="MoLibrary.AutoModel/MoLibrary.AutoModel.csproj" />
+  <Project Path="MoLibrary.Configuration.UI/MoLibrary.Configuration.UI.csproj" />
+  <Project Path="MoLibrary.Configuration/MoLibrary.Configuration.csproj" />
+  <Project Path="MoLibrary.Core/MoLibrary.Core.csproj" />
+  <Project Path="MoLibrary.Dapr/MoLibrary.Dapr.csproj" />
+  <Project Path="MoLibrary.DataChannel/MoLibrary.DataChannel.csproj" />
+  <Project Path="MoLibrary.DependencyInjection/MoLibrary.DependencyInjection.csproj" />
+  <Project Path="MoLibrary.DomainDrivenDesign/MoLibrary.DomainDrivenDesign.csproj" />
+  <Project Path="MoLibrary.EventBus/MoLibrary.EventBus.csproj" />
+  <Project Path="MoLibrary.Framework.Generators/MoLibrary.Framework.Generators.csproj" />
+  <Project Path="MoLibrary.Framework.UI/MoLibrary.Framework.UI.csproj" />
+  <Project Path="MoLibrary.Framework/MoLibrary.Framework.csproj" />
+  <Project Path="MoLibrary.Generators.AutoController/MoLibrary.Generators.AutoController.csproj" />
+  <Project Path="MoLibrary.JobScheduler.EfCore/MoLibrary.JobScheduler.EfCore.csproj" />
+  <Project Path="MoLibrary.JobScheduler.UI/MoLibrary.JobScheduler.UI.csproj" />
+  <Project Path="MoLibrary.JobScheduler/MoLibrary.JobScheduler.csproj" />
+  <Project Path="MoLibrary.Locker/MoLibrary.Locker.csproj" />
+  <Project Path="MoLibrary.Logging/MoLibrary.Logging.csproj" />
+  <Project Path="MoLibrary.Office/MoLibrary.Office.csproj" />
+  <Project Path="MoLibrary.Profiling/MoLibrary.Profiling.csproj" />
+  <Project Path="MoLibrary.RegisterCentre/MoLibrary.RegisterCentre.csproj" />
+  <Project Path="MoLibrary.Repository/MoLibrary.Repository.csproj" />
+  <Project Path="MoLibrary.Resilience/MoLibrary.Resilience.csproj" />
+  <Project Path="MoLibrary.SignalR/MoLibrary.SignalR.csproj" />
+  <Project Path="MoLibrary.StateStore.StackExchange/MoLibrary.StateStore.StackExchange.csproj" />
+  <Project Path="MoLibrary.StateStore/MoLibrary.StateStore.csproj" />
+  <Project Path="MoLibrary.Tool/MoLibrary.Tool.csproj" />
+  <Project Path="MoLibrary.UI/MoLibrary.UI.csproj" />
+  <Project Path="MoLibrary.Validation/MoLibrary.Validation.csproj" />
+</Solution>
