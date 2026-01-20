@@ -1,6 +1,6 @@
 .session-item-wrapper ::deep .session-item {
     border-radius: 8px;
-    margin: 4px 8px;
+    margin: 4px 0;
     transition: background-color 0.2s ease;
 }
 
@@ -9,7 +9,7 @@
 }
 
 .session-item-wrapper ::deep .session-item.selected {
-    background-color: var(--mud-palette-primary-lighten);
+    background-color: var(--mud-palette-primary);
 }
 
 .session-content {

@@ -16,11 +16,11 @@
 
     @if(Options.Value.EnableMarkdown)
     {
-        <link href="_content/MudBlazor.Markdown/MudBlazor.Markdown.min.css" rel="stylesheet" />
+        <link href=@Assets["_content/MudBlazor.Markdown/MudBlazor.Markdown.min.css"] rel="stylesheet" />
     }
     
     <!-- MoLibrary 主题 CSS -->
-    <link href="_content/MoLibrary.UI/css/mo-theme-main.css" rel="stylesheet" />
+    <link href=@Assets["_content/MoLibrary.UI/css/mo-theme-main.css"] rel="stylesheet" />
     
 	<!-- 巨坑：支持消费应用的 CSS isolation 最终是打包成了bundle(可以通过编译目录下的YourProject.staticwebassets.runtime.json)，所以要根据入口程序集名称获取 -->
     <link href="@(Assembly.GetEntryAssembly()?.GetName().Name).styles.css" rel="stylesheet" />
@@ -28,7 +28,7 @@
     <link rel="icon" type="image/ico" href="favicon.ico" />
     <HeadOutlet @rendermode="InteractiveServer" />
     <!-- D3.js for data visualization -->
-    <script src="_content/MoLibrary.UI/lib/d3.min.js"></script>
+    <script src=@Assets["_content/MoLibrary.UI/lib/d3.min.js"]></script>
 </head>
 
 <body>
@@ -38,7 +38,7 @@
     @* <script src="_content/MudBlazor/MudBlazor.min.js?v=@Metadata.Version"></script> *@
     @if(Options.Value.EnableMarkdown)
     {
-        <script src="_content/MudBlazor.Markdown/MudBlazor.Markdown.min.js"></script>
+        <script src=@Assets["_content/MudBlazor.Markdown/MudBlazor.Markdown.min.js"]></script>
     }
 </body>
 
