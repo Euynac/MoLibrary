@@ -90,11 +90,13 @@ public class AIChatUIService(
         string message,
         CancellationToken ct = default)
     {
+        var sessionInfo = sessionStorage.GetSession(sessionId);
         var request = new AIChatRequest
         {
             SessionId = sessionId,
             Message = message,
-            Streaming = false
+            Streaming = false,
+            ProviderId = sessionInfo?.ProviderId
         };
 
         var result = await chatService.SendMessageAsync(request, ct);
@@ -104,7 +106,6 @@ public class AIChatUIService(
         }
 
         // 更新本地会话存储
-        var sessionInfo = sessionStorage.GetSession(sessionId);
         if (sessionInfo != null)
         {
             // 添加用户消息到本地存储
@@ -131,15 +132,19 @@ public class AIChatUIService(
     /// <summary>
     /// 发送消息并获取流式响应
     /// </summary>
-    public async IAsyncEnumerable<ChatResponseUpdate> SendMessageStreamingAsync(
+    /// <remarks>
+    /// User message is added synchronously before returning the async enumerable,
+    /// ensuring it appears in the UI immediately when the caller updates state.
+    /// </remarks>
+    public IAsyncEnumerable<ChatResponseUpdate> SendMessageStreamingAsync(
         string sessionId,
         string message,
-        [EnumeratorCancellation] CancellationToken ct = default)
+        CancellationToken ct = default)
     {
         var sessionInfo = sessionStorage.GetSession(sessionId);
         if (sessionInfo != null)
         {
-            // 添加用户消息到本地存储
+            // 添加用户消息到本地存储（同步执行，确保调用者可以立即看到）
             sessionInfo.Messages.Add(new AIChatMessage
             {
                 Role = AIChatRole.User,
@@ -153,11 +158,25 @@ public class AIChatUIService(
             }
         }
 
+        // 返回异步流式响应
+        return StreamResponseAsync(sessionId, message, sessionInfo, ct);
+    }
+
+    /// <summary>
+    /// 内部方法：处理流式响应
+    /// </summary>
+    private async IAsyncEnumerable<ChatResponseUpdate> StreamResponseAsync(
+        string sessionId,
+        string message,
+        ChatSessionInfo? sessionInfo,
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
         var request = new AIChatRequest
         {
             SessionId = sessionId,
             Message = message,
-            Streaming = true
+            Streaming = true,
+            ProviderId = sessionInfo?.ProviderId
         };
 
         var fullContent = string.Empty;

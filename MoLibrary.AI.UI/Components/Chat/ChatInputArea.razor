@@ -57,6 +57,7 @@
 
         var message = _inputText.Trim();
         _inputText = string.Empty;
+        StateHasChanged(); // Ensure input clears immediately before async callback
 
         await OnSend.InvokeAsync(message);
     }

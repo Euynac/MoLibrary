@@ -20,7 +20,11 @@ public class AnthropicProvider : IAIProvider
         _options = options;
 
         // Anthropic SDK v12 使用对象初始化器配置客户端
-        var anthropicClient = new AnthropicClient { ApiKey = options.ApiKey };
+        var anthropicClient = new AnthropicClient
+        {
+            ApiKey = options.ApiKey,
+            BaseUrl = options.BaseUrl ?? ""
+        };
         // Anthropic SDK v12 官方实现 IChatClient
         _chatClient = anthropicClient.AsIChatClient(options.Model);
     }
@@ -55,7 +59,7 @@ public class AnthropicProvider : IAIProvider
         {
             var response = await _chatClient.GetResponseAsync(
                 [new ChatMessage(ChatRole.User, "Hello")],
-                new ChatOptions { MaxOutputTokens = 10 },
+                new ChatOptions {MaxOutputTokens = 10},
                 ct);
             return Res.Ok();
         }
@@ -96,6 +100,7 @@ public class AnthropicProvider : IAIProvider
             {
                 (_chatClient as IDisposable)?.Dispose();
             }
+
             _disposed = true;
         }
     }
