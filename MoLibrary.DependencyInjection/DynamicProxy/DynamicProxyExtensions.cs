@@ -319,6 +319,7 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
         }
         void AddNormalRegister(RegisterContext context)
         {
+            //巨坑：Controller如果不使用AddControllersAsServices，会导致Controller无法被动态代理
             collection.Add(new ServiceDescriptor(context.OldDescriptor.ServiceType, context.OldDescriptor.ServiceKey,
                 (provider, o) =>
                 {

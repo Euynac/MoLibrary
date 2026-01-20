@@ -68,7 +68,7 @@ public class ModuleAutoControllers(ModuleAutoControllersOption option)
                 manager.FeatureProviders.Add(
                     ActivatorUtilities
                         .CreateInstance<MoConventionalCrudControllerFeatureProvider>(provider));
-            });
+            }).AddControllersAsServices();
         }).ConfigMvcOption((o, provider) =>
         {
             o.ConfigAutoController(provider);

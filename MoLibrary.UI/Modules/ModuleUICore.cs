@@ -157,14 +157,14 @@ public class ModuleUICoreGuide : MoModuleGuide<ModuleUICore, ModuleUICoreOption,
     {
         ConfigureApplicationBuilder(builder =>
         {
-            var app = builder.ApplicationBuilder;
+            var app = builder.WebApplication;
 
             //app.UseExceptionHandler("/Error", createScopeForErrors: true);
 
-            //app.MapStaticAssets();  // .NET 9支持
+            app.MapStaticAssets();  // .NET 9支持
 
-            // 静态文件支持（用于MudBlazor资源和Razor类库静态资源）
-            app.UseStaticFiles();
+            // // 静态文件支持（用于MudBlazor资源和Razor类库静态资源）
+            // app.UseStaticFiles();
             
             //app.UseStaticFiles(new StaticFileOptions()
             //{
