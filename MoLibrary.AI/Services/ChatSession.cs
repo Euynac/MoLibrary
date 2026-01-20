@@ -181,6 +181,17 @@ public class ChatSession : IChatSession
     }
 
     /// <inheritdoc />
+    public void TruncateHistory(int keepCount)
+    {
+        if (keepCount < 0) keepCount = 0;
+        if (_messages.Count > keepCount)
+        {
+            _messages.RemoveRange(keepCount, _messages.Count - keepCount);
+            UpdatedAt = DateTimeOffset.UtcNow;
+        }
+    }
+
+    /// <inheritdoc />
     public IList<ChatMessage> ToChatMessages()
     {
         var chatMessages = new List<ChatMessage>();

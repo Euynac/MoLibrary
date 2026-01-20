@@ -85,6 +85,12 @@ public interface IChatSession
     void ClearHistory();
 
     /// <summary>
+    /// Truncate history to keep only the first N messages
+    /// </summary>
+    /// <param name="keepCount">Number of messages to keep from the beginning</param>
+    void TruncateHistory(int keepCount);
+
+    /// <summary>
     /// 将会话转换为 ChatMessage 列表（用于 IChatClient）
     /// </summary>
     /// <returns>ChatMessage 列表</returns>

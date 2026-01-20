@@ -81,6 +81,22 @@ public class AIChatService(IAIProviderFactory providerFactory, IOptions<ModuleAI
     }
 
     /// <summary>
+    /// Truncate session history to keep only the first N messages
+    /// </summary>
+    /// <param name="sessionId">会话 ID</param>
+    /// <param name="keepCount">Number of messages to keep from the beginning</param>
+    /// <returns>是否操作成功</returns>
+    public bool TruncateSessionHistory(string sessionId, int keepCount)
+    {
+        if (_sessions.TryGetValue(sessionId, out var session))
+        {
+            session.TruncateHistory(keepCount);
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>
     /// 发送消息并获取响应
     /// </summary>
     /// <param name="request">聊天请求</param>

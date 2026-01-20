@@ -235,6 +235,9 @@ public class AIChatUIService(
         // Remove all messages from this index onwards - EXECUTES NOW
         sessionInfo.Messages.RemoveRange(index, sessionInfo.Messages.Count - index);
 
+        // Sync backend: truncate to match UI state
+        chatService.TruncateSessionHistory(sessionId, index);
+
         // Return async streaming (only this part is lazy)
         return SendMessageStreamingAsync(sessionId, newContent, ct);
     }
@@ -274,6 +277,9 @@ public class AIChatUIService(
 
         // Remove the AI message (and any after it) - EXECUTES NOW
         sessionInfo.Messages.RemoveRange(index, sessionInfo.Messages.Count - index);
+
+        // Sync backend: truncate to match UI state
+        chatService.TruncateSessionHistory(sessionId, index);
 
         // Stream new AI response without adding user message (it already exists)
         return StreamResponseOnlyAsync(sessionId, userMessage.Content, sessionInfo, ct);
