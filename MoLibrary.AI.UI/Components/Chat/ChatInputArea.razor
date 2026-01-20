@@ -56,8 +56,11 @@
         if (string.IsNullOrWhiteSpace(_inputText) || IsSending) return;
 
         var message = _inputText.Trim();
-        _inputText = string.Empty;
-        StateHasChanged(); // Ensure input clears immediately before async callback
+       
+        _textFieldRef?.Clear();
+     
+        // Ensure component renders with empty value before parent re-renders
+        StateHasChanged();
 
         await OnSend.InvokeAsync(message);
     }

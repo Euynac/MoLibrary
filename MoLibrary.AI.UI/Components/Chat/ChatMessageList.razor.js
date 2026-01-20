@@ -14,6 +14,7 @@ export function initAutoScroll(element) {
 
     let isUserScrolling = false;
     let scrollTimeout = null;
+    let lastScrollHeight = element.scrollHeight; // Track scroll height for content growth detection
 
     // Check if user is near the bottom
     const isNearBottom = () => {
@@ -23,6 +24,7 @@ export function initAutoScroll(element) {
 
     // Scroll to bottom smoothly
     const scrollToBottom = () => {
+        isUserScrolling = false; // Reset flag so MutationObserver will auto-scroll
         element.scrollTo({
             top: element.scrollHeight,
             behavior: 'smooth'
@@ -39,10 +41,14 @@ export function initAutoScroll(element) {
         }, 150);
     };
 
-    // MutationObserver for new content
+    // MutationObserver for new content - auto-scroll when content grows (streaming) or when near bottom
     const observer = new MutationObserver((mutations) => {
-        // Only auto-scroll if user was near bottom before mutation
-        if (!isUserScrolling && isNearBottom()) {
+        const newScrollHeight = element.scrollHeight;
+        const contentGrew = newScrollHeight > lastScrollHeight;
+        lastScrollHeight = newScrollHeight;
+
+        // Always scroll if content grew (streaming), otherwise use near-bottom logic
+        if (contentGrew || (!isUserScrolling && isNearBottom())) {
             requestAnimationFrame(scrollToBottom);
         }
     });

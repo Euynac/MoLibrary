@@ -50,6 +50,12 @@
     private async Task HandleSend(string message)
     {
         await OnSendMessage.InvokeAsync(message);
+
+        // Scroll to bottom when sending a message to engage auto-scroll
+        if (_messageListRef != null)
+        {
+            await _messageListRef.ScrollToBottomAsync();
+        }
     }
 
     private async Task HandleStreamComplete(string content)

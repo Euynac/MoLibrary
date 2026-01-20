@@ -45,9 +45,6 @@
 }
 
 .message-content ::deep .mud-markdown-body pre {
-    background-color: var(--mud-palette-background-gray);
-    border-radius: 8px;
-    padding: 12px;
     overflow-x: auto;
 }
 
