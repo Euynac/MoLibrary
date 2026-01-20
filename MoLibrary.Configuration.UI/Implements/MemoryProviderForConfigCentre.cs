@@ -23,11 +23,13 @@ public class MemoryProviderForConfigCentre(
     IConfigurationCentreServiceInvoker invoker,
     IRegistrationStateManager stateManager) : IMoConfigurationCentre
 {
-    private static List<DtoDomainConfigs>? _cache;
+    private static (List<DtoDomainConfigs>? Data, DateTime CachedAt) _cache;
+    private static readonly TimeSpan _cacheTtl = TimeSpan.FromSeconds(30);
 
     public async Task<Res<List<DtoDomainConfigs>>> GetRegisteredServicesConfigsAsync()
     {
-        if (_cache != null) return _cache;
+        if (_cache.Data != null && DateTime.UtcNow - _cache.CachedAt < _cacheTtl)
+            return _cache.Data;
 
         // Get all instances from the state manager
         var instances = await stateManager.GetAllLeaderInstancesAsync();
@@ -43,7 +45,7 @@ public class MemoryProviderForConfigCentre(
 
         statusList.AddRange(manager.GetDomainConfigs());
         if ((await WashDomainConfigs(statusList)).IsFailed(out error, out var configs)) return error;
-        _cache = configs;
+        _cache = (configs, DateTime.UtcNow);
         return configs;
     }
 
@@ -91,7 +93,7 @@ public class MemoryProviderForConfigCentre(
 
     public async Task<Res> UpdateConfig(DtoUpdateConfig req)
     {
-        _cache = null;
+        _cache = default;
         // If configuration center node has the config item, modify it locally
         if ((await modifier.IsOptionExist(req.Key)).IsOk(out var option))
         {
