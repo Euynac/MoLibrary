@@ -21,16 +21,17 @@ namespace MoLibrary.AI.Modules;
 /// </summary>
 public static class ModuleAIBuilderExtensions
 {
-    /// <summary>
-    /// 配置 AI 模块
-    /// </summary>
-    /// <param name="builder">Web 应用构建器</param>
-    /// <param name="action">模块配置选项</param>
-    /// <returns>AI 模块配置引导器</returns>
-    public static ModuleAIGuide ConfigModuleAI(this WebApplicationBuilder builder,
-        Action<ModuleAIOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleAIGuide().Register(action);
+        /// <summary>
+        /// 配置 AI 模块
+        /// </summary>
+        /// <param name="action">模块配置选项</param>
+        /// <returns>AI 模块配置引导器</returns>
+        public static ModuleAIGuide ConfigModuleAI(Action<ModuleAIOption>? action = null)
+        {
+            return new ModuleAIGuide().Register(action);
+        }
     }
 }
 
@@ -73,12 +74,12 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
         var options = new OpenAIProviderOptions { ApiKey = "", Model = "gpt-4o" };
         configure(options);
 
-        ConfigureServices(context =>
+        ConfigureApplicationBuilder(context =>
         {
-            var manager = context.Services.BuildServiceProvider().GetRequiredService<AIProviderManager>();
+            var manager = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIProviderManager>();
             var provider = new OpenAIProvider(options);
             manager.RegisterProvider(provider);
-        }, secondKey: $"openai-{options.ProviderId ?? options.Model}");
+        }, secondKey: $"openai-{options.ProviderId ?? options.Model}", order: EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
 
         return this;
     }
@@ -93,12 +94,12 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
         var options = new AnthropicProviderOptions { ApiKey = "", Model = "claude-sonnet-4-20250514" };
         configure(options);
 
-        ConfigureServices(context =>
+        ConfigureApplicationBuilder(context =>
         {
-            var manager = context.Services.BuildServiceProvider().GetRequiredService<AIProviderManager>();
+            var manager = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIProviderManager>();
             var provider = new AnthropicProvider(options);
             manager.RegisterProvider(provider);
-        }, secondKey: $"anthropic-{options.ProviderId ?? options.Model}");
+        }, secondKey: $"anthropic-{options.ProviderId ?? options.Model}", order: EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
 
         return this;
     }
@@ -112,12 +113,12 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
     public ModuleAIGuide AddProvider<TProvider>(Func<IServiceProvider, TProvider> providerFactory)
         where TProvider : class, IAIProvider
     {
-        ConfigureServices(context =>
+        ConfigureApplicationBuilder(context =>
         {
-            var manager = context.Services.BuildServiceProvider().GetRequiredService<AIProviderManager>();
-            var provider = providerFactory(context.Services.BuildServiceProvider());
+            var manager = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIProviderManager>();
+            var provider = providerFactory(context.ApplicationBuilder.ApplicationServices);
             manager.RegisterProvider(provider);
-        }, secondKey: $"custom-{typeof(TProvider).Name}");
+        }, secondKey: $"custom-{typeof(TProvider).Name}", order: EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
 
         return this;
     }

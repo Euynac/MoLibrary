@@ -12,7 +12,6 @@ namespace MoLibrary.AI.Providers.Anthropic;
 public class AnthropicProvider : IAIProvider
 {
     private readonly AnthropicProviderOptions _options;
-    private readonly AnthropicClient _anthropicClient;
     private readonly IChatClient _chatClient;
     private bool _disposed;
 
@@ -21,9 +20,9 @@ public class AnthropicProvider : IAIProvider
         _options = options;
 
         // Anthropic SDK v12 使用对象初始化器配置客户端
-        _anthropicClient = new AnthropicClient { ApiKey = options.ApiKey };
+        var anthropicClient = new AnthropicClient { ApiKey = options.ApiKey };
         // Anthropic SDK v12 官方实现 IChatClient
-        _chatClient = _anthropicClient.AsIChatClient(options.Model);
+        _chatClient = anthropicClient.AsIChatClient(options.Model);
     }
 
     /// <inheritdoc />

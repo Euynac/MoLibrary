@@ -14,7 +14,6 @@ namespace MoLibrary.AI.Providers.OpenAI;
 public class OpenAIProvider : IAIProvider
 {
     private readonly OpenAIProviderOptions _options;
-    private readonly OpenAIClient _openAIClient;
     private readonly IChatClient _chatClient;
     private bool _disposed;
 
@@ -28,8 +27,8 @@ public class OpenAIProvider : IAIProvider
             clientOptions.Endpoint = new Uri(options.BaseUrl);
         }
 
-        _openAIClient = new OpenAIClient(new ApiKeyCredential(options.ApiKey), clientOptions);
-        _chatClient = _openAIClient.GetChatClient(options.Model).AsIChatClient();
+        var openAiClient = new OpenAIClient(new ApiKeyCredential(options.ApiKey), clientOptions);
+        _chatClient = openAiClient.GetChatClient(options.Model).AsIChatClient();
     }
 
     /// <inheritdoc />

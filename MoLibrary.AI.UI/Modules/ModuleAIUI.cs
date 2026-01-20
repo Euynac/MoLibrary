@@ -16,13 +16,15 @@ namespace MoLibrary.AI.UI.Modules;
 /// </summary>
 public static class ModuleAIUIBuilderExtensions
 {
-    /// <summary>
-    /// 配置 AI UI 模块
-    /// </summary>
-    public static ModuleAIUIGuide ConfigModuleAIUI(this WebApplicationBuilder builder,
-        Action<ModuleAIUIOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleAIUIGuide().Register(action);
+        /// <summary>
+        /// 配置 AI UI 模块
+        /// </summary>
+        public static ModuleAIUIGuide ConfigModuleAIUI(Action<ModuleAIUIOption>? action = null)
+        {
+            return new ModuleAIUIGuide().Register(action);
+        }
     }
 }
 
