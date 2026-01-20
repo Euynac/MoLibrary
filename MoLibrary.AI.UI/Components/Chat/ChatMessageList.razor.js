@@ -13,47 +13,55 @@ export function initAutoScroll(element) {
     if (!element) return null;
 
     let isUserScrolling = false;
+    let isProgrammaticScrolling = false;
     let scrollTimeout = null;
-    let lastScrollHeight = element.scrollHeight; // Track scroll height for content growth detection
+    let mutationDebounceTimeout = null;
+    let lastScrollHeight = element.scrollHeight;
 
-    // Check if user is near the bottom
     const isNearBottom = () => {
         const { scrollTop, scrollHeight, clientHeight } = element;
         return scrollHeight - scrollTop - clientHeight < scrollThreshold;
     };
 
-    // Scroll to bottom smoothly
     const scrollToBottom = () => {
-        isUserScrolling = false; // Reset flag so MutationObserver will auto-scroll
+        isProgrammaticScrolling = true;
         element.scrollTo({
             top: element.scrollHeight,
             behavior: 'smooth'
         });
+        // Reset after smooth scroll animation completes (~300-500ms)
+        setTimeout(() => {
+            isProgrammaticScrolling = false;
+        }, 400);
     };
 
-    // Handle user scroll
     const handleScroll = () => {
+        // Ignore scroll events caused by our programmatic scrolling
+        if (isProgrammaticScrolling) return;
+
         clearTimeout(scrollTimeout);
         isUserScrolling = true;
-
         scrollTimeout = setTimeout(() => {
             isUserScrolling = false;
         }, 150);
     };
 
-    // MutationObserver for new content - auto-scroll when content grows (streaming) or when near bottom
-    const observer = new MutationObserver((mutations) => {
-        const newScrollHeight = element.scrollHeight;
-        const contentGrew = newScrollHeight > lastScrollHeight;
-        lastScrollHeight = newScrollHeight;
+    // Debounced scroll check - waits for mutations to settle
+    const checkAndScroll = () => {
+        clearTimeout(mutationDebounceTimeout);
+        mutationDebounceTimeout = setTimeout(() => {
+            const newScrollHeight = element.scrollHeight;
+            const contentGrew = newScrollHeight > lastScrollHeight;
+            lastScrollHeight = newScrollHeight;
 
-        // Always scroll if content grew (streaming), otherwise use near-bottom logic
-        if (contentGrew || (!isUserScrolling && isNearBottom())) {
-            requestAnimationFrame(scrollToBottom);
-        }
-    });
+            if (contentGrew || (!isUserScrolling && isNearBottom())) {
+                requestAnimationFrame(scrollToBottom);
+            }
+        }, 16); // ~1 frame, allows DOM to settle
+    };
 
-    // Start observing
+    const observer = new MutationObserver(checkAndScroll);
+
     element.addEventListener('scroll', handleScroll, { passive: true });
     observer.observe(element, {
         childList: true,
@@ -61,16 +69,15 @@ export function initAutoScroll(element) {
         characterData: true
     });
 
-    // Initial scroll to bottom
     scrollToBottom();
 
-    // Return control object
     return {
         scrollToBottom,
         dispose: () => {
             element.removeEventListener('scroll', handleScroll);
             observer.disconnect();
             clearTimeout(scrollTimeout);
+            clearTimeout(mutationDebounceTimeout);
         }
     };
 }
