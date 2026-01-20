@@ -37,6 +37,9 @@ public class ModuleConfigurationDashboard(ModuleConfigurationDashboardOption opt
         services.AddScoped<ConfigurationClientService>();
         services.AddScoped<ConfigurationDashboardService>();
         
+        services.TryAddSingleton<IMoConfigurationDashboard, DefaultArrangeDashboard>();
+        services.TryAddTransient<IMoConfigurationStores, MoConfigurationDefaultMemoryStore>();
+        services.TryAddSingleton<IMoConfigurationModifier, MoConfigurationJsonFileModifier>();
         if (GetOptions<ModuleRegisterCentreOption>().IsStandaloneMode)
         {
             services.TryAddSingleton<IConfigurationCentreServiceInvoker,
@@ -175,13 +178,9 @@ public class ModuleConfigurationDashboardGuide : MoModuleGuide<ModuleConfigurati
 
         ConfigureServices(context =>
         {
-            context.Services.TryAddSingleton<IMoConfigurationDashboard, DefaultArrangeDashboard>();
-            context.Services.AddSingleton<MemoryProviderForConfigCentre>();
-            context.Services.AddSingleton<IMoConfigurationCentre>(p =>
+            context.Services.TryAddSingleton<MemoryProviderForConfigCentre>();
+            context.Services.TryAddSingleton<IMoConfigurationCentre>(p =>
                 p.GetRequiredService<MemoryProviderForConfigCentre>());
-
-            context.Services.TryAddTransient<IMoConfigurationStores, MoConfigurationDefaultMemoryStore>();
-            context.Services.AddSingleton<IMoConfigurationModifier, MoConfigurationJsonFileModifier>();
         });
         return this;
     }
