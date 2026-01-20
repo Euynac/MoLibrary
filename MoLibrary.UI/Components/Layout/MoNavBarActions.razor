@@ -1,14 +1,20 @@
+@using Microsoft.Extensions.Options
+@using MoLibrary.UI.Modules
 @using MoLibrary.UI.Services
 @inject MoUserContextService UserContext
+@inject IOptions<ModuleUICoreOption> Options
 
 <div class="navbar-actions">
-    <!-- 搜索按钮 -->
-    <MudIconButton Icon="@Icons.Material.Filled.Search"
-                   Color="Color.Default"
-                   Size="Size.Medium"
-                   Class="action-button"
-                   OnClick="OpenSearch"
-                   Title="搜索 (Ctrl+K)" />
+    @if (Options.Value.EnableNavBarSearch)
+    {
+        <!-- 搜索按钮 -->
+        <MudIconButton Icon="@Icons.Material.Filled.Search"
+                       Color="Color.Default"
+                       Size="Size.Medium"
+                       Class="action-button"
+                       OnClick="OpenSearch"
+                       Title="搜索 (Ctrl+K)" />
+    }
 
     <!-- 通知按钮 -->
     <MudIconButton Icon="@Icons.Material.Filled.Notifications"

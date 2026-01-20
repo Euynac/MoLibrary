@@ -26,7 +26,8 @@
 
 @code {
     private Dictionary<string, List<UINavItem>> _categorizedNavItems = new();
-    private int _maxVisibleCategories = 4; // 可配置
+
+    private int MaxVisibleCategories => Options.Value.MaxVisibleCategories;
 
     protected override void OnInitialized()
     {
@@ -38,14 +39,14 @@
     }
 
     private IEnumerable<string> VisibleCategories =>
-        _categorizedNavItems.Keys.Take(_maxVisibleCategories);
+        _categorizedNavItems.Keys.Take(MaxVisibleCategories);
 
     private bool HasMoreCategories =>
-        _categorizedNavItems.Count > _maxVisibleCategories;
+        _categorizedNavItems.Count > MaxVisibleCategories;
 
     private Dictionary<string, List<UINavItem>> MoreCategories =>
         _categorizedNavItems
-            .Skip(_maxVisibleCategories)
+            .Skip(MaxVisibleCategories)
             .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
     private List<UINavItem> GetItemsInCategory(string category) =>
