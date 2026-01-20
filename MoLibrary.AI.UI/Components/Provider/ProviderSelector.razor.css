@@ -2,10 +2,20 @@
     padding: 8px 16px;
 }
 
-.provider-select {
+.provider-selector ::deep .provider-select {
     width: 100%;
 }
 
+.provider-selector ::deep .mud-select {
+    margin-top: 0;
+}
+
+/*
+ * Note: .provider-item and .default-chip are rendered inside MudSelect's dropdown portal,
+ * which exists outside this component's DOM tree. CSS isolation cannot target portal content.
+ * These styles are kept here for reference but will not apply.
+ * To style dropdown content, use global CSS or MudBlazor's built-in styling options.
+ */
 .provider-item {
     display: flex;
     align-items: center;
@@ -15,9 +25,4 @@
 .default-chip {
     margin-left: auto;
     font-size: 0.7rem;
-}
-
-/* 使用 ::deep 选择器样式化 MudBlazor 组件 */
-.provider-selector ::deep .mud-select {
-    margin-top: 0;
 }

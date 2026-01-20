@@ -243,7 +243,7 @@ public class ModuleUICoreOption : MoModuleOption<ModuleUICore>
     /// <summary>
     /// 顶部导航栏显示的最大分类数量（超出部分放入"更多"菜单）
     /// </summary>
-    public int MaxVisibleCategories { get; set; } = 4;
+    public int MaxVisibleCategories { get; set; } = 6;
 
     /// <summary>
     /// 是否启用导航栏搜索功能

@@ -1,22 +1,24 @@
-<MudListItem T="string"
-             Class="@($"session-item {(IsSelected ? "selected" : "")}")"
-             OnClick="@HandleClick">
-    <ChildContent>
-        <div class="session-content">
-            <div class="session-info">
-                <MudText Typo="Typo.body2" Class="session-title">@Session.Title</MudText>
-                <MudText Typo="Typo.caption" Class="session-time">
-                    @GetTimeDisplay()
-                </MudText>
+<div class="session-item-wrapper">
+    <MudListItem T="string"
+                 Class="@($"session-item {(IsSelected ? "selected" : "")}")"
+                 OnClick="@HandleClick">
+        <ChildContent>
+            <div class="session-content">
+                <div class="session-info">
+                    <MudText Typo="Typo.body2" Class="session-title">@Session.Title</MudText>
+                    <MudText Typo="Typo.caption" Class="session-time">
+                        @GetTimeDisplay()
+                    </MudText>
+                </div>
+                <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                               Size="Size.Small"
+                               Color="Color.Error"
+                               Class="delete-button"
+                               OnClick="@HandleDelete" />
             </div>
-            <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                           Size="Size.Small"
-                           Color="Color.Error"
-                           Class="delete-button"
-                           OnClick="@HandleDelete" />
-        </div>
-    </ChildContent>
-</MudListItem>
+        </ChildContent>
+    </MudListItem>
+</div>
 
 @code {
     [Parameter] public required ChatSessionInfo Session { get; set; }

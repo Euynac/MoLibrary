@@ -4,7 +4,7 @@
     border-top: 1px solid var(--mud-palette-lines-default);
 }
 
-.input-container {
+.input-area ::deep .input-container {
     display: flex;
     align-items: flex-end;
     gap: 8px;
@@ -13,33 +13,32 @@
     background-color: var(--mud-palette-surface);
 }
 
-.input-field {
+.input-area ::deep .input-field {
     flex: 1;
 }
 
-/* 使用 ::deep 选择器样式化 MudBlazor 组件 */
-.input-container ::deep .mud-input-root {
+.input-area ::deep .mud-input-root {
     margin-top: 0 !important;
 }
 
-.input-container ::deep .mud-input-slot {
+.input-area ::deep .mud-input-slot {
     padding: 0 !important;
 }
 
-.input-container ::deep .mud-input-underline::before,
-.input-container ::deep .mud-input-underline::after {
+.input-area ::deep .mud-input-underline::before,
+.input-area ::deep .mud-input-underline::after {
     display: none !important;
 }
 
-.input-container ::deep textarea {
+.input-area ::deep textarea {
     resize: none;
 }
 
-.send-button {
+.input-area ::deep .send-button {
     flex-shrink: 0;
 }
 
-.provider-info {
+.input-area ::deep .provider-info {
     margin-top: 8px;
     text-align: center;
     opacity: 0.7;

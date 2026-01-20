@@ -1,14 +1,14 @@
-.session-item {
+.session-item-wrapper ::deep .session-item {
     border-radius: 8px;
     margin: 4px 8px;
     transition: background-color 0.2s ease;
 }
 
-.session-item:hover {
+.session-item-wrapper ::deep .session-item:hover {
     background-color: var(--mud-palette-action-default-hover);
 }
 
-.session-item.selected {
+.session-item-wrapper ::deep .session-item.selected {
     background-color: var(--mud-palette-primary-lighten);
 }
 
@@ -25,21 +25,21 @@
     overflow: hidden;
 }
 
-.session-title {
+.session-item-wrapper ::deep .session-title {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.session-time {
+.session-item-wrapper ::deep .session-time {
     opacity: 0.7;
 }
 
-.delete-button {
+.session-item-wrapper ::deep .delete-button {
     opacity: 0;
     transition: opacity 0.2s ease;
 }
 
-.session-item:hover .delete-button {
+.session-item-wrapper ::deep .session-item:hover .delete-button {
     opacity: 1;
 }

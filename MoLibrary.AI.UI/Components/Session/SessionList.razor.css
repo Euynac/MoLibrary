@@ -26,6 +26,6 @@
     opacity: 0.6;
 }
 
-.session-list-items {
+.session-list-content ::deep .session-list-items {
     padding: 0;
 }

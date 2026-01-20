@@ -12,12 +12,12 @@
     justify-content: flex-start;
 }
 
-.message-content-stack {
+.message-wrapper ::deep .message-content-stack {
     max-width: 80%;
     align-items: flex-start;
 }
 
-.message-avatar {
+.message-wrapper ::deep .message-avatar {
     flex-shrink: 0;
 }
 
