@@ -14,7 +14,8 @@
     {
         @foreach (var message in Messages)
         {
-            <ChatMessageItem Message="@message" EnableMarkdown="@EnableMarkdown" />
+            <ChatMessageItem Message="@message" EnableMarkdown="@EnableMarkdown"
+                             OnEdit="@OnEditMessage" OnRetry="@OnRetryMessage" />
         }
 
         @if (StreamingContent != null)
@@ -40,6 +41,8 @@
     [Parameter] public CancellationToken CancellationToken { get; set; }
     [Parameter] public EventCallback<string> OnStreamComplete { get; set; }
     [Parameter] public EventCallback<string> OnStreamError { get; set; }
+    [Parameter] public EventCallback<(AIChatMessage Message, string NewContent)> OnEditMessage { get; set; }
+    [Parameter] public EventCallback<AIChatMessage> OnRetryMessage { get; set; }
 
     private ElementReference _messageListRef;
     private StreamingMessageItem? _streamingItemRef;

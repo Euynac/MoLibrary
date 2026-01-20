@@ -1,4 +1,6 @@
 @using MoLibrary.AI.Models
+@inject IJSRuntime JSRuntime
+@inject ISnackbar Snackbar
 
 <div class="message-wrapper @(IsUser ? "user-message" : "assistant-message")">
     <MudStack Row="true" Spacing="2" Class="message-content-stack">
@@ -8,27 +10,62 @@
                 <MudIcon Icon="@Icons.Material.Filled.SmartToy" />
             </MudAvatar>
         }
-        <div class="message-content @(IsUser ? "user-bubble" : "assistant-bubble")">
-            @if (EnableMarkdown && !IsUser)
-            {
-                <MudMarkdown Value="@Message.Content" />
-            }
-            else
-            {
-                <MudText Typo="Typo.body1" Class="message-text">@Message.Content</MudText>
-            }
-            <div class="message-meta">
-                <MudText Typo="Typo.caption" Class="message-time">
-                    @Message.CreatedAt.ToLocalTime().ToString("HH:mm")
-                </MudText>
-                @if (!IsUser && Message.Usage != null)
-                {
-                    <MudText Typo="Typo.caption" Class="message-tokens">
-                        @Message.Usage.TotalTokens tokens
-                    </MudText>
-                }
+
+        @if (IsUser)
+        {
+            @* User message with external action buttons *@
+            <div class="user-message-container">
+                @* Action buttons outside bubble, top-left *@
+                <div class="user-actions">
+                    <MudIconButton Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small"
+                                   OnClick="@HandleCopy" Class="user-action-button" title="Copy" />
+                    <MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small"
+                                   OnClick="@HandleStartEdit" Class="user-action-button" title="Edit" />
+                </div>
+
+                @* The bubble itself *@
+                <div class="message-content user-bubble">
+                    <MudText Typo="Typo.body1" Class="message-text">@Message.Content</MudText>
+                    <div class="message-meta">
+                        <MudText Typo="Typo.caption" Class="message-time">
+                            @Message.CreatedAt.ToLocalTime().ToString("HH:mm")
+                        </MudText>
+                    </div>
+                </div>
             </div>
-        </div>
+        }
+        else
+        {
+            @* AI message - keep current structure with actions inside *@
+            <div class="message-content assistant-bubble">
+                @if (EnableMarkdown)
+                {
+                    <MudMarkdown Value="@Message.Content" />
+                }
+                else
+                {
+                    <MudText Typo="Typo.body1" Class="message-text">@Message.Content</MudText>
+                }
+                <div class="message-meta">
+                    <MudText Typo="Typo.caption" Class="message-time">
+                        @Message.CreatedAt.ToLocalTime().ToString("HH:mm")
+                    </MudText>
+                    @if (Message.Usage != null)
+                    {
+                        <MudText Typo="Typo.caption" Class="message-tokens">
+                            @Message.Usage.TotalTokens tokens
+                        </MudText>
+                    }
+                    <div class="message-actions">
+                        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small"
+                                       OnClick="@HandleCopy" Class="action-button" title="Copy" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
+                                       OnClick="@HandleRetry" Class="action-button" title="Retry" />
+                    </div>
+                </div>
+            </div>
+        }
+
         @if (IsUser)
         {
             <MudAvatar Size="Size.Small" Color="Color.Primary" Class="message-avatar">
@@ -36,11 +73,78 @@
             </MudAvatar>
         }
     </MudStack>
+
+    @* Edit mode: Separate input box below message *@
+    @if (_isEditing)
+    {
+        <div class="edit-overlay">
+            <MudTextField T="string" @bind-Value="_editContent"
+                          Variant="Variant.Outlined"
+                          AutoGrow="true" Lines="3" MaxLines="10"
+                          Class="edit-input" />
+            <div class="edit-buttons">
+                <MudButton Variant="Variant.Text" OnClick="@HandleCancelEdit">
+                    Cancel
+                </MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           OnClick="@HandleSaveEdit" Disabled="@string.IsNullOrWhiteSpace(_editContent)">
+                    Update
+                </MudButton>
+            </div>
+        </div>
+    }
 </div>
 
 @code {
     [Parameter] public required AIChatMessage Message { get; set; }
     [Parameter] public bool EnableMarkdown { get; set; } = true;
+    [Parameter] public EventCallback<(AIChatMessage Message, string NewContent)> OnEdit { get; set; }
+    [Parameter] public EventCallback<AIChatMessage> OnRetry { get; set; }
 
     private bool IsUser => Message.Role == AIChatRole.User;
+    private bool _isEditing;
+    private string _editContent = string.Empty;
+
+    private async Task HandleCopy()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", Message.Content);
+            Snackbar.Add("Copied to clipboard", Severity.Success);
+        }
+        catch
+        {
+            Snackbar.Add("Failed to copy", Severity.Error);
+        }
+    }
+
+    private void HandleStartEdit()
+    {
+        _editContent = Message.Content;
+        _isEditing = true;
+    }
+
+    private void HandleCancelEdit()
+    {
+        _isEditing = false;
+        _editContent = string.Empty;
+    }
+
+    private async Task HandleSaveEdit()
+    {
+        if (string.IsNullOrWhiteSpace(_editContent))
+        {
+            Snackbar.Add("Message cannot be empty", Severity.Warning);
+            return;
+        }
+
+        _isEditing = false;
+        await OnEdit.InvokeAsync((Message, _editContent));
+        _editContent = string.Empty;
+    }
+
+    private async Task HandleRetry()
+    {
+        await OnRetry.InvokeAsync(Message);
+    }
 }

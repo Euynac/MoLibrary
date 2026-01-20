@@ -15,7 +15,9 @@
         EnableAutoScroll="@EnableAutoScroll"
         CancellationToken="@CancellationToken"
         OnStreamComplete="@HandleStreamComplete"
-        OnStreamError="@HandleStreamError" />
+        OnStreamError="@HandleStreamError"
+        OnEditMessage="@OnEditMessage"
+        OnRetryMessage="@OnRetryMessage" />
 
     <ChatInputArea
         @ref="_inputAreaRef"
@@ -43,6 +45,8 @@
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public EventCallback OnRetry { get; set; }
     [Parameter] public EventCallback OnErrorDismissed { get; set; }
+    [Parameter] public EventCallback<(AIChatMessage Message, string NewContent)> OnEditMessage { get; set; }
+    [Parameter] public EventCallback<AIChatMessage> OnRetryMessage { get; set; }
 
     private ChatInputArea? _inputAreaRef;
     private ChatMessageList? _messageListRef;

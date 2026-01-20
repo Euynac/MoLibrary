@@ -1,15 +1,16 @@
 .message-wrapper {
     display: flex;
+    flex-direction: column;
     margin-bottom: 16px;
     padding: 0 16px;
 }
 
 .message-wrapper.user-message {
-    justify-content: flex-end;
+    align-items: flex-end;
 }
 
 .message-wrapper.assistant-message {
-    justify-content: flex-start;
+    align-items: flex-start;
 }
 
 .message-wrapper ::deep .message-content-stack {
@@ -41,7 +42,7 @@
     border-bottom-left-radius: 4px;
 }
 
-/* 使用 ::deep 选择器样式化 MudBlazor 组件内容 */
+/* MudMarkdown content styling */
 .message-content ::deep .mud-markdown-body {
     color: inherit;
 }
@@ -66,7 +67,7 @@
     font-size: 0.9em;
 }
 
-.message-text {
+.message-content ::deep .message-text {
     white-space: pre-wrap;
 }
 
@@ -75,6 +76,7 @@
     gap: 12px;
     margin-top: 8px;
     opacity: 0.7;
+    align-items: center;
 }
 
 .message-time {
@@ -83,4 +85,86 @@
 
 .message-tokens {
     font-size: 0.75rem;
+}
+
+/* Assistant message action buttons (inside bubble) */
+.message-actions {
+    display: flex;
+    gap: 4px;
+    margin-left: auto;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.message-content:hover .message-actions {
+    opacity: 1;
+}
+
+.message-actions ::deep .action-button {
+    padding: 2px;
+    min-width: 24px;
+    min-height: 24px;
+}
+
+.message-actions ::deep .action-button .mud-icon-root {
+    font-size: 16px;
+}
+
+/* User message container for external buttons */
+.user-message-container {
+    display: flex;
+    align-items: flex-start;
+}
+
+/* User action buttons - outside bubble, at left side */
+.user-actions {
+    display: flex;
+    gap: 4px;
+    margin-right: 8px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    align-self: center;
+}
+
+.user-message-container:hover .user-actions {
+    opacity: 1;
+}
+
+.user-actions ::deep .user-action-button {
+    padding: 4px;
+    min-width: 28px;
+    min-height: 28px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.user-actions ::deep .user-action-button:hover {
+    background-color: var(--mud-palette-action-default-hover);
+}
+
+.user-actions ::deep .user-action-button .mud-icon-root {
+    font-size: 18px;
+}
+
+/* Edit overlay - separate input box below message */
+.edit-overlay {
+    margin-top: 12px;
+    width: 100%;
+    max-width: 80%;
+    align-self: flex-end;
+    padding-right: 40px; /* Account for avatar width + spacing */
+}
+
+.edit-overlay ::deep .edit-input {
+    width: 100%;
+}
+
+.edit-overlay ::deep .edit-input .mud-input-outlined-border {
+    border-radius: 12px;
+}
+
+.edit-buttons {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 8px;
 }

@@ -206,6 +206,76 @@ public class AIChatUIService(
     }
 
     /// <summary>
+    /// Edit a user message and resend (discards all messages after it)
+    /// </summary>
+    public async IAsyncEnumerable<ChatResponseUpdate> EditMessageAsync(
+        string sessionId,
+        string messageId,
+        string newContent,
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        var sessionInfo = sessionStorage.GetSession(sessionId);
+        if (sessionInfo == null)
+        {
+            yield break;
+        }
+
+        // Find message index
+        var index = sessionInfo.Messages.FindIndex(m => m.Id == messageId);
+        if (index < 0)
+        {
+            yield break;
+        }
+
+        // Remove all messages from this index onwards
+        sessionInfo.Messages.RemoveRange(index, sessionInfo.Messages.Count - index);
+
+        // Re-send the edited message
+        await foreach (var update in SendMessageStreamingAsync(sessionId, newContent, ct))
+        {
+            yield return update;
+        }
+    }
+
+    /// <summary>
+    /// Retry an AI message (regenerate response for the previous user message)
+    /// </summary>
+    public async IAsyncEnumerable<ChatResponseUpdate> RetryMessageAsync(
+        string sessionId,
+        string messageId,
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        var sessionInfo = sessionStorage.GetSession(sessionId);
+        if (sessionInfo == null)
+        {
+            yield break;
+        }
+
+        // Find the AI message index
+        var index = sessionInfo.Messages.FindIndex(m => m.Id == messageId);
+        if (index < 0)
+        {
+            yield break;
+        }
+
+        // Find the previous user message
+        var userMessage = sessionInfo.Messages.Take(index).LastOrDefault(m => m.Role == AIChatRole.User);
+        if (userMessage == null)
+        {
+            yield break;
+        }
+
+        // Remove the AI message (and any after it)
+        sessionInfo.Messages.RemoveRange(index, sessionInfo.Messages.Count - index);
+
+        // Re-send the user message to get new AI response
+        await foreach (var update in SendMessageStreamingAsync(sessionId, userMessage.Content, ct))
+        {
+            yield return update;
+        }
+    }
+
+    /// <summary>
     /// 删除会话
     /// </summary>
     public bool DeleteSession(string sessionId)

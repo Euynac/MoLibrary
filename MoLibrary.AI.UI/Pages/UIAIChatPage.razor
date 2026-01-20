@@ -56,7 +56,9 @@
             OnStreamError="@HandleStreamError"
             OnCancel="@HandleCancel"
             OnRetry="@HandleRetry"
-            OnErrorDismissed="@HandleErrorDismissed" />
+            OnErrorDismissed="@HandleErrorDismissed"
+            OnEditMessage="@HandleEditMessage"
+            OnRetryMessage="@HandleRetryMessage" />
     </div>
 </div>
 
@@ -135,7 +137,8 @@
         if (currentSession != null)
         {
             _currentSessionTitle = currentSession.Title;
-            _currentMessages = currentSession.Messages;
+            // Create new list reference to trigger Blazor change detection
+            _currentMessages = currentSession.Messages.ToList();
             _currentProviderId = currentSession.ProviderId ?? _currentProviderId;
         }
         else
@@ -289,6 +292,58 @@
             ClearError();
             await HandleSendMessage(_lastMessage);
         }
+    }
+
+    private void HandleEditMessage((AIChatMessage Message, string NewContent) args)
+    {
+        if (string.IsNullOrWhiteSpace(args.NewContent) || _isSending) return;
+
+        ClearError();
+        _lastMessage = args.NewContent;
+
+        _isSending = true;
+        _cts?.Dispose();
+        _cts = new CancellationTokenSource();
+        _cancellationToken = _cts.Token;
+
+        if (_options.RequestTimeoutMs > 0)
+        {
+            _cts.CancelAfter(_options.RequestTimeoutMs);
+        }
+
+        _streamingContent = ChatUIService.EditMessageAsync(
+            _sessionStorage.CurrentSessionId!,
+            args.Message.Id,
+            args.NewContent,
+            _cts.Token);
+
+        UpdateCurrentSession();
+        StateHasChanged();
+    }
+
+    private void HandleRetryMessage(AIChatMessage message)
+    {
+        if (_isSending) return;
+
+        ClearError();
+
+        _isSending = true;
+        _cts?.Dispose();
+        _cts = new CancellationTokenSource();
+        _cancellationToken = _cts.Token;
+
+        if (_options.RequestTimeoutMs > 0)
+        {
+            _cts.CancelAfter(_options.RequestTimeoutMs);
+        }
+
+        _streamingContent = ChatUIService.RetryMessageAsync(
+            _sessionStorage.CurrentSessionId!,
+            message.Id,
+            _cts.Token);
+
+        UpdateCurrentSession();
+        StateHasChanged();
     }
 
     private void HandleErrorDismissed()
