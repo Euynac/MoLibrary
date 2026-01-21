@@ -2,7 +2,7 @@
     <MudPaper Elevation="2" Class="input-container">
         <MudTextField @ref="_textFieldRef"
                       T="string"
-                      @bind-Value="_inputText"
+                      @bind-Value="InputText"
                       Placeholder="@Placeholder"
                       Variant="Variant.Text"
                       Lines="1"
@@ -26,7 +26,7 @@
             <MudTooltip Text="Send message">
                 <MudIconButton Icon="@Icons.Material.Filled.Send"
                                Color="Color.Primary"
-                               Disabled="@string.IsNullOrWhiteSpace(_inputText)"
+                               Disabled="@string.IsNullOrWhiteSpace(InputText)"
                                OnClick="@HandleSend"
                                Class="send-button" />
             </MudTooltip>
@@ -48,15 +48,16 @@
     [Parameter] public EventCallback<string> OnSend { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
 
-    private string _inputText = string.Empty;
+    public string InputText { get; set; } = string.Empty;
     private MudTextField<string>? _textFieldRef;
 
     private async Task HandleSend()
     {
-        if (string.IsNullOrWhiteSpace(_inputText) || IsSending) return;
+        if (string.IsNullOrWhiteSpace(InputText) || IsSending) return;
 
-        var message = _inputText.Trim();
+        var message = InputText.Trim();
        
+        InputText = string.Empty;
         _textFieldRef?.Clear();
      
         // Ensure component renders with empty value before parent re-renders

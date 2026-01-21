@@ -40,7 +40,6 @@
         </div>
 
         <ChatContainer
-            @ref="_chatContainerRef"
             Messages="@_currentMessages"
             StreamingContent="@_streamingContent"
             IsSending="@_isSending"
@@ -74,7 +73,6 @@
     private IReadOnlyList<AIChatMessage> _currentMessages = [];
     private IAsyncEnumerable<ChatResponseUpdate>? _streamingContent;
     private bool _isSending;
-    private ChatContainer? _chatContainerRef;
     private string? _errorMessage;
     private bool _canRetry;
     private string? _lastMessage;

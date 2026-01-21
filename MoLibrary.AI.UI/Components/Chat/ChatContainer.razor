@@ -20,7 +20,6 @@
         OnRetryMessage="@OnRetryMessage" />
 
     <ChatInputArea
-        @ref="_inputAreaRef"
         IsSending="@IsSending"
         ProviderName="@ProviderName"
         ShowProviderInfo="@ShowProviderInfo"
@@ -48,7 +47,6 @@
     [Parameter] public EventCallback<(AIChatMessage Message, string NewContent)> OnEditMessage { get; set; }
     [Parameter] public EventCallback<AIChatMessage> OnRetryMessage { get; set; }
 
-    private ChatInputArea? _inputAreaRef;
     private ChatMessageList? _messageListRef;
 
     private async Task HandleSend(string message)
@@ -60,6 +58,8 @@
         {
             await _messageListRef.ScrollToBottomAsync();
         }
+        
+        StateHasChanged();
     }
 
     private async Task HandleStreamComplete(string content)
@@ -91,14 +91,7 @@
         await OnErrorDismissed.InvokeAsync();
     }
 
-    public async Task FocusInputAsync()
-    {
-        if (_inputAreaRef != null)
-        {
-            await _inputAreaRef.FocusAsync();
-        }
-    }
-
+  
     public async Task CancelStreamAsync()
     {
         if (_messageListRef != null)
