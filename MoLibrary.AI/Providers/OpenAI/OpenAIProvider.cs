@@ -103,7 +103,7 @@ public class OpenAIProvider : IAIProvider
         {
             if (disposing)
             {
-                (_chatClient as IDisposable)?.Dispose();
+                _chatClient?.Dispose();
             }
             _disposed = true;
         }

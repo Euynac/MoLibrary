@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.AI.Abstractions;
 using MoLibrary.AI.Extensions;
@@ -28,7 +27,7 @@ public static class ModuleAIBuilderExtensions
         /// </summary>
         /// <param name="action">模块配置选项</param>
         /// <returns>AI 模块配置引导器</returns>
-        public static ModuleAIGuide ConfigModuleAI(Action<ModuleAIOption>? action = null)
+        public static ModuleAIGuide AddAI(Action<ModuleAIOption>? action = null)
         {
             return new ModuleAIGuide().Register(action);
         }

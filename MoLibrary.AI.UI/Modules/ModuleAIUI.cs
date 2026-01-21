@@ -21,7 +21,7 @@ public static class ModuleAIUIBuilderExtensions
         /// <summary>
         /// 配置 AI UI 模块
         /// </summary>
-        public static ModuleAIUIGuide ConfigModuleAIUI(Action<ModuleAIUIOption>? action = null)
+        public static ModuleAIUIGuide AddAIUI(Action<ModuleAIUIOption>? action = null)
         {
             return new ModuleAIUIGuide().Register(action);
         }
