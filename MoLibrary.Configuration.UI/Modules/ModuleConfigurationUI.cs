@@ -11,15 +11,17 @@ using MudBlazor;
 
 namespace MoLibrary.Configuration.UI.Modules;
 
-/// <summary>
-/// 配置管理UI模块扩展方法
-/// </summary>
 public static class ModuleConfigurationUIBuilderExtensions
 {
-    public static ModuleConfigurationUIGuide ConfigModuleConfigurationUI(this WebApplicationBuilder builder,
-        Action<ModuleConfigurationUIOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleConfigurationUIGuide().Register(action);
+        /// <summary>
+        /// 配置 ConfigurationUI 模块
+        /// </summary>
+        public static ModuleConfigurationUIGuide AddConfigurationUI(Action<ModuleConfigurationUIOption>? action = null)
+        {
+            return new ModuleConfigurationUIGuide().Register(action);
+        }
     }
 }
 

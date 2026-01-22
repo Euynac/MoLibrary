@@ -19,10 +19,15 @@ namespace MoLibrary.Logging.Modules;
 
 public static class ModuleLoggingBuilderExtensions
 {
-    public static ModuleLoggingGuide ConfigModuleLogging(this WebApplicationBuilder builder,
-        Action<ModuleLoggingOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleLoggingGuide().Register(action);
+        /// <summary>
+        /// 配置 Logging 模块
+        /// </summary>
+        public static ModuleLoggingGuide AddLogging(Action<ModuleLoggingOption>? action = null)
+        {
+            return new ModuleLoggingGuide().Register(action);
+        }
     }
 }
 

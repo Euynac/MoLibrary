@@ -7,19 +7,17 @@ using MoLibrary.UI.UIStackTrace.Services;
 
 namespace MoLibrary.UI.Modules;
 
-/// <summary>
-/// Builder extension for UIStackTrace module configuration
-/// </summary>
 public static class ModuleUIStackTraceBuilderExtensions
 {
-    /// <summary>
-    /// Configure UIStackTrace module
-    /// </summary>
-    public static ModuleUIStackTraceGuide ConfigModuleUIStackTrace(
-        this WebApplicationBuilder builder,
-        Action<ModuleUIStackTraceOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleUIStackTraceGuide().Register(action);
+        /// <summary>
+        /// 配置 UIStackTrace 模块
+        /// </summary>
+        public static ModuleUIStackTraceGuide AddUIStackTrace(Action<ModuleUIStackTraceOption>? action = null)
+        {
+            return new ModuleUIStackTraceGuide().Register(action);
+        }
     }
 }
 

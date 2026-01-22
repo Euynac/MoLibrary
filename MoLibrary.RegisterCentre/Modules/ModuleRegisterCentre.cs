@@ -320,9 +320,15 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
 }
 public static class ModuleRegisterCentreBuilderExtensions
 {
-    public static ModuleRegisterCentreGuide ConfigModuleRegisterCentre(this WebApplicationBuilder builder, Action<ModuleRegisterCentreOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleRegisterCentreGuide().Register(action);
+        /// <summary>
+        /// 配置 RegisterCentre 模块
+        /// </summary>
+        public static ModuleRegisterCentreGuide AddRegisterCentre(Action<ModuleRegisterCentreOption>? action = null)
+        {
+            return new ModuleRegisterCentreGuide().Register(action);
+        }
     }
 }
 

@@ -11,19 +11,17 @@ using MudBlazor;
 
 namespace MoLibrary.StateStore.UI.Modules;
 
-/// <summary>
-/// StateStore UI 模块扩展方法
-/// </summary>
 public static class ModuleStateStoreUIBuilderExtensions
 {
-    /// <summary>
-    /// 配置 StateStore UI 模块
-    /// </summary>
-    public static ModuleStateStoreUIGuide ConfigModuleStateStoreUI(
-        this WebApplicationBuilder builder,
-        Action<ModuleStateStoreUIOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleStateStoreUIGuide().Register(action);
+        /// <summary>
+        /// 配置 StateStoreUI 模块
+        /// </summary>
+        public static ModuleStateStoreUIGuide AddStateStoreUI(Action<ModuleStateStoreUIOption>? action = null)
+        {
+            return new ModuleStateStoreUIGuide().Register(action);
+        }
     }
 }
 

@@ -10,10 +10,15 @@ namespace MoLibrary.Core.Modules;
 
 public static class ModuleSnowflakeIdBuilderExtensions
 {
-    public static ModuleSnowflakeIdGuide ConfigModuleSnowflakeId(this WebApplicationBuilder builder,
-        Action<ModuleSnowflakeIdOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleSnowflakeIdGuide().Register(action);
+        /// <summary>
+        /// 配置 SnowflakeId 模块
+        /// </summary>
+        public static ModuleSnowflakeIdGuide AddSnowflakeId(Action<ModuleSnowflakeIdOption>? action = null)
+        {
+            return new ModuleSnowflakeIdGuide().Register(action);
+        }
     }
 }
 

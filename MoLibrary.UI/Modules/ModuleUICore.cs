@@ -18,21 +18,17 @@ using MoLibrary.UI.Services;
 
 namespace MoLibrary.UI.Modules;
 
-/// <summary>
-/// UI模块核心配置扩展方法
-/// </summary>
 public static class ModuleUICoreBuilderExtensions
 {
-    /// <summary>
-    /// 配置UI核心模块
-    /// </summary>
-    /// <param name="builder">Web应用构建器</param>
-    /// <param name="action">模块配置选项</param>
-    /// <returns>UI模块配置引导器</returns>
-    public static ModuleUICoreGuide ConfigModuleUICore(this WebApplicationBuilder builder,
-        Action<ModuleUICoreOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleUICoreGuide().Register(action).AddBasicMiddlewares();
+        /// <summary>
+        /// 配置 UICore 模块
+        /// </summary>
+        public static ModuleUICoreGuide AddUICore(Action<ModuleUICoreOption>? action = null)
+        {
+            return new ModuleUICoreGuide().Register(action).AddBasicMiddlewares();
+        }
     }
 }
 

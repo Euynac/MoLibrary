@@ -61,21 +61,17 @@ public class ModuleDataChannelUI(ModuleDataChannelUIOption option)
     }
 }
 
-/// <summary>
-/// DataChannel UI模块构建器扩展
-/// </summary>
 public static class ModuleDataChannelUIBuilderExtensions
 {
-    /// <summary>
-    /// 配置DataChannel UI模块
-    /// </summary>
-    /// <param name="builder">Web应用程序构建器</param>
-    /// <param name="action">配置选项的操作</param>
-    /// <returns>DataChannel UI模块指导</returns>
-    public static ModuleDataChannelUIGuide ConfigModuleDataChannelUI(this WebApplicationBuilder builder,
-        Action<ModuleDataChannelUIOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleDataChannelUIGuide().Register(action);
+        /// <summary>
+        /// 配置 DataChannelUI 模块
+        /// </summary>
+        public static ModuleDataChannelUIGuide AddDataChannelUI(Action<ModuleDataChannelUIOption>? action = null)
+        {
+            return new ModuleDataChannelUIGuide().Register(action);
+        }
     }
 }
 

@@ -15,7 +15,7 @@ Provides distributed lock functionality using Dapr's Distributed Lock API via th
 ### Basic Setup
 
 ```csharp
-builder.ConfigModuleLocker()
+Mo.AddLocker()
     .UseDaprProvider(options =>
     {
         options.StoreName = "lockstore";
@@ -35,7 +35,7 @@ builder.ConfigModuleLocker()
 For advanced scenarios requiring custom Dapr endpoints or authentication:
 
 ```csharp
-builder.ConfigModuleLocker()
+Mo.AddLocker()
     .UseDaprProvider(options =>
     {
         options.StoreName = "lockstore";
@@ -159,7 +159,7 @@ public async Task ProcessWithCancellationAsync(
 Lock keys are automatically normalized with the configured prefix from `ModuleLockerOption`:
 
 ```csharp
-builder.ConfigModuleLocker(options =>
+Mo.AddLocker(options =>
 {
     options.KeyPrefix = "myapp:locks:";
 });

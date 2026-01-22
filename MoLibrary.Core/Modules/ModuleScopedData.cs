@@ -7,21 +7,17 @@ using MoLibrary.Core.Module.Models;
 
 namespace MoLibrary.Core.Modules;
 
-/// <summary>
-/// ScopedData模块扩展方法
-/// </summary>
 public static class ModuleScopedDataBuilderExtensions
 {
-    /// <summary>
-    /// 配置ScopedData模块
-    /// </summary>
-    /// <param name="builder">Web应用构建器</param>
-    /// <param name="action">配置选项的操作</param>
-    /// <returns>模块指导器</returns>
-    public static ModuleScopedDataGuide ConfigModuleScopedData(this WebApplicationBuilder builder,
-        Action<ModuleScopedDataOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleScopedDataGuide().Register(action);
+        /// <summary>
+        /// 配置 ScopedData 模块
+        /// </summary>
+        public static ModuleScopedDataGuide AddScopedData(Action<ModuleScopedDataOption>? action = null)
+        {
+            return new ModuleScopedDataGuide().Register(action);
+        }
     }
 }
 

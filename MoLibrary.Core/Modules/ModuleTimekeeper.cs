@@ -7,15 +7,17 @@ using MoLibrary.Core.Module.Models;
 
 namespace MoLibrary.Core.Modules;
 
-/// <summary>
-/// Timekeeper模块构建器扩展
-/// </summary>
 public static class ModuleTimekeeperBuilderExtensions
 {
-    public static ModuleTimekeeperGuide ConfigModuleTimekeeper(this WebApplicationBuilder builder,
-        Action<ModuleTimekeeperOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleTimekeeperGuide().Register(action);
+        /// <summary>
+        /// 配置 Timekeeper 模块
+        /// </summary>
+        public static ModuleTimekeeperGuide AddTimekeeper(Action<ModuleTimekeeperOption>? action = null)
+        {
+            return new ModuleTimekeeperGuide().Register(action);
+        }
     }
 }
 

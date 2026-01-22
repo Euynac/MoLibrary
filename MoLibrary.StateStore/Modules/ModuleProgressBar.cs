@@ -10,10 +10,15 @@ namespace MoLibrary.StateStore.Modules;
 
 public static class ModuleProgressBarBuilderExtensions
 {
-    public static ModuleProgressBarGuide ConfigModuleProgressBar(this WebApplicationBuilder builder,
-        Action<ModuleProgressBarOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleProgressBarGuide().Register(action);
+        /// <summary>
+        /// 配置 ProgressBar 模块
+        /// </summary>
+        public static ModuleProgressBarGuide AddProgressBar(Action<ModuleProgressBarOption>? action = null)
+        {
+            return new ModuleProgressBarGuide().Register(action);
+        }
     }
 }
 

@@ -16,10 +16,15 @@ namespace MoLibrary.Core.Modules;
 
 public static class ModuleGlobalExceptionHandlerBuilderExtensions
 {
-    public static ModuleGlobalExceptionHandlerGuide ConfigModuleGlobalExceptionHandler(this WebApplicationBuilder builder,
-        Action<ModuleGlobalExceptionHandlerOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleGlobalExceptionHandlerGuide().Register(action);
+        /// <summary>
+        /// 配置 GlobalExceptionHandler 模块
+        /// </summary>
+        public static ModuleGlobalExceptionHandlerGuide AddGlobalExceptionHandler(Action<ModuleGlobalExceptionHandlerOption>? action = null)
+        {
+            return new ModuleGlobalExceptionHandlerGuide().Register(action);
+        }
     }
 }
 

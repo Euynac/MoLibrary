@@ -10,10 +10,15 @@ namespace MoLibrary.StateStore.Modules;
 
 public static class ModuleStateStoreBuilderExtensions
 {
-    public static ModuleStateStoreGuide ConfigModuleStateStore(this WebApplicationBuilder builder,
-        Action<ModuleStateStoreOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleStateStoreGuide().Register(action);
+        /// <summary>
+        /// 配置 StateStore 模块
+        /// </summary>
+        public static ModuleStateStoreGuide AddStateStore(Action<ModuleStateStoreOption>? action = null)
+        {
+            return new ModuleStateStoreGuide().Register(action);
+        }
     }
 }
 

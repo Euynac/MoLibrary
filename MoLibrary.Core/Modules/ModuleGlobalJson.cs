@@ -14,10 +14,15 @@ namespace MoLibrary.Core.Modules;
 
 public static class ModuleGlobalJsonBuilderExtensions
 {
-    public static ModuleGlobalJsonGuide ConfigModuleGlobalJson(this WebApplicationBuilder builder,
-        Action<ModuleGlobalJsonOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleGlobalJsonGuide().Register(action);
+        /// <summary>
+        /// 配置 GlobalJson 模块
+        /// </summary>
+        public static ModuleGlobalJsonGuide AddGlobalJson(Action<ModuleGlobalJsonOption>? action = null)
+        {
+            return new ModuleGlobalJsonGuide().Register(action);
+        }
     }
 }
 

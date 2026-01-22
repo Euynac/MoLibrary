@@ -20,10 +20,15 @@ namespace MoLibrary.DomainDrivenDesign.Modules;
 
 public static class ModuleAutoControllersBuilderExtensions
 {
-    public static ModuleAutoControllersGuide ConfigModuleAutoControllers(this WebApplicationBuilder builder,
-        Action<ModuleAutoControllersOption>? action = null, Action<MoCrudControllerOption>? crudOptionAction = null)
+    extension(Mo)
     {
-        return new ModuleAutoControllersGuide().Register(action).ConfigureExtraOption(crudOptionAction);
+        /// <summary>
+        /// 配置 AutoControllers 模块
+        /// </summary>
+        public static ModuleAutoControllersGuide AddAutoControllers(Action<ModuleAutoControllersOption>? action = null, Action<MoCrudControllerOption>? crudOptionAction = null)
+        {
+            return new ModuleAutoControllersGuide().Register(action).ConfigureExtraOption(crudOptionAction);
+        }
     }
 }
 

@@ -13,19 +13,17 @@ using MudBlazor;
 
 namespace MoLibrary.JobScheduler.UI.Modules;
 
-/// <summary>
-/// JobScheduler UI 模块注册扩展方法
-/// </summary>
 public static class ModuleJobSchedulerUIBuilderExtensions
 {
-    /// <summary>
-    /// 配置 JobScheduler UI 模块
-    /// </summary>
-    public static ModuleJobSchedulerUIGuide ConfigModuleJobSchedulerUI(
-        this WebApplicationBuilder builder,
-        Action<ModuleJobSchedulerUIOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleJobSchedulerUIGuide().Register(action);
+        /// <summary>
+        /// 配置 JobSchedulerUI 模块
+        /// </summary>
+        public static ModuleJobSchedulerUIGuide AddJobSchedulerUI(Action<ModuleJobSchedulerUIOption>? action = null)
+        {
+            return new ModuleJobSchedulerUIGuide().Register(action);
+        }
     }
 }
 
@@ -132,7 +130,7 @@ public class ModuleJobSchedulerUIGuide
     : MoModuleGuide<ModuleJobSchedulerUI, ModuleJobSchedulerUIOption, ModuleJobSchedulerUIGuide>
 {
     // 配置方法可在后续需要时添加
-    // 目前通过 ConfigModuleJobSchedulerUI(options => { ... }) 直接配置即可
+    // 目前通过 Mo.AddJobSchedulerUI(options => { ... }) 直接配置即可
 }
 
 /// <summary>

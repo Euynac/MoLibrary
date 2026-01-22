@@ -9,15 +9,17 @@ using MudBlazor;
 
 namespace MoLibrary.UI.Modules;
 
-/// <summary>
-/// DiffHighlightUI模块构建器扩展
-/// </summary>
 public static class ModuleDiffHighlightUIBuilderExtensions
 {
-    public static ModuleDiffHighlightUIGuide ConfigModuleDiffHighlightUI(this WebApplicationBuilder builder,
-        Action<ModuleDiffHighlightUIOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleDiffHighlightUIGuide().Register(action);
+        /// <summary>
+        /// 配置 DiffHighlightUI 模块
+        /// </summary>
+        public static ModuleDiffHighlightUIGuide AddDiffHighlightUI(Action<ModuleDiffHighlightUIOption>? action = null)
+        {
+            return new ModuleDiffHighlightUIGuide().Register(action);
+        }
     }
 }
 

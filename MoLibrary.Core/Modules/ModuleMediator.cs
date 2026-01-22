@@ -11,10 +11,15 @@ namespace MoLibrary.Core.Modules;
 
 public static class ModuleMediatorBuilderExtensions
 {
-    public static ModuleMediatorGuide ConfigModuleMediator(this WebApplicationBuilder builder,
-        Action<ModuleMediatorOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleMediatorGuide().Register(action);
+        /// <summary>
+        /// 配置 Mediator 模块
+        /// </summary>
+        public static ModuleMediatorGuide AddMediator(Action<ModuleMediatorOption>? action = null)
+        {
+            return new ModuleMediatorGuide().Register(action);
+        }
     }
 }
 

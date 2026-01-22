@@ -11,10 +11,15 @@ namespace MoLibrary.DependencyInjection.Modules;
 
 public static class ModuleDependencyInjectionBuilderExtensions
 {
-    public static ModuleDependencyInjectionGuide ConfigModuleDependencyInjection(this WebApplicationBuilder builder,
-        Action<ModuleDependencyInjectionOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleDependencyInjectionGuide().Register(action);
+        /// <summary>
+        /// 配置 DependencyInjection 模块
+        /// </summary>
+        public static ModuleDependencyInjectionGuide AddDependencyInjection(Action<ModuleDependencyInjectionOption>? action = null)
+        {
+            return new ModuleDependencyInjectionGuide().Register(action);
+        }
     }
 }
 

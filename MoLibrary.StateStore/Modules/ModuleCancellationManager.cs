@@ -7,21 +7,17 @@ using MoLibrary.StateStore.CancellationManager;
 
 namespace MoLibrary.StateStore.Modules;
 
-/// <summary>
-/// 分布式取消令牌管理器模块构建器扩展
-/// </summary>
 public static class ModuleCancellationManagerBuilderExtensions
 {
-    /// <summary>
-    /// 配置分布式取消令牌管理器模块
-    /// </summary>
-    /// <param name="builder">Web应用程序构建器</param>
-    /// <param name="action">模块配置选项</param>
-    /// <returns>返回模块指南实例</returns>
-    public static ModuleCancellationManagerGuide ConfigModuleCancellationManager(this WebApplicationBuilder builder,
-        Action<ModuleCancellationManagerOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleCancellationManagerGuide().Register(action);
+        /// <summary>
+        /// 配置 CancellationManager 模块
+        /// </summary>
+        public static ModuleCancellationManagerGuide AddCancellationManager(Action<ModuleCancellationManagerOption>? action = null)
+        {
+            return new ModuleCancellationManagerGuide().Register(action);
+        }
     }
 }
 

@@ -187,10 +187,15 @@ public class ModuleConfigurationDashboardGuide : MoModuleGuide<ModuleConfigurati
 }
 public static class ModuleConfigurationDashboardBuilderExtensions
 {
-    public static ModuleConfigurationDashboardGuide ConfigModuleConfigurationDashboard(this WebApplicationBuilder builder,
-        Action<ModuleConfigurationDashboardOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleConfigurationDashboardGuide().Register(action);
+        /// <summary>
+        /// 配置 ConfigurationDashboard 模块
+        /// </summary>
+        public static ModuleConfigurationDashboardGuide AddConfigurationDashboard(Action<ModuleConfigurationDashboardOption>? action = null)
+        {
+            return new ModuleConfigurationDashboardGuide().Register(action);
+        }
     }
 }
 

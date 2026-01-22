@@ -14,15 +14,17 @@ using MudBlazor;
 
 namespace MoLibrary.Framework.UI.Modules;
 
-/// <summary>
-/// ObservableInstanceUI module builder extensions
-/// </summary>
 public static class ModuleObservableInstanceUIBuilderExtensions
 {
-    public static ModuleObservableInstanceUIGuide ConfigModuleObservableInstanceUI(this WebApplicationBuilder builder,
-        Action<ModuleObservableInstanceUIOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleObservableInstanceUIGuide().Register(action);
+        /// <summary>
+        /// 配置 ObservableInstanceUI 模块
+        /// </summary>
+        public static ModuleObservableInstanceUIGuide AddObservableInstanceUI(Action<ModuleObservableInstanceUIOption>? action = null)
+        {
+            return new ModuleObservableInstanceUIGuide().Register(action);
+        }
     }
 }
 

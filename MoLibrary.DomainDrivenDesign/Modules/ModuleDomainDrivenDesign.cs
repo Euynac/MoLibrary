@@ -67,9 +67,15 @@ public class ModuleDomainDrivenDesign(ModuleDomainDrivenDesignOption option) : M
 
 public static class ModuleDomainDrivenDesignBuilderExtensions
 {
-    public static ModuleDomainDrivenDesignGuide ConfigModuleDomainDrivenDesign(this WebApplicationBuilder builder, Action<ModuleDomainDrivenDesignOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleDomainDrivenDesignGuide().Register(action);
+        /// <summary>
+        /// 配置 DomainDrivenDesign 模块
+        /// </summary>
+        public static ModuleDomainDrivenDesignGuide AddDomainDrivenDesign(Action<ModuleDomainDrivenDesignOption>? action = null)
+        {
+            return new ModuleDomainDrivenDesignGuide().Register(action);
+        }
     }
 }
 public class ModuleDomainDrivenDesignGuide : MoModuleGuide<ModuleDomainDrivenDesign, ModuleDomainDrivenDesignOption, ModuleDomainDrivenDesignGuide>

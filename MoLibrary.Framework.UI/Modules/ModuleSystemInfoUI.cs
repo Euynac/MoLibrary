@@ -15,15 +15,17 @@ using MudBlazor;
 
 namespace MoLibrary.Framework.UI.Modules;
 
-/// <summary>
-/// SystemInfoUI模块构建器扩展
-/// </summary>
 public static class ModuleSystemInfoUIBuilderExtensions
 {
-    public static ModuleSystemInfoUIGuide ConfigModuleSystemInfoUI(this WebApplicationBuilder builder,
-        Action<ModuleSystemInfoUIOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleSystemInfoUIGuide().Register(action);
+        /// <summary>
+        /// 配置 SystemInfoUI 模块
+        /// </summary>
+        public static ModuleSystemInfoUIGuide AddSystemInfoUI(Action<ModuleSystemInfoUIOption>? action = null)
+        {
+            return new ModuleSystemInfoUIGuide().Register(action);
+        }
     }
 }
 

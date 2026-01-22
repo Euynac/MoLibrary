@@ -10,10 +10,15 @@ namespace MoLibrary.Core.Modules;
 
 public static class ModuleControllersBuilderExtensions
 {
-    public static ModuleControllersGuide ConfigModuleControllers(this WebApplicationBuilder builder,
-        Action<ModuleControllersOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleControllersGuide().Register(action);
+        /// <summary>
+        /// 配置 Controllers 模块
+        /// </summary>
+        public static ModuleControllersGuide AddControllers(Action<ModuleControllersOption>? action = null)
+        {
+            return new ModuleControllersGuide().Register(action);
+        }
     }
 }
 

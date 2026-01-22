@@ -20,7 +20,7 @@
 var builder = WebApplication.CreateBuilder(args);
 
 // 配置分布式取消令牌管理器模块
-builder.ConfigModuleCancellationManager(options =>
+Mo.AddCancellationManager(options =>
 {
     options.PollingIntervalMs = 2000; // 设置轮询间隔为2秒
     options.EnableVerboseLogging = true; // 启用详细日志

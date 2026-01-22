@@ -13,10 +13,15 @@ namespace MoLibrary.Repository.Modules;
 
 public static class ModuleUnitOfWorkBuilderExtensions
 {
-    public static ModuleUnitOfWorkGuide ConfigModuleUnitOfWork(this WebApplicationBuilder builder,
-        Action<ModuleUnitOfWorkOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleUnitOfWorkGuide().Register(action);
+        /// <summary>
+        /// 配置 UnitOfWork 模块
+        /// </summary>
+        public static ModuleUnitOfWorkGuide AddUnitOfWork(Action<ModuleUnitOfWorkOption>? action = null)
+        {
+            return new ModuleUnitOfWorkGuide().Register(action);
+        }
     }
 }
 

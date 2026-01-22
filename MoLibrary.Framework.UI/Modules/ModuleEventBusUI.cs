@@ -15,15 +15,17 @@ using MudBlazor;
 
 namespace MoLibrary.Framework.UI.Modules;
 
-/// <summary>
-/// EventBusUI模块构建器扩展
-/// </summary>
 public static class ModuleEventBusUIBuilderExtensions
 {
-    public static ModuleEventBusUIGuide ConfigModuleEventBusUI(this WebApplicationBuilder builder,
-        Action<ModuleEventBusUIOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleEventBusUIGuide().Register(action);
+        /// <summary>
+        /// 配置 EventBusUI 模块
+        /// </summary>
+        public static ModuleEventBusUIGuide AddEventBusUI(Action<ModuleEventBusUIOption>? action = null)
+        {
+            return new ModuleEventBusUIGuide().Register(action);
+        }
     }
 }
 

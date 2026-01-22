@@ -18,15 +18,17 @@ using MudBlazor;
 
 namespace MoLibrary.Framework.UI.Modules;
 
-/// <summary>
-/// LoggingUI 模块构建器扩展
-/// </summary>
 public static class ModuleLoggingUIBuilderExtensions
 {
-    public static ModuleLoggingUIGuide ConfigModuleLoggingUI(this WebApplicationBuilder builder,
-        Action<ModuleLoggingUIOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleLoggingUIGuide().Register(action);
+        /// <summary>
+        /// 配置 LoggingUI 模块
+        /// </summary>
+        public static ModuleLoggingUIGuide AddLoggingUI(Action<ModuleLoggingUIOption>? action = null)
+        {
+            return new ModuleLoggingUIGuide().Register(action);
+        }
     }
 }
 

@@ -12,10 +12,15 @@ namespace MoLibrary.Framework.Modules;
 
 public static class ModuleFrameworkChainTracingBuilderExtensions
 {
-    public static ModuleFrameworkChainTracingGuide ConfigModuleFrameworkChainTracing(this WebApplicationBuilder builder,
-        Action<ModuleFrameworkChainTracingOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleFrameworkChainTracingGuide().Register(action);
+        /// <summary>
+        /// 配置 FrameworkChainTracing 模块
+        /// </summary>
+        public static ModuleFrameworkChainTracingGuide AddFrameworkChainTracing(Action<ModuleFrameworkChainTracingOption>? action = null)
+        {
+            return new ModuleFrameworkChainTracingGuide().Register(action);
+        }
     }
 }
 

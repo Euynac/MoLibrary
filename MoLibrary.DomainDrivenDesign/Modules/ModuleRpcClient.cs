@@ -12,10 +12,15 @@ namespace MoLibrary.DomainDrivenDesign.Modules;
 
 public static class ModuleRpcClientBuilderExtensions
 {
-    public static ModuleRpcClientGuide ConfigModuleRpcClient(this WebApplicationBuilder builder,
-        Action<ModuleRpcClientOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleRpcClientGuide().Register(action);
+        /// <summary>
+        /// 配置 RpcClient 模块
+        /// </summary>
+        public static ModuleRpcClientGuide AddRpcClient(Action<ModuleRpcClientOption>? action = null)
+        {
+            return new ModuleRpcClientGuide().Register(action);
+        }
     }
 }
 

@@ -48,9 +48,15 @@ public class ModuleRegisterCentreUIGuide : MoModuleGuide<ModuleRegisterCentreUI,
 
 public static class ModuleRegisterCentreUIBuilderExtensions
 {
-    public static ModuleRegisterCentreUIGuide ConfigModuleRegisterCentreUI(this WebApplicationBuilder builder, Action<ModuleRegisterCentreUIOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleRegisterCentreUIGuide().Register(action);
+        /// <summary>
+        /// 配置 RegisterCentreUI 模块
+        /// </summary>
+        public static ModuleRegisterCentreUIGuide AddRegisterCentreUI(Action<ModuleRegisterCentreUIOption>? action = null)
+        {
+            return new ModuleRegisterCentreUIGuide().Register(action);
+        }
     }
 }
 

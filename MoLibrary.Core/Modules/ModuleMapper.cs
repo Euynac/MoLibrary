@@ -72,10 +72,15 @@ public class MapperInfo
 
 public static class ModuleMapperBuilderExtensions
 {
-    public static ModuleMapperGuide ConfigModuleMapper(this WebApplicationBuilder builder,
-        Action<ModuleMapperOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleMapperGuide().Register(action);
+        /// <summary>
+        /// 配置 Mapper 模块
+        /// </summary>
+        public static ModuleMapperGuide AddMapper(Action<ModuleMapperOption>? action = null)
+        {
+            return new ModuleMapperGuide().Register(action);
+        }
     }
 }
 

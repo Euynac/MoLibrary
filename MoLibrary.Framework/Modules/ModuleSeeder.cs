@@ -10,10 +10,15 @@ namespace MoLibrary.Framework.Modules;
 
 public static class ModuleSeederBuilderExtensions
 {
-    public static ModuleSeederGuide ConfigModuleSeeder(this WebApplicationBuilder builder,
-        Action<ModuleSeederOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleSeederGuide().Register(action);
+        /// <summary>
+        /// 配置 Seeder 模块
+        /// </summary>
+        public static ModuleSeederGuide AddSeeder(Action<ModuleSeederOption>? action = null)
+        {
+            return new ModuleSeederGuide().Register(action);
+        }
     }
 }
 

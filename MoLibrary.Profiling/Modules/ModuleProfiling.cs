@@ -13,10 +13,15 @@ namespace MoLibrary.Profiling.Modules;
 
 public static class ModuleProfilingBuilderExtensions
 {
-    public static ModuleProfilingGuide ConfigModuleProfiling(this WebApplicationBuilder builder,
-        Action<ModuleProfilingOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleProfilingGuide().Register(action);
+        /// <summary>
+        /// 配置 Profiling 模块
+        /// </summary>
+        public static ModuleProfilingGuide AddProfiling(Action<ModuleProfilingOption>? action = null)
+        {
+            return new ModuleProfilingGuide().Register(action);
+        }
     }
 }
 

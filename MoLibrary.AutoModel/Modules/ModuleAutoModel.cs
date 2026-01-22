@@ -15,9 +15,15 @@ namespace MoLibrary.AutoModel.Modules;
 
 public static class ModuleAutoModelBuilderExtensions
 {
-    public static ModuleAutoModelGuide ConfigModuleAutoModel(this WebApplicationBuilder builder, Action<ModuleAutoModelOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleAutoModelGuide().Register(action);
+        /// <summary>
+        /// 配置 AutoModel 模块
+        /// </summary>
+        public static ModuleAutoModelGuide AddAutoModel(Action<ModuleAutoModelOption>? action = null)
+        {
+            return new ModuleAutoModelGuide().Register(action);
+        }
     }
 }
 

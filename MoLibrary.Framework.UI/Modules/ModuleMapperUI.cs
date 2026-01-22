@@ -11,15 +11,17 @@ using MudBlazor;
 
 namespace MoLibrary.Framework.UI.Modules;
 
-/// <summary>
-/// MapperUI模块构建器扩展
-/// </summary>
 public static class ModuleMapperUIBuilderExtensions
 {
-    public static ModuleMapperUIGuide ConfigModuleMapperUI(this WebApplicationBuilder builder,
-        Action<ModuleMapperUIOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleMapperUIGuide().Register(action);
+        /// <summary>
+        /// 配置 MapperUI 模块
+        /// </summary>
+        public static ModuleMapperUIGuide AddMapperUI(Action<ModuleMapperUIOption>? action = null)
+        {
+            return new ModuleMapperUIGuide().Register(action);
+        }
     }
 }
 

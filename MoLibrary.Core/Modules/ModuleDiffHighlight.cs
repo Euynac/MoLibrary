@@ -95,21 +95,17 @@ public class ModuleDiffHighlight(ModuleDiffHighlightOption option) : MoModule<Mo
     }
 }
 
-/// <summary>
-/// 差异对比高亮模块扩展方法
-/// </summary>
 public static class ModuleDiffHighlightBuilderExtensions
 {
-    /// <summary>
-    /// 配置差异对比高亮模块
-    /// </summary>
-    /// <param name="builder">Web应用构建器</param>
-    /// <param name="action">配置委托</param>
-    /// <returns>模块引导实例</returns>
-    public static ModuleDiffHighlightGuide ConfigModuleDiffHighlight(this WebApplicationBuilder builder,
-        Action<ModuleDiffHighlightOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleDiffHighlightGuide().Register(action);
+        /// <summary>
+        /// 配置 DiffHighlight 模块
+        /// </summary>
+        public static ModuleDiffHighlightGuide AddDiffHighlight(Action<ModuleDiffHighlightOption>? action = null)
+        {
+            return new ModuleDiffHighlightGuide().Register(action);
+        }
     }
 }
 

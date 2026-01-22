@@ -9,10 +9,15 @@ namespace MoLibrary.Framework.UI.Modules;
 
 public static class ModuleFrameworkUIBuilderExtensions
 {
-    public static ModuleFrameworkUIGuide ConfigModuleFrameworkUI(this WebApplicationBuilder builder,
-        Action<ModuleFrameworkUIOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleFrameworkUIGuide().Register(action);
+        /// <summary>
+        /// 配置 FrameworkUI 模块
+        /// </summary>
+        public static ModuleFrameworkUIGuide AddFrameworkUI(Action<ModuleFrameworkUIOption>? action = null)
+        {
+            return new ModuleFrameworkUIGuide().Register(action);
+        }
     }
 }
 

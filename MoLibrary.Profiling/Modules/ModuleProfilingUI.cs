@@ -10,19 +10,17 @@ using MudBlazor;
 
 namespace MoLibrary.Profiling.Modules;
 
-/// <summary>
-///     Profiling UI 模块扩展方法
-/// </summary>
 public static class ModuleProfilingUIBuilderExtensions
 {
-    /// <summary>
-    ///     配置 Profiling UI 模块
-    /// </summary>
-    public static ModuleProfilingUIGuide ConfigModuleProfilingUI(
-        this WebApplicationBuilder builder,
-        Action<ModuleProfilingUIOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleProfilingUIGuide().Register(action);
+        /// <summary>
+        /// 配置 ProfilingUI 模块
+        /// </summary>
+        public static ModuleProfilingUIGuide AddProfilingUI(Action<ModuleProfilingUIOption>? action = null)
+        {
+            return new ModuleProfilingUIGuide().Register(action);
+        }
     }
 }
 

@@ -11,15 +11,17 @@ using MudBlazor;
 
 namespace MoLibrary.Framework.UI.Modules;
 
-/// <summary>
-/// FrameworkMonitorUI模块构建器扩展
-/// </summary>
 public static class ModuleFrameworkMonitorUIBuilderExtensions
 {
-    public static ModuleFrameworkMonitorUIGuide ConfigModuleFrameworkMonitorUI(this WebApplicationBuilder builder,
-        Action<ModuleFrameworkMonitorUIOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleFrameworkMonitorUIGuide().Register(action);
+        /// <summary>
+        /// 配置 FrameworkMonitorUI 模块
+        /// </summary>
+        public static ModuleFrameworkMonitorUIGuide AddFrameworkMonitorUI(Action<ModuleFrameworkMonitorUIOption>? action = null)
+        {
+            return new ModuleFrameworkMonitorUIGuide().Register(action);
+        }
     }
 }
 

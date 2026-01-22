@@ -12,10 +12,15 @@ namespace MoLibrary.Locker.Modules;
 
 public static class ModuleLockerBuilderExtensions
 {
-    public static ModuleLockerGuide ConfigModuleLocker(this WebApplicationBuilder builder,
-        Action<ModuleLockerOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleLockerGuide().Register(action);
+        /// <summary>
+        /// 配置 Locker 模块
+        /// </summary>
+        public static ModuleLockerGuide AddLocker(Action<ModuleLockerOption>? action = null)
+        {
+            return new ModuleLockerGuide().Register(action);
+        }
     }
 }
 

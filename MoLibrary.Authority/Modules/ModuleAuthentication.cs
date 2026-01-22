@@ -17,9 +17,15 @@ namespace MoLibrary.Authority.Modules;
 
 public static class ModuleAuthenticationBuilderExtensions
 {
-    public static ModuleAuthenticationGuide ConfigModuleAuthentication(this WebApplicationBuilder builder, Action<ModuleAuthenticationOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleAuthenticationGuide().Register(action);
+        /// <summary>
+        /// 配置 Authentication 模块
+        /// </summary>
+        public static ModuleAuthenticationGuide AddAuthentication(Action<ModuleAuthenticationOption>? action = null)
+        {
+            return new ModuleAuthenticationGuide().Register(action);
+        }
     }
 }
 

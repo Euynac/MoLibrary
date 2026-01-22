@@ -19,10 +19,15 @@ namespace MoLibrary.SignalR.Modules;
 
 public static class ModuleSignalRBuilderExtensions
 {
-    public static ModuleSignalRGuide ConfigModuleSignalR(this WebApplicationBuilder builder,
-        Action<ModuleSignalROption>? action = null)
+    extension(Mo)
     {
-        return new ModuleSignalRGuide().Register(action);
+        /// <summary>
+        /// 配置 SignalR 模块
+        /// </summary>
+        public static ModuleSignalRGuide AddSignalR(Action<ModuleSignalROption>? action = null)
+        {
+            return new ModuleSignalRGuide().Register(action);
+        }
     }
 }
 

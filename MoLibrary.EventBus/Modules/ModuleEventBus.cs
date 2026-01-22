@@ -18,10 +18,15 @@ namespace MoLibrary.EventBus.Modules;
 
 public static class ModuleEventBusBuilderExtensions
 {
-    public static ModuleEventBusGuide ConfigModuleEventBus(this WebApplicationBuilder builder,
-        Action<ModuleEventBusOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleEventBusGuide().Register(action);
+        /// <summary>
+        /// 配置 EventBus 模块
+        /// </summary>
+        public static ModuleEventBusGuide AddEventBus(Action<ModuleEventBusOption>? action = null)
+        {
+            return new ModuleEventBusGuide().Register(action);
+        }
     }
 }
 

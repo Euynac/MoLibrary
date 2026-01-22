@@ -9,21 +9,17 @@ using MoLibrary.Core.Features.MoChainTracing.Implementations;
 
 namespace MoLibrary.Core.Modules;
 
-/// <summary>
-/// 调用链追踪模块构建器扩展
-/// </summary>
 public static class ModuleChainTracingBuilderExtensions
 {
-    /// <summary>
-    /// 配置调用链追踪模块
-    /// </summary>
-    /// <param name="builder">Web应用程序构建器</param>
-    /// <param name="action">配置选项的操作</param>
-    /// <returns>调用链追踪模块指南</returns>
-    public static ModuleChainTracingGuide ConfigModuleChainTracing(this WebApplicationBuilder builder,
-        Action<ModuleChainTracingOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleChainTracingGuide().Register(action);
+        /// <summary>
+        /// 配置 ChainTracing 模块
+        /// </summary>
+        public static ModuleChainTracingGuide AddChainTracing(Action<ModuleChainTracingOption>? action = null)
+        {
+            return new ModuleChainTracingGuide().Register(action);
+        }
     }
 }
 

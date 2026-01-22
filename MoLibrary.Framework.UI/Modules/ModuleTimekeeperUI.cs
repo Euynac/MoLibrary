@@ -14,15 +14,17 @@ using MudBlazor;
 
 namespace MoLibrary.Framework.UI.Modules;
 
-/// <summary>
-/// TimekeeperUI模块构建器扩展
-/// </summary>
 public static class ModuleTimekeeperUIBuilderExtensions
 {
-    public static ModuleTimekeeperUIGuide ConfigModuleTimekeeperUI(this WebApplicationBuilder builder,
-        Action<ModuleTimekeeperUIOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleTimekeeperUIGuide().Register(action);
+        /// <summary>
+        /// 配置 TimekeeperUI 模块
+        /// </summary>
+        public static ModuleTimekeeperUIGuide AddTimekeeperUI(Action<ModuleTimekeeperUIOption>? action = null)
+        {
+            return new ModuleTimekeeperUIGuide().Register(action);
+        }
     }
 }
 

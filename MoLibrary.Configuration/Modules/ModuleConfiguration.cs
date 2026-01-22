@@ -20,9 +20,15 @@ namespace MoLibrary.Configuration.Modules;
 
 public static class ModuleConfigurationBuilderExtensions
 {
-    public static ModuleConfigurationGuide ConfigModuleConfiguration(this WebApplicationBuilder builder, Action<ModuleConfigurationOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleConfigurationGuide().Register(action);
+        /// <summary>
+        /// 配置 Configuration 模块
+        /// </summary>
+        public static ModuleConfigurationGuide AddConfiguration(Action<ModuleConfigurationOption>? action = null)
+        {
+            return new ModuleConfigurationGuide().Register(action);
+        }
     }
 }
 

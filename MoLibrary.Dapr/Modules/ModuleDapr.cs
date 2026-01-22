@@ -16,10 +16,15 @@ namespace MoLibrary.Dapr.Modules;
 
 public static class ModuleDaprBuilderExtensions
 {
-    public static ModuleDaprGuide ConfigModuleDapr(this WebApplicationBuilder builder,
-        Action<ModuleDaprOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleDaprGuide().Register(action);
+        /// <summary>
+        /// 配置 Dapr 模块
+        /// </summary>
+        public static ModuleDaprGuide AddDapr(Action<ModuleDaprOption>? action = null)
+        {
+            return new ModuleDaprGuide().Register(action);
+        }
     }
 }
 

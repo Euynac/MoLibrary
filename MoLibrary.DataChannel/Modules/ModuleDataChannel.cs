@@ -123,10 +123,15 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
 
 public static class ModuleDataChannelBuilderExtensions
 {
-    public static ModuleDataChannelGuide ConfigModuleDataChannel(this WebApplicationBuilder builder,
-        Action<ModuleDataChannelOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleDataChannelGuide().Register(action);
+        /// <summary>
+        /// 配置 DataChannel 模块
+        /// </summary>
+        public static ModuleDataChannelGuide AddDataChannel(Action<ModuleDataChannelOption>? action = null)
+        {
+            return new ModuleDataChannelGuide().Register(action);
+        }
     }
 }
 

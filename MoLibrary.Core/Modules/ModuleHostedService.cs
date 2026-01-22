@@ -9,22 +9,17 @@ using MoLibrary.Core.Module.Models;
 
 namespace MoLibrary.Core.Modules;
 
-/// <summary>
-/// Extension methods for configuring the HostedService observability module and registering observable hosted services
-/// </summary>
 public static class ModuleHostedServiceBuilderExtensions
 {
-    /// <summary>
-    /// Configures the HostedService observability module
-    /// </summary>
-    /// <param name="builder">The web application builder</param>
-    /// <param name="action">Optional configuration action</param>
-    /// <returns>The module guide for fluent configuration</returns>
-    public static ModuleHostedServiceGuide ConfigModuleHostedService(
-        this WebApplicationBuilder builder,
-        Action<ModuleHostedServiceOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleHostedServiceGuide().Register(action);
+        /// <summary>
+        /// 配置 HostedService 模块
+        /// </summary>
+        public static ModuleHostedServiceGuide AddHostedService(Action<ModuleHostedServiceOption>? action = null)
+        {
+            return new ModuleHostedServiceGuide().Register(action);
+        }
     }
 }
 

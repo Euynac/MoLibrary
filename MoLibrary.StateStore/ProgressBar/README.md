@@ -18,7 +18,7 @@ ProgressBar 模块提供了一个完整的进度条管理系统，支持状态�
 
 ```csharp
 // 在 Program.cs 中注册模块
-builder.ConfigModuleProgressBar(options =>
+Mo.AddProgressBar(options =>
 {
     options.UseDistributedStateStore = true; // 使用分布式存储
 })
@@ -392,7 +392,7 @@ public class DataMigrationStatus : ProgressBarStatus
 ## 配置选项
 
 ```csharp
-builder.ConfigModuleProgressBar(options =>
+Mo.AddProgressBar(options =>
 {
     options.UseDistributedStateStore = true; // 使用分布式存储
 })

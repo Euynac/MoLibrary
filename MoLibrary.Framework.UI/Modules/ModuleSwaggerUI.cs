@@ -9,15 +9,17 @@ using MoLibrary.Framework.UI.Swagger;
 
 namespace MoLibrary.Framework.UI.Modules;
 
-/// <summary>
-/// ModuleSwaggerUI构建器扩展
-/// </summary>
 public static class ModuleSwaggerUIBuilderExtensions
 {
-    public static ModuleSwaggerUIGuide ConfigModuleSwaggerUI(this WebApplicationBuilder builder,
-        Action<ModuleSwaggerUIOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleSwaggerUIGuide().Register(action);
+        /// <summary>
+        /// 配置 SwaggerUI 模块
+        /// </summary>
+        public static ModuleSwaggerUIGuide AddSwaggerUI(Action<ModuleSwaggerUIOption>? action = null)
+        {
+            return new ModuleSwaggerUIGuide().Register(action);
+        }
     }
 }
 

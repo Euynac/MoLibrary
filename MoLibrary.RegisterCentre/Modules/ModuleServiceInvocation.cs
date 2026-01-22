@@ -76,18 +76,16 @@ public class ModuleServiceInvocationGuide : MoModuleGuide<ModuleServiceInvocatio
     }
 }
 
-/// <summary>
-/// 服务调用模块构建器扩展
-/// </summary>
 public static class ModuleServiceInvocationBuilderExtensions
 {
-    /// <summary>
-    /// 配置服务调用模块
-    /// </summary>
-    public static ModuleServiceInvocationGuide ConfigModuleServiceInvocation(
-        this WebApplicationBuilder builder,
-        Action<ModuleServiceInvocationOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleServiceInvocationGuide().Register(action);
+        /// <summary>
+        /// 配置 ServiceInvocation 模块
+        /// </summary>
+        public static ModuleServiceInvocationGuide AddServiceInvocation(Action<ModuleServiceInvocationOption>? action = null)
+        {
+            return new ModuleServiceInvocationGuide().Register(action);
+        }
     }
 }

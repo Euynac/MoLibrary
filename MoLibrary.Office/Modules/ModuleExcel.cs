@@ -17,10 +17,15 @@ namespace MoLibrary.Office.Modules;
 
 public static class ModuleExcelBuilderExtensions
 {
-    public static ModuleExcelGuide ConfigModuleExcel(this WebApplicationBuilder builder,
-        Action<ModuleExcelOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleExcelGuide().Register(action);
+        /// <summary>
+        /// 配置 Excel 模块
+        /// </summary>
+        public static ModuleExcelGuide AddExcel(Action<ModuleExcelOption>? action = null)
+        {
+            return new ModuleExcelGuide().Register(action);
+        }
     }
 }
 

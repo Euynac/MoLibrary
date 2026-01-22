@@ -10,10 +10,15 @@ namespace MoLibrary.DependencyInjection.Modules;
 
 public static class ModuleDynamicProxyBuilderExtensions
 {
-    public static ModuleDynamicProxyGuide ConfigModuleDynamicProxy(this WebApplicationBuilder builder,
-        Action<ModuleDynamicProxyOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleDynamicProxyGuide().Register(action).ConfigDynamicProxyServices();
+        /// <summary>
+        /// 配置 DynamicProxy 模块
+        /// </summary>
+        public static ModuleDynamicProxyGuide AddDynamicProxy(Action<ModuleDynamicProxyOption>? action = null)
+        {
+            return new ModuleDynamicProxyGuide().Register(action).ConfigDynamicProxyServices();
+        }
     }
 }
 

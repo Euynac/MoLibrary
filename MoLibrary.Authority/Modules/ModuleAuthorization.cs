@@ -15,10 +15,16 @@ namespace MoLibrary.Authority.Modules;
 
 public static class ModuleAuthorizationBuilderExtensions
 {
-    public static ModuleAuthorizationGuide ConfigModuleAuthorization<TEnum>(this WebApplicationBuilder builder, string claimTypeDefinition) where TEnum : struct, Enum
+    extension(Mo)
     {
-        return new ModuleAuthorizationGuide().Register()
-            .AddDefaultPermissionBit<TEnum>(claimTypeDefinition).AddDefaultMiddleware();
+        /// <summary>
+        /// 配置 Authorization 模块
+        /// </summary>
+        public static ModuleAuthorizationGuide AddAuthorization<TEnum>(string claimTypeDefinition) where TEnum : struct, Enum
+        {
+            return new ModuleAuthorizationGuide().Register()
+                .AddDefaultPermissionBit<TEnum>(claimTypeDefinition).AddDefaultMiddleware();
+        }
     }
 }
 

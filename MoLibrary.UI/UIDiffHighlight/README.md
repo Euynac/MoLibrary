@@ -18,7 +18,7 @@
 在 `Program.cs` 或应用配置中添加：
 
 ```csharp
-builder.ConfigModuleDiffHighlightUI();
+Mo.AddDiffHighlightUI();
 ```
 
 ### 2. 访问页面

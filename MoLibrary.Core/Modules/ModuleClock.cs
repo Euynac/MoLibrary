@@ -12,10 +12,15 @@ namespace MoLibrary.Core.Modules;
 
 public static class ModuleClockBuilderExtensions
 {
-    public static ModuleClockGuide ConfigModuleClock(this WebApplicationBuilder builder,
-        Action<ModuleClockOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleClockGuide().Register(action);
+        /// <summary>
+        /// 配置 Clock 模块
+        /// </summary>
+        public static ModuleClockGuide AddClock(Action<ModuleClockOption>? action = null)
+        {
+            return new ModuleClockGuide().Register(action);
+        }
     }
 }
 

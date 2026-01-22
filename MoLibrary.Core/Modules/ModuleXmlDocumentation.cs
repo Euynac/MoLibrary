@@ -13,10 +13,15 @@ namespace MoLibrary.Core.Modules;
 
 public static class ModuleXmlDocumentationBuilderExtensions
 {
-    public static ModuleXmlDocumentationGuide ConfigModuleXmlDocumentation(this WebApplicationBuilder builder,
-        Action<ModuleXmlDocumentationOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleXmlDocumentationGuide().Register(action);
+        /// <summary>
+        /// 配置 XmlDocumentation 模块
+        /// </summary>
+        public static ModuleXmlDocumentationGuide AddXmlDocumentation(Action<ModuleXmlDocumentationOption>? action = null)
+        {
+            return new ModuleXmlDocumentationGuide().Register(action);
+        }
     }
 }
 

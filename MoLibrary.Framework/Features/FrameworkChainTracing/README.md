@@ -59,7 +59,7 @@ services.AddScoped<ChainTrackingProviderRepositoryEfCoreInterceptor>();
 
 ```csharp
 // 在 Program.cs 或 Startup.cs 中
-builder.ConfigModuleChainTracing(options =>
+Mo.AddChainTracing(options =>
 {
     options.Enabled = true;
     options.UseMiddleware = true;

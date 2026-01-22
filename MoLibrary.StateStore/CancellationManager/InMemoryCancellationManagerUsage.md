@@ -20,7 +20,7 @@
 var builder = WebApplication.CreateBuilder(args);
 
 // 配置内存版取消令牌管理器
-builder.ConfigModuleCancellationManager(options =>
+Mo.AddCancellationManager(options =>
 {
     options.UseInMemoryImplementation = true;
     options.EnableVerboseLogging = true; // 可选：启用详细日志
@@ -35,7 +35,7 @@ var app = builder.Build();
 var builder = WebApplication.CreateBuilder(args);
 
 // 添加多个内存版取消令牌管理器实例
-builder.ConfigModuleCancellationManager()
+Mo.AddCancellationManager()
     .AddKeyedCancellationManager("instance1", useInMemory: true)
     .AddKeyedCancellationManager("instance2", useInMemory: true);
 
@@ -47,7 +47,7 @@ var app = builder.Build();
 ```csharp
 var builder = WebApplication.CreateBuilder(args);
 
-builder.ConfigModuleCancellationManager()
+Mo.AddCancellationManager()
     .AddKeyedCancellationManager("memory-service", useInMemory: true)
     .AddKeyedCancellationManager("distributed-service", useInMemory: false);
 

@@ -127,10 +127,15 @@ public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger,
 
 public static class ModuleSwaggerBuilderExtensions
 {
-    public static ModuleSwaggerGuide ConfigModuleSwagger(this WebApplicationBuilder builder,
-        Action<ModuleSwaggerOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleSwaggerGuide().Register(action);
+        /// <summary>
+        /// 配置 Swagger 模块
+        /// </summary>
+        public static ModuleSwaggerGuide AddSwagger(Action<ModuleSwaggerOption>? action = null)
+        {
+            return new ModuleSwaggerGuide().Register(action);
+        }
     }
 }
 

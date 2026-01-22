@@ -20,10 +20,15 @@ namespace MoLibrary.Framework.Modules;
 
 public static class ModuleFrameworkMonitorBuilderExtensions
 {
-    public static ModuleFrameworkMonitorGuide ConfigModuleFrameworkMonitor(this WebApplicationBuilder builder,
-        Action<ModuleFrameworkMonitorOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleFrameworkMonitorGuide().Register(action);
+        /// <summary>
+        /// 配置 FrameworkMonitor 模块
+        /// </summary>
+        public static ModuleFrameworkMonitorGuide AddFrameworkMonitor(Action<ModuleFrameworkMonitorOption>? action = null)
+        {
+            return new ModuleFrameworkMonitorGuide().Register(action);
+        }
     }
 }
 

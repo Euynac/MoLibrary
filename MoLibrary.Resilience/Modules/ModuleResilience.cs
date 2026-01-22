@@ -10,10 +10,15 @@ namespace MoLibrary.Resilience.Modules;
 
 public static class ModuleResilienceBuilderExtensions
 {
-    public static ModuleResilienceGuide ConfigModuleResilience(this WebApplicationBuilder builder,
-        Action<ModuleResilienceOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleResilienceGuide().Register(action);
+        /// <summary>
+        /// 配置 Resilience 模块
+        /// </summary>
+        public static ModuleResilienceGuide AddResilience(Action<ModuleResilienceOption>? action = null)
+        {
+            return new ModuleResilienceGuide().Register(action);
+        }
     }
 }
 

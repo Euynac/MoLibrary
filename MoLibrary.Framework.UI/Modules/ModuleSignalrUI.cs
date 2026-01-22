@@ -16,10 +16,15 @@ namespace MoLibrary.Framework.UI.Modules;
 
 public static class ModuleSignalrUIBuilderExtensions
 {
-    public static ModuleSignalrUIGuide ConfigModuleSignalrUI(this WebApplicationBuilder builder,
-        Action<ModuleSignalrUIOption>? action = null)
+    extension(Mo)
     {
-        return new ModuleSignalrUIGuide().Register(action);
+        /// <summary>
+        /// 配置 SignalrUI 模块
+        /// </summary>
+        public static ModuleSignalrUIGuide AddSignalrUI(Action<ModuleSignalrUIOption>? action = null)
+        {
+            return new ModuleSignalrUIGuide().Register(action);
+        }
     }
 }
 
