@@ -38,7 +38,7 @@ MoLibrary 目前提供40+模块，以下是部分模块（待补充）
 - **DomainDrivenDesign**：DDD 模式实现
 - **Repository**：仓储模式实现
 - **DependencyInjection**：增强的依赖注入功能
-- **BackgroundJob**：后台任务处理
+- **JobScheduler**：后台任务处理
 - **SignalR**：实时通信扩展
 - **AutoModel**：自动模型映射和转换
 - **Configuration**：配置管理
@@ -69,12 +69,12 @@ dotnet add package MoLibrary.DependencyInjection
 MoLibrary 使用模块化的方式来注册和配置服务：
 
 ```csharp
-builder.ConfigModuleConfigurationDashboard().AddMoConfigurationDashboardClient<DaprHttpForConnectServer, ProjectServiceInfo>(s =>
+Mo.AddJobScheduler(o =>
 {
-    s.ClientRetryTimes = 3;
-    s.HeartbeatDuration = 10000;
-    s.RetryDuration = 6000;
-});
+    o.RecurringJobDebugMode = true;
+    o.TriggeredJobDebugMode = true;
+})
+.UseEfCoreMetadataRepository();
 ```
 
 > 模块通常会返回一个 `ModuleGuide` 对象，用于进一步配置。
