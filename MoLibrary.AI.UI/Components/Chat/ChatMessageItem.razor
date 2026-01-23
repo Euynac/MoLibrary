@@ -110,15 +110,9 @@
 
     private async Task HandleCopy()
     {
-        try
-        {
-            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", Message.Content);
-            Snackbar.Add("Copied to clipboard", Severity.Success);
-        }
-        catch
-        {
-            Snackbar.Add("Failed to copy", Severity.Error);
-        }
+        var success = await JSRuntime.InvokeAsync<bool>("MoClipboard.copyText", Message.Content);
+        Snackbar.Add(success ? "Copied to clipboard" : "Failed to copy",
+                     success ? Severity.Success : Severity.Error);
     }
 
     private void HandleStartEdit()

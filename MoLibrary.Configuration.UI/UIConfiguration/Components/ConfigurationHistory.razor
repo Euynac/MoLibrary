@@ -320,16 +320,8 @@
             return;
         }
 
-        try
-        {
-            // 使用现代的 Clipboard API
-            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", value);
-            Snackbar.Add("值已复制到剪贴板", Severity.Success);
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add("复制失败，请手动复制内容。可能是因为浏览器不支持或需要 HTTPS", Severity.Warning);
-            Console.WriteLine($"Copy to clipboard failed: {ex.Message}");
-        }
+        var success = await JSRuntime.InvokeAsync<bool>("MoClipboard.copyText", value);
+        Snackbar.Add(success ? "值已复制到剪贴板" : "复制失败",
+                     success ? Severity.Success : Severity.Error);
     }
 }

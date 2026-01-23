@@ -219,7 +219,7 @@
     {
         if (!string.IsNullOrEmpty(Message))
         {
-            await JS.InvokeVoidAsync("navigator.clipboard.writeText", Message);
+            await JS.InvokeAsync<bool>("MoClipboard.copyText", Message);
         }
     }
 }
