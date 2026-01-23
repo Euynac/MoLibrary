@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
@@ -409,7 +410,10 @@ public class ModuleJobSchedulerOption : MoModuleOption<ModuleJobScheduler>
 
     /// <summary>
     /// JSON serializer options used for serializing and deserializing job arguments.
-    /// Default: null (uses System.Text.Json defaults).
+    /// Default: Uses UnsafeRelaxedJsonEscaping to preserve non-ASCII characters (e.g., Chinese).
     /// </summary>
-    public JsonSerializerOptions? JobArgsSerializerOptions { get; set; }
+    public JsonSerializerOptions? JobArgsSerializerOptions { get; set; } = new()
+    {
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
 }

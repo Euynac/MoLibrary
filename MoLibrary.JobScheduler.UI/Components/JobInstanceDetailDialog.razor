@@ -1,3 +1,5 @@
+@using System.Text.Encodings.Web
+@using System.Text.Json
 @inject JobSchedulerUIService UIService
 @inject JobStateColorService ColorService
 @inject NavigationManager NavigationManager
@@ -105,7 +107,7 @@
                 <MudPaper Class="pa-4 mb-4" Elevation="2">
                     <MudText Typo="Typo.h6" Class="mb-3">作业参数</MudText>
                     <MudTextField T="string"
-                                  Value="@_jobInstance.JobArgs"
+                                  Value="@FormatJobArgs(_jobInstance.JobArgs)"
                                   ReadOnly="true"
                                   Variant="Variant.Outlined"
                                   Lines="10"
@@ -198,5 +200,23 @@
         if (duration.TotalSeconds >= 1)
             return $"{duration.TotalSeconds:F2}s";
         return $"{duration.TotalMilliseconds:F0}ms";
+    }
+
+    private static string FormatJobArgs(string? jobArgs)
+    {
+        if (string.IsNullOrEmpty(jobArgs)) return string.Empty;
+        try
+        {
+            using var doc = JsonDocument.Parse(jobArgs);
+            return JsonSerializer.Serialize(doc, new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            });
+        }
+        catch
+        {
+            return jobArgs;
+        }
     }
 }
