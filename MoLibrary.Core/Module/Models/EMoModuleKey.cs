@@ -149,5 +149,9 @@ public enum EMoModuleKey
     /// <summary>
     /// AI UI 模块 - 提供 AI 聊天界面
     /// </summary>
-    AIUI
+    AIUI,
+    /// <summary>
+    /// CORS (跨域资源共享) 模块
+    /// </summary>
+    Cors
 }
