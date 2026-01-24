@@ -45,6 +45,7 @@ public class ModuleAIUI(ModuleAIUIOption option)
         // 注册 UI 聊天服务
         services.AddScoped<AIChatUIService>();
         services.AddScoped<ChatSessionStorage>();
+        services.AddScoped<AIProviderUIService>();
     }
 
     public override void ClaimDependencies()
@@ -67,6 +68,21 @@ public class ModuleAIUI(ModuleAIUIOption option)
                         navOrder: 1);
                 });
         }
+
+        if (!Option.DisableAIProviderPage)
+        {
+            DependsOnModule<ModuleUICoreGuide>().Register()
+                .RegisterUIComponents(p =>
+                {
+                    p.RegisterComponent<UIAIProviderManagePage>(
+                        UIAIProviderManagePage.PAGE_URL,
+                        "AI Provider 管理",
+                        Icons.Material.Filled.Hub,
+                        "AI",
+                        addToNav: true,
+                        navOrder: 2);
+                });
+        }
     }
 }
 
@@ -87,6 +103,11 @@ public class ModuleAIUIOption : MoModuleOption<ModuleAIUI>
     /// Disable the AI chat page
     /// </summary>
     public bool DisableAIChatPage { get; set; }
+
+    /// <summary>
+    /// Disable the AI provider manage page
+    /// </summary>
+    public bool DisableAIProviderPage { get; set; }
 
     /// <summary>
     /// Enable Markdown rendering
