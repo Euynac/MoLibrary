@@ -1,36 +1,60 @@
 <div class="input-area">
     <MudPaper Elevation="2" Class="input-container">
-        <MudTextField @ref="_textFieldRef"
-                      T="string"
-                      @bind-Value="InputText"
-                      Placeholder="@Placeholder"
-                      Variant="Variant.Text"
-                      Lines="1"
-                      AutoGrow="true"
-                      MaxLines="6"
-                      Disabled="@IsSending"
-                      Immediate="true"
-                      Class="input-field"
-                      OnKeyDown="@HandleKeyDown" />
-        @if (IsSending)
-        {
-            <MudTooltip Text="Stop generating">
-                <MudIconButton Icon="@Icons.Material.Filled.Stop"
-                               Color="Color.Error"
-                               OnClick="@HandleCancel"
-                               Class="cancel-button" />
-            </MudTooltip>
-        }
-        else
-        {
-            <MudTooltip Text="Send message">
-                <MudIconButton Icon="@Icons.Material.Filled.Send"
-                               Color="Color.Primary"
-                               Disabled="@string.IsNullOrWhiteSpace(InputText)"
-                               OnClick="@HandleSend"
-                               Class="send-button" />
-            </MudTooltip>
-        }
+        <div class="input-top">
+            <MudTextField @ref="_textFieldRef"
+                          T="string"
+                          @bind-Value="InputText"
+                          Placeholder="@Placeholder"
+                          Variant="Variant.Text"
+                          Lines="1"
+                          AutoGrow="true"
+                          MaxLines="6"
+                          Disabled="@IsSending"
+                          Immediate="true"
+                          Class="input-field"
+                          OnKeyDown="@HandleKeyDown" />
+        </div>
+        <div class="input-bottom">
+            <div class="input-actions-left">
+                <MudTooltip Text="Attach file">
+                    <MudIconButton Icon="@Icons.Material.Filled.AttachFile"
+                                   Class="input-action-button"
+                                   OnClick="@HandleAttach" />
+                </MudTooltip>
+                <MudTooltip Text="Deep thinking">
+                    <MudIconButton Icon="@Icons.Material.Filled.Psychology"
+                                   Class="input-action-button"
+                                   OnClick="@HandleDeepThinking" />
+                </MudTooltip>
+            </div>
+            <div class="input-actions-right">
+                <MudButton Variant="Variant.Outlined"
+                           Size="Size.Small"
+                           Class="model-pill"
+                           OnClick="@HandleModelSwitch">
+                    @GetModelLabel()
+                </MudButton>
+                @if (IsSending)
+                {
+                    <MudTooltip Text="Stop generating">
+                        <MudIconButton Icon="@Icons.Material.Filled.Stop"
+                                       Color="Color.Error"
+                                       OnClick="@HandleCancel"
+                                       Class="cancel-button" />
+                    </MudTooltip>
+                }
+                else
+                {
+                    <MudTooltip Text="Send message">
+                        <MudIconButton Icon="@Icons.Material.Filled.Send"
+                                       Color="Color.Primary"
+                                       Disabled="@string.IsNullOrWhiteSpace(InputText)"
+                                       OnClick="@HandleSend"
+                                       Class="send-button" />
+                    </MudTooltip>
+                }
+            </div>
+        </div>
     </MudPaper>
     @if (ShowProviderInfo && !string.IsNullOrEmpty(ProviderName))
     {
@@ -41,9 +65,10 @@
 </div>
 
 @code {
-    [Parameter] public string Placeholder { get; set; } = "Type a message...";
+    [Parameter] public string Placeholder { get; set; } = "给 AI 发送消息...";
     [Parameter] public bool IsSending { get; set; }
     [Parameter] public string? ProviderName { get; set; }
+    [Parameter] public string? ModelName { get; set; }
     [Parameter] public bool ShowProviderInfo { get; set; } = true;
     [Parameter] public EventCallback<string> OnSend { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
@@ -90,6 +115,29 @@
         {
             await HandleSend();
         }
+    }
+
+    private Task HandleAttach()
+    {
+        // TODO: Implement attachment upload.
+        return Task.CompletedTask;
+    }
+
+    private Task HandleDeepThinking()
+    {
+        // TODO: Implement deep thinking mode.
+        return Task.CompletedTask;
+    }
+
+    private Task HandleModelSwitch()
+    {
+        // TODO: Implement model switch.
+        return Task.CompletedTask;
+    }
+
+    private string GetModelLabel()
+    {
+        return string.IsNullOrWhiteSpace(ModelName) ? "模型" : ModelName;
     }
 
     public async Task FocusAsync()

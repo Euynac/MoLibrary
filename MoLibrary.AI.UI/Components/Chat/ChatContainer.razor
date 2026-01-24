@@ -22,6 +22,7 @@
     <ChatInputArea
         IsSending="@IsSending"
         ProviderName="@ProviderName"
+        ModelName="@ModelName"
         ShowProviderInfo="@ShowProviderInfo"
         OnSend="@HandleSend"
         OnCancel="@HandleCancel" />
@@ -33,6 +34,7 @@
     [Parameter] public bool IsSending { get; set; }
     [Parameter] public bool EnableMarkdown { get; set; } = true;
     [Parameter] public string? ProviderName { get; set; }
+    [Parameter] public string? ModelName { get; set; }
     [Parameter] public bool ShowProviderInfo { get; set; } = true;
     [Parameter] public string? ErrorMessage { get; set; }
     [Parameter] public bool ShowRetry { get; set; }

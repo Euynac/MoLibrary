@@ -1,12 +1,16 @@
 <div class="session-list">
     <div class="session-header">
-        <MudText Typo="Typo.subtitle2">Chat History</MudText>
-        <MudTooltip Text="New conversation">
-            <MudIconButton Icon="@Icons.Material.Filled.Add"
-                           Size="Size.Small"
-                           Color="Color.Primary"
-                           OnClick="@HandleNewSession" />
-        </MudTooltip>
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Add"
+                   Class="new-chat-button"
+                   OnClick="@HandleNewSession">
+            新对话
+        </MudButton>
+    </div>
+
+    <div class="session-subtitle">
+        <MudText Typo="Typo.caption">最近会话</MudText>
     </div>
 
     <div class="session-list-content">

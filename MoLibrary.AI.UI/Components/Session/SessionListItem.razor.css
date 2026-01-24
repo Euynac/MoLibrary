@@ -1,7 +1,9 @@
 .session-item-wrapper ::deep .session-item {
-    border-radius: 8px;
-    margin: 4px 0;
-    transition: background-color 0.2s ease;
+    border-radius: 12px;
+    margin: 6px 0;
+    padding: 8px 12px;
+    border: 1px solid transparent;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .session-item-wrapper ::deep .session-item:hover {
@@ -9,7 +11,8 @@
 }
 
 .session-item-wrapper ::deep .session-item.selected {
-    background-color: var(--mud-palette-primary);
+    background-color: var(--mud-palette-surface);
+    border-color: var(--mud-palette-primary);
 }
 
 .session-content {
@@ -29,6 +32,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-weight: 600;
 }
 
 .session-item-wrapper ::deep .session-time {

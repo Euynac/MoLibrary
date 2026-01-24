@@ -5,39 +5,34 @@
 @inject IOptions<ModuleAIUIOption> Options
 @inject ISnackbar Snackbar
 
-<div class="ai-chat-page">
+<div class="ai-chat-shell">
     @if (_options.ShowSessionList)
     {
-        <div class="sidebar">
-            @if (_options.ShowProviderSelector)
-            {
-                <ProviderSelector
-                    Providers="@_providers"
-                    SelectedProviderId="@_currentProviderId"
-                    SelectedProviderIdChanged="@HandleProviderChanged" />
-                <MudDivider />
-            }
-
+        <aside class="ai-sidebar">
             <SessionList
                 Sessions="@_sessionStorage.Sessions"
                 CurrentSessionId="@_sessionStorage.CurrentSessionId"
                 OnNewSession="@HandleNewSession"
                 OnSelectSession="@HandleSelectSession"
                 OnDeleteSession="@HandleDeleteSession" />
-        </div>
+        </aside>
     }
 
-    <div class="main-content">
-        <div class="chat-header">
-            <MudText Typo="Typo.h6">@_currentSessionTitle</MudText>
-            @if (!_options.ShowSessionList && _options.ShowProviderSelector)
-            {
-                <ProviderSelector
-                    Providers="@_providers"
-                    SelectedProviderId="@_currentProviderId"
-                    SelectedProviderIdChanged="@HandleProviderChanged" />
-            }
-        </div>
+    <main class="ai-main">
+        <header class="ai-topbar">
+            <div class="topbar-left">
+                @if (_options.ShowProviderSelector)
+                {
+                    <ProviderSelector
+                        Providers="@_providers"
+                        SelectedProviderId="@_currentProviderId"
+                        SelectedProviderIdChanged="@HandleProviderChanged" />
+                }
+            </div>
+            <div class="topbar-right">
+                <MudText Typo="Typo.subtitle2" Class="session-title">@_currentSessionTitle</MudText>
+            </div>
+        </header>
 
         <ChatContainer
             Messages="@_currentMessages"
@@ -46,6 +41,7 @@
             EnableMarkdown="@_options.EnableMarkdown"
             EnableAutoScroll="@_options.EnableAutoScroll"
             ProviderName="@_currentProviderName"
+            ModelName="@_currentModelName"
             ShowProviderInfo="@(!_options.ShowProviderSelector)"
             ErrorMessage="@_errorMessage"
             ShowRetry="@_canRetry"
@@ -58,7 +54,7 @@
             OnErrorDismissed="@HandleErrorDismissed"
             OnEditMessage="@HandleEditMessage"
             OnRetryMessage="@HandleRetryMessage" />
-    </div>
+    </main>
 </div>
 
 @code {
@@ -76,6 +72,7 @@
     private string? _errorMessage;
     private bool _canRetry;
     private string? _lastMessage;
+    private string? _currentModelName;
     private CancellationTokenSource? _cts;
     private CancellationToken _cancellationToken;
 
@@ -89,6 +86,7 @@
         var defaultProvider = ChatUIService.GetDefaultProvider();
         _currentProviderId = defaultProvider?.ProviderId;
         _currentProviderName = defaultProvider?.DisplayName ?? string.Empty;
+        _currentModelName = defaultProvider?.DefaultModel;
 
         // Subscribe to session change events
         _sessionStorage.CurrentSessionChanged += OnCurrentSessionChanged;
@@ -138,6 +136,7 @@
             // Create new list reference to trigger Blazor change detection
             _currentMessages = currentSession.Messages.ToList();
             _currentProviderId = currentSession.ProviderId ?? _currentProviderId;
+            _currentModelName = currentSession.ModelName ?? _currentModelName;
         }
         else
         {
@@ -151,6 +150,7 @@
         _currentProviderId = providerId;
         var provider = _providers.FirstOrDefault(p => p.ProviderId == providerId);
         _currentProviderName = provider?.DisplayName ?? string.Empty;
+        _currentModelName = provider?.DefaultModel;
 
         // Update current session provider
         var currentSession = _sessionStorage.GetSession(_sessionStorage.CurrentSessionId ?? string.Empty);
@@ -361,4 +361,5 @@
         _sessionStorage.SessionsChanged -= OnSessionsChanged;
         _cts?.Dispose();
     }
+
 }

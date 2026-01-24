@@ -1,16 +1,44 @@
 .input-area {
-    padding: 16px;
-    background-color: var(--mud-palette-background);
-    border-top: 1px solid var(--mud-palette-lines-default);
+    padding: 16px 60px 24px;
+    background: linear-gradient(180deg, transparent 0%, var(--mud-palette-background) 45%);
 }
 
 .input-area ::deep .input-container {
     display: flex;
-    align-items: flex-end;
-    gap: 8px;
-    padding: 8px 16px;
-    border-radius: 24px;
+    flex-direction: column;
+    gap: 5px;
+    padding: 20px 14px;
+    border-radius: 50px;
     background-color: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-lines-default);
+    box-shadow: var(--mud-elevation-4);
+}
+
+.input-top {
+    display: flex;
+}
+
+.input-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.input-actions-left,
+.input-actions-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.input-area ::deep .input-action-button {
+    color: var(--mud-palette-text-secondary);
+}
+
+.input-area ::deep .input-action-button:hover {
+    background-color: var(--mud-palette-action-default-hover);
 }
 
 .input-area ::deep .input-field {
@@ -22,7 +50,7 @@
 }
 
 .input-area ::deep .mud-input-slot {
-    padding: 0 !important;
+    padding: 10px 15px 0 15px !important
 }
 
 .input-area ::deep .mud-input-underline::before,
@@ -32,6 +60,18 @@
 
 .input-area ::deep textarea {
     resize: none;
+}
+
+.input-area ::deep .model-pill {
+    border-radius: 999px;
+    padding: 4px 12px;
+    border: 1px solid var(--mud-palette-lines-default);
+    color: var(--mud-palette-text-primary);
+    background-color: var(--mud-palette-surface);
+    max-width: 160px;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
 }
 
 .input-area ::deep .send-button,
@@ -49,7 +89,7 @@
 }
 
 .provider-info {
-    margin-top: 8px;
+    margin-top: 10px;
     text-align: center;
     opacity: 0.7;
 }

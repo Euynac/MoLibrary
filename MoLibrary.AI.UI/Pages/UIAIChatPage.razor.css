@@ -1,11 +1,46 @@
-.ai-chat-page {
+@font-face {
+    font-family: "Nunito";
+    src: url("/_content/MoLibrary.UI/fonts/Nunito-Regular.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Nunito";
+    src: url("/_content/MoLibrary.UI/fonts/Nunito-Medium.woff2") format("woff2");
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Nunito";
+    src: url("/_content/MoLibrary.UI/fonts/Nunito-SemiBold.woff2") format("woff2");
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "IBM Plex Mono";
+    src: url("/_content/MoLibrary.UI/fonts/IBMPlexMono-Regular.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+.ai-chat-shell {
     display: flex;
     height: calc(100vh - 64px);
     overflow: hidden;
+    font-family: "Nunito", "Open Sans", system-ui, sans-serif;
+    background: var(--mud-palette-background);
+    color: var(--mud-palette-text-primary);
 }
 
-.sidebar {
-    width: 280px;
+.ai-sidebar {
+    width: 300px;
     display: flex;
     flex-direction: column;
     background-color: var(--mud-palette-surface);
@@ -13,34 +48,48 @@
     flex-shrink: 0;
 }
 
-.main-content {
+.ai-main {
     flex: 1;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    background: linear-gradient(180deg, var(--mud-palette-background) 0%, var(--mud-palette-surface) 100%);
 }
 
-.chat-header {
+.ai-topbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--mud-palette-lines-default);
-    background-color: var(--mud-palette-surface);
+    padding: 12px 20px;
+    border-bottom: none;
+    background-color: var(--mud-palette-background);
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 
-/* 使用 ::deep 选择器样式化内部组件 */
-.main-content ::deep .chat-container {
+.topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.session-title {
+    color: var(--mud-palette-text-secondary);
+}
+
+.ai-main ::deep .chat-container {
     flex: 1;
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
-    .sidebar {
-        display: none;
-    }
-
-    .ai-chat-page {
+@media (max-width: 1024px) {
+    .ai-chat-shell {
         height: calc(100vh - 56px);
     }
 }

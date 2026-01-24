@@ -1,28 +1,82 @@
 .provider-selector {
-    padding: 8px 16px;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    font-weight: 600;
+    color: var(--mud-palette-text-primary);
 }
 
-.provider-selector ::deep .provider-select {
+.provider-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    border-radius: 999px;
+    cursor: pointer;
+    color: var(--mud-palette-text-primary);
+}
+
+.provider-selector:hover .provider-trigger {
+    background-color: var(--mud-palette-action-default-hover);
+}
+
+.provider-name {
+    white-space: nowrap;
+}
+
+.provider-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    min-width: 220px;
+    background-color: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 16px;
+    padding: 8px;
+    box-shadow: var(--mud-elevation-4);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-6px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: 30;
+}
+
+.provider-selector:hover .provider-menu {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+.provider-option {
     width: 100%;
-}
-
-.provider-selector ::deep .mud-select {
-    margin-top: 0;
-}
-
-/*
- * Note: .provider-item and .default-chip are rendered inside MudSelect's dropdown portal,
- * which exists outside this component's DOM tree. CSS isolation cannot target portal content.
- * These styles are kept here for reference but will not apply.
- * To style dropdown content, use global CSS or MudBlazor's built-in styling options.
- */
-.provider-item {
     display: flex;
     align-items: center;
     gap: 8px;
+    padding: 8px 10px;
+    border-radius: 12px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    color: var(--mud-palette-text-primary);
 }
 
-.default-chip {
+.provider-option:hover {
+    background-color: var(--mud-palette-action-default-hover);
+}
+
+.provider-option.is-active {
+    background-color: var(--mud-palette-action-default);
+    font-weight: 600;
+}
+
+.provider-option ::deep .default-chip {
     margin-left: auto;
     font-size: 0.7rem;
+}
+
+@media (max-width: 600px) {
+    .provider-menu {
+        min-width: 180px;
+    }
 }

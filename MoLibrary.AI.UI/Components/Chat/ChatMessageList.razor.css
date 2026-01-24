@@ -1,21 +1,67 @@
 .message-list {
     flex: 1;
     overflow-y: auto;
-    padding: 16px 0;
+    padding: 24px 24px 120px;
     display: flex;
     flex-direction: column;
+    gap: 20px;
+    margin: 0 auto;
+    width: 100%;
 }
 
-.empty-state {
+.welcome-panel {
     flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 16px;
-    opacity: 0.6;
+    gap: 12px;
+    text-align: center;
+    padding: 24px 12px;
 }
 
-.empty-state ::deep .mud-icon-root {
-    font-size: 64px;
+.welcome-icon {
+    width: 132px;
+    height: 132px;
+    border-radius: 0;
+    background-color: transparent;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.welcome-icon ::deep .mud-icon-root {
+    font-size: 72px;
+}
+
+.welcome-subtitle {
+    max-width: 420px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.welcome-grid {
+    width: 100%;
+    max-width: 700px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.welcome-grid ::deep .welcome-card {
+    padding: 16px;
+    border-radius: 16px;
+    background-color: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-lines-default);
+}
+
+@media (max-width: 768px) {
+    .message-list {
+        padding: 20px 16px 140px;
+    }
+
+    .welcome-grid {
+        grid-template-columns: 1fr;
+    }
 }
