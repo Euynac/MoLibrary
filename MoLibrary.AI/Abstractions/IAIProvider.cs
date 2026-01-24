@@ -28,7 +28,7 @@ public interface IAIProvider : IDisposable
     /// 获取 IChatClient 实例
     /// </summary>
     /// <returns>IChatClient 实例</returns>
-    IChatClient GetChatClient();
+    IChatClient GetChatClient(string? modelName = null);
 
     /// <summary>
     /// 测试连接是否正常

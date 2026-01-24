@@ -29,21 +29,11 @@ public class AIProviderInfo
     /// 默认使用的模型
     /// </summary>
     public string? DefaultModel { get; init; }
-
+    
     /// <summary>
-    /// 支持的模型列表
+    /// 模型元数据信息
     /// </summary>
-    public IReadOnlyList<string>? SupportedModels { get; init; }
-
-    /// <summary>
-    /// 是否支持流式响应
-    /// </summary>
-    public bool SupportsStreaming { get; init; } = true;
-
-    /// <summary>
-    /// 是否支持函数调用
-    /// </summary>
-    public bool SupportsFunctionCalling { get; init; }
+    public IReadOnlyList<AIModelInfo>? SupportedModels { get; init; }
 
     /// <summary>
     /// 是否是默认 Provider

@@ -1,7 +1,11 @@
+using System;
 using System.ClientModel;
+using System.Collections.Concurrent;
 using Microsoft.Extensions.AI;
 using MoLibrary.AI.Abstractions;
 using MoLibrary.AI.Models;
+using MoLibrary.AI.Providers;
+using MoLibrary.AI.Services;
 using MoLibrary.Tool.MoResponse;
 using OpenAI;
 using AIChatMessage = Microsoft.Extensions.AI.ChatMessage;
@@ -14,10 +18,13 @@ namespace MoLibrary.AI.Providers.OpenAI;
 public class OpenAIProvider : IAIProvider
 {
     private readonly OpenAIProviderOptions _options;
-    private readonly IChatClient _chatClient;
+    private readonly OpenAIClient _client;
+    private readonly IReadOnlyList<AIModelInfo> _models;
+    private readonly string? _defaultModel;
+    private readonly ConcurrentDictionary<string, IChatClient> _chatClients = new(StringComparer.OrdinalIgnoreCase);
     private bool _disposed;
 
-    public OpenAIProvider(OpenAIProviderOptions options)
+    public OpenAIProvider(OpenAIProviderOptions options, AIModelCatalog modelCatalog)
     {
         _options = options;
 
@@ -27,15 +34,23 @@ public class OpenAIProvider : IAIProvider
             clientOptions.Endpoint = new Uri(options.BaseUrl);
         }
 
-        var openAiClient = new OpenAIClient(new ApiKeyCredential(options.ApiKey), clientOptions);
-        _chatClient = openAiClient.GetChatClient(options.Model).AsIChatClient();
+        _client = new OpenAIClient(new ApiKeyCredential(options.ApiKey), clientOptions);
+
+        var models = AIProviderModelResolver.ResolveModels(EAIProviderType.OpenAI, modelCatalog, options).ToList();
+        _defaultModel = AIProviderModelResolver.ResolveDefaultModel(options, models);
+        if (models.Count == 0 && !string.IsNullOrWhiteSpace(_defaultModel))
+        {
+            models.Add(new LLMModelInfo { ModelName = _defaultModel });
+        }
+
+        _models = models;
     }
 
     /// <inheritdoc />
-    public string ProviderId => _options.ProviderId ?? $"openai-{_options.Model}";
+    public string ProviderId => _options.ProviderId ?? (_defaultModel == null ? "openai" : $"openai-{_defaultModel}");
 
     /// <inheritdoc />
-    public string DisplayName => _options.DisplayName ?? $"OpenAI ({_options.Model})";
+    public string DisplayName => _options.DisplayName ?? (_defaultModel == null ? "OpenAI" : $"OpenAI ({_defaultModel})");
 
     /// <inheritdoc />
     public AIProviderInfo Info => new()
@@ -44,22 +59,31 @@ public class OpenAIProvider : IAIProvider
         DisplayName = DisplayName,
         Description = "OpenAI GPT models",
         ProviderType = "OpenAI",
-        DefaultModel = _options.Model,
-        SupportsStreaming = true,
-        SupportsFunctionCalling = true,
+        DefaultModel = _defaultModel,
+        SupportedModels = _models,
         IsDefault = _options.IsDefault,
         Icon = "openai"
     };
 
     /// <inheritdoc />
-    public IChatClient GetChatClient() => _chatClient;
+    public IChatClient GetChatClient(string? modelName = null)
+    {
+        var resolvedModel = !string.IsNullOrWhiteSpace(modelName) ? modelName : _defaultModel;
+        if (string.IsNullOrWhiteSpace(resolvedModel))
+        {
+            throw new InvalidOperationException("OpenAI model is not configured.");
+        }
+
+        return _chatClients.GetOrAdd(resolvedModel, name => _client.GetChatClient(name).AsIChatClient());
+    }
 
     /// <inheritdoc />
     public async Task<Res> TestConnectionAsync(CancellationToken ct = default)
     {
         try
         {
-            var response = await _chatClient.GetResponseAsync(
+            var chatClient = GetChatClient();
+            var response = await chatClient.GetResponseAsync(
                 [new AIChatMessage(ChatRole.User, "Hello")],
                 new ChatOptions { MaxOutputTokens = 10 },
                 ct);
@@ -74,20 +98,7 @@ public class OpenAIProvider : IAIProvider
     /// <inheritdoc />
     public Task<Res<IReadOnlyList<string>>> GetAvailableModelsAsync(CancellationToken ct = default)
     {
-        // OpenAI 目前没有通过 SDK 获取模型列表的简单方法
-        // 返回常用模型列表
-        var models = new List<string>
-        {
-            "gpt-4o",
-            "gpt-4o-mini",
-            "gpt-4-turbo",
-            "gpt-4",
-            "gpt-3.5-turbo",
-            "o1",
-            "o1-mini",
-            "o1-preview",
-            "o3-mini"
-        };
+        var models = _models.Select(m => m.ModelName).ToList();
         return Task.FromResult(Res.Ok<IReadOnlyList<string>>(models));
     }
 
@@ -103,7 +114,11 @@ public class OpenAIProvider : IAIProvider
         {
             if (disposing)
             {
-                _chatClient?.Dispose();
+                foreach (var chatClient in _chatClients.Values)
+                {
+                    chatClient.Dispose();
+                }
+                _chatClients.Clear();
             }
             _disposed = true;
         }

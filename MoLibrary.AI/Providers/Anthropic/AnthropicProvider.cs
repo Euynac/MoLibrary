@@ -1,7 +1,11 @@
+using System;
 using Anthropic;
+using System.Collections.Concurrent;
 using Microsoft.Extensions.AI;
 using MoLibrary.AI.Abstractions;
 using MoLibrary.AI.Models;
+using MoLibrary.AI.Providers;
+using MoLibrary.AI.Services;
 using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.AI.Providers.Anthropic;
@@ -12,28 +16,38 @@ namespace MoLibrary.AI.Providers.Anthropic;
 public class AnthropicProvider : IAIProvider
 {
     private readonly AnthropicProviderOptions _options;
-    private readonly IChatClient _chatClient;
+    private readonly AnthropicClient _client;
+    private readonly IReadOnlyList<AIModelInfo> _models;
+    private readonly string? _defaultModel;
+    private readonly ConcurrentDictionary<string, IChatClient> _chatClients = new(StringComparer.OrdinalIgnoreCase);
     private bool _disposed;
 
-    public AnthropicProvider(AnthropicProviderOptions options)
+    public AnthropicProvider(AnthropicProviderOptions options, AIModelCatalog modelCatalog)
     {
         _options = options;
 
         // Anthropic SDK v12 使用对象初始化器配置客户端
-        var anthropicClient = new AnthropicClient
+        _client = new AnthropicClient
         {
             ApiKey = options.ApiKey,
             BaseUrl = options.BaseUrl ?? ""
         };
-        // Anthropic SDK v12 官方实现 IChatClient
-        _chatClient = anthropicClient.AsIChatClient(options.Model);
+
+        var models = AIProviderModelResolver.ResolveModels(EAIProviderType.Anthropic, modelCatalog, options).ToList();
+        _defaultModel = AIProviderModelResolver.ResolveDefaultModel(options, models);
+        if (models.Count == 0 && !string.IsNullOrWhiteSpace(_defaultModel))
+        {
+            models.Add(new LLMModelInfo { ModelName = _defaultModel });
+        }
+
+        _models = models;
     }
 
     /// <inheritdoc />
-    public string ProviderId => _options.ProviderId ?? $"anthropic-{_options.Model}";
+    public string ProviderId => _options.ProviderId ?? (_defaultModel == null ? "anthropic" : $"anthropic-{_defaultModel}");
 
     /// <inheritdoc />
-    public string DisplayName => _options.DisplayName ?? $"Anthropic ({_options.Model})";
+    public string DisplayName => _options.DisplayName ?? (_defaultModel == null ? "Anthropic" : $"Anthropic ({_defaultModel})");
 
     /// <inheritdoc />
     public AIProviderInfo Info => new()
@@ -42,22 +56,31 @@ public class AnthropicProvider : IAIProvider
         DisplayName = DisplayName,
         Description = "Anthropic Claude models",
         ProviderType = "Anthropic",
-        DefaultModel = _options.Model,
-        SupportsStreaming = true,
-        SupportsFunctionCalling = true,
+        DefaultModel = _defaultModel,
+        SupportedModels = _models,
         IsDefault = _options.IsDefault,
         Icon = "anthropic"
     };
 
     /// <inheritdoc />
-    public IChatClient GetChatClient() => _chatClient;
+    public IChatClient GetChatClient(string? modelName = null)
+    {
+        var resolvedModel = !string.IsNullOrWhiteSpace(modelName) ? modelName : _defaultModel;
+        if (string.IsNullOrWhiteSpace(resolvedModel))
+        {
+            throw new InvalidOperationException("Anthropic model is not configured.");
+        }
+
+        return _chatClients.GetOrAdd(resolvedModel, name => _client.AsIChatClient(name));
+    }
 
     /// <inheritdoc />
     public async Task<Res> TestConnectionAsync(CancellationToken ct = default)
     {
         try
         {
-            var response = await _chatClient.GetResponseAsync(
+            var chatClient = GetChatClient();
+            var response = await chatClient.GetResponseAsync(
                 [new ChatMessage(ChatRole.User, "Hello")],
                 new ChatOptions {MaxOutputTokens = 10},
                 ct);
@@ -72,17 +95,7 @@ public class AnthropicProvider : IAIProvider
     /// <inheritdoc />
     public Task<Res<IReadOnlyList<string>>> GetAvailableModelsAsync(CancellationToken ct = default)
     {
-        // 返回 Anthropic 常用模型列表
-        var models = new List<string>
-        {
-            "claude-sonnet-4-20250514",
-            "claude-opus-4-20250514",
-            "claude-3-5-sonnet-20241022",
-            "claude-3-5-haiku-20241022",
-            "claude-3-opus-20240229",
-            "claude-3-sonnet-20240229",
-            "claude-3-haiku-20240307"
-        };
+        var models = _models.Select(m => m.ModelName).ToList();
         return Task.FromResult(Res.Ok<IReadOnlyList<string>>(models));
     }
 
@@ -98,7 +111,11 @@ public class AnthropicProvider : IAIProvider
         {
             if (disposing)
             {
-                _chatClient.Dispose();
+                foreach (var chatClient in _chatClients.Values)
+                {
+                    chatClient.Dispose();
+                }
+                _chatClients.Clear();
             }
 
             _disposed = true;

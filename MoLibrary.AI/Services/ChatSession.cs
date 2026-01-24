@@ -96,7 +96,7 @@ public class ChatSession : IChatSession
 
         try
         {
-            var chatClient = provider.GetChatClient();
+            var chatClient = provider.GetChatClient(ModelName);
             var chatMessages = ToChatMessages();
 
             var response = await chatClient.GetResponseAsync(chatMessages, cancellationToken: ct);
@@ -150,7 +150,7 @@ public class ChatSession : IChatSession
         };
         _messages.Add(assistantMessage);
 
-        var chatClient = provider.GetChatClient();
+        var chatClient = provider.GetChatClient(ModelName);
         var chatMessages = ToChatMessages();
         // 移除占位消息用于请求
         chatMessages.RemoveAt(chatMessages.Count - 1);

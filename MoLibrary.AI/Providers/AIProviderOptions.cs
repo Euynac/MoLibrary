@@ -1,3 +1,5 @@
+using System;
+
 namespace MoLibrary.AI.Providers;
 
 /// <summary>
@@ -23,7 +25,12 @@ public abstract class AIProviderOptions
     /// <summary>
     /// 默认使用的模型
     /// </summary>
-    public required string Model { get; set; }
+    public string? DefaultModel { get; set; }
+
+    /// <summary>
+    /// 支持的模型列表（为空则使用预留模型）
+    /// </summary>
+    public IList<string>? SupportedModels { get; set; }
 
     /// <summary>
     /// API 基础 URL（可选，用于自定义端点）

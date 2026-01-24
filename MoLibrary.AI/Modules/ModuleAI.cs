@@ -49,6 +49,21 @@ public class ModuleAI(ModuleAIOption option)
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
+        // 注册模型目录
+        services.AddSingleton(sp =>
+        {
+            var catalog = new AIModelCatalog();
+            catalog.AddModels(EAIProviderType.OpenAI, ModuleAIOption.GetReservedModels(EAIProviderType.OpenAI));
+            catalog.AddModels(EAIProviderType.Anthropic, ModuleAIOption.GetReservedModels(EAIProviderType.Anthropic));
+
+            foreach (var registration in Option.ModelRegistrations)
+            {
+                catalog.AddModel(registration.ProviderType, registration.Model);
+            }
+
+            return catalog;
+        });
+
         // 注册 Provider 管理器
         services.AddSingleton<AIProviderManager>();
         services.AddSingleton<IAIProviderFactory>(sp => sp.GetRequiredService<AIProviderManager>());
@@ -70,15 +85,16 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
     /// <returns>当前引导器实例</returns>
     public ModuleAIGuide AddOpenAIProvider(Action<OpenAIProviderOptions> configure)
     {
-        var options = new OpenAIProviderOptions { ApiKey = "", Model = "gpt-4o" };
+        var options = new OpenAIProviderOptions { ApiKey = "", DefaultModel = "gpt-4o" };
         configure(options);
 
         ConfigureApplicationBuilder(context =>
         {
             var manager = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIProviderManager>();
-            var provider = new OpenAIProvider(options);
+            var modelCatalog = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIModelCatalog>();
+            var provider = new OpenAIProvider(options, modelCatalog);
             manager.RegisterProvider(provider);
-        }, secondKey: $"openai-{options.ProviderId ?? options.Model}", order: EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
+        }, secondKey: $"openai-{options.ProviderId ?? options.DefaultModel ?? "default"}", order: EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
 
         return this;
     }
@@ -90,16 +106,29 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
     /// <returns>当前引导器实例</returns>
     public ModuleAIGuide AddAnthropicProvider(Action<AnthropicProviderOptions> configure)
     {
-        var options = new AnthropicProviderOptions { ApiKey = "", Model = "claude-sonnet-4-20250514" };
+        var options = new AnthropicProviderOptions { ApiKey = "", DefaultModel = "claude-sonnet-4-20250514" };
         configure(options);
 
         ConfigureApplicationBuilder(context =>
         {
             var manager = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIProviderManager>();
-            var provider = new AnthropicProvider(options);
+            var modelCatalog = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIModelCatalog>();
+            var provider = new AnthropicProvider(options, modelCatalog);
             manager.RegisterProvider(provider);
-        }, secondKey: $"anthropic-{options.ProviderId ?? options.Model}", order: EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
+        }, secondKey: $"anthropic-{options.ProviderId ?? options.DefaultModel ?? "default"}", order: EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
 
+        return this;
+    }
+
+    /// <summary>
+    /// 添加模型信息
+    /// </summary>
+    /// <param name="providerType">Provider 类型</param>
+    /// <param name="model">模型信息</param>
+    /// <returns>当前引导器实例</returns>
+    public ModuleAIGuide AddModel(EAIProviderType providerType, AIModelInfo model)
+    {
+        ConfigureModuleOption(option => option.AddModel(providerType, model));
         return this;
     }
 
@@ -220,6 +249,26 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
 /// </summary>
 public class ModuleAIOption : MoModuleOption<ModuleAI>
 {
+    internal List<AIModelRegistration> ModelRegistrations { get; } = [];
+
+    internal static IReadOnlyList<AIModelInfo> GetReservedModels(EAIProviderType providerType)
+    {
+        return providerType switch
+        {
+            EAIProviderType.OpenAI => OpenAIReservedModels.Models,
+            EAIProviderType.Anthropic => AnthropicReservedModels.Models,
+            _ => Array.Empty<AIModelInfo>()
+        };
+    }
+
+    /// <summary>
+    /// 添加模型信息
+    /// </summary>
+    public void AddModel(EAIProviderType providerType, AIModelInfo model)
+    {
+        ModelRegistrations.Add(new AIModelRegistration(providerType, model));
+    }
+
     /// <summary>
     /// 默认系统提示词
     /// </summary>
@@ -235,3 +284,5 @@ public class ModuleAIOption : MoModuleOption<ModuleAI>
     /// </summary>
     public bool EnableRequestLogging { get; set; }
 }
+
+internal record AIModelRegistration(EAIProviderType ProviderType, AIModelInfo Model);
