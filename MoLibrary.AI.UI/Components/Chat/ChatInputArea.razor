@@ -50,6 +50,18 @@
 
     public string InputText { get; set; } = string.Empty;
     private MudTextField<string>? _textFieldRef;
+    private bool _wasSending;
+
+    protected override void OnParametersSet()
+    {
+        if (_wasSending && !IsSending)
+        {
+            InputText = string.Empty;
+            _textFieldRef?.Clear();
+        }
+
+        _wasSending = IsSending;
+    }
 
     private async Task HandleSend()
     {
