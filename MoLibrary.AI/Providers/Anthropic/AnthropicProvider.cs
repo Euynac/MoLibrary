@@ -21,6 +21,7 @@ public class AnthropicProvider : IAIProvider
     private readonly string? _defaultModel;
     private readonly bool _isValid;
     private readonly IReadOnlyList<string> _invalidModels;
+    private string? _systemPrompt;
     private readonly ConcurrentDictionary<string, IChatClient> _chatClients = new(StringComparer.OrdinalIgnoreCase);
     private bool _disposed;
 
@@ -40,6 +41,7 @@ public class AnthropicProvider : IAIProvider
         _defaultModel = resolution.DefaultModel;
         _isValid = resolution.IsValid;
         _invalidModels = resolution.MissingModels;
+        _systemPrompt = options.SystemPrompt;
     }
 
     /// <inheritdoc />
@@ -56,6 +58,7 @@ public class AnthropicProvider : IAIProvider
         Description = "Anthropic Claude models",
         ProviderType = "Anthropic",
         DefaultModel = _defaultModel,
+        SystemPrompt = _systemPrompt,
         SupportedModels = _models,
         IsValid = _isValid,
         InvalidModels = _invalidModels,
@@ -98,6 +101,13 @@ public class AnthropicProvider : IAIProvider
     {
         var models = _models.Select(m => m.ModelName).ToList();
         return Task.FromResult(Res.Ok<IReadOnlyList<string>>(models));
+    }
+
+    /// <inheritdoc />
+    public void UpdateSystemPrompt(string? systemPrompt)
+    {
+        _systemPrompt = systemPrompt;
+        _options.SystemPrompt = systemPrompt;
     }
 
     public void Dispose()

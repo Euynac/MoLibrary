@@ -29,6 +29,11 @@ public class AIProviderInfo
     /// 默认使用的模型
     /// </summary>
     public string? DefaultModel { get; init; }
+
+    /// <summary>
+    /// 默认系统提示词
+    /// </summary>
+    public string? SystemPrompt { get; init; }
     
     /// <summary>
     /// 模型元数据信息

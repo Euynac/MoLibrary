@@ -1,0 +1,17 @@
+.prompt-dialog {
+    min-width: 420px;
+}
+
+.prompt-subtitle {
+    margin-bottom: 12px;
+}
+
+.prompt-input ::deep textarea {
+    font-family: "IBM Plex Mono", "Courier Prime", monospace;
+}
+
+@media (max-width: 600px) {
+    .prompt-dialog {
+        min-width: 100%;
+    }
+}

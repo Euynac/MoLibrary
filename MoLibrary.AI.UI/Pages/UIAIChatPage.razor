@@ -1,9 +1,12 @@
 @page "/ai-chat"
 @rendermode InteractiveServer
+@using MoLibrary.Tool.MoResponse
 @implements IDisposable
 @inject AIChatUIService ChatUIService
+@inject AIProviderUIService ProviderUIService
 @inject IOptions<ModuleAIUIOption> Options
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 
 <div class="ai-chat-shell">
     @if (_options.ShowSessionList)
@@ -30,7 +33,9 @@
                 }
             </div>
             <div class="topbar-right">
-                <MudText Typo="Typo.subtitle2" Class="session-title">@_currentSessionTitle</MudText>
+                <MudIconButton Icon="@Icons.Material.Filled.Settings"
+                               Class="settings-button"
+                               OnClick="OpenPromptSettingsAsync" />
             </div>
         </header>
 
@@ -353,6 +358,56 @@
     {
         _errorMessage = null;
         _canRetry = false;
+    }
+
+    private async Task OpenPromptSettingsAsync()
+    {
+        var provider = _providers.FirstOrDefault(p => p.ProviderId == _currentProviderId)
+                       ?? _providers.FirstOrDefault();
+        if (provider == null)
+        {
+            Snackbar.Add("未找到可用 Provider", Severity.Warning);
+            return;
+        }
+
+        var session = _sessionStorage.GetSession(_sessionStorage.CurrentSessionId ?? string.Empty);
+        var hasStarted = session?.Messages.Count > 0;
+        var currentPrompt = hasStarted ? session?.SystemPrompt : provider.SystemPrompt;
+
+        var parameters = new DialogParameters
+        {
+            [nameof(ProviderSystemPromptDialog.ProviderName)] = provider.DisplayName,
+            [nameof(ProviderSystemPromptDialog.SystemPrompt)] = currentPrompt,
+            [nameof(ProviderSystemPromptDialog.IsReadOnly)] = hasStarted
+        };
+
+        var dialog = await DialogService.ShowAsync<ProviderSystemPromptDialog>(
+            "系统提示词",
+            parameters,
+            new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+
+        var result = await dialog.Result;
+        if (result.Canceled || hasStarted)
+        {
+            return;
+        }
+
+        var prompt = result.Data as string;
+        var updateResult = ProviderUIService.UpdateProviderSystemPrompt(provider.ProviderId, prompt);
+        if (updateResult.IsFailed(out var error))
+        {
+            Snackbar.Add($"更新提示词失败: {error.Message}", Severity.Error);
+            return;
+        }
+
+        if (session != null && session.Messages.Count == 0)
+        {
+            ChatUIService.UpdateSessionSystemPrompt(session.SessionId, prompt);
+        }
+
+        _providers = ChatUIService.GetProviders();
+        Snackbar.Add("系统提示词已更新", Severity.Success);
+        StateHasChanged();
     }
 
     public void Dispose()

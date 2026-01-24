@@ -80,8 +80,12 @@
     gap: 8px;
 }
 
-.session-title {
+.settings-button {
     color: var(--mud-palette-text-secondary);
+}
+
+.settings-button:hover {
+    background-color: var(--mud-palette-action-default-hover);
 }
 
 .ai-main ::deep .chat-container {

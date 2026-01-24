@@ -56,4 +56,16 @@ public class AIProviderUIService(IAIProviderFactory providerFactory)
             return Res.Fail($"Model test failed: {ex.Message}");
         }
     }
+
+    public Res UpdateProviderSystemPrompt(string providerId, string? systemPrompt)
+    {
+        var provider = providerFactory.GetProvider(providerId);
+        if (provider == null)
+        {
+            return Res.Fail($"Provider '{providerId}' not found");
+        }
+
+        provider.UpdateSystemPrompt(systemPrompt);
+        return Res.Ok();
+    }
 }

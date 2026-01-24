@@ -21,6 +21,11 @@ public abstract class AIProviderOptions
     public required string ApiKey { get; set; }
 
     /// <summary>
+    /// Provider 默认系统提示词
+    /// </summary>
+    public string? SystemPrompt { get; set; }
+
+    /// <summary>
     /// 支持的模型列表（为空则该 Provider 无效）
     /// </summary>
     public IList<string>? SupportedModels { get; set; }

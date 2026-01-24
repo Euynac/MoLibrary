@@ -28,11 +28,33 @@ public class AIChatService(IAIProviderFactory providerFactory, IOptions<ModuleAI
     {
         var session = new ChatSession(providerFactory, providerId)
         {
-            Title = title ?? "新对话",
-            SystemPrompt = systemPrompt ?? _options.DefaultSystemPrompt
+            Title = title ?? "新对话"
         };
+
+        var resolvedPrompt = systemPrompt;
+        if (string.IsNullOrWhiteSpace(resolvedPrompt))
+        {
+            var provider = providerFactory.GetProvider(session.ProviderId);
+            resolvedPrompt = provider?.Info.SystemPrompt ?? _options.DefaultSystemPrompt;
+        }
+
+        session.SystemPrompt = resolvedPrompt;
         _sessions[session.SessionId] = session;
         return session;
+    }
+
+    /// <summary>
+    /// 更新会话系统提示词
+    /// </summary>
+    public bool UpdateSessionSystemPrompt(string sessionId, string? systemPrompt)
+    {
+        if (_sessions.TryGetValue(sessionId, out var session))
+        {
+            session.SystemPrompt = systemPrompt;
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>

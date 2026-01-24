@@ -2,6 +2,7 @@
 @using MoLibrary.Tool.MoResponse
 @rendermode InteractiveServer
 @inject AIProviderUIService ProviderUIService
+@inject IDialogService DialogService
 @inject ISnackbar Snackbar
 
 <PageTitle>AI Provider 管理</PageTitle>
@@ -48,7 +49,8 @@
                                         TestedAt="@testState.TestedAt"
                                         OnTest="TestProviderAsync"
                                         OnTestModel="TestModelAsync"
-                                        ModelTestingProvider="IsModelTesting" />
+                                        ModelTestingProvider="IsModelTesting"
+                                        OnEditPrompt="OpenProviderPromptAsync" />
                 </MudItem>
             }
         </MudGrid>
@@ -197,6 +199,38 @@
 
         _modelTesting.Remove(key);
         StateHasChanged();
+    }
+
+    private async Task OpenProviderPromptAsync(AIProviderInfo provider)
+    {
+        var parameters = new DialogParameters
+        {
+            [nameof(ProviderSystemPromptDialog.ProviderName)] = provider.DisplayName,
+            [nameof(ProviderSystemPromptDialog.SystemPrompt)] = provider.SystemPrompt,
+            [nameof(ProviderSystemPromptDialog.IsReadOnly)] = false
+        };
+
+        var dialog = await DialogService.ShowAsync<ProviderSystemPromptDialog>(
+            "系统提示词",
+            parameters,
+            new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+
+        var result = await dialog.Result;
+        if (result.Canceled)
+        {
+            return;
+        }
+
+        var prompt = result.Data as string;
+        var updateResult = ProviderUIService.UpdateProviderSystemPrompt(provider.ProviderId, prompt);
+        if (updateResult.IsFailed(out var error))
+        {
+            Snackbar.Add($"更新提示词失败: {error.Message}", Severity.Error);
+            return;
+        }
+
+        Snackbar.Add("系统提示词已更新", Severity.Success);
+        await LoadProvidersAsync();
     }
 
     private static string GetModelKey(string providerId, string modelName)

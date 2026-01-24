@@ -11,13 +11,19 @@
                     <MudChip T="string" Size="Size.Small" Color="Color.Primary">默认</MudChip>
                 }
             </MudStack>
-            <MudButton Variant="Variant.Outlined" OnClick="HandleTest" Disabled="@IsTesting">
-                @if (IsTesting)
-                {
-                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-                }
-                测试
-            </MudButton>
+            <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                <MudIconButton Icon="@Icons.Material.Filled.Settings"
+                               Size="Size.Small"
+                               OnClick="HandleEditPrompt"
+                               Class="config-button" />
+                <MudButton Variant="Variant.Outlined" OnClick="HandleTest" Disabled="@IsTesting">
+                    @if (IsTesting)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    }
+                    测试
+                </MudButton>
+            </MudStack>
         </MudStack>
 
         <MudText Typo="Typo.caption" Color="Color.Secondary">@Provider.ProviderType</MudText>
@@ -78,6 +84,20 @@
             </MudItem>
         </MudGrid>
 
+        <div class="prompt-block">
+            <MudText Typo="Typo.caption" Color="Color.Secondary">默认系统提示词</MudText>
+            @if (string.IsNullOrWhiteSpace(Provider.SystemPrompt))
+            {
+                <MudText Typo="Typo.body2">—</MudText>
+            }
+            else
+            {
+                <MudTooltip Text="@Provider.SystemPrompt">
+                    <MudText Typo="Typo.body2" Class="prompt-preview">@GetPromptPreview(Provider.SystemPrompt)</MudText>
+                </MudTooltip>
+            }
+        </div>
+
         <MudExpansionPanels Class="provider-expand" Elevation="0" Dense="true">
             <MudExpansionPanel Text="模型详情" Icon="@Icons.Material.Filled.Category">
                 <ProviderModelTable Models="@Models"
@@ -98,10 +118,16 @@
     [Parameter] public EventCallback<string> OnTest { get; set; }
     [Parameter] public EventCallback<(string ProviderId, AIModelInfo Model)> OnTestModel { get; set; }
     [Parameter] public Func<string, string, bool>? ModelTestingProvider { get; set; }
+    [Parameter] public EventCallback<AIProviderInfo> OnEditPrompt { get; set; }
 
     private async Task HandleTest()
     {
         await OnTest.InvokeAsync(Provider.ProviderId);
+    }
+
+    private async Task HandleEditPrompt()
+    {
+        await OnEditPrompt.InvokeAsync(Provider);
     }
 
     private async Task HandleTestModel(AIModelInfo model)
@@ -157,5 +183,16 @@
     private static string FormatValue(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? "—" : value;
+    }
+
+    private static string GetPromptPreview(string? prompt)
+    {
+        if (string.IsNullOrWhiteSpace(prompt))
+        {
+            return "—";
+        }
+
+        var trimmed = prompt.Trim();
+        return trimmed.Length > 80 ? trimmed[..80] + "..." : trimmed;
     }
 }

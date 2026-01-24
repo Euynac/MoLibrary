@@ -43,4 +43,10 @@ public interface IAIProvider : IDisposable
     /// <param name="ct">取消令牌</param>
     /// <returns>可用模型列表</returns>
     Task<Res<IReadOnlyList<string>>> GetAvailableModelsAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// 更新 Provider 默认系统提示词
+    /// </summary>
+    /// <param name="systemPrompt">系统提示词</param>
+    void UpdateSystemPrompt(string? systemPrompt);
 }

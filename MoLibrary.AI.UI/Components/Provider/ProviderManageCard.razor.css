@@ -12,12 +12,30 @@
     margin-top: 4px;
 }
 
+.config-button {
+    color: var(--mud-palette-text-secondary);
+}
+
+.config-button:hover {
+    background-color: var(--mud-palette-action-default-hover);
+}
+
 .provider-warning {
     margin-top: 8px;
 }
 
 .test-message {
     margin-top: 4px;
+}
+
+.prompt-block {
+    margin-top: 12px;
+}
+
+.prompt-preview {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .provider-expand {
