@@ -1,8 +1,9 @@
 # MoLibrary
 
 <p align="center">
-  <img src="logo.svg" alt="MoLibrary Logo" width="200" />
+  <img src="logo.jpg" alt="MoLibrary Logo" width="200" />
 </p>
+
 
 <p align="center">
   <a href="https://github.com/Euynac/MoLibrary.Docs/actions"><img src="https://github.com/Euynac/MoLibrary.Docs/actions/workflows/static.yml/badge.svg" alt="Build Status"></a>
