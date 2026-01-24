@@ -26,8 +26,35 @@
             <MudText Typo="Typo.body2" Class="provider-description">@Provider.Description</MudText>
         }
 
+        @if (!Provider.IsValid)
+        {
+            <MudAlert Severity="Severity.Warning" Dense="true" Class="provider-warning">
+                <MudStack Spacing="1">
+                    <MudText Typo="Typo.caption">模型配置不完整，请补充模型信息。</MudText>
+                    @if (Provider.InvalidModels is { Count: > 0 })
+                    {
+                        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                            <MudText Typo="Typo.caption">缺失模型:</MudText>
+                            @foreach (var model in Provider.InvalidModels)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Warning">@model</MudChip>
+                            }
+                        </MudStack>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.caption">未配置 SupportedModels。</MudText>
+                    }
+                </MudStack>
+            </MudAlert>
+        }
+
         <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="mt-2">
             <MudChip T="string" Size="Size.Small" Color="@GetTestStatusColor()">@GetTestStatusText()</MudChip>
+            @if (!Provider.IsValid)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Warning">无效</MudChip>
+            }
             @if (TestedAt.HasValue)
             {
                 <MudText Typo="Typo.caption" Color="Color.Secondary">@TestedAt.Value.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
@@ -74,11 +101,6 @@
 
     private async Task HandleTest()
     {
-        if (Provider.ProviderId is null)
-        {
-            return;
-        }
-
         await OnTest.InvokeAsync(Provider.ProviderId);
     }
 

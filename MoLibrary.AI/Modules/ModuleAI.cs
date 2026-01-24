@@ -85,7 +85,7 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
     /// <returns>当前引导器实例</returns>
     public ModuleAIGuide AddOpenAIProvider(Action<OpenAIProviderOptions> configure)
     {
-        var options = new OpenAIProviderOptions { ApiKey = "", DefaultModel = "gpt-4o" };
+        var options = new OpenAIProviderOptions { ApiKey = "", SupportedModels = [] };
         configure(options);
 
         ConfigureApplicationBuilder(context =>
@@ -94,7 +94,7 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
             var modelCatalog = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIModelCatalog>();
             var provider = new OpenAIProvider(options, modelCatalog);
             manager.RegisterProvider(provider);
-        }, secondKey: $"openai-{options.ProviderId ?? options.DefaultModel ?? "default"}", order: EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
+        }, secondKey: $"openai-{options.ProviderId ?? options.SupportedModels?.FirstOrDefault() ?? "invalid"}", order: EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
 
         return this;
     }
@@ -106,7 +106,7 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
     /// <returns>当前引导器实例</returns>
     public ModuleAIGuide AddAnthropicProvider(Action<AnthropicProviderOptions> configure)
     {
-        var options = new AnthropicProviderOptions { ApiKey = "", DefaultModel = "claude-sonnet-4-20250514" };
+        var options = new AnthropicProviderOptions { ApiKey = "", SupportedModels = [] };
         configure(options);
 
         ConfigureApplicationBuilder(context =>
@@ -115,7 +115,7 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
             var modelCatalog = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIModelCatalog>();
             var provider = new AnthropicProvider(options, modelCatalog);
             manager.RegisterProvider(provider);
-        }, secondKey: $"anthropic-{options.ProviderId ?? options.DefaultModel ?? "default"}", order: EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
+        }, secondKey: $"anthropic-{options.ProviderId ?? options.SupportedModels?.FirstOrDefault() ?? "invalid"}", order: EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
 
         return this;
     }

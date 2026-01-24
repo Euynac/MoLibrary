@@ -21,6 +21,8 @@ public class OpenAIProvider : IAIProvider
     private readonly OpenAIClient _client;
     private readonly IReadOnlyList<AIModelInfo> _models;
     private readonly string? _defaultModel;
+    private readonly bool _isValid;
+    private readonly IReadOnlyList<string> _invalidModels;
     private readonly ConcurrentDictionary<string, IChatClient> _chatClients = new(StringComparer.OrdinalIgnoreCase);
     private bool _disposed;
 
@@ -36,14 +38,11 @@ public class OpenAIProvider : IAIProvider
 
         _client = new OpenAIClient(new ApiKeyCredential(options.ApiKey), clientOptions);
 
-        var models = AIProviderModelResolver.ResolveModels(EAIProviderType.OpenAI, modelCatalog, options).ToList();
-        _defaultModel = AIProviderModelResolver.ResolveDefaultModel(options, models);
-        if (models.Count == 0 && !string.IsNullOrWhiteSpace(_defaultModel))
-        {
-            models.Add(new LLMModelInfo { ModelName = _defaultModel });
-        }
-
-        _models = models;
+        var resolution = AIProviderModelResolver.ResolveModels(EAIProviderType.OpenAI, modelCatalog, options);
+        _models = resolution.Models;
+        _defaultModel = resolution.DefaultModel;
+        _isValid = resolution.IsValid;
+        _invalidModels = resolution.MissingModels;
     }
 
     /// <inheritdoc />
@@ -61,6 +60,8 @@ public class OpenAIProvider : IAIProvider
         ProviderType = "OpenAI",
         DefaultModel = _defaultModel,
         SupportedModels = _models,
+        IsValid = _isValid,
+        InvalidModels = _invalidModels,
         IsDefault = _options.IsDefault,
         Icon = "openai"
     };

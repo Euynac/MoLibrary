@@ -5,41 +5,54 @@ namespace MoLibrary.AI.Providers;
 
 internal static class AIProviderModelResolver
 {
-    public static IReadOnlyList<AIModelInfo> ResolveModels(
+    public static ProviderModelResolution ResolveModels(
         EAIProviderType providerType,
         AIModelCatalog catalog,
         AIProviderOptions options)
     {
-        if (options.SupportedModels is { Count: > 0 })
-        {
-            var result = new List<AIModelInfo>();
-            foreach (var modelName in options.SupportedModels)
-            {
-                if (string.IsNullOrWhiteSpace(modelName))
-                {
-                    continue;
-                }
+        var supportedModels = options.SupportedModels
+            ?.Where(modelName => !string.IsNullOrWhiteSpace(modelName))
+            .Select(modelName => modelName!.Trim())
+            .ToList()
+            ?? [];
 
-                var model = catalog.GetModel(providerType, modelName) ?? new LLMModelInfo
-                {
-                    ModelName = modelName
-                };
-                result.Add(model);
+        if (supportedModels.Count == 0)
+        {
+            return new ProviderModelResolution(
+                [],
+                [],
+                null,
+                false);
+        }
+
+        var result = new List<AIModelInfo>();
+        var missingModels = new List<string>();
+
+        foreach (var modelName in supportedModels)
+        {
+            var model = catalog.GetModel(providerType, modelName);
+            if (model == null)
+            {
+                missingModels.Add(modelName);
+                continue;
             }
 
-            return result;
+            result.Add(model);
         }
 
-        return catalog.GetModels(providerType);
-    }
+        var defaultModel = supportedModels.FirstOrDefault();
+        var isValid = missingModels.Count == 0 && result.Count > 0;
 
-    public static string? ResolveDefaultModel(AIProviderOptions options, IReadOnlyList<AIModelInfo> models)
-    {
-        if (!string.IsNullOrWhiteSpace(options.DefaultModel))
-        {
-            return options.DefaultModel;
-        }
-
-        return models.FirstOrDefault()?.ModelName;
+        return new ProviderModelResolution(
+            result,
+            missingModels,
+            defaultModel,
+            isValid);
     }
 }
+
+internal sealed record ProviderModelResolution(
+    IReadOnlyList<AIModelInfo> Models,
+    IReadOnlyList<string> MissingModels,
+    string? DefaultModel,
+    bool IsValid);

@@ -1,5 +1,3 @@
-using System;
-
 namespace MoLibrary.AI.Providers;
 
 /// <summary>
@@ -23,12 +21,7 @@ public abstract class AIProviderOptions
     public required string ApiKey { get; set; }
 
     /// <summary>
-    /// 默认使用的模型
-    /// </summary>
-    public string? DefaultModel { get; set; }
-
-    /// <summary>
-    /// 支持的模型列表（为空则使用预留模型）
+    /// 支持的模型列表（为空则该 Provider 无效）
     /// </summary>
     public IList<string>? SupportedModels { get; set; }
 

@@ -36,6 +36,16 @@ public class AIProviderInfo
     public IReadOnlyList<AIModelInfo>? SupportedModels { get; init; }
 
     /// <summary>
+    /// Provider 是否有效（模型配置完整）
+    /// </summary>
+    public bool IsValid { get; init; } = true;
+
+    /// <summary>
+    /// 缺失的模型名称
+    /// </summary>
+    public IReadOnlyList<string>? InvalidModels { get; init; }
+
+    /// <summary>
     /// 是否是默认 Provider
     /// </summary>
     public bool IsDefault { get; init; }

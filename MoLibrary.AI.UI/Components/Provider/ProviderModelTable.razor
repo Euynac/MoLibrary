@@ -29,29 +29,38 @@
             </MudTd>
             <MudTd DataLabel="能力">
                 <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
-                    @if (context is LLMModelInfo llm)
+                    @switch (context)
                     {
-                        @if (llm.SupportsImage)
+                        case LLMModelInfo llm:
                         {
-                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Icon="@Icons.Material.Filled.Image">图像</MudChip>
+                            if (llm.SupportsImage)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Icon="@Icons.Material.Filled.Image">图像</MudChip>
+                            }
+                            if (llm.SupportsReasoning)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Icon="@Icons.Material.Filled.Psychology">推理</MudChip>
+                            }
+
+                            break;
                         }
-                        @if (llm.SupportsReasoning)
+                        case ImageModelInfo image:
                         {
-                            <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Icon="@Icons.Material.Filled.Psychology">推理</MudChip>
+                            if (image.SupportsEditing)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Icon="@Icons.Material.Filled.Edit">编辑</MudChip>
+                            }
+
+                            break;
                         }
-                    }
-                    else if (context is ImageModelInfo image)
-                    {
-                        if (image.SupportsEditing)
+                        case TextToSpeechModelInfo tts:
                         {
-                            <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Icon="@Icons.Material.Filled.Edit">编辑</MudChip>
-                        }
-                    }
-                    else if (context is TextToSpeechModelInfo tts)
-                    {
-                        if (tts.SupportsStreaming)
-                        {
-                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Icon="@Icons.Material.Filled.Stream">流式</MudChip>
+                            if (tts.SupportsStreaming)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Icon="@Icons.Material.Filled.Stream">流式</MudChip>
+                            }
+
+                            break;
                         }
                     }
                 </MudStack>
