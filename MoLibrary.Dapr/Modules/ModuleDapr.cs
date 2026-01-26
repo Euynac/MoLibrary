@@ -1,15 +1,11 @@
-using System.Net;
 using System.Text.RegularExpressions;
 using Dapr.Client;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
-using MoLibrary.Tool.Extensions;
-using MoLibrary.Tool.MoResponse;
 
 namespace MoLibrary.Dapr.Modules;
 
@@ -48,37 +44,6 @@ public partial class ModuleDapr(ModuleDaprOption option) : MoModule<ModuleDapr, 
         UseEndpoints(app, endpoints =>
         {
             var tagName = option.GetApiGroupName();
-
-            endpoints.Map("/dapr/invocation/{*rest}", async (string rest, HttpResponse response, HttpContext context) =>
-            {
-                var daprClient = context.RequestServices.GetRequiredService<DaprClient>();
-                var req = context.Request;
-                var regex = DaprInvocationRegex();
-                var match = regex.Match(req.GetDisplayUrl());
-                if (match.Success)
-                {
-                    var appid = match.Groups[1].Value;
-                    var method = match.Groups[2].Value;
-                    var data = await req.Body.ReadAsAsStringWithoutChangePosAsync();
-                    var reqToDapr = daprClient.CreateInvokeMethodRequest(HttpMethod.Parse(req.Method), appid, method, [], data);
-                    var res = await daprClient.InvokeMethodWithResponseAsync(reqToDapr);
-                    if (!res.IsSuccessStatusCode && res.StatusCode is not HttpStatusCode.BadRequest and HttpStatusCode.InternalServerError)
-                    {
-                        await context.Response.WriteAsJsonAsync(Res.CreateError(res, res.ToString()));
-                        return;
-                    }
-                    response.ContentType = "application/json; charset=utf-8";
-                    await context.Response.WriteAsync(await res.Content.ReadAsStringAsync());
-                    return;
-                }
-
-                await context.Response.WriteAsJsonAsync(Res.Fail("调用方式错误"));
-            })
-            .WithName("Dapr服务间调用")
-            .WithTags(tagName)
-            .WithSummary("Dapr服务间调用")
-            .WithDescription("Dapr服务间调用(反向代理)");
-
             endpoints.MapGet("/dapr/metadata", async (HttpResponse response, HttpContext context) =>
             {
                 var daprClient = context.RequestServices.GetRequiredService<DaprClient>();
