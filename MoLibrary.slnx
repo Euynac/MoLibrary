@@ -27,6 +27,7 @@
   <Project Path="MoLibrary.Framework.Generators/MoLibrary.Framework.Generators.csproj" />
   <Project Path="MoLibrary.Framework.UI/MoLibrary.Framework.UI.csproj" />
   <Project Path="MoLibrary.Framework/MoLibrary.Framework.csproj" />
+  <Project Path="MoLibrary.Generators.AutoController.Tool/MoLibrary.Generators.AutoController.Tool.csproj" />
   <Project Path="MoLibrary.Generators.AutoController/MoLibrary.Generators.AutoController.csproj" />
   <Project Path="MoLibrary.JobScheduler.EfCore/MoLibrary.JobScheduler.EfCore.csproj" />
   <Project Path="MoLibrary.JobScheduler.UI/MoLibrary.JobScheduler.UI.csproj" />
