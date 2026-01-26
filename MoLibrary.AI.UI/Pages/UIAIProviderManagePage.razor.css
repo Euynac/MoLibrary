@@ -1,0 +1,22 @@
+.ai-provider-page {
+    min-height: 100%;
+}
+
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.provider-grid {
+    margin-top: 8px;
+}
+
+.loading-area {
+    display: flex;
+    justify-content: center;
+    padding: 24px;
+}

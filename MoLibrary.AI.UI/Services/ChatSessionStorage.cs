@@ -137,6 +137,11 @@ public class ChatSessionInfo
     public string? ModelName { get; set; }
 
     /// <summary>
+    /// 系统提示词
+    /// </summary>
+    public string? SystemPrompt { get; set; }
+
+    /// <summary>
     /// 创建时间
     /// </summary>
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;

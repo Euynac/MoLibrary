@@ -37,14 +37,14 @@ Modules use a unified registration pattern:
 
 ```csharp
 // Basic registration with options
-builder.ConfigModule{ModuleName}(options =>
+Mo.Add{ModuleName}(options =>
 {
     options.Property1 = value1;
     options.Property2 = value2;
 });
 
 // With guide for fluent configuration
-builder.ConfigModule{ModuleName}()
+Mo.Add{ModuleName}()
     .GuideMethod1()
     .GuideMethod2();
 ```

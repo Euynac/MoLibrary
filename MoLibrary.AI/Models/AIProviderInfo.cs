@@ -31,19 +31,24 @@ public class AIProviderInfo
     public string? DefaultModel { get; init; }
 
     /// <summary>
-    /// 支持的模型列表
+    /// 默认系统提示词
     /// </summary>
-    public IReadOnlyList<string>? SupportedModels { get; init; }
+    public string? SystemPrompt { get; init; }
+    
+    /// <summary>
+    /// 模型元数据信息
+    /// </summary>
+    public IReadOnlyList<AIModelInfo>? SupportedModels { get; init; }
 
     /// <summary>
-    /// 是否支持流式响应
+    /// Provider 是否有效（模型配置完整）
     /// </summary>
-    public bool SupportsStreaming { get; init; } = true;
+    public bool IsValid { get; init; } = true;
 
     /// <summary>
-    /// 是否支持函数调用
+    /// 缺失的模型名称
     /// </summary>
-    public bool SupportsFunctionCalling { get; init; }
+    public IReadOnlyList<string>? InvalidModels { get; init; }
 
     /// <summary>
     /// 是否是默认 Provider

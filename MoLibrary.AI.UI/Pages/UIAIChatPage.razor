@@ -1,43 +1,43 @@
 @page "/ai-chat"
 @rendermode InteractiveServer
+@using MoLibrary.Tool.MoResponse
 @implements IDisposable
 @inject AIChatUIService ChatUIService
+@inject AIProviderUIService ProviderUIService
 @inject IOptions<ModuleAIUIOption> Options
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 
-<div class="ai-chat-page">
+<div class="ai-chat-shell">
     @if (_options.ShowSessionList)
     {
-        <div class="sidebar">
-            @if (_options.ShowProviderSelector)
-            {
-                <ProviderSelector
-                    Providers="@_providers"
-                    SelectedProviderId="@_currentProviderId"
-                    SelectedProviderIdChanged="@HandleProviderChanged" />
-                <MudDivider />
-            }
-
+        <aside class="ai-sidebar">
             <SessionList
                 Sessions="@_sessionStorage.Sessions"
                 CurrentSessionId="@_sessionStorage.CurrentSessionId"
                 OnNewSession="@HandleNewSession"
                 OnSelectSession="@HandleSelectSession"
                 OnDeleteSession="@HandleDeleteSession" />
-        </div>
+        </aside>
     }
 
-    <div class="main-content">
-        <div class="chat-header">
-            <MudText Typo="Typo.h6">@_currentSessionTitle</MudText>
-            @if (!_options.ShowSessionList && _options.ShowProviderSelector)
-            {
-                <ProviderSelector
-                    Providers="@_providers"
-                    SelectedProviderId="@_currentProviderId"
-                    SelectedProviderIdChanged="@HandleProviderChanged" />
-            }
-        </div>
+    <main class="ai-main">
+        <header class="ai-topbar">
+            <div class="topbar-left">
+                @if (_options.ShowProviderSelector)
+                {
+                    <ProviderSelector
+                        Providers="@_providers"
+                        SelectedProviderId="@_currentProviderId"
+                        SelectedProviderIdChanged="@HandleProviderChanged" />
+                }
+            </div>
+            <div class="topbar-right">
+                <MudIconButton Icon="@Icons.Material.Filled.Settings"
+                               Class="settings-button"
+                               OnClick="OpenPromptSettingsAsync" />
+            </div>
+        </header>
 
         <ChatContainer
             Messages="@_currentMessages"
@@ -46,6 +46,7 @@
             EnableMarkdown="@_options.EnableMarkdown"
             EnableAutoScroll="@_options.EnableAutoScroll"
             ProviderName="@_currentProviderName"
+            ModelName="@_currentModelName"
             ShowProviderInfo="@(!_options.ShowProviderSelector)"
             ErrorMessage="@_errorMessage"
             ShowRetry="@_canRetry"
@@ -58,7 +59,7 @@
             OnErrorDismissed="@HandleErrorDismissed"
             OnEditMessage="@HandleEditMessage"
             OnRetryMessage="@HandleRetryMessage" />
-    </div>
+    </main>
 </div>
 
 @code {
@@ -76,6 +77,7 @@
     private string? _errorMessage;
     private bool _canRetry;
     private string? _lastMessage;
+    private string? _currentModelName;
     private CancellationTokenSource? _cts;
     private CancellationToken _cancellationToken;
 
@@ -89,6 +91,7 @@
         var defaultProvider = ChatUIService.GetDefaultProvider();
         _currentProviderId = defaultProvider?.ProviderId;
         _currentProviderName = defaultProvider?.DisplayName ?? string.Empty;
+        _currentModelName = defaultProvider?.DefaultModel;
 
         // Subscribe to session change events
         _sessionStorage.CurrentSessionChanged += OnCurrentSessionChanged;
@@ -138,6 +141,7 @@
             // Create new list reference to trigger Blazor change detection
             _currentMessages = currentSession.Messages.ToList();
             _currentProviderId = currentSession.ProviderId ?? _currentProviderId;
+            _currentModelName = currentSession.ModelName ?? _currentModelName;
         }
         else
         {
@@ -151,6 +155,7 @@
         _currentProviderId = providerId;
         var provider = _providers.FirstOrDefault(p => p.ProviderId == providerId);
         _currentProviderName = provider?.DisplayName ?? string.Empty;
+        _currentModelName = provider?.DefaultModel;
 
         // Update current session provider
         var currentSession = _sessionStorage.GetSession(_sessionStorage.CurrentSessionId ?? string.Empty);
@@ -355,10 +360,61 @@
         _canRetry = false;
     }
 
+    private async Task OpenPromptSettingsAsync()
+    {
+        var provider = _providers.FirstOrDefault(p => p.ProviderId == _currentProviderId)
+                       ?? _providers.FirstOrDefault();
+        if (provider == null)
+        {
+            Snackbar.Add("未找到可用 Provider", Severity.Warning);
+            return;
+        }
+
+        var session = _sessionStorage.GetSession(_sessionStorage.CurrentSessionId ?? string.Empty);
+        var hasStarted = session?.Messages.Count > 0;
+        var currentPrompt = hasStarted ? session?.SystemPrompt : provider.SystemPrompt;
+
+        var parameters = new DialogParameters
+        {
+            [nameof(ProviderSystemPromptDialog.ProviderName)] = provider.DisplayName,
+            [nameof(ProviderSystemPromptDialog.SystemPrompt)] = currentPrompt,
+            [nameof(ProviderSystemPromptDialog.IsReadOnly)] = hasStarted
+        };
+
+        var dialog = await DialogService.ShowAsync<ProviderSystemPromptDialog>(
+            "系统提示词",
+            parameters,
+            new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+
+        var result = await dialog.Result;
+        if (result.Canceled || hasStarted)
+        {
+            return;
+        }
+
+        var prompt = result.Data as string;
+        var updateResult = ProviderUIService.UpdateProviderSystemPrompt(provider.ProviderId, prompt);
+        if (updateResult.IsFailed(out var error))
+        {
+            Snackbar.Add($"更新提示词失败: {error.Message}", Severity.Error);
+            return;
+        }
+
+        if (session != null && session.Messages.Count == 0)
+        {
+            ChatUIService.UpdateSessionSystemPrompt(session.SessionId, prompt);
+        }
+
+        _providers = ChatUIService.GetProviders();
+        Snackbar.Add("系统提示词已更新", Severity.Success);
+        StateHasChanged();
+    }
+
     public void Dispose()
     {
         _sessionStorage.CurrentSessionChanged -= OnCurrentSessionChanged;
         _sessionStorage.SessionsChanged -= OnSessionsChanged;
         _cts?.Dispose();
     }
+
 }

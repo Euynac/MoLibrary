@@ -34,7 +34,7 @@ class ModuleDependencyGraph {
             {
                 linkDistance: 120,
                 chargeStrength: -400,
-                keepFixed: true // 保持拖拽后的位置
+                keepFixed: false // 拖拽结束后释放节点，使其参与力模拟
             }
         );
         

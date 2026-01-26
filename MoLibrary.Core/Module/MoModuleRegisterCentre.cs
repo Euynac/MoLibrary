@@ -33,10 +33,10 @@ public static class MoModuleRegisterCentre
         WebApplicationBuilderExtensions.BeforeBuild += RegisterServices;
 
         // 注册BeforeUseRouting事件处理程序，用于在路由中间件应用前执行操作
-        WebApplicationBuilderExtensions.BeforeUseRouting += app => ConfigApplicationPipeline(app, ModuleOrder.MiddlewareUseRouting, false);
+        WebApplicationBuilderExtensions.BeforeUseRouting += app => ConfigApplicationPipeline(app, ModuleOrder.MIDDLEWARE_USE_ROUTING, false);
 
         // 注册AfterUseRouting事件处理程序，用于在路由中间件应用后执行操作
-        WebApplicationBuilderExtensions.AfterUseRouting += app => ConfigApplicationPipeline(app, ModuleOrder.MiddlewareUseRouting, true);
+        WebApplicationBuilderExtensions.AfterUseRouting += app => ConfigApplicationPipeline(app, ModuleOrder.MIDDLEWARE_USE_ROUTING, true);
 
         // 注册BeforeUseEndpoints事件处理程序，用于在Endpoints配置前执行操作
         WebApplicationBuilderExtensions.BeginUseEndpoints += ConfigEndpoints;

@@ -3,5 +3,5 @@
     flex-direction: column;
     height: 100%;
     overflow: hidden;
-    background-color: var(--mud-palette-background);
+    background-color: transparent;
 }

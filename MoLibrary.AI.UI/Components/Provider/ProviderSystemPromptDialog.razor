@@ -1,0 +1,62 @@
+@using MudBlazor
+
+<MudDialog Class="prompt-dialog">
+    <DialogContent>
+        <MudText Typo="Typo.h6">系统提示词设置</MudText>
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="prompt-subtitle">
+            @ProviderName
+        </MudText>
+
+        <MudTextField T="string"
+                      @bind-Value="_prompt"
+                      Variant="Variant.Outlined"
+                      Lines="6"
+                      AutoGrow="true"
+                      MaxLines="12"
+                      Disabled="@IsReadOnly"
+                      Class="prompt-input" />
+
+        @if (IsReadOnly)
+        {
+            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                当前会话已开始，系统提示词无法修改。
+            </MudText>
+        }
+        else
+        {
+            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                修改后仅对新的会话生效。
+            </MudText>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="Cancel">关闭</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Save" Disabled="@IsReadOnly">
+            保存
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = null!;
+    [Parameter] public string ProviderName { get; set; } = "Provider";
+    [Parameter] public string? SystemPrompt { get; set; }
+    [Parameter] public bool IsReadOnly { get; set; }
+
+    private string _prompt = string.Empty;
+
+    protected override void OnParametersSet()
+    {
+        _prompt = SystemPrompt ?? string.Empty;
+    }
+
+    private void Save()
+    {
+        Dialog.Close(DialogResult.Ok(_prompt));
+    }
+
+    private void Cancel()
+    {
+        Dialog.Cancel();
+    }
+}

@@ -1,0 +1,184 @@
+@using MoLibrary.AI.Models
+
+<div class="model-table">
+    <MudTable T="AIModelInfo"
+              Items="@Models"
+              Dense="true"
+              Hover="true"
+              Breakpoint="Breakpoint.Sm">
+        <HeaderContent>
+            <MudTh>模型</MudTh>
+            <MudTh>类型</MudTh>
+            <MudTh>能力</MudTh>
+            <MudTh>费用</MudTh>
+            <MudTh>附加</MudTh>
+            <MudTh Class="col-action">操作</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="模型">
+                <MudStack Spacing="0">
+                    <MudText Typo="Typo.body2">@context.ModelName</MudText>
+                    @if (!string.IsNullOrWhiteSpace(context.Description))
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@context.Description</MudText>
+                    }
+                </MudStack>
+            </MudTd>
+            <MudTd DataLabel="类型">
+                <MudText Typo="Typo.body2">@GetModelType(context)</MudText>
+            </MudTd>
+            <MudTd DataLabel="能力">
+                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                    @switch (context)
+                    {
+                        case LLMModelInfo llm:
+                        {
+                            if (llm.SupportsImage)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Icon="@Icons.Material.Filled.Image">图像</MudChip>
+                            }
+                            if (llm.SupportsReasoning)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Icon="@Icons.Material.Filled.Psychology">推理</MudChip>
+                            }
+
+                            break;
+                        }
+                        case ImageModelInfo image:
+                        {
+                            if (image.SupportsEditing)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Icon="@Icons.Material.Filled.Edit">编辑</MudChip>
+                            }
+
+                            break;
+                        }
+                        case TextToSpeechModelInfo tts:
+                        {
+                            if (tts.SupportsStreaming)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Icon="@Icons.Material.Filled.Stream">流式</MudChip>
+                            }
+
+                            break;
+                        }
+                    }
+                </MudStack>
+            </MudTd>
+            <MudTd DataLabel="费用">
+                @if (context is LLMModelInfo llmCost)
+                {
+                    var isFree = llmCost.InputCostPerMillionTokens <= 0
+                        && llmCost.OutputCostPerMillionTokens <= 0
+                        && llmCost.CachedInputCostPerMillionTokens <= 0;
+
+                    if (isFree)
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Success">免费</MudText>
+                    }
+                    else
+                    {
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.caption">@FormatCostLine("输入", llmCost.InputCostPerMillionTokens)</MudText>
+                            <MudText Typo="Typo.caption">@FormatCostLine("输出", llmCost.OutputCostPerMillionTokens)</MudText>
+                            <MudText Typo="Typo.caption">@FormatCostLine("缓存", llmCost.CachedInputCostPerMillionTokens)</MudText>
+                        </MudStack>
+                    }
+                }
+                else
+                {
+                    <MudText Typo="Typo.caption">—</MudText>
+                }
+            </MudTd>
+            <MudTd DataLabel="附加">
+                @if (context is LLMModelInfo llmMeta)
+                {
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.caption">上下文: @FormatOptional(llmMeta.ContextWindow)</MudText>
+                        <MudText Typo="Typo.caption">最大输出: @FormatOptional(llmMeta.MaxOutputTokens)</MudText>
+                    </MudStack>
+                }
+                else if (context is ImageModelInfo imageMeta)
+                {
+                    <MudText Typo="Typo.caption">最大尺寸: @FormatOptional(imageMeta.MaxImageSize)</MudText>
+                }
+                else if (context is EmbeddingModelInfo embedding)
+                {
+                    <MudText Typo="Typo.caption">维度: @FormatOptional(embedding.Dimensions)</MudText>
+                }
+                else if (context is TextToSpeechModelInfo ttsMeta)
+                {
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.caption">音色: @FormatVoiceSummary(ttsMeta.Voices)</MudText>
+                    </MudStack>
+                }
+            </MudTd>
+            <MudTd DataLabel="操作" Class="col-action">
+                @if (context is LLMModelInfo)
+                {
+                    var isTesting = IsModelTesting?.Invoke(context) ?? false;
+                    <MudButton Variant="Variant.Outlined"
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.PlayCircle"
+                               Disabled="@isTesting"
+                               OnClick="() => OnTestModel.InvokeAsync(context)">
+                        @(isTesting ? "测试中" : "测试")
+                    </MudButton>
+                }
+                else
+                {
+                    <MudText Typo="Typo.caption">—</MudText>
+                }
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="pa-4">
+                <MudIcon Icon="@Icons.Material.Filled.SearchOff" Size="Size.Medium" Color="Color.Secondary" />
+                <MudText Typo="Typo.body2" Color="Color.Secondary">未配置模型</MudText>
+            </MudStack>
+        </NoRecordsContent>
+    </MudTable>
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<AIModelInfo> Models { get; set; } = [];
+    [Parameter] public EventCallback<AIModelInfo> OnTestModel { get; set; }
+    [Parameter] public Func<AIModelInfo, bool>? IsModelTesting { get; set; }
+
+    private static string GetModelType(AIModelInfo model)
+    {
+        return model switch
+        {
+            LLMModelInfo => "LLM",
+            ImageModelInfo => "Image",
+            EmbeddingModelInfo => "Embedding",
+            TextToSpeechModelInfo => "TTS",
+            _ => "Unknown"
+        };
+    }
+
+    private static string FormatCostLine(string label, decimal value)
+    {
+        return $"{label}: {FormatCostValue(value)} / 1M tokens";
+    }
+
+    private static string FormatCostValue(decimal value)
+    {
+        return $"${value:0.####}";
+    }
+
+    private static string FormatOptional(int? value)
+    {
+        return value?.ToString() ?? "—";
+    }
+
+    private static string FormatVoiceSummary(IReadOnlyList<string>? voices)
+    {
+        if (voices == null || voices.Count == 0)
+        {
+            return "—";
+        }
+
+        return $"{voices.Count} 种";
+    }
+}

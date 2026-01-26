@@ -1,0 +1,14 @@
+.model-table ::deep .mud-table {
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+}
+
+.model-table ::deep .mud-table-container {
+    background-color: var(--mud-palette-surface);
+}
+
+.model-table ::deep .col-action {
+    width: 120px;
+    min-width: 120px;
+    text-align: center;
+}

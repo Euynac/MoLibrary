@@ -21,9 +21,14 @@ public abstract class AIProviderOptions
     public required string ApiKey { get; set; }
 
     /// <summary>
-    /// 默认使用的模型
+    /// Provider 默认系统提示词
     /// </summary>
-    public required string Model { get; set; }
+    public string? SystemPrompt { get; set; }
+
+    /// <summary>
+    /// 支持的模型列表（为空则该 Provider 无效）
+    /// </summary>
+    public IList<string>? SupportedModels { get; set; }
 
     /// <summary>
     /// API 基础 URL（可选，用于自定义端点）

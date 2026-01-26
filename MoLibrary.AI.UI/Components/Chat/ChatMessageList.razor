@@ -4,10 +4,32 @@
 <div class="message-list" @ref="_messageListRef">
     @if (Messages.Count == 0 && StreamingContent == null)
     {
-        <div class="empty-state">
-            <MudIcon Icon="@Icons.Material.Filled.Chat" Size="Size.Large" Color="Color.Default" />
-            <MudText Typo="Typo.h6" Color="Color.Default">Start a conversation</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Default">Send a message to the AI assistant</MudText>
+        <div class="welcome-panel">
+            <div class="welcome-icon">
+                <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Size="Size.Large" Color="Color.Primary" />
+            </div>
+            <MudText Typo="Typo.h5">今天想聊点什么？</MudText>
+            <MudText Typo="Typo.body2" Class="welcome-subtitle">
+                支持多个 Provider，直接提问代码、写作或分析任务。
+            </MudText>
+            <div class="welcome-grid">
+                <MudPaper Class="welcome-card" Elevation="0">
+                    <MudText Typo="Typo.subtitle2">优化前端交互</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">给出按钮与动效建议</MudText>
+                </MudPaper>
+                <MudPaper Class="welcome-card" Elevation="0">
+                    <MudText Typo="Typo.subtitle2">生成接口文档</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">根据 API 设计输出说明</MudText>
+                </MudPaper>
+                <MudPaper Class="welcome-card" Elevation="0">
+                    <MudText Typo="Typo.subtitle2">分析一段错误</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">定位日志与异常原因</MudText>
+                </MudPaper>
+                <MudPaper Class="welcome-card" Elevation="0">
+                    <MudText Typo="Typo.subtitle2">写一段脚本</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">自动化常见开发任务</MudText>
+                </MudPaper>
+            </div>
         </div>
     }
     else

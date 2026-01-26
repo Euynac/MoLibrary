@@ -9,11 +9,11 @@ public enum EMoModuleOrder
 
 public enum EMoModuleApplicationMiddlewaresOrder
 {
-    BeforeUseRouting = -2,
-    AfterUseRouting = 0,
+    BeforeUseRouting = -50,
+    AfterUseRouting = 50,
 }
 
 public static class ModuleOrder
 {
-    public static int MiddlewareUseRouting = -1;
+    public const int MIDDLEWARE_USE_ROUTING = -1;
 }

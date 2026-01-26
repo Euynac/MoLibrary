@@ -49,14 +49,15 @@ public class AIChatUIService(
         var session = chatService.CreateSession(
             providerId,
             title,
-            _options.DefaultSystemPrompt);
+            null);
 
         var sessionInfo = new ChatSessionInfo
         {
             SessionId = session.SessionId,
             Title = session.Title,
             ProviderId = session.ProviderId,
-            ModelName = session.ModelName
+            ModelName = session.ModelName,
+            SystemPrompt = session.SystemPrompt
         };
 
         sessionStorage.AddSession(sessionInfo);
@@ -356,6 +357,26 @@ public class AIChatUIService(
     }
 
     /// <summary>
+    /// 更新会话系统提示词
+    /// </summary>
+    public bool UpdateSessionSystemPrompt(string sessionId, string? systemPrompt)
+    {
+        if (!chatService.UpdateSessionSystemPrompt(sessionId, systemPrompt))
+        {
+            return false;
+        }
+
+        var session = sessionStorage.GetSession(sessionId);
+        if (session != null)
+        {
+            session.SystemPrompt = systemPrompt;
+            session.UpdatedAt = DateTimeOffset.UtcNow;
+        }
+
+        return true;
+    }
+
+    /// <summary>
     /// 加载会话列表
     /// </summary>
     public void LoadSessions()
@@ -367,6 +388,7 @@ public class AIChatUIService(
             Title = s.Title,
             ProviderId = s.ProviderId,
             ModelName = s.ModelName,
+            SystemPrompt = s.SystemPrompt,
             CreatedAt = s.CreatedAt,
             UpdatedAt = s.UpdatedAt
         }).ToList();

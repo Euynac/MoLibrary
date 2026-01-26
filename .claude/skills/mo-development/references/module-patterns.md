@@ -183,14 +183,14 @@ public static class Module{Name}BuilderExtensions
 var builder = WebApplication.CreateBuilder(args);
 
 // Option 1: With options action
-builder.ConfigModuleSignalR(options =>
+Mo.AddSignalR(options =>
 {
     options.EnableFeature = true;
     options.MaxItems = 50;
 });
 
 // Option 2: With fluent guide
-builder.ConfigModuleSignalR()
+Mo.AddSignalR()
     .EnableFeature()
     .WithMaxItems(50);
 ```
@@ -199,7 +199,7 @@ builder.ConfigModuleSignalR()
 
 ```csharp
 // Dependencies are automatically registered
-builder.ConfigModuleJobSchedulerUI(options =>
+Mo.AddJobSchedulerUI(options =>
 {
     options.DisableJobSchedulerPage = false;
 });
