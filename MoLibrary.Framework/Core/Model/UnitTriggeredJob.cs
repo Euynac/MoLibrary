@@ -6,14 +6,14 @@ using MoLibrary.Tool.Extensions;
 namespace MoLibrary.Framework.Core.Model;
 
 /// <summary>
-/// 后台任务
+/// 后台触发式任务
 /// </summary>
 /// <param name="type"></param>
-public class UnitBackgroundJob(Type type) : ProjectUnit(type, EProjectUnitType.BackgroundJob), IHasProjectUnitFactory
+public class UnitTriggeredJob(Type type) : ProjectUnit(type, EProjectUnitType.TriggeredJob), IHasProjectUnitFactory
 {
     public Type? JobArgsType { get; set; }
 
-    static UnitBackgroundJob()
+    static UnitTriggeredJob()
     {
         AddUnitRegisterFactory(Factory);
     }
@@ -33,7 +33,7 @@ public class UnitBackgroundJob(Type type) : ProjectUnit(type, EProjectUnitType.B
     public static ProjectUnit? Factory(FactoryContext context)
     {
         var type = context.Type;
-        var unit = new UnitBackgroundJob(type);
+        var unit = new UnitTriggeredJob(type);
         if (!type.IsClass || !type.IsSubclassOfRawGeneric(typeof(MoTriggeredJob<>), out var genericType) || genericType?.FullName is null) return null;
         unit.CheckNameConventionMode();
         unit.JobArgsType = genericType.GetGenericArguments().First();

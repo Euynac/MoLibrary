@@ -32,13 +32,13 @@ public enum EProjectUnitType
     /// </summary>
     Seeder,
     /// <summary>
-    /// 后台工作者
+    /// 后台定时作业
     /// </summary>
-    BackgroundWorker,
+    RecurringJob,
     /// <summary>
     /// 后台作业
     /// </summary>
-    BackgroundJob,
+    TriggeredJob,
     /// <summary>
     /// HTTP API
     /// </summary>

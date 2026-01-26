@@ -8,9 +8,9 @@ namespace MoLibrary.Framework.Core.Model;
 /// 后台定时作业
 /// </summary>
 /// <param name="type"></param>
-public class UnitBackgroundWorker(Type type) : ProjectUnit(type, EProjectUnitType.BackgroundWorker), IHasProjectUnitFactory
+public class UnitRecurringJob(Type type) : ProjectUnit(type, EProjectUnitType.RecurringJob), IHasProjectUnitFactory
 {
-    static UnitBackgroundWorker()
+    static UnitRecurringJob()
     {
         AddUnitRegisterFactory(Factory);
     }
@@ -29,7 +29,7 @@ public class UnitBackgroundWorker(Type type) : ProjectUnit(type, EProjectUnitTyp
 
     public static ProjectUnit? Factory(FactoryContext context)
     {
-        var unit = new UnitBackgroundWorker(context.Type);
+        var unit = new UnitRecurringJob(context.Type);
         return unit.VerifyType() ? unit : null;
     }
 }

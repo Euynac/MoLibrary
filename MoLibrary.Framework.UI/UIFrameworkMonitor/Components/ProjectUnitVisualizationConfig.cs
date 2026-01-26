@@ -20,8 +20,8 @@ public static class ProjectUnitVisualizationConfig
         {
             EProjectUnitType.ApplicationService => true,
             EProjectUnitType.DomainService => true,
-            EProjectUnitType.BackgroundWorker => true,
-            EProjectUnitType.BackgroundJob => true,
+            EProjectUnitType.RecurringJob => true,
+            EProjectUnitType.TriggeredJob => true,
             EProjectUnitType.HttpApi => true,
             EProjectUnitType.GrpcApi => true,
             _ => false
@@ -41,8 +41,8 @@ public static class ProjectUnitVisualizationConfig
             EProjectUnitType.DomainEvent => "#9C27B0", // Purple
             EProjectUnitType.DomainEventHandler => "#673AB7", // Deep Purple
             EProjectUnitType.LocalEventHandler => "#3F51B5", // Indigo
-            EProjectUnitType.BackgroundWorker => "#00BCD4", // Cyan
-            EProjectUnitType.BackgroundJob => "#009688", // Teal
+            EProjectUnitType.RecurringJob => "#00BCD4", // Cyan
+            EProjectUnitType.TriggeredJob => "#009688", // Teal
             EProjectUnitType.HttpApi => "#F44336", // Red
             EProjectUnitType.GrpcApi => "#E91E63", // Pink
             EProjectUnitType.Entity => "#795548", // Brown
@@ -69,8 +69,8 @@ public static class ProjectUnitVisualizationConfig
             EProjectUnitType.DomainEvent => Icons.Material.Filled.Event,
             EProjectUnitType.DomainEventHandler => Icons.Material.Filled.EventAvailable,
             EProjectUnitType.LocalEventHandler => Icons.Material.Filled.EventNote,
-            EProjectUnitType.BackgroundWorker => Icons.Material.Filled.Work,
-            EProjectUnitType.BackgroundJob => Icons.Material.Filled.Schedule,
+            EProjectUnitType.RecurringJob => Icons.Material.Filled.Work,
+            EProjectUnitType.TriggeredJob => Icons.Material.Filled.Schedule,
             EProjectUnitType.HttpApi => Icons.Material.Filled.Http,
             EProjectUnitType.GrpcApi => Icons.Material.Filled.Api,
             EProjectUnitType.Entity => Icons.Material.Filled.Dataset,
