@@ -103,6 +103,7 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
         services.AddSingleton<JobOrchestrator>();
         services.AddSingleton<IMoTriggeredJobManager, TriggeredJobManager>();
         services.AddSingleton<IJobCancellationTokenManager, JobCancellationTokenManager>();
+        services.AddSingleton<JobHistoryCleanupExecutor>();
 
         services.AddSingleton<IJobConcurrencyGuard, JobConcurrencyGuardHostedService>();
 

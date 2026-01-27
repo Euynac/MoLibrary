@@ -96,4 +96,9 @@ public class JobSchedulerUIService(
         IReadOnlyList<string> jobKeys,
         CancellationToken cancellationToken = default)
         => apiService.BatchUpdateJobStateAsync(jobKeys, isDisabled: false, cancellationToken);
+
+    // History Cleanup
+    public Task<Res<HistoryCleanupResult>> TriggerHistoryCleanupAsync(
+        CancellationToken cancellationToken = default)
+        => apiService.TriggerHistoryCleanupAsync(cancellationToken);
 }

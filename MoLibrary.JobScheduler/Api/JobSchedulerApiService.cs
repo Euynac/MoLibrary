@@ -24,6 +24,7 @@ public class JobSchedulerApiService(
     IJobCancellationTokenManager jobCancellationManager,
     JobInstanceManager jobInstanceManager,
     JobDispatcher jobDispatcher,
+    JobHistoryCleanupExecutor cleanupExecutor,
     IOptions<ModuleJobSchedulerOption> options,
     ILogger<JobSchedulerApiService> logger)
 {
@@ -411,6 +412,31 @@ public class JobSchedulerApiService(
         {
             logger.LogError(ex, "Failed to update job config for {JobKey}", jobKey);
             return Res.Fail($"Failed to update job configuration: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Triggers manual history cleanup operation.
+    /// </summary>
+    public async Task<Res<HistoryCleanupResult>> TriggerHistoryCleanupAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            logger.LogInformation("API: TriggerHistoryCleanup requested");
+
+            var result = await cleanupExecutor.ExecuteCleanupAsync(cancellationToken);
+
+            logger.LogInformation(
+                "Manual history cleanup completed: Deleted {DeletedCount} instances in {DurationSeconds:F2}s",
+                result.DeletedCount,
+                result.DurationSeconds);
+
+            return Res.Ok(result);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to trigger history cleanup");
+            return Res.Fail($"Failed to trigger history cleanup: {ex.Message}");
         }
     }
 

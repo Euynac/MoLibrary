@@ -112,6 +112,11 @@
             <ToolBarContent>
                 <MudText Typo="Typo.h6">实例列表</MudText>
                 <MudSpacer />
+                <MudIconButton Icon="@Icons.Material.Filled.DeleteSweep"
+                               Color="Color.Warning"
+                               OnClick="HandleCleanupHistoryAsync"
+                               Disabled="@_isCleaningUp"
+                               Title="清理历史记录" />
                 <MudIconButton Icon="@Icons.Material.Filled.Refresh"
                                Color="Color.Primary"
                                OnClick="RefreshAsync" />
@@ -218,6 +223,7 @@
     private bool _sortDescending = true;
     private int _pageSize = 10;
     private bool _stateLoaded = false;
+    private bool _isCleaningUp = false;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -383,6 +389,54 @@
         if (_table != null)
         {
             await _table.ReloadServerData();
+        }
+    }
+
+    private async Task HandleCleanupHistoryAsync()
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "确认清理",
+            "确定要清理历史记录吗？此操作将根据保留策略删除旧的作业实例记录。",
+            yesText: "确定",
+            cancelText: "取消");
+
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        _isCleaningUp = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await UIService.TriggerHistoryCleanupAsync();
+
+            if (result.IsFailed(out var error, out var data))
+            {
+                Snackbar.Add($"清理失败: {error.Message}", Severity.Error);
+            }
+            else
+            {
+                if (data.DeletedCount == 0)
+                {
+                    Snackbar.Add("没有需要清理的历史记录", Severity.Info);
+                }
+                else
+                {
+                    Snackbar.Add($"已清理 {data.DeletedCount} 条历史记录，耗时 {data.DurationSeconds:F2} 秒", Severity.Success);
+                    await RefreshAsync();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"清理失败: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isCleaningUp = false;
+            StateHasChanged();
         }
     }
 
