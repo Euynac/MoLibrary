@@ -71,7 +71,7 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
                 var parameters = m.GetParameters();
                 return parameters.Length == 1 && parameters[0].ParameterType == typeof(IServiceCollection);
             });
-
+        
         if (method == null)
         {
             throw new InvalidOperationException("AddOptions<T> method is not found.");
@@ -143,7 +143,7 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
 
             var configAttr = card.Configuration.Info;
             Logger.LogDebug($"AddOptions<{configType.Name}>");
-            var optionBuilder = (dynamic) _method.MakeGenericMethod(configType).Invoke(null, [_services])!;
+            dynamic optionsBuilder = _method.MakeGenericMethod(configType).Invoke(null, [_services])!;
 
             var configAction = new Action<BinderOptions>(o =>
             {
@@ -154,16 +154,19 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
             if (configAttr.Section is { } section)
             {
                 Logger.LogDebug($"Bind<{configType.Name}> to {section} (with section name)");
-                MoExtendedOptionsBuilderConfigurationExtensions.Bind(optionBuilder, Option.AppConfiguration.GetSection(section),
+                // OptionsBuilderConfigurationExtensions.Bind(optionsBuilder, Option.AppConfiguration.GetSection(section), configAction);
+                MoExtendedOptionsBuilderConfigurationExtensions.Bind(optionsBuilder, Option.AppConfiguration.GetSection(section),
                     configAction);
             }
             else
             {
                 Logger.LogDebug($"Bind<{configType.Name}> (without section name)");
-                MoExtendedOptionsBuilderConfigurationExtensions.Bind(optionBuilder, Option.AppConfiguration, configAction);
+                // OptionsBuilderConfigurationExtensions.Bind(optionsBuilder, Option.AppConfiguration, configAction);
+                MoExtendedOptionsBuilderConfigurationExtensions.Bind(optionsBuilder, Option.AppConfiguration,
+                    configAction);
             }
 
-            OptionsBuilderDataAnnotationsExtensions.ValidateDataAnnotations(optionBuilder);
+            OptionsBuilderDataAnnotationsExtensions.ValidateDataAnnotations(optionsBuilder);
             yield return configType;
         }
     }

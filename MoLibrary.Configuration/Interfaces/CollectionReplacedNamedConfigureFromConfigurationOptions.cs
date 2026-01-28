@@ -93,23 +93,23 @@ public class CollectionReplacedNamedConfigureFromConfigurationOptions<[Dynamical
                 var value = (dynamic?) collectionProperty.GetValue(option);
                 if (value == null) continue;
                 var section = sections.GetSection(GetPropertyName(collectionProperty));
-                if (!section.Exists())
-                {
-                    continue; //如果没有外部配置的，则读取默认值。
-                }
 
-                if(collectionProperty.PropertyType.IsCollectionType() || collectionProperty.PropertyType.IsArray)
+                // For collections and arrays, check if there are actual children
+                if (collectionProperty.PropertyType.IsCollectionType() || collectionProperty.PropertyType.IsArray)
                 {
-                    //if (value is Array {Length: > 0} array && array.GetType().GetElementType() is {} elementType)
-                    //{
-                    //    collectionProperty.SetValue(options, Array.CreateInstance(elementType, 0));
-                    //    continue;
-                    //}
+                    if (!section.GetChildren().Any())
+                    {
+                        continue; // No array elements in config, keep default value
+                    }
                     collectionProperty.SetValue(option, null);
                 }
                 else if (collectionProperty.PropertyType.IsClassObject()) //解决嵌套属性类型存在相同的Append问题的情况
                 {
-                    CleanOptionDefaultValueIfHasExternalConfig(ref value, sections);
+                    if (!section.Exists())
+                    {
+                        continue; // No nested config, keep default value
+                    }
+                    CleanOptionDefaultValueIfHasExternalConfig(ref value, section);
                 }
             }
         }
