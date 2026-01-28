@@ -241,9 +241,6 @@ public class ModuleRegisterCentreGuide : MoModuleGuide<ModuleRegisterCentre, Mod
     /// <summary>
     /// 将当前服务设置为注册中心服务器
     /// </summary>
-    /// <remarks>
-    /// 设置后，服务将作为配置中心或其他服务的注册管理中心
-    /// </remarks>
     public ModuleRegisterCentreGuide SetAsCentreServer()
     {
         ConfigureModuleOption(o => o.IsCentreServer = true);

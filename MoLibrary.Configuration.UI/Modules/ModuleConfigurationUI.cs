@@ -1,11 +1,20 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using MoLibrary.Configuration.Modules;
+using MoLibrary.Configuration.UI.Implements;
+using MoLibrary.Configuration.UI.Interfaces;
+using MoLibrary.Configuration.UI.Model;
 using MoLibrary.Configuration.UI.Pages;
+using MoLibrary.Configuration.UI.Services;
+using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
 using MoLibrary.Core.Module.Models;
 using MoLibrary.Core.Modules;
+using MoLibrary.RegisterCentre.Modules;
 using MoLibrary.UI.Modules;
 using MudBlazor;
 
@@ -36,19 +45,18 @@ public class ModuleConfigurationUI(ModuleConfigurationUIOption option)
         return EMoModuleKey.ConfigurationUI;
     }
 
-
     public override void ClaimDependencies()
     {
-        if (!Option.DisableConfigurationPage)
+        // 依赖配置模块
+        DependsOnModule<ModuleConfigurationGuide>().Register();
+        // Configure RegisterCentre and mark this as a centre server (for endpoint routing)
+        DependsOnModule<ModuleRegisterCentreGuide>().Register().SetAsCentreServer();
+        DependsOnModule<ModuleServiceInvocationGuide>().Register();
+        
+        if (!option.DisableConfigurationPage)
         {
-            // 依赖配置模块
-            DependsOnModule<ModuleConfigurationGuide>().Register();
-
             // 依赖差异对比模块
             DependsOnModule<ModuleDiffHighlightGuide>().Register();
-
-            // 依赖配置仪表板模块
-            DependsOnModule<ModuleConfigurationDashboardGuide>().Register();
 
             // 依赖UI核心模块并注册UI组件
             DependsOnModule<ModuleUICoreGuide>().Register()
@@ -65,21 +73,154 @@ public class ModuleConfigurationUI(ModuleConfigurationUIOption option)
                 });
         }
     }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        // 注册统一配置UI服务
+        services.AddScoped<ConfigurationUIService>();
+
+        // 注册默认实现
+        services.TryAddSingleton<IMoConfigurationDashboard, DefaultArrangeDashboard>();
+        services.TryAddTransient<IMoConfigurationStores, MoConfigurationDefaultMemoryStore>();
+        services.TryAddSingleton<IMoConfigurationModifier, MoConfigurationJsonFileModifier>();
+
+        if (GetOptions<ModuleRegisterCentreOption>().IsCentreServer)
+        {
+            // Dashboard mode: register centre API provider
+            services.TryAddSingleton<ConfigurationCentreApiProvider>();
+            services.TryAddSingleton<IMoConfigurationApi>(p =>
+                p.GetRequiredService<ConfigurationCentreApiProvider>());
+
+            // Register service invoker based on standalone mode
+            if (GetOptions<ModuleRegisterCentreOption>().IsStandaloneMode)
+            {
+                services.TryAddSingleton<IConfigurationCentreServiceInvoker,
+                    ConfigurationCentreServiceInvokerStandaloneProvider>();
+            }
+            else
+            {
+                services.TryAddSingleton<IConfigurationCentreServiceInvoker,
+                    ConfigurationCentreServiceInvokerDistributedProvider>();
+            }
+        }
+        else
+        {
+            // Client mode: register client API provider
+            services.TryAddSingleton<ConfigurationClientApiProvider>();
+            services.TryAddSingleton<IMoConfigurationApi>(p =>
+                p.GetRequiredService<ConfigurationClientApiProvider>());
+        }
+    }
+
+    public override void ConfigureEndpoints(IApplicationBuilder app)
+    {
+        // Dashboard centre mode endpoints
+        UseEndpoints(app, endpoints =>
+        {
+            var tagName = option.GetApiGroupName();
+
+            endpoints.MapGet(MoConfigurationConventions.DashboardConfigHistory,
+                    async ([FromQuery] string? key, [FromQuery] string? appid, [FromQuery] DateTime? start,
+                        [FromQuery] DateTime? end, [FromServices] ConfigurationUIService uiService) =>
+                    {
+                        return (await uiService.GetConfigHistoryAsync(key, appid, start, end)).GetResponse();
+                    })
+                .WithName("获取配置类历史")
+                .WithTags(tagName)
+                .WithSummary("获取配置类历史")
+                .WithDescription("获取配置类历史");
+
+            endpoints.MapPost(MoConfigurationConventions.DashboardConfigRollback,
+                    async ([FromBody] RollbackRequest req, [FromServices] ConfigurationUIService uiService) =>
+                    {
+                        return (await uiService.RollbackConfigAsync(req.Key, req.AppId, req.Version)).GetResponse();
+                    })
+                .WithName("回滚配置类")
+                .WithTags(tagName)
+                .WithSummary("回滚配置类")
+                .WithDescription("回滚配置类");
+
+            endpoints.MapPost(MoConfigurationConventions.DashboardConfigUpdate, async (DtoUpdateConfig req,
+                    [FromServices] ConfigurationUIService uiService) =>
+                {
+                    return (await uiService.UpdateConfigAsync(req)).GetResponse();
+                })
+                .WithName("更新指定配置")
+                .WithTags(tagName)
+                .WithSummary("更新指定配置")
+                .WithDescription("更新指定配置");
+
+            endpoints.MapGet(MoConfigurationConventions.DashboardOptionItemStatus,
+                    async ([FromQuery] string? appid, [FromQuery] string key,
+                        [FromServices] ConfigurationUIService uiService) =>
+                    {
+                        return (await uiService.GetOptionItemStatusAsync(appid, key)).GetResponse();
+                    })
+                .WithName("获取指定配置状态")
+                .WithTags(tagName)
+                .WithSummary("获取指定配置状态")
+                .WithDescription("获取指定配置状态");
+
+            endpoints.MapGet(MoConfigurationConventions.DashboardAllConfigStatus, async (
+                    [FromQuery] string? mode,
+                    [FromServices] ConfigurationUIService uiService) =>
+                {
+                    return (await uiService.GetAllConfigStatusAsync(mode)).GetResponse();
+                })
+                .WithName("获取所有微服务配置状态")
+                .WithTags(tagName)
+                .WithSummary("获取所有微服务配置状态")
+                .WithDescription("获取所有微服务配置状态");
+        });
+    }
+}
+
+/// <summary>
+/// 回滚请求模型
+/// </summary>
+public class RollbackRequest
+{
+    public required string Key { get; set; }
+    public required string AppId { get; set; }
+    public required string Version { get; set; }
 }
 
 /// <summary>
 /// 配置管理UI模块配置指南
 /// </summary>
-public class ModuleConfigurationUIGuide : MoModuleGuide<ModuleConfigurationUI, ModuleConfigurationUIOption, ModuleConfigurationUIGuide>
+public class ModuleConfigurationUIGuide : MoModuleGuide<ModuleConfigurationUI, ModuleConfigurationUIOption,
+    ModuleConfigurationUIGuide>
 {
-    
+    /// <summary>
+    /// 配置自定义仪表板显示模式
+    /// </summary>
+    public ModuleConfigurationUIGuide ConfigCustomDashboard<TDashboard>()
+        where TDashboard : class, IMoConfigurationDashboard
+    {
+        ConfigureServices(context => { context.Services.AddSingleton<IMoConfigurationDashboard, TDashboard>(); },
+            EMoModuleOrder.PreConfig);
+        return this;
+    }
+
+    /// <summary>
+    /// 配置自定义配置存储
+    /// </summary>
+    public ModuleConfigurationUIGuide ConfigCustomStore<TStore>()
+        where TStore : class, IMoConfigurationStores
+    {
+        ConfigureServices(context => { context.Services.AddTransient<IMoConfigurationStores, TStore>(); },
+            EMoModuleOrder.PreConfig);
+        return this;
+    }
 }
 
 /// <summary>
 /// 配置管理UI模块选项
 /// </summary>
-public class ModuleConfigurationUIOption : MoModuleOption<ModuleConfigurationUI>
+public class ModuleConfigurationUIOption : MoModuleOptionWithMinimalApi<ModuleConfigurationUI>
 {
+   
+
     /// <summary>
     /// 是否禁用配置管理页面
     /// </summary>

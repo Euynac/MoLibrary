@@ -3,7 +3,7 @@
 @using MoLibrary.Configuration.UI.Services
 @using MoLibrary.Tool.MoResponse
 @using MudBlazor
-@inject ConfigurationDashboardService ConfigurationDashboardService
+@inject ConfigurationUIService ConfigurationUIService
 @inject ISnackbar Snackbar
 @implements IDisposable
 
@@ -214,7 +214,7 @@
 
         try
         {
-            if ((await ConfigurationDashboardService.GetAllConfigStatusAsync()).IsFailed(out var error, out var domainConfigs))
+            if ((await ConfigurationUIService.GetAllConfigStatusAsync()).IsFailed(out var error, out var domainConfigs))
             {
                 Snackbar.Add($"加载配置状态失败: {error}", Severity.Error);
                 return;

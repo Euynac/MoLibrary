@@ -10,7 +10,6 @@
 @inject IOptions<ModuleRegisterCentreOption> Options
 @inject IServiceProvider ServiceProvider
 @inject ISnackbar Snackbar
-@inject MoLibrary.Configuration.Services.ModuleConfigurationService ModuleConfigurationService
 
 <PageTitle>配置面板</PageTitle>
 
@@ -91,7 +90,7 @@
 
     private List<DtoDomainConfigs>? configStatus;
     private bool isLoading = false;
-    private ConfigurationDashboardService? configurationDashboardService;
+    private ConfigurationUIService? configurationUIService;
     private int activeTabIndex = 0;
 
     // Component references
@@ -104,8 +103,8 @@
         {
             if (Options.Value.IsCentreServer)
             {
-				configurationDashboardService = ServiceProvider.GetService<ConfigurationDashboardService>();
-                if (configurationDashboardService != null)
+				configurationUIService = ServiceProvider.GetService<ConfigurationUIService>();
+                if (configurationUIService != null)
                 {
                     await LoadConfigStatusAsync();
                 }
@@ -115,12 +114,12 @@
 
     private async Task LoadConfigStatusAsync()
     {
-        if (configurationDashboardService == null) return;
-        
+        if (configurationUIService == null) return;
+
         isLoading = true;
         StateHasChanged();
 
-        if ((await configurationDashboardService.GetAllConfigStatusAsync()).IsFailed(out var error, out var data))
+        if ((await configurationUIService.GetAllConfigStatusAsync()).IsFailed(out var error, out var data))
         {
             Snackbar.Add($"加载配置状态失败: {error}", Severity.Error);
         }
@@ -135,9 +134,9 @@
 
     private async Task HandleConfigUpdate(DtoUpdateConfig updateRequest)
     {
-        if (configurationDashboardService == null) return;
-        
-        if ((await configurationDashboardService.UpdateConfigAsync(updateRequest)).IsFailed(out var error))
+        if (configurationUIService == null) return;
+
+        if ((await configurationUIService.UpdateConfigAsync(updateRequest)).IsFailed(out var error))
         {
             Snackbar.Add($"配置更新失败: {error}", Severity.Error);
         }

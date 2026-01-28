@@ -1,5 +1,6 @@
 @using MoLibrary.Tool.MoResponse
-@inject MoLibrary.Configuration.Services.ModuleConfigurationService ModuleConfigurationService
+@using MoLibrary.Configuration.UI.Services
+@inject ConfigurationUIService ConfigurationUIService
 @inject ISnackbar Snackbar
 
 <MudCard>
@@ -57,7 +58,7 @@
         isLoading = true;
         StateHasChanged();
 
-        if ((await ModuleConfigurationService.GetDebugViewAsync()).IsFailed(out var error, out var data))
+        if ((await ConfigurationUIService.GetDebugViewAsync()).IsFailed(out var error, out var data))
         {
             Snackbar.Add($"加载调试视图失败: {error}", Severity.Error);
         }

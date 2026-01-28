@@ -1,7 +1,5 @@
 using System.Reflection;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -10,7 +8,6 @@ using MoLibrary.Configuration.Annotations;
 using MoLibrary.Configuration.Interfaces;
 using MoLibrary.Configuration.Model;
 using MoLibrary.Configuration.Providers;
-using MoLibrary.Configuration.Services;
 using MoLibrary.Core.Extensions;
 using MoLibrary.Core.Module;
 using MoLibrary.Core.Module.Interfaces;
@@ -50,7 +47,6 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
         services.AddOptions();
         services.AddSingleton<IMoConfigurationCardManager, MoConfigurationCardManager>();
         services.AddSingleton<IMoConfigurationServiceInfo, MoConfigurationServiceInfoDefault>();
-        services.AddScoped<ModuleConfigurationService>();
 
         // if (Option is { UseDaprProvider: true, AppConfiguration: ConfigurationManager manager})
         // {
@@ -71,7 +67,7 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
                 var parameters = m.GetParameters();
                 return parameters.Length == 1 && parameters[0].ParameterType == typeof(IServiceCollection);
             });
-        
+
         if (method == null)
         {
             throw new InvalidOperationException("AddOptions<T> method is not found.");
@@ -81,42 +77,8 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
     }
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
-        UseEndpoints(app, endpoints =>
-        {
-            var tagName = option.GetApiGroupName();
-
-            endpoints.MapGet(MoConfigurationConventions.GetConfigStatus, async (
-                [FromQuery] bool? onlyCurDomain,
-                [FromServices] ModuleConfigurationService service) =>
-            {
-                var result = await service.GetConfigStatusAsync(onlyCurDomain);
-                return result.GetResponse();
-            })
-            .WithName("获取热配置状态信息")
-            .WithTags(tagName)
-            .WithSummary("获取热配置状态信息")
-            .WithDescription("获取热配置状态信息");
-
-            endpoints.MapGet("/option/debug", async ([FromServices] ModuleConfigurationService service) =>
-            {
-                var result = await service.GetDebugViewAsync();
-                return result.GetResponse();
-            })
-            .WithName("获取DebuggingView")
-            .WithTags(tagName)
-            .WithSummary("获取DebuggingView")
-            .WithDescription("展示配置项来源数据以及提供者");
-
-            endpoints.MapGet("/option/providers", async ([FromServices] ModuleConfigurationService service) =>
-            {
-                var result = await service.GetProvidersAsync();
-                return result.GetResponse();
-            })
-            .WithName("获取配置提供者")
-            .WithTags(tagName)
-            .WithSummary("获取配置提供者")
-            .WithDescription("获取配置提供者分组信息");
-        });
+        // Configuration endpoints have been moved to ConfigurationUI module
+        // This module now only handles configuration registration and binding
     }
     public override void PostConfigureServices(IServiceCollection services)
     {

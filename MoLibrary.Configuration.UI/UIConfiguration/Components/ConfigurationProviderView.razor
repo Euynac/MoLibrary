@@ -1,6 +1,7 @@
 @using MoLibrary.Configuration.Model
+@using MoLibrary.Configuration.UI.Services
 @using MoLibrary.Tool.MoResponse
-@inject MoLibrary.Configuration.Services.ModuleConfigurationService ModuleConfigurationService
+@inject ConfigurationUIService ConfigurationUIService
 @inject ISnackbar Snackbar
 
 <MudCard>
@@ -112,7 +113,7 @@
         isLoading = true;
         StateHasChanged();
 
-        if ((await ModuleConfigurationService.GetProvidersAsync()).IsFailed(out var error, out var data))
+        if ((await ConfigurationUIService.GetProvidersAsync()).IsFailed(out var error, out var data))
         {
             Snackbar.Add($"加载配置提供者失败: {error}", Severity.Error);
         }

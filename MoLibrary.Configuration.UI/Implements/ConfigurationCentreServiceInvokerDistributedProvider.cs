@@ -17,7 +17,7 @@ public class ConfigurationCentreServiceInvokerDistributedProvider(
     public async Task<Res<List<DtoDomainConfigs>>> GetRegisteredServicesConfigsAsync(List<string> appIds)
     {
         var res = await connector.GetAsync<Res<List<DtoDomainConfigs>>>(appIds,
-            $"{MoConfigurationConventions.GetConfigStatus}?onlyCurDomain=true");
+            $"{MoConfigurationConventions.DashboardAllConfigStatus}?onlyCurDomain=true");
 
         var statusList = res.Values
             .Where(p => p.IsOk() && p.Data != null && p.Data.IsOk() && p.Data.Data != null)
@@ -30,7 +30,7 @@ public class ConfigurationCentreServiceInvokerDistributedProvider(
     public async Task<Res<DtoUpdateConfigRes>> UpdateRemoteConfigAsync(string appId, DtoUpdateConfig request)
     {
         var res = await connector.PostAsync<DtoUpdateConfig, Res<DtoUpdateConfigRes>>(appId,
-            $"{MoConfigurationConventions.DashboardClientConfigUpdate}", request);
+            $"{MoConfigurationConventions.DashboardConfigUpdate}", request);
 
         if (res.IsFailed(out var error, out var data))
             return error;
