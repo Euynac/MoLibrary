@@ -121,7 +121,7 @@
 
     private static string FormatTimestamp(DateTime timestamp)
     {
-        var local = timestamp.ToLocalTime();
+        var local = timestamp.FromUtcToLocal();
         var now = DateTime.Now;
 
         if (local.Date == now.Date)

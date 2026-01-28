@@ -113,7 +113,7 @@
 
     private string FormatTimestamp(DateTime timestamp)
     {
-        var local = timestamp.ToLocalTime();
+        var local = timestamp.FromUtcToLocal();
         return Granularity switch
         {
             TimeGranularity.Hourly => local.ToString("HH:mm"),

@@ -167,15 +167,15 @@
                             </MudChip>
                         </MudTd>
                         <MudTd DataLabel="创建时间">
-                            @context.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff")
+                            @context.CreatedAt.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss.fff")
                         </MudTd>
                         <MudTd DataLabel="开始时间">
-                            @(context.StartedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff") ?? "-")
+                            @(context.StartedAt?.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss.fff") ?? "-")
                         </MudTd>
                         <MudTd DataLabel="运行时长">
                             @if (context.StartedAt.HasValue)
                             {
-                                var duration = DateTime.UtcNow.ToLocalTime() - context.StartedAt.Value.ToLocalTime();
+                                var duration = DateTime.UtcNow.FromUtcToLocal() - context.StartedAt.Value.FromUtcToLocal();
                                 <text>@FormatDuration(duration)</text>
                             }
                             else
@@ -290,14 +290,14 @@
                     {
                         <MudItem xs="12" sm="6">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">开始时间</MudText>
-                            <MudText Typo="Typo.body1">@_jobDefinition.StartTime.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                            <MudText Typo="Typo.body1">@_jobDefinition.StartTime.Value.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
                         </MudItem>
                     }
                     @if (_jobDefinition.EndTime.HasValue)
                     {
                         <MudItem xs="12" sm="6">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">结束时间</MudText>
-                            <MudText Typo="Typo.body1">@_jobDefinition.EndTime.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                            <MudText Typo="Typo.body1">@_jobDefinition.EndTime.Value.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
                         </MudItem>
                     }
                 }

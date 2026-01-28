@@ -148,7 +148,7 @@
                     <MudTd DataLabel="下次执行时间">
                         @if (context.NextExecutionTime.HasValue)
                         {
-                            <MudText Typo="Typo.body2">@context.NextExecutionTime.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                            <MudText Typo="Typo.body2">@context.NextExecutionTime.Value.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
                         }
                         else
                         {
@@ -164,7 +164,7 @@
                                          Color="@ColorService.GetStateColor(context.LastExecution.State)"
                                          OnClick="@(async () => await OpenInstanceDetailDialog(context.LastExecution.InstanceId))"
                                          Class="clickable-execution-time">
-                                    @context.LastExecution.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")
+                                    @context.LastExecution.CreatedAt.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")
                                 </MudChip>
                             </div>
                         }
@@ -255,7 +255,7 @@
                                          Color="@ColorService.GetStateColor(context.LastExecution.State)"
                                          OnClick="@(async () => await OpenInstanceDetailDialog(context.LastExecution.InstanceId))"
                                          Class="clickable-execution-time">
-                                    @context.LastExecution.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")
+                                    @context.LastExecution.CreatedAt.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")
                                 </MudChip>
                             </div>
                         }

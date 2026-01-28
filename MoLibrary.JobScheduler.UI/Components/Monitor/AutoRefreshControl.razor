@@ -99,7 +99,7 @@
 
     private static string FormatLastRefresh(DateTime time)
     {
-        var local = time.ToLocalTime();
+        var local = time.FromUtcToLocal();
         var diff = DateTime.Now - local;
 
         if (diff.TotalSeconds < 10)

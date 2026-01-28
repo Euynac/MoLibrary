@@ -195,14 +195,14 @@
         {
             if (JobDefinition.StartTime.HasValue)
             {
-                var startDateTime = JobDefinition.StartTime.Value.ToLocalTime();
+                var startDateTime = JobDefinition.StartTime.Value.FromUtcToLocal();
                 _startDate = startDateTime.Date;
                 _startTime = startDateTime.TimeOfDay;
             }
 
             if (JobDefinition.EndTime.HasValue)
             {
-                var endDateTime = JobDefinition.EndTime.Value.ToLocalTime();
+                var endDateTime = JobDefinition.EndTime.Value.FromUtcToLocal();
                 _endDate = endDateTime.Date;
                 _endTime = endDateTime.TimeOfDay;
             }
