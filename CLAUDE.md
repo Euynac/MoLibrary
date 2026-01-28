@@ -30,21 +30,11 @@ Invoke when:
 
 **Current MudBlazor version**: 8.9.0
 
-### /microsoft-docs:microsoft-code-reference
+### Microsoft Documentation Skill
 
-Invoke when:
-- Working with Azure SDKs, .NET libraries, or Microsoft APIs
-- Need to verify method signatures or find correct class/method names
-- Looking for working code samples before writing SDK code
-- Troubleshooting errors like "method not found", wrong signatures, or deprecated patterns
+You have access to MCP tools called `microsoft_docs_search`, `microsoft_docs_fetch`, and `microsoft_code_sample_search` - these tools allow you to search through and fetch Microsoft's latest official documentation and code samples, and that information might be more detailed or newer than what's in your training data set.
 
-### /microsoft-docs:microsoft-docs
-
-Invoke when:
-- Understanding Azure/Microsoft concepts, architecture, or service behavior
-- Finding tutorials, quickstarts, or step-by-step guides
-- Looking up configuration options, limits, or quotas
-- Need official best practices for Azure/.NET development
+When handling questions around how to work with native Microsoft technologies, such as C#, ASP.NET Core, Microsoft.Extensions, NuGet, Entity Framework, the `dotnet` runtime - please use these tools for research purposes when dealing with specific / narrowly defined questions that may occur.
 
 ### Context7 (MCP Tool)
 
