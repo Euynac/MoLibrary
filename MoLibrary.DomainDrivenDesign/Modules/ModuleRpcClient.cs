@@ -96,7 +96,7 @@ public class ModuleRpcClient(ModuleRpcClientOption option) :
                         var appid = infoProvider.GetDomainRelatedAppId(domain);
                         services.AddKeyedSingleton(appid, httpClientRegisterProvider.GetHttpClient(appid));
 
-                        services.TryAddScoped(targetInterface, provider =>
+                        services.TryAddTransient(targetInterface, provider =>
                         {
                             var client =
                                 provider.GetRequiredKeyedService<HttpClient>(appid);
@@ -112,7 +112,7 @@ public class ModuleRpcClient(ModuleRpcClientOption option) :
                     }
                     else
                     {
-                        services.TryAddScoped(targetInterface, type);
+                        services.TryAddTransient(targetInterface, type);
                         Logger.LogInformation("Register Domain ({domainName} - {domainDesc}) Custom RPC {type} -> {interface}", domain.ToString(), domain.GetDescription(), type.Name,
                             targetInterface.Name);
                     }
