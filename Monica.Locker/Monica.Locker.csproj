@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="..\common.xml"/>
+
+
+  <ItemGroup>
+    <PackageReference Include="AsyncKeyedLock" Version="8.0.0" />
+    <PackageReference Include="DistributedLock.Core" Version="1.0.9" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
+  </ItemGroup>
+
+</Project>

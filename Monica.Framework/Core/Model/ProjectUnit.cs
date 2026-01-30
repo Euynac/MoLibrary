@@ -1,0 +1,370 @@
+using System.Diagnostics.CodeAnalysis;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Monica.Framework.Core.Attributes;
+using Monica.Framework.Core.Interfaces;
+using Monica.Framework.Modules;
+using Monica.Tool.Extensions;
+
+namespace Monica.Framework.Core.Model;
+
+/// <summary>
+/// 项目单元信息
+/// </summary>
+public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
+{
+    private static Func<FactoryContext, ProjectUnit?>? _unitRegisterFactories;
+    private static Func<ConstructorAnalysisContext, ProjectUnit?> _constructorAnalyzerFactories = ConstructorDefaultAnalyzerFactory;
+
+    /// <summary>
+    /// 默认通过类型全名查找项目单元
+    /// </summary>
+    /// <param name="context"></param>
+    /// <returns></returns>
+    private static ProjectUnit? ConstructorDefaultAnalyzerFactory(ConstructorAnalysisContext context)
+    {
+        if (context.ParameterType.FullName == null) return null;
+
+        // 直接通过类型全名查找
+        return ProjectUnitStores.ProjectUnitsByFullName.TryGetValue(context.ParameterType.FullName, out var unit) ? unit : null;
+    }
+   
+    internal static ILogger Logger => Option.Logger;
+    internal static ModuleFrameworkMonitorOption Option { get; set; } = null!;
+
+    /// <summary>
+    /// 初始化类元数据
+    /// </summary>
+    private void InitializeClassInfo()
+    {
+        Description = ProjectUnitXmlDocHelper.ExtractTypeDescription(Type);
+        InitializeConstructorParameterTypes();
+    }
+
+    /// <summary>
+    /// 初始化构造函数参数类型信息
+    /// </summary>
+    private void InitializeConstructorParameterTypes()
+    {
+        var constructors = Type.GetConstructors();
+        
+        // 选择参数最多的构造函数（通常是主构造函数）
+        var mainConstructor = constructors.OrderByDescending(c => c.GetParameters().Length).FirstOrDefault();
+        
+        if (mainConstructor != null)
+        {
+            var parameters = mainConstructor.GetParameters();
+            ConstructorParameterTypes = parameters.Select(p => p.ParameterType).ToList();
+        }
+    }
+    /// <summary>
+    /// 初始化方法元数据
+    /// </summary>
+    protected void InitializeMethods()
+    {
+        Methods = ProjectUnitXmlDocHelper.GetPublicMethods(Type);
+    }
+    /// <summary>
+    /// 初始化方法元数据
+    /// </summary>
+    protected void InitializeMethods<T>()
+    {
+        Methods = ProjectUnitXmlDocHelper.GetPublicMethods(Type, typeof(T));
+    }
+
+    /// <summary>
+    /// 默认命名惯例规则
+    /// </summary>
+    /// <returns></returns>
+    protected virtual UnitNameConventionOption? DefaultConventionOption()
+    {
+        return null;
+    }
+
+    internal UnitNameConventionOption? ConventionOption =>
+        Option.ConventionOptions.Dict.TryGetValue(UnitType, out var option) ? option : DefaultConventionOption();
+
+    /// <summary>
+    /// 验证类型：类型限制和命名惯例
+    /// </summary>
+    /// <returns></returns>
+    protected virtual bool VerifyType()
+    {
+        if (!VerifyTypeConstrain()) return false;
+        CheckNameConventionMode();
+        return true;
+    }
+
+    /// <summary>
+    /// 验证命名惯例
+    /// </summary>
+    /// <returns></returns>
+    protected virtual bool VerifyNameConvention()
+    {
+        if (!Option.ConventionOptions.EnableNameConvention || ConventionOption is not {} option) return true;
+        var success = true;
+        if (option.Postfix is { } postfix)
+        {
+            success &= Type.Name.EndsWith(postfix);
+        }
+        if(success && option.Prefix is {} prefix)
+        {
+            success &= Type.Name.StartsWith(prefix);
+        }
+        return success;
+    }
+
+    /// <summary>
+    /// 验证类型限制
+    /// </summary>
+    /// <returns></returns>
+    protected virtual bool VerifyTypeConstrain()
+    {
+        return false;
+    }
+
+    /// <summary>
+    /// 检查命名限制模式
+    /// </summary>
+    /// <exception cref="InvalidOperationException"></exception>
+    /// <exception cref="ArgumentOutOfRangeException"></exception>
+    protected virtual void CheckNameConventionMode()
+    {
+        if (VerifyNameConvention()) return;
+        var option = ConventionOption;
+        if(option == null) return;
+        
+        var alertMessage = $"{Type.GetCleanFullName()}需满足命名限制：{option}";
+        
+        switch (option.NameConventionMode ?? Option.ConventionOptions.NameConventionMode)
+        {
+            case ENameConventionMode.Strict:
+                // 添加错误级别告警
+                Alerts.Add(new ProjectUnitAlert
+                {
+                    Level = EAlertLevel.Error,
+                    Message = alertMessage,
+                    Source = "NamingConvention"
+                });
+                throw new InvalidOperationException(alertMessage);
+            case ENameConventionMode.Warning:
+                // 添加警告级别告警
+                Alerts.Add(new ProjectUnitAlert
+                {
+                    Level = EAlertLevel.Warning,
+                    Message = alertMessage,
+                    Source = "NamingConvention"
+                });
+                Logger.Log(LogLevel.Error, alertMessage);
+                break;
+            case ENameConventionMode.Disable:
+                break;
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+    }
+
+
+
+    /// <summary>
+    /// 项目单元初始化完毕后。将项目单元间联系起来
+    /// </summary>
+    public virtual void DoingConnect()
+    {
+
+    }
+    /// <summary>
+    /// 添加单元构造函数依赖解析工厂
+    /// </summary>
+    /// <param name="func"></param>
+    public static void AddConstructorAnalyzerFactory(Func<ConstructorAnalysisContext, ProjectUnit?> func)
+    {
+        if (_constructorAnalyzerFactories != null)
+        {
+            var oldFunc = _constructorAnalyzerFactories;
+            _constructorAnalyzerFactories = (context) =>
+            {
+                var unit = oldFunc.Invoke(context);
+                return unit ?? func(context);
+            };
+        }
+        else
+        {
+            _constructorAnalyzerFactories = func;
+        }
+    }
+    /// <summary>
+    /// 添加单元注册工厂
+    /// </summary>
+    /// <param name="func"></param>
+    public static void AddUnitRegisterFactory(Func<FactoryContext, ProjectUnit?> func)
+    {
+        if (_unitRegisterFactories != null)
+        {
+            var oldFunc = _unitRegisterFactories;
+            _unitRegisterFactories = (context) =>
+            {
+                var unit = func.Invoke(context);
+                return unit ?? oldFunc(context);
+            };
+        }
+        else
+        {
+            _unitRegisterFactories = func;
+        }
+    }
+
+    /// <summary>
+    /// 尝试建造项目单元
+    /// </summary>
+    /// <param name="context"></param>
+    /// <returns></returns>
+    public static ProjectUnit? CreateUnit(FactoryContext context)
+    {
+        return _unitRegisterFactories?.Invoke(context);
+    }
+
+    /// <summary>
+    /// 进一步完善项目单元信息，如提取项目单元特性
+    /// </summary>
+    public virtual void PolishUnitInfo()
+    {
+        var attributes = Type.GetCustomAttributes(true).OfType<IUnitCachedAttribute>().ToList();
+        if (attributes.Count != 0)
+        {
+            Attributes.AddRange(attributes);
+        }
+
+        InitializeClassInfo();
+        if (attributes.OfType<UnitInfoAttribute>().FirstOrDefault() is { } info)
+        {
+            Title = info.Name;
+            Description = info.Description;
+            Author = info.Author;
+            Group = info.Group?.ToList();
+        }
+    }
+
+    /// <summary>
+    /// 项目单元键值，也即项目单元FullName名
+    /// </summary>
+    public string Key => Type.FullName!;
+
+    /// <summary>
+    /// 项目单元显示名
+    /// </summary>
+    public string Title { get; set; } = type.Name;
+
+    /// <summary>
+    /// 项目单元描述
+    /// </summary>
+    public string? Description { get; set; }
+
+    /// <summary>
+    /// 项目单元作者
+    /// </summary>
+    public string? Author { get; set; }
+
+    /// <summary>
+    /// 项目单元分组信息
+    /// </summary>
+    public List<string>? Group { get; set; }
+
+    /// <summary>
+    /// 系统类型
+    /// </summary>
+    public Type Type { get; init; } = type;
+
+    /// <summary>
+    /// 项目单元类型
+    /// </summary>
+    public EProjectUnitType UnitType { get; protected set; } = unitType;
+
+    /// <summary>
+    /// 所依赖的项目单元
+    /// </summary>
+    public HashSet<ProjectUnit> DependencyUnits { get; protected set; } = [];
+
+    /// <summary>
+    /// 项目单元特性
+    /// </summary>
+    public List<IUnitCachedAttribute> Attributes { get; protected set; } = [];
+    
+    /// <summary>
+    /// 告警信息列表
+    /// </summary>
+    public List<ProjectUnitAlert> Alerts { get; protected set; } = [];
+    
+    /// <summary>
+    /// 项目单元方法列表
+    /// </summary>
+    public List<ProjectUnitMethod> Methods { get; protected set; } = [];
+
+    /// <summary>
+    /// 构造函数参数信息列表
+    /// </summary>
+    public List<Type> ConstructorParameterTypes { get; protected set; } = [];
+
+    /// <summary>
+    /// 声明项目单元相关性
+    /// </summary>
+    /// <param name="unit"></param>
+    /// <param name="isDependent"></param>
+    public virtual void DeclareRelevance(ProjectUnit unit, bool isDependent = false)
+    {
+        if (isDependent)
+        {
+            DependencyUnits.Add(unit);
+        }
+        
+    }
+
+    /// <summary>
+    /// 获取所依赖的项目单元
+    /// </summary>
+    /// <typeparam name="TProjectUnit"></typeparam>
+    /// <returns></returns>
+    public virtual IReadOnlyList<TProjectUnit> FetchDependency<TProjectUnit>() where TProjectUnit : ProjectUnit
+    {
+        return DependencyUnits.OfType<TProjectUnit>().ToList();
+    }
+
+    #region 检测依赖
+
+    /// <summary>
+    /// 检测构造函数中的项目单元依赖
+    /// </summary>
+    protected void DetectConstructorUnitDependencies()
+    {
+        var constructors = Type.GetConstructors();
+
+        foreach (var constructor in constructors)
+        {
+            var parameters = constructor.GetParameters();
+
+            foreach (var parameter in parameters)
+            {
+                var parameterType = parameter.ParameterType;
+                var context = new ConstructorAnalysisContext(parameterType, this);
+
+                // 检查参数类型是否是一个已注册的项目单元
+                if (_constructorAnalyzerFactories(context) is {} dependentUnit)
+                {
+                    DeclareRelevance(dependentUnit, true);
+                    dependentUnit.DeclareRelevance(this);
+                    Logger.LogDebug($"{this}检测到构造函数依赖：{dependentUnit}");
+                }
+            }
+        }
+    }
+
+  
+
+    #endregion
+
+
+    public override string ToString()
+    {
+        return $"ProjectUnit[{UnitType}] - {Title}({Key})";
+    }
+}

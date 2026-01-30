@@ -1,23 +1,23 @@
-# MoLibrary
+# Monica
 
 <p align="center">
-  <img src="logo.png" alt="MoLibrary Logo" width="200" />
+  <img src="logo.png" alt="Monica Logo" width="200" />
 </p>
 
 
 
 <p align="center">
-  <a href="https://github.com/Euynac/MoLibrary.Docs/actions"><img src="https://github.com/Euynac/MoLibrary.Docs/actions/workflows/static.yml/badge.svg" alt="Build Status"></a>
-  <a href="https://www.nuget.org/packages?q=MoLibrary"><img src="https://img.shields.io/nuget/v/MoLibrary.Core.svg" alt="NuGet"></a>
-  <a href="https://github.com/Euynac/MoLibrary/blob/main/LICENSE"><img src="https://img.shields.io/github/license/Euynac/MoLibrary" alt="License"></a>
-  <a href="https://molibrary.dpdns.org/"><img src="https://img.shields.io/badge/docs-online-brightgreen.svg" alt="Documentation"></a>
+  <a href="https://github.com/molloryn/Monica.Docs/actions"><img src="https://github.com/molloryn/Monica.Docs/actions/workflows/static.yml/badge.svg" alt="Build Status"></a>
+  <a href="https://www.nuget.org/packages?q=Monica"><img src="https://img.shields.io/nuget/v/Monica.Core.svg" alt="NuGet"></a>
+  <a href="https://github.com/molloryn/Monica/blob/main/LICENSE"><img src="https://img.shields.io/github/license/molloryn/Monica" alt="License"></a>
+  <a href="https://monica.dpdns.org/"><img src="https://img.shields.io/badge/docs-online-brightgreen.svg" alt="Documentation"></a>
 </p>
 
 ## 📖 概述
 
-MoLibrary 是一个模块化的 .NET 基础设施库，允许您单独使用某个模块而无需引入整个框架。通过统一的注册和配置模式，MoLibrary 让您的开发体验更加一致和高效。
+Monica 是一个模块化的 .NET 基础设施库，允许您单独使用某个模块而无需引入整个框架。通过统一的注册和配置模式，Monica 让您的开发体验更加一致和高效。
 
-**[📚 在线文档](https://molibrary.dpdns.org/) • [🚀 快速开始](https://molibrary.dpdns.org/docs/intro) • [📝 博客](https://molibrary.dpdns.org/blog)**
+**[📚 在线文档](https://monica.dpdns.org/) • [🚀 快速开始](https://monica.dpdns.org/docs/intro) • [📝 博客](https://monica.dpdns.org/blog)**
 
 ## ✨ 特性
 
@@ -34,7 +34,7 @@ MoLibrary 是一个模块化的 .NET 基础设施库，允许您单独使用某�
 
 ## 📦 可用模块
 
-MoLibrary 目前提供40+模块，以下是部分模块（待补充）
+Monica 目前提供40+模块，以下是部分模块（待补充）
 
 - **Core**：核心功能和基础设施
 - **DomainDrivenDesign**：DDD 模式实现
@@ -55,20 +55,20 @@ MoLibrary 目前提供40+模块，以下是部分模块（待补充）
 
 ```bash
 # 安装核心库
-dotnet add package MoLibrary.Core
+dotnet add package Monica.Core
 
 # 安装仓储模块
-dotnet add package MoLibrary.Repository
+dotnet add package Monica.Repository
 
 # 安装依赖注入模块
-dotnet add package MoLibrary.DependencyInjection
+dotnet add package Monica.DependencyInjection
 
 # 其他模块...
 ```
 
 ### 基本使用
 
-MoLibrary 使用模块化的方式来注册和配置服务：
+Monica 使用模块化的方式来注册和配置服务：
 
 ```csharp
 Mo.AddJobScheduler(o =>
@@ -85,7 +85,7 @@ Mo.AddJobScheduler(o =>
 
 ## 📚 核心概念
 
-MoLibrary 的核心概念是 `MoModule`，作为库的核心注册机制，每个Library有一个或多个`Module`，每个`Module`组成如下：
+Monica 的核心概念是 `MoModule`，作为库的核心注册机制，每个Library有一个或多个`Module`，每个`Module`组成如下：
 
 1. `Module{ModuleName}Option`: 模块Option的设置
 2. `Module{ModuleName}Guide`: 模块配置的向导类
@@ -109,6 +109,6 @@ MoLibrary 的核心概念是 `MoModule`，作为库的核心注册机制，每�
 
 ## 📞 联系方式
 
-- GitHub Issues: [https://github.com/Euynac/MoLibrary/issues](https://github.com/Euynac/MoLibrary/issues)
-- GitHub Discussions: [https://github.com/Euynac/MoLibrary/discussions](https://github.com/Euynac/MoLibrary/discussions)
-- 文档网站: [https://molibrary.dpdns.org/](https://molibrary.dpdns.org/)
+- GitHub Issues: [https://github.com/molloryn/Monica/issues](https://github.com/molloryn/Monica/issues)
+- GitHub Discussions: [https://github.com/molloryn/Monica/discussions](https://github.com/molloryn/Monica/discussions)
+- 文档网站: [https://monica.dpdns.org/](https://monica.dpdns.org/)

@@ -1,0 +1,107 @@
+@using Monica.Framework.UI.UIObservableInstance.Models
+@using Monica.UI.UIStackTrace.Components
+
+@if (Exceptions == null || !Exceptions.Any())
+{
+    <MudAlert Severity="Severity.Success">无异常记录</MudAlert>
+}
+else
+{
+    <MudStack Spacing="2">
+        <MudText Typo="Typo.body1" Style="font-weight: 500;">
+            共 @Exceptions.Count 个异常记录
+        </MudText>
+
+        <MudStack Spacing="3">
+            @foreach (var exception in Exceptions)
+            {
+                <MudExpansionPanels>
+                    <MudExpansionPanel>
+                        <TitleContent>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Style="width: 100%;">
+                                <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" />
+                                <MudChip T="string" Color="Color.Error" Size="Size.Small">
+                                    @exception.ExceptionType
+                                </MudChip>
+                                <MudText Typo="Typo.body2" Style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    @exception.ExceptionMessage
+                                </MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @exception.RelativeTimeDisplay
+                                </MudText>
+                            </MudStack>
+                        </TitleContent>
+                        <ChildContent>
+                            <MudPaper Class="pa-3" Elevation="0" Style="background: var(--mud-palette-background-grey);">
+                                <MudStack Spacing="3">
+                                    <!-- Exception Details -->
+                                    <div>
+                                        <MudText Typo="Typo.subtitle2" Style="font-weight: 500;">异常详情</MudText>
+                                        <MudStack Spacing="2" Class="mt-2">
+                                            <div>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">类型:</MudText>
+                                                <MudText Typo="Typo.body2" Style="font-family: monospace;">@exception.ExceptionType</MudText>
+                                            </div>
+                                            <div>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">消息:</MudText>
+                                                <MudText Typo="Typo.body2">@exception.ExceptionMessage</MudText>
+                                            </div>
+                                            <div>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">时间:</MudText>
+                                                <MudText Typo="Typo.body2">@exception.TimestampDisplay (@exception.RelativeTimeDisplay)</MudText>
+                                            </div>
+                                        </MudStack>
+                                    </div>
+
+                                    <!-- Stack Trace -->
+                                    @if (!string.IsNullOrEmpty(exception.ExceptionStackTrace))
+                                    {
+                                        <div>
+                                            <MudText Typo="Typo.subtitle2" Style="font-weight: 500;" Class="mb-2">堆栈跟踪</MudText>
+                                            <MudPaper Class="pa-3" Elevation="0" Style="background: var(--mud-palette-background-grey); max-height: 500px; overflow-y: auto;">
+                                                <StackTraceViewer Message="@exception.ExceptionStackTrace" />
+                                            </MudPaper>
+                                        </div>
+                                    }
+
+                                    <!-- Context Information (if available) -->
+                                    @if (!string.IsNullOrEmpty(exception.Message))
+                                    {
+                                        <div>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">上下文信息:</MudText>
+                                            <MudText Typo="Typo.body2">@exception.Message</MudText>
+                                        </div>
+                                    }
+
+                                    <!-- State Change Info (if applicable) -->
+                                    @if (exception.IsStateTransition)
+                                    {
+                                        <div>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1">状态变更:</MudText>
+                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                                <MudPaper Class="pa-2" Elevation="0" Style="background: var(--mud-palette-surface); flex: 1;">
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">之前:</MudText>
+                                                    <MudText Typo="Typo.body2" Style="font-family: monospace; font-size: 11px;">@exception.PreviousStateDisplay</MudText>
+                                                </MudPaper>
+                                                <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Size="Size.Small" />
+                                                <MudPaper Class="pa-2" Elevation="0" Style="background: var(--mud-palette-surface); flex: 1;">
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">之后:</MudText>
+                                                    <MudText Typo="Typo.body2" Style="font-family: monospace; font-size: 11px;">@exception.CurrentStateDisplay</MudText>
+                                                </MudPaper>
+                                            </MudStack>
+                                        </div>
+                                    }
+                                </MudStack>
+                            </MudPaper>
+                        </ChildContent>
+                    </MudExpansionPanel>
+                </MudExpansionPanels>
+            }
+        </MudStack>
+    </MudStack>
+}
+
+@code {
+    [Parameter]
+    public List<ObservableStateHistoryViewModel>? Exceptions { get; set; }
+}

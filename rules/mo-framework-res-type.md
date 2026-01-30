@@ -1,6 +1,6 @@
 # 统一接口返回模型Res
 
-如需要查看完整定义，位于`MoLibrary.Tool/MoResponse/Res.cs`
+如需要查看完整定义，位于`Monica.Tool/MoResponse/Res.cs`
 
 ## `Res<T>`泛型类型介绍
 

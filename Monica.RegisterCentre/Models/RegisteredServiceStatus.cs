@@ -1,0 +1,63 @@
+using System.Linq;
+
+namespace Monica.RegisterCentre.Models;
+
+public class RegisteredServiceStatus
+{
+    /// <summary>服务AppId</summary>
+    public required string AppId { get; set; }
+    
+    /// <summary>服务名称</summary>
+    public required string AppName { get; set; }
+    
+    /// <summary>领域名</summary>
+    public string? DomainName { get; set; }
+    
+    /// <summary>项目名</summary>
+    public string? ProjectName { get; set; }
+    /// <summary>
+    /// 依赖子域列表
+    /// </summary>
+    public List<string>? DependentSubDomains { get; set; }
+    /// <summary>服务实例字典（Key: FromClient, Value: InstanceState）</summary>
+    public Dictionary<string, InstanceState> Instances { get; set; } = new();
+    
+    /// <summary>获取运行中的实例数量</summary>
+    public int RunningInstanceCount => 
+        Instances.Count(x => x.Value.Status == ServiceStatus.Running);
+    
+    /// <summary>获取总实例数量</summary>
+    public int TotalInstanceCount => Instances.Count;
+    
+    /// <summary>服务整体状态（基于所有实例状态判断）</summary>
+    public ServiceStatus OverallStatus => DetermineOverallStatus();
+
+    /// <summary>
+    /// 获取有效的服务实例信息
+    /// </summary>
+    /// <returns></returns>
+    public InstanceState? GetValidInstanceInfo() => Instances.Values.FirstOrDefault(x => x.Status is not ServiceStatus.Offline);
+
+    private ServiceStatus DetermineOverallStatus()
+    {
+        if (!Instances.Any())
+            return ServiceStatus.Offline;
+
+        var statuses = Instances.Values.Select(x => x.Status).ToList();
+
+        // 优先级：Error > Running > Unhealthy > Updating > Offline
+        if (statuses.Any(s => s == ServiceStatus.Error))
+            return ServiceStatus.Error;
+
+        if (statuses.Any(s => s == ServiceStatus.Running))
+            return ServiceStatus.Running;
+
+        if (statuses.Any(s => s == ServiceStatus.Unhealthy))
+            return ServiceStatus.Unhealthy;
+
+        if (statuses.Any(s => s == ServiceStatus.Updating))
+            return ServiceStatus.Updating;
+
+        return ServiceStatus.Offline;
+    }
+}

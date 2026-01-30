@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="..\common.xml" />
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
+    <ProjectReference Include="..\Monica.DependencyInjection\Monica.DependencyInjection.csproj" />
+  </ItemGroup>
+</Project>

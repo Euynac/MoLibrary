@@ -1,0 +1,104 @@
+@using Monica.AI.Models
+
+<div class="chat-container">
+    <ChatErrorDisplay
+        ErrorMessage="@ErrorMessage"
+        ShowRetry="@ShowRetry"
+        OnRetry="@HandleRetry"
+        OnDismissed="@HandleErrorDismissed" />
+
+    <ChatMessageList
+        @ref="_messageListRef"
+        Messages="@Messages"
+        StreamingContent="@StreamingContent"
+        EnableMarkdown="@EnableMarkdown"
+        EnableAutoScroll="@EnableAutoScroll"
+        CancellationToken="@CancellationToken"
+        OnStreamComplete="@HandleStreamComplete"
+        OnStreamError="@HandleStreamError"
+        OnEditMessage="@OnEditMessage"
+        OnRetryMessage="@OnRetryMessage" />
+
+    <ChatInputArea
+        IsSending="@IsSending"
+        ProviderName="@ProviderName"
+        ModelName="@ModelName"
+        ShowProviderInfo="@ShowProviderInfo"
+        OnSend="@HandleSend"
+        OnCancel="@HandleCancel" />
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<AIChatMessage> Messages { get; set; } = [];
+    [Parameter] public IAsyncEnumerable<ChatResponseUpdate>? StreamingContent { get; set; }
+    [Parameter] public bool IsSending { get; set; }
+    [Parameter] public bool EnableMarkdown { get; set; } = true;
+    [Parameter] public string? ProviderName { get; set; }
+    [Parameter] public string? ModelName { get; set; }
+    [Parameter] public bool ShowProviderInfo { get; set; } = true;
+    [Parameter] public string? ErrorMessage { get; set; }
+    [Parameter] public bool ShowRetry { get; set; }
+    [Parameter] public bool EnableAutoScroll { get; set; } = true;
+    [Parameter] public CancellationToken CancellationToken { get; set; }
+    [Parameter] public EventCallback<string> OnSendMessage { get; set; }
+    [Parameter] public EventCallback<string> OnStreamComplete { get; set; }
+    [Parameter] public EventCallback<string> OnStreamError { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback OnRetry { get; set; }
+    [Parameter] public EventCallback OnErrorDismissed { get; set; }
+    [Parameter] public EventCallback<(AIChatMessage Message, string NewContent)> OnEditMessage { get; set; }
+    [Parameter] public EventCallback<AIChatMessage> OnRetryMessage { get; set; }
+
+    private ChatMessageList? _messageListRef;
+
+    private async Task HandleSend(string message)
+    {
+        await OnSendMessage.InvokeAsync(message);
+
+        // Scroll to bottom when sending a message to engage auto-scroll
+        if (_messageListRef != null)
+        {
+            await _messageListRef.ScrollToBottomAsync();
+        }
+        
+        StateHasChanged();
+    }
+
+    private async Task HandleStreamComplete(string content)
+    {
+        await OnStreamComplete.InvokeAsync(content);
+    }
+
+    private async Task HandleStreamError(string error)
+    {
+        await OnStreamError.InvokeAsync(error);
+    }
+
+    private async Task HandleCancel()
+    {
+        if (_messageListRef != null)
+        {
+            await _messageListRef.CancelStreamAsync();
+        }
+        await OnCancel.InvokeAsync();
+    }
+
+    private async Task HandleRetry()
+    {
+        await OnRetry.InvokeAsync();
+    }
+
+    private async Task HandleErrorDismissed()
+    {
+        await OnErrorDismissed.InvokeAsync();
+    }
+
+  
+    public async Task CancelStreamAsync()
+    {
+        if (_messageListRef != null)
+        {
+            await _messageListRef.CancelStreamAsync();
+        }
+    }
+}

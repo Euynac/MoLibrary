@@ -1,0 +1,145 @@
+@using Monica.JobScheduler.UI.Models
+
+@inject NavigationManager NavigationManager
+
+<div class="problem-jobs-wrapper">
+    <MudPaper Class="problem-card" Elevation="0">
+        <div class="card-header">
+            <div class="header-title">
+                <MudIcon Icon="@Icons.Material.Filled.ReportProblem"
+                         Color="@(HasProblems ? Color.Warning : Color.Default)"
+                         Size="Size.Small" />
+                <MudText Typo="Typo.h6">需要关注</MudText>
+            </div>
+            @if (HasProblems)
+            {
+                <MudChip T="string" Color="Color.Warning" Size="Size.Small" Variant="Variant.Filled">
+                    @TotalProblemCount
+                </MudChip>
+            }
+        </div>
+
+        @if (HasProblems)
+        {
+            <div class="problems-container">
+                @* Consecutive Failures *@
+                @if (Problems?.ConsecutiveFailures.Count > 0)
+                {
+                    <div class="problem-section">
+                        <div class="section-header">
+                            <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Small" Color="Color.Error" />
+                            <span>连续失败</span>
+                        </div>
+                        @foreach (var job in Problems.ConsecutiveFailures.Take(3))
+                        {
+                            <div class="problem-item" @onclick="() => ViewJob(job.JobKey)">
+                                <div class="problem-info">
+                                    <span class="job-name" title="@job.JobKey">@job.JobName</span>
+                                    <span class="problem-detail">连续 @job.ConsecutiveFailureCount 次失败</span>
+                                </div>
+                                <MudIconButton Icon="@Icons.Material.Filled.ArrowForward"
+                                               Size="Size.Small"
+                                               Color="Color.Default" />
+                            </div>
+                        }
+                    </div>
+                }
+
+                @* Long Running Jobs *@
+                @if (Problems?.LongRunning.Count > 0)
+                {
+                    <div class="problem-section">
+                        <div class="section-header">
+                            <MudIcon Icon="@Icons.Material.Filled.HourglassTop" Size="Size.Small" Color="Color.Warning" />
+                            <span>长时间运行</span>
+                        </div>
+                        @foreach (var job in Problems.LongRunning.Take(3))
+                        {
+                            <div class="problem-item" @onclick="() => ViewInstance(job.InstanceId)">
+                                <div class="problem-info">
+                                    <span class="job-name" title="@job.JobKey">@job.JobName</span>
+                                    <span class="problem-detail">
+                                        已运行 @FormatDuration(job.ElapsedTime) (@job.TimeoutPercentage.ToString("F0")% 超时)
+                                    </span>
+                                </div>
+                                <MudProgressLinear Color="@GetTimeoutColor(job.TimeoutPercentage)"
+                                                   Value="@job.TimeoutPercentage"
+                                                   Max="100"
+                                                   Size="Size.Small"
+                                                   Style="width: 60px;" />
+                            </div>
+                        }
+                    </div>
+                }
+
+                @* High Skip Rate Jobs *@
+                @if (Problems?.HighSkipRate.Count > 0)
+                {
+                    <div class="problem-section">
+                        <div class="section-header">
+                            <MudIcon Icon="@Icons.Material.Filled.SkipNext" Size="Size.Small" Color="Color.Info" />
+                            <span>跳过率过高</span>
+                        </div>
+                        @foreach (var job in Problems.HighSkipRate.Take(3))
+                        {
+                            <div class="problem-item" @onclick="() => ViewJob(job.JobKey)">
+                                <div class="problem-info">
+                                    <span class="job-name" title="@job.JobKey">@job.JobName</span>
+                                    <span class="problem-detail">
+                                        跳过率 @job.SkipRate.ToString("F1")% (并发上限: @job.MaxConcurrency)
+                                    </span>
+                                </div>
+                                <MudIconButton Icon="@Icons.Material.Filled.ArrowForward"
+                                               Size="Size.Small"
+                                               Color="Color.Default" />
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="no-problems">
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Large" Color="Color.Success" />
+                <MudText Typo="Typo.body2" Color="Color.Secondary">所有任务运行正常</MudText>
+            </div>
+        }
+    </MudPaper>
+</div>
+
+@code {
+    [Parameter]
+    public ProblemJobs? Problems { get; set; }
+
+    private bool HasProblems => Problems?.HasProblems ?? false;
+    private int TotalProblemCount => Problems?.TotalProblemCount ?? 0;
+
+    private void ViewJob(string jobKey)
+    {
+        NavigationManager.NavigateTo($"/job-scheduler/definitions/{Uri.EscapeDataString(jobKey)}");
+    }
+
+    private void ViewInstance(string instanceId)
+    {
+        NavigationManager.NavigateTo($"/job-scheduler/instances?instanceId={Uri.EscapeDataString(instanceId)}");
+    }
+
+    private static Color GetTimeoutColor(double percentage)
+    {
+        if (percentage >= 90) return Color.Error;
+        if (percentage >= 70) return Color.Warning;
+        return Color.Info;
+    }
+
+    private static string FormatDuration(TimeSpan duration)
+    {
+        if (duration.TotalDays >= 1)
+            return $"{duration.TotalDays:F1}天";
+        if (duration.TotalHours >= 1)
+            return $"{duration.TotalHours:F1}小时";
+        if (duration.TotalMinutes >= 1)
+            return $"{duration.TotalMinutes:F0}分钟";
+        return $"{duration.TotalSeconds:F0}秒";
+    }
+}

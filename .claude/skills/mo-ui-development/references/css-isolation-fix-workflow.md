@@ -9,7 +9,7 @@ In Blazor CSS isolation, styles only apply to HTML elements directly written in 
 ### Step 1: Find all Razor components with CSS files
 
 ```bash
-find . -name "*.razor.css" -path "*/MoLibrary.*UI/*"
+find . -name "*.razor.css" -path "*/Monica.*UI/*"
 ```
 
 ### Step 2: Check each CSS file for problematic patterns
@@ -221,7 +221,7 @@ After making changes:
    }
    ```
 
-6. **Rebuild**: `dotnet build MoLibrary.JobScheduler.UI`
+6. **Rebuild**: `dotnet build Monica.JobScheduler.UI`
 
 7. **Test**: Verify styles are applied in browser
 
@@ -243,7 +243,7 @@ For fixing multiple components at once:
 
 4. **Rebuild all affected projects**:
    ```bash
-   dotnet build MoLibrary.sln
+   dotnet build Monica.sln
    ```
 
 5. **Verify in browser** for both light and dark modes

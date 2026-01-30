@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="..\common.xml" />
+
+  <ItemGroup>
+    <PackageReference Include="EPPlus" Version="8.4.1" />
+    <PackageReference Include="NPOI" Version="2.7.5" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Modules\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
+    <ProjectReference Include="..\Monica.StateStore\Monica.StateStore.csproj" />
+  </ItemGroup>
+</Project>

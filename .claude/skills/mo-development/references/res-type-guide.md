@@ -1,8 +1,8 @@
 # Unified Response Model Res - Complete Guide
 
-This guide provides comprehensive documentation for the unified interface return model `Res` used throughout MoLibrary.
+This guide provides comprehensive documentation for the unified interface return model `Res` used throughout Monica.
 
-**Source location**: `MoLibrary.Tool/MoResponse/Res.cs`
+**Source location**: `Monica.Tool/MoResponse/Res.cs`
 
 ## Overview
 
@@ -218,7 +218,7 @@ public class UserService
 1. **Never return null** - Always return `Res.Fail()` or `Res.Ok()`
 2. **Catch exceptions** - Return `Res.Fail()` with meaningful error messages
 3. **Use implicit conversions** - Makes code cleaner and more readable
-4. **Include using statement** - `using MoLibrary.Tool.MoResponse;`
+4. **Include using statement** - `using Monica.Tool.MoResponse;`
 
 ## API Response Integration
 

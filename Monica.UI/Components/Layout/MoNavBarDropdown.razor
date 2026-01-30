@@ -1,0 +1,48 @@
+@using Monica.UI.UICore.Models
+
+<div class="navbar-item"
+     @onmouseenter="OnMouseEnter"
+     @onmouseleave="OnMouseLeave">
+
+    <button class="navbar-link">
+        @Category
+        <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" />
+    </button>
+
+    @if (_isHovered)
+    {
+        <div class="dropdown-menu">
+            @foreach (var item in Items.OrderBy(i => i.Order))
+            {
+                <MudNavLink Href="@item.Href"
+                           Class="dropdown-item"
+                           Match="@item.NavLinkMatch">
+                    @if (!string.IsNullOrEmpty(item.Icon))
+                    {
+                        <MudIcon Icon="@item.Icon" Size="Size.Small" Class="item-icon" />
+                    }
+                    <span>@item.Text</span>
+                </MudNavLink>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Category { get; set; } = string.Empty;
+    [Parameter] public List<UINavItem> Items { get; set; } = new();
+
+    private bool _isHovered = false;
+
+    private void OnMouseEnter()
+    {
+        _isHovered = true;
+        StateHasChanged();
+    }
+
+    private void OnMouseLeave()
+    {
+        _isHovered = false;
+        StateHasChanged();
+    }
+}

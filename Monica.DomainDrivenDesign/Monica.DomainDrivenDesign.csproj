@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="..\common.xml" />
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.DynamicLinq" Version="10.7.1" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Monica.Authority\Monica.Authority.csproj" />
+    <ProjectReference Include="..\Monica.AutoModel\Monica.AutoModel.csproj" />
+    <ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
+    <ProjectReference Include="..\Monica.DependencyInjection\Monica.DependencyInjection.csproj" />
+    <ProjectReference Include="..\Monica.Repository\Monica.Repository.csproj" />
+  </ItemGroup>
+</Project>

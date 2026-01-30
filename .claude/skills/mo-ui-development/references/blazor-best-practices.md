@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document defines best practices for developing Blazor UI in the MoLibrary framework, focusing on code quality, maintainability, and user experience.
+This document defines best practices for developing Blazor UI in the Monica framework, focusing on code quality, maintainability, and user experience.
 
 ## 1. Component Architecture Principles
 

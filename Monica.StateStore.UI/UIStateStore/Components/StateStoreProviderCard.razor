@@ -1,0 +1,103 @@
+@using Monica.StateStore.Providers
+@using Monica.StateStore.UI.Models
+
+<MudCard Elevation="2">
+    <MudCardHeader>
+        <CardHeaderAvatar>
+            <MudAvatar Color="@GetProviderColor()" Size="Size.Large">
+                <MudIcon Icon="@GetProviderIcon()" />
+            </MudAvatar>
+        </CardHeaderAvatar>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">@Provider.DisplayName</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@Provider.ImplementationType</MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            <MudChip T="string" Color="@GetProviderColor()" Size="Size.Small">
+                @Provider.ProviderTypeName
+            </MudChip>
+        </CardHeaderActions>
+    </MudCardHeader>
+
+    <MudCardContent>
+        <MudStack Spacing="2">
+            @* 能力标签 *@
+            <div class="d-flex flex-wrap gap-1">
+                @if (Provider.IsDefaultIMoStateStore)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled">
+                        <MudIcon Icon="@Icons.Material.Filled.Star" Size="Size.Small" Class="mr-1" />
+                        IMoStateStore
+                    </MudChip>
+                }
+
+                @if (Provider.SupportsKeyScanning)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">
+                        <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Small" Class="mr-1" />
+                        Key 扫描
+                    </MudChip>
+                }
+                else
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
+                        <MudIcon Icon="@Icons.Material.Filled.SearchOff" Size="Size.Small" Class="mr-1" />
+                        不支持扫描
+                    </MudChip>
+                }
+
+                @if (Provider.IsDistributed)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
+                        <MudIcon Icon="@Icons.Material.Filled.Cloud" Size="Size.Small" Class="mr-1" />
+                        分布式
+                    </MudChip>
+                }
+
+                @if (Provider.OptionType != null)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Outlined">
+                        <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" Class="mr-1" />
+                        有配置项
+                    </MudChip>
+                }
+            </div>
+        </MudStack>
+    </MudCardContent>
+
+    <MudCardActions>
+        <MudButton Variant="Variant.Text"
+                   Color="Color.Primary"
+                   EndIcon="@Icons.Material.Filled.OpenInNew"
+                   OnClick="OnViewDetails">
+            查看详情
+        </MudButton>
+    </MudCardActions>
+</MudCard>
+
+@code {
+    [Parameter] public StateStoreProviderInfo Provider { get; set; } = null!;
+
+    [Parameter] public EventCallback<StateStoreProviderInfo> OnViewDetailsClicked { get; set; }
+
+    private string GetProviderIcon() => Provider.ProviderType switch
+    {
+        EStateStoreProviderType.Redis => Icons.Material.Filled.Storage,
+        EStateStoreProviderType.Dapr => Icons.Material.Filled.Cloud,
+        EStateStoreProviderType.Memory => Icons.Material.Filled.Memory,
+        _ => Icons.Material.Filled.Help
+    };
+
+    private Color GetProviderColor() => Provider.ProviderType switch
+    {
+        EStateStoreProviderType.Redis => Color.Error,
+        EStateStoreProviderType.Dapr => Color.Info,
+        EStateStoreProviderType.Memory => Color.Success,
+        _ => Color.Default
+    };
+
+    private async Task OnViewDetails()
+    {
+        await OnViewDetailsClicked.InvokeAsync(Provider);
+    }
+}

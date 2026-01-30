@@ -1,6 +1,6 @@
-# MoLibrary Module Patterns
+# Monica Module Patterns
 
-This guide defines the standardized patterns and conventions for creating modules in MoLibrary.
+This guide defines the standardized patterns and conventions for creating modules in Monica.
 
 ## Module Naming Conventions
 
@@ -17,7 +17,7 @@ This guide defines the standardized patterns and conventions for creating module
 ### Standard Module Structure
 
 ```
-MoLibrary.{ModuleName}/
+Monica.{ModuleName}/
 ├── Module{Name}.cs                    # Core module implementation
 ├── Module{Name}Option.cs              # Configuration options
 ├── Module{Name}Guide.cs               # Fluent configuration builder
@@ -32,7 +32,7 @@ MoLibrary.{ModuleName}/
 ### UI Module Structure
 
 ```
-MoLibrary.Framework.UI/
+Monica.Framework.UI/
 ├── Modules/
 │   └── {ModuleUI}UI.cs                # UI module class (e.g., SignalrUI.cs)
 ├── UI{ModuleName}/                    # UI folder (e.g., UISignalr/)
@@ -91,7 +91,7 @@ public class Module{Name}(Module{Name}Option option)
 
 ### UI Module Implementation
 
-For UI module implementation patterns including page registration and component structure, see the **MoLibrary UI Development** skill and its `references/module-structure-guide.md`.
+For UI module implementation patterns including page registration and component structure, see the **Monica UI Development** skill and its `references/module-structure-guide.md`.
 
 ## Options Class
 

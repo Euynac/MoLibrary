@@ -1,16 +1,16 @@
 ---
 name: mo-development
-description: This skill should be used when the user asks to "create module", "add module", "module structure", "use Res type", "return Res", "Res.Ok", "Res.Fail", "IsFailed pattern", "module registration", "module dependencies", "module pattern", "MoLibrary architecture", "service layer pattern", "create service", "add service", "create hosted service", "add background service", "MoBackgroundService", "MoHostedService", "RecordState", "hosted service observability", "service state tracking", "CoordinatedLeaderService", or needs guidance on MoLibrary module architecture, the unified response model Res, module registration patterns, service layer return value conventions, or hosted service development with observability.
+description: This skill should be used when the user asks to "create module", "add module", "module structure", "use Res type", "return Res", "Res.Ok", "Res.Fail", "IsFailed pattern", "module registration", "module dependencies", "module pattern", "Monica architecture", "service layer pattern", "create service", "add service", "create hosted service", "add background service", "MoBackgroundService", "MoHostedService", "RecordState", "hosted service observability", "service state tracking", "CoordinatedLeaderService", or needs guidance on Monica module architecture, the unified response model Res, module registration patterns, service layer return value conventions, or hosted service development with observability.
 version: 1.0.0
 ---
 
-# MoLibrary Development Guide
+# Monica Development Guide
 
-This skill provides essential guidance for developing modules and services in the MoLibrary framework.
+This skill provides essential guidance for developing modules and services in the Monica framework.
 
 ## Architecture Overview
 
-MoLibrary is a modular .NET infrastructure library designed for flexibility and performance. Each module can be used independently without requiring the entire framework.
+Monica is a modular .NET infrastructure library designed for flexibility and performance. Each module can be used independently without requiring the entire framework.
 
 ### Module Pattern
 
@@ -25,7 +25,7 @@ Every module follows a consistent pattern with four components:
 
 ### Core Dependencies
 
-**MoLibrary.Core** is the foundation for all other modules, containing:
+**Monica.Core** is the foundation for all other modules, containing:
 - `MoModule` base class
 - Module registration system
 - Automatic middleware ordering
@@ -102,7 +102,7 @@ if ((await service.GetDataAsync(id)).IsFailed(out var error, out var data))
 1. **All service methods** must return `Res<T>` or `Res` - never return null
 2. **Use implicit conversions** for cleaner code when returning success or error
 3. **Handle responses** using the `IsFailed` pattern to extract error and data
-4. **Required using**: Include `using MoLibrary.Tool.MoResponse;`
+4. **Required using**: Include `using Monica.Tool.MoResponse;`
 
 For detailed `Res` type documentation, see `references/res-type-guide.md`.
 
@@ -149,7 +149,7 @@ For complete module structure patterns, see `references/module-patterns.md`.
 
 ## Hosted Service Development
 
-MoLibrary provides `MoBackgroundService` as a base class for background services with built-in observability.
+Monica provides `MoBackgroundService` as a base class for background services with built-in observability.
 
 ### Key Principle: Use RecordState, Not Logger
 
@@ -216,7 +216,7 @@ For detailed hosted service patterns including `CoordinatedLeaderService` for le
 
 ### Source Code Reference
 
-- **Res type definition**: `MoLibrary.Tool/MoResponse/Res.cs`
-- **Module base class**: `MoLibrary.Core/Module/MoModule.cs`
-- **MoBackgroundService**: `MoLibrary.Core/Features/HostedServices/MoBackgroundService.cs`
-- **CoordinatedLeaderService**: `MoLibrary.RegisterCentre/Core/CoordinatedLeaderService.cs`
+- **Res type definition**: `Monica.Tool/MoResponse/Res.cs`
+- **Module base class**: `Monica.Core/Module/MoModule.cs`
+- **MoBackgroundService**: `Monica.Core/Features/HostedServices/MoBackgroundService.cs`
+- **CoordinatedLeaderService**: `Monica.RegisterCentre/Core/CoordinatedLeaderService.cs`

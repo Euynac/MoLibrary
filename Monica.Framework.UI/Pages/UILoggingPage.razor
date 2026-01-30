@@ -1,0 +1,715 @@
+@attribute [Route(LOGGING_MONITOR_URL)]
+@using System.Diagnostics
+@using System.Threading.Channels
+@using Microsoft.Extensions.Logging
+@using Microsoft.JSInterop
+@using Monica.Framework.UI.UILogging.Components
+@using Monica.Framework.UI.UILogging.Models
+@using Monica.Framework.UI.UILogging.Services
+@using Monica.Tool.MoResponse
+@using MudBlazor
+
+@inject LoggingService LoggingService
+@inject LogFileQueryService LogFileQueryService
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+@inject ILogger<UILoggingPage> Logger
+@inject IJSRuntime JSRuntime
+
+@implements IAsyncDisposable
+
+<PageTitle>日志监控</PageTitle>
+
+<script src="_content/Monica.Framework.UI/js/logging-ui.js"></script>
+
+<div class="page-container">
+    @if (_isInitializing)
+    {
+        <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="height: 100vh;">
+            <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Large" />
+            <MudText Typo="Typo.h6" Class="mt-4">正在加载日志数据...</MudText>
+        </MudStack>
+    }
+    else
+    {
+        <div class="page-content">
+            <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="tab-content">
+                <MudTabPanel Text="实时日志" Icon="@Icons.Material.Filled.Timeline">
+                    <div class="realtime-log-panel">
+                        @if (!_logFileExists)
+                        {
+                            <MudAlert Severity="Severity.Warning" Class="mb-2" Dense="true">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Style="width: 100%">
+                                    <MudText Typo="Typo.body2">
+                                        <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Class="mr-1" Style="vertical-align: middle;" />
+                                        日志文件不存在：<strong>@(_currentLogFilePath ?? "未配置")</strong>
+                                    </MudText>
+                                    <MudButton Variant="Variant.Outlined"
+                                               Color="Color.Warning"
+                                               Size="Size.Small"
+                                               StartIcon="@Icons.Material.Filled.SwapHoriz"
+                                               OnClick="OpenFileSwitchDialog">
+                                        切换日志文件
+                                    </MudButton>
+                                </MudStack>
+                            </MudAlert>
+                        }
+
+                        <div class="file-info">
+                            <MudStack Row="true" Spacing="4" AlignItems="AlignItems.Center">
+                                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                                    <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" />
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        当前监听日志文件：<strong>@(_currentLogFilePath ?? "未检测到")</strong>
+                                    </MudText>
+                                    <MudIconButton Icon="@Icons.Material.Filled.SwapHoriz"
+                                                   Size="Size.Small"
+                                                   Color="Color.Primary"
+                                                   OnClick="OpenFileSwitchDialog"
+                                                   Title="切换日志文件" />
+                                </MudStack>
+                                <MudDivider Vertical="true" FlexItem="true" />
+                                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                                    <MudIcon Icon="@Icons.Material.Filled.FormatListNumbered" Size="Size.Small" />
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        文件总行数：<strong>@_totalFileLineCount.ToString("N0")</strong>
+                                    </MudText>
+                                </MudStack>
+                                <MudDivider Vertical="true" FlexItem="true" />
+                                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                                    <MudIcon Icon="@Icons.Material.Filled.Speed" Size="Size.Small" />
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        初始加载耗时：<strong>@_initLoadTimeMs ms</strong>
+                                    </MudText>
+                                </MudStack>
+                            </MudStack>
+                        </div>
+
+                        <div class="toolbar-section">
+                            <LoggingToolbar IsRunning="@_isRunning"
+                                            AutoScroll="@_autoScroll"
+                                            AutoScrollChanged="OnAutoScrollChanged"
+                                            SelectedLineLimit="@_selectedLineLimit"
+                                            PresetLineCounts="@LoggingService.UIOption.PresetLineCounts"
+                                            LineLimitChanged="OnLineLimitChanged"
+                                            StartRequested="StartTailAsync"
+                                            PauseRequested="PauseTailAsync"
+                                            RefreshRequested="ReloadSnapshotAsync"
+                                            ExportRequested="ExportBuffer" />
+                        </div>
+
+                        <div class="filter-section">
+                            <LogFilterPanel Keyword="@_filterKeyword"
+                                            OnlyCapture="@_onlyCapture"
+                                            IsApplying="@_isApplyingFilter"
+                                            KeywordChanged="OnKeywordChanged"
+                                            OnlyCaptureChanged="OnOnlyCaptureChanged"
+                                            ApplyRequested="ApplyFilterAsync"
+                                            ClearRequested="ClearFilterAsync" />
+                        </div>
+
+                        <div class="viewer-section">
+                            @if (_isContextMode)
+                            {
+                                <MudAlert Severity="Severity.Info" Elevation="1" Class="mb-2" NoIcon="true">
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <div style="display: flex; align-items: center;">
+                                            <MudIcon Icon="@Icons.Material.Filled.Visibility" Class="mr-2" />
+                                            <span>正在查看行号 <strong>#@_contextTargetLine</strong> 附近的上下文</span>
+                                        </div>
+                                        <MudButton OnClick="ExitContextMode"
+                                                   Variant="Variant.Text"
+                                                   Color="Color.Primary"
+                                                   StartIcon="@Icons.Material.Filled.ArrowBack">
+                                            返回
+                                        </MudButton>
+                                    </div>
+                                </MudAlert>
+                            }
+
+                            <LogViewer @ref="_logViewerRef"
+                                       Lines="@_currentLines"
+                                       Version="@_currentVersion"
+                                       AutoScroll="@_autoScroll"
+                                       Filter="@_snapshot?.Filter"
+                                       OnLineClicked="HandleLineClick"
+                                       OnShowContext="HandleShowContext"
+                                       OnApplyFilter="HandleApplyFilter"
+                                       OnLoadMore="HandleLoadMore" />
+                        </div>
+                    </div>
+                </MudTabPanel>
+
+                <MudTabPanel Text="日志文件" Icon="@Icons.Material.Filled.Folder">
+                    <div class="file-table-panel">
+                        <LogFileTable Files="@_logFiles"
+                                      IsLoading="@_filesLoading"
+                                      CurrentDirectory="@_logDirectory"
+                                      RefreshRequested="RefreshFilesAsync"
+                                      DownloadRequested="DownloadFileAsync" />
+                    </div>
+                </MudTabPanel>
+            </MudTabs>
+        </div>
+    }
+</div>
+
+@* File Switch Dialog *@
+<MudDialog @bind-Visible="_fileSwitchDialogVisible">
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.SwapHoriz" />
+            <MudText>选择日志文件</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        @if (_filesLoading)
+        {
+            <MudStack AlignItems="AlignItems.Center" Class="pa-4">
+                <MudProgressCircular Indeterminate="true" Size="Size.Medium" />
+                <MudText Typo="Typo.body2" Color="Color.Secondary">正在加载文件列表...</MudText>
+            </MudStack>
+        }
+        else if (_logFiles.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info" Dense="true">
+                未找到任何日志文件
+            </MudAlert>
+        }
+        else
+        {
+            <MudList T="LogFileDescriptor" Clickable="true" @bind-SelectedValue="_selectedSwitchFile" Dense="true" Class="file-list">
+                @foreach (var file in _logFiles)
+                {
+                    <MudListItem T="LogFileDescriptor" Value="file" Class="@(file == _selectedSwitchFile ? "selected-file" : "")">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Style="width: 100%">
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.body2">@file.FileName</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@file.RelativePath</MudText>
+                            </MudStack>
+                            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default">
+                                    @FormatFileSize(file.Size)
+                                </MudChip>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @file.LastModified.ToString("MM-dd HH:mm")
+                                </MudText>
+                            </MudStack>
+                        </MudStack>
+                    </MudListItem>
+                }
+            </MudList>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseFileSwitchDialog">取消</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   OnClick="SwitchToSelectedFile"
+                   Disabled="@(_selectedSwitchFile == null)">
+            确定
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    public const string LOGGING_MONITOR_URL = "/logging-monitor";
+
+    private ScreenLogSnapshot? _snapshot;
+    private bool _isInitializing = true;
+    private bool _isRunning;
+    private bool _autoScroll = true;
+    private bool _isApplyingFilter;
+    private int _selectedLineLimit;
+    private string? _filterKeyword;
+    private bool _onlyCapture;
+    private List<LogFileDescriptor> _logFiles = new();
+    private bool _filesLoading;
+    private string? _logDirectory;
+    private string? _currentLogFilePath;
+    private bool _logFileExists = true;
+
+    // File switch dialog state
+    private bool _fileSwitchDialogVisible;
+    private LogFileDescriptor? _selectedSwitchFile;
+
+    private LoggingSubscription? _subscription;
+    private CancellationTokenSource? _subscriptionCts;
+
+    // Context mode state
+    private bool _isContextMode;
+    private long? _contextTargetLine;
+    private int? _savedLineIndex;
+    private ScreenLogSnapshot? _savedSnapshot;
+    private bool _savedAutoScroll;
+    private bool _savedIsRunning;
+
+    // Metrics
+    private long _totalFileLineCount;
+    private long _initLoadTimeMs;
+
+    private LogViewer? _logViewerRef;
+
+    private IReadOnlyList<LogLineViewModel> _currentLines => _snapshot?.Lines ?? Array.Empty<LogLineViewModel>();
+
+    private long _currentVersion => _snapshot?.Version ?? 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var options = LoggingService.UIOption;
+            _selectedLineLimit = options.DefaultFetchLines;
+            _onlyCapture = options.DefaultOnlyCapture;
+            _logDirectory = LoggingService.LogDirectory;
+            _currentLogFilePath = LoggingService.CurrentLogFilePath;
+            _logFileExists = LoggingService.LogFileExists;
+
+            _subscription = LoggingService.Subscribe();
+            _subscriptionCts = new CancellationTokenSource();
+            _ = Task.Run(() => ListenUpdatesAsync(_subscription.Reader, _subscriptionCts.Token));
+
+            await InitializeSnapshotAsync();
+            await RefreshFilesAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "初始化日志页面失败");
+            Snackbar.Add($"初始化失败: {ex.Message}", Severity.Error);
+
+            // 清理已创建的订阅
+            if (_subscriptionCts != null)
+            {
+                await _subscriptionCts.CancelAsync();
+                _subscriptionCts.Dispose();
+                _subscriptionCts = null;
+            }
+            if (_subscription != null)
+            {
+                await _subscription.DisposeAsync();
+                _subscription = null;
+            }
+        }
+        finally
+        {
+            _isInitializing = false;
+        }
+    }
+
+    private async Task InitializeSnapshotAsync()
+    {
+        var stopwatch = Stopwatch.StartNew();
+
+        var result = await LoggingService.InitializeAsync(_selectedLineLimit);
+
+        stopwatch.Stop();
+        _initLoadTimeMs = stopwatch.ElapsedMilliseconds;
+
+        if (result.IsFailed(out var error, out var snapshot))
+        {
+            Snackbar.Add(error.Message ?? "初始化日志失败", Severity.Error);
+            return;
+        }
+
+        _snapshot = snapshot;
+        _isRunning = LoggingService.IsRunning;
+        _totalFileLineCount = LoggingService.TotalFileLineCount;
+
+        StateHasChanged();
+    }
+
+    private async Task ListenUpdatesAsync(ChannelReader<ScreenLogSnapshot> reader, CancellationToken token)
+    {
+        try
+        {
+            await foreach (var snapshot in reader.ReadAllAsync(token))
+            {
+                _snapshot = snapshot;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // ignore
+        }
+    }
+
+    private Task OnKeywordChanged(string? keyword)
+    {
+        _filterKeyword = keyword;
+        return Task.CompletedTask;
+    }
+
+    private Task OnOnlyCaptureChanged(bool onlyCapture)
+    {
+        _onlyCapture = onlyCapture;
+        return Task.CompletedTask;
+    }
+
+    private Task OnAutoScrollChanged(bool autoScroll)
+    {
+        _autoScroll = autoScroll;
+        return Task.CompletedTask;
+    }
+
+    private async Task OnLineLimitChanged(int lineCount)
+    {
+        if (_selectedLineLimit == lineCount)
+        {
+            return;
+        }
+
+        _selectedLineLimit = lineCount;
+        await ReloadSnapshotAsync();
+    }
+
+    private async Task StartTailAsync()
+    {
+        var res = await LoggingService.StartAsync();
+        if (res.IsFailed(out var error))
+        {
+            Snackbar.Add(error.Message ?? "启动日志监听失败", Severity.Error);
+            return;
+        }
+
+        _isRunning = true;
+        Snackbar.Add("日志监听已启动", Severity.Success);
+    }
+
+    private async Task PauseTailAsync()
+    {
+        var res = await LoggingService.PauseAsync();
+        if (res.IsFailed(out var error))
+        {
+            Snackbar.Add(error.Message ?? "暂停日志监听失败", Severity.Error);
+            return;
+        }
+
+        _isRunning = false;
+        Snackbar.Add("日志监听已暂停", Severity.Info);
+    }
+
+    private async Task ReloadSnapshotAsync()
+    {
+        _isInitializing = true;
+        StateHasChanged();
+        try
+        {
+            await InitializeSnapshotAsync();
+        }
+        finally
+        {
+            _isInitializing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ApplyFilterAsync()
+    {
+        _isApplyingFilter = true;
+        var res = await LoggingService.UpdateFilterAsync(_filterKeyword, _onlyCapture);
+        if (res.IsFailed(out var error, out var snapshot))
+        {
+            Snackbar.Add(error.Message ?? "更新筛选器失败", Severity.Error);
+        }
+        else
+        {
+            _snapshot = snapshot;
+        }
+
+        _isApplyingFilter = false;
+        StateHasChanged();
+    }
+
+    private async Task ClearFilterAsync()
+    {
+        _filterKeyword = null;
+        await ApplyFilterAsync();
+    }
+
+    private Task HandleLineClick(LogLineViewModel line)
+    {
+        Logger.LogDebug("用户查看日志行: {Header}", line.Header);
+        return Task.CompletedTask;
+    }
+
+    private async Task RefreshFilesAsync()
+    {
+        _filesLoading = true;
+        StateHasChanged();
+
+        var res = await LoggingService.ListFilesAsync();
+        if (res.IsFailed(out var error, out var files))
+        {
+            Snackbar.Add(error.Message ?? "获取日志文件失败", Severity.Error);
+        }
+        else
+        {
+            _logFiles = files.ToList();
+        }
+
+        _filesLoading = false;
+        StateHasChanged();
+    }
+
+    private Task DownloadFileAsync(string relativePath)
+    {
+        NavigationManager.NavigateTo($"logging-ui/files/{relativePath}", true);
+        return Task.CompletedTask;
+    }
+
+    private void ExportBuffer()
+    {
+        NavigationManager.NavigateTo("logging-ui/current/export", true);
+    }
+
+    private async Task HandleShowContext((LogLineViewModel line, int lineIndex) args)
+    {
+        var (line, lineIndex) = args;
+
+        if (!line.AbsoluteLineNumber.HasValue)
+        {
+            Snackbar.Add("无法显示上下文：行号信息不可用", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            // 保存当前状态
+            _savedSnapshot = _snapshot;
+            _savedAutoScroll = _autoScroll;
+            _savedIsRunning = _isRunning;
+            _savedLineIndex = lineIndex;
+
+            // 如果正在运行，先暂停
+            if (_isRunning)
+            {
+                await LoggingService.PauseAsync();
+            }
+
+            // 禁用自动滚动
+            _autoScroll = false;
+
+            // 读取上下文
+            var contextResult = await LogFileQueryService.ReadContextAsync(
+                _currentLogFilePath ?? string.Empty,
+                line.AbsoluteLineNumber.Value,
+                50);
+
+            if (contextResult.IsFailed(out var error, out var context))
+            {
+                Snackbar.Add(error.Message ?? "读取上下文失败", Severity.Error);
+                return;
+            }
+
+            // 创建临时快照显示上下文
+            _snapshot = new ScreenLogSnapshot
+            {
+                Lines = context.Lines,
+                Version = _snapshot?.Version ?? 0 + 1,
+                TotalStoredLines = context.Lines.Count,
+                Filter = LogFilterState.Disabled,
+                GeneratedAt = DateTimeOffset.UtcNow
+            };
+
+            _isContextMode = true;
+            _contextTargetLine = line.AbsoluteLineNumber.Value;
+
+            Snackbar.Add($"已加载行号 #{line.AbsoluteLineNumber.Value} 附近的上下文", Severity.Info);
+            StateHasChanged();
+
+            // 等待UI渲染后滚动到目标行（居中显示）
+            await Task.Delay(100);
+            await ScrollToTargetLineAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "显示上下文失败");
+            Snackbar.Add($"显示上下文失败: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ScrollToTargetLineAsync()
+    {
+        if (_logViewerRef == null || !_contextTargetLine.HasValue)
+        {
+            return;
+        }
+
+        // 找到目标行在当前快照中的索引
+        var targetIndex = _snapshot?.Lines
+            .Select((line, index) => new { line, index })
+            .FirstOrDefault(x => x.line.AbsoluteLineNumber == _contextTargetLine.Value)?.index;
+
+        if (targetIndex.HasValue)
+        {
+            await _logViewerRef.ScrollToLineAsync(targetIndex.Value);
+        }
+    }
+
+    private async Task ExitContextMode()
+    {
+        if (!_isContextMode)
+        {
+            return;
+        }
+
+        // 恢复之前的状态
+        _snapshot = _savedSnapshot;
+        _autoScroll = _savedAutoScroll;
+
+        // 如果之前在运行，重新启动
+        if (_savedIsRunning)
+        {
+            await LoggingService.StartAsync();
+            _isRunning = true;
+        }
+
+        _isContextMode = false;
+        _contextTargetLine = null;
+        _savedSnapshot = null;
+
+        Snackbar.Add("已返回实时日志视图", Severity.Info);
+        StateHasChanged();
+
+        // 恢复滚动位置到之前查看的行
+        if (_savedLineIndex.HasValue)
+        {
+            await Task.Delay(100); // 等待UI渲染
+            if (_logViewerRef != null)
+            {
+                await _logViewerRef.ScrollToLineAsync(_savedLineIndex.Value);
+            }
+            _savedLineIndex = null;
+        }
+    }
+
+    private async Task HandleApplyFilter((LogLineViewModel line, string keyword) args)
+    {
+        _filterKeyword = args.keyword;
+        await ApplyFilterAsync();
+    }
+
+    private async Task HandleLoadMore(int lineCount)
+    {
+        if (_isContextMode)
+        {
+            // Don't load more in context mode
+            return;
+        }
+
+        try
+        {
+            var result = await LoggingService.LoadMoreLinesAsync(lineCount);
+
+            if (result.IsFailed(out var error, out var loadedCount))
+            {
+                if (loadedCount == 0)
+                {
+                    Snackbar.Add("已到达日志文件开头", Severity.Info);
+                }
+                else
+                {
+                    Snackbar.Add(error.Message ?? "加载更多日志失败", Severity.Warning);
+                }
+                return;
+            }
+
+            if (loadedCount == 0)
+            {
+                Snackbar.Add("已到达日志文件开头", Severity.Info);
+            }
+            else
+            {
+                Logger.LogDebug("已加载 {Count} 行历史日志", loadedCount);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "加载更多日志时发生异常");
+            Snackbar.Add($"加载失败: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task OpenFileSwitchDialog()
+    {
+        _selectedSwitchFile = null;
+        _fileSwitchDialogVisible = true;
+        await RefreshFilesAsync();
+    }
+
+    private void CloseFileSwitchDialog()
+    {
+        _fileSwitchDialogVisible = false;
+        _selectedSwitchFile = null;
+    }
+
+    private async Task SwitchToSelectedFile()
+    {
+        if (_selectedSwitchFile == null)
+        {
+            return;
+        }
+
+        var selectedFile = _selectedSwitchFile;
+        _fileSwitchDialogVisible = false;
+        _isInitializing = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await LoggingService.SwitchToFileAsync(selectedFile.RelativePath, _selectedLineLimit);
+            if (result.IsFailed(out var error, out var snapshot))
+            {
+                Snackbar.Add(error.Message ?? "切换日志文件失败", Severity.Error);
+                return;
+            }
+
+            _snapshot = snapshot;
+            _currentLogFilePath = LoggingService.CurrentLogFilePath;
+            _logFileExists = LoggingService.LogFileExists;
+            _totalFileLineCount = LoggingService.TotalFileLineCount;
+            _isRunning = false;
+
+            Snackbar.Add($"已切换到: {selectedFile.FileName}", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "切换日志文件失败");
+            Snackbar.Add($"切换失败: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isInitializing = false;
+            _selectedSwitchFile = null;
+            StateHasChanged();
+        }
+    }
+
+    private static string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        var order = 0;
+        double size = bytes;
+        while (size >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            size /= 1024;
+        }
+        return $"{size:0.##} {sizes[order]}";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_subscriptionCts != null)
+        {
+            _subscriptionCts.Cancel();
+            _subscriptionCts.Dispose();
+        }
+
+        if (_subscription is not null)
+        {
+            await _subscription.DisposeAsync();
+        }
+    }
+}

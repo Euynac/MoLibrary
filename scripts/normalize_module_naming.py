@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-MoLibrary Module Naming Normalization Script
+Monica Module Naming Normalization Script
 
-This script normalizes module file naming in MoLibrary projects:
+This script normalizes module file naming in Monica projects:
 1. Renames single-file modules (e.g., Clock.cs -> ModuleClock.cs)
 2. Merges multi-file modules into single files (e.g., ModuleAuth*.cs -> ModuleAuth.cs)
 
 Usage:
     python normalize_module_naming.py --dry-run          # Preview changes
     python normalize_module_naming.py                    # Apply changes
-    python normalize_module_naming.py --project MoLibrary.Core  # Process single project
+    python normalize_module_naming.py --project Monica.Core  # Process single project
 """
 
 import argparse
@@ -35,11 +35,11 @@ class ParsedFile:
     type_definitions: list[str]  # Each item is a complete type definition with docs
 
 
-def find_molibrary_projects(root: Path) -> list[Path]:
-    """Find all MoLibrary.* project directories."""
+def find_monica_projects(root: Path) -> list[Path]:
+    """Find all Monica.* project directories."""
     projects = []
     for item in root.iterdir():
-        if item.is_dir() and item.name.startswith('MoLibrary.'):
+        if item.is_dir() and item.name.startswith('Monica.'):
             projects.append(item)
     # Also check for nested projects (like ServiceInvocation inside RegisterCentre)
     for project in list(projects):
@@ -386,28 +386,28 @@ def process_module(module: ModuleInfo, modules_dir: Path, dry_run: bool, verbose
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Normalize MoLibrary module naming patterns',
+        description='Normalize Monica module naming patterns',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__
     )
     parser.add_argument('--root', type=str, default='.',
-                        help='MoLibrary root directory (default: current directory)')
+                        help='Monica root directory (default: current directory)')
     parser.add_argument('--dry-run', action='store_true',
                         help='Preview changes without executing')
     parser.add_argument('--verbose', '-v', action='store_true',
                         help='Show detailed output including skipped files')
     parser.add_argument('--project', type=str,
-                        help='Process specific project only (e.g., MoLibrary.Core)')
+                        help='Process specific project only (e.g., Monica.Core)')
 
     args = parser.parse_args()
     root = Path(args.root).resolve()
 
-    print("Normalizing MoLibrary module naming patterns...")
+    print("Normalizing Monica module naming patterns...")
     print(f"Root: {root}")
     print(f"Mode: {'DRY-RUN' if args.dry_run else 'EXECUTE'}")
     print()
 
-    projects = find_molibrary_projects(root)
+    projects = find_monica_projects(root)
 
     stats = {
         'projects_scanned': 0,

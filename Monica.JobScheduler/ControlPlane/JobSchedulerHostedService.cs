@@ -1,0 +1,75 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Monica.Core.Features.ObservableInstance;
+using Monica.Core.Modules;
+using Monica.EventBus.Abstractions;
+using Monica.JobScheduler.Events;
+using Monica.JobScheduler.Modules;
+using Monica.RegisterCentre.Modules;
+using Monica.RegisterCentre.Core;
+using Monica.RegisterCentre.Events;
+using Monica.RegisterCentre.Interfaces;
+
+namespace Monica.JobScheduler.ControlPlane;
+
+/// <summary>
+/// Central orchestrator for job scheduling and execution requests.
+/// Extends CoordinatedLeaderService for consistent initialization with RegisterCentre coordination and leader-only execution.
+/// Coordinates RecurringJobScheduler and TriggeredJobScheduler.
+/// Supports dynamic leader status changes - stops schedulers on leader loss and re-initializes on leader gain.
+/// </summary>
+public class JobSchedulerHostedService(
+    IOptions<ModuleJobSchedulerOption> options,
+    RecurringJobScheduler recurringJobScheduler,
+    TriggeredJobScheduler triggeredJobScheduler,
+    [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
+    ILeaderElectionService leaderService,
+    ILogger<JobSchedulerHostedService> logger,
+    IServiceRegistrationCoordinator coordinator,
+    IObservableInstanceManager observableManager,
+    IOptions<ModuleHostedServiceOption> hostedServiceOptions,
+    IOptions<ModuleRegisterCentreOption> registerCentreOptions) : CoordinatedLeaderService(leaderService, registerCentreOptions, logger, coordinator, observableManager, hostedServiceOptions)
+{
+    private readonly ModuleJobSchedulerOption _options = options.Value;
+
+    // Event subscriptions
+    private IAsyncDisposable? _definitionsChangedSubscription;
+
+    public override string ServiceName => nameof(JobSchedulerHostedService);
+
+    protected override async Task LeaderInitializeAsync(CancellationToken cancellationToken)
+    {
+        await recurringJobScheduler.InitializeAsync(cancellationToken);
+
+        // Initialize triggered job scheduler
+        await triggeredJobScheduler.InitializeAsync(eventBus, cancellationToken);
+
+        // Subscribe to job definitions changed event (recurring jobs only)
+        _definitionsChangedSubscription = await eventBus.SubscribeAsync<JobDefinitionsChangedEvent>(
+            recurringJobScheduler.OnJobDefinitionsChangedAsync);
+        RecordState("Subscribed to JobDefinitionsChangedEvent", givenLogLevel: LogLevel.Debug);
+    }
+
+    /// <summary>
+    /// Cleans up schedulers and event subscriptions when leader status is lost.
+    /// This allows for proper re-initialization when leader status is re-gained.
+    /// </summary>
+    protected override async Task OnLeaderLostAsync(LeaderLostReason reason)
+    {
+        RecordState($"JobScheduler cleaning up after losing leader status (reason: {reason})", givenLogLevel: LogLevel.Information);
+
+        // Unsubscribe from events
+        if (_definitionsChangedSubscription != null)
+        {
+            await _definitionsChangedSubscription.DisposeAsync();
+            _definitionsChangedSubscription = null;
+        }
+
+        // Stop schedulers (they will be re-initialized when leader status is re-gained)
+        await recurringJobScheduler.StopAsync(CancellationToken.None);
+        await triggeredJobScheduler.StopAsync(CancellationToken.None);
+
+        RecordState("JobScheduler cleanup completed", givenLogLevel: LogLevel.Information);
+    }
+}

@@ -1,0 +1,420 @@
+@page "/ai-chat"
+@rendermode InteractiveServer
+@using Monica.Tool.MoResponse
+@implements IDisposable
+@inject AIChatUIService ChatUIService
+@inject AIProviderUIService ProviderUIService
+@inject IOptions<ModuleAIUIOption> Options
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<div class="ai-chat-shell">
+    @if (_options.ShowSessionList)
+    {
+        <aside class="ai-sidebar">
+            <SessionList
+                Sessions="@_sessionStorage.Sessions"
+                CurrentSessionId="@_sessionStorage.CurrentSessionId"
+                OnNewSession="@HandleNewSession"
+                OnSelectSession="@HandleSelectSession"
+                OnDeleteSession="@HandleDeleteSession" />
+        </aside>
+    }
+
+    <main class="ai-main">
+        <header class="ai-topbar">
+            <div class="topbar-left">
+                @if (_options.ShowProviderSelector)
+                {
+                    <ProviderSelector
+                        Providers="@_providers"
+                        SelectedProviderId="@_currentProviderId"
+                        SelectedProviderIdChanged="@HandleProviderChanged" />
+                }
+            </div>
+            <div class="topbar-right">
+                <MudIconButton Icon="@Icons.Material.Filled.Settings"
+                               Class="settings-button"
+                               OnClick="OpenPromptSettingsAsync" />
+            </div>
+        </header>
+
+        <ChatContainer
+            Messages="@_currentMessages"
+            StreamingContent="@_streamingContent"
+            IsSending="@_isSending"
+            EnableMarkdown="@_options.EnableMarkdown"
+            EnableAutoScroll="@_options.EnableAutoScroll"
+            ProviderName="@_currentProviderName"
+            ModelName="@_currentModelName"
+            ShowProviderInfo="@(!_options.ShowProviderSelector)"
+            ErrorMessage="@_errorMessage"
+            ShowRetry="@_canRetry"
+            CancellationToken="@_cancellationToken"
+            OnSendMessage="@HandleSendMessage"
+            OnStreamComplete="@HandleStreamComplete"
+            OnStreamError="@HandleStreamError"
+            OnCancel="@HandleCancel"
+            OnRetry="@HandleRetry"
+            OnErrorDismissed="@HandleErrorDismissed"
+            OnEditMessage="@HandleEditMessage"
+            OnRetryMessage="@HandleRetryMessage" />
+    </main>
+</div>
+
+@code {
+    public const string PAGE_URL = "/ai-chat";
+
+    private ModuleAIUIOption _options = null!;
+    private ChatSessionStorage _sessionStorage = null!;
+    private IReadOnlyList<AIProviderInfo> _providers = [];
+    private string? _currentProviderId;
+    private string _currentProviderName = string.Empty;
+    private string _currentSessionTitle = "New Conversation";
+    private IReadOnlyList<AIChatMessage> _currentMessages = [];
+    private IAsyncEnumerable<ChatResponseUpdate>? _streamingContent;
+    private bool _isSending;
+    private string? _errorMessage;
+    private bool _canRetry;
+    private string? _lastMessage;
+    private string? _currentModelName;
+    private CancellationTokenSource? _cts;
+    private CancellationToken _cancellationToken;
+
+    protected override void OnInitialized()
+    {
+        _options = Options.Value;
+        _sessionStorage = ChatUIService.SessionStorage;
+        _providers = ChatUIService.GetProviders();
+
+        // Get default provider
+        var defaultProvider = ChatUIService.GetDefaultProvider();
+        _currentProviderId = defaultProvider?.ProviderId;
+        _currentProviderName = defaultProvider?.DisplayName ?? string.Empty;
+        _currentModelName = defaultProvider?.DefaultModel;
+
+        // Subscribe to session change events
+        _sessionStorage.CurrentSessionChanged += OnCurrentSessionChanged;
+        _sessionStorage.SessionsChanged += OnSessionsChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Load session list
+            ChatUIService.LoadSessions();
+
+            // If no sessions, create a new one
+            if (_sessionStorage.Sessions.Count == 0)
+            {
+                ChatUIService.CreateSession(_currentProviderId);
+            }
+            else
+            {
+                // Select first session
+                _sessionStorage.CurrentSessionId = _sessionStorage.Sessions.First().SessionId;
+            }
+
+            UpdateCurrentSession();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void OnCurrentSessionChanged()
+    {
+        UpdateCurrentSession();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnSessionsChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void UpdateCurrentSession()
+    {
+        var currentSession = _sessionStorage.GetSession(_sessionStorage.CurrentSessionId ?? string.Empty);
+        if (currentSession != null)
+        {
+            _currentSessionTitle = currentSession.Title;
+            // Create new list reference to trigger Blazor change detection
+            _currentMessages = currentSession.Messages.ToList();
+            _currentProviderId = currentSession.ProviderId ?? _currentProviderId;
+            _currentModelName = currentSession.ModelName ?? _currentModelName;
+        }
+        else
+        {
+            _currentSessionTitle = "New Conversation";
+            _currentMessages = [];
+        }
+    }
+
+    private void HandleProviderChanged(string providerId)
+    {
+        _currentProviderId = providerId;
+        var provider = _providers.FirstOrDefault(p => p.ProviderId == providerId);
+        _currentProviderName = provider?.DisplayName ?? string.Empty;
+        _currentModelName = provider?.DefaultModel;
+
+        // Update current session provider
+        var currentSession = _sessionStorage.GetSession(_sessionStorage.CurrentSessionId ?? string.Empty);
+        if (currentSession != null)
+        {
+            currentSession.ProviderId = providerId;
+        }
+    }
+
+    private void HandleNewSession()
+    {
+        ClearError();
+        ChatUIService.CreateSession(_currentProviderId);
+        UpdateCurrentSession();
+    }
+
+    private void HandleSelectSession(string sessionId)
+    {
+        ClearError();
+        ChatUIService.SwitchSession(sessionId);
+    }
+
+    private void HandleDeleteSession(string sessionId)
+    {
+        ChatUIService.DeleteSession(sessionId);
+
+        // If deleted current session, create new or switch to another
+        if (sessionId == _sessionStorage.CurrentSessionId)
+        {
+            if (_sessionStorage.Sessions.Count == 0)
+            {
+                ChatUIService.CreateSession(_currentProviderId);
+            }
+            else
+            {
+                _sessionStorage.CurrentSessionId = _sessionStorage.Sessions.First().SessionId;
+            }
+        }
+
+        UpdateCurrentSession();
+    }
+
+    private async Task HandleSendMessage(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message) || _isSending) return;
+
+        ClearError();
+        _lastMessage = message;
+
+        var sessionId = _sessionStorage.CurrentSessionId;
+        if (string.IsNullOrEmpty(sessionId))
+        {
+            var session = ChatUIService.CreateSession(_currentProviderId);
+            sessionId = session.SessionId;
+        }
+
+        _isSending = true;
+        _cts?.Dispose();
+        _cts = new CancellationTokenSource();
+        _cancellationToken = _cts.Token;
+        StateHasChanged();
+
+        try
+        {
+            // Apply timeout from options
+            if (_options.RequestTimeoutMs > 0)
+            {
+                _cts.CancelAfter(_options.RequestTimeoutMs);
+            }
+
+            // Use streaming response
+            _streamingContent = ChatUIService.SendMessageStreamingAsync(sessionId, message, _cts.Token);
+            UpdateCurrentSession();
+            StateHasChanged();
+        }
+        catch (OperationCanceledException)
+        {
+            HandleSendError("Request was cancelled");
+        }
+        catch (HttpRequestException ex)
+        {
+            HandleSendError($"Network error: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            HandleSendError($"Error: {ex.Message}");
+        }
+    }
+
+    private void HandleSendError(string error)
+    {
+        _isSending = false;
+        _streamingContent = null;
+        _errorMessage = error;
+        _canRetry = true;
+        Snackbar.Add(error, Severity.Error);
+        StateHasChanged();
+    }
+
+    private void HandleStreamComplete(string content)
+    {
+        _isSending = false;
+        _streamingContent = null;
+        _cts?.Dispose();
+        _cts = null;
+        UpdateCurrentSession();
+        StateHasChanged();
+    }
+
+    private void HandleStreamError(string error)
+    {
+        _isSending = false;
+        _streamingContent = null;
+        _errorMessage = error;
+        _canRetry = true;
+        Snackbar.Add(error, Severity.Error);
+        StateHasChanged();
+    }
+
+    private async Task HandleCancel()
+    {
+        if (_cts != null && !_cts.IsCancellationRequested)
+        {
+            await _cts.CancelAsync();
+            Snackbar.Add("Generation stopped", Severity.Info);
+        }
+
+        _isSending = false;
+        _streamingContent = null;
+        StateHasChanged();
+    }
+
+    private async Task HandleRetry()
+    {
+        if (!string.IsNullOrEmpty(_lastMessage))
+        {
+            ClearError();
+            await HandleSendMessage(_lastMessage);
+        }
+    }
+
+    private void HandleEditMessage((AIChatMessage Message, string NewContent) args)
+    {
+        if (string.IsNullOrWhiteSpace(args.NewContent) || _isSending) return;
+
+        ClearError();
+        _lastMessage = args.NewContent;
+
+        _isSending = true;
+        _cts?.Dispose();
+        _cts = new CancellationTokenSource();
+        _cancellationToken = _cts.Token;
+
+        if (_options.RequestTimeoutMs > 0)
+        {
+            _cts.CancelAfter(_options.RequestTimeoutMs);
+        }
+
+        _streamingContent = ChatUIService.EditMessageAsync(
+            _sessionStorage.CurrentSessionId!,
+            args.Message.Id,
+            args.NewContent,
+            _cts.Token);
+
+        UpdateCurrentSession();
+        StateHasChanged();
+    }
+
+    private void HandleRetryMessage(AIChatMessage message)
+    {
+        if (_isSending) return;
+
+        ClearError();
+
+        _isSending = true;
+        _cts?.Dispose();
+        _cts = new CancellationTokenSource();
+        _cancellationToken = _cts.Token;
+
+        if (_options.RequestTimeoutMs > 0)
+        {
+            _cts.CancelAfter(_options.RequestTimeoutMs);
+        }
+
+        _streamingContent = ChatUIService.RetryMessageAsync(
+            _sessionStorage.CurrentSessionId!,
+            message.Id,
+            _cts.Token);
+
+        UpdateCurrentSession();
+        StateHasChanged();
+    }
+
+    private void HandleErrorDismissed()
+    {
+        ClearError();
+    }
+
+    private void ClearError()
+    {
+        _errorMessage = null;
+        _canRetry = false;
+    }
+
+    private async Task OpenPromptSettingsAsync()
+    {
+        var provider = _providers.FirstOrDefault(p => p.ProviderId == _currentProviderId)
+                       ?? _providers.FirstOrDefault();
+        if (provider == null)
+        {
+            Snackbar.Add("未找到可用 Provider", Severity.Warning);
+            return;
+        }
+
+        var session = _sessionStorage.GetSession(_sessionStorage.CurrentSessionId ?? string.Empty);
+        var hasStarted = session?.Messages.Count > 0;
+        var currentPrompt = hasStarted ? session?.SystemPrompt : provider.SystemPrompt;
+
+        var parameters = new DialogParameters
+        {
+            [nameof(ProviderSystemPromptDialog.ProviderName)] = provider.DisplayName,
+            [nameof(ProviderSystemPromptDialog.SystemPrompt)] = currentPrompt,
+            [nameof(ProviderSystemPromptDialog.IsReadOnly)] = hasStarted
+        };
+
+        var dialog = await DialogService.ShowAsync<ProviderSystemPromptDialog>(
+            "系统提示词",
+            parameters,
+            new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+
+        var result = await dialog.Result;
+        if (result.Canceled || hasStarted)
+        {
+            return;
+        }
+
+        var prompt = result.Data as string;
+        var updateResult = ProviderUIService.UpdateProviderSystemPrompt(provider.ProviderId, prompt);
+        if (updateResult.IsFailed(out var error))
+        {
+            Snackbar.Add($"更新提示词失败: {error.Message}", Severity.Error);
+            return;
+        }
+
+        if (session != null && session.Messages.Count == 0)
+        {
+            ChatUIService.UpdateSessionSystemPrompt(session.SessionId, prompt);
+        }
+
+        _providers = ChatUIService.GetProviders();
+        Snackbar.Add("系统提示词已更新", Severity.Success);
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        _sessionStorage.CurrentSessionChanged -= OnCurrentSessionChanged;
+        _sessionStorage.SessionsChanged -= OnSessionsChanged;
+        _cts?.Dispose();
+    }
+
+}

@@ -1,0 +1,849 @@
+/**
+ * 项目单元架构可视化图表
+ * 使用模块化的 D3.js 组件
+ * 
+ * @module projectUnitGraph
+ */
+
+// 导入通用的D3.js模块
+import { GraphBase, getModernLinkStyle, getModernNodeStyle } from '../../Monica.UI/js/d3js/d3-graph-base.js';
+import { ForceLayoutManager } from '../../Monica.UI/js/d3js/d3-force-layout.js';
+import { NodeInteractionHandler, createStaticDragBehavior } from '../../Monica.UI/js/d3js/d3-node-interaction.js';
+import { createLayoutAlgorithms } from '../../Monica.UI/js/d3js/d3-layout-algorithms.js';
+
+// 导入项目单元特定的模块
+import { createProjectUnitCardRenderer } from './projectUnitCardRenderer.js';
+
+// ==================== 配置 ====================
+
+// 节点配置现在由C#层提供，不再在JS层硬编码
+
+/**
+ * 节点尺寸配置
+ */
+const NODE_SIZE = {
+    circle: { 
+        radius: 32,
+        textOffset: 45  // 文字在圆形下方的偏移距离
+    },
+    // 复杂节点尺寸现在由卡片渲染器动态计算
+    complex: {
+        minWidth: 200,
+        maxWidth: 500
+    }
+};
+
+/**
+ * 布局类型
+ */
+const LAYOUT_TYPES = {
+    FORCE: 'force',
+    HIERARCHY: 'hierarchy',
+    CIRCULAR: 'circular',
+    MULTI_CIRCULAR: 'multi_circular'
+};
+
+// ==================== 主类 ====================
+
+/**
+ * 项目单元图表类
+ */
+class ProjectUnitGraph {
+    constructor(containerId, isDarkMode, dotNetRef) {
+        this.containerId = containerId;
+        this.isDarkMode = isDarkMode;
+        this.dotNetRef = dotNetRef;
+        this.currentLayout = LAYOUT_TYPES.FORCE;
+        this.nodes = [];
+        this.links = [];
+        
+        // 初始化基础图形
+        this.graphBase = new GraphBase(containerId, {
+            isDarkMode,
+            showArrows: true,
+            onBackgroundClick: () => this.handleBackgroundClick()
+        });
+        
+        // 初始化力导向布局管理器
+        this.forceManager = new ForceLayoutManager(
+            this.graphBase.width,
+            this.graphBase.height,
+            {
+                linkDistance: 150,
+                chargeStrength: -300,
+                keepFixed: false // 默认不保持固定，支持双击释放
+            }
+        );
+        
+        // 初始化交互处理器
+        this.interactionHandler = new NodeInteractionHandler({
+            onClick: (event, d) => this.handleNodeClick(d),
+            onRightClick: (event, d, position) => this.handleNodeRightClick(d, position),
+            onDoubleClick: (event, d) => this.handleNodeDoubleClick(d),
+            highlightOptions: {
+                fadeOpacity: 0.2,
+                normalOpacity: 1
+            },
+            isDarkMode: isDarkMode,
+            markerIds: this.graphBase.markerIds // 传递marker IDs
+        });
+        
+        // 初始化项目单元卡片渲染器 - 传递尺寸配置
+        this.cardRenderer = createProjectUnitCardRenderer(isDarkMode, NODE_SIZE.complex);
+        
+        // 获取现代化节点样式
+        this.nodeStyle = getModernNodeStyle(isDarkMode, 'simple');
+        
+        // 初始化布局算法管理器
+        this.layoutAlgorithms = createLayoutAlgorithms(
+            this.graphBase.width,
+            this.graphBase.height
+        );
+        
+        // 静态布局拖拽行为
+        this.staticDragBehavior = null;
+    }
+    
+    /**
+     * 更新图表数据
+     */
+    updateGraph(data) {
+        this.nodes = data.nodes;
+        this.links = data.links;
+        
+        // 清空现有内容
+        this.graphBase.mainGroup.selectAll('.links').remove();
+        this.graphBase.mainGroup.selectAll('.nodes').remove();
+        
+        // 创建连接线组
+        const linkGroup = this.graphBase.mainGroup.append('g')
+            .attr('class', 'links');
+        
+        // 创建节点组
+        const nodeGroup = this.graphBase.mainGroup.append('g')
+            .attr('class', 'nodes');
+        
+        // 绘制现代化连接线 - 使用MudBlazor颜色系统和圆润样式
+        const linkStyle = getModernLinkStyle(this.isDarkMode, false, this.graphBase.markerIds);
+        this.linkSelection = linkGroup.selectAll('path')
+            .data(this.links)
+            .enter().append('path')
+            .attr('class', 'link modern-link')
+            .attr('stroke', linkStyle.stroke)
+            .attr('stroke-opacity', linkStyle.strokeOpacity)
+            .attr('stroke-width', linkStyle.strokeWidth)
+            .attr('stroke-linecap', linkStyle.strokeLinecap)
+            .attr('stroke-linejoin', linkStyle.strokeLinejoin)
+            .attr('fill', 'none')
+            .attr('marker-end', linkStyle.markerEnd)
+            .style('filter', linkStyle.filter)
+            .style('pointer-events', 'none'); // 现代化过渡动画
+        
+        // 创建节点
+        this.nodeSelection = nodeGroup.selectAll('g')
+            .data(this.nodes)
+            .enter().append('g')
+            .attr('class', 'node');
+        
+        // 绘制节点图形
+        this.nodeSelection.each((d, i, nodes) => {
+            const nodeElement = d3.select(nodes[i]);
+            this.drawNode(nodeElement, d);
+        });
+        
+        // 绑定交互事件
+        this.interactionHandler.bindNodeEvents(this.nodeSelection, {
+            nodes: this.nodes,
+            links: this.links,
+            linkSelection: this.linkSelection
+        });
+        
+        // 添加工具提示
+        this.nodeSelection.append('title')
+            .text(d => `${d.title}\n类型: ${d.type}\n依赖数: ${d.dependencyCount}\n被依赖数: ${d.dependedByCount || 0}`);
+        
+        // 应用当前布局
+        this.applyLayout(this.currentLayout);
+    }
+    
+    /**
+     * 绘制节点
+     */
+    drawNode(nodeElement, nodeData) {
+        // 添加告警级别属性
+        nodeElement.attr('data-alert-level', nodeData.alertLevel || 'none');
+        
+        // 使用来自C#层的配置判断节点类型
+        if (nodeData.isComplex) {
+            this.drawComplexNode(nodeElement, nodeData);
+        } else {
+            this.drawSimpleNode(nodeElement, nodeData);
+        }
+        
+        // 添加告警视觉效果
+        this.addAlertEffects(nodeElement, nodeData);
+    }
+    
+    /**
+     * 绘制复杂节点（卡片式）
+     */
+    drawComplexNode(nodeElement, nodeData) {
+        // 使用卡片渲染器绘制
+        this.cardRenderer.drawCard(nodeElement, nodeData);
+    }
+    
+    /**
+     * 绘制简单节点（圆形，文字在下方）
+     */
+    drawSimpleNode(nodeElement, nodeData) {
+        const { radius, textOffset } = NODE_SIZE.circle;
+        // 使用来自C#层的颜色配置
+        const color = nodeData.color || '#9E9E9E';
+        
+        // 绘制圆形
+        nodeElement.append('circle')
+            .attr('class', 'node-circle')
+            .attr('r', radius)
+            .attr('fill', color)
+            .attr('stroke', this.nodeStyle.strokeColor)
+            .attr('stroke-width', this.nodeStyle.strokeWidth)
+            .attr('opacity', 1)
+            .style('filter', this.nodeStyle.filter)
+            .style('cursor', 'pointer');
+        
+        // 在圆形下方绘制文字 - 不截断，完整显示
+        nodeElement.append('text')
+            .attr('y', textOffset)
+            .attr('text-anchor', 'middle')
+            .attr('fill', this.nodeStyle.textColor)
+            .style('font-size', '13px')
+            .style('font-weight', '500')
+            .style('pointer-events', 'none')
+            .text(nodeData.title);
+        
+        // 显示依赖和被依赖数量
+        const counts = [];
+        if (nodeData.dependencyCount > 0) {
+            counts.push(`依赖: ${nodeData.dependencyCount}`);
+        }
+        if (nodeData.dependedByCount > 0) {
+            counts.push(`被依赖: ${nodeData.dependedByCount}`);
+        }
+        
+        if (counts.length > 0) {
+            nodeElement.append('text')
+                .attr('y', textOffset + 16)
+                .attr('text-anchor', 'middle')
+                .attr('fill', this.nodeStyle.textColor)
+                .style('font-size', '11px')
+                .style('opacity', 0.7)
+                .style('pointer-events', 'none')
+                .text(counts.join(' | '));
+        }
+    }
+    
+    /**
+     * 添加告警视觉效果
+     */
+    addAlertEffects(nodeElement, nodeData) {
+        if (!nodeData.alertLevel || nodeData.alertLevel === 'none') {
+            return;
+        }
+        
+        // 为节点添加告警发光效果
+        const alertId = `alert-${nodeData.id || Math.random().toString(36).substr(2, 9)}`;
+        
+        // 创建告警滤镜
+        const defs = this.graphBase.svg.select('defs').empty() 
+            ? this.graphBase.svg.append('defs') 
+            : this.graphBase.svg.select('defs');
+        
+        // 移除旧的告警滤镜（如果存在）
+        defs.select(`#${alertId}`).remove();
+        
+        const filter = defs.append('filter')
+            .attr('id', alertId)
+            .attr('x', '-100%')
+            .attr('y', '-100%')
+            .attr('width', '300%')
+            .attr('height', '300%');
+        
+        // 根据告警级别设置不同的发光效果
+        let glowColor, glowStdDeviation, animationClass;
+        
+        switch (nodeData.alertLevel) {
+            case 'error':
+                glowColor = '#ff0000';
+                glowStdDeviation = 8;
+                animationClass = 'alert-glow-error';
+                break;
+            case 'warning':
+                glowColor = '#ffaa00';
+                glowStdDeviation = 6;
+                animationClass = 'alert-glow-warning';
+                break;
+            case 'info':
+                glowColor = '#0088ff';
+                glowStdDeviation = 4;
+                animationClass = 'alert-glow-info';
+                break;
+            default:
+                return;
+        }
+        
+        // 添加高斯模糊
+        const gaussianBlur = filter.append('feGaussianBlur')
+            .attr('stdDeviation', glowStdDeviation)
+            .attr('result', 'coloredBlur');
+        
+        // 添加发光颜色
+        filter.append('feFlood')
+            .attr('flood-color', glowColor)
+            .attr('flood-opacity', 0.6)
+            .attr('result', 'glowColor');
+        
+        filter.append('feComposite')
+            .attr('in', 'glowColor')
+            .attr('in2', 'coloredBlur')
+            .attr('operator', 'in')
+            .attr('result', 'softGlow');
+        
+        // 合并原图和发光
+        const merge = filter.append('feMerge');
+        merge.append('feMergeNode')
+            .attr('in', 'softGlow');
+        merge.append('feMergeNode')
+            .attr('in', 'SourceGraphic');
+        
+        // 应用滤镜到节点的主要元素
+        const mainElement = nodeData.isComplex 
+            ? nodeElement.select('.card-background')
+            : nodeElement.select('.node-circle');
+            
+        if (!mainElement.empty()) {
+            mainElement.style('filter', `url(#${alertId})`);
+            
+            // 为warning和error级别添加闪烁动画
+            if (nodeData.alertLevel === 'warning' || nodeData.alertLevel === 'error') {
+                this.addPulseAnimation(gaussianBlur, nodeData.alertLevel);
+            }
+        }
+    }
+    
+    /**
+     * 添加脉冲动画
+     */
+    addPulseAnimation(element, alertLevel) {
+        const duration = alertLevel === 'error' ? 800 : 1200; // error闪烁更快
+        const minStd = alertLevel === 'error' ? 6 : 4;
+        const maxStd = alertLevel === 'error' ? 12 : 8;
+        
+        // 创建动画
+        const animate = () => {
+            element
+                .transition()
+                .duration(duration / 2)
+                .attr('stdDeviation', maxStd)
+                .transition()
+                .duration(duration / 2)
+                .attr('stdDeviation', minStd)
+                .on('end', animate);
+        };
+        
+        animate();
+    }
+    
+    /**
+     * 应用布局
+     */
+    applyLayout(layoutType) {
+        this.currentLayout = layoutType;
+        
+        // 移除之前的拖拽行为
+        this.nodeSelection.on('.drag', null);
+        
+        switch (layoutType) {
+            case LAYOUT_TYPES.FORCE:
+                this.applyForceLayout();
+                break;
+            case LAYOUT_TYPES.HIERARCHY:
+                this.applyHierarchyLayout();
+                break;
+            case LAYOUT_TYPES.CIRCULAR:
+                this.applyCircularLayout();
+                break;
+            case LAYOUT_TYPES.MULTI_CIRCULAR:
+                this.applyMultiCircularLayout();
+                break;
+        }
+    }
+    
+    /**
+     * 应用力导向布局
+     */
+    applyForceLayout() {
+        // 释放所有固定节点
+        this.forceManager.releaseAllFixed(this.nodes);
+        
+        // 设置数据
+        this.forceManager.setData(this.nodes, this.links);
+        
+        // 应用拖拽行为
+        this.nodeSelection.call(this.forceManager.getDragBehavior());
+        
+        // 启动模拟
+        this.forceManager.start(() => {
+            this.linkSelection
+                .attr('d', d => {
+                    // 计算从源到目标的路径，根据目标节点类型调整终点
+                    const dx = d.target.x - d.source.x;
+                    const dy = d.target.y - d.source.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    const normX = dx / distance;
+                    const normY = dy / distance;
+                    
+                    // 根据目标节点类型计算箭头终点
+                    const targetNode = this.nodes.find(n => n.id === d.target.id);
+                    let arrowOffset = 35; // 默认圆形节点的偏移量
+                    
+                    if (targetNode && targetNode.isComplex && targetNode._cardSize) {
+                        // 复杂节点：计算到矩形边界的距离
+                        const halfWidth = targetNode._cardSize.width / 2;
+                        const halfHeight = targetNode._cardSize.height / 2;
+                        
+                        // 使用更稳定的算法计算矩形边界交点
+                        const angle = Math.atan2(dy, dx);
+                        const cos = Math.cos(angle);
+                        const sin = Math.sin(angle);
+                        
+                        // 计算射线与矩形四条边的交点，选择最近的
+                        let t = Infinity;
+                        
+                        // 检查与垂直边的交点
+                        if (Math.abs(cos) > 0.001) {
+                            const signX = cos > 0 ? 1 : -1;
+                            const tVertical = (signX * halfWidth) / cos;
+                            if (Math.abs(tVertical * sin) <= halfHeight) {
+                                t = Math.min(t, Math.abs(tVertical));
+                            }
+                        }
+                        
+                        // 检查与水平边的交点
+                        if (Math.abs(sin) > 0.001) {
+                            const signY = sin > 0 ? 1 : -1;
+                            const tHorizontal = (signY * halfHeight) / sin;
+                            if (Math.abs(tHorizontal * cos) <= halfWidth) {
+                                t = Math.min(t, Math.abs(tHorizontal));
+                            }
+                        }
+                        
+                        // 添加额外间距
+                        arrowOffset = t + 10;
+                        
+                        // 防止无限大的值
+                        if (!isFinite(arrowOffset) || arrowOffset > 200) {
+                            arrowOffset = halfWidth + halfHeight + 10; // 使用合理的默认值
+                        }
+                    }
+                    
+                    // 缩短路径末端，为箭头留出空间
+                    const endX = d.target.x - normX * arrowOffset;
+                    const endY = d.target.y - normY * arrowOffset;
+                    return `M${d.source.x},${d.source.y} L${endX},${endY}`;
+                });
+            
+            this.nodeSelection
+                .attr('transform', d => `translate(${d.x},${d.y})`);
+        });
+    }
+    
+    /**
+     * 应用层次布局
+     */
+    applyHierarchyLayout() {
+        this.forceManager.stop();
+        
+        // 计算层次布局
+        this.calculateHierarchyLayout();
+        
+        // 应用静态拖拽
+        this.applyStaticDrag();
+        
+        // 更新位置
+        this.updateStaticPositions();
+    }
+    
+    /**
+     * 应用环形布局
+     */
+    applyCircularLayout() {
+        this.forceManager.stop();
+        
+        // 计算环形布局
+        this.calculateCircularLayout();
+        
+        // 应用静态拖拽
+        this.applyStaticDrag();
+        
+        // 更新位置
+        this.updateStaticPositions();
+    }
+    
+    /**
+     * 计算层次布局 - 使用通用布局算法
+     */
+    calculateHierarchyLayout() {
+        this.layoutAlgorithms.hierarchicalLayout(this.nodes, this.links);
+    }
+    
+    /**
+     * 计算环形布局 - 使用通用布局算法
+     */
+    calculateCircularLayout() {
+        const complexNodeCount = this.nodes.filter(n => n.isComplex).length;
+        this.layoutAlgorithms.circularLayout(this.nodes, {
+            avgNodeSize: 60,
+            complexNodeCount: complexNodeCount
+        });
+    }
+    
+    /**
+     * 计算多层环形布局 - 使用通用布局算法
+     */
+    calculateMultiCircularLayout() {
+        this.layoutAlgorithms.multiCircularLayout(this.nodes, {
+            nodesPerRing: 15
+        });
+    }
+    
+    /**
+     * 应用多层环形布局
+     */
+    applyMultiCircularLayout() {
+        this.forceManager.stop();
+        
+        // 计算多层环形布局
+        this.calculateMultiCircularLayout();
+        
+        // 应用静态拖拽
+        this.applyStaticDrag();
+        
+        // 更新位置
+        this.updateStaticPositions();
+    }
+    
+    /**
+     * 应用静态拖拽
+     */
+    applyStaticDrag() {
+        const self = this;
+        
+        this.staticDragBehavior = createStaticDragBehavior({
+            updateLinks: (draggedNode) => {
+                // 实时更新连接线 - 使用path的d属性而不是x1,y1,x2,y2
+                self.linkSelection
+                    .attr('d', d => {
+                        const sourceId = d.source.id || d.source;
+                        const targetId = d.target.id || d.target;
+                        
+                        const source = sourceId === draggedNode.id ? draggedNode : 
+                                       self.nodes.find(n => n.id === sourceId);
+                        const target = targetId === draggedNode.id ? draggedNode : 
+                                       self.nodes.find(n => n.id === targetId);
+                        
+                        if (!source || !target) return '';
+                        
+                        // 计算从源到目标的路径
+                        const dx = target.x - source.x;
+                        const dy = target.y - source.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (distance === 0) return '';
+                        
+                        const normX = dx / distance;
+                        const normY = dy / distance;
+                        
+                        // 根据目标节点类型计算箭头终点
+                        let arrowOffset = 35; // 默认圆形节点的偏移量
+                        
+                        if (target.isComplex && target._cardSize) {
+                            // 复杂节点：计算到矩形边界的距离
+                            const halfWidth = target._cardSize.width / 2;
+                            const halfHeight = target._cardSize.height / 2;
+                            
+                            const angle = Math.atan2(dy, dx);
+                            const cos = Math.cos(angle);
+                            const sin = Math.sin(angle);
+                            
+                            let t = Infinity;
+                            
+                            // 检查与垂直边的交点
+                            if (Math.abs(cos) > 0.001) {
+                                const signX = cos > 0 ? 1 : -1;
+                                const tVertical = (signX * halfWidth) / cos;
+                                if (Math.abs(tVertical * sin) <= halfHeight) {
+                                    t = Math.min(t, Math.abs(tVertical));
+                                }
+                            }
+                            
+                            // 检查与水平边的交点
+                            if (Math.abs(sin) > 0.001) {
+                                const signY = sin > 0 ? 1 : -1;
+                                const tHorizontal = (signY * halfHeight) / sin;
+                                if (Math.abs(tHorizontal * cos) <= halfWidth) {
+                                    t = Math.min(t, Math.abs(tHorizontal));
+                                }
+                            }
+                            
+                            arrowOffset = t + 10;
+                            
+                            if (!isFinite(arrowOffset) || arrowOffset > 200) {
+                                arrowOffset = halfWidth + halfHeight + 10;
+                            }
+                        }
+                        
+                        const endX = target.x - normX * arrowOffset;
+                        const endY = target.y - normY * arrowOffset;
+                        return `M${source.x},${source.y} L${endX},${endY}`;
+                    });
+            }
+        });
+        
+        this.nodeSelection.call(this.staticDragBehavior);
+    }
+    
+    /**
+     * 更新静态位置
+     */
+    updateStaticPositions() {
+        this.nodeSelection
+            .transition()
+            .duration(750)
+            .attr('transform', d => `translate(${d.x},${d.y})`);
+        
+        this.linkSelection
+            .transition()
+            .duration(750)
+            .attr('d', d => {
+                const source = this.nodes.find(n => n.id === (d.source.id || d.source));
+                const target = this.nodes.find(n => n.id === (d.target.id || d.target));
+                
+                if (!source || !target) return '';
+                
+                // 计算从源到目标的路径，根据目标节点类型调整终点
+                const dx = target.x - source.x;
+                const dy = target.y - source.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance === 0) return '';
+                
+                const normX = dx / distance;
+                const normY = dy / distance;
+                
+                // 根据目标节点类型计算箭头终点
+                let arrowOffset = 35; // 默认圆形节点的偏移量
+                
+                if (target.isComplex && target._cardSize) {
+                    // 复杂节点：计算到矩形边界的距离
+                    const halfWidth = target._cardSize.width / 2;
+                    const halfHeight = target._cardSize.height / 2;
+                    
+                    // 使用更稳定的算法计算矩形边界交点
+                    const angle = Math.atan2(dy, dx);
+                    const cos = Math.cos(angle);
+                    const sin = Math.sin(angle);
+                    
+                    // 计算射线与矩形四条边的交点，选择最近的
+                    let t = Infinity;
+                    
+                    // 检查与垂直边的交点
+                    if (Math.abs(cos) > 0.001) {
+                        const signX = cos > 0 ? 1 : -1;
+                        const tVertical = (signX * halfWidth) / cos;
+                        if (Math.abs(tVertical * sin) <= halfHeight) {
+                            t = Math.min(t, Math.abs(tVertical));
+                        }
+                    }
+                    
+                    // 检查与水平边的交点
+                    if (Math.abs(sin) > 0.001) {
+                        const signY = sin > 0 ? 1 : -1;
+                        const tHorizontal = (signY * halfHeight) / sin;
+                        if (Math.abs(tHorizontal * cos) <= halfWidth) {
+                            t = Math.min(t, Math.abs(tHorizontal));
+                        }
+                    }
+                    
+                    // 添加额外间距
+                    arrowOffset = t + 10;
+                    
+                    // 防止无限大的值
+                    if (!isFinite(arrowOffset) || arrowOffset > 200) {
+                        arrowOffset = halfWidth + halfHeight + 10; // 使用合理的默认值
+                    }
+                }
+                
+                // 缩短路径末端，为箭头留出空间
+                const endX = target.x - normX * arrowOffset;
+                const endY = target.y - normY * arrowOffset;
+                return `M${source.x},${source.y} L${endX},${endY}`;
+            });
+    }
+    
+    /**
+     * 设置布局
+     */
+    setLayout(layoutType) {
+        this.applyLayout(layoutType);
+    }
+    
+    /**
+     * 设置力导向距离
+     */
+    setForceDistance(distance) {
+        this.forceManager.updateLinkDistance(distance);
+    }
+    
+    /**
+     * 设置斥力强度
+     */
+    setForceStrength(strength) {
+        this.forceManager.updateChargeStrength(strength);
+    }
+    
+    /**
+     * 重置视图
+     */
+    resetView() {
+        this.graphBase.resetView();
+    }
+    
+    /**
+     * 聚焦节点
+     */
+    focusOnNode(nodeId) {
+        const node = this.nodes.find(n => n.id === nodeId);
+        if (node) {
+            this.graphBase.focusOnPosition({ x: node.x, y: node.y });
+            
+            // 高亮节点
+            const nodeElement = this.nodeSelection.filter(d => d.id === nodeId);
+            nodeElement.select('circle, rect')
+                .transition()
+                .duration(300)
+                .attr('stroke-width', 4)
+                .transition()
+                .delay(300)
+                .duration(300)
+                .attr('stroke-width', 2);
+        }
+    }
+    
+    // 获取单元颜色的方法已移除 - 现在由C#层提供颜色配置
+    
+    /**
+     * 处理节点点击
+     */
+    handleNodeClick(nodeData) {
+        if (this.dotNetRef) {
+            this.dotNetRef.invokeMethodAsync('OnNodeClick', nodeData.id);
+        }
+    }
+    
+    /**
+     * 处理节点右键
+     */
+    handleNodeRightClick(nodeData, position) {
+        if (this.dotNetRef) {
+            // 优先使用 clientX/clientY（相对于视口），如果不存在则使用 pageX/pageY
+            const x = position.clientX !== undefined ? position.clientX : position.pageX;
+            const y = position.clientY !== undefined ? position.clientY : position.pageY;
+            
+            this.dotNetRef.invokeMethodAsync('OnNodeRightClick', nodeData.id, x, y);
+        }
+    }
+    
+    /**
+     * 处理节点双击（释放固定）
+     */
+    handleNodeDoubleClick(nodeData) {
+        if (this.currentLayout === LAYOUT_TYPES.FORCE) {
+            nodeData.fx = null;
+            nodeData.fy = null;
+            this.forceManager.simulation.alpha(0.3).restart();
+        }
+    }
+    
+    /**
+     * 处理背景点击
+     */
+    handleBackgroundClick() {
+        // 关闭右键菜单
+        if (this.dotNetRef) {
+            this.dotNetRef.invokeMethodAsync('OnSvgBackgroundClick');
+        }
+    }
+    
+    /**
+     * 销毁
+     */
+    dispose() {
+        if (this.forceManager) {
+            this.forceManager.dispose();
+        }
+        if (this.graphBase) {
+            this.graphBase.dispose();
+        }
+    }
+}
+
+// ==================== 导出函数 ====================
+
+let graphInstance = null;
+
+export function initializeGraph(containerId, isDarkMode, dotNetRef) {
+    graphInstance = new ProjectUnitGraph(containerId, isDarkMode, dotNetRef);
+}
+
+export function updateGraph(data) {
+    if (graphInstance) {
+        graphInstance.updateGraph(data);
+    }
+}
+
+export function setLayout(layoutType) {
+    if (graphInstance) {
+        graphInstance.setLayout(layoutType);
+    }
+}
+
+export function setForceDistance(distance) {
+    if (graphInstance) {
+        graphInstance.setForceDistance(distance);
+    }
+}
+
+export function setForceStrength(strength) {
+    if (graphInstance) {
+        graphInstance.setForceStrength(strength);
+    }
+}
+
+export function resetView() {
+    if (graphInstance) {
+        graphInstance.resetView();
+    }
+}
+
+export function focusOnNode(nodeId) {
+    if (graphInstance) {
+        graphInstance.focusOnNode(nodeId);
+    }
+}
+
+export function dispose() {
+    if (graphInstance) {
+        graphInstance.dispose();
+        graphInstance = null;
+    }
+}

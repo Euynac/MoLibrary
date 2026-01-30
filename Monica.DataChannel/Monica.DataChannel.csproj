@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <Import Project="..\common.xml"/>
+
+
+  <ItemGroup>
+    <PackageReference Include="Apache.NMS.ActiveMQ" Version="2.2.0" />
+    <PackageReference Include="Confluent.Kafka" Version="2.13.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
+    <ProjectReference Include="..\Monica.Dapr\Monica.Dapr.csproj" />
+    <ProjectReference Include="..\Monica.UI\Monica.UI.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,48 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/examples/">
+    <Project Path="examples/Examples.Monica/Examples.Monica.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Test.Monica.Core/Test.Monica.Core.csproj" />
+    <Project Path="tests/Test.Monica.Tool/Test.Monica.Tool.csproj" />
+    <Project Path="tests/Test.Monica/Test.Monica.csproj" />
+  </Folder>
+  <Project Path="Monica.AI.UI/Monica.AI.UI.csproj" />
+  <Project Path="Monica.AI/Monica.AI.csproj" />
+  <Project Path="Monica.Authority/Monica.Authority.csproj" />
+  <Project Path="Monica.AutoModel/Monica.AutoModel.csproj" />
+  <Project Path="Monica.Configuration.UI/Monica.Configuration.UI.csproj" />
+  <Project Path="Monica.Configuration/Monica.Configuration.csproj" />
+  <Project Path="Monica.Core/Monica.Core.csproj" />
+  <Project Path="Monica.Dapr/Monica.Dapr.csproj" />
+  <Project Path="Monica.DataChannel/Monica.DataChannel.csproj" />
+  <Project Path="Monica.DependencyInjection/Monica.DependencyInjection.csproj" />
+  <Project Path="Monica.DomainDrivenDesign/Monica.DomainDrivenDesign.csproj" />
+  <Project Path="Monica.EventBus/Monica.EventBus.csproj" />
+  <Project Path="Monica.Framework.Generators/Monica.Framework.Generators.csproj" />
+  <Project Path="Monica.Framework.UI/Monica.Framework.UI.csproj" />
+  <Project Path="Monica.Framework/Monica.Framework.csproj" />
+  <Project Path="Monica.Generators.AutoController.Tool/Monica.Generators.AutoController.Tool.csproj" />
+  <Project Path="Monica.Generators.AutoController/Monica.Generators.AutoController.csproj" />
+  <Project Path="Monica.JobScheduler.EfCore/Monica.JobScheduler.EfCore.csproj" />
+  <Project Path="Monica.JobScheduler.UI/Monica.JobScheduler.UI.csproj" />
+  <Project Path="Monica.JobScheduler/Monica.JobScheduler.csproj" />
+  <Project Path="Monica.Locker/Monica.Locker.csproj" />
+  <Project Path="Monica.Logging/Monica.Logging.csproj" />
+  <Project Path="Monica.Office/Monica.Office.csproj" />
+  <Project Path="Monica.Profiling/Monica.Profiling.csproj" />
+  <Project Path="Monica.RegisterCentre/Monica.RegisterCentre.csproj" />
+  <Project Path="Monica.Repository/Monica.Repository.csproj" />
+  <Project Path="Monica.Resilience/Monica.Resilience.csproj" />
+  <Project Path="Monica.SignalR/Monica.SignalR.csproj" />
+  <Project Path="Monica.StateStore.StackExchange/Monica.StateStore.StackExchange.csproj" />
+  <Project Path="Monica.StateStore/Monica.StateStore.csproj" />
+  <Project Path="Monica.Tool/Monica.Tool.csproj" />
+  <Project Path="Monica.UI/Monica.UI.csproj" />
+  <Project Path="Monica.Validation/Monica.Validation.csproj" />
+</Solution>

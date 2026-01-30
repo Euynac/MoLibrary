@@ -1,0 +1,40 @@
+using MudBlazor;
+
+namespace Monica.UI.Themes;
+
+/// <summary>
+/// 主题提供者接口
+/// </summary>
+public interface IThemeProvider
+{
+    /// <summary>
+    /// 主题名称
+    /// </summary>
+    string Name { get; }
+    
+    /// <summary>
+    /// 主题显示名称
+    /// </summary>
+    string DisplayName { get; }
+    
+    /// <summary>
+    /// 主题描述
+    /// </summary>
+    string Description { get; }
+    
+    /// <summary>
+    /// 创建MudTheme实例
+    /// </summary>
+    /// <returns>配置好的MudTheme实例</returns>
+    MudTheme CreateTheme();
+    
+    /// <summary>
+    /// 获取明亮模式下的代码块主题
+    /// </summary>
+    CodeBlockTheme LightCodeBlockTheme { get; }
+    
+    /// <summary>
+    /// 获取暗黑模式下的代码块主题
+    /// </summary>
+    CodeBlockTheme DarkCodeBlockTheme { get; }
+}

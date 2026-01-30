@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <Import Project="..\common.xml"/>
+
+  <PropertyGroup>
+    <GenerateStaticWebAssetsManifest>true</GenerateStaticWebAssetsManifest>
+    <NoWarn>$(NoWarn);CS1998</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Monica.Framework\Monica.Framework.csproj" />
+    <ProjectReference Include="..\Monica.JobScheduler.UI\Monica.JobScheduler.UI.csproj" />
+    <ProjectReference Include="..\Monica.UI\Monica.UI.csproj" />
+    <ProjectReference Include="..\Monica.Logging\Monica.Logging.csproj" />
+  </ItemGroup>
+</Project>

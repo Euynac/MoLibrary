@@ -1,0 +1,491 @@
+@using Monica.DataChannel.Dashboard.Models
+@using Monica.DataChannel.Dashboard.Services
+@using Monica.DataChannel.BuildInMiddlewares
+@using MudBlazor
+@using System.Text.Json
+@using Monica.Tool.MoResponse
+@inject IDialogService DialogService
+@inject DataChannelService DataChannelService
+@inject ISnackbar Snackbar
+
+<MudCard Elevation="2" Class="@GetCardClass()">
+    <MudCardHeader Class="pb-2">
+        <CardHeaderContent>
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@GetChannelIcon()" Color="@GetChannelColor()" />
+                <MudText Typo="Typo.h6" Class="channel-title">@Channel.Id</MudText>
+                @if (Channel.HasExceptions)
+                {
+                    <MudChip T="string" Color="Color.Error" Size="Size.Small" Label="true">
+                        异常 (@Channel.ExceptionCount)
+                    </MudChip>
+                }
+            </MudStack>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            @if (_isReInitializing)
+            {
+                <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true" />
+            }
+            else
+            {
+                <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small">
+                    <MudMenuItem OnClick="HandleReInitialize" 
+                                Icon="@Icons.Material.Filled.Refresh"
+                                Disabled="_isReInitializing">
+                        重新初始化
+                    </MudMenuItem>
+                    <MudMenuItem OnClick="@(() => OnViewExceptions.InvokeAsync(Channel.Id))" 
+                                Icon="@Icons.Material.Filled.ErrorOutline">
+                        查看异常
+                    </MudMenuItem>
+                    @if (Channel.HasExceptions)
+                    {
+                        <MudMenuItem OnClick="@(() => OnClearExceptions.InvokeAsync(Channel.Id))" 
+                                    Icon="@Icons.Material.Filled.Clear">
+                            清空异常
+                        </MudMenuItem>
+                    }
+                </MudMenu>
+            }
+        </CardHeaderActions>
+    </MudCardHeader>
+    <MudCardContent Class="channel-content">
+        @if (_isReInitializing)
+        {
+            <!-- Loading遮罩 -->
+            <MudStack AlignItems="AlignItems.Center" Spacing="3" Class="loading-container">
+                <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+                <MudText Typo="Typo.h6" Color="Color.Primary" Class="loading-title">
+                    正在重新初始化...
+                </MudText>
+                <MudText Typo="Typo.body2" Class="loading-subtitle">
+                    请稍候，这可能需要几秒钟
+                </MudText>
+            </MudStack>
+        }
+        else
+        {
+            <!-- 正常内容 -->
+            <MudStack Spacing="3">
+                <!-- 状态信息 -->
+                <MudStack Row="true" Spacing="2">
+                    <MudChip T="string" Color="@(Channel.IsInitialized ? Color.Success : Color.Secondary)" Size="Size.Small">
+                        @(Channel.IsInitialized ? "已初始化" : "未初始化")
+                    </MudChip>
+                    @if (Channel.IsInitializing)
+                    {
+                        <MudChip T="string" Color="Color.Warning" Size="Size.Small">
+                            初始化中
+                        </MudChip>
+                    }
+                    @if (Channel.IsNotAvailable)
+                    {
+                        <MudChip T="string" Color="Color.Error" Size="Size.Small">
+                            不可用
+                        </MudChip>
+                    }
+                </MudStack>
+
+                <!-- 端点信息 -->
+                <MudStack Spacing="2">
+                    <MudText Typo="Typo.subtitle2" Class="endpoint-section-title">端点信息</MudText>
+                    
+                    <!-- 内部端点 -->
+                    <MudExpansionPanels Elevation="0" Dense="true">
+                        <MudExpansionPanel>
+                            <TitleContent>
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@Icons.Material.Filled.Input" Size="Size.Small" Color="Color.Info" />
+                                    <MudText Class="endpoint-text">内部: @Channel.InnerEndpoint.Name</MudText>
+                                </MudStack>
+                            </TitleContent>
+                            <ChildContent>
+                                <MetadataDisplay Metadata="Channel.InnerEndpoint.Metadata" />
+                            </ChildContent>
+                        </MudExpansionPanel>
+                    </MudExpansionPanels>
+
+                    <!-- 外部端点 -->
+                    <MudExpansionPanels Elevation="0" Dense="true">
+                        <MudExpansionPanel>
+                            <TitleContent>
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@Icons.Material.Filled.Output" Size="Size.Small" Color="Color.Success" />
+                                    <MudText Class="endpoint-text">外部: @Channel.OuterEndpoint.Name</MudText>
+                                </MudStack>
+                            </TitleContent>
+                            <ChildContent>
+                                <MetadataDisplay Metadata="Channel.OuterEndpoint.Metadata" />
+                            </ChildContent>
+                        </MudExpansionPanel>
+                    </MudExpansionPanels>
+                </MudStack>
+
+                <!-- 中间件信息 -->
+                @if (Channel.Middlewares.Any())
+                {
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.subtitle2" Class="middleware-section-title">中间件 (@Channel.Middlewares.Count)</MudText>
+                        <MudExpansionPanels Elevation="0" Dense="true">
+                            @foreach (var middleware in Channel.Middlewares)
+                            {
+                                <MudExpansionPanel>
+                                    <TitleContent>
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                            <MudIcon Icon="@GetComponentIcon(middleware.Type)" Size="Size.Small" Color="@GetComponentColor(middleware.Type)" />
+                                            <MudText Class="middleware-name">@middleware.Name</MudText>
+                                            <MudChip T="string" Color="@GetComponentColor(middleware.Type)" Size="Size.Small" Label="true">
+                                                @GetComponentTypeDisplayName(middleware.Type)
+                                            </MudChip>
+                                            @if (middleware.Type == EPipeComponentType.InfoDisplayMiddleware && middleware.InfoDictionary?.Count > 0)
+                                            {
+                                                <MudChip T="string" Color="Color.Info" Size="Size.Small" Icon="@Icons.Material.Filled.Info">
+                                                    @middleware.InfoDictionary.Count 项信息
+                                                </MudChip>
+                                            }
+                                            @if (middleware.Name == nameof(MessageDebuggerMiddleware))
+                                            {
+                                                <MudIconButton Icon="@Icons.Material.Filled.BugReport" 
+                                                             Color="Color.Primary" 
+                                                             Size="Size.Small"
+                                                             OnClick="@(() => OpenMessageDebugger(Channel.Id, middleware))"
+                                                             Title="打开消息调试器" />
+                                            }
+                                        </MudStack>
+                                    </TitleContent>
+                                    <ChildContent>
+                                        @if (middleware.Type == EPipeComponentType.InfoDisplayMiddleware && middleware.InfoDictionary?.Any() == true)
+                                        {
+                                            <!-- 信息展示中间件特殊显示 -->
+                                            <MudStack Spacing="3">
+                                                <!-- 元数据信息 -->
+                                                <MudStack Spacing="2">
+                                                    <MudText Typo="Typo.subtitle2" Class="info-display-section-title">基础信息</MudText>
+                                                    <MetadataDisplay Metadata="middleware.Metadata" />
+                                                </MudStack>
+
+                                                <!-- 展示字典信息 -->
+                                                <MudStack Spacing="2">
+                                                    <MudText Typo="Typo.subtitle2" Class="stats-section-title">
+                                                        <MudIcon Icon="@Icons.Material.Filled.QueryStats" Size="Size.Small" Class="mr-1" />
+                                                        统计信息
+                                                    </MudText>
+                                                    <MudPaper Class="stats-container">
+                                                        <MudGrid Spacing="2">
+                                                            @foreach (var kvp in middleware.InfoDictionary)
+                                                            {
+                                                                <MudItem xs="12" sm="6" md="4">
+                                                                    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                                                                        <MudIcon Icon="@GetInfoIcon(kvp.Value)" Size="Size.Small" Color="@GetInfoColor(kvp.Value)" />
+                                                                        <MudStack Spacing="0" Class="stats-item-container">
+                                                                            <MudText Typo="Typo.caption" Class="stats-item-key">@kvp.Key</MudText>
+                                                                            <MudText Typo="Typo.body2" Class="stats-item-value">@FormatInfoValue(kvp.Value)</MudText>
+                                                                        </MudStack>
+                                                                    </MudStack>
+                                                                </MudItem>
+                                                            }
+                                                        </MudGrid>
+                                                    </MudPaper>
+                                                </MudStack>
+                                            </MudStack>
+                                        }
+                                        else
+                                        {
+                                            <!-- 普通中间件显示 -->
+                                            <MetadataDisplay Metadata="middleware.Metadata" />
+                                        }
+                                    </ChildContent>
+                                </MudExpansionPanel>
+                            }
+                        </MudExpansionPanels>
+                    </MudStack>
+                }
+
+                <!-- 异常信息 -->
+                @if (Channel.HasExceptions)
+                {
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.subtitle2" Class="exception-section-title">异常信息</MudText>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error" />
+                            <MudText Class="exception-text">当前异常: @Channel.ExceptionCount</MudText>
+                        </MudStack>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Small" Color="Color.Warning" />
+                            <MudText Class="exception-text">历史异常: @Channel.TotalExceptionCount</MudText>
+                        </MudStack>
+                    </MudStack>
+                }
+            </MudStack>
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    /// <summary>
+    /// Channel状态信息
+    /// </summary>
+    [Parameter] public ChannelStatusInfo Channel { get; set; } = null!;
+
+    /// <summary>
+    /// 重新初始化事件
+    /// </summary>
+    [Parameter] public EventCallback<string> OnReInitialize { get; set; }
+
+    /// <summary>
+    /// 查看异常事件
+    /// </summary>
+    [Parameter] public EventCallback<string> OnViewExceptions { get; set; }
+
+    /// <summary>
+    /// 清空异常事件
+    /// </summary>
+    [Parameter] public EventCallback<string> OnClearExceptions { get; set; }
+
+    /// <summary>
+    /// 重新初始化进行中状态
+    /// </summary>
+    private bool _isReInitializing = false;
+
+    /// <summary>
+    /// 处理重新初始化
+    /// </summary>
+    /// <returns></returns>
+    private async Task HandleReInitialize()
+    {
+        if (_isReInitializing) return;
+
+        _isReInitializing = true;
+        StateHasChanged();
+
+        try
+        {
+            // 使用ConfigureAwait(false)避免死锁，并确保异步操作不阻塞UI线程
+            await Task.Run(async () => 
+            {
+                await OnReInitialize.InvokeAsync(Channel.Id);
+            }).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            // 可以在这里添加错误处理逻辑
+            System.Diagnostics.Debug.WriteLine($"重新初始化失败: {ex.Message}");
+        }
+        finally
+        {
+            // 确保在UI线程上更新状态
+            await InvokeAsync(() =>
+            {
+                _isReInitializing = false;
+                StateHasChanged();
+            });
+        }
+    }
+
+    /// <summary>
+    /// 获取卡片CSS类
+    /// </summary>
+    /// <returns></returns>
+    private string GetCardClass()
+    {
+        var classes = new List<string> { "channel-card" };
+        
+        if (Channel.HasExceptions)
+            classes.Add("has-exceptions");
+        else if (Channel.IsNotAvailable)
+            classes.Add("not-available");
+        else if (Channel.IsInitialized)
+            classes.Add("initialized");
+            
+        return string.Join(" ", classes);
+    }
+
+    /// <summary>
+    /// 获取Channel图标
+    /// </summary>
+    /// <returns></returns>
+    private string GetChannelIcon()
+    {
+        if (Channel.IsNotAvailable) return Icons.Material.Filled.Cancel;
+        if (Channel.HasExceptions) return Icons.Material.Filled.Error;
+        if (Channel.IsInitialized) return Icons.Material.Filled.CheckCircle;
+        return Icons.Material.Filled.RadioButtonUnchecked;
+    }
+
+    /// <summary>
+    /// 获取Channel颜色
+    /// </summary>
+    /// <returns></returns>
+    private Color GetChannelColor()
+    {
+        if (Channel.IsNotAvailable) return Color.Error;
+        if (Channel.HasExceptions) return Color.Warning;
+        if (Channel.IsInitialized) return Color.Success;
+        return Color.Default;
+    }
+
+    /// <summary>
+    /// 获取组件图标
+    /// </summary>
+    /// <param name="type">组件类型</param>
+    /// <returns></returns>
+    private string GetComponentIcon(EPipeComponentType type)
+    {
+        return type switch
+        {
+            EPipeComponentType.Endpoint => Icons.Material.Filled.Adjust,
+            EPipeComponentType.TransformMiddleware => Icons.Material.Filled.Transform,
+            EPipeComponentType.MonitorMiddleware => Icons.Material.Filled.Monitor,
+            EPipeComponentType.EndpointMiddleware => Icons.Material.Filled.Router,
+            EPipeComponentType.InfoDisplayMiddleware => Icons.Material.Filled.Dashboard,
+            _ => Icons.Material.Filled.Extension
+        };
+    }
+
+    /// <summary>
+    /// 获取组件颜色
+    /// </summary>
+    /// <param name="type">组件类型</param>
+    /// <returns></returns>
+    private Color GetComponentColor(EPipeComponentType type)
+    {
+        return type switch
+        {
+            EPipeComponentType.Endpoint => Color.Primary,
+            EPipeComponentType.TransformMiddleware => Color.Secondary,
+            EPipeComponentType.MonitorMiddleware => Color.Info,
+            EPipeComponentType.EndpointMiddleware => Color.Warning,
+            EPipeComponentType.InfoDisplayMiddleware => Color.Success,
+            _ => Color.Default
+        };
+    }
+
+    /// <summary>
+    /// 获取组件类型显示名称
+    /// </summary>
+    /// <param name="type">组件类型</param>
+    /// <returns></returns>
+    private string GetComponentTypeDisplayName(EPipeComponentType type)
+    {
+        return type switch
+        {
+            EPipeComponentType.Endpoint => "端点",
+            EPipeComponentType.TransformMiddleware => "转换中间件",
+            EPipeComponentType.MonitorMiddleware => "监控中间件",
+            EPipeComponentType.EndpointMiddleware => "端点中间件",
+            EPipeComponentType.InfoDisplayMiddleware => "信息展示",
+            EPipeComponentType.BaseMiddleware => "基础中间件",
+            _ => type.ToString()
+        };
+    }
+
+    /// <summary>
+    /// 获取信息项图标
+    /// </summary>
+    /// <param name="value">信息值</param>
+    /// <returns></returns>
+    private string GetInfoIcon(object value)
+    {
+        return value switch
+        {
+            long or int => Icons.Material.Filled.Numbers,
+            double or float or decimal => Icons.Material.Filled.Numbers,
+            string => Icons.Material.Filled.TextFields,
+            bool => Icons.Material.Filled.ToggleOn,
+            DateTime => Icons.Material.Filled.Schedule,
+            _ => Icons.Material.Filled.Info
+        };
+    }
+
+    /// <summary>
+    /// 获取信息项颜色
+    /// </summary>
+    /// <param name="value">信息值</param>
+    /// <returns></returns>
+    private Color GetInfoColor(object value)
+    {
+        return value switch
+        {
+            long or int => Color.Primary,
+            double or float or decimal => Color.Primary,
+            string => Color.Secondary,
+            bool => Color.Success,
+            DateTime => Color.Info,
+            _ => Color.Default
+        };
+    }
+
+    /// <summary>
+    /// 格式化信息值显示
+    /// </summary>
+    /// <param name="value">信息值</param>
+    /// <returns></returns>
+    private string FormatInfoValue(object value)
+    {
+        return value switch
+        {
+            long longValue => longValue.ToString("N0"),
+            int intValue => intValue.ToString("N0"),
+            double doubleValue => doubleValue.ToString("F2"),
+            float floatValue => floatValue.ToString("F2"),
+            decimal decimalValue => decimalValue.ToString("F2"),
+            DateTime dateTimeValue => dateTimeValue.ToString("yyyy-MM-dd HH:mm:ss"),
+            bool boolValue => boolValue ? "是" : "否",
+            null => "空",
+            _ => value.ToString() ?? "未知"
+        };
+    }
+
+    /// <summary>
+    /// 打开消息调试器对话框
+    /// </summary>
+    private async Task OpenMessageDebugger(string channelId, ComponentInfo middleware)
+    {
+        // 获取实际的中间件实例
+        var debuggerMiddleware = await GetMessageDebuggerMiddleware(channelId, middleware.Name);
+        if (debuggerMiddleware == null)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<MessageDebuggerDialog>
+        {
+            { x => x.Middleware, debuggerMiddleware }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            CloseButton = true,
+            BackdropClick = false
+        };
+
+        await DialogService.ShowAsync<MessageDebuggerDialog>($"消息调试器 - {channelId}", parameters, options);
+    }
+
+    /// <summary>
+    /// 获取MessageDebuggerMiddleware实例
+    /// </summary>
+    private async Task<MessageDebuggerMiddleware?> GetMessageDebuggerMiddleware(string channelId, string middlewareName)
+    {
+        try
+        {
+            var result = await DataChannelService.GetMiddlewareAsync<MessageDebuggerMiddleware>(channelId, middlewareName);
+            if (result.IsFailed(out var error, out var middleware))
+            {
+                Snackbar.Add($"获取调试器失败: {error}", Severity.Error);
+                return null;
+            }
+            
+            return middleware;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"获取调试器时发生错误: {ex.Message}", Severity.Error);
+            return null;
+        }
+    }
+
+} 

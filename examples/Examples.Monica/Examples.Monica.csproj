@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="..\..\common.xml"/>
+
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Monica.DataChannel\Monica.DataChannel.csproj" />
+    <ProjectReference Include="..\..\Monica.Framework\Monica.Framework.csproj" />
+  </ItemGroup>
+
+</Project>

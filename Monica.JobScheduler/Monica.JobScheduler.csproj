@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<Import Project="..\common.xml"/>
+
+
+	<ItemGroup>
+		<PackageReference Include="Cronos" Version="0.11.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
+		<ProjectReference Include="..\Monica.DependencyInjection\Monica.DependencyInjection.csproj" />
+		<ProjectReference Include="..\Monica.EventBus\Monica.EventBus.csproj" />
+		<ProjectReference Include="..\Monica.RegisterCentre\Monica.RegisterCentre.csproj" />
+		<ProjectReference Include="..\Monica.StateStore\Monica.StateStore.csproj" />
+	</ItemGroup>
+</Project>

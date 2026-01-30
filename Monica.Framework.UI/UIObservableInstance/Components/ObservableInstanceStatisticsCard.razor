@@ -1,0 +1,236 @@
+@using Monica.Framework.UI.UIObservableInstance.Models
+
+<MudPaper Class="pa-4 mb-4" Elevation="2">
+    @if (Statistics == null)
+    {
+        <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="pa-4">
+            <MudProgressCircular Color="Color.Info" Indeterminate="true" />
+            <MudText Typo="Typo.body2" Color="Color.Secondary">加载统计信息...</MudText>
+        </MudStack>
+    }
+    else
+    {
+        <MudStack Spacing="3">
+            <!-- Title -->
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.Dashboard" Color="Color.Info" />
+                <MudText Typo="Typo.h6">实例统计</MudText>
+            </MudStack>
+
+            <!-- Statistics Cards Grid -->
+            <MudGrid>
+                <!-- Total Instances -->
+                <MudItem xs="12" sm="6" md="4">
+                    <MudPaper Class="pa-3" Elevation="1" Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <MudStack Spacing="1">
+                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8);">总实例数</MudText>
+                                <MudIcon Icon="@Icons.Material.Filled.Inventory" Style="color: rgba(255,255,255,0.6);" />
+                            </MudStack>
+                            <MudText Typo="Typo.h4" Style="color: white; font-weight: 600;">@Statistics.TotalInstances</MudText>
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+
+                <!-- Healthy Instances -->
+                <MudItem xs="12" sm="6" md="3">
+                    <MudPaper Class="pa-3" Elevation="1" Style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+                        <MudStack Spacing="1">
+                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8);">健康实例</MudText>
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Style="color: rgba(255,255,255,0.6);" />
+                            </MudStack>
+                            <MudText Typo="Typo.h4" Style="color: white; font-weight: 600;">@Statistics.HealthyCount</MudText>
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+
+                <!-- Unhealthy Instances -->
+                <MudItem xs="12" sm="6" md="3">
+                    <MudPaper Class="pa-3" Elevation="1" Style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                        <MudStack Spacing="1">
+                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8);">不健康实例</MudText>
+                                <MudIcon Icon="@Icons.Material.Filled.Warning" Style="color: rgba(255,255,255,0.6);" />
+                            </MudStack>
+                            <MudText Typo="Typo.h4" Style="color: white; font-weight: 600;">@Statistics.UnhealthyCount</MudText>
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+
+                <!-- Unknown Health Instances -->
+                <MudItem xs="12" sm="6" md="3">
+                    <MudPaper Class="pa-3" Elevation="1" Style="background: linear-gradient(135deg, #a8a8a8 0%, #d0d0d0 100%);">
+                        <MudStack Spacing="1">
+                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                <MudText Typo="Typo.caption" Style="color: rgba(0,0,0,0.6);">未知状态</MudText>
+                                <MudIcon Icon="@Icons.Material.Filled.HelpOutline" Style="color: rgba(0,0,0,0.4);" />
+                            </MudStack>
+                            <MudText Typo="Typo.h4" Style="color: rgba(0,0,0,0.8); font-weight: 600;">@Statistics.UnknownHealthCount</MudText>
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+
+                <!-- Total State Changes -->
+                <MudItem xs="12" sm="6" md="4">
+                    <MudPaper Class="pa-3" Elevation="1" Style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                        <MudStack Spacing="1">
+                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8);">总状态变更</MudText>
+                                <MudIcon Icon="@Icons.Material.Filled.SwapHoriz" Style="color: rgba(255,255,255,0.6);" />
+                            </MudStack>
+                            <MudText Typo="Typo.h4" Style="color: white; font-weight: 600;">@Statistics.TotalStateChanges</MudText>
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+
+                <!-- Total Exceptions -->
+                <MudItem xs="12" sm="6" md="4">
+                    <MudPaper Class="pa-3" Elevation="1" Style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                        <MudStack Spacing="1">
+                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8);">总异常数</MudText>
+                                <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Style="color: rgba(255,255,255,0.6);" />
+                            </MudStack>
+                            <MudText Typo="Typo.h4" Style="color: white; font-weight: 600;">@Statistics.TotalExceptions</MudText>
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+
+            <!-- Log Level Distribution -->
+            @if (Statistics.LogLevelDistribution.Any())
+            {
+                <MudPaper Class="pa-3" Elevation="1">
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">日志级别分布</MudText>
+                        <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
+                            @foreach (var logLevel in Statistics.LogLevelDistribution.OrderBy(kv => kv.Key))
+                            {
+                                var color = MapLogLevelToColor(logLevel.Key);
+                                var icon = MapLogLevelToIcon(logLevel.Key);
+                                <MudChip T="string" Color="@color" Icon="@icon">
+                                    @logLevel.Key: @logLevel.Value
+                                </MudChip>
+                            }
+                        </MudStack>
+                    </MudStack>
+                </MudPaper>
+            }
+
+            <!-- Additional Metrics -->
+            <MudGrid>
+                <MudItem xs="12" md="6">
+                    <MudPaper Class="pa-3" Elevation="1">
+                        <MudStack Spacing="2">
+                            <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">平均历史记录</MudText>
+                            <MudText Typo="Typo.h5">@Statistics.AverageHistoryPerInstance.ToString("F2") 条/实例</MudText>
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudPaper Class="pa-3" Elevation="1">
+                        <MudStack Spacing="2">
+                            <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">健康率</MudText>
+                            <MudStack Row="true" AlignItems="AlignItems.Baseline" Spacing="1">
+                                <MudText Typo="Typo.h5">@GetHealthPercentage()%</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">无异常实例占比</MudText>
+                            </MudStack>
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+
+            <!-- Top Types and Groups -->
+            @if (Statistics.TopTypesByCount.Any() || Statistics.TopGroupsByCount.Any())
+            {
+                <MudGrid>
+                    @if (Statistics.TopTypesByCount.Any())
+                    {
+                        <MudItem xs="12" md="6">
+                            <MudPaper Class="pa-3" Elevation="1">
+                                <MudStack Spacing="2">
+                                    <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">Top 类型分布</MudText>
+                                    <MudList T="string" Dense="true">
+                                        @foreach (var typeCount in Statistics.TopTypesByCount.Take(5))
+                                        {
+                                            <MudListItem T="string">
+                                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                                    <MudTooltip Text="@typeCount.TypeName">
+                                                        <MudText Typo="Typo.body2">@typeCount.TypeShortName</MudText>
+                                                    </MudTooltip>
+                                                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary">@typeCount.Count</MudChip>
+                                                </MudStack>
+                                            </MudListItem>
+                                        }
+                                    </MudList>
+                                </MudStack>
+                            </MudPaper>
+                        </MudItem>
+                    }
+
+                    @if (Statistics.TopGroupsByCount.Any())
+                    {
+                        <MudItem xs="12" md="6">
+                            <MudPaper Class="pa-3" Elevation="1">
+                                <MudStack Spacing="2">
+                                    <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">Top 组分布</MudText>
+                                    <MudList T="string" Dense="true">
+                                        @foreach (var groupCount in Statistics.TopGroupsByCount.Take(5))
+                                        {
+                                            <MudListItem T="string">
+                                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                                    <MudText Typo="Typo.body2">@groupCount.GroupId</MudText>
+                                                    <MudChip T="string" Size="Size.Small" Color="Color.Tertiary">@groupCount.Count</MudChip>
+                                                </MudStack>
+                                            </MudListItem>
+                                        }
+                                    </MudList>
+                                </MudStack>
+                            </MudPaper>
+                        </MudItem>
+                    }
+                </MudGrid>
+            }
+        </MudStack>
+    }
+</MudPaper>
+
+@code {
+    [Parameter]
+    public ObservableInstanceStatistics? Statistics { get; set; }
+
+    private string GetHealthPercentage()
+    {
+        if (Statistics == null || Statistics.TotalInstances == 0)
+            return "0";
+
+        var percentage = (double)(Statistics.HealthyCount + Statistics.UnknownHealthCount) / Statistics.TotalInstances * 100;
+        return percentage.ToString("F1");
+    }
+
+    private Color MapLogLevelToColor(Microsoft.Extensions.Logging.LogLevel level) =>
+        level switch
+        {
+            Microsoft.Extensions.Logging.LogLevel.Trace => Color.Default,
+            Microsoft.Extensions.Logging.LogLevel.Debug => Color.Default,
+            Microsoft.Extensions.Logging.LogLevel.Information => Color.Info,
+            Microsoft.Extensions.Logging.LogLevel.Warning => Color.Warning,
+            Microsoft.Extensions.Logging.LogLevel.Error => Color.Error,
+            Microsoft.Extensions.Logging.LogLevel.Critical => Color.Error,
+            _ => Color.Default
+        };
+
+    private string MapLogLevelToIcon(Microsoft.Extensions.Logging.LogLevel level) =>
+        level switch
+        {
+            Microsoft.Extensions.Logging.LogLevel.Trace => Icons.Material.Filled.Code,
+            Microsoft.Extensions.Logging.LogLevel.Debug => Icons.Material.Filled.BugReport,
+            Microsoft.Extensions.Logging.LogLevel.Information => Icons.Material.Filled.Info,
+            Microsoft.Extensions.Logging.LogLevel.Warning => Icons.Material.Filled.Warning,
+            Microsoft.Extensions.Logging.LogLevel.Error => Icons.Material.Filled.Error,
+            Microsoft.Extensions.Logging.LogLevel.Critical => Icons.Material.Filled.ErrorOutline,
+            _ => Icons.Material.Filled.HelpOutline
+        };
+}

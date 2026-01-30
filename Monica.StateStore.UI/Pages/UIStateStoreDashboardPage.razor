@@ -1,0 +1,85 @@
+@attribute [Route(PAGE_URL)]
+@using Monica.StateStore.UI.Services
+@using Monica.StateStore.UI.Models
+@using Monica.StateStore.UI.Modules
+@using Monica.StateStore.UI.UIStateStore.Components
+@using Monica.Tool.MoResponse
+@using Microsoft.Extensions.Options
+@inject StateStoreUIService StateStoreService
+@inject IOptions<ModuleStateStoreUIOption> Options
+@inject ISnackbar Snackbar
+
+<PageTitle>状态存储管理</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
+    <MudText Typo="Typo.h4" Class="mb-4">状态存储管理</MudText>
+
+    <MudTabs Elevation="4" Rounded="true" Color="Color.Primary"
+             @bind-ActivePanelIndex="activeTabIndex"
+             @bind-ActivePanelIndex:after="OnTabChangedAsync">
+        <MudTabPanel Text="Provider 概览" Icon="@Icons.Material.Filled.Hub">
+            <div class="pa-4">
+                <StateStoreProviderList Providers="providers"
+                                        OnRefresh="LoadProvidersAsync"
+                                        IsLoading="isLoading" />
+            </div>
+        </MudTabPanel>
+
+        <MudTabPanel Text="Key 浏览器" Icon="@Icons.Material.Filled.Key">
+            <div class="pa-4">
+                @if (providers.Any())
+                {
+                    <StateStoreKeyExplorer Providers="providers"
+                                           Options="Options.Value" />
+                }
+                else if (!isLoading)
+                {
+                    <MudAlert Severity="Severity.Info">
+                        未注册任何 StateStore Provider
+                    </MudAlert>
+                }
+            </div>
+        </MudTabPanel>
+    </MudTabs>
+</MudContainer>
+
+@code {
+    public const string PAGE_URL = "/state-store-dashboard";
+
+    private List<StateStoreProviderInfo> providers = [];
+    private bool isLoading = false;
+    private int activeTabIndex = 0;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadProvidersAsync();
+        }
+    }
+
+    private async Task LoadProvidersAsync()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        await Task.Yield(); // 确保 UI 更新
+
+        if (StateStoreService.GetRegisteredProviders().IsFailed(out var error, out var data))
+        {
+            Snackbar.Add($"加载 Provider 失败: {error}", Severity.Error);
+        }
+        else
+        {
+            providers = data;
+        }
+
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private Task OnTabChangedAsync()
+    {
+        return Task.CompletedTask;
+    }
+}

@@ -1,0 +1,177 @@
+﻿using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Monica.Core.Module;
+using Monica.Core.Module.Interfaces;
+using Monica.Core.Module.Models;
+using Monica.DomainDrivenDesign.AutoController.MoRpc;
+using Monica.Tool.Extensions;
+
+namespace Monica.DomainDrivenDesign.Modules;
+
+public static class ModuleRpcClientBuilderExtensions
+{
+    extension(Mo)
+    {
+        /// <summary>
+        /// 配置 RpcClient 模块
+        /// </summary>
+        public static ModuleRpcClientGuide AddRpcClient(Action<ModuleRpcClientOption>? action = null)
+        {
+            return new ModuleRpcClientGuide().Register(action);
+        }
+    }
+}
+
+public class ModuleRpcClient(ModuleRpcClientOption option) :
+    MoModuleWithDependencies<ModuleRpcClient, ModuleRpcClientOption, ModuleRpcClientGuide>(option),
+    IWantIterateBusinessTypes
+{
+    public List<Type> RelatedTypes { get; set; } = [];
+
+    public override ModuleKey GetModuleKey()
+    {
+        return EMoModuleKey.RpcClient;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+    }
+
+    public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
+    {
+        foreach (var type in types)
+        {
+            if (type is { IsClass: true, IsAbstract: false} && type.IsSubclassOf(typeof(MoRpcApi)))
+            {
+                RelatedTypes.Add(type);
+            }
+
+            yield return type;
+        }
+    }
+
+    public override void PostConfigureServices(IServiceCollection services)
+    {
+        var registeredInterfaces = new HashSet<Type>();
+        var infoProvider = Option.DomainInfoProvider;
+        if (infoProvider == null) throw new Exception("You must config DomainInfoProvider to use rpc client!");
+        var dependentDomains = infoProvider.GetDependencyDomains() as Enum;
+        foreach (var enumValue in Enum.GetValues(dependentDomains!.GetType()))
+        {
+            if (enumValue is Enum domain && dependentDomains.HasFlag(domain))
+            {
+                if (domain.ToString() == "None") continue;
+
+                foreach (var type in RelatedTypes.Where(p => p.Name.IndexOf("Api", StringComparison.Ordinal) is var index and > 0 
+                                                             && domain.ToString() == p.Name[(index + 3)..]))
+                {
+                    var interfaces = type.GetInterfaces()
+                        .Where(p => p != typeof(IMoRpcApi) && p.IsImplementInterface<IMoRpcApi>()).ToList();
+                    switch (interfaces.Count)
+                    {
+                        case 0:
+                            continue;
+                        case > 1:
+                            throw new InvalidOperationException(
+                                $"There are multiple interfaces ({interfaces.Select(p => p.GetCleanFullName()).StringJoin(",")}) extend {nameof(IMoRpcApi)} for type {type.GetCleanFullName()}");
+                    }
+
+                    var targetInterface = interfaces[0];
+                    if (!registeredInterfaces.Add(targetInterface))
+                    {
+                        throw new InvalidOperationException(
+                            $"Interface {targetInterface.GetCleanFullName()} has been registered, the type {type.GetCleanFullName()} can not register again!");
+                    }
+
+                    if (type.IsSubclassOf(typeof(MoHttpApi)))
+                    {
+                        if (Option.HttpClientRegisterProvider is not { } httpClientRegisterProvider)
+                        {
+                            throw new InvalidOperationException(
+                                "Please config MoRPC http client provider to use rpc client!");
+                        }
+
+                        var appid = infoProvider.GetDomainRelatedAppId(domain);
+                        services.AddKeyedSingleton(appid, httpClientRegisterProvider.GetHttpClient(appid));
+
+                        services.TryAddTransient(targetInterface, provider =>
+                        {
+                            var client =
+                                provider.GetRequiredKeyedService<HttpClient>(appid);
+                            return ActivatorUtilities.CreateInstance(provider, type, client);
+                        });
+                        Logger.LogInformation("Register Domain ({domainName} - {domainDesc}) HTTP RPC {type} -> {interface}", domain.ToString(), domain.GetDescription(), type.Name,
+                            targetInterface.Name);
+                    }
+                    else if (Option.UseGrpc)
+                    {
+                        throw new NotImplementedException("Grpc is not supported now!");
+                        continue;
+                    }
+                    else
+                    {
+                        services.TryAddTransient(targetInterface, type);
+                        Logger.LogInformation("Register Domain ({domainName} - {domainDesc}) Custom RPC {type} -> {interface}", domain.ToString(), domain.GetDescription(), type.Name,
+                            targetInterface.Name);
+                    }
+                }
+            }
+        }
+    }
+
+    public override void ClaimDependencies()
+    {
+        DependsOnModule<ModuleDomainDrivenDesignGuide>().Register();
+    }
+}
+
+public class ModuleRpcClientGuide : MoModuleGuide<ModuleRpcClient, ModuleRpcClientOption, ModuleRpcClientGuide>
+{
+    protected override string[] GetRequestedConfigMethodKeys()
+    {
+        return [nameof(ConfigDomainInfoProvider), nameof(ConfigHttpClientRegisterProvider)];
+    }
+
+    public ModuleRpcClientGuide ConfigHttpClientRegisterProvider(IMoRpcHttpClientRegisterProvider httpClientRegisterProvider)
+    {
+        ConfigureModuleOption(option =>
+        {
+            option.HttpClientRegisterProvider = httpClientRegisterProvider;
+        });
+        return this;
+    }
+    
+    public ModuleRpcClientGuide ConfigDomainInfoProvider(IMoRpcClientDomainInfoProvider domainInfoProvider)
+    {
+        ConfigureModuleOption(option =>
+        {
+            option.DomainInfoProvider = domainInfoProvider;
+        });
+        return this;
+    }
+}
+
+public class ModuleRpcClientOption : MoModuleOption<ModuleRpcClient>
+{
+    /// <summary>
+    /// 实现使用Grpc Client进行注册，默认使用HttpClient
+    /// </summary>
+    public bool UseGrpc { get; set; }
+
+    internal IMoRpcHttpClientRegisterProvider? HttpClientRegisterProvider { get; set; }
+    internal IMoRpcClientDomainInfoProvider? DomainInfoProvider { get; set; }
+}
+
+public interface IMoRpcClientDomainInfoProvider
+{
+    object GetDependencyDomains();
+
+    string GetDomainRelatedAppId(Enum domain);
+}
+
+public interface IMoRpcHttpClientRegisterProvider
+{
+    HttpClient GetHttpClient(string appid);
+}

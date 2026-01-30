@@ -1,0 +1,89 @@
+@using Monica.JobScheduler.UI.Models
+
+<div class="queue-status-wrapper">
+    <MudPaper Class="queue-card" Elevation="0">
+        <div class="card-header">
+            <MudIcon Icon="@Icons.Material.Filled.Queue" Size="Size.Small" Color="Color.Info" />
+            <MudText Typo="Typo.h6">队列状态</MudText>
+        </div>
+
+        <div class="status-grid">
+            <div class="status-item processing">
+                <div class="status-icon">
+                    <MudIcon Icon="@Icons.Material.Filled.PlayCircle" />
+                </div>
+                <div class="status-content">
+                    <div class="status-value">@Status.ProcessingCount</div>
+                    <div class="status-label">处理中</div>
+                </div>
+            </div>
+
+            <div class="status-item enqueued">
+                <div class="status-icon">
+                    <MudIcon Icon="@Icons.Material.Filled.HourglassEmpty" />
+                </div>
+                <div class="status-content">
+                    <div class="status-value">@Status.EnqueuedCount</div>
+                    <div class="status-label">等待执行</div>
+                </div>
+            </div>
+
+            <div class="status-item scheduled">
+                <div class="status-icon">
+                    <MudIcon Icon="@Icons.Material.Filled.Schedule" />
+                </div>
+                <div class="status-content">
+                    <div class="status-value">@Status.ScheduledCount</div>
+                    <div class="status-label">已调度</div>
+                </div>
+            </div>
+
+            <div class="status-item total">
+                <div class="status-icon">
+                    <MudIcon Icon="@Icons.Material.Filled.Assessment" />
+                </div>
+                <div class="status-content">
+                    <div class="status-value">@Status.ActiveCount</div>
+                    <div class="status-label">活跃总计</div>
+                </div>
+            </div>
+        </div>
+
+        @if (Status.ActiveCount > 0)
+        {
+            <div class="queue-progress">
+                <div class="progress-bar">
+                    @if (Status.ProcessingCount > 0)
+                    {
+                        <div class="segment processing"
+                             style="width: @GetPercentage(Status.ProcessingCount)%"
+                             title="@Status.ProcessingCount 处理中"></div>
+                    }
+                    @if (Status.EnqueuedCount > 0)
+                    {
+                        <div class="segment enqueued"
+                             style="width: @GetPercentage(Status.EnqueuedCount)%"
+                             title="@Status.EnqueuedCount 等待执行"></div>
+                    }
+                    @if (Status.ScheduledCount > 0)
+                    {
+                        <div class="segment scheduled"
+                             style="width: @GetPercentage(Status.ScheduledCount)%"
+                             title="@Status.ScheduledCount 已调度"></div>
+                    }
+                </div>
+            </div>
+        }
+    </MudPaper>
+</div>
+
+@code {
+    [Parameter]
+    public QueueStatus Status { get; set; } = new();
+
+    private double GetPercentage(int value)
+    {
+        if (Status.ActiveCount == 0) return 0;
+        return ((double)value / Status.ActiveCount) * 100;
+    }
+}

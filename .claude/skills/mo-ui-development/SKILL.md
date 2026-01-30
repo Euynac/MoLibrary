@@ -1,12 +1,12 @@
 ---
 name: mo-ui-development
-description: This skill should be used when the user asks to "create UI component", "build Blazor page", "add MudBlazor component", "style MudBlazor", "fix CSS isolation", "use ::deep selector", "customize theme", "support dark mode", "migrate MudBlazor v8", "use OnAfterRenderAsync", "create UI module", "module file structure", "UI folder structure", "refactor Minimal API", or needs guidance on Blazor component lifecycle, MudBlazor styling patterns, CSS isolation, theme customization, offline UI requirements, or MoFramework UI module structure in the MoLibrary framework.
+description: This skill should be used when the user asks to "create UI component", "build Blazor page", "add MudBlazor component", "style MudBlazor", "fix CSS isolation", "use ::deep selector", "customize theme", "support dark mode", "migrate MudBlazor v8", "use OnAfterRenderAsync", "create UI module", "module file structure", "UI folder structure", "refactor Minimal API", or needs guidance on Blazor component lifecycle, MudBlazor styling patterns, CSS isolation, theme customization, offline UI requirements, or MoFramework UI module structure in the Monica framework.
 version: 1.0.0
 ---
 
-# MoLibrary UI Development Guide
+# Monica UI Development Guide
 
-This skill provides essential guidance for developing Blazor UI components with MudBlazor 8.9.0 in the MoLibrary framework.
+This skill provides essential guidance for developing Blazor UI components with MudBlazor 8.9.0 in the Monica framework.
 
 ## Critical Rules
 

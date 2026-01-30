@@ -32,7 +32,7 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git log:*)",
-      "Read(//d/Code/MoLibrary.Docs/docs/BackgroundJob/**)",
+      "Read(//d/Code/Monica.Docs/docs/BackgroundJob/**)",
       "mcp__spec-workflow__spec-workflow-guide",
       "mcp__spec-workflow__approvals",
       "Bash(dotnet --version:*)",

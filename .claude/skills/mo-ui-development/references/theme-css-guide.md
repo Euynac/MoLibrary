@@ -1,8 +1,8 @@
-# MoLibrary Theme CSS Style Guide
+# Monica Theme CSS Style Guide
 
 ## Overview
 
-MoLibrary UI modules use a separated theme architecture, completely separating color management from style management to ensure theme extensibility and consistency.
+Monica UI modules use a separated theme architecture, completely separating color management from style management to ensure theme extensibility and consistency.
 
 ## Architecture Principles
 
@@ -65,11 +65,11 @@ public class ThemeExample : IThemeProvider
 ## File Structure Standards
 
 ```
-MoLibrary.UI/
+Monica.UI/
 ├── Themes/                          # C# theme definitions
 │   ├── IThemeProvider.cs            # Theme provider interface
 │   ├── ThemeMudBlazorDefault.cs     # MudBlazor original theme
-│   ├── ThemeMoLibraryDefault.cs     # MoLibrary default theme
+│   ├── ThemeMonicaDefault.cs     # Monica default theme
 │   ├── ThemeGlassmorphic.cs         # Glassmorphic theme
 │   └── ThemeRegistry.cs             # Theme registry management
 └── wwwroot/css/
@@ -499,4 +499,4 @@ MudBlazor 8.9.0 requires Shadow.Elevation array to have **26 elements** (indices
 
 ---
 
-*This standard ensures consistency, maintainability, and extensibility of the MoLibrary theme system. All new themes should be developed following this standard.*
+*This standard ensures consistency, maintainability, and extensibility of the Monica theme system. All new themes should be developed following this standard.*

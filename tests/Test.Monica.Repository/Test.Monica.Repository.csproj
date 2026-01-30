@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+<Import Project="..\..\common.xml"/>
+  <PropertyGroup>
+   
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+  
+ 
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Test.Monica\Test.Monica.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="NUnit.Framework" />
+    <Using Include="System.Threading.Tasks" />
+  </ItemGroup>
+
+</Project>

@@ -55,7 +55,7 @@ public class $EntityName$CrudService(
 
 ## 响应类型
 
-CRUD服务方法使用[mo-framework-res-type.mdc](mdc:MoLibrary/rules/en/mo-framework-res-type.mdc)中定义的`Res`和`Res<T>`类型：
+CRUD服务方法使用[mo-framework-res-type.mdc](mdc:Monica/rules/en/mo-framework-res-type.mdc)中定义的`Res`和`Res<T>`类型：
 
 - `CreateAsync`: 返回`Task<Res>`
 - `UpdateAsync`: 返回`Task<Res>`

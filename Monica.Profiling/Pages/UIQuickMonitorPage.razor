@@ -1,0 +1,111 @@
+@attribute [Route(PAGE_URL)]
+@using Monica.Profiling.UIProfiling.Components
+@implements IAsyncDisposable
+@inject ProfilingMetricsCollector MetricsCollector
+@inject IOptions<ModuleProfilingUIOption> Options
+@inject ISnackbar Snackbar
+
+<PageTitle>快速监控</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
+    <div class="d-flex justify-space-between align-center mb-4">
+        <div class="d-flex align-center gap-2">
+            <MudIcon Icon="@Icons.Material.Filled.Speed" Size="Size.Large" Color="Color.Primary"/>
+            <MudText Typo="Typo.h4">快速监控</MudText>
+        </div>
+        <div class="d-flex gap-2 align-center">
+            <MudChip T="string" Size="Size.Small" Color="@(autoRefresh ? Color.Success : Color.Default)">
+                @(autoRefresh ? "实时" : "已暂停")
+            </MudChip>
+            <MudSwitch T="bool" @bind-Value="autoRefresh" Color="Color.Primary" Label="自动刷新"/>
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                           Color="Color.Primary"
+                           OnClick="RefreshData"
+                           Disabled="isLoading"/>
+        </div>
+    </div>
+
+    @* 指标卡片 *@
+    <div class="mb-4">
+        <QuickMonitorCard DataPoint="currentDataPoint"
+                          PreviousDataPoint="previousDataPoint"
+                          IsLoading="isLoading"/>
+    </div>
+
+    @* 趋势图 *@
+    <QuickMonitorTrendChart TrendData="trendData" IsLoading="isLoading"/>
+</MudContainer>
+
+@code {
+    public const string PAGE_URL = "/quick-monitor";
+
+    private MemoryDataPoint? currentDataPoint;
+    private MemoryDataPoint? previousDataPoint;
+    private MemoryTrendData? trendData;
+    private bool isLoading;
+    private bool autoRefresh = true;
+    private Timer? refreshTimer;
+    private CancellationTokenSource? cts;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            cts = new CancellationTokenSource();
+            RefreshData();
+            StartAutoRefresh();
+            await Task.CompletedTask;
+        }
+    }
+
+    private void StartAutoRefresh()
+    {
+        var interval = Options.Value.AutoRefreshIntervalMs;
+        if (interval > 0)
+        {
+            refreshTimer = new Timer(_ =>
+            {
+                if (autoRefresh && !isLoading)
+                {
+                    InvokeAsync(RefreshData);
+                }
+            }, null, interval, interval);
+        }
+    }
+
+    private void RefreshData()
+    {
+        if (isLoading) return;
+
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            // 保存上一个数据点用于趋势显示
+            previousDataPoint = currentDataPoint;
+
+            // 获取当前数据
+            currentDataPoint = MetricsCollector.GetCurrentDataPoint();
+            trendData = MetricsCollector.GetTrendData();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"刷新数据失败: {ex.Message}", Severity.Error);
+        }
+
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        cts?.Cancel();
+        cts?.Dispose();
+
+        if (refreshTimer != null)
+        {
+            await refreshTimer.DisposeAsync();
+        }
+    }
+}

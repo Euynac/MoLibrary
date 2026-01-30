@@ -1,10 +1,10 @@
 # MoHostedService Development Guide
 
-This guide provides comprehensive documentation for developing hosted services in MoLibrary using `MoBackgroundService` with built-in observability.
+This guide provides comprehensive documentation for developing hosted services in Monica using `MoBackgroundService` with built-in observability.
 
 **Source locations**:
-- `MoLibrary.Core/Features/HostedServices/MoBackgroundService.cs`
-- `MoLibrary.RegisterCentre/Core/CoordinatedLeaderService.cs`
+- `Monica.Core/Features/HostedServices/MoBackgroundService.cs`
+- `Monica.RegisterCentre/Core/CoordinatedLeaderService.cs`
 
 ## Class Hierarchy
 
@@ -220,7 +220,7 @@ services.AddHostedService<MyMonitorService>();
 
 ## CoordinatedLeaderService (Advanced)
 
-For services that should only run on one instance in a distributed cluster. Located in `MoLibrary.RegisterCentre/Core/CoordinatedLeaderService.cs`.
+For services that should only run on one instance in a distributed cluster. Located in `Monica.RegisterCentre/Core/CoordinatedLeaderService.cs`.
 
 ### When to Use
 

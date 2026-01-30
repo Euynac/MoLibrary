@@ -1,0 +1,99 @@
+@using Monica.JobScheduler.Models
+@using Monica.JobScheduler.UI.Services
+@inject JobStateColorService ColorService
+@inject StackTraceParserService StackTraceParser
+
+<MudCard Elevation="2">
+    <MudCardHeader>
+        <MudText Typo="Typo.h6">状态历史</MudText>
+    </MudCardHeader>
+    <MudCardContent>
+        @if (_historyRecords?.Any() == true)
+        {
+            <MudTimeline TimelineOrientation="TimelineOrientation.Vertical">
+                @foreach (var record in _historyRecords)
+                {
+                    <MudTimelineItem Color="@ColorService.GetStateColor(record.NewState)"
+                                     Icon="@GetStateIcon(record.NewState)"
+                                     Size="Size.Small">
+                        <ItemContent>
+                            <MudStack Spacing="1">
+                                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                                    <MudChip T="string"
+                                             Size="Size.Small"
+                                             Color="@ColorService.GetStateColor(record.NewState)">
+                                        @record.OldState → @record.NewState
+                                    </MudChip>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        @record.Timestamp.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss.fff")
+                                    </MudText>
+                                </MudStack>
+
+                                @if (!string.IsNullOrEmpty(record.Message))
+                                {
+                                    @if (IsStackTrace(record.Message))
+                                    {
+                                        <!-- 使用新的 StackTraceViewer 组件显示堆栈信息 -->
+                                        <StackTraceViewer Message="@record.Message" />
+                                    }
+                                    else
+                                    {
+                                        <!-- 普通消息，保持原有显示方式 -->
+                                        <div class="normal-message-wrapper">
+                                            <MudPaper Elevation="0"
+                                                      Class="normal-message">
+                                                <MudText Typo="Typo.body2"
+                                                         Style="white-space: pre-wrap; font-family: monospace; font-size: 0.85rem;">
+                                                    @record.Message
+                                                </MudText>
+                                            </MudPaper>
+                                        </div>
+                                    }
+                                }
+                            </MudStack>
+                        </ItemContent>
+                    </MudTimelineItem>
+                }
+            </MudTimeline>
+        }
+        else
+        {
+            <MudText Typo="Typo.body2" Color="Color.Secondary">暂无状态历史记录</MudText>
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public JobInstance? Instance { get; set; }
+
+    private List<JobInstance.StateHistoryRecord>? _historyRecords;
+
+    protected override void OnParametersSet()
+    {
+        _historyRecords = Instance?.GetStateHistoryRecords();
+    }
+
+    /// <summary>
+    /// 判断消息是否为堆栈跟踪信息
+    /// </summary>
+    private bool IsStackTrace(string message)
+    {
+        return StackTraceParser.IsLikelyStackTrace(message);
+    }
+
+    private string GetStateIcon(JobState state)
+    {
+        return state switch
+        {
+            JobState.Succeeded => Icons.Material.Filled.CheckCircle,
+            JobState.Failed => Icons.Material.Filled.Error,
+            JobState.Terminated => Icons.Material.Filled.Cancel,
+            JobState.Cancelled => Icons.Material.Filled.Warning,
+            JobState.Processing => Icons.Material.Filled.PlayArrow,
+            JobState.Enqueued => Icons.Material.Filled.Queue,
+            JobState.Scheduled => Icons.Material.Filled.Schedule,
+            JobState.Skipped => Icons.Material.Filled.SkipNext,
+            _ => Icons.Material.Filled.Circle
+        };
+    }
+}

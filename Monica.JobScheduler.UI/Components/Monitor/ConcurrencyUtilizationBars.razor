@@ -1,0 +1,240 @@
+@using Monica.JobScheduler.UI.Models
+@using Monica.JobScheduler.Abstractions
+@using Monica.JobScheduler.ControlPlane
+
+@inject IDialogService DialogService
+
+<div class="concurrency-card-wrapper">
+    <MudPaper Class="concurrency-card" Elevation="0">
+        @* Header with title and actions *@
+        <div class="card-header">
+            <div class="header-title">
+                <MudIcon Icon="@Icons.Material.Filled.Memory" Size="Size.Small" Color="Color.Secondary" />
+                <MudText Typo="Typo.h6">并发状态</MudText>
+            </div>
+            <div class="header-actions">
+                @if (!Consistency.IsConsistent)
+                {
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Warning"
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Sync"
+                               OnClick="@OnReconcileClicked"
+                               Disabled="@IsReconciling">
+                        @(IsReconciling ? "同步中..." : "同步")
+                    </MudButton>
+                }
+                <MudTooltip Text="显示内存中并发槽位状态">
+                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Default" />
+                </MudTooltip>
+            </div>
+        </div>
+
+        @* Consistency Warning Banner *@
+        @if (!Consistency.IsConsistent)
+        {
+            <MudAlert Severity="Severity.Warning" Dense="true" Class="consistency-alert mb-3">
+                <div class="alert-header">
+                    <span>状态不一致 (偏差值: @Consistency.TotalDeviation)</span>
+                    <MudButton Variant="Variant.Text"
+                               Size="Size.Small"
+                               Color="Color.Warning"
+                               OnClick="@ToggleDeviationDetails">
+                        @(_showDeviationDetails ? "收起" : "详情")
+                    </MudButton>
+                </div>
+                @if (_showDeviationDetails)
+                {
+                    <div class="deviation-details">
+                        @foreach (var deviation in Consistency.Deviations)
+                        {
+                            <div class="deviation-item">
+                                <span class="job-key">@deviation.JobKey</span>
+                                @if (deviation.RunningDeviation != 0)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined">
+                                        Running: @(deviation.RunningDeviation > 0 ? "+" : "")@deviation.RunningDeviation
+                                    </MudChip>
+                                }
+                                @if (deviation.PendingDeviation != 0)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
+                                        Pending: @(deviation.PendingDeviation > 0 ? "+" : "")@deviation.PendingDeviation
+                                    </MudChip>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </MudAlert>
+        }
+
+        @* Job Concurrency List *@
+        @if (Details.Count > 0)
+        {
+            <MudExpansionPanels Class="jobs-container" Elevation="0" Dense="true" MultiExpansion="true">
+                @foreach (var job in Details)
+                {
+                    <MudExpansionPanel Class="job-panel">
+                        <TitleContent>
+                            <div class="job-header">
+                                <div class="job-info">
+                                    <span class="job-name">@job.JobName</span>
+                                    <span class="job-stats">
+                                        @job.Statistic.CurrentExecutingCount / @job.Statistic.MaxConcurrency
+                                        @if (job.IsAtCapacity)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Filled" Class="ml-2">已满</MudChip>
+                                        }
+                                    </span>
+                                </div>
+                                <MudProgressLinear Value="@job.UtilizationPercent"
+                                                   Max="100"
+                                                   Color="@GetUtilizationColor(job)"
+                                                   Class="utilization-bar mt-2" />
+                            </div>
+                        </TitleContent>
+                        <ChildContent>
+                            <div class="instances-container">
+                                @* Running Instances *@
+                                @if (job.Statistic.RunningInstances.Count > 0)
+                                {
+                                    <div class="instance-section">
+                                        <MudText Typo="Typo.subtitle2" Color="Color.Info" Class="section-title">
+                                            <MudIcon Icon="@Icons.Material.Filled.PlayArrow" Size="Size.Small" />
+                                            运行中 (@job.Statistic.RunningInstances.Count)
+                                        </MudText>
+                                        <MudSimpleTable Dense="true" Hover="true" Class="instance-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>实例ID</th>
+                                                    <th>Worker</th>
+                                                    <th>已运行</th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var instance in job.Statistic.RunningInstances)
+                                                {
+                                                    <tr>
+                                                        <td class="instance-id">@instance.InstanceId</td>
+                                                        <td class="worker-id">@instance.WorkerClientId</td>
+                                                        <td>@FormatDuration(DateTime.UtcNow - instance.StartedAt)</td>
+                                                        <td>
+                                                            <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                                                           Size="Size.Small"
+                                                                           OnClick="@(() => ViewInstance(instance.InstanceId))" />
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </MudSimpleTable>
+                                    </div>
+                                }
+
+                                @* Pending Reservations *@
+                                @if (job.Statistic.PendingReservations.Count > 0)
+                                {
+                                    <div class="instance-section">
+                                        <MudText Typo="Typo.subtitle2" Color="Color.Warning" Class="section-title">
+                                            <MudIcon Icon="@Icons.Material.Filled.HourglassEmpty" Size="Size.Small" />
+                                            等待中 (@job.Statistic.PendingReservations.Count)
+                                        </MudText>
+                                        <MudSimpleTable Dense="true" Hover="true" Class="instance-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>实例ID</th>
+                                                    <th>等待时间</th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var pending in job.Statistic.PendingReservations)
+                                                {
+                                                    <tr>
+                                                        <td class="instance-id">@pending.Key</td>
+                                                        <td>@FormatDuration(DateTime.UtcNow - pending.Value)</td>
+                                                        <td>
+                                                            <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                                                           Size="Size.Small"
+                                                                           OnClick="@(() => ViewInstance(pending.Key))" />
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </MudSimpleTable>
+                                    </div>
+                                }
+                            </div>
+                        </ChildContent>
+                    </MudExpansionPanel>
+                }
+            </MudExpansionPanels>
+        }
+        else
+        {
+            <div class="empty-state">
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircleOutline" Size="Size.Large" Color="Color.Success" />
+                <MudText Typo="Typo.body2" Color="Color.Secondary">当前无活跃任务</MudText>
+            </div>
+        }
+    </MudPaper>
+</div>
+
+@code {
+    [Parameter]
+    public List<ConcurrencyStatusWithName> Details { get; set; } = [];
+
+    [Parameter]
+    public ConsistencyCheckResult Consistency { get; set; } = new() { TotalDeviation = 0, Deviations = [] };
+
+    [Parameter]
+    public EventCallback OnReconcileRequested { get; set; }
+
+    [Parameter]
+    public bool IsReconciling { get; set; }
+
+    private bool _showDeviationDetails;
+
+    private void ToggleDeviationDetails() => _showDeviationDetails = !_showDeviationDetails;
+
+    private async Task OnReconcileClicked()
+    {
+        await OnReconcileRequested.InvokeAsync();
+    }
+
+    private async Task ViewInstance(string instanceId)
+    {
+        var parameters = new DialogParameters<JobInstanceDetailDialog>
+        {
+            { x => x.InstanceId, instanceId },
+            { x => x.ShowJobDefinitionButton, true }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.ExtraLarge,
+            FullWidth = true,
+            CloseButton = true
+        };
+
+        await DialogService.ShowAsync<JobInstanceDetailDialog>("作业实例详情", parameters, options);
+    }
+
+    private static Color GetUtilizationColor(ConcurrencyStatusWithName job)
+    {
+        if (job.IsAtCapacity) return Color.Error;
+        if (job.UtilizationPercent >= 80) return Color.Warning;
+        if (job.UtilizationPercent >= 50) return Color.Info;
+        return Color.Success;
+    }
+
+    private static string FormatDuration(TimeSpan duration)
+    {
+        if (duration.TotalHours >= 1)
+            return $"{(int)duration.TotalHours}h {duration.Minutes}m";
+        if (duration.TotalMinutes >= 1)
+            return $"{duration.Minutes}m {duration.Seconds}s";
+        return $"{duration.Seconds}s";
+    }
+}

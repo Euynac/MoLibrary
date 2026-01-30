@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="..\common.xml"/>
+
+  <ItemGroup>
+    <PackageReference Include="Dapr.AspNetCore" Version="1.16.1" />
+    <PackageReference Include="Dapr.Client" Version="1.16.1" />
+    <PackageReference Include="Dapr.DistributedLock" Version="1.16.1" />
+    <PackageReference Include="Dapr.Messaging" Version="1.16.1" />
+	<PackageReference Include="Dapr.Actors.AspNetCore" Version="1.16.1" />
+	<PackageReference Include="Dapr.Actors" Version="1.16.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
+    <ProjectReference Include="..\Monica.DomainDrivenDesign\Monica.DomainDrivenDesign.csproj" />
+    <ProjectReference Include="..\Monica.EventBus\Monica.EventBus.csproj" />
+    <ProjectReference Include="..\Monica.Locker\Monica.Locker.csproj" />
+    <ProjectReference Include="..\Monica.RegisterCentre\Monica.RegisterCentre.csproj" />
+    <ProjectReference Include="..\Monica.StateStore\Monica.StateStore.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,878 @@
+@attribute [Route(PAGE_URL)]
+@inject JobSchedulerUIService UIService
+@inject JobStateColorService ColorService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject IJSRuntime JSRuntime
+@using MudBlazor
+@using System.Text.Json
+@using Microsoft.JSInterop
+@using Monica.JobScheduler.Models
+@using Monica.JobScheduler.UI.Components
+@implements IAsyncDisposable
+
+<MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h4" Class="mb-4">作业定义</MudText>
+
+    <!-- 筛选器 -->
+    <MudPaper Class="pa-4 mb-4" Elevation="2">
+        <MudGrid Spacing="2">
+            <MudItem xs="12" sm="6" md="4">
+                <MudTextField T="string"
+                              @bind-Value="_filterFromProject"
+                              Label="来源项目"
+                              Variant="Variant.Outlined"
+                              Clearable="true"
+                              Immediate="true"
+                              OnClearButtonClick="HandleFilterChanged" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4">
+                <MudTextField T="string"
+                              @bind-Value="_filterJobKey"
+                              Label="作业键"
+                              Variant="Variant.Outlined"
+                              Clearable="true"
+                              Immediate="true"
+                              OnClearButtonClick="HandleFilterChanged" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4">
+                <MudTextField T="string"
+                              @bind-Value="_filterJobName"
+                              Label="作业名称"
+                              Variant="Variant.Outlined"
+                              Clearable="true"
+                              Immediate="true"
+                              OnClearButtonClick="HandleFilterChanged" />
+            </MudItem>
+            <MudItem xs="12" Class="d-flex justify-end">
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           OnClick="HandleFilterChanged"
+                           StartIcon="@Icons.Material.Filled.Search">
+                    搜索
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Default"
+                           OnClick="HandleResetFilters"
+                           StartIcon="@Icons.Material.Filled.Clear"
+                           Class="ml-2">
+                    重置
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <!-- 批量操作工具栏（仅在 RecurringJob 选项卡且有选择时显示） -->
+    @if (_selectedRecurringJobs.Any() && _activeTabIndex == 0)
+    {
+        <MudPaper Class="pa-3 mb-3 batch-toolbar" Elevation="2">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Primary" />
+                    <MudText Typo="Typo.body1">
+                        已选择 <strong>@_selectedRecurringJobs.Count</strong> 个作业
+                    </MudText>
+                </MudStack>
+                <MudStack Row="true" Spacing="2">
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Warning"
+                               StartIcon="@Icons.Material.Filled.Pause"
+                               OnClick="BatchPauseJobsAsync"
+                               Disabled="_isProcessingBatch">
+                        批量暂停
+                    </MudButton>
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Success"
+                               StartIcon="@Icons.Material.Filled.PlayArrow"
+                               OnClick="BatchResumeJobsAsync"
+                               Disabled="_isProcessingBatch">
+                        批量继续
+                    </MudButton>
+                    <MudButton Variant="Variant.Text"
+                               Color="Color.Default"
+                               StartIcon="@Icons.Material.Filled.Clear"
+                               OnClick="ClearSelection">
+                        清除选择
+                    </MudButton>
+                </MudStack>
+            </MudStack>
+        </MudPaper>
+    }
+
+    <!-- Tabs -->
+    @if (_stateLoaded)
+    {
+        <MudTabs @bind-ActivePanelIndex="_activeTabIndex"
+                 Elevation="2"
+                 Rounded="true"
+                 ApplyEffectsToContainer="true"
+                 PanelClass="pa-6">
+            <MudTabPanel Text="RecurringJob" Icon="@Icons.Material.Filled.Schedule">
+            <MudTable @ref="_recurringTable"
+                      T="JobDefinitionWithLastExecution"
+                      ServerData="LoadRecurringJobsAsync"
+                      RowsPerPage="@_recurringPageSize"
+                      MultiSelection="true"
+                      @bind-SelectedItems="_selectedRecurringJobs"
+                      SelectOnRowClick="false"
+                      Hover="true"
+                      Striped="true"
+                      Elevation="0"
+                      SortMode="SortMode.Single">
+                <ToolBarContent>
+                    <MudText Typo="Typo.h6">周期性作业</MudText>
+                    <MudSpacer />
+                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                   Color="Color.Primary"
+                                   OnClick="RefreshRecurringJobsAsync" />
+                </ToolBarContent>
+                <HeaderContent>
+                    <MudTh><MudTableSortLabel SortLabel="FromProject" T="JobDefinitionWithLastExecution">来源项目</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="JobKey" T="JobDefinitionWithLastExecution">作业键</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="JobName" T="JobDefinitionWithLastExecution">作业名称</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="CronExpression" T="JobDefinitionWithLastExecution">Cron表达式</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="NextExecutionTime" T="JobDefinitionWithLastExecution">下次执行时间</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="LastExecution" T="JobDefinitionWithLastExecution">上次执行时间</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="IsDisabled" T="JobDefinitionWithLastExecution">状态</MudTableSortLabel></MudTh>
+                    <MudTh>操作</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="来源项目">@context.Definition.FromProject</MudTd>
+                    <MudTd DataLabel="作业键">@context.Definition.JobKey</MudTd>
+                    <MudTd DataLabel="作业名称">@context.Definition.JobName</MudTd>
+                    <MudTd DataLabel="Cron表达式">
+                        <CronExpressionDisplay Expression="@context.Definition.CronExpression"
+                                               DisplayMode="CronDisplayMode.Compact" />
+                    </MudTd>
+                    <MudTd DataLabel="下次执行时间">
+                        @if (context.NextExecutionTime.HasValue)
+                        {
+                            <MudText Typo="Typo.body2">@context.NextExecutionTime.Value.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">-</MudText>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="上次执行时间">
+                        @if (context.LastExecution != null)
+                        {
+                            <div class="last-execution-wrapper">
+                                <MudChip T="string"
+                                         Size="Size.Small"
+                                         Color="@ColorService.GetStateColor(context.LastExecution.State)"
+                                         OnClick="@(async () => await OpenInstanceDetailDialog(context.LastExecution.InstanceId))"
+                                         Class="clickable-execution-time">
+                                    @context.LastExecution.CreatedAt.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")
+                                </MudChip>
+                            </div>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">-</MudText>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="状态">
+                        <MudChip T="string" Size="Size.Small" Color="@GetDisabledStateColor(context.Definition.IsDisabled)">
+                            @(context.Definition.IsDisabled ? "已禁用" : "启用")
+                        </MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="操作">
+                        <MudStack Row="true" Spacing="1">
+                            @if (context.Definition.IsDisabled)
+                            {
+                                <MudTooltip Text="继续">
+                                    <MudIconButton Icon="@Icons.Material.Filled.PlayArrow"
+                                                   Color="Color.Success"
+                                                   Size="Size.Small"
+                                                   OnClick="() => ResumeJobAsync(context.Definition.JobKey)" />
+                                </MudTooltip>
+                            }
+                            else
+                            {
+                                <MudTooltip Text="暂停">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Pause"
+                                                   Color="Color.Warning"
+                                                   Size="Size.Small"
+                                                   OnClick="() => PauseJobAsync(context.Definition.JobKey)" />
+                                </MudTooltip>
+                            }
+                            <MudTooltip Text="详情">
+                                <MudIconButton Icon="@Icons.Material.Filled.Info"
+                                               Color="Color.Info"
+                                               Size="Size.Small"
+                                               OnClick="() => NavigateToDetail(context.Definition.JobKey)" />
+                            </MudTooltip>
+                        </MudStack>
+                    </MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    <MudText>没有找到匹配的周期性作业</MudText>
+                </NoRecordsContent>
+                <LoadingContent>
+                    <MudProgressCircular Indeterminate="true" />
+                </LoadingContent>
+                <PagerContent>
+                    <MudTablePager PageSizeOptions="new int[] { 10, 20, 50, 100 }" />
+                </PagerContent>
+            </MudTable>
+        </MudTabPanel>
+
+        <MudTabPanel Text="TriggerJob" Icon="@Icons.Material.Filled.TouchApp">
+            <MudTable @ref="_triggerTable"
+                      T="JobDefinitionWithLastExecution"
+                      ServerData="LoadTriggerJobsAsync"
+                      RowsPerPage="@_triggerPageSize"
+                      Hover="true"
+                      Striped="true"
+                      Elevation="0"
+                      SortMode="SortMode.Single">
+                <ToolBarContent>
+                    <MudText Typo="Typo.h6">触发型作业</MudText>
+                    <MudSpacer />
+                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                   Color="Color.Primary"
+                                   OnClick="RefreshTriggerJobsAsync" />
+                </ToolBarContent>
+                <HeaderContent>
+                    <MudTh><MudTableSortLabel SortLabel="FromProject" T="JobDefinitionWithLastExecution">来源项目</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="JobKey" T="JobDefinitionWithLastExecution">作业键</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="JobName" T="JobDefinitionWithLastExecution">作业名称</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="LastExecution" T="JobDefinitionWithLastExecution">上次执行时间</MudTableSortLabel></MudTh>
+                    <MudTh>操作</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="来源项目">@context.Definition.FromProject</MudTd>
+                    <MudTd DataLabel="作业键">@context.Definition.JobKey</MudTd>
+                    <MudTd DataLabel="作业名称">@context.Definition.JobName</MudTd>
+                    <MudTd DataLabel="上次执行时间">
+                        @if (context.LastExecution != null)
+                        {
+                            <div class="last-execution-wrapper">
+                                <MudChip T="string"
+                                         Size="Size.Small"
+                                         Color="@ColorService.GetStateColor(context.LastExecution.State)"
+                                         OnClick="@(async () => await OpenInstanceDetailDialog(context.LastExecution.InstanceId))"
+                                         Class="clickable-execution-time">
+                                    @context.LastExecution.CreatedAt.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")
+                                </MudChip>
+                            </div>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">-</MudText>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="操作">
+                        <MudStack Row="true" Spacing="1">
+                            <MudTooltip Text="执行">
+                                <MudIconButton Icon="@Icons.Material.Filled.PlayCircle"
+                                               Color="Color.Primary"
+                                               Size="Size.Small"
+                                               OnClick="() => ExecuteJobAsync(context.Definition.JobKey)" />
+                            </MudTooltip>
+                            <MudTooltip Text="详情">
+                                <MudIconButton Icon="@Icons.Material.Filled.Info"
+                                               Color="Color.Info"
+                                               Size="Size.Small"
+                                               OnClick="() => NavigateToDetail(context.Definition.JobKey)" />
+                            </MudTooltip>
+                        </MudStack>
+                    </MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    <MudText>没有找到匹配的触发型作业</MudText>
+                </NoRecordsContent>
+                <LoadingContent>
+                    <MudProgressCircular Indeterminate="true" />
+                </LoadingContent>
+                <PagerContent>
+                    <MudTablePager PageSizeOptions="new int[] { 10, 20, 50, 100 }" />
+                </PagerContent>
+            </MudTable>
+            </MudTabPanel>
+        </MudTabs>
+    }
+    else
+    {
+        <MudPaper Class="pa-6" Elevation="2">
+            <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Class="py-8">
+                <MudProgressCircular Indeterminate="true" />
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">加载中...</MudText>
+            </MudStack>
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    public const string PAGE_URL = "/job-scheduler/definitions";
+
+    private MudTable<JobDefinitionWithLastExecution>? _recurringTable;
+    private MudTable<JobDefinitionWithLastExecution>? _triggerTable;
+    private int _activeTabIndex = 0;
+
+    private string? _filterFromProject;
+    private string? _filterJobKey;
+    private string? _filterJobName;
+
+    // Batch operation state
+    private HashSet<JobDefinitionWithLastExecution> _selectedRecurringJobs = [];
+    private bool _isProcessingBatch = false;
+
+    // Table state persistence
+    private IJSObjectReference? _tableStateModule;
+
+    // RecurringJob table state
+    private string? _recurringSortBy;
+    private bool _recurringSortDescending;
+    private int _recurringPageSize = 10;
+
+    // TriggerJob table state
+    private string? _triggerSortBy;
+    private bool _triggerSortDescending;
+    private int _triggerPageSize = 10;
+
+    // State loading flag - controls conditional rendering of MudTabs
+    private bool _stateLoaded = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // 1. Load JS module
+            _tableStateModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "import",
+                "./_content/Monica.JobScheduler.UI/js/table-state-helper.js"
+            ).ConfigureAwait(false);
+
+            // 2. Load state from localStorage
+            await LoadTableStatesAsync();
+
+            // 3. Mark state as loaded and trigger re-render
+            // MudTable will automatically call ServerData when rendered, no manual call needed
+            _stateLoaded = true;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task LoadTableStatesAsync()
+    {
+        if (_tableStateModule == null) return;
+
+        try
+        {
+            // Load RecurringJob state
+            var recurringState = await _tableStateModule.InvokeAsync<JsonElement?>(
+                "getTableState",
+                "job-definitions-recurring"
+            );
+
+            if (recurringState.HasValue && recurringState.Value.ValueKind == JsonValueKind.Object)
+            {
+                if (recurringState.Value.TryGetProperty("sortBy", out var sortBy) && sortBy.ValueKind == JsonValueKind.String)
+                    _recurringSortBy = sortBy.GetString();
+                if (recurringState.Value.TryGetProperty("sortDirection", out var sortDir) && sortDir.ValueKind == JsonValueKind.String)
+                    _recurringSortDescending = sortDir.GetString() == "descending";
+                if (recurringState.Value.TryGetProperty("pageSize", out var pageSize) && pageSize.ValueKind == JsonValueKind.Number)
+                {
+                    var size = pageSize.GetInt32();
+                    // Validate against allowed page sizes
+                    if (new[] { 10, 20, 50, 100 }.Contains(size))
+                        _recurringPageSize = size;
+                }
+            }
+
+            // Load TriggerJob state
+            var triggerState = await _tableStateModule.InvokeAsync<JsonElement?>(
+                "getTableState",
+                "job-definitions-trigger"
+            );
+
+            if (triggerState.HasValue && triggerState.Value.ValueKind == JsonValueKind.Object)
+            {
+                if (triggerState.Value.TryGetProperty("sortBy", out var sortBy) && sortBy.ValueKind == JsonValueKind.String)
+                    _triggerSortBy = sortBy.GetString();
+                if (triggerState.Value.TryGetProperty("sortDirection", out var sortDir) && sortDir.ValueKind == JsonValueKind.String)
+                    _triggerSortDescending = sortDir.GetString() == "descending";
+                if (triggerState.Value.TryGetProperty("pageSize", out var pageSize) && pageSize.ValueKind == JsonValueKind.Number)
+                {
+                    var size = pageSize.GetInt32();
+                    // Validate against allowed page sizes
+                    if (new[] { 10, 20, 50, 100 }.Contains(size))
+                        _triggerPageSize = size;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Silently fail - use default values
+            Console.WriteLine($"Failed to load table states: {ex.Message}");
+        }
+    }
+
+    private async Task<TableData<JobDefinitionWithLastExecution>> LoadRecurringJobsAsync(TableState state, CancellationToken cancellationToken)
+    {
+        // Extract sorting from TableState
+        string? sortBy = null;
+        bool sortDescending = false;
+
+        if (!string.IsNullOrEmpty(state.SortLabel))
+        {
+            sortBy = MapSortLabelToField(state.SortLabel);
+            sortDescending = state.SortDirection == SortDirection.Descending;
+
+            // Save sort state
+            _recurringSortBy = state.SortLabel;
+            _recurringSortDescending = sortDescending;
+        }
+
+        // Save page size if changed
+        if (state.PageSize != _recurringPageSize)
+        {
+            _recurringPageSize = state.PageSize;
+        }
+
+        var filter = new JobDefinitionFilterRequest
+        {
+            FromProject = _filterFromProject,
+            JobKey = _filterJobKey,
+            JobName = _filterJobName,
+            JobType = JobType.Recurring,
+            PageNumber = state.Page + 1,
+            PageSize = state.PageSize,
+            SortBy = sortBy,
+            SortDescending = sortDescending
+        };
+
+        var result = await UIService.GetJobDefinitionsWithLastExecutionAsync(filter, cancellationToken);
+
+        if (result.IsFailed(out var error, out var data))
+        {
+            Snackbar.Add($"加载失败: {error.Message}", Severity.Error);
+            return new TableData<JobDefinitionWithLastExecution> { Items = Array.Empty<JobDefinitionWithLastExecution>(), TotalItems = 0 };
+        }
+
+        // Apply client-side sorting for computed fields
+        var items = data.Items ?? Array.Empty<JobDefinitionWithLastExecution>();
+        if (!string.IsNullOrEmpty(state.SortLabel))
+        {
+            items = ApplyClientSideSorting(items, state.SortLabel, sortDescending).ToArray();
+        }
+
+        // Save state to localStorage
+        await SaveRecurringTableStateAsync();
+
+        return new TableData<JobDefinitionWithLastExecution>
+        {
+            Items = items,
+            TotalItems = data.Sum ?? 0
+        };
+    }
+
+    private async Task<TableData<JobDefinitionWithLastExecution>> LoadTriggerJobsAsync(TableState state, CancellationToken cancellationToken)
+    {
+        // Extract sorting from TableState
+        string? sortBy = null;
+        bool sortDescending = false;
+
+        if (!string.IsNullOrEmpty(state.SortLabel))
+        {
+            sortBy = MapSortLabelToField(state.SortLabel);
+            sortDescending = state.SortDirection == SortDirection.Descending;
+
+            // Save sort state
+            _triggerSortBy = state.SortLabel;
+            _triggerSortDescending = sortDescending;
+        }
+
+        // Save page size if changed
+        if (state.PageSize != _triggerPageSize)
+        {
+            _triggerPageSize = state.PageSize;
+        }
+
+        var filter = new JobDefinitionFilterRequest
+        {
+            FromProject = _filterFromProject,
+            JobKey = _filterJobKey,
+            JobName = _filterJobName,
+            JobType = JobType.Triggered,
+            PageNumber = state.Page + 1,
+            PageSize = state.PageSize,
+            SortBy = sortBy,
+            SortDescending = sortDescending
+        };
+
+        var result = await UIService.GetJobDefinitionsWithLastExecutionAsync(filter, cancellationToken);
+
+        if (result.IsFailed(out var error, out var data))
+        {
+            Snackbar.Add($"加载失败: {error.Message}", Severity.Error);
+            return new TableData<JobDefinitionWithLastExecution> { Items = Array.Empty<JobDefinitionWithLastExecution>(), TotalItems = 0 };
+        }
+
+        // Apply client-side sorting for computed fields
+        var items = data.Items ?? Array.Empty<JobDefinitionWithLastExecution>();
+        if (!string.IsNullOrEmpty(state.SortLabel))
+        {
+            items = ApplyClientSideSorting(items, state.SortLabel, sortDescending).ToArray();
+        }
+
+        // Save state to localStorage
+        await SaveTriggerTableStateAsync();
+
+        return new TableData<JobDefinitionWithLastExecution>
+        {
+            Items = items,
+            TotalItems = data.Sum ?? 0
+        };
+    }
+
+    private async Task HandleFilterChanged()
+    {
+        if (_activeTabIndex == 0)
+        {
+            if (_recurringTable != null)
+            {
+                await _recurringTable.ReloadServerData();
+            }
+        }
+        else
+        {
+            if (_triggerTable != null)
+            {
+                await _triggerTable.ReloadServerData();
+            }
+        }
+    }
+
+    private void HandleResetFilters()
+    {
+        _filterFromProject = null;
+        _filterJobKey = null;
+        _filterJobName = null;
+        _ = HandleFilterChanged();
+    }
+
+    private async Task RefreshRecurringJobsAsync()
+    {
+        if (_recurringTable != null)
+        {
+            await _recurringTable.ReloadServerData();
+        }
+    }
+
+    private async Task RefreshTriggerJobsAsync()
+    {
+        if (_triggerTable != null)
+        {
+            await _triggerTable.ReloadServerData();
+        }
+    }
+
+    private async Task PauseJobAsync(string jobKey)
+    {
+        var result = await UIService.PauseJobAsync(jobKey);
+        if (result.IsFailed(out var error))
+        {
+            Snackbar.Add($"暂停失败: {error.Message}", Severity.Error);
+        }
+        else
+        {
+            Snackbar.Add($"作业 {jobKey} 已暂停", Severity.Success);
+            await RefreshRecurringJobsAsync();
+        }
+    }
+
+    private async Task ResumeJobAsync(string jobKey)
+    {
+        var result = await UIService.ResumeJobAsync(jobKey);
+        if (result.IsFailed(out var error))
+        {
+            Snackbar.Add($"继续失败: {error.Message}", Severity.Error);
+        }
+        else
+        {
+            Snackbar.Add($"作业 {jobKey} 已继续", Severity.Success);
+            await RefreshRecurringJobsAsync();
+        }
+    }
+
+    private async Task ExecuteJobAsync(string jobKey)
+    {
+        // 获取 JobDefinition
+        var defResult = await UIService.GetJobDefinitionAsync(jobKey);
+        if (defResult.IsFailed(out var error, out var definition))
+        {
+            Snackbar.Add($"获取作业定义失败: {error.Message}", Severity.Error);
+            return;
+        }
+
+        if (definition == null)
+        {
+            Snackbar.Add("作业定义不存在", Severity.Error);
+            return;
+        }
+
+        // 显示执行确认对话框
+        var parameters = new DialogParameters<JobExecuteDialog>
+        {
+            { x => x.JobDefinition, definition }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            CloseButton = true,
+            BackdropClick = false
+        };
+
+        var dialog = await DialogService.ShowAsync<JobExecuteDialog>("执行作业", parameters, options);
+        var dialogResult = await dialog.Result;
+
+        // 执行结果已在对话框中处理，刷新列表
+        if (dialogResult is { Canceled: false })
+        {
+            await RefreshTriggerJobsAsync();
+        }
+    }
+
+    private void NavigateToDetail(string jobKey)
+    {
+        NavigationManager.NavigateTo($"/job-scheduler/definitions/{Uri.EscapeDataString(jobKey)}");
+    }
+
+    private async Task OpenInstanceDetailDialog(string instanceId)
+    {
+        var parameters = new DialogParameters<JobInstanceDetailDialog>
+        {
+            { x => x.InstanceId, instanceId },
+            { x => x.ShowJobDefinitionButton, true }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.ExtraLarge,
+            FullWidth = true,
+            CloseButton = true,
+            BackdropClick = false,
+            Position = DialogPosition.Center
+        };
+
+        await DialogService.ShowAsync<JobInstanceDetailDialog>("作业实例详情", parameters, options);
+    }
+
+    private Color GetDisabledStateColor(bool isDisabled)
+    {
+        return isDisabled ? Color.Warning : Color.Success;
+    }
+
+    // Helper methods for sorting and state management
+
+    /// <summary>
+    /// Maps MudTable SortLabel to API field name
+    /// </summary>
+    private static string? MapSortLabelToField(string sortLabel)
+    {
+        return sortLabel switch
+        {
+            "FromProject" => "FromProject",
+            "JobKey" => "JobKey",
+            "JobName" => "JobName",
+            "CronExpression" => "CronExpression",
+            "IsDisabled" => "IsDisabled",
+            // NextExecutionTime and LastExecution are client-side sorted
+            "NextExecutionTime" => null,
+            "LastExecution" => null,
+            _ => null
+        };
+    }
+
+    /// <summary>
+    /// Applies client-side sorting for computed fields
+    /// </summary>
+    private static IEnumerable<JobDefinitionWithLastExecution> ApplyClientSideSorting(
+        IEnumerable<JobDefinitionWithLastExecution> items,
+        string sortLabel,
+        bool descending)
+    {
+        IOrderedEnumerable<JobDefinitionWithLastExecution>? sorted = sortLabel switch
+        {
+            "NextExecutionTime" => descending
+                ? items.OrderByDescending(x => x.NextExecutionTime ?? DateTime.MinValue)
+                : items.OrderBy(x => x.NextExecutionTime ?? DateTime.MinValue),
+            "LastExecution" => descending
+                ? items.OrderByDescending(x => x.LastExecution?.CreatedAt ?? DateTime.MinValue)
+                : items.OrderBy(x => x.LastExecution?.CreatedAt ?? DateTime.MinValue),
+            _ => null
+        };
+
+        return sorted ?? items;
+    }
+
+    /// <summary>
+    /// Saves RecurringJob table state to localStorage
+    /// </summary>
+    private async Task SaveRecurringTableStateAsync()
+    {
+        if (_tableStateModule == null) return;
+
+        try
+        {
+            await _tableStateModule.InvokeVoidAsync("saveTableState",
+                "job-definitions-recurring",
+                new
+                {
+                    sortBy = _recurringSortBy,
+                    sortDirection = _recurringSortDescending ? "descending" : "ascending",
+                    pageSize = _recurringPageSize
+                });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to save RecurringJob table state: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Saves TriggerJob table state to localStorage
+    /// </summary>
+    private async Task SaveTriggerTableStateAsync()
+    {
+        if (_tableStateModule == null) return;
+
+        try
+        {
+            await _tableStateModule.InvokeVoidAsync("saveTableState",
+                "job-definitions-trigger",
+                new
+                {
+                    sortBy = _triggerSortBy,
+                    sortDirection = _triggerSortDescending ? "descending" : "ascending",
+                    pageSize = _triggerPageSize
+                });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to save TriggerJob table state: {ex.Message}");
+        }
+    }
+
+    // Batch operation methods
+
+    private async Task BatchPauseJobsAsync()
+    {
+        await ExecuteBatchOperationAsync(BatchOperationType.Pause);
+    }
+
+    private async Task BatchResumeJobsAsync()
+    {
+        await ExecuteBatchOperationAsync(BatchOperationType.Resume);
+    }
+
+    private async Task ExecuteBatchOperationAsync(BatchOperationType operationType)
+    {
+        var jobKeys = _selectedRecurringJobs
+            .Select(j => j.Definition.JobKey)
+            .ToList();
+
+        // Show confirmation dialog
+        var confirmParams = new DialogParameters<BatchOperationConfirmDialog>
+        {
+            { x => x.JobKeys, jobKeys },
+            { x => x.OperationType, operationType }
+        };
+
+        var confirmOptions = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true,
+            CloseButton = true,
+            BackdropClick = false
+        };
+
+        var confirmDialog = await DialogService.ShowAsync<BatchOperationConfirmDialog>(
+            "确认批量操作", confirmParams, confirmOptions);
+
+        var confirmResult = await confirmDialog.Result;
+
+        if (confirmResult.Canceled)
+            return;
+
+        // Execute batch operation
+        _isProcessingBatch = true;
+        StateHasChanged();
+
+        try
+        {
+            Res<BatchJobOperationResult> result = operationType == BatchOperationType.Pause
+                ? await UIService.BatchPauseJobsAsync(jobKeys)
+                : await UIService.BatchResumeJobsAsync(jobKeys);
+
+            if (result.IsFailed(out var error, out var data))
+            {
+                Snackbar.Add($"批量操作失败: {error.Message}", Severity.Error);
+                return;
+            }
+
+            // Show result dialog
+            var resultParams = new DialogParameters<BatchOperationResultDialog>
+            {
+                { x => x.Result, data }
+            };
+
+            var resultOptions = new DialogOptions
+            {
+                MaxWidth = MaxWidth.Medium,
+                FullWidth = true,
+                CloseButton = true
+            };
+
+            await DialogService.ShowAsync<BatchOperationResultDialog>(
+                "批量操作结果", resultParams, resultOptions);
+
+            // Show summary snackbar
+            if (data.FailedCount == 0)
+            {
+                Snackbar.Add($"批量操作成功: {data.SuccessCount} 个作业已更新", Severity.Success);
+            }
+            else if (data.SuccessCount > 0)
+            {
+                Snackbar.Add(
+                    $"批量操作完成: {data.SuccessCount} 成功, {data.FailedCount} 失败",
+                    Severity.Warning);
+            }
+            else
+            {
+                Snackbar.Add($"批量操作失败: 所有操作均失败", Severity.Error);
+            }
+
+            // Clear selection and refresh
+            _selectedRecurringJobs.Clear();
+            await RefreshRecurringJobsAsync();
+        }
+        finally
+        {
+            _isProcessingBatch = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ClearSelection()
+    {
+        _selectedRecurringJobs.Clear();
+    }
+
+    /// <summary>
+    /// Disposes the JavaScript module reference
+    /// </summary>
+    public async ValueTask DisposeAsync()
+    {
+        if (_tableStateModule != null)
+        {
+            await _tableStateModule.DisposeAsync();
+        }
+    }
+}

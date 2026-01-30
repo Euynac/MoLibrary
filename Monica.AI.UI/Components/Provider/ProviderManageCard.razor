@@ -1,0 +1,198 @@
+@using Monica.AI.Models
+
+<MudPaper Class="provider-card" Elevation="2">
+    <div class="provider-card-inner">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-2">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                <MudIcon Icon="@GetProviderIcon(Provider)" Size="Size.Medium" />
+                <MudText Typo="Typo.h6">@Provider.DisplayName</MudText>
+                @if (Provider.IsDefault)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary">默认</MudChip>
+                }
+            </MudStack>
+            <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                <MudIconButton Icon="@Icons.Material.Filled.Settings"
+                               Size="Size.Small"
+                               OnClick="HandleEditPrompt"
+                               Class="config-button" />
+                <MudButton Variant="Variant.Outlined" OnClick="HandleTest" Disabled="@IsTesting">
+                    @if (IsTesting)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    }
+                    测试
+                </MudButton>
+            </MudStack>
+        </MudStack>
+
+        <MudText Typo="Typo.caption" Color="Color.Secondary">@Provider.ProviderType</MudText>
+        @if (!string.IsNullOrWhiteSpace(Provider.Description))
+        {
+            <MudText Typo="Typo.body2" Class="provider-description">@Provider.Description</MudText>
+        }
+
+        @if (!Provider.IsValid)
+        {
+            <MudAlert Severity="Severity.Warning" Dense="true" Class="provider-warning">
+                <MudStack Spacing="1">
+                    <MudText Typo="Typo.caption">模型配置不完整，请补充模型信息。</MudText>
+                    @if (Provider.InvalidModels is { Count: > 0 })
+                    {
+                        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                            <MudText Typo="Typo.caption">缺失模型:</MudText>
+                            @foreach (var model in Provider.InvalidModels)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Warning">@model</MudChip>
+                            }
+                        </MudStack>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.caption">未配置 SupportedModels。</MudText>
+                    }
+                </MudStack>
+            </MudAlert>
+        }
+
+        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="mt-2">
+            <MudChip T="string" Size="Size.Small" Color="@GetTestStatusColor()">@GetTestStatusText()</MudChip>
+            @if (!Provider.IsValid)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Warning">无效</MudChip>
+            }
+            @if (TestedAt.HasValue)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@TestedAt.Value.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+            }
+        </MudStack>
+        @if (!string.IsNullOrWhiteSpace(TestMessage))
+        {
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="test-message">@TestMessage</MudText>
+        }
+
+        <MudDivider Class="my-3" />
+
+        <MudGrid>
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">默认模型</MudText>
+                <MudText Typo="Typo.body2">@FormatValue(Provider.DefaultModel)</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">模型数量</MudText>
+                <MudText Typo="Typo.body2">@Models.Count</MudText>
+            </MudItem>
+        </MudGrid>
+
+        <div class="prompt-block">
+            <MudText Typo="Typo.caption" Color="Color.Secondary">默认系统提示词</MudText>
+            @if (string.IsNullOrWhiteSpace(Provider.SystemPrompt))
+            {
+                <MudText Typo="Typo.body2">—</MudText>
+            }
+            else
+            {
+                <MudTooltip Text="@Provider.SystemPrompt">
+                    <MudText Typo="Typo.body2" Class="prompt-preview">@GetPromptPreview(Provider.SystemPrompt)</MudText>
+                </MudTooltip>
+            }
+        </div>
+
+        <MudExpansionPanels Class="provider-expand" Elevation="0" Dense="true">
+            <MudExpansionPanel Text="模型详情" Icon="@Icons.Material.Filled.Category">
+                <ProviderModelTable Models="@Models"
+                                    OnTestModel="HandleTestModel"
+                                    IsModelTesting="IsModelTesting" />
+            </MudExpansionPanel>
+        </MudExpansionPanels>
+    </div>
+</MudPaper>
+
+@code {
+    [Parameter] public AIProviderInfo Provider { get; set; } = null!;
+    [Parameter] public IReadOnlyList<AIModelInfo> Models { get; set; } = [];
+    [Parameter] public bool IsTesting { get; set; }
+    [Parameter] public bool? TestSuccess { get; set; }
+    [Parameter] public string? TestMessage { get; set; }
+    [Parameter] public DateTimeOffset? TestedAt { get; set; }
+    [Parameter] public EventCallback<string> OnTest { get; set; }
+    [Parameter] public EventCallback<(string ProviderId, AIModelInfo Model)> OnTestModel { get; set; }
+    [Parameter] public Func<string, string, bool>? ModelTestingProvider { get; set; }
+    [Parameter] public EventCallback<AIProviderInfo> OnEditPrompt { get; set; }
+
+    private async Task HandleTest()
+    {
+        await OnTest.InvokeAsync(Provider.ProviderId);
+    }
+
+    private async Task HandleEditPrompt()
+    {
+        await OnEditPrompt.InvokeAsync(Provider);
+    }
+
+    private async Task HandleTestModel(AIModelInfo model)
+    {
+        await OnTestModel.InvokeAsync((Provider.ProviderId, model));
+    }
+
+    private bool IsModelTesting(AIModelInfo model)
+    {
+        return ModelTestingProvider?.Invoke(Provider.ProviderId, model.ModelName) ?? false;
+    }
+
+    private static string GetProviderIcon(AIProviderInfo provider)
+    {
+        return provider.ProviderType switch
+        {
+            "OpenAI" => Icons.Material.Filled.Psychology,
+            "Anthropic" => Icons.Material.Filled.AutoAwesome,
+            _ => Icons.Material.Filled.SmartToy
+        };
+    }
+
+    private Color GetTestStatusColor()
+    {
+        if (IsTesting)
+        {
+            return Color.Info;
+        }
+
+        return TestSuccess switch
+        {
+            true => Color.Success,
+            false => Color.Error,
+            _ => Color.Default
+        };
+    }
+
+    private string GetTestStatusText()
+    {
+        if (IsTesting)
+        {
+            return "测试中";
+        }
+
+        return TestSuccess switch
+        {
+            true => "可用",
+            false => "失败",
+            _ => "未测试"
+        };
+    }
+
+    private static string FormatValue(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? "—" : value;
+    }
+
+    private static string GetPromptPreview(string? prompt)
+    {
+        if (string.IsNullOrWhiteSpace(prompt))
+        {
+            return "—";
+        }
+
+        var trimmed = prompt.Trim();
+        return trimmed.Length > 80 ? trimmed[..80] + "..." : trimmed;
+    }
+}

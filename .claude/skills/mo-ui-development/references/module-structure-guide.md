@@ -18,7 +18,7 @@ When creating UI modules, use these naming patterns:
 
 ### UI Module Class File
 
-- **Location**: `MoLibrary.Framework.UI/Modules/{ModuleUIName}.cs`
+- **Location**: `Monica.Framework.UI/Modules/{ModuleUIName}.cs`
 - **Class naming**: `Module{ModuleUIName}`
 - **Example**: `Modules/SignalrUI.cs` contains `ModuleSignalrUI`
 
@@ -33,7 +33,7 @@ UI{ModuleName}/
 
 ### Page File
 
-- **Location**: `MoLibrary.Framework.UI/Pages/{PageName}.razor`
+- **Location**: `Monica.Framework.UI/Pages/{PageName}.razor`
 - **File naming**: `UI{ModuleName}Page.razor`
 - **Example**: `Pages/UISignalRPage.razor`
 
@@ -87,9 +87,9 @@ public class Module{ModuleUIName}(Module{ModuleUIName}Option option)
 ### Page Dependency Injection
 
 ```csharp
-@using MoLibrary.Framework.UI.{UIFolderName}.Components
-@using MoLibrary.Framework.UI.{UIFolderName}.Services
-@using MoLibrary.Framework.UI.{UIFolderName}.Models
+@using Monica.Framework.UI.{UIFolderName}.Components
+@using Monica.Framework.UI.{UIFolderName}.Services
+@using Monica.Framework.UI.{UIFolderName}.Models
 @inject {ModuleName}Service {ModuleName}Service
 ```
 
@@ -152,7 +152,7 @@ public class {ModuleName}Service
 
 4. **Anonymous types**: If source module Minimal APIs return anonymous types, create proper DTO classes in the service layer.
 
-5. **Required using**: Always include `using MoLibrary.Tool.MoResponse;` for Res types.
+5. **Required using**: Always include `using Monica.Tool.MoResponse;` for Res types.
 
 ## Minimal API Refactoring
 

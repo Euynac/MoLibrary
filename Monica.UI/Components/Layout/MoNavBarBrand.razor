@@ -1,0 +1,21 @@
+@using Microsoft.Extensions.Options
+@using Monica.UI.Modules
+@inject IOptions<ModuleUICoreOption> Options
+@inject NavigationManager NavigationManager
+
+<div class="navbar-brand" @onclick="NavigateToHome">
+    <div class="brand-logo">
+        <MudIcon Icon="@Icons.Material.Filled.Dashboard" Size="Size.Medium" />
+    </div>
+    <div class="brand-text">
+        <div class="brand-name">@Options.Value.UIAppBarName</div>
+        <div class="brand-version">@Options.Value.UIAppVersion</div>
+    </div>
+</div>
+
+@code {
+    private void NavigateToHome()
+    {
+        NavigationManager.NavigateTo("/home");
+    }
+}

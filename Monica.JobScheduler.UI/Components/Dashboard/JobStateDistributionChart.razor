@@ -1,0 +1,113 @@
+@using Monica.JobScheduler.Models
+@using Monica.JobScheduler.UI.Services
+
+@inject JobStateColorService StateColorService
+
+<div class="state-distribution-wrapper">
+    <MudPaper Class="state-distribution-card" Elevation="0">
+        <div class="card-header">
+            <MudText Typo="Typo.h6">状态分布</MudText>
+            <MudText Typo="Typo.caption" Class="time-range">@TimeWindowText</MudText>
+        </div>
+
+        @if (HasData)
+        {
+            <div class="chart-content">
+                <div class="chart-container">
+                    <MudChart ChartType="ChartType.Donut"
+                              InputData="@ChartData"
+                              InputLabels="@ChartLabels"
+                              Width="410px"
+                              Height="410px"
+                              ChartOptions="@ChartOptionsWithPalette" />
+                </div>
+                <div class="legend-container">
+                    @foreach (var state in OrderedStates)
+                    {
+                        var count = StateDistribution.GetValueOrDefault(state, 0);
+                        if (count > 0)
+                        {
+                            <div class="legend-item">
+                                <div class="legend-color" style="background-color: @StateColorService.GetStateColorHex(state)"></div>
+                                <div class="legend-label">@GetStateLabel(state)</div>
+                                <div class="legend-value">@count</div>
+                                <div class="legend-percent">@GetPercentage(count)%</div>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <MudIcon Icon="@Icons.Material.Filled.PieChart" Size="Size.Large" Color="Color.Default" />
+                <MudText Typo="Typo.body2" Color="Color.Secondary">暂无执行数据</MudText>
+            </div>
+        }
+    </MudPaper>
+</div>
+
+@code {
+    [Parameter]
+    public Dictionary<JobState, int> StateDistribution { get; set; } = new();
+
+    [Parameter]
+    public string TimeWindowText { get; set; } = "最近30天";
+
+    private ChartOptions ChartOptionsWithPalette => new()
+    {
+        ChartPalette = OrderedStates
+            .Where(s => StateDistribution.GetValueOrDefault(s, 0) > 0)
+            .Select(s => StateColorService.GetStateColorHex(s))
+            .ToArray()
+    };
+
+    private bool HasData => StateDistribution.Values.Sum() > 0;
+    private int TotalCount => StateDistribution.Values.Sum();
+
+    private double[] ChartData => OrderedStates
+        .Select(s => (double)StateDistribution.GetValueOrDefault(s, 0))
+        .Where(v => v > 0)
+        .ToArray();
+
+    private string[] ChartLabels => OrderedStates
+        .Where(s => StateDistribution.GetValueOrDefault(s, 0) > 0)
+        .Select(GetStateLabel)
+        .ToArray();
+
+    // Order states by typical importance
+    private static readonly JobState[] OrderedStates =
+    [
+        JobState.Succeeded,
+        JobState.Failed,
+        JobState.Terminated,
+        JobState.Processing,
+        JobState.Enqueued,
+        JobState.Scheduled,
+        JobState.Skipped,
+        JobState.Cancelled
+    ];
+
+    private string GetStateLabel(JobState state)
+    {
+        return state switch
+        {
+            JobState.Succeeded => "成功",
+            JobState.Failed => "失败",
+            JobState.Terminated => "终止",
+            JobState.Processing => "执行中",
+            JobState.Enqueued => "等待中",
+            JobState.Scheduled => "已调度",
+            JobState.Skipped => "已跳过",
+            JobState.Cancelled => "已取消",
+            _ => state.ToString()
+        };
+    }
+
+    private string GetPercentage(int count)
+    {
+        if (TotalCount == 0) return "0";
+        return ((double)count / TotalCount * 100).ToString("F1");
+    }
+}

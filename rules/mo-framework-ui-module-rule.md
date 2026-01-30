@@ -19,12 +19,12 @@ alwaysApply: false
 ## 1. 模块文件结构
 
 ### 1.1 创建UI模块类文件
-- 文件位置：`MoLibrary.Framework.UI/Modules/$ModuleUIName$.cs`
+- 文件位置：`Monica.Framework.UI/Modules/$ModuleUIName$.cs`
 - 文件命名：以模块名+UI的格式命名，如 `SignalrUI.cs`
 - 类命名：`Module$ModuleUIName$`
 
 ### 1.2 创建UI模块文件夹
-- 文件夹位置：`MoLibrary.Framework.UI/$UIFolderName$/`
+- 文件夹位置：`Monica.Framework.UI/$UIFolderName$/`
 - 文件夹命名：UI+模块名，如 `UISignalr`
 - 子文件夹结构：
   ```
@@ -35,7 +35,7 @@ alwaysApply: false
   ```
 
 ### 1.3 创建页面文件
-- 文件位置：`MoLibrary.Framework.UI/Pages/$PageName$.razor`
+- 文件位置：`Monica.Framework.UI/Pages/$PageName$.razor`
 - 文件命名：UI+模块名+Page，如 `UISignalRPage.razor`
 
 ## 2. 代码结构规范
@@ -85,9 +85,9 @@ public class Module$ModuleUIName$(Module$ModuleUIName$Option option)
 
 ### 2.3 页面依赖注入
 ```csharp
-@using MoLibrary.Framework.UI.$UIFolderName$.Components
-@using MoLibrary.Framework.UI.$UIFolderName$.Services
-@using MoLibrary.Framework.UI.$UIFolderName$.Models
+@using Monica.Framework.UI.$UIFolderName$.Components
+@using Monica.Framework.UI.$UIFolderName$.Services
+@using Monica.Framework.UI.$UIFolderName$.Models
 @inject $ModuleName$Service $ModuleName$Service
 ```
 
@@ -318,7 +318,7 @@ public class DomainEventService(IMoDistributedEventBus eventBus, IGlobalJsonOpti
 #### 5.3.2 重要规则
 - 所有服务方法的返回值必须不为空
 - 成功时返回`Res.Ok(data)`，失败时返回`Res.Fail(errorMessage)`，没有泛型类型的`Res.Fail<T>`以及`OK<T>`这种方法，因为本身有隐式转换！
-- 记得必须引用using MoLibrary.Tool.MoResponse，否则会报错
+- 记得必须引用using Monica.Tool.MoResponse，否则会报错
 - 异常情况必须捕获并返回`Res.Fail`
 - 调用方使用`IsFailed(out var error, out var data)`模式检查结果
 - 成功时`data`保证不为null，失败时`error`包含错误信息

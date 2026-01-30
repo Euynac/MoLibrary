@@ -1,8 +1,8 @@
-# Offline/Intranet Requirements for MoLibrary UI
+# Offline/Intranet Requirements for Monica UI
 
 ## Overview
 
-All UI modules and components in MoLibrary must support offline/intranet environments. This document provides guidelines for ensuring UI components work without internet access.
+All UI modules and components in Monica must support offline/intranet environments. This document provides guidelines for ensuring UI components work without internet access.
 
 ## Core Requirements
 
@@ -22,7 +22,7 @@ All UI modules and components in MoLibrary must support offline/intranet environ
 All fonts must be stored in the project's `wwwroot/fonts/` directory:
 
 ```
-MoLibrary.UI/
+Monica.UI/
 └── wwwroot/
     └── fonts/
         ├── roboto/
@@ -55,8 +55,8 @@ All static resources must be local:
 **Required:**
 ```html
 <!-- Use local resources -->
-<link href="_content/MoLibrary.UI/css/theme.css" rel="stylesheet" />
-<script src="_content/MoLibrary.UI/js/app.js"></script>
+<link href="_content/Monica.UI/css/theme.css" rel="stylesheet" />
+<script src="_content/Monica.UI/js/app.js"></script>
 ```
 
 ### 4. Intranet Compatibility
@@ -267,19 +267,19 @@ Any results should be reviewed and potentially replaced with local resources.
 
 ## Module-Specific Notes
 
-### MoLibrary.UI
+### Monica.UI
 
 Main UI module containing core themes and styles. All base fonts and icon fonts should be here.
 
-### MoLibrary.Framework.UI
+### Monica.Framework.UI
 
-Framework-level UI components. Should reference fonts from MoLibrary.UI or include its own copies.
+Framework-level UI components. Should reference fonts from Monica.UI or include its own copies.
 
-### MoLibrary.JobScheduler.UI
+### Monica.JobScheduler.UI
 
 Job scheduler UI module. Should ensure all charting/visualization libraries are local.
 
-### MoLibrary.Configuration.UI
+### Monica.Configuration.UI
 
 Configuration dashboard. Should ensure all form and data display components work offline.
 

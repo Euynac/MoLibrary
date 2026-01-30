@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+	<Import Project="..\common.xml"/>
+
+	<ItemGroup>
+		<!-- For ETW/EventPipe allocation tracking -->
+		<PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.1.28" />
+		<!-- For heap snapshot analysis -->
+		<PackageReference Include="Microsoft.Diagnostics.Runtime" Version="3.1.512801"/>
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Monica.Core\Monica.Core.csproj"/>
+		<ProjectReference Include="..\Monica.Tool\Monica.Tool.csproj"/>
+		<ProjectReference Include="..\Monica.UI\Monica.UI.csproj"/>
+	</ItemGroup>
+
+</Project>

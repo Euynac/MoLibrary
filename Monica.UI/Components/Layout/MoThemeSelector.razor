@@ -1,0 +1,25 @@
+@using Monica.UI.Services
+@inject MoThemeService ThemeService
+@inject IDialogService DialogService
+
+<MudIconButton Icon="@Icons.Material.Filled.Palette"
+               Color="Color.Primary"
+               Size="Size.Medium"
+               Class="action-button"
+               OnClick="OpenThemeDialog"
+               Title="主题设置" />
+
+@code {
+    private async Task OpenThemeDialog()
+    {
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true,
+            CloseButton = true
+        };
+        
+        await DialogService.ShowAsync<MoThemeDialog>("主题设置", options);
+    }
+}
