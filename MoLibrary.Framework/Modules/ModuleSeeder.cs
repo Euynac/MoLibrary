@@ -32,10 +32,9 @@ public class ModuleSeeder(ModuleSeederOption option) : MoModule<ModuleSeeder, Mo
 
     public override void ConfigureApplicationBuilder(IApplicationBuilder app)
     {
-        using var scope = app.ApplicationServices.CreateScope();
         foreach (var type in _seedTypes)
         {
-            var seed = (IMoSeeder) ActivatorUtilities.CreateInstance(scope.ServiceProvider, type);
+            var seed = (IMoSeeder) ActivatorUtilities.CreateInstance(app.ApplicationServices, type);
             seed.SeedAsync();
             //TODO 优化种子方法执行策略
         }
