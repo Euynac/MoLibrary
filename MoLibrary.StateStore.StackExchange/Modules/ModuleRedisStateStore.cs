@@ -61,8 +61,8 @@ public static class ModuleRedisStateStoreBuilderExtensions
             // Register keyed IConnectionMultiplexer using factory
             services.AddKeyedSingleton<IConnectionMultiplexer>(serviceKey, (sp, _) =>
             {
-                var optionsSnapshot = sp.GetRequiredService<IOptionsSnapshot<ModuleRedisStateStoreOption>>();
-                var keyedOptions = optionsSnapshot.Get(serviceKey);
+                var optionsMonitor = sp.GetRequiredService<IOptionsMonitor<ModuleRedisStateStoreOption>>();
+                var keyedOptions = optionsMonitor.Get(serviceKey);
                 var factory = sp.GetRequiredService<IRedisConnectionFactory>();
                 return factory.CreateConnection(keyedOptions);
             });
@@ -70,8 +70,8 @@ public static class ModuleRedisStateStoreBuilderExtensions
             // Register keyed RedisStateStore
             services.AddKeyedSingleton<IMoStateStore>(serviceKey, (sp, _) =>
             {
-                var optionsSnapshot = sp.GetRequiredService<IOptionsSnapshot<ModuleRedisStateStoreOption>>();
-                var keyedOptions = Options.Create(optionsSnapshot.Get(serviceKey));
+                var optionsMonitor = sp.GetRequiredService<IOptionsMonitor<ModuleRedisStateStoreOption>>();
+                var keyedOptions = Options.Create(optionsMonitor.Get(serviceKey));
                 var keyedConnection = sp.GetRequiredKeyedService<IConnectionMultiplexer>(serviceKey);
                 return ActivatorUtilities.CreateInstance<RedisStateStore>(sp, keyedConnection, keyedOptions);
             });

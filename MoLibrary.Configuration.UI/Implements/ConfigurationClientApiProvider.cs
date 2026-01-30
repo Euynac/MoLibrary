@@ -16,11 +16,11 @@ public class ConfigurationClientApiProvider(
     IMoConfigurationStores stores,
     ILogger<ConfigurationClientApiProvider> logger) : IMoConfigurationApi
 {
-    public virtual Task<Res<List<DtoDomainConfigs>>> GetAllConfigStatusAsync(string? mode = null)
+    public virtual Task<Res<List<DtoDomainConfigs>>> GetConfigsAsync(string? mode = null, bool onlyCurDomain = false)
     {
         try
         {
-            var configs = cardManager.GetDomainConfigs();
+            var configs = cardManager.GetConfigs(onlyCurDomain);
             return Task.FromResult<Res<List<DtoDomainConfigs>>>(configs);
         }
         catch (Exception ex)
@@ -30,11 +30,11 @@ public class ConfigurationClientApiProvider(
         }
     }
 
-    public virtual async Task<Res<DtoOptionItem>> GetOptionItemStatusAsync(string key, string? appid = null)
+    public virtual async Task<Res<DtoOptionItem>> GetOptionItemAsync(string key, string? appid = null)
     {
         try
         {
-            var configs = cardManager.GetDomainConfigs();
+            var configs = cardManager.GetConfigs();
             var optionItem = configs
                 .SelectMany(p => p.Children)
                 .SelectMany(p => p.Children)
@@ -54,11 +54,11 @@ public class ConfigurationClientApiProvider(
         }
     }
 
-    public virtual async Task<Res<DtoConfig>> GetConfigStatusAsync(string key, string? appid = null)
+    public virtual async Task<Res<DtoConfig>> GetConfigAsync(string key, string? appid = null)
     {
         try
         {
-            var configs = cardManager.GetDomainConfigs();
+            var configs = cardManager.GetConfigs();
             var config = configs
                 .SelectMany(p => p.Children)
                 .SelectMany(p => p.Children)

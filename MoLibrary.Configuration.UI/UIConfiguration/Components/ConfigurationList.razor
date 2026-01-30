@@ -178,7 +178,7 @@
 
         try
         {
-            if ((await ConfigurationUIService.GetAllConfigStatusAsync()).IsFailed(out var error, out var domainConfigs))
+            if ((await ConfigurationUIService.GetConfigsAsync()).IsFailed(out var error, out var domainConfigs))
             {
                 Snackbar.Add($"加载配置失败: {error}", Severity.Error);
                 return;

@@ -48,7 +48,7 @@ public class ModuleLockerGuide : MoModuleGuide<ModuleLocker, ModuleLockerOption,
     {
         ConfigureServices(context =>
         {
-            context.Services.AddSingleton<IMoDistributedLock, TProvider>();
+            context.Services.AddScoped<IMoDistributedLock, TProvider>();
         });
         return this;
     }

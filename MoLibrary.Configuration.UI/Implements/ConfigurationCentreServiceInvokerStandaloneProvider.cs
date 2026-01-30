@@ -13,13 +13,13 @@ namespace MoLibrary.Configuration.UI.Implements;
 /// Suitable for single-instance deployments or development environments.
 /// </summary>
 public class ConfigurationCentreServiceInvokerStandaloneProvider(
-    IMoConfigurationApi api) : IConfigurationCentreServiceInvoker
+    ConfigurationClientApiProvider api) : IConfigurationCentreServiceInvoker
 {
     public async Task<Res<List<DtoDomainConfigs>>> GetRegisteredServicesConfigsAsync(List<string> appIds)
     {
         // In standalone mode, retrieve only the local instance's configuration
         // The appIds parameter is ignored since we can't invoke remote services
-        if((await api.GetAllConfigStatusAsync()).IsFailed(out var error, out var configs))
+        if((await api.GetConfigsAsync()).IsFailed(out var error, out var configs))
             return error;
         return Res.Ok(configs);
     }

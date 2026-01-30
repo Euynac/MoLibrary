@@ -17,12 +17,13 @@ public class ConfigurationUIService(
     /// 获取所有配置状态信息
     /// </summary>
     /// <param name="mode">显示模式（可选）</param>
+    /// <param name="onlyCurDomain"></param>
     /// <returns>配置状态列表</returns>
-    public async Task<Res<List<DtoDomainConfigs>>> GetAllConfigStatusAsync(string? mode = null)
+    public async Task<Res<List<DtoDomainConfigs>>> GetConfigsAsync(string? mode = null, bool onlyCurDomain = false)
     {
         try
         {
-            return await api.GetAllConfigStatusAsync(mode);
+            return await api.GetConfigsAsync(mode, onlyCurDomain);
         }
         catch (Exception ex)
         {
@@ -37,11 +38,11 @@ public class ConfigurationUIService(
     /// <param name="appid">应用ID（可选）</param>
     /// <param name="key">配置键</param>
     /// <returns>配置项状态</returns>
-    public async Task<Res<DtoOptionItem>> GetOptionItemStatusAsync(string? appid, string key)
+    public async Task<Res<DtoOptionItem>> GetOptionItemAsync(string? appid, string key)
     {
         try
         {
-            return await api.GetOptionItemStatusAsync(key, appid);
+            return await api.GetOptionItemAsync(key, appid);
         }
         catch (Exception ex)
         {
@@ -56,11 +57,11 @@ public class ConfigurationUIService(
     /// <param name="appid">应用ID（可选）</param>
     /// <param name="key">配置键</param>
     /// <returns>配置类状态</returns>
-    public async Task<Res<DtoConfig>> GetConfigStatusAsync(string? appid, string key)
+    public async Task<Res<DtoConfig>> GetConfigAsync(string? appid, string key)
     {
         try
         {
-            return await api.GetConfigStatusAsync(key, appid);
+            return await api.GetConfigAsync(key, appid);
         }
         catch (Exception ex)
         {

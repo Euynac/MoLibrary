@@ -264,7 +264,7 @@
     {
         // 获取当前配置值
         string? currentValue = null;
-        var currentConfigResult = await ConfigurationUIService.GetConfigStatusAsync(history.AppId, history.Key);
+        var currentConfigResult = await ConfigurationUIService.GetConfigAsync(history.AppId, history.Key);
         if (currentConfigResult.IsFailed(out var error, out var data))
         {
             Snackbar.Add($"获取当前配置值失败: {error}", Severity.Warning);

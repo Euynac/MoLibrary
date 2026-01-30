@@ -13,8 +13,9 @@ public interface IMoConfigurationApi
     /// 获取所有配置状态信息
     /// </summary>
     /// <param name="mode">显示模式（可选）</param>
+    /// <param name="onlyCurDomain"></param>
     /// <returns>配置状态列表</returns>
-    Task<Res<List<DtoDomainConfigs>>> GetAllConfigStatusAsync(string? mode = null);
+    Task<Res<List<DtoDomainConfigs>>> GetConfigsAsync(string? mode = null, bool onlyCurDomain = false);
 
     /// <summary>
     /// 获取指定配置项状态信息
@@ -22,7 +23,7 @@ public interface IMoConfigurationApi
     /// <param name="key">配置键</param>
     /// <param name="appid">应用ID（可选）</param>
     /// <returns>配置项状态</returns>
-    Task<Res<DtoOptionItem>> GetOptionItemStatusAsync(string key, string? appid = null);
+    Task<Res<DtoOptionItem>> GetOptionItemAsync(string key, string? appid = null);
 
     /// <summary>
     /// 获取指定配置类状态信息
@@ -30,7 +31,7 @@ public interface IMoConfigurationApi
     /// <param name="key">配置键</param>
     /// <param name="appid">应用ID（可选）</param>
     /// <returns>配置类状态</returns>
-    Task<Res<DtoConfig>> GetConfigStatusAsync(string key, string? appid = null);
+    Task<Res<DtoConfig>> GetConfigAsync(string key, string? appid = null);
 
     /// <summary>
     /// 获取配置历史记录

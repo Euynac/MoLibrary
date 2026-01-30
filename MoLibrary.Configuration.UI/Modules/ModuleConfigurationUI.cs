@@ -49,8 +49,7 @@ public class ModuleConfigurationUI(ModuleConfigurationUIOption option)
     {
         // 依赖配置模块
         DependsOnModule<ModuleConfigurationGuide>().Register();
-        // Configure RegisterCentre and mark this as a centre server (for endpoint routing)
-        DependsOnModule<ModuleRegisterCentreGuide>().Register().SetAsCentreServer();
+        DependsOnModule<ModuleRegisterCentreGuide>().Register();
         DependsOnModule<ModuleServiceInvocationGuide>().Register();
         
         if (!option.DisableConfigurationPage)
@@ -83,7 +82,8 @@ public class ModuleConfigurationUI(ModuleConfigurationUIOption option)
         services.TryAddSingleton<IMoConfigurationDashboard, DefaultArrangeDashboard>();
         services.TryAddTransient<IMoConfigurationStores, MoConfigurationDefaultMemoryStore>();
         services.TryAddSingleton<IMoConfigurationModifier, MoConfigurationJsonFileModifier>();
-
+        services.TryAddSingleton<ConfigurationClientApiProvider>();
+        
         if (GetOptions<ModuleRegisterCentreOption>().IsCentreServer)
         {
             // Dashboard mode: register centre API provider
@@ -106,7 +106,6 @@ public class ModuleConfigurationUI(ModuleConfigurationUIOption option)
         else
         {
             // Client mode: register client API provider
-            services.TryAddSingleton<ConfigurationClientApiProvider>();
             services.TryAddSingleton<IMoConfigurationApi>(p =>
                 p.GetRequiredService<ConfigurationClientApiProvider>());
         }
@@ -154,7 +153,7 @@ public class ModuleConfigurationUI(ModuleConfigurationUIOption option)
                     async ([FromQuery] string? appid, [FromQuery] string key,
                         [FromServices] ConfigurationUIService uiService) =>
                     {
-                        return (await uiService.GetOptionItemStatusAsync(appid, key)).GetResponse();
+                        return (await uiService.GetOptionItemAsync(appid, key)).GetResponse();
                     })
                 .WithName("获取指定配置状态")
                 .WithTags(tagName)
@@ -162,10 +161,11 @@ public class ModuleConfigurationUI(ModuleConfigurationUIOption option)
                 .WithDescription("获取指定配置状态");
 
             endpoints.MapGet(MoConfigurationConventions.DashboardAllConfigStatus, async (
+                    [FromServices] ConfigurationUIService uiService,
                     [FromQuery] string? mode,
-                    [FromServices] ConfigurationUIService uiService) =>
+                    [FromQuery] bool onlyCurDomain = false) =>
                 {
-                    return (await uiService.GetAllConfigStatusAsync(mode)).GetResponse();
+                    return (await uiService.GetConfigsAsync(mode, onlyCurDomain)).GetResponse();
                 })
                 .WithName("获取所有微服务配置状态")
                 .WithTags(tagName)
@@ -219,8 +219,6 @@ public class ModuleConfigurationUIGuide : MoModuleGuide<ModuleConfigurationUI, M
 /// </summary>
 public class ModuleConfigurationUIOption : MoModuleOptionWithMinimalApi<ModuleConfigurationUI>
 {
-   
-
     /// <summary>
     /// 是否禁用配置管理页面
     /// </summary>

@@ -18,13 +18,15 @@ public class ConfigurationCentreApiProvider(
     IMoConfigurationDashboard dashboard,
     IConfigurationCentreServiceInvoker invoker,
     IRegistrationStateManager stateManager,
+    IRegisterCentreClientInfo clientInfo,
     ILogger<ConfigurationClientApiProvider> logger)
     : ConfigurationClientApiProvider(modifier, manager, stores, logger)
 {
     private static (List<DtoDomainConfigs>? Data, DateTime CachedAt) _cache;
     private static readonly TimeSpan _cacheTtl = TimeSpan.FromSeconds(30);
 
-    public override async Task<Res<List<DtoDomainConfigs>>> GetAllConfigStatusAsync(string? mode = null)
+    public override async Task<Res<List<DtoDomainConfigs>>> GetConfigsAsync(string? mode = null,
+        bool onlyCurDomain = false)
     {
         if ((await GetRegisteredServicesConfigsAsync()).IsFailed(out var error, out var data))
             return Res.Fail(error);
@@ -35,7 +37,7 @@ public class ConfigurationCentreApiProvider(
         return Res.Ok(arranged);
     }
 
-    public override async Task<Res<DtoOptionItem>> GetOptionItemStatusAsync(string key, string? appid = null)
+    public override async Task<Res<DtoOptionItem>> GetOptionItemAsync(string key, string? appid = null)
     {
         if ((await GetRegisteredServicesConfigsAsync()).IsFailed(out var error, out var data)) return error;
 
@@ -46,7 +48,7 @@ public class ConfigurationCentreApiProvider(
         return "找不到相应的配置项";
     }
 
-    public override async Task<Res<DtoConfig>> GetConfigStatusAsync(string key, string? appid = null)
+    public override async Task<Res<DtoConfig>> GetConfigAsync(string key, string? appid = null)
     {
         if ((await GetRegisteredServicesConfigsAsync()).IsFailed(out var error, out var data)) return error;
 
@@ -72,17 +74,17 @@ public class ConfigurationCentreApiProvider(
 
         // Get all instances from the state manager
         var instances = await stateManager.GetAllLeaderInstancesAsync();
-
+        var curAppid = clientInfo.GetServiceStatus().ServiceName;
         // Extract AppIds, ordered by build time (newest first) so newest version is selected in Distinct
         var list = instances
+            .Where(p=>p.ServiceName != curAppid)
             .OrderByDescending(i => i.BuildTime)
             .Select(i => i.ServiceName)
             .ToList();
 
-        var res = await invoker.GetRegisteredServicesConfigsAsync(list);
-        if (res.IsFailed(out var error, out var statusList)) return error;
+        if ((await invoker.GetRegisteredServicesConfigsAsync(list)).IsFailed(out var error, out var statusList)) return error;
 
-        statusList.AddRange(manager.GetDomainConfigs());
+        statusList.AddRange(manager.GetConfigs());
         if ((await WashDomainConfigs(statusList)).IsFailed(out error, out var configs)) return error;
         _cache = (configs, DateTime.UtcNow);
         return configs;

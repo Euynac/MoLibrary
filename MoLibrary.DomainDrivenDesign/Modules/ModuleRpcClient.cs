@@ -93,11 +93,13 @@ public class ModuleRpcClient(ModuleRpcClientOption option) :
                                 "Please config MoRPC http client provider to use rpc client!");
                         }
 
-                        services.TryAddSingleton(targetInterface, provider =>
+                        var appid = infoProvider.GetDomainRelatedAppId(domain);
+                        services.AddKeyedSingleton(appid, httpClientRegisterProvider.GetHttpClient(appid));
+
+                        services.TryAddScoped(targetInterface, provider =>
                         {
                             var client =
-                                httpClientRegisterProvider.GetHttpClient(
-                                    infoProvider.GetDomainRelatedAppId(domain));
+                                provider.GetRequiredKeyedService<HttpClient>(appid);
                             return ActivatorUtilities.CreateInstance(provider, type, client);
                         });
                         Logger.LogInformation("Register Domain ({domainName} - {domainDesc}) HTTP RPC {type} -> {interface}", domain.ToString(), domain.GetDescription(), type.Name,
@@ -105,11 +107,12 @@ public class ModuleRpcClient(ModuleRpcClientOption option) :
                     }
                     else if (Option.UseGrpc)
                     {
+                        throw new NotImplementedException("Grpc is not supported now!");
                         continue;
                     }
                     else
                     {
-                        services.TryAddSingleton(targetInterface, type);
+                        services.TryAddScoped(targetInterface, type);
                         Logger.LogInformation("Register Domain ({domainName} - {domainDesc}) Custom RPC {type} -> {interface}", domain.ToString(), domain.GetDescription(), type.Name,
                             targetInterface.Name);
                     }

@@ -8,12 +8,12 @@ public interface IMoConfigurationCardManager
     /// 获取已注册的所有配置卡片信息
     /// </summary>
     /// <returns></returns>
-    IEnumerable<MoConfigurationCard> GetHotConfigCards();
+    IEnumerable<MoConfigurationCard> GetConfigCards();
 
     /// <summary>
-    /// 获取子域内配置信息
+    /// 获取当前服务内配置信息
     /// </summary>
     /// <param name="onlyCurDomain">只获取当前子域的配置信息</param>
     /// <returns></returns>
-    List<DtoDomainConfigs> GetDomainConfigs(bool? onlyCurDomain = null);
+    List<DtoDomainConfigs> GetConfigs(bool onlyCurDomain = false);
 }

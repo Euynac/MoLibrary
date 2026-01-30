@@ -89,14 +89,14 @@ public class ModuleDaprEventBusGuide : MoModuleGuide<ModuleDaprEventBus, ModuleD
             // Register keyed DaprEventBus with the specified serviceKey
             context.Services.AddKeyedSingleton<IMoDistributedEventBus>(key, (sp, _) =>
             {
-                var options = Options.Create(sp.GetRequiredService<IOptionsSnapshot<ModuleDaprEventBusOption>>().Get(key));
+                var options = Options.Create(sp.GetRequiredService<IOptionsMonitor<ModuleDaprEventBusOption>>().Get(key));
                 return ActivatorUtilities.CreateInstance<DistributedEventBusDaprEventBus>(sp, options, key);
             });
 
             // Register HostedService for this keyed EventBus
             context.Services.AddSingleton<IHostedService>(sp =>
             {
-                var options = Options.Create(sp.GetRequiredService<IOptionsSnapshot<ModuleDaprEventBusOption>>().Get(key));
+                var options = Options.Create(sp.GetRequiredService<IOptionsMonitor<ModuleDaprEventBusOption>>().Get(key));
                 return ActivatorUtilities.CreateInstance<DaprEventBusSubscriptionHostedService>(sp, options, key);
             });
         }, secondKey: key);

@@ -46,8 +46,8 @@ public static class ModuleDaprStateStoreBuilderExtensions
             // 注册 keyed DaprStateStore
             services.AddKeyedSingleton<IMoStateStore>(serviceKey, (sp, _) =>
             {
-                var optionsSnapshot = sp.GetRequiredService<IOptionsSnapshot<ModuleDaprStateStoreOption>>();
-                var keyedOptions = Options.Create(optionsSnapshot.Get(serviceKey));
+                var optionsMonitor = sp.GetRequiredService<IOptionsMonitor<ModuleDaprStateStoreOption>>();
+                var keyedOptions = Options.Create(optionsMonitor.Get(serviceKey));
                 return ActivatorUtilities.CreateInstance<DaprStateStore>(sp, keyedOptions);
             });
         }, serviceKey);

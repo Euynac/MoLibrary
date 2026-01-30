@@ -8,7 +8,7 @@ namespace MoLibrary.Configuration.Interfaces;
 
 public class MoConfigurationCardManager(IServiceProvider serviceProvider, IMoConfigurationServiceInfo info) : IMoConfigurationCardManager
 {
-    public IEnumerable<MoConfigurationCard> GetHotConfigCards()
+    public IEnumerable<MoConfigurationCard> GetConfigCards()
     {
         using var scope = serviceProvider.CreateScope();
         var cards = MoConfigurationCard.Cards.Values;
@@ -19,10 +19,10 @@ public class MoConfigurationCardManager(IServiceProvider serviceProvider, IMoCon
         }
     }
 
-    public List<DtoDomainConfigs> GetDomainConfigs(bool? onlyCurDomain = null)
+    public List<DtoDomainConfigs> GetConfigs(bool onlyCurDomain = false)
     {
         var result = new Dictionary<string, DtoDomainConfigs>();
-        foreach (var group in GetHotConfigCards().GroupBy(p => p.FromProjectName))
+        foreach (var group in GetConfigCards().GroupBy(p => p.FromProjectName))
         {
             var cards = group.ToList();
             var tmpCard = cards.FirstOrDefault();

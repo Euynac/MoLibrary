@@ -22,7 +22,6 @@ public static class MoConfigurationConventions
     /// 获取微服务配置状态
     /// </summary>
     public static string DashboardAllConfigStatus = "/configuration/status";
-
     /// <summary>
     /// 获取指定配置类状态
     /// </summary>
