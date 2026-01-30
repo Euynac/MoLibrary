@@ -4,8 +4,6 @@
   <img src="logo.png" alt="Monica Logo" width="200" />
 </p>
 
-
-
 <p align="center">
   <a href="https://github.com/molloryn/Monica.Docs/actions"><img src="https://github.com/molloryn/Monica.Docs/actions/workflows/static.yml/badge.svg" alt="Build Status"></a>
   <a href="https://www.nuget.org/packages?q=Monica"><img src="https://img.shields.io/nuget/v/Monica.Core.svg" alt="NuGet"></a>
@@ -13,102 +11,219 @@
   <a href="https://monica.dpdns.org/"><img src="https://img.shields.io/badge/docs-online-brightgreen.svg" alt="Documentation"></a>
 </p>
 
-## 📖 概述
+> ⚠️ **Development Status**: Monica is currently in internal development and undergoing rapid iteration. The API is subject to breaking changes. Documentation is being actively improved. Not recommended for production use at this time.
 
-Monica 是一个模块化的 .NET 基础设施库，允许您单独使用某个模块而无需引入整个框架。通过统一的注册和配置模式，Monica 让您的开发体验更加一致和高效。
+Modular .NET Infrastructure for Cutting-edge Apps. A comprehensive framework providing 30+ independent modules covering everything from core infrastructure to AI integration.
 
-**[📚 在线文档](https://monica.dpdns.org/) • [🚀 快速开始](https://monica.dpdns.org/docs/intro) • [📝 博客](https://monica.dpdns.org/blog)**
+## Language
 
-## ✨ 特性
+English | [简体中文](README.zh_CN.md)
 
-- **🧩 模块化设计**：每个组件都是独立的，您可以只使用所需的模块，无需引入整个框架
-- **🔄 统一直觉的 API**：所有模块都遵循相同的注册和配置模式，上手简易
-- **⚡ 高性能实现**：
-  - 自动中间件注册，无需手动注册中间件
-  - 防止重复注册，模块自动仅注册一次
-  - 高性能服务注册，减少反射开销
-  - 及时释放临时对象，减少内存占用
-- **🔌 自动解决中间件顺序**：无需手动管理中间件的注册顺序
-- **🔍 可视化依赖关系**：及时提醒可能的注册失败、误操作等
-- **🔒 .NET 原生体验**：充分利用 C# 类型系统，提供强类型支持
+## 📖 Overview
 
-## 📦 可用模块
+Monica is a modular .NET infrastructure library designed for flexibility and performance. Each module can be used independently without requiring the entire framework. Through unified registration and configuration patterns, Monica provides a consistent and efficient development experience.
 
-Monica 目前提供40+模块，以下是部分模块（待补充）
+**[📚 Documentation](https://monica.dpdns.org/) • [🚀 Quick Start](https://monica.dpdns.org/docs/intro) • [📝 Blog](https://monica.dpdns.org/blog)**
 
-- **Core**：核心功能和基础设施
-- **DomainDrivenDesign**：DDD 模式实现
-- **Repository**：仓储模式实现
-- **DependencyInjection**：增强的依赖注入功能
-- **JobScheduler**：后台任务处理
-- **SignalR**：实时通信扩展
-- **AutoModel**：自动模型映射和转换
-- **Configuration**：配置管理
-- **DataChannel**：数据通道
-- **Tool**：常用工具和辅助功能
+## ✨ Features
 
-## 🚀 快速开始
+- **🧩 True Modularity**: Each component is independent - use only what you need without pulling in the entire framework
+- **🔄 Unified Intuitive API**: All modules follow the same registration and configuration patterns with the `Mo.Add*()` convention
+- **⚡ High Performance**:
+  - Automatic middleware registration without manual configuration
+  - Prevents duplicate registrations - modules auto-register only once
+  - Optimized service registration with reduced reflection overhead
+  - Timely disposal of temporary objects to minimize memory footprint
+- **🔌 Auto Middleware Resolution**: No need to manually manage middleware registration order
+- **🔍 Dependency Visualization**: Proactive warnings for potential registration failures and misconfigurations
+- **🎯 Source Generators**: Code generation for reduced boilerplate and improved performance
+- **🖥️ Comprehensive Dashboards**: Built-in UI for monitoring and management
+- **🌐 Distributed-First Design**: Native support for distributed systems and microservices
+- **🔒 Strong Typing**: Full leverage of C# type system for compile-time safety
 
-### 安装
+## 📦 Available Modules
 
-选择您需要的模块进行安装：
+Monica provides 30+ modules organized by category. Modules marked with ⭐ are commonly used core modules.
+
+### Core Infrastructure
+- **Core** ⭐ - Fundamental types, utilities, and base infrastructure
+- **Tool** ⭐ - Common utilities and helper functions
+- **DependencyInjection** - Enhanced dependency injection capabilities
+
+### Domain-Driven Design
+- **DomainDrivenDesign** - DDD pattern implementations and base classes
+- **AutoController** ⭐ - Automatic API controller generation from services
+- **AutoModel** - Automatic model mapping and transformation
+
+### Data Access
+- **Repository** ⭐ - Repository pattern implementation with EF Core integration
+- **StateStore** - State management and persistence
+
+### Background Processing
+- **JobScheduler** ⭐ - Background job scheduling and execution with recurring and triggered jobs
+
+### Configuration
+- **Configuration** ⭐ - Enhanced configuration management with validation and hot-reload
+
+### Communication
+- **DataChannel** - Data streaming and channel-based communication
+- **EventBus** - Event-driven architecture support
+- **SignalR** - Real-time communication extensions
+- **Dapr** ⭐ - Dapr integration for distributed applications
+
+### Distributed Systems
+- **RegisterCentre** - Service registration and discovery
+- **Locker** - Distributed locking mechanisms
+- **Resilience** - Resilience patterns (retry, circuit breaker, etc.)
+
+### Security
+- **Authority** - Authentication and authorization infrastructure
+
+### AI Integration
+- **AI** ⭐ - AI service integration and abstractions
+
+### Monitoring & Observability
+- **Logging** - Enhanced logging capabilities
+- **Profiling** - Performance profiling and diagnostics
+- **Framework** - Framework-level monitoring and metrics
+
+### UI Components
+- **UI** ⭐ - Blazor UI components and utilities (MudBlazor-based)
+- **Framework.UI** - Framework UI dashboards and admin panels
+
+### Utilities
+- **Office** - Office document processing (Excel, Word, etc.)
+- **Validation** - Enhanced validation framework
+
+> 📚 For detailed module descriptions, configuration options, and usage examples, see the [online documentation](https://monica.dpdns.org/).
+
+## 🚀 Quick Start
+
+### Installation
+
+Install the modules you need via NuGet:
 
 ```bash
-# 安装核心库
+# Install core library
 dotnet add package Monica.Core
 
-# 安装仓储模块
+# Install repository module
 dotnet add package Monica.Repository
 
-# 安装依赖注入模块
-dotnet add package Monica.DependencyInjection
+# Install job scheduler
+dotnet add package Monica.JobScheduler
 
-# 其他模块...
+# Install other modules as needed...
 ```
 
-### 基本使用
+### Basic Usage
 
-Monica 使用模块化的方式来注册和配置服务：
+Monica uses a unified modular pattern for registering and configuring services. All modules follow the `Mo.Add*()` convention:
 
 ```csharp
+using Monica;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Register modules with the unified Mo.Add*() pattern
 Mo.AddJobScheduler(o =>
 {
     o.RecurringJobDebugMode = true;
     o.TriggeredJobDebugMode = true;
 })
 .UseEfCoreMetadataRepository();
+
+Mo.AddConfiguration(o =>
+{
+    o.EnableHotReload = true;
+    o.ValidateOnStartup = true;
+});
+
+var app = builder.Build();
+app.Run();
 ```
 
-> 模块通常会返回一个 `ModuleGuide` 对象，用于进一步配置。
+> 💡 Modules typically return a `ModuleGuide` object for further configuration through fluent API chaining.
 
+## 📚 Core Concepts
 
+### Module Pattern
 
-## 📚 核心概念
+Monica's architecture is built around the `MoModule` concept. Each module consists of four components:
 
-Monica 的核心概念是 `MoModule`，作为库的核心注册机制，每个Library有一个或多个`Module`，每个`Module`组成如下：
+1. **`Module{Name}Option`** - Configuration options for the module
+2. **`Module{Name}Guide`** - Fluent API guide for additional configuration
+3. **`Module{Name}`** - Core implementation with dependency injection and middleware setup
+4. **`Module{Name}BuilderExtensions`** - User-facing extension methods (the `Mo.Add*()` methods)
 
-1. `Module{ModuleName}Option`: 模块Option的设置
-2. `Module{ModuleName}Guide`: 模块配置的向导类
-3. `Module{ModuleName}`: 含有依赖注入的方式以及配置ASP.NET Core中间件等具体实现
-4. `Module{ModuleName}BuilderExtensions`: 面向用户的扩展方法
+### Module Registration
 
+All modules follow a consistent registration pattern:
 
-## 🤝 贡献
+```csharp
+Mo.Add{ModuleName}(options =>
+{
+    // Configure module options
+})
+.Use{Feature}()  // Optional: Enable specific features
+.With{Provider}(); // Optional: Configure providers
+```
 
-我们欢迎任何形式的贡献！如果您想参与贡献，请：
+## 🏗️ Architecture Highlights
 
-1. Fork 本仓库
-2. 创建您的功能分支 (`git checkout -b feature/amazing-feature`)
-3. 提交您的更改 (`git commit -m 'Add some amazing feature'`)
-4. 推送到分支 (`git push origin feature/amazing-feature`)
-5. 开启一个 Pull Request
+- **Automatic Middleware Registration**: Middleware components are automatically registered in the correct order based on dependencies
+- **Smart Dependency Resolution**: The framework analyzes module dependencies and provides warnings for potential issues
+- **Performance Optimizations**: Reduced reflection usage, optimized service registration, and efficient resource management
+- **Dashboard Integration**: Many modules include built-in dashboards for monitoring and management
+- **Extensibility**: Easy to extend with custom modules following the same patterns
 
-## 📄 许可证
+## 🛠️ Technology Stack
 
-该项目采用 MIT 许可证 - 详情请查看 [LICENSE](LICENSE) 文件。
+- **.NET 10.0** - Latest .NET runtime
+- **ASP.NET Core** - Web framework
+- **Entity Framework Core** - ORM for data access
+- **MudBlazor 8.9.0** - Blazor UI component library
+- **Mapster** - Object mapping
+- **MediatR** - Mediator pattern implementation
+- **Dapr** - Distributed application runtime
+- **Serilog** - Structured logging
+- **FluentValidation** - Validation framework
+- **Polly** - Resilience and transient-fault-handling
 
-## 📞 联系方式
+## 📖 Documentation
 
-- GitHub Issues: [https://github.com/molloryn/Monica/issues](https://github.com/molloryn/Monica/issues)
-- GitHub Discussions: [https://github.com/molloryn/Monica/discussions](https://github.com/molloryn/Monica/discussions)
-- 文档网站: [https://monica.dpdns.org/](https://monica.dpdns.org/)
+- **[Online Documentation](https://monica.dpdns.org/)** - Comprehensive guides and API reference
+- **Module READMEs** - Each module includes detailed documentation in its directory
+- **Claude Code Skills** - Use `/mo-development` and `/mo-ui-development` skills for development guidance
+
+## ⚠️ Development Status
+
+**Important**: Monica is currently in active internal development:
+
+- 🚧 **Rapid Iteration**: The API is subject to breaking changes without notice
+- 📝 **Documentation**: Being actively improved and expanded
+- 🔬 **Internal Use**: Currently designed for internal projects
+- ⚠️ **Not Production-Ready**: Not recommended for production use at this time
+- 🔄 **No Backward Compatibility**: Backward compatibility is not guaranteed during this phase
+
+We recommend waiting for the official stable release before using Monica in production environments.
+
+## 🤝 Contributing
+
+We welcome contributions! To contribute:
+
+1. Fork this repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 📞 Contact
+
+- **GitHub Issues**: [https://github.com/molloryn/Monica/issues](https://github.com/molloryn/Monica/issues)
+- **GitHub Discussions**: [https://github.com/molloryn/Monica/discussions](https://github.com/molloryn/Monica/discussions)
+- **Documentation**: [https://monica.dpdns.org/](https://monica.dpdns.org/)
