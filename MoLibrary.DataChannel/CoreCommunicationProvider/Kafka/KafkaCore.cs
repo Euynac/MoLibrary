@@ -55,7 +55,7 @@ public class KafkaCore(MetadataForKafka metadata, ILogger<KafkaCore> logger) : C
 
                 if (!string.IsNullOrEmpty(Metadata.Username) && !string.IsNullOrEmpty(Metadata.Password))
                 {
-                    producerConfig.SaslMechanism = SaslMechanism.Plain;
+                    producerConfig.SaslMechanism = Metadata.SaslMechanism;
                     producerConfig.SaslUsername = Metadata.Username;
                     producerConfig.SaslPassword = Metadata.Password;
                 }
