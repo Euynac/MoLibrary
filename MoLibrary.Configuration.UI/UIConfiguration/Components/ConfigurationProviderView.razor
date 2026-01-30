@@ -13,35 +13,37 @@
             </MudText>
         </CardHeaderContent>
         <CardHeaderActions>
-            <MudTextField @bind-Value="searchText"
-                         Label="搜索"
-                         Placeholder="提供者名称、类型或配置键值"
-                         Variant="Variant.Outlined"
-                         Adornment="Adornment.Start"
-                         AdornmentIcon="@Icons.Material.Filled.Search"
-                         Clearable="true"
-                         Immediate="false"
-                         DebounceInterval="300"
-                         OnDebounceIntervalElapsed="OnSearchChanged"
-                         Style="width: 300px; margin-right: 16px;" />
-            <MudButton Variant="Variant.Text"
-                      StartIcon="@Icons.Material.Filled.ExpandMore"
-                      OnClick="ExpandAllProviders"
-                      Size="Size.Small">
-                全部展开
-            </MudButton>
-            <MudButton Variant="Variant.Text"
-                      StartIcon="@Icons.Material.Filled.ExpandLess"
-                      OnClick="CollapseAllProviders"
-                      Size="Size.Small">
-                全部折叠
-            </MudButton>
-            <MudButton Variant="Variant.Outlined"
-                      StartIcon="@Icons.Material.Filled.Refresh"
-                      OnClick="LoadProvidersAsync"
-                      Disabled="@isLoading">
-                刷新
-            </MudButton>
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudTextField @bind-Value="searchText"
+                             Label="搜索"
+                             Placeholder="提供者名称、类型或配置键值"
+                             Variant="Variant.Outlined"
+                             Adornment="Adornment.Start"
+                             AdornmentIcon="@Icons.Material.Filled.Search"
+                             Clearable="true"
+                             Immediate="false"
+                             DebounceInterval="300"
+                             OnDebounceIntervalElapsed="OnSearchChanged"
+                             Style="width: 280px;" />
+                <MudButton Variant="Variant.Text"
+                          StartIcon="@Icons.Material.Filled.ExpandMore"
+                          OnClick="ExpandAllProviders"
+                          Size="Size.Small">
+                    全部展开
+                </MudButton>
+                <MudButton Variant="Variant.Text"
+                          StartIcon="@Icons.Material.Filled.ExpandLess"
+                          OnClick="CollapseAllProviders"
+                          Size="Size.Small">
+                    全部折叠
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                          StartIcon="@Icons.Material.Filled.Refresh"
+                          OnClick="LoadProvidersAsync"
+                          Disabled="@isLoading">
+                    刷新
+                </MudButton>
+            </MudStack>
         </CardHeaderActions>
     </MudCardHeader>
     <MudCardContent>
@@ -205,6 +207,11 @@
             ExpandAllProviders();
         }
         StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProvidersAsync();
     }
 
     private MarkupString HighlightSearchText(string text)

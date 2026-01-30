@@ -71,9 +71,9 @@ public static class UtilsConfiguration
     /// </summary>
     /// <returns></returns>
     /// <exception cref="InvalidOperationException"></exception>
-    public static object? GetConfig(Type configType, IServiceProvider provider) 
+    public static object? GetConfig(Type configType, IServiceProvider provider)
     {
-        var optionGeneric = typeof(IOptionsSnapshot<>);
+        var optionGeneric = typeof(IOptionsMonitor<>);
         var optionInterface = optionGeneric.MakeGenericType(configType);
         var config = provider.GetService(optionInterface);
         if (config != null)
