@@ -8,10 +8,6 @@ namespace Monica.Tool.General;
 /// </summary>
 public static class KouStringTool
 {
-
-      
-
-
     #region KouType类型适配
     /// <summary>
     /// 将字符串类型的数字转换为bool类型，支持中文以及英文、数字

@@ -2,7 +2,6 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using Monica.Tool.Algorithm;
-using Monica.Tool.Maths;
 
 namespace Monica.Tool.General;
 
@@ -17,10 +16,6 @@ public static class StringTool
     ///其他字符半角(33-126)与全角(65281-65374)的对应关系是：均相差65248
     public static string ToFullWidth(string input)
     {
-        if (input == null)
-        {
-            return "";
-        }
         // 半角转全角：
         var array = input.ToCharArray();
         for (var i = 0; i < array.Length; i++)
@@ -53,10 +48,6 @@ public static class StringTool
     /// <returns></returns>
     public static string ToHalfWidth(string input)
     {
-        if (input == null)
-        {
-            return "";
-        }
         var array = input.ToCharArray();
         for (var i = 0; i < array.Length; i++)
         {
@@ -119,7 +110,7 @@ public static class StringTool
             m =>
             {
                 var hexStr = m.Groups[1].Value;
-                hexStr = hexStr.Length.IsEven() ? hexStr : "0" + hexStr;
+                hexStr = hexStr.Length % 2 == 0 ? hexStr : "0" + hexStr;
                 var list = new List<byte>();
                 for (var i = hexStr.Length - 1; i >= 0; i-=2)
                 {

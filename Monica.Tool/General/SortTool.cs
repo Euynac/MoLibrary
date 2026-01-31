@@ -60,7 +60,7 @@ public static class SortTool
             result = nullResult;
             return null;
         }
-        result = ((IComparable)obj1).CompareTo(obj2) * result;
+        result = ((IComparable)obj1!).CompareTo(obj2) * result;
         return result != 0 ? null : new object();
     }
     /// <summary>
@@ -76,7 +76,7 @@ public static class SortTool
     {
         var result = isDesc ? -1 : 1;
         if (CompareToNullObj(obj1, obj2, out var nullReturnValue, nullIsLast)) return nullReturnValue;
-        return ((IComparable)obj1).CompareTo(obj2) * result;
+        return ((IComparable)obj1!).CompareTo(obj2) * result;
     }
 
 
