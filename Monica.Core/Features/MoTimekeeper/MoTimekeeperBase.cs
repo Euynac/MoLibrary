@@ -37,6 +37,7 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
     /// </summary>
     /// <param name="Name">The name/key of the timekeeper</param>
     /// <param name="Duration">The measured duration in milliseconds</param>
+    /// <param name="ExecutedTime">The time when the measurement was executed</param>
     public record TimekeeperMeasurement(string Name, long Duration, DateTime ExecutedTime)
     {
         public long? MemoryBytes { get; set; }
@@ -140,7 +141,9 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
         {
             MemoryBytes = MemoryUsage
         });
+#pragma warning disable CS0618 // Type or member is obsolete
         if (EnableMemoryMonitor)
+#pragma warning restore CS0618
         {
             MemoryUsage = null;
         }
@@ -160,8 +163,10 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
         {
             _runningTimekeepers.TryAdd(Key, new RunningTimekeeperInfo(Key, DateTime.Now, Content));
         }
-        
+
+#pragma warning disable CS0618 // Type or member is obsolete
         if (EnableMemoryMonitor)
+#pragma warning restore CS0618
         {
             MemoryUsage = GC.GetAllocatedBytesForCurrentThread();
         }
@@ -174,8 +179,10 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
         
         // Remove from running timekeepers tracking
         _runningTimekeepers.TryRemove(Key, out _);
-        
+
+#pragma warning disable CS0618 // Type or member is obsolete
         if (EnableMemoryMonitor)
+#pragma warning restore CS0618
         {
             MemoryUsage -= GC.GetAllocatedBytesForCurrentThread();
             if (MemoryUsage < 0)

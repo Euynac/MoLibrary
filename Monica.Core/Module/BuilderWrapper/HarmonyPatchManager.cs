@@ -173,7 +173,7 @@ public static class UseRouting_Patch
 
     /// <summary>
     /// Prefix: runs before UseRouting()
-    /// Triggers BeforeUseRouting event to configure middleware with Order <= -1.
+    /// Triggers BeforeUseRouting event to configure middleware with Order &lt;= -1.
     /// </summary>
     [HarmonyPrefix]
     private static void Prefix(IApplicationBuilder __0)

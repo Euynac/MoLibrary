@@ -9,6 +9,8 @@ namespace Monica.Core.Module.Models;
 /// 模块注册上下文，用于处理模块注册过程中的服务配置
 /// </summary>
 /// <param name="services">服务集合</param>
+/// <param name="applicationBuilder">应用构建器</param>
+/// <param name="webApplicationBuilder">Web应用构建器</param>
 /// <param name="moduleRegisterInfo">模块请求信息</param>
 public class ModuleRegisterContext(IServiceCollection? services, IApplicationBuilder? applicationBuilder, WebApplicationBuilder? webApplicationBuilder, ModuleRegisterInfo moduleRegisterInfo)
 {

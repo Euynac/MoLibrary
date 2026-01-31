@@ -18,6 +18,7 @@ namespace Monica.Core.Features.MoChainTracing.Implementations;
 /// </remarks>
 /// <param name="options">调用链追踪配置选项</param>
 /// <param name="logger">日志记录器</param>
+/// <param name="jsonOption">全局JSON配置选项</param>
 public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options, ILogger<AsyncLocalMoChainTracing> logger, IGlobalJsonOption jsonOption) : IMoChainTracing
 {
     private static readonly AsyncLocal<MoChainContext?> _chainContext = new();

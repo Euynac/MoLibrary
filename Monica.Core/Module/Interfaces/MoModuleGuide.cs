@@ -104,7 +104,6 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     /// <summary>
     /// 注册模块类型并获取其注册请求信息。
     /// </summary>
-    /// <typeparam name="TModule">模块类型。</typeparam>
     /// <returns>模块的注册请求信息。</returns>
     private ModuleRegisterInfo RegisterModule()
     {
@@ -123,7 +122,6 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     /// <summary>
     /// 注册模块并添加注册请求。
     /// </summary>
-    /// <typeparam name="TModule">模块类型。</typeparam>
     /// <param name="request">注册请求。</param>
     public void RegisterModule(ModuleRegisterRequest request)
     {
