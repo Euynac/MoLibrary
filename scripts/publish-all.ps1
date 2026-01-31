@@ -38,6 +38,18 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# Helper function to convert WSL paths to Windows paths
+function Convert-WslPath {
+    param([string]$Path)
+
+    if ($Path -match '^/mnt/([a-z])/(.*)$') {
+        $drive = $Matches[1].ToUpper()
+        $rest = $Matches[2] -replace '/', '\'
+        return "${drive}:\${rest}"
+    }
+    return $Path
+}
+
 # Navigate to repository root
 $repoRoot = Split-Path -Parent $PSScriptRoot
 Push-Location $repoRoot
@@ -83,9 +95,12 @@ try {
     foreach ($package in $packages) {
         Write-Host "Publishing $($package.Name)..." -ForegroundColor Cyan
 
+        # Convert path for Windows dotnet
+        $packagePath = Convert-WslPath $package.FullName
+
         $pushArgs = @(
             "nuget", "push"
-            $package.FullName
+            $packagePath
             "--api-key", $ApiKey
             "--source", $Source
             "--skip-duplicate"
