@@ -1,5 +1,3 @@
-using System;
-
 namespace Monica.Tool.Utils;
 
 public static class UtilsEnvironment

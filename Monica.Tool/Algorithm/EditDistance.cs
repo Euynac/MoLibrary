@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace Monica.Tool.Algorithm;
+﻿namespace Monica.Tool.Algorithm;
 
 public class EditDistance
 {

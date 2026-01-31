@@ -1,6 +1,4 @@
-﻿using System.Threading.Tasks;
-
-namespace Monica.Tool.Extensions;
+﻿namespace Monica.Tool.Extensions;
 
 public static class ThreadingExtensions
 {

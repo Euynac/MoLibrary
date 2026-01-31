@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Monica.Tool.Extensions;
+﻿namespace Monica.Tool.Extensions;
 #region DateTime Interval
 
 public class DateTimeInterval(DateTime left, DateTime right)

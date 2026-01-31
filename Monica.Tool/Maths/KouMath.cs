@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Monica.Tool.Extensions;
+﻿using Monica.Tool.Extensions;
 
 namespace Monica.Tool.Maths;
 

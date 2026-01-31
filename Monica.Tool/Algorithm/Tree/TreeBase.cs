@@ -1,14 +1,13 @@
-﻿namespace Monica.Tool.Algorithm.Tree
+﻿namespace Monica.Tool.Algorithm.Tree;
+
+/// <summary>
+/// A Tree, which Node type is T
+/// </summary>
+/// <typeparam name="T"></typeparam>
+public abstract class TreeBase<T>
 {
     /// <summary>
-    /// A Tree, which Node type is T
+    /// A Tree's root
     /// </summary>
-    /// <typeparam name="T"></typeparam>
-    public abstract class TreeBase<T>
-    {
-        /// <summary>
-        /// A Tree's root
-        /// </summary>
-        public T Root { get; set; }
-    }
+    public T Root { get; set; }
 }
