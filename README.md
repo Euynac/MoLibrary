@@ -1,8 +1,9 @@
 # Monica
 
 <p align="center">
-  <img src="logo.png" alt="Monica Logo" width="200" />
+  <img src="logo.jpeg" alt="Monica Logo" width="200" />
 </p>
+
 
 <p align="center">
   <a href="https://github.com/molloryn/Monica.Docs/actions"><img src="https://github.com/molloryn/Monica.Docs/actions/workflows/static.yml/badge.svg" alt="Build Status"></a>
@@ -13,7 +14,7 @@
 
 > ⚠️ **Development Status**: Monica is currently in internal development and undergoing rapid iteration. The API is subject to breaking changes. Documentation is being actively improved. Not recommended for production use at this time.
 
-Modular .NET Infrastructure for Cutting-edge Apps. A comprehensive framework providing 30+ independent modules covering everything from core infrastructure to AI integration.
+**Mo**dular .**N**ET **I**nfrastructure for **C**utting-edge **A**pps. A comprehensive framework providing 30+ independent modules covering everything from core infrastructure to AI integration.
 
 ## Language
 
@@ -182,7 +183,7 @@ Mo.Add{ModuleName}(options =>
 - **.NET 10.0** - Latest .NET runtime
 - **ASP.NET Core** - Web framework
 - **Entity Framework Core** - ORM for data access
-- **MudBlazor 8.9.0** - Blazor UI component library
+- **MudBlazor** - Blazor UI component library
 - **Mapster** - Object mapping
 - **MediatR** - Mediator pattern implementation
 - **Dapr** - Distributed application runtime
