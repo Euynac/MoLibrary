@@ -1,8 +1,9 @@
 # Monica
 
 <p align="center">
-  <img src="logo.jpeg" alt="Monica Logo" width="200" />
+  <img src="logo.png" alt="Monica Logo" width="200" />
 </p>
+
 
 
 <p align="center">

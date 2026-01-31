@@ -7,6 +7,10 @@
     <NoWarn>$(NoWarn);CS1998</NoWarn>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <PackageDescription>AI service management UI components for Monica framework, providing visual interfaces for managing and monitoring AI integrations.</PackageDescription>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Monica.AI\Monica.AI.csproj" />
     <ProjectReference Include="..\Monica.UI\Monica.UI.csproj" />

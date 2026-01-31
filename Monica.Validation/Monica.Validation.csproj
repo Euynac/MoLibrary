@@ -2,4 +2,8 @@
 
   <Import Project="..\common.xml"/>
 
+  <PropertyGroup>
+    <PackageDescription>Validation infrastructure for Monica framework providing fluent validation patterns and integration with ASP.NET Core model validation.</PackageDescription>
+  </PropertyGroup>
+
 </Project>

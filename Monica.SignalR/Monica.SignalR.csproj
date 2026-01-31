@@ -2,6 +2,10 @@
 
   <Import Project="..\common.xml" />
 
+  <PropertyGroup>
+    <PackageDescription>SignalR integration for Monica framework with Swagger documentation support, enabling real-time bidirectional communication between server and clients.</PackageDescription>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="SignalRSwaggerGen" Version="4.9.0" />
   </ItemGroup>

@@ -2,6 +2,10 @@
 
   <Import Project="..\common.xml" />
 
+  <PropertyGroup>
+    <PackageDescription>Enhanced dependency injection capabilities for Monica framework including dynamic proxy support and async interceptors using Castle.Core.</PackageDescription>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Castle.Core.AsyncInterceptor" Version="2.1.0" />
     <PackageReference Include="System.Linq.Async" Version="7.0.0" />

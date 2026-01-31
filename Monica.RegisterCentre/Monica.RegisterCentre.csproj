@@ -2,6 +2,10 @@
 
   <Import Project="..\common.xml"/>
 
+  <PropertyGroup>
+    <PackageDescription>Service registration and discovery for Monica framework, providing service registry capabilities for microservices architecture with health checking and load balancing.</PackageDescription>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
     <ProjectReference Include="..\Monica.StateStore\Monica.StateStore.csproj" />

@@ -7,6 +7,10 @@
     <GenerateStaticWebAssetsManifest>true</GenerateStaticWebAssetsManifest>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <PackageDescription>Blazor UI components and utilities for Monica framework based on MudBlazor, providing reusable UI building blocks and theming support.</PackageDescription>
+  </PropertyGroup>
+
   <ItemGroup>
     <SupportedPlatform Include="browser" />
   </ItemGroup>

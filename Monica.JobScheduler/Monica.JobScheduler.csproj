@@ -2,6 +2,9 @@
 
 	<Import Project="..\common.xml"/>
 
+	<PropertyGroup>
+		<PackageDescription>Background job scheduling system for Monica framework with support for recurring jobs, triggered jobs, and cron expressions using Cronos.</PackageDescription>
+	</PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Cronos" Version="0.11.1" />

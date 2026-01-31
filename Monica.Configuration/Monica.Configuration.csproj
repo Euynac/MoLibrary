@@ -2,6 +2,10 @@
 
   <Import Project="..\common.xml" />
 
+  <PropertyGroup>
+    <PackageDescription>Dynamic configuration management for Monica framework with support for runtime configuration updates and distributed configuration sources.</PackageDescription>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="System.Linq.Async" Version="7.0.0" />
   </ItemGroup>

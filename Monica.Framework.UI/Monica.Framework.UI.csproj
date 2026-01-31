@@ -6,6 +6,11 @@
     <GenerateStaticWebAssetsManifest>true</GenerateStaticWebAssetsManifest>
     <NoWarn>$(NoWarn);CS1998</NoWarn>
   </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageDescription>Framework UI dashboards and admin panels for Monica framework, providing monitoring and management interfaces for framework components.</PackageDescription>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Monica.Framework\Monica.Framework.csproj" />
     <ProjectReference Include="..\Monica.JobScheduler.UI\Monica.JobScheduler.UI.csproj" />

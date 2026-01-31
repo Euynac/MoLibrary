@@ -2,7 +2,10 @@
 
   <Import Project="..\common.xml"/>
 
-  
+  <PropertyGroup>
+    <PackageDescription>Configuration management UI components for Monica framework, providing visual interfaces for managing application configuration and settings.</PackageDescription>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Monica.Configuration\Monica.Configuration.csproj" />
     <ProjectReference Include="..\Monica.RegisterCentre\Monica.RegisterCentre.csproj" />

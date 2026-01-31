@@ -2,6 +2,9 @@
 
   <Import Project="..\common.xml"/>
 
+  <PropertyGroup>
+    <PackageDescription>Data channel abstractions for Monica framework with support for Kafka and ActiveMQ messaging systems, providing unified interfaces for message streaming.</PackageDescription>
+  </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Apache.NMS.ActiveMQ" Version="2.2.0" />

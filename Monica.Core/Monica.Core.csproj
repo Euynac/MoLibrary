@@ -2,6 +2,9 @@
 
   <Import Project="..\common.xml" />
 
+  <PropertyGroup>
+    <PackageDescription>Fundamental types, utilities, and base infrastructure for Monica framework including MediatR integration, Mapster mapping, and core abstractions.</PackageDescription>
+  </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Mapster.DependencyInjection" Version="1.0.1" />

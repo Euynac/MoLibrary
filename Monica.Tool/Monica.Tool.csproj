@@ -2,6 +2,9 @@
 
   <Import Project="..\common.xml" />
 
+  <PropertyGroup>
+    <PackageDescription>Common utilities and helper functions for Monica framework including extension methods, type converters, and general-purpose tools.</PackageDescription>
+  </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="JetBrains.Annotations" Version="2025.2.4" />

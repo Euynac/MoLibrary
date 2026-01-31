@@ -1,0 +1,53 @@
+<Project>
+  <!-- Common NuGet Package Properties -->
+  <PropertyGroup>
+    <!-- Package Metadata -->
+    <Version>0.1.0-preview.1</Version>
+    <Authors>Momean</Authors>
+    <Company>Momean</Company>
+    <Product>Monica Framework</Product>
+    <Copyright>Copyright © Momean 2026</Copyright>
+
+    <!-- License -->
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+
+    <!-- Repository Information -->
+    <RepositoryUrl>https://github.com/molloryn/Monica.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/molloryn/Monica</PackageProjectUrl>
+
+    <!-- Package Icon -->
+    <PackageIcon>logo.png</PackageIcon>
+
+    <!-- Package README -->
+    <PackageReadmeFile>PACKAGE_README.md</PackageReadmeFile>
+
+    <!-- Package Tags -->
+    <PackageTags>monica;jobscheduler;modular;recurringjob</PackageTags>
+
+    <!-- Package Release Notes -->
+    <PackageReleaseNotes>Initial preview release of Monica framework. This is a prerelease version for early testing and feedback.</PackageReleaseNotes>
+
+    <!-- Symbol Packages -->
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+
+    <!-- Source Link -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+
+    <!-- Documentation -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <!-- Include Logo and README in All Packages -->
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)logo.png" Pack="true" PackagePath="\" />
+    <None Include="$(MSBuildThisFileDirectory)PACKAGE_README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <!-- Source Link Package Reference -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.102" PrivateAssets="All" />
+  </ItemGroup>
+</Project>
