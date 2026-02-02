@@ -15,7 +15,6 @@ public class ConfigurationCentreApiProvider(
     IMoConfigurationModifier modifier,
     IMoConfigurationCardManager manager,
     IMoConfigurationStores stores,
-    IMoConfigurationDashboard dashboard,
     IConfigurationCentreServiceInvoker invoker,
     IRegistrationStateManager stateManager,
     IRegisterCentreClientInfo clientInfo,
@@ -32,10 +31,7 @@ public class ConfigurationCentreApiProvider(
         if ((await GetRegisteredServicesConfigsAsync()).IsFailed(out var error, out var data))
             return Res.Fail(error);
 
-        if ((await dashboard.DashboardDisplayMode(data, mode)).IsFailed(out error, out var arranged))
-            return Res.Fail(error);
-
-        return Res.Ok(arranged);
+        return Res.Ok(data);
     }
 
     public override async Task<Res<DtoOptionItem>> GetOptionItemAsync(string key, string? appid = null)

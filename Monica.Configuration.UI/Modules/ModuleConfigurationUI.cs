@@ -77,9 +77,6 @@ public class ModuleConfigurationUI(ModuleConfigurationUIOption option)
     {
         // 注册统一配置UI服务
         services.AddScoped<ConfigurationUIService>();
-
-        // 注册默认实现
-        services.TryAddSingleton<IMoConfigurationDashboard, DefaultArrangeDashboard>();
         services.TryAddTransient<IMoConfigurationStores, MoConfigurationDefaultMemoryStore>();
         services.TryAddSingleton<IMoConfigurationModifier, MoConfigurationJsonFileModifier>();
         services.TryAddSingleton<ConfigurationClientApiProvider>();
