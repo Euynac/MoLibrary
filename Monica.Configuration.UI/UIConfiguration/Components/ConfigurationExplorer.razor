@@ -250,14 +250,14 @@
 
 
 @code {
-    [Parameter] public List<DtoDomainConfigs> Configs { get; set; } = [];
+    [Parameter] public List<DtoDomainGroup> Configs { get; set; } = [];
     [Parameter] public EventCallback<DtoUpdateConfig> OnConfigUpdate { get; set; }
     
     private string searchKeyword = "";
     
     // 选择状态
-    private DtoDomainConfigs? selectedDomain;
-    private DtoServiceConfigs? selectedService;
+    private DtoDomainGroup? selectedDomain;
+    private DtoServiceGroup? selectedService;
     private DtoConfig? selectedConfig;
     
     // 状态管理
@@ -267,13 +267,13 @@
     private bool isSaveConfirmationDialogOpen = false;
     private bool isSaving = false;
     
-    private List<DtoDomainConfigs> FilteredConfigs => 
+    private List<DtoDomainGroup> FilteredConfigs => 
         string.IsNullOrWhiteSpace(searchKeyword) ? Configs : FilterConfigs();
 
     private DtoOptionItem? editingItem;
     private string? editingAppId;
     
-    private List<DtoDomainConfigs>? _lastConfigs;
+    private List<DtoDomainGroup>? _lastConfigs;
     
     protected override void OnParametersSet()
     {
@@ -289,7 +289,7 @@
     }
     
     
-    private void SelectService(DtoDomainConfigs domain, DtoServiceConfigs service)
+    private void SelectService(DtoDomainGroup domain, DtoServiceGroup service)
     {
         selectedDomain = domain;
         selectedService = service;
@@ -314,14 +314,14 @@
         StateHasChanged();
     }
     
-    private List<DtoDomainConfigs> FilterConfigs()
+    private List<DtoDomainGroup> FilterConfigs()
     {
         var keyword = searchKeyword.ToLowerInvariant();
-        var filtered = new List<DtoDomainConfigs>();
+        var filtered = new List<DtoDomainGroup>();
         
         foreach (var domain in Configs)
         {
-            var filteredServices = new List<DtoServiceConfigs>();
+            var filteredServices = new List<DtoServiceGroup>();
             
             foreach (var service in domain.Children)
             {
@@ -355,7 +355,7 @@
                 
                 if (filteredConfigs.Any())
                 {
-                    filteredServices.Add(new DtoServiceConfigs
+                    filteredServices.Add(new DtoServiceGroup
                     {
                         Title = service.Title,
                         Name = service.Name,
@@ -367,7 +367,7 @@
             
             if (filteredServices.Any())
             {
-                filtered.Add(new DtoDomainConfigs
+                filtered.Add(new DtoDomainGroup
                 {
                     Title = domain.Title,
                     Name = domain.Name,
@@ -430,7 +430,7 @@
         return baseClass;
     }
     
-    private string GetServiceNavLinkClass(DtoServiceConfigs service)
+    private string GetServiceNavLinkClass(DtoServiceGroup service)
     {
         return selectedService?.Name == service.Name ? "mud-nav-link-active" : "";
     }

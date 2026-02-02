@@ -16,7 +16,7 @@ public interface IConfigurationCentreServiceInvoker
     /// </summary>
     /// <param name="appIds">List of application IDs to retrieve configurations for</param>
     /// <returns>Aggregated domain configurations from all specified services</returns>
-    Task<Res<List<DtoDomainConfigs>>> GetRegisteredServicesConfigsAsync(List<string> appIds);
+    Task<Res<List<DtoDomainGroup>>> GetRegisteredServicesConfigsAsync(List<string> appIds);
 
     /// <summary>
     /// Updates configuration on a remote service.

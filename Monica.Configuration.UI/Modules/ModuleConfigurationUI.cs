@@ -192,17 +192,6 @@ public class ModuleConfigurationUIGuide : MoModuleGuide<ModuleConfigurationUI, M
     ModuleConfigurationUIGuide>
 {
     /// <summary>
-    /// 配置自定义仪表板显示模式
-    /// </summary>
-    public ModuleConfigurationUIGuide ConfigCustomDashboard<TDashboard>()
-        where TDashboard : class, IMoConfigurationDashboard
-    {
-        ConfigureServices(context => { context.Services.AddSingleton<IMoConfigurationDashboard, TDashboard>(); },
-            EMoModuleOrder.PreConfig);
-        return this;
-    }
-
-    /// <summary>
     /// 配置自定义配置存储
     /// </summary>
     public ModuleConfigurationUIGuide ConfigCustomStore<TStore>()

@@ -15,7 +15,7 @@ namespace Monica.Configuration.UI.Implements;
 public class ConfigurationCentreServiceInvokerStandaloneProvider(
     ConfigurationClientApiProvider api) : IConfigurationCentreServiceInvoker
 {
-    public async Task<Res<List<DtoDomainConfigs>>> GetRegisteredServicesConfigsAsync(List<string> appIds)
+    public async Task<Res<List<DtoDomainGroup>>> GetRegisteredServicesConfigsAsync(List<string> appIds)
     {
         // In standalone mode, retrieve only the local instance's configuration
         // The appIds parameter is ignored since we can't invoke remote services

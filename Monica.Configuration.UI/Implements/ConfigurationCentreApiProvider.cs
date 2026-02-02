@@ -23,10 +23,10 @@ public class ConfigurationCentreApiProvider(
     : ConfigurationClientApiProvider(modifier, manager, stores, logger)
 {
     private readonly IMoConfigurationCardManager _manager = manager;
-    private static (List<DtoDomainConfigs>? Data, DateTime CachedAt) _cache;
+    private static (List<DtoDomainGroup>? Data, DateTime CachedAt) _cache;
     private static readonly TimeSpan _cacheTtl = TimeSpan.FromSeconds(30);
 
-    public override async Task<Res<List<DtoDomainConfigs>>> GetConfigsAsync(string? mode = null,
+    public override async Task<Res<List<DtoDomainGroup>>> GetConfigsAsync(string? mode = null,
         bool onlyCurDomain = false)
     {
         if ((await GetRegisteredServicesConfigsAsync()).IsFailed(out var error, out var data))
@@ -68,7 +68,7 @@ public class ConfigurationCentreApiProvider(
         return remoteData;
     }
 
-    public async Task<Res<List<DtoDomainConfigs>>> GetRegisteredServicesConfigsAsync()
+    public async Task<Res<List<DtoDomainGroup>>> GetRegisteredServicesConfigsAsync()
     {
         if (_cache.Data != null && DateTime.UtcNow - _cache.CachedAt < _cacheTtl)
             return _cache.Data;
@@ -91,10 +91,10 @@ public class ConfigurationCentreApiProvider(
         return configs;
     }
 
-    public Task<Res<List<DtoDomainConfigs>>> WashDomainConfigs(List<DtoDomainConfigs> configs)
+    public Task<Res<List<DtoDomainGroup>>> WashDomainConfigs(List<DtoDomainGroup> configs)
     {
         var group = configs.GroupBy(p => p.Name).ToDictionary(g => g.Key, g => g.ToList());
-        var finalDomainConfigs = new List<DtoDomainConfigs>();
+        var finalDomainConfigs = new List<DtoDomainGroup>();
         foreach (var item in group)
         {
             var tmp = item.Value.First();
@@ -102,6 +102,6 @@ public class ConfigurationCentreApiProvider(
             finalDomainConfigs.Add(tmp);
         }
 
-        return Task.FromResult<Res<List<DtoDomainConfigs>>>(finalDomainConfigs);
+        return Task.FromResult<Res<List<DtoDomainGroup>>>(finalDomainConfigs);
     }
 }

@@ -15,7 +15,7 @@ public interface IMoConfigurationApi
     /// <param name="mode">显示模式（可选）</param>
     /// <param name="onlyCurDomain"></param>
     /// <returns>配置状态列表</returns>
-    Task<Res<List<DtoDomainConfigs>>> GetConfigsAsync(string? mode = null, bool onlyCurDomain = false);
+    Task<Res<List<DtoDomainGroup>>> GetConfigsAsync(string? mode = null, bool onlyCurDomain = false);
 
     /// <summary>
     /// 获取指定配置项状态信息

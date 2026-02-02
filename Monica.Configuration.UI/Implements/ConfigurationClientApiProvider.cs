@@ -16,17 +16,17 @@ public class ConfigurationClientApiProvider(
     IMoConfigurationStores stores,
     ILogger<ConfigurationClientApiProvider> logger) : IMoConfigurationApi
 {
-    public virtual Task<Res<List<DtoDomainConfigs>>> GetConfigsAsync(string? mode = null, bool onlyCurDomain = false)
+    public virtual Task<Res<List<DtoDomainGroup>>> GetConfigsAsync(string? mode = null, bool onlyCurDomain = false)
     {
         try
         {
             var configs = cardManager.GetConfigs(onlyCurDomain);
-            return Task.FromResult<Res<List<DtoDomainConfigs>>>(configs);
+            return Task.FromResult<Res<List<DtoDomainGroup>>>(configs);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "获取所有配置状态失败");
-            return Task.FromResult<Res<List<DtoDomainConfigs>>>(Res.Fail($"获取所有配置状态失败: {ex.Message}"));
+            return Task.FromResult<Res<List<DtoDomainGroup>>>(Res.Fail($"获取所有配置状态失败: {ex.Message}"));
         }
     }
 

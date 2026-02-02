@@ -19,7 +19,7 @@ public class ConfigurationUIService(
     /// <param name="mode">显示模式（可选）</param>
     /// <param name="onlyCurDomain"></param>
     /// <returns>配置状态列表</returns>
-    public async Task<Res<List<DtoDomainConfigs>>> GetConfigsAsync(string? mode = null, bool onlyCurDomain = false)
+    public async Task<Res<List<DtoDomainGroup>>> GetConfigsAsync(string? mode = null, bool onlyCurDomain = false)
     {
         try
         {

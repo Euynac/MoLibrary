@@ -11,12 +11,12 @@ public class DtoOptionItem
     /// <summary>
     /// 显示标题
     /// </summary>
-    public string Title { get; set; }
+    public required string Title { get; set; }
 
     /// <summary>
     /// 配置项名
     /// </summary>
-    public string Name { get; set; }
+    public required string Name { get; set; }
 
     /// <summary>
     /// 配置项Key，用此来进行配置项修改
@@ -80,12 +80,12 @@ public class DtoConfig
     /// <summary>
     /// 显示标题
     /// </summary>
-    public string Title { get; set; }
+    public required string Title { get; set; }
 
     /// <summary>
     /// 配置类名
     /// </summary>
-    public string Name { get; set; }
+    public required string Name { get; set; }
 
     /// <summary>
     /// 配置参数类别
@@ -100,7 +100,7 @@ public class DtoConfig
     /// <summary>
     /// 配置项
     /// </summary>
-    public List<DtoOptionItem> Items { get; set; }
+    public List<DtoOptionItem> Items { get; set; } = [];
 
 
     #region 审计字段
@@ -155,22 +155,22 @@ public class DtoConfig
     }
 }
 
-public class DtoServiceConfigs
+public class DtoServiceGroup
 {
     /// <summary>
     /// 显示标题
     /// </summary>
-    public string Title { get; set; }
+    public required string Title { get; set; }
 
     /// <summary>
     /// 微服务名
     /// </summary>
-    public string Name { get; set; }
+    public required string Name { get; set; }
 
     /// <summary>
     /// AppID
     /// </summary>
-    public string AppId { get; set; }
+    public required string AppId { get; set; }
 
     /// <summary>
     /// 微服务内配置类
@@ -178,20 +178,20 @@ public class DtoServiceConfigs
     public List<DtoConfig> Children { get; set; } = [];
 }
 
-public class DtoDomainConfigs
+public class DtoDomainGroup
 {
     /// <summary>
     /// 显示标题
     /// </summary>
-    public string Title { get; set; }
+    public required string Title { get; set; }
 
     /// <summary>
     /// 子域名
     /// </summary>
-    public string Name { get; set; }
+    public required string Name { get; set; }
 
     /// <summary>
     /// 子域内微服务信息
     /// </summary>
-    public List<DtoServiceConfigs> Children { get; set; } = [];
+    public List<DtoServiceGroup> Children { get; set; } = [];
 }
