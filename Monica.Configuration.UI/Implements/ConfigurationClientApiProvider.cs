@@ -142,9 +142,9 @@ public class ConfigurationClientApiProvider(
         return await UpdateConfigAsync(req);
     }
 
-    protected async Task<Res<DtoUpdateConfigRes>> SaveHistory(DtoUpdateConfigRes res, string projectName)
+    protected async Task<Res<DtoUpdateConfigRes>> SaveHistory(DtoUpdateConfigRes res, string appid)
     {
-        res.AppId = projectName;
+        res.AppId = appid;
         if((await stores.SaveUpdate(res)).IsFailed(out var err)) return err;
         return res;
     }
