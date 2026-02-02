@@ -10,7 +10,6 @@ namespace Monica.Configuration.Implements;
 public class RegisterCentreProjectCatalog : IMoProjectCatalog
 {
     private readonly IRegisterCentreCatalogProvider _catalogProvider;
-    private readonly IRegisterCentreClientInfo _clientInfo;
     private readonly Lazy<Dictionary<string, string>> _domainTitleCache;
     private readonly Lazy<string> _currentDomainName;
     private readonly Lazy<string> _currentAppId;
@@ -23,10 +22,10 @@ public class RegisterCentreProjectCatalog : IMoProjectCatalog
         IRegisterCentreClientInfo clientInfo)
     {
         _catalogProvider = catalogProvider;
-        _clientInfo = clientInfo;
+     
         _domainTitleCache = new Lazy<Dictionary<string, string>>(LoadDomainTitles);
-        _currentDomainName = new Lazy<string>(() => _clientInfo.GetServiceStatus().DomainName ?? "Unknown");
-        _currentAppId = new Lazy<string>(() => _clientInfo.GetServiceStatus().ServiceName);
+        _currentDomainName = new Lazy<string>(() => clientInfo.GetServiceStatus().DomainName ?? "Unknown");
+        _currentAppId = new Lazy<string>(() => clientInfo.GetServiceStatus().ServiceName);
     }
 
     public string CurrentDomainName => _currentDomainName.Value;

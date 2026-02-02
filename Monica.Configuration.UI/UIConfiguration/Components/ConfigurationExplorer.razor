@@ -214,9 +214,9 @@
                             </MudTd>
                             <MudTd DataLabel="操作">
                                 <div class="d-flex gap-1">
-                                    <MudButton Size="Size.Small" Variant="Variant.Text" 
-                                              StartIcon="@Icons.Material.Filled.Edit" 
-                                              OnClick="async () => await OpenEditDialog(context, selectedConfig.AppId)">
+                                    <MudButton Size="Size.Small" Variant="Variant.Text"
+                                              StartIcon="@Icons.Material.Filled.Edit"
+                                              OnClick="async () => await OpenEditDialog(context, selectedService.AppId)">
                                         编辑
                                     </MudButton>
                                     @{
@@ -344,7 +344,6 @@
                             Name = config.Name,
                             Type = config.Type,
                             Desc = config.Desc,
-                            AppId = config.AppId,
                             Items = filteredItems,
                             Version = config.Version,
                             LastModificationTime = config.LastModificationTime,
@@ -572,10 +571,12 @@
 
     private async Task OpenConfigHistoryDialog(DtoConfig config)
     {
+        if (selectedService == null) return;
+
         var parameters = new DialogParameters<ConfigurationHistoryDialog>
         {
             { x => x.ConfigKey, config.Name },
-            { x => x.AppId, config.AppId },
+            { x => x.AppId, selectedService.AppId },
             { x => x.DialogTitle, $"配置历史记录 - {config.Title}" }
         };
 

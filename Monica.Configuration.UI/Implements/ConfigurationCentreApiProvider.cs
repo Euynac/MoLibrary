@@ -42,7 +42,7 @@ public class ConfigurationCentreApiProvider(
     {
         if ((await GetRegisteredServicesConfigsAsync()).IsFailed(out var error, out var data)) return error;
 
-        var dtoConfig = data.SelectMany(p => p.Children).SelectMany(p => p.Children).Where(p => appid == null || appid == p.AppId).SelectMany(p => p.Items)
+        var dtoConfig = data.SelectMany(p => p.Children).Where(p => appid == null || appid == p.AppId).SelectMany(p => p.Children).SelectMany(p => p.Items)
             .FirstOrDefault(p => p.Key == key);
         if (dtoConfig != null) return dtoConfig;
 
@@ -53,8 +53,8 @@ public class ConfigurationCentreApiProvider(
     {
         if ((await GetRegisteredServicesConfigsAsync()).IsFailed(out var error, out var data)) return error;
 
-        var dtoConfig = data.SelectMany(p => p.Children).SelectMany(p => p.Children)
-            .FirstOrDefault(p => (appid == null || p.AppId == appid) && p.Name == key);
+        var dtoConfig = data.SelectMany(p => p.Children).Where(p => appid == null || appid == p.AppId).SelectMany(p => p.Children)
+            .FirstOrDefault(p => p.Name == key);
         if (dtoConfig != null) return dtoConfig;
 
         return "找不到相应的配置类";

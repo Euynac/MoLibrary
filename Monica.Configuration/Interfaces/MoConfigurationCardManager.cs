@@ -28,7 +28,7 @@ public class MoConfigurationCardManager(IServiceProvider serviceProvider, IMoPro
             if (tmpCard == null) continue;
 
             // Filter by domain
-            if (onlyCurDomain is true && !catalog.IsCurrentDomain(tmpCard.FromProjectName))
+            if (onlyCurDomain && !catalog.IsCurrentDomain(tmpCard.FromProjectName))
             {
                 continue;
             }
@@ -59,7 +59,6 @@ public class MoConfigurationCardManager(IServiceProvider serviceProvider, IMoPro
                 {
                     Name = c.Key,
                     Type = c.Configuration.Info.Type,
-                    AppId = catalog.CurrentAppId,  // Use current service's AppId
                     Desc = c.Description,
                     Title = c.Title,
                     Version = c.Version,

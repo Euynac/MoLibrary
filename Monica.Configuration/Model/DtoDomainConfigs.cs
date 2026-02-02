@@ -98,12 +98,6 @@ public class DtoConfig
     public string? Desc { get; set; }
 
     /// <summary>
-    /// 配置类相关APPID
-    /// </summary>
-    public string? AppId { get; set; }
-
-
-    /// <summary>
     /// 配置项
     /// </summary>
     public List<DtoOptionItem> Items { get; set; }

@@ -37,8 +37,8 @@ public class ConfigurationClientApiProvider(
             var configs = cardManager.GetConfigs();
             var optionItem = configs
                 .SelectMany(p => p.Children)
-                .SelectMany(p => p.Children)
                 .Where(p => appid == null || appid == p.AppId)
+                .SelectMany(p => p.Children)
                 .SelectMany(p => p.Items)
                 .FirstOrDefault(p => p.Key == key);
 
@@ -61,8 +61,9 @@ public class ConfigurationClientApiProvider(
             var configs = cardManager.GetConfigs();
             var config = configs
                 .SelectMany(p => p.Children)
+                .Where(p => appid == null || appid == p.AppId)
                 .SelectMany(p => p.Children)
-                .FirstOrDefault(p => (appid == null || p.AppId == appid) && p.Name == key);
+                .FirstOrDefault(p => p.Name == key);
 
             if (config != null)
                 return config;
