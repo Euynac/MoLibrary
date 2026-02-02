@@ -7,5 +7,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
+    <ProjectReference Include="..\Monica.RegisterCentre\Monica.RegisterCentre.csproj" />
   </ItemGroup>
 </Project>

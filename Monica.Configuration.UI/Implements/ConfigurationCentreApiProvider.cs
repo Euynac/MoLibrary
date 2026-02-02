@@ -22,6 +22,7 @@ public class ConfigurationCentreApiProvider(
     ILogger<ConfigurationClientApiProvider> logger)
     : ConfigurationClientApiProvider(modifier, manager, stores, logger)
 {
+    private readonly IMoConfigurationCardManager _manager = manager;
     private static (List<DtoDomainConfigs>? Data, DateTime CachedAt) _cache;
     private static readonly TimeSpan _cacheTtl = TimeSpan.FromSeconds(30);
 
@@ -84,7 +85,7 @@ public class ConfigurationCentreApiProvider(
 
         if ((await invoker.GetRegisteredServicesConfigsAsync(list)).IsFailed(out var error, out var statusList)) return error;
 
-        statusList.AddRange(manager.GetConfigs());
+        statusList.AddRange(_manager.GetConfigs());
         if ((await WashDomainConfigs(statusList)).IsFailed(out error, out var configs)) return error;
         _cache = (configs, DateTime.UtcNow);
         return configs;

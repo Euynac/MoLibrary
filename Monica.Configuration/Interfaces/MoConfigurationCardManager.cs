@@ -2,11 +2,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Configuration.Model;
 using Monica.Configuration.Providers;
 using Monica.Tool.Extensions;
-using System.Text.Json;
 
 namespace Monica.Configuration.Interfaces;
 
-public class MoConfigurationCardManager(IServiceProvider serviceProvider, IMoConfigurationServiceInfo info) : IMoConfigurationCardManager
+public class MoConfigurationCardManager(IServiceProvider serviceProvider, IMoProjectCatalog catalog) : IMoConfigurationCardManager
 {
     public IEnumerable<MoConfigurationCard> GetConfigCards()
     {
@@ -27,13 +26,18 @@ public class MoConfigurationCardManager(IServiceProvider serviceProvider, IMoCon
             var cards = group.ToList();
             var tmpCard = cards.FirstOrDefault();
             if (tmpCard == null) continue;
-            if (onlyCurDomain is true && !info.IsCurrentDomain(tmpCard.FromProjectName))
+
+            // Filter by domain
+            if (onlyCurDomain is true && !catalog.IsCurrentDomain(tmpCard.FromProjectName))
             {
                 continue;
             }
-            var serviceInfo = info.GetServiceInfo(tmpCard.FromProjectName);
-            var domainName = serviceInfo.DomainName;
-            var domainTitle = serviceInfo.DomainTitle;
+
+            // Get domain info
+            var domainName = catalog.GetDomainName(tmpCard.FromProjectName);
+            var domainTitle = catalog.GetDomainTitle(domainName);
+
+            // Create domain group if not exists
             if (!result.ContainsKey(domainName))
             {
                 var domainConfig = new DtoDomainConfigs()
@@ -44,17 +48,18 @@ public class MoConfigurationCardManager(IServiceProvider serviceProvider, IMoCon
                 };
                 result.Add(domainConfig.Name, domainConfig);
             }
+
             var config = result[domainName];
             var serviceConfig = new DtoServiceConfigs()
             {
-                AppId = serviceInfo.AppId,
-                Name = serviceInfo.ProjectName,
-                Title = serviceInfo.AppName,
+                AppId = catalog.CurrentAppId,  // Use current service's AppId
+                Name = tmpCard.FromProjectName,
+                Title = catalog.GetProjectDisplayName(tmpCard.FromProjectName),
                 Children = cards.Select(c => new DtoConfig()
                 {
                     Name = c.Key,
                     Type = c.Configuration.Info.Type,
-                    AppId = serviceInfo.AppId,
+                    AppId = catalog.CurrentAppId,  // Use current service's AppId
                     Desc = c.Description,
                     Title = c.Title,
                     Version = c.Version,
