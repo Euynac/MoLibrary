@@ -1,5 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Monica.Framework.UI.Modules;
 using Monica.RegisterCentre.Interfaces;
 using Monica.RegisterCentre.Models;
 using Monica.Tool.MoResponse;
@@ -8,10 +10,16 @@ namespace Monica.Framework.UI.UIRegisterCentre.Services;
 
 public class RegisterCentreService(
     ILogger<RegisterCentreService> logger,
-    IServiceProvider serviceProvider)
+    IServiceProvider serviceProvider,
+    IOptions<ModuleRegisterCentreUIOption> uiOptions)
 {
     private static readonly Dictionary<string, string> _domainColors = new();
     private static List<DomainInfo> _cachedDomains = [];
+
+    // Eviction tracking state
+    private static Dictionary<string, InstanceState> _previousInstancesSnapshot = new();
+    private static Dictionary<string, Queue<EvictedInstanceInfo>> _evictedInstances = new();
+    private static readonly object _evictionLock = new();
 
     public async Task<Res<List<RegisteredServiceStatus>>> GetServicesStatusAsync()
     {
@@ -121,6 +129,93 @@ public class RegisterCentreService(
         {
             logger.LogError(ex, "获取合并服务状态失败");
             return $"获取合并服务状态失败: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Get merged services with eviction tracking
+    /// </summary>
+    public async Task<Res<List<RegisteredServiceStatus>>> GetMergedServicesWithEvictionTrackingAsync()
+    {
+        var result = await GetMergedServicesStatusAsync();
+        if (result.IsFailed(out var error, out var services))
+            return error;
+
+        DetectAndTrackEvictions(services);
+        MergeEvictedInstances(services);
+
+        return services;
+    }
+
+    private void DetectAndTrackEvictions(List<RegisteredServiceStatus> currentServices)
+    {
+        lock (_evictionLock)
+        {
+            // Build current instances map
+            var currentInstances = new Dictionary<string, InstanceState>();
+            foreach (var service in currentServices)
+            {
+                foreach (var instance in service.Instances.Values)
+                {
+                    var key = $"{instance.ServiceName}:{instance.InstanceId}";
+                    currentInstances[key] = instance;
+                }
+            }
+
+            // Detect evictions by comparing with previous snapshot
+            foreach (var (key, previousInstance) in _previousInstancesSnapshot)
+            {
+                if (!currentInstances.ContainsKey(key))
+                {
+                    // Instance was evicted
+                    var serviceName = previousInstance.ServiceName;
+
+                    if (!_evictedInstances.ContainsKey(serviceName))
+                        _evictedInstances[serviceName] = new Queue<EvictedInstanceInfo>();
+
+                    var queue = _evictedInstances[serviceName];
+
+                    // Add to queue with minimal data to reduce memory usage
+                    queue.Enqueue(new EvictedInstanceInfo
+                    {
+                        InstanceId = previousInstance.InstanceId,
+                        ServiceName = previousInstance.ServiceName,
+                        AppName = previousInstance.AppName,
+                        ProjectName = previousInstance.ProjectName,
+                        DomainName = previousInstance.DomainName,
+                        Status = previousInstance.Status,
+                        EvictionTime = DateTime.Now,
+                        LastHeartbeatTime = previousInstance.LastHeartbeatTime,
+                        RegistrationTime = previousInstance.RegistrationTime,
+                        AssemblyVersion = previousInstance.AssemblyVersion,
+                        ReleaseVersion = previousInstance.ReleaseVersion,
+                        BuildTime = previousInstance.BuildTime,
+                        IsLeader = previousInstance.IsLeader
+                    });
+
+                    // Enforce max retention count
+                    var maxCount = uiOptions.Value.MaxEvictedServiceRetentionCount;
+                    while (queue.Count > maxCount)
+                        queue.Dequeue();
+                }
+            }
+
+            // Update snapshot for next comparison
+            _previousInstancesSnapshot = currentInstances;
+        }
+    }
+
+    private void MergeEvictedInstances(List<RegisteredServiceStatus> services)
+    {
+        lock (_evictionLock)
+        {
+            foreach (var service in services)
+            {
+                if (_evictedInstances.TryGetValue(service.AppId, out var evictedQueue))
+                {
+                    service.EvictedInstances = evictedQueue.ToList();
+                }
+            }
         }
     }
 
