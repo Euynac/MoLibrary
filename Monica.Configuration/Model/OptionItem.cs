@@ -11,9 +11,7 @@ namespace Monica.Configuration.Model;
 /// </summary>
 public class OptionItem
 {
-    /// <summary>
-    /// 配置项信息类
-    /// </summary>
+   
     public OptionItem(OptionSettingAttribute? info, PropertyInfo property, object? configInstance, string? parentKey)
     {
         Info = info;
@@ -54,10 +52,11 @@ public class OptionItem
     /// 配置基本类型
     /// </summary>
     public EOptionItemValueBasicType BasicType { get; set; }
+
     /// <summary>
     /// 配置基本的系统类型，去除nullable、List等泛型类型后的纯净类型
     /// </summary>
-    public Type UnderlyingType { get; private set; }
+    public Type UnderlyingType { get; private set; } = null!;
     /// <summary>
     /// 配置特殊类型
     /// </summary>

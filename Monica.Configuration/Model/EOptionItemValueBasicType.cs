@@ -2,7 +2,6 @@ namespace Monica.Configuration.Model;
 
 public enum EOptionItemValueBasicType
 {
-    None,
     String,
     Numeric,
     DateTime,
@@ -14,7 +13,6 @@ public enum EOptionItemValueBasicType
 
 public enum EOptionItemValueSpecialType
 {
-    None,
     Array,
     Dict
 }
