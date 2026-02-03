@@ -44,6 +44,7 @@
     font-family: var(--mud-typography-default-family);
     font-size: 0.85rem;
     line-height: 1.4;
+    height: 100%;
 }
 
 /* Custom scrollbar styling */
