@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace Monica.Tool.General.UnitConvert;
+﻿namespace Monica.Tool.General.UnitConvert;
 
 public class UnitValue
 {

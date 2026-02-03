@@ -4,6 +4,8 @@
   <img src="logo.png" alt="Monica Logo" width="200" />
 </p>
 
+
+
 <p align="center">
   <a href="https://github.com/molloryn/Monica.Docs/actions"><img src="https://github.com/molloryn/Monica.Docs/actions/workflows/static.yml/badge.svg" alt="Build Status"></a>
   <a href="https://www.nuget.org/packages?q=Monica"><img src="https://img.shields.io/nuget/v/Monica.Core.svg" alt="NuGet"></a>
@@ -183,7 +185,7 @@ Mo.Add{ModuleName}(options =>
 - **.NET 10.0** - 最新的 .NET 运行时
 - **ASP.NET Core** - Web 框架
 - **Entity Framework Core** - 数据访问 ORM
-- **MudBlazor 8.9.0** - Blazor UI 组件库
+- **MudBlazor** - Blazor UI 组件库
 - **Mapster** - 对象映射
 - **MediatR** - 中介者模式实现
 - **Dapr** - 分布式应用运行时

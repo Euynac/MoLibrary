@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace Monica.Tool.General.UnitConvert;
+﻿namespace Monica.Tool.General.UnitConvert;
 
 public class TemperatureUnitConverter : UnitConverterBase
 {

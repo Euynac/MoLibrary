@@ -2,6 +2,10 @@
 
 	<Import Project="..\common.xml" />
 
+	<PropertyGroup>
+		<PackageDescription>Complete Monica framework bundle integrating all core modules, providing a comprehensive infrastructure solution for .NET applications with gRPC, Minio, and protobuf support.</PackageDescription>
+	</PropertyGroup>
+
 	<ItemGroup>
 	  <Compile Remove="Databases\**" />
 	  <EmbeddedResource Remove="Databases\**" />

@@ -2,6 +2,10 @@
 
   <Import Project="..\common.xml" />
 
+  <PropertyGroup>
+    <PackageDescription>Authentication and authorization infrastructure for Monica framework with JWT bearer token support and role-based access control.</PackageDescription>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.2" />
   </ItemGroup>

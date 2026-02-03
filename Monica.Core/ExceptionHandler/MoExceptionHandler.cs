@@ -120,7 +120,7 @@ file class DtoConnectionInfo
     /// <summary>
     /// Gets or sets a unique identifier to represent this connection.
     /// </summary>
-    public string Id { get; set; }
+    public string Id { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the IP address of the remote target. Can be null.
@@ -144,11 +144,11 @@ file class DtoHttpContextRequest
 {
     /// <summary>Gets or sets the HTTP method.</summary>
     /// <returns>The HTTP method.</returns>
-    public string Method { get; set; }
+    public string Method { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the HTTP request scheme.</summary>
     /// <returns>The HTTP request scheme.</returns>
-    public string Scheme { get; set; }
+    public string Scheme { get; set; } = string.Empty;
 
     /// <summary>Returns true if the RequestScheme is https.</summary>
     /// <returns>true if this request is using https; otherwise, false.</returns>
@@ -224,7 +224,7 @@ file class DtoHttpContextResponse
     public int StatusCode { get; set; }
 
     /// <summary>Gets the response headers.</summary>
-    public IHeaderDictionary Headers { get; }
+    public IHeaderDictionary? Headers { get; init; }
 
     ///// <summary>
     ///// Gets or sets the response body <see cref="T:System.IO.Stream" />.
@@ -244,5 +244,5 @@ file class DtoHttpContextResponse
     /// <summary>
     /// Gets an object that can be used to manage cookies for this response.
     /// </summary>
-    public IResponseCookies Cookies { get; }
+    public IResponseCookies? Cookies { get; init; }
 }

@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Monica.Tool.Algorithm;
+﻿namespace Monica.Tool.Algorithm;
 
 public class LevenshteinDistance
 {

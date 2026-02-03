@@ -109,7 +109,7 @@ public class ModuleGlobalExceptionHandler(ModuleGlobalExceptionHandlerOption opt
         //巨坑：仅会在失败的Task GC后才会触发该异常。
         TaskScheduler.UnobservedTaskException += (sender, eventArgs) =>
         {
-            Logger.LogError("任务异常捕获：{sender}", sender?.ToJsonStringForce(), eventArgs?.ToJsonStringForce());
+            Logger.LogError("任务异常捕获：{sender} {eventArgs}", sender?.ToJsonStringForce(), eventArgs?.ToJsonStringForce());
         };
 
         curDomain.ProcessExit += (sender, eventArgs) =>

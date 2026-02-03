@@ -7,6 +7,10 @@
     <NoWarn>$(NoWarn);CS1998</NoWarn>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <PackageDescription>Job scheduler monitoring and management UI for Monica framework, providing visual interfaces for job configuration, execution history, and status monitoring.</PackageDescription>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Monica.JobScheduler\Monica.JobScheduler.csproj" />
     <ProjectReference Include="..\Monica.UI\Monica.UI.csproj" />

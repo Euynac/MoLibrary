@@ -2,6 +2,10 @@
 
   <Import Project="..\common.xml"/>
 
+  <PropertyGroup>
+    <PackageDescription>Dapr integration for Monica framework providing distributed application runtime capabilities including actors, pub/sub, state management, and service invocation.</PackageDescription>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Dapr.AspNetCore" Version="1.16.1" />
     <PackageReference Include="Dapr.Client" Version="1.16.1" />

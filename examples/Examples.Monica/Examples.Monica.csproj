@@ -2,6 +2,9 @@
 
   <Import Project="..\..\common.xml"/>
 
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Monica.DataChannel\Monica.DataChannel.csproj" />

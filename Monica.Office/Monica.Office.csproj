@@ -2,6 +2,10 @@
 
   <Import Project="..\common.xml" />
 
+  <PropertyGroup>
+    <PackageDescription>Office document processing for Monica framework with support for Excel file operations using EPPlus and NPOI, enabling spreadsheet generation and manipulation.</PackageDescription>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="EPPlus" Version="8.4.1" />
     <PackageReference Include="NPOI" Version="2.7.5" />

@@ -2,6 +2,9 @@
 
     <Import Project="..\common.xml"/>
 
+    <PropertyGroup>
+        <PackageDescription>Entity Framework Core metadata repository implementation for Monica JobScheduler, providing persistent storage for job definitions and execution history.</PackageDescription>
+    </PropertyGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\Monica.JobScheduler\Monica.JobScheduler.csproj" />

@@ -1,6 +1,4 @@
-﻿using System.IO;
-
-namespace Monica.Tool.Extensions;
+﻿namespace Monica.Tool.Extensions;
 
 public static class ResourcesExtensions
 {

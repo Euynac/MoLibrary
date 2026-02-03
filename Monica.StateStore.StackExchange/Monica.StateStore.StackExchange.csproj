@@ -2,6 +2,9 @@
 
   <Import Project="..\common.xml" />
 
+  <PropertyGroup>
+    <PackageDescription>Redis-based state store implementation for Monica framework using StackExchange.Redis, providing high-performance distributed caching and state management.</PackageDescription>
+  </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="StackExchange.Redis" Version="2.10.1" />

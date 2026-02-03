@@ -1,16 +1,12 @@
-using System;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Dynamic;
-using System.Linq;
 using System.Net;
 using System.Text;
-using System.Threading.Tasks;
 using Monica.Tool.Extensions;
 
 namespace Monica.Tool.MoResponse;
 
-public static class MoResponseHelper
+public static class ResponseHelper
 {
     /// <summary>
     /// 获取响应码对应的HttpStatusCode
@@ -277,7 +273,7 @@ public static class MoResponseHelper
     /// </summary>
     /// <param name="self"></param>
     /// <param name="response"></param>
-    public static T MergeRes<T>(this T self, IMoResponse response) where T : IMoResponse
+    public static T Merge<T>(this T self, IMoResponse response) where T : IMoResponse
     {
         self.AppendExtraInfo("oriMsg", self.Message);
         self.AppendExtraInfo("oriCode", self.Code);

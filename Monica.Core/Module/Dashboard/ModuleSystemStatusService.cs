@@ -2,6 +2,7 @@ using Monica.Core.Module.Dashboard.Interfaces;
 using Monica.Core.Module.Dashboard.Models;
 using Monica.Core.Module.Features;
 using Monica.Core.Module.Models;
+using Monica.Tool.Extensions;
 
 namespace Monica.Core.Module.Dashboard;
 
@@ -132,10 +133,10 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
             {
                 ModuleTypeName = moduleType.Name,
                 ModuleFullTypeName = moduleType.FullName ?? moduleType.Name,
-                ModuleKey = moduleKey.Value != null ? moduleKey : null,
+                ModuleKey = moduleKey.Value != null ? moduleKey : throw new Exception($"Can not get module key from module type {moduleType.GetCleanFullName()}"),
                 Order = int.MaxValue, // 禁用模块没有顺序
                 Status = EMoModuleConfigMethods.Disabled,
-                Dependencies = moduleKey.Value != null && ModuleAnalyser.ModuleDependencyMap.TryGetValue(moduleKey, out var deps)
+                Dependencies = ModuleAnalyser.ModuleDependencyMap.TryGetValue(moduleKey, out var deps)
                     ? [.. deps]
                     : [],
                 InitializationTimeMs = 0,

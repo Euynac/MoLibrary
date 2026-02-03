@@ -8,7 +8,6 @@ public static class RESTfulApiExtensions
     /// <summary>
     /// 封装为RESTful API response
     /// </summary>
-    /// <typeparam name="T"></typeparam>
     /// <param name="response"></param>
     /// <param name="controller"></param>
     /// <returns></returns>

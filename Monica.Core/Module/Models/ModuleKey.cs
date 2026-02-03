@@ -6,7 +6,7 @@ namespace Monica.Core.Module.Models;
 public readonly record struct ModuleKey : IEquatable<ModuleKey>
 {
     /// <summary>
-    /// 模���键的字符串值
+    /// 模块键的字符串值
     /// </summary>
     public string Value { get; }
 

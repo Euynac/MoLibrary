@@ -2,6 +2,10 @@
 
   <Import Project="..\common.xml" />
 
+  <PropertyGroup>
+    <PackageDescription>State management and persistence abstractions for Monica framework, providing unified interfaces for distributed state storage.</PackageDescription>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="System.Linq.Async" Version="7.0.0" />
   </ItemGroup>

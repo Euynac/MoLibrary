@@ -1,5 +1,3 @@
-using System;
-
 namespace Monica.Tool.Extensions;
 
 public static class ActionExtensions

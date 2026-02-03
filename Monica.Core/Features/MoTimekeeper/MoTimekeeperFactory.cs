@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Monica.Core.Features.MoTimekeeper;
 
-public class MoTimekeeperFactory(IHttpContextAccessor accessor, ILogger<MoTimekeeperFactory> logger) : IMoTimekeeperFactory
+public class MoTimekeeperFactory(ILogger<MoTimekeeperFactory> logger) : IMoTimekeeperFactory
 {
     public AutoTimekeeper CreateAutoTimer(string key, string? content = null)
     {

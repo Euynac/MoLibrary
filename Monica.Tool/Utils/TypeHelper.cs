@@ -1,8 +1,5 @@
-using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
 using System.Reflection;
 using Monica.Tool.Extensions;
 
@@ -219,91 +216,113 @@ public static class TypeHelper
         {
             return "string";
         }
-        else if (type == typeof(int))
+
+        if (type == typeof(int))
         {
             return "number";
         }
-        else if (type == typeof(long))
+
+        if (type == typeof(long))
         {
             return "number";
         }
-        else if (type == typeof(bool))
+
+        if (type == typeof(bool))
         {
             return "boolean";
         }
-        else if (type == typeof(char))
+
+        if (type == typeof(char))
         {
             return "string";
         }
-        else if (type == typeof(double))
+
+        if (type == typeof(double))
         {
             return "number";
         }
-        else if (type == typeof(float))
+
+        if (type == typeof(float))
         {
             return "number";
         }
-        else if (type == typeof(decimal))
+
+        if (type == typeof(decimal))
         {
             return "number";
         }
-        else if (type == typeof(DateTime))
+
+        if (type == typeof(DateTime))
         {
             return "string";
         }
-        else if (type == typeof(DateTimeOffset))
+
+        if (type == typeof(DateTimeOffset))
         {
             return "string";
         }
-        else if (type.FullName == "System.DateOnly")
+
+        if (type.FullName == "System.DateOnly")
         {
             return "string";
         }
-        else if (type.FullName == "System.TimeOnly")
+
+        if (type.FullName == "System.TimeOnly")
         {
             return "string";
         }
-        else if (type == typeof(TimeSpan))
+
+        if (type == typeof(TimeSpan))
         {
             return "string";
         }
-        else if (type == typeof(Guid))
+
+        if (type == typeof(Guid))
         {
             return "string";
         }
-        else if (type == typeof(byte))
+
+        if (type == typeof(byte))
         {
             return "number";
         }
-        else if (type == typeof(sbyte))
+
+        if (type == typeof(sbyte))
         {
             return "number";
         }
-        else if (type == typeof(short))
+
+        if (type == typeof(short))
         {
             return "number";
         }
-        else if (type == typeof(ushort))
+
+        if (type == typeof(ushort))
         {
             return "number";
         }
-        else if (type == typeof(uint))
+
+        if (type == typeof(uint))
         {
             return "number";
         }
-        else if (type == typeof(ulong))
+
+        if (type == typeof(ulong))
         {
             return "number";
         }
-        else if (type == typeof(IntPtr))
+
+        if (type == typeof(IntPtr))
         {
             return "number";
         }
-        else if (type == typeof(UIntPtr))
+
+        if (type == typeof(UIntPtr))
         {
             return "number";
         }
-        else if (type == typeof(object))
+
+        if (type == typeof(object))
         {
             return "object";
         }

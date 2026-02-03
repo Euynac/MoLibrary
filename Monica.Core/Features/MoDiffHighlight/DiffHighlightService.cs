@@ -20,9 +20,9 @@ public class DiffHighlightService(IMoDiffHighlight diffHighlight, ILogger<DiffHi
     {
         try
         {
-            logger.LogDebug("执行文本差异对比，oldText长度: {OldLength}, newText长度: {NewLength}", 
-                oldText?.Length ?? 0, newText?.Length ?? 0);
-            
+            logger.LogDebug("执行文本差异对比，oldText长度: {OldLength}, newText长度: {NewLength}",
+                oldText.Length, newText.Length);
+
             var result = await diffHighlight.HighlightAsync(oldText, newText, options);
             
             logger.LogInformation("文本差异对比完成，处理时间: {ProcessingTime}ms, 变更数: {TotalChanges}",
@@ -54,7 +54,7 @@ public class DiffHighlightService(IMoDiffHighlight diffHighlight, ILogger<DiffHi
         try
         {
             logger.LogDebug("执行文本差异对比（同步），oldText长度: {OldLength}, newText长度: {NewLength}", 
-                oldText?.Length ?? 0, newText?.Length ?? 0);
+                oldText.Length, newText.Length);
             
             var result = diffHighlight.Highlight(oldText, newText, options);
             

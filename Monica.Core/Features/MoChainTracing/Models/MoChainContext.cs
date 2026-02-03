@@ -70,6 +70,7 @@ public class MoChainContext
     /// 添加一个新的调用链节点
     /// </summary>
     /// <param name="node">调用链节点</param>
+    /// <param name="maxNodeCount">最大节点数量</param>
     public void AddNode(MoChainNode node, int maxNodeCount)
     {
         if (Root == null)
@@ -149,7 +150,8 @@ public class MoChainContext
     /// 合并远程调用链信息
     /// </summary>
     /// <param name="traceId">当前调用链节点标识</param>
-    /// <param name="remoteChainNode"></param>
+    /// <param name="remoteChainNode">远程调用链节点</param>
+    /// <param name="maxChainDepth">最大调用链深度</param>
     /// <returns>是否成功合并</returns>
     public bool MergeRemoteChain(string traceId, MoChainNode? remoteChainNode, int maxChainDepth)
     {
