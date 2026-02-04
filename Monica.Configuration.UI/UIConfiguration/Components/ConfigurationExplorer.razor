@@ -1,10 +1,12 @@
 @using Monica.Configuration.Model
 @using Monica.Configuration.UI.Model
+@using Monica.Configuration.UI.Services
 @using Monica.Configuration.Providers
 @using MudBlazor
 @using System.Text.Json
 @using System.Text.RegularExpressions
 @inject IDialogService DialogService
+@inject ConfigurationUIService ConfigUIService
 
 <MudContainer MaxWidth="MaxWidth.False" Class="pa-0">
     <!-- 搜索区域和操作按钮 -->
@@ -96,11 +98,28 @@
                                     <div>
                                         <div class="d-flex align-center">
                                             <MudText Typo="Typo.body2">@context.Title</MudText>
+
+                                            @{
+                                                var analysis = ConfigUIService.AnalyzeConfigSourceConsistency(context);
+                                            }
+
+                                            @if (!analysis.IsConsistent)
+                                            {
+                                                <MudTooltip Text="此配置类中的配置项来自不同的配置源，点击查看详情">
+                                                    <MudIconButton Icon="@Icons.Material.Filled.Warning"
+                                                                  Size="Size.Small"
+                                                                  Color="Color.Warning"
+                                                                  Class="ml-1"
+                                                                  Style="font-size: 14px;"
+                                                                  OnClick="@(() => OpenSourceInconsistencyDialog(context, analysis))" />
+                                                </MudTooltip>
+                                            }
+
                                             @if (!string.IsNullOrEmpty(context.Desc))
                                             {
                                                 <MudTooltip Text="@context.Desc">
-                                                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" 
-                                                            Color="Color.Primary" Class="ml-1" 
+                                                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small"
+                                                            Color="Color.Primary" Class="ml-1"
                                                             Style="font-size: 14px;" />
                                                 </MudTooltip>
                                             }
@@ -589,6 +608,30 @@
         };
 
         await DialogService.ShowAsync<ConfigurationHistoryDialog>($"配置历史记录 - {config.Title}", parameters, options);
+    }
+
+    /// <summary>
+    /// 打开配置来源不一致对话框
+    /// </summary>
+    private async Task OpenSourceInconsistencyDialog(DtoConfig config, ConfigSourceAnalysis analysis)
+    {
+        var parameters = new DialogParameters<SourceInconsistencyDialog>
+        {
+            { x => x.Analysis, analysis }
+        };
+
+        var options = new DialogOptions()
+        {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            CloseButton = true,
+            BackdropClick = true
+        };
+
+        await DialogService.ShowAsync<SourceInconsistencyDialog>(
+            $"配置来源分析 - {config.Title}",
+            parameters,
+            options);
     }
     
     /// <summary>

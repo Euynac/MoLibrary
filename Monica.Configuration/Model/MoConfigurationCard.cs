@@ -127,7 +127,7 @@ public class MoConfigurationCard
                     if(relativePath == null) continue;
               
                     var absolutePath = jsonProvider.Source.FileProvider?.GetFileInfo(relativePath).PhysicalPath;
-                    SetProvider(provider, absolutePath);
+                    SetProvider(provider, absolutePath ?? "Failed to get absolute path");
                     break;
                 }
                 case MemoryConfigurationProvider memory:
@@ -142,7 +142,7 @@ public class MoConfigurationCard
                 }
                 default:
                 {
-                    SetProvider(provider, provider.ToString());
+                    SetProvider(provider, provider.ToString() ?? "Unknown provider");
                     break;
                 }
             }
@@ -150,7 +150,7 @@ public class MoConfigurationCard
 
         return;
 
-        static void SetProvider(IConfigurationProvider provider, string? sourceInfo)
+        static void SetProvider(IConfigurationProvider provider, string sourceInfo)
         {
             foreach (var key in MoConfigurationManager.GetConfigurationFullKeys(provider, null))
             {

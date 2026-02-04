@@ -65,13 +65,19 @@ public class DtoOptionItem
     public DtoConfig? SubStructure { get; set; }
 
     /// <summary>
-    /// 配置Provider
+    /// 最终配置Provider
     /// </summary>
     public string? Provider { get; set; }
     /// <summary>
-    /// 配置来源信息
+    /// 最终配置来源信息
     /// </summary>
     public string? Source { get; set; }
+
+    /// <summary>
+    /// 所有配置来源列表，越后优先级越高（最后一个为最终生效的配置）
+    /// </summary>
+    [JsonIgnore]
+    public List<DtoConfigSource>? SourceList { get; set; }
 }
 
 public class DtoConfig
@@ -194,4 +200,25 @@ public class DtoDomainGroup
     /// 子域内微服务信息
     /// </summary>
     public List<DtoServiceGroup> Children { get; set; } = [];
+}
+
+/// <summary>
+/// 配置来源信息
+/// </summary>
+public class DtoConfigSource
+{
+    /// <summary>
+    /// 配置Provider类型名
+    /// </summary>
+    public required string Provider { get; set; }
+
+    /// <summary>
+    /// 配置来源详细信息
+    /// </summary>
+    public string? SourceInfo { get; set; }
+
+    /// <summary>
+    /// 是否为最终生效的配置源
+    /// </summary>
+    public bool IsActive { get; set; }
 }

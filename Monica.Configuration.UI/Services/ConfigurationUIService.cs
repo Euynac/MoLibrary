@@ -172,4 +172,53 @@ public class ConfigurationUIService(
             return Res.Fail($"获取配置提供者失败: {ex.Message}");
         }
     }
+
+    /// <summary>
+    /// 分析配置类中配置项的来源一致性
+    /// </summary>
+    /// <param name="config">配置类</param>
+    /// <returns>来源分析结果</returns>
+    public ConfigSourceAnalysis AnalyzeConfigSourceConsistency(DtoConfig config)
+    {
+        var analysis = new ConfigSourceAnalysis
+        {
+            ConfigName = config.Name,
+            ConfigTitle = config.Title
+        };
+
+        if (config.Items.Count == 0)
+        {
+            analysis.IsConsistent = true;
+            return analysis;
+        }
+
+        // Group items by their final effective source
+        var sourceGroups = config.Items
+            .GroupBy(item => new { item.Provider, item.Source })
+            .ToList();
+
+        analysis.IsConsistent = sourceGroups.Count == 1;
+
+        if (!analysis.IsConsistent)
+        {
+            // Build detailed inconsistency information
+            foreach (var group in sourceGroups)
+            {
+                var sourceInfo = new ConfigSourceGroup
+                {
+                    Provider = group.Key.Provider ?? "Unknown",
+                    Source = group.Key.Source ?? string.Empty,
+                    Items = group.Select(item => new ConfigItemSourceInfo
+                    {
+                        Key = item.Key,
+                        Title = item.Title,
+                        Name = item.Name
+                    }).ToList()
+                };
+                analysis.SourceGroups.Add(sourceInfo);
+            }
+        }
+
+        return analysis;
+    }
 }

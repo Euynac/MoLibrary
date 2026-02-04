@@ -91,20 +91,20 @@ public class OptionItem
     /// <summary>
     /// 最终配置类绑定到的配置来源
     /// </summary>
-    public string? Provider => SourceList.LastOrDefault().Provider;
+    public string? Provider => SourceList.LastOrDefault().Value;
 
     /// <summary>
     /// 最终配置来源详细
     /// </summary>
-    public string? Source => SourceList.LastOrDefault().SourceInfo;
+    public string? Source => SourceList.LastOrDefault().Key;
 
     /// <summary>
     /// 所有配置来源，越后优先级越高
     /// </summary>
-    public List<(string Provider, string? SourceInfo)> SourceList { get; } = [];
-    public void SetSource(IConfigurationProvider provider, string? sourceInfo)
+    public Dictionary<string, string> SourceList { get; } = new();
+    public void SetSource(IConfigurationProvider provider, string sourceInfo)
     {
-        SourceList.Add((provider.GetType().Name, sourceInfo));
+        SourceList.TryAdd(sourceInfo, provider.GetType().Name);
     }
     #endregion
 

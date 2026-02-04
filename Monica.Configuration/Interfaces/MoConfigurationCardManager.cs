@@ -92,7 +92,13 @@ public static class MoConfigurationExtensions
             Key = i.Key,
             RegexPattern = i.ValidateRegexPattern,
             Source = i.Source,
-            Provider = i.Provider
+            Provider = i.Provider,
+            SourceList = i.SourceList.Select((source, index) => new DtoConfigSource
+            {
+                Provider = source.Value,
+                SourceInfo = source.Key,
+                IsActive = index == i.SourceList.Count - 1
+            }).ToList()
         };
 
         return dto;
