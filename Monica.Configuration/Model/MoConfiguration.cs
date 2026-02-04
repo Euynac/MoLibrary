@@ -42,11 +42,7 @@ public class MoConfiguration
         return new MoConfiguration(typeof(T), config);
     }
 
-    public MoConfiguration(Type configType) : this(configType, null)
-    {
-        
-    }
-    public MoConfiguration(Type configType, object? configInstance)
+    public MoConfiguration(Type configType, object? configInstance = null)
     {
         ConfigType = configType;
         Name = configType.Name;
