@@ -195,7 +195,7 @@ internal class JsonSettingsDocument
         
         if (!IsJsonNodeValueKindCompatible(targetNode, value, out var errorMessage))
         {
-            throw new InvalidOperationException(errorMessage ?? $"{_filePath}中{key}的JsonNode类型{targetNode?.GetValueKind()}与将修改成为的类型{value?.GetValueKind()}不一致");
+            throw new InvalidOperationException($"{_filePath}中类型不兼容：{errorMessage ?? $"{_filePath}中{key}的JsonNode类型{targetNode?.GetValueKind()}与将修改成为的类型{value?.GetValueKind()}不一致"}");
         }
         node[targetProperty] = value;
     }

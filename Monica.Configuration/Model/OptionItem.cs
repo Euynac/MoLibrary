@@ -89,27 +89,22 @@ public class OptionItem
     #region 来源信息
 
     /// <summary>
-    /// 配置类绑定到的配置来源
+    /// 最终配置类绑定到的配置来源
     /// </summary>
-    public string? Provider { get; internal set; }
+    public string? Provider => SourceList.LastOrDefault().Provider;
 
     /// <summary>
     /// 最终配置来源详细
     /// </summary>
-    public string? Source { get; set; }
+    public string? Source => SourceList.LastOrDefault().SourceInfo;
 
     /// <summary>
     /// 所有配置来源，越后优先级越高
     /// </summary>
-    public HashSet<string> SourceList { get; set; } = [];
+    public List<(string Provider, string? SourceInfo)> SourceList { get; } = [];
     public void SetSource(IConfigurationProvider provider, string? sourceInfo)
     {
-        Provider = provider.GetType().Name;
-        Source = sourceInfo;
-        if (sourceInfo != null)
-        {
-            SourceList.Add(sourceInfo);
-        }
+        SourceList.Add((provider.GetType().Name, sourceInfo));
     }
     #endregion
 

@@ -58,13 +58,7 @@ public class MoConfiguration
     {
         return OptionItem.CreateItems(ConfigType, configInstance, Info.Section);
     }
-    public void SetOptionSource(IConfigurationProvider provider, string? sourceInfo)
-    {
-        foreach (var item in OptionItems)
-        {
-            item.SetSource(provider, sourceInfo);
-        }
-    }
+  
     public void SetOptionValue(object? configInstance)
     {
         foreach (var item in OptionItems)
