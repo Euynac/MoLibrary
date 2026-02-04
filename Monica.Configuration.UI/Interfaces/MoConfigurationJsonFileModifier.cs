@@ -226,7 +226,7 @@ internal class JsonSettingsDocument
 
         if (targetKind != newKind)
         {
-            errorMessage = $"{_filePath}中JsonNode类型{targetKind}与将修改成为的类型{newKind}不一致";
+            errorMessage = $"JsonNode类型{targetKind}与将修改成为的类型{newKind}不一致";
             return false;
         }
 
@@ -243,7 +243,7 @@ internal class JsonSettingsDocument
             {
                 if (!IsJsonNodeValueKindCompatible(targetValue, newProperty.Value, out var propertyErrorMessage))
                 {
-                    errorMessage = $"{_filePath}中属性{newProperty.Key}的类型不兼容：{propertyErrorMessage}";
+                    errorMessage = $"属性{newProperty.Key}的类型不兼容：{propertyErrorMessage}";
                     return false;
                 }
             }
