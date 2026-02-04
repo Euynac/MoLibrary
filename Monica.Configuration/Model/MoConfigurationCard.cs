@@ -34,12 +34,7 @@ public class MoConfigurationCard
     /// </summary>
     public string Version => Configuration.Version;
 
-    /// <summary>
-    /// 配置类所在的项目名
-    /// </summary>
-    public required string FromProjectName { get; set; }
-
-
+  
 
     /// <summary>
     /// <inheritdoc cref="ConfigurationAttribute.Description"/>
@@ -51,7 +46,7 @@ public class MoConfigurationCard
     /// </summary>
     public string? SectionName => Configuration.Info.Section;
 
-  
+   
 
     /// <summary>
     /// 配置卡片池
@@ -164,6 +159,6 @@ public class MoConfigurationCard
 
     public override string ToString()
     {
-        return $"{Title}({FromProjectName}-{Key})";
+        return $"{Title}({Configuration.FromProjectName}-{Key})";
     }
 }

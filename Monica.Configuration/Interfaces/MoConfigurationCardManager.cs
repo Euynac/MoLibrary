@@ -21,20 +21,20 @@ public class MoConfigurationCardManager(IServiceProvider serviceProvider, IMoPro
     public List<DtoDomainGroup> GetConfigs(bool onlyCurDomain = false)
     {
         var result = new Dictionary<string, DtoDomainGroup>();
-        foreach (var group in GetConfigCards().GroupBy(p => p.FromProjectName))
+        foreach (var group in GetConfigCards().GroupBy(p => p.Configuration.FromProjectName))
         {
             var cards = group.ToList();
             var tmpCard = cards.FirstOrDefault();
             if (tmpCard == null) continue;
 
             // Filter by domain
-            if (onlyCurDomain && !catalog.IsCurrentDomain(tmpCard.FromProjectName))
+            if (onlyCurDomain && !catalog.IsCurrentDomain(tmpCard.Configuration.FromProjectName))
             {
                 continue;
             }
 
             // Get domain info
-            var domainName = catalog.GetDomainName(tmpCard.FromProjectName);
+            var domainName = catalog.GetDomainName(tmpCard.Configuration.FromProjectName);
             var domainTitle = catalog.GetDomainTitle(domainName);
 
             // Create domain group if not exists
@@ -53,8 +53,8 @@ public class MoConfigurationCardManager(IServiceProvider serviceProvider, IMoPro
             var serviceConfig = new DtoServiceGroup()
             {
                 AppId = catalog.CurrentAppId,  // Use current service's AppId
-                Name = tmpCard.FromProjectName,
-                Title = catalog.GetProjectDisplayName(tmpCard.FromProjectName),
+                Name = tmpCard.Configuration.FromProjectName,
+                Title = catalog.GetProjectDisplayName(tmpCard.Configuration.FromProjectName),
                 Children = cards.Select(c => new DtoConfig()
                 {
                     Name = c.Key,

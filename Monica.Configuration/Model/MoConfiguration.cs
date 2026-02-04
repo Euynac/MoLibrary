@@ -37,6 +37,15 @@ public class MoConfiguration
     /// 配置版本
     /// </summary>
     public string Version { get; set; } = "";
+    /// <summary>
+    /// 配置类所在的项目名
+    /// </summary>
+    public string FromProjectName { get; set; }
+
+    /// <summary>
+    /// 默认配置文件名
+    /// </summary>
+    public string DefaultSourceFileName => $"{FromProjectName}.{Name}.json";
     public static MoConfiguration Create<T>(T config)
     {
         return new MoConfiguration(typeof(T), config);
@@ -48,6 +57,7 @@ public class MoConfiguration
         Name = configType.Name;
         Info = UtilsConfiguration.GetConfigAttribute(ConfigType)!;
         OptionItems = CreateOptionItems(configInstance);
+        FromProjectName = configType.Assembly.GetName().Name ?? "Unknown";
     }
 
     private List<OptionItem> CreateOptionItems(object? configInstance)

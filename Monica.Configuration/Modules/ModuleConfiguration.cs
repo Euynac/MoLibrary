@@ -91,10 +91,7 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
                          IsSubConfiguration: false
                      }))
         {
-            var card = new MoConfigurationCard(configType)
-            {
-                FromProjectName = configType.Assembly.GetName().Name ?? "Unknown",
-            };
+            var card = new MoConfigurationCard(configType);
             var provider = new LocalJsonFileProvider(card);
             provider.GenAndRegisterConfigurationFiles();
             MoConfigurationCard.Register(card);

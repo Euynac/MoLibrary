@@ -65,7 +65,7 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
     internal void GenAndRegisterConfigurationFiles()
     {
         if (!MoConfigurationManager.Setting.GenerateFileForEachOption) return;
-        var filename = $"{card.FromProjectName}.{card.Configuration.Name}.json";
+        var filename = card.Configuration.DefaultSourceFileName;
         if (MoConfigurationManager.Setting.GenerateOptionFileParentDirectory is { } parent && !string.IsNullOrWhiteSpace(parent))
         {
             filename = Path.Combine(parent, filename);

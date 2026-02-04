@@ -95,23 +95,23 @@ public class MoConfigurationJsonFileModifier(ILogger<MoConfigurationJsonFileModi
     public async Task<Res<DtoUpdateConfigRes>> UpdateConfig(MoConfiguration config, JsonNode? value)
     {
         var key = config.Key;
-        var option = config.OptionItems.FirstOrDefault();
+
+        var options = config.OptionItems
+            .Where(p => p.Provider?.Equals(nameof(JsonConfigurationProvider)) is true && p.Source != null).ToList();
+        var option = options.FirstOrDefault(p => p.Source?.Contains(config.DefaultSourceFileName) is false) ?? options.FirstOrDefault();
+        
         if (option == null)
         {
-            return $"配置类{key}中找不到任何配置项";
+            return $"配置类{key}中找不到任何有效Json来源的配置项";
         }
-        if (option.Provider?.Equals(nameof(JsonConfigurationProvider)) is false)
-        {
-            return $"暂不支持更新Provider为{option.Provider}的配置项";
-        }
-
+  
         if (option.Source == null)
         {
             var error = $"配置更新失败：无法获取其Json文件来源。更新操作：{key} => {value}";
             logger.LogError(error);
             return error;
         }
-
+        
         try
         {
             var doc = new JsonSettingsDocument(option.Source);
