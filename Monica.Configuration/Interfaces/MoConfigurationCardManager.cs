@@ -2,11 +2,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Configuration.Model;
 using Monica.Configuration.Providers;
 using Monica.Tool.Extensions;
-using System.Text.Json;
 
 namespace Monica.Configuration.Interfaces;
 
-public class MoConfigurationCardManager(IServiceProvider serviceProvider, IMoConfigurationServiceInfo info) : IMoConfigurationCardManager
+public class MoConfigurationCardManager(IServiceProvider serviceProvider, IMoProjectCatalog catalog) : IMoConfigurationCardManager
 {
     public IEnumerable<MoConfigurationCard> GetConfigCards()
     {
@@ -19,24 +18,29 @@ public class MoConfigurationCardManager(IServiceProvider serviceProvider, IMoCon
         }
     }
 
-    public List<DtoDomainConfigs> GetConfigs(bool onlyCurDomain = false)
+    public List<DtoDomainGroup> GetConfigs(bool onlyCurDomain = false)
     {
-        var result = new Dictionary<string, DtoDomainConfigs>();
-        foreach (var group in GetConfigCards().GroupBy(p => p.FromProjectName))
+        var result = new Dictionary<string, DtoDomainGroup>();
+        foreach (var group in GetConfigCards().GroupBy(p => p.Configuration.FromProjectName))
         {
             var cards = group.ToList();
             var tmpCard = cards.FirstOrDefault();
             if (tmpCard == null) continue;
-            if (onlyCurDomain is true && !info.IsCurrentDomain(tmpCard.FromProjectName))
+
+            // Filter by domain
+            if (onlyCurDomain && !catalog.IsCurrentDomain(tmpCard.Configuration.FromProjectName))
             {
                 continue;
             }
-            var serviceInfo = info.GetServiceInfo(tmpCard.FromProjectName);
-            var domainName = serviceInfo.DomainName;
-            var domainTitle = serviceInfo.DomainTitle;
+
+            // Get domain info
+            var domainName = catalog.GetDomainName(tmpCard.Configuration.FromProjectName);
+            var domainTitle = catalog.GetDomainTitle(domainName);
+
+            // Create domain group if not exists
             if (!result.ContainsKey(domainName))
             {
-                var domainConfig = new DtoDomainConfigs()
+                var domainConfig = new DtoDomainGroup()
                 {
                     Children = [],
                     Name = domainName,
@@ -44,17 +48,17 @@ public class MoConfigurationCardManager(IServiceProvider serviceProvider, IMoCon
                 };
                 result.Add(domainConfig.Name, domainConfig);
             }
+
             var config = result[domainName];
-            var serviceConfig = new DtoServiceConfigs()
+            var serviceConfig = new DtoServiceGroup()
             {
-                AppId = serviceInfo.AppId,
-                Name = serviceInfo.ProjectName,
-                Title = serviceInfo.AppName,
+                AppId = catalog.CurrentAppId,  // Use current service's AppId
+                Name = tmpCard.Configuration.FromProjectName,
+                Title = catalog.GetProjectDisplayName(tmpCard.Configuration.FromProjectName),
                 Children = cards.Select(c => new DtoConfig()
                 {
                     Name = c.Key,
                     Type = c.Configuration.Info.Type,
-                    AppId = serviceInfo.AppId,
                     Desc = c.Description,
                     Title = c.Title,
                     Version = c.Version,
@@ -88,7 +92,13 @@ public static class MoConfigurationExtensions
             Key = i.Key,
             RegexPattern = i.ValidateRegexPattern,
             Source = i.Source,
-            Provider = i.Provider
+            Provider = i.Provider,
+            SourceList = i.SourceList.Select((source, index) => new DtoConfigSource
+            {
+                Provider = source.Value,
+                SourceInfo = source.Key,
+                IsActive = index == i.SourceList.Count - 1
+            }).ToList()
         };
 
         return dto;

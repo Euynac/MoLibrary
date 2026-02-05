@@ -35,7 +35,7 @@ public class ModuleRegisterCentreUI(ModuleRegisterCentreUIOption option)
                     UIRegisterCentrePage.REGISTERCENTRE_DEBUG_URL,
                     "注册中心",
                     Icons.Material.Filled.CloudQueue,
-                    "调试",
+                    "监控",
                     addToNav: true,
                     navOrder: 40));
         }
@@ -73,4 +73,10 @@ public class ModuleRegisterCentreUIOption : MoModuleOption<ModuleRegisterCentreU
     /// 是否禁用列表界面展示监听地址
     /// </summary>
     public bool DisableListeningAddressDisplay { get; set; }
+
+    /// <summary>
+    /// Maximum number of evicted instances to retain per service for history tracking.
+    /// Default: 10
+    /// </summary>
+    public int MaxEvictedServiceRetentionCount { get; set; } = 10;
 }

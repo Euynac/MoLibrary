@@ -1,14 +1,13 @@
 using System.Reflection;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Monica.Configuration.Annotations;
+using Monica.Configuration.Implements;
 using Monica.Configuration.Interfaces;
 using Monica.Configuration.Model;
 using Monica.Configuration.Providers;
-using Monica.Core.Extensions;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
@@ -46,6 +45,7 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
 
         services.AddOptions();
         services.AddSingleton<IMoConfigurationCardManager, MoConfigurationCardManager>();
+        services.TryAddSingleton<IMoProjectCatalog, RegisterCentreProjectCatalog>();//TODO 抽离RegisterCentre依赖，设置项目结构最佳实践（单体、微服务）
         services.AddSingleton<IMoConfigurationServiceInfo, MoConfigurationServiceInfoDefault>();
 
         // if (Option is { UseDaprProvider: true, AppConfiguration: ConfigurationManager manager})
@@ -75,11 +75,7 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
 
         _method = method;
     }
-    public override void ConfigureEndpoints(IApplicationBuilder app)
-    {
-        // Configuration endpoints have been moved to ConfigurationUI module
-        // This module now only handles configuration registration and binding
-    }
+  
     public override void PostConfigureServices(IServiceCollection services)
     {
         //巨坑：当Option的属性是List或Array等类型，有多个Configuration来源，那么这里面的元素会Append而不是替换。设计如此。dotnet/runtime #36384
@@ -95,10 +91,7 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
                          IsSubConfiguration: false
                      }))
         {
-            var card = new MoConfigurationCard(configType)
-            {
-                FromProjectName = configType.Assembly.GetName().Name ?? "Unknown",
-            };
+            var card = new MoConfigurationCard(configType);
             var provider = new LocalJsonFileProvider(card);
             provider.GenAndRegisterConfigurationFiles();
             MoConfigurationCard.Register(card);
@@ -140,18 +133,6 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
 public class ModuleConfigurationGuide : MoModuleGuide<ModuleConfiguration, ModuleConfigurationOption, ModuleConfigurationGuide>
 {
 
-    /// <summary>
-    /// 根据项目获取领域信息，用于完善微服务配置状态接口信息返回
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    public ModuleConfigurationGuide AddMoConfigurationDomainInfo<T>() where T : class, IMoConfigurationServiceInfo
-    {
-        ConfigureServices(context =>
-        {
-            context.Services.Replace(ServiceDescriptor.Singleton<IMoConfigurationServiceInfo, T>());
-        });
-        return this;
-    }
 }
 
 public class ModuleConfigurationOption : MoModuleOptionWithMinimalApi<ModuleConfiguration>

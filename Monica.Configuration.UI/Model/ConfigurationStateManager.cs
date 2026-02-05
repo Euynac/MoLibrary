@@ -18,7 +18,7 @@ public class ConfigurationStateManager
     /// <summary>
     /// 初始化配置数据
     /// </summary>
-    public void Initialize(List<DtoDomainConfigs> domainConfigs)
+    public void Initialize(List<DtoDomainGroup> domainConfigs)
     {
         // 保存当前的选择状态
         var previousSelection = _selectionState.Clone();
@@ -178,7 +178,7 @@ public class ConfigurationStateManager
     /// <summary>
     /// 恢复选择状态
     /// </summary>
-    private void RestoreSelectionState(List<DtoDomainConfigs> domainConfigs, SelectionState previousSelection)
+    private void RestoreSelectionState(List<DtoDomainGroup> domainConfigs, SelectionState previousSelection)
     {
         if (string.IsNullOrEmpty(previousSelection.SelectedDomainName)) 
             return;

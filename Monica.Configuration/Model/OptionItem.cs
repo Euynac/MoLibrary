@@ -11,9 +11,7 @@ namespace Monica.Configuration.Model;
 /// </summary>
 public class OptionItem
 {
-    /// <summary>
-    /// 配置项信息类
-    /// </summary>
+   
     public OptionItem(OptionSettingAttribute? info, PropertyInfo property, object? configInstance, string? parentKey)
     {
         Info = info;
@@ -54,10 +52,11 @@ public class OptionItem
     /// 配置基本类型
     /// </summary>
     public EOptionItemValueBasicType BasicType { get; set; }
+
     /// <summary>
     /// 配置基本的系统类型，去除nullable、List等泛型类型后的纯净类型
     /// </summary>
-    public Type UnderlyingType { get; private set; }
+    public Type UnderlyingType { get; private set; } = null!;
     /// <summary>
     /// 配置特殊类型
     /// </summary>
@@ -90,27 +89,22 @@ public class OptionItem
     #region 来源信息
 
     /// <summary>
-    /// 配置类绑定到的配置来源
+    /// 最终配置类绑定到的配置来源
     /// </summary>
-    public string? Provider { get; internal set; }
+    public string? Provider => SourceList.LastOrDefault().Value;
 
     /// <summary>
     /// 最终配置来源详细
     /// </summary>
-    public string? Source { get; set; }
+    public string? Source => SourceList.LastOrDefault().Key;
 
     /// <summary>
     /// 所有配置来源，越后优先级越高
     /// </summary>
-    public HashSet<string> SourceList { get; set; } = [];
-    public void SetSource(IConfigurationProvider provider, string? sourceInfo)
+    public Dictionary<string, string> SourceList { get; } = new();
+    public void SetSource(IConfigurationProvider provider, string sourceInfo)
     {
-        Provider = provider.GetType().Name;
-        Source = sourceInfo;
-        if (sourceInfo != null)
-        {
-            SourceList.Add(sourceInfo);
-        }
+        SourceList.TryAdd(sourceInfo, provider.GetType().Name);
     }
     #endregion
 

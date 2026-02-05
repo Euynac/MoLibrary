@@ -34,9 +34,23 @@
                         </MudStack>
                     </MudPaper>
                 </MudItem>
-                
+
                 <MudItem xs="12">
-                    <RegisterCentreServiceList Services="_services" OnRefresh="@(() => RefreshServicesAsync())" IsLoading="_isLoading" />
+                    <ServiceFilterPanel
+                        AllServices="@_services"
+                        FilterText="@_filterText"
+                        FilterTextChanged="@((text) => { _filterText = text; ApplyFilters(); })"
+                        SelectedStatuses="@_selectedStatuses"
+                        SelectedStatusesChanged="@((statuses) => { _selectedStatuses = new HashSet<ServiceStatus>(statuses); ApplyFilters(); })"
+                        SelectedDomains="@_selectedDomains"
+                        SelectedDomainsChanged="@((domains) => { _selectedDomains = new HashSet<string>(domains); ApplyFilters(); })"
+                        ShowOnlyWithInstances="@_showOnlyWithInstances"
+                        ShowOnlyWithInstancesChanged="@((value) => { _showOnlyWithInstances = value; ApplyFilters(); })"
+                        OnFiltersChanged="@ApplyFilters" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <RegisterCentreServiceList Services="_filteredServices" OnRefresh="@(() => RefreshServicesAsync())" IsLoading="_isLoading" />
                     
                     @if (!_isLoading && !_services.Any())
                     {
@@ -82,6 +96,13 @@
     private DomainInfo? _selectedDomain;
     private int _activeTabIndex = 0;
 
+    // Filter state
+    private string _filterText = string.Empty;
+    private HashSet<ServiceStatus> _selectedStatuses = new();
+    private HashSet<string> _selectedDomains = new();
+    private bool _showOnlyWithInstances = false;
+    private List<RegisteredServiceStatus> _filteredServices = new();
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -122,7 +143,7 @@
             StateHasChanged();
         }
 
-        if ((await RegisterCentreService.GetMergedServicesStatusAsync()).IsFailed(out var error, out var data))
+        if ((await RegisterCentreService.GetMergedServicesWithEvictionTrackingAsync()).IsFailed(out var error, out var data))
         {
             if (showNotification)
                 Snackbar.Add($"获取服务列表失败: {error.Message}", Severity.Error);
@@ -131,6 +152,7 @@
         else
         {
             _services = data ?? new List<RegisteredServiceStatus>();
+            ApplyFilters();
             if (showNotification)
                 Snackbar.Add("服务列表已刷新", Severity.Success);
         }
@@ -219,7 +241,38 @@
         }
         await Task.CompletedTask;
     }
-    
+
+    private void ApplyFilters()
+    {
+        _filteredServices = _services.Where(service =>
+        {
+            // Text filter
+            if (!string.IsNullOrWhiteSpace(_filterText))
+            {
+                var searchText = _filterText.ToLower();
+                if (!service.AppName.ToLower().Contains(searchText) &&
+                    !service.AppId.ToLower().Contains(searchText) &&
+                    !(service.ProjectName?.ToLower().Contains(searchText) ?? false) &&
+                    !(service.DomainName?.ToLower().Contains(searchText) ?? false))
+                    return false;
+            }
+
+            // Status filter
+            if (_selectedStatuses.Any() && !_selectedStatuses.Contains(service.OverallStatus))
+                return false;
+
+            // Domain filter
+            if (_selectedDomains.Any() && !_selectedDomains.Contains(service.DomainName ?? "未知"))
+                return false;
+
+            // Instance filter
+            if (_showOnlyWithInstances && service.TotalInstanceCount == 0)
+                return false;
+
+            return true;
+        }).ToList();
+    }
+
     public void Dispose()
     {
         _refreshTimer?.Dispose();

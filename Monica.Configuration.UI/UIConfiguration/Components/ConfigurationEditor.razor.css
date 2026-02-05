@@ -74,8 +74,29 @@
     .config-info-item {
         margin-bottom: 12px;
     }
-    
+
     .config-value {
         font-size: 0.875rem;
     }
+}
+
+/* Multi-source timeline styling */
+.source-timeline {
+    margin-top: 8px;
+}
+
+.source-timeline ::deep .mud-timeline-item {
+    min-height: 60px;
+}
+
+.inactive-source {
+    opacity: 0.6;
+}
+
+.inactive-chip {
+    opacity: 0.7;
+}
+
+.fw-bold {
+    font-weight: 600;
 }

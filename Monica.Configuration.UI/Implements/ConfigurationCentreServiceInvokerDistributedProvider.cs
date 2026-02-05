@@ -14,9 +14,9 @@ namespace Monica.Configuration.UI.Implements;
 public class ConfigurationCentreServiceInvokerDistributedProvider(
     IServiceInvocationConnector connector) : IConfigurationCentreServiceInvoker
 {
-    public async Task<Res<List<DtoDomainConfigs>>> GetRegisteredServicesConfigsAsync(List<string> appIds)
+    public async Task<Res<List<DtoDomainGroup>>> GetRegisteredServicesConfigsAsync(List<string> appIds)
     {
-        var res = await connector.GetAsync<Res<List<DtoDomainConfigs>>>(appIds,
+        var res = await connector.GetAsync<Res<List<DtoDomainGroup>>>(appIds,
             $"{MoConfigurationConventions.DashboardAllConfigStatus}?onlyCurDomain=true");
 
         var statusList = res.Values

@@ -252,7 +252,7 @@ public class JobInstance
         var timestampStr = firstLine[1..timestampEnd];
         if (!DateTime.TryParseExact(timestampStr, "yyyy-MM-dd HH:mm:ss",
                 System.Globalization.CultureInfo.InvariantCulture,
-                System.Globalization.DateTimeStyles.AssumeUniversal,
+                System.Globalization.DateTimeStyles.None,
                 out var timestamp))
         {
             return false;

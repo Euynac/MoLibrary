@@ -1,0 +1,17 @@
+/* Source inconsistency dialog styling */
+::deep .mud-card {
+    border-radius: 8px;
+    transition: box-shadow 0.2s ease-in-out;
+}
+
+::deep .mud-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+::deep .mud-list-item {
+    padding: 8px 16px;
+}
+
+::deep .mud-list-item:hover {
+    background-color: var(--mud-palette-action-default-hover);
+}

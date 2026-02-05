@@ -11,12 +11,12 @@ public class DtoOptionItem
     /// <summary>
     /// 显示标题
     /// </summary>
-    public string Title { get; set; }
+    public required string Title { get; set; }
 
     /// <summary>
     /// 配置项名
     /// </summary>
-    public string Name { get; set; }
+    public required string Name { get; set; }
 
     /// <summary>
     /// 配置项Key，用此来进行配置项修改
@@ -65,13 +65,19 @@ public class DtoOptionItem
     public DtoConfig? SubStructure { get; set; }
 
     /// <summary>
-    /// 配置Provider
+    /// 最终配置Provider
     /// </summary>
     public string? Provider { get; set; }
     /// <summary>
-    /// 配置来源信息
+    /// 最终配置来源信息
     /// </summary>
     public string? Source { get; set; }
+
+    /// <summary>
+    /// 所有配置来源列表，越后优先级越高（最后一个为最终生效的配置）
+    /// </summary>
+    [JsonIgnore]
+    public List<DtoConfigSource>? SourceList { get; set; }
 }
 
 public class DtoConfig
@@ -80,12 +86,12 @@ public class DtoConfig
     /// <summary>
     /// 显示标题
     /// </summary>
-    public string Title { get; set; }
+    public required string Title { get; set; }
 
     /// <summary>
     /// 配置类名
     /// </summary>
-    public string Name { get; set; }
+    public required string Name { get; set; }
 
     /// <summary>
     /// 配置参数类别
@@ -98,15 +104,9 @@ public class DtoConfig
     public string? Desc { get; set; }
 
     /// <summary>
-    /// 配置类相关APPID
-    /// </summary>
-    public string? AppId { get; set; }
-
-
-    /// <summary>
     /// 配置项
     /// </summary>
-    public List<DtoOptionItem> Items { get; set; }
+    public List<DtoOptionItem> Items { get; set; } = [];
 
 
     #region 审计字段
@@ -161,22 +161,22 @@ public class DtoConfig
     }
 }
 
-public class DtoServiceConfigs
+public class DtoServiceGroup
 {
     /// <summary>
     /// 显示标题
     /// </summary>
-    public string Title { get; set; }
+    public required string Title { get; set; }
 
     /// <summary>
     /// 微服务名
     /// </summary>
-    public string Name { get; set; }
+    public required string Name { get; set; }
 
     /// <summary>
     /// AppID
     /// </summary>
-    public string AppId { get; set; }
+    public required string AppId { get; set; }
 
     /// <summary>
     /// 微服务内配置类
@@ -184,20 +184,41 @@ public class DtoServiceConfigs
     public List<DtoConfig> Children { get; set; } = [];
 }
 
-public class DtoDomainConfigs
+public class DtoDomainGroup
 {
     /// <summary>
     /// 显示标题
     /// </summary>
-    public string Title { get; set; }
+    public required string Title { get; set; }
 
     /// <summary>
     /// 子域名
     /// </summary>
-    public string Name { get; set; }
+    public required string Name { get; set; }
 
     /// <summary>
     /// 子域内微服务信息
     /// </summary>
-    public List<DtoServiceConfigs> Children { get; set; } = [];
+    public List<DtoServiceGroup> Children { get; set; } = [];
+}
+
+/// <summary>
+/// 配置来源信息
+/// </summary>
+public class DtoConfigSource
+{
+    /// <summary>
+    /// 配置Provider类型名
+    /// </summary>
+    public required string Provider { get; set; }
+
+    /// <summary>
+    /// 配置来源详细信息
+    /// </summary>
+    public string? SourceInfo { get; set; }
+
+    /// <summary>
+    /// 是否为最终生效的配置源
+    /// </summary>
+    public bool IsActive { get; set; }
 }

@@ -16,17 +16,17 @@ public class ConfigurationClientApiProvider(
     IMoConfigurationStores stores,
     ILogger<ConfigurationClientApiProvider> logger) : IMoConfigurationApi
 {
-    public virtual Task<Res<List<DtoDomainConfigs>>> GetConfigsAsync(string? mode = null, bool onlyCurDomain = false)
+    public virtual Task<Res<List<DtoDomainGroup>>> GetConfigsAsync(string? mode = null, bool onlyCurDomain = false)
     {
         try
         {
             var configs = cardManager.GetConfigs(onlyCurDomain);
-            return Task.FromResult<Res<List<DtoDomainConfigs>>>(configs);
+            return Task.FromResult<Res<List<DtoDomainGroup>>>(configs);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "获取所有配置状态失败");
-            return Task.FromResult<Res<List<DtoDomainConfigs>>>(Res.Fail($"获取所有配置状态失败: {ex.Message}"));
+            return Task.FromResult<Res<List<DtoDomainGroup>>>(Res.Fail($"获取所有配置状态失败: {ex.Message}"));
         }
     }
 
@@ -37,8 +37,8 @@ public class ConfigurationClientApiProvider(
             var configs = cardManager.GetConfigs();
             var optionItem = configs
                 .SelectMany(p => p.Children)
-                .SelectMany(p => p.Children)
                 .Where(p => appid == null || appid == p.AppId)
+                .SelectMany(p => p.Children)
                 .SelectMany(p => p.Items)
                 .FirstOrDefault(p => p.Key == key);
 
@@ -61,8 +61,9 @@ public class ConfigurationClientApiProvider(
             var configs = cardManager.GetConfigs();
             var config = configs
                 .SelectMany(p => p.Children)
+                .Where(p => appid == null || appid == p.AppId)
                 .SelectMany(p => p.Children)
-                .FirstOrDefault(p => (appid == null || p.AppId == appid) && p.Name == key);
+                .FirstOrDefault(p => p.Name == key);
 
             if (config != null)
                 return config;
@@ -141,9 +142,9 @@ public class ConfigurationClientApiProvider(
         return await UpdateConfigAsync(req);
     }
 
-    protected async Task<Res<DtoUpdateConfigRes>> SaveHistory(DtoUpdateConfigRes res, string projectName)
+    protected async Task<Res<DtoUpdateConfigRes>> SaveHistory(DtoUpdateConfigRes res, string appid)
     {
-        res.AppId = projectName;
+        res.AppId = appid;
         if((await stores.SaveUpdate(res)).IsFailed(out var err)) return err;
         return res;
     }

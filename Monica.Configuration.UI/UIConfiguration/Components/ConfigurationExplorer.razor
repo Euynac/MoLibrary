@@ -1,10 +1,12 @@
 @using Monica.Configuration.Model
 @using Monica.Configuration.UI.Model
+@using Monica.Configuration.UI.Services
 @using Monica.Configuration.Providers
 @using MudBlazor
 @using System.Text.Json
 @using System.Text.RegularExpressions
 @inject IDialogService DialogService
+@inject ConfigurationUIService ConfigUIService
 
 <MudContainer MaxWidth="MaxWidth.False" Class="pa-0">
     <!-- 搜索区域和操作按钮 -->
@@ -96,11 +98,28 @@
                                     <div>
                                         <div class="d-flex align-center">
                                             <MudText Typo="Typo.body2">@context.Title</MudText>
+
+                                            @{
+                                                var analysis = ConfigUIService.AnalyzeConfigSourceConsistency(context);
+                                            }
+
+                                            @if (!analysis.IsConsistent)
+                                            {
+                                                <MudTooltip Text="此配置类中的配置项来自不同的配置源，点击查看详情">
+                                                    <MudIconButton Icon="@Icons.Material.Filled.Warning"
+                                                                  Size="Size.Small"
+                                                                  Color="Color.Warning"
+                                                                  Class="ml-1"
+                                                                  Style="font-size: 14px;"
+                                                                  OnClick="@(() => OpenSourceInconsistencyDialog(context, analysis))" />
+                                                </MudTooltip>
+                                            }
+
                                             @if (!string.IsNullOrEmpty(context.Desc))
                                             {
                                                 <MudTooltip Text="@context.Desc">
-                                                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" 
-                                                            Color="Color.Primary" Class="ml-1" 
+                                                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small"
+                                                            Color="Color.Primary" Class="ml-1"
                                                             Style="font-size: 14px;" />
                                                 </MudTooltip>
                                             }
@@ -214,9 +233,9 @@
                             </MudTd>
                             <MudTd DataLabel="操作">
                                 <div class="d-flex gap-1">
-                                    <MudButton Size="Size.Small" Variant="Variant.Text" 
-                                              StartIcon="@Icons.Material.Filled.Edit" 
-                                              OnClick="async () => await OpenEditDialog(context, selectedConfig.AppId)">
+                                    <MudButton Size="Size.Small" Variant="Variant.Text"
+                                              StartIcon="@Icons.Material.Filled.Edit"
+                                              OnClick="async () => await OpenEditDialog(context, selectedService.AppId)">
                                         编辑
                                     </MudButton>
                                     @{
@@ -250,14 +269,14 @@
 
 
 @code {
-    [Parameter] public List<DtoDomainConfigs> Configs { get; set; } = [];
+    [Parameter] public List<DtoDomainGroup> Configs { get; set; } = [];
     [Parameter] public EventCallback<DtoUpdateConfig> OnConfigUpdate { get; set; }
     
     private string searchKeyword = "";
     
     // 选择状态
-    private DtoDomainConfigs? selectedDomain;
-    private DtoServiceConfigs? selectedService;
+    private DtoDomainGroup? selectedDomain;
+    private DtoServiceGroup? selectedService;
     private DtoConfig? selectedConfig;
     
     // 状态管理
@@ -267,13 +286,13 @@
     private bool isSaveConfirmationDialogOpen = false;
     private bool isSaving = false;
     
-    private List<DtoDomainConfigs> FilteredConfigs => 
+    private List<DtoDomainGroup> FilteredConfigs => 
         string.IsNullOrWhiteSpace(searchKeyword) ? Configs : FilterConfigs();
 
     private DtoOptionItem? editingItem;
     private string? editingAppId;
     
-    private List<DtoDomainConfigs>? _lastConfigs;
+    private List<DtoDomainGroup>? _lastConfigs;
     
     protected override void OnParametersSet()
     {
@@ -289,7 +308,7 @@
     }
     
     
-    private void SelectService(DtoDomainConfigs domain, DtoServiceConfigs service)
+    private void SelectService(DtoDomainGroup domain, DtoServiceGroup service)
     {
         selectedDomain = domain;
         selectedService = service;
@@ -314,14 +333,14 @@
         StateHasChanged();
     }
     
-    private List<DtoDomainConfigs> FilterConfigs()
+    private List<DtoDomainGroup> FilterConfigs()
     {
         var keyword = searchKeyword.ToLowerInvariant();
-        var filtered = new List<DtoDomainConfigs>();
+        var filtered = new List<DtoDomainGroup>();
         
         foreach (var domain in Configs)
         {
-            var filteredServices = new List<DtoServiceConfigs>();
+            var filteredServices = new List<DtoServiceGroup>();
             
             foreach (var service in domain.Children)
             {
@@ -344,7 +363,6 @@
                             Name = config.Name,
                             Type = config.Type,
                             Desc = config.Desc,
-                            AppId = config.AppId,
                             Items = filteredItems,
                             Version = config.Version,
                             LastModificationTime = config.LastModificationTime,
@@ -356,7 +374,7 @@
                 
                 if (filteredConfigs.Any())
                 {
-                    filteredServices.Add(new DtoServiceConfigs
+                    filteredServices.Add(new DtoServiceGroup
                     {
                         Title = service.Title,
                         Name = service.Name,
@@ -368,7 +386,7 @@
             
             if (filteredServices.Any())
             {
-                filtered.Add(new DtoDomainConfigs
+                filtered.Add(new DtoDomainGroup
                 {
                     Title = domain.Title,
                     Name = domain.Name,
@@ -431,7 +449,7 @@
         return baseClass;
     }
     
-    private string GetServiceNavLinkClass(DtoServiceConfigs service)
+    private string GetServiceNavLinkClass(DtoServiceGroup service)
     {
         return selectedService?.Name == service.Name ? "mud-nav-link-active" : "";
     }
@@ -572,10 +590,12 @@
 
     private async Task OpenConfigHistoryDialog(DtoConfig config)
     {
+        if (selectedService == null) return;
+
         var parameters = new DialogParameters<ConfigurationHistoryDialog>
         {
             { x => x.ConfigKey, config.Name },
-            { x => x.AppId, config.AppId },
+            { x => x.AppId, selectedService.AppId },
             { x => x.DialogTitle, $"配置历史记录 - {config.Title}" }
         };
 
@@ -588,6 +608,30 @@
         };
 
         await DialogService.ShowAsync<ConfigurationHistoryDialog>($"配置历史记录 - {config.Title}", parameters, options);
+    }
+
+    /// <summary>
+    /// 打开配置来源不一致对话框
+    /// </summary>
+    private async Task OpenSourceInconsistencyDialog(DtoConfig config, ConfigSourceAnalysis analysis)
+    {
+        var parameters = new DialogParameters<SourceInconsistencyDialog>
+        {
+            { x => x.Analysis, analysis }
+        };
+
+        var options = new DialogOptions()
+        {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            CloseButton = true,
+            BackdropClick = true
+        };
+
+        await DialogService.ShowAsync<SourceInconsistencyDialog>(
+            $"配置来源分析 - {config.Title}",
+            parameters,
+            options);
     }
     
     /// <summary>

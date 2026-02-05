@@ -15,5 +15,5 @@ public interface IMoConfigurationCardManager
     /// </summary>
     /// <param name="onlyCurDomain">只获取当前子域的配置信息</param>
     /// <returns></returns>
-    List<DtoDomainConfigs> GetConfigs(bool onlyCurDomain = false);
+    List<DtoDomainGroup> GetConfigs(bool onlyCurDomain = false);
 }

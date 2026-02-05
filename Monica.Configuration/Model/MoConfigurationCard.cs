@@ -34,12 +34,7 @@ public class MoConfigurationCard
     /// </summary>
     public string Version => Configuration.Version;
 
-    /// <summary>
-    /// 配置类所在的项目名
-    /// </summary>
-    public required string FromProjectName { get; set; }
-
-
+  
 
     /// <summary>
     /// <inheritdoc cref="ConfigurationAttribute.Description"/>
@@ -51,7 +46,7 @@ public class MoConfigurationCard
     /// </summary>
     public string? SectionName => Configuration.Info.Section;
 
-  
+   
 
     /// <summary>
     /// 配置卡片池
@@ -127,7 +122,7 @@ public class MoConfigurationCard
                     if(relativePath == null) continue;
               
                     var absolutePath = jsonProvider.Source.FileProvider?.GetFileInfo(relativePath).PhysicalPath;
-                    SetProvider(provider, absolutePath);
+                    SetProvider(provider, absolutePath ?? "Failed to get absolute path");
                     break;
                 }
                 case MemoryConfigurationProvider memory:
@@ -142,7 +137,7 @@ public class MoConfigurationCard
                 }
                 default:
                 {
-                    SetProvider(provider, provider.ToString());
+                    SetProvider(provider, provider.ToString() ?? "Unknown provider");
                     break;
                 }
             }
@@ -150,7 +145,7 @@ public class MoConfigurationCard
 
         return;
 
-        static void SetProvider(IConfigurationProvider provider, string? sourceInfo)
+        static void SetProvider(IConfigurationProvider provider, string sourceInfo)
         {
             foreach (var key in MoConfigurationManager.GetConfigurationFullKeys(provider, null))
             {
@@ -164,6 +159,6 @@ public class MoConfigurationCard
 
     public override string ToString()
     {
-        return $"{Title}({FromProjectName}-{Key})";
+        return $"{Title}({Configuration.FromProjectName}-{Key})";
     }
 }

@@ -15,33 +15,30 @@ public class ConfigurationCentreApiProvider(
     IMoConfigurationModifier modifier,
     IMoConfigurationCardManager manager,
     IMoConfigurationStores stores,
-    IMoConfigurationDashboard dashboard,
     IConfigurationCentreServiceInvoker invoker,
     IRegistrationStateManager stateManager,
     IRegisterCentreClientInfo clientInfo,
     ILogger<ConfigurationClientApiProvider> logger)
     : ConfigurationClientApiProvider(modifier, manager, stores, logger)
 {
-    private static (List<DtoDomainConfigs>? Data, DateTime CachedAt) _cache;
+    private readonly IMoConfigurationCardManager _manager = manager;
+    private static (List<DtoDomainGroup>? Data, DateTime CachedAt) _cache;
     private static readonly TimeSpan _cacheTtl = TimeSpan.FromSeconds(30);
 
-    public override async Task<Res<List<DtoDomainConfigs>>> GetConfigsAsync(string? mode = null,
+    public override async Task<Res<List<DtoDomainGroup>>> GetConfigsAsync(string? mode = null,
         bool onlyCurDomain = false)
     {
         if ((await GetRegisteredServicesConfigsAsync()).IsFailed(out var error, out var data))
             return Res.Fail(error);
 
-        if ((await dashboard.DashboardDisplayMode(data, mode)).IsFailed(out error, out var arranged))
-            return Res.Fail(error);
-
-        return Res.Ok(arranged);
+        return Res.Ok(data);
     }
 
     public override async Task<Res<DtoOptionItem>> GetOptionItemAsync(string key, string? appid = null)
     {
         if ((await GetRegisteredServicesConfigsAsync()).IsFailed(out var error, out var data)) return error;
 
-        var dtoConfig = data.SelectMany(p => p.Children).SelectMany(p => p.Children).Where(p => appid == null || appid == p.AppId).SelectMany(p => p.Items)
+        var dtoConfig = data.SelectMany(p => p.Children).Where(p => appid == null || appid == p.AppId).SelectMany(p => p.Children).SelectMany(p => p.Items)
             .FirstOrDefault(p => p.Key == key);
         if (dtoConfig != null) return dtoConfig;
 
@@ -52,8 +49,8 @@ public class ConfigurationCentreApiProvider(
     {
         if ((await GetRegisteredServicesConfigsAsync()).IsFailed(out var error, out var data)) return error;
 
-        var dtoConfig = data.SelectMany(p => p.Children).SelectMany(p => p.Children)
-            .FirstOrDefault(p => (appid == null || p.AppId == appid) && p.Name == key);
+        var dtoConfig = data.SelectMany(p => p.Children).Where(p => appid == null || appid == p.AppId).SelectMany(p => p.Children)
+            .FirstOrDefault(p => p.Name == key);
         if (dtoConfig != null) return dtoConfig;
 
         return "找不到相应的配置类";
@@ -67,7 +64,7 @@ public class ConfigurationCentreApiProvider(
         return remoteData;
     }
 
-    public async Task<Res<List<DtoDomainConfigs>>> GetRegisteredServicesConfigsAsync()
+    public async Task<Res<List<DtoDomainGroup>>> GetRegisteredServicesConfigsAsync()
     {
         if (_cache.Data != null && DateTime.UtcNow - _cache.CachedAt < _cacheTtl)
             return _cache.Data;
@@ -84,16 +81,16 @@ public class ConfigurationCentreApiProvider(
 
         if ((await invoker.GetRegisteredServicesConfigsAsync(list)).IsFailed(out var error, out var statusList)) return error;
 
-        statusList.AddRange(manager.GetConfigs());
+        statusList.AddRange(_manager.GetConfigs());
         if ((await WashDomainConfigs(statusList)).IsFailed(out error, out var configs)) return error;
         _cache = (configs, DateTime.UtcNow);
         return configs;
     }
 
-    public Task<Res<List<DtoDomainConfigs>>> WashDomainConfigs(List<DtoDomainConfigs> configs)
+    public Task<Res<List<DtoDomainGroup>>> WashDomainConfigs(List<DtoDomainGroup> configs)
     {
         var group = configs.GroupBy(p => p.Name).ToDictionary(g => g.Key, g => g.ToList());
-        var finalDomainConfigs = new List<DtoDomainConfigs>();
+        var finalDomainConfigs = new List<DtoDomainGroup>();
         foreach (var item in group)
         {
             var tmp = item.Value.First();
@@ -101,6 +98,6 @@ public class ConfigurationCentreApiProvider(
             finalDomainConfigs.Add(tmp);
         }
 
-        return Task.FromResult<Res<List<DtoDomainConfigs>>>(finalDomainConfigs);
+        return Task.FromResult<Res<List<DtoDomainGroup>>>(finalDomainConfigs);
     }
 }

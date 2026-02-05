@@ -77,9 +77,6 @@ public class ModuleConfigurationUI(ModuleConfigurationUIOption option)
     {
         // 注册统一配置UI服务
         services.AddScoped<ConfigurationUIService>();
-
-        // 注册默认实现
-        services.TryAddSingleton<IMoConfigurationDashboard, DefaultArrangeDashboard>();
         services.TryAddTransient<IMoConfigurationStores, MoConfigurationDefaultMemoryStore>();
         services.TryAddSingleton<IMoConfigurationModifier, MoConfigurationJsonFileModifier>();
         services.TryAddSingleton<ConfigurationClientApiProvider>();
@@ -191,17 +188,6 @@ public class RollbackRequest
 public class ModuleConfigurationUIGuide : MoModuleGuide<ModuleConfigurationUI, ModuleConfigurationUIOption,
     ModuleConfigurationUIGuide>
 {
-    /// <summary>
-    /// 配置自定义仪表板显示模式
-    /// </summary>
-    public ModuleConfigurationUIGuide ConfigCustomDashboard<TDashboard>()
-        where TDashboard : class, IMoConfigurationDashboard
-    {
-        ConfigureServices(context => { context.Services.AddSingleton<IMoConfigurationDashboard, TDashboard>(); },
-            EMoModuleOrder.PreConfig);
-        return this;
-    }
-
     /// <summary>
     /// 配置自定义配置存储
     /// </summary>

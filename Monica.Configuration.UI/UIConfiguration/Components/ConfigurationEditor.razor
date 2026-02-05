@@ -18,27 +18,70 @@
                             <MudIcon Icon="@Icons.Material.Filled.Source" Size="Size.Small" Class="me-1" />
                             配置提供者信息
                         </MudText>
-                        <MudGrid>
-                            <MudItem xs="12" md="6">
-                                <div Class="d-flex align-center mb-2">
-                                    <MudText Typo="Typo.caption" Class="text-muted me-2" Style="min-width: 60px;">类型：</MudText>
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Text">
-                                        @(_configProvider ?? "Unknown")
-                                    </MudChip>
-                                </div>
-                            </MudItem>
-                            @if (!string.IsNullOrEmpty(_configSource))
-                            {
+
+                        @if (_sourceList != null && _sourceList.Any())
+                        {
+                            <MudTimeline TimelineOrientation="TimelineOrientation.Vertical"
+                                         TimelinePosition="TimelinePosition.Start"
+                                         Class="source-timeline">
+                                @foreach (var source in _sourceList.AsEnumerable().Reverse())
+                                {
+                                    <MudTimelineItem Size="Size.Small"
+                                                     Color="@(source.IsActive ? Color.Success : Color.Default)"
+                                                     Variant="@(source.IsActive ? Variant.Filled : Variant.Outlined)"
+                                                     Class="@(source.IsActive ? "" : "inactive-source")">
+                                        <ItemOpposite>
+                                            <MudText Typo="Typo.caption"
+                                                     Color="@(source.IsActive ? Color.Success : Color.Default)"
+                                                     Class="@(source.IsActive ? "fw-bold" : "text-muted")">
+                                                @(source.IsActive ? "最终生效" : "已覆盖")
+                                            </MudText>
+                                        </ItemOpposite>
+                                        <ItemContent>
+                                            <MudChip T="string" Size="Size.Small"
+                                                     Color="@(source.IsActive ? Color.Success : Color.Default)"
+                                                     Variant="Variant.Text"
+                                                     Class="@(source.IsActive ? "" : "inactive-chip")">
+                                                @source.Provider
+                                            </MudChip>
+                                            @if (!string.IsNullOrEmpty(source.SourceInfo))
+                                            {
+                                                <MudText Typo="Typo.caption"
+                                                         Style="font-family: monospace; word-break: break-all;"
+                                                         Class="@(source.IsActive ? "" : "text-muted mt-1")">
+                                                    @source.SourceInfo
+                                                </MudText>
+                                            }
+                                        </ItemContent>
+                                    </MudTimelineItem>
+                                }
+                            </MudTimeline>
+                        }
+                        else
+                        {
+                            <!-- Fallback to single source display -->
+                            <MudGrid>
                                 <MudItem xs="12" md="6">
                                     <div Class="d-flex align-center mb-2">
-                                        <MudText Typo="Typo.caption" Class="text-muted me-2" Style="min-width: 60px;">来源：</MudText>
-                                        <MudText Typo="Typo.caption" Style="font-family: monospace; word-break: break-all;" Class="text-truncate">
-                                            @_configSource
-                                        </MudText>
+                                        <MudText Typo="Typo.caption" Class="text-muted me-2" Style="min-width: 60px;">类型：</MudText>
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Text">
+                                            @(_configProvider ?? "Unknown")
+                                        </MudChip>
                                     </div>
                                 </MudItem>
-                            }
-                        </MudGrid>
+                                @if (!string.IsNullOrEmpty(_configSource))
+                                {
+                                    <MudItem xs="12" md="6">
+                                        <div Class="d-flex align-center mb-2">
+                                            <MudText Typo="Typo.caption" Class="text-muted me-2" Style="min-width: 60px;">来源：</MudText>
+                                            <MudText Typo="Typo.caption" Style="font-family: monospace; word-break: break-all;" Class="text-truncate">
+                                                @_configSource
+                                            </MudText>
+                                        </div>
+                                    </MudItem>
+                                }
+                            </MudGrid>
+                        }
                     </MudPaper>
                 </MudItem>
                 
@@ -142,6 +185,7 @@
     private bool _isOffline = false;
     private object? _editValue;
     private ConfigurationValueEditor? valueEditor;
+    private List<DtoConfigSource>? _sourceList;
     
     private readonly DialogOptions _dialogOptions = new()
     {
@@ -174,12 +218,13 @@
         _configProvider = config.Provider ?? "Unknown";
         _configSource = config.Source ?? string.Empty;
         _isOffline = config.IsOffline;
-        
+        _sourceList = config.SourceList;
+
         // 从StateManager获取当前值，如果没有修改则使用原始值
         var configViewModel = StateManager?.GetConfiguration(ConfigName);
         var itemViewModel = configViewModel?.Items.FirstOrDefault(i => i.OriginalItem.Key == config.Key);
         _editValue = itemViewModel?.CurrentValue ?? config.Value;
-        
+
         _validationMessage = string.Empty;
         StateHasChanged();
     }

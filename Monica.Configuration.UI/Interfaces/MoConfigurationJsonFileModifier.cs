@@ -95,23 +95,23 @@ public class MoConfigurationJsonFileModifier(ILogger<MoConfigurationJsonFileModi
     public async Task<Res<DtoUpdateConfigRes>> UpdateConfig(MoConfiguration config, JsonNode? value)
     {
         var key = config.Key;
-        var option = config.OptionItems.FirstOrDefault();
+
+        var options = config.OptionItems
+            .Where(p => p.Provider?.Equals(nameof(JsonConfigurationProvider)) is true && p.Source != null).ToList();
+        var option = options.FirstOrDefault(p => p.Source?.Contains(config.DefaultSourceFileName) is false) ?? options.FirstOrDefault();
+        
         if (option == null)
         {
-            return $"配置类{key}中找不到任何配置项";
+            return $"配置类{key}中找不到任何有效Json来源的配置项";
         }
-        if (option.Provider?.Equals(nameof(JsonConfigurationProvider)) is false)
-        {
-            return $"暂不支持更新Provider为{option.Provider}的配置项";
-        }
-
+  
         if (option.Source == null)
         {
             var error = $"配置更新失败：无法获取其Json文件来源。更新操作：{key} => {value}";
             logger.LogError(error);
             return error;
         }
-
+        
         try
         {
             var doc = new JsonSettingsDocument(option.Source);
@@ -195,7 +195,7 @@ internal class JsonSettingsDocument
         
         if (!IsJsonNodeValueKindCompatible(targetNode, value, out var errorMessage))
         {
-            throw new InvalidOperationException(errorMessage ?? $"{_filePath}中{key}的JsonNode类型{targetNode?.GetValueKind()}与将修改成为的类型{value?.GetValueKind()}不一致");
+            throw new InvalidOperationException($"{_filePath}中类型不兼容：{errorMessage ?? $"{_filePath}中{key}的JsonNode类型{targetNode?.GetValueKind()}与将修改成为的类型{value?.GetValueKind()}不一致"}");
         }
         node[targetProperty] = value;
     }
@@ -226,7 +226,7 @@ internal class JsonSettingsDocument
 
         if (targetKind != newKind)
         {
-            errorMessage = $"{_filePath}中JsonNode类型{targetKind}与将修改成为的类型{newKind}不一致";
+            errorMessage = $"JsonNode类型{targetKind}与将修改成为的类型{newKind}不一致";
             return false;
         }
 
@@ -243,7 +243,7 @@ internal class JsonSettingsDocument
             {
                 if (!IsJsonNodeValueKindCompatible(targetValue, newProperty.Value, out var propertyErrorMessage))
                 {
-                    errorMessage = $"{_filePath}中属性{newProperty.Key}的类型不兼容：{propertyErrorMessage}";
+                    errorMessage = $"属性{newProperty.Key}的类型不兼容：{propertyErrorMessage}";
                     return false;
                 }
             }

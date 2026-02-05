@@ -251,7 +251,7 @@ public class TriggeredJobScheduler(
                 await jobInstanceManager.UpdateStateAsync(
                     instanceId,
                     JobState.Failed,
-                    $"Timer callback error: {ex.GetMessageRecursively()}");
+                    $"Timer callback error: {ex}");
             }
             catch { /* Best effort */ }
         }

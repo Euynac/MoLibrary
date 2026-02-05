@@ -94,43 +94,45 @@
 @code {
     [Parameter] public string FilterText { get; set; } = string.Empty;
     [Parameter] public EventCallback<string> FilterTextChanged { get; set; }
-    
+
     [Parameter] public IReadOnlyCollection<ServiceStatus> SelectedStatuses { get; set; } = new HashSet<ServiceStatus>();
     [Parameter] public EventCallback<IReadOnlyCollection<ServiceStatus>> SelectedStatusesChanged { get; set; }
-    
+
     [Parameter] public IReadOnlyCollection<string> SelectedDomains { get; set; } = new HashSet<string>();
     [Parameter] public EventCallback<IReadOnlyCollection<string>> SelectedDomainsChanged { get; set; }
-    
+
     [Parameter] public bool ShowOnlyWithInstances { get; set; }
     [Parameter] public EventCallback<bool> ShowOnlyWithInstancesChanged { get; set; }
-    
+
     [Parameter] public EventCallback OnFiltersChanged { get; set; }
     [Parameter] public List<RegisteredServiceStatus> AllServices { get; set; } = new();
-    
+
     private List<ServiceStatus> AllStatuses { get; set; } = new();
     private List<string> AllDomains { get; set; } = new();
-    
+    private bool _isInitialized = false;
+
     protected override void OnParametersSet()
     {
         // 获取所有状态
         AllStatuses = Enum.GetValues<ServiceStatus>().ToList();
-        
+
         // 获取所有域
         AllDomains = AllServices.Select(s => s.DomainName ?? "未知").Distinct().OrderBy(d => d).ToList();
-        
-        // 默认全选
-        if (!SelectedStatuses.Any())
+
+        // 默认全选 - 只在首次初始化时设置，不触发回调以避免无限循环
+        if (!_isInitialized)
         {
-            var allStatuses = new HashSet<ServiceStatus>(AllStatuses);
-            SelectedStatuses = allStatuses;
-            SelectedStatusesChanged.InvokeAsync(allStatuses);
-        }
-        
-        if (!SelectedDomains.Any())
-        {
-            var allDomains = new HashSet<string>(AllDomains);
-            SelectedDomains = allDomains;
-            SelectedDomainsChanged.InvokeAsync(allDomains);
+            if (!SelectedStatuses.Any())
+            {
+                SelectedStatuses = new HashSet<ServiceStatus>(AllStatuses);
+            }
+
+            if (!SelectedDomains.Any())
+            {
+                SelectedDomains = new HashSet<string>(AllDomains);
+            }
+
+            _isInitialized = true;
         }
     }
     

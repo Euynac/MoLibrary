@@ -109,7 +109,7 @@ public class JobDispatcher(
             await jobInstanceManager.UpdateStateAsync(
                 instance.InstanceId,
                 JobState.Failed,
-                $"Event bus publishing failure: {ex.GetMessageRecursively()}",
+                $"Event bus publishing failure: {ex}",
                 cancellationToken);
         }
     }

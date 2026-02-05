@@ -21,6 +21,10 @@ public class RegisteredServiceStatus
     public List<string>? DependentSubDomains { get; set; }
     /// <summary>服务实例字典（Key: FromClient, Value: InstanceState）</summary>
     public Dictionary<string, InstanceState> Instances { get; set; } = new();
+
+    /// <summary>Evicted instances (UI layer only, not serialized)</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public List<EvictedInstanceInfo> EvictedInstances { get; set; } = new();
     
     /// <summary>获取运行中的实例数量</summary>
     public int RunningInstanceCount => 
