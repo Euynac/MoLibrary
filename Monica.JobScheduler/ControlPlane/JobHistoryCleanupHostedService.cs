@@ -30,7 +30,7 @@ public class JobHistoryCleanupHostedService(
 
     public override string ServiceName => nameof(JobHistoryCleanupHostedService);
 
-    protected override Task LeaderInitializeAsync(CancellationToken cancellationToken)
+    protected override Task OnBecameLeaderAsync(CancellationToken cancellationToken)
     {
         RecordState(
             $"History cleanup configured: Interval={_jobSchedulerOptions.HistoryCleanupInterval}, MaxDeletionsPerJob={_jobSchedulerOptions.MaxDeletionsPerJobPerCycle}",

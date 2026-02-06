@@ -40,7 +40,7 @@ public class JobConcurrencyGuardHostedService(
 
     public override string ServiceName => nameof(JobConcurrencyGuardHostedService);
 
-    protected override async Task LeaderInitializeAsync(CancellationToken cancellationToken)
+    protected override async Task OnBecameLeaderAsync(CancellationToken cancellationToken)
     {
         await InitializeConcurrencyTrackingAsync(cancellationToken);
     }

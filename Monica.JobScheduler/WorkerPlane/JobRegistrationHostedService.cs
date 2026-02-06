@@ -48,7 +48,7 @@ public class JobRegistrationHostedService(
         return Task.CompletedTask;
     }
 
-    protected override async Task LeaderInitializeAsync(CancellationToken cancellationToken)
+    protected override async Task OnBecameLeaderAsync(CancellationToken cancellationToken)
     {
         // Perform job registration
         await RegisterJobsAsync(cancellationToken);

@@ -51,7 +51,7 @@ public class JobZombieDetectorHostedService(
         public static ZombieDetectionResult Zombie(string reason) => new() { IsZombie = true, Reason = reason };
     }
 
-    protected override Task LeaderInitializeAsync(CancellationToken cancellationToken)
+    protected override Task OnBecameLeaderAsync(CancellationToken cancellationToken)
     {
         RecordState($"Zombie detector configured: Interval={_jobSchedulerOptions.ZombieDetectionInterval}, ProcessingMultiplier={_jobSchedulerOptions.ProcessingTimeoutMultiplier}, EnqueuedTimeout={_jobSchedulerOptions.EnqueuedStateTimeout}", givenLogLevel: LogLevel.Information);
         return Task.CompletedTask;

@@ -38,7 +38,7 @@ public class JobSchedulerHostedService(
 
     public override string ServiceName => nameof(JobSchedulerHostedService);
 
-    protected override async Task LeaderInitializeAsync(CancellationToken cancellationToken)
+    protected override async Task OnBecameLeaderAsync(CancellationToken cancellationToken)
     {
         await recurringJobScheduler.InitializeAsync(cancellationToken);
 
