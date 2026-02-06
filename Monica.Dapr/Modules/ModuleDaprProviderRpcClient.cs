@@ -51,7 +51,21 @@ public class DaprHttpClientRegisterProvider(ModuleDaprProviderRpcClientOption op
 {
     public void ConfigureHttpClientBuilder(IHttpClientBuilder builder, string appid)
     {
-        builder.ConfigureHttpClient(client => client.Timeout = option.Timeout);
-        builder.AddHttpMessageHandler(() => new InvocationHandler { DefaultAppId = appid });
+        builder.ConfigureHttpClient(client =>
+        {
+            try
+            {
+                client.BaseAddress = new Uri($"http://{appid}");
+            }
+            catch (UriFormatException inner)
+            {
+                throw new ArgumentException("The appId must be a valid hostname.", nameof(appid), inner);
+            }
+            client.Timeout = option.Timeout;
+        });
+        builder.AddHttpMessageHandler(() => new InvocationHandler
+        {
+            DefaultAppId = appid
+        });
     }
 }
