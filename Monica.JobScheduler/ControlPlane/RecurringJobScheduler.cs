@@ -381,6 +381,7 @@ public class RecurringJobScheduler(
             schedule.Timer?.Dispose();
         }
         _inFlightRecurringSchedules.Clear();
+        _longIntervalSchedules.Clear();
 
         // Dispose lock
         _scheduleLock.Dispose();
