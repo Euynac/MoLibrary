@@ -61,6 +61,7 @@ public class ModuleRpcClient(ModuleRpcClientOption option) :
     public override void PostConfigureServices(IServiceCollection services)
     {
         var registeredInterfaces = new HashSet<Type>();
+        var registeredAppIds = new HashSet<string>();
         var infoProvider = Option.DomainInfoProvider;
         if (infoProvider == null) throw new Exception("You must config DomainInfoProvider to use rpc client!");
         var dependentDomains = infoProvider.GetDependencyDomains() as Enum;
@@ -101,9 +102,12 @@ public class ModuleRpcClient(ModuleRpcClientOption option) :
 
                         var appid = infoProvider.GetDomainRelatedAppId(domain);
 
-                        var httpClientBuilder = services.AddHttpClient(appid);
-                        httpClientBuilder.AddHttpMessageHandler<AuthenticationDelegatingHandler>();
-                        httpClientRegisterProvider.ConfigureHttpClientBuilder(httpClientBuilder, appid);
+                        if (registeredAppIds.Add(appid))
+                        {
+                            var httpClientBuilder = services.AddHttpClient(appid);
+                            httpClientBuilder.AddHttpMessageHandler<AuthenticationDelegatingHandler>();
+                            httpClientRegisterProvider.ConfigureHttpClientBuilder(httpClientBuilder, appid);
+                        }
 
                         services.TryAddTransient(targetInterface, provider =>
                         {
