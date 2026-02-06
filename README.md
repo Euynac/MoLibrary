@@ -5,13 +5,16 @@
 </p>
 
 
-
 <p align="center">
   <a href="https://github.com/molloryn/Monica.Docs/actions"><img src="https://github.com/molloryn/Monica.Docs/actions/workflows/static.yml/badge.svg" alt="Build Status"></a>
   <a href="https://www.nuget.org/packages?q=Monica"><img src="https://img.shields.io/nuget/v/Monica.Core.svg" alt="NuGet"></a>
   <a href="https://github.com/molloryn/Monica/blob/main/LICENSE"><img src="https://img.shields.io/github/license/molloryn/Monica" alt="License"></a>
   <a href="https://monica.dpdns.org/"><img src="https://img.shields.io/badge/docs-online-brightgreen.svg" alt="Documentation"></a>
+  <a href="https://deepwiki.com/molloryn/Monica"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
 </p>
+
+
+
 
 > ⚠️ **Development Status**: Monica is currently in internal development and undergoing rapid iteration. The API is subject to breaking changes. Documentation is being actively improved. Not recommended for production use at this time.
 

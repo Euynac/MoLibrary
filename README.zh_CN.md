@@ -11,6 +11,7 @@
   <a href="https://www.nuget.org/packages?q=Monica"><img src="https://img.shields.io/nuget/v/Monica.Core.svg" alt="NuGet"></a>
   <a href="https://github.com/molloryn/Monica/blob/main/LICENSE"><img src="https://img.shields.io/github/license/molloryn/Monica" alt="License"></a>
   <a href="https://monica.dpdns.org/"><img src="https://img.shields.io/badge/docs-online-brightgreen.svg" alt="Documentation"></a>
+  <a href="https://deepwiki.com/molloryn/Monica"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
 </p>
 
 > ⚠️ **开发状态**：Monica 目前处于内部开发阶段，正在快速迭代中。API 可能会发生破坏性变更。文档正在积极完善中。目前不建议在生产环境中使用。

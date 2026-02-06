@@ -36,7 +36,7 @@ public static class GenericsTool
         where TIn2 : TOut2
         where TIn1 : TOut1
     {
-        return (t, p) => func((TIn1)t, (TIn2)p);
+        return (t, p) => func((TIn1)t!, (TIn2)p!);
     }
 
     /// <summary>
@@ -49,6 +49,6 @@ public static class GenericsTool
     /// <returns></returns>
     public static Func<TOut, TR> ConvertFunc<TIn, TOut, TR>(this Func<TIn, TR> func) where TIn : TOut
     {
-        return p => func((TIn)p);
+        return p => func((TIn)p!);
     }
 }
