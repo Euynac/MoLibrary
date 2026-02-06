@@ -31,6 +31,7 @@ public class TriggeredJobScheduler(
     // Event subscriptions
     private IAsyncDisposable? _triggeredJobSubscription;
     private IAsyncDisposable? _cancellationSubscription;
+    private IAsyncDisposable? _manualExecutionSubscription;
 
     /// <summary>
     /// Initializes the triggered job scheduler.
@@ -47,6 +48,10 @@ public class TriggeredJobScheduler(
         // Subscribe to job cancellation event
         _cancellationSubscription = await eventBus.SubscribeAsync<JobCancellationRequestedEvent>(OnJobCancellationRequestedAsync);
         logger.LogDebug("Subscribed to JobCancellationRequestedEvent");
+
+        // Subscribe to manual job execution requests from Worker nodes
+        _manualExecutionSubscription = await eventBus.SubscribeAsync<ManualJobExecutionRequestEvent>(OnManualJobExecutionRequestAsync);
+        logger.LogDebug("Subscribed to ManualJobExecutionRequestEvent");
 
         if (!_options.TriggeredJobDebugMode)
         {
@@ -117,6 +122,41 @@ public class TriggeredJobScheduler(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error handling JobTriggeredEvent for {JobKey}", evt.JobKey);
+        }
+    }
+
+    /// <summary>
+    /// Handles ManualJobExecutionRequestEvent from Worker nodes.
+    /// Creates the job instance and dispatches it for execution on the Centre node.
+    /// </summary>
+    private async Task OnManualJobExecutionRequestAsync(ManualJobExecutionRequestEvent evt)
+    {
+        try
+        {
+            var definition = await cacheService.GetDefinitionAsync(evt.JobKey);
+            if (definition == null || definition.IsDisabled)
+            {
+                logger.LogWarning("Manual execution request for job {JobKey}: not found or disabled", evt.JobKey);
+                return;
+            }
+
+            // Create instance with pre-generated ID
+            var instance = await jobInstanceManager.CreateInstanceAsync(
+                definition,
+                parameters: evt.JobArgsJson,
+                JobState.Enqueued,
+                instanceId: evt.InstanceId);
+
+            // Dispatch for execution
+            await jobDispatcher.PublishJobExecutionEventAsync(instance, definition, evt.JobArgsJson);
+
+            logger.LogInformation(
+                "Centre processed manual execution request: {JobKey}, InstanceId: {InstanceId}",
+                evt.JobKey, instance.InstanceId);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error handling ManualJobExecutionRequestEvent for {JobKey}", evt.JobKey);
         }
     }
 
@@ -300,6 +340,10 @@ public class TriggeredJobScheduler(
         if (_cancellationSubscription != null)
         {
             await _cancellationSubscription.DisposeAsync();
+        }
+        if (_manualExecutionSubscription != null)
+        {
+            await _manualExecutionSubscription.DisposeAsync();
         }
 
         // Dispose all delayed job timers

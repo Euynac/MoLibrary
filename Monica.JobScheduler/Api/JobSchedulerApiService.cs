@@ -1,11 +1,15 @@
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Monica.EventBus.Abstractions;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.ControlPlane;
+using Monica.JobScheduler.Events;
 using Monica.JobScheduler.Metadata;
 using Monica.JobScheduler.Models;
 using Monica.JobScheduler.Modules;
+using Monica.RegisterCentre.Modules;
 using Monica.Tool.MoResponse;
 
 namespace Monica.JobScheduler.Api;
@@ -26,6 +30,8 @@ public class JobSchedulerApiService(
     JobDispatcher jobDispatcher,
     JobHistoryCleanupExecutor cleanupExecutor,
     IOptions<ModuleJobSchedulerOption> options,
+    IOptions<ModuleRegisterCentreOption> registerCentreOptions,
+    [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
     ILogger<JobSchedulerApiService> logger)
 {
     /// <summary>
@@ -63,20 +69,26 @@ public class JobSchedulerApiService(
             {
                 return Res.Fail($"Job {jobKey} not found");
             }
-            
-            // Serialize job arguments
+
+            var centreOption = registerCentreOptions.Value;
+
+            // On Worker nodes, delegate to Centre via event bus
+            if (!centreOption.IsCentreServer && !centreOption.IsStandaloneMode)
+            {
+                return await CreateJobInstanceViaCentreAsync(definition, jobArgs, cancellationToken);
+            }
+
+            // Centre/Standalone: execute locally (existing flow)
             var jobArgsJson = jobArgs != null
                 ? JsonSerializer.Serialize(jobArgs, options.Value.JobArgsSerializerOptions)
                 : null;
 
-            // Create instance via JobInstanceManager (pass original object for serialization)
             var instance = await jobInstanceManager.CreateInstanceAsync(
                 definition,
                 jobArgs,
                 JobState.Enqueued,
                 cancellationToken);
 
-            // Publish to event bus for worker pickup via JobDispatcher (pass pre-serialized JSON)
             await jobDispatcher.PublishJobExecutionEventAsync(
                 instance,
                 definition,
@@ -95,6 +107,33 @@ public class JobSchedulerApiService(
             logger.LogError(ex, "Failed to create job instance for {JobKey}", jobKey);
             return Res.Fail($"Failed to create job instance: {ex.Message}");
         }
+    }
+
+    private async Task<Res<string>> CreateJobInstanceViaCentreAsync(
+        JobDefinition definition,
+        object? jobArgs,
+        CancellationToken cancellationToken)
+    {
+        var instanceId = Guid.NewGuid().ToString();
+        var jobArgsJson = jobArgs != null
+            ? JsonSerializer.Serialize(jobArgs, options.Value.JobArgsSerializerOptions)
+            : null;
+
+        var requestEvent = new ManualJobExecutionRequestEvent
+        {
+            JobKey = definition.JobKey,
+            JobArgsJson = jobArgsJson,
+            InstanceId = instanceId,
+            RequestedAt = DateTime.UtcNow
+        };
+
+        await eventBus.PublishAsync(requestEvent, null, cancellationToken);
+
+        logger.LogInformation(
+            "Delegated manual job execution to Centre: {JobKey}, InstanceId: {InstanceId}",
+            definition.JobKey, instanceId);
+
+        return Res.Ok(instanceId);
     }
 
     /// <summary>
