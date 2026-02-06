@@ -56,16 +56,6 @@ public class ModuleHostedService(ModuleHostedServiceOption option)
         foreach (var service in hostedServices)
         {
             if (service is not IMoHostedService moHostedService) continue;
-            switch (service)
-            {
-                // Initialize observable info
-                case MoHostedService moHosted:
-                    moHosted.InitializeObservableInfo();
-                    break;
-                case MoBackgroundService moBackground:
-                    moBackground.InitializeObservableInfo();
-                    break;
-            }
 
             // Register with manager
             manager.RegisterService(moHostedService);

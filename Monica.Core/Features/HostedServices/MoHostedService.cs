@@ -13,13 +13,22 @@ namespace Monica.Core.Features.HostedServices;
 /// Base class for observable IHostedService implementations with built-in state management and exception tracking.
 /// Now uses ObservableAgent for unified tracking.
 /// </summary>
-public abstract class MoHostedService(
-    IObservableInstanceManager observableManager,
-    IOptions<ModuleHostedServiceOption> options,
-    ILogger? logger = null) : IHostedService, IMoHostedService
+public abstract class MoHostedService : IHostedService, IMoHostedService
 {
-    protected readonly ILogger Logger = logger ?? NullLogger.Instance;
-    private readonly ModuleHostedServiceOption _options = options.Value;
+    protected readonly ILogger Logger;
+    private readonly ModuleHostedServiceOption _options;
+    private readonly IObservableInstanceManager observableManager;
+
+    public MoHostedService(
+        IObservableInstanceManager observableManager,
+        IOptions<ModuleHostedServiceOption> options,
+        ILogger? logger = null)
+    {
+        this.observableManager = observableManager;
+        Logger = logger ?? NullLogger.Instance;
+        _options = options.Value;
+        InitializeObservableInfo();
+    }
 
     // IMoHostedService implementation
 
@@ -47,7 +56,7 @@ public abstract class MoHostedService(
     /// <summary>
     /// Initializes observable info (called by manager during registration)
     /// </summary>
-    internal void InitializeObservableInfo()
+    private void InitializeObservableInfo()
     {
         var agentId = $"HostedService_{ServiceName}_{Guid.NewGuid():N}";
         var agent = observableManager.Create(agentId, opt =>
