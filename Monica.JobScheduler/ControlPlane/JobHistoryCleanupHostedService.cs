@@ -15,9 +15,9 @@ namespace Monica.JobScheduler.ControlPlane;
 /// Extends CoordinatedLeaderService for leader-only execution to prevent duplicate cleanup operations.
 /// Supports dynamic leader status changes - stops cleanup loop on leader loss and resumes on leader gain.
 /// </summary>
-public class JobHistoryCleanupService(
+public class JobHistoryCleanupHostedService(
     JobHistoryCleanupExecutor executor,
-    ILogger<JobHistoryCleanupService> logger,
+    ILogger<JobHistoryCleanupHostedService> logger,
     ILeaderElectionService leaderService,
     IOptions<ModuleJobSchedulerOption> options,
     IServiceRegistrationCoordinator coordinator,
@@ -28,7 +28,7 @@ public class JobHistoryCleanupService(
 {
     private readonly ModuleJobSchedulerOption _jobSchedulerOptions = options.Value;
 
-    public override string ServiceName => nameof(JobHistoryCleanupService);
+    public override string ServiceName => nameof(JobHistoryCleanupHostedService);
 
     protected override Task LeaderInitializeAsync(CancellationToken cancellationToken)
     {

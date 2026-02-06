@@ -143,7 +143,7 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
             // Register zombie detection service (conditional)
             if (Option.EnableZombieDetection)
             {
-                services.AddHostedService<JobZombieDetectorService>();
+                services.AddHostedService<JobZombieDetectorHostedService>();
                 Logger.LogInformation(
                     "Zombie detection enabled with interval: {Interval}",
                     Option.ZombieDetectionInterval);
@@ -156,7 +156,7 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
             // Register history cleanup service (conditional)
             if (Option.EnableHistoryCleanup)
             {
-                services.AddHostedService<JobHistoryCleanupService>();
+                services.AddHostedService<JobHistoryCleanupHostedService>();
                 Logger.LogInformation(
                     "History cleanup enabled with interval: {Interval}",
                     Option.HistoryCleanupInterval);

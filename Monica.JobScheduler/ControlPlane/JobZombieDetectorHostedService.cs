@@ -20,12 +20,12 @@ namespace Monica.JobScheduler.ControlPlane;
 /// Extends CoordinatedLeaderService for leader-only execution.
 /// Supports dynamic leader status changes - stops scanning on leader loss and resumes on leader gain.
 /// </summary>
-public class JobZombieDetectorService(
+public class JobZombieDetectorHostedService(
     IMoJobMetadataRepository metadataRepository,
     IJobDefinitionCacheService cacheService,
     JobInstanceManager instanceManager,
     IJobConcurrencyGuard concurrencyGuard,
-    ILogger<JobZombieDetectorService> logger,
+    ILogger<JobZombieDetectorHostedService> logger,
     ILeaderElectionService leaderService,
     IOptions<ModuleJobSchedulerOption> options,
     IServiceRegistrationCoordinator coordinator,
@@ -37,7 +37,7 @@ public class JobZombieDetectorService(
 {
     private readonly ModuleJobSchedulerOption _jobSchedulerOptions = options.Value;
 
-    public override string ServiceName => nameof(JobZombieDetectorService);
+    public override string ServiceName => nameof(JobZombieDetectorHostedService);
 
     /// <summary>
     /// Result of zombie detection check.
