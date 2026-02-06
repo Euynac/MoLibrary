@@ -1,4 +1,5 @@
 ﻿using Dapr.Client;
+using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
@@ -48,10 +49,9 @@ public class ModuleDaprProviderRpcClientOption : MoModuleOption<ModuleDaprProvid
 
 public class DaprHttpClientRegisterProvider(ModuleDaprProviderRpcClientOption option) : IMoRpcHttpClientRegisterProvider
 {
-    public HttpClient GetHttpClient(string appid)
+    public void ConfigureHttpClientBuilder(IHttpClientBuilder builder, string appid)
     {
-        var client = DaprClient.CreateInvokeHttpClient(appid);
-        client.Timeout = option.Timeout;
-        return client;
+        builder.ConfigureHttpClient(client => client.Timeout = option.Timeout);
+        builder.AddHttpMessageHandler(() => new InvocationHandler { DefaultAppId = appid });
     }
 }
