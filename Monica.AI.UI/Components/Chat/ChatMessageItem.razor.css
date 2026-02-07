@@ -176,3 +176,53 @@
     justify-content: flex-end;
     margin-top: 8px;
 }
+
+/* Reasoning section styles */
+.reasoning-section {
+    border-left: 3px solid var(--mud-palette-text-disabled);
+    background-color: var(--mud-palette-background-grey);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+}
+
+.reasoning-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.reasoning-header-clickable {
+    cursor: pointer;
+    border-radius: 6px;
+    padding: 2px 4px;
+    margin: -2px -4px;
+    transition: background-color 0.15s;
+}
+
+.reasoning-header-clickable:hover {
+    background-color: var(--mud-palette-action-default-hover);
+}
+
+.reasoning-header ::deep .reasoning-label {
+    color: var(--mud-palette-text-secondary);
+    font-weight: 500;
+}
+
+.reasoning-header ::deep .reasoning-chevron {
+    color: var(--mud-palette-text-secondary);
+    margin-left: auto;
+}
+
+.reasoning-body {
+    margin-top: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.reasoning-body ::deep .reasoning-text {
+    color: var(--mud-palette-text-secondary);
+    white-space: pre-wrap;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}

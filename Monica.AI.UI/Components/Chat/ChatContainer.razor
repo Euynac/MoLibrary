@@ -24,6 +24,9 @@
         ProviderName="@ProviderName"
         ModelName="@ModelName"
         ShowProviderInfo="@ShowProviderInfo"
+        SupportsReasoning="@SupportsReasoning"
+        ReasoningEnabled="@ReasoningEnabled"
+        ReasoningEnabledChanged="@ReasoningEnabledChanged"
         OnSend="@HandleSend"
         OnCancel="@HandleCancel" />
 </div>
@@ -48,6 +51,9 @@
     [Parameter] public EventCallback OnErrorDismissed { get; set; }
     [Parameter] public EventCallback<(AIChatMessage Message, string NewContent)> OnEditMessage { get; set; }
     [Parameter] public EventCallback<AIChatMessage> OnRetryMessage { get; set; }
+    [Parameter] public bool SupportsReasoning { get; set; }
+    [Parameter] public bool ReasoningEnabled { get; set; }
+    [Parameter] public EventCallback<bool> ReasoningEnabledChanged { get; set; }
 
     private ChatMessageList? _messageListRef;
 

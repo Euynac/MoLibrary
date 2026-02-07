@@ -1,5 +1,6 @@
 @page "/ai-chat"
 @rendermode InteractiveServer
+@using Monica.AI.Models
 @using Monica.Tool.MoResponse
 @implements IDisposable
 @inject AIChatUIService ChatUIService
@@ -58,7 +59,10 @@
             OnRetry="@HandleRetry"
             OnErrorDismissed="@HandleErrorDismissed"
             OnEditMessage="@HandleEditMessage"
-            OnRetryMessage="@HandleRetryMessage" />
+            OnRetryMessage="@HandleRetryMessage"
+            SupportsReasoning="@_supportsReasoning"
+            ReasoningEnabled="@_reasoningEnabled"
+            ReasoningEnabledChanged="@HandleReasoningEnabledChanged" />
     </main>
 </div>
 
@@ -80,6 +84,8 @@
     private string? _currentModelName;
     private CancellationTokenSource? _cts;
     private CancellationToken _cancellationToken;
+    private bool _reasoningEnabled;
+    private bool _supportsReasoning;
 
     protected override void OnInitialized()
     {
@@ -92,6 +98,8 @@
         _currentProviderId = defaultProvider?.ProviderId;
         _currentProviderName = defaultProvider?.DisplayName ?? string.Empty;
         _currentModelName = defaultProvider?.DefaultModel;
+
+        UpdateSupportsReasoning();
 
         // Subscribe to session change events
         _sessionStorage.CurrentSessionChanged += OnCurrentSessionChanged;
@@ -156,6 +164,8 @@
         var provider = _providers.FirstOrDefault(p => p.ProviderId == providerId);
         _currentProviderName = provider?.DisplayName ?? string.Empty;
         _currentModelName = provider?.DefaultModel;
+
+        UpdateSupportsReasoning();
 
         // Update current session provider
         var currentSession = _sessionStorage.GetSession(_sessionStorage.CurrentSessionId ?? string.Empty);
@@ -227,7 +237,7 @@
             }
 
             // Use streaming response
-            _streamingContent = ChatUIService.SendMessageStreamingAsync(sessionId, message, _cts.Token);
+            _streamingContent = ChatUIService.SendMessageStreamingAsync(sessionId, message, _reasoningEnabled, _cts.Token);
             UpdateCurrentSession();
             StateHasChanged();
         }
@@ -318,6 +328,7 @@
             _sessionStorage.CurrentSessionId!,
             args.Message.Id,
             args.NewContent,
+            _reasoningEnabled,
             _cts.Token);
 
         UpdateCurrentSession();
@@ -343,6 +354,7 @@
         _streamingContent = ChatUIService.RetryMessageAsync(
             _sessionStorage.CurrentSessionId!,
             message.Id,
+            _reasoningEnabled,
             _cts.Token);
 
         UpdateCurrentSession();
@@ -408,6 +420,27 @@
         _providers = ChatUIService.GetProviders();
         Snackbar.Add("系统提示词已更新", Severity.Success);
         StateHasChanged();
+    }
+
+    private void UpdateSupportsReasoning()
+    {
+        var provider = _providers.FirstOrDefault(p => p.ProviderId == _currentProviderId);
+        var modelInfo = provider?.SupportedModels?
+            .OfType<LLMModelInfo>()
+            .FirstOrDefault(m => m.ModelName == _currentModelName);
+
+        _supportsReasoning = modelInfo?.SupportsReasoning ?? false;
+
+        // Reset reasoning toggle if new model doesn't support it
+        if (!_supportsReasoning)
+        {
+            _reasoningEnabled = false;
+        }
+    }
+
+    private void HandleReasoningEnabledChanged(bool enabled)
+    {
+        _reasoningEnabled = enabled;
     }
 
     public void Dispose()

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
@@ -140,6 +141,7 @@ public class AIChatUIService(
     public IAsyncEnumerable<ChatResponseUpdate> SendMessageStreamingAsync(
         string sessionId,
         string message,
+        bool reasoningEnabled = false,
         CancellationToken ct = default)
     {
         var sessionInfo = sessionStorage.GetSession(sessionId);
@@ -160,7 +162,7 @@ public class AIChatUIService(
         }
 
         // 返回异步流式响应
-        return StreamResponseAsync(sessionId, message, sessionInfo, ct);
+        return StreamResponseAsync(sessionId, message, sessionInfo, reasoningEnabled, ct);
     }
 
     /// <summary>
@@ -170,6 +172,7 @@ public class AIChatUIService(
         string sessionId,
         string message,
         ChatSessionInfo? sessionInfo,
+        bool reasoningEnabled = false,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
         var request = new AIChatRequest
@@ -177,22 +180,39 @@ public class AIChatUIService(
             SessionId = sessionId,
             Message = message,
             Streaming = true,
-            ProviderId = sessionInfo?.ProviderId
+            ProviderId = sessionInfo?.ProviderId,
+            ReasoningEnabled = reasoningEnabled
         };
 
         var fullContent = string.Empty;
+        var fullReasoning = string.Empty;
+        var reasoningStopwatch = new Stopwatch();
 
         await foreach (var update in chatService.SendMessageStreamingAsync(request, ct))
         {
-            if (!string.IsNullOrEmpty(update.Text))
+            foreach (var content in update.Contents)
             {
-                fullContent += update.Text;
+                if (content is TextReasoningContent reasoning && !string.IsNullOrEmpty(reasoning.Text))
+                {
+                    if (!reasoningStopwatch.IsRunning)
+                        reasoningStopwatch.Start();
+                    fullReasoning += reasoning.Text;
+                }
+                else if (content is TextContent text && !string.IsNullOrEmpty(text.Text))
+                {
+                    if (reasoningStopwatch.IsRunning)
+                        reasoningStopwatch.Stop();
+                    fullContent += text.Text;
+                }
             }
 
             yield return update;
         }
 
-        // 流式响应完成后，添加完整的助手消息到本地存储
+        if (reasoningStopwatch.IsRunning)
+            reasoningStopwatch.Stop();
+
+        // Add the complete assistant message to local storage
         if (sessionInfo != null)
         {
             sessionInfo.Messages.Add(new AIChatMessage
@@ -200,7 +220,11 @@ public class AIChatUIService(
                 Role = AIChatRole.Assistant,
                 Content = fullContent,
                 ProviderId = sessionInfo.ProviderId,
-                ModelName = sessionInfo.ModelName
+                ModelName = sessionInfo.ModelName,
+                ReasoningContent = string.IsNullOrEmpty(fullReasoning) ? null : fullReasoning,
+                ReasoningDurationSeconds = reasoningStopwatch.Elapsed.TotalSeconds > 0
+                    ? reasoningStopwatch.Elapsed.TotalSeconds
+                    : null
             });
             sessionInfo.UpdatedAt = DateTimeOffset.UtcNow;
         }
@@ -217,6 +241,7 @@ public class AIChatUIService(
         string sessionId,
         string messageId,
         string newContent,
+        bool reasoningEnabled = false,
         CancellationToken ct = default)
     {
         // SYNCHRONOUS: This code runs IMMEDIATELY when method is called
@@ -240,7 +265,7 @@ public class AIChatUIService(
         chatService.TruncateSessionHistory(sessionId, index);
 
         // Return async streaming (only this part is lazy)
-        return SendMessageStreamingAsync(sessionId, newContent, ct);
+        return SendMessageStreamingAsync(sessionId, newContent, reasoningEnabled, ct);
     }
 
     /// <summary>
@@ -253,6 +278,7 @@ public class AIChatUIService(
     public IAsyncEnumerable<ChatResponseUpdate> RetryMessageAsync(
         string sessionId,
         string messageId,
+        bool reasoningEnabled = false,
         CancellationToken ct = default)
     {
         // SYNCHRONOUS: This code runs IMMEDIATELY when method is called
@@ -283,7 +309,7 @@ public class AIChatUIService(
         chatService.TruncateSessionHistory(sessionId, index);
 
         // Stream new AI response without adding user message (it already exists)
-        return StreamResponseOnlyAsync(sessionId, userMessage.Content, sessionInfo, ct);
+        return StreamResponseOnlyAsync(sessionId, userMessage.Content, sessionInfo, reasoningEnabled, ct);
     }
 
     /// <summary>
@@ -294,6 +320,7 @@ public class AIChatUIService(
         string sessionId,
         string message,
         ChatSessionInfo sessionInfo,
+        bool reasoningEnabled = false,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
         var request = new AIChatRequest
@@ -301,19 +328,36 @@ public class AIChatUIService(
             SessionId = sessionId,
             Message = message,
             Streaming = true,
-            ProviderId = sessionInfo.ProviderId
+            ProviderId = sessionInfo.ProviderId,
+            ReasoningEnabled = reasoningEnabled
         };
 
         var fullContent = string.Empty;
+        var fullReasoning = string.Empty;
+        var reasoningStopwatch = new Stopwatch();
 
         await foreach (var update in chatService.SendMessageStreamingAsync(request, ct))
         {
-            if (!string.IsNullOrEmpty(update.Text))
+            foreach (var content in update.Contents)
             {
-                fullContent += update.Text;
+                if (content is TextReasoningContent reasoning && !string.IsNullOrEmpty(reasoning.Text))
+                {
+                    if (!reasoningStopwatch.IsRunning)
+                        reasoningStopwatch.Start();
+                    fullReasoning += reasoning.Text;
+                }
+                else if (content is TextContent text && !string.IsNullOrEmpty(text.Text))
+                {
+                    if (reasoningStopwatch.IsRunning)
+                        reasoningStopwatch.Stop();
+                    fullContent += text.Text;
+                }
             }
             yield return update;
         }
+
+        if (reasoningStopwatch.IsRunning)
+            reasoningStopwatch.Stop();
 
         // Add only the assistant message to local storage
         sessionInfo.Messages.Add(new AIChatMessage
@@ -321,7 +365,11 @@ public class AIChatUIService(
             Role = AIChatRole.Assistant,
             Content = fullContent,
             ProviderId = sessionInfo.ProviderId,
-            ModelName = sessionInfo.ModelName
+            ModelName = sessionInfo.ModelName,
+            ReasoningContent = string.IsNullOrEmpty(fullReasoning) ? null : fullReasoning,
+            ReasoningDurationSeconds = reasoningStopwatch.Elapsed.TotalSeconds > 0
+                ? reasoningStopwatch.Elapsed.TotalSeconds
+                : null
         });
         sessionInfo.UpdatedAt = DateTimeOffset.UtcNow;
     }

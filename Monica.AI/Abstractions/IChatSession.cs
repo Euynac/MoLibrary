@@ -75,9 +75,10 @@ public interface IChatSession
     /// 发送消息并获取流式响应
     /// </summary>
     /// <param name="message">用户消息</param>
+    /// <param name="options">Chat options (e.g. for reasoning)</param>
     /// <param name="ct">取消令牌</param>
     /// <returns>流式响应</returns>
-    IAsyncEnumerable<ChatResponseUpdate> SendMessageStreamingAsync(string message, CancellationToken ct = default);
+    IAsyncEnumerable<ChatResponseUpdate> SendMessageStreamingAsync(string message, ChatOptions? options = null, CancellationToken ct = default);
 
     /// <summary>
     /// 清空会话历史

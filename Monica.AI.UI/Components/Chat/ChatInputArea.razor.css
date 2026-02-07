@@ -41,6 +41,11 @@
     background-color: var(--mud-palette-action-default-hover);
 }
 
+.input-area ::deep .input-action-button.active {
+    color: var(--mud-palette-secondary);
+    background-color: var(--mud-palette-secondary-hover);
+}
+
 .input-area ::deep .input-field {
     flex: 1;
 }

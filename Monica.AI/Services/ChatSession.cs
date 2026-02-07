@@ -128,6 +128,7 @@ public class ChatSession : IChatSession
     /// <inheritdoc />
     public async IAsyncEnumerable<ChatResponseUpdate> SendMessageStreamingAsync(
         string message,
+        ChatOptions? options = null,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
         var provider = _providerFactory.GetProvider(ProviderId);
@@ -156,19 +157,29 @@ public class ChatSession : IChatSession
         chatMessages.RemoveAt(chatMessages.Count - 1);
 
         var fullContent = string.Empty;
+        var fullReasoning = string.Empty;
 
-        await foreach (var update in chatClient.GetStreamingResponseAsync(chatMessages, cancellationToken: ct))
+        await foreach (var update in chatClient.GetStreamingResponseAsync(chatMessages, options, cancellationToken: ct))
         {
-            if (!string.IsNullOrEmpty(update.Text))
+            foreach (var content in update.Contents)
             {
-                fullContent += update.Text;
-                assistantMessage.Content = fullContent;
+                if (content is TextReasoningContent reasoning && !string.IsNullOrEmpty(reasoning.Text))
+                {
+                    fullReasoning += reasoning.Text;
+                    assistantMessage.ReasoningContent = fullReasoning;
+                }
+                else if (content is TextContent text && !string.IsNullOrEmpty(text.Text))
+                {
+                    fullContent += text.Text;
+                    assistantMessage.Content = fullContent;
+                }
             }
 
             yield return update;
         }
 
         assistantMessage.Content = fullContent;
+        assistantMessage.ReasoningContent = string.IsNullOrEmpty(fullReasoning) ? null : fullReasoning;
         assistantMessage.IsStreaming = false;
         UpdatedAt = DateTimeOffset.UtcNow;
     }

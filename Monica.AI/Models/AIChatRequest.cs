@@ -34,6 +34,11 @@ public class AIChatRequest
     /// 是否使用流式响应
     /// </summary>
     public bool Streaming { get; set; } = true;
+
+    /// <summary>
+    /// Whether to enable reasoning/thinking mode for this request
+    /// </summary>
+    public bool ReasoningEnabled { get; set; }
 }
 
 /// <summary>

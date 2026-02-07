@@ -1,3 +1,4 @@
+@using System.Diagnostics
 @implements IAsyncDisposable
 
 <div class="message-wrapper assistant-message">
@@ -15,6 +16,43 @@
             }
             else
             {
+                @* Reasoning section *@
+                @if (!string.IsNullOrEmpty(_reasoningContent))
+                {
+                    <div class="reasoning-section @(_isReasoning ? "reasoning-active" : "")">
+                        @if (_isReasoning)
+                        {
+                            <div class="reasoning-header">
+                                <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small" />
+                                <MudText Typo="Typo.body2" Class="reasoning-label">Thinking...</MudText>
+                                <span class="reasoning-pulse"></span>
+                            </div>
+                            <div class="reasoning-body">
+                                <MudText Typo="Typo.body2" Class="reasoning-text">@_reasoningContent</MudText>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="reasoning-header reasoning-header-clickable"
+                                 @onclick="ToggleReasoningExpanded">
+                                <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small" />
+                                <MudText Typo="Typo.body2" Class="reasoning-label">
+                                    Thought for @FormatDuration(_reasoningDurationSeconds) seconds
+                                </MudText>
+                                <MudIcon Icon="@(_reasoningExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                                         Size="Size.Small" Class="reasoning-chevron" />
+                            </div>
+                            @if (_reasoningExpanded)
+                            {
+                                <div class="reasoning-body">
+                                    <MudText Typo="Typo.body2" Class="reasoning-text">@_reasoningContent</MudText>
+                                </div>
+                            }
+                        }
+                    </div>
+                }
+
+                @* Main content *@
                 @if (EnableMarkdown && !string.IsNullOrEmpty(_content))
                 {
                     <MudMarkdown Value="@_content" />
@@ -23,7 +61,7 @@
                 {
                     <MudText Typo="Typo.body1" Class="message-text">@_content</MudText>
                 }
-                else if (_isStreaming)
+                else if (_isStreaming && string.IsNullOrEmpty(_reasoningContent))
                 {
                     <MudSkeleton SkeletonType="SkeletonType.Text" Width="200px" />
                     <MudSkeleton SkeletonType="SkeletonType.Text" Width="160px" />
@@ -45,7 +83,12 @@
     [Parameter] public bool EnableMarkdown { get; set; } = true;
 
     private string _content = string.Empty;
+    private string _reasoningContent = string.Empty;
     private bool _isStreaming = true;
+    private bool _isReasoning;
+    private bool _reasoningExpanded;
+    private double _reasoningDurationSeconds;
+    private readonly Stopwatch _reasoningStopwatch = new();
     private bool _hasError;
     private string? _errorMessage;
     private CancellationTokenSource? _cts;
@@ -57,7 +100,6 @@
         {
             _hasStarted = true;
             _cts = new CancellationTokenSource();
-            // Use Task.Run to ensure fire-and-forget is properly tracked
             _ = Task.Run(ConsumeStreamAsync);
         }
     }
@@ -74,9 +116,35 @@
         {
             await foreach (var update in StreamingContent.WithCancellation(linkedCts.Token))
             {
-                if (!string.IsNullOrEmpty(update.Text))
+                var needsRender = false;
+
+                foreach (var content in update.Contents)
                 {
-                    _content += update.Text;
+                    if (content is TextReasoningContent reasoning && !string.IsNullOrEmpty(reasoning.Text))
+                    {
+                        if (!_reasoningStopwatch.IsRunning)
+                        {
+                            _reasoningStopwatch.Start();
+                            _isReasoning = true;
+                        }
+                        _reasoningContent += reasoning.Text;
+                        needsRender = true;
+                    }
+                    else if (content is TextContent text && !string.IsNullOrEmpty(text.Text))
+                    {
+                        if (_isReasoning)
+                        {
+                            _reasoningStopwatch.Stop();
+                            _reasoningDurationSeconds = _reasoningStopwatch.Elapsed.TotalSeconds;
+                            _isReasoning = false;
+                        }
+                        _content += text.Text;
+                        needsRender = true;
+                    }
+                }
+
+                if (needsRender)
+                {
                     await InvokeAsync(StateHasChanged);
                 }
             }
@@ -99,10 +167,26 @@
         }
         finally
         {
+            if (_reasoningStopwatch.IsRunning)
+            {
+                _reasoningStopwatch.Stop();
+                _reasoningDurationSeconds = _reasoningStopwatch.Elapsed.TotalSeconds;
+                _isReasoning = false;
+            }
             _isStreaming = false;
             await InvokeAsync(StateHasChanged);
             await InvokeAsync(() => OnStreamComplete.InvokeAsync(_content));
         }
+    }
+
+    private void ToggleReasoningExpanded()
+    {
+        _reasoningExpanded = !_reasoningExpanded;
+    }
+
+    private static string FormatDuration(double seconds)
+    {
+        return seconds < 1 ? $"{seconds:F1}" : $"{seconds:F1}";
     }
 
     private async Task HandleStreamError(string message)

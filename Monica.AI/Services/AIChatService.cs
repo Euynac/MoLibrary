@@ -185,7 +185,15 @@ public class AIChatService(IAIProviderFactory providerFactory, IOptions<ModuleAI
             session.SystemPrompt = request.SystemPrompt;
         }
 
-        await foreach (var update in session.SendMessageStreamingAsync(request.Message, ct))
+        ChatOptions? chatOptions = null;
+        if (request.ReasoningEnabled)
+        {
+            chatOptions = new ChatOptions();
+            chatOptions.AdditionalProperties ??= new AdditionalPropertiesDictionary();
+            chatOptions.AdditionalProperties["reasoning_effort"] = "medium";
+        }
+
+        await foreach (var update in session.SendMessageStreamingAsync(request.Message, chatOptions, ct))
         {
             yield return update;
         }

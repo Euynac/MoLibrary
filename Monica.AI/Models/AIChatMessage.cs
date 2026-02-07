@@ -43,6 +43,16 @@ public class AIChatMessage
     public TokenUsage? Usage { get; set; }
 
     /// <summary>
+    /// Reasoning/thinking content from the model (e.g., OpenAI o1, Claude extended thinking)
+    /// </summary>
+    public string? ReasoningContent { get; set; }
+
+    /// <summary>
+    /// Duration in seconds the model spent reasoning
+    /// </summary>
+    public double? ReasoningDurationSeconds { get; set; }
+
+    /// <summary>
     /// 是否正在流式传输中
     /// </summary>
     public bool IsStreaming { get; set; }
@@ -145,7 +155,12 @@ public class TokenUsage
     public int OutputTokens { get; init; }
 
     /// <summary>
+    /// Reasoning Token 数量
+    /// </summary>
+    public int ReasoningTokens { get; init; }
+
+    /// <summary>
     /// 总 Token 数量
     /// </summary>
-    public int TotalTokens => InputTokens + OutputTokens;
+    public int TotalTokens => InputTokens + OutputTokens + ReasoningTokens;
 }

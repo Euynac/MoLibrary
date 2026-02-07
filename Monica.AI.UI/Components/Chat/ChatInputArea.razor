@@ -21,11 +21,14 @@
                                    Class="input-action-button"
                                    OnClick="@HandleAttach" />
                 </MudTooltip>
-                <MudTooltip Text="Deep thinking">
-                    <MudIconButton Icon="@Icons.Material.Filled.Psychology"
-                                   Class="input-action-button"
-                                   OnClick="@HandleDeepThinking" />
-                </MudTooltip>
+                @if (SupportsReasoning)
+                {
+                    <MudTooltip Text="@(ReasoningEnabled ? "Disable deep thinking" : "Enable deep thinking")">
+                        <MudIconButton Icon="@Icons.Material.Filled.Psychology"
+                                       Class="@($"input-action-button {(ReasoningEnabled ? "active" : "")}")"
+                                       OnClick="@HandleDeepThinking" />
+                    </MudTooltip>
+                }
             </div>
             <div class="input-actions-right">
                 <MudButton Variant="Variant.Outlined"
@@ -65,11 +68,14 @@
 </div>
 
 @code {
-    [Parameter] public string Placeholder { get; set; } = "给 AI 发送消息...";
+    [Parameter] public string Placeholder { get; set; } = "Send a message...";
     [Parameter] public bool IsSending { get; set; }
     [Parameter] public string? ProviderName { get; set; }
     [Parameter] public string? ModelName { get; set; }
     [Parameter] public bool ShowProviderInfo { get; set; } = true;
+    [Parameter] public bool SupportsReasoning { get; set; }
+    [Parameter] public bool ReasoningEnabled { get; set; }
+    [Parameter] public EventCallback<bool> ReasoningEnabledChanged { get; set; }
     [Parameter] public EventCallback<string> OnSend { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
 
@@ -123,10 +129,9 @@
         return Task.CompletedTask;
     }
 
-    private Task HandleDeepThinking()
+    private async Task HandleDeepThinking()
     {
-        // TODO: Implement deep thinking mode.
-        return Task.CompletedTask;
+        await ReasoningEnabledChanged.InvokeAsync(!ReasoningEnabled);
     }
 
     private Task HandleModelSwitch()

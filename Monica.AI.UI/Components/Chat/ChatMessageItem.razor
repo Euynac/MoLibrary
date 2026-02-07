@@ -41,6 +41,33 @@
         {
             @* AI message - keep current structure with actions inside *@
             <div class="message-content assistant-bubble">
+                @if (!string.IsNullOrEmpty(Message.ReasoningContent))
+                {
+                    <div class="reasoning-section">
+                        <div class="reasoning-header reasoning-header-clickable"
+                             @onclick="ToggleReasoningExpanded">
+                            <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small" />
+                            <MudText Typo="Typo.body2" Class="reasoning-label">
+                                @if (Message.ReasoningDurationSeconds.HasValue)
+                                {
+                                    @($"Thought for {Message.ReasoningDurationSeconds.Value:F1} seconds")
+                                }
+                                else
+                                {
+                                    @("Reasoning")
+                                }
+                            </MudText>
+                            <MudIcon Icon="@(_reasoningExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                                     Size="Size.Small" Class="reasoning-chevron" />
+                        </div>
+                        @if (_reasoningExpanded)
+                        {
+                            <div class="reasoning-body">
+                                <MudText Typo="Typo.body2" Class="reasoning-text">@Message.ReasoningContent</MudText>
+                            </div>
+                        }
+                    </div>
+                }
                 @if (EnableMarkdown)
                 {
                     <MudMarkdown Value="@Message.Content" />
@@ -107,6 +134,7 @@
     private bool IsUser => Message.Role == AIChatRole.User;
     private bool _isEditing;
     private string _editContent = string.Empty;
+    private bool _reasoningExpanded;
 
     private async Task HandleCopy()
     {
@@ -143,5 +171,10 @@
     private async Task HandleRetry()
     {
         await OnRetry.InvokeAsync(Message);
+    }
+
+    private void ToggleReasoningExpanded()
+    {
+        _reasoningExpanded = !_reasoningExpanded;
     }
 }
