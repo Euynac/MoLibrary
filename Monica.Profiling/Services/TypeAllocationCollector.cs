@@ -6,6 +6,7 @@ using Microsoft.Diagnostics.Tracing.Parsers.Clr;
 using Microsoft.Diagnostics.Tracing.Session;
 using Microsoft.Extensions.Logging;
 using Monica.Profiling.Models;
+using Monica.Tool.Extensions;
 
 namespace Monica.Profiling.Services;
 
@@ -207,7 +208,8 @@ public class TypeAllocationCollector : IDisposable
         _snapshotTimer?.Dispose();
         _snapshotTimer = null;
 
-        _cts?.Cancel();
+        _cts.SafeCancelAndDispose();
+        _cts = null;
 
         try
         {
@@ -221,9 +223,6 @@ public class TypeAllocationCollector : IDisposable
         _session?.Dispose();
         _session = null;
         _source = null;
-
-        _cts?.Dispose();
-        _cts = null;
     }
 
     /// <summary>

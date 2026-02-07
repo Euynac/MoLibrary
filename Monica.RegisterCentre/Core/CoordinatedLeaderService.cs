@@ -8,6 +8,7 @@ using Monica.Core.Modules;
 using Monica.RegisterCentre.Events;
 using Monica.RegisterCentre.Interfaces;
 using Monica.RegisterCentre.Modules;
+using Monica.Tool.Extensions;
 
 namespace Monica.RegisterCentre.Core;
 
@@ -268,7 +269,8 @@ public abstract class CoordinatedLeaderService(
         // Cancel leader-scoped operations
         if (_leaderCts != null)
         {
-            await _leaderCts.CancelAsync();
+            try { await _leaderCts.CancelAsync(); }
+            catch (ObjectDisposedException) { }
 
             // Wait for background task to complete
             if (_leaderBackgroundTask != null)
@@ -289,7 +291,7 @@ public abstract class CoordinatedLeaderService(
                 _leaderBackgroundTask = null;
             }
 
-            _leaderCts.Dispose();
+            _leaderCts.SafeCancelAndDispose();
             _leaderCts = null;
         }
 

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.Extensions;
 using Monica.StateStore.Modules;
+using Monica.Tool.Extensions;
 // ReSharper disable PossiblyMistakenUseOfCancellationToken
 
 namespace Monica.StateStore.CancellationManager;
@@ -207,8 +208,7 @@ public class DistributedCancellationManager(
             // 清理本地资源
             if (_localTokenSources.TryRemove(key, out var tokenSource))
             {
-                await tokenSource.CancelAsync();
-                tokenSource.Dispose();
+                await tokenSource.SafeCancelAndDisposeAsync();
             }
 
             logger.LogInformation("Deleted distributed cancellation token for key: {Key}", key);
@@ -300,8 +300,7 @@ public class DistributedCancellationManager(
                         // 分布式状态已被删除，清理本地资源
                         if (_localTokenSources.TryRemove(key, out var localSource))
                         {
-                            await localSource.CancelAsync();
-                            localSource.Dispose();
+                            await localSource.SafeCancelAndDisposeAsync();
                         }
                         if (_options.EnableVerboseLogging)
                             logger.LogDebug("Distributed state deleted, cleaned up local resources for key: {Key}", key);

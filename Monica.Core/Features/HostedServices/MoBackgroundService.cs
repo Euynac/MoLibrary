@@ -6,6 +6,7 @@ using Monica.Core.Features.HostedServices.Interfaces;
 using Monica.Core.Features.HostedServices.Models;
 using Monica.Core.Features.ObservableInstance;
 using Monica.Core.Modules;
+using Monica.Tool.Extensions;
 
 namespace Monica.Core.Features.HostedServices;
 
@@ -170,14 +171,17 @@ public abstract class MoBackgroundService(
         {
             RecordState("Service stopping", HostedServiceState.Stopping);
 
-            if (_heartbeatCts?.Token.CanBeCanceled is true)
+            if (_heartbeatCts != null)
             {
-                await _heartbeatCts.CancelAsync();
+                try { await _heartbeatCts.CancelAsync(); }
+                catch (ObjectDisposedException) { }
             }
             if (_heartbeatTask != null)
             {
                 await _heartbeatTask;
             }
+            _heartbeatCts.SafeCancelAndDispose();
+            _heartbeatCts = null;
 
             await base.StopAsync(cancellationToken);
 
@@ -221,11 +225,8 @@ public abstract class MoBackgroundService(
     /// </summary>
     public override void Dispose()
     {
-        if (_heartbeatCts?.Token.CanBeCanceled is true)
-        {
-            _heartbeatCts?.Cancel();
-        }
-        _heartbeatCts?.Dispose();
+        _heartbeatCts.SafeCancelAndDispose();
+        _heartbeatCts = null;
         base.Dispose();
     }
 }

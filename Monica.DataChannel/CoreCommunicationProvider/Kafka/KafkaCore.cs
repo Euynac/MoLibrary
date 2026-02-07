@@ -2,6 +2,7 @@ using Confluent.Kafka;
 using Microsoft.Extensions.Logging;
 using Monica.DataChannel.CoreCommunication;
 using Monica.DataChannel.Pipeline;
+using Monica.Tool.Extensions;
 
 namespace Monica.DataChannel.CoreCommunicationProvider.Kafka;
 
@@ -154,11 +155,12 @@ public class KafkaCore(MetadataForKafka metadata, ILogger<KafkaCore> logger) : C
         try
         {
             // Cancel consumer loop
-            if (_consumerCts?.Token.CanBeCanceled is true)
+            if (_consumerCts != null)
             {
-                await _consumerCts.CancelAsync();
+                try { await _consumerCts.CancelAsync(); }
+                catch (ObjectDisposedException) { }
             }
-            
+
             // Wait for consumer task to complete
             if (_consumerTask != null)
             {
@@ -176,8 +178,8 @@ public class KafkaCore(MetadataForKafka metadata, ILogger<KafkaCore> logger) : C
                 _producer.Dispose();
             }
 
-            _consumerCts?.Dispose();
-            
+            _consumerCts.SafeCancelAndDispose();
+
             logger.LogInformation("Kafka core disposed successfully");
         }
         catch (Exception ex)

@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
+using Monica.Tool.Extensions;
 
 namespace Monica.StateStore.CancellationManager;
 
@@ -134,7 +135,7 @@ public class InMemoryCancellationManager(ILogger<InMemoryCancellationManager> lo
         // 移除并重新创建取消令牌源
         if (_tokenSources.TryRemove(key, out var oldTokenSource))
         {
-            oldTokenSource.Dispose();
+            oldTokenSource.SafeCancelAndDispose();
         }
 
         var newTokenSource = new CancellationTokenSource();
@@ -160,11 +161,7 @@ public class InMemoryCancellationManager(ILogger<InMemoryCancellationManager> lo
         // 移除并清理取消令牌源
         if (_tokenSources.TryRemove(key, out var tokenSource))
         {
-            if (!tokenSource.Token.IsCancellationRequested)
-            {
-                tokenSource.Cancel();
-            }
-            tokenSource.Dispose();
+            tokenSource.SafeCancelAndDispose();
         }
 
         logger.LogDebug("Deleted token for key: {Key}", key);

@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using Monica.DataChannel.CoreCommunicationProvider.TCP.Utils;
+using Monica.Tool.Extensions;
 
 namespace Monica.DataChannel.CoreCommunicationProvider.TCP
 {
@@ -138,11 +139,8 @@ namespace Monica.DataChannel.CoreCommunicationProvider.TCP
 
         public void Dispose()
         {
-
-            if (_source != null)
-            {
-                _source.Cancel();
-            }
+            _source.SafeCancelAndDispose();
+            _source = null;
         }
     }
 }

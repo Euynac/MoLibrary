@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Framework.UI.Modules;
 using Monica.Framework.UI.UILogging.Models;
+using Monica.Tool.Extensions;
 using Monica.Tool.MoResponse;
 
 namespace Monica.Framework.UI.UILogging.Services;
@@ -70,7 +71,7 @@ public sealed class LoggingService(
         }
 
         // 确保释放旧的 CancellationTokenSource
-        _tailCts?.Dispose();
+        _tailCts.SafeCancelAndDispose();
 
         var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _tailCts = linked;
@@ -92,9 +93,10 @@ public sealed class LoggingService(
 
         try
         {
-            if (_tailCts?.Token.CanBeCanceled is true)
+            if (_tailCts != null)
             {
-                await _tailCts.CancelAsync();
+                try { await _tailCts.CancelAsync(); }
+                catch (ObjectDisposedException) { }
             }
             if (_tailTask is { } task)
             {
@@ -111,7 +113,7 @@ public sealed class LoggingService(
         finally
         {
             _tailTask = null;
-            _tailCts?.Dispose();
+            _tailCts.SafeCancelAndDispose();
             _tailCts = null;
             _isRunning = false;
             logger.LogInformation("日志监听任务已停止");
