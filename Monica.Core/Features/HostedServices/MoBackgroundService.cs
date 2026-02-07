@@ -15,17 +15,26 @@ namespace Monica.Core.Features.HostedServices;
 /// exception tracking, and heartbeat monitoring.
 /// Now uses ObservableAgent for unified tracking.
 /// </summary>
-public abstract class MoBackgroundService(
-    IObservableInstanceManager observableManager,
-    IOptions<ModuleHostedServiceOption> options,
-    ILogger? logger = null) : BackgroundService, IMoHostedService
+public abstract class MoBackgroundService : BackgroundService, IMoHostedService
 {
-    protected readonly ILogger Logger = logger ?? NullLogger.Instance;
-    private readonly ModuleHostedServiceOption _options = options.Value;
+    protected readonly ILogger Logger;
+    private readonly ModuleHostedServiceOption _options;
+    private readonly IObservableInstanceManager observableManager;
 
     // Heartbeat mechanism
     private CancellationTokenSource? _heartbeatCts;
     private Task? _heartbeatTask;
+
+    public MoBackgroundService(
+        IObservableInstanceManager observableManager,
+        IOptions<ModuleHostedServiceOption> options,
+        ILogger? logger = null)
+    {
+        this.observableManager = observableManager;
+        Logger = logger ?? NullLogger.Instance;
+        _options = options.Value;
+        InitializeObservableInfo();
+    }
 
     // IMoHostedService implementation
 
@@ -52,7 +61,7 @@ public abstract class MoBackgroundService(
     /// <summary>
     /// Initializes observable info (called by manager during registration)
     /// </summary>
-    internal void InitializeObservableInfo()
+    private void InitializeObservableInfo()
     {
         var agentId = $"HostedService_{ServiceName}_{Guid.NewGuid():N}";
         var agent = observableManager.Create(agentId, opt =>

@@ -56,12 +56,12 @@ public static class HttpApiExtensions
             }
             else
             {
-                errorRes.AppendExtraInfo("exception", e.ToString());
+                errorRes.AppendExtraInfo("exception", e.ToString().Split('\n'));
             }
             var innerException = e.InnerException;
             while (innerException != null)
             {
-                errorRes.AppendExtraInfo("exception", innerException.ToString());
+                errorRes.AppendExtraInfo("exception", innerException.ToString().Split('\n'));
                 innerException = innerException.InnerException;
             }
         }
@@ -164,12 +164,12 @@ public static class HttpApiExtensions
             }
             else
             {
-                errorRes.AppendExtraInfo("exception", e.ToString());
+                errorRes.AppendExtraInfo("exception", e.ToString().Split('\n'));
             }
             var innerException = e.InnerException;
             while (innerException != null)
             {
-                errorRes.AppendExtraInfo("exception", innerException.ToString());
+                errorRes.AppendExtraInfo("exception", innerException.ToString().Split('\n'));
                 innerException = innerException.InnerException;
             }
         }

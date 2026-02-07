@@ -67,7 +67,9 @@
       "mcp__plugin_context7_context7__resolve-library-id",
       "mcp__plugin_context7_context7__get-library-docs",
       "Skill(microsoft-docs:microsoft-docs)",
-      "Bash(claude-mcp-client microsoft-docs microsoft_docs_search:*)"
+      "Bash(claude-mcp-client microsoft-docs microsoft_docs_search:*)",
+      "mcp__microsoft-learn__microsoft_docs_search",
+      "mcp__microsoft-learn__microsoft_code_sample_search"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

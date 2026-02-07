@@ -4,6 +4,7 @@
 @inject JobStateColorService ColorService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 
 <MudDialog>
     <DialogContent>
@@ -35,6 +36,20 @@
                     <MudIconButton Icon="@Icons.Material.Filled.Refresh"
                                    Color="Color.Primary"
                                    OnClick="RefreshAsync" />
+                    @if (IsCancellable())
+                    {
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Error"
+                                   StartIcon="@Icons.Material.Filled.Cancel"
+                                   Disabled="_isCancelling"
+                                   OnClick="CancelInstanceAsync">
+                            @if (_isCancelling)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                            }
+                            取消作业
+                        </MudButton>
+                    }
                 </MudStack>
             </MudStack>
 
@@ -137,6 +152,7 @@
 
     private JobInstance? _jobInstance;
     private bool _isLoading = true;
+    private bool _isCancelling;
     private string? _error;
 
     protected override async Task OnInitializedAsync()
@@ -189,6 +205,48 @@
     private void Close()
     {
         MudDialog.Close();
+    }
+
+    private bool IsCancellable() =>
+        _jobInstance?.State is JobState.Scheduled or JobState.Enqueued or JobState.Processing;
+
+    private async Task CancelInstanceAsync()
+    {
+        if (_jobInstance == null) return;
+
+        var confirmed = await DialogService.ShowMessageBox(
+            "确认取消",
+            $"确定要取消作业实例 {_jobInstance.InstanceId} 吗？",
+            yesText: "确定",
+            cancelText: "取消");
+
+        if (confirmed != true) return;
+
+        _isCancelling = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await UIService.CancelInstanceAsync(_jobInstance.InstanceId);
+            if (result.IsFailed(out var error))
+            {
+                Snackbar.Add($"取消失败: {error.Message}", Severity.Error);
+            }
+            else
+            {
+                Snackbar.Add("作业已取消", Severity.Success);
+                await LoadJobInstanceAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"取消失败: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isCancelling = false;
+            StateHasChanged();
+        }
     }
 
     private string FormatDuration(TimeSpan duration)

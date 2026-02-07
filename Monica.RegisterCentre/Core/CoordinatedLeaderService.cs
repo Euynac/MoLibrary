@@ -210,9 +210,6 @@ public abstract class CoordinatedLeaderService(
 
             // Perform service-specific initialization
             RecordState("Initializing as leader", HostedServiceState.Executing);
-            await LeaderInitializeAsync(leaderToken);
-
-            // Call post-initialization hook
             await OnBecameLeaderAsync(leaderToken);
 
             RecordState("Leader initialized successfully", HostedServiceState.Running);
@@ -343,7 +340,7 @@ public abstract class CoordinatedLeaderService(
     /// <summary>
     /// Performs service-specific initialization logic.
     /// Called when this instance becomes the leader.
-    /// May be called multiple times if leader status is lost and re-gained.
+    /// Can be called multiple times if leader status is lost and re-gained.
     /// </summary>
     /// <param name="leaderToken">Cancellation token that is cancelled when leader status is lost</param>
     /// <returns>A task representing the asynchronous initialization</returns>
@@ -351,16 +348,7 @@ public abstract class CoordinatedLeaderService(
     /// Implementations should be idempotent or reset state appropriately,
     /// as this method may be called multiple times during the service lifetime.
     /// </remarks>
-    protected abstract Task LeaderInitializeAsync(CancellationToken leaderToken);
-
-    /// <summary>
-    /// Called immediately after successful leader initialization.
-    /// Override this method for post-initialization setup that depends on being the leader.
-    /// </summary>
-    /// <param name="leaderToken">Cancellation token that is cancelled when leader status is lost</param>
-    /// <returns>A task representing the asynchronous operation</returns>
-    protected virtual Task OnBecameLeaderAsync(CancellationToken leaderToken)
-        => Task.CompletedTask;
+    protected abstract Task OnBecameLeaderAsync(CancellationToken leaderToken);
 
     /// <summary>
     /// Executes background work while this instance is the leader.

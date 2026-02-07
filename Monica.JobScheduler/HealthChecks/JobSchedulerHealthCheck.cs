@@ -21,8 +21,8 @@ public class JobSchedulerHealthCheck(IMoHostedServiceManager serviceManager) : I
             typeof(JobRegistrationHostedService),
             typeof(JobWorkerManagerHostedService),
             typeof(LongIntervalSchedulerService),
-            typeof(JobZombieDetectorService),
-            typeof(JobHistoryCleanupService)
+            typeof(JobZombieDetectorHostedService),
+            typeof(JobHistoryCleanupHostedService)
         };
 
         var services = serviceTypes

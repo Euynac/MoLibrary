@@ -1,10 +1,14 @@
-﻿using Microsoft.AspNetCore.Builder;
+﻿using System.Net.Http.Headers;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Monica.Authority.Security;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
+using Monica.DependencyInjection.AppInterfaces;
 using Monica.DomainDrivenDesign.AutoController.MoRpc;
 using Monica.Tool.Extensions;
 
@@ -37,6 +41,8 @@ public class ModuleRpcClient(ModuleRpcClientOption option) :
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddHttpContextAccessor();
+        services.AddTransient<AuthenticationDelegatingHandler>();
     }
 
     public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
@@ -55,6 +61,7 @@ public class ModuleRpcClient(ModuleRpcClientOption option) :
     public override void PostConfigureServices(IServiceCollection services)
     {
         var registeredInterfaces = new HashSet<Type>();
+        var registeredAppIds = new HashSet<string>();
         var infoProvider = Option.DomainInfoProvider;
         if (infoProvider == null) throw new Exception("You must config DomainInfoProvider to use rpc client!");
         var dependentDomains = infoProvider.GetDependencyDomains() as Enum;
@@ -94,12 +101,18 @@ public class ModuleRpcClient(ModuleRpcClientOption option) :
                         }
 
                         var appid = infoProvider.GetDomainRelatedAppId(domain);
-                        services.AddKeyedSingleton(appid, httpClientRegisterProvider.GetHttpClient(appid));
+
+                        if (registeredAppIds.Add(appid))
+                        {
+                            var httpClientBuilder = services.AddHttpClient(appid);
+                            httpClientBuilder.AddHttpMessageHandler<AuthenticationDelegatingHandler>();
+                            httpClientRegisterProvider.ConfigureHttpClientBuilder(httpClientBuilder, appid);
+                        }
 
                         services.TryAddTransient(targetInterface, provider =>
                         {
-                            var client =
-                                provider.GetRequiredKeyedService<HttpClient>(appid);
+                            var httpClientFactory = provider.GetRequiredService<IHttpClientFactory>();
+                            var client = httpClientFactory.CreateClient(appid);
                             return ActivatorUtilities.CreateInstance(provider, type, client);
                         });
                         Logger.LogInformation("Register Domain ({domainName} - {domainDesc}) HTTP RPC {type} -> {interface}", domain.ToString(), domain.GetDescription(), type.Name,
@@ -173,5 +186,36 @@ public interface IMoRpcClientDomainInfoProvider
 
 public interface IMoRpcHttpClientRegisterProvider
 {
-    HttpClient GetHttpClient(string appid);
+    void ConfigureHttpClientBuilder(IHttpClientBuilder builder, string appid);
+}
+
+
+public class AuthenticationDelegatingHandler(IHttpContextAccessor httpContextAccessor, IMoSystemUserManager systemUserManager) : DelegatingHandler
+{
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        // 1. 获取当前 HttpContext
+        var context = httpContextAccessor.HttpContext;
+
+        if (context != null)//请求从前端发起
+        {
+            if (context.Request.Headers.Authorization is { } authorization && !string.IsNullOrWhiteSpace(authorization.ToString()))
+            {
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authorization!);
+            }
+
+            else if (await context.GetTokenAsync("access_token") is { } token && !string.IsNullOrEmpty(token))
+            {
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            }
+        }
+        else //请求从后端发起
+        {
+            var token = systemUserManager.GetTokenOfCurSystemUser();
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        }
+
+        // 4. 继续执行请求
+        return await base.SendAsync(request, cancellationToken);
+    }
 }
