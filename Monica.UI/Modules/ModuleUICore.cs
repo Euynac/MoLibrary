@@ -95,9 +95,12 @@ public class ModuleUICore(ModuleUICoreOption option)
         // 注册UI组件管理服务
         services.AddSingleton<IUIComponentRegistry, UIComponentRegistry>();
 
-        // 注册主题服务
-        services.AddSingleton<MoThemeService>();
-        services.AddSingleton<IMoThemeService>(sp => sp.GetRequiredService<MoThemeService>());
+        // 注册浏览器存储服务
+        services.AddScoped<IMoBrowserStorage, MoBrowserStorage>();
+
+        // 注册主题服务 (Scoped: each Blazor circuit gets its own theme state)
+        services.AddScoped<MoThemeService>();
+        services.AddScoped<IMoThemeService>(sp => sp.GetRequiredService<MoThemeService>());
 
         // 注册用户上下文服务
         services.AddScoped<MoUserContextService>();
@@ -184,10 +187,6 @@ public class ModuleUICoreGuide : MoModuleGuide<ModuleUICore, ModuleUICoreOption,
             {
                 registry.RegisterComponent<ModuleSystemDashboard>(ModuleSystemDashboard.MODULE_SYSTEM_DASHBOARD_URL, "模块系统概览", Icons.Material.Filled.Dashboard, "模块", true, navOrder: 10);
             }
-
-            // 初始化主题服务
-            var themeService = builder.ApplicationBuilder.ApplicationServices.GetRequiredService<MoThemeService>();
-            themeService.Initialize();
 
             // 配置路由重定向
             foreach (var redirect in builder.ModuleOption.RouteRedirects)

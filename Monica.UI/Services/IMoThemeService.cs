@@ -28,11 +28,6 @@ public interface IMoThemeService
     string CurrentThemeName { get; set; }
 
     /// <summary>
-    /// 初始化主题服务
-    /// </summary>
-    void Initialize();
-
-    /// <summary>
     /// 切换主题模式（明暗切换）
     /// </summary>
     void ToggleTheme();

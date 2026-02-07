@@ -1,7 +1,8 @@
 @using Monica.UI.Services
 @inject MoThemeService ThemeService
+@inject IMoBrowserStorage BrowserStorage
 @inject IJSRuntime JSRuntime
-@implements IDisposable
+@implements IAsyncDisposable
 
 <MudThemeProvider Theme="@ThemeService.CurrentTheme" IsDarkMode="@ThemeService.IsDarkMode" />
 
@@ -12,6 +13,8 @@
 @code {
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
+    private IJSObjectReference? _themeHelperModule;
+
     protected override void OnInitialized()
     {
         ThemeService.OnThemeChanged += OnThemeChanged;
@@ -21,42 +24,55 @@
     {
         if (firstRender)
         {
-            var module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/Monica.UI/js/theme-helper.js").ConfigureAwait(false);
-            var themeData = await module.InvokeAsync<string>("getThemeData").ConfigureAwait(false);
-            
+            _themeHelperModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "import", "./_content/Monica.UI/js/theme-helper.js");
+
+            var themeData = await BrowserStorage.GetAsync<ThemeData?>("theme:data", null);
+
             await InvokeAsync(() =>
             {
-                if (!string.IsNullOrEmpty(themeData))
+                if (themeData != null)
                 {
-                    var parts = themeData.Split('|');
-                    if (parts.Length == 2)
-                    {
-                        ThemeService.CurrentThemeName = parts[0];
-                        ThemeService.IsDarkMode = parts[1] == "dark";
-                    }
+                    ThemeService.CurrentThemeName = themeData.ThemeName;
+                    ThemeService.IsDarkMode = themeData.IsDarkMode;
                 }
             });
-            
-            // 设置document root的data-theme属性
-            await module.InvokeVoidAsync("setDocumentTheme", ThemeService.GetThemeDataAttribute());
+
+            await _themeHelperModule.InvokeVoidAsync(
+                "setDocumentTheme", ThemeService.GetThemeDataAttribute());
         }
     }
 
     private async void OnThemeChanged()
     {
-        var module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/Monica.UI/js/theme-helper.js").ConfigureAwait(false);
-        
-        // 保存主题偏好到localStorage
-        await module.InvokeVoidAsync("saveThemeData", ThemeService.CurrentThemeName, ThemeService.IsDarkMode ? "dark" : "light");
-        
-        // 设置document root的data-theme属性
-        await module.InvokeVoidAsync("setDocumentTheme", ThemeService.GetThemeDataAttribute());
-        
+        await BrowserStorage.SetAsync("theme:data", new ThemeData(
+            ThemeService.CurrentThemeName, ThemeService.IsDarkMode));
+
+        if (_themeHelperModule != null)
+        {
+            await _themeHelperModule.InvokeVoidAsync(
+                "setDocumentTheme", ThemeService.GetThemeDataAttribute());
+        }
+
         await InvokeAsync(StateHasChanged);
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         ThemeService.OnThemeChanged -= OnThemeChanged;
+
+        if (_themeHelperModule != null)
+        {
+            try
+            {
+                await _themeHelperModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+                // Circuit already disconnected
+            }
+        }
     }
+
+    private record ThemeData(string ThemeName, bool IsDarkMode);
 }

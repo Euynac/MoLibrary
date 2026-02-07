@@ -11,7 +11,7 @@ namespace Monica.UI.Services;
 public class MoThemeService(IOptions<ModuleUICoreOption> options) : IMoThemeService
 {
     private bool _isDarkMode = false;
-    private MudTheme _currentTheme = new();
+    private MudTheme _currentTheme = ThemeRegistry.GetTheme("default").CreateTheme();
     private string _currentThemeName = "default";
     private readonly ModuleUICoreOption _options = options.Value;
 
@@ -46,14 +46,6 @@ public class MoThemeService(IOptions<ModuleUICoreOption> options) : IMoThemeServ
         }
     }
 
-    /// <summary>
-    /// 初始化主题服务
-    /// </summary>
-    public void Initialize()
-    {
-        _currentTheme = ThemeRegistry.GetTheme("default").CreateTheme();
-    }
-    
     /// <summary>
     /// 可用的主题列表
     /// </summary>

@@ -4,13 +4,10 @@
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
-@inject IJSRuntime JSRuntime
+@inject IMoBrowserStorage BrowserStorage
 @using MudBlazor
-@using System.Text.Json
-@using Microsoft.JSInterop
 @using Monica.JobScheduler.Models
 @using Monica.JobScheduler.UI.Components
-@implements IAsyncDisposable
 
 <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
     <MudText Typo="Typo.h4" Class="mb-4">作业定义</MudText>
@@ -320,9 +317,6 @@
     private HashSet<JobDefinitionWithLastExecution> _selectedRecurringJobs = [];
     private bool _isProcessingBatch = false;
 
-    // Table state persistence
-    private IJSObjectReference? _tableStateModule;
-
     // RecurringJob table state
     private string? _recurringSortBy;
     private bool _recurringSortDescending;
@@ -340,74 +334,24 @@
     {
         if (firstRender)
         {
-            // 1. Load JS module
-            _tableStateModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
-                "import",
-                "./_content/Monica.JobScheduler.UI/js/table-state-helper.js"
-            ).ConfigureAwait(false);
+            var recurringState = await BrowserStorage.GetTableStateAsync("job-definitions-recurring");
+            if (!string.IsNullOrEmpty(recurringState.SortBy))
+            {
+                _recurringSortBy = recurringState.SortBy;
+                _recurringSortDescending = recurringState.SortDescending;
+            }
+            _recurringPageSize = recurringState.PageSize;
 
-            // 2. Load state from localStorage
-            await LoadTableStatesAsync();
+            var triggerState = await BrowserStorage.GetTableStateAsync("job-definitions-trigger");
+            if (!string.IsNullOrEmpty(triggerState.SortBy))
+            {
+                _triggerSortBy = triggerState.SortBy;
+                _triggerSortDescending = triggerState.SortDescending;
+            }
+            _triggerPageSize = triggerState.PageSize;
 
-            // 3. Mark state as loaded and trigger re-render
-            // MudTable will automatically call ServerData when rendered, no manual call needed
             _stateLoaded = true;
             await InvokeAsync(StateHasChanged);
-        }
-    }
-
-    private async Task LoadTableStatesAsync()
-    {
-        if (_tableStateModule == null) return;
-
-        try
-        {
-            // Load RecurringJob state
-            var recurringState = await _tableStateModule.InvokeAsync<JsonElement?>(
-                "getTableState",
-                "job-definitions-recurring"
-            );
-
-            if (recurringState.HasValue && recurringState.Value.ValueKind == JsonValueKind.Object)
-            {
-                if (recurringState.Value.TryGetProperty("sortBy", out var sortBy) && sortBy.ValueKind == JsonValueKind.String)
-                    _recurringSortBy = sortBy.GetString();
-                if (recurringState.Value.TryGetProperty("sortDirection", out var sortDir) && sortDir.ValueKind == JsonValueKind.String)
-                    _recurringSortDescending = sortDir.GetString() == "descending";
-                if (recurringState.Value.TryGetProperty("pageSize", out var pageSize) && pageSize.ValueKind == JsonValueKind.Number)
-                {
-                    var size = pageSize.GetInt32();
-                    // Validate against allowed page sizes
-                    if (new[] { 10, 20, 50, 100 }.Contains(size))
-                        _recurringPageSize = size;
-                }
-            }
-
-            // Load TriggerJob state
-            var triggerState = await _tableStateModule.InvokeAsync<JsonElement?>(
-                "getTableState",
-                "job-definitions-trigger"
-            );
-
-            if (triggerState.HasValue && triggerState.Value.ValueKind == JsonValueKind.Object)
-            {
-                if (triggerState.Value.TryGetProperty("sortBy", out var sortBy) && sortBy.ValueKind == JsonValueKind.String)
-                    _triggerSortBy = sortBy.GetString();
-                if (triggerState.Value.TryGetProperty("sortDirection", out var sortDir) && sortDir.ValueKind == JsonValueKind.String)
-                    _triggerSortDescending = sortDir.GetString() == "descending";
-                if (triggerState.Value.TryGetProperty("pageSize", out var pageSize) && pageSize.ValueKind == JsonValueKind.Number)
-                {
-                    var size = pageSize.GetInt32();
-                    // Validate against allowed page sizes
-                    if (new[] { 10, 20, 50, 100 }.Contains(size))
-                        _triggerPageSize = size;
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            // Silently fail - use default values
-            Console.WriteLine($"Failed to load table states: {ex.Message}");
         }
     }
 
@@ -427,12 +371,9 @@
             _recurringSortDescending = sortDescending;
         }
 
-        // Save page size if changed
-        if (state.PageSize != _recurringPageSize)
-        {
-            _recurringPageSize = state.PageSize;
-        }
-
+        _recurringPageSize = state.PageSize;
+        // Save state to localStorage
+        await SaveRecurringTableStateAsync();
         var filter = new JobDefinitionFilterRequest
         {
             FromProject = _filterFromProject,
@@ -460,8 +401,7 @@
             items = ApplyClientSideSorting(items, state.SortLabel, sortDescending).ToArray();
         }
 
-        // Save state to localStorage
-        await SaveRecurringTableStateAsync();
+       
 
         return new TableData<JobDefinitionWithLastExecution>
         {
@@ -486,11 +426,10 @@
             _triggerSortDescending = sortDescending;
         }
 
-        // Save page size if changed
-        if (state.PageSize != _triggerPageSize)
-        {
-            _triggerPageSize = state.PageSize;
-        }
+        _triggerPageSize = state.PageSize;
+        
+        // Save state to localStorage
+        await SaveTriggerTableStateAsync();
 
         var filter = new JobDefinitionFilterRequest
         {
@@ -519,8 +458,7 @@
             items = ApplyClientSideSorting(items, state.SortLabel, sortDescending).ToArray();
         }
 
-        // Save state to localStorage
-        await SaveTriggerTableStateAsync();
+       
 
         return new TableData<JobDefinitionWithLastExecution>
         {
@@ -717,23 +655,11 @@
     /// </summary>
     private async Task SaveRecurringTableStateAsync()
     {
-        if (_tableStateModule == null) return;
-
-        try
-        {
-            await _tableStateModule.InvokeVoidAsync("saveTableState",
-                "job-definitions-recurring",
-                new
-                {
-                    sortBy = _recurringSortBy,
-                    sortDirection = _recurringSortDescending ? "descending" : "ascending",
-                    pageSize = _recurringPageSize
-                });
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Failed to save RecurringJob table state: {ex.Message}");
-        }
+        await BrowserStorage.SaveTableStateAsync("job-definitions-recurring", new TablePersistenceState(
+            SortBy: _recurringSortBy,
+            SortDescending: _recurringSortDescending,
+            PageSize: _recurringPageSize
+        ));
     }
 
     /// <summary>
@@ -741,23 +667,11 @@
     /// </summary>
     private async Task SaveTriggerTableStateAsync()
     {
-        if (_tableStateModule == null) return;
-
-        try
-        {
-            await _tableStateModule.InvokeVoidAsync("saveTableState",
-                "job-definitions-trigger",
-                new
-                {
-                    sortBy = _triggerSortBy,
-                    sortDirection = _triggerSortDescending ? "descending" : "ascending",
-                    pageSize = _triggerPageSize
-                });
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Failed to save TriggerJob table state: {ex.Message}");
-        }
+        await BrowserStorage.SaveTableStateAsync("job-definitions-trigger", new TablePersistenceState(
+            SortBy: _triggerSortBy,
+            SortDescending: _triggerSortDescending,
+            PageSize: _triggerPageSize
+        ));
     }
 
     // Batch operation methods
@@ -863,16 +777,5 @@
     private void ClearSelection()
     {
         _selectedRecurringJobs.Clear();
-    }
-
-    /// <summary>
-    /// Disposes the JavaScript module reference
-    /// </summary>
-    public async ValueTask DisposeAsync()
-    {
-        if (_tableStateModule != null)
-        {
-            await _tableStateModule.DisposeAsync();
-        }
     }
 }

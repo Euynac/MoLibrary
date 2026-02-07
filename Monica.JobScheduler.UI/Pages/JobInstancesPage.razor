@@ -4,11 +4,8 @@
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
-@inject IJSRuntime JSRuntime
+@inject IMoBrowserStorage BrowserStorage
 @using MudBlazor
-@using System.Text.Json
-@using Microsoft.JSInterop
-@implements IAsyncDisposable
 
 <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
     <MudText Typo="Typo.h4" Class="mb-4">作业实例</MudText>
@@ -218,7 +215,6 @@
     private string _timeRangePreset = string.Empty;
 
     // Table state persistence
-    private TableStateHelper? _stateHelper;
     private string? _sortBy = "CreatedAt";
     private bool _sortDescending = true;
     private int _pageSize = 10;
@@ -229,30 +225,15 @@
     {
         if (firstRender)
         {
-            _stateHelper = new TableStateHelper(JSRuntime);
-            await LoadTableStateAsync();
-            _stateLoaded = true;
-            await InvokeAsync(StateHasChanged);
-        }
-    }
-
-    private async Task LoadTableStateAsync()
-    {
-        if (_stateHelper == null) return;
-
-        try
-        {
-            var state = await _stateHelper.LoadStateAsync("job-instances");
+            var state = await BrowserStorage.GetTableStateAsync("job-instances");
             if (!string.IsNullOrEmpty(state.SortBy))
             {
                 _sortBy = state.SortBy;
                 _sortDescending = state.SortDescending;
             }
             _pageSize = state.PageSize;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Failed to load table state: {ex.Message}");
+            _stateLoaded = true;
+            await InvokeAsync(StateHasChanged);
         }
     }
 
@@ -285,10 +266,8 @@
             _sortDescending = sortDescending;
         }
 
-        if (state.PageSize != _pageSize)
-        {
-            _pageSize = state.PageSize;
-        }
+        _pageSize = state.PageSize;
+        await SaveTableStateAsync();
 
         var (startTime, endTime) = GetTimeRange();
 
@@ -316,7 +295,7 @@
         // No client-side sorting needed - all sorting is done server-side
         var items = data.Items ?? Array.Empty<JobInstance>();
 
-        await SaveTableStateAsync();
+       
 
         return new TableData<JobInstance>
         {
@@ -488,27 +467,10 @@
 
     private async Task SaveTableStateAsync()
     {
-        if (_stateHelper == null) return;
-
-        try
-        {
-            await _stateHelper.SaveStateAsync("job-instances", new TablePersistenceState(
-                SortBy: _sortBy,
-                SortDescending: _sortDescending,
-                PageSize: _pageSize
-            ));
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Failed to save table state: {ex.Message}");
-        }
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_stateHelper != null)
-        {
-            await _stateHelper.DisposeAsync();
-        }
+        await BrowserStorage.SaveTableStateAsync("job-instances", new TablePersistenceState(
+            SortBy: _sortBy,
+            SortDescending: _sortDescending,
+            PageSize: _pageSize
+        ));
     }
 }
