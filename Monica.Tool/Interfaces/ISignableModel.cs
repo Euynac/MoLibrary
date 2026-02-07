@@ -48,7 +48,7 @@ public interface ISignableModel<T> : ISignableModel where T : class, ISignableMo
     /// <returns></returns>
     public ISignableModel<T> Ignore(string ignoreName)
     {
-        if (!SignSetting.IgnoreList.Contains(ignoreName)) SignSetting.IgnoreList.Add(ignoreName);
+        SignSetting.IgnoreList.Add(ignoreName);
         return this;
     }
     /// <summary>
@@ -57,7 +57,7 @@ public interface ISignableModel<T> : ISignableModel where T : class, ISignableMo
     /// <returns></returns>
     public ISignableModel<T> UnIgnore(string ignoreName)
     {
-        if (SignSetting.IgnoreList.Contains(ignoreName)) SignSetting.IgnoreList.Remove(ignoreName);
+        SignSetting.IgnoreList.Remove(ignoreName);
         return this;
     }
     /// <summary>
@@ -174,7 +174,7 @@ public interface ISignableModel<T> : ISignableModel where T : class, ISignableMo
 public enum SignWay
 {
     /// <summary>
-    /// 传统方式，即key1=value1&key2=value2 value将被urlEncode
+    /// 传统方式，即key1=value1&amp;key2=value2 value将被urlEncode
     /// </summary>
     Traditional,
 }

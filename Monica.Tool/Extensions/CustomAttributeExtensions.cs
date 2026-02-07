@@ -64,13 +64,13 @@ public static class CustomAttributeExtensions
     /// <param name="sourceType">指定的类</param>
     /// <param name="name">指定属性或方法名</param>
     /// <returns>返回Attribute的值，没有则返回null</returns>
-    public static TAttribute? GetCustomAttributeCached<TAttribute>(this Type sourceType, string name)
+    public static TAttribute? GetCustomAttributeCached<TAttribute>(this Type sourceType, string? name)
         where TAttribute : Attribute
     {
         var cacheKey = sourceType.FullName + "." + name + "." + typeof(TAttribute).FullName;
         var value = _cache.GetOrAdd(cacheKey, key => GetValue<TAttribute>(sourceType, name));
         if (value is TAttribute attribute) return attribute;
-        return default;
+        return null;
     }
     /// <summary>
     /// 获取指定类或其属性或方法的CustomAttribute
@@ -79,7 +79,7 @@ public static class CustomAttributeExtensions
     /// <param name="type"></param>
     /// <param name="name">nameof</param>
     /// <returns>返回Attribute的值，没有则返回null</returns>
-    private static TAttribute? GetValue<TAttribute>(Type type, string name)
+    private static TAttribute? GetValue<TAttribute>(Type type, string? name)
         where TAttribute : Attribute
     {
         if (string.IsNullOrEmpty(name))
@@ -104,7 +104,7 @@ public static class CustomAttributeExtensions
             return fieldInfo.GetCustomAttribute<TAttribute>(false);
         }
 
-        return default;
+        return null;
     }
 
     #endregion
