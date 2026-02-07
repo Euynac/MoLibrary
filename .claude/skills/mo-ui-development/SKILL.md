@@ -1,6 +1,6 @@
 ---
 name: mo-ui-development
-description: This skill should be used when the user asks to "create UI component", "build Blazor page", "add MudBlazor component", "style MudBlazor", "fix CSS isolation", "use ::deep selector", "customize theme", "support dark mode", "migrate MudBlazor v8", "use OnAfterRenderAsync", "create UI module", "module file structure", "UI folder structure", "refactor Minimal API", or needs guidance on Blazor component lifecycle, MudBlazor styling patterns, CSS isolation, theme customization, offline UI requirements, or MoFramework UI module structure in the Monica framework.
+description: This skill should be used when the user asks to "create UI component", "build Blazor page", "add MudBlazor component", "style MudBlazor", "fix CSS isolation", "use ::deep selector", "customize theme", "support dark mode", "migrate MudBlazor v8", "use OnAfterRenderAsync", "create UI module", "module file structure", "UI folder structure", "refactor Minimal API", "persist UI state", "browser storage", "save table state", "IMoBrowserStorage", "localStorage", "sessionStorage", or needs guidance on Blazor component lifecycle, MudBlazor styling patterns, CSS isolation, theme customization, offline UI requirements, browser storage patterns, or MoFramework UI module structure in the Monica framework.
 version: 1.0.0
 ---
 
@@ -200,6 +200,37 @@ All UI modules must support offline environments:
 
 For font management workflow, see `references/offline-requirements.md`.
 
+### 8. Browser Storage (`IMoBrowserStorage`)
+
+**Always use `IMoBrowserStorage` for browser storage** — never use raw `IJSRuntime` calls for localStorage/sessionStorage.
+
+**Key naming convention**: `{category}:{id}` (auto-prefixed with `mo:` by the service).
+
+**Load persisted state in `OnAfterRenderAsync`**, use deferred rendering to prevent flash of default values:
+
+```csharp
+@inject IMoBrowserStorage BrowserStorage
+
+@code {
+    private bool _stateLoaded = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var state = await BrowserStorage.GetTableStateAsync("my-table");
+            // Apply state...
+            _stateLoaded = true;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+}
+```
+
+**Use `BrowserStorageExtensions`** for table state persistence (`GetTableStateAsync`/`SaveTableStateAsync`).
+
+For complete API reference, patterns, and examples, see `references/browser-storage-guide.md`.
+
 ## Component Architecture
 
 ### Component Hierarchy
@@ -322,6 +353,7 @@ For comprehensive guidance, consult these reference files:
 - **`references/migration-guide.md`** - Complete v8.9.0 breaking changes and migration patterns
 - **`references/css-isolation-fix-workflow.md`** - Step-by-step workflow for fixing CSS isolation issues
 - **`references/offline-requirements.md`** - Font management and offline environment requirements
+- **`references/browser-storage-guide.md`** - `IMoBrowserStorage` API, table state persistence, theme persistence, custom state patterns
 
 ### Scripts
 
@@ -359,3 +391,4 @@ Current project uses **MudBlazor 8.9.0**.
 - [ ] Use async methods (`ShowAsync`, not `Show`)
 - [ ] Use `*Typography` class names (v8.9.0)
 - [ ] Ensure offline/intranet compatibility
+- [ ] Use `IMoBrowserStorage` for browser persistence (never raw JS interop)

@@ -520,6 +520,78 @@ public override void ConfigureServices(IServiceCollection services)
 - Response models: `{Feature}Response`
 - View models: `{Feature}ViewModel`
 
+## 14. Browser Storage Best Practices
+
+### 14.1 Use `IMoBrowserStorage` for All Browser Storage
+
+Never use raw `IJSRuntime` calls for localStorage/sessionStorage. Always inject and use `IMoBrowserStorage`:
+
+```csharp
+@inject IMoBrowserStorage BrowserStorage
+```
+
+### 14.2 Key Naming Convention
+
+Use `{category}:{id}` format. The service auto-prefixes all keys with `mo:`:
+
+```csharp
+// Stored as "mo:table:job-instances" in localStorage
+await BrowserStorage.SetAsync("table:job-instances", state);
+
+// Stored as "mo:theme:data"
+await BrowserStorage.GetAsync<ThemeData?>("theme:data", null);
+```
+
+### 14.3 Deferred Rendering Pattern
+
+Always load persisted state in `OnAfterRenderAsync` and use a `_stateLoaded` flag to defer rendering of state-dependent UI:
+
+```csharp
+@inject IMoBrowserStorage BrowserStorage
+
+@if (_stateLoaded)
+{
+    <MudTable @ref="_table" ServerData="LoadDataAsync"
+              RowsPerPage="@_pageSize" SortLabel="@_sortBy">
+        @* columns *@
+    </MudTable>
+}
+
+@code {
+    private bool _stateLoaded = false;
+    private int _pageSize = 10;
+    private string? _sortBy;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var state = await BrowserStorage.GetTableStateAsync("my-table");
+            _pageSize = state.PageSize;
+            _sortBy = state.SortBy;
+            _stateLoaded = true;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task<TableData<MyItem>> LoadDataAsync(TableState state, CancellationToken ct)
+    {
+        // Save state on every data load
+        await BrowserStorage.SaveTableStateAsync("my-table", new TablePersistenceState(
+            state.SortLabel, state.SortDirection == SortDirection.Descending, state.PageSize));
+
+        // ... fetch data ...
+    }
+}
+```
+
+### 14.4 Service Lifetime
+
+- `IMoBrowserStorage` is **Scoped** (one per Blazor circuit)
+- `MoThemeService` is **Scoped** (not Singleton, needs per-circuit state)
+
+For complete API reference and patterns, see `references/browser-storage-guide.md`.
+
 ## Summary
 
 Following these best practices helps build high-quality, maintainable, and high-performance Blazor applications. These are guiding principles that should be flexibly applied based on specific project requirements.
