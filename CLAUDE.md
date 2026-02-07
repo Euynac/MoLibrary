@@ -44,6 +44,10 @@ Use `resolve-library-id` then `get-library-docs` when:
 - Encountering API changes, deprecated methods, or version-specific behavior
 - Uncertain about correct usage patterns for NuGet packages
 
+## Coding Annotations
+
+- All code annotations (comments, XML doc comments, `<summary>`, `<param>`, `<returns>`, etc.) must be written in English.
+
 ## Code Quality Principles
 
 - Write reusable, low-coupling and high-cohesion implementations with multiple abstractions
