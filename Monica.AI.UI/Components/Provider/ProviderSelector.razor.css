@@ -41,6 +41,15 @@
     z-index: 30;
 }
 
+.provider-menu::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: 0;
+    right: 0;
+    height: 8px;
+}
+
 .provider-selector:hover .provider-menu {
     opacity: 1;
     pointer-events: auto;
