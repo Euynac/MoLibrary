@@ -6,7 +6,6 @@ namespace Monica.AI.Providers;
 internal static class AIProviderModelResolver
 {
     public static ProviderModelResolution ResolveModels(
-        EAIProviderType providerType,
         AIModelCatalog catalog,
         AIProviderOptions options)
     {
@@ -30,7 +29,7 @@ internal static class AIProviderModelResolver
 
         foreach (var modelName in supportedModels)
         {
-            var model = catalog.GetModel(providerType, modelName);
+            var model = catalog.GetModel(modelName);
             if (model == null)
             {
                 missingModels.Add(modelName);

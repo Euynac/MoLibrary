@@ -53,12 +53,11 @@ public class ModuleAI(ModuleAIOption option)
         services.AddSingleton(sp =>
         {
             var catalog = new AIModelCatalog();
-            catalog.AddModels(EAIProviderType.OpenAI, ModuleAIOption.GetReservedModels(EAIProviderType.OpenAI));
-            catalog.AddModels(EAIProviderType.Anthropic, ModuleAIOption.GetReservedModels(EAIProviderType.Anthropic));
+            catalog.AddModels(ModuleAIOption.GetReservedModels());
 
-            foreach (var registration in Option.ModelRegistrations)
+            foreach (var model in Option.ModelRegistrations)
             {
-                catalog.AddModel(registration.ProviderType, registration.Model);
+                catalog.AddModel(model);
             }
 
             return catalog;
@@ -121,14 +120,13 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
     }
 
     /// <summary>
-    /// 添加模型信息
+    /// Add model information to the catalog
     /// </summary>
-    /// <param name="providerType">Provider 类型</param>
-    /// <param name="model">模型信息</param>
-    /// <returns>当前引导器实例</returns>
-    public ModuleAIGuide AddModel(EAIProviderType providerType, AIModelInfo model)
+    /// <param name="model">Model information</param>
+    /// <returns>Current guide instance</returns>
+    public ModuleAIGuide AddModel(AIModelInfo model)
     {
-        ConfigureModuleOption(option => option.AddModel(providerType, model));
+        ConfigureModuleOption(option => option.AddModel(model));
         return this;
     }
 
@@ -249,24 +247,19 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
 /// </summary>
 public class ModuleAIOption : MoModuleOption<ModuleAI>
 {
-    internal List<AIModelRegistration> ModelRegistrations { get; } = [];
+    internal List<AIModelInfo> ModelRegistrations { get; } = [];
 
-    internal static IReadOnlyList<AIModelInfo> GetReservedModels(EAIProviderType providerType)
+    internal static IReadOnlyList<AIModelInfo> GetReservedModels()
     {
-        return providerType switch
-        {
-            EAIProviderType.OpenAI => OpenAIReservedModels.Models,
-            EAIProviderType.Anthropic => AnthropicReservedModels.Models,
-            _ => Array.Empty<AIModelInfo>()
-        };
+        return [..OpenAIReservedModels.Models, ..AnthropicReservedModels.Models];
     }
 
     /// <summary>
-    /// 添加模型信息
+    /// Add model information
     /// </summary>
-    public void AddModel(EAIProviderType providerType, AIModelInfo model)
+    public void AddModel(AIModelInfo model)
     {
-        ModelRegistrations.Add(new AIModelRegistration(providerType, model));
+        ModelRegistrations.Add(model);
     }
 
     /// <summary>
@@ -284,5 +277,3 @@ public class ModuleAIOption : MoModuleOption<ModuleAI>
     /// </summary>
     public bool EnableRequestLogging { get; set; }
 }
-
-internal record AIModelRegistration(EAIProviderType ProviderType, AIModelInfo Model);

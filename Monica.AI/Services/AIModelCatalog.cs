@@ -3,71 +3,52 @@ using Monica.AI.Models;
 namespace Monica.AI.Services;
 
 /// <summary>
-/// AI 模型信息目录
+/// Global AI model information catalog
 /// </summary>
 public class AIModelCatalog
 {
-    private readonly Dictionary<EAIProviderType, List<AIModelInfo>> _models = new();
+    private readonly Dictionary<string, AIModelInfo> _models = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
-    /// 添加模型信息
+    /// Add a model to the catalog. If a model with the same name already exists, it is replaced.
     /// </summary>
-    public void AddModel(EAIProviderType providerType, AIModelInfo model)
+    public void AddModel(AIModelInfo model)
     {
-        if (!_models.TryGetValue(providerType, out var list))
-        {
-            list = new List<AIModelInfo>();
-            _models[providerType] = list;
-        }
-
-        var existingIndex = list.FindIndex(m => string.Equals(m.ModelName, model.ModelName, StringComparison.OrdinalIgnoreCase));
-        if (existingIndex >= 0)
-        {
-            list[existingIndex] = model;
-            return;
-        }
-
-        list.Add(model);
+        _models[model.ModelName] = model;
     }
 
     /// <summary>
-    /// 批量添加模型信息
+    /// Add multiple models to the catalog
     /// </summary>
-    public void AddModels(EAIProviderType providerType, IEnumerable<AIModelInfo> models)
+    public void AddModels(IEnumerable<AIModelInfo> models)
     {
         foreach (var model in models)
         {
-            AddModel(providerType, model);
+            AddModel(model);
         }
     }
 
     /// <summary>
-    /// 获取指定 Provider 的模型列表
+    /// Get all models in the catalog
     /// </summary>
-    public IReadOnlyList<AIModelInfo> GetModels(EAIProviderType providerType)
+    public IReadOnlyList<AIModelInfo> GetModels()
     {
-        if (_models.TryGetValue(providerType, out var list))
-        {
-            return list.AsReadOnly();
-        }
-
-        return Array.Empty<AIModelInfo>();
+        return _models.Values.ToList().AsReadOnly();
     }
 
     /// <summary>
-    /// 获取指定 Provider 的模型名称列表
+    /// Get all model names in the catalog
     /// </summary>
-    public IReadOnlyList<string> GetModelNames(EAIProviderType providerType)
+    public IReadOnlyList<string> GetModelNames()
     {
-        return GetModels(providerType).Select(m => m.ModelName).ToList();
+        return _models.Keys.ToList().AsReadOnly();
     }
 
     /// <summary>
-    /// 获取指定模型信息
+    /// Get a specific model by name (case-insensitive)
     /// </summary>
-    public AIModelInfo? GetModel(EAIProviderType providerType, string modelName)
+    public AIModelInfo? GetModel(string modelName)
     {
-        return GetModels(providerType).FirstOrDefault(m =>
-            string.Equals(m.ModelName, modelName, StringComparison.OrdinalIgnoreCase));
+        return _models.GetValueOrDefault(modelName);
     }
 }

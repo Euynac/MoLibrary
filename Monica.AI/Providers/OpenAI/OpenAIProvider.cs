@@ -39,7 +39,7 @@ public class OpenAIProvider : IAIProvider
 
         _client = new OpenAIClient(new ApiKeyCredential(options.ApiKey), clientOptions);
 
-        var resolution = AIProviderModelResolver.ResolveModels(EAIProviderType.OpenAI, modelCatalog, options);
+        var resolution = AIProviderModelResolver.ResolveModels(modelCatalog, options);
         _models = resolution.Models;
         _defaultModel = resolution.DefaultModel;
         _isValid = resolution.IsValid;

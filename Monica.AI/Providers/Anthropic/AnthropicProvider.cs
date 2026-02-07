@@ -36,7 +36,7 @@ public class AnthropicProvider : IAIProvider
             BaseUrl = options.BaseUrl ?? ""
         };
 
-        var resolution = AIProviderModelResolver.ResolveModels(EAIProviderType.Anthropic, modelCatalog, options);
+        var resolution = AIProviderModelResolver.ResolveModels(modelCatalog, options);
         _models = resolution.Models;
         _defaultModel = resolution.DefaultModel;
         _isValid = resolution.IsValid;
