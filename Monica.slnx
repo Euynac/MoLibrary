@@ -34,6 +34,7 @@
   <Project Path="Monica.JobScheduler/Monica.JobScheduler.csproj" />
   <Project Path="Monica.Locker/Monica.Locker.csproj" />
   <Project Path="Monica.Logging/Monica.Logging.csproj" />
+  <Project Path="Monica.Markdown/Monica.Markdown.csproj" />
   <Project Path="Monica.Office/Monica.Office.csproj" />
   <Project Path="Monica.Profiling/Monica.Profiling.csproj" />
   <Project Path="Monica.RegisterCentre/Monica.RegisterCentre.csproj" />

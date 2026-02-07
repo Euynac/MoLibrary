@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\common.xml" />
+  <PropertyGroup>
+    <PackageDescription>Markdown document management module with document groups, hierarchical navigation, YAML front matter parsing, and metadata search.</PackageDescription>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="YamlDotNet" Version="16.*" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
+  </ItemGroup>
+</Project>

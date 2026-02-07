@@ -151,7 +151,11 @@ public enum EMoModuleKey
     /// </summary>
     AIUI,
     /// <summary>
-    /// CORS (跨域资源共享) 模块
+    /// CORS (Cross-Origin Resource Sharing) module
     /// </summary>
-    Cors
+    Cors,
+    /// <summary>
+    /// Markdown document management module
+    /// </summary>
+    Markdown
 }

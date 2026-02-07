@@ -13,8 +13,9 @@ Proactively invoke these skills when encountering relevant development patterns:
 ### /mo-development
 
 Invoke when:
-- Writing service layer methods with `Res` or `Res<T>` return types
+- Writing UI service layer methods with `Res` or `Res<T>` return types
 - Uncertain about Res implicit conversions or IsFailed pattern
+- Determining whether a service should use Res (UI) or standard returns (infrastructure)
 - Creating modules (Module{Name}, Option, Guide, BuilderExtensions)
 - Configuring module registration or dependencies
 - Implementing hosted services (MoBackgroundService, RecordState)
@@ -54,6 +55,12 @@ Use `resolve-library-id` then `get-library-docs` when:
 - Split files to avoid overly large single files
 - Instead of just fixing errors, use simplified thinking and refactor whenever possible
 - If you feel the design is inadequate or lacks necessary information, you may raise concerns and propose improvements for user confirmation before proceeding.
+
+## Res Usage Policy
+
+- `Res` and `Res<T>` are **only for UI module-related services** — services directly consumed by Blazor components or UI layers where the `IsFailed` pattern is used for error handling in the view.
+- **Non-UI / infrastructure modules** must use standard .NET patterns: direct return types and throw exceptions (e.g., `KeyNotFoundException`, `FileNotFoundException`, `InvalidOperationException`) for error cases.
+- Do not wrap returns in `Res<T>` in infrastructure modules just for consistency — use it only where the UI consumption pattern requires it.
 
 ## Dependency Injection Guidelines
 

@@ -1,6 +1,6 @@
 ---
 name: mo-development
-description: This skill should be used when the user asks to "create module", "add module", "module structure", "use Res type", "return Res", "Res.Ok", "Res.Fail", "IsFailed pattern", "module registration", "module dependencies", "module pattern", "Monica architecture", "service layer pattern", "create service", "add service", "create hosted service", "add background service", "MoBackgroundService", "MoHostedService", "RecordState", "hosted service observability", "service state tracking", "CoordinatedLeaderService", or needs guidance on Monica module architecture, the unified response model Res, module registration patterns, service layer return value conventions, or hosted service development with observability.
+description: This skill should be used when the user asks to "create module", "add module", "module structure", "use Res type", "return Res", "Res.Ok", "Res.Fail", "IsFailed pattern", "module registration", "module dependencies", "module pattern", "Monica architecture", "service layer pattern", "create service", "add service", "create hosted service", "add background service", "MoBackgroundService", "MoHostedService", "RecordState", "hosted service observability", "service state tracking", "CoordinatedLeaderService", or needs guidance on Monica module architecture, the unified response model Res, module registration patterns, Res usage scope (UI vs infrastructure), or hosted service development with observability.
 version: 1.0.0
 ---
 
@@ -73,7 +73,9 @@ Dependencies are automatically registered when a module is added.
 
 ## Unified Response Model (Res)
 
-All service methods must use the unified response model `Res<T>` or `Res` for return values.
+**Scope**: `Res`/`Res<T>` is **only for UI module-related services** — services directly consumed by Blazor components or UI layers. Non-UI / infrastructure modules must use standard .NET patterns (direct return types + exceptions).
+
+UI-facing service methods use the unified response model `Res<T>` or `Res` for return values.
 
 ### Quick Reference
 
@@ -99,18 +101,20 @@ if ((await service.GetDataAsync(id)).IsFailed(out var error, out var data))
 
 ### Important Rules
 
-1. **All service methods** must return `Res<T>` or `Res` - never return null
-2. **Use implicit conversions** for cleaner code when returning success or error
-3. **Handle responses** using the `IsFailed` pattern to extract error and data
-4. **Required using**: Include `using Monica.Tool.MoResponse;`
+1. **UI service methods** must return `Res<T>` or `Res` - never return null
+2. **Infrastructure / non-UI service methods** must use standard return types and throw exceptions for errors — do not use `Res`
+3. **Use implicit conversions** for cleaner code when returning success or error in UI services
+4. **Handle responses** using the `IsFailed` pattern to extract error and data
+5. **Required using**: Include `using Monica.Tool.MoResponse;` only in UI service files
 
 For detailed `Res` type documentation, see `references/res-type-guide.md`.
 
 ## Service Layer Patterns
 
-### Return Value Convention
+### UI Service Return Convention (Res)
 
 ```csharp
+// UI-facing services use Res<T> for error propagation to Blazor components
 public async Task<Res<UserData>> GetUserAsync(int id)
 {
     try

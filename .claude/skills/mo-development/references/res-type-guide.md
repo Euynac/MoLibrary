@@ -4,6 +4,12 @@ This guide provides comprehensive documentation for the unified interface return
 
 **Source location**: `Monica.Tool/MoResponse/Res.cs`
 
+## Scope
+
+**`Res`/`Res<T>` is only for UI module-related services** — services directly consumed by Blazor components or UI layers where the `IsFailed` pattern is used for error handling in the view.
+
+**Non-UI / infrastructure modules** must use standard .NET patterns: direct return types and throw exceptions (e.g., `KeyNotFoundException`, `FileNotFoundException`, `InvalidOperationException`) for error cases. Do not use `Res` in these modules.
+
 ## Overview
 
 The `Res` and `Res<T>` types provide a consistent way to return results from service methods, supporting:
@@ -215,10 +221,11 @@ public class UserService
 
 ### Important Rules
 
-1. **Never return null** - Always return `Res.Fail()` or `Res.Ok()`
-2. **Catch exceptions** - Return `Res.Fail()` with meaningful error messages
-3. **Use implicit conversions** - Makes code cleaner and more readable
-4. **Include using statement** - `using Monica.Tool.MoResponse;`
+1. **Only use in UI-facing services** — infrastructure modules use standard returns + exceptions
+2. **Never return null** - Always return `Res.Fail()` or `Res.Ok()`
+3. **Catch exceptions** - Return `Res.Fail()` with meaningful error messages
+4. **Use implicit conversions** - Makes code cleaner and more readable
+5. **Include using statement** - `using Monica.Tool.MoResponse;`
 
 ## API Response Integration
 
