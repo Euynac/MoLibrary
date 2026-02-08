@@ -109,47 +109,7 @@ if ((await service.GetDataAsync(id)).IsFailed(out var error, out var data))
 
 For detailed `Res` type documentation, see `references/res-type-guide.md`.
 
-## Service Layer Patterns
-
-### UI Service Return Convention (Res)
-
-```csharp
-// UI-facing services use Res<T> for error propagation to Blazor components
-public async Task<Res<UserData>> GetUserAsync(int id)
-{
-    try
-    {
-        var user = await _repository.GetByIdAsync(id);
-        if (user == null)
-        {
-            return "User not found";  // Implicit error
-        }
-        return user;  // Implicit success
-    }
-    catch (Exception ex)
-    {
-        Logger.LogError(ex, "Failed to get user");
-        return Res.Fail($"Failed to get user: {ex.Message}");
-    }
-}
-```
-
-### Service Call Pattern
-
-```csharp
-// Pattern: Check for failure, extract error and data in one operation
-if ((await UserService.GetDataAsync(id)).IsFailed(out var error, out var data))
-{
-    // Handle error - error contains the failure information
-    Logger.LogWarning("Operation failed: {Error}", error.Message);
-    return error;  // Propagate error
-}
-
-// Success path - data is now available
-ProcessData(data);
-```
-
-For complete module structure patterns, see `references/module-patterns.md`.
+For service layer patterns (UI vs infrastructure), see `references/module-patterns.md`.
 
 ## Hosted Service Development
 

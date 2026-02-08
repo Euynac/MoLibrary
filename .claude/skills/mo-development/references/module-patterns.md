@@ -9,38 +9,22 @@ This guide defines the standardized patterns and conventions for creating module
 | Module class | `Module{Name}` | `ModuleSignalR`, `ModuleJobScheduler` |
 | Options class | `Module{Name}Option` | `ModuleSignalROption` |
 | Guide class | `Module{Name}Guide` | `ModuleSignalRGuide` |
-| Builder extensions | `Module{Name}BuilderExtensions` | `ModuleSignalRBuilderExtensions` |
-| Enum entry | `EMoModules.{Name}` | `EMoModules.SignalR` |
+| Builder extensions | `extension(Mo)` with `Add{Name}()` | `Mo.AddSignalR()` |
+| Module key entry | `EMoModuleKey.{Name}` | `EMoModuleKey.SignalR` |
 
 ## File Structure
 
-### Standard Module Structure
+### Standard Infrastructure Module
 
 ```
 Monica.{ModuleName}/
-├── Module{Name}.cs                    # Core module implementation
-├── Module{Name}Option.cs              # Configuration options
-├── Module{Name}Guide.cs               # Fluent configuration builder
-├── Module{Name}BuilderExtensions.cs   # WebApplicationBuilder extensions
-├── Services/                          # Module services
-│   ├── I{Feature}Service.cs           # Service interfaces
-│   └── {Feature}Service.cs            # Service implementations
-├── Models/                            # Data models (if needed)
-└── Middleware/                        # Module middleware (if needed)
-```
-
-### UI Module Structure
-
-```
-Monica.Framework.UI/
 ├── Modules/
-│   └── {ModuleUI}UI.cs                # UI module class (e.g., SignalrUI.cs)
-├── UI{ModuleName}/                    # UI folder (e.g., UISignalr/)
-│   ├── Components/                    # Blazor components
-│   ├── Models/                        # View models (if needed)
-│   └── Services/                      # UI-specific services (if needed)
-└── Pages/
-    └── UI{ModuleName}Page.razor       # Page component
+│   └── Module{Name}.cs               # Core module implementation
+├── Services/                         # Module services
+│   ├── I{Feature}Service.cs          # Service interfaces
+│   └── {Feature}Service.cs           # Service implementations
+├── Models/                           # Data models (if needed)
+└── Middleware/                       # Module middleware (if needed)
 ```
 
 ## Module Class Implementation
@@ -51,14 +35,10 @@ Monica.Framework.UI/
 public class Module{Name}(Module{Name}Option option)
     : MoModule<Module{Name}, Module{Name}Option, Module{Name}Guide>(option)
 {
-    public override EMoModules CurModuleEnum()
-    {
-        return EMoModules.{Name};
-    }
+    public override ModuleKey GetModuleKey() => EMoModuleKey.{Name};
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        // Register module services
         services.AddScoped<I{Name}Service, {Name}Service>();
     }
 }
@@ -70,10 +50,7 @@ public class Module{Name}(Module{Name}Option option)
 public class Module{Name}(Module{Name}Option option)
     : MoModuleWithDependencies<Module{Name}, Module{Name}Option, Module{Name}Guide>(option)
 {
-    public override EMoModules CurModuleEnum()
-    {
-        return EMoModules.{Name};
-    }
+    public override ModuleKey GetModuleKey() => EMoModuleKey.{Name};
 
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -82,43 +59,36 @@ public class Module{Name}(Module{Name}Option option)
 
     public override void ClaimDependencies()
     {
-        // Declare dependencies on other modules
         DependsOnModule<ModuleOtherGuide>().Register();
         DependsOnModule<ModuleAnotherGuide>().Register();
     }
 }
 ```
 
-### UI Module Implementation
-
-For UI module implementation patterns including page registration and component structure, see the **Monica UI Development** skill and its `references/module-structure-guide.md`.
-
 ## Options Class
 
+Options classes inherit from `MoModuleOption<TModule>` or `MoModuleOptionWithMinimalApi<TModule>` (for modules that expose Minimal API endpoints):
+
 ```csharp
-public class Module{Name}Option
+// Standard module options
+public class Module{Name}Option : MoModuleOption<Module{Name}>
 {
-    /// <summary>
-    /// Enable or disable the feature
-    /// </summary>
     public bool EnableFeature { get; set; } = true;
-
-    /// <summary>
-    /// Configuration value with default
-    /// </summary>
     public int MaxItems { get; set; } = 100;
-
-    /// <summary>
-    /// Connection string or other sensitive config
-    /// </summary>
     public string ConnectionString { get; set; } = string.Empty;
+}
+
+// Module with Minimal API endpoints
+public class Module{Name}Option : MoModuleOptionWithMinimalApi<Module{Name}>
+{
+    public bool EnableFeature { get; set; } = true;
 }
 ```
 
 ## Guide Class (Fluent Configuration)
 
 ```csharp
-public class Module{Name}Guide : MoModuleGuideBase<Module{Name}, Module{Name}Option>
+public class Module{Name}Guide : MoModuleGuide<Module{Name}, Module{Name}Option, Module{Name}Guide>
 {
     public Module{Name}Guide EnableFeature(bool enable = true)
     {
@@ -131,100 +101,57 @@ public class Module{Name}Guide : MoModuleGuideBase<Module{Name}, Module{Name}Opt
         Option.MaxItems = maxItems;
         return this;
     }
-
-    public Module{Name}Guide WithConnectionString(string connectionString)
-    {
-        Option.ConnectionString = connectionString;
-        return this;
-    }
 }
 ```
 
 ## Builder Extensions
 
+Builder extensions use the `extension(Mo)` syntax:
+
 ```csharp
-public static class Module{Name}BuilderExtensions
+public static Module{Name}Guide Add{Name}(Action<Module{Name}Option>? action = null)
 {
-    /// <summary>
-    /// Configure {Name} module with options action
-    /// </summary>
-    public static WebApplicationBuilder ConfigModule{Name}(
-        this WebApplicationBuilder builder,
-        Action<Module{Name}Option>? configureOptions = null)
-    {
-        var option = new Module{Name}Option();
-        configureOptions?.Invoke(option);
-
-        builder.Services.AddSingleton(option);
-        builder.Services.AddModule<Module{Name}>();
-
-        return builder;
-    }
-
-    /// <summary>
-    /// Configure {Name} module with fluent guide
-    /// </summary>
-    public static Module{Name}Guide ConfigModule{Name}(this WebApplicationBuilder builder)
-    {
-        var guide = new Module{Name}Guide();
-        builder.Services.AddSingleton(guide.Option);
-        builder.Services.AddModule<Module{Name}>();
-
-        return guide;
-    }
+    // Registration logic handled by Mo infrastructure
 }
 ```
 
-## Registration Examples
-
-### Basic Registration
+Usage:
 
 ```csharp
-var builder = WebApplication.CreateBuilder(args);
-
-// Option 1: With options action
-Mo.AddSignalR(options =>
+// With options action
+Mo.Add{Name}(options =>
 {
     options.EnableFeature = true;
     options.MaxItems = 50;
 });
 
-// Option 2: With fluent guide
-Mo.AddSignalR()
+// With fluent guide
+Mo.Add{Name}()
     .EnableFeature()
     .WithMaxItems(50);
-```
 
-### With Dependencies
-
-```csharp
 // Dependencies are automatically registered
 Mo.AddJobSchedulerUI(options =>
 {
     options.DisableJobSchedulerPage = false;
 });
-
 // ModuleJobScheduler and ModuleUICore are automatically added
 ```
 
+## UI Modules
+
+UI module architecture patterns (Mixed, Standalone, Framework), UI module class implementation, and folder conventions are documented in the **mo-ui-development** skill's `references/module-structure-guide.md`.
+
 ## Service Layer Integration
 
-### Service Definition
+### UI Service Pattern (Res<T>)
 
-Services should be defined in the source module (not UI module):
+UI services — those directly consumed by Blazor components — use `Res<T>` / `Res` return types:
 
 ```csharp
-// Interface
-public interface I{Name}Service
-{
-    Task<Res<TResponse>> GetDataAsync(TRequest request);
-    Task<Res> ExecuteActionAsync(TRequest request);
-}
-
-// Implementation
-public class {Name}Service(
-    ILogger<{Name}Service> logger,
-    IOtherDependency dependency) : I{Name}Service
+public class {Name}UIService(
+    ILogger<{Name}UIService> logger,
+    IOtherDependency dependency)
 {
     public async Task<Res<TResponse>> GetDataAsync(TRequest request)
     {
@@ -248,12 +175,37 @@ public class {Name}Service(
 }
 ```
 
-### Using Options in Services
+### Infrastructure Service Pattern (Exceptions)
+
+Non-UI / infrastructure services use standard .NET patterns — direct return types and throw exceptions:
 
 ```csharp
 public class {Name}Service(
+    ILogger<{Name}Service> logger,
+    IOtherDependency dependency)
+{
+    public async Task<TResponse> GetDataAsync(TRequest request)
+    {
+        var result = await dependency.ProcessAsync(request);
+        return result ?? throw new KeyNotFoundException("Data not found");
+    }
+
+    public async Task ExecuteActionAsync(TRequest request)
+    {
+        if (!IsValid(request))
+            throw new InvalidOperationException("Invalid request");
+
+        await dependency.ProcessAsync(request);
+    }
+}
+```
+
+### Using Options in Services
+
+```csharp
+public class {Name}UIService(
     IOptions<Module{Name}Option> options,
-    ILogger<{Name}Service> logger) : I{Name}Service
+    ILogger<{Name}UIService> logger)
 {
     private readonly Module{Name}Option _options = options.Value;
 
@@ -269,23 +221,79 @@ public class {Name}Service(
 }
 ```
 
-## Page Route Definition
+## Minimal API to Service Layer Refactoring
+
+When a source module contains Minimal API definitions with inline business logic, refactor them to the service layer pattern.
+
+### Principles
+
+- **Service in source module**: Service class must be defined in the source module, not the UI module
+- **Business logic migration**: Move all business logic from Minimal API to service class
+- **Interface abstraction**: Define interface for the service to support DI
+- **Model reuse**: Reuse existing models from the source module instead of creating duplicates
+
+### Before: Minimal API with Inline Logic
 
 ```csharp
-@page "/module-name-page"
-@attribute [Route({NAME}_URL)]
+endpoints.MapPost("/framework/units/domain-event/{eventKey}/publish",
+    async ([FromRoute] string eventKey,
+          [FromServices] IMoDistributedEventBus eventBus,
+          [FromServices] IGlobalJsonOption jsonOption,
+          [FromBody] JsonNode eventContent,
+          HttpResponse response,
+          HttpContext context) =>
+{
+    if (ProjectUnitStores.GetUnit<UnitDomainEvent>(eventKey) is { } e)
+    {
+        var json = eventContent.ToString();
+        var eventToPublish = JsonSerializer.Deserialize(json, e.Type, jsonOption.GlobalOptions)!;
+        await eventBus.PublishAsync(e.Type, eventToPublish);
+        return Res.Ok(eventToPublish).AppendMsg($"Published {eventKey} event").GetResponse();
+    }
 
-@code {
-    public const string {NAME}_URL = "/module-name-page";
+    return Res.Fail($"Failed to get {eventKey} unit information").GetResponse();
+});
+```
+
+### After: Thin Minimal API + Service
+
+```csharp
+// Minimal API - thin delegation layer
+endpoints.MapPost("/framework/units/domain-event/{eventKey}/publish",
+    async ([FromRoute] string eventKey,
+          [FromServices] IDomainEventService domainEventService,
+          [FromBody] JsonNode eventContent) =>
+    {
+        return await domainEventService.PublishDomainEventAsync(eventKey, eventContent);
+    });
+```
+
+```csharp
+// Service implementation (in source module)
+public class DomainEventService(
+    IMoDistributedEventBus eventBus,
+    IGlobalJsonOption jsonOption) : IDomainEventService
+{
+    public async Task<object> PublishDomainEventAsync(string eventKey, JsonNode eventContent)
+    {
+        if (ProjectUnitStores.GetUnit<UnitDomainEvent>(eventKey) is { } unitEvent)
+        {
+            var json = eventContent.ToString();
+            var eventToPublish = JsonSerializer.Deserialize(json, unitEvent.Type, jsonOption.GlobalOptions)!;
+            await eventBus.PublishAsync(unitEvent.Type, eventToPublish);
+            return Res.Ok(eventToPublish).AppendMsg($"Published {eventKey} event");
+        }
+        return Res.Fail($"Failed to get {eventKey} unit information");
+    }
 }
 ```
 
 ## Best Practices
 
 1. **Use primary constructors** for dependency injection
-2. **Keep modules focused** - one module, one responsibility
+2. **Keep modules focused** — one module, one responsibility
 3. **Declare dependencies explicitly** using `DependsOnModule<TGuide>().Register()`
-4. **Use options for configuration** - inject `IOptions<TOption>`
-5. **Follow naming conventions** - consistent naming makes code discoverable
-6. **Services in source module** - business logic belongs in the source module, not UI
-7. **Return Res types** - all service methods should return `Res<T>` or `Res`
+4. **Use options for configuration** — inject `IOptions<TOption>`
+5. **Follow naming conventions** — consistent naming makes code discoverable
+6. **Return Res types only in UI services** — infrastructure services use standard returns + exceptions
+7. **UI module patterns** — see mo-ui-development skill for UI module architecture and folder conventions

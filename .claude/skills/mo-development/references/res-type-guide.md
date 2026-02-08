@@ -181,22 +181,15 @@ public async Task<Res<Order>> ProcessOrderAsync(OrderRequest request)
 ### Standard Service Pattern
 
 ```csharp
-public class UserService
+public class UserUIService(
+    ILogger<UserUIService> logger,
+    IUserRepository repository)
 {
-    private readonly ILogger<UserService> _logger;
-    private readonly IUserRepository _repository;
-
-    public UserService(ILogger<UserService> logger, IUserRepository repository)
-    {
-        _logger = logger;
-        _repository = repository;
-    }
-
     public async Task<Res<UserResponse>> GetUserAsync(int id)
     {
         try
         {
-            var user = await _repository.GetByIdAsync(id);
+            var user = await repository.GetByIdAsync(id);
 
             if (user == null)
             {
@@ -212,7 +205,7 @@ public class UserService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get user {UserId}", id);
+            logger.LogError(ex, "Failed to get user {UserId}", id);
             return Res.Fail($"Failed to get user: {ex.Message}");
         }
     }

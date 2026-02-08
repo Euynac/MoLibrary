@@ -231,33 +231,13 @@ For font management workflow, see `references/offline-requirements.md`.
 
 For complete API reference, patterns, and examples, see `references/browser-storage-guide.md`.
 
-## Component Architecture
+For detailed component architecture patterns (hierarchy, communication, state management), see `references/blazor-best-practices.md`.
 
-### Component Hierarchy
-
-- **Base Components (Common)**: Reusable atomic components
-- **Business Components**: Feature-specific composite components
-- **Page Components (Pages)**: Complete page-level components
-
-### Single Responsibility
-
-- Each component handles one specific function
-- Complex features combine multiple simple components
-- Separate presentation logic from business logic
-
-### Component Communication
-
-- Use `[Parameter]` for parent-to-child communication
-- Use `EventCallback` for child-to-parent events
-- Use state containers for complex state management
-
-## Service Layer Patterns
+## Service Error Handling in Components
 
 For service layer patterns including `Res<T>` return values and the `IsFailed` handling pattern, see the **mo-development** skill.
 
-### Service Call Pattern in Blazor Components
-
-When calling services from Blazor components, handle errors with user feedback:
+When calling services from Blazor components, handle errors with user feedback via Snackbar:
 
 ```csharp
 private async Task LoadDataAsync()
@@ -273,71 +253,11 @@ private async Task LoadDataAsync()
 }
 ```
 
-## Performance Optimization
+For detailed performance optimization and error boundary patterns, see `references/blazor-best-practices.md`.
 
-### List Rendering
+## UI Module Development
 
-Use `@key` directive:
-
-```razor
-@foreach (var item in Items)
-{
-    <div @key="item.Id">
-        <ItemComponent Item="@item" />
-    </div>
-}
-```
-
-### Large Data Sets
-
-Use virtualization:
-
-```razor
-<MudVirtualize Items="@LargeDataSet" Context="item">
-    <ItemTemplate>
-        <ItemDisplay Item="@item" />
-    </ItemTemplate>
-</MudVirtualize>
-```
-
-### Avoid Unnecessary Rerenders
-
-```csharp
-protected override bool ShouldRender()
-{
-    return _hasDataChanged;
-}
-```
-
-## Error Handling
-
-Use `ErrorBoundary` for graceful error handling:
-
-```razor
-<ErrorBoundary>
-    <ChildContent>
-        <ComplexComponent />
-    </ChildContent>
-    <ErrorContent Context="exception">
-        <MudAlert Severity="Severity.Error">
-            Error: @exception.Message
-        </MudAlert>
-    </ErrorContent>
-</ErrorBoundary>
-```
-
-## MoFramework UI Module Development
-
-When creating new UI modules in MoFramework, follow the standardized structure and patterns.
-
-For complete module structure guide including:
-- Variable naming conventions (`$ModuleName$`, `$ModuleUIName$`, `$UIFolderName$`, `$PageName$`, `$RouteURL$`)
-- File and folder structure
-- Module class implementation with `MoModuleWithDependencies`
-- Service layer patterns
-- Minimal API refactoring to service layer
-
-See `references/module-structure-guide.md`.
+For UI module architecture patterns (Mixed, Standalone, Framework), module class implementation, folder conventions, and component organization, see `references/module-structure-guide.md`.
 
 ## Additional Resources
 
@@ -345,7 +265,7 @@ See `references/module-structure-guide.md`.
 
 For comprehensive guidance, consult these reference files:
 
-- **`references/module-structure-guide.md`** - MoFramework UI module structure, naming conventions, service layer patterns, Minimal API refactoring
+- **`references/module-structure-guide.md`** - UI folder conventions, naming patterns, component organization
 - **`references/blazor-best-practices.md`** - Component architecture, lifecycle, state management, form handling, accessibility patterns
 - **`references/theme-css-guide.md`** - Theme architecture, CSS variable naming, special effects (glassmorphic, gradients), responsive design
 - **`references/mudblazor-css-variables.md`** - Complete palette properties, shadows, layout properties, typography CSS variables
