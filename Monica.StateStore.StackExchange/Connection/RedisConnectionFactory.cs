@@ -52,8 +52,19 @@ public class RedisConnectionFactory(ILogger<RedisConnectionFactory> logger) : IR
         logger.LogInformation("Creating normal Redis connection to {Host}:{Port}", config.Host, config.Port);
 
         var options = BuildBaseOptions(config);
-      
-        return ConnectionMultiplexer.Connect(options);
+
+        try
+        {
+            var connection = ConnectionMultiplexer.Connect(options);
+            SubscribeConnectionEvents(connection, "Normal");
+            LogConnectionStatus(connection, "Normal");
+            return connection;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Redis [Normal] unexpected error during connection to {Host}:{Port}", config.Host, config.Port);
+            throw;
+        }
     }
 
     private IConnectionMultiplexer CreateSentinelConnection(RedisConnectionConfiguration config)
@@ -61,43 +72,57 @@ public class RedisConnectionFactory(ILogger<RedisConnectionFactory> logger) : IR
         logger.LogInformation("Creating Redis Sentinel connection to {Host}:{Port}, service: {ServiceName}",
             config.Host, config.Port, config.ServiceName);
 
-        // Step 1: Connect to Sentinel
-        var sentinelOptions = new ConfigurationOptions
+        try
         {
-            TieBreaker = "",
-            CommandMap = CommandMap.Sentinel,
-            AbortOnConnectFail = false
-        };
+            // Step 1: Connect to Sentinel
+            var sentinelOptions = new ConfigurationOptions
+            {
+                TieBreaker = "",
+                CommandMap = CommandMap.Sentinel,
+                AbortOnConnectFail = false
+            };
 
-        sentinelOptions.EndPoints.Add(config.Host, config.Port);
-        foreach (var endpoint in config.AdditionalEndpoints)
-        {
-            sentinelOptions.EndPoints.Add(endpoint);
+            sentinelOptions.EndPoints.Add(config.Host, config.Port);
+            foreach (var endpoint in config.AdditionalEndpoints)
+            {
+                sentinelOptions.EndPoints.Add(endpoint);
+            }
+
+            if (!string.IsNullOrEmpty(config.Password))
+            {
+                sentinelOptions.Password = config.Password;
+            }
+
+            var sentinelConnection = ConnectionMultiplexer.Connect(sentinelOptions);
+            SubscribeConnectionEvents(sentinelConnection, "Sentinel");
+            LogConnectionStatus(sentinelConnection, "Sentinel");
+
+            // Step 2: Get master connection from Sentinel
+            var masterOptions = new ConfigurationOptions
+            {
+                ServiceName = config.ServiceName,
+                AbortOnConnectFail = false,
+                ConnectTimeout = config.ConnectTimeout,
+                SyncTimeout = config.SyncTimeout
+            };
+
+            if (!string.IsNullOrEmpty(config.Password))
+            {
+                masterOptions.Password = config.Password;
+            }
+
+            logger.LogInformation("Resolving master for Sentinel service: {ServiceName}", config.ServiceName);
+            var masterConnection = sentinelConnection.GetSentinelMasterConnection(masterOptions);
+            SubscribeConnectionEvents(masterConnection, "Sentinel-Master");
+            LogConnectionStatus(masterConnection, "Sentinel-Master");
+            return masterConnection;
         }
-
-        if (!string.IsNullOrEmpty(config.Password))
+        catch (Exception ex)
         {
-            sentinelOptions.Password = config.Password;
+            logger.LogError(ex, "Redis [Sentinel] unexpected error during connection to {Host}:{Port}, service: {ServiceName}",
+                config.Host, config.Port, config.ServiceName);
+            throw;
         }
-
-        var sentinelConnection = ConnectionMultiplexer.Connect(sentinelOptions);
-
-        // Step 2: Get master connection from Sentinel
-        var masterOptions = new ConfigurationOptions
-        {
-            ServiceName = config.ServiceName,
-            AbortOnConnectFail = true,
-            ConnectTimeout = config.ConnectTimeout,
-            SyncTimeout = config.SyncTimeout
-        };
-
-        if (!string.IsNullOrEmpty(config.Password))
-        {
-            masterOptions.Password = config.Password;
-        }
-
-        logger.LogInformation("Connected to Sentinel, resolving master for service: {ServiceName}", config.ServiceName);
-        return sentinelConnection.GetSentinelMasterConnection(masterOptions);
     }
 
     private IConnectionMultiplexer CreateClusterConnection(RedisConnectionConfiguration config)
@@ -116,7 +141,18 @@ public class RedisConnectionFactory(ILogger<RedisConnectionFactory> logger) : IR
             options.EndPoints.Add(endpoint);
         }
 
-        return ConnectionMultiplexer.Connect(options);
+        try
+        {
+            var connection = ConnectionMultiplexer.Connect(options);
+            SubscribeConnectionEvents(connection, "Cluster");
+            LogConnectionStatus(connection, "Cluster");
+            return connection;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Redis [Cluster] unexpected error during connection to {Host}:{Port}", config.Host, config.Port);
+            throw;
+        }
     }
 
     private static ConfigurationOptions BuildBaseOptions(RedisConnectionConfiguration config)
@@ -139,5 +175,39 @@ public class RedisConnectionFactory(ILogger<RedisConnectionFactory> logger) : IR
         }
 
         return options;
+    }
+
+    /// <summary>
+    /// Subscribe to connection lifecycle events for comprehensive logging
+    /// </summary>
+    private void SubscribeConnectionEvents(IConnectionMultiplexer connection, string label)
+    {
+        connection.ConnectionFailed += (_, e) =>
+            logger.LogWarning("Redis [{Label}] connection failed: {Endpoint} ({FailureType}) - {Exception}",
+                label, e.EndPoint, e.FailureType, e.Exception?.Message);
+
+        connection.ConnectionRestored += (_, e) =>
+            logger.LogInformation("Redis [{Label}] connection restored: {Endpoint}", label, e.EndPoint);
+
+        connection.InternalError += (_, e) =>
+            logger.LogError(e.Exception, "Redis [{Label}] internal error (origin: {Origin})", label, e.Origin);
+
+        connection.ErrorMessage += (_, e) =>
+            logger.LogWarning("Redis [{Label}] server error: {Message}", label, e.Message);
+    }
+
+    /// <summary>
+    /// Log the post-connection status of a multiplexer
+    /// </summary>
+    private void LogConnectionStatus(IConnectionMultiplexer connection, string label)
+    {
+        if (connection.IsConnected)
+        {
+            logger.LogInformation("Redis [{Label}] connected successfully", label);
+        }
+        else
+        {
+            logger.LogWarning("Redis [{Label}] connection not yet established, will reconnect in background", label);
+        }
     }
 }
