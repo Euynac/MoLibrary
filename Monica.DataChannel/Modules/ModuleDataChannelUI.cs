@@ -1,10 +1,9 @@
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
-using Monica.DataChannel.Dashboard.Pages;
-using Monica.DataChannel.Dashboard.Services;
+using Monica.DataChannel.Pages;
+using Monica.DataChannel.UIDataChannel.Services;
 using Monica.UI.Modules;
 using MudBlazor;
 
@@ -32,7 +31,7 @@ public class ModuleDataChannelUI(ModuleDataChannelUIOption option)
     public override void ConfigureServices(IServiceCollection services)
     {
         // 注册DataChannel服务
-        services.AddScoped<DataChannelService>();
+        services.AddScoped<DataChannelUIService>();
     }
 
     /// <summary>

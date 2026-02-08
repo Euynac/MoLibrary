@@ -1,11 +1,11 @@
-@using Monica.DataChannel.Dashboard.Models
-@using Monica.DataChannel.Dashboard.Services
 @using Monica.DataChannel.BuildInMiddlewares
 @using MudBlazor
 @using System.Text.Json
+@using Monica.DataChannel.UIDataChannel.Models
+@using Monica.DataChannel.UIDataChannel.Services
 @using Monica.Tool.MoResponse
 @inject IDialogService DialogService
-@inject DataChannelService DataChannelService
+@inject DataChannelUIService DataChannelService
 @inject ISnackbar Snackbar
 
 <MudCard Elevation="2" Class="@GetCardClass()">

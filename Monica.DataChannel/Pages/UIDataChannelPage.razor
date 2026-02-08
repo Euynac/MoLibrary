@@ -1,11 +1,12 @@
 @attribute [Route(PAGE_URL)]
-@using Monica.DataChannel.Dashboard.Services
-@using Monica.DataChannel.Dashboard.Models
-@using Monica.DataChannel.Dashboard.Components
 @using Monica.Tool.MoResponse
 @using MudBlazor
 @using System.Text.Json
-@inject DataChannelService DataChannelService
+@using Monica.DataChannel.UIDataChannel.Components
+@using Monica.DataChannel.UIDataChannel.Services
+
+@using Monica.DataChannel.UIDataChannel.Models
+@inject DataChannelUIService DataChannelService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 

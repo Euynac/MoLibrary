@@ -8,9 +8,9 @@ using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
 using Monica.Core.Modules;
 using Monica.Dapr.Modules;
-using Monica.DataChannel.Dashboard.Services;
 using Monica.DataChannel.Interfaces;
 using Monica.DataChannel.Services;
+using Monica.DataChannel.UIDataChannel.Services;
 
 namespace Monica.DataChannel.Modules;
 
@@ -26,7 +26,7 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
     {
         DataChannelCentral.Setting = Option;
         services.AddSingleton<IDataChannelManager, DataChannelManager>();
-        services.AddScoped<DataChannelService>();
+        services.AddScoped<DataChannelUIService>();
         // Add the hosted service for channel initialization
         services.AddHostedService<DataChannelInitializerService>();
     }
@@ -54,7 +54,7 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
 
             endpoints.MapGet("/channel/{id}/re-init",
                 async ([FromRoute] string id,
-                      [FromServices] DataChannelService service,
+                      [FromServices] DataChannelUIService service,
                       CancellationToken cancellationToken = default) =>
                 {
                     var result = await service.ReInitializeChannelAsync(id, cancellationToken);
@@ -66,7 +66,7 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
                 .WithDescription("对给定ID的DataChannel进行重新初始化操作");
 
             endpoints.MapGet("/channels",
-                async ([FromServices] DataChannelService service) =>
+                async ([FromServices] DataChannelUIService service) =>
                 {
                     var result = await service.GetChannelsStatusAsync();
                     return result.GetResponse();
@@ -79,7 +79,7 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
             endpoints.MapGet("/channel/{id}/exceptions",
                 async ([FromRoute] string id,
                       [FromQuery] int count,
-                      [FromServices] DataChannelService service) =>
+                      [FromServices] DataChannelUIService service) =>
                 {
                     var result = await service.GetChannelExceptionsAsync(id, count);
                     return result.GetResponse();
@@ -90,7 +90,7 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
                 .WithDescription("获取指定DataChannel的异常信息");
 
             endpoints.MapGet("/channels/exceptions/summary",
-                async ([FromServices] DataChannelService service) =>
+                async ([FromServices] DataChannelUIService service) =>
                 {
                     var result = await service.GetExceptionSummaryAsync();
                     return result.GetResponse();
@@ -102,7 +102,7 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
 
             endpoints.MapDelete("/channel/{id}/exceptions",
                 async ([FromRoute] string id,
-                      [FromServices] DataChannelService service) =>
+                      [FromServices] DataChannelUIService service) =>
                 {
                     var result = await service.ClearChannelExceptionsAsync(id);
                     return result.GetResponse();

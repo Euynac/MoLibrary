@@ -1,4 +1,4 @@
-namespace Monica.DataChannel.Dashboard.Models;
+namespace Monica.DataChannel.UIDataChannel.Models;
 
 /// <summary>
 /// DataChannel异常信息

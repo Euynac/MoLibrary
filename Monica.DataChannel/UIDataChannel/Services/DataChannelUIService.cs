@@ -1,11 +1,9 @@
-using Monica.DataChannel.Dashboard.Models;
-using Monica.DataChannel.Interfaces;
-using Monica.DataChannel.BuildInMiddlewares;
-using Monica.Tool.MoResponse;
 using Microsoft.Extensions.Logging;
 using Monica.Core.Extensions;
+using Monica.DataChannel.UIDataChannel.Models;
+using Monica.Tool.MoResponse;
 
-namespace Monica.DataChannel.Dashboard.Services;
+namespace Monica.DataChannel.UIDataChannel.Services;
 
 /// <summary>
 /// DataChannel服务，提供DataChannel管理的核心业务逻辑
@@ -15,7 +13,7 @@ namespace Monica.DataChannel.Dashboard.Services;
 /// </remarks>
 /// <param name="manager">DataChannel管理器</param>
 /// <param name="logger">日志记录器</param>
-public class DataChannelService(IDataChannelManager manager, ILogger<DataChannelService> logger)
+public class DataChannelUIService(IDataChannelManager manager, ILogger<DataChannelUIService> logger)
 {
 
     /// <summary>

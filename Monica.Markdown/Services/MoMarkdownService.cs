@@ -281,7 +281,7 @@ public class MoMarkdownService(
             return false;
 
         // List value: contains check (e.g., tags)
-        if (rawValue is List<object> list)
+        if (rawValue is List<object?> list)
         {
             return list.Any(item =>
                 item is not null

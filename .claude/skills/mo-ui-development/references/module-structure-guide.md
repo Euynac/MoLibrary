@@ -272,7 +272,6 @@ Pages/UISignalRPage.razor                      # Page
 Modules/SystemInfoUI.cs                        # Module class
 UISystemInfo/                                  # UI folder
 ├── Services/SystemInfoService.cs              # Direct business logic
-├── Controllers/ModuleSystemInfoController.cs  # Optional controller
 └── Models/SystemInfoResponse.cs               # Response model
 Pages/UISystemInfoPage.razor                   # Page
 ```

@@ -1,7 +1,7 @@
-using Monica.DataChannel.Pipeline;
 using Monica.DataChannel.BuildInMiddlewares;
+using Monica.DataChannel.Pipeline;
 
-namespace Monica.DataChannel.Dashboard.Models;
+namespace Monica.DataChannel.UIDataChannel.Models;
 
 /// <summary>
 /// 管道组件信息
