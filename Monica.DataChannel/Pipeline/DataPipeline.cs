@@ -92,6 +92,7 @@ public class DataPipeline : IObservableInstance
             opt.InstanceName = id;
             opt.InstanceType = typeof(DataPipeline);
             opt.GroupId = groupId;
+            opt.Logger = DataChannelCentral.Logger;
         });
     }
 
@@ -265,11 +266,11 @@ public class DataPipeline : IObservableInstance
     /// 设置管道引用并初始化所有通信核心
     /// </summary>
     /// <returns>初始化结果，包含成功状态和可能的错误信息</returns>
-    internal async Task<Res> InitAsync(CancellationToken cancellationToken = default)
+    internal async Task InitAsync(CancellationToken cancellationToken = default)
     {
         if(IsInitializing)
         {
-            return Res.Ok("管道正在初始化中");
+            return;
         }
         IsInitializing = true;
         InnerEndpoint.Pipe = this;
@@ -285,18 +286,16 @@ public class DataPipeline : IObservableInstance
             catch (Exception e)
             {
                 // 收集异常信息
-                CollectException(e, communicationCore);
+                CollectException(e, communicationCore, $"DataPipeline:{Id}，初始化通信核心时发生错误，通信核心：{communicationCore.GetType().Name}");
                 
                 IsNotAvailable = true;
                 IsInitializing = false;
-                DataChannelCentral.Logger.LogError(e, "DataPipeline:{Id}初始化失败", Id);
-                return $"DataPipeline:{Id}初始化失败:{e.GetMessageRecursively()}";
+                throw;
             }
         }
 
         IsInitialized = true;
         IsInitializing = false;
-        return Res.Ok("管道初始化成功");
     }
 
     /// <summary>

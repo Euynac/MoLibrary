@@ -65,8 +65,8 @@ public class DataChannelService(IDataChannelManager manager, ILogger<DataChannel
                 return Res.Fail("未找到指定的DataChannel");
             }
 
-            var result = await channel.ReInitialize(cancellationToken);
-            return result.Code == ResponseCode.Ok ? Res.Ok("重新初始化成功") : Res.Fail(result.Message ?? "重新初始化失败");
+            await channel.ReInitialize(cancellationToken);
+            return Res.Ok("重新初始化成功");
         }
         catch (Exception ex)
         {
