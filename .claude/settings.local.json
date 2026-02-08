@@ -69,17 +69,14 @@
       "Skill(microsoft-docs:microsoft-docs)",
       "Bash(claude-mcp-client microsoft-docs microsoft_docs_search:*)",
       "mcp__microsoft-learn__microsoft_docs_search",
-      "mcp__microsoft-learn__microsoft_code_sample_search"
+      "mcp__microsoft-learn__microsoft_code_sample_search",
+      "Skill(playwright-cli)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"
   },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
-    "context7",
-    "browsermcp",
-    "puppeteer",
-    "microsoft_docs_mcp",
-    "spec-workflow"
+    "microsoft-learn"
   ]
 }
