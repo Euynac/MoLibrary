@@ -1,0 +1,30 @@
+/* Tree panel container */
+.tree-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.tree-header {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 8px 0 8px;
+}
+
+::deep .tree-search {
+    flex: 1;
+}
+
+.tree-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 0;
+}
+
+/* Tree item styling */
+::deep .mud-treeview-item-content {
+    border-radius: var(--mud-default-borderradius);
+    margin: 1px 4px;
+}

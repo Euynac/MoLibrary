@@ -1,0 +1,65 @@
+@using Monica.Markdown.Models
+
+<div class="metadata-panel pa-3">
+    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="flex-wrap">
+        @if (FrontMatter.Date.HasValue)
+        {
+            <MudChip T="string"
+                     Icon="@Icons.Material.Filled.CalendarToday"
+                     Size="Size.Small"
+                     Variant="Variant.Outlined"
+                     Color="Color.Default">
+                @FrontMatter.Date.Value.ToString("yyyy-MM-dd")
+            </MudChip>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(FrontMatter.Title))
+        {
+            <MudChip T="string"
+                     Icon="@Icons.Material.Filled.Title"
+                     Size="Size.Small"
+                     Variant="Variant.Outlined"
+                     Color="Color.Primary">
+                @FrontMatter.Title
+            </MudChip>
+        }
+
+        @foreach (var tag in FrontMatter.Tags)
+        {
+            <MudChip T="string"
+                     Icon="@Icons.Material.Filled.Tag"
+                     Size="Size.Small"
+                     Variant="Variant.Filled"
+                     Color="Color.Info">
+                @tag
+            </MudChip>
+        }
+
+        @foreach (var kv in GetCustomMetadata())
+        {
+            <MudTooltip Text="@kv.Key">
+                <MudChip T="string"
+                         Size="Size.Small"
+                         Variant="Variant.Outlined"
+                         Color="Color.Default">
+                    @kv.Key: @kv.Value
+                </MudChip>
+            </MudTooltip>
+        }
+    </MudStack>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public MarkdownFrontMatter FrontMatter { get; set; } = null!;
+
+    private static readonly HashSet<string> ReservedKeys =
+        new(StringComparer.OrdinalIgnoreCase) { "title", "date", "tags" };
+
+    private IEnumerable<KeyValuePair<string, string>> GetCustomMetadata()
+    {
+        return FrontMatter.RawMetadata
+            .Where(kv => !ReservedKeys.Contains(kv.Key) && kv.Value is not null)
+            .Select(kv => new KeyValuePair<string, string>(kv.Key, kv.Value?.ToString() ?? ""));
+    }
+}

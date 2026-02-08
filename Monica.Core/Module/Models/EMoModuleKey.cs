@@ -157,5 +157,9 @@ public enum EMoModuleKey
     /// <summary>
     /// Markdown document management module
     /// </summary>
-    Markdown
+    Markdown,
+    /// <summary>
+    /// Markdown document viewer UI module
+    /// </summary>
+    MarkdownUI
 }

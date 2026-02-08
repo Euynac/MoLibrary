@@ -1,0 +1,91 @@
+@using Monica.Markdown.Models
+
+@if (IsLoading)
+{
+    <MudPaper Class="content-container pa-8" Elevation="1">
+        <MudStack AlignItems="AlignItems.Center" Spacing="4">
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+            <MudText Typo="Typo.body1" Color="Color.Primary">Loading document...</MudText>
+        </MudStack>
+    </MudPaper>
+}
+else if (Document is null)
+{
+    <MudPaper Class="content-container pa-8" Elevation="1">
+        <MudStack AlignItems="AlignItems.Center" Spacing="4">
+            <MudIcon Icon="@Icons.Material.Filled.Article"
+                     Size="Size.Large"
+                     Color="Color.Default"
+                     Style="opacity: 0.3; font-size: 4rem;" />
+            <MudText Typo="Typo.h6" Color="Color.Default" Style="opacity: 0.5;">
+                Select a document to view
+            </MudText>
+        </MudStack>
+    </MudPaper>
+}
+else
+{
+    <MudPaper Class="content-container" Elevation="1">
+        <!-- Breadcrumb -->
+        <div class="breadcrumb-bar pa-3">
+            <MudBreadcrumbs Items="_breadcrumbs" Class="pa-0" />
+        </div>
+
+        <MudDivider />
+
+        <!-- Metadata -->
+        @if (Document.FrontMatter is not null)
+        {
+            <DocumentMetadataPanel FrontMatter="Document.FrontMatter" />
+            <MudDivider />
+        }
+
+        <!-- Markdown Content -->
+        <div class="markdown-body pa-4">
+            <MoMarkdownThemeManager />
+            <MudMarkdown Value="@Content" />
+        </div>
+    </MudPaper>
+}
+
+@code {
+    [Parameter]
+    public MarkdownDocument? Document { get; set; }
+
+    [Parameter]
+    public string? Content { get; set; }
+
+    [Parameter]
+    public bool IsLoading { get; set; }
+
+    [Parameter]
+    public string? GroupTitle { get; set; }
+
+    private List<BreadcrumbItem> _breadcrumbs = [];
+
+    protected override void OnParametersSet()
+    {
+        BuildBreadcrumbs();
+    }
+
+    private void BuildBreadcrumbs()
+    {
+        _breadcrumbs = [];
+
+        if (Document is null) return;
+
+        if (GroupTitle is not null)
+        {
+            _breadcrumbs.Add(new BreadcrumbItem(GroupTitle, null, icon: Icons.Material.Filled.Folder));
+        }
+
+        var segments = Document.RelativePath.Split('/');
+        for (var i = 0; i < segments.Length - 1; i++)
+        {
+            _breadcrumbs.Add(new BreadcrumbItem(segments[i], null, icon: Icons.Material.Filled.FolderOpen));
+        }
+
+        _breadcrumbs.Add(new BreadcrumbItem(Document.Title, null, disabled: true,
+            icon: Icons.Custom.FileFormats.FileDocument));
+    }
+}

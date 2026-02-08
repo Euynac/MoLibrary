@@ -1,0 +1,70 @@
+/* Page header */
+.title-header {
+    background: linear-gradient(45deg, var(--mud-palette-primary) 30%, var(--mud-palette-primary-lighten) 90%);
+    color: white;
+    border-radius: var(--mud-default-borderradius);
+}
+
+.title-text {
+    font-weight: 500;
+    margin: 0;
+}
+
+.header-button {
+    border-color: white;
+    color: white;
+}
+
+/* Loading */
+.loading-container {
+    padding: 2rem;
+}
+
+/* Content layout */
+.content-area {
+    display: flex;
+    gap: 16px;
+    min-height: 600px;
+    position: relative;
+}
+
+.tree-panel {
+    width: 300px;
+    min-width: 300px;
+    flex-shrink: 0;
+}
+
+.content-panel {
+    flex: 1;
+    min-width: 0;
+}
+
+.tree-toggle-button {
+    position: absolute;
+    left: 0;
+    top: 8px;
+    z-index: 1;
+}
+
+/* MudBlazor deep overrides */
+::deep .mud-paper.title-header .mud-button-root {
+    border-color: white !important;
+    color: white !important;
+}
+
+::deep .mud-paper.title-header .mud-button-root:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Responsive */
+@media (max-width: 960px) {
+    .tree-panel {
+        position: absolute;
+        left: 0;
+        top: 0;
+        z-index: 10;
+        height: 100%;
+        background: var(--mud-palette-surface);
+        box-shadow: var(--mud-elevation-8);
+    }
+}

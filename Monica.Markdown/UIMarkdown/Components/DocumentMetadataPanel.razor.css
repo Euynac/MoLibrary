@@ -1,0 +1,12 @@
+/* Metadata panel */
+.metadata-panel {
+    background: var(--mud-palette-background-gray);
+}
+
+::deep .metadata-panel .mud-chip {
+    margin: 2px;
+}
+
+.flex-wrap {
+    flex-wrap: wrap;
+}

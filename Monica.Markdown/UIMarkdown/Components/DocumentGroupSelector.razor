@@ -1,0 +1,49 @@
+@using Monica.Markdown.Models
+
+<MudPaper Class="mb-4" Elevation="1">
+    <MudTabs @bind-ActivePanelIndex="_activeIndex"
+             Elevation="0"
+             Rounded="true"
+             ApplyEffectsToContainer="true"
+             Class="group-tabs">
+        @foreach (var group in Groups)
+        {
+            <MudTabPanel Text="@group.Title"
+                         BadgeData="@group.DocumentCount"
+                         BadgeColor="Color.Primary"
+                         ToolTip="@(group.Description ?? group.BasePath)"
+                         Disabled="!group.IsValid"
+                         OnClick="@(() => OnTabClicked(group.Key))" />
+        }
+    </MudTabs>
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired]
+    public List<MarkdownDocumentGroup> Groups { get; set; } = [];
+
+    [Parameter]
+    public string? SelectedGroupKey { get; set; }
+
+    [Parameter]
+    public EventCallback<string> SelectedGroupKeyChanged { get; set; }
+
+    private int _activeIndex;
+
+    protected override void OnParametersSet()
+    {
+        if (SelectedGroupKey is not null)
+        {
+            var idx = Groups.FindIndex(g => g.Key == SelectedGroupKey);
+            if (idx >= 0) _activeIndex = idx;
+        }
+    }
+
+    private async Task OnTabClicked(string groupKey)
+    {
+        if (groupKey != SelectedGroupKey)
+        {
+            await SelectedGroupKeyChanged.InvokeAsync(groupKey);
+        }
+    }
+}

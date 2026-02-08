@@ -1,0 +1,203 @@
+@attribute [Route(PAGE_URL)]
+@using Monica.Tool.MoResponse
+@using Monica.Markdown.Models
+@using Monica.Markdown.UIMarkdown.Components
+@using Monica.Markdown.UIMarkdown.Services
+@using Monica.Tool.Algorithm.Tree
+
+@inject MarkdownUIService MarkdownService
+@inject ISnackbar Snackbar
+
+<PageTitle>Markdown Documents</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
+    <!-- Header -->
+    <MudPaper Class="title-header pa-4 mb-4">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                <MudIcon Icon="@Icons.Material.Filled.MenuBook" Size="Size.Large" />
+                <MudText Typo="Typo.h4" Class="title-text">Markdown Documents</MudText>
+            </MudStack>
+            <MudButton StartIcon="@Icons.Material.Filled.Refresh"
+                       Color="Color.Inherit"
+                       Variant="Variant.Outlined"
+                       OnClick="RefreshAll"
+                       Size="Size.Medium"
+                       Class="header-button">
+                Refresh
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+
+    @if (_loading)
+    {
+        <MudStack AlignItems="AlignItems.Center" Spacing="4" Class="loading-container">
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+            <MudText Typo="Typo.h6" Color="Color.Primary">Loading documents...</MudText>
+        </MudStack>
+    }
+    else if (_groups is null || _groups.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.Info" />
+                <MudText>No document groups registered.</MudText>
+            </MudStack>
+        </MudAlert>
+    }
+    else
+    {
+        <!-- Group Selector -->
+        <DocumentGroupSelector Groups="_groups"
+                               SelectedGroupKey="_selectedGroupKey"
+                               SelectedGroupKeyChanged="OnGroupSelected" />
+
+        <!-- Content Area -->
+        <div class="content-area">
+            <!-- Tree Panel -->
+            @if (_showTreePanel && _currentTree is not null)
+            {
+                <div class="tree-panel">
+                    <DocumentTreePanel TreeRoot="_currentTree"
+                                       SelectedDocument="_selectedDocument"
+                                       SelectedDocumentChanged="OnDocumentSelected"
+                                       OnCollapseRequested="ToggleTreePanel" />
+                </div>
+            }
+            else if (!_showTreePanel)
+            {
+                <MudIconButton Icon="@Icons.Material.Filled.ChevronRight"
+                               OnClick="ToggleTreePanel"
+                               Class="tree-toggle-button"
+                               Title="Show navigation" />
+            }
+
+            <!-- Document Content -->
+            <div class="content-panel">
+                <DocumentContentViewer Document="_selectedDocument"
+                                       Content="_documentContent"
+                                       IsLoading="_contentLoading"
+                                       GroupTitle="@GetCurrentGroupTitle()" />
+            </div>
+        </div>
+    }
+</MudContainer>
+
+@code {
+    public const string PAGE_URL = "/markdown-docs";
+
+    private bool _loading = true;
+    private bool _contentLoading;
+    private bool _showTreePanel = true;
+    private List<MarkdownDocumentGroup>? _groups;
+    private string? _selectedGroupKey;
+    private TreeNode<MarkdownDocumentNodeData>? _currentTree;
+    private MarkdownDocument? _selectedDocument;
+    private string? _documentContent;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadGroups();
+        }
+    }
+
+    private string? GetCurrentGroupTitle() =>
+        _groups?.FirstOrDefault(g => g.Key == _selectedGroupKey)?.Title;
+
+    private async Task LoadGroups()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        try
+        {
+            if ((await MarkdownService.GetAllDocumentGroupsAsync())
+                .IsFailed(out var error, out var groups))
+            {
+                Snackbar.Add("Failed to load document groups: " + error, Severity.Error);
+                return;
+            }
+
+            _groups = groups;
+
+            if (_groups.Count > 0)
+            {
+                var firstValid = _groups.FirstOrDefault(g => g.IsValid) ?? _groups[0];
+                await OnGroupSelected(firstValid.Key);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading data: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnGroupSelected(string groupKey)
+    {
+        _selectedGroupKey = groupKey;
+        _selectedDocument = null;
+        _documentContent = null;
+
+        if ((await MarkdownService.GetDocumentTreeAsync(groupKey))
+            .IsFailed(out var error, out var tree))
+        {
+            Snackbar.Add("Failed to load document tree: " + error, Severity.Error);
+            return;
+        }
+
+        _currentTree = tree;
+        StateHasChanged();
+    }
+
+    private async Task OnDocumentSelected(MarkdownDocument? document)
+    {
+        _selectedDocument = document;
+        _documentContent = null;
+
+        if (document is null) return;
+
+        _contentLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            if ((await MarkdownService.GetDocumentContentAsync(document))
+                .IsFailed(out var error, out var content))
+            {
+                Snackbar.Add("Failed to load document: " + error, Severity.Error);
+                return;
+            }
+
+            _documentContent = content;
+        }
+        finally
+        {
+            _contentLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefreshAll()
+    {
+        if ((await MarkdownService.RefreshAllAsync()).IsFailed(out var error))
+        {
+            Snackbar.Add("Failed to refresh: " + error, Severity.Error);
+            return;
+        }
+
+        Snackbar.Add("Documents refreshed", Severity.Success);
+        await LoadGroups();
+    }
+
+    private void ToggleTreePanel()
+    {
+        _showTreePanel = !_showTreePanel;
+    }
+}

@@ -1,0 +1,32 @@
+/* Content viewer container */
+.content-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.breadcrumb-bar {
+    background: var(--mud-palette-background-gray);
+}
+
+.markdown-body {
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* Markdown content styling */
+::deep .markdown-body img {
+    max-width: 100%;
+    height: auto;
+}
+
+::deep .markdown-body table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+::deep .markdown-body pre {
+    border-radius: var(--mud-default-borderradius);
+    overflow-x: auto;
+}

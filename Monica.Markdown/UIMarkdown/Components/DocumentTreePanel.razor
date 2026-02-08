@@ -1,0 +1,111 @@
+@using Monica.Markdown.Models
+@using Monica.Tool.Algorithm.Tree
+
+<MudPaper Class="tree-container" Elevation="1">
+    <!-- Tree Header -->
+    <div class="tree-header">
+        <MudTextField @bind-Value="_searchText"
+                      Placeholder="Search..."
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Immediate="true"
+                      Class="tree-search" />
+        <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft"
+                       OnClick="OnCollapseRequested"
+                       Size="Size.Small"
+                       Title="Hide navigation" />
+    </div>
+
+    <!-- Tree View -->
+    <div class="tree-content">
+        <MudTreeView T="MarkdownDocumentNodeData"
+                     Items="_treeItems"
+                     SelectedValueChanged="OnItemSelected"
+                     Hover="true"
+                     Dense="true">
+            <ItemTemplate>
+                <MudTreeViewItem T="MarkdownDocumentNodeData"
+                                 Items="@context.Children"
+                                 Value="@context.Value"
+                                 Text="@context.Text"
+                                 Icon="@GetIcon(context.Value)"
+                                 IconColor="@GetIconColor(context.Value)"
+                                 Expanded="IsExpanded(context.Value)" />
+            </ItemTemplate>
+        </MudTreeView>
+    </div>
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired]
+    public TreeNode<MarkdownDocumentNodeData>? TreeRoot { get; set; }
+
+    [Parameter]
+    public MarkdownDocument? SelectedDocument { get; set; }
+
+    [Parameter]
+    public EventCallback<MarkdownDocument?> SelectedDocumentChanged { get; set; }
+
+    [Parameter]
+    public EventCallback OnCollapseRequested { get; set; }
+
+    private string? _searchText;
+    private List<TreeItemData<MarkdownDocumentNodeData>>? _treeItems;
+
+    protected override void OnParametersSet()
+    {
+        _treeItems = BuildTreeItems(TreeRoot);
+    }
+
+    private List<TreeItemData<MarkdownDocumentNodeData>>? BuildTreeItems(
+        TreeNode<MarkdownDocumentNodeData>? node)
+    {
+        if (node is null) return null;
+
+        var items = new List<TreeItemData<MarkdownDocumentNodeData>>();
+        foreach (var child in node.Children)
+        {
+            if (!MatchesSearch(child)) continue;
+
+            var item = new TreeItemData<MarkdownDocumentNodeData>
+            {
+                Value = child.Data,
+                Text = child.Data.Name,
+                Children = BuildTreeItems(child)
+            };
+            items.Add(item);
+        }
+        return items.Count > 0 ? items : null;
+    }
+
+    private bool MatchesSearch(TreeNode<MarkdownDocumentNodeData> node)
+    {
+        if (string.IsNullOrWhiteSpace(_searchText)) return true;
+
+        if (node.Data.Name.Contains(_searchText, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return node.Children.Any(MatchesSearch);
+    }
+
+    private async Task OnItemSelected(MarkdownDocumentNodeData? data)
+    {
+        if (data?.IsDocument == true && data.Document is not null)
+        {
+            await SelectedDocumentChanged.InvokeAsync(data.Document);
+        }
+    }
+
+    private static string GetIcon(MarkdownDocumentNodeData? data) =>
+        data?.IsDocument == true
+            ? Icons.Custom.FileFormats.FileDocument
+            : Icons.Custom.Uncategorized.Folder;
+
+    private static Color GetIconColor(MarkdownDocumentNodeData? data) =>
+        data?.IsDocument == true ? Color.Info : Color.Warning;
+
+    private bool IsExpanded(MarkdownDocumentNodeData? data) =>
+        !string.IsNullOrWhiteSpace(_searchText) || data?.IsDocument != true;
+}
