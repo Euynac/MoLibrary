@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Monica.Core.Features.HostedServices;
 using Monica.Core.Features.HostedServices.Interfaces;
 using Monica.Core.Module;
@@ -49,17 +50,27 @@ public class ModuleHostedService(ModuleHostedServiceOption option)
 
     public override void ConfigureApplicationBuilder(IApplicationBuilder app)
     {
-        // Register all IHostedService instances that implement IMoHostedService
-        var manager = app.ApplicationServices.GetRequiredService<IMoHostedServiceManager>();
-        var hostedServices = app.ApplicationServices.GetServices<IHostedService>();
-
-        foreach (var service in hostedServices)
+        Task.Run(() =>
         {
-            if (service is not IMoHostedService moHostedService) continue;
+            try
+            {
+                // Register all IHostedService instances that implement IMoHostedService
+                var manager = app.ApplicationServices.GetRequiredService<IMoHostedServiceManager>();
+                var hostedServices = app.ApplicationServices.GetServices<IHostedService>();
 
-            // Register with manager
-            manager.RegisterService(moHostedService);
-        }
+                foreach (var service in hostedServices)
+                {
+                    if (service is not IMoHostedService moHostedService) continue;
+
+                    // Register with manager
+                    manager.RegisterService(moHostedService);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error registering MoHostedServices");
+            }
+        });
     }
 }
 

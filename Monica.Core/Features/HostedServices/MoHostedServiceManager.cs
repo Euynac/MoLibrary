@@ -14,7 +14,7 @@ public class MoHostedServiceManager : IMoHostedServiceManager
     /// <inheritdoc />
     public void RegisterService(IMoHostedService service)
     {
-        _services[service.GetType()] = service;
+        _services.TryAdd(service.GetType(), service);
     }
 
     /// <inheritdoc />
