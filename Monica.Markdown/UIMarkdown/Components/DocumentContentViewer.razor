@@ -1,6 +1,29 @@
 @using Monica.Markdown.Models
 
-@if (IsLoading)
+@if (IsGroupInvalid)
+{
+    <MudPaper Class="content-container pa-8" Elevation="1">
+        <MudStack AlignItems="AlignItems.Center" Spacing="4">
+            <MudIcon Icon="@Icons.Material.Filled.Warning"
+                     Size="Size.Large"
+                     Color="Color.Warning"
+                     Style="font-size: 4rem;" />
+            <MudText Typo="Typo.h6" Color="Color.Warning">
+                Document group unavailable
+            </MudText>
+            <MudText Typo="Typo.body2" Align="Align.Center" Style="opacity: 0.7;">
+                The configured path does not exist or is not accessible.
+            </MudText>
+            @if (InvalidGroupPath is not null)
+            {
+                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                    <MudText Typo="Typo.body2" Style="font-family: monospace;">@InvalidGroupPath</MudText>
+                </MudAlert>
+            }
+        </MudStack>
+    </MudPaper>
+}
+else if (IsLoading)
 {
     <MudPaper Class="content-container pa-8" Elevation="1">
         <MudStack AlignItems="AlignItems.Center" Spacing="4">
@@ -60,6 +83,12 @@ else
 
     [Parameter]
     public string? GroupTitle { get; set; }
+
+    [Parameter]
+    public bool IsGroupInvalid { get; set; }
+
+    [Parameter]
+    public string? InvalidGroupPath { get; set; }
 
     private List<BreadcrumbItem> _breadcrumbs = [];
 

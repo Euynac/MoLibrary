@@ -49,36 +49,48 @@
     {
         <!-- Group Selector -->
         <DocumentGroupSelector Groups="_groups"
-                               SelectedGroupKey="_selectedGroupKey"
+                               SelectedGroupKey="@_selectedGroupKey"
                                SelectedGroupKeyChanged="OnGroupSelected" />
 
         <!-- Content Area -->
         <div class="content-area">
-            <!-- Tree Panel -->
-            @if (_showTreePanel && _currentTree is not null)
+            @if (IsCurrentGroupValid())
             {
-                <div class="tree-panel">
-                    <DocumentTreePanel TreeRoot="_currentTree"
-                                       SelectedDocument="_selectedDocument"
-                                       SelectedDocumentChanged="OnDocumentSelected"
-                                       OnCollapseRequested="ToggleTreePanel" />
+                <!-- Tree Panel -->
+                @if (_showTreePanel && _currentTree is not null)
+                {
+                    <div class="tree-panel">
+                        <DocumentTreePanel TreeRoot="_currentTree"
+                                           SelectedDocument="_selectedDocument"
+                                           SelectedDocumentChanged="OnDocumentSelected"
+                                           OnCollapseRequested="ToggleTreePanel" />
+                    </div>
+                }
+                else if (!_showTreePanel)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.ChevronRight"
+                                   OnClick="ToggleTreePanel"
+                                   Class="tree-toggle-button"
+                                   Title="Show navigation" />
+                }
+
+                <!-- Document Content -->
+                <div class="content-panel">
+                    <DocumentContentViewer Document="_selectedDocument"
+                                           Content="@_documentContent"
+                                           IsLoading="_contentLoading"
+                                           GroupTitle="@GetCurrentGroupTitle()" />
                 </div>
             }
-            else if (!_showTreePanel)
+            else
             {
-                <MudIconButton Icon="@Icons.Material.Filled.ChevronRight"
-                               OnClick="ToggleTreePanel"
-                               Class="tree-toggle-button"
-                               Title="Show navigation" />
+                <!-- Invalid Group Warning -->
+                <div class="content-panel">
+                    <DocumentContentViewer IsGroupInvalid="true"
+                                           InvalidGroupPath="@GetCurrentGroupBasePath()"
+                                           GroupTitle="@GetCurrentGroupTitle()" />
+                </div>
             }
-
-            <!-- Document Content -->
-            <div class="content-panel">
-                <DocumentContentViewer Document="_selectedDocument"
-                                       Content="_documentContent"
-                                       IsLoading="_contentLoading"
-                                       GroupTitle="@GetCurrentGroupTitle()" />
-            </div>
         </div>
     }
 </MudContainer>
@@ -105,6 +117,12 @@
 
     private string? GetCurrentGroupTitle() =>
         _groups?.FirstOrDefault(g => g.Key == _selectedGroupKey)?.Title;
+
+    private string? GetCurrentGroupBasePath() =>
+        _groups?.FirstOrDefault(g => g.Key == _selectedGroupKey)?.BasePath;
+
+    private bool IsCurrentGroupValid() =>
+        _groups?.FirstOrDefault(g => g.Key == _selectedGroupKey)?.IsValid ?? false;
 
     private async Task LoadGroups()
     {
@@ -144,6 +162,14 @@
         _selectedGroupKey = groupKey;
         _selectedDocument = null;
         _documentContent = null;
+        _currentTree = null;
+
+        var group = _groups?.FirstOrDefault(g => g.Key == groupKey);
+        if (group is null || !group.IsValid)
+        {
+            StateHasChanged();
+            return;
+        }
 
         if ((await MarkdownService.GetDocumentTreeAsync(groupKey))
             .IsFailed(out var error, out var tree))

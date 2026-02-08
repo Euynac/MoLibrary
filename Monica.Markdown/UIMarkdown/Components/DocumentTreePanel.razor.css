@@ -20,11 +20,29 @@
 .tree-content {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 4px 0;
+}
+
+/* Prevent MudTreeView from causing horizontal overflow */
+::deep .mud-treeview {
+    overflow-x: hidden;
+}
+
+::deep .mud-treeview-item-content .mud-treeview-item-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
 }
 
 /* Tree item styling */
 ::deep .mud-treeview-item-content {
     border-radius: var(--mud-default-borderradius);
     margin: 1px 4px;
+}
+
+/* Empty state */
+.empty-state {
+    margin-top: 2rem;
 }

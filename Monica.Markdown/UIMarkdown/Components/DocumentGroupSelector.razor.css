@@ -3,3 +3,12 @@
     text-transform: none;
     font-weight: 500;
 }
+
+::deep .tab-warning-icon {
+    animation: pulse-warning 2s ease-in-out infinite;
+}
+
+@keyframes pulse-warning {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}

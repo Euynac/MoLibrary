@@ -70,9 +70,10 @@
       "Bash(claude-mcp-client microsoft-docs microsoft_docs_search:*)",
       "mcp__microsoft-learn__microsoft_docs_search",
       "mcp__microsoft-learn__microsoft_code_sample_search",
-      "Skill(playwright-cli)"
+      "Skill(playwright-cli)",
+      "Bash(playwright-cli:*)"
     ],
-    "deny": [],
+    "deny": [], 
     "defaultMode": "acceptEdits"
   },
   "enableAllProjectMcpServers": true,

@@ -20,21 +20,36 @@
 
     <!-- Tree View -->
     <div class="tree-content">
-        <MudTreeView T="MarkdownDocumentNodeData"
-                     Items="_treeItems"
-                     SelectedValueChanged="OnItemSelected"
-                     Hover="true"
-                     Dense="true">
-            <ItemTemplate>
-                <MudTreeViewItem T="MarkdownDocumentNodeData"
-                                 Items="@context.Children"
-                                 Value="@context.Value"
-                                 Text="@context.Text"
-                                 Icon="@GetIcon(context.Value)"
-                                 IconColor="@GetIconColor(context.Value)"
-                                 Expanded="IsExpanded(context.Value)" />
-            </ItemTemplate>
-        </MudTreeView>
+        @if (_treeItems is null || _treeItems.Count == 0)
+        {
+            <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="pa-4 empty-state">
+                <MudIcon Icon="@Icons.Material.Filled.SearchOff"
+                         Size="Size.Large"
+                         Color="Color.Default"
+                         Style="opacity: 0.3;" />
+                <MudText Typo="Typo.body2" Color="Color.Default" Style="opacity: 0.5;">
+                    No documents found
+                </MudText>
+            </MudStack>
+        }
+        else
+        {
+            <MudTreeView T="MarkdownDocumentNodeData"
+                         Items="_treeItems"
+                         SelectedValueChanged="OnItemSelected"
+                         Hover="true"
+                         Dense="true">
+                <ItemTemplate>
+                    <MudTreeViewItem T="MarkdownDocumentNodeData"
+                                     Items="@context.Children"
+                                     Value="@context.Value"
+                                     Text="@context.Text"
+                                     Icon="@GetIcon(context.Value)"
+                                     IconColor="@GetIconColor(context.Value)"
+                                     Expanded="IsExpanded(context.Value)" />
+                </ItemTemplate>
+            </MudTreeView>
+        }
     </div>
 </MudPaper>
 

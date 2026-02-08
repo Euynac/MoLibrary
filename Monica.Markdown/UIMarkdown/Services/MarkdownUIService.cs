@@ -71,7 +71,7 @@ public class MarkdownUIService(IMoMarkdownService markdownService, ILogger<Markd
         try
         {
             var content = await markdownService.GetDocumentContentAsync(document);
-            return Res.Ok(content);
+            return Res.Ok<string>(content);
         }
         catch (Exception ex)
         {
