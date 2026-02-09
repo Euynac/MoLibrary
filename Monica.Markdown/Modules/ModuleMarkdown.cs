@@ -164,6 +164,8 @@ public class ModuleMarkdownOption : MoModuleOption<ModuleMarkdown>
         "bin",
         "obj",
         ".nuget",
-        "packages"
+        "packages",
+        ".attachments",
+        ".obsidian"
     ];
 }
