@@ -26,9 +26,11 @@
         ShowProviderInfo="@ShowProviderInfo"
         SupportsReasoning="@SupportsReasoning"
         ReasoningEnabled="@ReasoningEnabled"
+        AvailableModels="@AvailableModels"
         ReasoningEnabledChanged="@ReasoningEnabledChanged"
         OnSend="@HandleSend"
-        OnCancel="@HandleCancel" />
+        OnCancel="@HandleCancel"
+        OnModelChanged="@HandleModelChanged" />
 </div>
 
 @code {
@@ -43,6 +45,7 @@
     [Parameter] public bool ShowRetry { get; set; }
     [Parameter] public bool EnableAutoScroll { get; set; } = true;
     [Parameter] public CancellationToken CancellationToken { get; set; }
+    [Parameter] public IReadOnlyList<AIModelInfo>? AvailableModels { get; set; }
     [Parameter] public EventCallback<string> OnSendMessage { get; set; }
     [Parameter] public EventCallback<string> OnStreamComplete { get; set; }
     [Parameter] public EventCallback<string> OnStreamError { get; set; }
@@ -51,6 +54,7 @@
     [Parameter] public EventCallback OnErrorDismissed { get; set; }
     [Parameter] public EventCallback<(AIChatMessage Message, string NewContent)> OnEditMessage { get; set; }
     [Parameter] public EventCallback<AIChatMessage> OnRetryMessage { get; set; }
+    [Parameter] public EventCallback<string> OnModelChanged { get; set; }
     [Parameter] public bool SupportsReasoning { get; set; }
     [Parameter] public bool ReasoningEnabled { get; set; }
     [Parameter] public EventCallback<bool> ReasoningEnabledChanged { get; set; }
@@ -99,7 +103,12 @@
         await OnErrorDismissed.InvokeAsync();
     }
 
-  
+    private async Task HandleModelChanged(string modelName)
+    {
+        await OnModelChanged.InvokeAsync(modelName);
+    }
+
+
     public async Task CancelStreamAsync()
     {
         if (_messageListRef != null)

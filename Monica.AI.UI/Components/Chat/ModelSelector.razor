@@ -1,0 +1,76 @@
+@using Monica.AI.Models
+
+<div class="model-selector">
+    <div class="model-trigger">
+        <MudIcon Icon="@Icons.Material.Filled.SmartToy" Size="Size.Small" />
+        <span class="model-name">@GetDisplayModelName()</span>
+        <MudIcon Icon="@Icons.Material.Filled.ExpandMore" Size="Size.Small" />
+    </div>
+    <div class="model-menu">
+        @if (AvailableModels != null && AvailableModels.Count > 0)
+        {
+            @foreach (var model in AvailableModels)
+            {
+                <button class="model-option @(IsSelected(model) ? "is-active" : string.Empty)"
+                        @onclick="() => HandleModelClick(model.ModelName)">
+                    <div class="model-info">
+                        <span class="model-name-full">@model.ModelName</span>
+                        @if (model is LLMModelInfo llm)
+                        {
+                            <div class="model-metadata">
+                                @if (llm.SupportsReasoning)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Psychology" Class="reasoning-chip">
+                                        Reasoning
+                                    </MudChip>
+                                }
+                                @if (llm.ContextWindow.HasValue)
+                                {
+                                    <span class="context-info">@FormatContextWindow(llm.ContextWindow.Value)</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                </button>
+            }
+        }
+        else
+        {
+            <div class="model-empty">No models available</div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<AIModelInfo>? AvailableModels { get; set; }
+    [Parameter] public string? SelectedModelName { get; set; }
+    [Parameter] public EventCallback<string> OnModelChanged { get; set; }
+    [Parameter] public int MaxDisplayLength { get; set; } = 20;
+
+    private async Task HandleModelClick(string modelName)
+    {
+        await OnModelChanged.InvokeAsync(modelName);
+    }
+
+    private bool IsSelected(AIModelInfo model)
+    {
+        return model.ModelName == SelectedModelName;
+    }
+
+    private string GetDisplayModelName()
+    {
+        if (string.IsNullOrWhiteSpace(SelectedModelName))
+            return "模型";
+
+        return SelectedModelName.Length > MaxDisplayLength
+            ? SelectedModelName[..MaxDisplayLength] + "..."
+            : SelectedModelName;
+    }
+
+    private string FormatContextWindow(int tokens)
+    {
+        return tokens >= 1000000
+            ? $"{tokens / 1000000}M context"
+            : $"{tokens / 1000}K context";
+    }
+}

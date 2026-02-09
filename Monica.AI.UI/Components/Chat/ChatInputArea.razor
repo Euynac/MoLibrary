@@ -1,3 +1,5 @@
+@using Monica.AI.Models
+
 <div class="input-area">
     <MudPaper Elevation="2" Class="input-container">
         <div class="input-top">
@@ -31,12 +33,10 @@
                 }
             </div>
             <div class="input-actions-right">
-                <MudButton Variant="Variant.Outlined"
-                           Size="Size.Small"
-                           Class="model-pill"
-                           OnClick="@HandleModelSwitch">
-                    @GetModelLabel()
-                </MudButton>
+                <ModelSelector
+                    AvailableModels="@AvailableModels"
+                    SelectedModelName="@ModelName"
+                    OnModelChanged="@HandleModelChanged" />
                 @if (IsSending)
                 {
                     <MudTooltip Text="Stop generating">
@@ -75,9 +75,11 @@
     [Parameter] public bool ShowProviderInfo { get; set; } = true;
     [Parameter] public bool SupportsReasoning { get; set; }
     [Parameter] public bool ReasoningEnabled { get; set; }
+    [Parameter] public IReadOnlyList<AIModelInfo>? AvailableModels { get; set; }
     [Parameter] public EventCallback<bool> ReasoningEnabledChanged { get; set; }
     [Parameter] public EventCallback<string> OnSend { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback<string> OnModelChanged { get; set; }
 
     public string InputText { get; set; } = string.Empty;
     private MudTextField<string>? _textFieldRef;
@@ -134,15 +136,9 @@
         await ReasoningEnabledChanged.InvokeAsync(!ReasoningEnabled);
     }
 
-    private Task HandleModelSwitch()
+    private async Task HandleModelChanged(string modelName)
     {
-        // TODO: Implement model switch.
-        return Task.CompletedTask;
-    }
-
-    private string GetModelLabel()
-    {
-        return string.IsNullOrWhiteSpace(ModelName) ? "模型" : ModelName;
+        await OnModelChanged.InvokeAsync(modelName);
     }
 
     public async Task FocusAsync()

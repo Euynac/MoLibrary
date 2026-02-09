@@ -52,6 +52,7 @@
             ErrorMessage="@_errorMessage"
             ShowRetry="@_canRetry"
             CancellationToken="@_cancellationToken"
+            AvailableModels="@_currentProviderModels"
             OnSendMessage="@HandleSendMessage"
             OnStreamComplete="@HandleStreamComplete"
             OnStreamError="@HandleStreamError"
@@ -60,6 +61,7 @@
             OnErrorDismissed="@HandleErrorDismissed"
             OnEditMessage="@HandleEditMessage"
             OnRetryMessage="@HandleRetryMessage"
+            OnModelChanged="@HandleModelChanged"
             SupportsReasoning="@_supportsReasoning"
             ReasoningEnabled="@_reasoningEnabled"
             ReasoningEnabledChanged="@HandleReasoningEnabledChanged" />
@@ -72,6 +74,7 @@
     private ModuleAIUIOption _options = null!;
     private ChatSessionStorage _sessionStorage = null!;
     private IReadOnlyList<AIProviderInfo> _providers = [];
+    private IReadOnlyList<AIModelInfo> _currentProviderModels = [];
     private string? _currentProviderId;
     private string _currentProviderName = string.Empty;
     private string _currentSessionTitle = "New Conversation";
@@ -98,6 +101,7 @@
         _currentProviderId = defaultProvider?.ProviderId;
         _currentProviderName = defaultProvider?.DisplayName ?? string.Empty;
         _currentModelName = defaultProvider?.DefaultModel;
+        _currentProviderModels = defaultProvider?.SupportedModels ?? [];
 
         UpdateSupportsReasoning();
 
@@ -164,6 +168,7 @@
         var provider = _providers.FirstOrDefault(p => p.ProviderId == providerId);
         _currentProviderName = provider?.DisplayName ?? string.Empty;
         _currentModelName = provider?.DefaultModel;
+        _currentProviderModels = provider?.SupportedModels ?? [];
 
         UpdateSupportsReasoning();
 
@@ -441,6 +446,23 @@
     private void HandleReasoningEnabledChanged(bool enabled)
     {
         _reasoningEnabled = enabled;
+    }
+
+    private void HandleModelChanged(string modelName)
+    {
+        _currentModelName = modelName;
+
+        // Update current session's model
+        var currentSession = _sessionStorage.GetSession(_sessionStorage.CurrentSessionId ?? string.Empty);
+        if (currentSession != null)
+        {
+            currentSession.ModelName = modelName;
+        }
+
+        // Update reasoning support based on new model
+        UpdateSupportsReasoning();
+
+        StateHasChanged();
     }
 
     public void Dispose()
