@@ -1,40 +1,28 @@
 @using Monica.Markdown.Models
 
-<MudPaper Class="mb-4" Elevation="1">
-    <MudTabs @bind-ActivePanelIndex="_activeIndex"
-             Elevation="0"
-             Rounded="true"
-             ApplyEffectsToContainer="true"
-             Class="group-tabs">
-        @foreach (var group in Groups)
-        {
-            <MudTabPanel ToolTip="@(group.Description ?? group.BasePath)"
-                         OnClick="@(() => OnTabClicked(group.Key))">
-                <TabContent>
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                        @if (!group.IsValid)
-                        {
-                            <MudIcon Icon="@Icons.Material.Filled.Warning"
-                                     Size="Size.Small"
-                                     Color="Color.Warning"
-                                     Class="tab-warning-icon" />
-                        }
-                        <MudText>@group.Title</MudText>
-                        @if (group.IsValid)
-                        {
-                            <MudChip T="string"
-                                     Size="Size.Small"
-                                     Color="Color.Primary"
-                                     Variant="Variant.Text">
-                                @group.DocumentCount
-                            </MudChip>
-                        }
-                    </MudStack>
-                </TabContent>
-            </MudTabPanel>
-        }
-    </MudTabs>
-</MudPaper>
+<div class="group-list">
+    @foreach (var group in Groups)
+    {
+        var isActive = group.Key == SelectedGroupKey;
+        <div class="group-item @(isActive ? "active" : "")"
+             @onclick="() => OnGroupClicked(group.Key)"
+             title="@(group.Description ?? group.BasePath)">
+            <span class="group-dot @(group.IsValid ? "" : "invalid")"></span>
+            <span class="group-name">@group.Title</span>
+            @if (!group.IsValid)
+            {
+                <MudIcon Icon="@Icons.Material.Filled.Warning"
+                         Size="Size.Small"
+                         Color="Color.Warning"
+                         Class="group-warning" />
+            }
+            else
+            {
+                <span class="group-count">@group.DocumentCount</span>
+            }
+        </div>
+    }
+</div>
 
 @code {
     [Parameter, EditorRequired]
@@ -46,18 +34,7 @@
     [Parameter]
     public EventCallback<string> SelectedGroupKeyChanged { get; set; }
 
-    private int _activeIndex;
-
-    protected override void OnParametersSet()
-    {
-        if (SelectedGroupKey is not null)
-        {
-            var idx = Groups.FindIndex(g => g.Key == SelectedGroupKey);
-            if (idx >= 0) _activeIndex = idx;
-        }
-    }
-
-    private async Task OnTabClicked(string groupKey)
+    private async Task OnGroupClicked(string groupKey)
     {
         if (groupKey != SelectedGroupKey)
         {

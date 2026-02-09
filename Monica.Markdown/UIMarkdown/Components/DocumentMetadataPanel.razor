@@ -1,60 +1,54 @@
 @using Monica.Markdown.Models
 
-<div class="metadata-panel pa-3">
-    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="flex-wrap">
-        @if (FrontMatter.Date.HasValue)
-        {
-            <MudChip T="string"
-                     Icon="@Icons.Material.Filled.CalendarToday"
-                     Size="Size.Small"
-                     Variant="Variant.Outlined"
-                     Color="Color.Default">
-                @FrontMatter.Date.Value.ToString("yyyy-MM-dd")
-            </MudChip>
-        }
-
-        @if (!string.IsNullOrWhiteSpace(FrontMatter.Title))
-        {
-            <MudChip T="string"
-                     Icon="@Icons.Material.Filled.Title"
-                     Size="Size.Small"
-                     Variant="Variant.Outlined"
-                     Color="Color.Primary">
-                @FrontMatter.Title
-            </MudChip>
-        }
-
+<div class="metadata-row">
+    @if (FrontMatter.Tags.Count > 0)
+    {
         @foreach (var tag in FrontMatter.Tags)
         {
-            <MudChip T="string"
-                     Icon="@Icons.Material.Filled.Tag"
-                     Size="Size.Small"
-                     Variant="Variant.Filled"
-                     Color="Color.Info">
-                @tag
-            </MudChip>
+            <span class="meta-tag">@tag</span>
         }
+    }
 
-        @foreach (var kv in GetCustomMetadata())
-        {
-            <MudTooltip Text="@kv.Key">
-                <MudChip T="string"
-                         Size="Size.Small"
-                         Variant="Variant.Outlined"
-                         Color="Color.Default">
-                    @kv.Key: @kv.Value
-                </MudChip>
-            </MudTooltip>
-        }
-    </MudStack>
+    @if (!string.IsNullOrWhiteSpace(AuthorDisplay))
+    {
+        <span class="meta-text">
+            <MudIcon Icon="@Icons.Material.Filled.Person"
+                     Size="Size.Small" Class="meta-icon" />
+            By @AuthorDisplay
+        </span>
+    }
+
+    @if (ReadTimeMinutes > 0)
+    {
+        <span class="meta-separator">·</span>
+        <span class="meta-text">@ReadTimeMinutes min read</span>
+    }
+
+    @foreach (var kv in GetCustomMetadata())
+    {
+        <MudTooltip Text="@kv.Key">
+            <span class="meta-text meta-custom">@kv.Key: @kv.Value</span>
+        </MudTooltip>
+    }
 </div>
 
 @code {
     [Parameter, EditorRequired]
     public MarkdownFrontMatter FrontMatter { get; set; } = null!;
 
+    [Parameter]
+    public long FileSize { get; set; }
+
+    private string? AuthorDisplay =>
+        FrontMatter.RawMetadata.TryGetValue("author", out var author)
+            ? author?.ToString()
+            : null;
+
+    private int ReadTimeMinutes =>
+        FileSize > 0 ? Math.Max(1, (int)Math.Ceiling(FileSize / 5.0 / 200.0)) : 0;
+
     private static readonly HashSet<string> ReservedKeys =
-        new(StringComparer.OrdinalIgnoreCase) { "title", "date", "tags" };
+        new(StringComparer.OrdinalIgnoreCase) { "title", "date", "tags", "author" };
 
     private IEnumerable<KeyValuePair<string, string>> GetCustomMetadata()
     {

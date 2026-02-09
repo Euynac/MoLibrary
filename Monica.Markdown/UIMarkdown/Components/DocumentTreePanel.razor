@@ -1,21 +1,20 @@
 @using Monica.Markdown.Models
 @using Monica.Tool.Algorithm.Tree
 
-<MudPaper Class="tree-container" Elevation="1">
-    <!-- Tree Header -->
+<div class="tree-container">
+    <!-- Section Label -->
+    <div class="tree-section-label">DOCUMENTS</div>
+
+    <!-- Search -->
     <div class="tree-header">
         <MudTextField @bind-Value="_searchText"
-                      Placeholder="Search..."
+                      Placeholder="Search files (Cmd+K)"
                       Adornment="Adornment.Start"
                       AdornmentIcon="@Icons.Material.Filled.Search"
                       Variant="Variant.Outlined"
                       Margin="Margin.Dense"
                       Immediate="true"
                       Class="tree-search" />
-        <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft"
-                       OnClick="OnCollapseRequested"
-                       Size="Size.Small"
-                       Title="Hide navigation" />
     </div>
 
     <!-- Tree View -->
@@ -51,7 +50,7 @@
             </MudTreeView>
         }
     </div>
-</MudPaper>
+</div>
 
 @code {
     [Parameter, EditorRequired]

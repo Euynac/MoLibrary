@@ -1,10 +1,80 @@
-/* Group selector tabs */
-::deep .group-tabs .mud-tab {
-    text-transform: none;
-    font-weight: 500;
+/* Group list */
+.group-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
 
-::deep .tab-warning-icon {
+.group-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    user-select: none;
+}
+
+.group-item:hover {
+    background-color: var(--mud-palette-action-default-hover);
+}
+
+.group-item.active {
+    background-color: var(--mud-palette-primary-hover);
+    box-shadow: inset 3px 0 0 var(--mud-palette-primary);
+}
+
+/* Colored dot */
+.group-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--mud-palette-primary);
+    flex-shrink: 0;
+}
+
+.group-item:nth-child(2) .group-dot {
+    background-color: var(--mud-palette-secondary);
+}
+
+.group-item:nth-child(3) .group-dot {
+    background-color: var(--mud-palette-tertiary);
+}
+
+.group-item:nth-child(4) .group-dot {
+    background-color: var(--mud-palette-info);
+}
+
+.group-dot.invalid {
+    background-color: var(--mud-palette-warning);
+}
+
+/* Group name */
+.group-name {
+    flex: 1;
+    font-size: 0.875rem;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--mud-palette-text-primary);
+}
+
+/* Document count badge */
+.group-count {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--mud-palette-text-secondary);
+    background-color: var(--mud-palette-background-gray);
+    padding: 1px 8px;
+    border-radius: 10px;
+    flex-shrink: 0;
+}
+
+/* Warning icon */
+::deep .group-warning {
+    flex-shrink: 0;
     animation: pulse-warning 2s ease-in-out infinite;
 }
 

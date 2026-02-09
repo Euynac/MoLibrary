@@ -1,0 +1,69 @@
+/* Sidebar container */
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background-color: var(--mud-palette-surface);
+    border-right: 1px solid var(--mud-palette-lines-default);
+    overflow: hidden;
+}
+
+/* Sidebar header */
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 12px 8px 16px;
+    flex-shrink: 0;
+}
+
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+::deep .brand-icon {
+    color: var(--mud-palette-primary);
+}
+
+.brand-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--mud-palette-text-primary);
+}
+
+/* Section label */
+.sidebar-section-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: var(--mud-palette-text-secondary);
+    padding: 8px 16px 4px 16px;
+}
+
+/* Groups area */
+.sidebar-groups {
+    padding: 0 8px;
+    flex-shrink: 0;
+}
+
+/* Tree area */
+.sidebar-tree {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* Footer */
+.sidebar-footer {
+    padding: 8px 16px;
+    border-top: 1px solid var(--mud-palette-lines-default);
+    flex-shrink: 0;
+}
+
+.footer-text {
+    font-size: 0.7rem;
+    color: var(--mud-palette-text-secondary);
+    opacity: 0.6;
+}

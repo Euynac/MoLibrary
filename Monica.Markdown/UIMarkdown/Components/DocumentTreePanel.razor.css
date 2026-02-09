@@ -6,22 +6,45 @@
     overflow: hidden;
 }
 
+.tree-section-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: var(--mud-palette-text-secondary);
+    padding: 12px 12px 4px 12px;
+}
+
 .tree-header {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 8px 8px 0 8px;
+    padding: 0 8px 8px 8px;
 }
 
 ::deep .tree-search {
-    flex: 1;
+    width: 100%;
+}
+
+::deep .tree-search .mud-input-outlined-border {
+    border-color: var(--mud-palette-lines-default);
 }
 
 .tree-content {
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 4px 0;
+    padding: 0 4px 4px 4px;
+}
+
+/* Thin scrollbar */
+.tree-content::-webkit-scrollbar {
+    width: 4px;
+}
+
+.tree-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.tree-content::-webkit-scrollbar-thumb {
+    background-color: var(--mud-palette-lines-default);
+    border-radius: 4px;
 }
 
 /* Prevent MudTreeView from causing horizontal overflow */
@@ -34,12 +57,19 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     min-width: 0;
+    font-size: 0.85rem;
 }
 
-/* Tree item styling */
+/* Notion-like tree items */
 ::deep .mud-treeview-item-content {
-    border-radius: var(--mud-default-borderradius);
+    border-radius: 6px;
     margin: 1px 4px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+}
+
+::deep .mud-treeview-item-content:hover {
+    background-color: var(--mud-palette-action-default-hover);
 }
 
 /* Empty state */

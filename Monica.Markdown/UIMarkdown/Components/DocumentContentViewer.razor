@@ -2,7 +2,7 @@
 
 @if (IsGroupInvalid)
 {
-    <MudPaper Class="content-container pa-8" Elevation="1">
+    <div class="content-container center-state">
         <MudStack AlignItems="AlignItems.Center" Spacing="4">
             <MudIcon Icon="@Icons.Material.Filled.Warning"
                      Size="Size.Large"
@@ -11,64 +11,86 @@
             <MudText Typo="Typo.h6" Color="Color.Warning">
                 Document group unavailable
             </MudText>
-            <MudText Typo="Typo.body2" Align="Align.Center" Style="opacity: 0.7;">
+            <MudText Typo="Typo.body2" Align="Align.Center"
+                     Style="opacity: 0.7;">
                 The configured path does not exist or is not accessible.
             </MudText>
             @if (InvalidGroupPath is not null)
             {
-                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
-                    <MudText Typo="Typo.body2" Style="font-family: monospace;">@InvalidGroupPath</MudText>
+                <MudAlert Severity="Severity.Warning"
+                          Variant="Variant.Outlined" Dense="true">
+                    <MudText Typo="Typo.body2"
+                             Style="font-family: monospace;">
+                        @InvalidGroupPath
+                    </MudText>
                 </MudAlert>
             }
         </MudStack>
-    </MudPaper>
+    </div>
 }
 else if (IsLoading)
 {
-    <MudPaper Class="content-container pa-8" Elevation="1">
+    <div class="content-container center-state">
         <MudStack AlignItems="AlignItems.Center" Spacing="4">
-            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
-            <MudText Typo="Typo.body1" Color="Color.Primary">Loading document...</MudText>
+            <MudProgressCircular Color="Color.Primary"
+                                 Size="Size.Large"
+                                 Indeterminate="true" />
+            <MudText Typo="Typo.body1" Color="Color.Primary">
+                Loading document...
+            </MudText>
         </MudStack>
-    </MudPaper>
+    </div>
 }
 else if (Document is null)
 {
-    <MudPaper Class="content-container pa-8" Elevation="1">
+    <div class="content-container center-state">
         <MudStack AlignItems="AlignItems.Center" Spacing="4">
             <MudIcon Icon="@Icons.Material.Filled.Article"
                      Size="Size.Large"
                      Color="Color.Default"
                      Style="opacity: 0.3; font-size: 4rem;" />
-            <MudText Typo="Typo.h6" Color="Color.Default" Style="opacity: 0.5;">
+            <MudText Typo="Typo.h6" Color="Color.Default"
+                     Style="opacity: 0.5;">
                 Select a document to view
             </MudText>
         </MudStack>
-    </MudPaper>
+    </div>
 }
 else
 {
-    <MudPaper Class="content-container" Elevation="1">
-        <!-- Breadcrumb -->
-        <div class="breadcrumb-bar pa-3">
-            <MudBreadcrumbs Items="_breadcrumbs" Class="pa-0" />
+    <div class="content-container">
+        <!-- Top Navbar -->
+        <div class="content-navbar">
+            <MudBreadcrumbs Items="_breadcrumbs" Class="content-breadcrumbs" />
+            <span class="last-edited">
+                <MudIcon Icon="@Icons.Material.Filled.Schedule"
+                         Size="Size.Small" Class="last-edited-icon" />
+                Last edited @FormatLastEdited(Document.LastModifiedUtc)
+            </span>
         </div>
 
-        <MudDivider />
+        <!-- Scrollable Content -->
+        <div class="content-scroll">
+            <div class="content-body">
+                <!-- Title Area -->
+                <h1 class="doc-title">@Document.Title</h1>
 
-        <!-- Metadata -->
-        @if (Document.FrontMatter is not null)
-        {
-            <DocumentMetadataPanel FrontMatter="Document.FrontMatter" />
-            <MudDivider />
-        }
+                @if (Document.FrontMatter is not null)
+                {
+                    <DocumentMetadataPanel FrontMatter="Document.FrontMatter"
+                                           FileSize="Document.FileSize" />
+                }
 
-        <!-- Markdown Content -->
-        <div class="markdown-body pa-4">
-            <MoMarkdownThemeManager />
-            <MudMarkdown Value="@Content" />
+                <MudDivider Class="my-4" />
+
+                <!-- Markdown Body -->
+                <div class="markdown-body">
+                    <MoMarkdownThemeManager />
+                    <MudMarkdown Value="@Content" />
+                </div>
+            </div>
         </div>
-    </MudPaper>
+    </div>
 }
 
 @code {
@@ -105,16 +127,33 @@ else
 
         if (GroupTitle is not null)
         {
-            _breadcrumbs.Add(new BreadcrumbItem(GroupTitle, null, icon: Icons.Material.Filled.Folder));
+            _breadcrumbs.Add(new BreadcrumbItem(GroupTitle, null,
+                icon: Icons.Material.Filled.Folder));
         }
 
         var segments = Document.RelativePath.Split('/');
         for (var i = 0; i < segments.Length - 1; i++)
         {
-            _breadcrumbs.Add(new BreadcrumbItem(segments[i], null, icon: Icons.Material.Filled.FolderOpen));
+            _breadcrumbs.Add(new BreadcrumbItem(segments[i], null,
+                icon: Icons.Material.Filled.FolderOpen));
         }
 
-        _breadcrumbs.Add(new BreadcrumbItem(Document.Title, null, disabled: true,
+        _breadcrumbs.Add(new BreadcrumbItem(Document.Title, null,
+            disabled: true,
             icon: Icons.Custom.FileFormats.FileDocument));
+    }
+
+    private static string FormatLastEdited(DateTime utcTime)
+    {
+        var elapsed = DateTime.UtcNow - utcTime;
+
+        return elapsed switch
+        {
+            { TotalMinutes: < 1 } => "just now",
+            { TotalMinutes: < 60 } => $"{(int)elapsed.TotalMinutes}m ago",
+            { TotalHours: < 24 } => $"{(int)elapsed.TotalHours}h ago",
+            { TotalDays: < 30 } => $"{(int)elapsed.TotalDays}d ago",
+            _ => utcTime.ToLocalTime().ToString("MMM dd, yyyy")
+        };
     }
 }

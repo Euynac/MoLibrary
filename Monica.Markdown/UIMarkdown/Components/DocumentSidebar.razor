@@ -1,0 +1,64 @@
+@using Monica.Markdown.Models
+@using Monica.Tool.Algorithm.Tree
+
+<div class="sidebar">
+    <!-- Sidebar Header -->
+    <div class="sidebar-header">
+        <div class="sidebar-brand">
+            <MudIcon Icon="@Icons.Material.Filled.MenuBook"
+                     Size="Size.Small" Class="brand-icon" />
+            <span class="brand-title">Markdown Docs</span>
+        </div>
+        <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft"
+                       Size="Size.Small"
+                       OnClick="OnCollapseRequested"
+                       Title="Hide sidebar" />
+    </div>
+
+    <!-- Repositories Section -->
+    <div class="sidebar-section-label">REPOSITORIES</div>
+    <div class="sidebar-groups">
+        <DocumentGroupSelector Groups="Groups"
+                               SelectedGroupKey="@SelectedGroupKey"
+                               SelectedGroupKeyChanged="SelectedGroupKeyChanged" />
+    </div>
+
+    <!-- Tree Section -->
+    @if (CurrentTree is not null)
+    {
+        <div class="sidebar-tree">
+            <DocumentTreePanel TreeRoot="CurrentTree"
+                               SelectedDocument="SelectedDocument"
+                               SelectedDocumentChanged="SelectedDocumentChanged"
+                               OnCollapseRequested="OnCollapseRequested" />
+        </div>
+    }
+
+    <!-- Footer -->
+    <div class="sidebar-footer">
+        <span class="footer-text">Monica Markdown</span>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public List<MarkdownDocumentGroup> Groups { get; set; } = [];
+
+    [Parameter]
+    public string? SelectedGroupKey { get; set; }
+
+    [Parameter]
+    public EventCallback<string> SelectedGroupKeyChanged { get; set; }
+
+    [Parameter]
+    public TreeNode<MarkdownDocumentNodeData>? CurrentTree { get; set; }
+
+    [Parameter]
+    public MarkdownDocument? SelectedDocument { get; set; }
+
+    [Parameter]
+    public EventCallback<MarkdownDocument?> SelectedDocumentChanged { get; set; }
+
+    [Parameter]
+    public EventCallback OnCollapseRequested { get; set; }
+}
