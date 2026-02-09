@@ -2,58 +2,91 @@
 
 @if (IsGroupInvalid)
 {
-    <div class="content-container center-state">
-        <MudStack AlignItems="AlignItems.Center" Spacing="4">
-            <MudIcon Icon="@Icons.Material.Filled.Warning"
-                     Size="Size.Large"
-                     Color="Color.Warning"
-                     Style="font-size: 4rem;" />
-            <MudText Typo="Typo.h6" Color="Color.Warning">
-                Document group unavailable
-            </MudText>
-            <MudText Typo="Typo.body2" Align="Align.Center"
-                     Style="opacity: 0.7;">
-                The configured path does not exist or is not accessible.
-            </MudText>
-            @if (InvalidGroupPath is not null)
-            {
-                <MudAlert Severity="Severity.Warning"
-                          Variant="Variant.Outlined" Dense="true">
-                    <MudText Typo="Typo.body2"
-                             Style="font-family: monospace;">
-                        @InvalidGroupPath
-                    </MudText>
-                </MudAlert>
-            }
-        </MudStack>
+    <div class="content-container">
+        @if (ShowSidebarToggle)
+        {
+            <div class="content-navbar empty-navbar">
+                <MudIconButton Icon="@Icons.Material.Filled.Menu"
+                               Size="Size.Small"
+                               OnClick="OnToggleSidebar"
+                               Class="sidebar-toggle-btn" />
+            </div>
+        }
+        <div class="center-state">
+            <MudStack AlignItems="AlignItems.Center" Spacing="4">
+                <MudIcon Icon="@Icons.Material.Filled.Warning"
+                         Size="Size.Large"
+                         Color="Color.Warning"
+                         Style="font-size: 4rem;" />
+                <MudText Typo="Typo.h6" Color="Color.Warning">
+                    Document group unavailable
+                </MudText>
+                <MudText Typo="Typo.body2" Align="Align.Center"
+                         Style="opacity: 0.7;">
+                    The configured path does not exist or is not accessible.
+                </MudText>
+                @if (InvalidGroupPath is not null)
+                {
+                    <MudAlert Severity="Severity.Warning"
+                              Variant="Variant.Outlined" Dense="true">
+                        <MudText Typo="Typo.body2"
+                                 Style="font-family: monospace;">
+                            @InvalidGroupPath
+                        </MudText>
+                    </MudAlert>
+                }
+            </MudStack>
+        </div>
     </div>
 }
 else if (IsLoading)
 {
-    <div class="content-container center-state">
-        <MudStack AlignItems="AlignItems.Center" Spacing="4">
-            <MudProgressCircular Color="Color.Primary"
-                                 Size="Size.Large"
-                                 Indeterminate="true" />
-            <MudText Typo="Typo.body1" Color="Color.Primary">
-                Loading document...
-            </MudText>
-        </MudStack>
+    <div class="content-container">
+        @if (ShowSidebarToggle)
+        {
+            <div class="content-navbar empty-navbar">
+                <MudIconButton Icon="@Icons.Material.Filled.Menu"
+                               Size="Size.Small"
+                               OnClick="OnToggleSidebar"
+                               Class="sidebar-toggle-btn" />
+            </div>
+        }
+        <div class="center-state">
+            <MudStack AlignItems="AlignItems.Center" Spacing="4">
+                <MudProgressCircular Color="Color.Primary"
+                                     Size="Size.Large"
+                                     Indeterminate="true" />
+                <MudText Typo="Typo.body1" Color="Color.Primary">
+                    Loading document...
+                </MudText>
+            </MudStack>
+        </div>
     </div>
 }
 else if (Document is null)
 {
-    <div class="content-container center-state">
-        <MudStack AlignItems="AlignItems.Center" Spacing="4">
-            <MudIcon Icon="@Icons.Material.Filled.Article"
-                     Size="Size.Large"
-                     Color="Color.Default"
-                     Style="opacity: 0.3; font-size: 4rem;" />
-            <MudText Typo="Typo.h6" Color="Color.Default"
-                     Style="opacity: 0.5;">
-                Select a document to view
-            </MudText>
-        </MudStack>
+    <div class="content-container">
+        @if (ShowSidebarToggle)
+        {
+            <div class="content-navbar empty-navbar">
+                <MudIconButton Icon="@Icons.Material.Filled.Menu"
+                               Size="Size.Small"
+                               OnClick="OnToggleSidebar"
+                               Class="sidebar-toggle-btn" />
+            </div>
+        }
+        <div class="center-state">
+            <MudStack AlignItems="AlignItems.Center" Spacing="4">
+                <MudIcon Icon="@Icons.Material.Filled.Article"
+                         Size="Size.Large"
+                         Color="Color.Default"
+                         Style="opacity: 0.3; font-size: 4rem;" />
+                <MudText Typo="Typo.h6" Color="Color.Default"
+                         Style="opacity: 0.5;">
+                    Select a document to view
+                </MudText>
+            </MudStack>
+        </div>
     </div>
 }
 else
@@ -61,7 +94,16 @@ else
     <div class="content-container">
         <!-- Top Navbar -->
         <div class="content-navbar">
-            <MudBreadcrumbs Items="_breadcrumbs" Class="content-breadcrumbs" />
+            <div class="navbar-left">
+                @if (ShowSidebarToggle)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Menu"
+                                   Size="Size.Small"
+                                   OnClick="OnToggleSidebar"
+                                   Class="sidebar-toggle-btn" />
+                }
+                <MudBreadcrumbs Items="_breadcrumbs" Class="content-breadcrumbs" />
+            </div>
             <span class="last-edited">
                 <MudIcon Icon="@Icons.Material.Filled.Schedule"
                          Size="Size.Small" Class="last-edited-icon" />
@@ -86,7 +128,7 @@ else
                 <!-- Markdown Body -->
                 <div class="markdown-body">
                     <MoMarkdownThemeManager />
-                    <MudMarkdown Value="@Content" />
+                    <MudMarkdown Value="@_strippedContent" />
                 </div>
             </div>
         </div>
@@ -112,11 +154,19 @@ else
     [Parameter]
     public string? InvalidGroupPath { get; set; }
 
+    [Parameter]
+    public bool ShowSidebarToggle { get; set; }
+
+    [Parameter]
+    public EventCallback OnToggleSidebar { get; set; }
+
     private List<BreadcrumbItem> _breadcrumbs = [];
+    private string? _strippedContent;
 
     protected override void OnParametersSet()
     {
         BuildBreadcrumbs();
+        _strippedContent = StripLeadingTitle(Content);
     }
 
     private void BuildBreadcrumbs()
@@ -155,5 +205,16 @@ else
             { TotalDays: < 30 } => $"{(int)elapsed.TotalDays}d ago",
             _ => utcTime.ToLocalTime().ToString("MMM dd, yyyy")
         };
+    }
+
+    private static string? StripLeadingTitle(string? content)
+    {
+        if (string.IsNullOrWhiteSpace(content)) return content;
+
+        var trimmed = content.TrimStart();
+        if (!trimmed.StartsWith("# ")) return content;
+
+        var newlineIndex = trimmed.IndexOf('\n');
+        return newlineIndex >= 0 ? trimmed[(newlineIndex + 1)..].TrimStart() : string.Empty;
     }
 }

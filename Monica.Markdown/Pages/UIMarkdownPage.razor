@@ -54,26 +54,22 @@
         }
 
         <div class="doc-main">
-            @if (!_showSidebar)
-            {
-                <MudIconButton Icon="@Icons.Material.Filled.Menu"
-                               OnClick="ToggleSidebar"
-                               Class="sidebar-toggle"
-                               Title="Show sidebar" />
-            }
-
             @if (IsCurrentGroupValid())
             {
                 <DocumentContentViewer Document="_selectedDocument"
                                        Content="@_documentContent"
                                        IsLoading="_contentLoading"
-                                       GroupTitle="@GetCurrentGroupTitle()" />
+                                       GroupTitle="@GetCurrentGroupTitle()"
+                                       ShowSidebarToggle="!_showSidebar"
+                                       OnToggleSidebar="ToggleSidebar" />
             }
             else
             {
                 <DocumentContentViewer IsGroupInvalid="true"
                                        InvalidGroupPath="@GetCurrentGroupBasePath()"
-                                       GroupTitle="@GetCurrentGroupTitle()" />
+                                       GroupTitle="@GetCurrentGroupTitle()"
+                                       ShowSidebarToggle="!_showSidebar"
+                                       OnToggleSidebar="ToggleSidebar" />
             }
         </div>
     }

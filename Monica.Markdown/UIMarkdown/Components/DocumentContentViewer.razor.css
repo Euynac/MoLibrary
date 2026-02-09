@@ -7,6 +7,8 @@
 }
 
 .center-state {
+    flex: 1;
+    display: flex;
     justify-content: center;
     align-items: center;
 }
@@ -20,6 +22,22 @@
     border-bottom: 1px solid var(--mud-palette-lines-default);
     flex-shrink: 0;
     min-height: 42px;
+}
+
+.empty-navbar {
+    justify-content: flex-start;
+}
+
+.navbar-left {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    flex: 1;
+}
+
+::deep .sidebar-toggle-btn {
+    flex-shrink: 0;
 }
 
 ::deep .content-breadcrumbs {
