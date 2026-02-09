@@ -25,4 +25,11 @@ public class DocumentGroupRegistration
     /// Optional description of this document group.
     /// </summary>
     public string? Description { get; init; }
+
+    /// <summary>
+    /// Additional folder names to exclude from scanning for this specific document group.
+    /// These are combined with global exclusions from ModuleMarkdownOption.
+    /// Matching is case-insensitive and applies to directory names at any level.
+    /// </summary>
+    public string[]? ExcludedFolders { get; init; }
 }

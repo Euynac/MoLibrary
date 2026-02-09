@@ -40,9 +40,31 @@ public static class DocumentScanner
             option.MarkdownFileExtensions,
             StringComparer.OrdinalIgnoreCase);
 
-        var files = Directory.EnumerateFiles(
-                basePath, "*", SearchOption.AllDirectories)
-            .Where(f => extensions.Contains(Path.GetExtension(f)));
+        // Build combined exclusion set
+        var excludedFolders = BuildExclusionSet(option, registration);
+
+        // Use EnumerationOptions for efficient filtering
+        var enumerationOptions = new EnumerationOptions
+        {
+            RecurseSubdirectories = true,
+            IgnoreInaccessible = true,
+            AttributesToSkip = FileAttributes.System | FileAttributes.Hidden
+        };
+
+        // Enumerate files with directory filtering
+        var files = Directory.EnumerateFiles(basePath, "*", enumerationOptions)
+            .Where(filePath =>
+            {
+                // Check file extension
+                if (!extensions.Contains(Path.GetExtension(filePath)))
+                    return false;
+
+                // Check if any parent directory should be excluded
+                var relativePath = Path.GetRelativePath(basePath, filePath);
+                var directoryPath = Path.GetDirectoryName(relativePath) ?? string.Empty;
+
+                return !ShouldExcludeDirectory(directoryPath, excludedFolders);
+            });
 
         var documents = new List<MarkdownDocument>();
 
@@ -104,5 +126,61 @@ public static class DocumentScanner
             DocumentCount = documents.Count,
             RootNode = rootNode
         };
+    }
+
+    /// <summary>
+    /// Determines if a directory path should be excluded based on exclusion patterns.
+    /// </summary>
+    private static bool ShouldExcludeDirectory(
+        string directoryPath,
+        HashSet<string> excludedFolders)
+    {
+        if (excludedFolders.Count == 0)
+            return false;
+
+        // Split path into segments and check each directory name
+        var pathSegments = directoryPath.Split(
+            new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
+            StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (var segment in pathSegments)
+        {
+            if (excludedFolders.Contains(segment))
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Builds a combined set of excluded folder names from global and group-specific exclusions.
+    /// </summary>
+    private static HashSet<string> BuildExclusionSet(
+        ModuleMarkdownOption option,
+        DocumentGroupRegistration registration)
+    {
+        var exclusions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        // Add global exclusions
+        if (option.ExcludedFolders is { Length: > 0 })
+        {
+            foreach (var folder in option.ExcludedFolders)
+            {
+                if (!string.IsNullOrWhiteSpace(folder))
+                    exclusions.Add(folder.Trim());
+            }
+        }
+
+        // Add group-specific exclusions
+        if (registration.ExcludedFolders is { Length: > 0 })
+        {
+            foreach (var folder in registration.ExcludedFolders)
+            {
+                if (!string.IsNullOrWhiteSpace(folder))
+                    exclusions.Add(folder.Trim());
+            }
+        }
+
+        return exclusions;
     }
 }
