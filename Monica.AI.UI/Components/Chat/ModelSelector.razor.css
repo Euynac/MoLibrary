@@ -31,6 +31,15 @@
     font-size: 0.875rem;
 }
 
+.model-selector::after {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: 0;
+    right: 0;
+    height: 8px;
+}
+
 .model-menu {
     position: absolute;
     bottom: calc(100% + 8px);
@@ -44,20 +53,11 @@
     box-shadow: var(--mud-elevation-4);
     opacity: 0;
     pointer-events: none;
-    transform: translateY(6px);
+    transform: translateY(-6px);
     transition: opacity 0.2s ease, transform 0.2s ease;
     z-index: 30;
     max-height: 400px;
     overflow-y: auto;
-}
-
-.model-menu::before {
-    content: '';
-    position: absolute;
-    bottom: -8px;
-    left: 0;
-    right: 0;
-    height: 8px;
 }
 
 .model-selector:hover .model-menu {
