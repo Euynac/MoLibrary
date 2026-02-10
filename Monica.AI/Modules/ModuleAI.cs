@@ -11,7 +11,6 @@ using Monica.AI.Services;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
-using Monica.Tool.MoResponse;
 
 namespace Monica.AI.Modules;
 
@@ -166,17 +165,18 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
             endpoints.MapGet($"{routePrefix}/providers", () =>
                 TypedResults.Ok(providerFactory.GetAllProviderInfos()));
 
-            // 创建会话
-            endpoints.MapPost($"{routePrefix}/sessions", (CreateSessionRequest? request) =>
+            // Create session
+            endpoints.MapPost($"{routePrefix}/sessions", async (CreateSessionRequest? request, CancellationToken ct) =>
             {
-                var session = chatService.CreateSession(
+                var session = await chatService.CreateSessionAsync(
                     request?.ProviderId,
                     request?.Title,
-                    request?.SystemPrompt);
+                    request?.SystemPrompt,
+                    ct);
                 return TypedResults.Ok(new { session.SessionId, session.Title, session.ProviderId });
             });
 
-            // 获取所有会话
+            // Get all sessions
             endpoints.MapGet($"{routePrefix}/sessions", () =>
             {
                 var sessions = chatService.GetAllSessions();
@@ -187,11 +187,11 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
                     s.ProviderId,
                     s.CreatedAt,
                     s.UpdatedAt,
-                    MessageCount = s.Messages.Count
+                    s.MessageCount
                 }));
             });
 
-            // 获取会话详情
+            // Get session details
             endpoints.MapGet($"{routePrefix}/sessions/{{sessionId}}", (string sessionId) =>
             {
                 var session = chatService.GetSession(sessionId);
@@ -208,29 +208,32 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
                     session.SystemPrompt,
                     session.CreatedAt,
                     session.UpdatedAt,
-                    session.Messages
+                    session.MessageCount
                 });
             });
 
-            // 删除会话
+            // Delete session
             endpoints.MapDelete($"{routePrefix}/sessions/{{sessionId}}", (string sessionId) =>
             {
                 var deleted = chatService.DeleteSession(sessionId);
                 return deleted ? Results.NoContent() : Results.NotFound();
             });
 
-            // 非流式聊天
+            // Non-streaming chat
             endpoints.MapPost($"{routePrefix}/chat", async (AIChatRequest request, CancellationToken ct) =>
             {
-                var result = await chatService.SendMessageAsync(request, ct);
-                if (result.IsFailed(out var error, out var data))
+                try
                 {
-                    return Results.BadRequest(error.Message);
+                    var response = await chatService.SendMessageAsync(request, ct);
+                    return Results.Ok(response);
                 }
-                return Results.Ok(data);
+                catch (Exception ex)
+                {
+                    return Results.BadRequest(ex.Message);
+                }
             });
 
-            // 流式聊天 (SSE)
+            // Streaming chat (SSE)
             endpoints.MapPost($"{routePrefix}/chat/stream", (AIChatRequest request, CancellationToken ct) =>
             {
                 var stream = chatService.SendMessageStreamingAsync(request, ct);

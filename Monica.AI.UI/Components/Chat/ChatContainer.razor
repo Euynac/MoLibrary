@@ -1,3 +1,4 @@
+@using Microsoft.Agents.AI
 @using Monica.AI.Models
 
 <div class="chat-container">
@@ -35,7 +36,7 @@
 
 @code {
     [Parameter] public IReadOnlyList<AIChatMessage> Messages { get; set; } = [];
-    [Parameter] public IAsyncEnumerable<ChatResponseUpdate>? StreamingContent { get; set; }
+    [Parameter] public IAsyncEnumerable<AgentResponseUpdate>? StreamingContent { get; set; }
     [Parameter] public bool IsSending { get; set; }
     [Parameter] public bool EnableMarkdown { get; set; } = true;
     [Parameter] public string? ProviderName { get; set; }

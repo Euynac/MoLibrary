@@ -1,5 +1,6 @@
 @page "/ai-chat"
 @rendermode InteractiveServer
+@using Microsoft.Agents.AI
 @using Monica.AI.Models
 @using Monica.Tool.MoResponse
 @implements IDisposable
@@ -79,7 +80,7 @@
     private string _currentProviderName = string.Empty;
     private string _currentSessionTitle = "New Conversation";
     private IReadOnlyList<AIChatMessage> _currentMessages = [];
-    private IAsyncEnumerable<ChatResponseUpdate>? _streamingContent;
+    private IAsyncEnumerable<AgentResponseUpdate>? _streamingContent;
     private bool _isSending;
     private string? _errorMessage;
     private bool _canRetry;
@@ -120,7 +121,7 @@
             // If no sessions, create a new one
             if (_sessionStorage.Sessions.Count == 0)
             {
-                ChatUIService.CreateSession(_currentProviderId);
+                await ChatUIService.CreateSessionAsync(_currentProviderId);
             }
             else
             {
@@ -180,10 +181,10 @@
         }
     }
 
-    private void HandleNewSession()
+    private async Task HandleNewSession()
     {
         ClearError();
-        ChatUIService.CreateSession(_currentProviderId);
+        await ChatUIService.CreateSessionAsync(_currentProviderId);
         UpdateCurrentSession();
     }
 
@@ -193,7 +194,7 @@
         ChatUIService.SwitchSession(sessionId);
     }
 
-    private void HandleDeleteSession(string sessionId)
+    private async Task HandleDeleteSession(string sessionId)
     {
         ChatUIService.DeleteSession(sessionId);
 
@@ -202,7 +203,7 @@
         {
             if (_sessionStorage.Sessions.Count == 0)
             {
-                ChatUIService.CreateSession(_currentProviderId);
+                await ChatUIService.CreateSessionAsync(_currentProviderId);
             }
             else
             {
@@ -223,7 +224,7 @@
         var sessionId = _sessionStorage.CurrentSessionId;
         if (string.IsNullOrEmpty(sessionId))
         {
-            var session = ChatUIService.CreateSession(_currentProviderId);
+            var session = await ChatUIService.CreateSessionAsync(_currentProviderId);
             sessionId = session.SessionId;
         }
 
@@ -419,7 +420,7 @@
 
         if (session != null && session.Messages.Count == 0)
         {
-            ChatUIService.UpdateSessionSystemPrompt(session.SessionId, prompt);
+            await ChatUIService.UpdateSessionSystemPromptAsync(session.SessionId, prompt);
         }
 
         _providers = ChatUIService.GetProviders();

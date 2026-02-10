@@ -1,3 +1,4 @@
+@using Microsoft.Agents.AI
 @using Monica.AI.Models
 @implements IAsyncDisposable
 
@@ -57,7 +58,7 @@
     [Inject] private IJSRuntime JSRuntime { get; set; } = null!;
 
     [Parameter] public IReadOnlyList<AIChatMessage> Messages { get; set; } = [];
-    [Parameter] public IAsyncEnumerable<ChatResponseUpdate>? StreamingContent { get; set; }
+    [Parameter] public IAsyncEnumerable<AgentResponseUpdate>? StreamingContent { get; set; }
     [Parameter] public bool EnableMarkdown { get; set; } = true;
     [Parameter] public bool EnableAutoScroll { get; set; } = true;
     [Parameter] public CancellationToken CancellationToken { get; set; }

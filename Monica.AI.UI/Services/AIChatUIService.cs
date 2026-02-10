@@ -1,17 +1,17 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using Monica.AI.Abstractions;
 using Monica.AI.Models;
 using Monica.AI.Services;
 using Monica.AI.UI.Modules;
-using Monica.Tool.MoResponse;
 
 namespace Monica.AI.UI.Services;
 
 /// <summary>
-/// AI 聊天 UI 服务
+/// AI chat UI service - bridges the agent framework with Blazor UI components.
 /// </summary>
 public class AIChatUIService(
     AIChatService chatService,
@@ -22,12 +22,12 @@ public class AIChatUIService(
     private readonly ModuleAIUIOption _options = options.Value;
 
     /// <summary>
-    /// 获取会话存储
+    /// Get session storage
     /// </summary>
     public ChatSessionStorage SessionStorage => sessionStorage;
 
     /// <summary>
-    /// 获取所有 Provider 信息
+    /// Get all provider info
     /// </summary>
     public IReadOnlyList<AIProviderInfo> GetProviders()
     {
@@ -35,7 +35,7 @@ public class AIChatUIService(
     }
 
     /// <summary>
-    /// 获取默认 Provider
+    /// Get default provider
     /// </summary>
     public AIProviderInfo? GetDefaultProvider()
     {
@@ -43,34 +43,37 @@ public class AIChatUIService(
     }
 
     /// <summary>
-    /// 创建新会话
+    /// Create a new session (async due to agent session creation)
     /// </summary>
-    public ChatSessionInfo CreateSession(string? providerId = null, string? title = null)
+    public async Task<ChatSessionInfo> CreateSessionAsync(
+        string? providerId = null,
+        string? title = null,
+        CancellationToken ct = default)
     {
-        var session = chatService.CreateSession(
-            providerId,
-            title,
-            null);
+        var state = await chatService.CreateSessionAsync(providerId, title, null, ct);
 
         var sessionInfo = new ChatSessionInfo
         {
-            SessionId = session.SessionId,
-            Title = session.Title,
-            ProviderId = session.ProviderId,
-            ModelName = session.ModelName,
-            SystemPrompt = session.SystemPrompt
+            SessionId = state.SessionId,
+            Title = state.Title,
+            ProviderId = state.ProviderId,
+            ModelName = state.ModelName,
+            SystemPrompt = state.SystemPrompt
         };
 
         sessionStorage.AddSession(sessionInfo);
-        sessionStorage.CurrentSessionId = session.SessionId;
+        sessionStorage.CurrentSessionId = state.SessionId;
 
         return sessionInfo;
     }
 
     /// <summary>
-    /// 获取或创建会话
+    /// Get or create a session
     /// </summary>
-    public ChatSessionInfo GetOrCreateSession(string? sessionId = null, string? providerId = null)
+    public async Task<ChatSessionInfo> GetOrCreateSessionAsync(
+        string? sessionId = null,
+        string? providerId = null,
+        CancellationToken ct = default)
     {
         if (!string.IsNullOrEmpty(sessionId))
         {
@@ -81,13 +84,13 @@ public class AIChatUIService(
             }
         }
 
-        return CreateSession(providerId);
+        return await CreateSessionAsync(providerId, ct: ct);
     }
 
     /// <summary>
-    /// 发送消息并获取响应
+    /// Send a message and get a non-streaming response
     /// </summary>
-    public async Task<Res<AIChatMessage>> SendMessageAsync(
+    public async Task<AIChatMessage> SendMessageAsync(
         string sessionId,
         string message,
         CancellationToken ct = default)
@@ -101,27 +104,18 @@ public class AIChatUIService(
             ProviderId = sessionInfo?.ProviderId
         };
 
-        var result = await chatService.SendMessageAsync(request, ct);
-        if (result.IsFailed(out var error, out var response))
-        {
-            return error;
-        }
+        var response = await chatService.SendMessageAsync(request, ct);
 
-        // 更新本地会话存储
         if (sessionInfo != null)
         {
-            // 添加用户消息到本地存储
             sessionInfo.Messages.Add(new AIChatMessage
             {
                 Role = AIChatRole.User,
                 Content = message
             });
-
-            // 添加助手响应到本地存储
             sessionInfo.Messages.Add(response.Message);
             sessionInfo.UpdatedAt = DateTimeOffset.UtcNow;
 
-            // 更新标题
             if (sessionInfo.Messages.Count == 2)
             {
                 sessionInfo.Title = message.Length > 50 ? message[..50] + "..." : message;
@@ -132,13 +126,10 @@ public class AIChatUIService(
     }
 
     /// <summary>
-    /// 发送消息并获取流式响应
+    /// Send a message and get a streaming response.
+    /// User message is added synchronously before returning the async enumerable.
     /// </summary>
-    /// <remarks>
-    /// User message is added synchronously before returning the async enumerable,
-    /// ensuring it appears in the UI immediately when the caller updates state.
-    /// </remarks>
-    public IAsyncEnumerable<ChatResponseUpdate> SendMessageStreamingAsync(
+    public IAsyncEnumerable<AgentResponseUpdate> SendMessageStreamingAsync(
         string sessionId,
         string message,
         bool reasoningEnabled = false,
@@ -147,28 +138,25 @@ public class AIChatUIService(
         var sessionInfo = sessionStorage.GetSession(sessionId);
         if (sessionInfo != null)
         {
-            // 添加用户消息到本地存储（同步执行，确保调用者可以立即看到）
             sessionInfo.Messages.Add(new AIChatMessage
             {
                 Role = AIChatRole.User,
                 Content = message
             });
 
-            // 更新标题（第一条消息）
             if (sessionInfo.Messages.Count == 1)
             {
                 sessionInfo.Title = message.Length > 50 ? message[..50] + "..." : message;
             }
         }
 
-        // 返回异步流式响应
         return StreamResponseAsync(sessionId, message, sessionInfo, reasoningEnabled, ct);
     }
 
     /// <summary>
-    /// 内部方法：处理流式响应
+    /// Internal: process streaming response from agent framework
     /// </summary>
-    private async IAsyncEnumerable<ChatResponseUpdate> StreamResponseAsync(
+    private async IAsyncEnumerable<AgentResponseUpdate> StreamResponseAsync(
         string sessionId,
         string message,
         ChatSessionInfo? sessionInfo,
@@ -212,7 +200,6 @@ public class AIChatUIService(
         if (reasoningStopwatch.IsRunning)
             reasoningStopwatch.Stop();
 
-        // Add the complete assistant message to local storage
         if (sessionInfo != null)
         {
             sessionInfo.Messages.Add(new AIChatMessage
@@ -231,84 +218,72 @@ public class AIChatUIService(
     }
 
     /// <summary>
-    /// Edit a user message and resend (discards all messages after it)
+    /// Edit a user message and resend (discards all messages after it).
+    /// Message removal is performed synchronously before returning the async enumerable.
     /// </summary>
-    /// <remarks>
-    /// Message removal is performed synchronously before returning the async enumerable,
-    /// ensuring the UI reflects changes immediately when the caller updates state.
-    /// </remarks>
-    public IAsyncEnumerable<ChatResponseUpdate> EditMessageAsync(
+    public IAsyncEnumerable<AgentResponseUpdate> EditMessageAsync(
         string sessionId,
         string messageId,
         string newContent,
         bool reasoningEnabled = false,
         CancellationToken ct = default)
     {
-        // SYNCHRONOUS: This code runs IMMEDIATELY when method is called
         var sessionInfo = sessionStorage.GetSession(sessionId);
         if (sessionInfo == null)
         {
-            return AsyncEnumerableEmpty<ChatResponseUpdate>();
+            return AsyncEnumerableEmpty<AgentResponseUpdate>();
         }
 
-        // Find message index
         var index = sessionInfo.Messages.FindIndex(m => m.Id == messageId);
         if (index < 0)
         {
-            return AsyncEnumerableEmpty<ChatResponseUpdate>();
+            return AsyncEnumerableEmpty<AgentResponseUpdate>();
         }
 
-        // Remove all messages from this index onwards - EXECUTES NOW
+        // Remove all messages from this index onwards
         sessionInfo.Messages.RemoveRange(index, sessionInfo.Messages.Count - index);
 
-        // Sync backend: truncate to match UI state
+        // Sync backend: truncate agent history to match UI state
         chatService.TruncateSessionHistory(sessionId, index);
 
-        // Return async streaming (only this part is lazy)
         return SendMessageStreamingAsync(sessionId, newContent, reasoningEnabled, ct);
     }
 
     /// <summary>
-    /// Retry an AI message (regenerate response for the previous user message)
+    /// Retry an AI message (regenerate response for the previous user message).
+    /// Message removal is performed synchronously before returning the async enumerable.
     /// </summary>
-    /// <remarks>
-    /// Message removal is performed synchronously before returning the async enumerable,
-    /// ensuring the UI reflects changes immediately when the caller updates state.
-    /// </remarks>
-    public IAsyncEnumerable<ChatResponseUpdate> RetryMessageAsync(
+    public IAsyncEnumerable<AgentResponseUpdate> RetryMessageAsync(
         string sessionId,
         string messageId,
         bool reasoningEnabled = false,
         CancellationToken ct = default)
     {
-        // SYNCHRONOUS: This code runs IMMEDIATELY when method is called
         var sessionInfo = sessionStorage.GetSession(sessionId);
         if (sessionInfo == null)
         {
-            return AsyncEnumerableEmpty<ChatResponseUpdate>();
+            return AsyncEnumerableEmpty<AgentResponseUpdate>();
         }
 
-        // Find the AI message index
         var index = sessionInfo.Messages.FindIndex(m => m.Id == messageId);
         if (index < 0)
         {
-            return AsyncEnumerableEmpty<ChatResponseUpdate>();
+            return AsyncEnumerableEmpty<AgentResponseUpdate>();
         }
 
-        // Find the previous user message
         var userMessage = sessionInfo.Messages.Take(index).LastOrDefault(m => m.Role == AIChatRole.User);
         if (userMessage == null)
         {
-            return AsyncEnumerableEmpty<ChatResponseUpdate>();
+            return AsyncEnumerableEmpty<AgentResponseUpdate>();
         }
 
-        // Remove the AI message (and any after it) - EXECUTES NOW
+        // Remove the AI message and any after it
         sessionInfo.Messages.RemoveRange(index, sessionInfo.Messages.Count - index);
 
-        // Sync backend: truncate to match UI state
+        // Sync backend: truncate agent history to match UI state
         chatService.TruncateSessionHistory(sessionId, index);
 
-        // Stream new AI response without adding user message (it already exists)
+        // Stream new response without adding user message (it already exists in UI)
         return StreamResponseOnlyAsync(sessionId, userMessage.Content, sessionInfo, reasoningEnabled, ct);
     }
 
@@ -316,7 +291,7 @@ public class AIChatUIService(
     /// Internal: Stream AI response without adding user message to local storage
     /// (used by retry where user message already exists)
     /// </summary>
-    private async IAsyncEnumerable<ChatResponseUpdate> StreamResponseOnlyAsync(
+    private async IAsyncEnumerable<AgentResponseUpdate> StreamResponseOnlyAsync(
         string sessionId,
         string message,
         ChatSessionInfo sessionInfo,
@@ -359,7 +334,6 @@ public class AIChatUIService(
         if (reasoningStopwatch.IsRunning)
             reasoningStopwatch.Stop();
 
-        // Add only the assistant message to local storage
         sessionInfo.Messages.Add(new AIChatMessage
         {
             Role = AIChatRole.Assistant,
@@ -384,7 +358,7 @@ public class AIChatUIService(
     }
 
     /// <summary>
-    /// 删除会话
+    /// Delete a session
     /// </summary>
     public bool DeleteSession(string sessionId)
     {
@@ -397,7 +371,7 @@ public class AIChatUIService(
     }
 
     /// <summary>
-    /// 切换会话
+    /// Switch active session
     /// </summary>
     public void SwitchSession(string sessionId)
     {
@@ -405,11 +379,14 @@ public class AIChatUIService(
     }
 
     /// <summary>
-    /// 更新会话系统提示词
+    /// Update session system prompt
     /// </summary>
-    public bool UpdateSessionSystemPrompt(string sessionId, string? systemPrompt)
+    public async Task<bool> UpdateSessionSystemPromptAsync(
+        string sessionId,
+        string? systemPrompt,
+        CancellationToken ct = default)
     {
-        if (!chatService.UpdateSessionSystemPrompt(sessionId, systemPrompt))
+        if (!await chatService.UpdateSessionSystemPromptAsync(sessionId, systemPrompt, ct))
         {
             return false;
         }
@@ -425,7 +402,7 @@ public class AIChatUIService(
     }
 
     /// <summary>
-    /// 加载会话列表
+    /// Load sessions from backend
     /// </summary>
     public void LoadSessions()
     {
@@ -440,16 +417,6 @@ public class AIChatUIService(
             CreatedAt = s.CreatedAt,
             UpdatedAt = s.UpdatedAt
         }).ToList();
-
-        // 加载每个会话的消息
-        foreach (var sessionInfo in sessionInfos)
-        {
-            var session = chatService.GetSession(sessionInfo.SessionId);
-            if (session != null)
-            {
-                sessionInfo.Messages.AddRange(session.Messages);
-            }
-        }
 
         sessionStorage.LoadSessions(sessionInfos);
     }

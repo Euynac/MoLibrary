@@ -1,102 +1,119 @@
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
+using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using Monica.AI.Abstractions;
 using Monica.AI.Models;
 using Monica.AI.Modules;
-using Monica.Tool.MoResponse;
 
 namespace Monica.AI.Services;
 
 /// <summary>
-/// AI 聊天服务
+/// AI chat service backed by the Microsoft Agent Framework.
+/// Uses ChatClientAgent + AgentSession instead of custom IChatSession.
 /// </summary>
 public class AIChatService(IAIProviderFactory providerFactory, IOptions<ModuleAIOption> options)
 {
-    private readonly ConcurrentDictionary<string, IChatSession> _sessions = new();
+    private readonly ConcurrentDictionary<string, AgentSessionState> _sessions = new();
     private readonly ModuleAIOption _options = options.Value;
 
     /// <summary>
-    /// 创建新的聊天会话
+    /// Create a new chat session backed by ChatClientAgent
     /// </summary>
-    /// <param name="providerId">Provider ID（可选）</param>
-    /// <param name="title">会话标题（可选）</param>
-    /// <param name="systemPrompt">系统提示词（可选）</param>
-    /// <returns>聊天会话</returns>
-    public IChatSession CreateSession(string? providerId = null, string? title = null, string? systemPrompt = null)
+    public async Task<AgentSessionState> CreateSessionAsync(
+        string? providerId = null,
+        string? title = null,
+        string? systemPrompt = null,
+        CancellationToken ct = default)
     {
-        var session = new ChatSession(providerFactory, providerId)
-        {
-            Title = title ?? "新对话"
-        };
+        var provider = ResolveProvider(providerId);
+        var resolvedProviderId = provider.ProviderId;
 
         var resolvedPrompt = systemPrompt;
         if (string.IsNullOrWhiteSpace(resolvedPrompt))
         {
-            var provider = providerFactory.GetProvider(session.ProviderId);
-            resolvedPrompt = provider?.Info.SystemPrompt ?? _options.DefaultSystemPrompt;
+            resolvedPrompt = provider.Info.SystemPrompt ?? _options.DefaultSystemPrompt;
         }
 
-        session.SystemPrompt = resolvedPrompt;
-        _sessions[session.SessionId] = session;
-        return session;
-    }
+        var chatClient = provider.GetChatClient(null);
+        var agent = new ChatClientAgent(chatClient, instructions: resolvedPrompt);
 
-    /// <summary>
-    /// 更新会话系统提示词
-    /// </summary>
-    public bool UpdateSessionSystemPrompt(string sessionId, string? systemPrompt)
-    {
-        if (_sessions.TryGetValue(sessionId, out var session))
+        var chatHistory = new InMemoryChatHistoryProvider();
+        var session = await agent.CreateSessionAsync(chatHistory, ct);
+
+        var state = new AgentSessionState(agent, session, chatHistory, resolvedProviderId)
         {
-            session.SystemPrompt = systemPrompt;
-            return true;
-        }
+            Title = title ?? "New Chat",
+            SystemPrompt = resolvedPrompt
+        };
 
-        return false;
+        _sessions[state.SessionId] = state;
+        return state;
     }
 
     /// <summary>
-    /// 获取会话
+    /// Update session system prompt. Recreates the agent with new instructions.
     /// </summary>
-    /// <param name="sessionId">会话 ID</param>
-    /// <returns>聊天会话</returns>
-    public IChatSession? GetSession(string sessionId)
+    public async Task<bool> UpdateSessionSystemPromptAsync(
+        string sessionId,
+        string? systemPrompt,
+        CancellationToken ct = default)
+    {
+        if (!_sessions.TryGetValue(sessionId, out var state))
+            return false;
+
+        state.SystemPrompt = systemPrompt;
+
+        // Recreate agent with new instructions, reusing existing history
+        var provider = providerFactory.GetProvider(state.ProviderId);
+        if (provider == null) return false;
+
+        var chatClient = provider.GetChatClient(state.ModelName);
+        var newAgent = new ChatClientAgent(chatClient, instructions: systemPrompt);
+        var newSession = await newAgent.CreateSessionAsync(state.ChatHistory, ct);
+
+        state.Agent = newAgent;
+        state.Session = newSession;
+        state.UpdatedAt = DateTimeOffset.UtcNow;
+        return true;
+    }
+
+    /// <summary>
+    /// Get a session by ID
+    /// </summary>
+    public AgentSessionState? GetSession(string sessionId)
     {
         return _sessions.GetValueOrDefault(sessionId);
     }
 
     /// <summary>
-    /// 获取或创建会话
+    /// Get or create a session
     /// </summary>
-    /// <param name="sessionId">会话 ID（可选）</param>
-    /// <param name="providerId">Provider ID（可选）</param>
-    /// <returns>聊天会话</returns>
-    public IChatSession GetOrCreateSession(string? sessionId = null, string? providerId = null)
+    public async Task<AgentSessionState> GetOrCreateSessionAsync(
+        string? sessionId = null,
+        string? providerId = null,
+        CancellationToken ct = default)
     {
         if (!string.IsNullOrEmpty(sessionId) && _sessions.TryGetValue(sessionId, out var session))
         {
             return session;
         }
 
-        return CreateSession(providerId);
+        return await CreateSessionAsync(providerId, ct: ct);
     }
 
     /// <summary>
-    /// 获取所有会话
+    /// Get all sessions ordered by last update
     /// </summary>
-    /// <returns>所有会话列表</returns>
-    public IReadOnlyList<IChatSession> GetAllSessions()
+    public IReadOnlyList<AgentSessionState> GetAllSessions()
     {
         return _sessions.Values.OrderByDescending(s => s.UpdatedAt).ToList();
     }
 
     /// <summary>
-    /// 删除会话
+    /// Delete a session
     /// </summary>
-    /// <param name="sessionId">会话 ID</param>
-    /// <returns>是否删除成功</returns>
     public bool DeleteSession(string sessionId)
     {
         return _sessions.TryRemove(sessionId, out _);
@@ -105,106 +122,126 @@ public class AIChatService(IAIProviderFactory providerFactory, IOptions<ModuleAI
     /// <summary>
     /// Truncate session history to keep only the first N messages
     /// </summary>
-    /// <param name="sessionId">会话 ID</param>
-    /// <param name="keepCount">Number of messages to keep from the beginning</param>
-    /// <returns>是否操作成功</returns>
     public bool TruncateSessionHistory(string sessionId, int keepCount)
     {
-        if (_sessions.TryGetValue(sessionId, out var session))
+        if (_sessions.TryGetValue(sessionId, out var state))
         {
-            session.TruncateHistory(keepCount);
+            state.TruncateHistory(keepCount);
             return true;
         }
         return false;
     }
 
     /// <summary>
-    /// 发送消息并获取响应
+    /// Send a message and get a non-streaming response
     /// </summary>
-    /// <param name="request">聊天请求</param>
-    /// <param name="ct">取消令牌</param>
-    /// <returns>聊天响应</returns>
-    public async Task<Res<AIChatResponse>> SendMessageAsync(AIChatRequest request, CancellationToken ct = default)
+    public async Task<AIChatResponse> SendMessageAsync(AIChatRequest request, CancellationToken ct = default)
     {
-        var session = GetOrCreateSession(request.SessionId, request.ProviderId);
+        var state = await GetOrCreateSessionAsync(request.SessionId, request.ProviderId, ct);
+        ApplyRequestOverrides(state, request);
 
-        if (!string.IsNullOrEmpty(request.ProviderId))
+        var userMessage = new ChatMessage(ChatRole.User, request.Message);
+
+        var runOptions = CreateRunOptions(state, request.ReasoningEnabled);
+        var response = await state.Agent.RunAsync([userMessage], state.Session, runOptions, ct);
+
+        state.UpdatedAt = DateTimeOffset.UtcNow;
+
+        // Auto-set title from first user message
+        if (state.ChatHistory.Count(m => m.Role == ChatRole.User) == 1)
         {
-            session.ProviderId = request.ProviderId;
+            state.Title = request.Message.Length > 50 ? request.Message[..50] + "..." : request.Message;
         }
 
-        if (!string.IsNullOrEmpty(request.ModelName))
+        var responseText = response.Text ?? string.Empty;
+        var assistantMessage = new AIChatMessage
         {
-            session.ModelName = request.ModelName;
-        }
-
-        if (!string.IsNullOrEmpty(request.SystemPrompt))
-        {
-            session.SystemPrompt = request.SystemPrompt;
-        }
-
-        var result = await session.SendMessageAsync(request.Message, ct);
-        if (result.IsFailed(out var error, out var message))
-        {
-            return error;
-        }
+            Role = AIChatRole.Assistant,
+            Content = responseText,
+            ProviderId = state.ProviderId,
+            ModelName = state.ModelName
+        };
 
         return new AIChatResponse
         {
-            SessionId = session.SessionId,
-            Message = message,
-            ProviderId = session.ProviderId,
-            ModelName = session.ModelName
+            SessionId = state.SessionId,
+            Message = assistantMessage,
+            ProviderId = state.ProviderId,
+            ModelName = state.ModelName
         };
     }
 
     /// <summary>
-    /// 发送消息并获取流式响应
+    /// Send a message and get a streaming response via agent framework
     /// </summary>
-    /// <param name="request">聊天请求</param>
-    /// <param name="ct">取消令牌</param>
-    /// <returns>流式响应</returns>
-    public async IAsyncEnumerable<ChatResponseUpdate> SendMessageStreamingAsync(
+    public async IAsyncEnumerable<AgentResponseUpdate> SendMessageStreamingAsync(
         AIChatRequest request,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
-        var session = GetOrCreateSession(request.SessionId, request.ProviderId);
+        var state = await GetOrCreateSessionAsync(request.SessionId, request.ProviderId, ct);
+        ApplyRequestOverrides(state, request);
 
-        if (!string.IsNullOrEmpty(request.ProviderId))
-        {
-            session.ProviderId = request.ProviderId;
-        }
+        var userMessage = new ChatMessage(ChatRole.User, request.Message);
 
-        if (!string.IsNullOrEmpty(request.ModelName))
-        {
-            session.ModelName = request.ModelName;
-        }
+        var runOptions = CreateRunOptions(state, request.ReasoningEnabled);
 
-        if (!string.IsNullOrEmpty(request.SystemPrompt))
-        {
-            session.SystemPrompt = request.SystemPrompt;
-        }
-
-        ChatOptions? chatOptions = null;
-        if (request.ReasoningEnabled)
-        {
-            chatOptions = new ChatOptions();
-            chatOptions.AdditionalProperties ??= new AdditionalPropertiesDictionary();
-            chatOptions.AdditionalProperties["reasoning_effort"] = "medium";
-        }
-
-        await foreach (var update in session.SendMessageStreamingAsync(request.Message, chatOptions, ct))
+        await foreach (var update in state.Agent.RunStreamingAsync([userMessage], state.Session, runOptions, ct))
         {
             yield return update;
+        }
+
+        state.UpdatedAt = DateTimeOffset.UtcNow;
+
+        // Auto-set title from first user message
+        if (state.ChatHistory.Count(m => m.Role == ChatRole.User) == 1)
+        {
+            state.Title = request.Message.Length > 50 ? request.Message[..50] + "..." : request.Message;
         }
     }
 
     /// <summary>
-    /// 获取会话 ID（用于新会话返回）
+    /// Get session ID for a request (creates session if needed)
     /// </summary>
-    public string GetSessionIdForRequest(AIChatRequest request)
+    public async Task<string> GetSessionIdForRequestAsync(AIChatRequest request, CancellationToken ct = default)
     {
-        var session = GetOrCreateSession(request.SessionId, request.ProviderId);
-        return session.SessionId;
+        var state = await GetOrCreateSessionAsync(request.SessionId, request.ProviderId, ct);
+        return state.SessionId;
+    }
+
+    private IAIProvider ResolveProvider(string? providerId)
+    {
+        IAIProvider? provider;
+        if (!string.IsNullOrEmpty(providerId))
+        {
+            provider = providerFactory.GetProvider(providerId);
+            if (provider != null) return provider;
+        }
+
+        provider = providerFactory.GetDefaultProvider();
+        if (provider != null) return provider;
+
+        throw new InvalidOperationException("No AI provider available.");
+    }
+
+    private static void ApplyRequestOverrides(AgentSessionState state, AIChatRequest request)
+    {
+        if (!string.IsNullOrEmpty(request.ProviderId))
+            state.ProviderId = request.ProviderId;
+
+        if (!string.IsNullOrEmpty(request.ModelName))
+            state.ModelName = request.ModelName;
+
+        if (!string.IsNullOrEmpty(request.SystemPrompt))
+            state.SystemPrompt = request.SystemPrompt;
+    }
+
+    private static ChatClientAgentRunOptions? CreateRunOptions(AgentSessionState state, bool reasoningEnabled)
+    {
+        if (!reasoningEnabled) return null;
+
+        var chatOptions = new ChatOptions();
+        chatOptions.AdditionalProperties ??= new AdditionalPropertiesDictionary();
+        chatOptions.AdditionalProperties["reasoning_effort"] = "medium";
+        return new ChatClientAgentRunOptions { ChatOptions = chatOptions };
     }
 }
