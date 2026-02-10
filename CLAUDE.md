@@ -31,6 +31,15 @@ Invoke when:
 
 **Current MudBlazor version**: 8.9.0
 
+### /mo-requirement-design
+
+Invoke when:
+- Brainstorming or refining a new requirement
+- Creating a requirements document for a new feature
+- Entering the design phase for an existing requirement
+- Planning module architecture for a new feature
+- User mentions "需求" (requirement) or "设计" (design)
+
 ### Microsoft Documentation Skill
 
 You have access to MCP tools called `microsoft_docs_search`, `microsoft_docs_fetch`, and `microsoft_code_sample_search` - these tools allow you to search through and fetch Microsoft's latest official documentation and code samples, and that information might be more detailed or newer than what's in your training data set.
