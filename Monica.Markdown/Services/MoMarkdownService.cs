@@ -3,7 +3,6 @@ using Microsoft.Extensions.Options;
 using Monica.Markdown.Interfaces;
 using Monica.Markdown.Models;
 using Monica.Markdown.Modules;
-using Monica.Markdown.Scanner;
 using Monica.Tool.Algorithm.Tree;
 
 namespace Monica.Markdown.Services;
@@ -11,10 +10,11 @@ namespace Monica.Markdown.Services;
 /// <summary>
 /// Singleton service for managing markdown document groups.
 /// Uses lazy async initialization with SemaphoreSlim for thread safety.
+/// Delegates scanning and content retrieval to <see cref="IMarkdownDocumentProvider"/>.
 /// </summary>
 public class MoMarkdownService(
     IOptions<ModuleMarkdownOption> options,
-    IDocumentTitleProvider titleProvider,
+    IMarkdownDocumentProvider documentProvider,
     ILogger<MoMarkdownService> logger) : IMoMarkdownService
 {
     private readonly SemaphoreSlim _initLock = new(1, 1);
@@ -57,7 +57,7 @@ public class MoMarkdownService(
             logger.LogDebug("Scanning document group '{Key}' at '{BasePath}'",
                 reg.Key, reg.BasePath);
 
-            var group = await DocumentScanner.ScanAsync(reg, opt, titleProvider);
+            var group = await documentProvider.ScanGroupAsync(reg, opt);
             newGroups[group.Key] = group;
 
             if (!group.IsValid)
@@ -157,12 +157,7 @@ public class MoMarkdownService(
 
     public async Task<string> GetDocumentContentByPathAsync(string filePath)
     {
-        var absolutePath = Path.GetFullPath(filePath);
-        if (!File.Exists(absolutePath))
-            throw new FileNotFoundException(
-                $"File not found: '{absolutePath}'.", absolutePath);
-
-        return await File.ReadAllTextAsync(absolutePath);
+        return await documentProvider.GetDocumentContentAsync(filePath);
     }
 
     public async Task<List<MarkdownDocument>> SearchByMetadataAsync(
@@ -243,7 +238,7 @@ public class MoMarkdownService(
         await _refreshLock.WaitAsync();
         try
         {
-            var group = await DocumentScanner.ScanAsync(reg, opt, titleProvider);
+            var group = await documentProvider.ScanGroupAsync(reg, opt);
             _groups[group.Key] = group;
 
             // Rebuild path index

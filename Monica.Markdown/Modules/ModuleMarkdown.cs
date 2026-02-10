@@ -36,6 +36,8 @@ public class ModuleMarkdown(ModuleMarkdownOption option)
     {
         services.TryAddSingleton<IDocumentTitleProvider,
             FileNameDocumentTitleProvider>();
+        services.TryAddSingleton<IMarkdownDocumentProvider,
+            FileMarkdownDocumentProvider>();
         services.AddSingleton<IMoMarkdownService, MoMarkdownService>();
     }
 }
@@ -127,6 +129,22 @@ public class ModuleMarkdownGuide
         {
             ctx.Services.RemoveAll<IDocumentTitleProvider>();
             ctx.Services.AddSingleton<IDocumentTitleProvider, TProvider>();
+        }, order: 0);
+
+        return this;
+    }
+
+    /// <summary>
+    /// Replaces the default document provider with a custom implementation.
+    /// </summary>
+    /// <typeparam name="TProvider">Custom document provider type.</typeparam>
+    public ModuleMarkdownGuide UseDocumentProvider<TProvider>()
+        where TProvider : class, IMarkdownDocumentProvider
+    {
+        ConfigureServices(ctx =>
+        {
+            ctx.Services.RemoveAll<IMarkdownDocumentProvider>();
+            ctx.Services.AddSingleton<IMarkdownDocumentProvider, TProvider>();
         }, order: 0);
 
         return this;
