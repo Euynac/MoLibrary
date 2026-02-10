@@ -72,7 +72,9 @@
       "mcp__microsoft-learn__microsoft_code_sample_search",
       "Skill(playwright-cli)",
       "Bash(playwright-cli:*)",
-      "mcp__microsoft-learn__microsoft_docs_fetch"
+      "mcp__microsoft-learn__microsoft_docs_fetch",
+      "mcp__cc-workflow-studio__get_workflow_schema",
+      "mcp__cc-workflow-studio__get_current_workflow"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"
