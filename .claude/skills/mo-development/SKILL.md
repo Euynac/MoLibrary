@@ -14,7 +14,7 @@ Monica is a modular .NET infrastructure library designed for flexibility and per
 
 ### Module Pattern
 
-Every module follows a consistent pattern with four components:
+Every module follows a consistent pattern with four components in one `Module{Name}.cs` file, which is located in the `Modules` folder of each project.
 
 | Component | Purpose | Example |
 |-----------|---------|---------|
