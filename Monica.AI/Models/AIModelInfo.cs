@@ -74,14 +74,24 @@ public class ImageModelInfo : AIModelInfo
 }
 
 /// <summary>
-/// 向量嵌入模型元数据信息
+/// Embedding model metadata.
 /// </summary>
 public class EmbeddingModelInfo : AIModelInfo
 {
     /// <summary>
-    /// 向量维度
+    /// Vector dimensions produced by this embedding model.
     /// </summary>
-    public int? Dimensions { get; init; }
+    public required int Dimensions { get; init; }
+
+    /// <summary>
+    /// Maximum input tokens per embedding request.
+    /// </summary>
+    public int? MaxInputTokens { get; init; }
+
+    /// <summary>
+    /// Cost per 1M tokens (USD).
+    /// </summary>
+    public decimal CostPerMillionTokens { get; init; }
 }
 
 /// <summary>

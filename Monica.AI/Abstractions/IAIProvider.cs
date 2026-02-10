@@ -5,48 +5,53 @@ using Monica.Tool.MoResponse;
 namespace Monica.AI.Abstractions;
 
 /// <summary>
-/// AI Provider 抽象接口，定义了 AI 服务提供者的基本操作
+/// AI Provider abstraction interface defining basic operations for AI service providers.
 /// </summary>
 public interface IAIProvider : IDisposable
 {
     /// <summary>
-    /// Provider 唯一标识符
+    /// Provider unique identifier.
     /// </summary>
     string ProviderId { get; }
 
     /// <summary>
-    /// Provider 显示名称
+    /// Provider display name.
     /// </summary>
     string DisplayName { get; }
 
     /// <summary>
-    /// Provider 元数据信息
+    /// Provider metadata information.
     /// </summary>
     AIProviderInfo Info { get; }
 
     /// <summary>
-    /// 获取 IChatClient 实例
+    /// Gets an IChatClient instance for the specified model.
     /// </summary>
-    /// <returns>IChatClient 实例</returns>
     IChatClient GetChatClient(string? modelName = null);
 
     /// <summary>
-    /// 测试连接是否正常
+    /// Gets an embedding generator for the specified model.
+    /// If modelName is null, uses the first EmbeddingModelInfo from the provider's resolved models.
     /// </summary>
-    /// <param name="ct">取消令牌</param>
-    /// <returns>连接测试结果</returns>
+    /// <exception cref="NotSupportedException">
+    /// Thrown when the provider does not support embedding generation
+    /// or no embedding models are configured in SupportedModels.
+    /// </exception>
+    IEmbeddingGenerator<string, Embedding<float>> GetEmbeddingGenerator(
+        string? modelName = null);
+
+    /// <summary>
+    /// Tests whether the connection is working.
+    /// </summary>
     Task<Res> TestConnectionAsync(CancellationToken ct = default);
 
     /// <summary>
-    /// 获取可用的模型列表
+    /// Gets the list of available models.
     /// </summary>
-    /// <param name="ct">取消令牌</param>
-    /// <returns>可用模型列表</returns>
     Task<Res<IReadOnlyList<string>>> GetAvailableModelsAsync(CancellationToken ct = default);
 
     /// <summary>
-    /// 更新 Provider 默认系统提示词
+    /// Updates the provider's default system prompt.
     /// </summary>
-    /// <param name="systemPrompt">系统提示词</param>
     void UpdateSystemPrompt(string? systemPrompt);
 }

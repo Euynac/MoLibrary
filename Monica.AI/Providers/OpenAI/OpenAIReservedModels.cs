@@ -29,6 +29,32 @@ public static class OpenAIReservedModels
             ModelName = "o1-mini",
             Description = "OpenAI O1 mini reasoning model",
             SupportsReasoning = true
+        },
+
+        // Embedding models
+        new EmbeddingModelInfo
+        {
+            ModelName = "text-embedding-3-small",
+            Description = "OpenAI Text Embedding 3 Small",
+            Dimensions = 1536,
+            MaxInputTokens = 8191,
+            CostPerMillionTokens = 0.02m
+        },
+        new EmbeddingModelInfo
+        {
+            ModelName = "text-embedding-3-large",
+            Description = "OpenAI Text Embedding 3 Large",
+            Dimensions = 3072,
+            MaxInputTokens = 8191,
+            CostPerMillionTokens = 0.13m
+        },
+        new EmbeddingModelInfo
+        {
+            ModelName = "text-embedding-ada-002",
+            Description = "OpenAI Text Embedding Ada 002 (Legacy)",
+            Dimensions = 1536,
+            MaxInputTokens = 8191,
+            CostPerMillionTokens = 0.10m
         }
     ];
 }

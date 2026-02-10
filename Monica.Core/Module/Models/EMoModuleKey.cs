@@ -161,5 +161,9 @@ public enum EMoModuleKey
     /// <summary>
     /// Markdown document viewer UI module
     /// </summary>
-    MarkdownUI
+    MarkdownUI,
+    /// <summary>
+    /// RAG (Retrieval-Augmented Generation) module
+    /// </summary>
+    RAG
 }

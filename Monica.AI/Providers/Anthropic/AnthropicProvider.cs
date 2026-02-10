@@ -11,7 +11,7 @@ using Monica.Tool.MoResponse;
 namespace Monica.AI.Providers.Anthropic;
 
 /// <summary>
-/// Anthropic Provider 实现
+/// Anthropic Provider implementation.
 /// </summary>
 public class AnthropicProvider : IAIProvider
 {
@@ -76,6 +76,15 @@ public class AnthropicProvider : IAIProvider
         }
 
         return _chatClients.GetOrAdd(resolvedModel, name => _client.AsIChatClient(name));
+    }
+
+    /// <inheritdoc />
+    public IEmbeddingGenerator<string, Embedding<float>> GetEmbeddingGenerator(
+        string? modelName = null)
+    {
+        throw new NotSupportedException(
+            "Anthropic does not provide embedding models. " +
+            "Use an OpenAI provider for embedding generation.");
     }
 
     /// <inheritdoc />

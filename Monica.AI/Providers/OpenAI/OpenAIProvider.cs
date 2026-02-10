@@ -25,6 +25,8 @@ public class OpenAIProvider : IAIProvider
     private readonly IReadOnlyList<string> _invalidModels;
     private string? _systemPrompt;
     private readonly ConcurrentDictionary<string, IChatClient> _chatClients = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, IEmbeddingGenerator<string, Embedding<float>>>
+        _embeddingGenerators = new(StringComparer.OrdinalIgnoreCase);
     private bool _disposed;
 
     public OpenAIProvider(OpenAIProviderOptions options, AIModelCatalog modelCatalog)
@@ -82,6 +84,21 @@ public class OpenAIProvider : IAIProvider
     }
 
     /// <inheritdoc />
+    public IEmbeddingGenerator<string, Embedding<float>> GetEmbeddingGenerator(
+        string? modelName = null)
+    {
+        var resolvedModel = !string.IsNullOrWhiteSpace(modelName)
+            ? modelName
+            : _models.OfType<EmbeddingModelInfo>().FirstOrDefault()?.ModelName
+              ?? throw new NotSupportedException(
+                  "No embedding model configured for this OpenAI provider. " +
+                  "Add an embedding model to SupportedModels (e.g., 'text-embedding-3-small').");
+
+        return _embeddingGenerators.GetOrAdd(resolvedModel, name =>
+            _client.GetEmbeddingClient(name).AsIEmbeddingGenerator());
+    }
+
+    /// <inheritdoc />
     public async Task<Res> TestConnectionAsync(CancellationToken ct = default)
     {
         try
@@ -130,6 +147,12 @@ public class OpenAIProvider : IAIProvider
                     chatClient.Dispose();
                 }
                 _chatClients.Clear();
+
+                foreach (var generator in _embeddingGenerators.Values)
+                {
+                    (generator as IDisposable)?.Dispose();
+                }
+                _embeddingGenerators.Clear();
             }
             _disposed = true;
         }
