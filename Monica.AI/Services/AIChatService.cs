@@ -143,6 +143,7 @@ public class AIChatService(IAIProviderFactory providerFactory, IOptions<ModuleAI
         var userMessage = new ChatMessage(ChatRole.User, request.Message);
 
         var runOptions = CreateRunOptions(state, request.ReasoningEnabled);
+        //TODO 解决上下文丢失问题：https://github.com/microsoft/agent-framework/pull/3798
         var response = await state.Agent.RunAsync([userMessage], state.Session, runOptions, ct);
 
         state.UpdatedAt = DateTimeOffset.UtcNow;
