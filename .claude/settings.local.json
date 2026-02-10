@@ -71,9 +71,10 @@
       "mcp__microsoft-learn__microsoft_docs_search",
       "mcp__microsoft-learn__microsoft_code_sample_search",
       "Skill(playwright-cli)",
-      "Bash(playwright-cli:*)"
+      "Bash(playwright-cli:*)",
+      "mcp__microsoft-learn__microsoft_docs_fetch"
     ],
-    "deny": [], 
+    "deny": [],
     "defaultMode": "acceptEdits"
   },
   "enableAllProjectMcpServers": true,
