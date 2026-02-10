@@ -17,27 +17,27 @@ public static class MoConfigurationConventions
     /// <summary>
     /// 更新指定配置
     /// </summary>
-    public static string DashboardConfigUpdate = "/configuration/update";
+    public static string DashboardConfigUpdate { get; set; } = "/configuration/update";
     /// <summary>
     /// 获取微服务配置状态
     /// </summary>
-    public static string DashboardAllConfigStatus = "/configuration/status";
+    public static string DashboardAllConfigStatus { get; set; } = "/configuration/status";
     /// <summary>
     /// 获取指定配置类状态
     /// </summary>
-    public static string DashboardConfigStatus = "/configuration/config/status";
+    public static string DashboardConfigStatus { get; set; } = "/configuration/config/status";
     /// <summary>
     /// 获取指定配置状态
     /// </summary>
-    public static string DashboardOptionItemStatus = "/configuration/option/status";
+    public static string DashboardOptionItemStatus { get; set; } = "/configuration/option/status";
     /// <summary>
     /// 获取配置类历史
     /// </summary>
-    public static string DashboardConfigHistory = "/configuration/history";
+    public static string DashboardConfigHistory { get; set; } = "/configuration/history";
     /// <summary>
     /// 回滚配置类
     /// </summary>
-    public static string DashboardConfigRollback = "/configuration/rollback";
+    public static string DashboardConfigRollback { get; set; } = "/configuration/rollback";
     #endregion
 
 }

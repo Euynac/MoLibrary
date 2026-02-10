@@ -59,6 +59,10 @@ public class ConfigurationCentreApiProvider(
     public override async Task<Res<DtoUpdateConfigRes>> UpdateConfigAsync(DtoUpdateConfig req)
     {
         _cache = default;
+        var curAppid = clientInfo.GetServiceStatus().ServiceName;
+        if (curAppid == req.AppId)
+            return await base.UpdateConfigAsync(req);
+        
         if((await invoker.UpdateRemoteConfigAsync(req.AppId, req)).IsFailed(out var remoteError, out var remoteData))
             return remoteError;
         return remoteData;
