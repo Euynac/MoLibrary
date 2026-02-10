@@ -23,7 +23,7 @@
 {Describe the overall architecture. Include component relationships and data flow.}
 
 ```
-{ASCII diagram or description of component relationships}
+{mermaid diagram or description of component relationships}
 ```
 
 ## Abstractions & Interfaces
