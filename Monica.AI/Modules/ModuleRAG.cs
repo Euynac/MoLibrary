@@ -1,3 +1,4 @@
+using Microsoft.Agents.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.VectorData;
@@ -57,6 +58,13 @@ public class ModuleRAGOption : MoModuleOption<ModuleRAG>
     public int? VectorDimensions { get; set; }
     public string CollectionNamePrefix { get; set; } = "monica_rag_";
     public int DefaultTopK { get; set; } = 5;
+
+    /// <summary>
+    /// Options for the TextSearchProvider used in agent integration (Phase 3).
+    /// Controls search behavior (BeforeAIInvoke vs OnDemandFunctionCalling),
+    /// result formatting, and recent message memory.
+    /// </summary>
+    public TextSearchProviderOptions? SearchProviderOptions { get; set; }
 }
 
 /// <summary>

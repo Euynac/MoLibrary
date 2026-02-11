@@ -60,6 +60,12 @@ public class AgentSessionState
     public string? SystemPrompt { get; set; }
 
     /// <summary>
+    /// Active knowledge base IDs for this session (for UI display and session recreation).
+    /// Null if RAG is not enabled for this session.
+    /// </summary>
+    public List<string>? ActiveKnowledgeBaseIds { get; set; }
+
+    /// <summary>
     /// The ChatClientAgent instance wrapping the IChatClient
     /// </summary>
     public ChatClientAgent Agent { get; set; }

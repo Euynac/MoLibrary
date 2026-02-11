@@ -148,4 +148,14 @@ public class ModuleAIUIOption : MoModuleOption<ModuleAIUI>
     /// Enable auto-scroll to bottom on new messages
     /// </summary>
     public bool EnableAutoScroll { get; set; } = true;
+
+    /// <summary>
+    /// Default knowledge base IDs to pre-select in the chat UI.
+    /// </summary>
+    public List<string> DefaultKnowledgeBaseIds { get; set; } = [];
+
+    /// <summary>
+    /// Whether to show the knowledge base selector in the chat UI.
+    /// </summary>
+    public bool ShowKnowledgeBaseSelector { get; set; } = true;
 }

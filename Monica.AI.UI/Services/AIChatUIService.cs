@@ -43,14 +43,15 @@ public class AIChatUIService(
     }
 
     /// <summary>
-    /// Create a new session (async due to agent session creation)
+    /// Create a new session with optional RAG knowledge bases.
     /// </summary>
     public async Task<ChatSessionInfo> CreateSessionAsync(
         string? providerId = null,
         string? title = null,
+        IEnumerable<string>? knowledgeBaseIds = null,
         CancellationToken ct = default)
     {
-        var state = await chatService.CreateSessionAsync(providerId, title, null, ct);
+        var state = await chatService.CreateSessionAsync(providerId, title, null, knowledgeBaseIds, ct);
 
         var sessionInfo = new ChatSessionInfo
         {
@@ -58,7 +59,8 @@ public class AIChatUIService(
             Title = state.Title,
             ProviderId = state.ProviderId,
             ModelName = state.ModelName,
-            SystemPrompt = state.SystemPrompt
+            SystemPrompt = state.SystemPrompt,
+            ActiveKnowledgeBaseIds = state.ActiveKnowledgeBaseIds
         };
 
         sessionStorage.AddSession(sessionInfo);
@@ -154,7 +156,8 @@ public class AIChatUIService(
     }
 
     /// <summary>
-    /// Internal: process streaming response from agent framework
+    /// Internal: process streaming response from agent framework.
+    /// Captures text, reasoning, and tool call content from the stream.
     /// </summary>
     private async IAsyncEnumerable<AgentResponseUpdate> StreamResponseAsync(
         string sessionId,
@@ -175,6 +178,7 @@ public class AIChatUIService(
         var fullContent = string.Empty;
         var fullReasoning = string.Empty;
         var reasoningStopwatch = new Stopwatch();
+        var toolCalls = new List<ToolCallInfo>();
 
         await foreach (var update in chatService.SendMessageStreamingAsync(request, ct))
         {
@@ -191,6 +195,26 @@ public class AIChatUIService(
                     if (reasoningStopwatch.IsRunning)
                         reasoningStopwatch.Stop();
                     fullContent += text.Text;
+                }
+                else if (content is FunctionCallContent functionCall)
+                {
+                    toolCalls.Add(new ToolCallInfo(
+                        functionCall.Name,
+                        functionCall.CallId ?? string.Empty,
+                        functionCall.Arguments,
+                        null,
+                        DateTimeOffset.UtcNow));
+                }
+                else if (content is FunctionResultContent functionResult)
+                {
+                    var matching = toolCalls.FindIndex(t => t.CallId == functionResult.CallId);
+                    if (matching >= 0)
+                    {
+                        toolCalls[matching] = toolCalls[matching] with
+                        {
+                            Result = functionResult.Result?.ToString()
+                        };
+                    }
                 }
             }
 
@@ -211,7 +235,8 @@ public class AIChatUIService(
                 ReasoningContent = string.IsNullOrEmpty(fullReasoning) ? null : fullReasoning,
                 ReasoningDurationSeconds = reasoningStopwatch.Elapsed.TotalSeconds > 0
                     ? reasoningStopwatch.Elapsed.TotalSeconds
-                    : null
+                    : null,
+                ToolCalls = toolCalls.Count > 0 ? toolCalls : null
             });
             sessionInfo.UpdatedAt = DateTimeOffset.UtcNow;
         }
@@ -289,7 +314,8 @@ public class AIChatUIService(
 
     /// <summary>
     /// Internal: Stream AI response without adding user message to local storage
-    /// (used by retry where user message already exists)
+    /// (used by retry where user message already exists).
+    /// Also captures tool call content from the stream.
     /// </summary>
     private async IAsyncEnumerable<AgentResponseUpdate> StreamResponseOnlyAsync(
         string sessionId,
@@ -310,6 +336,7 @@ public class AIChatUIService(
         var fullContent = string.Empty;
         var fullReasoning = string.Empty;
         var reasoningStopwatch = new Stopwatch();
+        var toolCalls = new List<ToolCallInfo>();
 
         await foreach (var update in chatService.SendMessageStreamingAsync(request, ct))
         {
@@ -327,6 +354,26 @@ public class AIChatUIService(
                         reasoningStopwatch.Stop();
                     fullContent += text.Text;
                 }
+                else if (content is FunctionCallContent functionCall)
+                {
+                    toolCalls.Add(new ToolCallInfo(
+                        functionCall.Name,
+                        functionCall.CallId ?? string.Empty,
+                        functionCall.Arguments,
+                        null,
+                        DateTimeOffset.UtcNow));
+                }
+                else if (content is FunctionResultContent functionResult)
+                {
+                    var matching = toolCalls.FindIndex(t => t.CallId == functionResult.CallId);
+                    if (matching >= 0)
+                    {
+                        toolCalls[matching] = toolCalls[matching] with
+                        {
+                            Result = functionResult.Result?.ToString()
+                        };
+                    }
+                }
             }
             yield return update;
         }
@@ -343,7 +390,8 @@ public class AIChatUIService(
             ReasoningContent = string.IsNullOrEmpty(fullReasoning) ? null : fullReasoning,
             ReasoningDurationSeconds = reasoningStopwatch.Elapsed.TotalSeconds > 0
                 ? reasoningStopwatch.Elapsed.TotalSeconds
-                : null
+                : null,
+            ToolCalls = toolCalls.Count > 0 ? toolCalls : null
         });
         sessionInfo.UpdatedAt = DateTimeOffset.UtcNow;
     }
@@ -414,6 +462,7 @@ public class AIChatUIService(
             ProviderId = s.ProviderId,
             ModelName = s.ModelName,
             SystemPrompt = s.SystemPrompt,
+            ActiveKnowledgeBaseIds = s.ActiveKnowledgeBaseIds,
             CreatedAt = s.CreatedAt,
             UpdatedAt = s.UpdatedAt
         }).ToList();

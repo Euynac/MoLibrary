@@ -53,9 +53,15 @@ public class AIChatMessage
     public double? ReasoningDurationSeconds { get; set; }
 
     /// <summary>
-    /// 是否正在流式传输中
+    /// Whether the message is currently streaming
     /// </summary>
     public bool IsStreaming { get; set; }
+
+    /// <summary>
+    /// Tool calls made during this message's generation.
+    /// Populated from FunctionCallContent/FunctionResultContent in AgentResponseUpdate.
+    /// </summary>
+    public List<ToolCallInfo>? ToolCalls { get; set; }
 
     /// <summary>
     /// 将消息转换为 Microsoft.Extensions.AI 的 ChatMessage
@@ -160,7 +166,17 @@ public class TokenUsage
     public int ReasoningTokens { get; init; }
 
     /// <summary>
-    /// 总 Token 数量
+    /// Total token count
     /// </summary>
     public int TotalTokens => InputTokens + OutputTokens + ReasoningTokens;
 }
+
+/// <summary>
+/// Information about a tool call made during message generation.
+/// </summary>
+public record ToolCallInfo(
+    string ToolName,
+    string CallId,
+    IDictionary<string, object?>? Arguments,
+    string? Result,
+    DateTimeOffset Timestamp);

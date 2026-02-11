@@ -172,6 +172,7 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
                     request?.ProviderId,
                     request?.Title,
                     request?.SystemPrompt,
+                    knowledgeBaseIds: null,
                     ct);
                 return TypedResults.Ok(new { session.SessionId, session.Title, session.ProviderId });
             });

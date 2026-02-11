@@ -137,9 +137,15 @@ public class ChatSessionInfo
     public string? ModelName { get; set; }
 
     /// <summary>
-    /// 系统提示词
+    /// System prompt
     /// </summary>
     public string? SystemPrompt { get; set; }
+
+    /// <summary>
+    /// Active knowledge base IDs for this session.
+    /// Null if RAG is not enabled.
+    /// </summary>
+    public List<string>? ActiveKnowledgeBaseIds { get; set; }
 
     /// <summary>
     /// 创建时间
