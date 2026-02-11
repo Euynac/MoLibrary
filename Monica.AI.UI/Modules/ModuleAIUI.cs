@@ -83,9 +83,6 @@ public class ModuleAIUI(ModuleAIUIOption option)
                         navOrder: 2);
                 });
         }
-
-        // Depends on RAG UI module
-        DependsOnModule<ModuleRAGUIGuide>().Register();
     }
 }
 
