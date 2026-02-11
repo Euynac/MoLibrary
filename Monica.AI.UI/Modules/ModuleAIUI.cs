@@ -46,7 +46,6 @@ public class ModuleAIUI(ModuleAIUIOption option)
         services.AddScoped<AIChatUIService>();
         services.AddScoped<ChatSessionStorage>();
         services.AddScoped<AIProviderUIService>();
-        services.AddScoped<RAGUIService>();
     }
 
     public override void ClaimDependencies()
@@ -85,20 +84,8 @@ public class ModuleAIUI(ModuleAIUIOption option)
                 });
         }
 
-        if (!Option.DisableRAGDebugPage)
-        {
-            DependsOnModule<ModuleUICoreGuide>().Register()
-                .RegisterUIComponents(p =>
-                {
-                    p.RegisterComponent<UIAIRAGDebugPage>(
-                        UIAIRAGDebugPage.PAGE_URL,
-                        "RAG Debug",
-                        Icons.Material.Filled.ManageSearch,
-                        "AI",
-                        addToNav: true,
-                        navOrder: 3);
-                });
-        }
+        // Depends on RAG UI module
+        DependsOnModule<ModuleRAGUIGuide>().Register();
     }
 }
 
@@ -124,11 +111,6 @@ public class ModuleAIUIOption : MoModuleOption<ModuleAIUI>
     /// Disable the AI provider manage page
     /// </summary>
     public bool DisableAIProviderPage { get; set; }
-
-    /// <summary>
-    /// Disable the RAG debug page
-    /// </summary>
-    public bool DisableRAGDebugPage { get; set; }
 
     /// <summary>
     /// Enable Markdown rendering

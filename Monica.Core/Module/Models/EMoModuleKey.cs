@@ -165,5 +165,9 @@ public enum EMoModuleKey
     /// <summary>
     /// RAG (Retrieval-Augmented Generation) module
     /// </summary>
-    RAG
+    RAG,
+    /// <summary>
+    /// RAG UI module - provides RAG debug and management interface
+    /// </summary>
+    RAGUI
 }
