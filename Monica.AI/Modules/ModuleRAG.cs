@@ -73,13 +73,21 @@ public class ModuleRAGOption : MoModuleOption<ModuleRAG>
 public class ModuleRAGGuide
     : MoModuleGuide<ModuleRAG, ModuleRAGOption, ModuleRAGGuide>
 {
+    private const string CONFIG_KB_STORE = nameof(CONFIG_KB_STORE);
+    private const string CONFIG_VECTOR_STORE = nameof(CONFIG_VECTOR_STORE);
+
+    protected override string[] GetRequestedConfigMethodKeys()
+    {
+        return [CONFIG_KB_STORE, CONFIG_VECTOR_STORE];
+    }
+
     public ModuleRAGGuide UseKnowledgeBaseStore<TStore>()
         where TStore : class, IKnowledgeBaseStore
     {
         ConfigureServices(ctx =>
         {
             ctx.Services.AddSingleton<IKnowledgeBaseStore, TStore>();
-        });
+        }, key: CONFIG_KB_STORE);
         return this;
     }
 
@@ -118,7 +126,7 @@ public class ModuleRAGGuide
                     EmbeddingGenerator = embeddingGenerator
                 });
             });
-        });
+        }, key: CONFIG_VECTOR_STORE);
         return this;
     }
 
@@ -128,7 +136,7 @@ public class ModuleRAGGuide
         ConfigureServices(ctx =>
         {
             ctx.Services.AddSingleton<VectorStore, TVectorStore>();
-        });
+        }, key: CONFIG_VECTOR_STORE);
         return this;
     }
 

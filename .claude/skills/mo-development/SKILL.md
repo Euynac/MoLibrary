@@ -1,6 +1,6 @@
 ---
 name: mo-development
-description: This skill should be used when the user asks to "create module", "add module", "module structure", "use Res type", "return Res", "Res.Ok", "Res.Fail", "IsFailed pattern", "module registration", "module dependencies", "module pattern", "Monica architecture", "service layer pattern", "create service", "add service", "create hosted service", "add background service", "MoBackgroundService", "MoHostedService", "RecordState", "hosted service observability", "service state tracking", "CoordinatedLeaderService", or needs guidance on Monica module architecture, the unified response model Res, module registration patterns, Res usage scope (UI vs infrastructure), or hosted service development with observability.
+description: This skill should be used when the user asks to "create module", "add module", "module structure", "use Res type", "return Res", "Res.Ok", "Res.Fail", "IsFailed pattern", "module registration", "module dependencies", "module pattern", "Monica architecture", "service layer pattern", "create service", "add service", "create hosted service", "add background service", "MoBackgroundService", "MoHostedService", "RecordState", "hosted service observability", "service state tracking", "CoordinatedLeaderService", "GetRequestedConfigMethodKeys", "required config", "required configuration methods", or needs guidance on Monica module architecture, the unified response model Res, module registration patterns, Res usage scope (UI vs infrastructure), required Guide configuration validation, or hosted service development with observability.
 version: 1.0.0
 ---
 
@@ -62,6 +62,61 @@ public override void ClaimDependencies()
 ```
 
 Dependencies are automatically registered when a module is added.
+
+### Required Configuration Methods (GetRequestedConfigMethodKeys)
+
+When a module's services depend on registrations that must come from Guide methods (e.g., choosing a store implementation), the Guide class must override `GetRequestedConfigMethodKeys` to declare those requirements. The module system validates at startup that all required keys have been satisfied, throwing a clear error if any are missing.
+
+**Pattern**: Define `private const string` keys, return them from `GetRequestedConfigMethodKeys`, and pass `key:` to `ConfigureServices`/`ConfigureEmpty` in the guide methods that satisfy each requirement.
+
+```csharp
+public class ModuleExampleGuide
+    : MoModuleGuide<ModuleExample, ModuleExampleOption, ModuleExampleGuide>
+{
+    // 1. Define constants for required configuration keys
+    private const string CONFIG_STORE = nameof(CONFIG_STORE);
+    private const string CONFIG_PROVIDER = nameof(CONFIG_PROVIDER);
+
+    // 2. Declare which keys are required
+    protected override string[] GetRequestedConfigMethodKeys()
+    {
+        return [CONFIG_STORE, CONFIG_PROVIDER];
+    }
+
+    // 3. Guide methods satisfy requirements by passing key:
+    //    Multiple methods can share the same key (alternatives)
+    public ModuleExampleGuide UseInMemoryStore()
+    {
+        ConfigureServices(ctx =>
+        {
+            ctx.Services.AddSingleton<IStore, InMemoryStore>();
+        }, key: CONFIG_STORE);  // Satisfies CONFIG_STORE
+        return this;
+    }
+
+    public ModuleExampleGuide UseCustomStore<T>() where T : class, IStore
+    {
+        ConfigureServices(ctx =>
+        {
+            ctx.Services.AddSingleton<IStore, T>();
+        }, key: CONFIG_STORE);  // Also satisfies CONFIG_STORE
+        return this;
+    }
+
+    // Use ConfigureEmpty when the method doesn't register services
+    // but still needs to mark the requirement as satisfied
+    public ModuleExampleGuide UseDefaultProvider()
+    {
+        ConfigureEmpty(CONFIG_PROVIDER);
+        return this;
+    }
+}
+```
+
+**Key rules**:
+- If a service registered in `Module.ConfigureServices` depends on a DI registration that only comes from a Guide method, that Guide method's key **must** be in `GetRequestedConfigMethodKeys`
+- Alternative methods (e.g., `UseInMemory` vs `UseCustom`) share the same key constant
+- Use `ConfigureEmpty(KEY)` when a method satisfies a requirement without registering services
 
 ## Key Architectural Decisions
 
