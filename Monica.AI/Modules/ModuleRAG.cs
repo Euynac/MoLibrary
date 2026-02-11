@@ -60,6 +60,12 @@ public class ModuleRAGOption : MoModuleOption<ModuleRAG>
     public int DefaultTopK { get; set; } = 5;
 
     /// <summary>
+    /// Relative file path for the file-based knowledge base store.
+    /// Resolved relative to the application's running directory.
+    /// </summary>
+    public string KnowledgeBaseStoreFilePath { get; set; } = "monica_data/rag/knowledge_bases.json";
+
+    /// <summary>
     /// Options for the TextSearchProvider used in agent integration (Phase 3).
     /// Controls search behavior (BeforeAIInvoke vs OnDemandFunctionCalling),
     /// result formatting, and recent message memory.
@@ -87,6 +93,20 @@ public class ModuleRAGGuide
         ConfigureServices(ctx =>
         {
             ctx.Services.AddSingleton<IKnowledgeBaseStore, TStore>();
+        }, key: CONFIG_KB_STORE);
+        return this;
+    }
+
+    /// <summary>
+    /// Uses the file-based knowledge base store.
+    /// Persists knowledge base metadata as a JSON file on disk.
+    /// File path is configured via <see cref="ModuleRAGOption.KnowledgeBaseStoreFilePath"/>.
+    /// </summary>
+    public ModuleRAGGuide UseFileKnowledgeBaseStore()
+    {
+        ConfigureServices(ctx =>
+        {
+            ctx.Services.AddSingleton<IKnowledgeBaseStore, FileKnowledgeBaseStore>();
         }, key: CONFIG_KB_STORE);
         return this;
     }
