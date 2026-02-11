@@ -3,8 +3,8 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.VectorData;
 using Microsoft.SemanticKernel.Connectors.InMemory;
 using Monica.AI.Abstractions;
+using Monica.AI.Models;
 using Monica.AI.RAG.Abstractions;
-using Monica.AI.RAG.Models;
 using Monica.AI.RAG.Services;
 using Monica.AI.Services;
 using Monica.Core.Module;
@@ -56,7 +56,7 @@ public class ModuleRAGOption : MoModuleOption<ModuleRAG>
     public string? EmbeddingModelName { get; set; }
     public int? VectorDimensions { get; set; }
     public string CollectionNamePrefix { get; set; } = "monica_rag_";
-    public RAGSearchOptions SearchOptions { get; set; } = new();
+    public int DefaultTopK { get; set; } = 5;
 }
 
 /// <summary>
@@ -77,7 +77,8 @@ public class ModuleRAGGuide
 
     /// <summary>
     /// Uses the in-memory vector store (for development/testing).
-    /// Vector dimensions are automatically derived from the embedding model in the catalog.
+    /// Automatically resolves vector dimensions from the embedding model catalog
+    /// and configures the embedding generator for auto-embedding.
     /// </summary>
     public ModuleRAGGuide UseInMemoryVectorStore()
     {
@@ -86,7 +87,12 @@ public class ModuleRAGGuide
             ctx.Services.AddSingleton<VectorStore>(sp =>
             {
                 var providerFactory = sp.GetRequiredService<IAIProviderFactory>();
+                var modelCatalog = sp.GetRequiredService<AIModelCatalog>();
                 var ragOptions = sp.GetRequiredService<IOptions<ModuleRAGOption>>().Value;
+
+                // Auto-resolve VectorDimensions if not explicitly set
+                ragOptions.VectorDimensions ??= ResolveVectorDimensions(
+                    ragOptions, providerFactory, modelCatalog);
 
                 var provider = !string.IsNullOrWhiteSpace(ragOptions.EmbeddingProviderId)
                     ? providerFactory.GetProvider(ragOptions.EmbeddingProviderId)
@@ -126,5 +132,35 @@ public class ModuleRAGGuide
             ctx.Services.AddSingleton<IDocumentChunker, TChunker>();
         });
         return this;
+    }
+
+    private static int ResolveVectorDimensions(
+        ModuleRAGOption ragOptions,
+        IAIProviderFactory providerFactory,
+        AIModelCatalog modelCatalog)
+    {
+        if (ragOptions.VectorDimensions.HasValue)
+            return ragOptions.VectorDimensions.Value;
+
+        var provider = !string.IsNullOrWhiteSpace(ragOptions.EmbeddingProviderId)
+            ? providerFactory.GetProvider(ragOptions.EmbeddingProviderId)
+            : providerFactory.GetDefaultProvider();
+
+        var modelName = ragOptions.EmbeddingModelName
+            ?? provider?.Info.SupportedModels?
+                .OfType<EmbeddingModelInfo>()
+                .FirstOrDefault()?.ModelName;
+
+        if (string.IsNullOrWhiteSpace(modelName))
+            throw new InvalidOperationException(
+                "Cannot determine embedding model. Configure an embedding model " +
+                "in the provider's SupportedModels or set VectorDimensions explicitly.");
+
+        var modelInfo = modelCatalog.GetModel(modelName) as EmbeddingModelInfo
+            ?? throw new InvalidOperationException(
+                $"Embedding model '{modelName}' not found in catalog. " +
+                "Register it via AddModel() or set VectorDimensions explicitly.");
+
+        return modelInfo.Dimensions;
     }
 }
