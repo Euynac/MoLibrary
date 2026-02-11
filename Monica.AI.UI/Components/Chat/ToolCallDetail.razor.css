@@ -1,0 +1,87 @@
+.tool-call-detail {
+    border-left: 3px solid var(--mud-palette-info);
+    background-color: var(--mud-palette-background-grey);
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+}
+
+.tool-call-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    border-radius: 6px;
+    padding: 2px 4px;
+    margin: -2px -4px;
+    transition: background-color 0.15s;
+    color: var(--mud-palette-text-secondary);
+}
+
+.tool-call-header:hover {
+    background-color: var(--mud-palette-action-default-hover);
+}
+
+.tool-call-header ::deep .tool-call-summary {
+    color: var(--mud-palette-text-secondary);
+    font-weight: 500;
+}
+
+.tool-call-header ::deep .tool-call-chevron {
+    color: var(--mud-palette-text-secondary);
+    margin-left: auto;
+}
+
+.tool-call-body {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.tool-call-item {
+    padding: 6px 8px;
+    border-radius: 6px;
+    background-color: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-lines-default);
+}
+
+.tool-call-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--mud-palette-info);
+}
+
+.tool-call-name ::deep .tool-name-text {
+    font-weight: 500;
+    color: var(--mud-palette-text-primary);
+}
+
+.tool-call-args {
+    margin-top: 4px;
+    padding-left: 26px;
+}
+
+.tool-call-args ::deep .tool-arg {
+    color: var(--mud-palette-text-secondary);
+    font-family: 'IBM Plex Mono', 'Courier Prime', monospace;
+    font-size: 0.75rem;
+}
+
+.tool-call-result {
+    margin-top: 4px;
+    padding: 4px 8px;
+    margin-left: 26px;
+    border-radius: 4px;
+    background-color: var(--mud-palette-background-grey);
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+.tool-call-result ::deep .tool-result-text {
+    color: var(--mud-palette-text-secondary);
+    white-space: pre-wrap;
+    font-size: 0.75rem;
+    line-height: 1.4;
+}

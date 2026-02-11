@@ -1,5 +1,6 @@
 @using Microsoft.Agents.AI
 @using Monica.AI.Models
+@using Monica.AI.RAG.Models
 
 <div class="chat-container">
     <ChatErrorDisplay
@@ -29,6 +30,9 @@
         ReasoningEnabled="@ReasoningEnabled"
         AvailableModels="@AvailableModels"
         ReasoningEnabledChanged="@ReasoningEnabledChanged"
+        KnowledgeBases="@KnowledgeBases"
+        SelectedKnowledgeBaseIds="@SelectedKnowledgeBaseIds"
+        SelectedKnowledgeBaseIdsChanged="@SelectedKnowledgeBaseIdsChanged"
         OnSend="@HandleSend"
         OnCancel="@HandleCancel"
         OnModelChanged="@HandleModelChanged" />
@@ -59,6 +63,9 @@
     [Parameter] public bool SupportsReasoning { get; set; }
     [Parameter] public bool ReasoningEnabled { get; set; }
     [Parameter] public EventCallback<bool> ReasoningEnabledChanged { get; set; }
+    [Parameter] public IReadOnlyList<KnowledgeBase>? KnowledgeBases { get; set; }
+    [Parameter] public List<string> SelectedKnowledgeBaseIds { get; set; } = [];
+    [Parameter] public EventCallback<List<string>> SelectedKnowledgeBaseIdsChanged { get; set; }
 
     private ChatMessageList? _messageListRef;
 

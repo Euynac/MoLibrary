@@ -2,6 +2,8 @@
 @rendermode InteractiveServer
 @using Microsoft.Agents.AI
 @using Monica.AI.Models
+@using Monica.AI.RAG.Models
+@using Monica.AI.RAG.Services
 @using Monica.Tool.MoResponse
 @implements IDisposable
 @inject AIChatUIService ChatUIService
@@ -9,6 +11,7 @@
 @inject IOptions<ModuleAIUIOption> Options
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject IServiceProvider ServiceProvider
 
 <div class="ai-chat-shell">
     @if (_options.ShowSessionList)
@@ -65,7 +68,10 @@
             OnModelChanged="@HandleModelChanged"
             SupportsReasoning="@_supportsReasoning"
             ReasoningEnabled="@_reasoningEnabled"
-            ReasoningEnabledChanged="@HandleReasoningEnabledChanged" />
+            ReasoningEnabledChanged="@HandleReasoningEnabledChanged"
+            KnowledgeBases="@_knowledgeBases"
+            SelectedKnowledgeBaseIds="@_selectedKbIds"
+            SelectedKnowledgeBaseIdsChanged="@HandleKbSelectionChanged" />
     </main>
 </div>
 
@@ -90,6 +96,9 @@
     private CancellationToken _cancellationToken;
     private bool _reasoningEnabled;
     private bool _supportsReasoning;
+    private IReadOnlyList<KnowledgeBase> _knowledgeBases = [];
+    private List<string> _selectedKbIds = [];
+    private RAGService? _ragService;
 
     protected override void OnInitialized()
     {
@@ -106,6 +115,10 @@
 
         UpdateSupportsReasoning();
 
+        // Optionally resolve RAG service
+        _ragService = ServiceProvider.GetService(typeof(RAGService)) as RAGService;
+        _selectedKbIds = new List<string>(_options.DefaultKnowledgeBaseIds);
+
         // Subscribe to session change events
         _sessionStorage.CurrentSessionChanged += OnCurrentSessionChanged;
         _sessionStorage.SessionsChanged += OnSessionsChanged;
@@ -115,13 +128,20 @@
     {
         if (firstRender)
         {
+            // Load knowledge bases if RAG is available
+            if (_ragService is not null && _options.ShowKnowledgeBaseSelector)
+            {
+                _knowledgeBases = await _ragService.GetKnowledgeBasesAsync();
+            }
+
             // Load session list
             ChatUIService.LoadSessions();
 
             // If no sessions, create a new one
             if (_sessionStorage.Sessions.Count == 0)
             {
-                await ChatUIService.CreateSessionAsync(_currentProviderId);
+                var kbIds = _selectedKbIds.Count > 0 ? _selectedKbIds : null;
+                await ChatUIService.CreateSessionAsync(_currentProviderId, knowledgeBaseIds: kbIds);
             }
             else
             {
@@ -184,7 +204,8 @@
     private async Task HandleNewSession()
     {
         ClearError();
-        await ChatUIService.CreateSessionAsync(_currentProviderId);
+        var kbIds = _selectedKbIds.Count > 0 ? _selectedKbIds : null;
+        await ChatUIService.CreateSessionAsync(_currentProviderId, knowledgeBaseIds: kbIds);
         UpdateCurrentSession();
     }
 
@@ -203,7 +224,8 @@
         {
             if (_sessionStorage.Sessions.Count == 0)
             {
-                await ChatUIService.CreateSessionAsync(_currentProviderId);
+                var kbIds = _selectedKbIds.Count > 0 ? _selectedKbIds : null;
+                await ChatUIService.CreateSessionAsync(_currentProviderId, knowledgeBaseIds: kbIds);
             }
             else
             {
@@ -224,7 +246,8 @@
         var sessionId = _sessionStorage.CurrentSessionId;
         if (string.IsNullOrEmpty(sessionId))
         {
-            var session = await ChatUIService.CreateSessionAsync(_currentProviderId);
+            var kbIds = _selectedKbIds.Count > 0 ? _selectedKbIds : null;
+            var session = await ChatUIService.CreateSessionAsync(_currentProviderId, knowledgeBaseIds: kbIds);
             sessionId = session.SessionId;
         }
 
@@ -447,6 +470,11 @@
     private void HandleReasoningEnabledChanged(bool enabled)
     {
         _reasoningEnabled = enabled;
+    }
+
+    private void HandleKbSelectionChanged(List<string> selectedIds)
+    {
+        _selectedKbIds = selectedIds;
     }
 
     private void HandleModelChanged(string modelName)

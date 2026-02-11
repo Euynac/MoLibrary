@@ -1,0 +1,235 @@
+@page "/ai/rag"
+@rendermode InteractiveServer
+@using Monica.AI.RAG.Models
+@using Monica.AI.RAG.Services
+@using Monica.Markdown.Interfaces
+@using Monica.Markdown.Models
+@using Monica.Tool.MoResponse
+@inject RAGUIService RAGUIService
+@inject ISnackbar Snackbar
+
+<div class="rag-debug-shell">
+    <aside class="rag-left-panel">
+        <KnowledgeBasePanel
+            KnowledgeBases="@_knowledgeBases"
+            IsLoading="@_isLoading"
+            OnCreate="HandleCreateKb"
+            OnDelete="HandleDeleteKb" />
+
+        <MudDivider Class="my-3" />
+
+        <IndexingPanel
+            MarkdownGroups="@_markdownGroups"
+            KnowledgeBases="@_knowledgeBases"
+            IsIndexing="@_isIndexing"
+            Progress="@_indexingProgress"
+            OnIndexGroup="HandleIndexGroup"
+            OnUpload="HandleUpload" />
+    </aside>
+
+    <main class="rag-right-panel">
+        <MudText Typo="Typo.subtitle1" Class="panel-title">Search</MudText>
+
+        <div class="search-controls">
+            <MudTextField @bind-Value="_searchQuery" Placeholder="Enter search query..."
+                          Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Immediate="true" Class="search-input"
+                          OnKeyDown="HandleSearchKeyDown" />
+
+            <div class="search-options">
+                <MudSelect T="int" @bind-Value="_topK" Label="Top-K"
+                           Variant="Variant.Outlined" Margin="Margin.Dense"
+                           Dense="true" Class="topk-select">
+                    <MudSelectItem Value="3">3</MudSelectItem>
+                    <MudSelectItem Value="5">5</MudSelectItem>
+                    <MudSelectItem Value="10">10</MudSelectItem>
+                    <MudSelectItem Value="20">20</MudSelectItem>
+                </MudSelect>
+
+                <MudSelect T="string" @bind-SelectedValues="_searchKbIds" Label="Knowledge Bases"
+                           Variant="Variant.Outlined" Margin="Margin.Dense"
+                           Dense="true" MultiSelection="true" Class="kb-multi-select">
+                    @foreach (var kb in _knowledgeBases)
+                    {
+                        <MudSelectItem Value="@kb.Id">@kb.Name</MudSelectItem>
+                    }
+                </MudSelect>
+
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Search"
+                           OnClick="HandleSearch"
+                           Disabled="@(_isSearching || string.IsNullOrWhiteSpace(_searchQuery) || !_searchKbIds.Any())">
+                    @(_isSearching ? "Searching..." : "Go")
+                </MudButton>
+            </div>
+        </div>
+
+        @if (_searchResults.Count > 0)
+        {
+            <MudText Typo="Typo.caption" Class="results-count">
+                @_searchResults.Count result(s) found
+            </MudText>
+            <div class="search-results">
+                @foreach (var result in _searchResults)
+                {
+                    <SearchResultCard Result="@result" />
+                }
+            </div>
+        }
+        else if (_hasSearched && !_isSearching)
+        {
+            <MudText Typo="Typo.body2" Class="no-results">
+                No results found for the given query.
+            </MudText>
+        }
+    </main>
+</div>
+
+@code {
+    public const string PAGE_URL = "/ai/rag";
+
+    private IReadOnlyList<KnowledgeBase> _knowledgeBases = [];
+    private List<MarkdownDocumentGroup> _markdownGroups = [];
+    private IReadOnlyList<TextSearchResult> _searchResults = [];
+    private IEnumerable<string> _searchKbIds = [];
+    private string _searchQuery = string.Empty;
+    private int _topK = 5;
+    private bool _isLoading;
+    private bool _isIndexing;
+    private bool _isSearching;
+    private bool _hasSearched;
+    private IndexingProgress? _indexingProgress;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _isLoading = true;
+            StateHasChanged();
+
+            var kbResult = await RAGUIService.GetKnowledgeBasesAsync();
+            if (!kbResult.IsFailed(out var error, out var kbs))
+                _knowledgeBases = kbs;
+            else
+                Snackbar.Add(error.Message!, Severity.Error);
+
+            var groupResult = await RAGUIService.GetMarkdownGroupsAsync();
+            if (!groupResult.IsFailed(out error, out var groups))
+                _markdownGroups = groups;
+
+            // Pre-select all KBs for search
+            _searchKbIds = _knowledgeBases.Select(kb => kb.Id).ToList();
+
+            _isLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task HandleCreateKb(string name)
+    {
+        var result = await RAGUIService.CreateKnowledgeBaseAsync(name);
+        if (result.IsFailed(out var error))
+        {
+            Snackbar.Add(error.Message!, Severity.Error);
+            return;
+        }
+
+        Snackbar.Add($"Created '{name}'", Severity.Success);
+        await RefreshKnowledgeBases();
+    }
+
+    private async Task HandleDeleteKb(KnowledgeBase kb)
+    {
+        var result = await RAGUIService.DeleteKnowledgeBaseAsync(kb.Id);
+        if (result.IsFailed(out var error))
+        {
+            Snackbar.Add(error.Message!, Severity.Error);
+            return;
+        }
+
+        Snackbar.Add($"Deleted '{kb.Name}'", Severity.Success);
+        await RefreshKnowledgeBases();
+    }
+
+    private async Task HandleIndexGroup((string KbId, string GroupKey) args)
+    {
+        _isIndexing = true;
+        _indexingProgress = null;
+        StateHasChanged();
+
+        var progress = new Progress<IndexingProgress>(p =>
+        {
+            _indexingProgress = p;
+            InvokeAsync(StateHasChanged);
+        });
+
+        var result = await RAGUIService.IndexMarkdownGroupAsync(
+            args.KbId, args.GroupKey, progress);
+
+        _isIndexing = false;
+        _indexingProgress = null;
+
+        if (result.IsFailed(out var error))
+            Snackbar.Add(error.Message!, Severity.Error);
+        else
+            Snackbar.Add(result.Message!, Severity.Success);
+
+        await RefreshKnowledgeBases();
+    }
+
+    private async Task HandleUpload((string KbId, string FileName, string Content) args)
+    {
+        _isIndexing = true;
+        StateHasChanged();
+
+        var result = await RAGUIService.UploadAndIndexDocumentAsync(
+            args.KbId, args.FileName, args.Content);
+
+        _isIndexing = false;
+
+        if (result.IsFailed(out var error))
+            Snackbar.Add(error.Message!, Severity.Error);
+        else
+            Snackbar.Add(result.Message!, Severity.Success);
+
+        await RefreshKnowledgeBases();
+    }
+
+    private async Task HandleSearch()
+    {
+        if (string.IsNullOrWhiteSpace(_searchQuery) || !_searchKbIds.Any()) return;
+
+        _isSearching = true;
+        _hasSearched = true;
+        StateHasChanged();
+
+        var result = await RAGUIService.SearchAsync(_searchQuery, _searchKbIds, _topK);
+        if (!result.IsFailed(out var error, out var results))
+            _searchResults = results;
+        else
+        {
+            _searchResults = [];
+            Snackbar.Add(error.Message!, Severity.Error);
+        }
+
+        _isSearching = false;
+        StateHasChanged();
+    }
+
+    private async Task HandleSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await HandleSearch();
+    }
+
+    private async Task RefreshKnowledgeBases()
+    {
+        var kbResult = await RAGUIService.GetKnowledgeBasesAsync();
+        if (!kbResult.IsFailed(out _, out var kbs))
+        {
+            _knowledgeBases = kbs;
+            _searchKbIds = _knowledgeBases.Select(kb => kb.Id).ToList();
+        }
+        StateHasChanged();
+    }
+}

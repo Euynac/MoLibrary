@@ -1,0 +1,119 @@
+@using Monica.AI.RAG.Models
+@using Monica.Markdown.Models
+
+<MudText Typo="Typo.subtitle1" Class="panel-title">Indexing</MudText>
+
+<div class="indexing-section">
+    <MudText Typo="Typo.caption" Class="section-label">Markdown Group</MudText>
+    <MudSelect T="string" @bind-Value="_selectedGroupKey"
+               Variant="Variant.Outlined" Margin="Margin.Dense"
+               Placeholder="Select a group..." Dense="true"
+               Disabled="@(IsIndexing || MarkdownGroups.Count == 0)">
+        @foreach (var group in MarkdownGroups)
+        {
+            <MudSelectItem Value="@group.Key">
+                @group.Title (@group.DocumentCount docs)
+            </MudSelectItem>
+        }
+    </MudSelect>
+
+    <MudText Typo="Typo.caption" Class="section-label">Target Knowledge Base</MudText>
+    <MudSelect T="string" @bind-Value="_selectedKbId"
+               Variant="Variant.Outlined" Margin="Margin.Dense"
+               Placeholder="Select a KB..." Dense="true"
+               Disabled="@(IsIndexing || KnowledgeBases.Count == 0)">
+        @foreach (var kb in KnowledgeBases)
+        {
+            <MudSelectItem Value="@kb.Id">@kb.Name</MudSelectItem>
+        }
+    </MudSelect>
+
+    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.PlayArrow"
+               OnClick="HandleIndexGroup" FullWidth="true"
+               Disabled="@(IsIndexing || string.IsNullOrEmpty(_selectedGroupKey) || string.IsNullOrEmpty(_selectedKbId))">
+        @(IsIndexing ? "Indexing..." : "Index Now")
+    </MudButton>
+
+    @if (IsIndexing && _progress is not null)
+    {
+        <div class="progress-section">
+            <MudProgressLinear Value="@ProgressPercent" Color="Color.Primary"
+                               Rounded="true" Size="Size.Medium" />
+            <MudText Typo="Typo.caption" Class="progress-text">
+                @_progress.CurrentDocument (@_progress.ProcessedChunks / @_progress.TotalChunks)
+            </MudText>
+        </div>
+    }
+</div>
+
+<MudDivider Class="my-3" />
+
+<MudText Typo="Typo.subtitle1" Class="panel-title">Upload Document</MudText>
+<div class="indexing-section">
+    <MudText Typo="Typo.caption" Class="section-label">Target Knowledge Base</MudText>
+    <MudSelect T="string" @bind-Value="_uploadKbId"
+               Variant="Variant.Outlined" Margin="Margin.Dense"
+               Placeholder="Select a KB..." Dense="true"
+               Disabled="@(IsIndexing || KnowledgeBases.Count == 0)">
+        @foreach (var kb in KnowledgeBases)
+        {
+            <MudSelectItem Value="@kb.Id">@kb.Name</MudSelectItem>
+        }
+    </MudSelect>
+
+    <MudFileUpload T="IBrowserFile" Accept=".md,.txt,.markdown"
+                   FilesChanged="HandleFileSelected" MaximumFileCount="1">
+        <ActivatorContent>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.UploadFile"
+                       FullWidth="true"
+                       Disabled="@(IsIndexing || string.IsNullOrEmpty(_uploadKbId))">
+                @(_uploadFileName ?? "Choose File")
+            </MudButton>
+        </ActivatorContent>
+    </MudFileUpload>
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<MarkdownDocumentGroup> MarkdownGroups { get; set; } = [];
+    [Parameter] public IReadOnlyList<KnowledgeBase> KnowledgeBases { get; set; } = [];
+    [Parameter] public bool IsIndexing { get; set; }
+    [Parameter] public EventCallback<(string KbId, string GroupKey)> OnIndexGroup { get; set; }
+    [Parameter] public EventCallback<(string KbId, string FileName, string Content)> OnUpload { get; set; }
+    [Parameter] public IndexingProgress? Progress { get; set; }
+
+    private string? _selectedGroupKey;
+    private string? _selectedKbId;
+    private string? _uploadKbId;
+    private string? _uploadFileName;
+    private IndexingProgress? _progress;
+
+    protected override void OnParametersSet()
+    {
+        _progress = Progress;
+    }
+
+    private double ProgressPercent =>
+        _progress is { TotalChunks: > 0 }
+            ? (double)_progress.ProcessedChunks / _progress.TotalChunks * 100
+            : 0;
+
+    private async Task HandleIndexGroup()
+    {
+        if (string.IsNullOrEmpty(_selectedKbId) || string.IsNullOrEmpty(_selectedGroupKey))
+            return;
+        await OnIndexGroup.InvokeAsync((_selectedKbId, _selectedGroupKey));
+    }
+
+    private async Task HandleFileSelected(IBrowserFile? file)
+    {
+        if (file is null || string.IsNullOrEmpty(_uploadKbId)) return;
+
+        _uploadFileName = file.Name;
+        using var reader = new StreamReader(file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024));
+        var content = await reader.ReadToEndAsync();
+        await OnUpload.InvokeAsync((_uploadKbId, file.Name, content));
+        _uploadFileName = null;
+    }
+}

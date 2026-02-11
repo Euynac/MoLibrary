@@ -1,5 +1,7 @@
 @using System.Diagnostics
 @using Microsoft.Agents.AI
+@using Microsoft.Extensions.AI
+@using Monica.AI.Models
 @implements IAsyncDisposable
 
 <div class="message-wrapper assistant-message">
@@ -53,6 +55,12 @@
                     </div>
                 }
 
+                @* Tool call indicator *@
+                @if (_toolCalls.Count > 0)
+                {
+                    <ToolCallIndicator ActiveToolCalls="@_toolCalls" />
+                }
+
                 @* Main content *@
                 @if (EnableMarkdown && !string.IsNullOrEmpty(_content))
                 {
@@ -94,6 +102,7 @@
     private string? _errorMessage;
     private CancellationTokenSource? _cts;
     private bool _hasStarted;
+    private readonly List<ToolCallInfo> _toolCalls = [];
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -140,6 +149,28 @@
                             _isReasoning = false;
                         }
                         _content += text.Text;
+                        needsRender = true;
+                    }
+                    else if (content is FunctionCallContent functionCall)
+                    {
+                        _toolCalls.Add(new ToolCallInfo(
+                            functionCall.Name,
+                            functionCall.CallId ?? string.Empty,
+                            functionCall.Arguments,
+                            null,
+                            DateTimeOffset.UtcNow));
+                        needsRender = true;
+                    }
+                    else if (content is FunctionResultContent functionResult)
+                    {
+                        var idx = _toolCalls.FindIndex(t => t.CallId == functionResult.CallId);
+                        if (idx >= 0)
+                        {
+                            _toolCalls[idx] = _toolCalls[idx] with
+                            {
+                                Result = functionResult.Result?.ToString()
+                            };
+                        }
                         needsRender = true;
                     }
                 }

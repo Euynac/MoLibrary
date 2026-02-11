@@ -42,10 +42,11 @@ public class ModuleAIUI(ModuleAIUIOption option)
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        // 注册 UI 聊天服务
+        // Register UI services
         services.AddScoped<AIChatUIService>();
         services.AddScoped<ChatSessionStorage>();
         services.AddScoped<AIProviderUIService>();
+        services.AddScoped<RAGUIService>();
     }
 
     public override void ClaimDependencies()
@@ -83,6 +84,21 @@ public class ModuleAIUI(ModuleAIUIOption option)
                         navOrder: 2);
                 });
         }
+
+        if (!Option.DisableRAGDebugPage)
+        {
+            DependsOnModule<ModuleUICoreGuide>().Register()
+                .RegisterUIComponents(p =>
+                {
+                    p.RegisterComponent<UIAIRAGDebugPage>(
+                        UIAIRAGDebugPage.PAGE_URL,
+                        "RAG Debug",
+                        Icons.Material.Filled.ManageSearch,
+                        "AI",
+                        addToNav: true,
+                        navOrder: 3);
+                });
+        }
     }
 }
 
@@ -108,6 +124,11 @@ public class ModuleAIUIOption : MoModuleOption<ModuleAIUI>
     /// Disable the AI provider manage page
     /// </summary>
     public bool DisableAIProviderPage { get; set; }
+
+    /// <summary>
+    /// Disable the RAG debug page
+    /// </summary>
+    public bool DisableRAGDebugPage { get; set; }
 
     /// <summary>
     /// Enable Markdown rendering

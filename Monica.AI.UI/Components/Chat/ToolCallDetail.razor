@@ -1,0 +1,62 @@
+@using Monica.AI.Models
+
+@if (ToolCalls is { Count: > 0 })
+{
+    <div class="tool-call-detail">
+        <div class="tool-call-header" @onclick="ToggleExpanded">
+            <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Small" />
+            <MudText Typo="Typo.body2" Class="tool-call-summary">
+                @ToolCalls.Count tool call@(ToolCalls.Count > 1 ? "s" : "")
+            </MudText>
+            <MudIcon Icon="@(_expanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                     Size="Size.Small" Class="tool-call-chevron" />
+        </div>
+        @if (_expanded)
+        {
+            <div class="tool-call-body">
+                @foreach (var call in ToolCalls)
+                {
+                    <div class="tool-call-item">
+                        <div class="tool-call-name">
+                            <MudIcon Icon="@Icons.Material.Filled.Search"
+                                     Size="Size.Small" />
+                            <MudText Typo="Typo.body2" Class="tool-name-text">
+                                @call.ToolName
+                            </MudText>
+                        </div>
+                        @if (call.Arguments is { Count: > 0 })
+                        {
+                            <div class="tool-call-args">
+                                @foreach (var arg in call.Arguments)
+                                {
+                                    <MudText Typo="Typo.caption" Class="tool-arg">
+                                        @arg.Key: @arg.Value
+                                    </MudText>
+                                }
+                            </div>
+                        }
+                        @if (call.Result is not null)
+                        {
+                            <div class="tool-call-result">
+                                <MudText Typo="Typo.caption" Class="tool-result-text">
+                                    @TruncateResult(call.Result)
+                                </MudText>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public List<ToolCallInfo>? ToolCalls { get; set; }
+
+    private bool _expanded;
+
+    private void ToggleExpanded() => _expanded = !_expanded;
+
+    private static string TruncateResult(string result, int maxLength = 200)
+        => result.Length > maxLength ? result[..maxLength] + "..." : result;
+}

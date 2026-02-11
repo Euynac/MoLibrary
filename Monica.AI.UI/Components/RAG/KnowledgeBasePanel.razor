@@ -1,0 +1,67 @@
+@using Monica.AI.RAG.Models
+
+<MudText Typo="Typo.subtitle1" Class="panel-title">Knowledge Bases</MudText>
+
+<div class="kb-actions">
+    <MudTextField @bind-Value="_newKbName" Placeholder="New KB name..."
+                  Variant="Variant.Outlined" Margin="Margin.Dense"
+                  Class="kb-name-input" Immediate="true"
+                  Adornment="Adornment.End"
+                  AdornmentIcon="@Icons.Material.Filled.Add"
+                  OnAdornmentClick="HandleCreate"
+                  Disabled="@IsLoading" />
+</div>
+
+@if (KnowledgeBases.Count == 0 && !IsLoading)
+{
+    <MudText Typo="Typo.body2" Class="empty-hint">
+        No knowledge bases yet. Create one above.
+    </MudText>
+}
+else
+{
+    <div class="kb-panel-list">
+        @foreach (var kb in KnowledgeBases)
+        {
+            <div class="kb-panel-item">
+                <div class="kb-panel-item-info">
+                    <MudText Typo="Typo.body2" Class="kb-name">@kb.Name</MudText>
+                    <MudText Typo="Typo.caption" Class="kb-stats">
+                        @kb.DocumentCount docs / @kb.ChunkCount chunks
+                    </MudText>
+                    @if (!string.IsNullOrEmpty(kb.Description))
+                    {
+                        <MudText Typo="Typo.caption" Class="kb-desc">
+                            @kb.Description
+                        </MudText>
+                    }
+                </div>
+                <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                               Size="Size.Small" Color="Color.Error"
+                               OnClick="() => HandleDelete(kb)"
+                               Disabled="@IsLoading" />
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public IReadOnlyList<KnowledgeBase> KnowledgeBases { get; set; } = [];
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public EventCallback<string> OnCreate { get; set; }
+    [Parameter] public EventCallback<KnowledgeBase> OnDelete { get; set; }
+
+    private string _newKbName = string.Empty;
+
+    private async Task HandleCreate()
+    {
+        if (string.IsNullOrWhiteSpace(_newKbName)) return;
+        await OnCreate.InvokeAsync(_newKbName.Trim());
+        _newKbName = string.Empty;
+    }
+
+    private async Task HandleDelete(KnowledgeBase kb)
+    {
+        await OnDelete.InvokeAsync(kb);
+    }
+}

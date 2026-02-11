@@ -1,0 +1,43 @@
+@using Monica.AI.RAG.Models
+
+<MudPaper Class="result-card" Elevation="0">
+    <div class="result-header">
+        <div class="result-score">
+            <MudChip T="string" Size="Size.Small" Color="@GetScoreColor()" Variant="Variant.Filled">
+                @($"{Result.Score:P0}")
+            </MudChip>
+        </div>
+        <div class="result-source">
+            <MudText Typo="Typo.body2" Class="source-name">
+                @(Result.SourceName ?? "Unknown")
+            </MudText>
+            @if (!string.IsNullOrEmpty(Result.SectionPath))
+            {
+                <MudText Typo="Typo.caption" Class="section-path">
+                    @Result.SectionPath
+                </MudText>
+            }
+        </div>
+    </div>
+    <MudText Typo="Typo.body2" Class="result-content">
+        @Result.Text
+    </MudText>
+    @if (!string.IsNullOrEmpty(Result.SourceLink))
+    {
+        <MudText Typo="Typo.caption" Class="result-link">
+            @Result.SourceLink
+        </MudText>
+    }
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired]
+    public TextSearchResult Result { get; set; } = null!;
+
+    private Color GetScoreColor() => Result.Score switch
+    {
+        >= 0.8 => Color.Success,
+        >= 0.5 => Color.Warning,
+        _ => Color.Default
+    };
+}

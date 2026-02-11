@@ -1,0 +1,27 @@
+@using Monica.AI.Models
+
+<div class="tool-call-indicator">
+    <div class="tool-call-icon">
+        <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Small" />
+        <span class="tool-call-pulse"></span>
+    </div>
+    <MudText Typo="Typo.body2" Class="tool-call-label">
+        @GetDisplayText()
+    </MudText>
+</div>
+
+@code {
+    [Parameter] public List<ToolCallInfo> ActiveToolCalls { get; set; } = [];
+
+    private string GetDisplayText()
+    {
+        if (ActiveToolCalls.Count == 0)
+            return "Calling tool...";
+
+        var latest = ActiveToolCalls[^1];
+        if (latest.Result is not null)
+            return $"Completed: {latest.ToolName}";
+
+        return $"Searching: {latest.ToolName}...";
+    }
+}

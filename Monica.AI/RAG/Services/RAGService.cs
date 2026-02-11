@@ -58,6 +58,12 @@ public sealed partial class RAGService(
         return kb;
     }
 
+    /// <summary>
+    /// Lists all knowledge bases from the store.
+    /// </summary>
+    public Task<IReadOnlyList<KnowledgeBase>> GetKnowledgeBasesAsync(CancellationToken ct = default)
+        => kbStore.GetAllAsync(ct);
+
     public async Task DeleteKnowledgeBaseAsync(string knowledgeBaseId, CancellationToken ct = default)
     {
         var collectionName = GetCollectionName(knowledgeBaseId);
