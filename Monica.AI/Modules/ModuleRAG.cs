@@ -1,4 +1,5 @@
 using Microsoft.Agents.AI;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.VectorData;
@@ -157,6 +158,43 @@ public class ModuleRAGGuide
         {
             ctx.Services.AddSingleton<VectorStore, TVectorStore>();
         }, key: CONFIG_VECTOR_STORE);
+        return this;
+    }
+
+    /// <summary>
+    /// Uses fake embeddings for testing and development.
+    /// No external API or embedding model required.
+    /// </summary>
+    /// <remarks>
+    /// This generates random embedding vectors, meaning semantic similarity search
+    /// will return arbitrary results. Use this for:
+    /// <list type="bullet">
+    ///   <item>Unit and integration testing</item>
+    ///   <item>CI/CD pipelines</item>
+    ///   <item>Prototyping without API costs</item>
+    ///   <item>Validating RAG infrastructure</item>
+    /// </list>
+    /// </remarks>
+    /// <param name="dimensions">
+    /// The number of dimensions for embedding vectors. Default is 384,
+    /// which matches common small models like bge-micro-v2.
+    /// </param>
+    public ModuleRAGGuide UseFakeEmbeddings(int dimensions = 384)
+    {
+        ConfigureModuleOption(opt => opt.VectorDimensions = dimensions);
+
+        ConfigureServices(ctx =>
+        {
+            ctx.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(
+                new FakeEmbeddingGenerator(dimensions));
+
+            ctx.Services.AddSingleton<VectorStore>(sp =>
+                new InMemoryVectorStore(new()
+                {
+                    EmbeddingGenerator = sp.GetRequiredService<IEmbeddingGenerator<string, Embedding<float>>>()
+                }));
+        }, key: CONFIG_VECTOR_STORE);
+
         return this;
     }
 
