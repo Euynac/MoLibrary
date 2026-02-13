@@ -91,4 +91,37 @@ public class AIProviderUIService(IAIProviderFactory providerFactory)
         var provider = providerFactory.GetProvider(providerId);
         return provider?.SupportsRemoteModelListing ?? false;
     }
+
+    /// <summary>
+    /// Probes the actual vector dimensions of an embedding model by sending a short text
+    /// and measuring the returned embedding length. Updates the model's Dimensions if successful.
+    /// </summary>
+    public async Task<Res<int>> ProbeEmbeddingDimensionsAsync(
+        string providerId, string modelName, CancellationToken ct = default)
+    {
+        var provider = providerFactory.GetProvider(providerId);
+        if (provider == null)
+            return Res.Fail($"Provider '{providerId}' not found");
+
+        var model = provider.Info.SupportedModels?.FirstOrDefault(m =>
+            string.Equals(m.ModelName, modelName, StringComparison.OrdinalIgnoreCase));
+        if (model is not EmbeddingModelInfo embeddingModel)
+            return Res.Fail("Only embedding models can be probed for dimensions");
+
+        try
+        {
+            var generator = provider.GetEmbeddingGenerator(modelName);
+            var result = await generator.GenerateAsync(["dimension probe"], cancellationToken: ct);
+            var dimensions = result[0].Vector.Length;
+
+            // Update the model's dimensions in place
+            embeddingModel.Dimensions = dimensions;
+
+            return Res.Ok(dimensions);
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Embedding probe failed: {ex.Message}");
+        }
+    }
 }

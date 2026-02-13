@@ -121,7 +121,15 @@
                 }
                 else if (context is EmbeddingModelInfo embedding)
                 {
-                    <MudText Typo="Typo.caption">维度: @FormatOptional(embedding.Dimensions)</MudText>
+                    <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                        <MudText Typo="Typo.caption">维度: @(embedding.Dimensions?.ToString() ?? "未知")</MudText>
+                        @if (embedding.Dimensions == null)
+                        {
+                            <MudTooltip Text="维度未配置，可使用探测功能自动检测">
+                                <MudIcon Icon="@Icons.Material.Filled.HelpOutline" Size="Size.Small" Color="Color.Warning" />
+                            </MudTooltip>
+                        }
+                    </MudStack>
                 }
                 else if (context is TextToSpeechModelInfo ttsMeta)
                 {
@@ -140,6 +148,17 @@
                                Disabled="@isTesting"
                                OnClick="() => OnTestModel.InvokeAsync(context)">
                         @(isTesting ? "测试中" : "测试")
+                    </MudButton>
+                }
+                else if (context is EmbeddingModelInfo)
+                {
+                    var isProbing = IsModelTesting?.Invoke(context) ?? false;
+                    <MudButton Variant="Variant.Outlined"
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Radar"
+                               Disabled="@isProbing"
+                               OnClick="() => OnProbeEmbedding.InvokeAsync(context)">
+                        @(isProbing ? "探测中" : "探测维度")
                     </MudButton>
                 }
                 else
@@ -161,6 +180,7 @@
     [Parameter] public IReadOnlyList<AIModelInfo> Models { get; set; } = [];
     [Parameter] public IReadOnlyList<AIRemoteModelInfo>? RemoteModels { get; set; }
     [Parameter] public EventCallback<AIModelInfo> OnTestModel { get; set; }
+    [Parameter] public EventCallback<AIModelInfo> OnProbeEmbedding { get; set; }
     [Parameter] public Func<AIModelInfo, bool>? IsModelTesting { get; set; }
 
     private HashSet<string>? _remoteModelIds;

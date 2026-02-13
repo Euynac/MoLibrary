@@ -49,6 +49,7 @@
                                         TestedAt="@testState.TestedAt"
                                         OnTest="TestProviderAsync"
                                         OnTestModel="TestModelAsync"
+                                        OnProbeEmbedding="ProbeEmbeddingAsync"
                                         ModelTestingProvider="IsModelTesting"
                                         OnEditPrompt="OpenProviderPromptAsync"
                                         RemoteModels="@GetRemoteModels(provider.ProviderId)"
@@ -200,6 +201,34 @@
         else
         {
             Snackbar.Add("模型测试成功", Severity.Success);
+        }
+
+        _modelTesting.Remove(key);
+        StateHasChanged();
+    }
+
+    private async Task ProbeEmbeddingAsync((string ProviderId, AIModelInfo Model) request)
+    {
+        if (request.Model is not EmbeddingModelInfo)
+        {
+            Snackbar.Add("仅 Embedding 模型支持维度探测", Severity.Info);
+            return;
+        }
+
+        var key = GetModelKey(request.ProviderId, request.Model.ModelName);
+        if (!_modelTesting.Add(key)) return;
+
+        StateHasChanged();
+
+        var result = await ProviderUIService.ProbeEmbeddingDimensionsAsync(
+            request.ProviderId, request.Model.ModelName);
+        if (result.IsFailed(out var error))
+        {
+            Snackbar.Add($"维度探测失败: {error.Message}", Severity.Error);
+        }
+        else
+        {
+            Snackbar.Add($"探测成功: 维度 = {result.Data}", Severity.Success);
         }
 
         _modelTesting.Remove(key);

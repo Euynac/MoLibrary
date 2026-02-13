@@ -151,6 +151,7 @@
                         <ProviderModelTable Models="@Models"
                                             RemoteModels="@RemoteModels"
                                             OnTestModel="HandleTestModel"
+                                            OnProbeEmbedding="HandleProbeEmbedding"
                                             IsModelTesting="IsModelTesting" />
 
                         @if (RemoteModels != null)
@@ -198,6 +199,7 @@
     [Parameter] public DateTimeOffset? TestedAt { get; set; }
     [Parameter] public EventCallback<string> OnTest { get; set; }
     [Parameter] public EventCallback<(string ProviderId, AIModelInfo Model)> OnTestModel { get; set; }
+    [Parameter] public EventCallback<(string ProviderId, AIModelInfo Model)> OnProbeEmbedding { get; set; }
     [Parameter] public Func<string, string, bool>? ModelTestingProvider { get; set; }
     [Parameter] public EventCallback<AIProviderInfo> OnEditPrompt { get; set; }
     [Parameter] public IReadOnlyList<AIRemoteModelInfo>? RemoteModels { get; set; }
@@ -231,6 +233,11 @@
     private async Task HandleTestModel(AIModelInfo model)
     {
         await OnTestModel.InvokeAsync((Provider.ProviderId, model));
+    }
+
+    private async Task HandleProbeEmbedding(AIModelInfo model)
+    {
+        await OnProbeEmbedding.InvokeAsync((Provider.ProviderId, model));
     }
 
     private bool IsModelTesting(AIModelInfo model)

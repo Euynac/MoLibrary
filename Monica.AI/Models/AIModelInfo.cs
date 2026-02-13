@@ -80,8 +80,9 @@ public class EmbeddingModelInfo : AIModelInfo
 {
     /// <summary>
     /// Vector dimensions produced by this embedding model.
+    /// Null if unknown — use the probe feature to detect at runtime.
     /// </summary>
-    public required int Dimensions { get; init; }
+    public int? Dimensions { get; set; }
 
     /// <summary>
     /// Maximum input tokens per embedding request.

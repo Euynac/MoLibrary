@@ -235,6 +235,10 @@ public class ModuleRAGGuide
                 $"Embedding model '{modelName}' not found in catalog. " +
                 "Register it via AddModel() or set VectorDimensions explicitly.");
 
-        return modelInfo.Dimensions;
+        return modelInfo.Dimensions
+            ?? throw new InvalidOperationException(
+                $"Embedding model '{modelName}' has no Dimensions configured. " +
+                "Use the probe feature in the provider management UI to detect dimensions, " +
+                "or set VectorDimensions explicitly in RAG options.");
     }
 }
