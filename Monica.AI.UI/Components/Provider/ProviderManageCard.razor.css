@@ -41,3 +41,9 @@
 .provider-expand {
     margin-top: 12px;
 }
+
+.unconfigured-models {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}

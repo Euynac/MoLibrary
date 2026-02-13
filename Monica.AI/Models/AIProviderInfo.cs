@@ -64,6 +64,17 @@ public class AIProviderInfo
     /// Provider 状态
     /// </summary>
     public AIProviderStatus Status { get; set; } = AIProviderStatus.Unknown;
+
+    /// <summary>
+    /// Whether this provider supports fetching remote model lists.
+    /// </summary>
+    public bool SupportsRemoteModelListing { get; init; } = true;
+
+    /// <summary>
+    /// Model information fetched from the remote provider API.
+    /// Null if not yet fetched or provider doesn't support it.
+    /// </summary>
+    public IReadOnlyList<AIRemoteModelInfo>? RemoteModels { get; set; }
 }
 
 /// <summary>

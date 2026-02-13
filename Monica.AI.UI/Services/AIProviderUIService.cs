@@ -68,4 +68,27 @@ public class AIProviderUIService(IAIProviderFactory providerFactory)
         provider.UpdateSystemPrompt(systemPrompt);
         return Res.Ok();
     }
+
+    public async Task<Res<IReadOnlyList<AIRemoteModelInfo>>> FetchRemoteModelsAsync(
+        string providerId, CancellationToken ct = default)
+    {
+        var provider = providerFactory.GetProvider(providerId);
+        if (provider == null)
+        {
+            return Res.Fail($"Provider '{providerId}' not found");
+        }
+
+        if (!provider.SupportsRemoteModelListing)
+        {
+            return Res.Fail("Provider does not support remote model listing");
+        }
+
+        return await provider.FetchRemoteModelsAsync(ct);
+    }
+
+    public bool SupportsRemoteModelListing(string providerId)
+    {
+        var provider = providerFactory.GetProvider(providerId);
+        return provider?.SupportsRemoteModelListing ?? false;
+    }
 }

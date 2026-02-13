@@ -124,6 +124,33 @@ public class OpenAIProvider : IAIProvider
     }
 
     /// <inheritdoc />
+    public async Task<Res<IReadOnlyList<AIRemoteModelInfo>>> FetchRemoteModelsAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var modelClient = _client.GetOpenAIModelClient();
+            var result = await modelClient.GetModelsAsync(ct);
+            IReadOnlyList<AIRemoteModelInfo> remoteModels = result.Value
+                .Select(m => new AIRemoteModelInfo
+                {
+                    ModelId = m.Id,
+                    Metadata = new Dictionary<string, string>
+                    {
+                        ["OwnedBy"] = m.OwnedBy ?? "",
+                        ["CreatedAt"] = m.CreatedAt.ToString("O")
+                    }
+                })
+                .OrderBy(m => m.ModelId)
+                .ToList();
+            return Res.Ok<IReadOnlyList<AIRemoteModelInfo>>(remoteModels);
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail("Failed to fetch OpenAI models: " + ex.Message);
+        }
+    }
+
+    /// <inheritdoc />
     public void UpdateSystemPrompt(string? systemPrompt)
     {
         _systemPrompt = systemPrompt;

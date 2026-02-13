@@ -1,5 +1,6 @@
 using System;
 using Anthropic;
+using Anthropic.Models.Models;
 using System.Collections.Concurrent;
 using Microsoft.Extensions.AI;
 using Monica.AI.Abstractions;
@@ -110,6 +111,47 @@ public class AnthropicProvider : IAIProvider
     {
         var models = _models.Select(m => m.ModelName).ToList();
         return Task.FromResult(Res.Ok<IReadOnlyList<string>>(models));
+    }
+
+    /// <inheritdoc />
+    public async Task<Res<IReadOnlyList<AIRemoteModelInfo>>> FetchRemoteModelsAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var remoteModels = new List<AIRemoteModelInfo>();
+            var page = await _client.Models.List(new ModelListParams { Limit = 1000 }, ct);
+
+            void CollectModels(ModelListPage p)
+            {
+                foreach (var model in p.Items)
+                {
+                    remoteModels.Add(new AIRemoteModelInfo
+                    {
+                        ModelId = model.ID,
+                        Metadata = new Dictionary<string, string>
+                        {
+                            ["DisplayName"] = model.DisplayName ?? "",
+                            ["CreatedAt"] = model.CreatedAt.ToString("O")
+                        }
+                    });
+                }
+            }
+
+            CollectModels(page);
+
+            while (page.HasNext())
+            {
+                page = await page.Next(ct);
+                CollectModels(page);
+            }
+
+            remoteModels.Sort((a, b) => string.Compare(a.ModelId, b.ModelId, StringComparison.Ordinal));
+            return Res.Ok<IReadOnlyList<AIRemoteModelInfo>>(remoteModels);
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail("Failed to fetch Anthropic models: " + ex.Message);
+        }
     }
 
     /// <inheritdoc />

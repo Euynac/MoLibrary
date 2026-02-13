@@ -99,10 +99,91 @@
         </div>
 
         <MudExpansionPanels Class="provider-expand" Elevation="0" Dense="true">
-            <MudExpansionPanel Text="模型详情" Icon="@Icons.Material.Filled.Category">
-                <ProviderModelTable Models="@Models"
-                                    OnTestModel="HandleTestModel"
-                                    IsModelTesting="IsModelTesting" />
+            <MudExpansionPanel Icon="@Icons.Material.Filled.Category">
+                <TitleContent>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudText Typo="Typo.body2">模型详情</MudText>
+                        @if (RemoteModels != null)
+                        {
+                            var unconfiguredCount = GetUnconfiguredRemoteModels().Count;
+                            @if (unconfiguredCount > 0)
+                            {
+                                <MudTooltip Text="@($"{unconfiguredCount} 个可用模型未配置")">
+                                    <MudBadge Content="@unconfiguredCount" Color="Color.Info" Overlap="true">
+                                        <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Info" />
+                                    </MudBadge>
+                                </MudTooltip>
+                            }
+                        }
+                        else if (!Provider.SupportsRemoteModelListing)
+                        {
+                            <MudTooltip Text="此 Provider 不支持获取可用模型列表">
+                                <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Color="Color.Warning" />
+                            </MudTooltip>
+                        }
+                        else if (RemoteModelsFetchError != null)
+                        {
+                            <MudTooltip Text="@($"获取模型列表失败: {RemoteModelsFetchError}")">
+                                <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Color="Color.Warning" />
+                            </MudTooltip>
+                        }
+                    </MudStack>
+                </TitleContent>
+                <ChildContent>
+                    <MudStack Spacing="2">
+                        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Justify="Justify.FlexEnd">
+                            @if (Provider.SupportsRemoteModelListing)
+                            {
+                                <MudButton Variant="Variant.Text"
+                                           Size="Size.Small"
+                                           StartIcon="@Icons.Material.Filled.CloudDownload"
+                                           OnClick="HandleFetchRemoteModels"
+                                           Disabled="@IsFetchingRemoteModels">
+                                    @if (IsFetchingRemoteModels)
+                                    {
+                                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
+                                    }
+                                    @(RemoteModels != null ? "刷新远程模型" : "获取远程模型")
+                                </MudButton>
+                            }
+                        </MudStack>
+
+                        <ProviderModelTable Models="@Models"
+                                            RemoteModels="@RemoteModels"
+                                            OnTestModel="HandleTestModel"
+                                            IsModelTesting="IsModelTesting" />
+
+                        @if (RemoteModels != null)
+                        {
+                            var unconfigured = GetUnconfiguredRemoteModels();
+                            @if (unconfigured.Count > 0)
+                            {
+                                <MudDivider Class="my-1" />
+                                <MudStack Spacing="1">
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                        <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Info" />
+                                        <MudText Typo="Typo.caption" Color="Color.Info">可用但未配置的模型 (@unconfigured.Count)</MudText>
+                                    </MudStack>
+                                    <div class="unconfigured-models">
+                                        @foreach (var rm in unconfigured)
+                                        {
+                                            var displayName = rm.Metadata?.GetValueOrDefault("DisplayName");
+                                            <MudTooltip Text="@(!string.IsNullOrEmpty(displayName) ? displayName : rm.ModelId)">
+                                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default">@rm.ModelId</MudChip>
+                                            </MudTooltip>
+                                        }
+                                    </div>
+                                </MudStack>
+                            }
+                        }
+                        else if (!Provider.SupportsRemoteModelListing)
+                        {
+                            <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-1">
+                                此 Provider 不支持获取可用模型列表，无法验证已配置模型的有效性。
+                            </MudAlert>
+                        }
+                    </MudStack>
+                </ChildContent>
             </MudExpansionPanel>
         </MudExpansionPanels>
     </div>
@@ -119,6 +200,10 @@
     [Parameter] public EventCallback<(string ProviderId, AIModelInfo Model)> OnTestModel { get; set; }
     [Parameter] public Func<string, string, bool>? ModelTestingProvider { get; set; }
     [Parameter] public EventCallback<AIProviderInfo> OnEditPrompt { get; set; }
+    [Parameter] public IReadOnlyList<AIRemoteModelInfo>? RemoteModels { get; set; }
+    [Parameter] public bool IsFetchingRemoteModels { get; set; }
+    [Parameter] public string? RemoteModelsFetchError { get; set; }
+    [Parameter] public EventCallback<string> OnFetchRemoteModels { get; set; }
 
     private async Task HandleTest()
     {
@@ -128,6 +213,19 @@
     private async Task HandleEditPrompt()
     {
         await OnEditPrompt.InvokeAsync(Provider);
+    }
+
+    private async Task HandleFetchRemoteModels()
+    {
+        await OnFetchRemoteModels.InvokeAsync(Provider.ProviderId);
+    }
+
+    private List<AIRemoteModelInfo> GetUnconfiguredRemoteModels()
+    {
+        if (RemoteModels == null) return [];
+        var configuredNames = new HashSet<string>(
+            Models.Select(m => m.ModelName), StringComparer.OrdinalIgnoreCase);
+        return RemoteModels.Where(rm => !configuredNames.Contains(rm.ModelId)).ToList();
     }
 
     private async Task HandleTestModel(AIModelInfo model)

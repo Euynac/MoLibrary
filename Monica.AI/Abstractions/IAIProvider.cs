@@ -51,6 +51,16 @@ public interface IAIProvider : IDisposable
     Task<Res<IReadOnlyList<string>>> GetAvailableModelsAsync(CancellationToken ct = default);
 
     /// <summary>
+    /// Fetches the list of models actually available from the remote provider API.
+    /// </summary>
+    Task<Res<IReadOnlyList<AIRemoteModelInfo>>> FetchRemoteModelsAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Whether this provider supports fetching remote model lists.
+    /// </summary>
+    bool SupportsRemoteModelListing => true;
+
+    /// <summary>
     /// Updates the provider's default system prompt.
     /// </summary>
     void UpdateSystemPrompt(string? systemPrompt);

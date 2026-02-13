@@ -16,11 +16,28 @@
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="模型">
-                <MudStack Spacing="0">
-                    <MudText Typo="Typo.body2">@context.ModelName</MudText>
-                    @if (!string.IsNullOrWhiteSpace(context.Description))
+                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.body2">@context.ModelName</MudText>
+                        @if (!string.IsNullOrWhiteSpace(context.Description))
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@context.Description</MudText>
+                        }
+                    </MudStack>
+                    @if (RemoteModels != null)
                     {
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@context.Description</MudText>
+                        @if (IsModelInRemoteList(context.ModelName))
+                        {
+                            <MudTooltip Text="已验证：此模型在 Provider 支持列表中">
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Color="Color.Success" />
+                            </MudTooltip>
+                        }
+                        else
+                        {
+                            <MudTooltip Text="此模型不在 Provider 支持的模型列表中">
+                                <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Color="Color.Warning" />
+                            </MudTooltip>
+                        }
                     }
                 </MudStack>
             </MudTd>
@@ -142,8 +159,24 @@
 
 @code {
     [Parameter] public IReadOnlyList<AIModelInfo> Models { get; set; } = [];
+    [Parameter] public IReadOnlyList<AIRemoteModelInfo>? RemoteModels { get; set; }
     [Parameter] public EventCallback<AIModelInfo> OnTestModel { get; set; }
     [Parameter] public Func<AIModelInfo, bool>? IsModelTesting { get; set; }
+
+    private HashSet<string>? _remoteModelIds;
+    private IReadOnlyList<AIRemoteModelInfo>? _lastRemoteModels;
+
+    private bool IsModelInRemoteList(string modelName)
+    {
+        if (RemoteModels == null) return true;
+        if (_remoteModelIds == null || !ReferenceEquals(RemoteModels, _lastRemoteModels))
+        {
+            _lastRemoteModels = RemoteModels;
+            _remoteModelIds = new HashSet<string>(
+                RemoteModels.Select(rm => rm.ModelId), StringComparer.OrdinalIgnoreCase);
+        }
+        return _remoteModelIds.Contains(modelName);
+    }
 
     private static string GetModelType(AIModelInfo model)
     {

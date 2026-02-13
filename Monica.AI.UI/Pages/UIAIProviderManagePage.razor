@@ -50,7 +50,11 @@
                                         OnTest="TestProviderAsync"
                                         OnTestModel="TestModelAsync"
                                         ModelTestingProvider="IsModelTesting"
-                                        OnEditPrompt="OpenProviderPromptAsync" />
+                                        OnEditPrompt="OpenProviderPromptAsync"
+                                        RemoteModels="@GetRemoteModels(provider.ProviderId)"
+                                        IsFetchingRemoteModels="@IsFetchingRemoteModels(provider.ProviderId)"
+                                        RemoteModelsFetchError="@GetRemoteModelsFetchError(provider.ProviderId)"
+                                        OnFetchRemoteModels="FetchRemoteModelsAsync" />
                 </MudItem>
             }
         </MudGrid>
@@ -65,6 +69,7 @@
     private bool _isTestingAll;
     private readonly Dictionary<string, ProviderTestState> _testStates = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _modelTesting = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, RemoteModelState> _remoteModelStates = new(StringComparer.OrdinalIgnoreCase);
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -244,5 +249,59 @@
         public bool? Success { get; set; }
         public string? Message { get; set; }
         public DateTimeOffset? TestedAt { get; set; }
+    }
+
+    private IReadOnlyList<AIRemoteModelInfo>? GetRemoteModels(string providerId)
+    {
+        return _remoteModelStates.TryGetValue(providerId, out var state) ? state.Models : null;
+    }
+
+    private bool IsFetchingRemoteModels(string providerId)
+    {
+        return _remoteModelStates.TryGetValue(providerId, out var state) && state.IsFetching;
+    }
+
+    private string? GetRemoteModelsFetchError(string providerId)
+    {
+        return _remoteModelStates.TryGetValue(providerId, out var state) ? state.Error : null;
+    }
+
+    private async Task FetchRemoteModelsAsync(string providerId)
+    {
+        if (!_remoteModelStates.TryGetValue(providerId, out var state))
+        {
+            state = new RemoteModelState();
+            _remoteModelStates[providerId] = state;
+        }
+
+        if (state.IsFetching) return;
+
+        state.IsFetching = true;
+        state.Error = null;
+        StateHasChanged();
+
+        var result = await ProviderUIService.FetchRemoteModelsAsync(providerId);
+        if (result.IsFailed(out var error))
+        {
+            state.Error = error.Message;
+            state.Models = null;
+            Snackbar.Add($"获取远程模型列表失败: {error.Message}", Severity.Warning);
+        }
+        else
+        {
+            state.Models = result.Data;
+            state.Error = null;
+            Snackbar.Add($"已获取 {result.Data?.Count ?? 0} 个远程模型", Severity.Success);
+        }
+
+        state.IsFetching = false;
+        StateHasChanged();
+    }
+
+    private sealed class RemoteModelState
+    {
+        public bool IsFetching { get; set; }
+        public IReadOnlyList<AIRemoteModelInfo>? Models { get; set; }
+        public string? Error { get; set; }
     }
 }
