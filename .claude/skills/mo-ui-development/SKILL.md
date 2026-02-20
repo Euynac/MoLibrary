@@ -233,6 +233,40 @@ For complete API reference, patterns, and examples, see `references/browser-stor
 
 For detailed component architecture patterns (hierarchy, communication, state management), see `references/blazor-best-practices.md`.
 
+### 9. Localization (i18n)
+
+**Always use localization for user-facing text** — never hardcode text strings in components.
+
+**Inject the localizer** at the top of your component:
+
+```razor
+@inject IStringLocalizer<SharedResource> L
+```
+
+**Basic usage:**
+
+```razor
+<MudButton>@L["Common:Save"]</MudButton>
+<MudText>@L["ModuleSystem:Dashboard:Title"]</MudText>
+```
+
+**Key naming convention**: Use colon-separated hierarchical paths matching JSON structure (`Category:SubCategory:Key`).
+
+**Both languages required:** When adding new keys, update both `zh-CN.json` and `en-US.json`.
+
+**Remove unused keys:** Localization files should only contain keys that are actively used in the code. Unused keys create maintenance burden and confusion.
+
+**Validation workflow:**
+```bash
+# Run before commit to check for missing/unused keys
+python .claude/skills/mo-ui-development/scripts/validate_localization.py
+
+# If unused keys are found, remove them from both language files
+# The validation script will list all unused keys that need to be removed
+```
+
+For complete localization patterns, key naming conventions, parameterized strings, and migration guide, see `references/localization-guide.md`.
+
 ## Service Error Handling in Components
 
 For service layer patterns including `Res<T>` return values and the `IsFailed` handling pattern, see the **mo-development** skill.
@@ -274,12 +308,14 @@ For comprehensive guidance, consult these reference files:
 - **`references/css-isolation-fix-workflow.md`** - Step-by-step workflow for fixing CSS isolation issues
 - **`references/offline-requirements.md`** - Font management and offline environment requirements
 - **`references/browser-storage-guide.md`** - `IMoBrowserStorage` API, table state persistence, theme persistence, custom state patterns
+- **`references/localization-guide.md`** - Localization patterns, key naming conventions, parameterized strings, validation workflow, migration guide
 
 ### Scripts
 
 Utility scripts for common operations:
 
 - **`scripts/font_downloader.py`** - Download Google Fonts for offline use. Supports single URL download, batch download (`--download-all`), weight filtering (`--weights`), and custom output directory. See `references/offline-requirements.md` for detailed usage.
+- **`scripts/validate_localization.py`** - Validate localization keys for missing, unused, and language sync issues. Run before committing changes to ensure localization integrity.
 
 ### Quick Search Patterns
 
@@ -312,3 +348,4 @@ Current project uses **MudBlazor 8.9.0**.
 - [ ] Use `*Typography` class names (v8.9.0)
 - [ ] Ensure offline/intranet compatibility
 - [ ] Use `IMoBrowserStorage` for browser persistence (never raw JS interop)
+- [ ] Use localization for all user-facing text (never hardcode strings)

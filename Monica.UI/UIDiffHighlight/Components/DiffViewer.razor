@@ -3,8 +3,11 @@
 @using Monica.Core.Features.MoDiffHighlight.Models
 @using Monica.Tool.MoResponse
 @using MudBlazor
+@using Microsoft.Extensions.Localization
+@using Monica.UI.Localization
 @inject DiffHighlightService DiffHighlightService
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResource> L
 
 <MudPaper Class="diff-viewer" Elevation="2">
     @if (!string.IsNullOrEmpty(ErrorMessage))
@@ -18,7 +21,7 @@
     {
         <div class="diff-header">
             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
-                @($"变更: {DiffResult.Statistics.TotalChanges}")
+                @($"{L["DiffViewer:Changes"]}: {DiffResult.Statistics.TotalChanges}")
             </MudChip>
             <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="Color.Success">
                 @($"+ {DiffResult.Statistics.AddedLines}")
@@ -33,10 +36,7 @@
                 </MudChip>
             }
             <MudSpacer />
-            
-           
-            
-            @* 显示模式切换按钮（仅统一模式显示） *@
+
             @if (ViewMode == EDiffViewMode.Unified)
             {
                 <MudButton Variant="Variant.Outlined" 
@@ -47,16 +47,15 @@
                     @GetDisplayModeText()
                 </MudButton>
             }
-            @* 视图模式切换按钮 *@
-            <MudButton Variant="Variant.Outlined" 
-                       Size="Size.Small" 
-                       StartIcon="@GetViewModeIcon()" 
+            <MudButton Variant="Variant.Outlined"
+                       Size="Size.Small"
+                       StartIcon="@GetViewModeIcon()"
                        OnClick="ToggleViewMode"
                        Class="view-mode-toggle">
                 @GetViewModeText()
             </MudButton>
             <MudText Typo="Typo.caption">
-                耗时: @($"{DiffResult.ProcessingTimeMs}ms")
+                @L["DiffViewer:ProcessingTime"]: @($"{DiffResult.ProcessingTimeMs}ms")
             </MudText>
         </div>
 
@@ -110,9 +109,9 @@
     {
         return ViewMode switch
         {
-            EDiffViewMode.Split => "分割",
-            EDiffViewMode.Unified => "统一",
-            _ => "统一"
+            EDiffViewMode.Split => L["DiffViewer:ViewModes:Split"],
+            EDiffViewMode.Unified => L["DiffViewer:ViewModes:Unified"],
+            _ => L["DiffViewer:ViewModes:Unified"]
         };
     }
 
@@ -130,10 +129,10 @@
     {
         return DisplayMode switch
         {
-            EDiffDisplayMode.Compare => "比较",
-            EDiffDisplayMode.NewOnly => "新值",
-            EDiffDisplayMode.OldOnly => "旧值",
-            _ => "比较"
+            EDiffDisplayMode.Compare => L["DiffViewer:DisplayModes:Compare"],
+            EDiffDisplayMode.NewOnly => L["DiffViewer:DisplayModes:NewValue"],
+            EDiffDisplayMode.OldOnly => L["DiffViewer:DisplayModes:OldValue"],
+            _ => L["DiffViewer:DisplayModes:Compare"]
         };
     }
 
@@ -173,7 +172,7 @@
             if (result.IsFailed(out var error, out var data))
             {
                 ErrorMessage = error;
-                Snackbar.Add($"差异对比失败: {error}", Severity.Error);
+                Snackbar.Add($"{L["DiffViewer:ComparisonFailed"]}: {error}", Severity.Error);
             }
             else
             {
@@ -183,7 +182,7 @@
         catch (Exception ex)
         {
             ErrorMessage = ex.Message;
-            Snackbar.Add($"差异对比出错: {ex.Message}", Severity.Error);
+            Snackbar.Add($"{L["DiffViewer:ComparisonError"]}: {ex.Message}", Severity.Error);
         }
         finally
         {

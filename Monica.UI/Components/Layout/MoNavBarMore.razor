@@ -1,11 +1,14 @@
 @using Monica.UI.UICore.Models
+@using Microsoft.Extensions.Localization
+@using Monica.UI.Localization
+@inject IStringLocalizer<SharedResource> L
 
 <div class="navbar-more"
      @onmouseenter="OnMouseEnter"
      @onmouseleave="OnMouseLeave">
 
     <button class="navbar-link">
-        更多
+        @L["NavBar:More"]
         <MudIcon Icon="@Icons.Material.Filled.MoreHoriz" Size="Size.Small" />
     </button>
 
@@ -13,7 +16,7 @@
     {
         <div class="dropdown-menu more-menu">
             <div class="more-menu-header">
-                <span>更多模块</span>
+                <span>@L["NavBar:MoreModules"]</span>
             </div>
             @foreach (var category in Categories.OrderBy(c => c.Key))
             {

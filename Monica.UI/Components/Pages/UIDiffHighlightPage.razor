@@ -4,65 +4,68 @@
 @using Monica.Core.Features.MoDiffHighlight.Models
 @using Monica.Tool.MoResponse
 @using Monica.UI.UIDiffHighlight.Components
+@using Microsoft.Extensions.Localization
+@using Monica.UI.Localization
 
 @inject DiffHighlightService DiffHighlightService
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResource> L
 
-<PageTitle>文本差异对比</PageTitle>
+<PageTitle>@L["DiffHighlightPage:PageTitle"]</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
     <MudPaper Elevation="1" Class="pa-4 mb-4">
         <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
             <MudIcon Icon="@Icons.Material.Filled.Compare" Size="Size.Large" />
             <div>
-                <MudText Typo="Typo.h4">文本差异对比</MudText>
+                <MudText Typo="Typo.h4">@L["DiffHighlightPage:Title"]</MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary">
-                    比较两个文本文件的差异，提供可视化的对比结果
+                    @L["DiffHighlightPage:Description"]
                 </MudText>
             </div>
         </MudStack>
 
         <MudExpansionPanels>
-            <MudExpansionPanel Text="配置选项" Icon="@Icons.Material.Filled.Settings">
+            <MudExpansionPanel Text="@L["DiffHighlightPage:ConfigOptions"]" Icon="@Icons.Material.Filled.Settings">
                 <div class="pa-2">
                     <MudGrid>
                         <MudItem xs="12" sm="6" md="3">
-                            <MudSelect T="EDiffHighlightMode" @bind-Value="Options.Mode" Label="对比模式">
-                                <MudSelectItem T="EDiffHighlightMode" Value="EDiffHighlightMode.Line">行级对比</MudSelectItem>
-                                <MudSelectItem T="EDiffHighlightMode" Value="EDiffHighlightMode.Character">字符级对比</MudSelectItem>
-                                <MudSelectItem T="EDiffHighlightMode" Value="EDiffHighlightMode.Mixed">混合对比</MudSelectItem>
+                            <MudSelect T="EDiffHighlightMode" @bind-Value="Options.Mode" Label="@L["DiffHighlightPage:CompareMode"]">
+                                <MudSelectItem T="EDiffHighlightMode" Value="EDiffHighlightMode.Line">@L["DiffHighlightPage:Modes:Line"]</MudSelectItem>
+                                <MudSelectItem T="EDiffHighlightMode" Value="EDiffHighlightMode.Character">@L["DiffHighlightPage:Modes:Character"]</MudSelectItem>
+                                <MudSelectItem T="EDiffHighlightMode" Value="EDiffHighlightMode.Mixed">@L["DiffHighlightPage:Modes:Mixed"]</MudSelectItem>
                             </MudSelect>
                         </MudItem>
                         <MudItem xs="12" sm="6" md="3">
-                            <MudSelect T="EDiffOutputFormat" @bind-Value="Options.OutputFormat" Label="输出格式">
-                                <MudSelectItem T="EDiffOutputFormat" Value="EDiffOutputFormat.Html">HTML</MudSelectItem>
-                                <MudSelectItem T="EDiffOutputFormat" Value="EDiffOutputFormat.Markdown">Markdown</MudSelectItem>
-                                <MudSelectItem T="EDiffOutputFormat" Value="EDiffOutputFormat.PlainText">纯文本</MudSelectItem>
+                            <MudSelect T="EDiffOutputFormat" @bind-Value="Options.OutputFormat" Label="@L["DiffHighlightPage:OutputFormat"]">
+                                <MudSelectItem T="EDiffOutputFormat" Value="EDiffOutputFormat.Html">@L["DiffHighlightPage:Formats:Html"]</MudSelectItem>
+                                <MudSelectItem T="EDiffOutputFormat" Value="EDiffOutputFormat.Markdown">@L["DiffHighlightPage:Formats:Markdown"]</MudSelectItem>
+                                <MudSelectItem T="EDiffOutputFormat" Value="EDiffOutputFormat.PlainText">@L["DiffHighlightPage:Formats:PlainText"]</MudSelectItem>
                             </MudSelect>
                         </MudItem>
                         <MudItem xs="12" sm="6" md="3">
-                            <MudNumericField T="int" @bind-Value="Options.ContextLines" Label="上下文行数" Min="0" Max="20" />
+                            <MudNumericField T="int" @bind-Value="Options.ContextLines" Label="@L["DiffHighlightPage:ContextLines"]" Min="0" Max="20" />
                         </MudItem>
                         <MudItem xs="12" sm="6" md="3">
-                            <MudNumericField T="int" @bind-Value="Options.MaxCharacterDiffLength" Label="最大字符差异长度" Min="100" Max="10000" />
+                            <MudNumericField T="int" @bind-Value="Options.MaxCharacterDiffLength" Label="@L["DiffHighlightPage:MaxCharacterDiffLength"]" Min="100" Max="10000" />
                         </MudItem>
                     </MudGrid>
                     <MudGrid Class="mt-2">
                         <MudItem xs="12" sm="6" md="3">
-                            <MudSwitch T="bool" @bind-Value="Options.IgnoreWhitespace" Label="忽略空白字符" Color="Color.Primary" />
+                            <MudSwitch T="bool" @bind-Value="Options.IgnoreWhitespace" Label="@L["DiffHighlightPage:IgnoreWhitespace"]" Color="Color.Primary" />
                         </MudItem>
                         <MudItem xs="12" sm="6" md="3">
-                            <MudSwitch T="bool" @bind-Value="Options.IgnoreCase" Label="忽略大小写" Color="Color.Primary" />
+                            <MudSwitch T="bool" @bind-Value="Options.IgnoreCase" Label="@L["DiffHighlightPage:IgnoreCase"]" Color="Color.Primary" />
                         </MudItem>
                         <MudItem xs="12" sm="6" md="3">
-                            <MudSwitch T="bool" @bind-Value="AutoRefresh" Label="自动刷新" Color="Color.Primary" />
+                            <MudSwitch T="bool" @bind-Value="AutoRefresh" Label="@L["DiffHighlightPage:AutoRefresh"]" Color="Color.Primary" />
                         </MudItem>
                         <MudItem xs="12" sm="6" md="3">
-                            <MudButton Variant="Variant.Outlined" 
-                                      StartIcon="@Icons.Material.Filled.Refresh" 
+                            <MudButton Variant="Variant.Outlined"
+                                      StartIcon="@Icons.Material.Filled.Refresh"
                                       OnClick="LoadSampleDataAsync"
                                       Size="Size.Small">
-                                加载示例
+                                @L["DiffHighlightPage:LoadSample"]
                             </MudButton>
                         </MudItem>
                     </MudGrid>
@@ -77,15 +80,15 @@
                 <MudStack>
                     <MudText Typo="Typo.h6" Class="mb-2">
                         <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" Class="mr-2" />
-                        原始文本
+                        @L["DiffHighlightPage:OriginalText"]
                     </MudText>
-                    <MudTextField T="string" 
+                    <MudTextField T="string"
                                  Value="@OriginText"
                                  ValueChanged="@OnOriginTextChanged"
                                  Lines="18"
                                  Variant="Variant.Outlined"
                                  Class="diff-text-input"
-                                 Placeholder="请输入原始文本..."
+                                 Placeholder="@L["DiffHighlightPage:OriginalTextPlaceholder"]"
                                  Immediate="true" />
                 </MudStack>
             </MudPaper>
@@ -95,15 +98,15 @@
                 <MudStack>
                     <MudText Typo="Typo.h6" Class="mb-2">
                         <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Class="mr-2" />
-                        新文本
+                        @L["DiffHighlightPage:NewText"]
                     </MudText>
-                    <MudTextField T="string" 
+                    <MudTextField T="string"
                                  Value="@NewText"
                                  ValueChanged="@OnNewTextChanged"
                                  Lines="18"
                                  Variant="Variant.Outlined"
                                  Class="diff-text-input"
-                                 Placeholder="请输入新文本..."
+                                 Placeholder="@L["DiffHighlightPage:NewTextPlaceholder"]"
                                  Immediate="true" />
                 </MudStack>
             </MudPaper>
@@ -114,14 +117,14 @@
         <MudStack Row="true" AlignItems="AlignItems.Center" Class="pa-4 pb-2">
             <MudText Typo="Typo.h6">
                 <MudIcon Icon="@Icons.Material.Filled.Compare" Size="Size.Small" Class="mr-2" />
-                差异对比结果
+                @L["DiffHighlightPage:DiffResult"]
             </MudText>
             <MudSpacer />
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" 
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Filled"
                     Color="@GetFormatChipColor()" Icon="@GetFormatIcon()">
                 @Options.OutputFormat
             </MudChip>
-            <MudButton Variant="Variant.Filled" 
+            <MudButton Variant="Variant.Filled"
                       Color="Color.Primary"
                       StartIcon="@Icons.Material.Filled.Refresh"
                       OnClick="RefreshDiffAsync"
@@ -129,11 +132,11 @@
                 @if (IsManualRefreshing)
                 {
                     <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-                    <text>对比中...</text>
+                    <text>@L["DiffHighlightPage:Comparing"]</text>
                 }
                 else
                 {
-                    <text>手动刷新</text>
+                    <text>@L["DiffHighlightPage:ManualRefresh"]</text>
                 }
             </MudButton>
         </MudStack>
@@ -170,7 +173,7 @@
                 }
                 else
                 {
-                    <MudAlert Severity="Severity.Info">请输入文本并点击刷新按钮</MudAlert>
+                    <MudAlert Severity="Severity.Info">@L["DiffHighlightPage:EnterTextAndRefresh"]</MudAlert>
                 }
             </div>
         }
@@ -263,10 +266,10 @@
             {
                 // 非HTML格式直接调用服务
                 var result = await DiffHighlightService.HighlightAsync(OriginText, NewText, Options);
-                
+
                 if (result.IsFailed(out var error, out var data))
                 {
-                    Snackbar.Add($"差异对比失败: {error}", Severity.Error);
+                    Snackbar.Add($"{L["DiffHighlightPage:ComparisonFailed"]}: {error}", Severity.Error);
                 }
                 else
                 {

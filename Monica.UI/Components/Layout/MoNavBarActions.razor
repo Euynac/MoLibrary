@@ -10,7 +10,6 @@
 <div class="navbar-actions">
     @if (Options.Value.EnableNavBarSearch)
     {
-        <!-- 搜索按钮 -->
         <MudIconButton Icon="@Icons.Material.Filled.Search"
                        Color="Color.Default"
                        Size="Size.Medium"
@@ -19,23 +18,18 @@
                        Title="@L["Layout:SearchTooltip"]" />
     }
 
-    <!-- 通知按钮 -->
     <MudIconButton Icon="@Icons.Material.Filled.Notifications"
                    Color="Color.Default"
                    Size="Size.Medium"
                    Class="action-button"
                    Title="@L["Layout:NotificationsTooltip"]" />
 
-    <!-- 主题选择器 -->
     <MoThemeSelector />
 
-    <!-- 语言选择器 -->
     @if (Options.Value.ShowLanguageSwitcher)
     {
         <MoCultureSelector />
     }
-
-    <!-- 用户菜单 -->
     <MudMenu AnchorOrigin="Origin.BottomRight"
              TransformOrigin="Origin.TopRight"
              Class="user-menu">
@@ -58,6 +52,6 @@
 @code {
     private void OpenSearch()
     {
-        // TODO: 实现全局搜索对话框
+        // TODO: Implement global search dialog
     }
 }

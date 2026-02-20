@@ -2,8 +2,11 @@
 @using Monica.UI.UIStackTrace.Services
 @using Microsoft.JSInterop
 @using MudBlazor
+@using Microsoft.Extensions.Localization
+@using Monica.UI.Localization
 @inject StackTraceParserService ParserService
 @inject IJSRuntime JS
+@inject IStringLocalizer<SharedResource> L
 
 <div class="stack-trace-container">
     @if (!string.IsNullOrWhiteSpace(Message))
@@ -12,7 +15,7 @@
             <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
                            Size="Size.Small"
                            OnClick="CopyToClipboard"
-                           Title="复制堆栈信息" />
+                           Title="@L["StackTrace:CopyTooltip"]" />
         </div>
     }
     @if (_parseResult?.Success == true && _parseResult.Lines.Count > 0)
@@ -29,10 +32,8 @@
             else if (line.LineType == StackLineType.StackFrame)
             {
                 <div class="stack-frame" style="@GetInnerExceptionIndentForLevel(level)">
-                    <!-- "at" 关键字: 加粗 + Color.Info -->
                     <span class="at-keyword">at</span>
 
-                    <!-- 命名空间、类名、方法名 -->
                     @if (!string.IsNullOrEmpty(line.Namespace))
                     {
                         <span class="namespace-part">@line.Namespace.</span>
@@ -43,11 +44,9 @@
                     }
                     @if (!string.IsNullOrEmpty(line.MethodName))
                     {
-                        <!-- 最后一个方法名: 加粗 + Color.Warning -->
                         <span class="method-name">@line.MethodName</span>
                     }
 
-                    <!-- 方法参数 -->
                     @if (!string.IsNullOrEmpty(line.Parameters))
                     {
                         <span class="param-bracket">(</span>
@@ -60,12 +59,10 @@
                                     <span class="param-separator">,</span>
                                     <span class="param-space"> </span>
                                 }
-                                <!-- 参数类型: 加粗 -->
                                 <span class="param-type">@line.ParsedParameters[i].Type</span>
                                 @if (!string.IsNullOrEmpty(line.ParsedParameters[i].Name))
                                 {
                                     <span class="param-space"> </span>
-                                    <!-- 参数名: 不加粗 -->
                                     <span class="param-name">@line.ParsedParameters[i].Name</span>
                                 }
                             }
@@ -73,7 +70,6 @@
                         <span class="param-bracket">)</span>
                     }
 
-                    <!-- 文件信息 -->
                     @if (!string.IsNullOrEmpty(line.FilePath))
                     {
                         <span class="in-keyword"> in </span>
@@ -83,12 +79,10 @@
                         }
                         @if (!string.IsNullOrEmpty(line.FileName))
                         {
-                            <!-- 文件名: 加粗 + Color.Warning -->
                             <span class="file-name">@line.FileName</span>
                         }
                     }
 
-                    <!-- 行号: 加粗 + Color.Error -->
                     @if (line.LineNumber.HasValue)
                     {
                         <span class="line-info">:line</span>
@@ -126,7 +120,6 @@
     }
     else if (_parseResult?.Success == false)
     {
-        <!-- 解析失败，显示错误提示和原始文本 -->
         <div class="parse-error">
             <span class="error-icon">⚠</span>
             <span class="error-message">@_parseResult.ErrorMessage</span>
@@ -137,22 +130,16 @@
     }
     else
     {
-        <div class="empty-message">暂无堆栈信息</div>
+        <div class="empty-message">@L["StackTrace:NoStackTrace"]</div>
     }
 </div>
 
 @code {
-    /// <summary>
-    /// 堆栈信息文本
-    /// </summary>
     [Parameter]
     public string? Message { get; set; }
 
     private ParseResult? _parseResult;
 
-    /// <summary>
-    /// 组件参数变化时调用
-    /// </summary>
     protected override void OnParametersSet()
     {
         if (!string.IsNullOrWhiteSpace(Message))
@@ -161,13 +148,10 @@
         }
         else
         {
-            _parseResult = new ParseResult { Success = false, ErrorMessage = "未提供堆栈信息" };
+            _parseResult = new ParseResult { Success = false, ErrorMessage = L["StackTrace:NotProvided"] };
         }
     }
 
-    /// <summary>
-    /// 获取行及其对应的嵌套层级
-    /// </summary>
     private IEnumerable<(StackTraceLine line, int level)> GetLinesWithLevel(List<StackTraceLine> lines)
     {
         int level = 0;
@@ -193,9 +177,6 @@
         }
     }
 
-    /// <summary>
-    /// 获取指定层级的内部异常缩进样式
-    /// </summary>
     private string GetInnerExceptionIndentForLevel(int level)
     {
         if (level <= 0)
@@ -204,17 +185,11 @@
         return $"margin-left: {level * 16}px; border-left: 2px dashed var(--mud-palette-warning);";
     }
 
-    /// <summary>
-    /// 检查是否为内部异常结束标记
-    /// </summary>
     private bool IsEndOfInnerException(string? content)
     {
         return content?.Contains("--- End of inner exception") == true;
     }
 
-    /// <summary>
-    /// 复制堆栈信息到剪贴板
-    /// </summary>
     private async Task CopyToClipboard()
     {
         if (!string.IsNullOrEmpty(Message))
