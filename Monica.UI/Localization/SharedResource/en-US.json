@@ -1,0 +1,59 @@
+{
+  "texts": {
+    "Common": {
+      "Save": "Save",
+      "Cancel": "Cancel",
+      "Delete": "Delete",
+      "Edit": "Edit",
+      "Add": "Add",
+      "Search": "Search",
+      "Filter": "Filter",
+      "Export": "Export",
+      "Import": "Import",
+      "Refresh": "Refresh",
+      "Close": "Close",
+      "Confirm": "Confirm",
+      "Back": "Back",
+      "Next": "Next",
+      "Previous": "Previous",
+      "Submit": "Submit",
+      "Reset": "Reset",
+      "Clear": "Clear",
+      "Select": "Select",
+      "SelectAll": "Select All",
+      "Actions": "Actions",
+      "Status": "Status",
+      "Name": "Name",
+      "Description": "Description",
+      "CreatedAt": "Created At",
+      "UpdatedAt": "Updated At",
+      "Yes": "Yes",
+      "No": "No"
+    },
+    "Validation": {
+      "Required": "This field is required",
+      "InvalidEmail": "Invalid email format",
+      "InvalidUrl": "Invalid URL format",
+      "MinLength": "Minimum {0} characters required",
+      "MaxLength": "Maximum {0} characters allowed",
+      "Range": "Value must be between {0} and {1}"
+    },
+    "Messages": {
+      "SaveSuccess": "Saved successfully",
+      "SaveFailed": "Save failed",
+      "DeleteSuccess": "Deleted successfully",
+      "DeleteFailed": "Delete failed",
+      "DeleteConfirm": "Are you sure you want to delete?",
+      "LoadingData": "Loading data...",
+      "NoData": "No data available",
+      "OperationSuccess": "Operation successful",
+      "OperationFailed": "Operation failed"
+    },
+    "Navigation": {
+      "Home": "Home",
+      "Settings": "Settings",
+      "Profile": "Profile",
+      "Logout": "Logout"
+    }
+  }
+}

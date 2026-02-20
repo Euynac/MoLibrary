@@ -169,5 +169,9 @@ public enum EMoModuleKey
     /// <summary>
     /// RAG UI module - provides RAG debug and management interface
     /// </summary>
-    RAGUI
+    RAGUI,
+    /// <summary>
+    /// Localization module - provides JSON-based localization with culture fallback
+    /// </summary>
+    Localization
 }

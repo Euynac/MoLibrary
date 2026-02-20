@@ -1,0 +1,149 @@
+using System.Globalization;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Localization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
+using Monica.Core.Module;
+using Monica.Core.Module.Interfaces;
+using Monica.Core.Module.Models;
+using Monica.Localization.Localizers;
+using Monica.Tool.Extensions;
+
+namespace Monica.Localization.Modules;
+
+public static class ModuleLocalizationBuilderExtensions
+{
+    extension(Mo)
+    {
+        /// <summary>
+        /// Configure Localization module
+        /// </summary>
+        public static ModuleLocalizationGuide AddLocalization(Action<ModuleLocalizationOption>? action = null)
+        {
+            return new ModuleLocalizationGuide().Register(action);
+        }
+    }
+}
+
+public class ModuleLocalization(ModuleLocalizationOption option)
+    : MoModule<ModuleLocalization, ModuleLocalizationOption, ModuleLocalizationGuide>(option)
+{
+    public override ModuleKey GetModuleKey()
+    {
+        return EMoModuleKey.Localization;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        // Services are configured in the Guide
+    }
+}
+
+public class ModuleLocalizationGuide : MoModuleGuide<ModuleLocalization, ModuleLocalizationOption, ModuleLocalizationGuide>
+{
+    public ModuleLocalizationGuide()
+    {
+        // Register services
+        ConfigureServices(ctx =>
+        {
+            var option = ctx.ModuleOption;
+
+            // Add ASP.NET Core localization services
+            ctx.Services.AddLocalization();
+
+            // Replace default factory with custom JSON-based factory
+            ctx.Services.Replace(ServiceDescriptor.Singleton<IStringLocalizerFactory, MoStringLocalizerFactory>());
+
+            // Configure RequestLocalizationOptions
+            ctx.Services.Configure<RequestLocalizationOptions>(options =>
+            {
+                var supportedCultures = option.SupportedCultures
+                    .Select(c => new CultureInfo(c))
+                    .ToArray();
+
+                options.DefaultRequestCulture = new RequestCulture(option.DefaultCulture);
+                options.SupportedCultures = supportedCultures;
+                options.SupportedUICultures = supportedCultures;
+
+                // Cookie provider for culture persistence
+                options.RequestCultureProviders =
+                [
+                    new CookieRequestCultureProvider
+                    {
+                        CookieName = option.CookieName
+                    }
+                ];
+            });
+        });
+
+        // Register middleware (before routing)
+        ConfigureApplicationBuilder(ctx =>
+        {
+            ctx.ApplicationBuilder.UseRequestLocalization();
+        }, EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
+
+        // Register culture switching endpoint
+        ConfigureEndpoints(ctx =>
+        {
+            ctx.WebApplication.MapPost("/culture/set", async (
+                HttpContext httpContext,
+                [FromForm] string culture,
+                [FromForm] string? returnUrl,
+                [FromServices] IOptions<ModuleLocalizationOption> options) =>
+            {
+                var option = options.Value;
+
+                if (!option.SupportedCultures.Contains(culture))
+                {
+                    return Results.BadRequest("Unsupported culture");
+                }
+
+                httpContext.Response.Cookies.Append(
+                    option.CookieName,
+                    CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),
+                    new CookieOptions
+                    {
+                        Expires = DateTimeOffset.UtcNow.AddYears(1),
+                        IsEssential = true,
+                        Path = "/",
+                        SameSite = SameSiteMode.Lax
+                    }
+                );
+
+                return Results.Redirect(returnUrl ?? "/");
+            });
+        });
+    }
+}
+
+public class ModuleLocalizationOption : MoModuleOption<ModuleLocalization>
+{
+    /// <summary>
+    /// Default culture when no culture is specified. Default: "zh-CN"
+    /// </summary>
+    public string DefaultCulture { get; set; } = "zh-CN";
+
+    /// <summary>
+    /// List of supported cultures. Default: ["zh-CN", "en-US"]
+    /// </summary>
+    public List<string> SupportedCultures { get; set; } = ["zh-CN", "en-US"];
+
+    /// <summary>
+    /// Culture display names for UI. If not specified, uses CultureInfo.NativeName
+    /// </summary>
+    public Dictionary<string, string> CultureDisplayNames { get; set; } = new()
+    {
+        ["zh-CN"] = "简体中文",
+        ["en-US"] = "English"
+    };
+
+    /// <summary>
+    /// Cookie name for culture persistence. Default: ".AspNetCore.Culture"
+    /// </summary>
+    public string CookieName { get; set; } = ".AspNetCore.Culture";
+}
+

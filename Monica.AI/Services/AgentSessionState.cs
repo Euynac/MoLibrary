@@ -12,12 +12,10 @@ public class AgentSessionState
     public AgentSessionState(
         ChatClientAgent agent,
         AgentSession session,
-        InMemoryChatHistoryProvider chatHistory,
         string providerId)
     {
         Agent = agent;
         Session = session;
-        ChatHistory = chatHistory;
         ProviderId = providerId;
         SessionId = Guid.NewGuid().ToString("N");
         CreatedAt = DateTimeOffset.UtcNow;
@@ -76,25 +74,27 @@ public class AgentSessionState
     public AgentSession Session { get; set; }
 
     /// <summary>
-    /// Direct reference to the chat history provider for UI display and manipulation
-    /// (implements IList&lt;ChatMessage&gt;)
+    /// Get the chat history from the session
     /// </summary>
-    public InMemoryChatHistoryProvider ChatHistory { get; }
+    public IList<ChatMessage>? ChatHistory => Session.GetService<IList<ChatMessage>>();
 
     /// <summary>
     /// Message count in the chat history
     /// </summary>
-    public int MessageCount => ChatHistory.Count;
+    public int MessageCount => ChatHistory?.Count ?? 0;
 
     /// <summary>
     /// Truncate history to keep only the first N messages
     /// </summary>
     public void TruncateHistory(int keepCount)
     {
+        var history = ChatHistory;
+        if (history == null) return;
+
         if (keepCount < 0) keepCount = 0;
-        while (ChatHistory.Count > keepCount)
+        while (history.Count > keepCount)
         {
-            ChatHistory.RemoveAt(ChatHistory.Count - 1);
+            history.RemoveAt(history.Count - 1);
         }
 
         UpdatedAt = DateTimeOffset.UtcNow;
@@ -105,7 +105,10 @@ public class AgentSessionState
     /// </summary>
     public void ClearHistory()
     {
-        ChatHistory.Clear();
+        var history = ChatHistory;
+        if (history == null) return;
+
+        history.Clear();
         UpdatedAt = DateTimeOffset.UtcNow;
     }
 }

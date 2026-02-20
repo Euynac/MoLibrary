@@ -1,0 +1,66 @@
+@using System.Globalization
+@using Microsoft.AspNetCore.Localization
+@using Microsoft.Extensions.Options
+@using Monica.Localization.Modules
+@inject NavigationManager NavigationManager
+@inject IOptions<ModuleLocalizationOption> LocalizationOptions
+@inject IJSRuntime JSRuntime
+
+<MudMenu Icon="@Icons.Material.Filled.Language"
+         Color="Color.Primary"
+         Size="Size.Medium"
+         AnchorOrigin="Origin.BottomCenter"
+         TransformOrigin="Origin.TopCenter"
+         Class="action-button"
+         Title="Language / 语言">
+    @foreach (var culture in LocalizationOptions.Value.SupportedCultures)
+    {
+        var displayName = LocalizationOptions.Value.CultureDisplayNames.TryGetValue(culture, out var name)
+            ? name
+            : new CultureInfo(culture).NativeName;
+        var isCurrentCulture = CultureInfo.CurrentUICulture.Name == culture;
+
+        <MudMenuItem OnClick="@(() => ChangeCulture(culture))"
+                     Icon="@(isCurrentCulture ? Icons.Material.Filled.Check : null)">
+            @displayName
+        </MudMenuItem>
+    }
+</MudMenu>
+
+@code {
+    private async Task ChangeCulture(string culture)
+    {
+        var currentUrl = NavigationManager.Uri;
+
+        // Create form data
+        var formData = new Dictionary<string, string>
+        {
+            ["culture"] = culture,
+            ["returnUrl"] = currentUrl
+        };
+
+        // Submit form via JavaScript to set cookie
+        await JSRuntime.InvokeVoidAsync("eval", $@"
+            (function() {{
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/culture/set';
+
+                const cultureInput = document.createElement('input');
+                cultureInput.type = 'hidden';
+                cultureInput.name = 'culture';
+                cultureInput.value = '{culture}';
+                form.appendChild(cultureInput);
+
+                const returnUrlInput = document.createElement('input');
+                returnUrlInput.type = 'hidden';
+                returnUrlInput.name = 'returnUrl';
+                returnUrlInput.value = '{currentUrl}';
+                form.appendChild(returnUrlInput);
+
+                document.body.appendChild(form);
+                form.submit();
+            }})();
+        ");
+    }
+}

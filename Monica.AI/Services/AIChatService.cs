@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
@@ -53,10 +54,9 @@ public class AIChatService(
 
         var agent = CreateAgent(chatClient, resolvedPrompt, kbIds);
 
-        var chatHistory = new InMemoryChatHistoryProvider();
-        var session = await agent.CreateSessionAsync(chatHistory, ct);
+        var session = await agent.CreateSessionAsync(ct);
 
-        var state = new AgentSessionState(agent, session, chatHistory, resolvedProviderId)
+        var state = new AgentSessionState(agent, session, resolvedProviderId)
         {
             Title = title ?? "New Chat",
             SystemPrompt = resolvedPrompt,
@@ -87,7 +87,7 @@ public class AIChatService(
 
         var chatClient = provider.GetChatClient(state.ModelName);
         var newAgent = CreateAgent(chatClient, systemPrompt, state.ActiveKnowledgeBaseIds);
-        var newSession = await newAgent.CreateSessionAsync(state.ChatHistory, ct);
+        var newSession = await newAgent.CreateSessionAsync(ct);
 
         state.Agent = newAgent;
         state.Session = newSession;
@@ -165,7 +165,8 @@ public class AIChatService(
         state.UpdatedAt = DateTimeOffset.UtcNow;
 
         // Auto-set title from first user message
-        if (state.ChatHistory.Count(m => m.Role == ChatRole.User) == 1)
+        var history = state.ChatHistory;
+        if (history != null && history.Count(m => m.Role == ChatRole.User) == 1)
         {
             state.Title = request.Message.Length > 50 ? request.Message[..50] + "..." : request.Message;
         }
@@ -210,7 +211,8 @@ public class AIChatService(
         state.UpdatedAt = DateTimeOffset.UtcNow;
 
         // Auto-set title from first user message
-        if (state.ChatHistory.Count(m => m.Role == ChatRole.User) == 1)
+        var history = state.ChatHistory;
+        if (history != null && history.Count(m => m.Role == ChatRole.User) == 1)
         {
             state.Title = request.Message.Length > 50 ? request.Message[..50] + "..." : request.Message;
         }
@@ -256,19 +258,12 @@ public class AIChatService(
             var searchProviderOptions = ragOptions?.Value.SearchProviderOptions;
             var searchAdapter = _ragService.CreateSearchAdapter(knowledgeBaseIds, topK);
 
+            var textSearchProvider = new TextSearchProvider(searchAdapter, options: searchProviderOptions);
+
             var agentOptions = new ChatClientAgentOptions
             {
                 ChatOptions = new ChatOptions { Instructions = instructions },
-                AIContextProviderFactory = (ctx, _) =>
-                {
-                    var provider = new TextSearchProvider(
-                        searchAdapter,
-                        ctx.SerializedState,
-                        ctx.JsonSerializerOptions,
-                        searchProviderOptions,
-                        _loggerFactory);
-                    return new ValueTask<AIContextProvider>(provider);
-                }
+                AIContextProviders = new List<AIContextProvider> { textSearchProvider }
             };
 
             return new ChatClientAgent(chatClient, agentOptions, _loggerFactory);

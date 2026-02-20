@@ -1,0 +1,59 @@
+{
+  "texts": {
+    "Common": {
+      "Save": "保存",
+      "Cancel": "取消",
+      "Delete": "删除",
+      "Edit": "编辑",
+      "Add": "添加",
+      "Search": "搜索",
+      "Filter": "筛选",
+      "Export": "导出",
+      "Import": "导入",
+      "Refresh": "刷新",
+      "Close": "关闭",
+      "Confirm": "确认",
+      "Back": "返回",
+      "Next": "下一步",
+      "Previous": "上一步",
+      "Submit": "提交",
+      "Reset": "重置",
+      "Clear": "清空",
+      "Select": "选择",
+      "SelectAll": "全选",
+      "Actions": "操作",
+      "Status": "状态",
+      "Name": "名称",
+      "Description": "描述",
+      "CreatedAt": "创建时间",
+      "UpdatedAt": "更新时间",
+      "Yes": "是",
+      "No": "否"
+    },
+    "Validation": {
+      "Required": "此字段为必填项",
+      "InvalidEmail": "邮箱格式不正确",
+      "InvalidUrl": "URL格式不正确",
+      "MinLength": "最少需要 {0} 个字符",
+      "MaxLength": "最多允许 {0} 个字符",
+      "Range": "值必须在 {0} 到 {1} 之间"
+    },
+    "Messages": {
+      "SaveSuccess": "保存成功",
+      "SaveFailed": "保存失败",
+      "DeleteSuccess": "删除成功",
+      "DeleteFailed": "删除失败",
+      "DeleteConfirm": "确定要删除吗?",
+      "LoadingData": "加载数据中...",
+      "NoData": "暂无数据",
+      "OperationSuccess": "操作成功",
+      "OperationFailed": "操作失败"
+    },
+    "Navigation": {
+      "Home": "首页",
+      "Settings": "设置",
+      "Profile": "个人资料",
+      "Logout": "退出登录"
+    }
+  }
+}

@@ -250,4 +250,8 @@ public class ModuleUICoreOption : MoModuleOption<ModuleUICore>
     /// </summary>
     internal Dictionary<string, string> RouteRedirects { get; set; } = new();
 
+    /// <summary>
+    /// 是否显示语言切换器
+    /// </summary>
+    public bool ShowLanguageSwitcher { get; set; } = true;
 }

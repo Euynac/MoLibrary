@@ -26,6 +26,12 @@
     <!-- 主题选择器 -->
     <MoThemeSelector />
 
+    <!-- 语言选择器 -->
+    @if (Options.Value.ShowLanguageSwitcher)
+    {
+        <MoCultureSelector />
+    }
+
     <!-- 用户菜单 -->
     <MudMenu AnchorOrigin="Origin.BottomRight"
              TransformOrigin="Origin.TopRight"

@@ -1,0 +1,7 @@
+.action-button {
+    border-radius: var(--mud-default-borderradius);
+}
+
+.action-button:hover {
+    background-color: var(--mud-palette-action-default-hover);
+}
