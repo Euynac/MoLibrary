@@ -77,38 +77,6 @@ public class ModuleLocalizationGuide : MoModuleGuide<ModuleLocalization, ModuleL
         {
             ctx.ApplicationBuilder.UseRequestLocalization();
         }, EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
-
-        // Register culture switching endpoint
-        ConfigureEndpoints(ctx =>
-        {
-            ctx.WebApplication.MapPost("/culture/set", async (
-                HttpContext httpContext,
-                [FromForm] string culture,
-                [FromForm] string? returnUrl,
-                [FromServices] IOptions<ModuleLocalizationOption> options) =>
-            {
-                var option = options.Value;
-
-                if (!option.SupportedCultures.Contains(culture))
-                {
-                    return Results.BadRequest("Unsupported culture");
-                }
-
-                httpContext.Response.Cookies.Append(
-                    option.CookieName,
-                    CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),
-                    new CookieOptions
-                    {
-                        Expires = DateTimeOffset.UtcNow.AddYears(1),
-                        IsEssential = true,
-                        Path = "/",
-                        SameSite = SameSiteMode.Lax
-                    }
-                );
-
-                return Results.Redirect(returnUrl ?? "/");
-            });
-        });
     }
 }
 

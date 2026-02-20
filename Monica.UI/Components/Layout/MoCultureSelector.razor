@@ -2,9 +2,12 @@
 @using Microsoft.AspNetCore.Localization
 @using Microsoft.Extensions.Options
 @using Monica.Localization.Modules
+@using Monica.UI.Services
 @inject NavigationManager NavigationManager
 @inject IOptions<ModuleLocalizationOption> LocalizationOptions
 @inject IJSRuntime JSRuntime
+@inject IMoBrowserStorage BrowserStorage
+@implements IAsyncDisposable
 
 <MudMenu Icon="@Icons.Material.Filled.Language"
          Color="Color.Primary"
@@ -20,7 +23,7 @@
             : new CultureInfo(culture).NativeName;
         var isCurrentCulture = CultureInfo.CurrentUICulture.Name == culture;
 
-        <MudMenuItem OnClick="@(() => ChangeCulture(culture))"
+        <MudMenuItem OnClick="@(() => ChangeCultureAsync(culture))"
                      Icon="@(isCurrentCulture ? Icons.Material.Filled.Check : null)">
             @displayName
         </MudMenuItem>
@@ -28,39 +31,74 @@
 </MudMenu>
 
 @code {
-    private async Task ChangeCulture(string culture)
+    private const string StorageKey = "culture:preference";
+    private IJSObjectReference? _cultureHelperModule;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        var currentUrl = NavigationManager.Uri;
-
-        // Create form data
-        var formData = new Dictionary<string, string>
+        if (firstRender)
         {
-            ["culture"] = culture,
-            ["returnUrl"] = currentUrl
-        };
+            // Load JS module
+            _cultureHelperModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "import", "./_content/Monica.UI/js/culture-helper.js");
 
-        // Submit form via JavaScript to set cookie
-        await JSRuntime.InvokeVoidAsync("eval", $@"
-            (function() {{
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '/culture/set';
+            // Load culture preference from localStorage
+            var storedCulture = await BrowserStorage.GetAsync<string?>(StorageKey, null);
 
-                const cultureInput = document.createElement('input');
-                cultureInput.type = 'hidden';
-                cultureInput.name = 'culture';
-                cultureInput.value = '{culture}';
-                form.appendChild(cultureInput);
+            if (storedCulture != null && LocalizationOptions.Value.SupportedCultures.Contains(storedCulture))
+            {
+                // Ensure cookie is in sync with localStorage
+                var cookieCulture = await _cultureHelperModule.InvokeAsync<string?>(
+                    "getCultureFromCookie", LocalizationOptions.Value.CookieName);
 
-                const returnUrlInput = document.createElement('input');
-                returnUrlInput.type = 'hidden';
-                returnUrlInput.name = 'returnUrl';
-                returnUrlInput.value = '{currentUrl}';
-                form.appendChild(returnUrlInput);
+                if (cookieCulture != storedCulture)
+                {
+                    // Sync cookie with localStorage
+                    await _cultureHelperModule.InvokeVoidAsync(
+                        "setCultureCookie", storedCulture, LocalizationOptions.Value.CookieName);
+                }
+            }
+            else if (storedCulture == null)
+            {
+                // First visit - save default culture to localStorage
+                var defaultCulture = LocalizationOptions.Value.DefaultCulture;
+                await BrowserStorage.SetAsync(StorageKey, defaultCulture);
+                await _cultureHelperModule.InvokeVoidAsync(
+                    "setCultureCookie", defaultCulture, LocalizationOptions.Value.CookieName);
+            }
+        }
+    }
 
-                document.body.appendChild(form);
-                form.submit();
-            }})();
-        ");
+    private async Task ChangeCultureAsync(string culture)
+    {
+        if (_cultureHelperModule == null)
+        {
+            return;
+        }
+
+        // 1. Save to localStorage (source of truth)
+        await BrowserStorage.SetAsync(StorageKey, culture);
+
+        // 2. Set cookie for server-side middleware
+        await _cultureHelperModule.InvokeVoidAsync(
+            "setCultureCookie", culture, LocalizationOptions.Value.CookieName);
+
+        // 3. Reload page to apply culture change
+        NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_cultureHelperModule != null)
+        {
+            try
+            {
+                await _cultureHelperModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+                // Circuit already disconnected
+            }
+        }
     }
 }
