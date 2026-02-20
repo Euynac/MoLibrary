@@ -39,7 +39,32 @@ public class ModuleLocalization(ModuleLocalizationOption option)
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        // Services are configured in the Guide
+        // Add ASP.NET Core localization services
+        services.AddLocalization();
+
+        // Replace default factory with custom JSON-based factory
+        services.Replace(ServiceDescriptor.Singleton<IStringLocalizerFactory, MoStringLocalizerFactory>());
+
+        // Configure RequestLocalizationOptions
+        services.Configure<RequestLocalizationOptions>(options =>
+        {
+            var supportedCultures = Option.SupportedCultures
+                .Select(c => new CultureInfo(c))
+                .ToArray();
+
+            options.DefaultRequestCulture = new RequestCulture(Option.DefaultCulture);
+            options.SupportedCultures = supportedCultures;
+            options.SupportedUICultures = supportedCultures;
+
+            // Cookie provider for culture persistence
+            options.RequestCultureProviders =
+            [
+                new CookieRequestCultureProvider
+                {
+                    CookieName = Option.CookieName
+                }
+            ];
+        });
     }
 }
 
@@ -47,39 +72,6 @@ public class ModuleLocalizationGuide : MoModuleGuide<ModuleLocalization, ModuleL
 {
     public ModuleLocalizationGuide()
     {
-        // Register services
-        ConfigureServices(ctx =>
-        {
-            var option = ctx.ModuleOption;
-
-            // Add ASP.NET Core localization services
-            ctx.Services.AddLocalization();
-
-            // Replace default factory with custom JSON-based factory
-            ctx.Services.Replace(ServiceDescriptor.Singleton<IStringLocalizerFactory, MoStringLocalizerFactory>());
-
-            // Configure RequestLocalizationOptions
-            ctx.Services.Configure<RequestLocalizationOptions>(options =>
-            {
-                var supportedCultures = option.SupportedCultures
-                    .Select(c => new CultureInfo(c))
-                    .ToArray();
-
-                options.DefaultRequestCulture = new RequestCulture(option.DefaultCulture);
-                options.SupportedCultures = supportedCultures;
-                options.SupportedUICultures = supportedCultures;
-
-                // Cookie provider for culture persistence
-                options.RequestCultureProviders =
-                [
-                    new CookieRequestCultureProvider
-                    {
-                        CookieName = option.CookieName
-                    }
-                ];
-            });
-        });
-
         // Register middleware (before routing)
         ConfigureApplicationBuilder(ctx =>
         {

@@ -1,8 +1,11 @@
 @using Microsoft.Extensions.Options
+@using Microsoft.Extensions.Localization
+@using Monica.UI.Localization
 @using Monica.UI.Modules
 @using Monica.UI.Services
 @inject MoUserContextService UserContext
 @inject IOptions<ModuleUICoreOption> Options
+@inject IStringLocalizer<SharedResource> L
 
 <div class="navbar-actions">
     @if (Options.Value.EnableNavBarSearch)
@@ -13,7 +16,7 @@
                        Size="Size.Medium"
                        Class="action-button"
                        OnClick="OpenSearch"
-                       Title="搜索 (Ctrl+K)" />
+                       Title="@L["Layout:SearchTooltip"]" />
     }
 
     <!-- 通知按钮 -->
@@ -21,7 +24,7 @@
                    Color="Color.Default"
                    Size="Size.Medium"
                    Class="action-button"
-                   Title="通知" />
+                   Title="@L["Layout:NotificationsTooltip"]" />
 
     <!-- 主题选择器 -->
     <MoThemeSelector />
@@ -44,10 +47,10 @@
             </MudButton>
         </ActivatorContent>
         <ChildContent>
-            <MudMenuItem Icon="@Icons.Material.Filled.Person">个人资料</MudMenuItem>
-            <MudMenuItem Icon="@Icons.Material.Filled.Settings">设置</MudMenuItem>
+            <MudMenuItem Icon="@Icons.Material.Filled.Person">@L["Layout:UserMenu:Profile"]</MudMenuItem>
+            <MudMenuItem Icon="@Icons.Material.Filled.Settings">@L["Layout:UserMenu:Settings"]</MudMenuItem>
             <MudDivider />
-            <MudMenuItem Icon="@Icons.Material.Filled.Logout">退出登录</MudMenuItem>
+            <MudMenuItem Icon="@Icons.Material.Filled.Logout">@L["Layout:UserMenu:Logout"]</MudMenuItem>
         </ChildContent>
     </MudMenu>
 </div>

@@ -96,7 +96,7 @@ public class ModuleStateStoreGuide : MoModuleGuide<ModuleStateStore, ModuleState
     /// <returns>Current module guide instance for chaining</returns>
     public ModuleStateStoreGuide AddKeyedStateStore<TProvider>(string key) where TProvider : class, IMoStateStore
     {
-        ConfigureServices(services => { services.Services.AddKeyedSingleton<IMoStateStore, TProvider>(key); });
+        ConfigureServices(services => { services.Services.AddKeyedSingleton<IMoStateStore, TProvider>(key); }, secondKey: key);
         RecordKeyedServiceKey(key);
         return this;
     }

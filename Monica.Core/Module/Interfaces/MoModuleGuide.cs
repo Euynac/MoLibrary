@@ -184,9 +184,9 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
         var request = new ModuleRegisterRequest($"{key}{secondKey?.BeAfter("_")}")
         {
             Order = order,
-            RequestFrom = GuideFrom, 
+            RequestFrom = GuideFrom,
             RequestMethod = requestMethod,
-            ConfigureContext = context, Key = key
+            ConfigureContext = context
         };
         RegisterModule(request);
     }

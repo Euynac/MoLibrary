@@ -1,5 +1,8 @@
 @using Monica.UI.Services
+@using Microsoft.Extensions.Localization
+@using Monica.UI.Localization
 @inject MoThemeService ThemeService
+@inject IStringLocalizer<SharedResource> L
 @implements IDisposable
 
 <MudDialog>
@@ -8,19 +11,19 @@
             <MudStack Spacing="4" Class="pa-2">
                 <MudText Typo="Typo.h5" Class="mb-2" Align="Align.Center">
                     <MudIcon Icon="@Icons.Material.Filled.Palette" Class="mr-2" />
-                    主题设置
+                    @L["Theme:Settings"]
                 </MudText>
-                
+
                 <MudDivider />
-                
+
                 <div>
-                    <MudText Typo="Typo.subtitle1" Class="mb-3">选择主题风格</MudText>
-                    
+                    <MudText Typo="Typo.subtitle1" Class="mb-3">@L["Theme:SelectStyle"]</MudText>
+
                     <MudStack Spacing="2">
                         @foreach (var theme in MoThemeService.AvailableThemes)
                         {
-                            <MudCard Elevation="@(ThemeService.CurrentThemeName == theme.Name ? 4 : 1)" 
-                                     Class="@GetThemeCardClass(theme.Name)" 
+                            <MudCard Elevation="@(ThemeService.CurrentThemeName == theme.Name ? 4 : 1)"
+                                     Class="@GetThemeCardClass(theme.Name)"
                                      Style="cursor: pointer; transition: all 0.3s ease;"
                                      @onclick="() => OnThemeChanged(theme.Name)">
                                 <MudCardContent Class="pa-3">
@@ -40,25 +43,25 @@
                         }
                     </MudStack>
                 </div>
-                
+
                 <MudDivider />
 
                 <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-                    <MudText Typo="Typo.subtitle1">深色模式</MudText>
+                    <MudText Typo="Typo.subtitle1">@L["Theme:DarkMode"]</MudText>
                     <MudSwitch T="bool" @bind-Value="ThemeService.IsDarkMode" Color="Color.Primary" Size="Size.Large" />
                 </MudStack>
-                
+
                 <MudDivider />
-                
+
                 <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
-                    当前主题: @GetCurrentThemeDisplayName()
+                    @L["Theme:CurrentTheme"]: @GetCurrentThemeDisplayName()
                 </MudText>
             </MudStack>
         </MudContainer>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Close" Color="Color.Primary" Variant="Variant.Filled">
-            关闭
+            @L["Common:Close"]
         </MudButton>
     </DialogActions>
 </MudDialog>
@@ -92,14 +95,14 @@
         ThemeService.CurrentThemeName = newTheme;
         StateHasChanged();
     }
-    
+
     private string GetCurrentThemeDisplayName()
     {
         var current = MoThemeService.AvailableThemes.FirstOrDefault(t => t.Name == ThemeService.CurrentThemeName);
-        var mode = ThemeService.IsDarkMode ? "深色" : "浅色";
+        var mode = ThemeService.IsDarkMode ? L["Theme:Dark"] : L["Theme:Light"];
         return $"{current.DisplayName} - {mode}";
     }
-    
+
     private string GetThemeCardClass(string themeName)
     {
         var baseClass = "theme-card";

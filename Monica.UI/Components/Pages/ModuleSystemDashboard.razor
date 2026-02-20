@@ -1,52 +1,55 @@
 @attribute [Route(MODULE_SYSTEM_DASHBOARD_URL)]
+@using Microsoft.Extensions.Localization
 @using Monica.Core.Module.Dashboard.Interfaces
 @using Monica.Core.Module.Dashboard.Models
 @using Monica.Core.Module.Models
+@using Monica.UI.Localization
 @using Monica.UI.UIModuleSystem.Components
 @inject IModuleSystemStatusService StatusService
 @inject ISnackbar SnackBar
+@inject IStringLocalizer<SharedResource> L
 
-<PageTitle>模块系统仪表板</PageTitle>
+<PageTitle>@L["ModuleSystem:Dashboard:Title"]</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.False" Class="ma-4">
     <MudPaper Class="pa-6 mb-6" Elevation="2">
         <MudText Typo="Typo.h3" Class="mb-2">
             <MudIcon Icon="@Icons.Material.Filled.Dashboard" Class="mr-3" />
-            模块系统仪表板
+            @L["ModuleSystem:Dashboard:Title"]
         </MudText>
         <MudText Typo="Typo.body1" Color="Color.Secondary">
-            全面监控和管理系统模块状态、性能和依赖关系
+            @L["ModuleSystem:Dashboard:Description"]
         </MudText>
     </MudPaper>
 
     <MudTabs Elevation="4" Rounded="true" ApplyEffectsToContainer="true" Class="mb-6">
-        <MudTabPanel Text="系统概览" Icon="@Icons.Material.Filled.Assessment">
+        <MudTabPanel Text="@L["ModuleSystem:Dashboard:Tabs:SystemOverview"]" Icon="@Icons.Material.Filled.Assessment">
             <div class="tab-content-panel">
                 <SystemOverview SystemStatus="systemStatus" />
             </div>
         </MudTabPanel>
 
-        <MudTabPanel Text="性能监控" Icon="@Icons.Material.Filled.Speed">
+        <MudTabPanel Text="@L["ModuleSystem:Dashboard:Tabs:PerformanceMonitoring"]" Icon="@Icons.Material.Filled.Speed">
             <div class="tab-content-panel">
                 <PerformanceMonitoring SystemPerformance="systemPerformance" />
             </div>
         </MudTabPanel>
 
-        <MudTabPanel Text="健康检查" Icon="@Icons.Material.Filled.HealthAndSafety">
+        <MudTabPanel Text="@L["ModuleSystem:Dashboard:Tabs:HealthCheck"]" Icon="@Icons.Material.Filled.HealthAndSafety">
             <div class="tab-content-panel">
                 <HealthCheck HealthCheckData="healthCheck" />
             </div>
         </MudTabPanel>
 
-        <MudTabPanel Text="模块管理" Icon="@Icons.Material.Filled.ViewModule">
+        <MudTabPanel Text="@L["ModuleSystem:Dashboard:Tabs:ModuleManagement"]" Icon="@Icons.Material.Filled.ViewModule">
             <div class="tab-content-panel">
-                <ModuleManagement RegistrationInfo="registrationInfo" 
-                                OnRefresh="RefreshData" 
+                <ModuleManagement RegistrationInfo="registrationInfo"
+                                OnRefresh="RefreshData"
                                 OnModuleDetailClicked="ViewModuleDetail" />
             </div>
         </MudTabPanel>
 
-        <MudTabPanel Text="依赖关系" Icon="@Icons.Material.Filled.AccountTree">
+        <MudTabPanel Text="@L["ModuleSystem:Dashboard:Tabs:Dependencies"]" Icon="@Icons.Material.Filled.AccountTree">
             <div class="tab-content-panel">
                 <DependencyGraph DependencyGraphData="dependencyGraph" />
             </div>
@@ -73,9 +76,8 @@
     private object? selectedModuleOptionInstance;
     private bool showModuleDetail = false;
 
-   
 
-   
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -96,12 +98,12 @@
             healthCheck = StatusService.GetHealthCheck();
             registrationInfo = StatusService.GetRegistrationInfo();
             dependencyGraph = StatusService.GetDependencyGraph();
-            
-            SnackBar.Add("数据已刷新", Severity.Success);
+
+            SnackBar.Add(L["ModuleSystem:Dashboard:Messages:DataRefreshed"], Severity.Success);
         }
         catch (Exception ex)
         {
-            SnackBar.Add($"刷新数据失败: {ex.Message}", Severity.Error);
+            SnackBar.Add($"{L["ModuleSystem:Dashboard:Messages:RefreshFailed"]}: {ex.Message}", Severity.Error);
         }
     }
 
@@ -126,12 +128,12 @@
             }
             else
             {
-                SnackBar.Add("模块详情不存在", Severity.Warning);
+                SnackBar.Add(L["ModuleSystem:Dashboard:Messages:ModuleDetailNotFound"], Severity.Warning);
             }
         }
         catch (Exception ex)
         {
-            SnackBar.Add($"获取模块详情失败: {ex.Message}", Severity.Error);
+            SnackBar.Add($"{L["ModuleSystem:Dashboard:Messages:GetModuleDetailFailed"]}: {ex.Message}", Severity.Error);
         }
     }
 } 

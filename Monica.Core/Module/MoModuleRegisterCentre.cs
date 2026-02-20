@@ -175,7 +175,10 @@ public static class MoModuleRegisterCentre
             info.StartModulePhase(EMoModuleConfigMethods.ConfigureBuilder);
 
             // 执行额外的配置请求
-            foreach (var request in info.RegisterRequests.Where(p => p.RequestMethod == EMoModuleConfigMethods.ConfigureBuilder).OrderBy(r => r.Order))
+            foreach (var request in info.DeduplicateRequests(
+                info.RegisterRequests
+                    .Where(p => p.RequestMethod == EMoModuleConfigMethods.ConfigureBuilder)
+                    .OrderBy(r => r.Order)))
             {
                 try
                 {
@@ -194,7 +197,10 @@ public static class MoModuleRegisterCentre
             info.StartModulePhase(EMoModuleConfigMethods.ConfigureServices);
 
             // 执行额外的配置请求
-            foreach (var request in info.RegisterRequests.Where(p => p.RequestMethod == EMoModuleConfigMethods.ConfigureServices).OrderBy(r => r.Order))
+            foreach (var request in info.DeduplicateRequests(
+                info.RegisterRequests
+                    .Where(p => p.RequestMethod == EMoModuleConfigMethods.ConfigureServices)
+                    .OrderBy(r => r.Order)))
             {
                 try
                 {
@@ -243,7 +249,10 @@ public static class MoModuleRegisterCentre
         {
             module.RegisterInfo.StartModulePhase(EMoModuleConfigMethods.PostConfigureServices);
             // 执行额外的配置请求
-            foreach (var request in module.RegisterInfo.RegisterRequests.Where(p => p.RequestMethod == EMoModuleConfigMethods.PostConfigureServices).OrderBy(r => r.Order))
+            foreach (var request in module.RegisterInfo.DeduplicateRequests(
+                module.RegisterInfo.RegisterRequests
+                    .Where(p => p.RequestMethod == EMoModuleConfigMethods.PostConfigureServices)
+                    .OrderBy(r => r.Order)))
             {
                 try
                 {
@@ -279,7 +288,11 @@ public static class MoModuleRegisterCentre
         {
             module.RegisterInfo.StartModulePhase(EMoModuleConfigMethods.ConfigureApplicationBuilder);
 
-            foreach (var request in module.RegisterInfo.RegisterRequests.Where(p => p.RequestMethod == EMoModuleConfigMethods.ConfigureApplicationBuilder).Where(filter).OrderBy(r => r.Order))
+            foreach (var request in module.RegisterInfo.DeduplicateRequests(
+                module.RegisterInfo.RegisterRequests
+                    .Where(p => p.RequestMethod == EMoModuleConfigMethods.ConfigureApplicationBuilder)
+                    .Where(filter)
+                    .OrderBy(r => r.Order)))
             {
                 try
                 {
@@ -311,7 +324,10 @@ public static class MoModuleRegisterCentre
         {
             module.RegisterInfo.StartModulePhase(EMoModuleConfigMethods.ConfigureEndpoints);
 
-            foreach (var request in module.RegisterInfo.RegisterRequests.Where(p => p.RequestMethod == EMoModuleConfigMethods.ConfigureEndpoints).OrderBy(r => r.Order))
+            foreach (var request in module.RegisterInfo.DeduplicateRequests(
+                module.RegisterInfo.RegisterRequests
+                    .Where(p => p.RequestMethod == EMoModuleConfigMethods.ConfigureEndpoints)
+                    .OrderBy(r => r.Order)))
             {
                 try
                 {

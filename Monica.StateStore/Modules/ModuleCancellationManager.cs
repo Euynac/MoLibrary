@@ -106,7 +106,7 @@ public class ModuleCancellationManagerGuide : MoModuleGuide<ModuleCancellationMa
                     return ActivatorUtilities.CreateInstance<DistributedCancellationManager>(serviceProvider, stateStore);
                 }
             });
-        });
+        }, secondKey: key);
         RecordKeyedServiceKey(key);
         return this;
     }

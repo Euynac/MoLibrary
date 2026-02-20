@@ -105,7 +105,7 @@ public class ModuleRegisterRequest(string key)
 {
     public Action<ModuleRegisterContext>? ConfigureContext { get; set; }
     /// <summary>
-    /// 相同Key的配置只执行一次
+    /// Configuration key. Configurations with the same Key are executed only once during the execution phase (first occurrence wins).
     /// </summary>
     public string Key { get; set; } = key;
     /// <summary>

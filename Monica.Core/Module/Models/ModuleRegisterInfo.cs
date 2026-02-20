@@ -1,4 +1,7 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Monica.Core.Features.MoLogProvider;
 using Monica.Core.Module.Features;
 using Monica.Core.Module.Interfaces;
 using Monica.Tool.Extensions;
@@ -201,11 +204,40 @@ public class ModuleRegisterInfo(Type moduleType)
     {
         if (RequiredConfigMethodKeys.Count == 0)
             return [];
-        
+
         var configuredKeys = RegisterRequests.Select(r => r.Key).ToHashSet();
         return RequiredConfigMethodKeys
             .Where(key => !configuredKeys.Contains(key))
             .ToList();
+    }
+
+    /// <summary>
+    /// Filters register requests to execute only unique configurations.
+    /// Configurations with the same Key are executed only once (first occurrence wins).
+    /// </summary>
+    /// <param name="requests">All register requests to deduplicate</param>
+    /// <returns>Deduplicated requests maintaining original order</returns>
+    public IEnumerable<ModuleRegisterRequest> DeduplicateRequests(
+        IEnumerable<ModuleRegisterRequest> requests)
+    {
+        var logger = LogProvider.For(typeof(ModuleRegisterInfo));
+        var seenKeys = new HashSet<string>();
+
+        foreach (var request in requests.Reverse())
+        {
+            // Deduplicate by key
+            if (seenKeys.Add(request.Key))
+            {
+                yield return request;
+            }
+            else
+            {
+                // Log skipped duplicate for debugging
+                logger.LogWarning(
+                    "Skipping duplicate configuration: {Key} (OwningModule: {OwningModule}, RequestFrom: {RequestFrom}, RequestMethod: {Method}, Order: {Order}, SourceDesc: {SourceDesc})",
+                    request.Key, ModuleType.Name, request.RequestFrom?.ToString() ?? "N/A", request.RequestMethod, request.Order, request.SourceDesc ?? "N/A");
+            }
+        }
     }
 
 

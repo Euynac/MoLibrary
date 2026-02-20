@@ -8,6 +8,7 @@ using Monica.Core.Module.Dashboard.Interfaces;
 using Monica.Core.Module.Dashboard;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
+using Monica.Localization.Modules;
 using Monica.UI.Components;
 using Monica.UI.Components.Pages;
 using MudBlazor;
@@ -37,7 +38,7 @@ public static class ModuleUICoreBuilderExtensions
 /// 提供基于MudBlazor的UI基础设施
 /// </summary>
 public class ModuleUICore(ModuleUICoreOption option)
-    : MoModule<ModuleUICore, ModuleUICoreOption, ModuleUICoreGuide>(option)
+    : MoModuleWithDependencies<ModuleUICore, ModuleUICoreOption, ModuleUICoreGuide>(option)
 {
     /// <summary>
     /// 获取当前模块枚举
@@ -46,6 +47,15 @@ public class ModuleUICore(ModuleUICoreOption option)
     public override ModuleKey GetModuleKey()
     {
         return EMoModuleKey.UICore;
+    }
+
+    /// <summary>
+    /// 声明模块依赖
+    /// </summary>
+    public override void ClaimDependencies()
+    {
+        // 依赖本地化模块以支持语言切换功能
+        DependsOnModule<ModuleLocalizationGuide>().Register();
     }
 
     public override void ConfigureBuilder(WebApplicationBuilder builder)
@@ -126,7 +136,7 @@ public class ModuleUICoreGuide : MoModuleGuide<ModuleUICore, ModuleUICoreOption,
         {
             var registry = builder.ApplicationBuilder.ApplicationServices.GetRequiredService<IUIComponentRegistry>();
             registrationAction(registry);
-        }, EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
+        }, EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting, secondKey: Guid.NewGuid().ToString());
 
         return this;
     }

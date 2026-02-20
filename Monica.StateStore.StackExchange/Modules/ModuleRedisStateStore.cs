@@ -83,12 +83,18 @@ public static class ModuleRedisStateStoreBuilderExtensions
 }
 
 public class ModuleRedisStateStore(ModuleRedisStateStoreOption option)
-    : MoModule<ModuleRedisStateStore, ModuleRedisStateStoreOption, ModuleRedisStateStoreGuide>(option),
+    : MoModuleWithDependencies<ModuleRedisStateStore, ModuleRedisStateStoreOption, ModuleRedisStateStoreGuide>(option),
       IStateStoreModuleProvider
 {
     public override ModuleKey GetModuleKey()
     {
         return EMoModuleKey.RedisStateStore;
+    }
+
+    public override void ClaimDependencies()
+    {
+        // 依赖 StateStore 基础模块
+        DependsOnModule<ModuleStateStoreGuide>().Register();
     }
 
     public override void ConfigureServices(IServiceCollection services)
@@ -116,10 +122,6 @@ public class ModuleRedisStateStore(ModuleRedisStateStoreOption option)
 
 public class ModuleRedisStateStoreGuide : MoModuleGuide<ModuleRedisStateStore, ModuleRedisStateStoreOption, ModuleRedisStateStoreGuide>
 {
-    public ModuleRedisStateStoreGuide()
-    {
-        DependsOnModule<ModuleStateStoreGuide>().Register();
-    }
 }
 
 /// <summary>

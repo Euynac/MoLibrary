@@ -111,7 +111,7 @@ public class ModuleAuthorizationGuide : MoModuleGuide<ModuleAuthorization, Modul
             var checker = new PermissionBitChecker<TEnum>(claimTypeDefinition);
             PermissionBitCheckerManager.AddChecker(checker);
             context.Services.AddSingleton<IPermissionBitChecker<TEnum>, PermissionBitChecker<TEnum>>(_ => checker);
-        });
+        }, secondKey: typeof(TEnum).Name);
         return this;
     }
 

@@ -125,7 +125,7 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
     /// <returns>Current guide instance</returns>
     public ModuleAIGuide AddModel(AIModelInfo model)
     {
-        ConfigureModuleOption(option => option.AddModel(model));
+        ConfigureModuleOption(option => option.AddModel(model), secondKey: model.ModelName);
         return this;
     }
 
