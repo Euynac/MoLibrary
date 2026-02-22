@@ -1,6 +1,9 @@
 @using Monica.Core.Module.Dashboard.Models
 @using Monica.Core.Module.Models
 @using MudBlazor
+@using Monica.UI.Localization
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizer<SharedResource> L
 
 <MudDialog @bind-Visible="IsVisible" Options="DialogOptions">
     <DialogContent>
@@ -17,17 +20,17 @@
             </div>
             
             <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true">
-                <MudTabPanel Text="基本信息" Icon="@Icons.Material.Filled.Info">
+                <MudTabPanel Text="@L["ModuleSystem:ModuleDetail:Tabs:BasicInfo"]" Icon="@Icons.Material.Filled.Info">
                     <div class="tab-content">
                         <MudGrid Spacing="3" Class="mt-4">
                             <MudItem xs="12" sm="6">
                                 <MudPaper Class="pa-4 detail-card" Elevation="2">
                                     <div class="d-flex align-center mb-2">
                                         <MudIcon Icon="@Icons.Material.Filled.Category" Color="Color.Primary" Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">模块键</MudText>
+                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@L["ModuleSystem:ModuleDetail:Labels:ModuleKey"]</MudText>
                                     </div>
                                     <MudText Typo="Typo.body1" Color="Color.Secondary">
-                                        @(SelectedModuleDetail.BasicInfo.ModuleKey?.ToString() ?? "Unknown")
+                                        @(SelectedModuleDetail.BasicInfo.ModuleKey?.ToString() ?? L["ModuleSystem:ModuleDetail:States:Unknown"])
                                     </MudText>
                                 </MudPaper>
                             </MudItem>
@@ -35,7 +38,7 @@
                                 <MudPaper Class="pa-4 detail-card" Elevation="2">
                                     <div class="d-flex align-center mb-2">
                                         <MudIcon Icon="@Icons.Material.Filled.Numbers" Color="Color.Info" Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">注册顺序</MudText>
+                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@L["ModuleSystem:ModuleDetail:Labels:RegistrationOrder"]</MudText>
                                     </div>
                                     <MudText Typo="Typo.body1" Color="Color.Secondary">
                                         @SelectedModuleDetail.BasicInfo.Order.ToString()
@@ -46,7 +49,7 @@
                                 <MudPaper Class="pa-4 detail-card" Elevation="2">
                                     <div class="d-flex align-center mb-2">
                                         <MudIcon Icon="@Icons.Material.Filled.Timer" Color="Color.Warning" Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">初始化时间</MudText>
+                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@L["ModuleSystem:ModuleDetail:Labels:InitializationTime"]</MudText>
                                     </div>
                                     <MudText Typo="Typo.body1" Color="Color.Secondary">
                                         @($"{SelectedModuleDetail.BasicInfo.InitializationTimeMs}ms")
@@ -56,28 +59,28 @@
                             <MudItem xs="12" sm="6">
                                 <MudPaper Class="pa-4 detail-card" Elevation="2">
                                     <div class="d-flex align-center mb-2">
-                                        <MudIcon Icon="@(SelectedModuleDetail.BasicInfo.IsDisabled ? Icons.Material.Filled.Block : Icons.Material.Filled.CheckCircle)" 
-                                               Color="@(SelectedModuleDetail.BasicInfo.IsDisabled ? Color.Warning : Color.Success)" 
+                                        <MudIcon Icon="@(SelectedModuleDetail.BasicInfo.IsDisabled ? Icons.Material.Filled.Block : Icons.Material.Filled.CheckCircle)"
+                                               Color="@(SelectedModuleDetail.BasicInfo.IsDisabled ? Color.Warning : Color.Success)"
                                                Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">模块状态</MudText>
+                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@L["ModuleSystem:ModuleDetail:Labels:ModuleStatus"]</MudText>
                                     </div>
                                     <MudChip T="string" Color="@(SelectedModuleDetail.BasicInfo.IsDisabled ? Color.Warning : Color.Success)" Size="Size.Small">
-                                        @(SelectedModuleDetail.BasicInfo.IsDisabled ? "禁用" : "启用")
+                                        @(SelectedModuleDetail.BasicInfo.IsDisabled ? L["ModuleSystem:ModuleDetail:States:Disabled"] : L["ModuleSystem:ModuleDetail:States:Enabled"])
                                     </MudChip>
                                 </MudPaper>
                             </MudItem>
                         </MudGrid>
                     </div>
                 </MudTabPanel>
-                
-                <MudTabPanel Text="性能信息" Icon="@Icons.Material.Filled.Speed">
+
+                <MudTabPanel Text="@L["ModuleSystem:ModuleDetail:Tabs:PerformanceInfo"]" Icon="@Icons.Material.Filled.Speed">
                     <div class="tab-content">
                         <MudGrid Spacing="3" Class="mt-4">
                             <MudItem xs="12">
                                 <MudPaper Class="pa-4 detail-card" Elevation="2">
                                     <div class="d-flex align-center mb-3">
                                         <MudIcon Icon="@Icons.Material.Filled.Timer" Color="Color.Primary" Size="Size.Medium" Class="mr-2" />
-                                        <MudText Typo="Typo.h6">总耗时</MudText>
+                                        <MudText Typo="Typo.h6">@L["ModuleSystem:ModuleDetail:Labels:TotalDuration"]</MudText>
                                     </div>
                                     <MudText Typo="Typo.h4" Color="Color.Primary">
                                         @($"{SelectedModuleDetail.PerformanceInfo.TotalDurationMs}ms")
@@ -87,7 +90,7 @@
                             @if (SelectedModuleDetail.PerformanceInfo.PhaseDurations.Any())
                             {
                                 <MudItem xs="12">
-                                    <MudText Typo="Typo.h6" Class="mb-3">阶段详情</MudText>
+                                    <MudText Typo="Typo.h6" Class="mb-3">@L["ModuleSystem:ModuleDetail:Labels:PhaseDetails"]</MudText>
                                     <MudStack Spacing="2">
                                         @foreach (var phase in SelectedModuleDetail.PerformanceInfo.PhaseDurations)
                                         {
@@ -113,8 +116,8 @@
                         </MudGrid>
                     </div>
                 </MudTabPanel>
-                
-                <MudTabPanel Text="依赖关系" Icon="@Icons.Material.Filled.AccountTree">
+
+                <MudTabPanel Text="@L["ModuleSystem:ModuleDetail:Tabs:DependencyInfo"]" Icon="@Icons.Material.Filled.AccountTree">
                     <div class="tab-content">
                         <MudGrid Spacing="3" Class="mt-4">
                             <MudItem xs="12" sm="4">
@@ -122,7 +125,7 @@
                                     <div class="text-center">
                                         <MudIcon Icon="@Icons.Material.Filled.DirectionsRun" Color="Color.Primary" Size="Size.Large" Class="mb-2" />
                                         <MudText Typo="Typo.h4" Color="Color.Primary">@SelectedModuleDetail.DependencyInfo.DirectDependencies.Count</MudText>
-                                        <MudText Typo="Typo.subtitle1">直接依赖</MudText>
+                                        <MudText Typo="Typo.subtitle1">@L["ModuleSystem:ModuleDetail:Labels:DirectDependencies"]</MudText>
                                     </div>
                                 </MudPaper>
                             </MudItem>
@@ -131,7 +134,7 @@
                                     <div class="text-center">
                                         <MudIcon Icon="@Icons.Material.Filled.DeviceHub" Color="Color.Info" Size="Size.Large" Class="mb-2" />
                                         <MudText Typo="Typo.h4" Color="Color.Info">@SelectedModuleDetail.DependencyInfo.AllDependencies.Count</MudText>
-                                        <MudText Typo="Typo.subtitle1">总依赖数</MudText>
+                                        <MudText Typo="Typo.subtitle1">@L["ModuleSystem:ModuleDetail:Labels:TotalDependencies"]</MudText>
                                     </div>
                                 </MudPaper>
                             </MudItem>
@@ -140,17 +143,17 @@
                                     <div class="text-center">
                                         <MudIcon Icon="@Icons.Material.Filled.CallMade" Color="Color.Success" Size="Size.Large" Class="mb-2" />
                                         <MudText Typo="Typo.h4" Color="Color.Success">@SelectedModuleDetail.DependencyInfo.DependedByModules.Count</MudText>
-                                        <MudText Typo="Typo.subtitle1">被依赖数</MudText>
+                                        <MudText Typo="Typo.subtitle1">@L["ModuleSystem:ModuleDetail:Labels:DependedByCount"]</MudText>
                                     </div>
                                 </MudPaper>
                             </MudItem>
-                            
+
                             @if (SelectedModuleDetail.DependencyInfo.DirectDependencies.Any())
                             {
                                 <MudItem xs="12">
                                     <MudText Typo="Typo.h6" Class="mb-3">
                                         <MudIcon Icon="@Icons.Material.Filled.DirectionsRun" Class="mr-2" />
-                                        直接依赖列表
+                                        @L["ModuleSystem:ModuleDetail:Labels:DirectDependencyList"]
                                     </MudText>
                                     <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
                                         @foreach (var dep in SelectedModuleDetail.DependencyInfo.DirectDependencies)
@@ -162,13 +165,13 @@
                                     </MudStack>
                                 </MudItem>
                             }
-                            
+
                             @if (GetTransitiveDependencies().Any())
                             {
                                 <MudItem xs="12">
                                     <MudText Typo="Typo.h6" Class="mb-3">
                                         <MudIcon Icon="@Icons.Material.Filled.Timeline" Class="mr-2" />
-                                        传递依赖列表
+                                        @L["ModuleSystem:ModuleDetail:Labels:TransitiveDependencyList"]
                                     </MudText>
                                     <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
                                         @foreach (var dep in GetTransitiveDependencies())
@@ -180,13 +183,13 @@
                                     </MudStack>
                                 </MudItem>
                             }
-                            
+
                             @if (SelectedModuleDetail.DependencyInfo.DependedByModules.Any())
                             {
                                 <MudItem xs="12">
                                     <MudText Typo="Typo.h6" Class="mb-3">
                                         <MudIcon Icon="@Icons.Material.Filled.CallMade" Class="mr-2" />
-                                        被依赖模块列表
+                                        @L["ModuleSystem:ModuleDetail:Labels:DependedByModuleList"]
                                     </MudText>
                                     <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
                                         @foreach (var dep in SelectedModuleDetail.DependencyInfo.DependedByModules)
@@ -198,7 +201,7 @@
                                     </MudStack>
                                 </MudItem>
                             }
-                            
+
                             @if (SelectedModuleDetail.DependencyInfo.IsPartOfCycle)
                             {
                                 <MudItem xs="12">
@@ -206,9 +209,9 @@
                                         <div class="d-flex align-center">
                                             <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Medium" Class="mr-2" />
                                             <div>
-                                                <MudText Typo="Typo.subtitle1">检测到循环依赖</MudText>
+                                                <MudText Typo="Typo.subtitle1">@L["ModuleSystem:ModuleDetail:Messages:CircularDependencyDetected"]</MudText>
                                                 <MudText Typo="Typo.body2">
-                                                    循环路径: @string.Join(" → ", SelectedModuleDetail.DependencyInfo.CyclePath)
+                                                    @L["ModuleSystem:ModuleDetail:Messages:CircularPath"]: @string.Join(" → ", SelectedModuleDetail.DependencyInfo.CyclePath)
                                                 </MudText>
                                             </div>
                                         </div>
@@ -219,7 +222,7 @@
                     </div>
                 </MudTabPanel>
 
-                <MudTabPanel Text="配置选项" Icon="@Icons.Material.Filled.Settings">
+                <MudTabPanel Text="@L["ModuleSystem:ModuleDetail:Tabs:ConfigOptions"]" Icon="@Icons.Material.Filled.Settings">
                     <div class="tab-content">
                         <ModuleOptionDisplay OptionType="@ModuleOptionType"
                                            OptionInstance="@ModuleOptionInstance" />
@@ -228,7 +231,7 @@
 
                 @if (SelectedModuleDetail.Errors.Any())
                 {
-                    <MudTabPanel Text="错误信息" Icon="@Icons.Material.Filled.Error">
+                    <MudTabPanel Text="@L["ModuleSystem:ModuleDetail:Tabs:ErrorInfo"]" Icon="@Icons.Material.Filled.Error">
                         <div class="tab-content">
                             <MudStack Spacing="3" Class="mt-4">
                                 @foreach (var error in SelectedModuleDetail.Errors)
@@ -254,7 +257,7 @@
     </DialogContent>
     <DialogActions>
         <MudButton Color="Color.Primary" OnClick="OnClose" StartIcon="@Icons.Material.Filled.Close">
-            关闭
+            @L["ModuleSystem:ModuleDetail:Labels:Close"]
         </MudButton>
     </DialogActions>
 </MudDialog>

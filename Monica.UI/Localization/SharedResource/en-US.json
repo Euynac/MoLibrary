@@ -42,6 +42,221 @@
           "ModuleDetailNotFound": "Module details not found",
           "GetModuleDetailFailed": "Failed to get module details"
         }
+      },
+      "SystemOverview": {
+        "Labels": {
+          "SystemStatus": "System Status",
+          "ModuleStatistics": "Module Statistics",
+          "InitializationTime": "Initialization Time",
+          "HealthStatus": "Health Status",
+          "TotalModules": "Total Modules",
+          "StartTime": "Start Time",
+          "Unknown": "Unknown",
+          "Loading": "Loading..."
+        },
+        "States": {
+          "NotInitialized": "Not Initialized",
+          "Initializing": "Initializing",
+          "Initialized": "Initialized",
+          "Failed": "Failed",
+          "Unknown": "Unknown"
+        },
+        "Messages": {
+          "SystemInitialized": "System initialization completed",
+          "SystemInitializing": "System is initializing...",
+          "SystemRunning": "System has been running for {0}ms",
+          "SystemStarting": "System is starting...",
+          "HasIssues": "Has Issues",
+          "Healthy": "Healthy",
+          "RunningNormally": "Running Normally",
+          "RegistrationErrors": "Registration errors detected",
+          "CircularDependencies": "Circular dependencies detected",
+          "SystemHealthy": "System is healthy"
+        }
+      },
+      "ModuleManagement": {
+        "Title": "Module Management",
+        "Statistics": "Module Statistics",
+        "ModuleList": "Module List",
+        "Refresh": "Refresh",
+        "Details": "Details",
+        "Labels": {
+          "TotalModules": "Total Modules",
+          "EnabledModules": "Enabled Modules",
+          "DisabledModules": "Disabled Modules",
+          "TotalInitTime": "Total Init Time",
+          "ModuleDistribution": "Module Distribution",
+          "ModuleName": "Module Name",
+          "Status": "Status",
+          "Order": "Order",
+          "InitTime": "Init Time",
+          "Dependencies": "Dependencies",
+          "Actions": "Actions"
+        },
+        "States": {
+          "Enabled": "Enabled",
+          "Disabled": "Disabled"
+        },
+        "Loading": {
+          "Statistics": "Loading module statistics...",
+          "List": "Loading module list..."
+        }
+      },
+      "HealthCheck": {
+        "Labels": {
+          "HealthOverview": "Health Overview",
+          "PerformanceMetrics": "Performance Metrics",
+          "CheckItems": "Check Items",
+          "DiscoveredIssues": "Discovered Issues",
+          "CheckTime": "Check Time:",
+          "AverageInitTime": "Average Init Time",
+          "SlowestModuleTime": "Slowest Module Time",
+          "EfficiencyScore": "Efficiency Score",
+          "MemoryUsage": "Memory Usage"
+        },
+        "Messages": {
+          "NoCheckItems": "No check items",
+          "NoIssuesFound": "No issues found"
+        },
+        "Loading": {
+          "HealthOverview": "Loading health overview...",
+          "PerformanceMetrics": "Loading performance metrics...",
+          "CheckItems": "Loading check items...",
+          "IssueList": "Loading issue list..."
+        }
+      },
+      "PerformanceMonitoring": {
+        "Labels": {
+          "PerformanceOverview": "Performance Overview",
+          "SlowestModules": "Slowest Modules",
+          "PhasePerformanceAnalysis": "Phase Performance Analysis",
+          "TotalInitTime": "Total Init Time",
+          "TotalSystemPhaseDuration": "Total System Phase Duration",
+          "TotalModulePhaseDuration": "Total Module Phase Duration",
+          "TotalModulePhaseExecutions": "Total Module Phase Executions",
+          "Order": "Order",
+          "PhaseName": "Phase Name",
+          "Duration": "Duration (ms)",
+          "PerformanceRatio": "Performance Ratio",
+          "Status": "Status"
+        },
+        "Messages": {
+          "NoPerformanceData": "No performance data",
+          "NoPhasePerformanceData": "No phase performance data"
+        },
+        "States": {
+          "Slow": "Slow",
+          "Medium": "Medium",
+          "Good": "Good",
+          "Excellent": "Excellent"
+        },
+        "Loading": {
+          "PerformanceOverview": "Loading performance overview...",
+          "SlowestModules": "Loading slowest modules...",
+          "PhasePerformanceData": "Loading phase performance data..."
+        }
+      },
+      "DependencyGraph": {
+        "Labels": {
+          "DependencyOverview": "Dependency Overview",
+          "TotalNodes": "Total Nodes",
+          "TotalDependencies": "Total Dependencies",
+          "CircularDependencies": "Circular Dependencies",
+          "DependencyLayers": "Dependency Layers",
+          "GraphControls": "Graph Controls",
+          "LayoutAlgorithm": "Layout Algorithm",
+          "Filter": "Filter",
+          "ZoomIn": "Zoom In",
+          "ZoomOut": "Zoom Out",
+          "ResetView": "Reset View",
+          "DependencyGraph": "Dependency Graph",
+          "ExportImage": "Export Image",
+          "Legend": "Legend",
+          "NodeTypes": "Node Types",
+          "EnabledModule": "Enabled Module",
+          "DisabledModule": "Disabled Module",
+          "CircularDependencyModule": "Circular Dependency Module",
+          "EdgeTypes": "Edge Types",
+          "DirectDependency": "Direct Dependency",
+          "TransitiveDependency": "Transitive Dependency",
+          "CircularDependency": "Circular Dependency",
+          "NodeDetails": "Node Details"
+        },
+        "States": {
+          "Exists": "Exists",
+          "None": "None"
+        },
+        "Layouts": {
+          "Force": "Force-Directed Layout",
+          "Hierarchical": "Hierarchical Layout",
+          "Circular": "Circular Layout"
+        },
+        "Filters": {
+          "ShowAll": "Show All",
+          "DirectOnly": "Direct Dependencies Only",
+          "CycleOnly": "Circular Dependencies Only"
+        },
+        "Messages": {
+          "HoverToViewDetails": "Hover over a node to view details"
+        },
+        "Loading": {
+          "DependencyOverview": "Loading dependency overview...",
+          "GraphControls": "Loading graph controls...",
+          "DependencyGraph": "Loading dependency graph...",
+          "Legend": "Loading legend...",
+          "NodeDetails": "Loading node details...",
+          "Default": "Loading..."
+        }
+      },
+      "ModuleDetail": {
+        "Tabs": {
+          "BasicInfo": "Basic Info",
+          "PerformanceInfo": "Performance Info",
+          "DependencyInfo": "Dependencies",
+          "ConfigOptions": "Config Options",
+          "ErrorInfo": "Error Info"
+        },
+        "Labels": {
+          "ModuleKey": "Module Key",
+          "RegistrationOrder": "Registration Order",
+          "InitializationTime": "Initialization Time",
+          "ModuleStatus": "Module Status",
+          "TotalDuration": "Total Duration",
+          "PhaseDetails": "Phase Details",
+          "DirectDependencies": "Direct Dependencies",
+          "TotalDependencies": "Total Dependencies",
+          "DependedByCount": "Depended By",
+          "DirectDependencyList": "Direct Dependency List",
+          "TransitiveDependencyList": "Transitive Dependency List",
+          "DependedByModuleList": "Depended By Module List",
+          "Close": "Close"
+        },
+        "States": {
+          "Enabled": "Enabled",
+          "Disabled": "Disabled",
+          "Unknown": "Unknown"
+        },
+        "Messages": {
+          "CircularDependencyDetected": "Circular Dependency Detected",
+          "CircularPath": "Circular Path"
+        }
+      },
+      "ModuleOption": {
+        "Messages": {
+          "NoConfigurableOptions": "This module has no configurable options",
+          "NoDisplayableProperties": "This module option type has no displayable properties",
+          "ClickToView": "Click to view",
+          "ItemsClickToView": "[{0} items] Click to view",
+          "ObjectClickToView": "(object) Click to view"
+        },
+        "Labels": {
+          "Close": "Close"
+        }
+      },
+      "Common": {
+        "Labels": {
+          "Uncategorized": "Uncategorized"
+        }
       }
     },
     "DiffViewer": {

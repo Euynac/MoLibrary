@@ -1,5 +1,8 @@
 @using Monica.Core.Module.Dashboard.Models
 @using MudBlazor
+@using Monica.UI.Localization
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizer<SharedResource> L
 
 <div class="performance-monitoring-container">
     @if (SystemPerformance != null)
@@ -12,7 +15,7 @@
                         <CardHeaderContent>
                             <div class="d-flex align-center">
                                 <MudIcon Icon="@Icons.Material.Filled.Assessment" Color="Color.Primary" Class="mr-2" />
-                                <MudText Typo="Typo.h6">性能概览</MudText>
+                                <MudText Typo="Typo.h6">@L["ModuleSystem:PerformanceMonitoring:Labels:PerformanceOverview"]</MudText>
                             </div>
                         </CardHeaderContent>
                     </MudCardHeader>
@@ -22,7 +25,7 @@
                                 <MudPaper Class="pa-4 performance-metric-card" Elevation="2">
                                     <div class="d-flex justify-space-between align-center">
                                         <div>
-                                            <MudText Typo="Typo.subtitle1" Color="Color.Primary">总初始化时间</MudText>
+                                            <MudText Typo="Typo.subtitle1" Color="Color.Primary">@L["ModuleSystem:PerformanceMonitoring:Labels:TotalInitTime"]</MudText>
                                             <MudText Typo="Typo.h5" Color="Color.Primary">@($"{SystemPerformance.TotalSystemInitializationTimeMs}ms")</MudText>
                                         </div>
                                         <MudIcon Icon="@Icons.Material.Filled.Timer" Color="Color.Primary" Size="Size.Large" />
@@ -33,7 +36,7 @@
                                 <MudPaper Class="pa-4 performance-metric-card" Elevation="2">
                                     <div class="d-flex justify-space-between align-center">
                                         <div>
-                                            <MudText Typo="Typo.subtitle1" Color="Color.Info">系统阶段总耗时</MudText>
+                                            <MudText Typo="Typo.subtitle1" Color="Color.Info">@L["ModuleSystem:PerformanceMonitoring:Labels:TotalSystemPhaseDuration"]</MudText>
                                             <MudText Typo="Typo.h5" Color="Color.Info">@($"{SystemPerformance.TotalSystemPhaseDurationMs}ms")</MudText>
                                         </div>
                                         <MudIcon Icon="@Icons.Material.Filled.Timeline" Color="Color.Info" Size="Size.Large" />
@@ -44,7 +47,7 @@
                                 <MudPaper Class="pa-4 performance-metric-card" Elevation="2">
                                     <div class="d-flex justify-space-between align-center">
                                         <div>
-                                            <MudText Typo="Typo.subtitle1" Color="Color.Success">模块阶段总耗时</MudText>
+                                            <MudText Typo="Typo.subtitle1" Color="Color.Success">@L["ModuleSystem:PerformanceMonitoring:Labels:TotalModulePhaseDuration"]</MudText>
                                             <MudText Typo="Typo.h5" Color="Color.Success">@($"{SystemPerformance.TotalModulePhaseDurationMs}ms")</MudText>
                                         </div>
                                         <MudIcon Icon="@Icons.Material.Filled.Memory" Color="Color.Success" Size="Size.Large" />
@@ -55,7 +58,7 @@
                                 <MudPaper Class="pa-4 performance-metric-card" Elevation="2">
                                     <div class="d-flex justify-space-between align-center">
                                         <div>
-                                            <MudText Typo="Typo.subtitle1" Color="Color.Warning">总模块阶段执行次数</MudText>
+                                            <MudText Typo="Typo.subtitle1" Color="Color.Warning">@L["ModuleSystem:PerformanceMonitoring:Labels:TotalModulePhaseExecutions"]</MudText>
                                             <MudText Typo="Typo.h5" Color="Color.Warning">@SystemPerformance.TotalModulePhaseExecutions.ToString()</MudText>
                                         </div>
                                         <MudIcon Icon="@Icons.Material.Filled.PlayArrow" Color="Color.Warning" Size="Size.Large" />
@@ -74,7 +77,7 @@
                         <CardHeaderContent>
                             <div class="d-flex align-center">
                                 <MudIcon Icon="@Icons.Material.Filled.Speed" Color="Color.Error" Class="mr-2" />
-                                <MudText Typo="Typo.h6">最慢模块</MudText>
+                                <MudText Typo="Typo.h6">@L["ModuleSystem:PerformanceMonitoring:Labels:SlowestModules"]</MudText>
                             </div>
                         </CardHeaderContent>
                     </MudCardHeader>
@@ -113,7 +116,7 @@
                             <div class="d-flex align-center justify-center" style="min-height: 200px;">
                                 <div class="text-center">
                                     <MudIcon Icon="@Icons.Material.Filled.Speed" Size="Size.Large" Color="Color.Secondary" Class="mb-3" />
-                                    <MudText Color="Color.Secondary">暂无性能数据</MudText>
+                                    <MudText Color="Color.Secondary">@L["ModuleSystem:PerformanceMonitoring:Messages:NoPerformanceData"]</MudText>
                                 </div>
                             </div>
                         }
@@ -128,7 +131,7 @@
                         <CardHeaderContent>
                             <div class="d-flex align-center">
                                 <MudIcon Icon="@Icons.Material.Filled.Analytics" Color="Color.Tertiary" Class="mr-2" />
-                                <MudText Typo="Typo.h6">阶段性能分析</MudText>
+                                <MudText Typo="Typo.h6">@L["ModuleSystem:PerformanceMonitoring:Labels:PhasePerformanceAnalysis"]</MudText>
                             </div>
                         </CardHeaderContent>
                     </MudCardHeader>
@@ -143,10 +146,10 @@
                                        T="PhasePerformanceInfo"
                                        Style="min-height: 400px;">
                                 <Columns>
-                                    <PropertyColumn Property="x => x.Order" Title="顺序" />
-                                    <PropertyColumn Property="x => x.PhaseName" Title="阶段名称" />
-                                    <PropertyColumn Property="x => x.DurationMs" Title="耗时 (ms)" />
-                                    <TemplateColumn Title="性能占比">
+                                    <PropertyColumn Property="x => x.Order" Title="@L["ModuleSystem:PerformanceMonitoring:Labels:Order"]" />
+                                    <PropertyColumn Property="x => x.PhaseName" Title="@L["ModuleSystem:PerformanceMonitoring:Labels:PhaseName"]" />
+                                    <PropertyColumn Property="x => x.DurationMs" Title="@L["ModuleSystem:PerformanceMonitoring:Labels:Duration"]" />
+                                    <TemplateColumn Title="@L["ModuleSystem:PerformanceMonitoring:Labels:PerformanceRatio"]">
                                         <CellTemplate>
                                             @{
                                                 var maxDuration = SystemPerformance.PhasePerformances.Max(p => p.DurationMs);
@@ -161,7 +164,7 @@
                                             </div>
                                         </CellTemplate>
                                     </TemplateColumn>
-                                    <TemplateColumn Title="状态">
+                                    <TemplateColumn Title="@L["ModuleSystem:PerformanceMonitoring:Labels:Status"]">
                                         <CellTemplate>
                                             @{
                                                 var maxDuration = SystemPerformance.PhasePerformances.Max(p => p.DurationMs);
@@ -180,7 +183,7 @@
                             <div class="d-flex align-center justify-center" style="min-height: 400px;">
                                 <div class="text-center">
                                     <MudIcon Icon="@Icons.Material.Filled.Analytics" Size="Size.Large" Color="Color.Secondary" Class="mb-3" />
-                                    <MudText Color="Color.Secondary">暂无阶段性能数据</MudText>
+                                    <MudText Color="Color.Secondary">@L["ModuleSystem:PerformanceMonitoring:Messages:NoPhasePerformanceData"]</MudText>
                                 </div>
                             </div>
                         }
@@ -197,7 +200,7 @@
                     <MudCardContent Class="pa-4 d-flex align-center justify-center" Style="min-height: 300px;">
                         <div class="text-center">
                             <MudProgressCircular Indeterminate="true" Class="mb-3" />
-                            <MudText Color="Color.Secondary">加载性能概览...</MudText>
+                            <MudText Color="Color.Secondary">@L["ModuleSystem:PerformanceMonitoring:Loading:PerformanceOverview"]</MudText>
                         </div>
                     </MudCardContent>
                 </MudCard>
@@ -207,7 +210,7 @@
                     <MudCardContent Class="pa-4 d-flex align-center justify-center" Style="min-height: 300px;">
                         <div class="text-center">
                             <MudProgressCircular Indeterminate="true" Class="mb-3" />
-                            <MudText Color="Color.Secondary">加载最慢模块...</MudText>
+                            <MudText Color="Color.Secondary">@L["ModuleSystem:PerformanceMonitoring:Loading:SlowestModules"]</MudText>
                         </div>
                     </MudCardContent>
                 </MudCard>
@@ -217,7 +220,7 @@
                     <MudCardContent Class="pa-4 d-flex align-center justify-center" Style="min-height: 400px;">
                         <div class="text-center">
                             <MudProgressCircular Indeterminate="true" Class="mb-3" />
-                            <MudText Color="Color.Secondary">加载阶段性能数据...</MudText>
+                            <MudText Color="Color.Secondary">@L["ModuleSystem:PerformanceMonitoring:Loading:PhasePerformanceData"]</MudText>
                         </div>
                     </MudCardContent>
                 </MudCard>
@@ -279,9 +282,9 @@
     /// <returns>性能文本</returns>
     private string GetPerformanceText(double percentage) => percentage switch
     {
-        >= 80 => "缓慢",
-        >= 60 => "中等",
-        >= 40 => "良好",
-        _ => "优秀"
+        >= 80 => L["ModuleSystem:PerformanceMonitoring:States:Slow"],
+        >= 60 => L["ModuleSystem:PerformanceMonitoring:States:Medium"],
+        >= 40 => L["ModuleSystem:PerformanceMonitoring:States:Good"],
+        _ => L["ModuleSystem:PerformanceMonitoring:States:Excellent"]
     };
-} 
+}

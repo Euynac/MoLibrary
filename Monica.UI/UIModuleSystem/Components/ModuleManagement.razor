@@ -1,6 +1,9 @@
 @using Monica.Core.Module.Dashboard.Models
 @using Monica.Core.Module.Models
 @using MudBlazor
+@using Monica.UI.Localization
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizer<SharedResource> L
 
 <div class="module-management-container">
     @if (RegistrationInfo != null)
@@ -13,7 +16,7 @@
                         <CardHeaderContent>
                             <div class="d-flex align-center">
                                 <MudIcon Icon="@Icons.Material.Filled.Analytics" Color="Color.Primary" Class="mr-2" />
-                                <MudText Typo="Typo.h6">模块统计</MudText>
+                                <MudText Typo="Typo.h6">@L["ModuleSystem:ModuleManagement:Statistics"]</MudText>
                             </div>
                         </CardHeaderContent>
                     </MudCardHeader>
@@ -22,7 +25,7 @@
                             <MudPaper Class="pa-4 modern-stat-card" Elevation="2">
                                 <div class="d-flex justify-space-between align-center">
                                     <div>
-                                        <MudText Typo="Typo.subtitle1" Color="Color.Primary">总模块数</MudText>
+                                        <MudText Typo="Typo.subtitle1" Color="Color.Primary">@L["ModuleSystem:ModuleManagement:Labels:TotalModules"]</MudText>
                                         <MudText Typo="Typo.h4" Color="Color.Primary">@RegistrationInfo.Statistics.TotalModules.ToString()</MudText>
                                     </div>
                                     <MudIcon Icon="@Icons.Material.Filled.Apps" Color="Color.Primary" Size="Size.Large" />
@@ -31,7 +34,7 @@
                             <MudPaper Class="pa-4 modern-stat-card" Elevation="2">
                                 <div class="d-flex justify-space-between align-center">
                                     <div>
-                                        <MudText Typo="Typo.subtitle1" Color="Color.Success">启用模块</MudText>
+                                        <MudText Typo="Typo.subtitle1" Color="Color.Success">@L["ModuleSystem:ModuleManagement:Labels:EnabledModules"]</MudText>
                                         <MudText Typo="Typo.h4" Color="Color.Success">@RegistrationInfo.Statistics.EnabledModules.ToString()</MudText>
                                     </div>
                                     <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Large" />
@@ -40,7 +43,7 @@
                             <MudPaper Class="pa-4 modern-stat-card" Elevation="2">
                                 <div class="d-flex justify-space-between align-center">
                                     <div>
-                                        <MudText Typo="Typo.subtitle1" Color="Color.Warning">禁用模块</MudText>
+                                        <MudText Typo="Typo.subtitle1" Color="Color.Warning">@L["ModuleSystem:ModuleManagement:Labels:DisabledModules"]</MudText>
                                         <MudText Typo="Typo.h4" Color="Color.Warning">@RegistrationInfo.Statistics.DisabledModules.ToString()</MudText>
                                     </div>
                                     <MudIcon Icon="@Icons.Material.Filled.Block" Color="Color.Warning" Size="Size.Large" />
@@ -49,7 +52,7 @@
                             <MudPaper Class="pa-4 modern-stat-card" Elevation="2">
                                 <div class="d-flex justify-space-between align-center">
                                     <div>
-                                        <MudText Typo="Typo.subtitle1" Color="Color.Info">总初始化时间</MudText>
+                                        <MudText Typo="Typo.subtitle1" Color="Color.Info">@L["ModuleSystem:ModuleManagement:Labels:TotalInitTime"]</MudText>
                                         <MudText Typo="Typo.h4" Color="Color.Info">@($"{RegistrationInfo.Statistics.TotalInitializationTimeMs}ms")</MudText>
                                     </div>
                                     <MudIcon Icon="@Icons.Material.Filled.Timer" Color="Color.Info" Size="Size.Large" />
@@ -57,9 +60,9 @@
                             </MudPaper>
                             <!-- 模块分布图表 -->
                             <MudPaper Class="pa-4 modern-stat-card" Elevation="2">
-                                <MudText Typo="Typo.subtitle1" Class="mb-3">模块分布</MudText>
+                                <MudText Typo="Typo.subtitle1" Class="mb-3">@L["ModuleSystem:ModuleManagement:Labels:ModuleDistribution"]</MudText>
                                 <div class="d-flex justify-space-between align-center mb-2">
-                                    <MudText Typo="Typo.body2">启用模块</MudText>
+                                    <MudText Typo="Typo.body2">@L["ModuleSystem:ModuleManagement:Labels:EnabledModules"]</MudText>
                                     <MudText Typo="Typo.body2">@($"{GetPercentage(RegistrationInfo.Statistics.EnabledModules, RegistrationInfo.Statistics.TotalModules):F1}%")</MudText>
                                 </div>
                                 <MudProgressLinear Color="Color.Success" 
@@ -67,7 +70,7 @@
                                                  Class="mb-2" 
                                                  Size="Size.Medium" />
                                 <div class="d-flex justify-space-between align-center mb-2">
-                                    <MudText Typo="Typo.body2">禁用模块</MudText>
+                                    <MudText Typo="Typo.body2">@L["ModuleSystem:ModuleManagement:Labels:DisabledModules"]</MudText>
                                     <MudText Typo="Typo.body2">@($"{GetPercentage(RegistrationInfo.Statistics.DisabledModules, RegistrationInfo.Statistics.TotalModules):F1}%")</MudText>
                                 </div>
                                 <MudProgressLinear Color="Color.Warning" 
@@ -86,16 +89,16 @@
                         <CardHeaderContent>
                             <div class="d-flex align-center">
                                 <MudIcon Icon="@Icons.Material.Filled.ViewModule" Color="Color.Primary" Class="mr-2" />
-                                <MudText Typo="Typo.h6">模块列表</MudText>
+                                <MudText Typo="Typo.h6">@L["ModuleSystem:ModuleManagement:ModuleList"]</MudText>
                             </div>
                         </CardHeaderContent>
                         <CardHeaderActions>
-                            <MudButton Variant="Variant.Filled" 
-                                     Color="Color.Primary" 
+                            <MudButton Variant="Variant.Filled"
+                                     Color="Color.Primary"
                                      Size="Size.Small"
                                      StartIcon="@Icons.Material.Filled.Refresh"
                                      OnClick="OnRefreshClicked">
-                                刷新
+                                @L["ModuleSystem:ModuleManagement:Refresh"]
                             </MudButton>
                         </CardHeaderActions>
                     </MudCardHeader>
@@ -108,18 +111,18 @@
                                    T="ModuleBasicInfo"
                                    Style="min-height: 500px;">
                             <Columns>
-                                <PropertyColumn Property="x => x.ModuleTypeName" Title="模块名称" />
-                                <TemplateColumn Title="状态">
+                                <PropertyColumn Property="x => x.ModuleTypeName" Title="@L["ModuleSystem:ModuleManagement:Labels:ModuleName"]" />
+                                <TemplateColumn Title="@L["ModuleSystem:ModuleManagement:Labels:Status"]">
                                     <CellTemplate>
-                                        <MudChip T="string" Color="@(context.Item.IsDisabled ? Color.Warning : Color.Success)" 
+                                        <MudChip T="string" Color="@(context.Item.IsDisabled ? Color.Warning : Color.Success)"
                                                Size="Size.Small"
                                                Icon="@(context.Item.IsDisabled ? Icons.Material.Filled.Block : Icons.Material.Filled.CheckCircle)">
-                                            @(context.Item.IsDisabled ? "禁用" : "启用")
+                                            @(context.Item.IsDisabled ? L["ModuleSystem:ModuleManagement:States:Disabled"] : L["ModuleSystem:ModuleManagement:States:Enabled"])
                                         </MudChip>
                                     </CellTemplate>
                                 </TemplateColumn>
-                                <PropertyColumn Property="x => x.Order" Title="顺序" />
-                                <TemplateColumn Title="初始化时间">
+                                <PropertyColumn Property="x => x.Order" Title="@L["ModuleSystem:ModuleManagement:Labels:Order"]" />
+                                <TemplateColumn Title="@L["ModuleSystem:ModuleManagement:Labels:InitTime"]">
                                     <CellTemplate>
                                         <div class="d-flex align-center">
                                             <MudText Typo="Typo.body2" Class="mr-2">@($"{context.Item.InitializationTimeMs}ms")</MudText>
@@ -129,7 +132,7 @@
                                         </div>
                                     </CellTemplate>
                                 </TemplateColumn>
-                                <TemplateColumn Title="依赖">
+                                <TemplateColumn Title="@L["ModuleSystem:ModuleManagement:Labels:Dependencies"]">
                                     <CellTemplate>
                                         <MudBadge Content="@context.Item.Dependencies.Count" 
                                                 Color="@(context.Item.Dependencies.Count > 0 ? Color.Info : Color.Default)" 
@@ -139,7 +142,7 @@
                                         </MudBadge>
                                     </CellTemplate>
                                 </TemplateColumn>
-                                <TemplateColumn Title="操作">
+                                <TemplateColumn Title="@L["ModuleSystem:ModuleManagement:Labels:Actions"]">
                                     <CellTemplate>
                                         @if (context.Item.ModuleKey.HasValue)
                                         {
@@ -148,7 +151,7 @@
                                                        Size="Size.Small"
                                                        StartIcon="@Icons.Material.Filled.Info"
                                                        OnClick="@(() => OnModuleDetailClicked.InvokeAsync(context.Item.ModuleKey!.Value))">
-                                                详情
+                                                @L["ModuleSystem:ModuleManagement:Details"]
                                             </MudButton>
                                         }
                                     </CellTemplate>
@@ -168,7 +171,7 @@
                     <MudCardContent Class="pa-4 d-flex align-center justify-center" Style="min-height: 400px;">
                         <div class="text-center">
                             <MudProgressCircular Indeterminate="true" Class="mb-3" />
-                            <MudText Color="Color.Secondary">加载模块统计...</MudText>
+                            <MudText Color="Color.Secondary">@L["ModuleSystem:ModuleManagement:Loading:Statistics"]</MudText>
                         </div>
                     </MudCardContent>
                 </MudCard>
@@ -178,7 +181,7 @@
                     <MudCardContent Class="pa-4 d-flex align-center justify-center" Style="min-height: 400px;">
                         <div class="text-center">
                             <MudProgressCircular Indeterminate="true" Class="mb-3" />
-                            <MudText Color="Color.Secondary">加载模块列表...</MudText>
+                            <MudText Color="Color.Secondary">@L["ModuleSystem:ModuleManagement:Loading:List"]</MudText>
                         </div>
                     </MudCardContent>
                 </MudCard>

@@ -2,8 +2,11 @@
 @using Monica.UI.Modules
 @using Monica.UI.UICore.Interfaces
 @using Monica.UI.UICore.Models
+@using Monica.UI.Localization
+@using Microsoft.Extensions.Localization
 @inject IUIComponentRegistry UIRegistry
 @inject IOptions<ModuleUICoreOption> Options
+@inject IStringLocalizer<SharedResource> L
 
 <nav class="mo-navbar">
     <MoNavBarBrand />
@@ -33,7 +36,7 @@
     {
         var allNavItems = UIRegistry.GetNavItems();
         _categorizedNavItems = allNavItems
-            .GroupBy(item => item.Category ?? "未分类")
+            .GroupBy(item => item.Category ?? L["ModuleSystem:Common:Labels:Uncategorized"])
             .OrderBy(g => g.Key)
             .ToDictionary(g => g.Key, g => g.ToList());
     }

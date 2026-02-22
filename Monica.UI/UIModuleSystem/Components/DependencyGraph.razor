@@ -2,6 +2,9 @@
 @using Monica.Core.Module.Models
 @using MudBlazor
 @using Microsoft.JSInterop
+@using Monica.UI.Localization
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizer<SharedResource> L
 
 <div class="dependency-graph-container">
     @if (DependencyGraphData != null)
@@ -14,7 +17,7 @@
                         <CardHeaderContent>
                             <div class="d-flex align-center">
                                 <MudIcon Icon="@Icons.Material.Filled.AccountTree" Color="Color.Primary" Class="mr-2" />
-                                <MudText Typo="Typo.h6">依赖关系概览</MudText>
+                                <MudText Typo="Typo.h6">@L["ModuleSystem:DependencyGraph:Labels:DependencyOverview"]</MudText>
                             </div>
                         </CardHeaderContent>
                     </MudCardHeader>
@@ -23,7 +26,7 @@
                             <MudPaper Class="pa-4 overview-stat-card" Elevation="2">
                                 <div class="d-flex justify-space-between align-center">
                                     <div>
-                                        <MudText Typo="Typo.subtitle1" Color="Color.Primary">总节点数</MudText>
+                                        <MudText Typo="Typo.subtitle1" Color="Color.Primary">@L["ModuleSystem:DependencyGraph:Labels:TotalNodes"]</MudText>
                                         <MudText Typo="Typo.h5" Color="Color.Primary">@DependencyGraphData.Nodes.Count.ToString()</MudText>
                                     </div>
                                     <MudIcon Icon="@Icons.Material.Filled.Hub" Color="Color.Primary" Size="Size.Large" />
@@ -32,7 +35,7 @@
                             <MudPaper Class="pa-4 overview-stat-card" Elevation="2">
                                 <div class="d-flex justify-space-between align-center">
                                     <div>
-                                        <MudText Typo="Typo.subtitle1" Color="Color.Info">总依赖关系</MudText>
+                                        <MudText Typo="Typo.subtitle1" Color="Color.Info">@L["ModuleSystem:DependencyGraph:Labels:TotalDependencies"]</MudText>
                                         <MudText Typo="Typo.h5" Color="Color.Info">@DependencyGraphData.Edges.Count.ToString()</MudText>
                                     </div>
                                     <MudIcon Icon="@Icons.Material.Filled.Link" Color="Color.Info" Size="Size.Large" />
@@ -41,8 +44,8 @@
                             <MudPaper Class="pa-4 overview-stat-card" Elevation="2">
                                 <div class="d-flex justify-space-between align-center">
                                     <div>
-                                        <MudText Typo="Typo.subtitle1" Color="@(DependencyGraphData.HasCircularDependencies ? Color.Warning : Color.Success)">循环依赖</MudText>
-                                        <MudText Typo="Typo.h5" Color="@(DependencyGraphData.HasCircularDependencies ? Color.Warning : Color.Success)">@(DependencyGraphData.HasCircularDependencies ? "存在" : "无")</MudText>
+                                        <MudText Typo="Typo.subtitle1" Color="@(DependencyGraphData.HasCircularDependencies ? Color.Warning : Color.Success)">@L["ModuleSystem:DependencyGraph:Labels:CircularDependencies"]</MudText>
+                                        <MudText Typo="Typo.h5" Color="@(DependencyGraphData.HasCircularDependencies ? Color.Warning : Color.Success)">@(DependencyGraphData.HasCircularDependencies ? L["ModuleSystem:DependencyGraph:States:Exists"] : L["ModuleSystem:DependencyGraph:States:None"])</MudText>
                                     </div>
                                     @if (DependencyGraphData.HasCircularDependencies)
                                     {
@@ -57,7 +60,7 @@
                             <MudPaper Class="pa-4 overview-stat-card" Elevation="2">
                                 <div class="d-flex justify-space-between align-center">
                                     <div>
-                                        <MudText Typo="Typo.subtitle1" Color="Color.Secondary">依赖层级</MudText>
+                                        <MudText Typo="Typo.subtitle1" Color="Color.Secondary">@L["ModuleSystem:DependencyGraph:Labels:DependencyLayers"]</MudText>
                                         <MudText Typo="Typo.h5" Color="Color.Secondary">@DependencyGraphData.ModuleLayers.Count.ToString()</MudText>
                                     </div>
                                     <MudIcon Icon="@Icons.Material.Filled.Layers" Color="Color.Secondary" Size="Size.Large" />
@@ -75,56 +78,56 @@
                         <CardHeaderContent>
                             <div class="d-flex align-center">
                                 <MudIcon Icon="@Icons.Material.Filled.Settings" Color="Color.Primary" Class="mr-2" />
-                                <MudText Typo="Typo.h6">图表控制</MudText>
+                                <MudText Typo="Typo.h6">@L["ModuleSystem:DependencyGraph:Labels:GraphControls"]</MudText>
                             </div>
                         </CardHeaderContent>
                     </MudCardHeader>
                     <MudCardContent Class="pa-4">
                         <MudGrid Spacing="4">
                             <MudItem xs="12" md="6">
-                                <MudSelect T="string" Value="selectedLayout" Label="布局算法" 
+                                <MudSelect T="string" Value="selectedLayout" Label="@L["ModuleSystem:DependencyGraph:Labels:LayoutAlgorithm"]"
                                          ValueChanged="OnLayoutChanged" Variant="Variant.Outlined"
                                          AnchorOrigin="Origin.BottomCenter">
                                     <MudSelectItem Value="@("force")">
                                         <div class="d-flex align-center">
                                             <MudIcon Icon="@Icons.Material.Filled.ScatterPlot" Class="mr-2" />
-                                            力导向布局
+                                            @L["ModuleSystem:DependencyGraph:Layouts:Force"]
                                         </div>
                                     </MudSelectItem>
                                     <MudSelectItem Value="@("hierarchical")">
                                         <div class="d-flex align-center">
                                             <MudIcon Icon="@Icons.Material.Filled.AccountTree" Class="mr-2" />
-                                            层次布局
+                                            @L["ModuleSystem:DependencyGraph:Layouts:Hierarchical"]
                                         </div>
                                     </MudSelectItem>
                                     <MudSelectItem Value="@("circular")">
                                         <div class="d-flex align-center">
                                             <MudIcon Icon="@Icons.Material.Filled.Circle" Class="mr-2" />
-                                            环形布局
+                                            @L["ModuleSystem:DependencyGraph:Layouts:Circular"]
                                         </div>
                                     </MudSelectItem>
                                 </MudSelect>
                             </MudItem>
                             <MudItem xs="12" md="6">
-                                <MudSelect T="string" Value="selectedFilter" Label="过滤器" 
+                                <MudSelect T="string" Value="selectedFilter" Label="@L["ModuleSystem:DependencyGraph:Labels:Filter"]"
                                          ValueChanged="OnFilterChanged" Variant="Variant.Outlined"
                                          AnchorOrigin="Origin.BottomCenter">
                                     <MudSelectItem Value="@("all")">
                                         <div class="d-flex align-center">
                                             <MudIcon Icon="@Icons.Material.Filled.Visibility" Class="mr-2" />
-                                            显示全部
+                                            @L["ModuleSystem:DependencyGraph:Filters:ShowAll"]
                                         </div>
                                     </MudSelectItem>
                                     <MudSelectItem Value="@("direct")">
                                         <div class="d-flex align-center">
                                             <MudIcon Icon="@Icons.Material.Filled.DirectionsRun" Class="mr-2" />
-                                            仅直接依赖
+                                            @L["ModuleSystem:DependencyGraph:Filters:DirectOnly"]
                                         </div>
                                     </MudSelectItem>
                                     <MudSelectItem Value="@("cycle")">
                                         <div class="d-flex align-center">
                                             <MudIcon Icon="@Icons.Material.Filled.Warning" Class="mr-2" />
-                                            仅循环依赖
+                                            @L["ModuleSystem:DependencyGraph:Filters:CycleOnly"]
                                         </div>
                                     </MudSelectItem>
                                 </MudSelect>
@@ -132,23 +135,23 @@
                         </MudGrid>
                         <MudDivider Class="my-4" />
                         <MudStack Row="true" Spacing="2" Justify="Justify.Center">
-                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" 
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary"
                                      Size="Size.Small"
-                                     StartIcon="@Icons.Material.Filled.ZoomIn" 
+                                     StartIcon="@Icons.Material.Filled.ZoomIn"
                                      OnClick="ZoomIn">
-                                放大
+                                @L["ModuleSystem:DependencyGraph:Labels:ZoomIn"]
                             </MudButton>
-                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" 
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary"
                                      Size="Size.Small"
-                                     StartIcon="@Icons.Material.Filled.ZoomOut" 
+                                     StartIcon="@Icons.Material.Filled.ZoomOut"
                                      OnClick="ZoomOut">
-                                缩小
+                                @L["ModuleSystem:DependencyGraph:Labels:ZoomOut"]
                             </MudButton>
-                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" 
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary"
                                      Size="Size.Small"
-                                     StartIcon="@Icons.Material.Filled.CenterFocusStrong" 
+                                     StartIcon="@Icons.Material.Filled.CenterFocusStrong"
                                      OnClick="ResetZoom">
-                                重置视图
+                                @L["ModuleSystem:DependencyGraph:Labels:ResetView"]
                             </MudButton>
                         </MudStack>
                     </MudCardContent>
@@ -162,16 +165,16 @@
                         <CardHeaderContent>
                             <div class="d-flex align-center">
                                 <MudIcon Icon="@Icons.Material.Filled.DeviceHub" Color="Color.Primary" Class="mr-2" />
-                                <MudText Typo="Typo.h6">依赖关系图</MudText>
+                                <MudText Typo="Typo.h6">@L["ModuleSystem:DependencyGraph:Labels:DependencyGraph"]</MudText>
                             </div>
                         </CardHeaderContent>
                         <CardHeaderActions>
-                            <MudButton Variant="Variant.Filled" 
-                                     Color="Color.Primary" 
+                            <MudButton Variant="Variant.Filled"
+                                     Color="Color.Primary"
                                      Size="Size.Small"
                                      StartIcon="@Icons.Material.Filled.Download"
                                      OnClick="ExportGraph">
-                                导出图片
+                                @L["ModuleSystem:DependencyGraph:Labels:ExportImage"]
                             </MudButton>
                         </CardHeaderActions>
                     </MudCardHeader>
@@ -193,44 +196,44 @@
                         <CardHeaderContent>
                             <div class="d-flex align-center">
                                 <MudIcon Icon="@Icons.Material.Filled.Image" Color="Color.Info" Class="mr-2" />
-                                <MudText Typo="Typo.h6">图例</MudText>
+                                <MudText Typo="Typo.h6">@L["ModuleSystem:DependencyGraph:Labels:Legend"]</MudText>
                             </div>
                         </CardHeaderContent>
                     </MudCardHeader>
                     <MudCardContent Class="pa-4">
                         <MudStack Spacing="4">
                             <div>
-                                <MudText Typo="Typo.subtitle1" Class="mb-3">节点类型</MudText>
+                                <MudText Typo="Typo.subtitle1" Class="mb-3">@L["ModuleSystem:DependencyGraph:Labels:NodeTypes"]</MudText>
                                 <MudStack Spacing="2">
                                     <div class="d-flex align-center">
                                         <div class="legend-circle" style="background-color: #64B5F6; width: 24px; height: 24px; border-radius: 50%; margin-right: 12px;"></div>
-                                        <MudText Typo="Typo.body2">启用模块</MudText>
+                                        <MudText Typo="Typo.body2">@L["ModuleSystem:DependencyGraph:Labels:EnabledModule"]</MudText>
                                     </div>
                                     <div class="d-flex align-center">
                                         <div class="legend-circle" style="background-color: #FFB74D; width: 24px; height: 24px; border-radius: 50%; margin-right: 12px;"></div>
-                                        <MudText Typo="Typo.body2">禁用模块</MudText>
+                                        <MudText Typo="Typo.body2">@L["ModuleSystem:DependencyGraph:Labels:DisabledModule"]</MudText>
                                     </div>
                                     <div class="d-flex align-center">
                                         <div class="legend-circle" style="background-color: #E57373; width: 24px; height: 24px; border-radius: 50%; margin-right: 12px;"></div>
-                                        <MudText Typo="Typo.body2">循环依赖模块</MudText>
+                                        <MudText Typo="Typo.body2">@L["ModuleSystem:DependencyGraph:Labels:CircularDependencyModule"]</MudText>
                                     </div>
                                 </MudStack>
                             </div>
                             <MudDivider />
                             <div>
-                                <MudText Typo="Typo.subtitle1" Class="mb-3">连线类型</MudText>
+                                <MudText Typo="Typo.subtitle1" Class="mb-3">@L["ModuleSystem:DependencyGraph:Labels:EdgeTypes"]</MudText>
                                 <MudStack Spacing="2">
                                     <div class="d-flex align-center">
                                         <div class="legend-line" style="background-color: #81C784; width: 30px; height: 3px; margin-right: 12px;"></div>
-                                        <MudText Typo="Typo.body2">直接依赖</MudText>
+                                        <MudText Typo="Typo.body2">@L["ModuleSystem:DependencyGraph:Labels:DirectDependency"]</MudText>
                                     </div>
                                     <div class="d-flex align-center">
                                         <div class="legend-line" style="background-color: #BA68C8; width: 30px; height: 3px; margin-right: 12px; border-top: 2px dashed #BA68C8; background: none;"></div>
-                                        <MudText Typo="Typo.body2">传递依赖</MudText>
+                                        <MudText Typo="Typo.body2">@L["ModuleSystem:DependencyGraph:Labels:TransitiveDependency"]</MudText>
                                     </div>
                                     <div class="d-flex align-center">
                                         <div class="legend-line" style="background-color: #FF8A65; width: 30px; height: 3px; margin-right: 12px;"></div>
-                                        <MudText Typo="Typo.body2">循环依赖</MudText>
+                                        <MudText Typo="Typo.body2">@L["ModuleSystem:DependencyGraph:Labels:CircularDependency"]</MudText>
                                     </div>
                                 </MudStack>
                             </div>
@@ -246,7 +249,7 @@
                         <CardHeaderContent>
                             <div class="d-flex align-center">
                                 <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Secondary" Class="mr-2" />
-                                <MudText Typo="Typo.h6">节点详情</MudText>
+                                <MudText Typo="Typo.h6">@L["ModuleSystem:DependencyGraph:Labels:NodeDetails"]</MudText>
                             </div>
                         </CardHeaderContent>
                     </MudCardHeader>
@@ -256,7 +259,7 @@
                                 <div class="text-center">
                                     <MudIcon Icon="@Icons.Material.Filled.TouchApp" Size="Size.Large" Color="Color.Secondary" Class="mb-3" />
                                     <MudText Typo="Typo.body1" Color="Color.Secondary">
-                                        鼠标悬停在节点上查看详情
+                                        @L["ModuleSystem:DependencyGraph:Messages:HoverToViewDetails"]
                                     </MudText>
                                 </div>
                             </div>
@@ -438,12 +441,12 @@
     /// <returns>加载文本</returns>
     private string GetLoadingText(int index) => index switch
     {
-        0 => "加载依赖关系概览...",
-        1 => "加载图表控制...",
-        2 => "加载依赖关系图...",
-        3 => "加载图例...",
-        4 => "加载节点详情...",
-        _ => "加载中..."
+        0 => L["ModuleSystem:DependencyGraph:Loading:DependencyOverview"],
+        1 => L["ModuleSystem:DependencyGraph:Loading:GraphControls"],
+        2 => L["ModuleSystem:DependencyGraph:Loading:DependencyGraph"],
+        3 => L["ModuleSystem:DependencyGraph:Loading:Legend"],
+        4 => L["ModuleSystem:DependencyGraph:Loading:NodeDetails"],
+        _ => L["ModuleSystem:DependencyGraph:Loading:Default"]
     };
 
     /// <summary>

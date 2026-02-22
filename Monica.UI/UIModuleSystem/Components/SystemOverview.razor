@@ -1,6 +1,9 @@
 @using Monica.Core.Module.Dashboard.Models
 @using Monica.Core.Module.Models
 @using MudBlazor
+@using Monica.UI.Localization
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizer<SharedResource> L
 
 <div class="system-overview-container">
     @if (SystemStatus != null)
@@ -11,11 +14,11 @@
                 <MudCard Class="status-card modern-card">
                     <MudCardContent Class="pa-4">
                         <div class="card-header d-flex align-center mb-4">
-                            <MudIcon Icon="@GetStatusIcon(SystemStatus.State)" 
-                                   Color="@GetStatusColor(SystemStatus.State)" 
-                                   Size="Size.Large" 
+                            <MudIcon Icon="@GetStatusIcon(SystemStatus.State)"
+                                   Color="@GetStatusColor(SystemStatus.State)"
+                                   Size="Size.Large"
                                    Class="mr-3" />
-                            <MudText Typo="Typo.h6">系统状态</MudText>
+                            <MudText Typo="Typo.h6">@L["ModuleSystem:SystemOverview:Labels:SystemStatus"]</MudText>
                         </div>
                         <div class="card-content">
                             <MudText Typo="Typo.h4" Class="mb-3" Color="@GetStatusColor(SystemStatus.State)">
@@ -26,7 +29,7 @@
                                              Class="mb-2" 
                                              Size="Size.Medium" />
                             <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                @(SystemStatus.IsInitialized ? "系统已完成初始化" : "系统正在初始化...")
+                                @(SystemStatus.IsInitialized ? L["ModuleSystem:SystemOverview:Messages:SystemInitialized"] : L["ModuleSystem:SystemOverview:Messages:SystemInitializing"])
                             </MudText>
                         </div>
                     </MudCardContent>
@@ -38,11 +41,11 @@
                 <MudCard Class="stats-card modern-card">
                     <MudCardContent Class="pa-4">
                         <div class="card-header d-flex align-center mb-4">
-                            <MudIcon Icon="@Icons.Material.Filled.Apps" 
-                                   Color="Color.Primary" 
-                                   Size="Size.Large" 
+                            <MudIcon Icon="@Icons.Material.Filled.Apps"
+                                   Color="Color.Primary"
+                                   Size="Size.Large"
                                    Class="mr-3" />
-                            <MudText Typo="Typo.h6">模块统计</MudText>
+                            <MudText Typo="Typo.h6">@L["ModuleSystem:SystemOverview:Labels:ModuleStatistics"]</MudText>
                         </div>
                         <div class="card-content">
                             <MudText Typo="Typo.h4" Color="Color.Primary" Class="mb-3">
@@ -59,7 +62,7 @@
                                 </MudChip>
                             </MudStack>
                             <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                总模块数量
+                                @L["ModuleSystem:SystemOverview:Labels:TotalModules"]
                             </MudText>
                         </div>
                     </MudCardContent>
@@ -71,18 +74,18 @@
                 <MudCard Class="performance-card modern-card">
                     <MudCardContent Class="pa-4">
                         <div class="card-header d-flex align-center mb-4">
-                            <MudIcon Icon="@Icons.Material.Filled.Timer" 
-                                   Color="Color.Warning" 
-                                   Size="Size.Large" 
+                            <MudIcon Icon="@Icons.Material.Filled.Timer"
+                                   Color="Color.Warning"
+                                   Size="Size.Large"
                                    Class="mr-3" />
-                            <MudText Typo="Typo.h6">初始化时间</MudText>
+                            <MudText Typo="Typo.h6">@L["ModuleSystem:SystemOverview:Labels:InitializationTime"]</MudText>
                         </div>
                         <div class="card-content">
                             <MudText Typo="Typo.h4" Color="Color.Warning" Class="mb-3">
                                 @(SystemStatus.TotalInitializationTimeMs)ms
                             </MudText>
                             <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
-                                启动时间: @(SystemStatus.StartTime?.ToString("HH:mm:ss") ?? "未知")
+                                @L["ModuleSystem:SystemOverview:Labels:StartTime"]: @(SystemStatus.StartTime?.ToString("HH:mm:ss") ?? L["ModuleSystem:SystemOverview:Labels:Unknown"])
                             </MudText>
                             <MudProgressLinear Color="Color.Warning" 
                                              Value="@GetInitTimeProgress(SystemStatus.TotalInitializationTimeMs)" 
@@ -101,11 +104,11 @@
                 <MudCard Class="health-card modern-card">
                     <MudCardContent Class="pa-4">
                         <div class="card-header d-flex align-center mb-4">
-                            <MudIcon Icon="@GetHealthIcon()" 
-                                   Color="@GetHealthColor()" 
-                                   Size="Size.Large" 
+                            <MudIcon Icon="@GetHealthIcon()"
+                                   Color="@GetHealthColor()"
+                                   Size="Size.Large"
                                    Class="mr-3" />
-                            <MudText Typo="Typo.h6">健康状态</MudText>
+                            <MudText Typo="Typo.h6">@L["ModuleSystem:SystemOverview:Labels:HealthStatus"]</MudText>
                         </div>
                         <div class="card-content">
                             <MudText Typo="Typo.h4" Color="@GetHealthColor()" Class="mb-3">
@@ -116,20 +119,20 @@
                                 {
                                     <MudChip T="string" Color="Color.Error" Size="Size.Small" Class="mb-1">
                                         <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Class="mr-1" />
-                                        存在问题
+                                        @L["ModuleSystem:SystemOverview:Messages:HasIssues"]
                                     </MudChip>
                                 }
                                 else
                                 {
                                     <MudChip T="string" Color="Color.Success" Size="Size.Small" Class="mb-1">
                                         <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-1" />
-                                        运行正常
+                                        @L["ModuleSystem:SystemOverview:Messages:RunningNormally"]
                                     </MudChip>
                                 }
                             </div>
                             <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                @(SystemStatus.HasRegistrationErrors ? "检测到注册错误" : 
-                                  SystemStatus.HasCircularDependencies ? "检测到循环依赖" : "系统健康运行")
+                                @(SystemStatus.HasRegistrationErrors ? L["ModuleSystem:SystemOverview:Messages:RegistrationErrors"] :
+                                  SystemStatus.HasCircularDependencies ? L["ModuleSystem:SystemOverview:Messages:CircularDependencies"] : L["ModuleSystem:SystemOverview:Messages:SystemHealthy"])
                             </MudText>
                         </div>
                     </MudCardContent>
@@ -147,7 +150,7 @@
                         <MudCardContent Class="pa-4 d-flex align-center justify-center" Style="min-height: 200px;">
                             <div class="text-center">
                                 <MudProgressCircular Indeterminate="true" Class="mb-3" />
-                                <MudText Color="Color.Secondary">加载中...</MudText>
+                                <MudText Color="Color.Secondary">@L["ModuleSystem:SystemOverview:Labels:Loading"]</MudText>
                             </div>
                         </MudCardContent>
                     </MudCard>
@@ -198,11 +201,11 @@
     /// <returns>状态文本</returns>
     private string GetStatusText(ModuleSystemState state) => state switch
     {
-        ModuleSystemState.NotInitialized => "未初始化",
-        ModuleSystemState.Initializing => "初始化中",
-        ModuleSystemState.Initialized => "已初始化",
-        ModuleSystemState.Failed => "初始化失败",
-        _ => "未知状态"
+        ModuleSystemState.NotInitialized => L["ModuleSystem:SystemOverview:States:NotInitialized"],
+        ModuleSystemState.Initializing => L["ModuleSystem:SystemOverview:States:Initializing"],
+        ModuleSystemState.Initialized => L["ModuleSystem:SystemOverview:States:Initialized"],
+        ModuleSystemState.Failed => L["ModuleSystem:SystemOverview:States:Failed"],
+        _ => L["ModuleSystem:SystemOverview:States:Unknown"]
     };
 
     /// <summary>
@@ -226,8 +229,8 @@
     /// </summary>
     /// <returns>健康状态文本</returns>
     private string GetHealthText() => SystemStatus?.HasRegistrationErrors == true || SystemStatus?.HasCircularDependencies == true
-        ? "存在问题"
-        : "健康";
+        ? L["ModuleSystem:SystemOverview:Messages:HasIssues"]
+        : L["ModuleSystem:SystemOverview:Messages:Healthy"];
 
     /// <summary>
     /// 获取初始化时间进度
@@ -247,8 +250,8 @@
     /// <returns>描述文本</returns>
     private string GetInitTimeDescription(long totalTimeMs)
     {
-        if (totalTimeMs == 0) return "系统正在启动...";
-        if (SystemStatus?.IsInitialized == true) return "系统已完成初始化";
-        return $"系统已运行 {totalTimeMs}ms";
+        if (totalTimeMs == 0) return L["ModuleSystem:SystemOverview:Messages:SystemStarting"];
+        if (SystemStatus?.IsInitialized == true) return L["ModuleSystem:SystemOverview:Messages:SystemInitialized"];
+        return string.Format(L["ModuleSystem:SystemOverview:Messages:SystemRunning"], totalTimeMs);
     }
 } 

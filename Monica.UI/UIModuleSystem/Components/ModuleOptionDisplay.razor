@@ -1,13 +1,16 @@
 @using System.Reflection
 @using Monica.Tool.General
 @using MudBlazor
+@using Monica.UI.Localization
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizer<SharedResource> L
 
 <div class="module-option-display">
     @if (OptionType == null || OptionInstance == null)
     {
         <div class="alert-wrapper">
             <MudAlert Severity="Severity.Info" Class="mb-4">
-                <MudText>此模块没有可配置的选项</MudText>
+                <MudText>@L["ModuleSystem:ModuleOption:Messages:NoConfigurableOptions"]</MudText>
             </MudAlert>
         </div>
     }
@@ -53,7 +56,7 @@
         {
             <div class="alert-wrapper">
                 <MudAlert Severity="Severity.Info" Class="mt-4">
-                    <MudText>此模块选项类型没有可显示的属性</MudText>
+                    <MudText>@L["ModuleSystem:ModuleOption:Messages:NoDisplayableProperties"]</MudText>
                 </MudAlert>
             </div>
         }
@@ -75,7 +78,7 @@
             </MudPaper>
         </DialogContent>
         <DialogActions>
-            <MudButton Color="Color.Primary" OnClick="CloseJsonDialog">关闭</MudButton>
+            <MudButton Color="Color.Primary" OnClick="CloseJsonDialog">@L["ModuleSystem:ModuleOption:Labels:Close"]</MudButton>
         </DialogActions>
     </MudDialog>
 </div>
@@ -249,7 +252,7 @@
             builder.AddAttribute(4, "Variant", Variant.Outlined);
             builder.AddAttribute(5, "OnClick", EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.MouseEventArgs>(this, () => ShowJsonDetail(property)));
             builder.AddAttribute(6, "Class", "clickable-chip");
-            builder.AddAttribute(7, "ChildContent", (RenderFragment)(b => b.AddContent(0, $"[{count} items] 点击查看")));
+            builder.AddAttribute(7, "ChildContent", (RenderFragment)(b => b.AddContent(0, string.Format(L["ModuleSystem:ModuleOption:Messages:ItemsClickToView"], count))));
             builder.CloseComponent();
             return;
         }
@@ -264,7 +267,7 @@
             builder.AddAttribute(4, "Variant", Variant.Outlined);
             builder.AddAttribute(5, "OnClick", EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.MouseEventArgs>(this, () => ShowJsonDetail(property)));
             builder.AddAttribute(6, "Class", "clickable-chip");
-            builder.AddAttribute(7, "ChildContent", (RenderFragment)(b => b.AddContent(0, "(object) 点击查看")));
+            builder.AddAttribute(7, "ChildContent", (RenderFragment)(b => b.AddContent(0, L["ModuleSystem:ModuleOption:Messages:ObjectClickToView"])));
             builder.CloseComponent();
             return;
         }
