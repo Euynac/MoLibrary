@@ -1,0 +1,557 @@
+{
+  "Common": {
+    "Actions": {
+      "Search": "Search",
+      "Reset": "Reset",
+      "Cancel": "Cancel",
+      "Confirm": "Confirm",
+      "Save": "Save",
+      "Close": "Close",
+      "Refresh": "Refresh",
+      "Apply": "Apply",
+      "Execute": "Execute",
+      "Retry": "Retry",
+      "ViewAll": "View All",
+      "ViewDetails": "View Details",
+      "Edit": "Edit",
+      "Back": "Back to List",
+      "ClearSelection": "Clear Selection"
+    },
+    "Status": {
+      "Loading": "Loading...",
+      "Saving": "Saving...",
+      "Executing": "Executing...",
+      "Refreshing": "Refreshing...",
+      "Processing": "Processing...",
+      "Syncing": "Syncing..."
+    },
+    "Messages": {
+      "LoadFailed": "Load Failed",
+      "SaveFailed": "Save Failed",
+      "ExecuteFailed": "Execute Failed",
+      "OperationSuccess": "Operation Successful",
+      "NoData": "No Data",
+      "NoRecords": "No Matching Records Found",
+      "AndMore": "{0} more"
+    },
+    "Time": {
+      "JustNow": "Just Now",
+      "SecondsAgo": "{0} seconds ago",
+      "MinutesAgo": "{0} minutes ago",
+      "Yesterday": "Yesterday",
+      "Days": "days",
+      "Hours": "hours",
+      "Minutes": "minutes",
+      "Seconds": "seconds",
+      "Milliseconds": "milliseconds"
+    }
+  },
+  "JobStates": {
+    "Succeeded": "Succeeded",
+    "Failed": "Failed",
+    "Terminated": "Terminated",
+    "Processing": "Processing",
+    "Enqueued": "Enqueued",
+    "Scheduled": "Scheduled",
+    "Skipped": "Skipped",
+    "Cancelled": "Cancelled"
+  },
+  "Dashboard": {
+    "Title": "Job Scheduler - Dashboard",
+    "SystemHealth": {
+      "Title": "System Health",
+      "Healthy": "System Running Normally",
+      "Degraded": "System Partially Degraded",
+      "Unhealthy": "System Unhealthy",
+      "Unknown": "Unknown Status"
+    },
+    "Metrics": {
+      "TotalJobs": "Total Jobs",
+      "TotalJobsLabel": "Total Jobs",
+      "RecurringJobs": "Recurring Jobs",
+      "RecurringJobsShort": "Recurring",
+      "TriggeredJobs": "Triggered Jobs",
+      "TriggeredJobsShort": "Triggered",
+      "DisabledJobs": "Disabled",
+      "RunningNow": "Running Now",
+      "RunningNowLabel": "Running Now",
+      "SuccessRate": "Success Rate",
+      "SuccessRateLabel": "Success Rate",
+      "ThroughputPerHour": "Throughput/Hour",
+      "ThroughputLabel": "Throughput",
+      "ThroughputUnit": "Executions per hour",
+      "TimeWindow": "Time Window"
+    },
+    "StateDistribution": {
+      "Title": "State Distribution",
+      "NoData": "No execution data"
+    },
+    "ProblemJobs": {
+      "Title": "Needs Attention",
+      "NoProblems": "No Problem Jobs",
+      "AllHealthy": "All Jobs Running Normally",
+      "HighFailureRate": "High Failure Rate",
+      "ConsecutiveFailures": "Consecutive Failures",
+      "ConsecutiveFailuresDetail": "{0} consecutive failures",
+      "LongRunning": "Long Running",
+      "LongRunningDetail": "Running for {0} ({1}% timeout)",
+      "HighSkipRate": "High Skip Rate",
+      "HighSkipRateDetail": "Skip rate {0}% (Max concurrency: {1})",
+      "FrequentRetries": "Frequent Retries"
+    },
+    "RecentActivity": {
+      "Title": "Recent Activity",
+      "NoActivity": "No Activity Records",
+      "AllQuiet": "System Running Smoothly",
+      "Yesterday": "Yesterday"
+    },
+    "AutoRefresh": {
+      "Enabled": "Auto-refresh enabled (every {0} seconds)"
+    },
+    "TimeRange": {
+      "LastHours": "Last {0} hours",
+      "LastDays": "Last {0} days",
+      "Last30Days": "Last 30 days"
+    }
+  },
+  "JobDefinitions": {
+    "Title": "Job Definitions",
+    "Filters": {
+      "SourceProject": "Source Project",
+      "JobKey": "Job Key",
+      "JobName": "Job Name"
+    },
+    "Tabs": {
+      "RecurringJob": "Recurring Jobs",
+      "TriggerJob": "Triggered Jobs"
+    },
+    "Columns": {
+      "SourceProject": "Source Project",
+      "JobKey": "Job Key",
+      "JobName": "Job Name",
+      "CronExpression": "Cron Expression",
+      "NextExecutionTime": "Next Execution",
+      "LastExecutionTime": "Last Execution",
+      "Status": "Status",
+      "Actions": "Actions"
+    },
+    "Actions": {
+      "Pause": "Pause",
+      "Resume": "Resume",
+      "Execute": "Execute",
+      "ViewDetails": "Details",
+      "BatchPause": "Batch Pause",
+      "BatchResume": "Batch Resume"
+    },
+    "Status": {
+      "Enabled": "Enabled",
+      "Disabled": "Disabled"
+    },
+    "BatchOperation": {
+      "Selected": "{0} jobs selected",
+      "ConfirmTitle": "Confirm Batch Operation",
+      "ResultTitle": "Batch Operation Result",
+      "Success": "Batch operation successful: {0} jobs updated",
+      "PartialSuccess": "Batch operation completed: {0} succeeded, {1} failed",
+      "AllFailed": "Batch operation failed: All operations failed"
+    },
+    "Messages": {
+      "NoRecurringJobs": "No matching recurring jobs found",
+      "NoTriggerJobs": "No matching triggered jobs found",
+      "PauseSuccess": "Job {0} paused",
+      "PauseFailed": "Pause failed",
+      "ResumeSuccess": "Job {0} resumed",
+      "ResumeFailed": "Resume failed"
+    }
+  },
+  "JobInstances": {
+    "Title": "Job Instances",
+    "Filters": {
+      "JobKey": "Job Key",
+      "InstanceId": "Instance ID",
+      "State": "State",
+      "TimeRange": "Time Range",
+      "StartTime": "Start Time",
+      "EndTime": "End Time",
+      "AllStates": "All",
+      "Custom": "Custom",
+      "LastHour": "Last Hour",
+      "Last24Hours": "Last 24 Hours",
+      "Last7Days": "Last 7 Days",
+      "Last30Days": "Last 30 Days"
+    },
+    "Columns": {
+      "InstanceId": "Instance ID",
+      "JobKey": "Job Key",
+      "State": "State",
+      "CreatedTime": "Created Time",
+      "StartTime": "Start Time",
+      "EndTime": "End Time",
+      "Duration": "Duration",
+      "Actions": "Actions"
+    },
+    "Actions": {
+      "ViewDetails": "Details",
+      "CleanupHistory": "Cleanup History"
+    },
+    "Messages": {
+      "NoInstances": "No matching job instances found",
+      "Running": "Running",
+      "LoadFailed": "Load failed",
+      "CleanupConfirm": "Are you sure you want to cleanup history? This will delete old job instance records according to retention policy.",
+      "CleanupConfirmTitle": "Confirm Cleanup",
+      "CleanupSuccess": "Cleaned up {0} history records in {1} seconds",
+      "CleanupNoRecords": "No history records to cleanup",
+      "CleanupFailed": "Cleanup failed"
+    },
+    "TableHeader": {
+      "InstanceList": "Instance List"
+    }
+  },
+  "JobDetail": {
+    "BasicInfo": {
+      "Title": "Basic Information",
+      "JobKey": "Job Key",
+      "SourceProject": "Source Project",
+      "JobType": "Job Type",
+      "Status": "Status",
+      "CronExpression": "Cron Expression",
+      "Description": "Description"
+    },
+    "Actions": {
+      "Enable": "Enable",
+      "Disable": "Disable",
+      "ExecuteNow": "Execute Now",
+      "Execute": "Execute"
+    },
+    "RunningInstances": {
+      "Title": "Running Instances",
+      "ViewAll": "View All Instances",
+      "NoRunning": "No running instances",
+      "Columns": {
+        "InstanceId": "Instance ID",
+        "State": "State",
+        "CreatedTime": "Created Time",
+        "StartTime": "Start Time",
+        "Duration": "Duration",
+        "Actions": "Actions"
+      }
+    },
+    "Configuration": {
+      "Title": "Job Configuration",
+      "MaxConcurrency": "Max Concurrency",
+      "MaxConcurrencyTooltip": "Number of concurrent executions for the same job key. Default is `1`. If exceeded, new execution requests will be `Skipped`",
+      "RetryCount": "Retry Count",
+      "RetryCountTooltip": "Default is `0`. Job will automatically retry immediately after exception, affected by max concurrency limit.",
+      "MaxExecutionTimeout": "Max Execution Timeout",
+      "MaxExecutionTimeoutTooltip": "When job exceeds this time without returning result, it's considered timeout failure. Worker will set `CancellationToken` to cancelled state to attempt termination (if job doesn't use cancellation token mechanism, the thread will remain occupied as .NET cannot force kill background processes). Default is `1 hour`.",
+      "MaxRetainedHistoryRecords": "Max Retained History Records",
+      "MaxRetainedHistoryRecordsTooltip": "Maximum number of historical execution records to retain. When exceeded, oldest records will be automatically cleaned. Set to 0 or negative for unlimited.",
+      "MaxRetentionDays": "Max Retention Days",
+      "MaxRetentionDaysTooltip": "Maximum days to retain historical execution records. Records older than this will be automatically cleaned. Not set means time-based cleanup is disabled.",
+      "StartTime": "Start Time",
+      "EndTime": "End Time",
+      "Unlimited": "Unlimited",
+      "NotSet": "Not Set",
+      "Days": "days"
+    },
+    "Messages": {
+      "LoadFailed": "Load failed",
+      "LoadRunningInstancesFailed": "Failed to load running instances",
+      "DisableSuccess": "Job disabled",
+      "DisableFailed": "Disable failed",
+      "EnableSuccess": "Job enabled",
+      "EnableFailed": "Enable failed",
+      "GetDefinitionFailed": "Failed to get job definition",
+      "DefinitionNotFound": "Job definition not found"
+    }
+  },
+  "Monitor": {
+    "Title": "Job Scheduler - Real-time Monitor",
+    "LiveExecution": {
+      "Title": "Live Execution",
+      "ActiveCount": "{0} active",
+      "Columns": {
+        "Job": "Job",
+        "State": "State",
+        "ElapsedTime": "Elapsed",
+        "TimeoutProgress": "Timeout Progress",
+        "Actions": "Actions"
+      },
+      "Actions": {
+        "ViewDetails": "View Details",
+        "Cancel": "Cancel Execution"
+      },
+      "Messages": {
+        "NoExecutions": "No jobs currently executing",
+        "AllCompleted": "All jobs completed or waiting for schedule",
+        "Waiting": "Waiting...",
+        "CancelSuccess": "Job cancellation requested",
+        "CancelFailed": "Cancel failed"
+      }
+    },
+    "QueueStatus": {
+      "Title": "Queue Status",
+      "Processing": "Processing",
+      "Enqueued": "Enqueued",
+      "Scheduled": "Scheduled",
+      "ActiveTotal": "Active Total"
+    },
+    "ConcurrencyUtilization": {
+      "Title": "Concurrency Status",
+      "Reconcile": "Reconcile",
+      "Syncing": "Syncing...",
+      "ReconcileTooltip": "Display in-memory concurrency slot status",
+      "ReconcileSuccess": "Reconcile completed (duration: {0}ms, deviation: {1} -> {2})",
+      "ReconcileFailed": "Reconcile failed",
+      "NoJobs": "No active jobs",
+      "AllIdle": "All jobs are idle",
+      "Deviation": "Deviation",
+      "DeviationTooltip": "Difference between counter and actual state",
+      "InconsistentState": "Inconsistent state (deviation: {0})",
+      "ShowDetails": "Details",
+      "HideDetails": "Hide",
+      "RunningDeviation": "Running: {0}",
+      "PendingDeviation": "Pending: {0}",
+      "AtCapacity": "Full",
+      "Running": "Running ({0})",
+      "Pending": "Pending ({0})",
+      "InstanceId": "Instance ID",
+      "Worker": "Worker",
+      "ElapsedTime": "Elapsed",
+      "WaitingTime": "Waiting Time"
+    },
+    "AutoRefresh": {
+      "Enable": "Auto-refresh",
+      "Interval": "Refresh Interval",
+      "LastRefresh": "Last Refresh",
+      "ManualRefresh": "Refresh",
+      "Refreshing": "Refreshing...",
+      "Intervals": {
+        "ThreeSeconds": "3 seconds",
+        "FiveSeconds": "5 seconds",
+        "TenSeconds": "10 seconds",
+        "ThirtySeconds": "30 seconds"
+      }
+    },
+    "Messages": {
+      "LoadFailed": "Failed to load data",
+      "RefreshFailed": "Refresh failed"
+    }
+  },
+  "Statistics": {
+    "Title": "Job Scheduler - Statistics",
+    "TimeRange": {
+      "Today": "Today",
+      "Last24Hours": "24 Hours",
+      "Last7Days": "7 Days",
+      "Last30Days": "30 Days",
+      "Custom": "Custom",
+      "Label": "Time Range"
+    },
+    "ExecutionTrend": {
+      "Title": "Execution Trend",
+      "Legend": {
+        "Success": "Success",
+        "Failed": "Failed",
+        "Skipped": "Skipped"
+      },
+      "Summary": {
+        "TotalExecutions": "Total Executions",
+        "Success": "Success",
+        "Failed": "Failed",
+        "Skipped": "Skipped"
+      },
+      "NoData": "No trend data"
+    },
+    "DurationPercentiles": {
+      "Title": "Execution Duration Distribution",
+      "Sample": "Sample",
+      "P50": "P50",
+      "P90": "P90",
+      "P95": "P95",
+      "P99": "P99",
+      "P50Desc": "Median",
+      "P90Desc": "90th Percentile",
+      "P95Desc": "95th Percentile",
+      "P99Desc": "99th Percentile",
+      "Average": "Average",
+      "Fastest": "Fastest",
+      "Slowest": "Slowest",
+      "SlowestInstances": "Slowest Instances Top {0}",
+      "SlowestTooltip": "Statistics of slowest execution instances for different jobs (only showing the slowest one per job)",
+      "NoData": "No duration data"
+    },
+    "TopJobs": {
+      "ExecutionCount": "Top Jobs by Execution Count",
+      "FailureCount": "Top Jobs by Failure Count",
+      "TopN": "Top {0}",
+      "NoData": "No ranking data"
+    },
+    "FailureAnalysis": {
+      "Title": "Failure Analysis",
+      "TotalFailures": "Total Failures",
+      "TotalTerminated": "Total Terminated",
+      "RetrySuccessRate": "Retry Success Rate",
+      "ByJob": "By Job Distribution",
+      "FailureCount": "{0} failures",
+      "NoFailures": "No failures in this time period",
+      "AllNormal": "All jobs executing normally"
+    },
+    "Messages": {
+      "LoadFailed": "Failed to load statistics",
+      "PartialFailed": "Some statistics calculations failed"
+    }
+  },
+  "Dialogs": {
+    "JobInstanceDetail": {
+      "Title": "Job Instance Details",
+      "BasicInfo": "Basic Information",
+      "InstanceId": "Instance ID",
+      "JobKey": "Job Key",
+      "State": "State",
+      "CreatedTime": "Created Time",
+      "StartTime": "Start Time",
+      "EndTime": "End Time",
+      "Duration": "Duration",
+      "RetryCount": "Retry Count",
+      "StateHistory": "State History",
+      "ViewJobDefinition": "View Job Definition",
+      "NoStateHistory": "No state history",
+      "LoadFailed": "Load failed",
+      "RunningClient": "Running Client",
+      "ScheduledExecutionTime": "Scheduled Execution Time",
+      "JobArgs": "Job Args",
+      "CancelJob": "Cancel Job",
+      "CancelConfirmTitle": "Confirm Cancel",
+      "CancelConfirmMessage": "Are you sure you want to cancel job instance {0}?",
+      "CancelSuccess": "Job cancelled",
+      "CancelFailed": "Cancel failed"
+    },
+    "JobExecute": {
+      "Title": "Execute Job",
+      "JobName": "Job Name",
+      "JobKey": "Job Key",
+      "ExecuteNow": "Execute Now",
+      "ExecuteSuccess": "Job submitted for execution",
+      "ExecuteFailed": "Execute failed",
+      "ArgsType": "Args Type",
+      "JsonArgs": "JSON Args",
+      "ValidationSuccess": "JSON validation passed, ready to execute",
+      "NoArgsRequired": "This job requires no arguments, click execute to trigger immediately",
+      "TypeReference": "Type Reference"
+    },
+    "CronEditor": {
+      "Title": "Edit Cron Expression",
+      "CurrentExpression": "Current Expression",
+      "NewExpression": "New Expression",
+      "Description": "Description",
+      "NextExecutions": "Next {0} Execution Times",
+      "InvalidExpression": "Invalid Cron Expression",
+      "SaveSuccess": "Cron expression updated",
+      "SaveFailed": "Save failed",
+      "EmptyExpression": "Cron expression cannot be empty"
+    },
+    "JobConfigEditor": {
+      "Title": "Edit Job Configuration",
+      "JobName": "Job Name",
+      "JobNameHelper": "Readable name for the job",
+      "JobNameRequired": "Job name cannot be empty",
+      "Description": "Description",
+      "DescriptionHelper": "Detailed description of the job (optional)",
+      "MaxConcurrency": "Max Concurrency",
+      "MaxConcurrencyHelper": "Number of concurrent executions for the same job key, default is 1",
+      "MaxConcurrencyRequired": "Max concurrency must be greater than or equal to 1",
+      "RetryCount": "Retry Count",
+      "RetryCountHelper": "Number of automatic retries after exception, default is 0",
+      "RetryCountRequired": "Retry count must be greater than or equal to 0",
+      "MaxExecutionTimeout": "Max Execution Timeout",
+      "TimeoutHours": "Timeout (Hours)",
+      "TimeoutMinutes": "Minutes",
+      "TimeoutRequired": "Timeout must be greater than 0",
+      "CurrentTimeout": "Current timeout: {0} hours {1} minutes (default: 1 hour)",
+      "HistoryRetentionPolicy": "History Retention Policy",
+      "HistoryRetentionTooltip": "These two settings jointly control automatic cleanup of job execution history. Records exceeding the maximum count or retention days will be automatically deleted",
+      "MaxRetainedHistoryRecords": "Max Retained History Records",
+      "MaxRetainedHistoryRecordsHelper": "Maximum number of historical execution records to retain. Default is 100, set to 0 or negative for unlimited",
+      "MaxRetainedHistoryRecordsRequired": "Max retained history records cannot be empty",
+      "MaxRetentionDays": "Max Retention Days",
+      "MaxRetentionDaysHelper": "Maximum days to retain historical execution records. Leave empty to disable time-based cleanup",
+      "StartTime": "Start Time",
+      "StartTimeHelper": "Earliest execution time for the job (optional)",
+      "EndTime": "End Time",
+      "EndTimeHelper": "Latest execution time for the job (optional)",
+      "SaveSuccess": "Configuration updated",
+      "SaveFailed": "Save failed",
+      "ValidationJobNameEmpty": "Job name cannot be empty",
+      "ValidationMaxConcurrency": "Max concurrency must be greater than or equal to 1",
+      "ValidationTimeout": "Timeout must be greater than 0",
+      "ValidationRetentionDays": "Retention days must be greater than or equal to 1"
+    },
+    "BatchOperationConfirm": {
+      "Title": "Confirm Batch Operation",
+      "Message": "Are you sure you want to {1} the following {0} jobs?",
+      "OperationPause": "pause",
+      "OperationResume": "resume"
+    },
+    "BatchOperationResult": {
+      "Title": "Batch Operation Result",
+      "Success": "Success",
+      "Failed": "Failed",
+      "Total": "Total",
+      "FailedDetails": "Failed Items Details"
+    },
+    "StateHistory": {
+      "Title": "State History",
+      "State": "State",
+      "Timestamp": "Timestamp",
+      "Message": "Message",
+      "NoHistory": "No history records"
+    }
+  },
+  "Components": {
+    "CronExpression": {
+      "EveryMinute": "Every Minute",
+      "EveryHour": "Every Hour",
+      "EveryDay": "Every Day",
+      "EveryWeek": "Every Week",
+      "EveryMonth": "Every Month",
+      "Custom": "Custom",
+      "At": "at",
+      "Invalid": "Invalid Expression"
+    },
+    "AutoRefresh": {
+      "Enabled": "Auto-refresh",
+      "Interval": "Interval",
+      "LastRefresh": "Last Refresh",
+      "Refresh": "Refresh",
+      "Intervals": {
+        "FiveSeconds": "5 seconds",
+        "TenSeconds": "10 seconds",
+        "ThirtySeconds": "30 seconds",
+        "OneMinute": "1 minute"
+      }
+    }
+  },
+  "Services": {
+    "Errors": {
+      "ExpressionEmpty": "Expression cannot be empty",
+      "ExpressionFormatError": "Expression format error: {0}",
+      "CountRange": "Count must be between 1 and 100",
+      "CalculateOccurrencesFailed": "Failed to calculate execution times: {0}",
+      "JsModuleNotLoaded": "JavaScript module not loaded",
+      "ParseFailed": "Parse failed",
+      "JsInvokeFailed": "JavaScript invocation failed: {0}",
+      "ParseFailedWithMessage": "Parse failed: {0}",
+      "UnknownSettingsType": "Unknown settings type",
+      "GeneratedExpressionInvalid": "Generated expression is invalid: {0}",
+      "BuildExpressionFailed": "Failed to build expression: {0}",
+      "SourceExpressionInvalid": "Source expression is invalid: {0}",
+      "QuartzFormatMustHave6Parts": "Quartz format must contain 6 parts",
+      "FormatConversionFailed": "Format conversion failed: {0}",
+      "BuildDashboardFailed": "Failed to build dashboard data: {0}",
+      "BuildRecentActivitiesFailed": "Failed to build recent activities: {0}",
+      "FindProblemJobsFailed": "Failed to find problem jobs: {0}"
+    }
+  }
+}

@@ -1,4 +1,7 @@
 @using Monica.JobScheduler.UI.Models
+@using Monica.JobScheduler.UI.Localization
+
+@inject IStringLocalizer<JobSchedulerResource> L
 
 <div class="refresh-control-wrapper">
     <MudPaper Class="refresh-control" Elevation="0">
@@ -7,7 +10,7 @@
                        Value="@IsEnabled"
                        ValueChanged="@OnEnabledChanged"
                        Color="Color.Primary"
-                       Label="自动刷新" />
+                       Label="@L["Monitor:AutoRefresh:Enable"]" />
         </div>
 
         <MudDivider Vertical="true" FlexItem="true" Class="mx-2" />
@@ -16,16 +19,16 @@
             <MudSelect T="RefreshInterval"
                        Value="@Interval"
                        ValueChanged="@OnIntervalChanged"
-                       Label="刷新间隔"
+                       Label="@L["Monitor:AutoRefresh:Interval"]"
                        Variant="Variant.Outlined"
                        Dense="true"
                        Margin="Margin.Dense"
                        Disabled="@(!IsEnabled)"
                        Style="min-width: 120px;">
-                <MudSelectItem T="RefreshInterval" Value="RefreshInterval.ThreeSeconds">3 秒</MudSelectItem>
-                <MudSelectItem T="RefreshInterval" Value="RefreshInterval.FiveSeconds">5 秒</MudSelectItem>
-                <MudSelectItem T="RefreshInterval" Value="RefreshInterval.TenSeconds">10 秒</MudSelectItem>
-                <MudSelectItem T="RefreshInterval" Value="RefreshInterval.ThirtySeconds">30 秒</MudSelectItem>
+                <MudSelectItem T="RefreshInterval" Value="RefreshInterval.ThreeSeconds">@L["Monitor:AutoRefresh:Intervals:ThreeSeconds"]</MudSelectItem>
+                <MudSelectItem T="RefreshInterval" Value="RefreshInterval.FiveSeconds">@L["Monitor:AutoRefresh:Intervals:FiveSeconds"]</MudSelectItem>
+                <MudSelectItem T="RefreshInterval" Value="RefreshInterval.TenSeconds">@L["Monitor:AutoRefresh:Intervals:TenSeconds"]</MudSelectItem>
+                <MudSelectItem T="RefreshInterval" Value="RefreshInterval.ThirtySeconds">@L["Monitor:AutoRefresh:Intervals:ThirtySeconds"]</MudSelectItem>
             </MudSelect>
         </div>
 
@@ -40,11 +43,11 @@
                 @if (IsRefreshing)
                 {
                     <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-                    <span>刷新中...</span>
+                    <span>@L["Monitor:AutoRefresh:Refreshing"]</span>
                 }
                 else
                 {
-                    <span>刷新</span>
+                    <span>@L["Monitor:AutoRefresh:ManualRefresh"]</span>
                 }
             </MudButton>
         </div>
@@ -53,7 +56,7 @@
         {
             <div class="last-refresh">
                 <MudText Typo="Typo.caption" Color="Color.Secondary">
-                    上次刷新: @FormatLastRefresh(LastRefreshTime.Value)
+                    @L["Monitor:AutoRefresh:LastRefresh"]: @FormatLastRefresh(LastRefreshTime.Value)
                 </MudText>
             </div>
         }
@@ -97,17 +100,17 @@
         await OnRefreshRequested.InvokeAsync();
     }
 
-    private static string FormatLastRefresh(DateTime time)
+    private string FormatLastRefresh(DateTime time)
     {
         var local = time.FromUtcToLocal();
         var diff = DateTime.Now - local;
 
         if (diff.TotalSeconds < 10)
-            return "刚刚";
+            return L["Common:Time:JustNow"];
         if (diff.TotalSeconds < 60)
-            return $"{(int)diff.TotalSeconds}秒前";
+            return L["Common:Time:SecondsAgo", (int)diff.TotalSeconds];
         if (diff.TotalMinutes < 60)
-            return $"{(int)diff.TotalMinutes}分钟前";
+            return L["Common:Time:MinutesAgo", (int)diff.TotalMinutes];
 
         return local.ToString("HH:mm:ss");
     }

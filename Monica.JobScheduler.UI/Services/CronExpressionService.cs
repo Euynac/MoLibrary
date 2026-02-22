@@ -1,6 +1,8 @@
 using Cronos;
 using Monica.Tool.MoResponse;
 using Microsoft.JSInterop;
+using Microsoft.Extensions.Localization;
+using Monica.JobScheduler.UI.Localization;
 
 namespace Monica.JobScheduler.UI.Services;
 
@@ -24,7 +26,7 @@ public enum CronFormat
 /// Cron 表达式服务，提供表达式解析、验证和执行时间计算
 /// 注意：解析描述功能需要组件提供 JS 模块引用
 /// </summary>
-public class CronExpressionService
+public class CronExpressionService(IStringLocalizer<JobSchedulerResource> localizer)
 {
     /// <summary>
     /// 验证 Cron 表达式是否有效
@@ -33,7 +35,7 @@ public class CronExpressionService
     {
         if (string.IsNullOrWhiteSpace(expression))
         {
-            return "表达式不能为空";
+            return Res.Fail(localizer["Services:Errors:ExpressionEmpty"].Value);
         }
 
         try
@@ -47,7 +49,7 @@ public class CronExpressionService
         }
         catch (Exception ex)
         {
-            return $"表达式格式错误: {ex.Message}";
+            return Res.Fail(localizer["Services:Errors:ExpressionFormatError", ex.Message].Value);
         }
     }
 
@@ -58,12 +60,12 @@ public class CronExpressionService
     {
         if (string.IsNullOrWhiteSpace(expression))
         {
-            return "表达式不能为空";
+            return Res.Fail(localizer["Services:Errors:ExpressionEmpty"].Value);
         }
 
         if (count <= 0 || count > 100)
         {
-            return "计算次数必须在 1-100 之间";
+            return Res.Fail(localizer["Services:Errors:CountRange"].Value);
         }
 
         try
@@ -92,7 +94,7 @@ public class CronExpressionService
         }
         catch (Exception ex)
         {
-            return $"计算执行时间失败: {ex.Message}";
+            return Res.Fail(localizer["Services:Errors:CalculateOccurrencesFailed", ex.Message].Value);
         }
     }
 
@@ -106,12 +108,12 @@ public class CronExpressionService
     {
         if (jsModule == null)
         {
-            return Res.Fail("JavaScript 模块未加载");
+            return Res.Fail(localizer["Services:Errors:JsModuleNotLoaded"]);
         }
 
         if (string.IsNullOrWhiteSpace(expression))
         {
-            return Res.Fail("表达式不能为空");
+            return Res.Fail(localizer["Services:Errors:ExpressionEmpty"]);
         }
 
         try
@@ -124,15 +126,15 @@ public class CronExpressionService
 
             return result.Success
                 ? Res.Ok<string>(result.Description ?? "")
-                : Res.Fail(result.Error ?? "解析失败");
+                : Res.Fail(result.Error ?? localizer["Services:Errors:ParseFailed"]);
         }
         catch (JSException jsEx)
         {
-            return Res.Fail($"JavaScript 调用失败: {jsEx.Message}");
+            return Res.Fail(localizer["Services:Errors:JsInvokeFailed", jsEx.Message]);
         }
         catch (Exception ex)
         {
-            return Res.Fail($"解析失败: {ex.Message}");
+            return Res.Fail(localizer["Services:Errors:ParseFailedWithMessage", ex.Message]);
         }
     }
 
@@ -159,20 +161,20 @@ public class CronExpressionService
                 SimpleSettingsType.Custom => format == CronFormat.Quartz
                     ? $"{settings.Second} {settings.Minute} {settings.Hour} {settings.DayOfMonth} {settings.Month} {settings.DayOfWeek}"
                     : $"{settings.Minute} {settings.Hour} {settings.DayOfMonth} {settings.Month} {settings.DayOfWeek}",
-                _ => throw new ArgumentException("未知的设置类型")
+                _ => throw new ArgumentException(localizer["Services:Errors:UnknownSettingsType"])
             };
-    
+
             var validation = ValidateExpression(expression, format);
             if (validation.IsFailed(out var error))
             {
-                return Res.Fail($"生成的表达式无效: {error.Message}");
+                return Res.Fail(localizer["Services:Errors:GeneratedExpressionInvalid", error.Message]);
             }
 
             return Res.Ok<string>(expression);
         }
         catch (Exception ex)
         {
-            return Res.Fail($"构建表达式失败: {ex.Message}");
+            return Res.Fail(localizer["Services:Errors:BuildExpressionFailed", ex.Message]);
         }
     }
 
@@ -189,7 +191,7 @@ public class CronExpressionService
         var validation = ValidateExpression(expression, fromFormat);
         if (validation.IsFailed(out var error))
         {
-            return Res.Fail($"源表达式无效: {error.Message}");
+            return Res.Fail(localizer["Services:Errors:SourceExpressionInvalid", error.Message]);
         }
 
         try
@@ -205,14 +207,14 @@ public class CronExpressionService
                 var parts = expression.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                 if (parts.Length != 6)
                 {
-                    return Res.Fail("Quartz 格式必须包含 6 段");
+                    return Res.Fail(localizer["Services:Errors:QuartzFormatMustHave6Parts"]);
                 }
                 return Res.Ok<string>(string.Join(" ", parts.Skip(1)));
             }
         }
         catch (Exception ex)
         {
-            return Res.Fail($"格式转换失败: {ex.Message}");
+            return Res.Fail(localizer["Services:Errors:FormatConversionFailed", ex.Message]);
         }
     }
 

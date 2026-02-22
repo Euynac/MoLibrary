@@ -1,8 +1,10 @@
 @using Monica.JobScheduler.UI.Services
+@using Monica.JobScheduler.UI.Localization
 @using Microsoft.JSInterop
 @inject CronExpressionService CronService
 @inject IJSRuntime JsRuntime
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<JobSchedulerResource> L
 
 <!-- 引入 cronstrue 库 -->
 @if (!_cronstrueLoaded)
@@ -412,7 +414,7 @@
             {
                 // JS 模块加载失败，记录错误但不阻止组件渲染
                 _cronstrueLoaded = false;
-                Snackbar.Add($"加载 JavaScript 模块失败: {ex.Message}", Severity.Warning);
+                Snackbar.Add($"{L["Common:Messages:LoadFailed"]}: {ex.Message}", Severity.Warning);
             }
         }
     }

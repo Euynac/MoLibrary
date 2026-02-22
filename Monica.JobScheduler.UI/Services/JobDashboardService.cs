@@ -6,6 +6,8 @@ using Monica.JobScheduler.Models;
 using Monica.JobScheduler.UI.Models;
 using Monica.JobScheduler.UI.Modules;
 using Monica.Tool.MoResponse;
+using Microsoft.Extensions.Localization;
+using Monica.JobScheduler.UI.Localization;
 
 namespace Monica.JobScheduler.UI.Services;
 
@@ -16,7 +18,8 @@ public class JobDashboardService(
     IJobConcurrencyGuard concurrencyGuard,
     HealthCheckService healthCheckService,
     IOptions<ModuleJobSchedulerUIOption> uiOptions,
-    ILogger<JobDashboardService> logger)
+    ILogger<JobDashboardService> logger,
+    IStringLocalizer<JobSchedulerResource> localizer)
 {
     private readonly ModuleJobSchedulerUIOption _options = uiOptions.Value;
 
@@ -83,7 +86,7 @@ public class JobDashboardService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to build dashboard summary");
-            return Res.Fail($"构建仪表盘数据失败: {ex.Message}");
+            return Res.Fail(localizer["Services:Errors:BuildDashboardFailed", ex.Message]);
         }
     }
 
@@ -118,7 +121,7 @@ public class JobDashboardService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to build recent activities");
-            return Res.Fail($"构建最近活动失败: {ex.Message}");
+            return Res.Fail(localizer["Services:Errors:BuildRecentActivitiesFailed", ex.Message]);
         }
     }
 
@@ -141,7 +144,7 @@ public class JobDashboardService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to find problem jobs");
-            return Res.Fail($"查找问题任务失败: {ex.Message}");
+            return Res.Fail(localizer["Services:Errors:FindProblemJobsFailed", ex.Message]);
         }
     }
 

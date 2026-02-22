@@ -1,7 +1,9 @@
 @using Monica.JobScheduler.Models
 @using Monica.JobScheduler.UI.Services
+@using Monica.JobScheduler.UI.Localization
 @inject JobSchedulerUIService UIService
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<JobSchedulerResource> L
 
 <MudDialog>
     <DialogContent>
@@ -9,7 +11,7 @@
         {
             <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="pa-4">
                 <MudProgressCircular Indeterminate="true" />
-                <MudText>保存中...</MudText>
+                <MudText>@L["Common:Status:Saving"]</MudText>
             </MudStack>
         }
         else
@@ -19,12 +21,12 @@
         }
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel">取消</MudButton>
+        <MudButton OnClick="Cancel">@L["Common:Actions:Cancel"]</MudButton>
         <MudButton Color="Color.Primary"
                    Variant="Variant.Filled"
                    OnClick="Save"
                    Disabled="@_isLoading">
-            保存
+            @L["Common:Actions:Save"]
         </MudButton>
     </DialogActions>
 </MudDialog>
@@ -58,7 +60,7 @@
     {
         if (string.IsNullOrWhiteSpace(_cronExpression))
         {
-            Snackbar.Add("Cron 表达式不能为空", Severity.Warning);
+            Snackbar.Add(L["Dialogs:CronEditor:EmptyExpression"], Severity.Warning);
             return;
         }
 
@@ -72,17 +74,17 @@
 
             if (result.IsFailed(out var error))
             {
-                Snackbar.Add($"更新失败: {error.Message}", Severity.Error);
+                Snackbar.Add($"{L["Common:Messages:SaveFailed"]}: {error.Message}", Severity.Error);
             }
             else
             {
-                Snackbar.Add("Cron 表达式已更新", Severity.Success);
+                Snackbar.Add(L["Dialogs:CronEditor:SaveSuccess"], Severity.Success);
                 MudDialog.Close(DialogResult.Ok(true));
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"保存失败: {ex.Message}", Severity.Error);
+            Snackbar.Add($"{L["Common:Messages:SaveFailed"]}: {ex.Message}", Severity.Error);
         }
         finally
         {

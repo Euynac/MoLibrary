@@ -1,8 +1,10 @@
 @using Monica.JobScheduler.UI.Models
 @using Monica.JobScheduler.Abstractions
 @using Monica.JobScheduler.ControlPlane
+@using Monica.JobScheduler.UI.Localization
 
 @inject IDialogService DialogService
+@inject IStringLocalizer<JobSchedulerResource> L
 
 <div class="concurrency-card-wrapper">
     <MudPaper Class="concurrency-card" Elevation="0">
@@ -10,7 +12,7 @@
         <div class="card-header">
             <div class="header-title">
                 <MudIcon Icon="@Icons.Material.Filled.Memory" Size="Size.Small" Color="Color.Secondary" />
-                <MudText Typo="Typo.h6">并发状态</MudText>
+                <MudText Typo="Typo.h6">@L["Monitor:ConcurrencyUtilization:Title"]</MudText>
             </div>
             <div class="header-actions">
                 @if (!Consistency.IsConsistent)
@@ -21,10 +23,10 @@
                                StartIcon="@Icons.Material.Filled.Sync"
                                OnClick="@OnReconcileClicked"
                                Disabled="@IsReconciling">
-                        @(IsReconciling ? "同步中..." : "同步")
+                        @(IsReconciling ? L["Monitor:ConcurrencyUtilization:Syncing"] : L["Monitor:ConcurrencyUtilization:Reconcile"])
                     </MudButton>
                 }
-                <MudTooltip Text="显示内存中并发槽位状态">
+                <MudTooltip Text="@L["Monitor:ConcurrencyUtilization:ReconcileTooltip"]">
                     <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Default" />
                 </MudTooltip>
             </div>
@@ -35,12 +37,12 @@
         {
             <MudAlert Severity="Severity.Warning" Dense="true" Class="consistency-alert mb-3">
                 <div class="alert-header">
-                    <span>状态不一致 (偏差值: @Consistency.TotalDeviation)</span>
+                    <span>@L["Monitor:ConcurrencyUtilization:InconsistentState", Consistency.TotalDeviation]</span>
                     <MudButton Variant="Variant.Text"
                                Size="Size.Small"
                                Color="Color.Warning"
                                OnClick="@ToggleDeviationDetails">
-                        @(_showDeviationDetails ? "收起" : "详情")
+                        @(_showDeviationDetails ? L["Monitor:ConcurrencyUtilization:HideDetails"] : L["Monitor:ConcurrencyUtilization:ShowDetails"])
                     </MudButton>
                 </div>
                 @if (_showDeviationDetails)
@@ -53,13 +55,13 @@
                                 @if (deviation.RunningDeviation != 0)
                                 {
                                     <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined">
-                                        Running: @(deviation.RunningDeviation > 0 ? "+" : "")@deviation.RunningDeviation
+                                        @L["Monitor:ConcurrencyUtilization:RunningDeviation", (deviation.RunningDeviation > 0 ? "+" : "") + deviation.RunningDeviation]
                                     </MudChip>
                                 }
                                 @if (deviation.PendingDeviation != 0)
                                 {
                                     <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
-                                        Pending: @(deviation.PendingDeviation > 0 ? "+" : "")@deviation.PendingDeviation
+                                        @L["Monitor:ConcurrencyUtilization:PendingDeviation", (deviation.PendingDeviation > 0 ? "+" : "") + deviation.PendingDeviation]
                                     </MudChip>
                                 }
                             </div>
@@ -84,7 +86,7 @@
                                         @job.Statistic.CurrentExecutingCount / @job.Statistic.MaxConcurrency
                                         @if (job.IsAtCapacity)
                                         {
-                                            <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Filled" Class="ml-2">已满</MudChip>
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Filled" Class="ml-2">@L["Monitor:ConcurrencyUtilization:AtCapacity"]</MudChip>
                                         }
                                     </span>
                                 </div>
@@ -102,14 +104,14 @@
                                     <div class="instance-section">
                                         <MudText Typo="Typo.subtitle2" Color="Color.Info" Class="section-title">
                                             <MudIcon Icon="@Icons.Material.Filled.PlayArrow" Size="Size.Small" />
-                                            运行中 (@job.Statistic.RunningInstances.Count)
+                                            @L["Monitor:ConcurrencyUtilization:Running", job.Statistic.RunningInstances.Count]
                                         </MudText>
                                         <MudSimpleTable Dense="true" Hover="true" Class="instance-table">
                                             <thead>
                                                 <tr>
-                                                    <th>实例ID</th>
-                                                    <th>Worker</th>
-                                                    <th>已运行</th>
+                                                    <th>@L["Monitor:ConcurrencyUtilization:InstanceId"]</th>
+                                                    <th>@L["Monitor:ConcurrencyUtilization:Worker"]</th>
+                                                    <th>@L["Monitor:ConcurrencyUtilization:ElapsedTime"]</th>
                                                     <th></th>
                                                 </tr>
                                             </thead>
@@ -138,13 +140,13 @@
                                     <div class="instance-section">
                                         <MudText Typo="Typo.subtitle2" Color="Color.Warning" Class="section-title">
                                             <MudIcon Icon="@Icons.Material.Filled.HourglassEmpty" Size="Size.Small" />
-                                            等待中 (@job.Statistic.PendingReservations.Count)
+                                            @L["Monitor:ConcurrencyUtilization:Pending", job.Statistic.PendingReservations.Count]
                                         </MudText>
                                         <MudSimpleTable Dense="true" Hover="true" Class="instance-table">
                                             <thead>
                                                 <tr>
-                                                    <th>实例ID</th>
-                                                    <th>等待时间</th>
+                                                    <th>@L["Monitor:ConcurrencyUtilization:InstanceId"]</th>
+                                                    <th>@L["Monitor:ConcurrencyUtilization:WaitingTime"]</th>
                                                     <th></th>
                                                 </tr>
                                             </thead>
@@ -175,7 +177,7 @@
         {
             <div class="empty-state">
                 <MudIcon Icon="@Icons.Material.Filled.CheckCircleOutline" Size="Size.Large" Color="Color.Success" />
-                <MudText Typo="Typo.body2" Color="Color.Secondary">当前无活跃任务</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Monitor:ConcurrencyUtilization:NoJobs"]</MudText>
             </div>
         }
     </MudPaper>
@@ -218,7 +220,7 @@
             CloseButton = true
         };
 
-        await DialogService.ShowAsync<JobInstanceDetailDialog>("作业实例详情", parameters, options);
+        await DialogService.ShowAsync<JobInstanceDetailDialog>(L["Dialogs:JobInstanceDetail:Title"], parameters, options);
     }
 
     private static Color GetUtilizationColor(ConcurrencyStatusWithName job)

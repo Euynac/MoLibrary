@@ -5,10 +5,12 @@
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject IMoBrowserStorage BrowserStorage
+@inject IStringLocalizer<JobSchedulerResource> L
 @using MudBlazor
+@using Monica.JobScheduler.UI.Localization
 
 <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
-    <MudText Typo="Typo.h4" Class="mb-4">作业实例</MudText>
+    <MudText Typo="Typo.h4" Class="mb-4">@L["JobInstances:Title"]</MudText>
 
     <!-- 筛选器 -->
     <MudPaper Class="pa-4 mb-4" Elevation="2">
@@ -16,7 +18,7 @@
             <MudItem xs="12" sm="6" md="3">
                 <MudTextField T="string"
                               @bind-Value="_filterJobKey"
-                              Label="作业键"
+                              Label="@L["JobInstances:Filters:JobKey"]"
                               Variant="Variant.Outlined"
                               Clearable="true"
                               Immediate="true"
@@ -25,7 +27,7 @@
             <MudItem xs="12" sm="6" md="3">
                 <MudTextField T="string"
                               @bind-Value="_filterInstanceId"
-                              Label="实例ID"
+                              Label="@L["JobInstances:Filters:InstanceId"]"
                               Variant="Variant.Outlined"
                               Clearable="true"
                               Immediate="true"
@@ -34,11 +36,11 @@
             <MudItem xs="12" sm="6" md="3">
                 <MudSelect T="JobState?"
                            @bind-Value="_filterState"
-                           Label="状态"
+                           Label="@L["JobInstances:Filters:State"]"
                            Variant="Variant.Outlined"
                            Clearable="true"
                            OnClearButtonClick="HandleFilterChanged">
-                    <MudSelectItem T="JobState?" Value="@((JobState?)null)">全部</MudSelectItem>
+                    <MudSelectItem T="JobState?" Value="@((JobState?)null)">@L["JobInstances:Filters:AllStates"]</MudSelectItem>
                     <MudSelectItem T="JobState?" Value="@JobState.Scheduled">Scheduled</MudSelectItem>
                     <MudSelectItem T="JobState?" Value="@JobState.Enqueued">Enqueued</MudSelectItem>
                     <MudSelectItem T="JobState?" Value="@JobState.Processing">Processing</MudSelectItem>
@@ -51,18 +53,18 @@
             <MudItem xs="12" sm="6" md="3">
                 <MudSelect T="string"
                            @bind-Value="_timeRangePreset"
-                           Label="时间范围"
+                           Label="@L["JobInstances:Filters:TimeRange"]"
                            Variant="Variant.Outlined"
                            OnClearButtonClick="HandleTimeRangePresetChanged">
-                    <MudSelectItem T="string" Value="@string.Empty">自定义</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("last_hour")">最近1小时</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("last_24_hours")">最近24小时</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("last_7_days")">最近7天</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("last_30_days")">最近30天</MudSelectItem>
+                    <MudSelectItem T="string" Value="@string.Empty">@L["JobInstances:Filters:Custom"]</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("last_hour")">@L["JobInstances:Filters:LastHour"]</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("last_24_hours")">@L["JobInstances:Filters:Last24Hours"]</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("last_7_days")">@L["JobInstances:Filters:Last7Days"]</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("last_30_days")">@L["JobInstances:Filters:Last30Days"]</MudSelectItem>
                 </MudSelect>
             </MudItem>
             <MudItem xs="12" sm="6" md="3">
-                <MudDatePicker Label="开始时间"
+                <MudDatePicker Label="@L["JobInstances:Filters:StartTime"]"
                                Date="_filterStartDate"
                                DateChanged="HandleStartDateChanged"
                                Variant="Variant.Outlined"
@@ -70,7 +72,7 @@
                                Disabled="@(!string.IsNullOrEmpty(_timeRangePreset))" />
             </MudItem>
             <MudItem xs="12" sm="6" md="3">
-                <MudDatePicker Label="结束时间"
+                <MudDatePicker Label="@L["JobInstances:Filters:EndTime"]"
                                Date="_filterEndDate"
                                DateChanged="HandleEndDateChanged"
                                Variant="Variant.Outlined"
@@ -82,14 +84,14 @@
                            Color="Color.Primary"
                            OnClick="HandleFilterChanged"
                            StartIcon="@Icons.Material.Filled.Search">
-                    搜索
+                    @L["Common:Actions:Search"]
                 </MudButton>
                 <MudButton Variant="Variant.Outlined"
                            Color="Color.Default"
                            OnClick="HandleResetFilters"
                            StartIcon="@Icons.Material.Filled.Clear"
                            Class="ml-2">
-                    重置
+                    @L["Common:Actions:Reset"]
                 </MudButton>
             </MudItem>
         </MudGrid>
@@ -107,49 +109,49 @@
                   Elevation="2"
                   SortMode="SortMode.Single">
             <ToolBarContent>
-                <MudText Typo="Typo.h6">实例列表</MudText>
+                <MudText Typo="Typo.h6">@L["JobInstances:TableHeader:InstanceList"]</MudText>
                 <MudSpacer />
                 <MudIconButton Icon="@Icons.Material.Filled.DeleteSweep"
                                Color="Color.Warning"
                                OnClick="HandleCleanupHistoryAsync"
                                Disabled="@_isCleaningUp"
-                               Title="清理历史记录" />
+                               Title="@L["JobInstances:Actions:CleanupHistory"]" />
                 <MudIconButton Icon="@Icons.Material.Filled.Refresh"
                                Color="Color.Primary"
                                OnClick="RefreshAsync" />
             </ToolBarContent>
             <HeaderContent>
-                <MudTh><MudTableSortLabel SortLabel="InstanceId" T="JobInstance">实例ID</MudTableSortLabel></MudTh>
-                <MudTh><MudTableSortLabel SortLabel="JobKey" T="JobInstance">作业键</MudTableSortLabel></MudTh>
-                <MudTh><MudTableSortLabel SortLabel="State" T="JobInstance">状态</MudTableSortLabel></MudTh>
-                <MudTh><MudTableSortLabel SortLabel="CreatedAt" T="JobInstance" InitialDirection="SortDirection.Descending">创建时间</MudTableSortLabel></MudTh>
-                <MudTh><MudTableSortLabel SortLabel="StartedAt" T="JobInstance">开始时间</MudTableSortLabel></MudTh>
-                <MudTh><MudTableSortLabel SortLabel="CompletedAt" T="JobInstance">结束时间</MudTableSortLabel></MudTh>
-                <MudTh><MudTableSortLabel SortLabel="Duration" T="JobInstance">执行时长</MudTableSortLabel></MudTh>
-                <MudTh>操作</MudTh>
+                <MudTh><MudTableSortLabel SortLabel="InstanceId" T="JobInstance">@L["JobInstances:Columns:InstanceId"]</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortLabel="JobKey" T="JobInstance">@L["JobInstances:Columns:JobKey"]</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortLabel="State" T="JobInstance">@L["JobInstances:Columns:State"]</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortLabel="CreatedAt" T="JobInstance" InitialDirection="SortDirection.Descending">@L["JobInstances:Columns:CreatedTime"]</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortLabel="StartedAt" T="JobInstance">@L["JobInstances:Columns:StartTime"]</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortLabel="CompletedAt" T="JobInstance">@L["JobInstances:Columns:EndTime"]</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortLabel="Duration" T="JobInstance">@L["JobInstances:Columns:Duration"]</MudTableSortLabel></MudTh>
+                <MudTh>@L["JobInstances:Columns:Actions"]</MudTh>
             </HeaderContent>
         <RowTemplate>
-            <MudTd DataLabel="实例ID">
+            <MudTd DataLabel="@L["JobInstances:Columns:InstanceId"]">
                 <MudText Typo="Typo.body2" Style="font-family: monospace;">
                     @context.InstanceId.Substring(0, Math.Min(8, context.InstanceId.Length))...
                 </MudText>
             </MudTd>
-            <MudTd DataLabel="作业键">@context.JobKey</MudTd>
-            <MudTd DataLabel="状态">
+            <MudTd DataLabel="@L["JobInstances:Columns:JobKey"]">@context.JobKey</MudTd>
+            <MudTd DataLabel="@L["JobInstances:Columns:State"]">
                 <MudChip T="string" Size="Size.Small" Color="@ColorService.GetStateColor(context.State)">
                     @context.State
                 </MudChip>
             </MudTd>
-            <MudTd DataLabel="创建时间">
+            <MudTd DataLabel="@L["JobInstances:Columns:CreatedTime"]">
                 @context.CreatedAt.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")
             </MudTd>
-            <MudTd DataLabel="开始时间">
+            <MudTd DataLabel="@L["JobInstances:Columns:StartTime"]">
                 @(context.StartedAt?.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss") ?? "-")
             </MudTd>
-            <MudTd DataLabel="结束时间">
+            <MudTd DataLabel="@L["JobInstances:Columns:EndTime"]">
                 @(context.CompletedAt?.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss") ?? "-")
             </MudTd>
-            <MudTd DataLabel="执行时长">
+            <MudTd DataLabel="@L["JobInstances:Columns:Duration"]">
                 @if (context.StartedAt.HasValue && context.CompletedAt.HasValue)
                 {
                     var duration = context.CompletedAt.Value - context.StartedAt.Value;
@@ -158,15 +160,15 @@
                 else if (context.StartedAt.HasValue)
                 {
                     var duration = DateTime.UtcNow.FromUtcToLocal() - context.StartedAt.Value.FromUtcToLocal();
-                    <text>@FormatDuration(duration) (运行中)</text>
+                    <text>@FormatDuration(duration) (@L["JobInstances:Messages:Running"])</text>
                 }
                 else
                 {
                     <text>-</text>
                 }
             </MudTd>
-            <MudTd DataLabel="操作">
-                <MudTooltip Text="详情">
+            <MudTd DataLabel="@L["JobInstances:Columns:Actions"]">
+                <MudTooltip Text="@L["JobInstances:Actions:ViewDetails"]">
                     <MudIconButton Icon="@Icons.Material.Filled.Info"
                                    Color="Color.Info"
                                    Size="Size.Small"
@@ -175,7 +177,7 @@
             </MudTd>
         </RowTemplate>
         <NoRecordsContent>
-            <MudText>没有找到匹配的作业实例</MudText>
+            <MudText>@L["JobInstances:Messages:NoInstances"]</MudText>
         </NoRecordsContent>
         <LoadingContent>
             <MudProgressCircular Indeterminate="true" />
@@ -190,7 +192,7 @@
         <MudPaper Class="pa-6" Elevation="2">
             <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Class="py-8">
                 <MudProgressCircular Indeterminate="true" />
-                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">加载中...</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">@L["Common:Status:Loading"]</MudText>
             </MudStack>
         </MudPaper>
     }
@@ -288,7 +290,7 @@
 
         if (result.IsFailed(out var error, out var data))
         {
-            Snackbar.Add($"加载失败: {error.Message}", Severity.Error);
+            Snackbar.Add($"{L["JobInstances:Messages:LoadFailed"]}: {error.Message}", Severity.Error);
             return new TableData<JobInstance> { Items = Array.Empty<JobInstance>(), TotalItems = 0 };
         }
 
@@ -374,10 +376,10 @@
     private async Task HandleCleanupHistoryAsync()
     {
         var confirmed = await DialogService.ShowMessageBox(
-            "确认清理",
-            "确定要清理历史记录吗？此操作将根据保留策略删除旧的作业实例记录。",
-            yesText: "确定",
-            cancelText: "取消");
+            L["JobInstances:Messages:CleanupConfirmTitle"],
+            L["JobInstances:Messages:CleanupConfirm"],
+            yesText: L["Common:Actions:Confirm"],
+            cancelText: L["Common:Actions:Cancel"]);
 
         if (confirmed != true)
         {
@@ -393,24 +395,24 @@
 
             if (result.IsFailed(out var error, out var data))
             {
-                Snackbar.Add($"清理失败: {error.Message}", Severity.Error);
+                Snackbar.Add($"{L["JobInstances:Messages:CleanupFailed"]}: {error.Message}", Severity.Error);
             }
             else
             {
                 if (data.DeletedCount == 0)
                 {
-                    Snackbar.Add("没有需要清理的历史记录", Severity.Info);
+                    Snackbar.Add(L["JobInstances:Messages:CleanupNoRecords"], Severity.Info);
                 }
                 else
                 {
-                    Snackbar.Add($"已清理 {data.DeletedCount} 条历史记录，耗时 {data.DurationSeconds:F2} 秒", Severity.Success);
+                    Snackbar.Add(L["JobInstances:Messages:CleanupSuccess", data.DeletedCount.ToString(), data.DurationSeconds.ToString("F2")], Severity.Success);
                     await RefreshAsync();
                 }
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"清理失败: {ex.Message}", Severity.Error);
+            Snackbar.Add($"{L["JobInstances:Messages:CleanupFailed"]}: {ex.Message}", Severity.Error);
         }
         finally
         {
@@ -436,7 +438,7 @@
             Position = DialogPosition.Center
         };
 
-        await DialogService.ShowAsync<JobInstanceDetailDialog>("作业实例详情", parameters, options);
+        await DialogService.ShowAsync<JobInstanceDetailDialog>(L["Dialogs:JobInstanceDetail:Title"], parameters, options);
     }
 
     private string FormatDuration(TimeSpan duration)

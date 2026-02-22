@@ -1,20 +1,22 @@
 @using Monica.JobScheduler.Models
 @using Monica.JobScheduler.UI.Models
 @using Monica.JobScheduler.UI.Services
+@using Monica.JobScheduler.UI.Localization
 
 @inject JobStateColorService StateColorService
 @inject NavigationManager NavigationManager
 @inject IDialogService DialogService
+@inject IStringLocalizer<JobSchedulerResource> L
 
 <div class="activity-timeline-wrapper">
     <MudPaper Class="activity-card" Elevation="0">
         <div class="card-header">
-            <MudText Typo="Typo.h6">最近活动</MudText>
+            <MudText Typo="Typo.h6">@L["Dashboard.RecentActivity.Title"]</MudText>
             <MudButton Variant="Variant.Text"
                        Size="Size.Small"
                        EndIcon="@Icons.Material.Filled.ArrowForward"
                        OnClick="@ViewAllInstances">
-                查看全部
+                @L["Common.Actions.ViewAll"]
             </MudButton>
         </div>
 
@@ -55,7 +57,7 @@
         {
             <div class="empty-state">
                 <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Large" Color="Color.Default" />
-                <MudText Typo="Typo.body2" Color="Color.Secondary">暂无活动记录</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Dashboard.RecentActivity.NoActivity"]</MudText>
             </div>
         }
     </MudPaper>
@@ -87,7 +89,7 @@
             Position = DialogPosition.Center
         };
 
-        await DialogService.ShowAsync<JobInstanceDetailDialog>("作业实例详情", parameters, options);
+        await DialogService.ShowAsync<JobInstanceDetailDialog>(L["Dialogs.JobInstanceDetail.Title"], parameters, options);
     }
 
     private string GetStateDotClass(JobState state)
@@ -103,23 +105,23 @@
         };
     }
 
-    private static string GetStateLabel(JobState state)
+    private string GetStateLabel(JobState state)
     {
         return state switch
         {
-            JobState.Succeeded => "成功",
-            JobState.Failed => "失败",
-            JobState.Terminated => "终止",
-            JobState.Processing => "执行中",
-            JobState.Enqueued => "等待中",
-            JobState.Scheduled => "已调度",
-            JobState.Skipped => "已跳过",
-            JobState.Cancelled => "已取消",
+            JobState.Succeeded => L["JobStates.Succeeded"],
+            JobState.Failed => L["JobStates.Failed"],
+            JobState.Terminated => L["JobStates.Terminated"],
+            JobState.Processing => L["JobStates.Processing"],
+            JobState.Enqueued => L["JobStates.Enqueued"],
+            JobState.Scheduled => L["JobStates.Scheduled"],
+            JobState.Skipped => L["JobStates.Skipped"],
+            JobState.Cancelled => L["JobStates.Cancelled"],
             _ => state.ToString()
         };
     }
 
-    private static string FormatTimestamp(DateTime timestamp)
+    private string FormatTimestamp(DateTime timestamp)
     {
         var local = timestamp.FromUtcToLocal();
         var now = DateTime.Now;
@@ -128,21 +130,21 @@
             return local.ToString("HH:mm:ss");
 
         if (local.Date == now.Date.AddDays(-1))
-            return $"昨天 {local:HH:mm}";
+            return $"{L["Dashboard.RecentActivity.Yesterday"]} {local:HH:mm}";
 
         return local.ToString("MM-dd HH:mm");
     }
 
-    private static string FormatDuration(TimeSpan duration)
+    private string FormatDuration(TimeSpan duration)
     {
         if (duration.TotalDays >= 1)
-            return $"{duration.TotalDays:F1}天";
+            return $"{duration.TotalDays:F1}{L["Common.Time.Days"]}";
         if (duration.TotalHours >= 1)
-            return $"{duration.TotalHours:F1}小时";
+            return $"{duration.TotalHours:F1}{L["Common.Time.Hours"]}";
         if (duration.TotalMinutes >= 1)
-            return $"{duration.TotalMinutes:F1}分钟";
+            return $"{duration.TotalMinutes:F1}{L["Common.Time.Minutes"]}";
         if (duration.TotalSeconds >= 1)
-            return $"{duration.TotalSeconds:F1}秒";
-        return $"{duration.TotalMilliseconds:F0}毫秒";
+            return $"{duration.TotalSeconds:F1}{L["Common.Time.Seconds"]}";
+        return $"{duration.TotalMilliseconds:F0}{L["Common.Time.Milliseconds"]}";
     }
 }

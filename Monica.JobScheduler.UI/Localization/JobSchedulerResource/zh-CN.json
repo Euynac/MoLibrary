@@ -1,0 +1,557 @@
+{
+  "Common": {
+    "Actions": {
+      "Search": "搜索",
+      "Reset": "重置",
+      "Cancel": "取消",
+      "Confirm": "确认",
+      "Save": "保存",
+      "Close": "关闭",
+      "Refresh": "刷新",
+      "Apply": "应用",
+      "Execute": "执行",
+      "Retry": "重试",
+      "ViewAll": "查看全部",
+      "ViewDetails": "查看详情",
+      "Edit": "编辑",
+      "Back": "返回列表",
+      "ClearSelection": "清除选择"
+    },
+    "Status": {
+      "Loading": "加载中...",
+      "Saving": "保存中...",
+      "Executing": "执行中...",
+      "Refreshing": "刷新中...",
+      "Processing": "处理中...",
+      "Syncing": "同步中..."
+    },
+    "Messages": {
+      "LoadFailed": "加载失败",
+      "SaveFailed": "保存失败",
+      "ExecuteFailed": "执行失败",
+      "OperationSuccess": "操作成功",
+      "NoData": "暂无数据",
+      "NoRecords": "没有找到匹配的记录",
+      "AndMore": "还有 {0} 个"
+    },
+    "Time": {
+      "JustNow": "刚刚",
+      "SecondsAgo": "{0}秒前",
+      "MinutesAgo": "{0}分钟前",
+      "Yesterday": "昨天",
+      "Days": "天",
+      "Hours": "小时",
+      "Minutes": "分钟",
+      "Seconds": "秒",
+      "Milliseconds": "毫秒"
+    }
+  },
+  "JobStates": {
+    "Succeeded": "成功",
+    "Failed": "失败",
+    "Terminated": "终止",
+    "Processing": "执行中",
+    "Enqueued": "等待中",
+    "Scheduled": "已调度",
+    "Skipped": "已跳过",
+    "Cancelled": "已取消"
+  },
+  "Dashboard": {
+    "Title": "任务调度 - 总览",
+    "SystemHealth": {
+      "Title": "系统健康状态",
+      "Healthy": "系统运行正常",
+      "Degraded": "系统部分降级",
+      "Unhealthy": "系统异常",
+      "Unknown": "未知状态"
+    },
+    "Metrics": {
+      "TotalJobs": "任务总数",
+      "TotalJobsLabel": "任务总数",
+      "RecurringJobs": "周期性任务",
+      "RecurringJobsShort": "周期",
+      "TriggeredJobs": "触发型任务",
+      "TriggeredJobsShort": "触发",
+      "DisabledJobs": "已禁用",
+      "RunningNow": "正在运行",
+      "RunningNowLabel": "正在运行",
+      "SuccessRate": "成功率",
+      "SuccessRateLabel": "成功率",
+      "ThroughputPerHour": "吞吐量",
+      "ThroughputLabel": "吞吐量",
+      "ThroughputUnit": "每小时执行",
+      "TimeWindow": "时间窗口"
+    },
+    "StateDistribution": {
+      "Title": "状态分布",
+      "NoData": "暂无执行数据"
+    },
+    "ProblemJobs": {
+      "Title": "需要关注",
+      "NoProblems": "当前没有问题任务",
+      "AllHealthy": "所有任务运行正常",
+      "HighFailureRate": "高失败率",
+      "ConsecutiveFailures": "连续失败",
+      "ConsecutiveFailuresDetail": "连续 {0} 次失败",
+      "LongRunning": "长时间运行",
+      "LongRunningDetail": "已运行 {0} ({1}% 超时)",
+      "HighSkipRate": "跳过率过高",
+      "HighSkipRateDetail": "跳过率 {0}% (并发上限: {1})",
+      "FrequentRetries": "频繁重试"
+    },
+    "RecentActivity": {
+      "Title": "最近活动",
+      "NoActivity": "暂无活动记录",
+      "AllQuiet": "系统运行平稳",
+      "Yesterday": "昨天"
+    },
+    "AutoRefresh": {
+      "Enabled": "自动刷新已启用 (每{0}秒)"
+    },
+    "TimeRange": {
+      "LastHours": "最近{0}小时",
+      "LastDays": "最近{0}天",
+      "Last30Days": "最近30天"
+    }
+  },
+  "JobDefinitions": {
+    "Title": "作业定义",
+    "Filters": {
+      "SourceProject": "来源项目",
+      "JobKey": "作业键",
+      "JobName": "作业名称"
+    },
+    "Tabs": {
+      "RecurringJob": "周期性作业",
+      "TriggerJob": "触发型作业"
+    },
+    "Columns": {
+      "SourceProject": "来源项目",
+      "JobKey": "作业键",
+      "JobName": "作业名称",
+      "CronExpression": "Cron表达式",
+      "NextExecutionTime": "下次执行时间",
+      "LastExecutionTime": "上次执行时间",
+      "Status": "状态",
+      "Actions": "操作"
+    },
+    "Actions": {
+      "Pause": "暂停",
+      "Resume": "继续",
+      "Execute": "执行",
+      "ViewDetails": "详情",
+      "BatchPause": "批量暂停",
+      "BatchResume": "批量继续"
+    },
+    "Status": {
+      "Enabled": "启用",
+      "Disabled": "已禁用"
+    },
+    "BatchOperation": {
+      "Selected": "已选择 {0} 个作业",
+      "ConfirmTitle": "确认批量操作",
+      "ResultTitle": "批量操作结果",
+      "Success": "批量操作成功: {0} 个作业已更新",
+      "PartialSuccess": "批量操作完成: {0} 成功, {1} 失败",
+      "AllFailed": "批量操作失败: 所有操作均失败"
+    },
+    "Messages": {
+      "NoRecurringJobs": "没有找到匹配的周期性作业",
+      "NoTriggerJobs": "没有找到匹配的触发型作业",
+      "PauseSuccess": "作业 {0} 已暂停",
+      "PauseFailed": "暂停失败",
+      "ResumeSuccess": "作业 {0} 已继续",
+      "ResumeFailed": "继续失败"
+    }
+  },
+  "JobInstances": {
+    "Title": "作业实例",
+    "Filters": {
+      "JobKey": "作业键",
+      "InstanceId": "实例ID",
+      "State": "状态",
+      "TimeRange": "时间范围",
+      "StartTime": "开始时间",
+      "EndTime": "结束时间",
+      "AllStates": "全部",
+      "Custom": "自定义",
+      "LastHour": "最近1小时",
+      "Last24Hours": "最近24小时",
+      "Last7Days": "最近7天",
+      "Last30Days": "最近30天"
+    },
+    "Columns": {
+      "InstanceId": "实例ID",
+      "JobKey": "作业键",
+      "State": "状态",
+      "CreatedTime": "创建时间",
+      "StartTime": "开始时间",
+      "EndTime": "结束时间",
+      "Duration": "执行时长",
+      "Actions": "操作"
+    },
+    "Actions": {
+      "ViewDetails": "详情",
+      "CleanupHistory": "清理历史记录"
+    },
+    "Messages": {
+      "NoInstances": "没有找到匹配的作业实例",
+      "Running": "运行中",
+      "LoadFailed": "加载失败",
+      "CleanupConfirm": "确定要清理历史记录吗？此操作将根据保留策略删除旧的作业实例记录。",
+      "CleanupConfirmTitle": "确认清理",
+      "CleanupSuccess": "已清理 {0} 条历史记录，耗时 {1} 秒",
+      "CleanupNoRecords": "没有需要清理的历史记录",
+      "CleanupFailed": "清理失败"
+    },
+    "TableHeader": {
+      "InstanceList": "实例列表"
+    }
+  },
+  "JobDetail": {
+    "BasicInfo": {
+      "Title": "基本信息",
+      "JobKey": "作业键",
+      "SourceProject": "来源项目",
+      "JobType": "作业类型",
+      "Status": "状态",
+      "CronExpression": "Cron表达式",
+      "Description": "描述"
+    },
+    "Actions": {
+      "Enable": "启用",
+      "Disable": "禁用",
+      "ExecuteNow": "立即执行",
+      "Execute": "执行"
+    },
+    "RunningInstances": {
+      "Title": "运行中的实例",
+      "ViewAll": "查看所有实例",
+      "NoRunning": "当前无运行中的实例",
+      "Columns": {
+        "InstanceId": "实例ID",
+        "State": "状态",
+        "CreatedTime": "创建时间",
+        "StartTime": "开始时间",
+        "Duration": "运行时长",
+        "Actions": "操作"
+      }
+    },
+    "Configuration": {
+      "Title": "作业配置",
+      "MaxConcurrency": "最大并发数",
+      "MaxConcurrencyTooltip": "相同作业Key的并发执行数量。默认值为`1`，如果超过并发数量，新的作业执行请求将被`Skipped`",
+      "RetryCount": "重试次数",
+      "RetryCountTooltip": "默认值为`0`，作业出现异常后立即自动进行重试，会被最大并发数量影响。",
+      "MaxExecutionTimeout": "最大执行超时",
+      "MaxExecutionTimeoutTooltip": "当作业超过此时间仍未返回结果，则作业视为执行超时失败，Worker执行器会将`CancellationToken`置为以已取消状态来尝试终止该作业（如果作业没有使用取消令牌机制，则该线程将一直被占用，由于`.NET`机制，无法强制杀死后台进程）。默认值为 `1小时`。",
+      "MaxRetainedHistoryRecords": "最大历史记录数",
+      "MaxRetainedHistoryRecordsTooltip": "保留的历史执行记录最大数量。当超过此数量时，最旧的记录将被自动清理。设置为0或负数表示不限制记录数量。",
+      "MaxRetentionDays": "历史保留天数",
+      "MaxRetentionDaysTooltip": "历史执行记录的最大保留天数。超过此天数的记录将被自动清理。未设置表示不启用基于时间的清理策略。",
+      "StartTime": "开始时间",
+      "EndTime": "结束时间",
+      "Unlimited": "无限制",
+      "NotSet": "未设置",
+      "Days": "天"
+    },
+    "Messages": {
+      "LoadFailed": "加载失败",
+      "LoadRunningInstancesFailed": "加载运行中实例失败",
+      "DisableSuccess": "作业已禁用",
+      "DisableFailed": "禁用失败",
+      "EnableSuccess": "作业已启用",
+      "EnableFailed": "启用失败",
+      "GetDefinitionFailed": "获取作业定义失败",
+      "DefinitionNotFound": "作业定义不存在"
+    }
+  },
+  "Monitor": {
+    "Title": "任务调度 - 实时监控",
+    "LiveExecution": {
+      "Title": "实时执行",
+      "ActiveCount": "{0} 个活跃",
+      "Columns": {
+        "Job": "任务",
+        "State": "状态",
+        "ElapsedTime": "已运行",
+        "TimeoutProgress": "超时进度",
+        "Actions": "操作"
+      },
+      "Actions": {
+        "ViewDetails": "查看详情",
+        "Cancel": "取消执行"
+      },
+      "Messages": {
+        "NoExecutions": "当前没有正在执行的任务",
+        "AllCompleted": "所有任务已完成或等待调度",
+        "Waiting": "等待中...",
+        "CancelSuccess": "任务已请求取消",
+        "CancelFailed": "取消失败"
+      }
+    },
+    "QueueStatus": {
+      "Title": "队列状态",
+      "Processing": "处理中",
+      "Enqueued": "等待执行",
+      "Scheduled": "已调度",
+      "ActiveTotal": "活跃总计"
+    },
+    "ConcurrencyUtilization": {
+      "Title": "并发状态",
+      "Reconcile": "同步",
+      "Syncing": "同步中...",
+      "ReconcileTooltip": "显示内存中并发槽位状态",
+      "ReconcileSuccess": "同步完成 (耗时: {0}ms, 偏差: {1} -> {2})",
+      "ReconcileFailed": "同步失败",
+      "NoJobs": "当前无活跃任务",
+      "AllIdle": "所有作业处于空闲状态",
+      "Deviation": "偏差",
+      "DeviationTooltip": "计数器与实际状态的差异",
+      "InconsistentState": "状态不一致 (偏差值: {0})",
+      "ShowDetails": "详情",
+      "HideDetails": "收起",
+      "RunningDeviation": "Running: {0}",
+      "PendingDeviation": "Pending: {0}",
+      "AtCapacity": "已满",
+      "Running": "运行中 ({0})",
+      "Pending": "等待中 ({0})",
+      "InstanceId": "实例ID",
+      "Worker": "Worker",
+      "ElapsedTime": "已运行",
+      "WaitingTime": "等待时间"
+    },
+    "AutoRefresh": {
+      "Enable": "自动刷新",
+      "Interval": "刷新间隔",
+      "LastRefresh": "上次刷新",
+      "ManualRefresh": "刷新",
+      "Refreshing": "刷新中...",
+      "Intervals": {
+        "ThreeSeconds": "3 秒",
+        "FiveSeconds": "5 秒",
+        "TenSeconds": "10 秒",
+        "ThirtySeconds": "30 秒"
+      }
+    },
+    "Messages": {
+      "LoadFailed": "加载数据失败",
+      "RefreshFailed": "刷新失败"
+    }
+  },
+  "Statistics": {
+    "Title": "任务调度 - 统计分析",
+    "TimeRange": {
+      "Today": "今天",
+      "Last24Hours": "24小时",
+      "Last7Days": "7天",
+      "Last30Days": "30天",
+      "Custom": "自定义",
+      "Label": "时间范围"
+    },
+    "ExecutionTrend": {
+      "Title": "执行趋势",
+      "Legend": {
+        "Success": "成功",
+        "Failed": "失败",
+        "Skipped": "跳过"
+      },
+      "Summary": {
+        "TotalExecutions": "总执行",
+        "Success": "成功",
+        "Failed": "失败",
+        "Skipped": "跳过"
+      },
+      "NoData": "暂无趋势数据"
+    },
+    "DurationPercentiles": {
+      "Title": "执行耗时分布",
+      "Sample": "样本",
+      "P50": "P50",
+      "P90": "P90",
+      "P95": "P95",
+      "P99": "P99",
+      "P50Desc": "中位数",
+      "P90Desc": "90%分位",
+      "P95Desc": "95%分位",
+      "P99Desc": "99%分位",
+      "Average": "平均",
+      "Fastest": "最快",
+      "Slowest": "最慢",
+      "SlowestInstances": "最慢实例 Top {0}",
+      "SlowestTooltip": "统计不同作业的最慢执行实例（每个作业仅显示最慢的一条）",
+      "NoData": "暂无耗时数据"
+    },
+    "TopJobs": {
+      "ExecutionCount": "执行次数排行",
+      "FailureCount": "失败次数排行",
+      "TopN": "Top {0}",
+      "NoData": "暂无排行数据"
+    },
+    "FailureAnalysis": {
+      "Title": "失败分析",
+      "TotalFailures": "失败次数",
+      "TotalTerminated": "终止次数",
+      "RetrySuccessRate": "重试成功率",
+      "ByJob": "按任务分布",
+      "FailureCount": "{0} 次失败",
+      "NoFailures": "该时间段内无失败记录",
+      "AllNormal": "所有任务执行正常"
+    },
+    "Messages": {
+      "LoadFailed": "加载统计数据失败",
+      "PartialFailed": "部分统计数据计算失败"
+    }
+  },
+  "Dialogs": {
+    "JobInstanceDetail": {
+      "Title": "作业实例详情",
+      "BasicInfo": "基本信息",
+      "InstanceId": "实例ID",
+      "JobKey": "作业键",
+      "State": "状态",
+      "CreatedTime": "创建时间",
+      "StartTime": "开始时间",
+      "EndTime": "结束时间",
+      "Duration": "执行时长",
+      "RetryCount": "重试次数",
+      "StateHistory": "状态历史",
+      "ViewJobDefinition": "查看作业定义",
+      "NoStateHistory": "暂无状态历史",
+      "LoadFailed": "加载失败",
+      "RunningClient": "运行客户端",
+      "ScheduledExecutionTime": "计划执行时间",
+      "JobArgs": "作业参数",
+      "CancelJob": "取消作业",
+      "CancelConfirmTitle": "确认取消",
+      "CancelConfirmMessage": "确定要取消作业实例 {0} 吗？",
+      "CancelSuccess": "作业已取消",
+      "CancelFailed": "取消失败"
+    },
+    "JobExecute": {
+      "Title": "执行作业",
+      "JobName": "作业名称",
+      "JobKey": "作业键",
+      "ExecuteNow": "立即执行",
+      "ExecuteSuccess": "作业已提交执行",
+      "ExecuteFailed": "执行失败",
+      "ArgsType": "参数类型",
+      "JsonArgs": "JSON 参数",
+      "ValidationSuccess": "JSON 验证通过，可以执行",
+      "NoArgsRequired": "此作业不需要参数，点击执行按钮立即触发",
+      "TypeReference": "类型参考"
+    },
+    "CronEditor": {
+      "Title": "编辑 Cron 表达式",
+      "CurrentExpression": "当前表达式",
+      "NewExpression": "新表达式",
+      "Description": "描述",
+      "NextExecutions": "接下来 {0} 次执行时间",
+      "InvalidExpression": "无效的 Cron 表达式",
+      "SaveSuccess": "Cron 表达式已更新",
+      "SaveFailed": "保存失败",
+      "EmptyExpression": "Cron 表达式不能为空"
+    },
+    "JobConfigEditor": {
+      "Title": "编辑作业配置",
+      "JobName": "作业名称",
+      "JobNameHelper": "作业的可读名称",
+      "JobNameRequired": "作业名称不能为空",
+      "Description": "描述",
+      "DescriptionHelper": "作业的详细描述（可选）",
+      "MaxConcurrency": "最大并发数",
+      "MaxConcurrencyHelper": "相同作业Key的并发执行数量，默认值为1",
+      "MaxConcurrencyRequired": "最大并发数必须大于等于1",
+      "RetryCount": "重试次数",
+      "RetryCountHelper": "作业出现异常后自动重试的次数，默认值为0",
+      "RetryCountRequired": "重试次数必须大于等于0",
+      "MaxExecutionTimeout": "最大执行超时",
+      "TimeoutHours": "超时时间（小时）",
+      "TimeoutMinutes": "分钟",
+      "TimeoutRequired": "超时时间必须大于0",
+      "CurrentTimeout": "当前超时: {0} 小时 {1} 分钟（默认: 1小时）",
+      "HistoryRetentionPolicy": "历史记录保留策略",
+      "HistoryRetentionTooltip": "这两个设置共同控制作业执行历史的自动清理。当记录数超过最大数量或超过保留天数时，最旧的记录将被自动删除",
+      "MaxRetainedHistoryRecords": "最大历史记录数",
+      "MaxRetainedHistoryRecordsHelper": "保留的历史记录最大数量。默认值为100，设置为0或负数表示不限制记录数量",
+      "MaxRetainedHistoryRecordsRequired": "最大历史记录数不能为空",
+      "MaxRetentionDays": "历史保留天数",
+      "MaxRetentionDaysHelper": "历史记录保留的最大天数。留空表示不启用基于时间的清理策略",
+      "StartTime": "开始时间",
+      "StartTimeHelper": "作业最早执行时间（可选）",
+      "EndTime": "结束时间",
+      "EndTimeHelper": "作业最晚执行时间（可选）",
+      "SaveSuccess": "配置已更新",
+      "SaveFailed": "保存失败",
+      "ValidationJobNameEmpty": "作业名称不能为空",
+      "ValidationMaxConcurrency": "最大并发数必须大于等于1",
+      "ValidationTimeout": "超时时间必须大于0",
+      "ValidationRetentionDays": "历史保留天数必须大于等于1"
+    },
+    "BatchOperationConfirm": {
+      "Title": "确认批量操作",
+      "Message": "确定要对以下 {0} 个作业执行 {1} 操作吗？",
+      "OperationPause": "暂停",
+      "OperationResume": "继续"
+    },
+    "BatchOperationResult": {
+      "Title": "批量操作结果",
+      "Success": "成功",
+      "Failed": "失败",
+      "Total": "总计",
+      "FailedDetails": "失败项详情"
+    },
+    "StateHistory": {
+      "Title": "状态历史",
+      "State": "状态",
+      "Timestamp": "时间",
+      "Message": "消息",
+      "NoHistory": "暂无历史记录"
+    }
+  },
+  "Components": {
+    "CronExpression": {
+      "EveryMinute": "每分钟",
+      "EveryHour": "每小时",
+      "EveryDay": "每天",
+      "EveryWeek": "每周",
+      "EveryMonth": "每月",
+      "Custom": "自定义",
+      "At": "在",
+      "Invalid": "无效表达式"
+    },
+    "AutoRefresh": {
+      "Enabled": "自动刷新",
+      "Interval": "间隔",
+      "LastRefresh": "上次刷新",
+      "Refresh": "刷新",
+      "Intervals": {
+        "FiveSeconds": "5秒",
+        "TenSeconds": "10秒",
+        "ThirtySeconds": "30秒",
+        "OneMinute": "1分钟"
+      }
+    }
+  },
+  "Services": {
+    "Errors": {
+      "ExpressionEmpty": "表达式不能为空",
+      "ExpressionFormatError": "表达式格式错误: {0}",
+      "CountRange": "计算次数必须在 1-100 之间",
+      "CalculateOccurrencesFailed": "计算执行时间失败: {0}",
+      "JsModuleNotLoaded": "JavaScript 模块未加载",
+      "ParseFailed": "解析失败",
+      "JsInvokeFailed": "JavaScript 调用失败: {0}",
+      "ParseFailedWithMessage": "解析失败: {0}",
+      "UnknownSettingsType": "未知的设置类型",
+      "GeneratedExpressionInvalid": "生成的表达式无效: {0}",
+      "BuildExpressionFailed": "构建表达式失败: {0}",
+      "SourceExpressionInvalid": "源表达式无效: {0}",
+      "QuartzFormatMustHave6Parts": "Quartz 格式必须包含 6 段",
+      "FormatConversionFailed": "格式转换失败: {0}",
+      "BuildDashboardFailed": "构建仪表盘数据失败: {0}",
+      "BuildRecentActivitiesFailed": "构建最近活动失败: {0}",
+      "FindProblemJobsFailed": "查找问题任务失败: {0}"
+    }
+  }
+}

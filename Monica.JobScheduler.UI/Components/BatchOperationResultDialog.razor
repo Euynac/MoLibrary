@@ -1,4 +1,6 @@
 @using Monica.JobScheduler.Models
+@using Monica.JobScheduler.UI.Localization
+@inject IStringLocalizer<JobSchedulerResource> L
 
 <MudDialog>
     <DialogContent>
@@ -11,7 +13,7 @@
                             <MudIcon Icon="@Icons.Material.Filled.Assignment"
                                     Color="Color.Default" Size="Size.Large" />
                             <MudText Typo="Typo.h5">@Result.TotalRequested</MudText>
-                            <MudText Typo="Typo.caption">总数</MudText>
+                            <MudText Typo="Typo.caption">@L["Dialogs:BatchOperationResult:Total"]</MudText>
                         </MudStack>
                     </MudPaper>
                 </MudItem>
@@ -21,7 +23,7 @@
                             <MudIcon Icon="@Icons.Material.Filled.CheckCircle"
                                     Color="Color.Success" Size="Size.Large" />
                             <MudText Typo="Typo.h5">@Result.SuccessCount</MudText>
-                            <MudText Typo="Typo.caption">成功</MudText>
+                            <MudText Typo="Typo.caption">@L["Dialogs:BatchOperationResult:Success"]</MudText>
                         </MudStack>
                     </MudPaper>
                 </MudItem>
@@ -31,7 +33,7 @@
                             <MudIcon Icon="@Icons.Material.Filled.Error"
                                     Color="Color.Error" Size="Size.Large" />
                             <MudText Typo="Typo.h5">@Result.FailedCount</MudText>
-                            <MudText Typo="Typo.caption">失败</MudText>
+                            <MudText Typo="Typo.caption">@L["Dialogs:BatchOperationResult:Failed"]</MudText>
                         </MudStack>
                     </MudPaper>
                 </MudItem>
@@ -45,7 +47,7 @@
                         <MudCardHeader>
                             <CardHeaderContent>
                                 <MudText Typo="Typo.subtitle1" Color="Color.Error">
-                                    失败项详情
+                                    @L["Dialogs:BatchOperationResult:FailedDetails"]
                                 </MudText>
                             </CardHeaderContent>
                         </MudCardHeader>
@@ -72,7 +74,7 @@
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Close" Variant="Variant.Filled" Color="Color.Primary">
-            关闭
+            @L["Common:Actions:Close"]
         </MudButton>
     </DialogActions>
 </MudDialog>

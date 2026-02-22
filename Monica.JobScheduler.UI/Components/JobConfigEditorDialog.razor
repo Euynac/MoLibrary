@@ -1,7 +1,9 @@
 @using Monica.JobScheduler.Models
 @using Monica.JobScheduler.UI.Services
+@using Monica.JobScheduler.UI.Localization
 @inject JobSchedulerUIService UIService
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<JobSchedulerResource> L
 
 <MudDialog>
     <DialogContent>
@@ -9,7 +11,7 @@
         {
             <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="pa-4">
                 <MudProgressCircular Indeterminate="true" />
-                <MudText>保存中...</MudText>
+                <MudText>@L["Common:Status:Saving"]</MudText>
             </MudStack>
         }
         else
@@ -19,66 +21,66 @@
                     <!-- JobName -->
                     <MudTextField @bind-Value="@_jobName"
                                   T="string"
-                                  Label="作业名称"
+                                  Label="@L["Dialogs:JobConfigEditor:JobName"]"
                                   Variant="Variant.Outlined"
-                                  HelperText="作业的可读名称"
+                                  HelperText="@L["Dialogs:JobConfigEditor:JobNameHelper"]"
                                   Required="true"
-                                  RequiredError="作业名称不能为空" />
+                                  RequiredError="@L["Dialogs:JobConfigEditor:JobNameRequired"]" />
 
                     <!-- Description -->
                     <MudTextField @bind-Value="@_description"
                                   T="string"
-                                  Label="描述"
+                                  Label="@L["Dialogs:JobConfigEditor:Description"]"
                                   Variant="Variant.Outlined"
                                   Lines="3"
-                                  HelperText="作业的详细描述（可选）" />
+                                  HelperText="@L["Dialogs:JobConfigEditor:DescriptionHelper"]" />
 
                     <!-- MaxConcurrency -->
                     <MudNumericField @bind-Value="@_maxConcurrency"
                                      T="int"
-                                     Label="最大并发数"
+                                     Label="@L["Dialogs:JobConfigEditor:MaxConcurrency"]"
                                      Variant="Variant.Outlined"
                                      Min="1"
                                      Required="true"
-                                     RequiredError="最大并发数必须大于等于1"
-                                     HelperText="相同作业Key的并发执行数量，默认值为1" />
+                                     RequiredError="@L["Dialogs:JobConfigEditor:MaxConcurrencyRequired"]"
+                                     HelperText="@L["Dialogs:JobConfigEditor:MaxConcurrencyHelper"]" />
 
                     <!-- RetryCount -->
                     <MudNumericField @bind-Value="@_retryCount"
                                      T="int"
-                                     Label="重试次数"
+                                     Label="@L["Dialogs:JobConfigEditor:RetryCount"]"
                                      Variant="Variant.Outlined"
                                      Min="0"
                                      Required="true"
-                                     RequiredError="重试次数必须大于等于0"
-                                     HelperText="作业出现异常后自动重试的次数，默认值为0" />
+                                     RequiredError="@L["Dialogs:JobConfigEditor:RetryCountRequired"]"
+                                     HelperText="@L["Dialogs:JobConfigEditor:RetryCountHelper"]" />
 
                     <!-- MaxExecutionTimeout -->
                     <MudStack Row="true" Spacing="2">
                         <MudNumericField @bind-Value="@_timeoutHours"
                                          T="int"
-                                         Label="超时时间（小时）"
+                                         Label="@L["Dialogs:JobConfigEditor:TimeoutHours"]"
                                          Variant="Variant.Outlined"
                                          Min="0"
                                          Style="flex: 1;"
                                          Required="true"
-                                         RequiredError="超时时间必须大于0" />
+                                         RequiredError="@L["Dialogs:JobConfigEditor:TimeoutRequired"]" />
                         <MudNumericField @bind-Value="@_timeoutMinutes"
                                          T="int"
-                                         Label="分钟"
+                                         Label="@L["Dialogs:JobConfigEditor:TimeoutMinutes"]"
                                          Variant="Variant.Outlined"
                                          Min="0"
                                          Max="59"
                                          Style="flex: 1;" />
                     </MudStack>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">
-                        当前超时: @_timeoutHours 小时 @_timeoutMinutes 分钟（默认: 1小时）
+                        @L["Dialogs:JobConfigEditor:CurrentTimeout", _timeoutHours, _timeoutMinutes]
                     </MudText>
 
                     <!-- History Retention Section -->
                     <MudStack Row="true" AlignItems="AlignItems.Center" Class="mt-2">
-                        <MudText Typo="Typo.subtitle2" Color="Color.Primary">历史记录保留策略</MudText>
-                        <MudTooltip Text="这两个设置共同控制作业执行历史的自动清理。当记录数超过最大数量或超过保留天数时，最旧的记录将被自动删除">
+                        <MudText Typo="Typo.subtitle2" Color="Color.Primary">@L["Dialogs:JobConfigEditor:HistoryRetentionPolicy"]</MudText>
+                        <MudTooltip Text="@L["Dialogs:JobConfigEditor:HistoryRetentionTooltip"]">
                             <MudIcon Icon="@Icons.Material.Filled.Info"
                                      Size="Size.Small"
                                      Color="Color.Info"
@@ -89,46 +91,46 @@
                     <!-- MaxRetainedHistoryRecords -->
                     <MudNumericField @bind-Value="@_maxRetainedHistoryRecords"
                                      T="int"
-                                     Label="最大历史记录数"
+                                     Label="@L["Dialogs:JobConfigEditor:MaxRetainedHistoryRecords"]"
                                      Variant="Variant.Outlined"
                                      Min="0"
                                      Required="true"
-                                     RequiredError="最大历史记录数不能为空"
-                                     HelperText="保留的历史记录最大数量。默认值为100，设置为0或负数表示不限制记录数量" />
+                                     RequiredError="@L["Dialogs:JobConfigEditor:MaxRetainedHistoryRecordsRequired"]"
+                                     HelperText="@L["Dialogs:JobConfigEditor:MaxRetainedHistoryRecordsHelper"]" />
 
                     <!-- MaxRetentionDays -->
                     <MudNumericField @bind-Value="@_maxRetentionDays"
                                      T="int?"
-                                     Label="历史保留天数"
+                                     Label="@L["Dialogs:JobConfigEditor:MaxRetentionDays"]"
                                      Variant="Variant.Outlined"
                                      Min="1"
                                      Clearable="true"
-                                     HelperText="历史记录保留的最大天数。留空表示不启用基于时间的清理策略" />
+                                     HelperText="@L["Dialogs:JobConfigEditor:MaxRetentionDaysHelper"]" />
 
                     <!-- Recurring Job Specific Fields -->
                     @if (JobDefinition?.JobType == JobType.Recurring)
                     {
                         <!-- StartTime -->
                         <MudDatePicker @bind-Date="@_startDate"
-                                       Label="开始时间"
+                                       Label="@L["Dialogs:JobConfigEditor:StartTime"]"
                                        Variant="Variant.Outlined"
-                                       HelperText="作业最早执行时间（可选）" />
+                                       HelperText="@L["Dialogs:JobConfigEditor:StartTimeHelper"]" />
                         @if (_startDate.HasValue)
                         {
                             <MudTimePicker @bind-Time="@_startTime"
-                                           Label="开始时间（时:分:秒）"
+                                           Label="@L["Dialogs:JobConfigEditor:StartTime"]"
                                            Variant="Variant.Outlined" />
                         }
 
                         <!-- EndTime -->
                         <MudDatePicker @bind-Date="@_endDate"
-                                       Label="结束时间"
+                                       Label="@L["Dialogs:JobConfigEditor:EndTime"]"
                                        Variant="Variant.Outlined"
-                                       HelperText="作业最晚执行时间（可选）" />
+                                       HelperText="@L["Dialogs:JobConfigEditor:EndTimeHelper"]" />
                         @if (_endDate.HasValue)
                         {
                             <MudTimePicker @bind-Time="@_endTime"
-                                           Label="结束时间（时:分:秒）"
+                                           Label="@L["Dialogs:JobConfigEditor:EndTime"]"
                                            Variant="Variant.Outlined" />
                         }
                     }
@@ -137,12 +139,12 @@
         }
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel">取消</MudButton>
+        <MudButton OnClick="Cancel">@L["Common:Actions:Cancel"]</MudButton>
         <MudButton Color="Color.Primary"
                    Variant="Variant.Filled"
                    OnClick="Save"
                    Disabled="@(!_success || _isLoading)">
-            保存
+            @L["Common:Actions:Save"]
         </MudButton>
     </DialogActions>
 </MudDialog>
@@ -222,26 +224,26 @@
         // Validation
         if (string.IsNullOrWhiteSpace(_jobName))
         {
-            Snackbar.Add("作业名称不能为空", Severity.Warning);
+            Snackbar.Add(L["Dialogs:JobConfigEditor:ValidationJobNameEmpty"], Severity.Warning);
             return;
         }
 
         if (_maxConcurrency < 1)
         {
-            Snackbar.Add("最大并发数必须大于等于1", Severity.Warning);
+            Snackbar.Add(L["Dialogs:JobConfigEditor:ValidationMaxConcurrency"], Severity.Warning);
             return;
         }
 
         if (_timeoutHours == 0 && _timeoutMinutes == 0)
         {
-            Snackbar.Add("超时时间必须大于0", Severity.Warning);
+            Snackbar.Add(L["Dialogs:JobConfigEditor:ValidationTimeout"], Severity.Warning);
             return;
         }
 
         // Validation for retention fields
         if (_maxRetentionDays.HasValue && _maxRetentionDays.Value < 1)
         {
-            Snackbar.Add("历史保留天数必须大于等于1", Severity.Warning);
+            Snackbar.Add(L["Dialogs:JobConfigEditor:ValidationRetentionDays"], Severity.Warning);
             return;
         }
 
@@ -290,17 +292,17 @@
 
             if (result.IsFailed(out var error))
             {
-                Snackbar.Add($"保存失败: {error.Message}", Severity.Error);
+                Snackbar.Add($"{L["Dialogs:JobConfigEditor:SaveFailed"]}: {error.Message}", Severity.Error);
             }
             else
             {
-                Snackbar.Add("配置已保存", Severity.Success);
+                Snackbar.Add(L["Dialogs:JobConfigEditor:SaveSuccess"], Severity.Success);
                 MudDialog.Close(DialogResult.Ok(true));
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"保存失败: {ex.Message}", Severity.Error);
+            Snackbar.Add($"{L["Dialogs:JobConfigEditor:SaveFailed"]}: {ex.Message}", Severity.Error);
         }
         finally
         {

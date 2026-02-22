@@ -1,36 +1,38 @@
 @using Monica.JobScheduler.UI.Models
+@using Monica.JobScheduler.UI.Localization
 
 @inject IDialogService DialogService
+@inject IStringLocalizer<JobSchedulerResource> L
 
 <div class="percentiles-wrapper">
     <MudPaper Class="percentiles-card" Elevation="0">
         <div class="card-header">
-            <MudText Typo="Typo.h6">执行耗时分布</MudText>
-            <MudText Typo="Typo.caption" Color="Color.Secondary">样本: @Percentiles.SampleCount</MudText>
+            <MudText Typo="Typo.h6">@L["Statistics:DurationPercentiles:Title"]</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Statistics:DurationPercentiles:Sample"]: @Percentiles.SampleCount</MudText>
         </div>
 
         @if (Percentiles.SampleCount > 0)
         {
             <div class="percentiles-grid">
                 <div class="percentile-item">
-                    <div class="percentile-label">P50</div>
+                    <div class="percentile-label">@L["Statistics:DurationPercentiles:P50"]</div>
                     <div class="percentile-value">@FormatDuration(Percentiles.P50)</div>
-                    <div class="percentile-desc">中位数</div>
+                    <div class="percentile-desc">@L["Statistics:DurationPercentiles:P50Desc"]</div>
                 </div>
                 <div class="percentile-item">
-                    <div class="percentile-label">P90</div>
+                    <div class="percentile-label">@L["Statistics:DurationPercentiles:P90"]</div>
                     <div class="percentile-value">@FormatDuration(Percentiles.P90)</div>
-                    <div class="percentile-desc">90%分位</div>
+                    <div class="percentile-desc">@L["Statistics:DurationPercentiles:P90Desc"]</div>
                 </div>
                 <div class="percentile-item">
-                    <div class="percentile-label">P95</div>
+                    <div class="percentile-label">@L["Statistics:DurationPercentiles:P95"]</div>
                     <div class="percentile-value">@FormatDuration(Percentiles.P95)</div>
-                    <div class="percentile-desc">95%分位</div>
+                    <div class="percentile-desc">@L["Statistics:DurationPercentiles:P95Desc"]</div>
                 </div>
                 <div class="percentile-item highlight">
-                    <div class="percentile-label">P99</div>
+                    <div class="percentile-label">@L["Statistics:DurationPercentiles:P99"]</div>
                     <div class="percentile-value">@FormatDuration(Percentiles.P99)</div>
-                    <div class="percentile-desc">99%分位</div>
+                    <div class="percentile-desc">@L["Statistics:DurationPercentiles:P99Desc"]</div>
                 </div>
             </div>
 
@@ -39,17 +41,17 @@
             <div class="stats-row">
                 <div class="stat-item">
                     <MudIcon Icon="@Icons.Material.Filled.Timer" Size="Size.Small" Color="Color.Default" />
-                    <span class="stat-label">平均:</span>
+                    <span class="stat-label">@L["Statistics:DurationPercentiles:Average"]:</span>
                     <span class="stat-value">@FormatDuration(Percentiles.Average)</span>
                 </div>
                 <div class="stat-item">
                     <MudIcon Icon="@Icons.Material.Filled.Speed" Size="Size.Small" Color="Color.Success" />
-                    <span class="stat-label">最快:</span>
+                    <span class="stat-label">@L["Statistics:DurationPercentiles:Fastest"]:</span>
                     <span class="stat-value">@FormatDuration(Percentiles.Min)</span>
                 </div>
                 <div class="stat-item">
                     <MudIcon Icon="@Icons.Material.Filled.Timelapse" Size="Size.Small" Color="Color.Warning" />
-                    <span class="stat-label">最慢:</span>
+                    <span class="stat-label">@L["Statistics:DurationPercentiles:Slowest"]:</span>
                     <span class="stat-value">@FormatDuration(Percentiles.Max)</span>
                 </div>
             </div>
@@ -60,8 +62,8 @@
 
                 <div class="slowest-section">
                     <div class="slowest-header">
-                        <MudText Typo="Typo.subtitle2">最慢实例 Top @SlowestInstances.Count</MudText>
-                        <MudTooltip Text="统计不同作业的最慢执行实例（每个作业仅显示最慢的一条）">
+                        <MudText Typo="Typo.subtitle2">@L["Statistics:DurationPercentiles:SlowestInstances", SlowestInstances.Count]</MudText>
+                        <MudTooltip Text="@L["Statistics:DurationPercentiles:SlowestTooltip"]">
                             <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Default" />
                         </MudTooltip>
                     </div>
@@ -81,7 +83,7 @@
         {
             <div class="empty-state">
                 <MudIcon Icon="@Icons.Material.Filled.AccessTime" Size="Size.Large" Color="Color.Default" />
-                <MudText Typo="Typo.body2" Color="Color.Secondary">暂无耗时数据</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Statistics:DurationPercentiles:NoData"]</MudText>
             </div>
         }
     </MudPaper>
@@ -110,19 +112,19 @@
             BackdropClick = false
         };
 
-        await DialogService.ShowAsync<JobInstanceDetailDialog>("作业实例详情", parameters, options);
+        await DialogService.ShowAsync<JobInstanceDetailDialog>(L["Dialogs:JobInstanceDetail:Title"], parameters, options);
     }
 
-    private static string FormatDuration(TimeSpan duration)
+    private string FormatDuration(TimeSpan duration)
     {
         if (duration.TotalDays >= 1)
-            return $"{duration.TotalDays:F1}天";
+            return $"{duration.TotalDays:F1}{L["Common:Time:Days"]}";
         if (duration.TotalHours >= 1)
-            return $"{duration.TotalHours:F1}小时";
+            return $"{duration.TotalHours:F1}{L["Common:Time:Hours"]}";
         if (duration.TotalMinutes >= 1)
-            return $"{duration.TotalMinutes:F1}分钟";
+            return $"{duration.TotalMinutes:F1}{L["Common:Time:Minutes"]}";
         if (duration.TotalSeconds >= 1)
-            return $"{duration.TotalSeconds:F2}秒";
-        return $"{duration.TotalMilliseconds:F0}毫秒";
+            return $"{duration.TotalSeconds:F2}{L["Common:Time:Seconds"]}";
+        return $"{duration.TotalMilliseconds:F0}{L["Common:Time:Milliseconds"]}";
     }
 }

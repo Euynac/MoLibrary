@@ -1,10 +1,12 @@
 @using Monica.JobScheduler.Models
 @using Monica.JobScheduler.UI.Services
+@using Monica.JobScheduler.UI.Localization
 @using Monica.JobScheduler.ControlPlane
 @inject JobSchedulerUIService UIService
 @inject JobArgsSchemaService SchemaService
 @inject JobRegistry JobRegistry
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<JobSchedulerResource> L
 
 <MudDialog>
     <DialogContent>
@@ -12,7 +14,7 @@
         {
             <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="pa-4">
                 <MudProgressCircular Indeterminate="true" />
-                <MudText>加载中...</MudText>
+                <MudText>@L["Common:Status:Loading"]</MudText>
             </MudStack>
         }
         else
@@ -22,13 +24,13 @@
                 <div class="job-info-header">
                     <MudGrid>
                         <MudItem xs="12" sm="@(_hasArgsType ? 6 : 12)">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">作业</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dialogs:JobExecute:JobName"]</MudText>
                             <MudText Typo="Typo.body1">@JobDefinition.JobName</MudText>
                         </MudItem>
                         @if (_hasArgsType)
                         {
                             <MudItem xs="12" sm="6">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">参数类型</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dialogs:JobExecute:ArgsType"]</MudText>
                                 <MudText Typo="Typo.body1" Class="type-name">
                                     @_argsTypeName
                                 </MudText>
@@ -43,7 +45,7 @@
                     <div class="json-editor-container">
                         <MudTextField @bind-Value="@_jsonInput"
                                       T="string"
-                                      Label="JSON 参数"
+                                      Label="@L["Dialogs:JobExecute:JsonArgs"]"
                                       Variant="Variant.Outlined"
                                       Lines="12"
                                       AutoGrow="true"
@@ -59,7 +61,7 @@
                     @if (!_hasValidationError && !string.IsNullOrEmpty(_jsonInput) && _jsonInput != "null")
                     {
                         <MudAlert Severity="Severity.Success" Dense="true" Icon="@Icons.Material.Filled.CheckCircle">
-                            JSON 验证通过，可以执行
+                            @L["Dialogs:JobExecute:ValidationSuccess"]
                         </MudAlert>
                     }
 
@@ -67,7 +69,7 @@
                     @if (!string.IsNullOrEmpty(_typeReference))
                     {
                         <MudExpansionPanels Elevation="0">
-                            <MudExpansionPanel Text="类型参考" Dense="true" Icon="@Icons.Material.Filled.Info">
+                            <MudExpansionPanel Text="@L["Dialogs:JobExecute:TypeReference"]" Dense="true" Icon="@Icons.Material.Filled.Info">
                                 <div class="type-reference">
                                     <pre>@_typeReference</pre>
                                 </div>
@@ -79,14 +81,14 @@
                 {
                     <!-- No Args - Simple Confirmation -->
                     <MudAlert Severity="Severity.Info" Dense="true" Icon="@Icons.Material.Filled.Info">
-                        此作业不需要参数，点击执行按钮立即触发
+                        @L["Dialogs:JobExecute:NoArgsRequired"]
                     </MudAlert>
                 }
             </MudStack>
         }
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel">取消</MudButton>
+        <MudButton OnClick="Cancel">@L["Common:Actions:Cancel"]</MudButton>
         <MudButton Color="Color.Primary"
                    Variant="Variant.Filled"
                    OnClick="Execute"
@@ -94,11 +96,11 @@
             @if (_isExecuting)
             {
                 <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-                <span>执行中...</span>
+                <span>@L["Common:Status:Executing"]</span>
             }
             else
             {
-                <span>执行</span>
+                <span>@L["Common:Actions:Execute"]</span>
             }
         </MudButton>
     </DialogActions>
@@ -141,7 +143,7 @@
             if (jsonResult.IsFailed(out var error))
             {
                 _jsonInput = "{}";
-                Snackbar.Add($"生成默认 JSON 失败: {error.Message}", Severity.Warning);
+                Snackbar.Add($"{L["Common:Messages:LoadFailed"]}: {error.Message}", Severity.Warning);
             }
             else
             {
@@ -210,17 +212,17 @@
             var result = await UIService.ExecuteJobAsync(JobDefinition.JobKey, _deserializedArgs ?? new object());
             if (result.IsFailed(out var error))
             {
-                Snackbar.Add($"执行失败: {error.Message}", Severity.Error);
+                Snackbar.Add($"{L["Dialogs:JobExecute:ExecuteFailed"]}: {error.Message}", Severity.Error);
             }
             else
             {
-                Snackbar.Add($"作业 {JobDefinition.JobName} 已触发执行", Severity.Success);
+                Snackbar.Add(L["Dialogs:JobExecute:ExecuteSuccess"], Severity.Success);
                 MudDialog.Close(DialogResult.Ok(true));
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"执行失败: {ex.Message}", Severity.Error);
+            Snackbar.Add($"{L["Dialogs:JobExecute:ExecuteFailed"]}: {ex.Message}", Severity.Error);
         }
         finally
         {

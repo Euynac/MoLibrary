@@ -5,12 +5,14 @@
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject IMoBrowserStorage BrowserStorage
+@inject IStringLocalizer<JobSchedulerResource> L
 @using MudBlazor
 @using Monica.JobScheduler.Models
 @using Monica.JobScheduler.UI.Components
+@using Monica.JobScheduler.UI.Localization
 
 <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
-    <MudText Typo="Typo.h4" Class="mb-4">作业定义</MudText>
+    <MudText Typo="Typo.h4" Class="mb-4">@L["JobDefinitions:Title"]</MudText>
 
     <!-- 筛选器 -->
     <MudPaper Class="pa-4 mb-4" Elevation="2">
@@ -18,7 +20,7 @@
             <MudItem xs="12" sm="6" md="4">
                 <MudTextField T="string"
                               @bind-Value="_filterFromProject"
-                              Label="来源项目"
+                              Label="@L["JobDefinitions:Filters:SourceProject"]"
                               Variant="Variant.Outlined"
                               Clearable="true"
                               Immediate="true"
@@ -27,7 +29,7 @@
             <MudItem xs="12" sm="6" md="4">
                 <MudTextField T="string"
                               @bind-Value="_filterJobKey"
-                              Label="作业键"
+                              Label="@L["JobDefinitions:Filters:JobKey"]"
                               Variant="Variant.Outlined"
                               Clearable="true"
                               Immediate="true"
@@ -36,7 +38,7 @@
             <MudItem xs="12" sm="6" md="4">
                 <MudTextField T="string"
                               @bind-Value="_filterJobName"
-                              Label="作业名称"
+                              Label="@L["JobDefinitions:Filters:JobName"]"
                               Variant="Variant.Outlined"
                               Clearable="true"
                               Immediate="true"
@@ -47,14 +49,14 @@
                            Color="Color.Primary"
                            OnClick="HandleFilterChanged"
                            StartIcon="@Icons.Material.Filled.Search">
-                    搜索
+                    @L["Common:Actions:Search"]
                 </MudButton>
                 <MudButton Variant="Variant.Outlined"
                            Color="Color.Default"
                            OnClick="HandleResetFilters"
                            StartIcon="@Icons.Material.Filled.Clear"
                            Class="ml-2">
-                    重置
+                    @L["Common:Actions:Reset"]
                 </MudButton>
             </MudItem>
         </MudGrid>
@@ -68,7 +70,7 @@
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                     <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Primary" />
                     <MudText Typo="Typo.body1">
-                        已选择 <strong>@_selectedRecurringJobs.Count</strong> 个作业
+                        @L["JobDefinitions:BatchOperation:Selected", _selectedRecurringJobs.Count]
                     </MudText>
                 </MudStack>
                 <MudStack Row="true" Spacing="2">
@@ -77,20 +79,20 @@
                                StartIcon="@Icons.Material.Filled.Pause"
                                OnClick="BatchPauseJobsAsync"
                                Disabled="_isProcessingBatch">
-                        批量暂停
+                        @L["JobDefinitions:Actions:BatchPause"]
                     </MudButton>
                     <MudButton Variant="Variant.Filled"
                                Color="Color.Success"
                                StartIcon="@Icons.Material.Filled.PlayArrow"
                                OnClick="BatchResumeJobsAsync"
                                Disabled="_isProcessingBatch">
-                        批量继续
+                        @L["JobDefinitions:Actions:BatchResume"]
                     </MudButton>
                     <MudButton Variant="Variant.Text"
                                Color="Color.Default"
                                StartIcon="@Icons.Material.Filled.Clear"
                                OnClick="ClearSelection">
-                        清除选择
+                        @L["Common:Actions:ClearSelection"]
                     </MudButton>
                 </MudStack>
             </MudStack>
@@ -105,7 +107,7 @@
                  Rounded="true"
                  ApplyEffectsToContainer="true"
                  PanelClass="pa-6">
-            <MudTabPanel Text="RecurringJob" Icon="@Icons.Material.Filled.Schedule">
+            <MudTabPanel Text="@L["JobDefinitions:Tabs:RecurringJob"]" Icon="@Icons.Material.Filled.Schedule">
             <MudTable @ref="_recurringTable"
                       T="JobDefinitionWithLastExecution"
                       ServerData="LoadRecurringJobsAsync"
@@ -118,31 +120,31 @@
                       Elevation="0"
                       SortMode="SortMode.Single">
                 <ToolBarContent>
-                    <MudText Typo="Typo.h6">周期性作业</MudText>
+                    <MudText Typo="Typo.h6">@L["JobDefinitions:Tabs:RecurringJob"]</MudText>
                     <MudSpacer />
                     <MudIconButton Icon="@Icons.Material.Filled.Refresh"
                                    Color="Color.Primary"
                                    OnClick="RefreshRecurringJobsAsync" />
                 </ToolBarContent>
                 <HeaderContent>
-                    <MudTh><MudTableSortLabel SortLabel="FromProject" T="JobDefinitionWithLastExecution">来源项目</MudTableSortLabel></MudTh>
-                    <MudTh><MudTableSortLabel SortLabel="JobKey" T="JobDefinitionWithLastExecution">作业键</MudTableSortLabel></MudTh>
-                    <MudTh><MudTableSortLabel SortLabel="JobName" T="JobDefinitionWithLastExecution">作业名称</MudTableSortLabel></MudTh>
-                    <MudTh><MudTableSortLabel SortLabel="CronExpression" T="JobDefinitionWithLastExecution">Cron表达式</MudTableSortLabel></MudTh>
-                    <MudTh><MudTableSortLabel SortLabel="NextExecutionTime" T="JobDefinitionWithLastExecution">下次执行时间</MudTableSortLabel></MudTh>
-                    <MudTh><MudTableSortLabel SortLabel="LastExecution" T="JobDefinitionWithLastExecution">上次执行时间</MudTableSortLabel></MudTh>
-                    <MudTh><MudTableSortLabel SortLabel="IsDisabled" T="JobDefinitionWithLastExecution">状态</MudTableSortLabel></MudTh>
-                    <MudTh>操作</MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="FromProject" T="JobDefinitionWithLastExecution">@L["JobDefinitions:Columns:SourceProject"]</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="JobKey" T="JobDefinitionWithLastExecution">@L["JobDefinitions:Columns:JobKey"]</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="JobName" T="JobDefinitionWithLastExecution">@L["JobDefinitions:Columns:JobName"]</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="CronExpression" T="JobDefinitionWithLastExecution">@L["JobDefinitions:Columns:CronExpression"]</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="NextExecutionTime" T="JobDefinitionWithLastExecution">@L["JobDefinitions:Columns:NextExecutionTime"]</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="LastExecution" T="JobDefinitionWithLastExecution">@L["JobDefinitions:Columns:LastExecutionTime"]</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="IsDisabled" T="JobDefinitionWithLastExecution">@L["JobDefinitions:Columns:Status"]</MudTableSortLabel></MudTh>
+                    <MudTh>@L["JobDefinitions:Columns:Actions"]</MudTh>
                 </HeaderContent>
                 <RowTemplate>
-                    <MudTd DataLabel="来源项目">@context.Definition.FromProject</MudTd>
-                    <MudTd DataLabel="作业键">@context.Definition.JobKey</MudTd>
-                    <MudTd DataLabel="作业名称">@context.Definition.JobName</MudTd>
-                    <MudTd DataLabel="Cron表达式">
+                    <MudTd DataLabel="@L["JobDefinitions:Columns:SourceProject"]">@context.Definition.FromProject</MudTd>
+                    <MudTd DataLabel="@L["JobDefinitions:Columns:JobKey"]">@context.Definition.JobKey</MudTd>
+                    <MudTd DataLabel="@L["JobDefinitions:Columns:JobName"]">@context.Definition.JobName</MudTd>
+                    <MudTd DataLabel="@L["JobDefinitions:Columns:CronExpression"]">
                         <CronExpressionDisplay Expression="@context.Definition.CronExpression"
                                                DisplayMode="CronDisplayMode.Compact" />
                     </MudTd>
-                    <MudTd DataLabel="下次执行时间">
+                    <MudTd DataLabel="@L["JobDefinitions:Columns:NextExecutionTime"]">
                         @if (context.NextExecutionTime.HasValue)
                         {
                             <MudText Typo="Typo.body2">@context.NextExecutionTime.Value.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
@@ -152,7 +154,7 @@
                             <MudText Typo="Typo.body2" Color="Color.Secondary">-</MudText>
                         }
                     </MudTd>
-                    <MudTd DataLabel="上次执行时间">
+                    <MudTd DataLabel="@L["JobDefinitions:Columns:LastExecutionTime"]">
                         @if (context.LastExecution != null)
                         {
                             <div class="last-execution-wrapper">
@@ -170,16 +172,16 @@
                             <MudText Typo="Typo.body2" Color="Color.Secondary">-</MudText>
                         }
                     </MudTd>
-                    <MudTd DataLabel="状态">
+                    <MudTd DataLabel="@L["JobDefinitions:Columns:Status"]">
                         <MudChip T="string" Size="Size.Small" Color="@GetDisabledStateColor(context.Definition.IsDisabled)">
-                            @(context.Definition.IsDisabled ? "已禁用" : "启用")
+                            @(context.Definition.IsDisabled ? L["JobDefinitions:Status:Disabled"] : L["JobDefinitions:Status:Enabled"])
                         </MudChip>
                     </MudTd>
-                    <MudTd DataLabel="操作">
+                    <MudTd DataLabel="@L["JobDefinitions:Columns:Actions"]">
                         <MudStack Row="true" Spacing="1">
                             @if (context.Definition.IsDisabled)
                             {
-                                <MudTooltip Text="继续">
+                                <MudTooltip Text="@L["JobDefinitions:Actions:Resume"]">
                                     <MudIconButton Icon="@Icons.Material.Filled.PlayArrow"
                                                    Color="Color.Success"
                                                    Size="Size.Small"
@@ -188,14 +190,14 @@
                             }
                             else
                             {
-                                <MudTooltip Text="暂停">
+                                <MudTooltip Text="@L["JobDefinitions:Actions:Pause"]">
                                     <MudIconButton Icon="@Icons.Material.Filled.Pause"
                                                    Color="Color.Warning"
                                                    Size="Size.Small"
                                                    OnClick="() => PauseJobAsync(context.Definition.JobKey)" />
                                 </MudTooltip>
                             }
-                            <MudTooltip Text="详情">
+                            <MudTooltip Text="@L["JobDefinitions:Actions:ViewDetails"]">
                                 <MudIconButton Icon="@Icons.Material.Filled.Info"
                                                Color="Color.Info"
                                                Size="Size.Small"
@@ -205,7 +207,7 @@
                     </MudTd>
                 </RowTemplate>
                 <NoRecordsContent>
-                    <MudText>没有找到匹配的周期性作业</MudText>
+                    <MudText>@L["JobDefinitions:Messages:NoRecurringJobs"]</MudText>
                 </NoRecordsContent>
                 <LoadingContent>
                     <MudProgressCircular Indeterminate="true" />
@@ -216,7 +218,7 @@
             </MudTable>
         </MudTabPanel>
 
-        <MudTabPanel Text="TriggerJob" Icon="@Icons.Material.Filled.TouchApp">
+        <MudTabPanel Text="@L["JobDefinitions:Tabs:TriggerJob"]" Icon="@Icons.Material.Filled.TouchApp">
             <MudTable @ref="_triggerTable"
                       T="JobDefinitionWithLastExecution"
                       ServerData="LoadTriggerJobsAsync"
@@ -226,24 +228,24 @@
                       Elevation="0"
                       SortMode="SortMode.Single">
                 <ToolBarContent>
-                    <MudText Typo="Typo.h6">触发型作业</MudText>
+                    <MudText Typo="Typo.h6">@L["JobDefinitions:Tabs:TriggerJob"]</MudText>
                     <MudSpacer />
                     <MudIconButton Icon="@Icons.Material.Filled.Refresh"
                                    Color="Color.Primary"
                                    OnClick="RefreshTriggerJobsAsync" />
                 </ToolBarContent>
                 <HeaderContent>
-                    <MudTh><MudTableSortLabel SortLabel="FromProject" T="JobDefinitionWithLastExecution">来源项目</MudTableSortLabel></MudTh>
-                    <MudTh><MudTableSortLabel SortLabel="JobKey" T="JobDefinitionWithLastExecution">作业键</MudTableSortLabel></MudTh>
-                    <MudTh><MudTableSortLabel SortLabel="JobName" T="JobDefinitionWithLastExecution">作业名称</MudTableSortLabel></MudTh>
-                    <MudTh><MudTableSortLabel SortLabel="LastExecution" T="JobDefinitionWithLastExecution">上次执行时间</MudTableSortLabel></MudTh>
-                    <MudTh>操作</MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="FromProject" T="JobDefinitionWithLastExecution">@L["JobDefinitions:Columns:SourceProject"]</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="JobKey" T="JobDefinitionWithLastExecution">@L["JobDefinitions:Columns:JobKey"]</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="JobName" T="JobDefinitionWithLastExecution">@L["JobDefinitions:Columns:JobName"]</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="LastExecution" T="JobDefinitionWithLastExecution">@L["JobDefinitions:Columns:LastExecutionTime"]</MudTableSortLabel></MudTh>
+                    <MudTh>@L["JobDefinitions:Columns:Actions"]</MudTh>
                 </HeaderContent>
                 <RowTemplate>
-                    <MudTd DataLabel="来源项目">@context.Definition.FromProject</MudTd>
-                    <MudTd DataLabel="作业键">@context.Definition.JobKey</MudTd>
-                    <MudTd DataLabel="作业名称">@context.Definition.JobName</MudTd>
-                    <MudTd DataLabel="上次执行时间">
+                    <MudTd DataLabel="@L["JobDefinitions:Columns:SourceProject"]">@context.Definition.FromProject</MudTd>
+                    <MudTd DataLabel="@L["JobDefinitions:Columns:JobKey"]">@context.Definition.JobKey</MudTd>
+                    <MudTd DataLabel="@L["JobDefinitions:Columns:JobName"]">@context.Definition.JobName</MudTd>
+                    <MudTd DataLabel="@L["JobDefinitions:Columns:LastExecutionTime"]">
                         @if (context.LastExecution != null)
                         {
                             <div class="last-execution-wrapper">
@@ -261,15 +263,15 @@
                             <MudText Typo="Typo.body2" Color="Color.Secondary">-</MudText>
                         }
                     </MudTd>
-                    <MudTd DataLabel="操作">
+                    <MudTd DataLabel="@L["JobDefinitions:Columns:Actions"]">
                         <MudStack Row="true" Spacing="1">
-                            <MudTooltip Text="执行">
+                            <MudTooltip Text="@L["JobDefinitions:Actions:Execute"]">
                                 <MudIconButton Icon="@Icons.Material.Filled.PlayCircle"
                                                Color="Color.Primary"
                                                Size="Size.Small"
                                                OnClick="() => ExecuteJobAsync(context.Definition.JobKey)" />
                             </MudTooltip>
-                            <MudTooltip Text="详情">
+                            <MudTooltip Text="@L["JobDefinitions:Actions:ViewDetails"]">
                                 <MudIconButton Icon="@Icons.Material.Filled.Info"
                                                Color="Color.Info"
                                                Size="Size.Small"
@@ -279,7 +281,7 @@
                     </MudTd>
                 </RowTemplate>
                 <NoRecordsContent>
-                    <MudText>没有找到匹配的触发型作业</MudText>
+                    <MudText>@L["JobDefinitions:Messages:NoTriggerJobs"]</MudText>
                 </NoRecordsContent>
                 <LoadingContent>
                     <MudProgressCircular Indeterminate="true" />
@@ -296,7 +298,7 @@
         <MudPaper Class="pa-6" Elevation="2">
             <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Class="py-8">
                 <MudProgressCircular Indeterminate="true" />
-                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">加载中...</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">@L["Common:Status:Loading"]</MudText>
             </MudStack>
         </MudPaper>
     }
@@ -390,7 +392,7 @@
 
         if (result.IsFailed(out var error, out var data))
         {
-            Snackbar.Add($"加载失败: {error.Message}", Severity.Error);
+            Snackbar.Add($"{L["Common:Messages:LoadFailed"]}: {error.Message}", Severity.Error);
             return new TableData<JobDefinitionWithLastExecution> { Items = Array.Empty<JobDefinitionWithLastExecution>(), TotalItems = 0 };
         }
 
@@ -447,7 +449,7 @@
 
         if (result.IsFailed(out var error, out var data))
         {
-            Snackbar.Add($"加载失败: {error.Message}", Severity.Error);
+            Snackbar.Add($"{L["Common:Messages:LoadFailed"]}: {error.Message}", Severity.Error);
             return new TableData<JobDefinitionWithLastExecution> { Items = Array.Empty<JobDefinitionWithLastExecution>(), TotalItems = 0 };
         }
 
@@ -514,11 +516,11 @@
         var result = await UIService.PauseJobAsync(jobKey);
         if (result.IsFailed(out var error))
         {
-            Snackbar.Add($"暂停失败: {error.Message}", Severity.Error);
+            Snackbar.Add($"{L["JobDefinitions:Messages:PauseFailed"]}: {error.Message}", Severity.Error);
         }
         else
         {
-            Snackbar.Add($"作业 {jobKey} 已暂停", Severity.Success);
+            Snackbar.Add(L["JobDefinitions:Messages:PauseSuccess", jobKey], Severity.Success);
             await RefreshRecurringJobsAsync();
         }
     }
@@ -528,11 +530,11 @@
         var result = await UIService.ResumeJobAsync(jobKey);
         if (result.IsFailed(out var error))
         {
-            Snackbar.Add($"继续失败: {error.Message}", Severity.Error);
+            Snackbar.Add($"{L["JobDefinitions:Messages:ResumeFailed"]}: {error.Message}", Severity.Error);
         }
         else
         {
-            Snackbar.Add($"作业 {jobKey} 已继续", Severity.Success);
+            Snackbar.Add(L["JobDefinitions:Messages:ResumeSuccess", jobKey], Severity.Success);
             await RefreshRecurringJobsAsync();
         }
     }
@@ -543,13 +545,13 @@
         var defResult = await UIService.GetJobDefinitionAsync(jobKey);
         if (defResult.IsFailed(out var error, out var definition))
         {
-            Snackbar.Add($"获取作业定义失败: {error.Message}", Severity.Error);
+            Snackbar.Add($"{L["JobDetail:Messages:GetDefinitionFailed"]}: {error.Message}", Severity.Error);
             return;
         }
 
         if (definition == null)
         {
-            Snackbar.Add("作业定义不存在", Severity.Error);
+            Snackbar.Add(L["JobDetail:Messages:DefinitionNotFound"], Severity.Error);
             return;
         }
 
@@ -567,7 +569,7 @@
             BackdropClick = false
         };
 
-        var dialog = await DialogService.ShowAsync<JobExecuteDialog>("执行作业", parameters, options);
+        var dialog = await DialogService.ShowAsync<JobExecuteDialog>(L["Dialogs:JobExecute:Title"], parameters, options);
         var dialogResult = await dialog.Result;
 
         // 执行结果已在对话框中处理，刷新列表
@@ -599,7 +601,7 @@
             Position = DialogPosition.Center
         };
 
-        await DialogService.ShowAsync<JobInstanceDetailDialog>("作业实例详情", parameters, options);
+        await DialogService.ShowAsync<JobInstanceDetailDialog>(L["Dialogs:JobInstanceDetail:Title"], parameters, options);
     }
 
     private Color GetDisabledStateColor(bool isDisabled)
@@ -708,7 +710,7 @@
         };
 
         var confirmDialog = await DialogService.ShowAsync<BatchOperationConfirmDialog>(
-            "确认批量操作", confirmParams, confirmOptions);
+            L["JobDefinitions:BatchOperation:ConfirmTitle"], confirmParams, confirmOptions);
 
         var confirmResult = await confirmDialog.Result;
 
@@ -727,7 +729,7 @@
 
             if (result.IsFailed(out var error, out var data))
             {
-                Snackbar.Add($"批量操作失败: {error.Message}", Severity.Error);
+                Snackbar.Add($"{L["Common:Messages:LoadFailed"]}: {error.Message}", Severity.Error);
                 return;
             }
 
@@ -745,22 +747,22 @@
             };
 
             await DialogService.ShowAsync<BatchOperationResultDialog>(
-                "批量操作结果", resultParams, resultOptions);
+                L["JobDefinitions:BatchOperation:ResultTitle"], resultParams, resultOptions);
 
             // Show summary snackbar
             if (data.FailedCount == 0)
             {
-                Snackbar.Add($"批量操作成功: {data.SuccessCount} 个作业已更新", Severity.Success);
+                Snackbar.Add(L["JobDefinitions:BatchOperation:Success", data.SuccessCount], Severity.Success);
             }
             else if (data.SuccessCount > 0)
             {
                 Snackbar.Add(
-                    $"批量操作完成: {data.SuccessCount} 成功, {data.FailedCount} 失败",
+                    L["JobDefinitions:BatchOperation:PartialSuccess", data.SuccessCount, data.FailedCount],
                     Severity.Warning);
             }
             else
             {
-                Snackbar.Add($"批量操作失败: 所有操作均失败", Severity.Error);
+                Snackbar.Add(L["JobDefinitions:BatchOperation:AllFailed"], Severity.Error);
             }
 
             // Clear selection and refresh

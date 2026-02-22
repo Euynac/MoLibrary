@@ -1,4 +1,7 @@
 @using Monica.JobScheduler.UI.Models
+@using Monica.JobScheduler.UI.Localization
+
+@inject IStringLocalizer<JobSchedulerResource> L
 
 <div class="health-banner-wrapper">
     <MudPaper Class="@GetBannerClass()" Elevation="0">
@@ -54,10 +57,10 @@
     {
         return Status switch
         {
-            SystemHealthStatus.Healthy => "系统运行正常",
-            SystemHealthStatus.Degraded => "系统部分降级",
-            SystemHealthStatus.Unhealthy => "系统异常",
-            _ => "未知状态"
+            SystemHealthStatus.Healthy => L["Dashboard.SystemHealth.Healthy"],
+            SystemHealthStatus.Degraded => L["Dashboard.SystemHealth.Degraded"],
+            SystemHealthStatus.Unhealthy => L["Dashboard.SystemHealth.Unhealthy"],
+            _ => L["Dashboard.SystemHealth.Unknown"]
         };
     }
 

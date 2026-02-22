@@ -4,28 +4,30 @@
 @using Monica.JobScheduler.UI.Components.Dashboard
 @using Monica.JobScheduler.UI.Models
 @using Monica.JobScheduler.UI.Services
+@using Monica.JobScheduler.UI.Localization
 
 @inject DashboardDataLoader DataLoader
 @inject JobDashboardService DashboardService
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<JobSchedulerResource> L
 
 @implements IAsyncDisposable
 
-<PageTitle>任务调度 - 总览</PageTitle>
+<PageTitle>@L["Dashboard:Title"]</PageTitle>
 
 <div class="dashboard-page">
     @if (_isLoading)
     {
         <div class="loading-container">
             <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-            <MudText Typo="Typo.body2" Color="Color.Secondary">加载中...</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Common:Status:Loading"]</MudText>
         </div>
     }
     else if (_loadError != null)
     {
         <MudAlert Severity="Severity.Error" Class="mb-4">
             @_loadError
-            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="@(() => LoadDataAsync())">重试</MudButton>
+            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="@(() => LoadDataAsync())">@L["Common:Actions:Retry"]</MudButton>
         </MudAlert>
     }
     else if (_summary != null)
@@ -64,7 +66,7 @@
         @if (_autoRefreshEnabled)
         {
             <div class="refresh-indicator">
-                <MudTooltip Text="@($"自动刷新已启用 (每{_autoRefreshInterval}秒)")">
+                <MudTooltip Text="@L["Dashboard:AutoRefresh:Enabled", _autoRefreshInterval]">
                     <MudIcon Icon="@Icons.Material.Filled.Autorenew"
                              Size="Size.Small"
                              Class="@(_isRefreshing ? "rotating" : "")" />
@@ -150,7 +152,7 @@
         }
         catch (Exception ex)
         {
-            _loadError = $"加载数据失败: {ex.Message}";
+            _loadError = $"{L["Common:Messages:LoadFailed"]}: {ex.Message}";
         }
         finally
         {
@@ -206,12 +208,12 @@
 
         var window = _summary.MetricsEndTime - _summary.MetricsStartTime;
         if (window.TotalDays >= 30)
-            return $"最近{(int)window.TotalDays}天";
+            return L["Dashboard:TimeRange:LastDays", (int)window.TotalDays];
         if (window.TotalDays >= 7)
-            return $"最近{(int)window.TotalDays}天";
+            return L["Dashboard:TimeRange:LastDays", (int)window.TotalDays];
         if (window.TotalHours >= 24)
-            return $"最近{(int)window.TotalDays}天";
-        return $"最近{(int)window.TotalHours}小时";
+            return L["Dashboard:TimeRange:LastDays", (int)window.TotalDays];
+        return L["Dashboard:TimeRange:LastHours", (int)window.TotalHours];
     }
 
     public async ValueTask DisposeAsync()

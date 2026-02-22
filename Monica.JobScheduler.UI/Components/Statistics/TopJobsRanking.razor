@@ -1,13 +1,15 @@
 @using Monica.JobScheduler.UI.Models
+@using Monica.JobScheduler.UI.Localization
 
 @inject NavigationManager NavigationManager
+@inject IStringLocalizer<JobSchedulerResource> L
 
 <div class="ranking-wrapper">
     <MudPaper Class="ranking-card" Elevation="0">
         <div class="card-header">
             <MudText Typo="Typo.h6">@Title</MudText>
             <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">
-                Top @Rankings.Count
+                @L["Statistics:TopJobs:TopN", Rankings.Count]
             </MudChip>
         </div>
 
@@ -38,7 +40,7 @@
         {
             <div class="empty-state">
                 <MudIcon Icon="@Icons.Material.Filled.Leaderboard" Size="Size.Large" Color="Color.Default" />
-                <MudText Typo="Typo.body2" Color="Color.Secondary">暂无排行数据</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Statistics:TopJobs:NoData"]</MudText>
             </div>
         }
     </MudPaper>

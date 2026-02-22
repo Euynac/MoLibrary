@@ -1,4 +1,7 @@
 @using Monica.JobScheduler.UI.Models
+@using Monica.JobScheduler.UI.Localization
+
+@inject IStringLocalizer<JobSchedulerResource> L
 
 <div class="time-range-wrapper">
     <MudPaper Class="time-range-card" Elevation="0">
@@ -6,23 +9,23 @@
             <MudButtonGroup OverrideStyles="false" Variant="Variant.Outlined">
                 <MudButton Color="@GetPresetColor(TimeRangePreset.Today)"
                            OnClick="@(() => SelectPreset(TimeRangePreset.Today))">
-                    今天
+                    @L["Statistics:TimeRange:Today"]
                 </MudButton>
                 <MudButton Color="@GetPresetColor(TimeRangePreset.Last24Hours)"
                            OnClick="@(() => SelectPreset(TimeRangePreset.Last24Hours))">
-                    24小时
+                    @L["Statistics:TimeRange:Last24Hours"]
                 </MudButton>
                 <MudButton Color="@GetPresetColor(TimeRangePreset.Last7Days)"
                            OnClick="@(() => SelectPreset(TimeRangePreset.Last7Days))">
-                    7天
+                    @L["Statistics:TimeRange:Last7Days"]
                 </MudButton>
                 <MudButton Color="@GetPresetColor(TimeRangePreset.Last30Days)"
                            OnClick="@(() => SelectPreset(TimeRangePreset.Last30Days))">
-                    30天
+                    @L["Statistics:TimeRange:Last30Days"]
                 </MudButton>
                 <MudButton Color="@GetPresetColor(TimeRangePreset.Custom)"
                            OnClick="@ToggleCustomRange">
-                    自定义
+                    @L["Statistics:TimeRange:Custom"]
                 </MudButton>
             </MudButtonGroup>
         </div>
@@ -30,7 +33,7 @@
         @if (_showCustomRange)
         {
             <div class="custom-range">
-                <MudDateRangePicker Label="时间范围"
+                <MudDateRangePicker Label="@L["Statistics:TimeRange:Label"]"
                                      @bind-DateRange="_dateRange"
                                      Variant="Variant.Outlined"
                                      Margin="Margin.Dense"
@@ -40,7 +43,7 @@
                            Color="Color.Primary"
                            Size="Size.Small"
                            OnClick="@ApplyCustomRange">
-                    应用
+                    @L["Common:Actions:Apply"]
                 </MudButton>
             </div>
         }

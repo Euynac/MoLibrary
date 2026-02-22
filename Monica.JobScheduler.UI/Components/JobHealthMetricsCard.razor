@@ -1,7 +1,9 @@
+@using Monica.JobScheduler.UI.Localization
+@using MudBlazor
 @inject JobSchedulerUIService UIService
 @inject NavigationManager NavigationManager
 @inject IDialogService DialogService
-@using MudBlazor
+@inject IStringLocalizer<JobSchedulerResource> L
 
 <MudCard Elevation="2">
     <MudCardHeader>
@@ -171,7 +173,7 @@
         {
             <MudStack AlignItems="AlignItems.Center" Spacing="2">
                 <MudProgressCircular Indeterminate="true" Size="Size.Small" />
-                <MudText Typo="Typo.caption">正在加载健康指标...</MudText>
+                <MudText Typo="Typo.caption">@L["Common:Status:Loading"]</MudText>
             </MudStack>
         }
         else if (_error != null)
@@ -207,7 +209,7 @@
             var result = await UIService.GetHealthMetricsAsync(JobKey);
             if (result.IsFailed(out var error, out var data))
             {
-                _error = $"加载失败: {error.Message}";
+                _error = $"{L["Common:Messages:LoadFailed"]}: {error.Message}";
             }
             else
             {
@@ -217,7 +219,7 @@
         }
         catch (Exception ex)
         {
-            _error = $"加载失败: {ex.Message}";
+            _error = $"{L["Common:Messages:LoadFailed"]}: {ex.Message}";
         }
         finally
         {

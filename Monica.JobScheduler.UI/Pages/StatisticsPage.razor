@@ -2,14 +2,16 @@
 
 @using Monica.JobScheduler.Abstractions
 @using Monica.JobScheduler.UI.Components.Statistics
+@using Monica.JobScheduler.UI.Localization
 
 @inject JobAnalyticsService AnalyticsService
 @inject IJobDefinitionCacheService CacheService
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<JobSchedulerResource> L
 
 @implements IAsyncDisposable
 
-<PageTitle>任务调度 - 统计分析</PageTitle>
+<PageTitle>@L["Statistics:Title"]</PageTitle>
 
 <div class="statistics-page">
     @* Time Range Selector *@
@@ -25,14 +27,14 @@
     {
         <div class="loading-container">
             <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-            <MudText Typo="Typo.body2" Color="Color.Secondary">加载统计数据...</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Common:Status:Loading"]</MudText>
         </div>
     }
     else if (_loadError != null)
     {
         <MudAlert Severity="Severity.Error" Class="mb-4">
             @_loadError
-            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="LoadDataAsync">重试</MudButton>
+            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="LoadDataAsync">@L["Common:Actions:Retry"]</MudButton>
         </MudAlert>
     }
     else
@@ -50,12 +52,12 @@
 
             @* Top Jobs by Execution Count *@
             <MudItem xs="12" md="6">
-                <TopJobsRanking Title="执行次数排行" Rankings="@_topByExecution" />
+                <TopJobsRanking Title="@L["Statistics:TopJobs:ExecutionCount"]" Rankings="@_topByExecution" />
             </MudItem>
 
             @* Top Jobs by Failure Count *@
             <MudItem xs="12" md="6">
-                <TopJobsRanking Title="失败次数排行" Rankings="@_topByFailure" />
+                <TopJobsRanking Title="@L["Statistics:TopJobs:FailureCount"]" Rankings="@_topByFailure" />
             </MudItem>
 
             @* Failure Analysis *@
@@ -129,7 +131,7 @@
             if (AnalyticsService.CalculateExecutionTrend(instances, startTime, endTime, granularity)
                 .IsFailed(out var trendError, out var trend))
             {
-                errors.Add($"执行趋势: {trendError.Message}");
+                errors.Add($"{L["Statistics:ExecutionTrend:Title"]}: {trendError.Message}");
             }
             else
             {
@@ -139,7 +141,7 @@
             if (AnalyticsService.CalculateDurationPercentiles(instances)
                 .IsFailed(out var percentilesError, out var percentiles))
             {
-                errors.Add($"耗时分布: {percentilesError.Message}");
+                errors.Add($"{L["Statistics:DurationPercentiles:Title"]}: {percentilesError.Message}");
             }
             else
             {
@@ -149,7 +151,7 @@
             if (AnalyticsService.CalculateSlowestInstances(instances, jobNameMap, 10)
                 .IsFailed(out var slowestError, out var slowestInstances))
             {
-                errors.Add($"最慢实例: {slowestError.Message}");
+                errors.Add($"{L["Statistics:DurationPercentiles:Slowest"]}: {slowestError.Message}");
             }
             else
             {
@@ -159,7 +161,7 @@
             if (AnalyticsService.CalculateTopJobs(instances, jobNameMap, 10, RankingType.ExecutionCount)
                 .IsFailed(out var topExecutionError, out var topExecution))
             {
-                errors.Add($"执行排行: {topExecutionError.Message}");
+                errors.Add($"{L["Statistics:TopJobs:ExecutionCount"]}: {topExecutionError.Message}");
             }
             else
             {
@@ -169,7 +171,7 @@
             if (AnalyticsService.CalculateTopJobs(instances, jobNameMap, 10, RankingType.FailureCount)
                 .IsFailed(out var topFailureError, out var topFailure))
             {
-                errors.Add($"失败排行: {topFailureError.Message}");
+                errors.Add($"{L["Statistics:TopJobs:FailureCount"]}: {topFailureError.Message}");
             }
             else
             {
@@ -179,7 +181,7 @@
             if (AnalyticsService.CalculateFailureAnalysis(instances, jobNameMap, startTime, endTime)
                 .IsFailed(out var failureError, out var failure))
             {
-                errors.Add($"失败分析: {failureError.Message}");
+                errors.Add($"{L["Statistics:FailureAnalysis:Title"]}: {failureError.Message}");
             }
             else
             {
@@ -189,7 +191,7 @@
             // Display partial errors as warnings if any calculation failed
             if (errors.Count > 0)
             {
-                var message = $"部分统计数据计算失败:\n{string.Join("\n", errors)}";
+                var message = $"{L["Statistics:Messages:PartialFailed"]}:\n{string.Join("\n", errors)}";
                 Snackbar.Add(message, Severity.Warning);
             }
         }
@@ -199,7 +201,7 @@
         }
         catch (Exception ex)
         {
-            _loadError = $"加载统计数据失败: {ex.Message}";
+            _loadError = $"{L["Statistics:Messages:LoadFailed"]}: {ex.Message}";
         }
         finally
         {

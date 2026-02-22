@@ -1,25 +1,27 @@
 @using Monica.JobScheduler.Models
 @using Monica.JobScheduler.UI.Models
 @using Monica.JobScheduler.UI.Services
+@using Monica.JobScheduler.UI.Localization
 
 @inject JobStateColorService StateColorService
+@inject IStringLocalizer<JobSchedulerResource> L
 
 <div class="trend-chart-wrapper">
     <MudPaper Class="trend-card" Elevation="0">
         <div class="card-header">
-            <MudText Typo="Typo.h6">执行趋势</MudText>
+            <MudText Typo="Typo.h6">@L["Statistics:ExecutionTrend:Title"]</MudText>
             <div class="legend">
                 <div class="legend-item">
                     <div class="legend-dot success"></div>
-                    <span>成功</span>
+                    <span>@L["Statistics:ExecutionTrend:Legend:Success"]</span>
                 </div>
                 <div class="legend-item">
                     <div class="legend-dot failed"></div>
-                    <span>失败</span>
+                    <span>@L["Statistics:ExecutionTrend:Legend:Failed"]</span>
                 </div>
                 <div class="legend-item">
                     <div class="legend-dot skipped"></div>
-                    <span>跳过</span>
+                    <span>@L["Statistics:ExecutionTrend:Legend:Skipped"]</span>
                 </div>
             </div>
         </div>
@@ -37,19 +39,19 @@
 
             <div class="summary-row">
                 <div class="summary-item">
-                    <span class="label">总执行</span>
+                    <span class="label">@L["Statistics:ExecutionTrend:Summary:TotalExecutions"]</span>
                     <span class="value">@TrendData.Sum(d => d.TotalCount)</span>
                 </div>
                 <div class="summary-item success">
-                    <span class="label">成功</span>
+                    <span class="label">@L["Statistics:ExecutionTrend:Summary:Success"]</span>
                     <span class="value">@TrendData.Sum(d => d.SucceededCount)</span>
                 </div>
                 <div class="summary-item failed">
-                    <span class="label">失败</span>
+                    <span class="label">@L["Statistics:ExecutionTrend:Summary:Failed"]</span>
                     <span class="value">@TrendData.Sum(d => d.FailedCount)</span>
                 </div>
                 <div class="summary-item skipped">
-                    <span class="label">跳过</span>
+                    <span class="label">@L["Statistics:ExecutionTrend:Summary:Skipped"]</span>
                     <span class="value">@TrendData.Sum(d => d.SkippedCount)</span>
                 </div>
             </div>
@@ -58,7 +60,7 @@
         {
             <div class="empty-state">
                 <MudIcon Icon="@Icons.Material.Filled.ShowChart" Size="Size.Large" Color="Color.Default" />
-                <MudText Typo="Typo.body2" Color="Color.Secondary">暂无趋势数据</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Statistics:ExecutionTrend:NoData"]</MudText>
             </div>
         }
     </MudPaper>
@@ -90,17 +92,17 @@
         [
             new ChartSeries
             {
-                Name = "成功",
+                Name = L["Statistics:ExecutionTrend:Legend:Success"],
                 Data = TrendData.Select(d => (double)d.SucceededCount).ToArray()
             },
             new ChartSeries
             {
-                Name = "失败",
+                Name = L["Statistics:ExecutionTrend:Legend:Failed"],
                 Data = TrendData.Select(d => (double)d.FailedCount).ToArray()
             },
             new ChartSeries
             {
-                Name = "跳过",
+                Name = L["Statistics:ExecutionTrend:Legend:Skipped"],
                 Data = TrendData.Select(d => (double)d.SkippedCount).ToArray()
             }
         ];

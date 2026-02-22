@@ -1,11 +1,13 @@
 @using Monica.JobScheduler.Models
 @using Monica.JobScheduler.UI.Services
+@using Monica.JobScheduler.UI.Localization
 @inject JobStateColorService ColorService
 @inject StackTraceParserService StackTraceParser
+@inject IStringLocalizer<JobSchedulerResource> L
 
 <MudCard Elevation="2">
     <MudCardHeader>
-        <MudText Typo="Typo.h6">状态历史</MudText>
+        <MudText Typo="Typo.h6">@L["Dialogs:StateHistory:Title"]</MudText>
     </MudCardHeader>
     <MudCardContent>
         @if (_historyRecords?.Any() == true)
@@ -58,7 +60,7 @@
         }
         else
         {
-            <MudText Typo="Typo.body2" Color="Color.Secondary">暂无状态历史记录</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Dialogs:StateHistory:NoHistory"]</MudText>
         }
     </MudCardContent>
 </MudCard>

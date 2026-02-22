@@ -4,14 +4,16 @@
 @using Monica.JobScheduler.UI.Components.Monitor
 @using Monica.JobScheduler.UI.Models
 @using Monica.JobScheduler.UI.Services
+@using Monica.JobScheduler.UI.Localization
 
 @inject JobMonitorService MonitorService
 @inject JobSchedulerUIService UIService
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<JobSchedulerResource> L
 
 @implements IAsyncDisposable
 
-<PageTitle>任务调度 - 实时监控</PageTitle>
+<PageTitle>@L["Monitor:Title"]</PageTitle>
 
 <div class="monitor-page">
     @* Auto Refresh Control *@
@@ -27,14 +29,14 @@
     {
         <div class="loading-container">
             <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-            <MudText Typo="Typo.body2" Color="Color.Secondary">加载中...</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Common:Status:Loading"]</MudText>
         </div>
     }
     else if (_loadError != null)
     {
         <MudAlert Severity="Severity.Error" Class="mb-4">
             @_loadError
-            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="RefreshDataAsync">重试</MudButton>
+            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="RefreshDataAsync">@L["Common:Actions:Retry"]</MudButton>
         </MudAlert>
     }
     else if (_state != null)
@@ -133,7 +135,7 @@
         }
         catch (Exception ex)
         {
-            _loadError = $"加载数据失败: {ex.Message}";
+            _loadError = $"{L["Monitor:Messages:LoadFailed"]}: {ex.Message}";
         }
         finally
         {
@@ -180,7 +182,7 @@
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"刷新失败: {ex.Message}", Severity.Error);
+            Snackbar.Add($"{L["Monitor:Messages:RefreshFailed"]}: {ex.Message}", Severity.Error);
         }
         finally
         {
@@ -203,7 +205,7 @@
             if (result.IsOk(out var reconcileResult))
             {
                 Snackbar.Add(
-                    $"同步完成 (耗时: {reconcileResult.Duration.TotalMilliseconds:F0}ms, 偏差: {reconcileResult.StateBefore?.TotalDeviation} -> {reconcileResult.StateAfter?.TotalDeviation})",
+                    L["Monitor:ConcurrencyUtilization:ReconcileSuccess", reconcileResult.Duration.TotalMilliseconds.ToString("F0"), reconcileResult.StateBefore?.TotalDeviation.ToString() ?? "0", reconcileResult.StateAfter?.TotalDeviation.ToString() ?? "0"],
                     Severity.Success);
 
                 // Refresh data after reconciliation
@@ -211,12 +213,12 @@
             }
             else if (result.IsFailed(out var error, out _))
             {
-                Snackbar.Add($"同步失败: {error.Message}", Severity.Error);
+                Snackbar.Add($"{L["Monitor:ConcurrencyUtilization:ReconcileFailed"]}: {error.Message}", Severity.Error);
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"同步失败: {ex.Message}", Severity.Error);
+            Snackbar.Add($"{L["Monitor:ConcurrencyUtilization:ReconcileFailed"]}: {ex.Message}", Severity.Error);
         }
         finally
         {
@@ -232,17 +234,17 @@
             var result = await UIService.CancelInstanceAsync(instanceId);
             if (result.IsFailed(out var error))
             {
-                Snackbar.Add($"取消失败: {error.Message}", Severity.Error);
+                Snackbar.Add($"{L["Monitor:LiveExecution:Messages:CancelFailed"]}: {error.Message}", Severity.Error);
             }
             else
             {
-                Snackbar.Add("任务已请求取消", Severity.Success);
+                Snackbar.Add(L["Monitor:LiveExecution:Messages:CancelSuccess"], Severity.Success);
                 await RefreshDataAsync();
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"取消失败: {ex.Message}", Severity.Error);
+            Snackbar.Add($"{L["Monitor:LiveExecution:Messages:CancelFailed"]}: {ex.Message}", Severity.Error);
         }
     }
 

@@ -1,12 +1,13 @@
 @using Monica.JobScheduler.Models
+@using Monica.JobScheduler.UI.Localization
+@inject IStringLocalizer<JobSchedulerResource> L
 
 <MudDialog>
     <DialogContent>
         <MudContainer MaxWidth="MaxWidth.False" Class="pa-0">
             <MudAlert Severity="@GetSeverity()" Class="mb-3">
                 <MudText>
-                    您即将@(OperationType == BatchOperationType.Pause ? "暂停" : "继续")
-                    <strong>@JobKeys.Count</strong> 个作业，请确认操作。
+                    @L["Dialogs:BatchOperationConfirm:Message", JobKeys.Count, L[$"Dialogs:BatchOperationConfirm:Operation{OperationType}"]]
                 </MudText>
             </MudAlert>
 
@@ -14,7 +15,7 @@
                 <MudCard Outlined="true" Class="mb-3">
                     <MudCardHeader>
                         <CardHeaderContent>
-                            <MudText Typo="Typo.subtitle1">作业列表</MudText>
+                            <MudText Typo="Typo.subtitle1">@L["JobDefinitions:Columns:JobKey"]</MudText>
                         </CardHeaderContent>
                     </MudCardHeader>
                     <MudCardContent>
@@ -29,7 +30,7 @@
                         {
                             <MudListItem T="string">
                                 <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                    ... 还有 @(JobKeys.Count - 10) 个作业
+                                    ... @L["Common:Messages:AndMore", JobKeys.Count - 10]
                                 </MudText>
                             </MudListItem>
                         }
@@ -41,13 +42,13 @@
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel" Variant="Variant.Text">
-            取消
+            @L["Common:Actions:Cancel"]
         </MudButton>
         <MudButton OnClick="Confirm"
                   Variant="Variant.Filled"
                   Color="@GetColor()"
                   StartIcon="@GetIcon()">
-            确认@(OperationType == BatchOperationType.Pause ? "暂停" : "继续")
+            @L["Common:Actions:Confirm"]@L[$"Dialogs:BatchOperationConfirm:Operation{OperationType}"]
         </MudButton>
     </DialogActions>
 </MudDialog>

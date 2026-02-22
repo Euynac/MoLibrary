@@ -1,12 +1,14 @@
 @using Monica.JobScheduler.Models
 @using Monica.JobScheduler.UI.Services
+@using Monica.JobScheduler.UI.Localization
 
 @inject JobStateColorService StateColorService
+@inject IStringLocalizer<JobSchedulerResource> L
 
 <div class="state-distribution-wrapper">
     <MudPaper Class="state-distribution-card" Elevation="0">
         <div class="card-header">
-            <MudText Typo="Typo.h6">状态分布</MudText>
+            <MudText Typo="Typo.h6">@L["Dashboard.StateDistribution.Title"]</MudText>
             <MudText Typo="Typo.caption" Class="time-range">@TimeWindowText</MudText>
         </div>
 
@@ -42,7 +44,7 @@
         {
             <div class="empty-state">
                 <MudIcon Icon="@Icons.Material.Filled.PieChart" Size="Size.Large" Color="Color.Default" />
-                <MudText Typo="Typo.body2" Color="Color.Secondary">暂无执行数据</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Dashboard.StateDistribution.NoData"]</MudText>
             </div>
         }
     </MudPaper>
@@ -93,14 +95,14 @@
     {
         return state switch
         {
-            JobState.Succeeded => "成功",
-            JobState.Failed => "失败",
-            JobState.Terminated => "终止",
-            JobState.Processing => "执行中",
-            JobState.Enqueued => "等待中",
-            JobState.Scheduled => "已调度",
-            JobState.Skipped => "已跳过",
-            JobState.Cancelled => "已取消",
+            JobState.Succeeded => L["JobStates.Succeeded"],
+            JobState.Failed => L["JobStates.Failed"],
+            JobState.Terminated => L["JobStates.Terminated"],
+            JobState.Processing => L["JobStates.Processing"],
+            JobState.Enqueued => L["JobStates.Enqueued"],
+            JobState.Scheduled => L["JobStates.Scheduled"],
+            JobState.Skipped => L["JobStates.Skipped"],
+            JobState.Cancelled => L["JobStates.Cancelled"],
             _ => state.ToString()
         };
     }

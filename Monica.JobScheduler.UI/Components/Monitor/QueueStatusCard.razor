@@ -1,10 +1,13 @@
 @using Monica.JobScheduler.UI.Models
+@using Monica.JobScheduler.UI.Localization
+
+@inject IStringLocalizer<JobSchedulerResource> L
 
 <div class="queue-status-wrapper">
     <MudPaper Class="queue-card" Elevation="0">
         <div class="card-header">
             <MudIcon Icon="@Icons.Material.Filled.Queue" Size="Size.Small" Color="Color.Info" />
-            <MudText Typo="Typo.h6">队列状态</MudText>
+            <MudText Typo="Typo.h6">@L["Monitor:QueueStatus:Title"]</MudText>
         </div>
 
         <div class="status-grid">
@@ -14,7 +17,7 @@
                 </div>
                 <div class="status-content">
                     <div class="status-value">@Status.ProcessingCount</div>
-                    <div class="status-label">处理中</div>
+                    <div class="status-label">@L["Monitor:QueueStatus:Processing"]</div>
                 </div>
             </div>
 
@@ -24,7 +27,7 @@
                 </div>
                 <div class="status-content">
                     <div class="status-value">@Status.EnqueuedCount</div>
-                    <div class="status-label">等待执行</div>
+                    <div class="status-label">@L["Monitor:QueueStatus:Enqueued"]</div>
                 </div>
             </div>
 
@@ -34,7 +37,7 @@
                 </div>
                 <div class="status-content">
                     <div class="status-value">@Status.ScheduledCount</div>
-                    <div class="status-label">已调度</div>
+                    <div class="status-label">@L["Monitor:QueueStatus:Scheduled"]</div>
                 </div>
             </div>
 
@@ -44,7 +47,7 @@
                 </div>
                 <div class="status-content">
                     <div class="status-value">@Status.ActiveCount</div>
-                    <div class="status-label">活跃总计</div>
+                    <div class="status-label">@L["Monitor:QueueStatus:ActiveTotal"]</div>
                 </div>
             </div>
         </div>
@@ -57,19 +60,19 @@
                     {
                         <div class="segment processing"
                              style="width: @GetPercentage(Status.ProcessingCount)%"
-                             title="@Status.ProcessingCount 处理中"></div>
+                             title="@Status.ProcessingCount @L["Monitor:QueueStatus:Processing"]"></div>
                     }
                     @if (Status.EnqueuedCount > 0)
                     {
                         <div class="segment enqueued"
                              style="width: @GetPercentage(Status.EnqueuedCount)%"
-                             title="@Status.EnqueuedCount 等待执行"></div>
+                             title="@Status.EnqueuedCount @L["Monitor:QueueStatus:Enqueued"]"></div>
                     }
                     @if (Status.ScheduledCount > 0)
                     {
                         <div class="segment scheduled"
                              style="width: @GetPercentage(Status.ScheduledCount)%"
-                             title="@Status.ScheduledCount 已调度"></div>
+                             title="@Status.ScheduledCount @L["Monitor:QueueStatus:Scheduled"]"></div>
                     }
                 </div>
             </div>

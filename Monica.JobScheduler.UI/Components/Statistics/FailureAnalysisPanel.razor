@@ -1,13 +1,15 @@
 @using Monica.JobScheduler.UI.Models
+@using Monica.JobScheduler.UI.Localization
 
 @inject NavigationManager NavigationManager
+@inject IStringLocalizer<JobSchedulerResource> L
 
 <div class="failure-analysis-wrapper">
     <MudPaper Class="failure-card" Elevation="0">
         <div class="card-header">
             <div class="header-title">
                 <MudIcon Icon="@Icons.Material.Filled.BugReport" Size="Size.Small" Color="Color.Error" />
-                <MudText Typo="Typo.h6">失败分析</MudText>
+                <MudText Typo="Typo.h6">@L["Statistics:FailureAnalysis:Title"]</MudText>
             </div>
         </div>
 
@@ -16,15 +18,15 @@
             <div class="summary-cards">
                 <div class="summary-card failed">
                     <div class="summary-value">@Analysis.TotalFailures</div>
-                    <div class="summary-label">失败次数</div>
+                    <div class="summary-label">@L["Statistics:FailureAnalysis:TotalFailures"]</div>
                 </div>
                 <div class="summary-card terminated">
                     <div class="summary-value">@Analysis.TotalTerminated</div>
-                    <div class="summary-label">终止次数</div>
+                    <div class="summary-label">@L["Statistics:FailureAnalysis:TotalTerminated"]</div>
                 </div>
                 <div class="summary-card retry">
                     <div class="summary-value">@Analysis.RetrySuccessRate.ToString("F1")%</div>
-                    <div class="summary-label">重试成功率</div>
+                    <div class="summary-label">@L["Statistics:FailureAnalysis:RetrySuccessRate"]</div>
                 </div>
             </div>
 
@@ -32,7 +34,7 @@
             {
                 <MudDivider Class="my-3" />
 
-                <MudText Typo="Typo.subtitle2" Class="mb-2">按任务分布</MudText>
+                <MudText Typo="Typo.subtitle2" Class="mb-2">@L["Statistics:FailureAnalysis:ByJob"]</MudText>
 
                 <div class="job-failures">
                     @foreach (var job in Analysis.ByJob.Take(5))
@@ -46,7 +48,7 @@
                                                    Size="Size.Small" />
                             </div>
                             <div class="failure-stats">
-                                <span class="count">@job.TotalFailureCount 次失败</span>
+                                <span class="count">@L["Statistics:FailureAnalysis:FailureCount", job.TotalFailureCount]</span>
                                 <span class="rate">@job.FailureRate.ToString("F1")%</span>
                             </div>
                         </div>
@@ -58,8 +60,8 @@
         {
             <div class="no-failures">
                 <MudIcon Icon="@Icons.Material.Filled.Verified" Size="Size.Large" Color="Color.Success" />
-                <MudText Typo="Typo.body1" Color="Color.Secondary">该时间段内无失败记录</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Tertiary">所有任务执行正常</MudText>
+                <MudText Typo="Typo.body1" Color="Color.Secondary">@L["Statistics:FailureAnalysis:NoFailures"]</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Tertiary">@L["Statistics:FailureAnalysis:AllNormal"]</MudText>
             </div>
         }
     </MudPaper>

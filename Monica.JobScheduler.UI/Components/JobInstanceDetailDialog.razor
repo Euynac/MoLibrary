@@ -1,10 +1,12 @@
 @using System.Text.Encodings.Web
 @using System.Text.Json
+@using Monica.JobScheduler.UI.Localization
 @inject JobSchedulerUIService UIService
 @inject JobStateColorService ColorService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject IStringLocalizer<JobSchedulerResource> L
 
 <MudDialog>
     <DialogContent>
@@ -12,7 +14,7 @@
         {
             <MudStack AlignItems="AlignItems.Center" Spacing="2">
                 <MudProgressCircular Indeterminate="true" Size="Size.Large" />
-                <MudText Typo="Typo.h6">加载中...</MudText>
+                <MudText Typo="Typo.h6">@L["Common:Status:Loading"]</MudText>
             </MudStack>
         }
         else if (_error != null)
@@ -30,7 +32,7 @@
                                    Color="Color.Primary"
                                    StartIcon="@Icons.Material.Filled.Description"
                                    OnClick="@NavigateToJobDefinition">
-                            查看作业定义
+                            @L["Dialogs:JobInstanceDetail:ViewJobDefinition"]
                         </MudButton>
                     }
                     <MudIconButton Icon="@Icons.Material.Filled.Refresh"
@@ -47,7 +49,7 @@
                             {
                                 <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
                             }
-                            取消作业
+                            @L["Dialogs:JobInstanceDetail:CancelJob"]
                         </MudButton>
                     }
                 </MudStack>
@@ -55,50 +57,50 @@
 
             <!-- 基本信息 -->
             <MudPaper Class="pa-4 mb-4" Elevation="2">
-                <MudText Typo="Typo.h6" Class="mb-3">基本信息</MudText>
+                <MudText Typo="Typo.h6" Class="mb-3">@L["Dialogs:JobInstanceDetail:BasicInfo"]</MudText>
                 <MudGrid>
                     <MudItem xs="12" sm="6" md="4">
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">实例ID</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dialogs:JobInstanceDetail:InstanceId"]</MudText>
                         <MudText Typo="Typo.body1" Style="font-family: monospace;">@_jobInstance.InstanceId</MudText>
                     </MudItem>
                     <MudItem xs="12" sm="6" md="4">
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">作业键</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dialogs:JobInstanceDetail:JobKey"]</MudText>
                         <MudText Typo="Typo.body1">@_jobInstance.JobKey</MudText>
                     </MudItem>
                     <MudItem xs="12" sm="6" md="4">
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">运行客户端</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dialogs:JobInstanceDetail:RunningClient"]</MudText>
                         <MudText Typo="Typo.body1" Style="font-family: monospace;">@(_jobInstance.RunningClientId ?? "-")</MudText>
                     </MudItem>
                     <MudItem xs="12" sm="6" md="4">
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">状态</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dialogs:JobInstanceDetail:State"]</MudText>
                         <MudChip T="string" Size="Size.Small" Color="@ColorService.GetStateColor(_jobInstance.State)">
                             @_jobInstance.State
                         </MudChip>
                     </MudItem>
                     <MudItem xs="12" sm="6" md="4">
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">重试次数</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dialogs:JobInstanceDetail:RetryCount"]</MudText>
                         <MudText Typo="Typo.body1" Color="@(_jobInstance.RetryAttempt > 0 ? Color.Warning : Color.Default)">@_jobInstance.RetryAttempt</MudText>
                     </MudItem>
                     <MudItem xs="12" sm="6" md="4">
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">创建时间</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dialogs:JobInstanceDetail:CreatedTime"]</MudText>
                         <MudText Typo="Typo.body1">@_jobInstance.CreatedAt.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss.fff")</MudText>
                     </MudItem>
                     <MudItem xs="12" sm="6" md="4">
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">计划执行时间</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dialogs:JobInstanceDetail:ScheduledExecutionTime"]</MudText>
                         <MudText Typo="Typo.body1">@(_jobInstance.ScheduledExecutionTime?.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss.fff") ?? "-")</MudText>
                     </MudItem>
                     <MudItem xs="12" sm="6" md="4">
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">开始时间</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dialogs:JobInstanceDetail:StartTime"]</MudText>
                         <MudText Typo="Typo.body1">@(_jobInstance.StartedAt?.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss.fff") ?? "-")</MudText>
                     </MudItem>
                     <MudItem xs="12" sm="6" md="4">
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">结束时间</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dialogs:JobInstanceDetail:EndTime"]</MudText>
                         <MudText Typo="Typo.body1">@(_jobInstance.CompletedAt?.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss.fff") ?? "-")</MudText>
                     </MudItem>
                     @if (_jobInstance.StartedAt.HasValue)
                     {
                         <MudItem xs="12" sm="6" md="4">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">执行时长</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dialogs:JobInstanceDetail:Duration"]</MudText>
                             <MudText Typo="Typo.body1">
                                 @if (_jobInstance.CompletedAt.HasValue)
                                 {
@@ -108,7 +110,7 @@
                                 else
                                 {
                                     var duration = DateTime.UtcNow.FromUtcToLocal() - _jobInstance.StartedAt.Value.FromUtcToLocal();
-                                    <text>@FormatDuration(duration) (运行中)</text>
+                                    <text>@FormatDuration(duration) (@L["JobInstances:Messages:Running"])</text>
                                 }
                             </MudText>
                         </MudItem>
@@ -120,7 +122,7 @@
             @if (!string.IsNullOrEmpty(_jobInstance.JobArgs))
             {
                 <MudPaper Class="pa-4 mb-4" Elevation="2">
-                    <MudText Typo="Typo.h6" Class="mb-3">作业参数</MudText>
+                    <MudText Typo="Typo.h6" Class="mb-3">@L["Dialogs:JobInstanceDetail:JobArgs"]</MudText>
                     <MudTextField T="string"
                                   Value="@FormatJobArgs(_jobInstance.JobArgs)"
                                   ReadOnly="true"
@@ -136,7 +138,7 @@
         }
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Close">关闭</MudButton>
+        <MudButton OnClick="Close">@L["Common:Actions:Close"]</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -170,7 +172,7 @@
             var result = await UIService.GetJobInstanceAsync(InstanceId);
             if (result.IsFailed(out var error, out var data))
             {
-                _error = $"加载失败: {error.Message}";
+                _error = $"{L["Dialogs:JobInstanceDetail:LoadFailed"]}: {error.Message}";
             }
             else
             {
@@ -179,7 +181,7 @@
         }
         catch (Exception ex)
         {
-            _error = $"加载失败: {ex.Message}";
+            _error = $"{L["Dialogs:JobInstanceDetail:LoadFailed"]}: {ex.Message}";
         }
         finally
         {
@@ -215,10 +217,10 @@
         if (_jobInstance == null) return;
 
         var confirmed = await DialogService.ShowMessageBox(
-            "确认取消",
-            $"确定要取消作业实例 {_jobInstance.InstanceId} 吗？",
-            yesText: "确定",
-            cancelText: "取消");
+            L["Dialogs:JobInstanceDetail:CancelConfirmTitle"],
+            L["Dialogs:JobInstanceDetail:CancelConfirmMessage", _jobInstance.InstanceId],
+            yesText: L["Common:Actions:Confirm"],
+            cancelText: L["Common:Actions:Cancel"]);
 
         if (confirmed != true) return;
 
@@ -230,17 +232,17 @@
             var result = await UIService.CancelInstanceAsync(_jobInstance.InstanceId);
             if (result.IsFailed(out var error))
             {
-                Snackbar.Add($"取消失败: {error.Message}", Severity.Error);
+                Snackbar.Add($"{L["Dialogs:JobInstanceDetail:CancelFailed"]}: {error.Message}", Severity.Error);
             }
             else
             {
-                Snackbar.Add("作业已取消", Severity.Success);
+                Snackbar.Add(L["Dialogs:JobInstanceDetail:CancelSuccess"], Severity.Success);
                 await LoadJobInstanceAsync();
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"取消失败: {ex.Message}", Severity.Error);
+            Snackbar.Add($"{L["Dialogs:JobInstanceDetail:CancelFailed"]}: {ex.Message}", Severity.Error);
         }
         finally
         {
