@@ -75,7 +75,8 @@
       "mcp__microsoft-learn__microsoft_docs_fetch",
       "mcp__cc-workflow-studio__get_workflow_schema",
       "mcp__cc-workflow-studio__get_current_workflow",
-      "Bash(chmod +x:*)"
+      "Bash(chmod +x:*)",
+      "Bash(cd:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

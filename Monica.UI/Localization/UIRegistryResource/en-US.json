@@ -1,90 +1,88 @@
 {
-  "texts": {
-    "Categories": {
-      "AI": "AI",
-      "Documentation": "Documentation",
-      "Monitor": "Monitor",
-      "Configuration": "Configuration",
-      "Debug": "Debug",
-      "Module": "Module",
-      "TaskScheduling": "Task Scheduling"
+  "Categories": {
+    "AI": "AI",
+    "Documentation": "Documentation",
+    "Monitor": "Monitor",
+    "Configuration": "Configuration",
+    "Debug": "Debug",
+    "Module": "Module",
+    "TaskScheduling": "Task Scheduling"
+  },
+  "Pages": {
+    "AIChat": {
+      "Title": "AI Assistant"
     },
-    "Pages": {
-      "AIChat": {
-        "Title": "AI Assistant"
-      },
-      "AIProviderManage": {
-        "Title": "AI Provider Management"
-      },
-      "RAGDebug": {
-        "Title": "RAG Debug"
-      },
-      "MarkdownDocuments": {
-        "Title": "Markdown Documents"
-      },
-      "DataChannelManage": {
-        "Title": "DataChannel Management"
-      },
-      "ConfigurationDashboard": {
-        "Title": "Configuration Dashboard"
-      },
-      "QuickMonitor": {
-        "Title": "Quick Monitor"
-      },
-      "ProfilingDashboard": {
-        "Title": "Memory Profiling"
-      },
-      "RegisterCentre": {
-        "Title": "Register Centre"
-      },
-      "TimekeeperDebug": {
-        "Title": "Timekeeper Debug"
-      },
-      "LoggingMonitor": {
-        "Title": "Logging Monitor"
-      },
-      "SystemInfo": {
-        "Title": "System Information"
-      },
-      "SignalRDebug": {
-        "Title": "SignalR Debug"
-      },
-      "MapperDebug": {
-        "Title": "Mapper Debug"
-      },
-      "ObservableInstance": {
-        "Title": "Observable Instance"
-      },
-      "FrameworkMonitor": {
-        "Title": "Framework Monitor"
-      },
-      "EventBusMonitor": {
-        "Title": "Event Bus Monitor"
-      },
-      "StateStoreManage": {
-        "Title": "State Store Management"
-      },
-      "DiffHighlight": {
-        "Title": "Text Diff Comparison"
-      },
-      "ModuleSystemDashboard": {
-        "Title": "Module System Dashboard"
-      },
-      "JobSchedulerDashboard": {
-        "Title": "Dashboard"
-      },
-      "JobSchedulerMonitor": {
-        "Title": "Real-time Monitor"
-      },
-      "JobDefinitions": {
-        "Title": "Job Definitions"
-      },
-      "JobInstances": {
-        "Title": "Job Instances"
-      },
-      "JobStatistics": {
-        "Title": "Statistics"
-      }
+    "AIProviderManage": {
+      "Title": "AI Provider Management"
+    },
+    "RAGDebug": {
+      "Title": "RAG Debug"
+    },
+    "MarkdownDocuments": {
+      "Title": "Markdown Documents"
+    },
+    "DataChannelManage": {
+      "Title": "DataChannel Management"
+    },
+    "ConfigurationDashboard": {
+      "Title": "Configuration Dashboard"
+    },
+    "QuickMonitor": {
+      "Title": "Quick Monitor"
+    },
+    "ProfilingDashboard": {
+      "Title": "Memory Profiling"
+    },
+    "RegisterCentre": {
+      "Title": "Register Centre"
+    },
+    "TimekeeperDebug": {
+      "Title": "Timekeeper Debug"
+    },
+    "LoggingMonitor": {
+      "Title": "Logging Monitor"
+    },
+    "SystemInfo": {
+      "Title": "System Information"
+    },
+    "SignalRDebug": {
+      "Title": "SignalR Debug"
+    },
+    "MapperDebug": {
+      "Title": "Mapper Debug"
+    },
+    "ObservableInstance": {
+      "Title": "Observable Instance"
+    },
+    "FrameworkMonitor": {
+      "Title": "Framework Monitor"
+    },
+    "EventBusMonitor": {
+      "Title": "Event Bus Monitor"
+    },
+    "StateStoreManage": {
+      "Title": "State Store Management"
+    },
+    "DiffHighlight": {
+      "Title": "Text Diff Comparison"
+    },
+    "ModuleSystemDashboard": {
+      "Title": "Module System Dashboard"
+    },
+    "JobSchedulerDashboard": {
+      "Title": "Dashboard"
+    },
+    "JobSchedulerMonitor": {
+      "Title": "Real-time Monitor"
+    },
+    "JobDefinitions": {
+      "Title": "Job Definitions"
+    },
+    "JobInstances": {
+      "Title": "Job Instances"
+    },
+    "JobStatistics": {
+      "Title": "Statistics"
     }
   }
 }

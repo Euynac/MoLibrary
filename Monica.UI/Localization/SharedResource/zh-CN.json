@@ -1,322 +1,320 @@
 {
-  "texts": {
-    "Common": {
-      "Close": "关闭"
-    },
-    "Theme": {
-      "Settings": "主题设置",
-      "SelectStyle": "选择主题风格",
-      "DarkMode": "深色模式",
-      "CurrentTheme": "当前主题",
-      "Dark": "深色",
-      "Light": "浅色"
-    },
-    "Layout": {
-      "SearchTooltip": "搜索 (Ctrl+K)",
-      "NotificationsTooltip": "通知",
-      "LanguageTooltip": "Language / 语言",
-      "UserMenu": {
-        "Profile": "个人资料",
-        "Settings": "设置",
-        "Logout": "退出登录"
-      }
-    },
-    "NavBar": {
-      "More": "更多",
-      "MoreModules": "更多模块"
-    },
-    "ModuleSystem": {
-      "Dashboard": {
-        "Title": "模块系统仪表板",
-        "Description": "全面监控和管理系统模块状态、性能和依赖关系",
-        "Tabs": {
-          "SystemOverview": "系统概览",
-          "PerformanceMonitoring": "性能监控",
-          "HealthCheck": "健康检查",
-          "ModuleManagement": "模块管理",
-          "Dependencies": "依赖关系"
-        },
-        "Messages": {
-          "DataRefreshed": "数据已刷新",
-          "RefreshFailed": "刷新数据失败",
-          "ModuleDetailNotFound": "模块详情不存在",
-          "GetModuleDetailFailed": "获取模块详情失败"
-        }
-      },
-      "SystemOverview": {
-        "Labels": {
-          "SystemStatus": "系统状态",
-          "ModuleStatistics": "模块统计",
-          "InitializationTime": "初始化时间",
-          "HealthStatus": "健康状态",
-          "TotalModules": "总模块数量",
-          "StartTime": "启动时间",
-          "Unknown": "未知",
-          "Loading": "加载中..."
-        },
-        "States": {
-          "NotInitialized": "未初始化",
-          "Initializing": "初始化中",
-          "Initialized": "已初始化",
-          "Failed": "初始化失败",
-          "Unknown": "未知状态"
-        },
-        "Messages": {
-          "SystemInitialized": "系统已完成初始化",
-          "SystemInitializing": "系统正在初始化...",
-          "SystemRunning": "系统已运行 {0}ms",
-          "SystemStarting": "系统正在启动...",
-          "HasIssues": "存在问题",
-          "Healthy": "健康",
-          "RunningNormally": "运行正常",
-          "RegistrationErrors": "检测到注册错误",
-          "CircularDependencies": "检测到循环依赖",
-          "SystemHealthy": "系统健康运行"
-        }
-      },
-      "ModuleManagement": {
-        "Statistics": "模块统计",
-        "ModuleList": "模块列表",
-        "Refresh": "刷新",
-        "Details": "详情",
-        "Labels": {
-          "TotalModules": "总模块数",
-          "EnabledModules": "启用模块",
-          "DisabledModules": "禁用模块",
-          "TotalInitTime": "总初始化时间",
-          "ModuleDistribution": "模块分布",
-          "ModuleName": "模块名称",
-          "Status": "状态",
-          "Order": "顺序",
-          "InitTime": "初始化时间",
-          "Dependencies": "依赖",
-          "Actions": "操作"
-        },
-        "States": {
-          "Enabled": "启用",
-          "Disabled": "禁用"
-        },
-        "Loading": {
-          "Statistics": "加载模块统计...",
-          "List": "加载模块列表..."
-        }
-      },
-      "HealthCheck": {
-        "Labels": {
-          "HealthOverview": "健康概览",
-          "PerformanceMetrics": "性能指标",
-          "CheckItems": "检查项目",
-          "DiscoveredIssues": "发现的问题",
-          "CheckTime": "检查时间:",
-          "AverageInitTime": "平均初始化时间",
-          "SlowestModuleTime": "最慢模块时间",
-          "EfficiencyScore": "效率评分",
-          "MemoryUsage": "内存使用"
-        },
-        "Messages": {
-          "NoCheckItems": "暂无检查项目",
-          "NoIssuesFound": "未发现问题"
-        },
-        "Loading": {
-          "HealthOverview": "加载健康概览...",
-          "PerformanceMetrics": "加载性能指标...",
-          "CheckItems": "加载检查项目...",
-          "IssueList": "加载问题列表..."
-        }
-      },
-      "PerformanceMonitoring": {
-        "Labels": {
-          "PerformanceOverview": "性能概览",
-          "SlowestModules": "最慢模块",
-          "PhasePerformanceAnalysis": "阶段性能分析",
-          "TotalInitTime": "总初始化时间",
-          "TotalSystemPhaseDuration": "系统阶段总耗时",
-          "TotalModulePhaseDuration": "模块阶段总耗时",
-          "TotalModulePhaseExecutions": "总模块阶段执行次数",
-          "Order": "顺序",
-          "PhaseName": "阶段名称",
-          "Duration": "耗时 (ms)",
-          "PerformanceRatio": "性能占比",
-          "Status": "状态"
-        },
-        "Messages": {
-          "NoPerformanceData": "暂无性能数据",
-          "NoPhasePerformanceData": "暂无阶段性能数据"
-        },
-        "States": {
-          "Slow": "缓慢",
-          "Medium": "中等",
-          "Good": "良好",
-          "Excellent": "优秀"
-        },
-        "Loading": {
-          "PerformanceOverview": "加载性能概览...",
-          "SlowestModules": "加载最慢模块...",
-          "PhasePerformanceData": "加载阶段性能数据..."
-        }
-      },
-      "DependencyGraph": {
-        "Labels": {
-          "DependencyOverview": "依赖关系概览",
-          "TotalNodes": "总节点数",
-          "TotalDependencies": "总依赖关系",
-          "CircularDependencies": "循环依赖",
-          "DependencyLayers": "依赖层级",
-          "GraphControls": "图表控制",
-          "LayoutAlgorithm": "布局算法",
-          "Filter": "过滤器",
-          "ZoomIn": "放大",
-          "ZoomOut": "缩小",
-          "ResetView": "重置视图",
-          "DependencyGraph": "依赖关系图",
-          "ExportImage": "���出图片",
-          "Legend": "图例",
-          "NodeTypes": "节点类型",
-          "EnabledModule": "启用模块",
-          "DisabledModule": "禁用模块",
-          "CircularDependencyModule": "循环依赖模块",
-          "EdgeTypes": "连线类型",
-          "DirectDependency": "直接依赖",
-          "TransitiveDependency": "传递依赖",
-          "CircularDependency": "循环依赖",
-          "NodeDetails": "节点详情"
-        },
-        "States": {
-          "Exists": "存在",
-          "None": "无"
-        },
-        "Layouts": {
-          "Force": "力导向布局",
-          "Hierarchical": "层次布局",
-          "Circular": "环形布局"
-        },
-        "Filters": {
-          "ShowAll": "显示全部",
-          "DirectOnly": "仅直接依赖",
-          "CycleOnly": "仅循环依赖"
-        },
-        "Messages": {
-          "HoverToViewDetails": "鼠标悬停在节点上查看详情"
-        },
-        "Loading": {
-          "DependencyOverview": "加载依赖关系概览...",
-          "GraphControls": "加载图表控制...",
-          "DependencyGraph": "加载依赖关系图...",
-          "Legend": "加载图例...",
-          "NodeDetails": "加载节点详情...",
-          "Default": "加载中..."
-        }
-      },
-      "ModuleDetail": {
-        "Tabs": {
-          "BasicInfo": "基本信息",
-          "PerformanceInfo": "性能信息",
-          "DependencyInfo": "依赖关系",
-          "ConfigOptions": "配置选项",
-          "ErrorInfo": "错误信息"
-        },
-        "Labels": {
-          "ModuleKey": "模块键",
-          "RegistrationOrder": "注册顺序",
-          "InitializationTime": "初始化时间",
-          "ModuleStatus": "模块状态",
-          "TotalDuration": "总耗时",
-          "PhaseDetails": "阶段详情",
-          "DirectDependencies": "直接依赖",
-          "TotalDependencies": "总依赖数",
-          "DependedByCount": "被依赖数",
-          "DirectDependencyList": "直接依赖列表",
-          "TransitiveDependencyList": "传递依赖列表",
-          "DependedByModuleList": "被依赖模块列表",
-          "Close": "关闭"
-        },
-        "States": {
-          "Enabled": "启用",
-          "Disabled": "禁用",
-          "Unknown": "Unknown"
-        },
-        "Messages": {
-          "CircularDependencyDetected": "检测到循环依赖",
-          "CircularPath": "循环路径"
-        }
-      },
-      "ModuleOption": {
-        "Messages": {
-          "NoConfigurableOptions": "此模块没有可配置的选项",
-          "NoDisplayableProperties": "此模块选项类型没有可显示的属性",
-          "ItemsClickToView": "[{0} items] 点击查看",
-          "ObjectClickToView": "(object) 点击查看"
-        },
-        "Labels": {
-          "Close": "关闭"
-        }
-      },
-      "Common": {
-        "Labels": {
-          "Uncategorized": "未分类"
-        }
-      }
-    },
-    "DiffViewer": {
-      "Changes": "变更",
-      "ProcessingTime": "耗时",
-      "ViewModes": {
-        "Split": "分割",
-        "Unified": "统一"
-      },
-      "DisplayModes": {
-        "Compare": "比较",
-        "NewValue": "新值",
-        "OldValue": "旧值"
-      },
-      "ComparisonFailed": "差异对比失败",
-      "ComparisonError": "差异对比出错"
-    },
-    "DiffHighlightPage": {
-      "PageTitle": "差异高亮",
-      "Title": "差异高亮工具",
-      "Description": "比较两段文本并高亮显示差异，支持多种比较模式和输出格式",
-      "ConfigOptions": "配置选项",
-      "CompareMode": "比较模式",
-      "Modes": {
-        "Line": "行模式",
-        "Character": "字符模式",
-        "Mixed": "混合模式"
-      },
-      "OutputFormat": "输出格式",
-      "Formats": {
-        "Html": "HTML",
-        "Markdown": "Markdown",
-        "PlainText": "纯文本"
-      },
-      "ContextLines": "上下文行数",
-      "MaxCharacterDiffLength": "最大字符差异长度",
-      "IgnoreWhitespace": "忽略空白字符",
-      "IgnoreCase": "忽略大小写",
-      "AutoRefresh": "自动刷新",
-      "LoadSample": "加载示例",
-      "OriginalText": "原始文本",
-      "OriginalTextPlaceholder": "在此输入原始文本...",
-      "NewText": "新文本",
-      "NewTextPlaceholder": "在此输入新文本...",
-      "DiffResult": "差异结果",
-      "Comparing": "比较中...",
-      "ManualRefresh": "手动刷新",
-      "EnterTextAndRefresh": "在两个文本框中输入内容并点击刷新以查看比较结果",
-      "ComparisonFailed": "比较失败"
-    },
-    "StackTrace": {
-      "CopyTooltip": "复制堆栈信息",
-      "NoStackTrace": "暂无堆栈信息",
-      "NotProvided": "未提供堆栈信息"
-    },
-    "Error": {
-      "Title": "Error.",
-      "Message": "An error occurred while processing your request.",
-      "RequestId": "Request ID:",
-      "DevelopmentMode": "Development Mode",
-      "DevelopmentModeWarning": "Swapping to Development environment will display more detailed information about the error that occurred.",
-      "DevelopmentModeNote": "The Development environment shouldn't be enabled for deployed applications."
+  "Common": {
+    "Close": "关闭"
+  },
+  "Theme": {
+    "Settings": "主题设置",
+    "SelectStyle": "选择主题风格",
+    "DarkMode": "深色模式",
+    "CurrentTheme": "当前主题",
+    "Dark": "深色",
+    "Light": "浅色"
+  },
+  "Layout": {
+    "SearchTooltip": "搜索 (Ctrl+K)",
+    "NotificationsTooltip": "通知",
+    "LanguageTooltip": "Language / 语言",
+    "UserMenu": {
+      "Profile": "个人资料",
+      "Settings": "设置",
+      "Logout": "退出登录"
     }
+  },
+  "NavBar": {
+    "More": "更多",
+    "MoreModules": "更多模块"
+  },
+  "ModuleSystem": {
+    "Dashboard": {
+      "Title": "模块系统仪表板",
+      "Description": "全面监控和管理系统模块状态、性能和依赖关系",
+      "Tabs": {
+        "SystemOverview": "系统概览",
+        "PerformanceMonitoring": "性能监控",
+        "HealthCheck": "健康检查",
+        "ModuleManagement": "模块管理",
+        "Dependencies": "依赖关系"
+      },
+      "Messages": {
+        "DataRefreshed": "数据已刷新",
+        "RefreshFailed": "刷新数据失败",
+        "ModuleDetailNotFound": "模块详情不存在",
+        "GetModuleDetailFailed": "获取模块详情失败"
+      }
+    },
+    "SystemOverview": {
+      "Labels": {
+        "SystemStatus": "系统状态",
+        "ModuleStatistics": "模块统计",
+        "InitializationTime": "初始化时间",
+        "HealthStatus": "健康状态",
+        "TotalModules": "总模块数量",
+        "StartTime": "启动时间",
+        "Unknown": "未知",
+        "Loading": "加载中..."
+      },
+      "States": {
+        "NotInitialized": "未初始化",
+        "Initializing": "初始化中",
+        "Initialized": "已初始化",
+        "Failed": "初始化失败",
+        "Unknown": "未知状态"
+      },
+      "Messages": {
+        "SystemInitialized": "系统已完成初始化",
+        "SystemInitializing": "系统正在初始化...",
+        "SystemRunning": "系统已运行 {0}ms",
+        "SystemStarting": "系统正在启动...",
+        "HasIssues": "存在问题",
+        "Healthy": "健康",
+        "RunningNormally": "运行正常",
+        "RegistrationErrors": "检测到注册错误",
+        "CircularDependencies": "检测到循环依赖",
+        "SystemHealthy": "系统健康运行"
+      }
+    },
+    "ModuleManagement": {
+      "Statistics": "模块统计",
+      "ModuleList": "模块列表",
+      "Refresh": "刷新",
+      "Details": "详情",
+      "Labels": {
+        "TotalModules": "总模块数",
+        "EnabledModules": "启用模块",
+        "DisabledModules": "禁用模块",
+        "TotalInitTime": "总初始化时间",
+        "ModuleDistribution": "模块分布",
+        "ModuleName": "模块名称",
+        "Status": "状态",
+        "Order": "顺序",
+        "InitTime": "初始化时间",
+        "Dependencies": "依赖",
+        "Actions": "操作"
+      },
+      "States": {
+        "Enabled": "启用",
+        "Disabled": "禁用"
+      },
+      "Loading": {
+        "Statistics": "加载模块统计...",
+        "List": "加载模块列表..."
+      }
+    },
+    "HealthCheck": {
+      "Labels": {
+        "HealthOverview": "健康概览",
+        "PerformanceMetrics": "性能指标",
+        "CheckItems": "检查项目",
+        "DiscoveredIssues": "发现的问题",
+        "CheckTime": "检查时间:",
+        "AverageInitTime": "平均初始化时间",
+        "SlowestModuleTime": "最慢模块时间",
+        "EfficiencyScore": "效率评分",
+        "MemoryUsage": "内存使用"
+      },
+      "Messages": {
+        "NoCheckItems": "暂无检查项目",
+        "NoIssuesFound": "未发现问题"
+      },
+      "Loading": {
+        "HealthOverview": "加载健康概览...",
+        "PerformanceMetrics": "加载性能指标...",
+        "CheckItems": "加载检查项目...",
+        "IssueList": "加载问题列表..."
+      }
+    },
+    "PerformanceMonitoring": {
+      "Labels": {
+        "PerformanceOverview": "性能概览",
+        "SlowestModules": "最慢模块",
+        "PhasePerformanceAnalysis": "阶段性能分析",
+        "TotalInitTime": "总初始化时间",
+        "TotalSystemPhaseDuration": "系统阶段总耗时",
+        "TotalModulePhaseDuration": "模块阶段总耗时",
+        "TotalModulePhaseExecutions": "总模块阶段执行次数",
+        "Order": "顺序",
+        "PhaseName": "阶段名称",
+        "Duration": "耗时 (ms)",
+        "PerformanceRatio": "性能占比",
+        "Status": "状态"
+      },
+      "Messages": {
+        "NoPerformanceData": "暂无性能数据",
+        "NoPhasePerformanceData": "暂无阶段性能数据"
+      },
+      "States": {
+        "Slow": "缓慢",
+        "Medium": "中等",
+        "Good": "良好",
+        "Excellent": "优秀"
+      },
+      "Loading": {
+        "PerformanceOverview": "加载性能概览...",
+        "SlowestModules": "加载最慢模块...",
+        "PhasePerformanceData": "加载阶段性能数据..."
+      }
+    },
+    "DependencyGraph": {
+      "Labels": {
+        "DependencyOverview": "依赖关系概览",
+        "TotalNodes": "总节点数",
+        "TotalDependencies": "总依赖关系",
+        "CircularDependencies": "循环依赖",
+        "DependencyLayers": "依赖层级",
+        "GraphControls": "图表控制",
+        "LayoutAlgorithm": "布局算法",
+        "Filter": "过滤器",
+        "ZoomIn": "放大",
+        "ZoomOut": "缩小",
+        "ResetView": "重置视图",
+        "DependencyGraph": "依赖关系图",
+        "ExportImage": "���出图片",
+        "Legend": "图例",
+        "NodeTypes": "节点类型",
+        "EnabledModule": "启用模块",
+        "DisabledModule": "禁用模块",
+        "CircularDependencyModule": "循环依赖模块",
+        "EdgeTypes": "连线类型",
+        "DirectDependency": "直接依赖",
+        "TransitiveDependency": "传递依赖",
+        "CircularDependency": "循环依赖",
+        "NodeDetails": "节点详情"
+      },
+      "States": {
+        "Exists": "存在",
+        "None": "无"
+      },
+      "Layouts": {
+        "Force": "力导向布局",
+        "Hierarchical": "层次布局",
+        "Circular": "环形布局"
+      },
+      "Filters": {
+        "ShowAll": "显示全部",
+        "DirectOnly": "仅直接依赖",
+        "CycleOnly": "仅循环依赖"
+      },
+      "Messages": {
+        "HoverToViewDetails": "鼠标悬停在节点上查看详情"
+      },
+      "Loading": {
+        "DependencyOverview": "加载依赖关系概览...",
+        "GraphControls": "加载图表控制...",
+        "DependencyGraph": "加载依赖关系图...",
+        "Legend": "加载图例...",
+        "NodeDetails": "加载节点详情...",
+        "Default": "加载中..."
+      }
+    },
+    "ModuleDetail": {
+      "Tabs": {
+        "BasicInfo": "基本信息",
+        "PerformanceInfo": "性能信息",
+        "DependencyInfo": "依赖关系",
+        "ConfigOptions": "配置选项",
+        "ErrorInfo": "错误信息"
+      },
+      "Labels": {
+        "ModuleKey": "模块键",
+        "RegistrationOrder": "注册顺序",
+        "InitializationTime": "初始化时间",
+        "ModuleStatus": "模块状态",
+        "TotalDuration": "总耗时",
+        "PhaseDetails": "阶段详情",
+        "DirectDependencies": "直接依赖",
+        "TotalDependencies": "总依赖数",
+        "DependedByCount": "被依赖数",
+        "DirectDependencyList": "直接依赖列表",
+        "TransitiveDependencyList": "传递依赖列表",
+        "DependedByModuleList": "被依赖模块列表",
+        "Close": "关闭"
+      },
+      "States": {
+        "Enabled": "启用",
+        "Disabled": "禁用",
+        "Unknown": "Unknown"
+      },
+      "Messages": {
+        "CircularDependencyDetected": "检测到循环依赖",
+        "CircularPath": "循环路径"
+      }
+    },
+    "ModuleOption": {
+      "Messages": {
+        "NoConfigurableOptions": "此模块没有可配置的选项",
+        "NoDisplayableProperties": "此模块选项类型没有可显示的属性",
+        "ItemsClickToView": "[{0} items] 点击查看",
+        "ObjectClickToView": "(object) 点击查看"
+      },
+      "Labels": {
+        "Close": "关闭"
+      }
+    },
+    "Common": {
+      "Labels": {
+        "Uncategorized": "未分类"
+      }
+    }
+  },
+  "DiffViewer": {
+    "Changes": "变更",
+    "ProcessingTime": "耗时",
+    "ViewModes": {
+      "Split": "分割",
+      "Unified": "统一"
+    },
+    "DisplayModes": {
+      "Compare": "比较",
+      "NewValue": "新值",
+      "OldValue": "旧值"
+    },
+    "ComparisonFailed": "差异对比失败",
+    "ComparisonError": "差异对比出错"
+  },
+  "DiffHighlightPage": {
+    "PageTitle": "差异高亮",
+    "Title": "差异高亮工具",
+    "Description": "比较两段文本并高亮显示差异，支持多种比较模式和输出格式",
+    "ConfigOptions": "配置选项",
+    "CompareMode": "比较模式",
+    "Modes": {
+      "Line": "行模式",
+      "Character": "字符模式",
+      "Mixed": "混合模式"
+    },
+    "OutputFormat": "输出格式",
+    "Formats": {
+      "Html": "HTML",
+      "Markdown": "Markdown",
+      "PlainText": "纯文本"
+    },
+    "ContextLines": "上下文行数",
+    "MaxCharacterDiffLength": "最大字符差异长度",
+    "IgnoreWhitespace": "忽略空白字符",
+    "IgnoreCase": "忽略大小写",
+    "AutoRefresh": "自动刷新",
+    "LoadSample": "加载示例",
+    "OriginalText": "原始文本",
+    "OriginalTextPlaceholder": "在此输入原始文本...",
+    "NewText": "新文本",
+    "NewTextPlaceholder": "在此输入新文本...",
+    "DiffResult": "差异结果",
+    "Comparing": "比较中...",
+    "ManualRefresh": "手动刷新",
+    "EnterTextAndRefresh": "在两个文本框中输入内容并点击刷新以查看比较结果",
+    "ComparisonFailed": "比较失败"
+  },
+  "StackTrace": {
+    "CopyTooltip": "复制堆栈信息",
+    "NoStackTrace": "暂无堆栈信息",
+    "NotProvided": "未提供堆栈信息"
+  },
+  "Error": {
+    "Title": "Error.",
+    "Message": "An error occurred while processing your request.",
+    "RequestId": "Request ID:",
+    "DevelopmentMode": "Development Mode",
+    "DevelopmentModeWarning": "Swapping to Development environment will display more detailed information about the error that occurred.",
+    "DevelopmentModeNote": "The Development environment shouldn't be enabled for deployed applications."
   }
 }

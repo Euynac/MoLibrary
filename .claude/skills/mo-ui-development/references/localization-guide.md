@@ -66,24 +66,22 @@ Monica.StateStore.UI/
 
 ```json
 {
-  "texts": {
-    "Dashboard": {
-      "PageTitle": "State Store Management",
-      "Title": "State Store Dashboard",
-      "Tabs": {
-        "ProviderOverview": "Provider Overview",
-        "KeyExplorer": "Key Explorer"
-      }
+  "Dashboard": {
+    "PageTitle": "State Store Management",
+    "Title": "State Store Dashboard",
+    "Tabs": {
+      "ProviderOverview": "Provider Overview",
+      "KeyExplorer": "Key Explorer"
+    }
+  },
+  "KeyExplorer": {
+    "Labels": {
+      "KeyPattern": "Key Pattern",
+      "KeyName": "Key Name"
     },
-    "KeyExplorer": {
-      "Labels": {
-        "KeyPattern": "Key Pattern",
-        "KeyName": "Key Name"
-      },
-      "Actions": {
-        "Scan": "Scan Keys",
-        "Refresh": "Refresh"
-      }
+    "Actions": {
+      "Scan": "Scan Keys",
+      "Refresh": "Refresh"
     }
   }
 }
@@ -165,12 +163,10 @@ ComponentName (top-level)
 **JSON:**
 ```json
 {
-  "texts": {
-    "KeyExplorer": {
-      "Messages": {
-        "FoundKeys": "Found {0} keys",
-        "KeyRange": "Showing keys {0} to {1} of {2}"
-      }
+  "KeyExplorer": {
+    "Messages": {
+      "FoundKeys": "Found {0} keys",
+      "KeyRange": "Showing keys {0} to {1} of {2}"
     }
   }
 }
@@ -209,17 +205,15 @@ public class StateStoreResource { }
 **zh-CN.json:**
 ```json
 {
-  "texts": {
-    "KeyExplorer": {
-      "Labels": {
-        "KeyPattern": "键模式"
-      },
-      "Actions": {
-        "Scan": "扫描键"
-      },
-      "Messages": {
-        "FoundKeys": "找到 {0} 个键"
-      }
+  "KeyExplorer": {
+    "Labels": {
+      "KeyPattern": "键模式"
+    },
+    "Actions": {
+      "Scan": "扫描键"
+    },
+    "Messages": {
+      "FoundKeys": "找到 {0} 个键"
     }
   }
 }
@@ -228,17 +222,15 @@ public class StateStoreResource { }
 **en-US.json:**
 ```json
 {
-  "texts": {
-    "KeyExplorer": {
-      "Labels": {
-        "KeyPattern": "Key Pattern"
-      },
-      "Actions": {
-        "Scan": "Scan Keys"
-      },
-      "Messages": {
-        "FoundKeys": "Found {0} keys"
-      }
+  "KeyExplorer": {
+    "Labels": {
+      "KeyPattern": "Key Pattern"
+    },
+    "Actions": {
+      "Scan": "Scan Keys"
+    },
+    "Messages": {
+      "FoundKeys": "Found {0} keys"
     }
   }
 }

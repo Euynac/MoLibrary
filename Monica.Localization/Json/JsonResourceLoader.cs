@@ -23,11 +23,11 @@ public static class JsonResourceLoader
 
             using var reader = new StreamReader(stream);
             var json = reader.ReadToEnd();
-            var localizationFile = JsonSerializer.Deserialize<JsonLocalizationFile>(json);
+            var flatData = JsonSerializer.Deserialize<Dictionary<string, object>>(json);
 
-            if (localizationFile?.Texts != null)
+            if (flatData != null)
             {
-                result[culture] = FlattenKeys(localizationFile.Texts);
+                result[culture] = FlattenKeys(flatData);
             }
         }
 
