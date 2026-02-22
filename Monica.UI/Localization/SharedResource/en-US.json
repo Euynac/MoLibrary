@@ -75,7 +75,6 @@
         }
       },
       "ModuleManagement": {
-        "Title": "Module Management",
         "Statistics": "Module Statistics",
         "ModuleList": "Module List",
         "Refresh": "Refresh",
@@ -245,7 +244,6 @@
         "Messages": {
           "NoConfigurableOptions": "This module has no configurable options",
           "NoDisplayableProperties": "This module option type has no displayable properties",
-          "ClickToView": "Click to view",
           "ItemsClickToView": "[{0} items] Click to view",
           "ObjectClickToView": "(object) Click to view"
         },

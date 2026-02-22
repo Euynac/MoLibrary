@@ -75,7 +75,6 @@
         }
       },
       "ModuleManagement": {
-        "Title": "模块管理",
         "Statistics": "模块统计",
         "ModuleList": "模块列表",
         "Refresh": "刷新",
@@ -245,7 +244,6 @@
         "Messages": {
           "NoConfigurableOptions": "此模块没有可配置的选项",
           "NoDisplayableProperties": "此模块选项类型没有可显示的属性",
-          "ClickToView": "点击查看",
           "ItemsClickToView": "[{0} items] 点击查看",
           "ObjectClickToView": "(object) 点击查看"
         },
