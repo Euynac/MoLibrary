@@ -1,7 +1,7 @@
 ---
 name: planning-with-files
-version: "2.10.0"
-description: Implements Manus-style file-based planning for complex tasks. Creates task_plan.md, findings.md, and progress.md. Use when starting complex multi-step tasks, research projects, or any task requiring >5 tool calls. Now with automatic session recovery after /clear.
+version: "2.11.0"
+description: Implements Manus-style file-based planning for complex tasks. Creates task_plan.md, findings.md, and progress.md in .pending/NNN-description/ folders. Use when starting complex multi-step tasks, research projects, or any task requiring >5 tool calls. Now with automatic session recovery and completion tracking.
 user-invocable: true
 allowed-tools:
   - Read
@@ -17,7 +17,15 @@ hooks:
     - matcher: "Write|Edit|Bash|Read|Glob|Grep"
       hooks:
         - type: command
-          command: "cat task_plan.md 2>/dev/null | head -30 || true"
+          command: |
+            # Try to find task_plan.md in .pending/ folders first, then fall back to root
+            TASK_PLAN=$(find .pending -name "task_plan.md" -type f 2>/dev/null | grep -v "(done)" | head -1)
+            if [ -z "$TASK_PLAN" ]; then
+              TASK_PLAN="task_plan.md"
+            fi
+            if [ -f "$TASK_PLAN" ]; then
+              cat "$TASK_PLAN" | head -30
+            fi
   PostToolUse:
     - matcher: "Write|Edit"
       hooks:
@@ -44,12 +52,22 @@ hooks:
                 pwsh -ExecutionPolicy Bypass -File "$SCRIPT_DIR/check-complete.ps1" 2>/dev/null ||
                 powershell -ExecutionPolicy Bypass -File "$SCRIPT_DIR/check-complete.ps1" 2>/dev/null ||
                 sh "$SCRIPT_DIR/check-complete.sh"
+
+                # Run mark-complete script
+                pwsh -ExecutionPolicy Bypass -File "$SCRIPT_DIR/mark-complete.ps1" 2>/dev/null ||
+                powershell -ExecutionPolicy Bypass -File "$SCRIPT_DIR/mark-complete.ps1" 2>/dev/null ||
+                sh "$SCRIPT_DIR/mark-complete.sh"
               else
                 powershell -ExecutionPolicy Bypass -File "$SCRIPT_DIR/check-complete.ps1" 2>/dev/null ||
                 sh "$SCRIPT_DIR/check-complete.sh"
+
+                # Run mark-complete script
+                powershell -ExecutionPolicy Bypass -File "$SCRIPT_DIR/mark-complete.ps1" 2>/dev/null ||
+                sh "$SCRIPT_DIR/mark-complete.sh"
               fi
             else
               sh "$SCRIPT_DIR/check-complete.sh"
+              sh "$SCRIPT_DIR/mark-complete.sh"
             fi
 ---
 
@@ -57,9 +75,47 @@ hooks:
 
 Work like Manus: Use persistent markdown files as your "working memory on disk."
 
-## FIRST: Check for Previous Session (v2.2.0)
+## FIRST: Setup Requirement Folder
 
-**Before starting work**, check for unsynced context from a previous session:
+**Before starting work**, set up a requirement folder in `.pending/`:
+
+1. **Extract task description** from the user's initial message:
+   - Identify 2-4 key words describing the task
+   - Convert to kebab-case (lowercase with hyphens)
+   - Examples:
+     - "I want to add a RAG module" → "rag-module"
+     - "Create localization support" → "localization-support"
+     - "Fix the authentication bug" → "auth-bug-fix"
+
+2. **Create the requirement folder**:
+
+```bash
+# Linux/macOS
+FOLDER_PATH=$(${CLAUDE_PLUGIN_ROOT}/scripts/setup-requirement-folder.sh "task-description")
+```
+
+```powershell
+# Windows PowerShell
+$FOLDER_PATH = & "$env:USERPROFILE\.claude\skills\planning-with-files\scripts\setup-requirement-folder.ps1" "task-description"
+```
+
+3. **Initialize planning files** in the folder:
+
+```bash
+# Linux/macOS
+${CLAUDE_PLUGIN_ROOT}/scripts/init-session.sh "project-name" "$FOLDER_PATH"
+```
+
+```powershell
+# Windows PowerShell
+& "$env:USERPROFILE\.claude\skills\planning-with-files\scripts\init-session.ps1" "project-name" "$FOLDER_PATH"
+```
+
+The folder will be created as `.pending/NNN-description/` where NNN is the next available number (e.g., 010, 011, etc.).
+
+## Check for Previous Session (v2.2.0)
+
+**After folder setup**, check for unsynced context from a previous session:
 
 ```bash
 # Linux/macOS
@@ -80,24 +136,35 @@ If catchup report shows unsynced context:
 ## Important: Where Files Go
 
 - **Templates** are in `${CLAUDE_PLUGIN_ROOT}/templates/`
-- **Your planning files** go in **your project directory**
+- **Your planning files** go in **`.pending/NNN-description/`** folders
 
 | Location | What Goes There |
 |----------|-----------------|
 | Skill directory (`${CLAUDE_PLUGIN_ROOT}/`) | Templates, scripts, reference docs |
-| Your project directory | `task_plan.md`, `findings.md`, `progress.md` |
+| `.pending/NNN-description/` | `task_plan.md`, `findings.md`, `progress.md` |
+| Project root | Fallback location if `.pending/` cannot be created |
+
+## Automatic Completion Tracking
+
+When all phases in `task_plan.md` are marked as `Status: complete`, the requirement folder is automatically renamed with a "(done)" prefix when you stop the session:
+
+- Before: `.pending/010-rag-module/`
+- After: `.pending/(done) 010-rag-module/`
+
+This provides visual indication of completed requirements in the file system.
 
 ## Quick Start
 
 Before ANY complex task:
 
-1. **Create `task_plan.md`** — Use [templates/task_plan.md](templates/task_plan.md) as reference
-2. **Create `findings.md`** — Use [templates/findings.md](templates/findings.md) as reference
-3. **Create `progress.md`** — Use [templates/progress.md](templates/progress.md) as reference
+1. **Setup requirement folder** — Extract task description from user's message, create `.pending/NNN-description/` folder
+2. **Initialize planning files** — Run init-session script with the folder path
+3. **Create planning files** — `task_plan.md`, `findings.md`, `progress.md` in the requirement folder
 4. **Re-read plan before decisions** — Refreshes goals in attention window
 5. **Update after each phase** — Mark complete, log errors
+6. **Automatic completion** — Folder gets "(done)" prefix when all phases complete
 
-> **Note:** Planning files go in your project root, not the skill installation folder.
+> **Note:** Planning files go in `.pending/NNN-description/` folders, not the project root.
 
 ## The Core Pattern
 
@@ -239,10 +306,11 @@ Helper scripts for automation:
 
 | Don't | Do Instead |
 |-------|------------|
-| Use TodoWrite for persistence | Create task_plan.md file |
+| Use TodoWrite for persistence | Create task_plan.md file in requirement folder |
 | State goals once and forget | Re-read plan before decisions |
 | Hide errors and retry silently | Log errors to plan file |
 | Stuff everything in context | Store large content in files |
-| Start executing immediately | Create plan file FIRST |
+| Start executing immediately | Setup requirement folder and create plan FIRST |
 | Repeat failed actions | Track attempts, mutate approach |
-| Create files in skill directory | Create files in your project |
+| Create files in project root | Create files in `.pending/NNN-description/` folder |
+| Manually track completion | Let the Stop hook auto-rename completed folders |

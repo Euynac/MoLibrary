@@ -1,17 +1,21 @@
 #!/bin/bash
 # Initialize planning files for a new session
-# Usage: ./init-session.sh [project-name]
+# Usage: ./init-session.sh [project-name] [target-directory]
 
 set -e
 
 PROJECT_NAME="${1:-project}"
+TARGET_DIR="${2:-.}"
 DATE=$(date +%Y-%m-%d)
 
 echo "Initializing planning files for: $PROJECT_NAME"
 
+# Create target directory if it doesn't exist
+mkdir -p "$TARGET_DIR"
+
 # Create task_plan.md if it doesn't exist
-if [ ! -f "task_plan.md" ]; then
-    cat > task_plan.md << 'EOF'
+if [ ! -f "$TARGET_DIR/task_plan.md" ]; then
+    cat > "$TARGET_DIR/task_plan.md" << 'EOF'
 # Task Plan: [Brief Description]
 
 ## Goal
@@ -62,8 +66,8 @@ else
 fi
 
 # Create findings.md if it doesn't exist
-if [ ! -f "findings.md" ]; then
-    cat > findings.md << 'EOF'
+if [ ! -f "$TARGET_DIR/findings.md" ]; then
+    cat > "$TARGET_DIR/findings.md" << 'EOF'
 # Findings & Decisions
 
 ## Requirements
@@ -89,8 +93,8 @@ else
 fi
 
 # Create progress.md if it doesn't exist
-if [ ! -f "progress.md" ]; then
-    cat > progress.md << EOF
+if [ ! -f "$TARGET_DIR/progress.md" ]; then
+    cat > "$TARGET_DIR/progress.md" << EOF
 # Progress Log
 
 ## Session: $DATE

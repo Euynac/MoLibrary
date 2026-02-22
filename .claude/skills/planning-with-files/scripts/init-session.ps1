@@ -1,16 +1,22 @@
 # Initialize planning files for a new session
-# Usage: .\init-session.ps1 [project-name]
+# Usage: .\init-session.ps1 [project-name] [target-directory]
 
 param(
-    [string]$ProjectName = "project"
+    [string]$ProjectName = "project",
+    [string]$TargetDir = "."
 )
 
 $DATE = Get-Date -Format "yyyy-MM-dd"
 
 Write-Host "Initializing planning files for: $ProjectName"
 
+# Create target directory if it doesn't exist
+if (-not (Test-Path $TargetDir)) {
+    New-Item -ItemType Directory -Path $TargetDir | Out-Null
+}
+
 # Create task_plan.md if it doesn't exist
-if (-not (Test-Path "task_plan.md")) {
+if (-not (Test-Path (Join-Path $TargetDir "task_plan.md"))) {
     @"
 # Task Plan: [Brief Description]
 
@@ -55,14 +61,14 @@ Phase 1
 ## Errors Encountered
 | Error | Resolution |
 |-------|------------|
-"@ | Out-File -FilePath "task_plan.md" -Encoding UTF8
+"@ | Out-File -FilePath (Join-Path $TargetDir "task_plan.md") -Encoding UTF8
     Write-Host "Created task_plan.md"
 } else {
     Write-Host "task_plan.md already exists, skipping"
 }
 
 # Create findings.md if it doesn't exist
-if (-not (Test-Path "findings.md")) {
+if (-not (Test-Path (Join-Path $TargetDir "findings.md"))) {
     @"
 # Findings & Decisions
 
@@ -82,14 +88,14 @@ if (-not (Test-Path "findings.md")) {
 
 ## Resources
 -
-"@ | Out-File -FilePath "findings.md" -Encoding UTF8
+"@ | Out-File -FilePath (Join-Path $TargetDir "findings.md") -Encoding UTF8
     Write-Host "Created findings.md"
 } else {
     Write-Host "findings.md already exists, skipping"
 }
 
 # Create progress.md if it doesn't exist
-if (-not (Test-Path "progress.md")) {
+if (-not (Test-Path (Join-Path $TargetDir "progress.md"))) {
     @"
 # Progress Log
 
@@ -109,7 +115,7 @@ if (-not (Test-Path "progress.md")) {
 ### Errors
 | Error | Resolution |
 |-------|------------|
-"@ | Out-File -FilePath "progress.md" -Encoding UTF8
+"@ | Out-File -FilePath (Join-Path $TargetDir "progress.md") -Encoding UTF8
     Write-Host "Created progress.md"
 } else {
     Write-Host "progress.md already exists, skipping"
