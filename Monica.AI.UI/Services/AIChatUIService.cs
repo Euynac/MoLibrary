@@ -1,9 +1,8 @@
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Microsoft.Agents.AI;
-using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using Monica.AI.Abstractions;
+using Monica.AI.Extensions;
 using Monica.AI.Models;
 using Monica.AI.Services;
 using Monica.AI.UI.Modules;
@@ -96,72 +95,6 @@ public class AIChatUIService(
     }
 
     /// <summary>
-    /// Helper class to accumulate streaming content, reasoning, and tool calls.
-    /// </summary>
-    private sealed class StreamAccumulator
-    {
-        public string FullContent { get; private set; } = string.Empty;
-        public string FullReasoning { get; private set; } = string.Empty;
-        public Stopwatch ReasoningStopwatch { get; } = new();
-        public List<ToolCallInfo> ToolCalls { get; } = new();
-
-        public void ProcessContent(AIContent content)
-        {
-            if (content is TextReasoningContent reasoning && !string.IsNullOrEmpty(reasoning.Text))
-            {
-                if (!ReasoningStopwatch.IsRunning)
-                    ReasoningStopwatch.Start();
-                FullReasoning += reasoning.Text;
-            }
-            else if (content is TextContent text && !string.IsNullOrEmpty(text.Text))
-            {
-                if (ReasoningStopwatch.IsRunning)
-                    ReasoningStopwatch.Stop();
-                FullContent += text.Text;
-            }
-            else if (content is FunctionCallContent functionCall)
-            {
-                ToolCalls.Add(new ToolCallInfo(
-                    functionCall.Name,
-                    functionCall.CallId ?? string.Empty,
-                    functionCall.Arguments,
-                    null,
-                    DateTimeOffset.UtcNow));
-            }
-            else if (content is FunctionResultContent functionResult)
-            {
-                var matching = ToolCalls.FindIndex(t => t.CallId == functionResult.CallId);
-                if (matching >= 0)
-                {
-                    ToolCalls[matching] = ToolCalls[matching] with
-                    {
-                        Result = functionResult.Result?.ToString()
-                    };
-                }
-            }
-        }
-
-        public AIChatMessage CreateMessage(string providerId, string modelName)
-        {
-            if (ReasoningStopwatch.IsRunning)
-                ReasoningStopwatch.Stop();
-
-            return new AIChatMessage
-            {
-                Role = AIChatRole.Assistant,
-                Content = FullContent,
-                ProviderId = providerId,
-                ModelName = modelName,
-                ReasoningContent = string.IsNullOrEmpty(FullReasoning) ? null : FullReasoning,
-                ReasoningDurationSeconds = ReasoningStopwatch.Elapsed.TotalSeconds > 0
-                    ? ReasoningStopwatch.Elapsed.TotalSeconds
-                    : null,
-                ToolCalls = ToolCalls.Count > 0 ? ToolCalls : null
-            };
-        }
-    }
-
-    /// <summary>
     /// Unified stream processing method that accumulates content, reasoning, and tool calls.
     /// </summary>
     private async IAsyncEnumerable<AgentResponseUpdate> ProcessStreamAsync(
@@ -181,7 +114,7 @@ public class AIChatUIService(
             ReasoningEnabled = reasoningEnabled
         };
 
-        var accumulator = new StreamAccumulator();
+        var accumulator = new StreamingContentAccumulator();
 
         await foreach (var update in chatService.SendMessageStreamingAsync(request, ct))
         {

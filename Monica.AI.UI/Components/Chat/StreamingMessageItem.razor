@@ -1,6 +1,7 @@
 @using System.Diagnostics
 @using Microsoft.Agents.AI
 @using Microsoft.Extensions.AI
+@using Monica.AI.Extensions
 @using Monica.AI.Models
 @implements IAsyncDisposable
 
@@ -20,7 +21,7 @@
             else
             {
                 @* Reasoning section *@
-                @if (!string.IsNullOrEmpty(_reasoningContent))
+                @if (!string.IsNullOrEmpty(_accumulator.FullReasoning))
                 {
                     <div class="reasoning-section @(_isReasoning ? "reasoning-active" : "")">
                         @if (_isReasoning)
@@ -31,7 +32,7 @@
                                 <span class="reasoning-pulse"></span>
                             </div>
                             <div class="reasoning-body">
-                                <MudText Typo="Typo.body2" Class="reasoning-text">@_reasoningContent</MudText>
+                                <MudText Typo="Typo.body2" Class="reasoning-text">@_accumulator.FullReasoning</MudText>
                             </div>
                         }
                         else
@@ -48,7 +49,7 @@
                             @if (_reasoningExpanded)
                             {
                                 <div class="reasoning-body">
-                                    <MudText Typo="Typo.body2" Class="reasoning-text">@_reasoningContent</MudText>
+                                    <MudText Typo="Typo.body2" Class="reasoning-text">@_accumulator.FullReasoning</MudText>
                                 </div>
                             }
                         }
@@ -56,26 +57,26 @@
                 }
 
                 @* Tool call indicator *@
-                @if (_toolCalls.Count > 0)
+                @if (_accumulator.ToolCalls.Count > 0)
                 {
-                    <ToolCallIndicator ActiveToolCalls="@_toolCalls" />
+                    <ToolCallIndicator ActiveToolCalls="@_accumulator.ToolCalls" />
                 }
 
                 @* Main content *@
-                @if (EnableMarkdown && !string.IsNullOrEmpty(_content))
+                @if (EnableMarkdown && !string.IsNullOrEmpty(_accumulator.FullContent))
                 {
-                    <MudMarkdown Value="@_content" />
+                    <MudMarkdown Value="@_accumulator.FullContent" />
                 }
-                else if (!string.IsNullOrEmpty(_content))
+                else if (!string.IsNullOrEmpty(_accumulator.FullContent))
                 {
-                    <MudText Typo="Typo.body1" Class="message-text">@_content</MudText>
+                    <MudText Typo="Typo.body1" Class="message-text">@_accumulator.FullContent</MudText>
                 }
-                else if (_isStreaming && string.IsNullOrEmpty(_reasoningContent))
+                else if (_isStreaming && string.IsNullOrEmpty(_accumulator.FullReasoning))
                 {
                     <MudSkeleton SkeletonType="SkeletonType.Text" Width="200px" />
                     <MudSkeleton SkeletonType="SkeletonType.Text" Width="160px" />
                 }
-                @if (_isStreaming && !string.IsNullOrEmpty(_content))
+                @if (_isStreaming && !string.IsNullOrEmpty(_accumulator.FullContent))
                 {
                     <span class="typing-indicator"></span>
                 }
@@ -91,18 +92,15 @@
     [Parameter] public CancellationToken ExternalCancellationToken { get; set; }
     [Parameter] public bool EnableMarkdown { get; set; } = true;
 
-    private string _content = string.Empty;
-    private string _reasoningContent = string.Empty;
+    private readonly StreamingContentAccumulator _accumulator = new();
     private bool _isStreaming = true;
     private bool _isReasoning;
     private bool _reasoningExpanded;
     private double _reasoningDurationSeconds;
-    private readonly Stopwatch _reasoningStopwatch = new();
     private bool _hasError;
     private string? _errorMessage;
     private CancellationTokenSource? _cts;
     private bool _hasStarted;
-    private readonly List<ToolCallInfo> _toolCalls = [];
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -130,47 +128,22 @@
 
                 foreach (var content in update.Contents)
                 {
-                    if (content is TextReasoningContent reasoning && !string.IsNullOrEmpty(reasoning.Text))
+                    _accumulator.ProcessContent(content);
+
+                    // Track reasoning state for UI
+                    if (content is TextReasoningContent && _accumulator.ReasoningStopwatch.IsRunning)
                     {
-                        if (!_reasoningStopwatch.IsRunning)
-                        {
-                            _reasoningStopwatch.Start();
-                            _isReasoning = true;
-                        }
-                        _reasoningContent += reasoning.Text;
+                        _isReasoning = true;
                         needsRender = true;
                     }
-                    else if (content is TextContent text && !string.IsNullOrEmpty(text.Text))
+                    else if (content is TextContent && !_accumulator.ReasoningStopwatch.IsRunning && _isReasoning)
                     {
-                        if (_isReasoning)
-                        {
-                            _reasoningStopwatch.Stop();
-                            _reasoningDurationSeconds = _reasoningStopwatch.Elapsed.TotalSeconds;
-                            _isReasoning = false;
-                        }
-                        _content += text.Text;
+                        _reasoningDurationSeconds = _accumulator.ReasoningStopwatch.Elapsed.TotalSeconds;
+                        _isReasoning = false;
                         needsRender = true;
                     }
-                    else if (content is FunctionCallContent functionCall)
+                    else if (content is TextContent or FunctionCallContent or FunctionResultContent)
                     {
-                        _toolCalls.Add(new ToolCallInfo(
-                            functionCall.Name,
-                            functionCall.CallId ?? string.Empty,
-                            functionCall.Arguments,
-                            null,
-                            DateTimeOffset.UtcNow));
-                        needsRender = true;
-                    }
-                    else if (content is FunctionResultContent functionResult)
-                    {
-                        var idx = _toolCalls.FindIndex(t => t.CallId == functionResult.CallId);
-                        if (idx >= 0)
-                        {
-                            _toolCalls[idx] = _toolCalls[idx] with
-                            {
-                                Result = functionResult.Result?.ToString()
-                            };
-                        }
                         needsRender = true;
                     }
                 }
@@ -199,15 +172,14 @@
         }
         finally
         {
-            if (_reasoningStopwatch.IsRunning)
+            if (_accumulator.ReasoningStopwatch.IsRunning)
             {
-                _reasoningStopwatch.Stop();
-                _reasoningDurationSeconds = _reasoningStopwatch.Elapsed.TotalSeconds;
+                _reasoningDurationSeconds = _accumulator.ReasoningStopwatch.Elapsed.TotalSeconds;
                 _isReasoning = false;
             }
             _isStreaming = false;
             await InvokeAsync(StateHasChanged);
-            await InvokeAsync(() => OnStreamComplete.InvokeAsync(_content));
+            await InvokeAsync(() => OnStreamComplete.InvokeAsync(_accumulator.FullContent));
         }
     }
 
