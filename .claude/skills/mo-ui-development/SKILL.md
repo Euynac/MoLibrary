@@ -237,7 +237,7 @@ For detailed component architecture patterns (hierarchy, communication, state ma
 
 **Always use localization for user-facing text** — never hardcode text strings in components.
 
-#### Recommended: Decentralized Pattern (Module-Specific Resources)
+#### Decentralized Pattern
 
 Each UI module should manage its own localization resources independently. This improves modularity and reduces coupling.
 
@@ -281,22 +281,6 @@ public class StateStoreResource
 **Key naming**: Use hierarchical paths without module prefix (`Dashboard:Title`, not `StateStore:Dashboard:Title`).
 
 **Auto-discovery**: `MoStringLocalizerFactory` automatically discovers resources from all assemblies starting with "Monica" in namespaces containing ".Localization".
-
-#### Legacy: Centralized Pattern (SharedResource)
-
-Existing modules may use the centralized SharedResource pattern:
-
-```razor
-@using Monica.UI.Localization
-@inject IStringLocalizer<SharedResource> L
-
-<MudButton>@L["Common:Save"]</MudButton>
-<MudText>@L["ModuleSystem:Dashboard:Title"]</MudText>
-```
-
-**Location:** `Monica.UI/Localization/SharedResource/zh-CN.json` and `en-US.json`
-
-**When to use**: Only for existing modules already using SharedResource. New modules should use the decentralized pattern.
 
 #### General Requirements
 

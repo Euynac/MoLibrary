@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-Localization Validation Script for Monica Framework - Updated for Decentralized Resources
+Localization Validation Script for Monica Framework
 
 This script validates localization keys bidirectionally across all UI modules:
 1. Missing keys: Keys used in Razor files but not defined in JSON
 2. Unused keys: Keys defined in JSON but never used in Razor files
 3. Language sync: Keys present in one language but not another
 
-Supports both centralized (SharedResource) and decentralized (module-specific) localization patterns.
+Auto-discovers all *.UI projects in the repository and validates their localization resources.
 """
 
 import json
@@ -17,6 +18,12 @@ import argparse
 from pathlib import Path
 from typing import Dict, List, Set, Tuple
 from collections import defaultdict
+
+# Force UTF-8 encoding for stdout/stderr on Windows
+if sys.platform == 'win32':
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 
 class Colors:
@@ -35,14 +42,7 @@ class LocalizationValidator:
     def __init__(self, root_path: Path, languages: List[str]):
         self.root_path = root_path
         self.languages = languages
-        self.ui_projects = [
-            'Monica.UI',
-            'Monica.Framework.UI',
-            'Monica.Configuration.UI',
-            'Monica.JobScheduler.UI',
-            'Monica.StateStore.UI',
-            'Monica.AI.UI'
-        ]
+        self.ui_projects = self._discover_ui_projects()
 
         # Auto-discover all localization resources
         self.localization_resources = self._discover_localization_resources()
@@ -53,6 +53,19 @@ class LocalizationValidator:
         self.missing_keys: Dict[str, List[Tuple[str, int]]] = defaultdict(list)
         self.unused_keys: Set[str] = set()
         self.sync_issues: Dict[str, Dict[str, bool]] = {}
+
+    def _discover_ui_projects(self) -> List[str]:
+        """Auto-discover all *.UI projects in the repository"""
+        ui_projects = []
+
+        for item in self.root_path.iterdir():
+            if item.is_dir() and item.name.endswith('.UI'):
+                # Verify it's a valid project by checking for .csproj
+                csproj_files = list(item.glob('*.csproj'))
+                if csproj_files:
+                    ui_projects.append(item.name)
+
+        return sorted(ui_projects)
 
     def _discover_localization_resources(self) -> List[Path]:
         """Discover all localization resource directories in UI projects"""
