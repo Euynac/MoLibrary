@@ -7,6 +7,8 @@
 @using Monica.Tool.MoResponse
 @using Microsoft.Extensions.Localization
 @using Monica.AI.UI.Localization
+@using Monica.UI.Services
+@using Monica.AI.UI.Services
 @implements IDisposable
 @inject AIChatUIService ChatUIService
 @inject AIProviderUIService ProviderUIService
@@ -15,6 +17,7 @@
 @inject IDialogService DialogService
 @inject IServiceProvider ServiceProvider
 @inject IStringLocalizer<AIResource> L
+@inject IMoBrowserStorage BrowserStorage
 
 <div class="ai-chat-shell">
     @if (_options.ShowSessionList)
@@ -37,6 +40,7 @@
                     <ProviderSelector
                         Providers="@_providers"
                         SelectedProviderId="@_currentProviderId"
+                        SelectedModelName="@_currentModelName"
                         SelectedProviderIdChanged="@HandleProviderChanged" />
                 }
             </div>
@@ -131,6 +135,46 @@
     {
         if (firstRender)
         {
+            // Load persisted provider and model preferences
+            var savedProviderId = await BrowserStorage.GetDefaultProviderAsync();
+            var savedModelName = await BrowserStorage.GetDefaultModelAsync();
+
+            // Validate and apply saved provider
+            if (!string.IsNullOrEmpty(savedProviderId))
+            {
+                var provider = _providers.FirstOrDefault(p => p.ProviderId == savedProviderId);
+                if (provider != null)
+                {
+                    _currentProviderId = savedProviderId;
+                    _currentProviderName = provider.DisplayName;
+                    _currentProviderModels = provider.SupportedModels ?? [];
+
+                    // Validate and apply saved model
+                    if (!string.IsNullOrEmpty(savedModelName) &&
+                        _currentProviderModels.Any(m => m.ModelName == savedModelName))
+                    {
+                        _currentModelName = savedModelName;
+                    }
+                    else
+                    {
+                        // Saved model is invalid, use provider default and clear storage
+                        _currentModelName = provider.DefaultModel;
+                        if (!string.IsNullOrEmpty(savedModelName))
+                        {
+                            await BrowserStorage.RemoveAsync("ai-chat:default-model");
+                        }
+                    }
+
+                    UpdateSupportsReasoning();
+                }
+                else
+                {
+                    // Saved provider is invalid, clear storage and use default
+                    await BrowserStorage.RemoveAsync("ai-chat:default-provider");
+                    await BrowserStorage.RemoveAsync("ai-chat:default-model");
+                }
+            }
+
             // Load knowledge bases if RAG is available
             if (_ragService is not null && _options.ShowKnowledgeBaseSelector)
             {
@@ -144,7 +188,13 @@
             if (_sessionStorage.Sessions.Count == 0)
             {
                 var kbIds = _selectedKbIds.Count > 0 ? _selectedKbIds : null;
-                await ChatUIService.CreateSessionAsync(_currentProviderId, knowledgeBaseIds: kbIds);
+                var newSession = await ChatUIService.CreateSessionAsync(_currentProviderId, knowledgeBaseIds: kbIds);
+
+                // Update session with current model name if available
+                if (!string.IsNullOrEmpty(_currentModelName))
+                {
+                    newSession.ModelName = _currentModelName;
+                }
             }
             else
             {
@@ -186,7 +236,7 @@
         }
     }
 
-    private void HandleProviderChanged(string providerId)
+    private async Task HandleProviderChanged(string providerId)
     {
         _currentProviderId = providerId;
         var provider = _providers.FirstOrDefault(p => p.ProviderId == providerId);
@@ -196,12 +246,21 @@
 
         UpdateSupportsReasoning();
 
+        // Persist provider selection
+        await BrowserStorage.SaveDefaultProviderAsync(providerId);
+        if (!string.IsNullOrEmpty(_currentModelName))
+        {
+            await BrowserStorage.SaveDefaultModelAsync(_currentModelName);
+        }
+
         // Update current session provider
         var currentSession = _sessionStorage.GetSession(_sessionStorage.CurrentSessionId ?? string.Empty);
         if (currentSession != null)
         {
             currentSession.ProviderId = providerId;
         }
+
+        StateHasChanged();
     }
 
     private async Task HandleNewSession()
@@ -480,15 +539,20 @@
         _selectedKbIds = selectedIds;
     }
 
-    private void HandleModelChanged(string modelName)
+    private async Task HandleModelChanged(string modelName)
     {
         _currentModelName = modelName;
 
-        // Update current session's model
-        var currentSession = _sessionStorage.GetSession(_sessionStorage.CurrentSessionId ?? string.Empty);
-        if (currentSession != null)
+        // Persist model selection
+        await BrowserStorage.SaveDefaultModelAsync(modelName);
+
+        // Update current session's model using UpdateSession to trigger change event
+        if (!string.IsNullOrEmpty(_sessionStorage.CurrentSessionId))
         {
-            currentSession.ModelName = modelName;
+            _sessionStorage.UpdateSession(_sessionStorage.CurrentSessionId, session =>
+            {
+                session.ModelName = modelName;
+            });
         }
 
         // Update reasoning support based on new model

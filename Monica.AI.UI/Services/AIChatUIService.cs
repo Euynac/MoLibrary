@@ -19,8 +19,6 @@ public class AIChatUIService(
     ChatSessionStorage sessionStorage,
     IOptions<ModuleAIUIOption> options)
 {
-    private readonly ModuleAIUIOption _options = options.Value;
-
     /// <summary>
     /// Get session storage
     /// </summary>
@@ -70,64 +68,6 @@ public class AIChatUIService(
     }
 
     /// <summary>
-    /// Get or create a session
-    /// </summary>
-    public async Task<ChatSessionInfo> GetOrCreateSessionAsync(
-        string? sessionId = null,
-        string? providerId = null,
-        CancellationToken ct = default)
-    {
-        if (!string.IsNullOrEmpty(sessionId))
-        {
-            var existing = sessionStorage.GetSession(sessionId);
-            if (existing != null)
-            {
-                return existing;
-            }
-        }
-
-        return await CreateSessionAsync(providerId, ct: ct);
-    }
-
-    /// <summary>
-    /// Send a message and get a non-streaming response
-    /// </summary>
-    public async Task<AIChatMessage> SendMessageAsync(
-        string sessionId,
-        string message,
-        CancellationToken ct = default)
-    {
-        var sessionInfo = sessionStorage.GetSession(sessionId);
-        var request = new AIChatRequest
-        {
-            SessionId = sessionId,
-            Message = message,
-            Streaming = false,
-            ProviderId = sessionInfo?.ProviderId
-        };
-
-        var response = await chatService.SendMessageAsync(request, ct);
-
-        if (sessionInfo != null)
-        {
-            sessionInfo.Messages.Add(new AIChatMessage
-            {
-                Role = AIChatRole.User,
-                Content = message
-            });
-            sessionInfo.Messages.Add(response.Message);
-            sessionInfo.UpdatedAt = DateTimeOffset.UtcNow;
-
-            if (sessionInfo.Messages.Count == 2)
-            {
-                sessionInfo.Title = message.Length > 50 ? message[..50] + "..." : message;
-            }
-        }
-
-        return response.Message;
-    }
-
-    /// <summary>
     /// Send a message and get a streaming response.
     /// User message is added synchronously before returning the async enumerable.
     /// </summary>
@@ -156,14 +96,79 @@ public class AIChatUIService(
     }
 
     /// <summary>
-    /// Internal: process streaming response from agent framework.
-    /// Captures text, reasoning, and tool call content from the stream.
+    /// Helper class to accumulate streaming content, reasoning, and tool calls.
     /// </summary>
-    private async IAsyncEnumerable<AgentResponseUpdate> StreamResponseAsync(
+    private sealed class StreamAccumulator
+    {
+        public string FullContent { get; private set; } = string.Empty;
+        public string FullReasoning { get; private set; } = string.Empty;
+        public Stopwatch ReasoningStopwatch { get; } = new();
+        public List<ToolCallInfo> ToolCalls { get; } = new();
+
+        public void ProcessContent(AIContent content)
+        {
+            if (content is TextReasoningContent reasoning && !string.IsNullOrEmpty(reasoning.Text))
+            {
+                if (!ReasoningStopwatch.IsRunning)
+                    ReasoningStopwatch.Start();
+                FullReasoning += reasoning.Text;
+            }
+            else if (content is TextContent text && !string.IsNullOrEmpty(text.Text))
+            {
+                if (ReasoningStopwatch.IsRunning)
+                    ReasoningStopwatch.Stop();
+                FullContent += text.Text;
+            }
+            else if (content is FunctionCallContent functionCall)
+            {
+                ToolCalls.Add(new ToolCallInfo(
+                    functionCall.Name,
+                    functionCall.CallId ?? string.Empty,
+                    functionCall.Arguments,
+                    null,
+                    DateTimeOffset.UtcNow));
+            }
+            else if (content is FunctionResultContent functionResult)
+            {
+                var matching = ToolCalls.FindIndex(t => t.CallId == functionResult.CallId);
+                if (matching >= 0)
+                {
+                    ToolCalls[matching] = ToolCalls[matching] with
+                    {
+                        Result = functionResult.Result?.ToString()
+                    };
+                }
+            }
+        }
+
+        public AIChatMessage CreateMessage(string providerId, string modelName)
+        {
+            if (ReasoningStopwatch.IsRunning)
+                ReasoningStopwatch.Stop();
+
+            return new AIChatMessage
+            {
+                Role = AIChatRole.Assistant,
+                Content = FullContent,
+                ProviderId = providerId,
+                ModelName = modelName,
+                ReasoningContent = string.IsNullOrEmpty(FullReasoning) ? null : FullReasoning,
+                ReasoningDurationSeconds = ReasoningStopwatch.Elapsed.TotalSeconds > 0
+                    ? ReasoningStopwatch.Elapsed.TotalSeconds
+                    : null,
+                ToolCalls = ToolCalls.Count > 0 ? ToolCalls : null
+            };
+        }
+    }
+
+    /// <summary>
+    /// Unified stream processing method that accumulates content, reasoning, and tool calls.
+    /// </summary>
+    private async IAsyncEnumerable<AgentResponseUpdate> ProcessStreamAsync(
         string sessionId,
         string message,
-        ChatSessionInfo? sessionInfo,
-        bool reasoningEnabled = false,
+        ChatSessionInfo sessionInfo,
+        bool reasoningEnabled,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
         var request = new AIChatRequest
@@ -171,75 +176,42 @@ public class AIChatUIService(
             SessionId = sessionId,
             Message = message,
             Streaming = true,
-            ProviderId = sessionInfo?.ProviderId,
+            ProviderId = sessionInfo.ProviderId,
+            ModelName = sessionInfo.ModelName,
             ReasoningEnabled = reasoningEnabled
         };
 
-        var fullContent = string.Empty;
-        var fullReasoning = string.Empty;
-        var reasoningStopwatch = new Stopwatch();
-        var toolCalls = new List<ToolCallInfo>();
+        var accumulator = new StreamAccumulator();
 
         await foreach (var update in chatService.SendMessageStreamingAsync(request, ct))
         {
             foreach (var content in update.Contents)
             {
-                if (content is TextReasoningContent reasoning && !string.IsNullOrEmpty(reasoning.Text))
-                {
-                    if (!reasoningStopwatch.IsRunning)
-                        reasoningStopwatch.Start();
-                    fullReasoning += reasoning.Text;
-                }
-                else if (content is TextContent text && !string.IsNullOrEmpty(text.Text))
-                {
-                    if (reasoningStopwatch.IsRunning)
-                        reasoningStopwatch.Stop();
-                    fullContent += text.Text;
-                }
-                else if (content is FunctionCallContent functionCall)
-                {
-                    toolCalls.Add(new ToolCallInfo(
-                        functionCall.Name,
-                        functionCall.CallId ?? string.Empty,
-                        functionCall.Arguments,
-                        null,
-                        DateTimeOffset.UtcNow));
-                }
-                else if (content is FunctionResultContent functionResult)
-                {
-                    var matching = toolCalls.FindIndex(t => t.CallId == functionResult.CallId);
-                    if (matching >= 0)
-                    {
-                        toolCalls[matching] = toolCalls[matching] with
-                        {
-                            Result = functionResult.Result?.ToString()
-                        };
-                    }
-                }
+                accumulator.ProcessContent(content);
             }
-
             yield return update;
         }
 
-        if (reasoningStopwatch.IsRunning)
-            reasoningStopwatch.Stop();
+        var aiMessage = accumulator.CreateMessage(sessionInfo.ProviderId ?? string.Empty, sessionInfo.ModelName ?? string.Empty);
+        sessionInfo.Messages.Add(aiMessage);
+        sessionInfo.UpdatedAt = DateTimeOffset.UtcNow;
+    }
 
-        if (sessionInfo != null)
-        {
-            sessionInfo.Messages.Add(new AIChatMessage
-            {
-                Role = AIChatRole.Assistant,
-                Content = fullContent,
-                ProviderId = sessionInfo.ProviderId,
-                ModelName = sessionInfo.ModelName,
-                ReasoningContent = string.IsNullOrEmpty(fullReasoning) ? null : fullReasoning,
-                ReasoningDurationSeconds = reasoningStopwatch.Elapsed.TotalSeconds > 0
-                    ? reasoningStopwatch.Elapsed.TotalSeconds
-                    : null,
-                ToolCalls = toolCalls.Count > 0 ? toolCalls : null
-            });
-            sessionInfo.UpdatedAt = DateTimeOffset.UtcNow;
-        }
+    /// <summary>
+    /// Internal: process streaming response from agent framework.
+    /// Captures text, reasoning, and tool call content from the stream.
+    /// </summary>
+    private IAsyncEnumerable<AgentResponseUpdate> StreamResponseAsync(
+        string sessionId,
+        string message,
+        ChatSessionInfo? sessionInfo,
+        bool reasoningEnabled = false,
+        CancellationToken ct = default)
+    {
+        if (sessionInfo == null)
+            return AsyncEnumerableEmpty<AgentResponseUpdate>();
+
+        return ProcessStreamAsync(sessionId, message, sessionInfo, reasoningEnabled, ct);
     }
 
     /// <summary>
@@ -317,83 +289,14 @@ public class AIChatUIService(
     /// (used by retry where user message already exists).
     /// Also captures tool call content from the stream.
     /// </summary>
-    private async IAsyncEnumerable<AgentResponseUpdate> StreamResponseOnlyAsync(
+    private IAsyncEnumerable<AgentResponseUpdate> StreamResponseOnlyAsync(
         string sessionId,
         string message,
         ChatSessionInfo sessionInfo,
         bool reasoningEnabled = false,
-        [EnumeratorCancellation] CancellationToken ct = default)
+        CancellationToken ct = default)
     {
-        var request = new AIChatRequest
-        {
-            SessionId = sessionId,
-            Message = message,
-            Streaming = true,
-            ProviderId = sessionInfo.ProviderId,
-            ReasoningEnabled = reasoningEnabled
-        };
-
-        var fullContent = string.Empty;
-        var fullReasoning = string.Empty;
-        var reasoningStopwatch = new Stopwatch();
-        var toolCalls = new List<ToolCallInfo>();
-
-        await foreach (var update in chatService.SendMessageStreamingAsync(request, ct))
-        {
-            foreach (var content in update.Contents)
-            {
-                if (content is TextReasoningContent reasoning && !string.IsNullOrEmpty(reasoning.Text))
-                {
-                    if (!reasoningStopwatch.IsRunning)
-                        reasoningStopwatch.Start();
-                    fullReasoning += reasoning.Text;
-                }
-                else if (content is TextContent text && !string.IsNullOrEmpty(text.Text))
-                {
-                    if (reasoningStopwatch.IsRunning)
-                        reasoningStopwatch.Stop();
-                    fullContent += text.Text;
-                }
-                else if (content is FunctionCallContent functionCall)
-                {
-                    toolCalls.Add(new ToolCallInfo(
-                        functionCall.Name,
-                        functionCall.CallId ?? string.Empty,
-                        functionCall.Arguments,
-                        null,
-                        DateTimeOffset.UtcNow));
-                }
-                else if (content is FunctionResultContent functionResult)
-                {
-                    var matching = toolCalls.FindIndex(t => t.CallId == functionResult.CallId);
-                    if (matching >= 0)
-                    {
-                        toolCalls[matching] = toolCalls[matching] with
-                        {
-                            Result = functionResult.Result?.ToString()
-                        };
-                    }
-                }
-            }
-            yield return update;
-        }
-
-        if (reasoningStopwatch.IsRunning)
-            reasoningStopwatch.Stop();
-
-        sessionInfo.Messages.Add(new AIChatMessage
-        {
-            Role = AIChatRole.Assistant,
-            Content = fullContent,
-            ProviderId = sessionInfo.ProviderId,
-            ModelName = sessionInfo.ModelName,
-            ReasoningContent = string.IsNullOrEmpty(fullReasoning) ? null : fullReasoning,
-            ReasoningDurationSeconds = reasoningStopwatch.Elapsed.TotalSeconds > 0
-                ? reasoningStopwatch.Elapsed.TotalSeconds
-                : null,
-            ToolCalls = toolCalls.Count > 0 ? toolCalls : null
-        });
-        sessionInfo.UpdatedAt = DateTimeOffset.UtcNow;
+        return ProcessStreamAsync(sessionId, message, sessionInfo, reasoningEnabled, ct);
     }
 
     /// <summary>

@@ -154,28 +154,24 @@ public class AIChatService(
     public async Task<AIChatResponse> SendMessageAsync(AIChatRequest request, CancellationToken ct = default)
     {
         var state = await GetOrCreateSessionAsync(request.SessionId, request.ProviderId, ct);
-        ApplyRequestOverrides(state, request);
 
-        var userMessage = new ChatMessage(ChatRole.User, request.Message);
+        var fullContent = string.Empty;
 
-        var runOptions = CreateRunOptions(state, request.ReasoningEnabled);
-        //TODO 解决上下文丢失问题：https://github.com/microsoft/agent-framework/pull/3798
-        var response = await state.Agent.RunAsync([userMessage], state.Session, runOptions, ct);
-
-        state.UpdatedAt = DateTimeOffset.UtcNow;
-
-        // Auto-set title from first user message
-        var history = state.ChatHistory;
-        if (history != null && history.Count(m => m.Role == ChatRole.User) == 1)
+        await foreach (var update in SendMessageStreamingAsync(request, ct))
         {
-            state.Title = request.Message.Length > 50 ? request.Message[..50] + "..." : request.Message;
+            foreach (var content in update.Contents)
+            {
+                if (content is TextContent text && !string.IsNullOrEmpty(text.Text))
+                {
+                    fullContent += text.Text;
+                }
+            }
         }
 
-        var responseText = response.Text ?? string.Empty;
         var assistantMessage = new AIChatMessage
         {
             Role = AIChatRole.Assistant,
-            Content = responseText,
+            Content = fullContent,
             ProviderId = state.ProviderId,
             ModelName = state.ModelName
         };
@@ -197,7 +193,7 @@ public class AIChatService(
         [EnumeratorCancellation] CancellationToken ct = default)
     {
         var state = await GetOrCreateSessionAsync(request.SessionId, request.ProviderId, ct);
-        ApplyRequestOverrides(state, request);
+        await ApplyRequestOverridesAsync(state, request, ct);
 
         var userMessage = new ChatMessage(ChatRole.User, request.Message);
 
@@ -272,16 +268,52 @@ public class AIChatService(
         return new ChatClientAgent(chatClient, instructions: instructions);
     }
 
-    private static void ApplyRequestOverrides(AgentSessionState state, AIChatRequest request)
+    private async Task ApplyRequestOverridesAsync(AgentSessionState state, AIChatRequest request, CancellationToken ct = default)
     {
-        if (!string.IsNullOrEmpty(request.ProviderId))
-            state.ProviderId = request.ProviderId;
+        bool needsAgentRecreation = false;
 
-        if (!string.IsNullOrEmpty(request.ModelName))
+        // Check if provider or model changed
+        if (!string.IsNullOrEmpty(request.ProviderId) && request.ProviderId != state.ProviderId)
+        {
+            state.ProviderId = request.ProviderId;
+            needsAgentRecreation = true;
+        }
+
+        if (!string.IsNullOrEmpty(request.ModelName) && request.ModelName != state.ModelName)
+        {
             state.ModelName = request.ModelName;
+            needsAgentRecreation = true;
+        }
 
         if (!string.IsNullOrEmpty(request.SystemPrompt))
             state.SystemPrompt = request.SystemPrompt;
+
+        // Recreate agent if provider or model changed
+        if (needsAgentRecreation)
+        {
+            var provider = providerFactory.GetProvider(state.ProviderId);
+            if (provider != null)
+            {
+                var chatClient = provider.GetChatClient(state.ModelName);
+                var newAgent = CreateAgent(chatClient, state.SystemPrompt, state.ActiveKnowledgeBaseIds);
+                var newSession = await newAgent.CreateSessionAsync(ct);
+
+                // Copy chat history from old session to new session
+                var oldHistory = state.ChatHistory;
+                var newHistory = newSession.GetService<IList<ChatMessage>>();
+                if (oldHistory != null && newHistory != null)
+                {
+                    foreach (var message in oldHistory)
+                    {
+                        newHistory.Add(message);
+                    }
+                }
+
+                state.Agent = newAgent;
+                state.Session = newSession;
+                state.UpdatedAt = DateTimeOffset.UtcNow;
+            }
+        }
     }
 
     private static ChatClientAgentRunOptions? CreateRunOptions(AgentSessionState state, bool reasoningEnabled)

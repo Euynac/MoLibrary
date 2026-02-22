@@ -105,12 +105,38 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
 }
 
 .model-metadata ::deep .reasoning-chip {
-    font-size: 0.7rem;
-    height: 20px;
+    font-size: 0.7rem !important;
+    height: 18px !important;
+    width: 18px !important;
+    min-height: 18px !important;
+    min-width: 18px !important;
+    max-height: 18px !important;
+    max-width: 18px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 50% !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.model-metadata ::deep .reasoning-chip .mud-chip-content {
+    padding: 0 !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.model-metadata ::deep .reasoning-chip .mud-icon-root {
+    font-size: 12px !important;
+    width: 12px !important;
+    height: 12px !important;
+    margin: 0 !important;
 }
 
 .context-info {

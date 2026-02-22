@@ -17,21 +17,23 @@
                 <button class="model-option @(IsSelected(model) ? "is-active" : string.Empty)"
                         @onclick="() => HandleModelClick(model.ModelName)">
                     <div class="model-info">
-                        <span class="model-name-full">@model.ModelName</span>
                         @if (model is LLMModelInfo llm)
                         {
                             <div class="model-metadata">
                                 @if (llm.SupportsReasoning)
                                 {
-                                    <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Psychology" Class="reasoning-chip">
-                                        @L["Model:Reasoning"]
-                                    </MudChip>
+                                    <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Psychology" Class="reasoning-chip" />
                                 }
+                                <span class="model-name-full">@model.ModelName</span>
                                 @if (llm.ContextWindow.HasValue)
                                 {
                                     <span class="context-info">@FormatContextWindow(llm.ContextWindow.Value)</span>
                                 }
                             </div>
+                        }
+                        else
+                        {
+                            <span class="model-name-full">@model.ModelName</span>
                         }
                     </div>
                 </button>

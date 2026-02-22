@@ -6,7 +6,17 @@
 <div class="provider-selector">
     <div class="provider-trigger">
         <MudIcon Icon="@GetProviderIcon(_currentProvider)" Size="Size.Small" />
-        <span class="provider-name">@(_currentProvider?.DisplayName ?? L["Provider:Label"])</span>
+        <span class="provider-name">
+            @if (!string.IsNullOrEmpty(SelectedModelName))
+            {
+                var shortModelName = SelectedModelName.Length > 20 ? SelectedModelName[..20] + "..." : SelectedModelName;
+                <text>@(_currentProvider?.ProviderType ?? L["Provider:Label"]) / @shortModelName</text>
+            }
+            else
+            {
+                <text>@(_currentProvider?.ProviderType ?? L["Provider:Label"])</text>
+            }
+        </span>
         <MudIcon Icon="@Icons.Material.Filled.ExpandMore" Size="Size.Small" />
     </div>
     <div class="provider-menu">
@@ -28,6 +38,7 @@
 @code {
     [Parameter] public IReadOnlyList<AIProviderInfo> Providers { get; set; } = [];
     [Parameter] public string? SelectedProviderId { get; set; }
+    [Parameter] public string? SelectedModelName { get; set; }
     [Parameter] public EventCallback<string> SelectedProviderIdChanged { get; set; }
 
     private AIProviderInfo? _currentProvider =>
