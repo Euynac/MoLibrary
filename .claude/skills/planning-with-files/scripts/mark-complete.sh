@@ -29,20 +29,22 @@ if [ ! -f "$TASK_PLAN_FILE" ]; then
     exit 0
 fi
 
-# Check if folder already has (done) prefix
+# Check if folder already has (done) prefix (with or without space)
 FOLDER_NAME=$(basename "$FOLDER_PATH")
-if [[ "$FOLDER_NAME" == "(done) "* ]]; then
+if [[ "$FOLDER_NAME" == "(done)"* ]] || [[ "$FOLDER_NAME" == "(done) "* ]]; then
     exit 0
 fi
 
 # Check if all phases are complete
 # Look for "Status:" lines and check if any are not "complete"
+STATUS_COUNT=$(grep -ci "Status:" "$TASK_PLAN_FILE" || echo "0")
 INCOMPLETE_COUNT=$(grep -i "Status:" "$TASK_PLAN_FILE" | grep -iv "complete" | wc -l)
 
-if [ "$INCOMPLETE_COUNT" -eq 0 ]; then
-    # All phases are complete, rename the folder
+# Only rename if there's at least one status line and all are complete
+if [ "$STATUS_COUNT" -gt 0 ] && [ "$INCOMPLETE_COUNT" -eq 0 ]; then
+    # All phases are complete, rename the folder (no space between (done) and folder name)
     PARENT_DIR=$(dirname "$FOLDER_PATH")
-    NEW_FOLDER_NAME="(done) ${FOLDER_NAME}"
+    NEW_FOLDER_NAME="(done)${FOLDER_NAME}"
     NEW_FOLDER_PATH="${PARENT_DIR}/${NEW_FOLDER_NAME}"
 
     mv "$FOLDER_PATH" "$NEW_FOLDER_PATH"

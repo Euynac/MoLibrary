@@ -33,9 +33,9 @@ if (-not (Test-Path $taskPlanFile)) {
     exit 0
 }
 
-# Check if folder already has (done) prefix
+# Check if folder already has (done) prefix (with or without space)
 $folderName = Split-Path $FolderPath -Leaf
-if ($folderName -like "(done) *") {
+if ($folderName -like "(done)*" -or $folderName -like "(done) *") {
     exit 0
 }
 
@@ -53,9 +53,9 @@ foreach ($match in $statusLines.Matches) {
 }
 
 if ($incompleteCount -eq 0 -and $statusLines.Matches.Count -gt 0) {
-    # All phases are complete, rename the folder
+    # All phases are complete, rename the folder (no space between (done) and folder name)
     $parentDir = Split-Path $FolderPath -Parent
-    $newFolderName = "(done) $folderName"
+    $newFolderName = "(done)$folderName"
     $newFolderPath = Join-Path $parentDir $newFolderName
 
     Move-Item -Path $FolderPath -Destination $newFolderPath -Force
