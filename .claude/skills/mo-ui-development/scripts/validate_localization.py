@@ -56,15 +56,22 @@ class LocalizationValidator:
         self.json_errors: List[Tuple[Path, str]] = []
 
     def _discover_ui_projects(self) -> List[str]:
-        """Auto-discover all *.UI projects in the repository"""
+        """Auto-discover all *.UI projects and other Monica projects with UI modules"""
         ui_projects = []
 
         for item in self.root_path.iterdir():
-            if item.is_dir() and item.name.endswith('.UI'):
+            if item.is_dir() and item.name.startswith('Monica.'):
                 # Verify it's a valid project by checking for .csproj
                 csproj_files = list(item.glob('*.csproj'))
                 if csproj_files:
-                    ui_projects.append(item.name)
+                    # Include *.UI projects and projects that have Modules/Module*UI.cs files
+                    if item.name.endswith('.UI'):
+                        ui_projects.append(item.name)
+                    else:
+                        # Check if project has UI module files
+                        ui_module_files = list(item.glob('Modules/Module*UI.cs'))
+                        if ui_module_files:
+                            ui_projects.append(item.name)
 
         return sorted(ui_projects)
 
@@ -117,6 +124,40 @@ class LocalizationValidator:
 
                 except Exception as e:
                     print(f"Warning: Could not read {razor_file}: {e}", file=sys.stderr)
+
+    def scan_cs_files(self) -> None:
+        """Extract localization keys from C# files (string literals with colon notation)"""
+        # Pattern to match string literals containing colon-separated keys
+        # Matches: "Pages:JobSchedulerDashboard:Title", "Services:Errors:BuildFailed", etc.
+        # Must have at least one colon and start with a capital letter
+        pattern = re.compile(r'["\']([A-Z][A-Za-z]+:[A-Za-z:]+)["\']')
+
+        for project in self.ui_projects:
+            project_path = self.root_path / project
+            if not project_path.exists():
+                continue
+
+            for cs_file in project_path.rglob('*.cs'):
+                try:
+                    with open(cs_file, 'r', encoding='utf-8') as f:
+                        lines = f.readlines()
+
+                    for line_num, line in enumerate(lines, 1):
+                        # Skip comments
+                        if line.strip().startswith('//'):
+                            continue
+
+                        matches = pattern.findall(line)
+                        for key in matches:
+                            # Validate that this looks like a localization key
+                            # Must have at least 2 parts and reasonable length
+                            parts = key.split(':')
+                            if len(parts) >= 2 and len(key) < 100:
+                                relative_path = cs_file.relative_to(self.root_path)
+                                self.used_keys[key].append((str(relative_path), line_num))
+
+                except Exception as e:
+                    print(f"Warning: Could not read {cs_file}: {e}", file=sys.stderr)
 
     def validate_json_integrity(self) -> bool:
         """Validate JSON syntax and structure for all localization files"""
@@ -368,7 +409,10 @@ def main():
             sys.exit(1)
 
         # Step 2: Scan and validate keys
+        print("Scanning Razor files...")
         validator.scan_razor_files()
+        print("Scanning C# files...")
+        validator.scan_cs_files()
         validator.load_json_keys()
         validator.validate_bidirectional()
         validator.validate_language_sync()

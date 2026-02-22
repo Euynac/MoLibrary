@@ -57,10 +57,10 @@
     {
         return Status switch
         {
-            SystemHealthStatus.Healthy => L["Dashboard.SystemHealth.Healthy"],
-            SystemHealthStatus.Degraded => L["Dashboard.SystemHealth.Degraded"],
-            SystemHealthStatus.Unhealthy => L["Dashboard.SystemHealth.Unhealthy"],
-            _ => L["Dashboard.SystemHealth.Unknown"]
+            SystemHealthStatus.Healthy => L["Dashboard:SystemHealth:Healthy"],
+            SystemHealthStatus.Degraded => L["Dashboard:SystemHealth:Degraded"],
+            SystemHealthStatus.Unhealthy => L["Dashboard:SystemHealth:Unhealthy"],
+            _ => L["Dashboard:SystemHealth:Unknown"]
         };
     }
 

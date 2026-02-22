@@ -38,7 +38,7 @@
         var allNavItems = UIRegistry.GetNavItems();
         _categorizedNavItems = allNavItems
             .GroupBy(item => {
-                var category = item.Category ?? "Uncategorized";
+                var category = item.Category ?? L["ModuleSystem:Common:Labels:Uncategorized"];
                 return GetLocalizedText(category, item.CategoryKey);
             })
             .OrderBy(g => g.Key)

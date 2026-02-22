@@ -13,11 +13,11 @@
                     </div>
                     <div class="metric-content">
                         <div class="metric-value">@TotalJobs</div>
-                        <div class="metric-label">@L["Dashboard.Metrics.TotalJobsLabel"]</div>
+                        <div class="metric-label">@L["Dashboard:Metrics:TotalJobsLabel"]</div>
                         <div class="metric-detail">
-                            <span class="recurring">@RecurringJobCount @L["Dashboard.Metrics.RecurringJobsShort"]</span>
+                            <span class="recurring">@RecurringJobCount @L["Dashboard:Metrics:RecurringJobsShort"]</span>
                             <span class="separator">·</span>
-                            <span class="triggered">@TriggeredJobCount @L["Dashboard.Metrics.TriggeredJobsShort"]</span>
+                            <span class="triggered">@TriggeredJobCount @L["Dashboard:Metrics:TriggeredJobsShort"]</span>
                         </div>
                     </div>
                 </MudPaper>
@@ -32,9 +32,9 @@
                     </div>
                     <div class="metric-content">
                         <div class="metric-value">@RunningNow</div>
-                        <div class="metric-label">@L["Dashboard.Metrics.RunningNowLabel"]</div>
+                        <div class="metric-label">@L["Dashboard:Metrics:RunningNowLabel"]</div>
                         <div class="metric-detail">
-                            <span class="disabled">@DisabledJobCount @L["Dashboard.Metrics.DisabledJobs"]</span>
+                            <span class="disabled">@DisabledJobCount @L["Dashboard:Metrics:DisabledJobs"]</span>
                         </div>
                     </div>
                 </MudPaper>
@@ -49,7 +49,7 @@
                     </div>
                     <div class="metric-content">
                         <div class="metric-value">@SuccessRate.ToString("F1")%</div>
-                        <div class="metric-label">@L["Dashboard.Metrics.SuccessRateLabel"]</div>
+                        <div class="metric-label">@L["Dashboard:Metrics:SuccessRateLabel"]</div>
                         <div class="metric-detail">
                             <span>@TimeWindowText</span>
                         </div>
@@ -66,9 +66,9 @@
                     </div>
                     <div class="metric-content">
                         <div class="metric-value">@FormatThroughput(ThroughputPerHour)</div>
-                        <div class="metric-label">@L["Dashboard.Metrics.ThroughputLabel"]</div>
+                        <div class="metric-label">@L["Dashboard:Metrics:ThroughputLabel"]</div>
                         <div class="metric-detail">
-                            <span>@L["Dashboard.Metrics.ThroughputUnit"]</span>
+                            <span>@L["Dashboard:Metrics:ThroughputUnit"]</span>
                         </div>
                     </div>
                 </MudPaper>

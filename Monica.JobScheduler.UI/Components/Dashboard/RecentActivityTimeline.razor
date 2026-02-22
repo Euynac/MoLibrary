@@ -11,12 +11,12 @@
 <div class="activity-timeline-wrapper">
     <MudPaper Class="activity-card" Elevation="0">
         <div class="card-header">
-            <MudText Typo="Typo.h6">@L["Dashboard.RecentActivity.Title"]</MudText>
+            <MudText Typo="Typo.h6">@L["Dashboard:RecentActivity:Title"]</MudText>
             <MudButton Variant="Variant.Text"
                        Size="Size.Small"
                        EndIcon="@Icons.Material.Filled.ArrowForward"
                        OnClick="@ViewAllInstances">
-                @L["Common.Actions.ViewAll"]
+                @L["Common:Actions:ViewAll"]
             </MudButton>
         </div>
 
@@ -57,7 +57,7 @@
         {
             <div class="empty-state">
                 <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Large" Color="Color.Default" />
-                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Dashboard.RecentActivity.NoActivity"]</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Dashboard:RecentActivity:NoActivity"]</MudText>
             </div>
         }
     </MudPaper>
@@ -89,7 +89,7 @@
             Position = DialogPosition.Center
         };
 
-        await DialogService.ShowAsync<JobInstanceDetailDialog>(L["Dialogs.JobInstanceDetail.Title"], parameters, options);
+        await DialogService.ShowAsync<JobInstanceDetailDialog>(L["Dialogs:JobInstanceDetail:Title"], parameters, options);
     }
 
     private string GetStateDotClass(JobState state)
@@ -109,14 +109,14 @@
     {
         return state switch
         {
-            JobState.Succeeded => L["JobStates.Succeeded"],
-            JobState.Failed => L["JobStates.Failed"],
-            JobState.Terminated => L["JobStates.Terminated"],
-            JobState.Processing => L["JobStates.Processing"],
-            JobState.Enqueued => L["JobStates.Enqueued"],
-            JobState.Scheduled => L["JobStates.Scheduled"],
-            JobState.Skipped => L["JobStates.Skipped"],
-            JobState.Cancelled => L["JobStates.Cancelled"],
+            JobState.Succeeded => L["JobStates:Succeeded"],
+            JobState.Failed => L["JobStates:Failed"],
+            JobState.Terminated => L["JobStates:Terminated"],
+            JobState.Processing => L["JobStates:Processing"],
+            JobState.Enqueued => L["JobStates:Enqueued"],
+            JobState.Scheduled => L["JobStates:Scheduled"],
+            JobState.Skipped => L["JobStates:Skipped"],
+            JobState.Cancelled => L["JobStates:Cancelled"],
             _ => state.ToString()
         };
     }
@@ -130,7 +130,7 @@
             return local.ToString("HH:mm:ss");
 
         if (local.Date == now.Date.AddDays(-1))
-            return $"{L["Dashboard.RecentActivity.Yesterday"]} {local:HH:mm}";
+            return $"{L["Dashboard:RecentActivity:Yesterday"]} {local:HH:mm}";
 
         return local.ToString("MM-dd HH:mm");
     }
@@ -138,13 +138,13 @@
     private string FormatDuration(TimeSpan duration)
     {
         if (duration.TotalDays >= 1)
-            return $"{duration.TotalDays:F1}{L["Common.Time.Days"]}";
+            return $"{duration.TotalDays:F1}{L["Common:Time:Days"]}";
         if (duration.TotalHours >= 1)
-            return $"{duration.TotalHours:F1}{L["Common.Time.Hours"]}";
+            return $"{duration.TotalHours:F1}{L["Common:Time:Hours"]}";
         if (duration.TotalMinutes >= 1)
-            return $"{duration.TotalMinutes:F1}{L["Common.Time.Minutes"]}";
+            return $"{duration.TotalMinutes:F1}{L["Common:Time:Minutes"]}";
         if (duration.TotalSeconds >= 1)
-            return $"{duration.TotalSeconds:F1}{L["Common.Time.Seconds"]}";
-        return $"{duration.TotalMilliseconds:F0}{L["Common.Time.Milliseconds"]}";
+            return $"{duration.TotalSeconds:F1}{L["Common:Time:Seconds"]}";
+        return $"{duration.TotalMilliseconds:F0}{L["Common:Time:Milliseconds"]}";
     }
 }

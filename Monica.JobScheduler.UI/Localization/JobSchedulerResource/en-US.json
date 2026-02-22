@@ -7,7 +7,6 @@
       "Confirm": "Confirm",
       "Save": "Save",
       "Close": "Close",
-      "Refresh": "Refresh",
       "Apply": "Apply",
       "Execute": "Execute",
       "Retry": "Retry",
@@ -20,25 +19,17 @@
     "Status": {
       "Loading": "Loading...",
       "Saving": "Saving...",
-      "Executing": "Executing...",
-      "Refreshing": "Refreshing...",
-      "Processing": "Processing...",
-      "Syncing": "Syncing..."
+      "Executing": "Executing..."
     },
     "Messages": {
       "LoadFailed": "Load Failed",
       "SaveFailed": "Save Failed",
-      "ExecuteFailed": "Execute Failed",
-      "OperationSuccess": "Operation Successful",
-      "NoData": "No Data",
-      "NoRecords": "No Matching Records Found",
       "AndMore": "{0} more"
     },
     "Time": {
       "JustNow": "Just Now",
       "SecondsAgo": "{0} seconds ago",
       "MinutesAgo": "{0} minutes ago",
-      "Yesterday": "Yesterday",
       "Days": "days",
       "Hours": "hours",
       "Minutes": "minutes",
@@ -59,28 +50,20 @@
   "Dashboard": {
     "Title": "Job Scheduler - Dashboard",
     "SystemHealth": {
-      "Title": "System Health",
       "Healthy": "System Running Normally",
       "Degraded": "System Partially Degraded",
       "Unhealthy": "System Unhealthy",
       "Unknown": "Unknown Status"
     },
     "Metrics": {
-      "TotalJobs": "Total Jobs",
       "TotalJobsLabel": "Total Jobs",
-      "RecurringJobs": "Recurring Jobs",
       "RecurringJobsShort": "Recurring",
-      "TriggeredJobs": "Triggered Jobs",
       "TriggeredJobsShort": "Triggered",
       "DisabledJobs": "Disabled",
-      "RunningNow": "Running Now",
       "RunningNowLabel": "Running Now",
-      "SuccessRate": "Success Rate",
       "SuccessRateLabel": "Success Rate",
-      "ThroughputPerHour": "Throughput/Hour",
       "ThroughputLabel": "Throughput",
-      "ThroughputUnit": "Executions per hour",
-      "TimeWindow": "Time Window"
+      "ThroughputUnit": "Executions per hour"
     },
     "StateDistribution": {
       "Title": "State Distribution",
@@ -88,21 +71,17 @@
     },
     "ProblemJobs": {
       "Title": "Needs Attention",
-      "NoProblems": "No Problem Jobs",
       "AllHealthy": "All Jobs Running Normally",
-      "HighFailureRate": "High Failure Rate",
       "ConsecutiveFailures": "Consecutive Failures",
       "ConsecutiveFailuresDetail": "{0} consecutive failures",
       "LongRunning": "Long Running",
       "LongRunningDetail": "Running for {0} ({1}% timeout)",
       "HighSkipRate": "High Skip Rate",
-      "HighSkipRateDetail": "Skip rate {0}% (Max concurrency: {1})",
-      "FrequentRetries": "Frequent Retries"
+      "HighSkipRateDetail": "Skip rate {0}% (Max concurrency: {1})"
     },
     "RecentActivity": {
       "Title": "Recent Activity",
       "NoActivity": "No Activity Records",
-      "AllQuiet": "System Running Smoothly",
       "Yesterday": "Yesterday"
     },
     "AutoRefresh": {
@@ -110,8 +89,7 @@
     },
     "TimeRange": {
       "LastHours": "Last {0} hours",
-      "LastDays": "Last {0} days",
-      "Last30Days": "Last 30 days"
+      "LastDays": "Last {0} days"
     }
   },
   "JobDefinitions": {
@@ -305,9 +283,6 @@
       "ReconcileSuccess": "Reconcile completed (duration: {0}ms, deviation: {1} -> {2})",
       "ReconcileFailed": "Reconcile failed",
       "NoJobs": "No active jobs",
-      "AllIdle": "All jobs are idle",
-      "Deviation": "Deviation",
-      "DeviationTooltip": "Difference between counter and actual state",
       "InconsistentState": "Inconsistent state (deviation: {0})",
       "ShowDetails": "Details",
       "HideDetails": "Hide",
@@ -415,9 +390,7 @@
       "EndTime": "End Time",
       "Duration": "Duration",
       "RetryCount": "Retry Count",
-      "StateHistory": "State History",
       "ViewJobDefinition": "View Job Definition",
-      "NoStateHistory": "No state history",
       "LoadFailed": "Load failed",
       "RunningClient": "Running Client",
       "ScheduledExecutionTime": "Scheduled Execution Time",
@@ -431,8 +404,6 @@
     "JobExecute": {
       "Title": "Execute Job",
       "JobName": "Job Name",
-      "JobKey": "Job Key",
-      "ExecuteNow": "Execute Now",
       "ExecuteSuccess": "Job submitted for execution",
       "ExecuteFailed": "Execute failed",
       "ArgsType": "Args Type",
@@ -443,13 +414,7 @@
     },
     "CronEditor": {
       "Title": "Edit Cron Expression",
-      "CurrentExpression": "Current Expression",
-      "NewExpression": "New Expression",
-      "Description": "Description",
-      "NextExecutions": "Next {0} Execution Times",
-      "InvalidExpression": "Invalid Cron Expression",
       "SaveSuccess": "Cron expression updated",
-      "SaveFailed": "Save failed",
       "EmptyExpression": "Cron expression cannot be empty"
     },
     "JobConfigEditor": {
@@ -465,7 +430,6 @@
       "RetryCount": "Retry Count",
       "RetryCountHelper": "Number of automatic retries after exception, default is 0",
       "RetryCountRequired": "Retry count must be greater than or equal to 0",
-      "MaxExecutionTimeout": "Max Execution Timeout",
       "TimeoutHours": "Timeout (Hours)",
       "TimeoutMinutes": "Minutes",
       "TimeoutRequired": "Timeout must be greater than 0",
@@ -489,13 +453,9 @@
       "ValidationRetentionDays": "Retention days must be greater than or equal to 1"
     },
     "BatchOperationConfirm": {
-      "Title": "Confirm Batch Operation",
-      "Message": "Are you sure you want to {1} the following {0} jobs?",
-      "OperationPause": "pause",
-      "OperationResume": "resume"
+      "Message": "Are you sure you want to {1} the following {0} jobs?"
     },
     "BatchOperationResult": {
-      "Title": "Batch Operation Result",
       "Success": "Success",
       "Failed": "Failed",
       "Total": "Total",
@@ -503,34 +463,7 @@
     },
     "StateHistory": {
       "Title": "State History",
-      "State": "State",
-      "Timestamp": "Timestamp",
-      "Message": "Message",
       "NoHistory": "No history records"
-    }
-  },
-  "Components": {
-    "CronExpression": {
-      "EveryMinute": "Every Minute",
-      "EveryHour": "Every Hour",
-      "EveryDay": "Every Day",
-      "EveryWeek": "Every Week",
-      "EveryMonth": "Every Month",
-      "Custom": "Custom",
-      "At": "at",
-      "Invalid": "Invalid Expression"
-    },
-    "AutoRefresh": {
-      "Enabled": "Auto-refresh",
-      "Interval": "Interval",
-      "LastRefresh": "Last Refresh",
-      "Refresh": "Refresh",
-      "Intervals": {
-        "FiveSeconds": "5 seconds",
-        "TenSeconds": "10 seconds",
-        "ThirtySeconds": "30 seconds",
-        "OneMinute": "1 minute"
-      }
     }
   },
   "Services": {
@@ -547,7 +480,6 @@
       "GeneratedExpressionInvalid": "Generated expression is invalid: {0}",
       "BuildExpressionFailed": "Failed to build expression: {0}",
       "SourceExpressionInvalid": "Source expression is invalid: {0}",
-      "QuartzFormatMustHave6Parts": "Quartz format must contain 6 parts",
       "FormatConversionFailed": "Format conversion failed: {0}",
       "BuildDashboardFailed": "Failed to build dashboard data: {0}",
       "BuildRecentActivitiesFailed": "Failed to build recent activities: {0}",

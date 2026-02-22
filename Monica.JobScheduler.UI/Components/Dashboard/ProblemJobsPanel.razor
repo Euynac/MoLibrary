@@ -11,7 +11,7 @@
                 <MudIcon Icon="@Icons.Material.Filled.ReportProblem"
                          Color="@(HasProblems ? Color.Warning : Color.Default)"
                          Size="Size.Small" />
-                <MudText Typo="Typo.h6">@L["Dashboard.ProblemJobs.Title"]</MudText>
+                <MudText Typo="Typo.h6">@L["Dashboard:ProblemJobs:Title"]</MudText>
             </div>
             @if (HasProblems)
             {
@@ -30,14 +30,14 @@
                     <div class="problem-section">
                         <div class="section-header">
                             <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Small" Color="Color.Error" />
-                            <span>@L["Dashboard.ProblemJobs.ConsecutiveFailures"]</span>
+                            <span>@L["Dashboard:ProblemJobs:ConsecutiveFailures"]</span>
                         </div>
                         @foreach (var job in Problems.ConsecutiveFailures.Take(3))
                         {
                             <div class="problem-item" @onclick="() => ViewJob(job.JobKey)">
                                 <div class="problem-info">
                                     <span class="job-name" title="@job.JobKey">@job.JobName</span>
-                                    <span class="problem-detail">@L["Dashboard.ProblemJobs.ConsecutiveFailuresDetail", job.ConsecutiveFailureCount]</span>
+                                    <span class="problem-detail">@L["Dashboard:ProblemJobs:ConsecutiveFailuresDetail", job.ConsecutiveFailureCount]</span>
                                 </div>
                                 <MudIconButton Icon="@Icons.Material.Filled.ArrowForward"
                                                Size="Size.Small"
@@ -53,7 +53,7 @@
                     <div class="problem-section">
                         <div class="section-header">
                             <MudIcon Icon="@Icons.Material.Filled.HourglassTop" Size="Size.Small" Color="Color.Warning" />
-                            <span>@L["Dashboard.ProblemJobs.LongRunning"]</span>
+                            <span>@L["Dashboard:ProblemJobs:LongRunning"]</span>
                         </div>
                         @foreach (var job in Problems.LongRunning.Take(3))
                         {
@@ -61,7 +61,7 @@
                                 <div class="problem-info">
                                     <span class="job-name" title="@job.JobKey">@job.JobName</span>
                                     <span class="problem-detail">
-                                        @L["Dashboard.ProblemJobs.LongRunningDetail", FormatDuration(job.ElapsedTime), job.TimeoutPercentage.ToString("F0")]
+                                        @L["Dashboard:ProblemJobs:LongRunningDetail", FormatDuration(job.ElapsedTime), job.TimeoutPercentage.ToString("F0")]
                                     </span>
                                 </div>
                                 <MudProgressLinear Color="@GetTimeoutColor(job.TimeoutPercentage)"
@@ -80,7 +80,7 @@
                     <div class="problem-section">
                         <div class="section-header">
                             <MudIcon Icon="@Icons.Material.Filled.SkipNext" Size="Size.Small" Color="Color.Info" />
-                            <span>@L["Dashboard.ProblemJobs.HighSkipRate"]</span>
+                            <span>@L["Dashboard:ProblemJobs:HighSkipRate"]</span>
                         </div>
                         @foreach (var job in Problems.HighSkipRate.Take(3))
                         {
@@ -88,7 +88,7 @@
                                 <div class="problem-info">
                                     <span class="job-name" title="@job.JobKey">@job.JobName</span>
                                     <span class="problem-detail">
-                                        @L["Dashboard.ProblemJobs.HighSkipRateDetail", job.SkipRate.ToString("F1"), job.MaxConcurrency]
+                                        @L["Dashboard:ProblemJobs:HighSkipRateDetail", job.SkipRate.ToString("F1"), job.MaxConcurrency]
                                     </span>
                                 </div>
                                 <MudIconButton Icon="@Icons.Material.Filled.ArrowForward"
@@ -104,7 +104,7 @@
         {
             <div class="no-problems">
                 <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Large" Color="Color.Success" />
-                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Dashboard.ProblemJobs.AllHealthy"]</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Dashboard:ProblemJobs:AllHealthy"]</MudText>
             </div>
         }
     </MudPaper>
@@ -137,11 +137,11 @@
     private string FormatDuration(TimeSpan duration)
     {
         if (duration.TotalDays >= 1)
-            return $"{duration.TotalDays:F1}{L["Common.Time.Days"]}";
+            return $"{duration.TotalDays:F1}{L["Common:Time:Days"]}";
         if (duration.TotalHours >= 1)
-            return $"{duration.TotalHours:F1}{L["Common.Time.Hours"]}";
+            return $"{duration.TotalHours:F1}{L["Common:Time:Hours"]}";
         if (duration.TotalMinutes >= 1)
-            return $"{duration.TotalMinutes:F0}{L["Common.Time.Minutes"]}";
-        return $"{duration.TotalSeconds:F0}{L["Common.Time.Seconds"]}";
+            return $"{duration.TotalMinutes:F0}{L["Common:Time:Minutes"]}";
+        return $"{duration.TotalSeconds:F0}{L["Common:Time:Seconds"]}";
     }
 }

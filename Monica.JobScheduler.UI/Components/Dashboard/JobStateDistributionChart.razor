@@ -8,7 +8,7 @@
 <div class="state-distribution-wrapper">
     <MudPaper Class="state-distribution-card" Elevation="0">
         <div class="card-header">
-            <MudText Typo="Typo.h6">@L["Dashboard.StateDistribution.Title"]</MudText>
+            <MudText Typo="Typo.h6">@L["Dashboard:StateDistribution:Title"]</MudText>
             <MudText Typo="Typo.caption" Class="time-range">@TimeWindowText</MudText>
         </div>
 
@@ -44,7 +44,7 @@
         {
             <div class="empty-state">
                 <MudIcon Icon="@Icons.Material.Filled.PieChart" Size="Size.Large" Color="Color.Default" />
-                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Dashboard.StateDistribution.NoData"]</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Dashboard:StateDistribution:NoData"]</MudText>
             </div>
         }
     </MudPaper>
@@ -95,14 +95,14 @@
     {
         return state switch
         {
-            JobState.Succeeded => L["JobStates.Succeeded"],
-            JobState.Failed => L["JobStates.Failed"],
-            JobState.Terminated => L["JobStates.Terminated"],
-            JobState.Processing => L["JobStates.Processing"],
-            JobState.Enqueued => L["JobStates.Enqueued"],
-            JobState.Scheduled => L["JobStates.Scheduled"],
-            JobState.Skipped => L["JobStates.Skipped"],
-            JobState.Cancelled => L["JobStates.Cancelled"],
+            JobState.Succeeded => L["JobStates:Succeeded"],
+            JobState.Failed => L["JobStates:Failed"],
+            JobState.Terminated => L["JobStates:Terminated"],
+            JobState.Processing => L["JobStates:Processing"],
+            JobState.Enqueued => L["JobStates:Enqueued"],
+            JobState.Scheduled => L["JobStates:Scheduled"],
+            JobState.Skipped => L["JobStates:Skipped"],
+            JobState.Cancelled => L["JobStates:Cancelled"],
             _ => state.ToString()
         };
     }
