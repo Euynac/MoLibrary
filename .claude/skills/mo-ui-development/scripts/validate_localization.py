@@ -395,6 +395,14 @@ def main():
         print(f"Error: Root path does not exist: {root_path}", file=sys.stderr)
         sys.exit(1)
 
+    # Check if running from repository root
+    is_root_directory = any(root_path.glob('*.slnx')) or any(root_path.glob('*.sln'))
+    if not is_root_directory:
+        print(f"{Colors.RED}Error: This script must be run from the repository root directory.{Colors.END}", file=sys.stderr)
+        print(f"Current directory: {root_path}", file=sys.stderr)
+        print(f"Please navigate to the repository root (where .slnx or .sln file is located) and run the script again.", file=sys.stderr)
+        sys.exit(1)
+
     validator = LocalizationValidator(root_path, languages)
 
     try:
