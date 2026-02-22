@@ -1,3 +1,7 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@inject IStringLocalizer<AIResource> L
+
 <div class="session-list">
     <div class="session-header">
         <MudButton Variant="Variant.Outlined"
@@ -5,19 +9,19 @@
                    StartIcon="@Icons.Material.Filled.Add"
                    Class="new-chat-button"
                    OnClick="@HandleNewSession">
-            新对话
+            @L["Session:NewChat"]
         </MudButton>
     </div>
 
     <div class="session-subtitle">
-        <MudText Typo="Typo.caption">最近会话</MudText>
+        <MudText Typo="Typo.caption">@L["Session:RecentSessions"]</MudText>
     </div>
 
     <div class="session-list-content">
         @if (Sessions.Count == 0)
         {
             <div class="empty-sessions">
-                <MudText Typo="Typo.body2" Color="Color.Default">No conversations</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Default">@L["Session:NoConversations"]</MudText>
             </div>
         }
         else

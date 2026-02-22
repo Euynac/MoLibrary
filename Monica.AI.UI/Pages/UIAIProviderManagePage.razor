@@ -1,25 +1,28 @@
 @page "/ai-providers"
 @using Monica.Tool.MoResponse
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
 @rendermode InteractiveServer
 @inject AIProviderUIService ProviderUIService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<AIResource> L
 
-<PageTitle>AI Provider 管理</PageTitle>
+<PageTitle>@L["ProviderManage:Title"]</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.False" Class="ai-provider-page pa-4">
     <div class="page-header">
-        <MudText Typo="Typo.h4">AI Provider 管理</MudText>
+        <MudText Typo="Typo.h4">@L["ProviderManage:Title"]</MudText>
         <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
             <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadProvidersAsync">
-                刷新
+                @L["ProviderManage:Refresh"]
             </MudButton>
             <MudButton Variant="Variant.Filled"
                        Color="Color.Primary"
                        StartIcon="@Icons.Material.Filled.PlayCircle"
                        OnClick="TestAllAsync"
                        Disabled="@(!_providers.Any() || _isTestingAll)">
-                测试全部
+                @L["ProviderManage:TestAll"]
             </MudButton>
         </MudStack>
     </div>
@@ -32,7 +35,7 @@
     }
     else if (!_providers.Any())
     {
-        <MudAlert Severity="Severity.Info">未发现已配置的 AI Provider</MudAlert>
+        <MudAlert Severity="Severity.Info">@L["ProviderManage:NoProviders"]</MudAlert>
     }
     else
     {
@@ -93,7 +96,7 @@
         catch (Exception ex)
         {
             _providers = [];
-            Snackbar.Add($"加载 Provider 失败: {ex.Message}", Severity.Error);
+            Snackbar.Add($"{L["ProviderManage:LoadFailed"]}: {ex.Message}", Severity.Error);
         }
 
         foreach (var provider in _providers)
@@ -144,13 +147,13 @@
         {
             state.Success = false;
             state.Message = error.Message;
-            Snackbar.Add($"Provider 测试失败: {error.Message}", Severity.Error);
+            Snackbar.Add($"{L["ProviderManage:TestFailed"]}: {error.Message}", Severity.Error);
         }
         else
         {
             state.Success = true;
-            state.Message = "连接成功";
-            Snackbar.Add("Provider 测试成功", Severity.Success);
+            state.Message = L["ProviderManage:TestSuccess"];
+            Snackbar.Add(L["ProviderManage:TestSuccessMessage"], Severity.Success);
         }
 
         state.TestedAt = DateTimeOffset.UtcNow;
@@ -181,7 +184,7 @@
     {
         if (request.Model is not LLMModelInfo)
         {
-            Snackbar.Add("当前仅支持测试 LLM 模型", Severity.Info);
+            Snackbar.Add(L["ProviderManage:OnlyLLMSupported"], Severity.Info);
             return;
         }
 
@@ -196,11 +199,11 @@
         var result = await ProviderUIService.TestModelAsync(request.ProviderId, request.Model.ModelName);
         if (result.IsFailed(out var error))
         {
-            Snackbar.Add($"模型测试失败: {error.Message}", Severity.Error);
+            Snackbar.Add($"{L["ProviderManage:ModelTestFailed"]}: {error.Message}", Severity.Error);
         }
         else
         {
-            Snackbar.Add("模型测试成功", Severity.Success);
+            Snackbar.Add(L["ProviderManage:ModelTestSuccess"], Severity.Success);
         }
 
         _modelTesting.Remove(key);
@@ -224,11 +227,11 @@
             request.ProviderId, request.Model.ModelName);
         if (result.IsFailed(out var error))
         {
-            Snackbar.Add($"维度探测失败: {error.Message}", Severity.Error);
+            Snackbar.Add($"{L["ProviderManage:DimensionDetectFailed"]}: {error.Message}", Severity.Error);
         }
         else
         {
-            Snackbar.Add($"探测成功: 维度 = {result.Data}", Severity.Success);
+            Snackbar.Add(L["ProviderManage:DimensionDetectSuccess", result.Data], Severity.Success);
         }
 
         _modelTesting.Remove(key);
@@ -245,7 +248,7 @@
         };
 
         var dialog = await DialogService.ShowAsync<ProviderSystemPromptDialog>(
-            "系统提示词",
+            L["Provider:Settings:SystemPrompt"],
             parameters,
             new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
 
@@ -259,11 +262,11 @@
         var updateResult = ProviderUIService.UpdateProviderSystemPrompt(provider.ProviderId, prompt);
         if (updateResult.IsFailed(out var error))
         {
-            Snackbar.Add($"更新提示词失败: {error.Message}", Severity.Error);
+            Snackbar.Add($"{L["ProviderManage:UpdatePromptFailed"]}: {error.Message}", Severity.Error);
             return;
         }
 
-        Snackbar.Add("系统提示词已更新", Severity.Success);
+        Snackbar.Add(L["Provider:Settings:UpdateSuccess"], Severity.Success);
         await LoadProvidersAsync();
     }
 
@@ -314,7 +317,7 @@
         {
             state.Error = error.Message;
             state.Models = null;
-            Snackbar.Add($"获取远程模型列表失败: {error.Message}", Severity.Warning);
+            Snackbar.Add($"{L["ProviderManage:GetRemoteModelsFailed"]}: {error.Message}", Severity.Warning);
         }
         else
         {

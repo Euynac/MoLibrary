@@ -1,0 +1,109 @@
+{
+  "Session": {
+    "NewChat": "新对话",
+    "RecentSessions": "最近会话",
+    "NoConversations": "暂无对话",
+    "NewConversation": "新对话",
+    "JustNow": "刚刚",
+    "MinutesAgo": "{0}分钟前",
+    "HoursAgo": "{0}小时前",
+    "DaysAgo": "{0}天前"
+  },
+  "Chat": {
+    "Input": {
+      "Placeholder": "发送消息...",
+      "AttachFile": "附加文件",
+      "Send": "发送消息",
+      "Stop": "停止生成"
+    },
+    "Actions": {
+      "EnableDeepThinking": "启用深度思考",
+      "DisableDeepThinking": "禁用深度思考",
+      "Retry": "重试"
+    },
+    "Status": {
+      "Current": "当前",
+      "GenerationStopped": "生成已停止"
+    }
+  },
+  "Provider": {
+    "Label": "Provider",
+    "NotFound": "未找到可用 Provider",
+    "Default": "默认",
+    "Settings": {
+      "Title": "系统提示词设置",
+      "SystemPrompt": "系统提示词",
+      "ReadOnlyMessage": "当前会话已开始，系统提示词无法修改。",
+      "NewSessionMessage": "修改后仅对新的会话生效。",
+      "UpdateFailed": "更新提示词失败",
+      "UpdateSuccess": "系统提示词已更新"
+    }
+  },
+  "Model": {
+    "Label": "模型",
+    "NoModelsAvailable": "暂无可用模型",
+    "Reasoning": "推理",
+    "ContextWindow": "{0}K 上下文",
+    "ContextWindowM": "{0}M 上下文"
+  },
+  "Error": {
+    "RequestCancelled": "请求已取消",
+    "NetworkError": "网络错误",
+    "Generic": "错误"
+  },
+  "Common": {
+    "Actions": {
+      "Close": "关闭",
+      "Save": "保存",
+      "Cancel": "取消",
+      "Confirm": "确认"
+    }
+  },
+  "RAG": {
+    "KnowledgeBase": {
+      "Title": "知识库",
+      "NewPlaceholder": "新知识库名称...",
+      "EmptyHint": "暂无知识库。请在上方创建一个。",
+      "DocsCount": "{0} 文档",
+      "ChunksCount": "{0} 块"
+    },
+    "Indexing": {
+      "Title": "索引",
+      "MarkdownGroup": "Markdown 组",
+      "SelectGroup": "选择组...",
+      "TargetKB": "目标知识库",
+      "SelectKB": "选择知识库...",
+      "IndexNow": "立即索引",
+      "Indexing": "索引中...",
+      "UploadDocument": "上传文档",
+      "ChooseFile": "选择文件"
+    },
+    "Search": {
+      "Title": "搜索",
+      "Placeholder": "输入搜索查询...",
+      "TopK": "Top-K",
+      "KnowledgeBases": "知识库",
+      "Go": "搜索",
+      "Searching": "搜索中...",
+      "NoResults": "未找到结果",
+      "ResultsCount": "找到 {0} 个结果"
+    }
+  },
+  "ProviderManage": {
+    "Title": "AI Provider 管理",
+    "Refresh": "刷新",
+    "TestAll": "测试全部",
+    "NoProviders": "未发现已配置的 AI Provider",
+    "LoadFailed": "加载 Provider 失败",
+    "TestFailed": "Provider 测试失败",
+    "TestSuccess": "连接成功",
+    "TestSuccessMessage": "Provider 测试成功",
+    "OnlyLLMSupported": "当前仅支持测试 LLM 模型",
+    "ModelTestFailed": "模型测试失败",
+    "ModelTestSuccess": "模型测试成功",
+    "DimensionDetectFailed": "维度探测失败",
+    "DimensionDetectSuccess": "探测成功: 维度 = {0}",
+    "UpdatePromptFailed": "更新提示词失败",
+    "GetRemoteModelsFailed": "获取远程模型列表失败"
+  }
+}

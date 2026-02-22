@@ -1,9 +1,12 @@
 @using Monica.AI.Models
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@inject IStringLocalizer<AIResource> L
 
 <div class="provider-selector">
     <div class="provider-trigger">
         <MudIcon Icon="@GetProviderIcon(_currentProvider)" Size="Size.Small" />
-        <span class="provider-name">@(_currentProvider?.DisplayName ?? "Provider")</span>
+        <span class="provider-name">@(_currentProvider?.DisplayName ?? L["Provider:Label"])</span>
         <MudIcon Icon="@Icons.Material.Filled.ExpandMore" Size="Size.Small" />
     </div>
     <div class="provider-menu">
@@ -15,7 +18,7 @@
                 <span>@provider.DisplayName</span>
                 @if (provider.IsDefault)
                 {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Class="default-chip">默认</MudChip>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Class="default-chip">@L["Provider:Default"]</MudChip>
                 }
             </button>
         }

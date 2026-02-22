@@ -1,26 +1,29 @@
 @using Monica.AI.RAG.Models
 @using Monica.Markdown.Models
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@inject IStringLocalizer<AIResource> L
 
-<MudText Typo="Typo.subtitle1" Class="panel-title">Indexing</MudText>
+<MudText Typo="Typo.subtitle1" Class="panel-title">@L["RAG:Indexing:Title"]</MudText>
 
 <div class="indexing-section">
-    <MudText Typo="Typo.caption" Class="section-label">Markdown Group</MudText>
+    <MudText Typo="Typo.caption" Class="section-label">@L["RAG:Indexing:MarkdownGroup"]</MudText>
     <MudSelect T="string" @bind-Value="_selectedGroupKey"
                Variant="Variant.Outlined" Margin="Margin.Dense"
-               Placeholder="Select a group..." Dense="true"
+               Placeholder="@L["RAG:Indexing:SelectGroup"]" Dense="true"
                Disabled="@(IsIndexing || MarkdownGroups.Count == 0)">
         @foreach (var group in MarkdownGroups)
         {
             <MudSelectItem Value="@group.Key">
-                @group.Title (@group.DocumentCount docs)
+                @group.Title (@L["RAG:KnowledgeBase:DocsCount", group.DocumentCount])
             </MudSelectItem>
         }
     </MudSelect>
 
-    <MudText Typo="Typo.caption" Class="section-label">Target Knowledge Base</MudText>
+    <MudText Typo="Typo.caption" Class="section-label">@L["RAG:Indexing:TargetKB"]</MudText>
     <MudSelect T="string" @bind-Value="_selectedKbId"
                Variant="Variant.Outlined" Margin="Margin.Dense"
-               Placeholder="Select a KB..." Dense="true"
+               Placeholder="@L["RAG:Indexing:SelectKB"]" Dense="true"
                Disabled="@(IsIndexing || KnowledgeBases.Count == 0)">
         @foreach (var kb in KnowledgeBases)
         {
@@ -32,7 +35,7 @@
                StartIcon="@Icons.Material.Filled.PlayArrow"
                OnClick="HandleIndexGroup" FullWidth="true"
                Disabled="@(IsIndexing || string.IsNullOrEmpty(_selectedGroupKey) || string.IsNullOrEmpty(_selectedKbId))">
-        @(IsIndexing ? "Indexing..." : "Index Now")
+        @(IsIndexing ? L["RAG:Indexing:Indexing"] : L["RAG:Indexing:IndexNow"])
     </MudButton>
 
     @if (IsIndexing && _progress is not null)
@@ -49,12 +52,12 @@
 
 <MudDivider Class="my-3" />
 
-<MudText Typo="Typo.subtitle1" Class="panel-title">Upload Document</MudText>
+<MudText Typo="Typo.subtitle1" Class="panel-title">@L["RAG:Indexing:UploadDocument"]</MudText>
 <div class="indexing-section">
-    <MudText Typo="Typo.caption" Class="section-label">Target Knowledge Base</MudText>
+    <MudText Typo="Typo.caption" Class="section-label">@L["RAG:Indexing:TargetKB"]</MudText>
     <MudSelect T="string" @bind-Value="_uploadKbId"
                Variant="Variant.Outlined" Margin="Margin.Dense"
-               Placeholder="Select a KB..." Dense="true"
+               Placeholder="@L["RAG:Indexing:SelectKB"]" Dense="true"
                Disabled="@(IsIndexing || KnowledgeBases.Count == 0)">
         @foreach (var kb in KnowledgeBases)
         {
@@ -69,7 +72,7 @@
                        StartIcon="@Icons.Material.Filled.UploadFile"
                        FullWidth="true"
                        Disabled="@(IsIndexing || string.IsNullOrEmpty(_uploadKbId))">
-                @(_uploadFileName ?? "Choose File")
+                @(_uploadFileName ?? L["RAG:Indexing:ChooseFile"])
             </MudButton>
         </ActivatorContent>
     </MudFileUpload>

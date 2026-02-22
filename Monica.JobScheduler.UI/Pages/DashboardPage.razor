@@ -219,8 +219,7 @@
     public async ValueTask DisposeAsync()
     {
         StopAutoRefresh();
-        _cts?.Cancel();
-        _cts?.Dispose();
+        await _cts.SafeCancelAndDisposeAsync();
 
         await ValueTask.CompletedTask;
     }

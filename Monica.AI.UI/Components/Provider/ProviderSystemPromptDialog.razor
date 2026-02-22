@@ -1,8 +1,11 @@
 @using MudBlazor
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@inject IStringLocalizer<AIResource> L
 
 <MudDialog Class="prompt-dialog">
     <DialogContent>
-        <MudText Typo="Typo.h6">系统提示词设置</MudText>
+        <MudText Typo="Typo.h6">@L["Provider:Settings:Title"]</MudText>
         <MudText Typo="Typo.caption" Color="Color.Secondary" Class="prompt-subtitle">
             @ProviderName
         </MudText>
@@ -19,20 +22,20 @@
         @if (IsReadOnly)
         {
             <MudText Typo="Typo.caption" Color="Color.Secondary">
-                当前会话已开始，系统提示词无法修改。
+                @L["Provider:Settings:ReadOnlyMessage"]
             </MudText>
         }
         else
         {
             <MudText Typo="Typo.caption" Color="Color.Secondary">
-                修改后仅对新的会话生效。
+                @L["Provider:Settings:NewSessionMessage"]
             </MudText>
         }
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Text" OnClick="Cancel">关闭</MudButton>
+        <MudButton Variant="Variant.Text" OnClick="Cancel">@L["Common:Actions:Close"]</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Save" Disabled="@IsReadOnly">
-            保存
+            @L["Common:Actions:Save"]
         </MudButton>
     </DialogActions>
 </MudDialog>

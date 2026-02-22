@@ -1,0 +1,109 @@
+{
+  "Session": {
+    "NewChat": "New Chat",
+    "RecentSessions": "Recent Sessions",
+    "NoConversations": "No conversations",
+    "NewConversation": "New Conversation",
+    "JustNow": "Just now",
+    "MinutesAgo": "{0} minutes ago",
+    "HoursAgo": "{0} hours ago",
+    "DaysAgo": "{0} days ago"
+  },
+  "Chat": {
+    "Input": {
+      "Placeholder": "Send a message...",
+      "AttachFile": "Attach file",
+      "Send": "Send message",
+      "Stop": "Stop generating"
+    },
+    "Actions": {
+      "EnableDeepThinking": "Enable deep thinking",
+      "DisableDeepThinking": "Disable deep thinking",
+      "Retry": "Retry"
+    },
+    "Status": {
+      "Current": "Current",
+      "GenerationStopped": "Generation stopped"
+    }
+  },
+  "Provider": {
+    "Label": "Provider",
+    "NotFound": "No provider available",
+    "Default": "Default",
+    "Settings": {
+      "Title": "System Prompt Settings",
+      "SystemPrompt": "System Prompt",
+      "ReadOnlyMessage": "The session has started, system prompt cannot be modified.",
+      "NewSessionMessage": "Changes will only apply to new sessions.",
+      "UpdateFailed": "Failed to update system prompt",
+      "UpdateSuccess": "System prompt updated successfully"
+    }
+  },
+  "Model": {
+    "Label": "Model",
+    "NoModelsAvailable": "No models available",
+    "Reasoning": "Reasoning",
+    "ContextWindow": "{0}K context",
+    "ContextWindowM": "{0}M context"
+  },
+  "Error": {
+    "RequestCancelled": "Request was cancelled",
+    "NetworkError": "Network error",
+    "Generic": "Error"
+  },
+  "Common": {
+    "Actions": {
+      "Close": "Close",
+      "Save": "Save",
+      "Cancel": "Cancel",
+      "Confirm": "Confirm"
+    }
+  },
+  "RAG": {
+    "KnowledgeBase": {
+      "Title": "Knowledge Bases",
+      "NewPlaceholder": "New KB name...",
+      "EmptyHint": "No knowledge bases yet. Create one above.",
+      "DocsCount": "{0} docs",
+      "ChunksCount": "{0} chunks"
+    },
+    "Indexing": {
+      "Title": "Indexing",
+      "MarkdownGroup": "Markdown Group",
+      "SelectGroup": "Select a group...",
+      "TargetKB": "Target Knowledge Base",
+      "SelectKB": "Select a KB...",
+      "IndexNow": "Index Now",
+      "Indexing": "Indexing...",
+      "UploadDocument": "Upload Document",
+      "ChooseFile": "Choose File"
+    },
+    "Search": {
+      "Title": "Search",
+      "Placeholder": "Enter search query...",
+      "TopK": "Top-K",
+      "KnowledgeBases": "Knowledge Bases",
+      "Go": "Go",
+      "Searching": "Searching...",
+      "NoResults": "No results found",
+      "ResultsCount": "{0} result(s) found"
+    }
+  },
+  "ProviderManage": {
+    "Title": "AI Provider Management",
+    "Refresh": "Refresh",
+    "TestAll": "Test All",
+    "NoProviders": "No configured AI providers found",
+    "LoadFailed": "Failed to load providers",
+    "TestFailed": "Provider test failed",
+    "TestSuccess": "Connection successful",
+    "TestSuccessMessage": "Provider test successful",
+    "OnlyLLMSupported": "Only LLM model testing is currently supported",
+    "ModelTestFailed": "Model test failed",
+    "ModelTestSuccess": "Model test successful",
+    "DimensionDetectFailed": "Dimension detection failed",
+    "DimensionDetectSuccess": "Detection successful: dimension = {0}",
+    "UpdatePromptFailed": "Failed to update prompt",
+    "GetRemoteModelsFailed": "Failed to get remote model list"
+  }
+}

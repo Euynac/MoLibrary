@@ -1,3 +1,7 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@inject IStringLocalizer<AIResource> L
+
 <div class="session-item-wrapper">
     <MudListItem T="string"
                  Class="@($"session-item {(IsSelected ? "selected" : "")}")"
@@ -39,10 +43,10 @@
     private string GetTimeDisplay()
     {
         var diff = DateTimeOffset.UtcNow - Session.UpdatedAt;
-        return diff.TotalMinutes < 1 ? "刚刚" :
-               diff.TotalMinutes < 60 ? $"{(int)diff.TotalMinutes}分钟前" :
-               diff.TotalHours < 24 ? $"{(int)diff.TotalHours}小时前" :
-               diff.TotalDays < 7 ? $"{(int)diff.TotalDays}天前" :
+        return diff.TotalMinutes < 1 ? L["Session:JustNow"] :
+               diff.TotalMinutes < 60 ? L["Session:MinutesAgo", (int)diff.TotalMinutes] :
+               diff.TotalHours < 24 ? L["Session:HoursAgo", (int)diff.TotalHours] :
+               diff.TotalDays < 7 ? L["Session:DaysAgo", (int)diff.TotalDays] :
                Session.UpdatedAt.ToLocalTime().ToString("MM-dd");
     }
 }

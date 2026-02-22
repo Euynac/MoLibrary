@@ -16,4 +16,8 @@
     <ProjectReference Include="..\Monica.UI\Monica.UI.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Localization\**\*.json" />
+  </ItemGroup>
+
 </Project>

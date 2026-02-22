@@ -5,6 +5,8 @@
 @using Monica.AI.RAG.Models
 @using Monica.AI.RAG.Services
 @using Monica.Tool.MoResponse
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
 @implements IDisposable
 @inject AIChatUIService ChatUIService
 @inject AIProviderUIService ProviderUIService
@@ -12,6 +14,7 @@
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject IServiceProvider ServiceProvider
+@inject IStringLocalizer<AIResource> L
 
 <div class="ai-chat-shell">
     @if (_options.ShowSessionList)
@@ -178,7 +181,7 @@
         }
         else
         {
-            _currentSessionTitle = "New Conversation";
+            _currentSessionTitle = L["Session:NewConversation"];
             _currentMessages = [];
         }
     }
@@ -272,15 +275,15 @@
         }
         catch (OperationCanceledException)
         {
-            HandleSendError("Request was cancelled");
+            HandleSendError(L["Error:RequestCancelled"]);
         }
         catch (HttpRequestException ex)
         {
-            HandleSendError($"Network error: {ex.Message}");
+            HandleSendError($"{L["Error:NetworkError"]}: {ex.Message}");
         }
         catch (Exception ex)
         {
-            HandleSendError($"Error: {ex.Message}");
+            HandleSendError($"{L["Error:Generic"]}: {ex.Message}");
         }
     }
 
@@ -319,7 +322,7 @@
         if (_cts != null && !_cts.IsCancellationRequested)
         {
             await _cts.CancelAsync();
-            Snackbar.Add("Generation stopped", Severity.Info);
+            Snackbar.Add(L["Chat:Status:GenerationStopped"], Severity.Info);
         }
 
         _isSending = false;
@@ -407,7 +410,7 @@
                        ?? _providers.FirstOrDefault();
         if (provider == null)
         {
-            Snackbar.Add("未找到可用 Provider", Severity.Warning);
+            Snackbar.Add(L["Provider:NotFound"], Severity.Warning);
             return;
         }
 
@@ -423,7 +426,7 @@
         };
 
         var dialog = await DialogService.ShowAsync<ProviderSystemPromptDialog>(
-            "系统提示词",
+            L["Provider:Settings:SystemPrompt"],
             parameters,
             new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
 
@@ -437,7 +440,7 @@
         var updateResult = ProviderUIService.UpdateProviderSystemPrompt(provider.ProviderId, prompt);
         if (updateResult.IsFailed(out var error))
         {
-            Snackbar.Add($"更新提示词失败: {error.Message}", Severity.Error);
+            Snackbar.Add($"{L["Provider:Settings:UpdateFailed"]}: {error.Message}", Severity.Error);
             return;
         }
 
@@ -447,7 +450,7 @@
         }
 
         _providers = ChatUIService.GetProviders();
-        Snackbar.Add("系统提示词已更新", Severity.Success);
+        Snackbar.Add(L["Provider:Settings:UpdateSuccess"], Severity.Success);
         StateHasChanged();
     }
 

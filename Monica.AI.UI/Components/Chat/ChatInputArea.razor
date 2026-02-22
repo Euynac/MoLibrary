@@ -1,5 +1,8 @@
 @using Monica.AI.Models
 @using Monica.AI.RAG.Models
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@inject IStringLocalizer<AIResource> L
 
 <div class="input-area">
     <MudPaper Elevation="2" Class="input-container">
@@ -7,7 +10,7 @@
             <MudTextField @ref="_textFieldRef"
                           T="string"
                           @bind-Value="InputText"
-                          Placeholder="@Placeholder"
+                          Placeholder="@_placeholderText"
                           Variant="Variant.Text"
                           Lines="1"
                           AutoGrow="true"
@@ -19,14 +22,14 @@
         </div>
         <div class="input-bottom">
             <div class="input-actions-left">
-                <MudTooltip Text="Attach file">
+                <MudTooltip Text="@L["Chat:Input:AttachFile"]">
                     <MudIconButton Icon="@Icons.Material.Filled.AttachFile"
                                    Class="input-action-button"
                                    OnClick="@HandleAttach" />
                 </MudTooltip>
                 @if (SupportsReasoning)
                 {
-                    <MudTooltip Text="@(ReasoningEnabled ? "Disable deep thinking" : "Enable deep thinking")">
+                    <MudTooltip Text="@(ReasoningEnabled ? L["Chat:Actions:DisableDeepThinking"] : L["Chat:Actions:EnableDeepThinking"])">
                         <MudIconButton Icon="@Icons.Material.Filled.Psychology"
                                        Class="@($"input-action-button {(ReasoningEnabled ? "active" : "")}")"
                                        OnClick="@HandleDeepThinking" />
@@ -47,7 +50,7 @@
                     OnModelChanged="@HandleModelChanged" />
                 @if (IsSending)
                 {
-                    <MudTooltip Text="Stop generating">
+                    <MudTooltip Text="@L["Chat:Input:Stop"]">
                         <MudIconButton Icon="@Icons.Material.Filled.Stop"
                                        Color="Color.Error"
                                        OnClick="@HandleCancel"
@@ -56,7 +59,7 @@
                 }
                 else
                 {
-                    <MudTooltip Text="Send message">
+                    <MudTooltip Text="@L["Chat:Input:Send"]">
                         <MudIconButton Icon="@Icons.Material.Filled.Send"
                                        Color="Color.Primary"
                                        Disabled="@string.IsNullOrWhiteSpace(InputText)"
@@ -70,13 +73,13 @@
     @if (ShowProviderInfo && !string.IsNullOrEmpty(ProviderName))
     {
         <MudText Typo="Typo.caption" Class="provider-info">
-            Current: @ProviderName
+            @L["Chat:Status:Current"]: @ProviderName
         </MudText>
     }
 </div>
 
 @code {
-    [Parameter] public string Placeholder { get; set; } = "Send a message...";
+    [Parameter] public string? Placeholder { get; set; }
     [Parameter] public bool IsSending { get; set; }
     [Parameter] public string? ProviderName { get; set; }
     [Parameter] public string? ModelName { get; set; }
@@ -95,6 +98,12 @@
     public string InputText { get; set; } = string.Empty;
     private MudTextField<string>? _textFieldRef;
     private bool _wasSending;
+    private string _placeholderText = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        _placeholderText = Placeholder ?? L["Chat:Input:Placeholder"];
+    }
 
     protected override void OnParametersSet()
     {

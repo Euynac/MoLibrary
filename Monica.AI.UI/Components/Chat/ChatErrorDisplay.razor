@@ -1,3 +1,7 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@inject IStringLocalizer<AIResource> L
+
 @if (_visible && !string.IsNullOrEmpty(ErrorMessage))
 {
     <MudAlert Severity="Severity.Error"
@@ -16,7 +20,7 @@
                            StartIcon="@Icons.Material.Filled.Refresh"
                            OnClick="@HandleRetry"
                            Class="retry-button">
-                    Retry
+                    @L["Chat:Actions:Retry"]
                 </MudButton>
             }
         </div>

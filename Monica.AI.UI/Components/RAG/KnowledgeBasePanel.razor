@@ -1,9 +1,12 @@
 @using Monica.AI.RAG.Models
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@inject IStringLocalizer<AIResource> L
 
-<MudText Typo="Typo.subtitle1" Class="panel-title">Knowledge Bases</MudText>
+<MudText Typo="Typo.subtitle1" Class="panel-title">@L["RAG:KnowledgeBase:Title"]</MudText>
 
 <div class="kb-actions">
-    <MudTextField @bind-Value="_newKbName" Placeholder="New KB name..."
+    <MudTextField @bind-Value="_newKbName" Placeholder="@L["RAG:KnowledgeBase:NewPlaceholder"]"
                   Variant="Variant.Outlined" Margin="Margin.Dense"
                   Class="kb-name-input" Immediate="true"
                   Adornment="Adornment.End"
@@ -15,7 +18,7 @@
 @if (KnowledgeBases.Count == 0 && !IsLoading)
 {
     <MudText Typo="Typo.body2" Class="empty-hint">
-        No knowledge bases yet. Create one above.
+        @L["RAG:KnowledgeBase:EmptyHint"]
     </MudText>
 }
 else
@@ -27,7 +30,7 @@ else
                 <div class="kb-panel-item-info">
                     <MudText Typo="Typo.body2" Class="kb-name">@kb.Name</MudText>
                     <MudText Typo="Typo.caption" Class="kb-stats">
-                        @kb.DocumentCount docs / @kb.ChunkCount chunks
+                        @L["RAG:KnowledgeBase:DocsCount", kb.DocumentCount] / @L["RAG:KnowledgeBase:ChunksCount", kb.ChunkCount]
                     </MudText>
                     @if (!string.IsNullOrEmpty(kb.Description))
                     {

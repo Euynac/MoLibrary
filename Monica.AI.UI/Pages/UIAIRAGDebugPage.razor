@@ -5,8 +5,11 @@
 @using Monica.Markdown.Interfaces
 @using Monica.Markdown.Models
 @using Monica.Tool.MoResponse
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
 @inject RAGUIService RAGUIService
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<AIResource> L
 
 <div class="rag-debug-shell">
     <aside class="rag-left-panel">
@@ -28,16 +31,16 @@
     </aside>
 
     <main class="rag-right-panel">
-        <MudText Typo="Typo.subtitle1" Class="panel-title">Search</MudText>
+        <MudText Typo="Typo.subtitle1" Class="panel-title">@L["RAG:Search:Title"]</MudText>
 
         <div class="search-controls">
-            <MudTextField @bind-Value="_searchQuery" Placeholder="Enter search query..."
+            <MudTextField @bind-Value="_searchQuery" Placeholder="@L["RAG:Search:Placeholder"]"
                           Variant="Variant.Outlined" Margin="Margin.Dense"
                           Immediate="true" Class="search-input"
                           OnKeyDown="HandleSearchKeyDown" />
 
             <div class="search-options">
-                <MudSelect T="int" @bind-Value="_topK" Label="Top-K"
+                <MudSelect T="int" @bind-Value="_topK" Label="@L["RAG:Search:TopK"]"
                            Variant="Variant.Outlined" Margin="Margin.Dense"
                            Dense="true" Class="topk-select">
                     <MudSelectItem Value="3">3</MudSelectItem>
@@ -46,7 +49,7 @@
                     <MudSelectItem Value="20">20</MudSelectItem>
                 </MudSelect>
 
-                <MudSelect T="string" @bind-SelectedValues="_searchKbIds" Label="Knowledge Bases"
+                <MudSelect T="string" @bind-SelectedValues="_searchKbIds" Label="@L["RAG:Search:KnowledgeBases"]"
                            Variant="Variant.Outlined" Margin="Margin.Dense"
                            Dense="true" MultiSelection="true" Class="kb-multi-select">
                     @foreach (var kb in _knowledgeBases)
@@ -59,7 +62,7 @@
                            StartIcon="@Icons.Material.Filled.Search"
                            OnClick="HandleSearch"
                            Disabled="@(_isSearching || string.IsNullOrWhiteSpace(_searchQuery) || !_searchKbIds.Any())">
-                    @(_isSearching ? "Searching..." : "Go")
+                    @(_isSearching ? L["RAG:Search:Searching"] : L["RAG:Search:Go"])
                 </MudButton>
             </div>
         </div>
@@ -67,7 +70,7 @@
         @if (_searchResults.Count > 0)
         {
             <MudText Typo="Typo.caption" Class="results-count">
-                @_searchResults.Count result(s) found
+                @L["RAG:Search:ResultsCount", _searchResults.Count]
             </MudText>
             <div class="search-results">
                 @foreach (var result in _searchResults)
@@ -79,7 +82,7 @@
         else if (_hasSearched && !_isSearching)
         {
             <MudText Typo="Typo.body2" Class="no-results">
-                No results found for the given query.
+                @L["RAG:Search:NoResults"]
             </MudText>
         }
     </main>

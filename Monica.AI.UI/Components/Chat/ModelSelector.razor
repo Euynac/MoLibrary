@@ -1,4 +1,7 @@
 @using Monica.AI.Models
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@inject IStringLocalizer<AIResource> L
 
 <div class="model-selector">
     <div class="model-trigger">
@@ -21,7 +24,7 @@
                                 @if (llm.SupportsReasoning)
                                 {
                                     <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Psychology" Class="reasoning-chip">
-                                        Reasoning
+                                        @L["Model:Reasoning"]
                                     </MudChip>
                                 }
                                 @if (llm.ContextWindow.HasValue)
@@ -36,7 +39,7 @@
         }
         else
         {
-            <div class="model-empty">No models available</div>
+            <div class="model-empty">@L["Model:NoModelsAvailable"]</div>
         }
     </div>
 </div>
@@ -60,7 +63,7 @@
     private string GetDisplayModelName()
     {
         if (string.IsNullOrWhiteSpace(SelectedModelName))
-            return "模型";
+            return L["Model:Label"];
 
         return SelectedModelName.Length > MaxDisplayLength
             ? SelectedModelName[..MaxDisplayLength] + "..."
@@ -70,7 +73,7 @@
     private string FormatContextWindow(int tokens)
     {
         return tokens >= 1000000
-            ? $"{tokens / 1000000}M context"
-            : $"{tokens / 1000}K context";
+            ? L["Model:ContextWindowM", tokens / 1000000]
+            : L["Model:ContextWindow", tokens / 1000];
     }
 }
