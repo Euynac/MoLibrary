@@ -2,6 +2,7 @@
 @using Microsoft.Extensions.Localization
 @using Monica.UI.Localization
 @inject IStringLocalizer<SharedResource> L
+@inject IStringLocalizer<UIRegistryResource> RegistryL
 
 <div class="navbar-more"
      @onmouseenter="OnMouseEnter"
@@ -44,7 +45,7 @@
                                     {
                                         <MudIcon Icon="@item.Icon" Size="Size.Small" Class="item-icon" />
                                     }
-                                    <span>@item.Text</span>
+                                    <span>@GetItemText(item)</span>
                                 </MudNavLink>
                             }
                         </div>
@@ -60,6 +61,15 @@
 
     private bool _isDropdownOpen = false;
     private string? _activeFlyoutCategory = null;
+
+    private string GetItemText(UINavItem item)
+    {
+        if (!string.IsNullOrEmpty(item.TextKey))
+        {
+            return RegistryL[item.TextKey];
+        }
+        return item.Text;
+    }
 
     private void OnMouseEnter()
     {

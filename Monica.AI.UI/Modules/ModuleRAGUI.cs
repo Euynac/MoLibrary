@@ -52,11 +52,11 @@ public class ModuleRAGUI(ModuleRAGUIOption option)
             DependsOnModule<ModuleUICoreGuide>().Register()
                 .RegisterUIComponents(p =>
                 {
-                    p.RegisterComponent<UIAIRAGDebugPage>(
+                    p.RegisterLocalizedComponent<UIAIRAGDebugPage>(
                         UIAIRAGDebugPage.PAGE_URL,
-                        "RAG Debug",
+                        "Pages:RAGDebug:Title",
                         Icons.Material.Filled.ManageSearch,
-                        "AI",
+                        "Categories:AI",
                         addToNav: true,
                         navOrder: 3);
                 });

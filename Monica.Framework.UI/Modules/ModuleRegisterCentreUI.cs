@@ -31,11 +31,11 @@ public class ModuleRegisterCentreUI(ModuleRegisterCentreUIOption option)
         {
             DependsOnModule<ModuleRegisterCentreGuide>().Register();
             DependsOnModule<ModuleUICoreGuide>().Register()
-                .RegisterUIComponents(p => p.RegisterComponent<UIRegisterCentrePage>(
+                .RegisterUIComponents(p => p.RegisterLocalizedComponent<UIRegisterCentrePage>(
                     UIRegisterCentrePage.REGISTERCENTRE_DEBUG_URL,
-                    "注册中心",
+                    "Pages:RegisterCentre:Title",
                     Icons.Material.Filled.CloudQueue,
-                    "监控",
+                    "Categories:Monitor",
                     addToNav: true,
                     navOrder: 40));
         }

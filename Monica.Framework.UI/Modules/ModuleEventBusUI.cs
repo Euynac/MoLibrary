@@ -61,11 +61,11 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
         if (!Option.DisableUIEventBusPage)
         {
             DependsOnModule<ModuleUICoreGuide>().Register()
-                .RegisterUIComponents(p => p.RegisterComponent<UIEventBusPage>(
+                .RegisterUIComponents(p => p.RegisterLocalizedComponent<UIEventBusPage>(
                     UIEventBusPage.PAGE_URL,
-                    "事件总线监控",
+                    "Pages:EventBusMonitor:Title",
                     Icons.Material.Filled.Hub,
-                    "监控",
+                    "Categories:Monitor",
                     addToNav: true,
                     navOrder: 40));
         }

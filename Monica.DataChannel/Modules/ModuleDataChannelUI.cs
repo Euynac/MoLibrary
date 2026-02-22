@@ -49,11 +49,11 @@ public class ModuleDataChannelUI(ModuleDataChannelUIOption option)
 
             // 依赖UI核心模块，并注册UI页面
             DependsOnModule<ModuleUICoreGuide>().Register()
-                .RegisterUIComponents(p => p.RegisterComponent<UIDataChannelPage>(
+                .RegisterUIComponents(p => p.RegisterLocalizedComponent<UIDataChannelPage>(
                     UIDataChannelPage.PAGE_URL,
-                    "DataChannel管理",
+                    "Pages:DataChannelManage:Title",
                     Icons.Material.Filled.DataObject,
-                    "监控",
+                    "Categories:Monitor",
                     addToNav: true,
                     navOrder: 30));
         }

@@ -47,11 +47,11 @@ public class ModuleFrameworkMonitorUI(ModuleFrameworkMonitorUIOption option)
         {
             DependsOnModule<ModuleFrameworkMonitorGuide>().Register();
             DependsOnModule<ModuleUICoreGuide>().Register()
-                .RegisterUIComponents(p => p.RegisterComponent<UIFrameworkMonitorPage>(
+                .RegisterUIComponents(p => p.RegisterLocalizedComponent<UIFrameworkMonitorPage>(
                     UIFrameworkMonitorPage.FRAMEWORK_MONITOR_DEBUG_URL,
-                    "框架监控",
+                    "Pages:FrameworkMonitor:Title",
                     Icons.Material.Filled.Monitor,
-                    "监控",
+                    "Categories:Monitor",
                     addToNav: true,
                     navOrder: 20));
         }

@@ -54,11 +54,11 @@ public class ModuleObservableInstanceUI(ModuleObservableInstanceUIOption option)
         if (!Option.DisableUIObservableInstancePage)
         {
             DependsOnModule<ModuleUICoreGuide>().Register()
-                .RegisterUIComponents(p => p.RegisterComponent<UIObservableInstancePage>(
+                .RegisterUIComponents(p => p.RegisterLocalizedComponent<UIObservableInstancePage>(
                     UIObservableInstancePage.PAGE_URL,
-                    "Observable Instance",
+                    "Pages:ObservableInstance:Title",
                     Icons.Material.Filled.Inventory,
-                    "调试",
+                    "Categories:Debug",
                     addToNav: true,
                     navOrder: 50));
         }

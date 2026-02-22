@@ -50,11 +50,11 @@ public class ModuleSystemInfoUI(ModuleSystemInfoUIOption option)
         if (!Option.DisableUISystemInfoPage)
         {
             DependsOnModule<ModuleUICoreGuide>().Register()
-                .RegisterUIComponents(p => p.RegisterComponent<UISystemInfoPage>(
+                .RegisterUIComponents(p => p.RegisterLocalizedComponent<UISystemInfoPage>(
                     UISystemInfoPage.PAGE_URL,
-                    "系统信息",
+                    "Pages:SystemInfo:Title",
                     Icons.Material.Filled.Info,
-                    "监控",
+                    "Categories:Monitor",
                     addToNav: true,
                     navOrder: 50));
         }

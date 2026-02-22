@@ -7,6 +7,7 @@
 @inject IUIComponentRegistry UIRegistry
 @inject IOptions<ModuleUICoreOption> Options
 @inject IStringLocalizer<SharedResource> L
+@inject IStringLocalizer<UIRegistryResource> RegistryL
 
 <nav class="mo-navbar">
     <MoNavBarBrand />
@@ -36,9 +37,21 @@
     {
         var allNavItems = UIRegistry.GetNavItems();
         _categorizedNavItems = allNavItems
-            .GroupBy(item => item.Category ?? L["ModuleSystem:Common:Labels:Uncategorized"])
+            .GroupBy(item => {
+                var category = item.Category ?? "Uncategorized";
+                return GetLocalizedText(category, item.CategoryKey);
+            })
             .OrderBy(g => g.Key)
             .ToDictionary(g => g.Key, g => g.ToList());
+    }
+
+    private string GetLocalizedText(string text, string? key)
+    {
+        if (!string.IsNullOrEmpty(key))
+        {
+            return RegistryL[key];
+        }
+        return text;  // Fallback to plain text
     }
 
     private IEnumerable<string> VisibleCategories =>

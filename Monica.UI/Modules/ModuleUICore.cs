@@ -195,7 +195,7 @@ public class ModuleUICoreGuide : MoModuleGuide<ModuleUICore, ModuleUICoreOption,
 
             if (!builder.ModuleOption.DisableModuleSystemUI)
             {
-                registry.RegisterComponent<ModuleSystemDashboard>(ModuleSystemDashboard.MODULE_SYSTEM_DASHBOARD_URL, "模块系统概览", Icons.Material.Filled.Dashboard, "模块", true, navOrder: 10);
+                registry.RegisterLocalizedComponent<ModuleSystemDashboard>(ModuleSystemDashboard.MODULE_SYSTEM_DASHBOARD_URL, "Pages:ModuleSystemDashboard:Title", Icons.Material.Filled.Dashboard, "Categories:Module", true, navOrder: 10);
             }
 
             // 配置路由重定向

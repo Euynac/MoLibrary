@@ -42,11 +42,11 @@ public class ModuleMarkdownUI(ModuleMarkdownUIOption option)
             DependsOnModule<ModuleMarkdownGuide>().Register();
 
             DependsOnModule<ModuleUICoreGuide>().Register()
-                .RegisterUIComponents(p => p.RegisterComponent<UIMarkdownPage>(
+                .RegisterUIComponents(p => p.RegisterLocalizedComponent<UIMarkdownPage>(
                     UIMarkdownPage.PAGE_URL,
-                    "Markdown Documents",
+                    "Pages:MarkdownDocuments:Title",
                     Icons.Material.Filled.MenuBook,
-                    "Documentation",
+                    "Categories:Documentation",
                     addToNav: true,
                     navOrder: 50));
         }

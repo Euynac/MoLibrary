@@ -43,11 +43,11 @@ public class ModuleMapperUI(ModuleMapperUIOption option)
             DependsOnModule<ModuleMapperGuide>().Register();
             DependsOnModule<ModuleUICoreGuide>().Register()
                 .ConfigureModuleOption(o=>o.EnableMarkdown = true)
-                .RegisterUIComponents(p => p.RegisterComponent<UIMapperPage>(
+                .RegisterUIComponents(p => p.RegisterLocalizedComponent<UIMapperPage>(
                     UIMapperPage.MAPPER_DEBUG_URL,
-                    "Mapper调试",
+                    "Pages:MapperDebug:Title",
                     Icons.Material.Filled.Code,
-                    "调试",
+                    "Categories:Debug",
                     addToNav: true,
                     navOrder: 10));
         }

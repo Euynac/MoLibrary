@@ -46,19 +46,19 @@ public class ModuleProfilingUI(ModuleProfilingUIOption option)
             DependsOnModule<ModuleUICoreGuide>().Register()
                 .RegisterUIComponents(registry =>
                 {
-                    registry.RegisterComponent<UIQuickMonitorPage>(
+                    registry.RegisterLocalizedComponent<UIQuickMonitorPage>(
                         UIQuickMonitorPage.PAGE_URL,
-                        "快速监控",
+                        "Pages:QuickMonitor:Title",
                         Icons.Material.Filled.Speed,
-                        "监控",
+                        "Categories:Monitor",
                         addToNav: true,
                         navOrder: 10);
 
-                    registry.RegisterComponent<UIProfilingDashboardPage>(
+                    registry.RegisterLocalizedComponent<UIProfilingDashboardPage>(
                         UIProfilingDashboardPage.PAGE_URL,
-                        "内存分析",
+                        "Pages:ProfilingDashboard:Title",
                         Icons.Material.Filled.Memory,
-                        "监控",
+                        "Categories:Monitor",
                         addToNav: true,
                         navOrder: 60);
                 });

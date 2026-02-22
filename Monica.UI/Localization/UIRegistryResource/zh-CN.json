@@ -1,0 +1,90 @@
+{
+  "texts": {
+    "Categories": {
+      "AI": "AI",
+      "Documentation": "文档",
+      "Monitor": "监控",
+      "Configuration": "配置",
+      "Debug": "调试",
+      "Module": "模块",
+      "TaskScheduling": "任务调度"
+    },
+    "Pages": {
+      "AIChat": {
+        "Title": "AI 助手"
+      },
+      "AIProviderManage": {
+        "Title": "AI Provider 管理"
+      },
+      "RAGDebug": {
+        "Title": "RAG 调试"
+      },
+      "MarkdownDocuments": {
+        "Title": "知识库"
+      },
+      "DataChannelManage": {
+        "Title": "DataChannel管理"
+      },
+      "ConfigurationDashboard": {
+        "Title": "配置面板"
+      },
+      "QuickMonitor": {
+        "Title": "快速监控"
+      },
+      "ProfilingDashboard": {
+        "Title": "内存分析"
+      },
+      "RegisterCentre": {
+        "Title": "注册中心"
+      },
+      "TimekeeperDebug": {
+        "Title": "性能监控"
+      },
+      "LoggingMonitor": {
+        "Title": "日志监控"
+      },
+      "SystemInfo": {
+        "Title": "系统信息"
+      },
+      "SignalRDebug": {
+        "Title": "SignalR调试"
+      },
+      "MapperDebug": {
+        "Title": "Mapper调试"
+      },
+      "ObservableInstance": {
+        "Title": "单例服务监控"
+      },
+      "FrameworkMonitor": {
+        "Title": "框架监控"
+      },
+      "EventBusMonitor": {
+        "Title": "事件总线监控"
+      },
+      "StateStoreManage": {
+        "Title": "状态存储管理"
+      },
+      "DiffHighlight": {
+        "Title": "文本差异对比"
+      },
+      "ModuleSystemDashboard": {
+        "Title": "模块系统概览"
+      },
+      "JobSchedulerDashboard": {
+        "Title": "总览"
+      },
+      "JobSchedulerMonitor": {
+        "Title": "实时监控"
+      },
+      "JobDefinitions": {
+        "Title": "任务定义"
+      },
+      "JobInstances": {
+        "Title": "任务实例"
+      },
+      "JobStatistics": {
+        "Title": "统计分析"
+      }
+    }
+  }
+}

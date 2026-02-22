@@ -31,6 +31,16 @@ public class UIPageInfo
     /// 分类
     /// </summary>
     public string? Category { get; init; }
+
+    /// <summary>
+    /// 显示名称的本地化键
+    /// </summary>
+    public string? DisplayNameKey { get; init; }
+
+    /// <summary>
+    /// 分类的本地化键
+    /// </summary>
+    public string? CategoryKey { get; init; }
 }
 
 /// <summary>
@@ -86,4 +96,14 @@ public class UINavItem
     /// 导航链接匹配模式
     /// </summary>
     public NavLinkMatch NavLinkMatch { get; init; } = NavLinkMatch.Prefix;
+
+    /// <summary>
+    /// 显示文本的本地化键
+    /// </summary>
+    public string? TextKey { get; init; }
+
+    /// <summary>
+    /// 分类的本地化键
+    /// </summary>
+    public string? CategoryKey { get; init; }
 } 

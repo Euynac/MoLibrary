@@ -44,11 +44,11 @@ public class ModuleStateStoreUI(ModuleStateStoreUIOption option)
             DependsOnModule<ModuleUICoreGuide>().Register()
                 .RegisterUIComponents(registry =>
                 {
-                    registry.RegisterComponent<UIStateStoreDashboardPage>(
+                    registry.RegisterLocalizedComponent<UIStateStoreDashboardPage>(
                         UIStateStoreDashboardPage.PAGE_URL,
-                        "状态存储管理",
+                        "Pages:StateStoreManage:Title",
                         Icons.Material.Filled.Storage,
-                        "调试",
+                        "Categories:Debug",
                         addToNav: true,
                         navOrder: 20);
                 });

@@ -76,46 +76,46 @@ public class ModuleJobSchedulerUI(ModuleJobSchedulerUIOption option)
                 .RegisterUIComponents(p =>
                 {
                     // 总览仪表盘
-                    p.RegisterComponent<DashboardPage>(
+                    p.RegisterLocalizedComponent<DashboardPage>(
                         DashboardPage.PAGE_URL,
-                        "总览",
+                        "Pages:JobSchedulerDashboard:Title",
                         Icons.Material.Filled.Dashboard,
-                        "任务调度",
+                        "Categories:TaskScheduling",
                         addToNav: true,
                         navOrder: 99,
                         navLinkMatch: NavLinkMatch.All);
 
                     // 实时监控
-                    p.RegisterComponent<MonitorPage>(
+                    p.RegisterLocalizedComponent<MonitorPage>(
                         MonitorPage.PAGE_URL,
-                        "实时监控",
+                        "Pages:JobSchedulerMonitor:Title",
                         Icons.Material.Filled.Monitor,
-                        "任务调度",
+                        "Categories:TaskScheduling",
                         addToNav: true,
                         navOrder: 100);
 
-                    p.RegisterComponent<JobDefinitionsPage>(
+                    p.RegisterLocalizedComponent<JobDefinitionsPage>(
                         JobDefinitionsPage.PAGE_URL,
-                        "任务定义",
+                        "Pages:JobDefinitions:Title",
                         Icons.Material.Filled.WorkOutline,
-                        "任务调度",
+                        "Categories:TaskScheduling",
                         addToNav: true,
                         navOrder: 101);
 
-                    p.RegisterComponent<JobInstancesPage>(
+                    p.RegisterLocalizedComponent<JobInstancesPage>(
                         JobInstancesPage.PAGE_URL,
-                        "任务实例",
+                        "Pages:JobInstances:Title",
                         Icons.Material.Filled.PlaylistPlay,
-                        "任务调度",
+                        "Categories:TaskScheduling",
                         addToNav: true,
                         navOrder: 102);
 
                     // 统计分析
-                    p.RegisterComponent<StatisticsPage>(
+                    p.RegisterLocalizedComponent<StatisticsPage>(
                         StatisticsPage.PAGE_URL,
-                        "统计分析",
+                        "Pages:JobStatistics:Title",
                         Icons.Material.Filled.Analytics,
-                        "任务调度",
+                        "Categories:TaskScheduling",
                         addToNav: true,
                         navOrder: 103);
                 });

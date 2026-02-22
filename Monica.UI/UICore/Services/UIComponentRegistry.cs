@@ -37,7 +37,7 @@ public class UIComponentRegistry : IUIComponentRegistry
     {
         route = route.TrimStart('/');
         var componentType = typeof(T);
-        
+
         // 注册页面信息
         var pageInfo = new UIPageInfo
         {
@@ -73,6 +73,62 @@ public class UIComponentRegistry : IUIComponentRegistry
             _assemblies.Add(componentType.Assembly);
         }
 
+    }
+
+    /// <summary>
+    /// 注册页面组件（支持本地化）
+    /// </summary>
+    /// <typeparam name="T">组件类型，必须继承自ComponentBase</typeparam>
+    /// <param name="route">路由路径</param>
+    /// <param name="displayNameKey">显示名称的本地化键（使用UIRegistryResource）</param>
+    /// <param name="icon">图标</param>
+    /// <param name="categoryKey">分类的本地化键（使用UIRegistryResource）</param>
+    /// <param name="addToNav">是否添加到导航菜单</param>
+    /// <param name="navOrder">导航菜单排序顺序</param>
+    /// <param name="navLinkMatch">导航链接匹配模式</param>
+    public void RegisterLocalizedComponent<T>(string route, string displayNameKey, string? icon = null, string? categoryKey = null, bool addToNav = false, int navOrder = 0, NavLinkMatch navLinkMatch = NavLinkMatch.Prefix) where T : ComponentBase
+    {
+        route = route.TrimStart('/');
+        var componentType = typeof(T);
+
+        // 注册页面信息
+        var pageInfo = new UIPageInfo
+        {
+            Route = route,
+            ComponentType = componentType,
+            DisplayName = displayNameKey,  // Fallback
+            DisplayNameKey = displayNameKey,
+            Icon = icon,
+            Category = categoryKey,  // Fallback
+            CategoryKey = categoryKey
+        };
+        _pages.Add(pageInfo);
+
+        // 注册组件类型（用于名称查找）
+        _components[route] = componentType;
+
+        // 如果需要，自动创建导航菜单项
+        if (addToNav)
+        {
+            var navItem = new UINavItem
+            {
+                Text = displayNameKey,  // Fallback
+                TextKey = displayNameKey,
+                Href = route,
+                Icon = icon,
+                Category = categoryKey,  // Fallback
+                CategoryKey = categoryKey,
+                Order = navOrder,
+                NavLinkMatch = navLinkMatch
+            };
+            _navItems.Add(navItem);
+        }
+
+        if (!_excludedAssemblies.Contains(componentType.Assembly))
+        {
+            // 添加组件所在的程序集
+            _assemblies.Add(componentType.Assembly);
+        }
     }
 
     /// <summary>

@@ -58,11 +58,11 @@ public class ModuleLoggingUI(ModuleLoggingUIOption option)
         if (!Option.DisableUILoggingPage)
         {
             DependsOnModule<ModuleUICoreGuide>().Register()
-                .RegisterUIComponents(p => p.RegisterComponent<UILoggingPage>(
+                .RegisterUIComponents(p => p.RegisterLocalizedComponent<UILoggingPage>(
                     UILoggingPage.LOGGING_MONITOR_URL,
-                    "日志监控",
+                    "Pages:LoggingMonitor:Title",
                     Icons.Material.Filled.Article,
-                    "监控",
+                    "Categories:Monitor",
                     addToNav: true,
                     navOrder: 30));
         }

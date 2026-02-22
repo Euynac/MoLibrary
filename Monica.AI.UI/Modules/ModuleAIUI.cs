@@ -59,11 +59,11 @@ public class ModuleAIUI(ModuleAIUIOption option)
             DependsOnModule<ModuleUICoreGuide>().Register(o => o.EnableMarkdown = true)
                 .RegisterUIComponents(p =>
                 {
-                    p.RegisterComponent<UIAIChatPage>(
+                    p.RegisterLocalizedComponent<UIAIChatPage>(
                         UIAIChatPage.PAGE_URL,
-                        "AI 助手",
+                        "Pages:AIChat:Title",
                         Icons.Material.Filled.SmartToy,
-                        "AI",
+                        "Categories:AI",
                         addToNav: true,
                         navOrder: 1);
                 });
@@ -74,11 +74,11 @@ public class ModuleAIUI(ModuleAIUIOption option)
             DependsOnModule<ModuleUICoreGuide>().Register()
                 .RegisterUIComponents(p =>
                 {
-                    p.RegisterComponent<UIAIProviderManagePage>(
+                    p.RegisterLocalizedComponent<UIAIProviderManagePage>(
                         UIAIProviderManagePage.PAGE_URL,
-                        "AI Provider 管理",
+                        "Pages:AIProviderManage:Title",
                         Icons.Material.Filled.Hub,
-                        "AI",
+                        "Categories:AI",
                         addToNav: true,
                         navOrder: 2);
                 });

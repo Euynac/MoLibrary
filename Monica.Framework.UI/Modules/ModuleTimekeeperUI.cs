@@ -52,11 +52,11 @@ public class ModuleTimekeeperUI(ModuleTimekeeperUIOption option)
             DependsOnModule<ModuleTimekeeperGuide>().Register();
 
             DependsOnModule<ModuleUICoreGuide>().Register()
-                .RegisterUIComponents(p => p.RegisterComponent<UITimekeeperPage>(
+                .RegisterUIComponents(p => p.RegisterLocalizedComponent<UITimekeeperPage>(
                     UITimekeeperPage.PAGE_URL,
-                    "Timekeeper调试",
+                    "Pages:TimekeeperDebug:Title",
                     Icons.Material.Filled.Timer,
-                    "调试",
+                    "Categories:Debug",
                     addToNav: true,
                     navOrder: 30));
         }

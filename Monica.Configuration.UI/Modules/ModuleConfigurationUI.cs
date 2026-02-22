@@ -62,11 +62,11 @@ public class ModuleConfigurationUI(ModuleConfigurationUIOption option)
                 .RegisterUIComponents(registry =>
                 {
                     // 注册面板配置页面
-                    registry.RegisterComponent<UIConfigurationDashboardPage>(
+                    registry.RegisterLocalizedComponent<UIConfigurationDashboardPage>(
                         UIConfigurationDashboardPage.PAGE_URL,
-                        "配置面板",
+                        "Pages:ConfigurationDashboard:Title",
                         Icons.Material.Filled.Dashboard,
-                        "配置",
+                        "Categories:Configuration",
                         addToNav: true,
                         navOrder: 10);
                 });
