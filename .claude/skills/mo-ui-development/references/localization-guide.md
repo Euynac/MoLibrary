@@ -2,11 +2,316 @@
 
 Comprehensive guidance for implementing multilingual support in Monica UI components.
 
-## Quick Start
+## Architecture Overview
 
-**Supported Languages:** zh-CN (default), en-US  
-**Location:** `Monica.UI/Localization/SharedResource/`  
+Monica supports two localization patterns:
+
+1. **Decentralized Pattern (Recommended)** - Each UI module manages its own localization resources independently
+2. **Centralized Pattern (Legacy)** - All modules share `Monica.UI/Localization/SharedResource`
+
+**For new UI modules, always use the decentralized pattern.** It improves modularity, reduces coupling, and makes modules truly self-contained.
+
+## Decentralized Pattern (Recommended)
+
+### Overview
+
+Each `*.UI` project has its own localization infrastructure:
+- Marker class in `Localization/{ModuleName}Resource.cs`
+- JSON files in `Localization/{ModuleName}Resource/zh-CN.json` and `en-US.json`
+- Embedded resources configured in `.csproj`
+- Auto-discovered by `MoStringLocalizerFactory`
+
+**Benefits:**
+- True module independence
+- No coupling to Monica.UI
+- Simpler key names (no module prefix needed)
+- Easier to maintain and version independently
+
+### Auto-Discovery Mechanism
+
+`MoStringLocalizerFactory` automatically discovers localization resources:
+
+1. Scans all assemblies starting with "Monica"
+2. Finds types in namespaces containing ".Localization"
+3. For each resource type, loads embedded JSON files using pattern: `{Namespace}.{ResourceName}.{Culture}.json`
+
+**Example:** For type `StateStoreResource` in namespace `Monica.StateStore.UI.Localization`, it loads:
+- `Monica.StateStore.UI.Localization.StateStoreResource.zh-CN.json`
+- `Monica.StateStore.UI.Localization.StateStoreResource.en-US.json`
+
+**No registration code needed!** Just create the marker class, add JSON files, and configure embedding.
+
+### Implementation Steps
+
+#### Step 1: Create Marker Class
+
+Create a marker class in your UI module:
+
+```csharp
+// Monica.StateStore.UI/Localization/StateStoreResource.cs
+namespace Monica.StateStore.UI.Localization;
+
+/// <summary>
+/// Marker class for StateStore UI localization resources
+/// </summary>
+public class StateStoreResource
+{
+}
+```
+
+**Naming convention:** `{ModuleName}Resource` (e.g., `StateStoreResource`, `ConfigurationResource`)
+
+#### Step 2: Create JSON Files
+
+Create JSON files in `Localization/{ResourceName}/` folder:
+
+```
+Monica.StateStore.UI/
+└── Localization/
+    └── StateStoreResource/
+        ├── zh-CN.json
+        └── en-US.json
+```
+
+**JSON structure:**
+
+```json
+{
+  "texts": {
+    "Dashboard": {
+      "PageTitle": "State Store Management",
+      "Title": "State Store Dashboard",
+      "Tabs": {
+        "ProviderOverview": "Provider Overview",
+        "KeyExplorer": "Key Explorer"
+      }
+    },
+    "KeyExplorer": {
+      "Labels": {
+        "KeyPattern": "Key Pattern",
+        "KeyName": "Key Name"
+      },
+      "Actions": {
+        "Scan": "Scan Keys",
+        "Refresh": "Refresh"
+      }
+    }
+  }
+}
+```
+
+**Key naming:** Use hierarchical structure without module prefix:
+- ✅ `"Dashboard:PageTitle"` (correct)
+- ❌ `"StateStore:Dashboard:PageTitle"` (wrong - no module prefix needed)
+
+#### Step 3: Configure Project File
+
+Update your `.csproj` to embed JSON files:
+
+```xml
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+  <!-- ... other configuration ... -->
+
+  <ItemGroup>
+    <EmbeddedResource Include="Localization\**\*.json" />
+  </ItemGroup>
+</Project>
+```
+
+This embeds all JSON files in the `Localization` folder as embedded resources.
+
+#### Step 4: Update _Imports.razor
+
+Add the localization namespace to your module's `_Imports.razor`:
+
+```razor
+@using Microsoft.Extensions.Localization
+@using Monica.StateStore.UI.Localization
+```
+
+#### Step 5: Use in Components
+
+Inject the localizer in your components:
+
+```razor
+@inject IStringLocalizer<StateStoreResource> L
+
+<MudText Typo="Typo.h4">@L["Dashboard:PageTitle"]</MudText>
+<MudButton OnClick="ScanKeys">@L["KeyExplorer:Actions:Scan"]</MudButton>
+<MudTextField Label="@L["KeyExplorer:Labels:KeyPattern"]" />
+```
+
+### Key Naming Conventions
+
+**Hierarchical structure** matching JSON organization:
+
+```
+ComponentName (top-level)
+├── Labels (UI labels)
+├── Placeholders (input placeholders)
+├── Actions (button text)
+├── Messages (user feedback)
+├── Dialogs (dialog titles/content)
+└── Tabs (tab labels)
+```
+
+**Examples:**
+
+```razor
+@L["Dashboard:PageTitle"]
+@L["KeyExplorer:Labels:KeyPattern"]
+@L["KeyExplorer:Actions:Scan"]
+@L["KeyExplorer:Messages:FoundKeys", count]
+@L["KeyEditor:Dialogs:ConfirmDelete"]
+```
+
+**Rules:**
+- PascalCase for all parts
+- No module prefix (e.g., no "StateStore:" prefix)
+- Descriptive names (e.g., `InitializationComplete` not `InitDone`)
+- Consistent terminology across the module
+
+### Parameterized Strings
+
+**JSON:**
+```json
+{
+  "texts": {
+    "KeyExplorer": {
+      "Messages": {
+        "FoundKeys": "Found {0} keys",
+        "KeyRange": "Showing keys {0} to {1} of {2}"
+      }
+    }
+  }
+}
+```
+
+**Razor:**
+```razor
+@L["KeyExplorer:Messages:FoundKeys", count]
+@L["KeyExplorer:Messages:KeyRange", start, end, total]
+```
+
+### Complete Example
+
+**File structure:**
+```
+Monica.StateStore.UI/
+├── Localization/
+│   ├── StateStoreResource.cs
+│   └── StateStoreResource/
+│       ├── zh-CN.json
+│       └── en-US.json
+├── _Imports.razor
+├── Monica.StateStore.UI.csproj
+└── UIStateStore/
+    └── Components/
+        └── StateStoreKeyExplorer.razor
+```
+
+**StateStoreResource.cs:**
+```csharp
+namespace Monica.StateStore.UI.Localization;
+
+public class StateStoreResource { }
+```
+
+**zh-CN.json:**
+```json
+{
+  "texts": {
+    "KeyExplorer": {
+      "Labels": {
+        "KeyPattern": "键模式"
+      },
+      "Actions": {
+        "Scan": "扫描键"
+      },
+      "Messages": {
+        "FoundKeys": "找到 {0} 个键"
+      }
+    }
+  }
+}
+```
+
+**en-US.json:**
+```json
+{
+  "texts": {
+    "KeyExplorer": {
+      "Labels": {
+        "KeyPattern": "Key Pattern"
+      },
+      "Actions": {
+        "Scan": "Scan Keys"
+      },
+      "Messages": {
+        "FoundKeys": "Found {0} keys"
+      }
+    }
+  }
+}
+```
+
+**_Imports.razor:**
+```razor
+@using Microsoft.Extensions.Localization
+@using Monica.StateStore.UI.Localization
+```
+
+**StateStoreKeyExplorer.razor:**
+```razor
+@inject IStringLocalizer<StateStoreResource> L
+
+<MudTextField Label="@L["KeyExplorer:Labels:KeyPattern"]" />
+<MudButton OnClick="ScanKeys">@L["KeyExplorer:Actions:Scan"]</MudButton>
+
+@code {
+    private async Task ScanKeys()
+    {
+        var keys = await ScanAsync();
+        Snackbar.Add(L["KeyExplorer:Messages:FoundKeys", keys.Count], Severity.Success);
+    }
+}
+```
+
+### Migration from SharedResource
+
+If you have an existing module using SharedResource, follow these steps:
+
+**1. Create new localization infrastructure:**
+- Create marker class
+- Create JSON files
+- Configure csproj
+
+**2. Extract keys from SharedResource:**
+- Copy your module's section from `Monica.UI/Localization/SharedResource/zh-CN.json`
+- Remove module prefix from keys (e.g., `"StateStore:Dashboard:Title"` → `"Dashboard:Title"`)
+- Paste into your new JSON files
+
+**3. Update components:**
+- Change injection: `IStringLocalizer<SharedResource>` → `IStringLocalizer<{YourModule}Resource>`
+- Update key references: remove module prefix from all keys
+- Update `_Imports.razor` to use new namespace
+
+**4. Remove from SharedResource:**
+- Delete your module's section from both `zh-CN.json` and `en-US.json` in Monica.UI
+
+**5. Validate:**
+```bash
+python .claude/skills/mo-ui-development/scripts/validate_localization.py
+```
+
+## Centralized Pattern (Legacy)
+
+### Quick Start
+
+**Supported Languages:** zh-CN (default), en-US
+**Location:** `Monica.UI/Localization/SharedResource/`
 **Shared across:** All `*.UI` projects
+**When to use:** Only for existing modules already using SharedResource
 
 ### Basic Usage
 

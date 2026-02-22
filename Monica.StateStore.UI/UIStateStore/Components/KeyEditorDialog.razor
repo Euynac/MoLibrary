@@ -3,13 +3,14 @@
 @using Monica.Tool.MoResponse
 @inject StateStoreUIService StateStoreService
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<StateStoreResource> L
 
 <MudDialog>
     <DialogContent>
         <MudStack Spacing="3">
             @* Key 名称 *@
             <MudTextField Value="@KeyInfo.Key"
-                          Label="Key 名称"
+                          Label="@L["KeyEditor:Labels:KeyName"]"
                           Variant="Variant.Outlined"
                           ReadOnly="true"
                           Style="font-family: monospace;" />
@@ -18,7 +19,7 @@
             @if (!string.IsNullOrEmpty(KeyInfo.ETag))
             {
                 <MudTextField Value="@KeyInfo.ETag"
-                              Label="ETag"
+                              Label="@L["KeyEditor:Labels:ETag"]"
                               Variant="Variant.Outlined"
                               ReadOnly="true"
                               Style="font-family: monospace;" />
@@ -28,21 +29,21 @@
             @if (!ReadOnly)
             {
                 <MudNumericField @bind-Value="ttlSeconds"
-                                 Label="TTL (秒, 0 表示永久)"
+                                 Label="@L["KeyEditor:Labels:TTL"]"
                                  Variant="Variant.Outlined"
                                  Min="0"
                                  Adornment="Adornment.End"
-                                 AdornmentText="秒" />
+                                 AdornmentText="@L["KeyEditor:Labels:TTLUnit"]" />
             }
 
             @* JSON 值编辑器 *@
             <MudTextField @bind-Value="editedValue"
-                          Label="JSON 值"
+                          Label="@L["KeyEditor:Labels:JsonValue"]"
                           Variant="Variant.Outlined"
                           Lines="15"
                           ReadOnly="@ReadOnly"
                           Style="font-family: monospace;"
-                          HelperText="@(ReadOnly ? "" : "输入有效的 JSON 值")" />
+                          HelperText="@(ReadOnly ? "" : L["KeyEditor:Labels:JsonHelperText"])" />
 
             @if (!ReadOnly)
             {
@@ -52,14 +53,14 @@
                                StartIcon="@Icons.Material.Filled.FormatIndentIncrease"
                                OnClick="FormatJson"
                                Size="Size.Small">
-                        格式化 JSON
+                        @L["KeyEditor:Actions:FormatJson"]
                     </MudButton>
                     <MudButton Variant="Variant.Text"
                                Color="Color.Secondary"
                                StartIcon="@Icons.Material.Filled.Compress"
                                OnClick="MinifyJson"
                                Size="Size.Small">
-                        压缩 JSON
+                        @L["KeyEditor:Actions:MinifyJson"]
                     </MudButton>
                 </div>
             }
@@ -71,7 +72,7 @@
         </MudStack>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel">取消</MudButton>
+        <MudButton OnClick="Cancel">@L["KeyEditor:Actions:Cancel"]</MudButton>
         @if (!ReadOnly)
         {
             <MudButton Color="Color.Primary"
@@ -82,7 +83,7 @@
                 {
                     <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
                 }
-                保存
+                @L["KeyEditor:Actions:Save"]
             </MudButton>
         }
     </DialogActions>
@@ -118,7 +119,7 @@
         }
         catch (Exception ex)
         {
-            errorMessage = $"JSON 格式化失败: {ex.Message}";
+            errorMessage = L["KeyEditor:Messages:FormatFailed", ex.Message];
         }
     }
 
@@ -132,7 +133,7 @@
         }
         catch (Exception ex)
         {
-            errorMessage = $"JSON 压缩失败: {ex.Message}";
+            errorMessage = L["KeyEditor:Messages:MinifyFailed", ex.Message];
         }
     }
 

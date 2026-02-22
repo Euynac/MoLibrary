@@ -1,0 +1,170 @@
+{
+  "texts": {
+    "Dashboard": {
+      "PageTitle": "状态存储管理",
+      "Title": "状态存储管理",
+      "Tabs": {
+        "ProviderOverview": "Provider 概览",
+        "KeyBrowser": "Key 浏览器"
+      },
+      "Messages": {
+        "NoProviders": "未注册任何 StateStore Provider",
+        "LoadProviderFailed": "加载 Provider 失败: {0}"
+      }
+    },
+    "ProviderList": {
+      "Labels": {
+        "RegisteredProviders": "已注册的 StateStore Provider"
+      },
+      "Actions": {
+        "Refresh": "刷新"
+      },
+      "Messages": {
+        "NoProvidersFound": "未发现已注册的 StateStore Provider"
+      }
+    },
+    "ProviderCard": {
+      "Labels": {
+        "KeyScanning": "Key 扫描",
+        "NoScanningSupport": "不支持扫描",
+        "Distributed": "分布式",
+        "HasConfiguration": "有配置项"
+      },
+      "Actions": {
+        "ViewDetails": "查看详情"
+      }
+    },
+    "ProviderDetail": {
+      "Tabs": {
+        "ProviderInfo": "Provider 信息",
+        "ConfigOptions": "配置选项"
+      },
+      "Labels": {
+        "ProviderType": "Provider 类型",
+        "ServiceKey": "服务键",
+        "DefaultNoKey": "默认 (无键)",
+        "StorageMode": "存储模式",
+        "Distributed": "分布式",
+        "LocalMemory": "本地内存",
+        "ImplementationType": "实现类型",
+        "SupportedCapabilities": "支持的能力"
+      },
+      "Capabilities": {
+        "KeyScanning": "Key 扫描",
+        "NoScanning": "不支持扫描",
+        "RawStringRetrieval": "原始字符串检索",
+        "QueryState": "查询状态",
+        "BulkOperations": "批量操作"
+      },
+      "Actions": {
+        "Close": "关闭"
+      }
+    },
+    "KeyExplorer": {
+      "Labels": {
+        "SelectProvider": "选择 Provider",
+        "KeyPattern": "Key 模式 (例如: user:*, session:*)",
+        "KeyName": "Key 名称 (完整名称)",
+        "KeyNameColumn": "Key 名称",
+        "ValuePreview": "值预览",
+        "Actions": "操作"
+      },
+      "Placeholders": {
+        "PatternSearch": "*",
+        "FullKeyName": "输入完整 Key 名称"
+      },
+      "Actions": {
+        "Scan": "扫描",
+        "Query": "查询",
+        "Create": "新建",
+        "View": "查看",
+        "Edit": "编辑",
+        "Delete": "删除",
+        "DeleteSelected": "删除选中 ({0})"
+      },
+      "Messages": {
+        "NoScanningSupport": "此 Provider 不支持 Key 扫描",
+        "EnterFullKeyName": "请输入完整 Key 名称进行查询。",
+        "FoundKeys": "找到 {0} 个 Key",
+        "ShowingFirst": "(显示前 {0} 个)",
+        "NoKeysFound": "未找到匹配的 Key",
+        "SelectProviderToStart": "选择一个 Provider 并输入搜索条件开始查询",
+        "KeySaveSuccess": "Key 保存成功",
+        "KeyCreateSuccess": "Key 创建成功",
+        "KeyDeleteSuccess": "Key 删除成功",
+        "KeyDeleteFailed": "删除 Key 失败: {0}",
+        "BatchDeleteFailed": "批量删除 Key 失败: {0}",
+        "DeleteSuccess": "删除成功"
+      },
+      "Dialogs": {
+        "DeleteKeyTitle": "删除 Key",
+        "DeleteKeyMessage": "确定要删除 Key '{0}' 吗？",
+        "DeleteKeyConfirm": "删除",
+        "DeleteKeyCancel": "取消",
+        "BatchDeleteTitle": "批量删除 Key",
+        "BatchDeleteMessage": "确定要删除选中的 {0} 个 Key 吗？",
+        "BatchDeleteConfirm": "全部删除",
+        "ViewKeyTitle": "查看 Key: {0}",
+        "EditKeyTitle": "编辑 Key: {0}"
+      }
+    },
+    "KeyEditor": {
+      "Labels": {
+        "KeyName": "Key 名称",
+        "ETag": "ETag",
+        "TTL": "TTL (秒, 0 表示永久)",
+        "TTLUnit": "秒",
+        "JsonValue": "JSON 值",
+        "JsonHelperText": "输入有效的 JSON 值"
+      },
+      "Actions": {
+        "FormatJson": "格式化 JSON",
+        "MinifyJson": "压缩 JSON",
+        "Cancel": "取消",
+        "Save": "保存"
+      },
+      "Messages": {
+        "FormatFailed": "JSON 格式化失败: {0}",
+        "MinifyFailed": "JSON 压缩失败: {0}"
+      }
+    },
+    "KeyCreate": {
+      "Dialogs": {
+        "Title": "新建 Key"
+      },
+      "Labels": {
+        "KeyName": "Key 名称",
+        "KeyNameRequired": "请输入 Key 名称",
+        "TTL": "TTL (秒, 0 表示永久)",
+        "TTLUnit": "秒",
+        "JsonValue": "JSON 值",
+        "JsonHelperText": "输入有效的 JSON 值"
+      },
+      "Placeholders": {
+        "KeyNameExample": "例如: user:123, session:abc",
+        "JsonExample": "例如: {\"name\": \"test\", \"count\": 1}"
+      },
+      "Actions": {
+        "FormatJson": "格式化 JSON",
+        "MinifyJson": "压缩 JSON",
+        "Cancel": "取消",
+        "Create": "创建"
+      },
+      "Messages": {
+        "FormatFailed": "JSON 格式化失败: {0}",
+        "MinifyFailed": "JSON 压缩失败: {0}",
+        "KeyNameRequired": "请输入 Key 名称",
+        "KeyExists": "Key 已存在，请使用其他名称或编辑现有 Key"
+      }
+    },
+    "KeyValuePreview": {
+      "Actions": {
+        "LoadValue": "加载值"
+      },
+      "Labels": {
+        "Empty": "(空)"
+      }
+    }
+  }
+}
+

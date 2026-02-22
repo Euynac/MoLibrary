@@ -6,6 +6,7 @@
 @inject StateStoreUIService StateStoreService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject IStringLocalizer<StateStoreResource> L
 
 <MudGrid>
     @* Provider 选择和搜索 *@
@@ -14,7 +15,7 @@
             <MudGrid>
                 <MudItem xs="12" md="4">
                     <MudSelect T="StateStoreProviderInfo"
-                               Label="选择 Provider"
+                               Label="@L["KeyExplorer:Labels:SelectProvider"]"
                                @bind-Value="selectedProvider"
                                @bind-Value:after="OnProviderChanged"
                                Variant="Variant.Outlined">
@@ -62,7 +63,7 @@
                                    StartIcon="@Icons.Material.Filled.Add"
                                    OnClick="OpenCreateKeyDialog"
                                    Disabled="@(selectedProvider == null)">
-                            新建
+                            @L["KeyExplorer:Actions:Create"]
                         </MudButton>
                     }
                 </MudItem>
@@ -72,7 +73,7 @@
             {
                 <MudAlert Severity="Severity.Warning" Class="mt-3">
                     <MudText>
-                        <strong>此 Provider 不支持 Key 扫描</strong>，请输入完整 Key 名称进行查询。
+                        <strong>@L["KeyExplorer:Messages:NoScanningSupport"]</strong>@L["KeyExplorer:Messages:EnterFullKeyName"]
                     </MudText>
                 </MudAlert>
             }
@@ -96,10 +97,10 @@
             {
                 <div class="d-flex justify-space-between align-center mb-3">
                     <MudText Typo="Typo.subtitle1">
-                        找到 @scanResult.TotalCount 个 Key
+                        @L["KeyExplorer:Messages:FoundKeys", scanResult.TotalCount]
                         @if (scanResult.HasMore)
                         {
-                            <span class="ml-1">(显示前 @keys.Count 个)</span>
+                            <span class="ml-1">@L["KeyExplorer:Messages:ShowingFirst", keys.Count]</span>
                         }
                     </MudText>
 
@@ -109,7 +110,7 @@
                                    Color="Color.Error"
                                    StartIcon="@Icons.Material.Filled.Delete"
                                    OnClick="DeleteSelectedKeys">
-                            删除选中 (@selectedKeys.Count)
+                            @L["KeyExplorer:Actions:DeleteSelected", selectedKeys.Count]
                         </MudButton>
                     }
                 </div>
@@ -122,9 +123,9 @@
                           @bind-SelectedItems="selectedKeys"
                           Loading="isLoadingValues">
                     <HeaderContent>
-                        <MudTh>Key 名称</MudTh>
-                        <MudTh>值预览</MudTh>
-                        <MudTh Style="width: 150px;">操作</MudTh>
+                        <MudTh>@L["KeyExplorer:Labels:KeyNameColumn"]</MudTh>
+                        <MudTh>@L["KeyExplorer:Labels:ValuePreview"]</MudTh>
+                        <MudTh Style="width: 150px;">@L["KeyExplorer:Labels:Actions"]</MudTh>
                     </HeaderContent>
                     <RowTemplate>
                         <MudTd DataLabel="Key">
@@ -138,7 +139,7 @@
                         </MudTd>
                         <MudTd DataLabel="操作">
                             <div class="d-flex gap-1">
-                                <MudTooltip Text="查看">
+                                <MudTooltip Text="@L["KeyExplorer:Actions:View"]">
                                     <MudIconButton Icon="@Icons.Material.Filled.Visibility"
                                                    Size="Size.Small"
                                                    Color="Color.Info"
@@ -147,7 +148,7 @@
 
                                 @if (Options.AllowKeyEditing)
                                 {
-                                    <MudTooltip Text="编辑">
+                                    <MudTooltip Text="@L["KeyExplorer:Actions:Edit"]">
                                         <MudIconButton Icon="@Icons.Material.Filled.Edit"
                                                        Size="Size.Small"
                                                        Color="Color.Primary"
@@ -157,7 +158,7 @@
 
                                 @if (Options.AllowKeyDeletion)
                                 {
-                                    <MudTooltip Text="删除">
+                                    <MudTooltip Text="@L["KeyExplorer:Actions:Delete"]">
                                         <MudIconButton Icon="@Icons.Material.Filled.Delete"
                                                        Size="Size.Small"
                                                        Color="Color.Error"
@@ -171,12 +172,12 @@
             }
             else if (hasSearched)
             {
-                <MudAlert Severity="Severity.Info">未找到匹配的 Key</MudAlert>
+                <MudAlert Severity="Severity.Info">@L["KeyExplorer:Messages:NoKeysFound"]</MudAlert>
             }
             else
             {
                 <MudText Class="text-center pa-4" Color="Color.Secondary">
-                    选择一个 Provider 并输入搜索条件开始查询
+                    @L["KeyExplorer:Messages:SelectProviderToStart"]
                 </MudText>
             }
         </MudPaper>
@@ -225,20 +226,20 @@
     private string GetSearchLabel()
     {
         return selectedProvider?.SupportsKeyScanning == true
-            ? "Key 模式 (例如: user:*, session:*)"
-            : "Key 名称 (完整名称)";
+            ? L["KeyExplorer:Labels:KeyPattern"]
+            : L["KeyExplorer:Labels:KeyName"];
     }
 
     private string GetSearchPlaceholder()
     {
         return selectedProvider?.SupportsKeyScanning == true
-            ? "*"
-            : "输入完整 Key 名称";
+            ? L["KeyExplorer:Placeholders:PatternSearch"]
+            : L["KeyExplorer:Placeholders:FullKeyName"];
     }
 
     private string GetSearchButtonText()
     {
-        return selectedProvider?.SupportsKeyScanning == true ? "扫描" : "查询";
+        return selectedProvider?.SupportsKeyScanning == true ? L["KeyExplorer:Actions:Scan"] : L["KeyExplorer:Actions:Query"];
     }
 
     private async Task SearchKeysAsync()
@@ -336,7 +337,7 @@
         };
 
         var options = new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true };
-        await DialogService.ShowAsync<KeyEditorDialog>($"查看 Key: {keyInfo.Key}", parameters, options);
+        await DialogService.ShowAsync<KeyEditorDialog>(L["KeyExplorer:Dialogs:ViewKeyTitle", keyInfo.Key], parameters, options);
     }
 
     private async Task EditKey(StateStoreKeyInfo keyInfo)
@@ -355,7 +356,7 @@
         };
 
         var options = new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true };
-        await DialogService.ShowAsync<KeyEditorDialog>($"编辑 Key: {keyInfo.Key}", parameters, options);
+        await DialogService.ShowAsync<KeyEditorDialog>(L["KeyExplorer:Dialogs:EditKeyTitle", keyInfo.Key], parameters, options);
     }
 
     private void OnKeySaved(StateStoreKeyInfo updatedKey)
@@ -367,7 +368,7 @@
             existing.ETag = updatedKey.ETag;
         }
 
-        Snackbar.Add("Key 保存成功", Severity.Success);
+        Snackbar.Add(L["KeyExplorer:Messages:KeySaveSuccess"], Severity.Success);
         StateHasChanged();
     }
 
@@ -380,24 +381,24 @@
         };
 
         var options = new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true };
-        await DialogService.ShowAsync<KeyCreateDialog>("新建 Key", parameters, options);
+        await DialogService.ShowAsync<KeyCreateDialog>(L["KeyCreate:Dialogs:Title"], parameters, options);
     }
 
     private void OnKeyCreated(StateStoreKeyInfo newKey)
     {
         keys.Insert(0, newKey);
         scanResult = scanResult with { TotalCount = scanResult.TotalCount + 1 };
-        Snackbar.Add("Key 创建成功", Severity.Success);
+        Snackbar.Add(L["KeyExplorer:Messages:KeyCreateSuccess"], Severity.Success);
         StateHasChanged();
     }
 
     private async Task DeleteKey(StateStoreKeyInfo keyInfo)
     {
         var confirmed = await DialogService.ShowMessageBox(
-            "删除 Key",
-            $"确定要删除 Key '{keyInfo.Key}' 吗？",
-            "删除",
-            "取消");
+            L["KeyExplorer:Dialogs:DeleteKeyTitle"],
+            L["KeyExplorer:Dialogs:DeleteKeyMessage", keyInfo.Key],
+            L["KeyExplorer:Dialogs:DeleteKeyConfirm"],
+            L["KeyExplorer:Dialogs:DeleteKeyCancel"]);
 
         if (confirmed == true && selectedProvider != null)
         {
@@ -408,13 +409,13 @@
 
             if (result.IsFailed(out var error))
             {
-                Snackbar.Add($"删除 Key 失败: {error.Message}", Severity.Error);
+                Snackbar.Add(L["KeyExplorer:Messages:KeyDeleteFailed", error.Message], Severity.Error);
             }
             else
             {
                 keys.Remove(keyInfo);
                 scanResult = scanResult with { TotalCount = scanResult.TotalCount - 1 };
-                Snackbar.Add("Key 删除成功", Severity.Success);
+                Snackbar.Add(L["KeyExplorer:Messages:KeyDeleteSuccess"], Severity.Success);
                 StateHasChanged();
             }
         }
@@ -425,10 +426,10 @@
         if (!selectedKeys.Any() || selectedProvider == null) return;
 
         var confirmed = await DialogService.ShowMessageBox(
-            "批量删除 Key",
-            $"确定要删除选中的 {selectedKeys.Count} 个 Key 吗？",
-            "全部删除",
-            "取消");
+            L["KeyExplorer:Dialogs:BatchDeleteTitle"],
+            L["KeyExplorer:Dialogs:BatchDeleteMessage", selectedKeys.Count],
+            L["KeyExplorer:Dialogs:BatchDeleteConfirm"],
+            L["KeyExplorer:Dialogs:DeleteKeyCancel"]);
 
         if (confirmed == true)
         {
@@ -438,7 +439,7 @@
 
             if (result.IsFailed(out var error))
             {
-                Snackbar.Add($"批量删除 Key 失败: {error.Message}", Severity.Error);
+                Snackbar.Add(L["KeyExplorer:Messages:BatchDeleteFailed", error.Message], Severity.Error);
             }
             else
             {
@@ -448,7 +449,7 @@
                 }
                 scanResult = scanResult with { TotalCount = scanResult.TotalCount - selectedKeys.Count };
                 selectedKeys.Clear();
-                Snackbar.Add(result.Message ?? "删除成功", Severity.Success);
+                Snackbar.Add(result.Message ?? L["KeyExplorer:Messages:DeleteSuccess"], Severity.Success);
                 StateHasChanged();
             }
         }

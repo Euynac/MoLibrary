@@ -1,0 +1,169 @@
+{
+  "texts": {
+    "Dashboard": {
+      "PageTitle": "State Store Management",
+      "Title": "State Store Management",
+      "Tabs": {
+        "ProviderOverview": "Provider Overview",
+        "KeyBrowser": "Key Browser"
+      },
+      "Messages": {
+        "NoProviders": "No StateStore Provider registered",
+        "LoadProviderFailed": "Failed to load Provider: {0}"
+      }
+    },
+    "ProviderList": {
+      "Labels": {
+        "RegisteredProviders": "Registered StateStore Providers"
+      },
+      "Actions": {
+        "Refresh": "Refresh"
+      },
+      "Messages": {
+        "NoProvidersFound": "No registered StateStore Providers found"
+      }
+    },
+    "ProviderCard": {
+      "Labels": {
+        "KeyScanning": "Key Scanning",
+        "NoScanningSupport": "No Scanning Support",
+        "Distributed": "Distributed",
+        "HasConfiguration": "Has Configuration"
+      },
+      "Actions": {
+        "ViewDetails": "View Details"
+      }
+    },
+    "ProviderDetail": {
+      "Tabs": {
+        "ProviderInfo": "Provider Info",
+        "ConfigOptions": "Configuration Options"
+      },
+      "Labels": {
+        "ProviderType": "Provider Type",
+        "ServiceKey": "Service Key",
+        "DefaultNoKey": "Default (No Key)",
+        "StorageMode": "Storage Mode",
+        "Distributed": "Distributed",
+        "LocalMemory": "Local Memory",
+        "ImplementationType": "Implementation Type",
+        "SupportedCapabilities": "Supported Capabilities"
+      },
+      "Capabilities": {
+        "KeyScanning": "Key Scanning",
+        "NoScanning": "No Scanning Support",
+        "RawStringRetrieval": "Raw String Retrieval",
+        "QueryState": "Query State",
+        "BulkOperations": "Bulk Operations"
+      },
+      "Actions": {
+        "Close": "Close"
+      }
+    },
+    "KeyExplorer": {
+      "Labels": {
+        "SelectProvider": "Select Provider",
+        "KeyPattern": "Key Pattern (e.g., user:*, session:*)",
+        "KeyName": "Key Name (Full Name)",
+        "KeyNameColumn": "Key Name",
+        "ValuePreview": "Value Preview",
+        "Actions": "Actions"
+      },
+      "Placeholders": {
+        "PatternSearch": "*",
+        "FullKeyName": "Enter full Key name"
+      },
+      "Actions": {
+        "Scan": "Scan",
+        "Query": "Query",
+        "Create": "Create",
+        "View": "View",
+        "Edit": "Edit",
+        "Delete": "Delete",
+        "DeleteSelected": "Delete Selected ({0})"
+      },
+      "Messages": {
+        "NoScanningSupport": "This Provider does not support Key scanning",
+        "EnterFullKeyName": "Please enter the full Key name to query.",
+        "FoundKeys": "Found {0} Keys",
+        "ShowingFirst": "(Showing first {0})",
+        "NoKeysFound": "No matching Keys found",
+        "SelectProviderToStart": "Select a Provider and enter search criteria to start",
+        "KeySaveSuccess": "Key saved successfully",
+        "KeyCreateSuccess": "Key created successfully",
+        "KeyDeleteSuccess": "Key deleted successfully",
+        "KeyDeleteFailed": "Failed to delete Key: {0}",
+        "BatchDeleteFailed": "Failed to batch delete Keys: {0}",
+        "DeleteSuccess": "Deleted successfully"
+      },
+      "Dialogs": {
+        "DeleteKeyTitle": "Delete Key",
+        "DeleteKeyMessage": "Are you sure you want to delete Key '{0}'?",
+        "DeleteKeyConfirm": "Delete",
+        "DeleteKeyCancel": "Cancel",
+        "BatchDeleteTitle": "Batch Delete Keys",
+        "BatchDeleteMessage": "Are you sure you want to delete {0} selected Keys?",
+        "BatchDeleteConfirm": "Delete All",
+        "ViewKeyTitle": "View Key: {0}",
+        "EditKeyTitle": "Edit Key: {0}"
+      }
+    },
+    "KeyEditor": {
+      "Labels": {
+        "KeyName": "Key Name",
+        "ETag": "ETag",
+        "TTL": "TTL (seconds, 0 for permanent)",
+        "TTLUnit": "seconds",
+        "JsonValue": "JSON Value",
+        "JsonHelperText": "Enter valid JSON value"
+      },
+      "Actions": {
+        "FormatJson": "Format JSON",
+        "MinifyJson": "Minify JSON",
+        "Cancel": "Cancel",
+        "Save": "Save"
+      },
+      "Messages": {
+        "FormatFailed": "JSON formatting failed: {0}",
+        "MinifyFailed": "JSON minification failed: {0}"
+      }
+    },
+    "KeyCreate": {
+      "Dialogs": {
+        "Title": "Create Key"
+      },
+      "Labels": {
+        "KeyName": "Key Name",
+        "KeyNameRequired": "Please enter Key name",
+        "TTL": "TTL (seconds, 0 for permanent)",
+        "TTLUnit": "seconds",
+        "JsonValue": "JSON Value",
+        "JsonHelperText": "Enter valid JSON value"
+      },
+      "Placeholders": {
+        "KeyNameExample": "e.g., user:123, session:abc",
+        "JsonExample": "e.g., {\"name\": \"test\", \"count\": 1}"
+      },
+      "Actions": {
+        "FormatJson": "Format JSON",
+        "MinifyJson": "Minify JSON",
+        "Cancel": "Cancel",
+        "Create": "Create"
+      },
+      "Messages": {
+        "FormatFailed": "JSON formatting failed: {0}",
+        "MinifyFailed": "JSON minification failed: {0}",
+        "KeyNameRequired": "Please enter Key name",
+        "KeyExists": "Key already exists, please use a different name or edit the existing Key"
+      }
+    },
+    "KeyValuePreview": {
+      "Actions": {
+        "LoadValue": "Load Value"
+      },
+      "Labels": {
+        "Empty": "(Empty)"
+      }
+    }
+  }
+}

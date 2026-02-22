@@ -8,16 +8,17 @@
 @inject StateStoreUIService StateStoreService
 @inject IOptions<ModuleStateStoreUIOption> Options
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<StateStoreResource> L
 
-<PageTitle>状态存储管理</PageTitle>
+<PageTitle>@L["Dashboard:PageTitle"]</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
-    <MudText Typo="Typo.h4" Class="mb-4">状态存储管理</MudText>
+    <MudText Typo="Typo.h4" Class="mb-4">@L["Dashboard:Title"]</MudText>
 
     <MudTabs Elevation="4" Rounded="true" Color="Color.Primary"
              @bind-ActivePanelIndex="activeTabIndex"
              @bind-ActivePanelIndex:after="OnTabChangedAsync">
-        <MudTabPanel Text="Provider 概览" Icon="@Icons.Material.Filled.Hub">
+        <MudTabPanel Text="@L["Dashboard:Tabs:ProviderOverview"]" Icon="@Icons.Material.Filled.Hub">
             <div class="pa-4">
                 <StateStoreProviderList Providers="providers"
                                         OnRefresh="LoadProvidersAsync"
@@ -25,7 +26,7 @@
             </div>
         </MudTabPanel>
 
-        <MudTabPanel Text="Key 浏览器" Icon="@Icons.Material.Filled.Key">
+        <MudTabPanel Text="@L["Dashboard:Tabs:KeyBrowser"]" Icon="@Icons.Material.Filled.Key">
             <div class="pa-4">
                 @if (providers.Any())
                 {
@@ -35,7 +36,7 @@
                 else if (!isLoading)
                 {
                     <MudAlert Severity="Severity.Info">
-                        未注册任何 StateStore Provider
+                        @L["Dashboard:Messages:NoProviders"]
                     </MudAlert>
                 }
             </div>
@@ -67,7 +68,7 @@
 
         if (StateStoreService.GetRegisteredProviders().IsFailed(out var error, out var data))
         {
-            Snackbar.Add($"加载 Provider 失败: {error}", Severity.Error);
+            Snackbar.Add(L["Dashboard:Messages:LoadProviderFailed", error], Severity.Error);
         }
         else
         {

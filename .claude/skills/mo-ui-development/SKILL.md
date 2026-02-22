@@ -237,24 +237,72 @@ For detailed component architecture patterns (hierarchy, communication, state ma
 
 **Always use localization for user-facing text** — never hardcode text strings in components.
 
-**Inject the localizer** at the top of your component:
+#### Recommended: Decentralized Pattern (Module-Specific Resources)
 
-```razor
-@inject IStringLocalizer<SharedResource> L
+Each UI module should manage its own localization resources independently. This improves modularity and reduces coupling.
+
+**1. Create marker class** in your UI module:
+
+```csharp
+// Monica.StateStore.UI/Localization/StateStoreResource.cs
+namespace Monica.StateStore.UI.Localization;
+
+/// <summary>
+/// Marker class for StateStore UI localization resources
+/// </summary>
+public class StateStoreResource
+{
+}
 ```
 
-**Basic usage:**
+**2. Add JSON files** in `Localization/{ResourceName}/` folder:
+- `Localization/StateStoreResource/zh-CN.json`
+- `Localization/StateStoreResource/en-US.json`
+
+**3. Configure csproj** to embed JSON files:
+
+```xml
+<ItemGroup>
+  <EmbeddedResource Include="Localization\**\*.json" />
+</ItemGroup>
+```
+
+**4. Inject in components:**
 
 ```razor
+@using Microsoft.Extensions.Localization
+@using Monica.StateStore.UI.Localization
+@inject IStringLocalizer<StateStoreResource> L
+
+<MudButton>@L["Dashboard:Title"]</MudButton>
+<MudText>@L["KeyExplorer:Actions:Scan"]</MudText>
+```
+
+**Key naming**: Use hierarchical paths without module prefix (`Dashboard:Title`, not `StateStore:Dashboard:Title`).
+
+**Auto-discovery**: `MoStringLocalizerFactory` automatically discovers resources from all assemblies starting with "Monica" in namespaces containing ".Localization".
+
+#### Legacy: Centralized Pattern (SharedResource)
+
+Existing modules may use the centralized SharedResource pattern:
+
+```razor
+@using Monica.UI.Localization
+@inject IStringLocalizer<SharedResource> L
+
 <MudButton>@L["Common:Save"]</MudButton>
 <MudText>@L["ModuleSystem:Dashboard:Title"]</MudText>
 ```
 
-**Key naming convention**: Use colon-separated hierarchical paths matching JSON structure (`Category:SubCategory:Key`).
+**Location:** `Monica.UI/Localization/SharedResource/zh-CN.json` and `en-US.json`
+
+**When to use**: Only for existing modules already using SharedResource. New modules should use the decentralized pattern.
+
+#### General Requirements
 
 **Both languages required:** When adding new keys, update both `zh-CN.json` and `en-US.json`.
 
-**Remove unused keys:** Localization files should only contain keys that are actively used in the code. Unused keys create maintenance burden and confusion.
+**Remove unused keys:** Localization files should only contain keys that are actively used in the code.
 
 **Validation workflow:**
 ```bash
@@ -262,10 +310,9 @@ For detailed component architecture patterns (hierarchy, communication, state ma
 python .claude/skills/mo-ui-development/scripts/validate_localization.py
 
 # If unused keys are found, remove them from both language files
-# The validation script will list all unused keys that need to be removed
 ```
 
-For complete localization patterns, key naming conventions, parameterized strings, and migration guide, see `references/localization-guide.md`.
+For complete patterns, auto-discovery mechanism, JSON structure, parameterized strings, and migration guide, see `references/localization-guide.md`.
 
 ## Service Error Handling in Components
 

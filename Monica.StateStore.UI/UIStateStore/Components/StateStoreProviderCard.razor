@@ -1,5 +1,6 @@
 @using Monica.StateStore.Providers
 @using Monica.StateStore.UI.Models
+@inject IStringLocalizer<StateStoreResource> L
 
 <MudCard Elevation="2">
     <MudCardHeader>
@@ -35,14 +36,14 @@
                 {
                     <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">
                         <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Small" Class="mr-1" />
-                        Key 扫描
+                        @L["ProviderCard:Labels:KeyScanning"]
                     </MudChip>
                 }
                 else
                 {
                     <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
                         <MudIcon Icon="@Icons.Material.Filled.SearchOff" Size="Size.Small" Class="mr-1" />
-                        不支持扫描
+                        @L["ProviderCard:Labels:NoScanningSupport"]
                     </MudChip>
                 }
 
@@ -50,7 +51,7 @@
                 {
                     <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
                         <MudIcon Icon="@Icons.Material.Filled.Cloud" Size="Size.Small" Class="mr-1" />
-                        分布式
+                        @L["ProviderCard:Labels:Distributed"]
                     </MudChip>
                 }
 
@@ -58,7 +59,7 @@
                 {
                     <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Outlined">
                         <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" Class="mr-1" />
-                        有配置项
+                        @L["ProviderCard:Labels:HasConfiguration"]
                     </MudChip>
                 }
             </div>
@@ -70,7 +71,7 @@
                    Color="Color.Primary"
                    EndIcon="@Icons.Material.Filled.OpenInNew"
                    OnClick="OnViewDetails">
-            查看详情
+            @L["ProviderCard:Actions:ViewDetails"]
         </MudButton>
     </MudCardActions>
 </MudCard>

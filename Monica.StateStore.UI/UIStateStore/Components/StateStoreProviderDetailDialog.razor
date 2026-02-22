@@ -1,6 +1,7 @@
 @using Monica.StateStore.Providers
 @using Monica.StateStore.UI.Models
 @using Monica.UI.UIModuleSystem.Components
+@inject IStringLocalizer<StateStoreResource> L
 
 <MudDialog @bind-Visible="IsVisible" Options="DialogOptions">
     <DialogContent>
@@ -19,14 +20,14 @@
             </div>
 
             <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true">
-                <MudTabPanel Text="Provider 信息" Icon="@Icons.Material.Filled.Info">
+                <MudTabPanel Text="@L["ProviderDetail:Tabs:ProviderInfo"]" Icon="@Icons.Material.Filled.Info">
                     <div class="tab-content pa-4">
                         <MudGrid Spacing="3">
                             <MudItem xs="12" sm="6">
                                 <MudPaper Class="pa-4" Elevation="2">
                                     <div class="d-flex align-center mb-2">
                                         <MudIcon Icon="@Icons.Material.Filled.Category" Color="Color.Primary" Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">Provider 类型</MudText>
+                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@L["ProviderDetail:Labels:ProviderType"]</MudText>
                                     </div>
                                     <MudChip T="string" Color="@GetProviderColor()" Size="Size.Small">
                                         @Provider.ProviderTypeName
@@ -37,10 +38,10 @@
                                 <MudPaper Class="pa-4" Elevation="2">
                                     <div class="d-flex align-center mb-2">
                                         <MudIcon Icon="@Icons.Material.Filled.Key" Color="Color.Info" Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">服务键</MudText>
+                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@L["ProviderDetail:Labels:ServiceKey"]</MudText>
                                     </div>
                                     <MudText Typo="Typo.body1" Color="Color.Secondary">
-                                        @(Provider.ServiceKey ?? "默认 (无键)")
+                                        @(Provider.ServiceKey ?? L["ProviderDetail:Labels:DefaultNoKey"])
                                     </MudText>
                                 </MudPaper>
                             </MudItem>
@@ -50,12 +51,12 @@
                                         <MudIcon Icon="@(Provider.IsDistributed ? Icons.Material.Filled.Cloud : Icons.Material.Filled.Memory)"
                                                  Color="@(Provider.IsDistributed ? Color.Info : Color.Success)"
                                                  Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">存储模式</MudText>
+                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@L["ProviderDetail:Labels:StorageMode"]</MudText>
                                     </div>
                                     <MudChip T="string"
                                              Color="@(Provider.IsDistributed ? Color.Info : Color.Success)"
                                              Size="Size.Small">
-                                        @(Provider.IsDistributed ? "分布式" : "本地内存")
+                                        @(Provider.IsDistributed ? L["ProviderDetail:Labels:Distributed"] : L["ProviderDetail:Labels:LocalMemory"])
                                     </MudChip>
                                 </MudPaper>
                             </MudItem>
@@ -63,7 +64,7 @@
                                 <MudPaper Class="pa-4" Elevation="2">
                                     <div class="d-flex align-center mb-2">
                                         <MudIcon Icon="@Icons.Material.Filled.Code" Color="Color.Secondary" Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">实现类型</MudText>
+                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@L["ProviderDetail:Labels:ImplementationType"]</MudText>
                                     </div>
                                     <MudText Typo="Typo.body1" Color="Color.Secondary">
                                         @Provider.ImplementationType
@@ -74,42 +75,42 @@
                                 <MudPaper Class="pa-4" Elevation="2">
                                     <div class="d-flex align-center mb-3">
                                         <MudIcon Icon="@Icons.Material.Filled.Extension" Color="Color.Tertiary" Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">支持的能力</MudText>
+                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@L["ProviderDetail:Labels:SupportedCapabilities"]</MudText>
                                     </div>
                                     <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
                                         @if (Provider.SupportsKeyScanning)
                                         {
                                             <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">
                                                 <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Small" Class="mr-1" />
-                                                Key 扫描
+                                                @L["ProviderDetail:Capabilities:KeyScanning"]
                                             </MudChip>
                                         }
                                         else
                                         {
                                             <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
                                                 <MudIcon Icon="@Icons.Material.Filled.SearchOff" Size="Size.Small" Class="mr-1" />
-                                                不支持扫描
+                                                @L["ProviderDetail:Capabilities:NoScanning"]
                                             </MudChip>
                                         }
                                         @if (Provider.Capabilities.HasFlag(EStateStoreCapabilities.RawStringRetrieval))
                                         {
                                             <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
                                                 <MudIcon Icon="@Icons.Material.Filled.TextFields" Size="Size.Small" Class="mr-1" />
-                                                原始字符串检索
+                                                @L["ProviderDetail:Capabilities:RawStringRetrieval"]
                                             </MudChip>
                                         }
                                         @if (Provider.Capabilities.HasFlag(EStateStoreCapabilities.QueryState))
                                         {
                                             <MudChip T="string" Size="Size.Small" Color="Color.Tertiary" Variant="Variant.Outlined">
                                                 <MudIcon Icon="@Icons.Material.Filled.QueryStats" Size="Size.Small" Class="mr-1" />
-                                                查询状态
+                                                @L["ProviderDetail:Capabilities:QueryState"]
                                             </MudChip>
                                         }
                                         @if (Provider.Capabilities.HasFlag(EStateStoreCapabilities.BulkOperations))
                                         {
                                             <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
                                                 <MudIcon Icon="@Icons.Material.Filled.DynamicFeed" Size="Size.Small" Class="mr-1" />
-                                                批量操作
+                                                @L["ProviderDetail:Capabilities:BulkOperations"]
                                             </MudChip>
                                         }
                                     </MudStack>
@@ -119,7 +120,7 @@
                     </div>
                 </MudTabPanel>
 
-                <MudTabPanel Text="配置选项" Icon="@Icons.Material.Filled.Settings">
+                <MudTabPanel Text="@L["ProviderDetail:Tabs:ConfigOptions"]" Icon="@Icons.Material.Filled.Settings">
                     <div class="tab-content pa-4">
                         <ModuleOptionDisplay OptionType="@Provider.OptionType"
                                            OptionInstance="@Provider.OptionInstance" />
@@ -130,7 +131,7 @@
     </DialogContent>
     <DialogActions>
         <MudButton Color="Color.Primary" OnClick="OnClose" StartIcon="@Icons.Material.Filled.Close">
-            关闭
+            @L["ProviderDetail:Actions:Close"]
         </MudButton>
     </DialogActions>
 </MudDialog>
