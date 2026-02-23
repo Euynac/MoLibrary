@@ -42,28 +42,25 @@ public class AIChatUIService(
     /// <summary>
     /// Create a new session with optional RAG knowledge bases.
     /// </summary>
-    public async Task<ChatSessionInfo> CreateSessionAsync(
+    public async Task<AgentSessionState> CreateSessionAsync(
         string? providerId = null,
         string? title = null,
         IEnumerable<string>? knowledgeBaseIds = null,
         CancellationToken ct = default)
     {
-        var state = await chatService.CreateSessionAsync(providerId, title, null, knowledgeBaseIds, ct);
-
-        var sessionInfo = new ChatSessionInfo
+        var config = new SessionConfiguration
         {
-            SessionId = state.SessionId,
-            Title = state.Title,
-            ProviderId = state.ProviderId,
-            ModelName = state.ModelName,
-            SystemPrompt = state.SystemPrompt,
-            ActiveKnowledgeBaseIds = state.ActiveKnowledgeBaseIds
+            ProviderId = providerId,
+            Title = title,
+            KnowledgeBaseIds = knowledgeBaseIds?.ToList()
         };
 
-        sessionStorage.AddSession(sessionInfo);
+        var state = await chatService.CreateSessionAsync(config, ct);
+
+        sessionStorage.AddSession(state);
         sessionStorage.CurrentSessionId = state.SessionId;
 
-        return sessionInfo;
+        return state;
     }
 
     /// <summary>
@@ -76,22 +73,28 @@ public class AIChatUIService(
         bool reasoningEnabled = false,
         CancellationToken ct = default)
     {
-        var sessionInfo = sessionStorage.GetSession(sessionId);
-        if (sessionInfo != null)
+        var state = sessionStorage.GetSession(sessionId);
+        if (state != null)
         {
-            sessionInfo.Messages.Add(new AIChatMessage
+            state.Messages.Add(new AIChatMessage
             {
                 Role = AIChatRole.User,
                 Content = message
             });
 
-            if (sessionInfo.Messages.Count == 1)
+            if (state.Messages.Count == 1)
             {
-                sessionInfo.Title = message.Length > 50 ? message[..50] + "..." : message;
+                state.Title = message.Length > 50 ? message[..50] + "..." : message;
+            }
+
+            // Update reasoning mode if changed
+            if (state.ReasoningEnabled != reasoningEnabled)
+            {
+                state.ReasoningEnabled = reasoningEnabled;
             }
         }
 
-        return StreamResponseAsync(sessionId, message, sessionInfo, reasoningEnabled, ct);
+        return StreamResponseAsync(sessionId, message, state, ct);
     }
 
     /// <summary>
@@ -100,23 +103,12 @@ public class AIChatUIService(
     private async IAsyncEnumerable<AgentResponseUpdate> ProcessStreamAsync(
         string sessionId,
         string message,
-        ChatSessionInfo sessionInfo,
-        bool reasoningEnabled,
+        AgentSessionState state,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
-        var request = new AIChatRequest
-        {
-            SessionId = sessionId,
-            Message = message,
-            Streaming = true,
-            ProviderId = sessionInfo.ProviderId,
-            ModelName = sessionInfo.ModelName,
-            ReasoningEnabled = reasoningEnabled
-        };
-
         var accumulator = new StreamingContentAccumulator();
 
-        await foreach (var update in chatService.SendMessageStreamingAsync(request, ct))
+        await foreach (var update in chatService.SendMessageStreamingAsync(state, message, ct))
         {
             foreach (var content in update.Contents)
             {
@@ -125,9 +117,9 @@ public class AIChatUIService(
             yield return update;
         }
 
-        var aiMessage = accumulator.CreateMessage(sessionInfo.ProviderId ?? string.Empty, sessionInfo.ModelName ?? string.Empty);
-        sessionInfo.Messages.Add(aiMessage);
-        sessionInfo.UpdatedAt = DateTimeOffset.UtcNow;
+        var aiMessage = accumulator.CreateMessage(state.ProviderId ?? string.Empty, state.ModelName ?? string.Empty);
+        state.Messages.Add(aiMessage);
+        state.UpdatedAt = DateTimeOffset.UtcNow;
     }
 
     /// <summary>
@@ -137,14 +129,13 @@ public class AIChatUIService(
     private IAsyncEnumerable<AgentResponseUpdate> StreamResponseAsync(
         string sessionId,
         string message,
-        ChatSessionInfo? sessionInfo,
-        bool reasoningEnabled = false,
+        AgentSessionState? state,
         CancellationToken ct = default)
     {
-        if (sessionInfo == null)
+        if (state == null)
             return AsyncEnumerableEmpty<AgentResponseUpdate>();
 
-        return ProcessStreamAsync(sessionId, message, sessionInfo, reasoningEnabled, ct);
+        return ProcessStreamAsync(sessionId, message, state, ct);
     }
 
     /// <summary>
@@ -158,23 +149,23 @@ public class AIChatUIService(
         bool reasoningEnabled = false,
         CancellationToken ct = default)
     {
-        var sessionInfo = sessionStorage.GetSession(sessionId);
-        if (sessionInfo == null)
+        var state = sessionStorage.GetSession(sessionId);
+        if (state == null)
         {
             return AsyncEnumerableEmpty<AgentResponseUpdate>();
         }
 
-        var index = sessionInfo.Messages.FindIndex(m => m.Id == messageId);
+        var index = state.Messages.FindIndex(m => m.Id == messageId);
         if (index < 0)
         {
             return AsyncEnumerableEmpty<AgentResponseUpdate>();
         }
 
         // Remove all messages from this index onwards
-        sessionInfo.Messages.RemoveRange(index, sessionInfo.Messages.Count - index);
+        state.Messages.RemoveRange(index, state.Messages.Count - index);
 
         // Sync backend: truncate agent history to match UI state
-        chatService.TruncateSessionHistory(sessionId, index);
+        state.TruncateHistory(index);
 
         return SendMessageStreamingAsync(sessionId, newContent, reasoningEnabled, ct);
     }
@@ -189,32 +180,32 @@ public class AIChatUIService(
         bool reasoningEnabled = false,
         CancellationToken ct = default)
     {
-        var sessionInfo = sessionStorage.GetSession(sessionId);
-        if (sessionInfo == null)
+        var state = sessionStorage.GetSession(sessionId);
+        if (state == null)
         {
             return AsyncEnumerableEmpty<AgentResponseUpdate>();
         }
 
-        var index = sessionInfo.Messages.FindIndex(m => m.Id == messageId);
+        var index = state.Messages.FindIndex(m => m.Id == messageId);
         if (index < 0)
         {
             return AsyncEnumerableEmpty<AgentResponseUpdate>();
         }
 
-        var userMessage = sessionInfo.Messages.Take(index).LastOrDefault(m => m.Role == AIChatRole.User);
+        var userMessage = state.Messages.Take(index).LastOrDefault(m => m.Role == AIChatRole.User);
         if (userMessage == null)
         {
             return AsyncEnumerableEmpty<AgentResponseUpdate>();
         }
 
         // Remove the AI message and any after it
-        sessionInfo.Messages.RemoveRange(index, sessionInfo.Messages.Count - index);
+        state.Messages.RemoveRange(index, state.Messages.Count - index);
 
         // Sync backend: truncate agent history to match UI state
-        chatService.TruncateSessionHistory(sessionId, index);
+        state.TruncateHistory(index);
 
         // Stream new response without adding user message (it already exists in UI)
-        return StreamResponseOnlyAsync(sessionId, userMessage.Content, sessionInfo, reasoningEnabled, ct);
+        return StreamResponseOnlyAsync(sessionId, userMessage.Content, state, ct);
     }
 
     /// <summary>
@@ -225,11 +216,10 @@ public class AIChatUIService(
     private IAsyncEnumerable<AgentResponseUpdate> StreamResponseOnlyAsync(
         string sessionId,
         string message,
-        ChatSessionInfo sessionInfo,
-        bool reasoningEnabled = false,
+        AgentSessionState state,
         CancellationToken ct = default)
     {
-        return ProcessStreamAsync(sessionId, message, sessionInfo, reasoningEnabled, ct);
+        return ProcessStreamAsync(sessionId, message, state, ct);
     }
 
     /// <summary>
@@ -246,12 +236,8 @@ public class AIChatUIService(
     /// </summary>
     public bool DeleteSession(string sessionId)
     {
-        var deleted = chatService.DeleteSession(sessionId);
-        if (deleted)
-        {
-            sessionStorage.RemoveSession(sessionId);
-        }
-        return deleted;
+        sessionStorage.RemoveSession(sessionId);
+        return true;
     }
 
     /// <summary>
@@ -263,46 +249,53 @@ public class AIChatUIService(
     }
 
     /// <summary>
-    /// Update session system prompt
+    /// Update session system prompt.
+    /// Sets the NeedsRecreation flag; agent will be recreated on next message send.
     /// </summary>
-    public async Task<bool> UpdateSessionSystemPromptAsync(
+    public Task<bool> UpdateSessionSystemPromptAsync(
         string sessionId,
         string? systemPrompt,
         CancellationToken ct = default)
     {
-        if (!await chatService.UpdateSessionSystemPromptAsync(sessionId, systemPrompt, ct))
+        var state = sessionStorage.GetSession(sessionId);
+        if (state == null)
         {
-            return false;
+            return Task.FromResult(false);
         }
 
-        var session = sessionStorage.GetSession(sessionId);
-        if (session != null)
-        {
-            session.SystemPrompt = systemPrompt;
-            session.UpdatedAt = DateTimeOffset.UtcNow;
-        }
+        state.SystemPrompt = systemPrompt;
+        state.UpdatedAt = DateTimeOffset.UtcNow;
 
-        return true;
+        return Task.FromResult(true);
     }
 
     /// <summary>
-    /// Load sessions from backend
+    /// Update session configuration.
+    /// Changes to ProviderId, ModelName, SystemPrompt, KnowledgeBaseIds, or ReasoningEnabled
+    /// will trigger agent recreation on next message send.
     /// </summary>
-    public void LoadSessions()
+    public void UpdateSessionConfiguration(string sessionId, SessionConfiguration config)
     {
-        var sessions = chatService.GetAllSessions();
-        var sessionInfos = sessions.Select(s => new ChatSessionInfo
-        {
-            SessionId = s.SessionId,
-            Title = s.Title,
-            ProviderId = s.ProviderId,
-            ModelName = s.ModelName,
-            SystemPrompt = s.SystemPrompt,
-            ActiveKnowledgeBaseIds = s.ActiveKnowledgeBaseIds,
-            CreatedAt = s.CreatedAt,
-            UpdatedAt = s.UpdatedAt
-        }).ToList();
+        var state = sessionStorage.GetSession(sessionId);
+        if (state == null) return;
 
-        sessionStorage.LoadSessions(sessionInfos);
+        if (!string.IsNullOrEmpty(config.ProviderId))
+            state.ProviderId = config.ProviderId;
+
+        if (config.ModelName != null)
+            state.ModelName = config.ModelName;
+
+        if (config.SystemPrompt != null)
+            state.SystemPrompt = config.SystemPrompt;
+
+        if (config.KnowledgeBaseIds != null)
+            state.ActiveKnowledgeBaseIds = config.KnowledgeBaseIds;
+
+        state.ReasoningEnabled = config.ReasoningEnabled;
+
+        if (!string.IsNullOrEmpty(config.Title))
+            state.Title = config.Title;
+
+        state.UpdatedAt = DateTimeOffset.UtcNow;
     }
 }

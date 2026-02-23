@@ -1,5 +1,6 @@
 @using Microsoft.Extensions.Localization
 @using Monica.AI.UI.Localization
+@using Monica.AI.Services
 @inject IStringLocalizer<AIResource> L
 
 <div class="session-item-wrapper">
@@ -25,7 +26,7 @@
 </div>
 
 @code {
-    [Parameter] public required ChatSessionInfo Session { get; set; }
+    [Parameter] public required AgentSessionState Session { get; set; }
     [Parameter] public bool IsSelected { get; set; }
     [Parameter] public EventCallback OnClick { get; set; }
     [Parameter] public EventCallback OnDelete { get; set; }

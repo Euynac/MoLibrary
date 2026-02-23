@@ -149,97 +149,24 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
     }
 
     /// <summary>
-    /// 映射 AI 聊天端点
+    /// Map AI chat endpoints
     /// </summary>
-    /// <param name="routePrefix">路由前缀，默认为 "/ai"</param>
-    /// <returns>当前引导器实例</returns>
+    /// <param name="routePrefix">Route prefix, defaults to "/ai"</param>
+    /// <returns>Current guide instance</returns>
     public ModuleAIGuide MapAIEndpoints(string routePrefix = "/ai")
     {
         ConfigureEndpoints(builder =>
         {
             var endpoints = builder.WebApplication;
-            var chatService = endpoints.Services.GetRequiredService<AIChatService>();
             var providerFactory = endpoints.Services.GetRequiredService<IAIProviderFactory>();
 
-            // 获取所有 Provider
+            // Get all providers
             endpoints.MapGet($"{routePrefix}/providers", () =>
                 TypedResults.Ok(providerFactory.GetAllProviderInfos()));
 
-            // Create session
-            endpoints.MapPost($"{routePrefix}/sessions", async (CreateSessionRequest? request, CancellationToken ct) =>
-            {
-                var session = await chatService.CreateSessionAsync(
-                    request?.ProviderId,
-                    request?.Title,
-                    request?.SystemPrompt,
-                    knowledgeBaseIds: null,
-                    ct);
-                return TypedResults.Ok(new { session.SessionId, session.Title, session.ProviderId });
-            });
-
-            // Get all sessions
-            endpoints.MapGet($"{routePrefix}/sessions", () =>
-            {
-                var sessions = chatService.GetAllSessions();
-                return TypedResults.Ok(sessions.Select(s => new
-                {
-                    s.SessionId,
-                    s.Title,
-                    s.ProviderId,
-                    s.CreatedAt,
-                    s.UpdatedAt,
-                    s.MessageCount
-                }));
-            });
-
-            // Get session details
-            endpoints.MapGet($"{routePrefix}/sessions/{{sessionId}}", (string sessionId) =>
-            {
-                var session = chatService.GetSession(sessionId);
-                if (session == null)
-                {
-                    return Results.NotFound();
-                }
-                return Results.Ok(new
-                {
-                    session.SessionId,
-                    session.Title,
-                    session.ProviderId,
-                    session.ModelName,
-                    session.SystemPrompt,
-                    session.CreatedAt,
-                    session.UpdatedAt,
-                    session.MessageCount
-                });
-            });
-
-            // Delete session
-            endpoints.MapDelete($"{routePrefix}/sessions/{{sessionId}}", (string sessionId) =>
-            {
-                var deleted = chatService.DeleteSession(sessionId);
-                return deleted ? Results.NoContent() : Results.NotFound();
-            });
-
-            // Non-streaming chat
-            endpoints.MapPost($"{routePrefix}/chat", async (AIChatRequest request, CancellationToken ct) =>
-            {
-                try
-                {
-                    var response = await chatService.SendMessageAsync(request, ct);
-                    return Results.Ok(response);
-                }
-                catch (Exception ex)
-                {
-                    return Results.BadRequest(ex.Message);
-                }
-            });
-
-            // Streaming chat (SSE)
-            endpoints.MapPost($"{routePrefix}/chat/stream", (AIChatRequest request, CancellationToken ct) =>
-            {
-                var stream = chatService.SendMessageStreamingAsync(request, ct);
-                return TypedResults.ServerSentEvents(stream.ToSseItems(ct));
-            });
+            // Note: Session management endpoints removed as sessions are now managed by UI layer.
+            // API endpoints should be stateless and not manage sessions.
+            // For stateful chat, use the UI service layer (AIChatUIService).
         });
 
         return this;

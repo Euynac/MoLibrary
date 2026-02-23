@@ -1,14 +1,22 @@
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
+using Monica.AI.Models;
 
 namespace Monica.AI.Services;
 
 /// <summary>
-/// Lightweight state holder for a single chat session backed by the Microsoft Agent Framework.
-/// Replaces the former IChatSession/ChatSession with ChatClientAgent + AgentSession.
+/// Unified state holder for a single chat session backed by the Microsoft Agent Framework.
+/// Combines backend agent state with UI message history.
+/// Smart property setters automatically trigger agent recreation when configuration changes.
 /// </summary>
 public class AgentSessionState
 {
+    private string _providerId;
+    private string? _modelName;
+    private string? _systemPrompt;
+    private List<string>? _activeKnowledgeBaseIds;
+    private bool _reasoningEnabled;
+
     public AgentSessionState(
         ChatClientAgent agent,
         AgentSession session,
@@ -16,7 +24,7 @@ public class AgentSessionState
     {
         Agent = agent;
         Session = session;
-        ProviderId = providerId;
+        _providerId = providerId;
         SessionId = Guid.NewGuid().ToString("N");
         CreatedAt = DateTimeOffset.UtcNow;
         UpdatedAt = CreatedAt;
@@ -43,35 +51,125 @@ public class AgentSessionState
     public DateTimeOffset UpdatedAt { get; set; }
 
     /// <summary>
-    /// Current provider ID
+    /// Current provider ID.
+    /// Setting this property triggers agent recreation on next message send.
     /// </summary>
-    public string ProviderId { get; set; }
+    public string ProviderId
+    {
+        get => _providerId;
+        set
+        {
+            if (_providerId != value)
+            {
+                _providerId = value;
+                NeedsRecreation = true;
+            }
+        }
+    }
 
     /// <summary>
-    /// Current model name
+    /// Current model name.
+    /// Setting this property triggers agent recreation on next message send.
     /// </summary>
-    public string? ModelName { get; set; }
+    public string? ModelName
+    {
+        get => _modelName;
+        set
+        {
+            if (_modelName != value)
+            {
+                _modelName = value;
+                NeedsRecreation = true;
+            }
+        }
+    }
 
     /// <summary>
-    /// System prompt (passed as instructions on each agent run)
+    /// System prompt (passed as instructions on each agent run).
+    /// Setting this property triggers agent recreation on next message send.
     /// </summary>
-    public string? SystemPrompt { get; set; }
+    public string? SystemPrompt
+    {
+        get => _systemPrompt;
+        set
+        {
+            if (_systemPrompt != value)
+            {
+                _systemPrompt = value;
+                NeedsRecreation = true;
+            }
+        }
+    }
 
     /// <summary>
-    /// Active knowledge base IDs for this session (for UI display and session recreation).
+    /// Active knowledge base IDs for this session (for RAG integration).
     /// Null if RAG is not enabled for this session.
+    /// Setting this property triggers agent recreation on next message send.
     /// </summary>
-    public List<string>? ActiveKnowledgeBaseIds { get; set; }
+    public List<string>? ActiveKnowledgeBaseIds
+    {
+        get => _activeKnowledgeBaseIds;
+        set
+        {
+            // Compare list contents, not reference
+            var needsUpdate = false;
+            if (_activeKnowledgeBaseIds == null && value != null)
+                needsUpdate = true;
+            else if (_activeKnowledgeBaseIds != null && value == null)
+                needsUpdate = true;
+            else if (_activeKnowledgeBaseIds != null && value != null)
+            {
+                if (_activeKnowledgeBaseIds.Count != value.Count ||
+                    !_activeKnowledgeBaseIds.SequenceEqual(value))
+                    needsUpdate = true;
+            }
 
+            if (needsUpdate)
+            {
+                _activeKnowledgeBaseIds = value;
+                NeedsRecreation = true;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Whether reasoning/thinking mode is enabled for this session.
+    /// Setting this property triggers agent recreation on next message send.
+    /// </summary>
+    public bool ReasoningEnabled
+    {
+        get => _reasoningEnabled;
+        set
+        {
+            if (_reasoningEnabled != value)
+            {
+                _reasoningEnabled = value;
+                NeedsRecreation = true;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Indicates whether the agent needs to be recreated due to configuration changes.
+    /// This flag is checked before sending messages and reset after recreation.
+    /// </summary>
+    public bool NeedsRecreation { get; internal set; }
+
+    /// <summary>
+    /// Message history for UI display.
+    /// This list is managed by the UI service layer.
+    /// </summary>
+    public List<AIChatMessage> Messages { get; } = [];
+    
     /// <summary>
     /// The ChatClientAgent instance wrapping the IChatClient
     /// </summary>
-    public ChatClientAgent Agent { get; set; }
+    public ChatClientAgent Agent { get; internal set; }
 
     /// <summary>
     /// The agent session holding history and context provider references
     /// </summary>
-    public AgentSession Session { get; set; }
+    public AgentSession Session { get; internal set; }
 
     /// <summary>
     /// Get the chat history from the session
@@ -82,6 +180,15 @@ public class AgentSessionState
     /// Message count in the chat history
     /// </summary>
     public int MessageCount => ChatHistory?.Count ?? 0;
+
+    /// <summary>
+    /// Reset the recreation flag after agent has been recreated.
+    /// This method is called internally by AIChatService after recreation.
+    /// </summary>
+    public void ResetRecreationFlag()
+    {
+        NeedsRecreation = false;
+    }
 
     /// <summary>
     /// Truncate history to keep only the first N messages

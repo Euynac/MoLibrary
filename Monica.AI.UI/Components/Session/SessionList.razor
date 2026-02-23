@@ -1,5 +1,6 @@
 @using Microsoft.Extensions.Localization
 @using Monica.AI.UI.Localization
+@using Monica.AI.Services
 @inject IStringLocalizer<AIResource> L
 
 <div class="session-list">
@@ -41,7 +42,7 @@
 </div>
 
 @code {
-    [Parameter] public IReadOnlyList<ChatSessionInfo> Sessions { get; set; } = [];
+    [Parameter] public IReadOnlyList<AgentSessionState> Sessions { get; set; } = [];
     [Parameter] public string? CurrentSessionId { get; set; }
     [Parameter] public EventCallback OnNewSession { get; set; }
     [Parameter] public EventCallback<string> OnSelectSession { get; set; }

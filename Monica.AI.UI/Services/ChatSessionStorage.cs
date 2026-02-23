@@ -1,17 +1,18 @@
-using Monica.AI.Models;
+using Monica.AI.Services;
 
 namespace Monica.AI.UI.Services;
 
 /// <summary>
-/// 会话本地存储服务（用于 Blazor 组件间状态共享）
+/// Session storage service for Blazor component state sharing.
+/// Manages AgentSessionState instances for the UI layer.
 /// </summary>
 public class ChatSessionStorage
 {
-    private readonly List<ChatSessionInfo> _sessions = [];
+    private readonly List<AgentSessionState> _sessions = [];
     private string? _currentSessionId;
 
     /// <summary>
-    /// 当前会话 ID
+    /// Current session ID
     /// </summary>
     public string? CurrentSessionId
     {
@@ -27,33 +28,33 @@ public class ChatSessionStorage
     }
 
     /// <summary>
-    /// 所有会话列表
+    /// All sessions list
     /// </summary>
-    public IReadOnlyList<ChatSessionInfo> Sessions => _sessions.AsReadOnly();
+    public IReadOnlyList<AgentSessionState> Sessions => _sessions.AsReadOnly();
 
     /// <summary>
-    /// 当前会话变更事件
+    /// Current session changed event
     /// </summary>
     public event Action? CurrentSessionChanged;
 
     /// <summary>
-    /// 会话列表变更事件
+    /// Sessions list changed event
     /// </summary>
     public event Action? SessionsChanged;
 
     /// <summary>
-    /// 添加会话
+    /// Add session
     /// </summary>
-    public void AddSession(ChatSessionInfo session)
+    public void AddSession(AgentSessionState session)
     {
         _sessions.Insert(0, session);
         SessionsChanged?.Invoke();
     }
 
     /// <summary>
-    /// 更新会话
+    /// Update session
     /// </summary>
-    public void UpdateSession(string sessionId, Action<ChatSessionInfo> updateAction)
+    public void UpdateSession(string sessionId, Action<AgentSessionState> updateAction)
     {
         var session = _sessions.FirstOrDefault(s => s.SessionId == sessionId);
         if (session != null)
@@ -64,7 +65,7 @@ public class ChatSessionStorage
     }
 
     /// <summary>
-    /// 删除会话
+    /// Remove session
     /// </summary>
     public void RemoveSession(string sessionId)
     {
@@ -82,15 +83,15 @@ public class ChatSessionStorage
     }
 
     /// <summary>
-    /// 获取会话
+    /// Get session
     /// </summary>
-    public ChatSessionInfo? GetSession(string sessionId)
+    public AgentSessionState? GetSession(string sessionId)
     {
         return _sessions.FirstOrDefault(s => s.SessionId == sessionId);
     }
 
     /// <summary>
-    /// 清空所有会话
+    /// Clear all sessions
     /// </summary>
     public void ClearSessions()
     {
@@ -99,66 +100,4 @@ public class ChatSessionStorage
         CurrentSessionChanged?.Invoke();
         SessionsChanged?.Invoke();
     }
-
-    /// <summary>
-    /// 加载会话列表（从后端同步）
-    /// </summary>
-    public void LoadSessions(IEnumerable<ChatSessionInfo> sessions)
-    {
-        _sessions.Clear();
-        _sessions.AddRange(sessions);
-        SessionsChanged?.Invoke();
-    }
-}
-
-/// <summary>
-/// 会话信息模型（UI 使用）
-/// </summary>
-public class ChatSessionInfo
-{
-    /// <summary>
-    /// 会话 ID
-    /// </summary>
-    public required string SessionId { get; init; }
-
-    /// <summary>
-    /// 会话标题
-    /// </summary>
-    public string Title { get; set; } = "新对话";
-
-    /// <summary>
-    /// Provider ID
-    /// </summary>
-    public string? ProviderId { get; set; }
-
-    /// <summary>
-    /// 模型名称
-    /// </summary>
-    public string? ModelName { get; set; }
-
-    /// <summary>
-    /// System prompt
-    /// </summary>
-    public string? SystemPrompt { get; set; }
-
-    /// <summary>
-    /// Active knowledge base IDs for this session.
-    /// Null if RAG is not enabled.
-    /// </summary>
-    public List<string>? ActiveKnowledgeBaseIds { get; set; }
-
-    /// <summary>
-    /// 创建时间
-    /// </summary>
-    public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
-
-    /// <summary>
-    /// 更新时间
-    /// </summary>
-    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
-
-    /// <summary>
-    /// 消息列表
-    /// </summary>
-    public List<AIChatMessage> Messages { get; } = [];
 }
