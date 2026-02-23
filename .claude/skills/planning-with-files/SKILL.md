@@ -75,6 +75,18 @@ hooks:
 
 Work like Manus: Use persistent markdown files as your "working memory on disk."
 
+## CRITICAL: Path Configuration
+
+**⚠️ IMPORTANT:** The `${CLAUDE_PLUGIN_ROOT}` in this documentation is a placeholder that refers to:
+
+```
+<project-root>/.claude/skills/planning-with-files
+```
+
+This skill is located in the **project directory**, NOT in the user's home directory.
+
+When using the scripts in bash commands, replace `${CLAUDE_PLUGIN_ROOT}` with the actual absolute path to your project's `.claude/skills/planning-with-files` directory.
+
 ## FIRST: Setup Requirement Folder
 
 **Before starting work**, set up a requirement folder in `.pending/`:
@@ -91,24 +103,28 @@ Work like Manus: Use persistent markdown files as your "working memory on disk."
 
 ```bash
 # Linux/macOS
-FOLDER_PATH=$(${CLAUDE_PLUGIN_ROOT}/scripts/setup-requirement-folder.sh "task-description")
+# Replace <project-root> with your actual project path
+FOLDER_PATH=$(<project-root>/.claude/skills/planning-with-files/scripts/setup-requirement-folder.sh "task-description")
 ```
 
 ```powershell
 # Windows PowerShell
-$FOLDER_PATH = & "$env:USERPROFILE\.claude\skills\planning-with-files\scripts\setup-requirement-folder.ps1" "task-description"
+# Replace <project-root> with your actual project path
+$FOLDER_PATH = & "<project-root>\.claude\skills\planning-with-files\scripts\setup-requirement-folder.ps1" "task-description"
 ```
 
 3. **Initialize planning files** in the folder:
 
 ```bash
 # Linux/macOS
-${CLAUDE_PLUGIN_ROOT}/scripts/init-session.sh "project-name" "$FOLDER_PATH"
+# Replace <project-root> with your actual project path
+<project-root>/.claude/skills/planning-with-files/scripts/init-session.sh "project-name" "$FOLDER_PATH"
 ```
 
 ```powershell
 # Windows PowerShell
-& "$env:USERPROFILE\.claude\skills\planning-with-files\scripts\init-session.ps1" "project-name" "$FOLDER_PATH"
+# Replace <project-root> with your actual project path
+& "<project-root>\.claude\skills\planning-with-files\scripts\init-session.ps1" "project-name" "$FOLDER_PATH"
 ```
 
 The folder will be created as `.pending/NNN-description/` where NNN is the next available number (e.g., 010, 011, etc.).
@@ -119,12 +135,14 @@ The folder will be created as `.pending/NNN-description/` where NNN is the next 
 
 ```bash
 # Linux/macOS
-$(command -v python3 || command -v python) ${CLAUDE_PLUGIN_ROOT}/scripts/session-catchup.py "$(pwd)"
+# Replace <project-root> with your actual project path
+$(command -v python3 || command -v python) <project-root>/.claude/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"
 ```
 
 ```powershell
 # Windows PowerShell
-& (Get-Command python -ErrorAction SilentlyContinue).Source "$env:USERPROFILE\.claude\skills\planning-with-files\scripts\session-catchup.py" (Get-Location)
+# Replace <project-root> with your actual project path
+& (Get-Command python -ErrorAction SilentlyContinue).Source "<project-root>\.claude\skills\planning-with-files\scripts\session-catchup.py" (Get-Location)
 ```
 
 If catchup report shows unsynced context:
