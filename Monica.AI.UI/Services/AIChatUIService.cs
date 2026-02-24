@@ -183,14 +183,17 @@ public class AIChatUIService(
             return AsyncEnumerableEmpty<AgentResponseUpdate>();
         }
 
-        // Remove the AI message and any after it
-        state.Messages.RemoveRange(index, state.Messages.Count - index);
+        // Find the user message index
+        var userMessageIndex = state.Messages.FindIndex(m => m.Id == userMessage.Id);
 
-        // Sync backend: truncate agent history to match UI state
-        state.TruncateHistory(index);
+        // Remove the user message and everything after it (including the AI message to retry)
+        state.Messages.RemoveRange(userMessageIndex, state.Messages.Count - userMessageIndex);
 
-        // Stream new response without adding user message (it already exists in UI)
-        return StreamResponseOnlyAsync(sessionId, userMessage.Content, state, ct);
+        // Sync backend: truncate to remove both user and assistant messages
+        state.TruncateHistory(userMessageIndex);
+
+        // Now send the message normally - it will add the user message and new response
+        return SendMessageStreamingAsync(sessionId, userMessage.Content, ct);
     }
 
     /// <summary>

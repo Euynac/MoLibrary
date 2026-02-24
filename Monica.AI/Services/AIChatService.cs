@@ -82,13 +82,13 @@ public class AIChatService(
 
         // Copy chat history from old session to new session
         var oldHistory = state.ChatHistory;
-        var newProvider = newAgent.GetService<InMemoryChatHistoryProvider>();
-        var newHistory = newProvider?.GetMessages(newSession);
-        if (oldHistory != null && newHistory != null)
+        if (oldHistory != null && oldHistory.Count > 0)
         {
-            foreach (var message in oldHistory)
+            var newProvider = newAgent.GetService<InMemoryChatHistoryProvider>();
+            if (newProvider != null)
             {
-                newHistory.Add(message);
+                // Initialize the new session's state by setting messages directly
+                newProvider.SetMessages(newSession, new List<ChatMessage>(oldHistory));
             }
         }
 
