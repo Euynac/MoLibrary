@@ -64,7 +64,7 @@ public class ModuleUnitOfWorkGuide : MoModuleGuide<ModuleUnitOfWork, ModuleUnitO
         {
             context.Services.AddTransient(typeof(IDbContextProvider<TDbContext>), typeof(UnitOfWorkDbContextProvider<TDbContext>));
             //TODO 可使用Singleton？
-        }, secondKey: nameof(TDbContext));
+        }, secondKey: typeof(TDbContext).FullName);
         return this;
     }
 
