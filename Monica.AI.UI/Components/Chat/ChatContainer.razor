@@ -1,95 +1,71 @@
 @using Microsoft.Agents.AI
 @using Monica.AI.Models
 @using Monica.AI.RAG.Models
+@using Monica.AI.UI.Models
 
 <div class="chat-container">
     <ChatErrorDisplay
-        ErrorMessage="@ErrorMessage"
-        ShowRetry="@ShowRetry"
+        ErrorMessage="@_params.ErrorMessage"
+        ShowRetry="@_params.ShowRetry"
         OnRetry="@HandleRetry"
         OnDismissed="@HandleErrorDismissed" />
 
     <ChatMessageList
         @ref="_messageListRef"
-        Messages="@Messages"
-        StreamingContent="@StreamingContent"
-        EnableMarkdown="@EnableMarkdown"
-        EnableAutoScroll="@EnableAutoScroll"
-        CancellationToken="@CancellationToken"
+        Messages="@_params.Messages"
+        StreamingContent="@_params.StreamingContent"
+        EnableMarkdown="@_params.EnableMarkdown"
+        EnableAutoScroll="@_params.EnableAutoScroll"
+        CancellationToken="@_params.CancellationToken"
         OnStreamComplete="@HandleStreamComplete"
         OnStreamError="@HandleStreamError"
-        OnEditMessage="@OnEditMessage"
-        OnRetryMessage="@OnRetryMessage" />
+        OnEditMessage="@_params.OnEditMessage"
+        OnRetryMessage="@_params.OnRetryMessage" />
 
     <ChatInputArea
-        IsSending="@IsSending"
-        ProviderName="@ProviderName"
-        ModelName="@ModelName"
-        ShowProviderInfo="@ShowProviderInfo"
-        SupportsReasoning="@SupportsReasoning"
-        ReasoningEnabled="@ReasoningEnabled"
-        AvailableModels="@AvailableModels"
-        ReasoningEnabledChanged="@ReasoningEnabledChanged"
-        KnowledgeBases="@KnowledgeBases"
-        SelectedKnowledgeBaseIds="@SelectedKnowledgeBaseIds"
-        SelectedKnowledgeBaseIdsChanged="@SelectedKnowledgeBaseIdsChanged"
+        IsSending="@_params.IsSending"
+        ProviderName="@_params.ProviderName"
+        ModelName="@_params.ModelName"
+        ShowProviderInfo="@_params.ShowProviderInfo"
+        SupportsReasoning="@_params.SupportsReasoning"
+        ReasoningEnabled="@_params.ReasoningEnabled"
+        AvailableModels="@_params.AvailableModels"
+        ReasoningEnabledChanged="@_params.ReasoningEnabledChanged"
+        KnowledgeBases="@_params.KnowledgeBases"
+        SelectedKnowledgeBaseIds="@_params.SelectedKnowledgeBaseIds"
+        SelectedKnowledgeBaseIdsChanged="@_params.SelectedKnowledgeBaseIdsChanged"
         OnSend="@HandleSend"
         OnCancel="@HandleCancel"
         OnModelChanged="@HandleModelChanged" />
 </div>
 
 @code {
-    [Parameter] public IReadOnlyList<AIChatMessage> Messages { get; set; } = [];
-    [Parameter] public IAsyncEnumerable<AgentResponseUpdate>? StreamingContent { get; set; }
-    [Parameter] public bool IsSending { get; set; }
-    [Parameter] public bool EnableMarkdown { get; set; } = true;
-    [Parameter] public string? ProviderName { get; set; }
-    [Parameter] public string? ModelName { get; set; }
-    [Parameter] public bool ShowProviderInfo { get; set; } = true;
-    [Parameter] public string? ErrorMessage { get; set; }
-    [Parameter] public bool ShowRetry { get; set; }
-    [Parameter] public bool EnableAutoScroll { get; set; } = true;
-    [Parameter] public CancellationToken CancellationToken { get; set; }
-    [Parameter] public IReadOnlyList<AIModelInfo>? AvailableModels { get; set; }
-    [Parameter] public EventCallback<string> OnSendMessage { get; set; }
-    [Parameter] public EventCallback<string> OnStreamComplete { get; set; }
-    [Parameter] public EventCallback<string> OnStreamError { get; set; }
-    [Parameter] public EventCallback OnCancel { get; set; }
-    [Parameter] public EventCallback OnRetry { get; set; }
-    [Parameter] public EventCallback OnErrorDismissed { get; set; }
-    [Parameter] public EventCallback<(AIChatMessage Message, string NewContent)> OnEditMessage { get; set; }
-    [Parameter] public EventCallback<AIChatMessage> OnRetryMessage { get; set; }
-    [Parameter] public EventCallback<string> OnModelChanged { get; set; }
-    [Parameter] public bool SupportsReasoning { get; set; }
-    [Parameter] public bool ReasoningEnabled { get; set; }
-    [Parameter] public EventCallback<bool> ReasoningEnabledChanged { get; set; }
-    [Parameter] public IReadOnlyList<KnowledgeBase>? KnowledgeBases { get; set; }
-    [Parameter] public List<string> SelectedKnowledgeBaseIds { get; set; } = [];
-    [Parameter] public EventCallback<List<string>> SelectedKnowledgeBaseIdsChanged { get; set; }
+    [Parameter, EditorRequired]
+    public required ChatContainerParameters Parameters { get; set; }
 
     private ChatMessageList? _messageListRef;
+    private ChatContainerParameters _params => Parameters;
 
     private async Task HandleSend(string message)
     {
-        await OnSendMessage.InvokeAsync(message);
+        await _params.OnSendMessage.InvokeAsync(message);
 
-        // Scroll to bottom when sending a message to engage auto-scroll
         if (_messageListRef != null)
         {
             await _messageListRef.ScrollToBottomAsync();
         }
-        
+
         StateHasChanged();
     }
 
     private async Task HandleStreamComplete(string content)
     {
-        await OnStreamComplete.InvokeAsync(content);
+        await _params.OnStreamComplete.InvokeAsync(content);
     }
 
     private async Task HandleStreamError(string error)
     {
-        await OnStreamError.InvokeAsync(error);
+        await _params.OnStreamError.InvokeAsync(error);
     }
 
     private async Task HandleCancel()
@@ -98,24 +74,23 @@
         {
             await _messageListRef.CancelStreamAsync();
         }
-        await OnCancel.InvokeAsync();
+        await _params.OnCancel.InvokeAsync();
     }
 
     private async Task HandleRetry()
     {
-        await OnRetry.InvokeAsync();
+        await _params.OnRetry.InvokeAsync();
     }
 
     private async Task HandleErrorDismissed()
     {
-        await OnErrorDismissed.InvokeAsync();
+        await _params.OnErrorDismissed.InvokeAsync();
     }
 
     private async Task HandleModelChanged(string modelName)
     {
-        await OnModelChanged.InvokeAsync(modelName);
+        await _params.OnModelChanged.InvokeAsync(modelName);
     }
-
 
     public async Task CancelStreamAsync()
     {

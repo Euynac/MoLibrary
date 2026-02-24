@@ -1,14 +1,17 @@
 @page "/ai-chat"
 @rendermode InteractiveServer
 @using Microsoft.Agents.AI
-@using Monica.AI.RAG.Models
 @using Monica.AI.RAG.Services
-@using Monica.Tool.MoResponse
-@using Microsoft.Extensions.Localization
 @using Monica.AI.UI.Localization
+@using Monica.AI.UI.Models
+@using Monica.AI.UI.Services
+@using Monica.AI.UI.Helpers
+@using Monica.Tool.MoResponse
 @using Monica.UI.Services
+@using Microsoft.Extensions.Localization
 @implements IDisposable
 @inject AIChatUIService ChatUIService
+@inject ChatSessionStateManager StateManager
 @inject AIProviderUIService ProviderUIService
 @inject IOptions<ModuleAIUIOption> Options
 @inject ISnackbar Snackbar
@@ -36,9 +39,9 @@
                 @if (_options.ShowProviderSelector)
                 {
                     <ProviderSelector
-                        Providers="@_providers"
-                        SelectedProviderId="@_currentProviderId"
-                        SelectedModelName="@_currentModelName"
+                        Providers="@_state.Providers"
+                        SelectedProviderId="@_state.CurrentProviderId"
+                        SelectedModelName="@_state.CurrentModelName"
                         SelectedProviderIdChanged="@HandleProviderChanged" />
                 }
             </div>
@@ -49,34 +52,7 @@
             </div>
         </header>
 
-        <ChatContainer
-            Messages="@_currentMessages"
-            StreamingContent="@_streamingContent"
-            IsSending="@_isSending"
-            EnableMarkdown="@_options.EnableMarkdown"
-            EnableAutoScroll="@_options.EnableAutoScroll"
-            ProviderName="@_currentProviderName"
-            ModelName="@_currentModelName"
-            ShowProviderInfo="@(!_options.ShowProviderSelector)"
-            ErrorMessage="@_errorMessage"
-            ShowRetry="@_canRetry"
-            CancellationToken="@_cancellationToken"
-            AvailableModels="@_currentProviderModels"
-            OnSendMessage="@HandleSendMessage"
-            OnStreamComplete="@HandleStreamComplete"
-            OnStreamError="@HandleStreamError"
-            OnCancel="@HandleCancel"
-            OnRetry="@HandleRetry"
-            OnErrorDismissed="@HandleErrorDismissed"
-            OnEditMessage="@HandleEditMessage"
-            OnRetryMessage="@HandleRetryMessage"
-            OnModelChanged="@HandleModelChanged"
-            SupportsReasoning="@_supportsReasoning"
-            ReasoningEnabled="@_reasoningEnabled"
-            ReasoningEnabledChanged="@HandleReasoningEnabledChanged"
-            KnowledgeBases="@_knowledgeBases"
-            SelectedKnowledgeBaseIds="@_selectedKbIds"
-            SelectedKnowledgeBaseIdsChanged="@HandleKbSelectionChanged" />
+        <ChatContainer Parameters="@BuildChatContainerParameters()" />
     </main>
 </div>
 
@@ -85,123 +61,126 @@
 
     private ModuleAIUIOption _options = null!;
     private ChatSessionStorage _sessionStorage = null!;
-    private IReadOnlyList<AIProviderInfo> _providers = [];
-    private IReadOnlyList<AIModelInfo> _currentProviderModels = [];
-    private string? _currentProviderId;
-    private string _currentProviderName = string.Empty;
-    private string _currentSessionTitle = "New Conversation";
-    private IReadOnlyList<AIChatMessage> _currentMessages = [];
-    private IAsyncEnumerable<AgentResponseUpdate>? _streamingContent;
-    private bool _isSending;
-    private string? _errorMessage;
-    private bool _canRetry;
-    private string? _lastMessage;
-    private string? _currentModelName;
-    private CancellationTokenSource? _cts;
-    private CancellationToken _cancellationToken;
-    private bool _reasoningEnabled;
-    private bool _supportsReasoning;
-    private IReadOnlyList<KnowledgeBase> _knowledgeBases = [];
-    private List<string> _selectedKbIds = [];
+    private ChatPageState _state = null!;
     private RAGService? _ragService;
 
     protected override void OnInitialized()
     {
         _options = Options.Value;
         _sessionStorage = ChatUIService.SessionStorage;
-        _providers = ChatUIService.GetProviders();
+        _state = new ChatPageState
+        {
+            Providers = ChatUIService.GetProviders()
+        };
 
-        // Get default provider
-        var defaultProvider = ChatUIService.GetDefaultProvider();
-        _currentProviderId = defaultProvider?.ProviderId;
-        _currentProviderName = defaultProvider?.DisplayName ?? string.Empty;
-        _currentModelName = defaultProvider?.DefaultModel;
-        _currentProviderModels = defaultProvider?.SupportedModels ?? [];
-
-        UpdateSupportsReasoning();
-
-        // Optionally resolve RAG service
-        _ragService = ServiceProvider.GetService(typeof(RAGService)) as RAGService;
-        _selectedKbIds = new List<string>(_options.DefaultKnowledgeBaseIds);
-
-        // Subscribe to session change events
-        _sessionStorage.CurrentSessionChanged += OnCurrentSessionChanged;
-        _sessionStorage.SessionsChanged += OnSessionsChanged;
+        InitializeDefaultProvider();
+        InitializeRAG();
+        SubscribeToEvents();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            // Load persisted provider and model preferences
-            var savedProviderId = await BrowserStorage.GetDefaultProviderAsync();
-            var savedModelName = await BrowserStorage.GetDefaultModelAsync();
+            await LoadPersistedPreferences();
+            await LoadKnowledgeBases();
+            await EnsureSessionExists();
+            UpdateCurrentSession();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
 
-            // Validate and apply saved provider
-            if (!string.IsNullOrEmpty(savedProviderId))
+    private void InitializeDefaultProvider()
+    {
+        var defaultProvider = ChatUIService.GetDefaultProvider();
+        _state.DefaultProviderId = defaultProvider?.ProviderId;
+        _state.DefaultModelName = defaultProvider?.DefaultModel;
+        _state.CurrentProviderName = defaultProvider?.DisplayName ?? string.Empty;
+        _state.CurrentProviderModels = defaultProvider?.SupportedModels ?? [];
+        _state.SupportsReasoning = ChatPageHelper.GetReasoningSupport(
+            _state.Providers, defaultProvider?.ProviderId, defaultProvider?.DefaultModel);
+    }
+
+    private void InitializeRAG()
+    {
+        _ragService = ServiceProvider.GetService(typeof(RAGService)) as RAGService;
+        _state.SelectedKnowledgeBaseIds = new List<string>(_options.DefaultKnowledgeBaseIds);
+    }
+
+    private void SubscribeToEvents()
+    {
+        _sessionStorage.CurrentSessionChanged += OnCurrentSessionChanged;
+        _sessionStorage.SessionsChanged += OnSessionsChanged;
+    }
+
+    private async Task LoadPersistedPreferences()
+    {
+        var savedProviderId = await BrowserStorage.GetDefaultProviderAsync();
+        var savedModelName = await BrowserStorage.GetDefaultModelAsync();
+
+        if (!string.IsNullOrEmpty(savedProviderId))
+        {
+            var provider = ChatPageHelper.FindProvider(_state.Providers, savedProviderId);
+            if (provider != null)
             {
-                var provider = _providers.FirstOrDefault(p => p.ProviderId == savedProviderId);
-                if (provider != null)
-                {
-                    _currentProviderId = savedProviderId;
-                    _currentProviderName = provider.DisplayName;
-                    _currentProviderModels = provider.SupportedModels ?? [];
-
-                    // Validate and apply saved model
-                    if (!string.IsNullOrEmpty(savedModelName) &&
-                        _currentProviderModels.Any(m => m.ModelName == savedModelName))
-                    {
-                        _currentModelName = savedModelName;
-                    }
-                    else
-                    {
-                        // Saved model is invalid, use provider default and clear storage
-                        _currentModelName = provider.DefaultModel;
-                        if (!string.IsNullOrEmpty(savedModelName))
-                        {
-                            await BrowserStorage.RemoveAsync("ai-chat:default-model");
-                        }
-                    }
-
-                    UpdateSupportsReasoning();
-                }
-                else
-                {
-                    // Saved provider is invalid, clear storage and use default
-                    await BrowserStorage.RemoveAsync("ai-chat:default-provider");
-                    await BrowserStorage.RemoveAsync("ai-chat:default-model");
-                }
-            }
-
-            // Load knowledge bases if RAG is available
-            if (_ragService is not null && _options.ShowKnowledgeBaseSelector)
-            {
-                _knowledgeBases = await _ragService.GetKnowledgeBasesAsync();
-            }
-
-            // Load session list
-            ChatUIService.LoadSessions();
-
-            // If no sessions, create a new one
-            if (_sessionStorage.Sessions.Count == 0)
-            {
-                var kbIds = _selectedKbIds.Count > 0 ? _selectedKbIds : null;
-                var newSession = await ChatUIService.CreateSessionAsync(_currentProviderId, knowledgeBaseIds: kbIds);
-
-                // Update session with current model name if available
-                if (!string.IsNullOrEmpty(_currentModelName))
-                {
-                    newSession.ModelName = _currentModelName;
-                }
+                ApplyProviderSelection(provider, savedModelName);
             }
             else
             {
-                // Select first session
-                _sessionStorage.CurrentSessionId = _sessionStorage.Sessions.First().SessionId;
+                await ClearInvalidPreferences();
             }
+        }
+    }
 
-            UpdateCurrentSession();
-            await InvokeAsync(StateHasChanged);
+    private void ApplyProviderSelection(AIProviderInfo provider, string? savedModelName)
+    {
+        _state.DefaultProviderId = provider.ProviderId;
+        _state.CurrentProviderName = provider.DisplayName;
+        _state.CurrentProviderModels = provider.SupportedModels ?? [];
+
+        if (ChatPageHelper.IsModelValid(provider, savedModelName))
+        {
+            _state.DefaultModelName = savedModelName;
+        }
+        else
+        {
+            _state.DefaultModelName = provider.DefaultModel;
+            if (!string.IsNullOrEmpty(savedModelName))
+            {
+                _ = BrowserStorage.RemoveAsync("ai-chat:default-model");
+            }
+        }
+
+        _state.SupportsReasoning = ChatPageHelper.GetReasoningSupport(
+            _state.Providers, _state.DefaultProviderId, _state.DefaultModelName);
+    }
+
+    private async Task ClearInvalidPreferences()
+    {
+        await BrowserStorage.RemoveAsync("ai-chat:default-provider");
+        await BrowserStorage.RemoveAsync("ai-chat:default-model");
+    }
+
+    private async Task LoadKnowledgeBases()
+    {
+        if (_ragService is not null && _options.ShowKnowledgeBaseSelector)
+        {
+            _state.KnowledgeBases = await _ragService.GetKnowledgeBasesAsync();
+        }
+    }
+
+    private async Task EnsureSessionExists()
+    {
+        if (_sessionStorage.Sessions.Count == 0)
+        {
+            await ChatUIService.CreateSessionAsync(
+                _state.CurrentProviderId!,
+                _state.CurrentModelName!,
+                knowledgeBaseIds: ChatPageHelper.GetKnowledgeBaseIds(_state.SelectedKnowledgeBaseIds));
+        }
+        else
+        {
+            _sessionStorage.CurrentSessionId = _sessionStorage.Sessions.First().SessionId;
         }
     }
 
@@ -219,59 +198,80 @@
     private void UpdateCurrentSession()
     {
         var currentSession = _sessionStorage.GetSession(_sessionStorage.CurrentSessionId ?? string.Empty);
+        _state.CurrentAgentSessionState = currentSession;
+
+        // Update UI-specific provider info if session has provider
         if (currentSession != null)
         {
-            _currentSessionTitle = currentSession.Title;
-            // Create new list reference to trigger Blazor change detection
-            _currentMessages = currentSession.Messages.ToList();
-            _currentProviderId = currentSession.ProviderId ?? _currentProviderId;
-            _currentModelName = currentSession.ModelName ?? _currentModelName;
-        }
-        else
-        {
-            _currentSessionTitle = L["Session:NewConversation"];
-            _currentMessages = [];
+            var provider = ChatPageHelper.FindProvider(_state.Providers, currentSession.ProviderId);
+            if (provider != null)
+            {
+                _state.CurrentProviderName = provider.DisplayName;
+                _state.CurrentProviderModels = provider.SupportedModels ?? [];
+            }
         }
     }
 
+    // Provider/Model handlers
     private async Task HandleProviderChanged(string providerId)
     {
-        _currentProviderId = providerId;
-        var provider = _providers.FirstOrDefault(p => p.ProviderId == providerId);
-        _currentProviderName = provider?.DisplayName ?? string.Empty;
-        _currentModelName = provider?.DefaultModel;
-        _currentProviderModels = provider?.SupportedModels ?? [];
+        var provider = ChatPageHelper.FindProvider(_state.Providers, providerId);
+        if (provider == null) return;
 
-        UpdateSupportsReasoning();
+        _state.DefaultProviderId = providerId;
+        _state.DefaultModelName = provider.DefaultModel;
+        _state.CurrentProviderName = provider.DisplayName;
+        _state.CurrentProviderModels = provider.SupportedModels ?? [];
+        _state.SupportsReasoning = ChatPageHelper.GetReasoningSupport(
+            _state.Providers, providerId, provider.DefaultModel);
 
-        // Persist provider selection
         await BrowserStorage.SaveDefaultProviderAsync(providerId);
-        if (!string.IsNullOrEmpty(_currentModelName))
+        if (!string.IsNullOrEmpty(provider.DefaultModel))
         {
-            await BrowserStorage.SaveDefaultModelAsync(_currentModelName);
+            await BrowserStorage.SaveDefaultModelAsync(provider.DefaultModel);
         }
 
-        // Update current session provider
         var currentSession = _sessionStorage.GetSession(_sessionStorage.CurrentSessionId ?? string.Empty);
         if (currentSession != null)
         {
             currentSession.ProviderId = providerId;
+            currentSession.ModelName = provider.DefaultModel;
         }
 
         StateHasChanged();
     }
 
+    private async Task HandleModelChanged(string modelName)
+    {
+        _state.DefaultModelName = modelName;
+        await BrowserStorage.SaveDefaultModelAsync(modelName);
+
+        var currentSession = _sessionStorage.GetSession(_sessionStorage.CurrentSessionId ?? string.Empty);
+        if (currentSession != null)
+        {
+            currentSession.ModelName = modelName;
+        }
+
+        _state.SupportsReasoning = ChatPageHelper.GetReasoningSupport(
+            _state.Providers, _state.CurrentProviderId, modelName);
+
+        StateHasChanged();
+    }
+
+    // Session handlers
     private async Task HandleNewSession()
     {
-        ClearError();
-        var kbIds = _selectedKbIds.Count > 0 ? _selectedKbIds : null;
-        await ChatUIService.CreateSessionAsync(_currentProviderId, knowledgeBaseIds: kbIds);
+        _state.ClearError();
+        await ChatUIService.CreateSessionAsync(
+            _state.CurrentProviderId!,
+            _state.CurrentModelName!,
+            knowledgeBaseIds: ChatPageHelper.GetKnowledgeBaseIds(_state.SelectedKnowledgeBaseIds));
         UpdateCurrentSession();
     }
 
     private void HandleSelectSession(string sessionId)
     {
-        ClearError();
+        _state.ClearError();
         ChatUIService.SwitchSession(sessionId);
     }
 
@@ -279,13 +279,14 @@
     {
         ChatUIService.DeleteSession(sessionId);
 
-        // If deleted current session, create new or switch to another
         if (sessionId == _sessionStorage.CurrentSessionId)
         {
             if (_sessionStorage.Sessions.Count == 0)
             {
-                var kbIds = _selectedKbIds.Count > 0 ? _selectedKbIds : null;
-                await ChatUIService.CreateSessionAsync(_currentProviderId, knowledgeBaseIds: kbIds);
+                await ChatUIService.CreateSessionAsync(
+                    _state.CurrentProviderId!,
+                    _state.CurrentModelName!,
+                    knowledgeBaseIds: ChatPageHelper.GetKnowledgeBaseIds(_state.SelectedKnowledgeBaseIds));
             }
             else
             {
@@ -296,37 +297,56 @@
         UpdateCurrentSession();
     }
 
+    // Message handlers
     private async Task HandleSendMessage(string message)
     {
-        if (string.IsNullOrWhiteSpace(message) || _isSending) return;
+        if (string.IsNullOrWhiteSpace(message) || _state.IsSending) return;
 
-        ClearError();
-        _lastMessage = message;
+        _state.ClearError();
+        _state.LastMessage = message;
 
+        var sessionId = await EnsureCurrentSession();
+        AddUserMessageAndUpdateTitle(sessionId, message);
+        StateManager.UpdateReasoning(sessionId, _state.ReasoningEnabled);
+
+        await SendMessageAsync(sessionId, message);
+    }
+
+    private async Task<string> EnsureCurrentSession()
+    {
         var sessionId = _sessionStorage.CurrentSessionId;
         if (string.IsNullOrEmpty(sessionId))
         {
-            var kbIds = _selectedKbIds.Count > 0 ? _selectedKbIds : null;
-            var session = await ChatUIService.CreateSessionAsync(_currentProviderId, knowledgeBaseIds: kbIds);
+            var session = await ChatUIService.CreateSessionAsync(
+                _state.CurrentProviderId!,
+                _state.CurrentModelName!,
+                knowledgeBaseIds: ChatPageHelper.GetKnowledgeBaseIds(_state.SelectedKnowledgeBaseIds));
             sessionId = session.SessionId;
         }
+        return sessionId;
+    }
 
-        _isSending = true;
-        _cts?.Dispose();
-        _cts = new CancellationTokenSource();
-        _cancellationToken = _cts.Token;
+    private void AddUserMessageAndUpdateTitle(string sessionId, string message)
+    {
+        StateManager.AddUserMessage(sessionId, message);
+        var currentSession = _sessionStorage.GetSession(sessionId);
+        if (currentSession != null && currentSession.Messages.Count == 1)
+        {
+            var title = ChatPageHelper.GenerateSessionTitle(message);
+            StateManager.UpdateTitle(sessionId, title);
+        }
+    }
+
+    private async Task SendMessageAsync(string sessionId, string message)
+    {
+        _state.IsSending = true;
+        _state.SetupCancellationToken(_options.RequestTimeoutMs);
         StateHasChanged();
 
         try
         {
-            // Apply timeout from options
-            if (_options.RequestTimeoutMs > 0)
-            {
-                _cts.CancelAfter(_options.RequestTimeoutMs);
-            }
-
-            // Use streaming response
-            _streamingContent = ChatUIService.SendMessageStreamingAsync(sessionId, message, _reasoningEnabled, _cts.Token);
+            _state.StreamingContent = ChatUIService.SendMessageStreamingAsync(
+                sessionId, message, _state.CancellationToken);
             UpdateCurrentSession();
             StateHasChanged();
         }
@@ -346,79 +366,69 @@
 
     private void HandleSendError(string error)
     {
-        _isSending = false;
-        _streamingContent = null;
-        _errorMessage = error;
-        _canRetry = true;
+        _state.IsSending = false;
+        _state.StreamingContent = null;
+        _state.SetError(error, canRetry: true);
         Snackbar.Add(error, Severity.Error);
         StateHasChanged();
     }
 
     private void HandleStreamComplete(string content)
     {
-        _isSending = false;
-        _streamingContent = null;
-        _cts?.Dispose();
-        _cts = null;
+        _state.IsSending = false;
+        _state.StreamingContent = null;
+        _state.CancellationTokenSource?.Dispose();
+        _state.CancellationTokenSource = null;
         UpdateCurrentSession();
         StateHasChanged();
     }
 
     private void HandleStreamError(string error)
     {
-        _isSending = false;
-        _streamingContent = null;
-        _errorMessage = error;
-        _canRetry = true;
+        _state.IsSending = false;
+        _state.StreamingContent = null;
+        _state.SetError(error, canRetry: true);
         Snackbar.Add(error, Severity.Error);
         StateHasChanged();
     }
 
     private async Task HandleCancel()
     {
-        if (_cts != null && !_cts.IsCancellationRequested)
+        if (_state.CancellationTokenSource != null && !_state.CancellationTokenSource.IsCancellationRequested)
         {
-            await _cts.CancelAsync();
+            await _state.CancellationTokenSource.CancelAsync();
             Snackbar.Add(L["Chat:Status:GenerationStopped"], Severity.Info);
         }
 
-        _isSending = false;
-        _streamingContent = null;
+        _state.IsSending = false;
+        _state.StreamingContent = null;
         StateHasChanged();
     }
 
     private async Task HandleRetry()
     {
-        if (!string.IsNullOrEmpty(_lastMessage))
+        if (!string.IsNullOrEmpty(_state.LastMessage))
         {
-            ClearError();
-            await HandleSendMessage(_lastMessage);
+            _state.ClearError();
+            await HandleSendMessage(_state.LastMessage);
         }
     }
 
     private void HandleEditMessage((AIChatMessage Message, string NewContent) args)
     {
-        if (string.IsNullOrWhiteSpace(args.NewContent) || _isSending) return;
+        if (string.IsNullOrWhiteSpace(args.NewContent) || _state.IsSending) return;
 
-        ClearError();
-        _lastMessage = args.NewContent;
+        _state.ClearError();
+        _state.LastMessage = args.NewContent;
+        _state.IsSending = true;
+        _state.SetupCancellationToken(_options.RequestTimeoutMs);
 
-        _isSending = true;
-        _cts?.Dispose();
-        _cts = new CancellationTokenSource();
-        _cancellationToken = _cts.Token;
-
-        if (_options.RequestTimeoutMs > 0)
-        {
-            _cts.CancelAfter(_options.RequestTimeoutMs);
-        }
-
-        _streamingContent = ChatUIService.EditMessageAsync(
+        StateManager.UpdateReasoning(_sessionStorage.CurrentSessionId!, _state.ReasoningEnabled);
+        _state.StreamingContent = ChatUIService.EditMessageAsync(
             _sessionStorage.CurrentSessionId!,
             args.Message.Id,
             args.NewContent,
-            _reasoningEnabled,
-            _cts.Token);
+            _state.CancellationToken);
 
         UpdateCurrentSession();
         StateHasChanged();
@@ -426,25 +436,17 @@
 
     private void HandleRetryMessage(AIChatMessage message)
     {
-        if (_isSending) return;
+        if (_state.IsSending) return;
 
-        ClearError();
+        _state.ClearError();
+        _state.IsSending = true;
+        _state.SetupCancellationToken(_options.RequestTimeoutMs);
 
-        _isSending = true;
-        _cts?.Dispose();
-        _cts = new CancellationTokenSource();
-        _cancellationToken = _cts.Token;
-
-        if (_options.RequestTimeoutMs > 0)
-        {
-            _cts.CancelAfter(_options.RequestTimeoutMs);
-        }
-
-        _streamingContent = ChatUIService.RetryMessageAsync(
+        StateManager.UpdateReasoning(_sessionStorage.CurrentSessionId!, _state.ReasoningEnabled);
+        _state.StreamingContent = ChatUIService.RetryMessageAsync(
             _sessionStorage.CurrentSessionId!,
             message.Id,
-            _reasoningEnabled,
-            _cts.Token);
+            _state.CancellationToken);
 
         UpdateCurrentSession();
         StateHasChanged();
@@ -452,19 +454,14 @@
 
     private void HandleErrorDismissed()
     {
-        ClearError();
+        _state.ClearError();
     }
 
-    private void ClearError()
-    {
-        _errorMessage = null;
-        _canRetry = false;
-    }
-
+    // Settings and feature handlers
     private async Task OpenPromptSettingsAsync()
     {
-        var provider = _providers.FirstOrDefault(p => p.ProviderId == _currentProviderId)
-                       ?? _providers.FirstOrDefault();
+        var provider = ChatPageHelper.FindProvider(_state.Providers, _state.CurrentProviderId)
+                       ?? _state.Providers.FirstOrDefault();
         if (provider == null)
         {
             Snackbar.Add(L["Provider:NotFound"], Severity.Warning);
@@ -488,10 +485,7 @@
             new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
 
         var result = await dialog.Result;
-        if (result.Canceled || hasStarted)
-        {
-            return;
-        }
+        if (result.Canceled || hasStarted) return;
 
         var prompt = result.Data as string;
         var updateResult = ProviderUIService.UpdateProviderSystemPrompt(provider.ProviderId, prompt);
@@ -503,67 +497,63 @@
 
         if (session != null && session.Messages.Count == 0)
         {
-            await ChatUIService.UpdateSessionSystemPromptAsync(session.SessionId, prompt);
+            session.SystemPrompt = prompt;
         }
 
-        _providers = ChatUIService.GetProviders();
+        _state.Providers = ChatUIService.GetProviders();
         Snackbar.Add(L["Provider:Settings:UpdateSuccess"], Severity.Success);
         StateHasChanged();
     }
 
-    private void UpdateSupportsReasoning()
-    {
-        var provider = _providers.FirstOrDefault(p => p.ProviderId == _currentProviderId);
-        var modelInfo = provider?.SupportedModels?
-            .OfType<LLMModelInfo>()
-            .FirstOrDefault(m => m.ModelName == _currentModelName);
-
-        _supportsReasoning = modelInfo?.SupportsReasoning ?? false;
-
-        // Reset reasoning toggle if new model doesn't support it
-        if (!_supportsReasoning)
-        {
-            _reasoningEnabled = false;
-        }
-    }
-
     private void HandleReasoningEnabledChanged(bool enabled)
     {
-        _reasoningEnabled = enabled;
+        _state.ReasoningEnabled = enabled;
     }
 
     private void HandleKbSelectionChanged(List<string> selectedIds)
     {
-        _selectedKbIds = selectedIds;
+        _state.SelectedKnowledgeBaseIds = selectedIds;
     }
 
-    private async Task HandleModelChanged(string modelName)
+    // Helper to build ChatContainer parameters
+    private ChatContainerParameters BuildChatContainerParameters()
     {
-        _currentModelName = modelName;
-
-        // Persist model selection
-        await BrowserStorage.SaveDefaultModelAsync(modelName);
-
-        // Update current session's model using UpdateSession to trigger change event
-        if (!string.IsNullOrEmpty(_sessionStorage.CurrentSessionId))
+        return new ChatContainerParameters
         {
-            _sessionStorage.UpdateSession(_sessionStorage.CurrentSessionId, session =>
-            {
-                session.ModelName = modelName;
-            });
-        }
-
-        // Update reasoning support based on new model
-        UpdateSupportsReasoning();
-
-        StateHasChanged();
+            Messages = _state.CurrentMessages,
+            StreamingContent = _state.StreamingContent,
+            IsSending = _state.IsSending,
+            ShowRetry = _state.CanRetry,
+            ProviderName = _state.CurrentProviderName,
+            ModelName = _state.CurrentModelName,
+            ShowProviderInfo = !_options.ShowProviderSelector,
+            AvailableModels = _state.CurrentProviderModels,
+            ErrorMessage = _state.ErrorMessage,
+            CancellationToken = _state.CancellationToken,
+            EnableMarkdown = _options.EnableMarkdown,
+            EnableAutoScroll = _options.EnableAutoScroll,
+            SupportsReasoning = _state.SupportsReasoning,
+            ReasoningEnabled = _state.ReasoningEnabled,
+            KnowledgeBases = _state.KnowledgeBases,
+            SelectedKnowledgeBaseIds = _state.SelectedKnowledgeBaseIds,
+            OnSendMessage = EventCallback.Factory.Create<string>(this, HandleSendMessage),
+            OnStreamComplete = EventCallback.Factory.Create<string>(this, HandleStreamComplete),
+            OnStreamError = EventCallback.Factory.Create<string>(this, HandleStreamError),
+            OnCancel = EventCallback.Factory.Create(this, HandleCancel),
+            OnRetry = EventCallback.Factory.Create(this, HandleRetry),
+            OnErrorDismissed = EventCallback.Factory.Create(this, HandleErrorDismissed),
+            OnEditMessage = EventCallback.Factory.Create<(AIChatMessage, string)>(this, HandleEditMessage),
+            OnRetryMessage = EventCallback.Factory.Create<AIChatMessage>(this, HandleRetryMessage),
+            OnModelChanged = EventCallback.Factory.Create<string>(this, HandleModelChanged),
+            ReasoningEnabledChanged = EventCallback.Factory.Create<bool>(this, HandleReasoningEnabledChanged),
+            SelectedKnowledgeBaseIdsChanged = EventCallback.Factory.Create<List<string>>(this, HandleKbSelectionChanged)
+        };
     }
 
     public void Dispose()
     {
         _sessionStorage.CurrentSessionChanged -= OnCurrentSessionChanged;
         _sessionStorage.SessionsChanged -= OnSessionsChanged;
-        _cts?.Dispose();
+        _state?.Dispose();
     }
-
 }

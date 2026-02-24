@@ -73,3 +73,35 @@ Use `resolve-library-id` then `get-library-docs` when:
 - **Development Stage**: This project is in internal development and has not been released. Backward compatibility is not a concern unless explicitly instructed otherwise.
 - **Optimization First**: Always prioritize the most optimal design and implementation approaches. Proactively identify and propose refactoring or redesign opportunities when improvements are possible.
 - **Testing Policy**: Unit testing is not required during this phase. Do not include testing-related tasks in planning or implementation unless explicitly requested.
+
+## WSL Environment - dotnet Build Path Issue
+
+**Environment**: This project runs in WSL (Windows Subsystem for Linux) where dotnet CLI is a Windows binary accessed through WSL interoperability.
+
+**Critical Issue**: When using `dotnet build` commands in WSL, you MUST use Windows path format, not Linux/WSL paths.
+
+**Correct Usage**:
+```bash
+# ✅ CORRECT - Use Windows path format with escaped backslashes
+dotnet build D:\\Code\\MoLibrary\\Monica.AI.UI\\Monica.AI.UI.csproj
+
+# ❌ WRONG - WSL path format will fail
+dotnet build /mnt/d/Code/MoLibrary/Monica.AI.UI/Monica.AI.UI.csproj
+
+# ❌ WRONG - Relative paths may fail if current directory is incorrect
+dotnet build Monica.AI.UI/Monica.AI.UI.csproj
+```
+
+**Why This Happens**:
+- dotnet CLI in WSL is a Windows program running through interoperability
+- MSBuild (invoked by dotnet) cannot understand `/mnt/d/...` Linux-style paths
+- It expects native Windows paths like `D:\...`
+
+**Path Conversion** (if needed):
+```bash
+# Convert WSL path to Windows path
+wslpath -w /mnt/d/Code/MoLibrary/Monica.AI.UI/Monica.AI.UI.csproj
+# Output: D:\Code\MoLibrary\Monica.AI.UI\Monica.AI.UI.csproj
+```
+
+**Always remember**: In WSL, use Windows path format for all dotnet commands.

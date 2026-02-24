@@ -3,7 +3,7 @@ namespace Monica.AI.Models;
 /// <summary>
 /// AI chat request model for external API/endpoint use.
 /// Note: This model is primarily for API endpoints and external integrations.
-/// Internal service layer uses SessionConfiguration and AgentSessionState directly.
+/// Internal service layer uses AgentSessionState directly.
 /// </summary>
 public class AIChatRequest
 {

@@ -31,33 +31,35 @@ public class AIChatService(
     /// that automatically performs RAG search on each invocation.
     /// </summary>
     public async Task<AgentSessionState> CreateSessionAsync(
-        SessionConfiguration? config = null,
+        string? providerId = null,
+        string? modelName = null,
+        string? systemPrompt = null,
+        List<string>? knowledgeBaseIds = null,
+        bool reasoningEnabled = false,
+        string? title = null,
         CancellationToken ct = default)
     {
-        config ??= new SessionConfiguration();
-
-        var provider = ResolveProvider(config.ProviderId);
+        var provider = ResolveProvider(providerId);
         var resolvedProviderId = provider.ProviderId;
 
-        var resolvedPrompt = config.SystemPrompt;
+        var resolvedPrompt = systemPrompt;
         if (string.IsNullOrWhiteSpace(resolvedPrompt))
         {
             resolvedPrompt = provider.Info.SystemPrompt ?? _options.DefaultSystemPrompt;
         }
 
-        var chatClient = provider.GetChatClient(config.ModelName);
-        var kbIds = config.KnowledgeBaseIds;
+        var chatClient = provider.GetChatClient(modelName);
 
-        var agent = CreateAgent(chatClient, resolvedPrompt, kbIds);
+        var agent = CreateAgent(chatClient, resolvedPrompt, knowledgeBaseIds);
         var session = await agent.CreateSessionAsync(ct);
 
         var state = new AgentSessionState(agent, session, resolvedProviderId)
         {
-            Title = config.Title ?? "New Chat",
+            Title = title ?? "New Chat",
             SystemPrompt = resolvedPrompt,
-            ActiveKnowledgeBaseIds = kbIds,
-            ModelName = config.ModelName,
-            ReasoningEnabled = config.ReasoningEnabled
+            ActiveKnowledgeBaseIds = knowledgeBaseIds,
+            ModelName = modelName,
+            ReasoningEnabled = reasoningEnabled
         };
 
         return state;
@@ -195,9 +197,10 @@ public class AIChatService(
     {
         if (!state.ReasoningEnabled) return null;
 
-        var chatOptions = new ChatOptions();
-        chatOptions.AdditionalProperties ??= new AdditionalPropertiesDictionary();
-        chatOptions.AdditionalProperties["reasoning_effort"] = "medium";
+        var chatOptions = new ChatOptions
+        {
+            Reasoning = new ReasoningOptions { Effort = ReasoningEffort.Medium }
+        };
         return new ChatClientAgentRunOptions { ChatOptions = chatOptions };
     }
 }

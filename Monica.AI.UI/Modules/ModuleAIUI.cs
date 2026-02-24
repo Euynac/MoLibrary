@@ -45,6 +45,7 @@ public class ModuleAIUI(ModuleAIUIOption option)
         // Register UI services
         services.AddScoped<AIChatUIService>();
         services.AddScoped<ChatSessionStorage>();
+        services.AddScoped<ChatSessionStateManager>();
         services.AddScoped<AIProviderUIService>();
     }
 

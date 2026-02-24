@@ -12,10 +12,6 @@ namespace Monica.AI.Services;
 public class AgentSessionState
 {
     private string _providerId;
-    private string? _modelName;
-    private string? _systemPrompt;
-    private List<string>? _activeKnowledgeBaseIds;
-    private bool _reasoningEnabled;
 
     public AgentSessionState(
         ChatClientAgent agent,
@@ -73,12 +69,12 @@ public class AgentSessionState
     /// </summary>
     public string? ModelName
     {
-        get => _modelName;
+        get;
         set
         {
-            if (_modelName != value)
+            if (field != value)
             {
-                _modelName = value;
+                field = value;
                 NeedsRecreation = true;
             }
         }
@@ -90,12 +86,12 @@ public class AgentSessionState
     /// </summary>
     public string? SystemPrompt
     {
-        get => _systemPrompt;
+        get;
         set
         {
-            if (_systemPrompt != value)
+            if (field != value)
             {
-                _systemPrompt = value;
+                field = value;
                 NeedsRecreation = true;
             }
         }
@@ -108,25 +104,25 @@ public class AgentSessionState
     /// </summary>
     public List<string>? ActiveKnowledgeBaseIds
     {
-        get => _activeKnowledgeBaseIds;
+        get;
         set
         {
             // Compare list contents, not reference
             var needsUpdate = false;
-            if (_activeKnowledgeBaseIds == null && value != null)
+            if (field == null && value != null)
                 needsUpdate = true;
-            else if (_activeKnowledgeBaseIds != null && value == null)
+            else if (field != null && value == null)
                 needsUpdate = true;
-            else if (_activeKnowledgeBaseIds != null && value != null)
+            else if (field != null && value != null)
             {
-                if (_activeKnowledgeBaseIds.Count != value.Count ||
-                    !_activeKnowledgeBaseIds.SequenceEqual(value))
+                if (field.Count != value.Count ||
+                    !field.SequenceEqual(value))
                     needsUpdate = true;
             }
 
             if (needsUpdate)
             {
-                _activeKnowledgeBaseIds = value;
+                field = value;
                 NeedsRecreation = true;
             }
         }
@@ -134,19 +130,12 @@ public class AgentSessionState
 
     /// <summary>
     /// Whether reasoning/thinking mode is enabled for this session.
-    /// Setting this property triggers agent recreation on next message send.
+    /// This is a per-message option and does NOT require agent recreation.
     /// </summary>
     public bool ReasoningEnabled
     {
-        get => _reasoningEnabled;
-        set
-        {
-            if (_reasoningEnabled != value)
-            {
-                _reasoningEnabled = value;
-                NeedsRecreation = true;
-            }
-        }
+        get;
+        set => field = value;
     }
 
     /// <summary>

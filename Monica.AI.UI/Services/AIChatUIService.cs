@@ -16,7 +16,7 @@ public class AIChatUIService(
     AIChatService chatService,
     IAIProviderFactory providerFactory,
     ChatSessionStorage sessionStorage,
-    IOptions<ModuleAIUIOption> options)
+    ChatSessionStateManager stateManager)
 {
     /// <summary>
     /// Get session storage
@@ -40,22 +40,25 @@ public class AIChatUIService(
     }
 
     /// <summary>
-    /// Create a new session with optional RAG knowledge bases.
+    /// Create a new session with the specified configuration.
     /// </summary>
     public async Task<AgentSessionState> CreateSessionAsync(
         string? providerId = null,
+        string? modelName = null,
+        string? systemPrompt = null,
+        List<string>? knowledgeBaseIds = null,
+        bool reasoningEnabled = false,
         string? title = null,
-        IEnumerable<string>? knowledgeBaseIds = null,
         CancellationToken ct = default)
     {
-        var config = new SessionConfiguration
-        {
-            ProviderId = providerId,
-            Title = title,
-            KnowledgeBaseIds = knowledgeBaseIds?.ToList()
-        };
-
-        var state = await chatService.CreateSessionAsync(config, ct);
+        var state = await chatService.CreateSessionAsync(
+            providerId,
+            modelName,
+            systemPrompt,
+            knowledgeBaseIds,
+            reasoningEnabled,
+            title,
+            ct);
 
         sessionStorage.AddSession(state);
         sessionStorage.CurrentSessionId = state.SessionId;
@@ -65,33 +68,17 @@ public class AIChatUIService(
 
     /// <summary>
     /// Send a message and get a streaming response.
-    /// User message is added synchronously before returning the async enumerable.
+    /// Note: UI layer should call StateManager.AddUserMessage() and StateManager.UpdateTitle() before calling this.
     /// </summary>
     public IAsyncEnumerable<AgentResponseUpdate> SendMessageStreamingAsync(
         string sessionId,
         string message,
-        bool reasoningEnabled = false,
         CancellationToken ct = default)
     {
         var state = sessionStorage.GetSession(sessionId);
-        if (state != null)
+        if (state == null)
         {
-            state.Messages.Add(new AIChatMessage
-            {
-                Role = AIChatRole.User,
-                Content = message
-            });
-
-            if (state.Messages.Count == 1)
-            {
-                state.Title = message.Length > 50 ? message[..50] + "..." : message;
-            }
-
-            // Update reasoning mode if changed
-            if (state.ReasoningEnabled != reasoningEnabled)
-            {
-                state.ReasoningEnabled = reasoningEnabled;
-            }
+            return AsyncEnumerableEmpty<AgentResponseUpdate>();
         }
 
         return StreamResponseAsync(sessionId, message, state, ct);
@@ -118,7 +105,7 @@ public class AIChatUIService(
         }
 
         var aiMessage = accumulator.CreateMessage(state.ProviderId ?? string.Empty, state.ModelName ?? string.Empty);
-        state.Messages.Add(aiMessage);
+        stateManager.AddAssistantMessage(sessionId, aiMessage.Content, aiMessage.ProviderId, aiMessage.ModelName);
         state.UpdatedAt = DateTimeOffset.UtcNow;
     }
 
@@ -146,7 +133,6 @@ public class AIChatUIService(
         string sessionId,
         string messageId,
         string newContent,
-        bool reasoningEnabled = false,
         CancellationToken ct = default)
     {
         var state = sessionStorage.GetSession(sessionId);
@@ -167,7 +153,7 @@ public class AIChatUIService(
         // Sync backend: truncate agent history to match UI state
         state.TruncateHistory(index);
 
-        return SendMessageStreamingAsync(sessionId, newContent, reasoningEnabled, ct);
+        return SendMessageStreamingAsync(sessionId, newContent, ct);
     }
 
     /// <summary>
@@ -177,7 +163,6 @@ public class AIChatUIService(
     public IAsyncEnumerable<AgentResponseUpdate> RetryMessageAsync(
         string sessionId,
         string messageId,
-        bool reasoningEnabled = false,
         CancellationToken ct = default)
     {
         var state = sessionStorage.GetSession(sessionId);
@@ -246,56 +231,5 @@ public class AIChatUIService(
     public void SwitchSession(string sessionId)
     {
         sessionStorage.CurrentSessionId = sessionId;
-    }
-
-    /// <summary>
-    /// Update session system prompt.
-    /// Sets the NeedsRecreation flag; agent will be recreated on next message send.
-    /// </summary>
-    public Task<bool> UpdateSessionSystemPromptAsync(
-        string sessionId,
-        string? systemPrompt,
-        CancellationToken ct = default)
-    {
-        var state = sessionStorage.GetSession(sessionId);
-        if (state == null)
-        {
-            return Task.FromResult(false);
-        }
-
-        state.SystemPrompt = systemPrompt;
-        state.UpdatedAt = DateTimeOffset.UtcNow;
-
-        return Task.FromResult(true);
-    }
-
-    /// <summary>
-    /// Update session configuration.
-    /// Changes to ProviderId, ModelName, SystemPrompt, KnowledgeBaseIds, or ReasoningEnabled
-    /// will trigger agent recreation on next message send.
-    /// </summary>
-    public void UpdateSessionConfiguration(string sessionId, SessionConfiguration config)
-    {
-        var state = sessionStorage.GetSession(sessionId);
-        if (state == null) return;
-
-        if (!string.IsNullOrEmpty(config.ProviderId))
-            state.ProviderId = config.ProviderId;
-
-        if (config.ModelName != null)
-            state.ModelName = config.ModelName;
-
-        if (config.SystemPrompt != null)
-            state.SystemPrompt = config.SystemPrompt;
-
-        if (config.KnowledgeBaseIds != null)
-            state.ActiveKnowledgeBaseIds = config.KnowledgeBaseIds;
-
-        state.ReasoningEnabled = config.ReasoningEnabled;
-
-        if (!string.IsNullOrEmpty(config.Title))
-            state.Title = config.Title;
-
-        state.UpdatedAt = DateTimeOffset.UtcNow;
     }
 }
