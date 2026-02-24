@@ -38,18 +38,12 @@ public class ChatSessionStateManager(ChatSessionStorage storage)
     /// <summary>
     /// Add assistant message to session.
     /// </summary>
-    public void AddAssistantMessage(string sessionId, string content, string? providerId = null, string? modelName = null)
+    public void AddAssistantMessage(string sessionId, AIChatMessage message)
     {
         var session = storage.GetSession(sessionId);
         if (session == null) return;
 
-        session.Messages.Add(new AIChatMessage
-        {
-            Role = AIChatRole.Assistant,
-            Content = content,
-            ProviderId = providerId,
-            ModelName = modelName
-        });
+        session.Messages.Add(message);
     }
 
     /// <summary>

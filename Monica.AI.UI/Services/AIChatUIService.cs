@@ -105,7 +105,7 @@ public class AIChatUIService(
         }
 
         var aiMessage = accumulator.CreateMessage(state.ProviderId ?? string.Empty, state.ModelName ?? string.Empty);
-        stateManager.AddAssistantMessage(sessionId, aiMessage.Content, aiMessage.ProviderId, aiMessage.ModelName);
+        stateManager.AddAssistantMessage(sessionId, aiMessage);
         state.UpdatedAt = DateTimeOffset.UtcNow;
     }
 
