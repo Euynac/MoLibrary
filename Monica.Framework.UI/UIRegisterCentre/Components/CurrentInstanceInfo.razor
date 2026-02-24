@@ -73,7 +73,7 @@
                     <MudDivider />
                     <MudStack Row="true" Justify="Justify.SpaceBetween">
                         <MudText Typo="Typo.body2" Color="Color.Secondary">构建时间</MudText>
-                        <MudText Typo="Typo.body1">@_currentInstance.BuildTime.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                        <MudText Typo="Typo.body1">@_currentInstance.BuildTime.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
                     </MudStack>
                     <MudDivider />
                     <MudStack Row="true" Justify="Justify.SpaceBetween">
@@ -88,12 +88,12 @@
                     <MudDivider />
                     <MudStack Row="true" Justify="Justify.SpaceBetween">
                         <MudText Typo="Typo.body2" Color="Color.Secondary">注册时间</MudText>
-                        <MudText Typo="Typo.body1">@_currentInstance.RegistrationTime.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                        <MudText Typo="Typo.body1">@_currentInstance.RegistrationTime.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
                     </MudStack>
                     <MudDivider />
                     <MudStack Row="true" Justify="Justify.SpaceBetween">
                         <MudText Typo="Typo.body2" Color="Color.Secondary">最后心跳</MudText>
-                        <MudText Typo="Typo.body1">@_currentInstance.LastHeartbeatTime.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                        <MudText Typo="Typo.body1">@_currentInstance.LastHeartbeatTime.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
                     </MudStack>
 
                     @if (_currentInstance.Metadata.Any())
@@ -139,7 +139,7 @@
                         {
                             <MudStack Row="true" Justify="Justify.SpaceBetween">
                                 <MudText Typo="Typo.body2" Color="Color.Secondary">成为 Leader 时间</MudText>
-                                <MudText Typo="Typo.body1">@_leaderElectionService.LeaderBecomeTime.Value.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                                <MudText Typo="Typo.body1">@_leaderElectionService.LeaderBecomeTime.Value.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
                             </MudStack>
                             <MudDivider />
                         }
@@ -163,7 +163,7 @@
                             <MudDivider />
                             <MudStack Row="true" Justify="Justify.SpaceBetween">
                                 <MudText Typo="Typo.body2" Color="Color.Secondary">成为 Leader 时间</MudText>
-                                <MudText Typo="Typo.body1">@_clusterLeaderState.BecomeLeaderTime.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                                <MudText Typo="Typo.body1">@_clusterLeaderState.BecomeLeaderTime.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
                             </MudStack>
                         }
                     </MudStack>

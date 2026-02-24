@@ -114,9 +114,27 @@
                     </TemplateColumn>
                     <PropertyColumn Property="x => x.Instance.AssemblyVersion" Title="程序集版本" />
                     <PropertyColumn Property="x => x.Instance.ReleaseVersion" Title="发布版本" />
-                    <PropertyColumn Property="x => x.Instance.BuildTime" Title="构建时间" Format="yyyy-MM-dd HH:mm:ss" />
-                    <PropertyColumn Property="x => x.Instance.LastHeartbeatTime" Title="最后心跳" Format="yyyy-MM-dd HH:mm:ss" />
-                    <PropertyColumn Property="x => x.Instance.RegistrationTime" Title="注册时间" Format="yyyy-MM-dd HH:mm:ss" />
+                    <TemplateColumn Title="构建时间">
+                        <CellTemplate>
+                            <MudText Typo="Typo.body2" Style="@(context.Item.IsEvicted ? "opacity: 0.6;" : "")">
+                                @context.Item.Instance.BuildTime.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")
+                            </MudText>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="最后心跳">
+                        <CellTemplate>
+                            <MudText Typo="Typo.body2" Style="@(context.Item.IsEvicted ? "opacity: 0.6;" : "")">
+                                @context.Item.Instance.LastHeartbeatTime.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")
+                            </MudText>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="注册时间">
+                        <CellTemplate>
+                            <MudText Typo="Typo.body2" Style="@(context.Item.IsEvicted ? "opacity: 0.6;" : "")">
+                                @context.Item.Instance.RegistrationTime.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")
+                            </MudText>
+                        </CellTemplate>
+                    </TemplateColumn>
                     @if (HasEvictedInstances())
                     {
                         <TemplateColumn Title="驱逐时间">
@@ -124,7 +142,7 @@
                                 @if (context.Item.IsEvicted)
                                 {
                                     <MudText Typo="Typo.body2">
-                                        @context.Item.EvictionTime?.ToString("yyyy-MM-dd HH:mm:ss")
+                                        @context.Item.EvictionTime?.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")
                                     </MudText>
                                 }
                                 else
@@ -137,7 +155,7 @@
                     <TemplateColumn Title="心跳健康度">
                         <CellTemplate>
                             @{
-                                var timeSinceHeartbeat = DateTime.Now - context.Item.Instance.LastHeartbeatTime;
+                                var timeSinceHeartbeat = DateTime.Now - context.Item.Instance.LastHeartbeatTime.FromUtcToLocal();
                                 var healthText = GetHeartbeatHealthText(timeSinceHeartbeat);
                                 var healthColor = GetHeartbeatHealthColor(timeSinceHeartbeat);
                             }
@@ -267,7 +285,7 @@
                             {
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                     <MudText Typo="Typo.subtitle1">成为Leader时间:</MudText>
-                                    <MudText Typo="Typo.body1">@(LeaderElectionService.LeaderBecomeTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-")</MudText>
+                                    <MudText Typo="Typo.body1">@(LeaderElectionService.LeaderBecomeTime?.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss") ?? "-")</MudText>
                                 </MudStack>
                             }
                             @if (!string.IsNullOrEmpty(LeaderElectionService.CurrentETag))

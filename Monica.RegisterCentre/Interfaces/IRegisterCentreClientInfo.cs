@@ -18,4 +18,26 @@ public interface IRegisterCentreClientInfo
     /// <param name="isHeartbeatInfo">是否为心跳信息（心跳时不包含环境变量和监听地址元数据）</param>
     /// <returns>实例状态信息</returns>
     InstanceState GetServiceStatus(bool isHeartbeatInfo = false);
+
+    /// <summary>
+    /// 获取当前实例的注册时间（首次注册时记录，null 表示尚未注册）
+    /// </summary>
+    DateTime? RegistrationTime { get; }
+
+    /// <summary>
+    /// 获取当前实例的最后心跳时间（每次心跳更新，null 表示尚未发送心跳）
+    /// </summary>
+    DateTime? LastHeartbeatTime { get; }
+
+    /// <summary>
+    /// 设置注册时间（仅在首次注册成功时调用）
+    /// </summary>
+    /// <param name="time">注册时间</param>
+    void SetRegistrationTime(DateTime time);
+
+    /// <summary>
+    /// 更新最后心跳时间（每次心跳成功后调用）
+    /// </summary>
+    /// <param name="time">心跳时间</param>
+    void UpdateLastHeartbeatTime(DateTime time);
 }

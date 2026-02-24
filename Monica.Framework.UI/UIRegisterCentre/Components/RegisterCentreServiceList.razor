@@ -45,9 +45,9 @@
 				@{
 					var runningInstance = context.Item.GetValidInstanceInfo();
 				}
-				<MudTooltip Text="@(runningInstance?.BuildTime.ToString("yyyy-MM-dd HH:mm:ss") ?? "N/A")">
+				<MudTooltip Text="@(runningInstance?.BuildTime.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss") ?? "N/A")">
 					<MudText Typo="Typo.body2">
-						@(runningInstance?.BuildTime.ToString("MM-dd HH:mm") ?? "N/A")
+						@(runningInstance?.BuildTime.FromUtcToLocal().ToString("MM-dd HH:mm") ?? "N/A")
 					</MudText>
 				</MudTooltip>
 			</CellTemplate>
@@ -69,9 +69,9 @@
 				@{
 					var runningInstance = context.Item.GetValidInstanceInfo();
 				}
-				<MudTooltip Text="@(runningInstance?.LastHeartbeatTime.ToString("yyyy-MM-dd HH:mm:ss") ?? "N/A")">
+				<MudTooltip Text="@(runningInstance?.LastHeartbeatTime.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss") ?? "N/A")">
 					<MudText Typo="Typo.body2">
-						@(runningInstance?.LastHeartbeatTime.ToString("MM-dd HH:mm:ss") ?? "N/A")
+						@(runningInstance?.LastHeartbeatTime.FromUtcToLocal().ToString("MM-dd HH:mm:ss") ?? "N/A")
 					</MudText>
 				</MudTooltip>
 			</CellTemplate>

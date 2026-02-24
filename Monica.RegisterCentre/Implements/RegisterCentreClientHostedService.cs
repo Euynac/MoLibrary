@@ -118,9 +118,10 @@ public class RegisterCentreClientHostedService(
     {
         try
         {
+            RegistrationResult? result = null;
             await _heartbeatPipeline.ExecuteAsync(async token =>
             {
-                var result = await stateManager.RegisterOrHeartbeatAsync(token);
+                result = await stateManager.RegisterOrHeartbeatAsync(token);
                 if (!result.Success)
                 {
                     throw new HeartbeatFailedException(result.ErrorMessage ?? "Heartbeat failed");
@@ -128,6 +129,13 @@ public class RegisterCentreClientHostedService(
             }, ct);
 
             // Heartbeat succeeded (possibly after retries)
+            // Update client info with actual registration/heartbeat times
+            if (result?.HeartbeatTime.HasValue == true)
+            {
+                clientInfo.SetRegistrationTime(result.HeartbeatTime.Value);
+                clientInfo.UpdateLastHeartbeatTime(result.HeartbeatTime.Value);
+            }
+
             await HandleSuccessfulHeartbeatAsync(ct);
         }
         catch (HeartbeatFailedException ex)

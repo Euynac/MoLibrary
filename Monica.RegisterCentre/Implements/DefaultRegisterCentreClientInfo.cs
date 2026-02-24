@@ -22,6 +22,50 @@ public class DefaultRegisterCentreClientInfo(
     private readonly Lazy<InstanceState> _baseServiceInfo = new(
         () => BuildBaseServiceInfo(options.Value));
 
+    // 线程安全的本地状态管理（类似 LeaderElectionService 模式）
+    private readonly object _stateLock = new();
+    private DateTime? _registrationTime;
+    private DateTime? _lastHeartbeatTime;
+
+    public DateTime? RegistrationTime
+    {
+        get
+        {
+            lock (_stateLock)
+            {
+                return _registrationTime;
+            }
+        }
+    }
+
+    public DateTime? LastHeartbeatTime
+    {
+        get
+        {
+            lock (_stateLock)
+            {
+                return _lastHeartbeatTime;
+            }
+        }
+    }
+
+    public void SetRegistrationTime(DateTime time)
+    {
+        lock (_stateLock)
+        {
+            // 仅在首次注册时设置（后续不再更改）
+            _registrationTime ??= time;
+        }
+    }
+
+    public void UpdateLastHeartbeatTime(DateTime time)
+    {
+        lock (_stateLock)
+        {
+            _lastHeartbeatTime = time;
+        }
+    }
+
     public InstanceState GetServiceStatus(bool isHeartbeatInfo = false)
     {
         // 克隆基础信息以避免修改缓存的实例
@@ -58,8 +102,8 @@ public class DefaultRegisterCentreClientInfo(
             AssemblyVersion = options.AssemblyVersion ?? GetAssemblyVersion(entryAssembly),
             ReleaseVersion = options.ReleaseVersion,
             DependentSubDomains = options.DependentSubDomains,
-            RegistrationTime = DateTime.MinValue,
-            LastHeartbeatTime = DateTime.MinValue
+            RegistrationTime = DateTime.MinValue,  // 将在 CloneInstanceState 中使用本地状态覆盖
+            LastHeartbeatTime = DateTime.MinValue   // 将在 CloneInstanceState 中使用本地状态覆盖
         };
     }
 
@@ -119,7 +163,7 @@ public class DefaultRegisterCentreClientInfo(
     /// <summary>
     /// 克隆 InstanceState 以避免修改缓存的实例
     /// </summary>
-    private static InstanceState CloneInstanceState(InstanceState original)
+    private InstanceState CloneInstanceState(InstanceState original)
     {
         return new InstanceState
         {
@@ -132,8 +176,8 @@ public class DefaultRegisterCentreClientInfo(
             AssemblyVersion = original.AssemblyVersion,
             ReleaseVersion = original.ReleaseVersion,
             DependentSubDomains = original.DependentSubDomains?.ToList(),
-            RegistrationTime = original.RegistrationTime,
-            LastHeartbeatTime = original.LastHeartbeatTime,
+            RegistrationTime = RegistrationTime ?? DateTime.MinValue,  // 使用本地状态
+            LastHeartbeatTime = LastHeartbeatTime ?? DateTime.MinValue,  // 使用本地状态
             Metadata = new Dictionary<string, string>() // 从空元数据开始
         };
     }
