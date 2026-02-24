@@ -37,7 +37,7 @@ public class JobRegistry(
             jobDefinition.MaxConcurrency,
             jobDefinition.RetryCount,
             jobDefinition.MaxExecutionTimeout);
-        _jobDefinitionTypeMap.Add(jobDefinition.JobClrType.FullName!, jobDefinition.JobClrType);
+        _jobDefinitionTypeMap.TryAdd(jobDefinition.JobClrType.FullName!, jobDefinition.JobClrType);
         
         if (jobDefinition.JobType == JobType.Recurring)
         {
@@ -53,8 +53,8 @@ public class JobRegistry(
         {
             if (jobDefinition.JobArgsClrType == null)
                 throw new JobRegistrationException(jobDefinition.JobKey, "ParameterClrType is null");
-            _triggeredJobMapping.Add(jobDefinition.JobArgsClrType.FullName!, jobDefinition.JobClrType);
-            _triggeredJobArgsTypeMap.Add(jobDefinition.JobArgsClrType.FullName!, jobDefinition.JobArgsClrType);
+            _triggeredJobMapping.TryAdd(jobDefinition.JobArgsClrType.FullName!, jobDefinition.JobClrType);
+            _triggeredJobArgsTypeMap.TryAdd(jobDefinition.JobArgsClrType.FullName!, jobDefinition.JobArgsClrType);
             logger.LogDebug(
                 "Triggered job details - JobKey: {JobKey}, ParameterType: {ParameterType}",
                 jobDefinition.JobKey,

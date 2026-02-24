@@ -1,0 +1,178 @@
+@using Monica.Framework.UI.UIRegisterCentre.Extensions
+@using Monica.Framework.UI.UIRegisterCentre.Services
+@using Monica.RegisterCentre.Interfaces
+@using Monica.RegisterCentre.Models
+@implements IDisposable
+
+<MudGrid>
+    <MudItem xs="12">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+            <MudText Typo="Typo.h6">当前实例信息</MudText>
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                    <MudSwitch T="bool" @bind-Value="_autoRefreshEnabled" @bind-Value:after="OnAutoRefreshToggled" Color="Color.Primary" Label="自动刷新" />
+                    <MudNumericField T="int" @bind-Value="_refreshInterval" @bind-Value:after="OnRefreshIntervalChanged" Label="刷新间隔(秒)" Min="1" Max="60"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 120px"
+                                   Disabled="!_autoRefreshEnabled" Immediate="true" />
+                </MudStack>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@RefreshAsync" Disabled="@_isLoading">
+                    <MudIcon Icon="@Icons.Material.Filled.Refresh" Class="mr-1" />
+                    刷新
+                </MudButton>
+            </MudStack>
+        </MudStack>
+    </MudItem>
+
+    @if (_isLoading)
+    {
+        <MudItem xs="12">
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+        </MudItem>
+    }
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <MudItem xs="12">
+            <MudAlert Severity="Severity.Warning">@_errorMessage</MudAlert>
+        </MudItem>
+    }
+
+    @if (_currentInstance != null)
+    {
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-4" Elevation="2">
+                <MudText Typo="Typo.h6" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Info" Class="mr-1" />
+                    实例详情
+                </MudText>
+                <MudStack Spacing="2">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">服务名称</MudText>
+                        <MudText Typo="Typo.body1">@_currentInstance.ServiceName</MudText>
+                    </MudStack>
+                    <MudDivider />
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">应用名称</MudText>
+                        <MudText Typo="Typo.body1">@_currentInstance.AppName</MudText>
+                    </MudStack>
+                    <MudDivider />
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">实例 ID</MudText>
+                        <MudText Typo="Typo.body1" Style="font-family: monospace;">@_currentInstance.InstanceId</MudText>
+                    </MudStack>
+                    <MudDivider />
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">项目名称</MudText>
+                        <MudText Typo="Typo.body1">@_currentInstance.ProjectName</MudText>
+                    </MudStack>
+                    <MudDivider />
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">子域名称</MudText>
+                        <MudText Typo="Typo.body1">@(_currentInstance.DomainName ?? "未指定")</MudText>
+                    </MudStack>
+                    <MudDivider />
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">构建时间</MudText>
+                        <MudText Typo="Typo.body1">@_currentInstance.BuildTime.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                    </MudStack>
+                    <MudDivider />
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">程序集版本</MudText>
+                        <MudText Typo="Typo.body1">@(_currentInstance.AssemblyVersion ?? "未知")</MudText>
+                    </MudStack>
+                    <MudDivider />
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">发布版本</MudText>
+                        <MudText Typo="Typo.body1">@(_currentInstance.ReleaseVersion ?? "未知")</MudText>
+                    </MudStack>
+                    <MudDivider />
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">注册时间</MudText>
+                        <MudText Typo="Typo.body1">@_currentInstance.RegistrationTime.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                    </MudStack>
+                    <MudDivider />
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">最后心跳</MudText>
+                        <MudText Typo="Typo.body1">@_currentInstance.LastHeartbeatTime.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                    </MudStack>
+
+                    @if (_currentInstance.Metadata.Any())
+                    {
+                        <MudExpansionPanels Class="mt-3">
+                            <MudExpansionPanel Text="元数据">
+                                <MudStack Spacing="1">
+                                    @foreach (var kvp in _currentInstance.Metadata)
+                                    {
+                                        <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary" Style="font-family: monospace;">@kvp.Key</MudText>
+                                            <MudText Typo="Typo.body2" Style="font-family: monospace;">@kvp.Value</MudText>
+                                        </MudStack>
+                                        <MudDivider />
+                                    }
+                                </MudStack>
+                            </MudExpansionPanel>
+                        </MudExpansionPanels>
+                    }
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-4" Elevation="2">
+                <MudText Typo="Typo.h6" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.WorkspacePremium" Class="mr-1" />
+                    Leader 状态
+                </MudText>
+
+                @if (_leaderElectionService != null)
+                {
+                    <MudStack Spacing="2">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">当前状态</MudText>
+                            <MudChip T="string" Color="@_leaderElectionService.CurrentStatus.GetColor()" Icon="@_leaderElectionService.CurrentStatus.GetIcon()">
+                                @_leaderElectionService.CurrentStatus.GetText()
+                            </MudChip>
+                        </MudStack>
+                        <MudDivider />
+
+                        @if (_leaderElectionService.IsLeader && _leaderElectionService.LeaderBecomeTime.HasValue)
+                        {
+                            <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">成为 Leader 时间</MudText>
+                                <MudText Typo="Typo.body1">@_leaderElectionService.LeaderBecomeTime.Value.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                            </MudStack>
+                            <MudDivider />
+                        }
+
+                        @if (_leaderElectionService.IsLeader && !string.IsNullOrEmpty(_leaderElectionService.CurrentETag))
+                        {
+                            <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">当前 ETag</MudText>
+                                <MudText Typo="Typo.body2" Style="font-family: monospace;">@_leaderElectionService.CurrentETag</MudText>
+                            </MudStack>
+                            <MudDivider />
+                        }
+
+                        @if (_clusterLeaderState != null)
+                        {
+                            <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1">集群 Leader 信息</MudText>
+                            <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Leader 实例 ID</MudText>
+                                <MudText Typo="Typo.body2" Style="font-family: monospace;">@_clusterLeaderState.InstanceId</MudText>
+                            </MudStack>
+                            <MudDivider />
+                            <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">成为 Leader 时间</MudText>
+                                <MudText Typo="Typo.body1">@_clusterLeaderState.BecomeLeaderTime.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                            </MudStack>
+                        }
+                    </MudStack>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Info">Leader 选举服务未启用</MudAlert>
+                }
+            </MudPaper>
+        </MudItem>
+    }
+</MudGrid>

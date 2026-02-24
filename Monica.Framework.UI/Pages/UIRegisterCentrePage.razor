@@ -82,6 +82,10 @@
                 <DomainDetail DomainName="@_selectedDomain.Name" OnBackClick="OnBackToDomainList" OnServiceDetailClick="OnServiceDetailFromDomain" />
             }
         </MudTabPanel>
+
+        <MudTabPanel Text="当前实例" Icon="@Icons.Material.Filled.Computer">
+            <CurrentInstanceInfo />
+        </MudTabPanel>
     </MudTabs>
 </MudContainer>
 
