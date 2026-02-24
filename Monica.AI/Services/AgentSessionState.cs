@@ -161,9 +161,17 @@ public class AgentSessionState
     public AgentSession Session { get; internal set; }
 
     /// <summary>
-    /// Get the chat history from the session
+    /// Get the chat history from the session via the agent's ChatHistoryProvider
     /// </summary>
-    public IList<ChatMessage>? ChatHistory => Session.GetService<IList<ChatMessage>>();
+    public IList<ChatMessage>? ChatHistory
+    {
+        get
+        {
+            // Get the InMemoryChatHistoryProvider from the agent
+            var provider = Agent.GetService<InMemoryChatHistoryProvider>();
+            return provider?.GetMessages(Session);
+        }
+    }
 
     /// <summary>
     /// Message count in the chat history
