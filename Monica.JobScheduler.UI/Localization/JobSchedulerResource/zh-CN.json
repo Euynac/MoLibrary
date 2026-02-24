@@ -187,6 +187,27 @@
     }
   },
   "JobDetail": {
+    "HealthMetrics": {
+      "Title": "健康指标 (最近 {0} 天)",
+      "HealthScore": "健康度",
+      "HealthScoreTooltip": "健康度 = (总执行次数 - 跳过 - 失败 - 终止) / 总执行次数。反映作业被成功调度执行的比例。",
+      "ExecutionFailureRate": "执行失败率",
+      "ExecutionFailureRateTooltip": "执行失败率 = 失败次数 / 实际完成次数。实际完成次数 = 总执行次数 - 跳过 - 取消 - 运行中。反映作业执行代码的失败率。",
+      "TotalExecutions": "总执行次数",
+      "RecentFailures": "最近失败实例",
+      "NoFailuresInWindow": "在监控时间窗口内无失败记录",
+      "InstanceDetailTitle": "作业实例详情"
+    },
+    "Statistics": {
+      "Title": "统计信息",
+      "TotalExecutions": "总执行次数",
+      "FailedExecutions": "失败次数",
+      "AverageExecutionTime": "平均执行时间",
+      "FastestExecutionTime": "最快执行时间",
+      "SlowestExecutionTime": "最慢执行时间",
+      "LastExecutionTime": "最后执行时间",
+      "LastExecutionState": "最后执行状态"
+    },
     "BasicInfo": {
       "Title": "基本信息",
       "JobKey": "作业键",

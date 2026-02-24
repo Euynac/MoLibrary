@@ -55,7 +55,7 @@
     public Dictionary<JobState, int> StateDistribution { get; set; } = new();
 
     [Parameter]
-    public string TimeWindowText { get; set; } = "最近30天";
+    public string TimeWindowText { get; set; } = string.Empty;
 
     private ChartOptions ChartOptionsWithPalette => new()
     {

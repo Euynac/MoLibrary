@@ -9,7 +9,7 @@
 <MudCard Elevation="2">
     <MudCardHeader>
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-            <MudText Typo="Typo.h6">统计信息</MudText>
+            <MudText Typo="Typo.h6">@L["JobDetail:Statistics:Title"]</MudText>
             <MudIconButton Icon="@Icons.Material.Filled.Refresh"
                            OnClick="RefreshAsync"
                            Size="Size.Small"
@@ -22,7 +22,7 @@
             <MudStack Spacing="2">
                 <!-- 执行次数 -->
                 <MudStack Row="true" Justify="Justify.SpaceBetween">
-                    <MudText Typo="Typo.body2">总执行次数</MudText>
+                    <MudText Typo="Typo.body2">@L["JobDetail:Statistics:TotalExecutions"]</MudText>
                     <MudLink OnClick="NavigateToAllInstances" Typo="Typo.body2">
                         @_statistics.TotalExecutions
                     </MudLink>
@@ -30,7 +30,7 @@
 
                 <!-- 失败次数 -->
                 <MudStack Row="true" Justify="Justify.SpaceBetween">
-                    <MudText Typo="Typo.body2">失败次数</MudText>
+                    <MudText Typo="Typo.body2">@L["JobDetail:Statistics:FailedExecutions"]</MudText>
                     <MudLink OnClick="NavigateToFailedInstances" Typo="Typo.body2" Color="Color.Error">
                         @_statistics.FailedExecutions
                     </MudLink>
@@ -42,7 +42,7 @@
                 @if (_statistics.AverageExecutionTime.HasValue)
                 {
                     <MudStack Row="true" Justify="Justify.SpaceBetween">
-                        <MudText Typo="Typo.body2">平均执行时间</MudText>
+                        <MudText Typo="Typo.body2">@L["JobDetail:Statistics:AverageExecutionTime"]</MudText>
                         <MudText Typo="Typo.body2">@FormatTimeSpan(_statistics.AverageExecutionTime.Value)</MudText>
                     </MudStack>
                 }
@@ -51,7 +51,7 @@
                 @if (_statistics.FastestExecutionTime.HasValue && _statistics.FastestInstanceId != null)
                 {
                     <MudStack Row="true" Justify="Justify.SpaceBetween">
-                        <MudText Typo="Typo.body2">最快执行时间</MudText>
+                        <MudText Typo="Typo.body2">@L["JobDetail:Statistics:FastestExecutionTime"]</MudText>
                         <MudLink OnClick="@(async () => await OpenInstanceDetailDialog(_statistics.FastestInstanceId))" Typo="Typo.body2" Color="Color.Success">
                             @FormatTimeSpan(_statistics.FastestExecutionTime.Value)
                         </MudLink>
@@ -62,7 +62,7 @@
                 @if (_statistics.SlowestExecutionTime.HasValue && _statistics.SlowestInstanceId != null)
                 {
                     <MudStack Row="true" Justify="Justify.SpaceBetween">
-                        <MudText Typo="Typo.body2">最慢执行时间</MudText>
+                        <MudText Typo="Typo.body2">@L["JobDetail:Statistics:SlowestExecutionTime"]</MudText>
                         <MudLink OnClick="@(async () => await OpenInstanceDetailDialog(_statistics.SlowestInstanceId))" Typo="Typo.body2" Color="Color.Warning">
                             @FormatTimeSpan(_statistics.SlowestExecutionTime.Value)
                         </MudLink>
@@ -75,7 +75,7 @@
 
                     <!-- 最后执行时间 -->
                     <MudStack Row="true" Justify="Justify.SpaceBetween">
-                        <MudText Typo="Typo.body2">最后执行时间</MudText>
+                        <MudText Typo="Typo.body2">@L["JobDetail:Statistics:LastExecutionTime"]</MudText>
                         <MudText Typo="Typo.body2">@_statistics.LastExecutionTime.Value.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
                     </MudStack>
 
@@ -83,7 +83,7 @@
                     @if (_statistics.LastExecutionState.HasValue)
                     {
                         <MudStack Row="true" Justify="Justify.SpaceBetween">
-                            <MudText Typo="Typo.body2">最后执行状态</MudText>
+                            <MudText Typo="Typo.body2">@L["JobDetail:Statistics:LastExecutionState"]</MudText>
                             <MudChip T="string" Size="Size.Small" Color="@ColorService.GetStateColor(_statistics.LastExecutionState.Value)">
                                 @_statistics.LastExecutionState.Value
                             </MudChip>
@@ -192,6 +192,6 @@
             Position = DialogPosition.Center
         };
 
-        await DialogService.ShowAsync<JobInstanceDetailDialog>("作业实例详情", parameters, options);
+        await DialogService.ShowAsync<JobInstanceDetailDialog>(L["JobDetail:HealthMetrics:InstanceDetailTitle"], parameters, options);
     }
 }

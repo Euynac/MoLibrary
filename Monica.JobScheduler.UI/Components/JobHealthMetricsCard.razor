@@ -8,7 +8,7 @@
 <MudCard Elevation="2">
     <MudCardHeader>
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-            <MudText Typo="Typo.h6">健康指标 (最近 @_timeWindowDays 天)</MudText>
+            <MudText Typo="Typo.h6">@string.Format(L["JobDetail:HealthMetrics:Title"], _timeWindowDays)</MudText>
             <MudIconButton Icon="@Icons.Material.Filled.Refresh"
                            OnClick="RefreshAsync"
                            Size="Size.Small"
@@ -24,8 +24,8 @@
                     <MudItem xs="6">
                         <MudStack Spacing="1">
                             <MudStack Row="true" AlignItems="AlignItems.Center">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">健康度</MudText>
-                                <MudTooltip Text="健康度 = (总执行次数 - 跳过 - 失败 - 终止) / 总执行次数。反映作业被成功调度执行的比例。">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["JobDetail:HealthMetrics:HealthScore"]</MudText>
+                                <MudTooltip Text="@L["JobDetail:HealthMetrics:HealthScoreTooltip"]">
                                     <MudIcon Icon="@Icons.Material.Filled.Info"
                                              Size="Size.Small"
                                              Color="Color.Info"
@@ -41,8 +41,8 @@
                     <MudItem xs="6">
                         <MudStack Spacing="1">
                             <MudStack Row="true" AlignItems="AlignItems.Center">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">执行失败率</MudText>
-                                <MudTooltip Text="执行失败率 = 失败次数 / 实际完成次数。实际完成次数 = 总执行次数 - 跳过 - 取消 - 运行中。反映作业执行代码的失败率。">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["JobDetail:HealthMetrics:ExecutionFailureRate"]</MudText>
+                                <MudTooltip Text="@L["JobDetail:HealthMetrics:ExecutionFailureRateTooltip"]">
                                     <MudIcon Icon="@Icons.Material.Filled.Info"
                                              Size="Size.Small"
                                              Color="Color.Info"
@@ -69,7 +69,7 @@
                         <MudItem xs="6" sm="3">
                             <MudPaper Class="pa-2 state-scheduled">
                                 <MudStack Spacing="1">
-                                    <MudText Typo="Typo.caption">Scheduled</MudText>
+                                    <MudText Typo="Typo.caption">@L["JobStates:Scheduled"]</MudText>
                                     <MudText Typo="Typo.h6">@_metrics.ScheduledCount</MudText>
                                 </MudStack>
                             </MudPaper>
@@ -77,7 +77,7 @@
                         <MudItem xs="6" sm="3">
                             <MudPaper Class="pa-2 state-enqueued">
                                 <MudStack Spacing="1">
-                                    <MudText Typo="Typo.caption">Enqueued</MudText>
+                                    <MudText Typo="Typo.caption">@L["JobStates:Enqueued"]</MudText>
                                     <MudText Typo="Typo.h6">@_metrics.EnqueuedCount</MudText>
                                 </MudStack>
                             </MudPaper>
@@ -85,7 +85,7 @@
                         <MudItem xs="6" sm="3">
                             <MudPaper Class="pa-2 state-processing">
                                 <MudStack Spacing="1">
-                                    <MudText Typo="Typo.caption">Processing</MudText>
+                                    <MudText Typo="Typo.caption">@L["JobStates:Processing"]</MudText>
                                     <MudText Typo="Typo.h6">@_metrics.ProcessingCount</MudText>
                                 </MudStack>
                             </MudPaper>
@@ -93,7 +93,7 @@
                         <MudItem xs="6" sm="3">
                             <MudPaper Class="pa-2 state-succeeded">
                                 <MudStack Spacing="1">
-                                    <MudText Typo="Typo.caption">Succeeded</MudText>
+                                    <MudText Typo="Typo.caption">@L["JobStates:Succeeded"]</MudText>
                                     <MudText Typo="Typo.h6">@_metrics.SucceededCount</MudText>
                                 </MudStack>
                             </MudPaper>
@@ -101,7 +101,7 @@
                         <MudItem xs="6" sm="3">
                             <MudPaper Class="pa-2 state-failed">
                                 <MudStack Spacing="1">
-                                    <MudText Typo="Typo.caption">Failed</MudText>
+                                    <MudText Typo="Typo.caption">@L["JobStates:Failed"]</MudText>
                                     <MudText Typo="Typo.h6">@_metrics.FailedCount</MudText>
                                 </MudStack>
                             </MudPaper>
@@ -109,7 +109,7 @@
                         <MudItem xs="6" sm="3">
                             <MudPaper Class="pa-2 state-terminated">
                                 <MudStack Spacing="1">
-                                    <MudText Typo="Typo.caption">Terminated</MudText>
+                                    <MudText Typo="Typo.caption">@L["JobStates:Terminated"]</MudText>
                                     <MudText Typo="Typo.h6">@_metrics.TerminatedCount</MudText>
                                 </MudStack>
                             </MudPaper>
@@ -117,7 +117,7 @@
                         <MudItem xs="6" sm="3">
                             <MudPaper Class="pa-2 state-cancelled">
                                 <MudStack Spacing="1">
-                                    <MudText Typo="Typo.caption">Cancelled</MudText>
+                                    <MudText Typo="Typo.caption">@L["JobStates:Cancelled"]</MudText>
                                     <MudText Typo="Typo.h6">@_metrics.CancelledCount</MudText>
                                 </MudStack>
                             </MudPaper>
@@ -125,7 +125,7 @@
                         <MudItem xs="6" sm="3">
                             <MudPaper Class="pa-2 state-skipped">
                                 <MudStack Spacing="1">
-                                    <MudText Typo="Typo.caption">Skipped</MudText>
+                                    <MudText Typo="Typo.caption">@L["JobStates:Skipped"]</MudText>
                                     <MudText Typo="Typo.h6">@_metrics.SkippedCount</MudText>
                                 </MudStack>
                             </MudPaper>
@@ -136,7 +136,7 @@
                 <!-- 总执行次数 -->
                 <MudStack Row="true" Justify="Justify.Center">
                     <MudText Typo="Typo.body1" Color="Color.Secondary">
-                        总执行次数: <strong>@_metrics.TotalExecutions</strong>
+                        @L["JobDetail:HealthMetrics:TotalExecutions"]: <strong>@_metrics.TotalExecutions</strong>
                     </MudText>
                 </MudStack>
 
@@ -144,7 +144,7 @@
                 @if (_metrics.RecentFailures.Any())
                 {
                     <MudExpansionPanels Elevation="0">
-                        <MudExpansionPanel Text="最近失败实例" Icon="@Icons.Material.Filled.Error">
+                        <MudExpansionPanel Text="@L["JobDetail:HealthMetrics:RecentFailures"]" Icon="@Icons.Material.Filled.Error">
                             <MudList T="string" Dense="true">
                                 @foreach (var failure in _metrics.RecentFailures)
                                 {
@@ -164,7 +164,7 @@
                 else
                 {
                     <MudAlert Severity="Severity.Success" Dense="true" NoIcon="true">
-                        在监控时间窗口内无失败记录
+                        @L["JobDetail:HealthMetrics:NoFailuresInWindow"]
                     </MudAlert>
                 }
             </MudStack>
@@ -264,6 +264,6 @@
             Position = DialogPosition.Center
         };
 
-        await DialogService.ShowAsync<JobInstanceDetailDialog>("作业实例详情", parameters, options);
+        await DialogService.ShowAsync<JobInstanceDetailDialog>(L["JobDetail:HealthMetrics:InstanceDetailTitle"], parameters, options);
     }
 }

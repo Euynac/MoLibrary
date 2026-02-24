@@ -14,8 +14,4 @@
     <ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <EmbeddedResource Include="**\*.json" />
-  </ItemGroup>
-
 </Project>

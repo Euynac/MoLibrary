@@ -187,6 +187,27 @@
     }
   },
   "JobDetail": {
+    "HealthMetrics": {
+      "Title": "Health Metrics (Last {0} days)",
+      "HealthScore": "Health Score",
+      "HealthScoreTooltip": "Health Score = (Total Executions - Skipped - Failed - Terminated) / Total Executions. Reflects the proportion of jobs successfully scheduled for execution.",
+      "ExecutionFailureRate": "Execution Failure Rate",
+      "ExecutionFailureRateTooltip": "Execution Failure Rate = Failed Count / Actual Completed Count. Actual Completed Count = Total Executions - Skipped - Cancelled - Running. Reflects the failure rate of job execution code.",
+      "TotalExecutions": "Total Executions",
+      "RecentFailures": "Recent Failures",
+      "NoFailuresInWindow": "No failures in monitoring window",
+      "InstanceDetailTitle": "Job Instance Details"
+    },
+    "Statistics": {
+      "Title": "Statistics",
+      "TotalExecutions": "Total Executions",
+      "FailedExecutions": "Failed Executions",
+      "AverageExecutionTime": "Average Execution Time",
+      "FastestExecutionTime": "Fastest Execution Time",
+      "SlowestExecutionTime": "Slowest Execution Time",
+      "LastExecutionTime": "Last Execution Time",
+      "LastExecutionState": "Last Execution State"
+    },
     "BasicInfo": {
       "Title": "Basic Information",
       "JobKey": "Job Key",
