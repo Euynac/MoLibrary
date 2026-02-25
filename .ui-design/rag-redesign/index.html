@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAG UI Redesign v3 — Prototype</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: ['class', '[data-theme="dark"]'],
+      theme: {
+        extend: {
+          colors: {
+            primary: { DEFAULT: '#1976d2', light: '#42a5f5', dark: '#1565c0' },
+            success: { DEFAULT: '#4caf50', light: '#81c784', dark: '#388e3c' },
+            warning: { DEFAULT: '#ff9800', light: '#ffb74d', dark: '#f57c00' },
+            error: { DEFAULT: '#f44336', light: '#e57373', dark: '#d32f2f' },
+            surface: { DEFAULT: '#ffffff', dark: '#1e1e1e' },
+            background: { DEFAULT: '#fafafa', dark: '#121212' },
+            appbar: { DEFAULT: '#f8f9fa', dark: '#2d2d30' },
+          },
+          fontFamily: { sans: ['Roboto', 'Helvetica', 'Arial', 'sans-serif'] },
+        },
+      },
+    }
+  </script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #888; border-radius: 3px; }
+    .dark ::-webkit-scrollbar-thumb { background: #555; }
+    .page-transition { transition: opacity 0.15s ease; }
+    @keyframes progress-fill { from { width: 0; } }
+    .progress-animate { animation: progress-fill 0.6s ease-out; }
+    .kb-row, .doc-row { transition: background-color 0.1s; cursor: pointer; }
+    .kb-row:hover, .doc-row:hover { background-color: rgba(25,118,210,0.04); }
+    .dark .kb-row:hover, .dark .doc-row:hover { background-color: rgba(66,165,245,0.08); }
+    .kb-row.selected {
+      background-color: rgba(25,118,210,0.08);
+      border-color: #1976d2 !important;
+    }
+    .dark .kb-row.selected {
+      background-color: rgba(66,165,245,0.12);
+      border-color: #42a5f5 !important;
+    }
+
+    /* Chunk highlight styles */
+    .chunk-highlight {
+      background: linear-gradient(to bottom, rgba(251, 191, 36, 0.15), rgba(251, 191, 36, 0.25));
+      box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.2);
+      border-radius: 3px;
+      padding: 2px 4px;
+      margin: 0 1px;
+      position: relative;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    .dark .chunk-highlight {
+      background: linear-gradient(to bottom, rgba(251, 191, 36, 0.2), rgba(251, 191, 36, 0.3));
+      box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.25);
+    }
+    .chunk-highlight:hover {
+      background: linear-gradient(to bottom, rgba(251, 191, 36, 0.3), rgba(251, 191, 36, 0.4));
+      box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.35);
+    }
+    .dark .chunk-highlight:hover {
+      background: linear-gradient(to bottom, rgba(251, 191, 36, 0.35), rgba(251, 191, 36, 0.45));
+      box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.4);
+    }
+    .chunk-badge {
+      display: inline-block;
+      background: rgba(251, 191, 36, 0.9);
+      color: #78350f;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 1px 5px;
+      border-radius: 3px;
+      margin-left: 4px;
+      vertical-align: super;
+      line-height: 1;
+    }
+    .dark .chunk-badge {
+      background: rgba(251, 191, 36, 0.95);
+      color: #451a03;
+    }
+    /* Matched chunk highlight (green for search results) */
+    .chunk-highlight.matched {
+      background: linear-gradient(to bottom, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.35));
+      box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.3);
+    }
+    .dark .chunk-highlight.matched {
+      background: linear-gradient(to bottom, rgba(34, 197, 94, 0.25), rgba(34, 197, 94, 0.4));
+      box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.35);
+    }
+    .chunk-highlight.matched:hover {
+      background: linear-gradient(to bottom, rgba(34, 197, 94, 0.35), rgba(34, 197, 94, 0.5));
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.45);
+    }
+    .dark .chunk-highlight.matched:hover {
+      background: linear-gradient(to bottom, rgba(34, 197, 94, 0.4), rgba(34, 197, 94, 0.55));
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.5);
+    }
+    .chunk-badge.matched {
+      background: rgba(34, 197, 94, 0.9);
+      color: #14532d;
+    }
+    .dark .chunk-badge.matched {
+      background: rgba(34, 197, 94, 0.95);
+      color: #052e16;
+    }
+  </style>
+</head>
+<body class="bg-background dark:bg-background-dark text-gray-900 dark:text-gray-100 font-sans min-h-screen">
+
+<header class="h-14 bg-appbar dark:bg-appbar-dark border-b border-gray-200 dark:border-gray-700 flex items-center px-4 sticky top-0 z-50">
+  <span class="text-lg font-medium text-primary dark:text-primary-light mr-8">Monica</span>
+  <nav class="flex gap-1 h-full items-end">
+    <button onclick="switchPage('manage')" id="tab-manage" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 transition-colors">
+      <i data-lucide="library" class="inline w-4 h-4 mr-1 -mt-0.5"></i>Knowledge Bases
+    </button>
+    <button onclick="switchPage('debug')" id="tab-debug" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 transition-colors">
+      <i data-lucide="search-code" class="inline w-4 h-4 mr-1 -mt-0.5"></i>RAG Debug
+    </button>
+  </nav>
+  <div class="flex-1"></div>
+  <button onclick="toggleTheme()" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+    <i data-lucide="sun" class="w-5 h-5 dark:hidden"></i>
+    <i data-lucide="moon" class="w-5 h-5 hidden dark:block"></i>
+  </button>
+</header>
+
+<!-- PAGE 1: Knowledge Base Management -->
+<div id="page-manage" class="page-transition">
+  <div class="flex h-[calc(100vh-56px)]">
+    <!-- Left: KB List -->
+    <aside class="w-[360px] flex-shrink-0 border-r border-gray-200 dark:border-gray-700 bg-surface dark:bg-surface-dark flex flex-col">
+      <div class="p-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Knowledge Bases</h2>
+        <button onclick="openCreateDialog()" class="flex items-center gap-1 px-3 py-1.5 bg-primary hover:bg-primary-dark text-white text-xs font-medium rounded transition-colors">
+          <i data-lucide="plus" class="w-3.5 h-3.5"></i> New
+        </button>
+      </div>
+      <div class="flex-1 overflow-y-auto">
+        <div id="kb-list-body" class="p-2"></div>
+        <div id="kb-empty" class="hidden flex-col items-center justify-center py-16 text-gray-400 dark:text-gray-500">
+          <i data-lucide="database" class="w-12 h-12 mb-3 opacity-40"></i>
+          <p class="text-sm">No knowledge bases yet</p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Right: Detail Panel -->
+    <main class="flex-1 overflow-y-auto bg-background dark:bg-background-dark">
+      <div id="detail-empty" class="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500">
+        <i data-lucide="mouse-pointer-click" class="w-16 h-16 mb-4 opacity-30"></i>
+        <p class="text-base">Select a knowledge base</p>
+      </div>
+
+      <div id="detail-content" class="hidden p-6">
+        <!-- Embedding Model Selector -->
+        <div class="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <div class="flex items-center gap-3">
+            <i data-lucide="cpu" class="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0"></i>
+            <div class="flex-1 flex items-center gap-3">
+              <label class="text-sm font-medium text-blue-900 dark:text-blue-100">Embedding Model:</label>
+              <select class="embedding-model-select px-3 py-1.5 border border-blue-300 dark:border-blue-700 rounded bg-white dark:bg-gray-800 text-sm font-mono" onchange="setEmbeddingModel(this.value)">
+                <option value="text-embedding-3-large">text-embedding-3-large</option>
+                <option value="text-embedding-3-small">text-embedding-3-small</option>
+                <option value="text-embedding-ada-002">text-embedding-ada-002</option>
+                <option value="bge-large-zh-v1.5">bge-large-zh-v1.5</option>
+              </select>
+              <span class="text-xs text-blue-700 dark:text-blue-300">
+                <span class="embedding-dimensions-display font-semibold"></span> · <span class="current-embedding-display font-mono"></span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Embedding Model Warning -->
+        <div id="embedding-warning" class="hidden mb-4 p-3 bg-warning/10 border border-warning/30 rounded-lg flex items-start gap-3">
+          <i data-lucide="alert-triangle" class="w-5 h-5 text-warning flex-shrink-0 mt-0.5"></i>
+          <div class="flex-1">
+            <p class="text-sm font-medium text-warning-dark dark:text-warning-light">Embedding Model Mismatch</p>
+            <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+              Current model: <span class="font-mono font-semibold" id="current-model-display"></span><br>
+              KB model: <span class="font-mono font-semibold" id="kb-model-display"></span><br>
+              All documents must be re-indexed to use the new embedding model.
+            </p>
+          </div>
+        </div>
+
+        <!-- Header -->
+        <div class="flex items-start justify-between mb-6">
+          <div>
+            <h2 id="detail-name" class="text-xl font-semibold"></h2>
+            <p id="detail-desc" class="text-sm text-gray-500 dark:text-gray-400 mt-1"></p>
+          </div>
+          <div class="flex gap-2">
+            <span id="detail-docs" class="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-medium rounded-full">
+              <i data-lucide="file-text" class="w-3 h-3"></i> <span></span>
+            </span>
+            <span id="detail-chunks" class="inline-flex items-center gap-1 px-2.5 py-1 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs font-medium rounded-full">
+              <i data-lucide="puzzle" class="w-3 h-3"></i> <span></span>
+            </span>
+            <span id="detail-embedding" class="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs font-medium rounded-full">
+              <i data-lucide="cpu" class="w-3 h-3"></i> <span></span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Documents & Queue Section -->
+        <div class="mb-6">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Documents & Queue</h3>
+            <div class="flex items-center gap-3">
+              <span id="detail-doc-count" class="text-xs text-gray-400"></span>
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-500 dark:text-gray-400">Parallel:</span>
+                <input id="parallel-count" type="number" value="5" min="1" max="10" class="w-12 px-1.5 py-0.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-xs text-center">
+                <button onclick="startBatchIndexing()" id="start-batch-btn" class="flex items-center gap-1 px-2.5 py-1 bg-success hover:bg-success-dark text-white text-xs font-medium rounded transition-colors">
+                  <i data-lucide="play" class="w-3 h-3"></i> Start
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50 dark:bg-gray-800 text-xs text-gray-500 dark:text-gray-400 uppercase">
+                <tr>
+                  <th class="text-left px-4 py-2.5 font-medium">Document</th>
+                  <th class="text-center px-3 py-2.5 font-medium w-24">Status</th>
+                  <th class="text-center px-3 py-2.5 font-medium w-20">Chunks</th>
+                  <th class="text-right px-3 py-2.5 font-medium w-32">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="detail-doc-table"></tbody>
+            </table>
+            <div id="detail-doc-empty" class="hidden py-8 text-center text-gray-400 dark:text-gray-500 text-sm">
+              <i data-lucide="file-x" class="w-8 h-8 mx-auto mb-2 opacity-40"></i>
+              <p>No documents yet</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Indexing Actions -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <!-- Markdown Group Indexing -->
+          <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+            <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-1.5">
+              <i data-lucide="book-open" class="w-4 h-4 text-primary"></i> Index Markdown Group
+            </h3>
+            <div class="space-y-3">
+              <select id="md-group-select" onchange="loadGroupDocs()" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-sm">
+                <option value="">Select a group...</option>
+                <option value="api-docs">API Documentation (12 docs)</option>
+                <option value="user-guide">User Guide (8 docs)</option>
+              </select>
+              <button onclick="openGroupDocsDialog()" id="select-docs-btn" disabled class="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-primary hover:bg-primary-dark disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-medium rounded transition-colors">
+                <i data-lucide="list-checks" class="w-4 h-4"></i> Select Documents
+              </button>
+            </div>
+          </div>
+
+          <!-- File Upload -->
+          <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+            <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-1.5">
+              <i data-lucide="upload" class="w-4 h-4 text-primary"></i> Upload Document
+            </h3>
+            <div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-primary dark:hover:border-primary-light transition-colors cursor-pointer" onclick="simulateUpload()">
+              <i data-lucide="file-up" class="w-8 h-8 mx-auto mb-2 text-gray-400 dark:text-gray-500"></i>
+              <p class="text-sm text-gray-500 dark:text-gray-400">Click to upload</p>
+              <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">.md, .txt, .markdown</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- PAGE 2: RAG Debug -->
+<div id="page-debug" class="page-transition hidden">
+  <div class="flex h-[calc(100vh-56px)]">
+    <aside class="w-[280px] flex-shrink-0 border-r border-gray-200 dark:border-gray-700 bg-surface dark:bg-surface-dark flex flex-col">
+      <div class="p-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Knowledge Bases</h2>
+        <button onclick="toggleAllKbs()" id="toggle-all-btn" class="text-xs text-primary dark:text-primary-light hover:underline">Select All</button>
+      </div>
+      <div class="flex-1 overflow-y-auto p-2" id="debug-kb-list"></div>
+    </aside>
+    <main class="flex-1 overflow-y-auto bg-background dark:bg-background-dark p-6">
+      <!-- Embedding Model Selector -->
+      <div class="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+        <div class="flex items-center gap-3">
+          <i data-lucide="cpu" class="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0"></i>
+          <div class="flex-1 flex items-center gap-3">
+            <label class="text-sm font-medium text-blue-900 dark:text-blue-100">Embedding Model:</label>
+            <select class="embedding-model-select px-3 py-1.5 border border-blue-300 dark:border-blue-700 rounded bg-white dark:bg-gray-800 text-sm font-mono" onchange="setEmbeddingModel(this.value)">
+              <option value="text-embedding-3-large">text-embedding-3-large</option>
+              <option value="text-embedding-3-small">text-embedding-3-small</option>
+              <option value="text-embedding-ada-002">text-embedding-ada-002</option>
+              <option value="bge-large-zh-v1.5">bge-large-zh-v1.5</option>
+            </select>
+            <span class="text-xs text-blue-700 dark:text-blue-300">
+              <span class="embedding-dimensions-display font-semibold"></span> · <span class="current-embedding-display font-mono"></span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div id="embedding-mismatch-warning" class="hidden mb-4 p-3 bg-warning/10 border border-warning/30 rounded-lg flex items-start gap-3">
+        <i data-lucide="alert-triangle" class="w-5 h-5 text-warning flex-shrink-0"></i>
+        <div class="flex-1">
+          <p class="text-sm font-medium text-warning-dark dark:text-warning-light">Embedding Model Mismatch Detected</p>
+          <p class="text-xs text-gray-600 dark:text-gray-400 mt-1" id="mismatch-details"></p>
+        </div>
+      </div>
+
+      <div class="flex gap-3 items-end mb-6">
+        <div class="flex-1">
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Search Query</label>
+          <input id="search-input" type="text" placeholder="Enter your search query..." class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" onkeydown="if(event.key==='Enter')doSearch()">
+        </div>
+        <div class="w-20">
+          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Top-K</label>
+          <select id="topk-select" class="w-full px-2 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-sm">
+            <option>3</option><option selected>5</option><option>10</option><option>20</option>
+          </select>
+        </div>
+        <button onclick="doSearch()" class="flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded transition-colors">
+          <i data-lucide="search" class="w-4 h-4"></i> Search
+        </button>
+      </div>
+      <div id="search-results" class="space-y-3"></div>
+      <div id="search-empty" class="flex flex-col items-center justify-center py-20 text-gray-400 dark:text-gray-500">
+        <i data-lucide="search" class="w-14 h-14 mb-3 opacity-30"></i>
+        <p class="text-sm">Enter a query and select knowledge bases to search</p>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Create KB Dialog -->
+<div id="create-dialog" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40">
+  <div class="bg-surface dark:bg-surface-dark rounded-lg shadow-xl w-[420px] mx-4">
+    <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700">
+      <h3 class="text-base font-semibold">Create Knowledge Base</h3>
+    </div>
+    <div class="px-5 py-4 space-y-4">
+      <div>
+        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Name *</label>
+        <input id="create-name" type="text" placeholder="e.g. Product Documentation" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Description</label>
+        <textarea id="create-desc" rows="2" placeholder="Optional description..." class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none"></textarea>
+      </div>
+    </div>
+    <div class="px-5 py-3 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
+      <button onclick="closeCreateDialog()" class="px-4 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors">Cancel</button>
+      <button onclick="createKb()" class="px-4 py-1.5 text-sm bg-primary hover:bg-primary-dark text-white font-medium rounded transition-colors">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Group Docs Selection Dialog -->
+<div id="group-docs-dialog" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40">
+  <div class="bg-surface dark:bg-surface-dark rounded-lg shadow-xl w-[600px] mx-4 max-h-[80vh] flex flex-col">
+    <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+      <h3 class="text-base font-semibold">Select Documents to Index</h3>
+      <button onclick="closeGroupDocsDialog()" class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+    <div class="flex-1 overflow-y-auto px-5 py-4">
+      <div class="flex items-center gap-2 mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">
+        <input type="checkbox" id="select-all-docs" onchange="toggleAllDocs(this.checked)" class="w-4 h-4 rounded border-gray-300 text-primary accent-primary">
+        <label for="select-all-docs" class="text-sm font-medium text-gray-700 dark:text-gray-300">Select All</label>
+      </div>
+      <div id="group-docs-list" class="space-y-1"></div>
+    </div>
+    <div class="px-5 py-3 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
+      <span id="selected-count" class="text-xs text-gray-500">0 selected</span>
+      <div class="flex gap-2">
+        <button onclick="closeGroupDocsDialog()" class="px-4 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors">Cancel</button>
+        <button onclick="addToQueue()" class="px-4 py-1.5 text-sm bg-primary hover:bg-primary-dark text-white font-medium rounded transition-colors">Add to Queue</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Chunks Viewer Dialog (Original Text with Highlights) -->
+<div id="chunks-dialog" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40">
+  <div class="bg-surface dark:bg-surface-dark rounded-lg shadow-xl w-[900px] mx-4 max-h-[85vh] flex flex-col">
+    <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+      <div>
+        <h3 id="chunks-doc-name" class="text-base font-semibold"></h3>
+        <p id="chunks-doc-info" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5"></p>
+      </div>
+      <button onclick="closeChunksDialog()" class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <div class="flex-1 overflow-y-auto px-5 py-4">
+      <div id="chunks-original-text" class="prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 leading-relaxed"></div>
+    </div>
+  </div>
+</div>
+
+<script src="prototype-v3.js"></script>
+</body>
+</html>
