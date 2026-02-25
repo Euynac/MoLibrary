@@ -114,6 +114,7 @@ public class JobSchedulerApiService(
         object? jobArgs,
         CancellationToken cancellationToken)
     {
+        //TODO 这里应该就创建Instances而不是到Centre创建，因为如果Centre出现问题，那无法跟踪状态。
         var instanceId = Guid.NewGuid().ToString();
         var jobArgsJson = jobArgs != null
             ? JsonSerializer.Serialize(jobArgs, options.Value.JobArgsSerializerOptions)
