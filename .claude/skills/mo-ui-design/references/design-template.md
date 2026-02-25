@@ -3,9 +3,20 @@
 > Created: {date}
 > Last Updated: {date}
 
+## Design Thinking
+
+| Dimension | Decision |
+|-----------|----------|
+| **Purpose** | {What problem does this interface solve? Who uses it?} |
+| **Aesthetic Direction** | {Bold direction: brutally minimal, maximalist, retro-futuristic, organic, luxury, playful, editorial, brutalist, art deco, soft/pastel, industrial, etc.} |
+| **Typography** | {Display font + body font pairing, and why} |
+| **Color Palette** | {Dominant color, accent colors, overall feel} |
+| **Signature Detail** | {The ONE thing that makes this design unforgettable} |
+| **Constraints** | {Technical requirements} |
+
 ## Overview
 
-{What this UI does, who it's for, and the primary use case.}
+{What this UI does, who it is for, and the primary use case.}
 
 ## Modules
 
@@ -13,15 +24,13 @@
 |--------|-------------|----------------|
 | {name} | {purpose} | {components used} |
 
-## Component Mapping
-
-| Prototype Element | MudBlazor Component | Notes |
-|-------------------|---------------------|-------|
-| {element} | {component} | {implementation notes} |
-
 ## Interactions
 
 {Describe key user flows — what happens when the user clicks, navigates, submits, etc.}
+
+## Motion and Animation
+
+{Key animations: page load reveals, hover effects, transitions between states, scroll-triggered effects.}
 
 ## Responsive Behavior
 
