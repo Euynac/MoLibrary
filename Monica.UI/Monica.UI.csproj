@@ -16,8 +16,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="MudBlazor" Version="8.15.0" />
-    <PackageReference Include="MudBlazor.Markdown" Version="8.11.0" />
+    <PackageReference Include="MudBlazor" Version="9.0.0" />
+    <PackageReference Include="MudBlazor.Markdown" Version="9.0.0" />
   </ItemGroup>
 
   <ItemGroup>
