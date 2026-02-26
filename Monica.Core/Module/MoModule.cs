@@ -88,7 +88,7 @@ public abstract class MoModule<TModuleSelf, TModuleOption, TModuleGuide>(TModule
 
         context.FinalConfigures.TryGetValue(typeof(TSpecificModuleOption), out var value);
         if(value == null)
-            throw new InvalidOperationException($"Module {moduleType.Name} does not have option {typeof(TSpecificModuleOption).Name}.");
+            throw new InvalidOperationException($"Module {moduleType.Name} does not have option {typeof(TSpecificModuleOption).Name} or is not initialized in current stage.");
         return (TSpecificModuleOption)value;
     }
     internal override void ConvertToRegisterRequest()

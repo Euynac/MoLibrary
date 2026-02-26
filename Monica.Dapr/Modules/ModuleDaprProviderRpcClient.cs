@@ -1,5 +1,7 @@
-﻿using Dapr.Client;
+using Dapr.Client;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Http;
+using Microsoft.Extensions.Options;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
@@ -27,8 +29,10 @@ public class ModuleDaprProviderRpcClient(ModuleDaprProviderRpcClientOption optio
 
     public override void ClaimDependencies()
     {
+        DependsOnModule<ModuleDaprClientGuide>().Register();
         DependsOnModule<ModuleRpcClientGuide>().Register()
-            .ConfigHttpClientRegisterProvider(new DaprHttpClientRegisterProvider(Option));
+            .ConfigHttpClientRegisterProvider<DaprHttpClientRegisterProvider>();
+       
     }
 }
 
@@ -47,11 +51,13 @@ public class ModuleDaprProviderRpcClientOption : MoModuleOption<ModuleDaprProvid
     public TimeSpan Timeout { get; set; } =  TimeSpan.FromSeconds(60);
 }
 
-public class DaprHttpClientRegisterProvider(ModuleDaprProviderRpcClientOption option) : IMoRpcHttpClientRegisterProvider
+public class DaprHttpClientRegisterProvider(
+    IOptions<ModuleDaprProviderRpcClientOption> rpcClientOptionAccessor,
+    IOptions<ModuleDaprClientOption> daprClientOptionAccessor) : IMoRpcHttpClientRegisterProvider
 {
-    public void ConfigureHttpClientBuilder(IHttpClientBuilder builder, string appid)
+    public void ConfigureHttpClientFactoryOptions(HttpClientFactoryOptions options, string appid)
     {
-        builder.ConfigureHttpClient(client =>
+        options.HttpClientActions.Add(client =>
         {
             try
             {
@@ -61,11 +67,26 @@ public class DaprHttpClientRegisterProvider(ModuleDaprProviderRpcClientOption op
             {
                 throw new ArgumentException("The appId must be a valid hostname.", nameof(appid), inner);
             }
-            client.Timeout = option.Timeout;
+            client.Timeout = rpcClientOptionAccessor.Value.Timeout;
         });
-        builder.AddHttpMessageHandler(() => new InvocationHandler
+
+        if (daprClientOptionAccessor.Value.MaxReceiveMessageSize is { } size)
         {
-            DefaultAppId = appid
+            options.HttpMessageHandlerBuilderActions.Add(builder =>
+            {
+                builder.PrimaryHandler = new SocketsHttpHandler
+                {
+                    MaxResponseHeadersLength = size / 1024, // Convert to KB
+                };
+            });
+        }
+
+        options.HttpMessageHandlerBuilderActions.Add(builder =>
+        {
+            builder.AdditionalHandlers.Add(new InvocationHandler
+            {
+                DefaultAppId = appid
+            });
         });
     }
 }

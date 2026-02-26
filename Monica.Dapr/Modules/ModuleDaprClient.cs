@@ -1,5 +1,6 @@
 using Grpc.Net.Client;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.GlobalJson;
 using Monica.Core.Module;
@@ -30,6 +31,14 @@ public class ModuleDaprClient(ModuleDaprClientOption option)
     public override ModuleKey GetModuleKey()
     {
         return EMoModuleKey.DaprClient;
+    }
+
+    public override void ConfigureBuilder(WebApplicationBuilder builder)
+    {
+        builder.WebHost.ConfigureKestrel(options =>
+        {
+            options.Limits.MaxRequestBodySize = Option.MaxReceiveMessageSize;
+        });
     }
 
     public override void ConfigureServices(IServiceCollection services)

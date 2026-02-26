@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Monica.Authority.Security;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
@@ -43,6 +45,10 @@ public class ModuleRpcClient(ModuleRpcClientOption option) :
     {
         services.AddHttpContextAccessor();
         services.AddTransient<AuthenticationDelegatingHandler>();
+        if (Option.HttpClientRegisterProviderType is { } providerType)
+        {
+            services.TryAddSingleton(providerType);
+        }
     }
 
     public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
@@ -94,7 +100,7 @@ public class ModuleRpcClient(ModuleRpcClientOption option) :
 
                     if (type.IsSubclassOf(typeof(MoHttpApi)))
                     {
-                        if (Option.HttpClientRegisterProvider is not { } httpClientRegisterProvider)
+                        if (Option.HttpClientRegisterProviderType is not { } httpClientRegisterProviderType)
                         {
                             throw new InvalidOperationException(
                                 "Please config MoRPC http client provider to use rpc client!");
@@ -106,7 +112,12 @@ public class ModuleRpcClient(ModuleRpcClientOption option) :
                         {
                             var httpClientBuilder = services.AddHttpClient(appid);
                             httpClientBuilder.AddHttpMessageHandler<AuthenticationDelegatingHandler>();
-                            httpClientRegisterProvider.ConfigureHttpClientBuilder(httpClientBuilder, appid);
+                            services.AddSingleton<IConfigureOptions<HttpClientFactoryOptions>>(provider =>
+                                new ConfigureNamedOptions<HttpClientFactoryOptions>(appid, options =>
+                                {
+                                    var httpClientRegisterProvider = (IMoRpcHttpClientRegisterProvider)provider.GetRequiredService(httpClientRegisterProviderType);
+                                    httpClientRegisterProvider.ConfigureHttpClientFactoryOptions(options, appid);
+                                }));
                         }
 
                         services.TryAddTransient(targetInterface, provider =>
@@ -147,11 +158,12 @@ public class ModuleRpcClientGuide : MoModuleGuide<ModuleRpcClient, ModuleRpcClie
         return [nameof(ConfigDomainInfoProvider), nameof(ConfigHttpClientRegisterProvider)];
     }
 
-    public ModuleRpcClientGuide ConfigHttpClientRegisterProvider(IMoRpcHttpClientRegisterProvider httpClientRegisterProvider)
+    public ModuleRpcClientGuide ConfigHttpClientRegisterProvider<THttpClientRegisterProvider>()
+        where THttpClientRegisterProvider : class, IMoRpcHttpClientRegisterProvider
     {
         ConfigureModuleOption(option =>
         {
-            option.HttpClientRegisterProvider = httpClientRegisterProvider;
+            option.HttpClientRegisterProviderType = typeof(THttpClientRegisterProvider);
         });
         return this;
     }
@@ -173,7 +185,7 @@ public class ModuleRpcClientOption : MoModuleOption<ModuleRpcClient>
     /// </summary>
     public bool UseGrpc { get; set; }
 
-    internal IMoRpcHttpClientRegisterProvider? HttpClientRegisterProvider { get; set; }
+    internal Type? HttpClientRegisterProviderType { get; set; }
     internal IMoRpcClientDomainInfoProvider? DomainInfoProvider { get; set; }
 }
 
@@ -186,7 +198,7 @@ public interface IMoRpcClientDomainInfoProvider
 
 public interface IMoRpcHttpClientRegisterProvider
 {
-    void ConfigureHttpClientBuilder(IHttpClientBuilder builder, string appid);
+    void ConfigureHttpClientFactoryOptions(HttpClientFactoryOptions options, string appid);
 }
 
 
