@@ -364,6 +364,7 @@ FodyWeavers.xsd
 /NuGet.Config
 /rules/mudblazor/src
 .auto-claude
+.claude/worktrees/
 
 .playwright-cli
 temp/
