@@ -82,16 +82,20 @@
             SelectedDocuments.Add(documentId);
         else
             SelectedDocuments.Remove(documentId);
+
+        StateHasChanged();
     }
 
     private void SelectAll()
     {
         SelectedDocuments = AvailableDocuments.Select(d => d.RelativePath).ToHashSet();
+        StateHasChanged();
     }
 
     private void DeselectAll()
     {
         SelectedDocuments.Clear();
+        StateHasChanged();
     }
 
     private void Cancel()

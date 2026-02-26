@@ -39,6 +39,12 @@
                             <MudText Typo="Typo.caption" Class="kb-stats">
                                 @L["RAG:Debug:KBSidebar:Stats", kb.DocumentCount, kb.ChunkCount]
                             </MudText>
+                            @if (!string.IsNullOrEmpty(kb.EmbeddingModelId))
+                            {
+                                <MudText Typo="Typo.caption" Class="kb-embedding-model">
+                                    @kb.EmbeddingModelId
+                                </MudText>
+                            }
                         </div>
                     </MudCheckBox>
                 </div>
@@ -47,8 +53,6 @@
     </aside>
 
     <main class="rag-main-panel">
-        <MudText Typo="Typo.h5" Class="page-title">@L["RAG:Debug:Title"]</MudText>
-
         <EmbeddingModelSelector
             AvailableModels="@_embeddingModels"
             SelectedModelId="@_selectedEmbeddingModelId"

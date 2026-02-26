@@ -70,6 +70,12 @@
     font-size: 0.7rem;
 }
 
+.kb-info ::deep .kb-embedding-model {
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.7rem;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
 .rag-main-panel {
     flex: 1;
     display: flex;

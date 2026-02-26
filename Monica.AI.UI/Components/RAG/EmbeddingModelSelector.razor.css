@@ -2,10 +2,6 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    padding: 12px;
-    background-color: var(--mud-palette-info-lighten);
-    border: 1px solid var(--mud-palette-info);
-    border-radius: 4px;
 }
 
 .selector-header {
@@ -15,12 +11,12 @@
 }
 
 .selector-icon {
-    color: var(--mud-palette-info);
+    color: var(--mud-palette-text-secondary);
 }
 
 .selector-label {
     font-weight: 500;
-    color: var(--mud-palette-info-darken);
+    color: var(--mud-palette-text-primary);
 }
 
 .embedding-model-selector-wrapper ::deep .model-select {
@@ -51,6 +47,6 @@
 }
 
 .model-info {
-    color: var(--mud-palette-info-darken);
+    color: var(--mud-palette-text-secondary);
     font-size: 0.75rem;
 }
