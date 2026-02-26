@@ -15,6 +15,9 @@
     "AIProviderManage": {
       "Title": "AI Provider 管理"
     },
+    "RAGManage": {
+      "Title": "RAG 管理"
+    },
     "RAGDebug": {
       "Title": "RAG 调试"
     },

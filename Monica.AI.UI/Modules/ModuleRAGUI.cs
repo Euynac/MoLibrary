@@ -46,7 +46,22 @@ public class ModuleRAGUI(ModuleRAGUIOption option)
         // Depends on RAG backend module
         DependsOnModule<ModuleRAGGuide>().Register();
 
-        // Depends on UI core module and register RAG debug page
+        // Depends on UI core module and register RAG pages
+        if (!Option.DisableRAGManagePage)
+        {
+            DependsOnModule<ModuleUICoreGuide>().Register()
+                .RegisterUIComponents(p =>
+                {
+                    p.RegisterLocalizedComponent<UIAIRAGManagePage>(
+                        UIAIRAGManagePage.PAGE_URL,
+                        "Pages:RAGManage:Title",
+                        Icons.Material.Filled.Storage,
+                        "Categories:AI",
+                        addToNav: true,
+                        navOrder: 3);
+                });
+        }
+
         if (!Option.DisableRAGDebugPage)
         {
             DependsOnModule<ModuleUICoreGuide>().Register()
@@ -58,7 +73,7 @@ public class ModuleRAGUI(ModuleRAGUIOption option)
                         Icons.Material.Filled.ManageSearch,
                         "Categories:AI",
                         addToNav: true,
-                        navOrder: 3);
+                        navOrder: 4);
                 });
         }
     }
@@ -77,6 +92,11 @@ public class ModuleRAGUIGuide
 /// </summary>
 public class ModuleRAGUIOption : MoModuleOption<ModuleRAGUI>
 {
+    /// <summary>
+    /// Disable the RAG management page.
+    /// </summary>
+    public bool DisableRAGManagePage { get; set; }
+
     /// <summary>
     /// Disable the RAG debug page.
     /// </summary>

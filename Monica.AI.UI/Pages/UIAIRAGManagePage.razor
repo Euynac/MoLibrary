@@ -224,6 +224,8 @@
 </div>
 
 @code {
+    public const string PAGE_URL = "/ai/rag/manage";
+
     private List<KnowledgeBase> _knowledgeBases = new();
     private KnowledgeBase? _selectedKB;
     private string _currentEmbeddingModelId = "text-embedding-3-large";
