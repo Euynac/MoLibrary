@@ -1,6 +1,6 @@
-# MudBlazor v8.9.0 Component Reference
+# MudBlazor v9.0.0 Component Reference
 
-This document provides a quick reference for MudBlazor v8 components.
+This document provides a quick reference for MudBlazor v9 components.
 
 ## Component Categories
 
@@ -26,7 +26,7 @@ This document provides a quick reference for MudBlazor v8 components.
 - **MudNavMenu/MudNavLink** - Navigation menu
 - **MudPagination** - Pagination
 - **MudTabs/MudTabPanel** - Tab panels
-- **MudStepper/MudStep** - Stepper (v8 new)
+- **MudStepper/MudStep** - Stepper
 - **MudSpeedDial** - Speed dial button
 
 ### 3. Input Components
@@ -40,7 +40,7 @@ This document provides a quick reference for MudBlazor v8 components.
 - **MudSwitch** - Switch toggle
 - **MudSlider** - Slider
 - **MudRating** - Rating
-- **MudToggleGroup/MudToggleItem** - Toggle group (v8 new)
+- **MudToggleGroup/MudToggleItem** - Toggle group
 - **MudColorPicker** - Color picker
 - **MudDatePicker** - Date picker
 - **MudTimePicker** - Time picker
@@ -60,7 +60,7 @@ This document provides a quick reference for MudBlazor v8 components.
 - **MudTooltip** - Tooltip
 - **MudCarousel** - Carousel
 - **MudTimeline** - Timeline
-- **MudChat/MudChatBubble** - Chat component (v8 new)
+- **MudChat/MudChatBubble** - Chat component (removed in v9)
 
 ### 5. Feedback Components
 
@@ -91,7 +91,7 @@ This document provides a quick reference for MudBlazor v8 components.
 - **MudSwipeArea** - Swipe area
 - **MudScrollToTop** - Scroll to top
 - **MudMessageBox** - Message box
-- **MudContextualActionBar** - Contextual action bar (v8 new)
+- **MudContextualActionBar** - Contextual action bar
 
 ## Common Code Examples
 
@@ -173,7 +173,7 @@ This document provides a quick reference for MudBlazor v8 components.
 }
 ```
 
-### Toggle Group Example (v8 New)
+### Toggle Group Example
 
 ```razor
 <MudToggleGroup T="string" @bind-Value="selectedValue">
@@ -183,7 +183,7 @@ This document provides a quick reference for MudBlazor v8 components.
 </MudToggleGroup>
 ```
 
-### Stepper Example (v8 New)
+### Stepper Example
 
 ```razor
 <MudStepper @ref="stepper">
@@ -199,7 +199,7 @@ This document provides a quick reference for MudBlazor v8 components.
 </MudStepper>
 ```
 
-### DataGrid Drag-Drop Example (v8 New)
+### DataGrid Drag-Drop Example
 
 ```razor
 <MudDataGrid T="MyModel"

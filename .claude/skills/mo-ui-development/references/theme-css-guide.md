@@ -446,11 +446,11 @@ private static void RegisterDefaultThemes()
 4. **Browser compatibility**: Special effects (like glassmorphic) require browser prefixes
 5. **Dark mode**: Every theme must support both Light and Dark modes
 
-## MudBlazor 8.9.0 Compatibility
+## MudBlazor 9.0.0 Compatibility
 
 ### Typography Class Name Changes
 
-| MudBlazor 7.x | MudBlazor 8.9.0 |
+| MudBlazor 7.x | MudBlazor 9.0.0 |
 |---------------|-----------------|
 | `new Default()` | `new DefaultTypography()` |
 | `new H1()` | `new H1Typography()` |
@@ -479,7 +479,7 @@ private static void RegisterDefaultThemes()
 
 ### Shadow.Elevation Array Requirement
 
-MudBlazor 8.9.0 requires Shadow.Elevation array to have **26 elements** (indices 0-25).
+MudBlazor 9.0.0 requires Shadow.Elevation array to have **26 elements** (indices 0-25).
 
 ### Palette Property Changes
 

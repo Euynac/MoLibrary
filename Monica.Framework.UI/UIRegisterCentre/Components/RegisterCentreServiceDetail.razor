@@ -443,7 +443,7 @@
 
     private async Task OnForceDeleteLeaderClicked()
     {
-        bool? result = await DialogService.ShowMessageBox(
+        bool? result = await DialogService.ShowMessageBoxAsync(
             "确认操作",
             $"确定要强制删除服务 '{Service.AppName}' 的 Leader 吗？此操作将触发新一轮 Leader 选举。",
             yesText: "确定删除", cancelText: "取消");

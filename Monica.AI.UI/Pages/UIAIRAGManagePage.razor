@@ -432,7 +432,7 @@
     {
         if (_selectedKB == null) return;
 
-        var confirmed = await DialogService.ShowMessageBox(
+        var confirmed = await DialogService.ShowMessageBoxAsync(
             L["Common:Confirm"],
             L["RAG:DocumentQueue:DeleteConfirm", document.Name],
             yesText: L["Common:Delete"],

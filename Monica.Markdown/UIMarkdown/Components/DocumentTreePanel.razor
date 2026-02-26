@@ -66,29 +66,28 @@
     public EventCallback OnCollapseRequested { get; set; }
 
     private string? _searchText;
-    private List<TreeItemData<MarkdownDocumentNodeData>>? _treeItems;
+    private List<DocumentTreeItem>? _treeItems;
 
     protected override void OnParametersSet()
     {
         _treeItems = BuildTreeItems(TreeRoot);
     }
 
-    private List<TreeItemData<MarkdownDocumentNodeData>>? BuildTreeItems(
+    private List<DocumentTreeItem>? BuildTreeItems(
         TreeNode<MarkdownDocumentNodeData>? node)
     {
         if (node is null) return null;
 
-        var items = new List<TreeItemData<MarkdownDocumentNodeData>>();
+        var items = new List<DocumentTreeItem>();
         foreach (var child in node.Children)
         {
             if (!MatchesSearch(child)) continue;
 
-            var item = new TreeItemData<MarkdownDocumentNodeData>
-            {
-                Value = child.Data,
-                Text = child.Data.Name,
-                Children = BuildTreeItems(child)
-            };
+            var childItems = BuildTreeItems(child);
+            var item = new DocumentTreeItem(
+                child.Data,
+                child.Data.Name,
+                childItems);
             items.Add(item);
         }
         return items.Count > 0 ? items : null;
@@ -122,4 +121,36 @@
 
     private bool IsExpanded(MarkdownDocumentNodeData? data) =>
         !string.IsNullOrWhiteSpace(_searchText) || data?.IsDocument != true;
+
+    /// <summary>
+    /// Custom tree item implementation for MudBlazor v9 TreeView.
+    /// Implements ITreeItemData to provide tree structure for MarkdownDocumentNodeData.
+    /// </summary>
+    private sealed class DocumentTreeItem : MudBlazor.ITreeItemData<MarkdownDocumentNodeData>
+    {
+        public DocumentTreeItem(
+            MarkdownDocumentNodeData value,
+            string text,
+            List<DocumentTreeItem>? children)
+        {
+            Value = value;
+            Text = text;
+            Children = children;
+            Icon = string.Empty;
+            Expanded = false;
+            Expandable = true;
+            Selected = false;
+            Visible = true;
+        }
+
+        public MarkdownDocumentNodeData Value { get; }
+        public string? Text { get; set; }
+        public string? Icon { get; set; }
+        public bool Expanded { get; set; }
+        public bool Expandable { get; set; }
+        public bool Selected { get; set; }
+        public bool Visible { get; set; }
+        public IReadOnlyCollection<MudBlazor.ITreeItemData<MarkdownDocumentNodeData>>? Children { get; set; }
+        public bool HasChildren => Children?.Count > 0;
+    }
 }

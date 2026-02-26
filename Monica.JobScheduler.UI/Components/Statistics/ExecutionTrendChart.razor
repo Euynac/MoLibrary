@@ -75,8 +75,6 @@
 
     private ChartOptions ChartOptionsWithPalette => new()
     {
-        YAxisTicks = 5,
-        LineStrokeWidth = 2,
         ShowLegend = false,
         ChartPalette =
         [
@@ -86,21 +84,21 @@
         ]
     };
 
-    private List<ChartSeries> GetChartSeries()
+    private List<ChartSeries<double>> GetChartSeries()
     {
         return
         [
-            new ChartSeries
+            new ChartSeries<double>
             {
                 Name = L["Statistics:ExecutionTrend:Legend:Success"],
                 Data = TrendData.Select(d => (double)d.SucceededCount).ToArray()
             },
-            new ChartSeries
+            new ChartSeries<double>
             {
                 Name = L["Statistics:ExecutionTrend:Legend:Failed"],
                 Data = TrendData.Select(d => (double)d.FailedCount).ToArray()
             },
-            new ChartSeries
+            new ChartSeries<double>
             {
                 Name = L["Statistics:ExecutionTrend:Legend:Skipped"],
                 Data = TrendData.Select(d => (double)d.SkippedCount).ToArray()

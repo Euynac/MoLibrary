@@ -86,16 +86,12 @@
     [Parameter] public MemoryTrendData? TrendData { get; set; }
     [Parameter] public bool IsLoading { get; set; }
 
-    private List<ChartSeries> chartSeries = [];
+    private List<ChartSeries<double>> chartSeries = [];
     private string[] timeLabels = [];
     private bool showCpu = true;
     private bool showMemory = true;
 
-    private ChartOptions chartOptions = new()
-    {
-        YAxisTicks = 5,
-        LineStrokeWidth = 2
-    };
+    private ChartOptions chartOptions = new();
 
     protected override void OnParametersSet()
     {
@@ -128,7 +124,7 @@
 
         if (showCpu)
         {
-            chartSeries.Add(new ChartSeries
+            chartSeries.Add(new ChartSeries<double>
             {
                 Name = "CPU %",
                 Data = sampledData.Select(p => p.CpuUsagePercent).ToArray()
@@ -137,7 +133,7 @@
 
         if (showMemory)
         {
-            chartSeries.Add(new ChartSeries
+            chartSeries.Add(new ChartSeries<double>
             {
                 Name = "工作集 MB",
                 Data = sampledData.Select(p => p.WorkingSetMB).ToArray()

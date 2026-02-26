@@ -103,7 +103,7 @@
             var genLabels = new string[] { "Gen 0", "Gen 1", "Gen 2", "LOH" };
 
             <MudChart ChartType="ChartType.Bar"
-                      ChartSeries="@(new List<ChartSeries> { new() { Name = "大小 (MB)", Data = genData } })"
+                      ChartSeries="@(new List<ChartSeries<double>> { new() { Name = "大小 (MB)", Data = genData } })"
                       XAxisLabels="@genLabels"
                       Width="100%"
                       Height="250px"
@@ -162,26 +162,15 @@
 [Parameter] public MemoryTrendData? TrendData { get; set; }
 [Parameter] public bool IsLoading { get; set; }
 
-private List<ChartSeries> heapSizeSeries = [];
-private List<ChartSeries> allocationSeries = [];
+private List<ChartSeries<double>> heapSizeSeries = [];
+private List<ChartSeries<double>> allocationSeries = [];
 private string[] timeLabels = [];
 
-private ChartOptions heapChartOptions = new()
-{
-YAxisTicks = 5,
-LineStrokeWidth = 2
-};
+private ChartOptions heapChartOptions = new();
 
-private ChartOptions allocChartOptions = new()
-{
-YAxisTicks = 5,
-LineStrokeWidth = 2
-};
+private ChartOptions allocChartOptions = new();
 
-private ChartOptions genChartOptions = new()
-{
-YAxisTicks = 5
-};
+private ChartOptions genChartOptions = new();
 
 protected override void OnParametersSet()
 {
@@ -205,7 +194,7 @@ timeLabels = sampledData
 
 heapSizeSeries =
 [
-new ChartSeries
+new ChartSeries<double>
 {
 Name = "堆大小",
 Data = sampledData.Select(p => p.GcHeapSizeMB).ToArray()
@@ -214,7 +203,7 @@ Data = sampledData.Select(p => p.GcHeapSizeMB).ToArray()
 
 allocationSeries =
 [
-new ChartSeries
+new ChartSeries<double>
 {
 Name = "分配速率",
 Data = sampledData.Select(p => p.AllocationRateBps / 1024 / 1024).ToArray()
