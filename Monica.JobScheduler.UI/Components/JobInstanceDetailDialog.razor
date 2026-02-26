@@ -216,7 +216,7 @@
     {
         if (_jobInstance == null) return;
 
-        var confirmed = await DialogService.ShowMessageBox(
+        var confirmed = await DialogService.ShowMessageBoxAsync(
             L["Dialogs:JobInstanceDetail:CancelConfirmTitle"],
             L["Dialogs:JobInstanceDetail:CancelConfirmMessage", _jobInstance.InstanceId],
             yesText: L["Common:Actions:Confirm"],

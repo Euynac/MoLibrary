@@ -375,7 +375,7 @@
 
     private async Task HandleCleanupHistoryAsync()
     {
-        var confirmed = await DialogService.ShowMessageBox(
+        var confirmed = await DialogService.ShowMessageBoxAsync(
             L["JobInstances:Messages:CleanupConfirmTitle"],
             L["JobInstances:Messages:CleanupConfirm"],
             yesText: L["Common:Actions:Confirm"],

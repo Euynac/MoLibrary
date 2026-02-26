@@ -394,7 +394,7 @@
 
     private async Task DeleteKey(StateStoreKeyInfo keyInfo)
     {
-        var confirmed = await DialogService.ShowMessageBox(
+        var confirmed = await DialogService.ShowMessageBoxAsync(
             L["KeyExplorer:Dialogs:DeleteKeyTitle"],
             L["KeyExplorer:Dialogs:DeleteKeyMessage", keyInfo.Key],
             L["KeyExplorer:Dialogs:DeleteKeyConfirm"],
@@ -425,7 +425,7 @@
     {
         if (!selectedKeys.Any() || selectedProvider == null) return;
 
-        var confirmed = await DialogService.ShowMessageBox(
+        var confirmed = await DialogService.ShowMessageBoxAsync(
             L["KeyExplorer:Dialogs:BatchDeleteTitle"],
             L["KeyExplorer:Dialogs:BatchDeleteMessage", selectedKeys.Count],
             L["KeyExplorer:Dialogs:BatchDeleteConfirm"],

@@ -110,7 +110,7 @@
         if (_wasSending && !IsSending)
         {
             InputText = string.Empty;
-            _textFieldRef?.Clear();
+            _textFieldRef?.ClearAsync();
         }
 
         _wasSending = IsSending;
@@ -121,10 +121,10 @@
         if (string.IsNullOrWhiteSpace(InputText) || IsSending) return;
 
         var message = InputText.Trim();
-       
+
         InputText = string.Empty;
-        _textFieldRef?.Clear();
-     
+        await _textFieldRef?.ClearAsync()!;
+
         // Ensure component renders with empty value before parent re-renders
         StateHasChanged();
 
