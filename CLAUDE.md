@@ -29,7 +29,7 @@ Invoke when:
 - Implementing theme customization or dark mode support
 - Handling component lifecycle (OnAfterRenderAsync)
 
-**Current MudBlazor version**: 8.9.0
+**Current MudBlazor version**: 9.0.0
 
 ### Microsoft Documentation Skill
 

@@ -1,12 +1,12 @@
 ---
 name: mo-ui-development
-description: This skill should be used when the user asks to "create UI component", "build Blazor page", "add MudBlazor component", "style MudBlazor", "fix CSS isolation", "use ::deep selector", "customize theme", "support dark mode", "migrate MudBlazor v8", "use OnAfterRenderAsync", "create UI module", "module file structure", "UI folder structure", "refactor Minimal API", "persist UI state", "browser storage", "save table state", "IMoBrowserStorage", "localStorage", "sessionStorage", or needs guidance on Blazor component lifecycle, MudBlazor styling patterns, CSS isolation, theme customization, offline UI requirements, browser storage patterns, or MoFramework UI module structure in the Monica framework.
+description: This skill should be used when the user asks to "create UI component", "build Blazor page", "add MudBlazor component", "style MudBlazor", "fix CSS isolation", "use ::deep selector", "customize theme", "support dark mode", "migrate MudBlazor v9", "use OnAfterRenderAsync", "create UI module", "module file structure", "UI folder structure", "refactor Minimal API", "persist UI state", "browser storage", "save table state", "IMoBrowserStorage", "localStorage", "sessionStorage", "implement converter", "GetDefaultConverter", or needs guidance on Blazor component lifecycle, MudBlazor styling patterns, CSS isolation, theme customization, offline UI requirements, browser storage patterns, converter implementation, or MoFramework UI module structure in the Monica framework.
 version: 1.0.0
 ---
 
 # Monica UI Development Guide
 
-This skill provides essential guidance for developing Blazor UI components with MudBlazor 8.9.0 in the Monica framework.
+This skill provides essential guidance for developing Blazor UI components with MudBlazor 9.0.0 in the Monica framework.
 
 ## Critical Rules
 
@@ -151,43 +151,75 @@ Common palette variables:
 
 For complete CSS variable reference, see `references/mudblazor-css-variables.md`.
 
-### 6. MudBlazor 8.9.0 API Requirements
+### 6. MudBlazor 9.0.0 API Requirements
 
-**Use async methods.** Synchronous methods are deprecated:
+**All synchronous methods have been removed.** Always use async methods:
 
 ```csharp
-// Correct (v8)
+// Correct (v9)
 var dialog = await DialogService.ShowAsync<MyDialog>();
+await DialogService.ShowMessageBoxAsync();
 await dataGrid.ExpandAllGroupsAsync();
+await select.ClearAsync();
+await tabs.ActivatePanelAsync();
 
-// Wrong (deprecated)
-var dialog = DialogService.Show<MyDialog>();
-dataGrid.ExpandAllGroups();
+// Wrong (removed in v9)
+var dialog = DialogService.Show<MyDialog>();  // Removed
+DialogService.ShowMessageBox();  // Removed
+dataGrid.ExpandAllGroups();  // Removed
 ```
 
-**Typography class names changed:**
-
-| Old (v7) | New (v8.9.0) |
-|----------|--------------|
-| `new Default()` | `new DefaultTypography()` |
-| `new H1()` | `new H1Typography()` |
-| `new Button()` | `new ButtonTypography()` |
-
-**FontWeight and LineHeight are now strings:**
+**Converters have been completely redesigned.** Custom converters must implement new interfaces:
 
 ```csharp
-// Correct (v8)
-FontWeight = "400",
-LineHeight = "1.43"
+// Correct (v9) - Implement IReversibleConverter
+public class MyConverter : IReversibleConverter<MyType, string>
+{
+    public string Convert(MyType input) => input?.ToString() ?? string.Empty;
+    public MyType ConvertBack(string input) => MyType.Parse(input);
+}
 
-// Wrong (v7)
-FontWeight = 400,
-LineHeight = 1.43
+// For inline converters, use Conversions.From()
+private IConverter<MyType?, string?> _converter = Conversions
+    .From((MyType? value) => value?.ToString(),
+          text => new MyType { Name = text });
 ```
 
-**Shadow.Elevation array must have 26 elements (indices 0-25).**
+**Custom form components must implement GetDefaultConverter():**
 
-For complete migration guide, see `references/migration-guide.md`.
+```csharp
+public class MyInput : MudFormComponent<MyType, string>
+{
+    protected override IConverter<MyType?, string?> GetDefaultConverter()
+    {
+        return new DefaultConverter<MyType>
+        {
+            Culture = GetCulture,
+            Format = GetFormat
+        };
+    }
+
+    // Use GetConverter() to access the active converter
+    private void SomeMethod()
+    {
+        var converter = GetConverter(); // Always returns non-null
+    }
+}
+```
+
+**MudGlobal theming properties removed.** Use CSS variables, theme configuration, or explicit component parameters instead:
+
+```csharp
+// Wrong (removed in v9)
+MudGlobal.ButtonDefaults.Color = Color.Primary;
+MudGlobal.InputDefaults.Variant = Variant.Outlined;
+
+// Correct (v9) - Use component parameters
+<MudButton Color="Color.Primary">Button</MudButton>
+<MudTextField Variant="Variant.Outlined" />
+```
+
+For complete migration guide, see `references/migration-guide-v9.md` (for v8 to v9 migration, see `references/migration-guide-v8.md`).
 
 ### 7. Offline/Intranet Requirements
 
@@ -335,7 +367,8 @@ For comprehensive guidance, consult these reference files:
 - **`references/theme-css-guide.md`** - Theme architecture, CSS variable naming, special effects (glassmorphic, gradients), responsive design
 - **`references/mudblazor-css-variables.md`** - Complete palette properties, shadows, layout properties, typography CSS variables
 - **`references/component-reference.md`** - Component categories, common code examples, component properties
-- **`references/migration-guide.md`** - Complete v8.9.0 breaking changes and migration patterns
+- **`references/migration-guide-v9.md`** - Complete v9.0.0 breaking changes and migration patterns (v8 → v9)
+- **`references/migration-guide-v8.md`** - Complete v8.9.0 breaking changes and migration patterns (v7 → v8)
 - **`references/css-isolation-fix-workflow.md`** - Step-by-step workflow for fixing CSS isolation issues
 - **`references/offline-requirements.md`** - Font management and offline environment requirements
 - **`references/browser-storage-guide.md`** - `IMoBrowserStorage` API, table state persistence, theme persistence, custom state patterns
@@ -364,7 +397,7 @@ Glob: "**/_mud{componentname}.scss"
 ## Quick Reference
 
 ### MudBlazor Version
-Current project uses **MudBlazor 8.9.0**.
+Current project uses **MudBlazor 9.0.0**.
 
 ### Essential Checklist
 
@@ -375,8 +408,10 @@ Current project uses **MudBlazor 8.9.0**.
 - [ ] Place JS interop in `OnAfterRenderAsync`
 - [ ] Use MudBlazor CSS variables for colors
 - [ ] Support both light and dark modes
-- [ ] Use async methods (`ShowAsync`, not `Show`)
-- [ ] Use `*Typography` class names (v8.9.0)
+- [ ] Use async methods (all sync methods removed in v9)
+- [ ] Implement `GetDefaultConverter()` for custom form components
+- [ ] Use new converter interfaces (`IReversibleConverter`, `IConverter`)
+- [ ] Avoid removed `MudGlobal` theming properties
 - [ ] Ensure offline/intranet compatibility
 - [ ] Use `IMoBrowserStorage` for browser persistence (never raw JS interop)
 - [ ] Use localization for all user-facing text (never hardcode strings)
