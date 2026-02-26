@@ -356,7 +356,7 @@
 
     private async Task ClearInstanceHistoryWithConfirmAsync(ObservableInstanceViewModel instance)
     {
-        bool? result = await DialogService.ShowMessageBox(
+        bool? result = await DialogService.ShowMessageBoxAsync(
             "确认",
             $"确定要清除实例 '{instance.InstanceName}' 的历史记录吗？",
             yesText: "确定", cancelText: "取消");

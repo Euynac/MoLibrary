@@ -140,9 +140,9 @@
     [Parameter]
     public EventCallback OnFilterChanged { get; set; }
 
-    private IEnumerable<Microsoft.Extensions.Logging.LogLevel> _selectedLogLevels
+    private IReadOnlyCollection<Microsoft.Extensions.Logging.LogLevel> _selectedLogLevels
     {
-        get => Filter?.LogLevels ?? Enumerable.Empty<Microsoft.Extensions.Logging.LogLevel>();
+        get => Filter?.LogLevels?.ToList() ?? (IReadOnlyCollection<Microsoft.Extensions.Logging.LogLevel>)Array.Empty<Microsoft.Extensions.Logging.LogLevel>();
         set
         {
             if (Filter != null)
