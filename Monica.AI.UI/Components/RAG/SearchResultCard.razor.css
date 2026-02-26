@@ -1,13 +1,42 @@
+.result-card-wrapper {
+    cursor: pointer;
+    transition: transform 0.15s;
+}
+
+.result-card-wrapper:hover {
+    transform: translateY(-2px);
+}
+
 .result-card {
     padding: 12px 16px;
     border: 1px solid var(--mud-palette-lines-default);
     border-radius: 8px;
     background-color: var(--mud-palette-surface);
-    transition: border-color 0.15s;
+    transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-.result-card:hover {
+.result-card-wrapper:hover .result-card {
     border-color: var(--mud-palette-primary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.result-progress-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.result-progress-header ::deep .score-progress {
+    flex: 1;
+    border-radius: 4px;
+}
+
+.result-progress-header ::deep .score-text {
+    font-weight: 600;
+    color: var(--mud-palette-text-primary);
+    min-width: 40px;
+    text-align: right;
 }
 
 .result-header {
@@ -47,3 +76,4 @@
     margin-top: 6px;
     font-style: italic;
 }
+

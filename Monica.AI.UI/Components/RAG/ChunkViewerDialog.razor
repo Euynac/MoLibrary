@@ -1,0 +1,110 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@using Monica.AI.RAG.Models
+@using System.Text
+@using System.Web
+@using MudBlazor
+@inject IStringLocalizer<AIResource> L
+
+<MudDialog>
+    <DialogContent>
+        <div class="chunk-viewer-header">
+            <MudText Typo="Typo.h6">@DocumentName</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                @L["RAG:ChunkViewer:Info", ChunkCount, StatusText]
+            </MudText>
+        </div>
+
+        <div class="chunk-viewer-content">
+            @if (string.IsNullOrEmpty(OriginalText) || Chunks == null || Chunks.Count == 0)
+            {
+                <div class="empty-state">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        @L["RAG:ChunkViewer:NoContent"]
+                    </MudText>
+                </div>
+            }
+            else
+            {
+                <div class="original-text">
+                    @((MarkupString)BuildHighlightedHtml())
+                </div>
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">@L["Common:Close"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public string DocumentName { get; set; } = string.Empty;
+
+    [Parameter]
+    public string OriginalText { get; set; } = string.Empty;
+
+    [Parameter]
+    public IReadOnlyList<ChunkHighlight> Chunks { get; set; } = Array.Empty<ChunkHighlight>();
+
+    [Parameter]
+    public int? MatchedChunkIndex { get; set; }
+
+    [Parameter]
+    public string StatusText { get; set; } = string.Empty;
+
+    private int ChunkCount => Chunks?.Count ?? 0;
+
+    private void Close() => MudDialog.Close();
+
+    /// <summary>
+    /// Build HTML with highlighted chunks.
+    /// Escapes user content to prevent XSS and inserts chunk highlights at correct positions.
+    /// </summary>
+    private string BuildHighlightedHtml()
+    {
+        if (string.IsNullOrEmpty(OriginalText) || Chunks == null || Chunks.Count == 0)
+            return string.Empty;
+
+        var html = new StringBuilder();
+        var sortedChunks = Chunks.OrderBy(c => c.Start).ToList();
+        var lastPos = 0;
+
+        foreach (var chunk in sortedChunks)
+        {
+            // Add text before chunk (escaped)
+            if (chunk.Start > lastPos)
+            {
+                var beforeText = OriginalText.Substring(lastPos, chunk.Start - lastPos);
+                html.Append(HttpUtility.HtmlEncode(beforeText));
+            }
+
+            // Add highlighted chunk
+            var chunkText = OriginalText.Substring(chunk.Start, chunk.End - chunk.Start);
+            var isMatched = MatchedChunkIndex.HasValue && chunk.Index == MatchedChunkIndex.Value;
+            var matchedClass = isMatched ? " matched" : "";
+            var matchedLabel = isMatched ? $" {L["RAG:ChunkViewer:Matched"]}" : "";
+
+            var tooltipText = $"{L["RAG:ChunkViewer:ChunkBadge", chunk.Index, chunk.Section ?? ""]}{matchedLabel}";
+
+            html.Append($"<span class=\"chunk-highlight{matchedClass}\" title=\"{HttpUtility.HtmlAttributeEncode(tooltipText)}\">");
+            html.Append(HttpUtility.HtmlEncode(chunkText));
+            html.Append($"<span class=\"chunk-badge{matchedClass}\">#{chunk.Index}</span>");
+            html.Append("</span>");
+
+            lastPos = chunk.End;
+        }
+
+        // Add remaining text after last chunk (escaped)
+        if (lastPos < OriginalText.Length)
+        {
+            var remainingText = OriginalText.Substring(lastPos);
+            html.Append(HttpUtility.HtmlEncode(remainingText));
+        }
+
+        return html.ToString();
+    }
+}

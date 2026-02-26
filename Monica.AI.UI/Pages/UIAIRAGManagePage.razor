@@ -1,0 +1,529 @@
+@page "/ai/rag/manage"
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@using Monica.AI.UI.Services
+@using Monica.AI.Models
+@using Monica.AI.RAG.Models
+@using Monica.AI.UI.Components.RAG
+@using Monica.Tool.MoResponse
+@inject IStringLocalizer<AIResource> L
+@inject RAGUIService RAGService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>@L["RAG:Navigation:Manage"]</PageTitle>
+
+<div class="rag-manage-page">
+    <div class="kb-list-panel">
+        <div class="panel-header">
+            <MudText Typo="Typo.h6">@L["RAG:KnowledgeBase:Title"]</MudText>
+            <MudIconButton Icon="@Icons.Material.Filled.Add"
+                           Color="Color.Primary"
+                           Size="Size.Small"
+                           OnClick="@ShowCreateKBDialog"
+                           title="@L["RAG:KnowledgeBase:Create"]" />
+        </div>
+
+        <MudDataGrid T="KnowledgeBase"
+                     Items="@_knowledgeBases"
+                     Dense="true"
+                     Hover="true"
+                     SelectedItemChanged="@OnKBSelected"
+                     SelectedItem="@_selectedKB"
+                     Class="kb-grid">
+            <Columns>
+                <PropertyColumn Property="x => x.Name" Title="@L["RAG:KnowledgeBase:Name"]" />
+                <PropertyColumn Property="x => x.DocumentCount" Title="@L["RAG:KnowledgeBase:DocumentCount"]" />
+                <PropertyColumn Property="x => x.ChunkCount" Title="@L["RAG:KnowledgeBase:ChunkCount"]" />
+            </Columns>
+        </MudDataGrid>
+    </div>
+
+    <div class="kb-detail-panel">
+        @if (_selectedKB != null)
+        {
+            <div class="detail-content">
+                <!-- Embedding Model Selector -->
+                <div class="embedding-model-section">
+                    <EmbeddingModelSelector AvailableModels="@_availableModels"
+                                            SelectedModelId="@_currentEmbeddingModelId"
+                                            SelectedModelIdChanged="@OnEmbeddingModelChanged"
+                                            IsDisabled="@(_selectedKB.DocumentCount > 0)" />
+                </div>
+
+                <!-- Embedding Model Warning -->
+                @if (!string.IsNullOrEmpty(_selectedKB.EmbeddingModelId) && _currentEmbeddingModelId != _selectedKB.EmbeddingModelId)
+                {
+                    <EmbeddingModelWarning CurrentModelId="@_currentEmbeddingModelId"
+                                           KnowledgeBaseModelId="@_selectedKB.EmbeddingModelId" />
+                }
+
+                <!-- KB Detail Header -->
+                <div class="kb-header">
+                    <MudText Typo="Typo.h5">@_selectedKB.Name</MudText>
+                    @if (!string.IsNullOrEmpty(_selectedKB.Description))
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@_selectedKB.Description</MudText>
+                    }
+                    <div class="kb-stats">
+                        <MudChip T="string" Size="Size.Small" Color="Color.Info">
+                            @L["RAG:KnowledgeBase:DocumentCount"]: @_selectedKB.DocumentCount
+                        </MudChip>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Info">
+                            @L["RAG:KnowledgeBase:ChunkCount"]: @_selectedKB.ChunkCount
+                        </MudChip>
+                        @if (!string.IsNullOrEmpty(_selectedKB.EmbeddingModelId))
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Success">
+                                @_selectedKB.EmbeddingModelId
+                            </MudChip>
+                        }
+                    </div>
+                </div>
+
+                <!-- Document Queue Table -->
+                <div class="document-queue-section">
+                    <div class="queue-header">
+                        <MudText Typo="Typo.h6">@L["RAG:DocumentQueue:Title"]</MudText>
+                        <div class="queue-controls">
+                            <MudText Typo="Typo.body2" Class="parallel-label">
+                                @L["RAG:ParallelIndexing:Label"]
+                            </MudText>
+                            <MudNumericField T="int"
+                                             @bind-Value="@_parallelCount"
+                                             Min="1"
+                                             Max="10"
+                                             Variant="Variant.Outlined"
+                                             Margin="Margin.Dense"
+                                             Class="parallel-input" />
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Filled.PlayArrow"
+                                       OnClick="@StartBatchIndexing"
+                                       Disabled="@(!_documentQueue.Any(d => d.Status == DocumentStatus.Pending))">
+                                @L["RAG:ParallelIndexing:Start"]
+                            </MudButton>
+                        </div>
+                    </div>
+
+                    <MudTable T="DocumentQueueItem"
+                              Items="@_documentQueue"
+                              Dense="true"
+                              Hover="true"
+                              Class="document-queue-table">
+                        <HeaderContent>
+                            <MudTh>@L["RAG:DocumentQueue:Name"]</MudTh>
+                            <MudTh>@L["RAG:DocumentQueue:Status"]</MudTh>
+                            <MudTh>@L["RAG:DocumentQueue:Chunks"]</MudTh>
+                            <MudTh>@L["RAG:DocumentQueue:Actions"]</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="@L["RAG:DocumentQueue:Name"]">@context.Name</MudTd>
+                            <MudTd DataLabel="@L["RAG:DocumentQueue:Status"]">
+                                @switch (context.Status)
+                                {
+                                    case DocumentStatus.Pending:
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Default">
+                                            @L["RAG:DocumentQueue:Status:Pending"]
+                                        </MudChip>
+                                        break;
+                                    case DocumentStatus.Indexing:
+                                        <div class="indexing-status">
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Info">
+                                                @L["RAG:DocumentQueue:Status:Indexing"]
+                                            </MudChip>
+                                            <MudProgressLinear Value="@context.Progress" Color="Color.Info" Size="Size.Small" />
+                                        </div>
+                                        break;
+                                    case DocumentStatus.Done:
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Success">
+                                            @L["RAG:DocumentQueue:Status:Done"]
+                                        </MudChip>
+                                        break;
+                                    case DocumentStatus.Error:
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Error" title="@context.ErrorMessage">
+                                            @L["RAG:DocumentQueue:Status:Error"]
+                                        </MudChip>
+                                        break;
+                                }
+                            </MudTd>
+                            <MudTd DataLabel="@L["RAG:DocumentQueue:Chunks"]">@context.ChunkCount</MudTd>
+                            <MudTd DataLabel="@L["RAG:DocumentQueue:Actions"]">
+                                <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                               Size="Size.Small"
+                                               OnClick="@(() => ShowChunkViewer(context))"
+                                               title="@L["RAG:DocumentQueue:Actions:ViewChunks"]" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                               Size="Size.Small"
+                                               OnClick="@(() => ReindexDocument(context))"
+                                               Disabled="@(context.Status == DocumentStatus.Indexing)"
+                                               title="@L["RAG:DocumentQueue:Actions:Reindex"]" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                               Size="Size.Small"
+                                               Color="Color.Error"
+                                               OnClick="@(() => DeleteDocument(context))"
+                                               Disabled="@(context.Status == DocumentStatus.Indexing)"
+                                               title="@L["RAG:DocumentQueue:Actions:Delete"]" />
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </div>
+
+                <!-- Indexing Actions -->
+                <div class="indexing-actions-section">
+                    <MudText Typo="Typo.h6">@L["RAG:Indexing:Title"]</MudText>
+
+                    <div class="markdown-group-section">
+                        <MudSelect T="string"
+                                   @bind-Value="@_selectedMarkdownGroup"
+                                   Label="@L["RAG:Indexing:MarkdownGroup"]"
+                                   Variant="Variant.Outlined"
+                                   Margin="Margin.Dense">
+                            @foreach (var group in _markdownGroups)
+                            {
+                                <MudSelectItem T="string" Value="@group">@group</MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.FolderOpen"
+                                   OnClick="@ShowDocumentSelectionDialog"
+                                   Disabled="@string.IsNullOrEmpty(_selectedMarkdownGroup)">
+                            @L["RAG:DocumentSelection:Title"]
+                        </MudButton>
+                    </div>
+
+                    <MudDivider Class="my-4" />
+
+                    <div class="file-upload-section">
+                        <MudFileUpload T="IBrowserFile"
+                                       Accept=".txt,.md,.pdf"
+                                       FilesChanged="@OnFileSelected"
+                                       MaximumFileCount="1">
+                            <ActivatorContent>
+                                <MudButton Variant="Variant.Filled"
+                                           Color="Color.Secondary"
+                                           StartIcon="@Icons.Material.Filled.Upload">
+                                    @L["RAG:Indexing:UploadFile"]
+                                </MudButton>
+                            </ActivatorContent>
+                        </MudFileUpload>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <MudText Typo="Typo.h6" Color="Color.Secondary">
+                    @L["RAG:KnowledgeBase:SelectPrompt"]
+                </MudText>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<KnowledgeBase> _knowledgeBases = new();
+    private KnowledgeBase? _selectedKB;
+    private string _currentEmbeddingModelId = "text-embedding-3-large";
+    private List<EmbeddingModelInfo> _availableModels = new();
+    private List<DocumentQueueItem> _documentQueue = new();
+    private int _parallelCount = 5;
+    private List<string> _markdownGroups = new();
+    private string? _selectedMarkdownGroup;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadEmbeddingModelsAsync();
+            await LoadKnowledgeBasesAsync();
+            await LoadMarkdownGroupsAsync();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task LoadEmbeddingModelsAsync()
+    {
+        if ((await RAGService.GetEmbeddingModelsAsync()).IsFailed(out var error, out var models))
+        {
+            Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
+            return;
+        }
+        _availableModels = models.ToList();
+    }
+
+    private async Task LoadKnowledgeBasesAsync()
+    {
+        if ((await RAGService.GetKnowledgeBasesAsync()).IsFailed(out var error, out var kbs))
+        {
+            Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
+            return;
+        }
+        _knowledgeBases = kbs.ToList();
+    }
+
+    private async Task LoadMarkdownGroupsAsync()
+    {
+        if ((await RAGService.GetMarkdownGroupsAsync()).IsFailed(out var error, out var groups))
+        {
+            Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
+            return;
+        }
+        _markdownGroups = groups.Select(g => g.Key).ToList();
+    }
+
+    private async Task OnKBSelected(KnowledgeBase? kb)
+    {
+        _selectedKB = kb;
+        if (kb != null)
+        {
+            // Load KB's embedding model
+            if ((await RAGService.GetKnowledgeBaseEmbeddingModelAsync(kb.Id)).IsFailed(out var error, out var model))
+            {
+                Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
+            }
+            else if (model != null)
+            {
+                _currentEmbeddingModelId = model.ModelName;
+            }
+
+            // Load document queue for this KB
+            await LoadDocumentQueueAsync();
+        }
+    }
+
+    private async Task LoadDocumentQueueAsync()
+    {
+        if (_selectedKB == null) return;
+
+        if ((await RAGService.GetDocumentQueueAsync(_selectedKB.Id)).IsFailed(out var error, out var queue))
+        {
+            Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
+            _documentQueue.Clear();
+        }
+        else
+        {
+            _documentQueue = queue.ToList();
+        }
+    }
+
+    private async Task OnEmbeddingModelChanged(string modelId)
+    {
+        if (_selectedKB == null) return;
+
+        _currentEmbeddingModelId = modelId;
+
+        // If KB has no documents, lock the model
+        if (_selectedKB.DocumentCount == 0)
+        {
+            if ((await RAGService.SetKnowledgeBaseEmbeddingModelAsync(_selectedKB.Id, modelId)).IsFailed(out var error))
+            {
+                Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
+            }
+            else
+            {
+                _selectedKB = _selectedKB with { EmbeddingModelId = modelId };
+            }
+        }
+    }
+
+    private async Task ShowCreateKBDialog()
+    {
+        var dialog = await DialogService.ShowAsync<CreateKnowledgeBaseDialog>(
+            L["RAG:Manage:CreateDialog:Title"],
+            new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+
+        var result = await dialog.Result;
+        if (result is { Canceled: false, Data: ValueTuple<string, string> data })
+        {
+            var (name, description) = data;
+            if ((await RAGService.CreateKnowledgeBaseAsync(name, description)).IsFailed(out var error))
+            {
+                Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
+            }
+            else
+            {
+                Snackbar.Add(L["Common:Success"], Severity.Success);
+                await LoadKnowledgeBasesAsync();
+            }
+        }
+    }
+
+    private async Task StartBatchIndexing()
+    {
+        if (_selectedKB == null) return;
+
+        var pendingDocs = _documentQueue.Where(d => d.Status == DocumentStatus.Pending).ToList();
+        if (pendingDocs.Count == 0)
+        {
+            Snackbar.Add(L["RAG:ParallelIndexing:NoPendingDocuments"], Severity.Warning);
+            return;
+        }
+
+        if ((await RAGService.StartBatchIndexingAsync(_selectedKB.Id, _parallelCount)).IsFailed(out var error))
+        {
+            Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
+        }
+        else
+        {
+            Snackbar.Add(L["Common:Success"], Severity.Success);
+            await LoadDocumentQueueAsync();
+        }
+    }
+
+    private async Task ShowChunkViewer(DocumentQueueItem document)
+    {
+        if (_selectedKB == null) return;
+
+        // Get document chunks from service
+        var result = await RAGService.GetDocumentChunksAsync(_selectedKB.Id, document.Id);
+        if (result.IsFailed(out var error, out var data))
+        {
+            Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
+            return;
+        }
+
+        var (originalText, chunks) = data;
+
+        // Determine status text for display
+        var statusText = document.Status switch
+        {
+            DocumentStatus.Done => L["RAG:ChunkViewer:Indexed", document.IndexedAt?.ToString("yyyy-MM-dd") ?? ""],
+            DocumentStatus.Pending => L["RAG:ChunkViewer:PendingIndexing"],
+            _ => document.Status.ToString()
+        };
+
+        // Open dialog with chunk data
+        var parameters = new DialogParameters
+        {
+            { nameof(ChunkViewerDialog.DocumentName), document.Name },
+            { nameof(ChunkViewerDialog.OriginalText), originalText },
+            { nameof(ChunkViewerDialog.Chunks), chunks },
+            { nameof(ChunkViewerDialog.MatchedChunkIndex), (int?)null }, // Will be used in Phase 7 for search results
+            { nameof(ChunkViewerDialog.StatusText), statusText }
+        };
+
+        await DialogService.ShowAsync<ChunkViewerDialog>(
+            L["RAG:ChunkViewer:Title"],
+            parameters,
+            new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true });
+    }
+
+    private async Task ReindexDocument(DocumentQueueItem document)
+    {
+        if (_selectedKB == null) return;
+
+        if ((await RAGService.ReindexDocumentAsync(_selectedKB.Id, document.Id)).IsFailed(out var error))
+        {
+            Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
+        }
+        else
+        {
+            Snackbar.Add(L["Common:Success"], Severity.Success);
+            await LoadDocumentQueueAsync();
+        }
+    }
+
+    private async Task DeleteDocument(DocumentQueueItem document)
+    {
+        if (_selectedKB == null) return;
+
+        var confirmed = await DialogService.ShowMessageBox(
+            L["Common:Confirm"],
+            L["RAG:DocumentQueue:DeleteConfirm", document.Name],
+            yesText: L["Common:Delete"],
+            cancelText: L["Common:Cancel"]);
+
+        if (confirmed != true) return;
+
+        if ((await RAGService.RemoveDocumentAsync(_selectedKB.Id, document.Id)).IsFailed(out var error))
+        {
+            Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
+        }
+        else
+        {
+            Snackbar.Add(L["Common:Success"], Severity.Success);
+            await LoadDocumentQueueAsync();
+        }
+    }
+
+    private async Task ShowDocumentSelectionDialog()
+    {
+        if (_selectedKB == null || string.IsNullOrEmpty(_selectedMarkdownGroup)) return;
+
+        // Get available documents from the selected markdown group
+        if ((await RAGService.GetAvailableDocumentsAsync(_selectedMarkdownGroup)).IsFailed(out var error, out var documents))
+        {
+            Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
+            return;
+        }
+
+        // Get already indexed document IDs
+        var indexedIds = _documentQueue
+            .Where(d => d.Status == DocumentStatus.Done)
+            .Select(d => d.Id)
+            .ToHashSet();
+
+        var parameters = new DialogParameters
+        {
+            { nameof(DocumentSelectionDialog.AvailableDocuments), documents.ToList() },
+            { nameof(DocumentSelectionDialog.IndexedDocumentIds), indexedIds }
+        };
+
+        var dialog = await DialogService.ShowAsync<DocumentSelectionDialog>(
+            L["RAG:DocumentSelection:Title"],
+            parameters,
+            new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true });
+
+        var result = await dialog.Result;
+        if (result is { Canceled: false, Data: List<string> selectedDocIds })
+        {
+            if ((await RAGService.AddDocumentsToQueueAsync(_selectedKB.Id, selectedDocIds)).IsFailed(out var addError))
+            {
+                Snackbar.Add($"{L["Common:Error"]}: {addError.Message}", Severity.Error);
+            }
+            else
+            {
+                Snackbar.Add(L["Common:Success"], Severity.Success);
+                await LoadDocumentQueueAsync();
+            }
+        }
+    }
+
+    private async Task OnFileSelected(IBrowserFile file)
+    {
+        if (_selectedKB == null) return;
+
+        try
+        {
+            // Read file content (limit to 10MB)
+            const long maxFileSize = 10 * 1024 * 1024;
+            if (file.Size > maxFileSize)
+            {
+                Snackbar.Add(L["RAG:Indexing:FileTooLarge"], Severity.Error);
+                return;
+            }
+
+            using var stream = file.OpenReadStream(maxFileSize);
+            using var reader = new StreamReader(stream);
+            var content = await reader.ReadToEndAsync();
+
+            if ((await RAGService.UploadAndIndexDocumentAsync(_selectedKB.Id, file.Name, content)).IsFailed(out var error))
+            {
+                Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
+            }
+            else
+            {
+                Snackbar.Add(L["Common:Success"], Severity.Success);
+                await LoadDocumentQueueAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"{L["Common:Error"]}: {ex.Message}", Severity.Error);
+        }
+    }
+}
+

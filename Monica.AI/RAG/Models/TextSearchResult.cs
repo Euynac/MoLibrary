@@ -13,4 +13,14 @@ public sealed class TextSearchResult
     public string? KnowledgeBaseId { get; set; }
     public string? SectionPath { get; set; }
     public object? RawRepresentation { get; set; }
+
+    /// <summary>
+    /// Document ID for this search result (used to open chunk viewer).
+    /// </summary>
+    public string? DocumentId { get; set; }
+
+    /// <summary>
+    /// Chunk index within the document (used to highlight matched chunk).
+    /// </summary>
+    public int? ChunkIndex { get; set; }
 }

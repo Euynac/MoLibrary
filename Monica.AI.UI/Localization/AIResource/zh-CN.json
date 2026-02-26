@@ -52,6 +52,16 @@
     "Generic": "错误"
   },
   "Common": {
+    "Error": "错误",
+    "Success": "成功",
+    "Create": "创建",
+    "Cancel": "取消",
+    "Delete": "删除",
+    "Confirm": "确认",
+    "Close": "关闭",
+    "Validation": {
+      "Required": "此字段为必填项"
+    },
     "Actions": {
       "Close": "关闭",
       "Save": "保存",
@@ -60,12 +70,111 @@
     }
   },
   "RAG": {
+    "Navigation": {
+      "Manage": "知识库管理",
+      "Debug": "RAG 调试"
+    },
+    "EmbeddingModel": {
+      "Label": "嵌入模型",
+      "Dimensions": "{0}维",
+      "Warning": {
+        "Title": "嵌入模型不匹配",
+        "CurrentModel": "当前模型：{0}",
+        "KBModel": "知识库模型：{0}",
+        "ReindexRequired": "所有文档必须重新索引才能使用新的嵌入模型。",
+        "SearchMismatch": "以下知识库使用不同的嵌入模型：{0}。搜索结果可能不准确。"
+      }
+    },
     "KnowledgeBase": {
       "Title": "知识库",
+      "Name": "名称",
+      "DocumentCount": "文档数",
+      "ChunkCount": "块数",
+      "Create": "创建知识库",
+      "SelectPrompt": "选择一个知识库以查看详情",
       "NewPlaceholder": "新知识库名称...",
       "EmptyHint": "暂无知识库。请在上方创建一个。",
       "DocsCount": "{0} 文档",
       "ChunksCount": "{0} 块"
+    },
+    "Manage": {
+      "Title": "知识库管理",
+      "SelectKB": "选择一个知识库",
+      "CreateDialog": {
+        "Title": "创建知识库",
+        "Name": "名称",
+        "Description": "描述",
+        "NamePlaceholder": "例如：产品文档",
+        "DescPlaceholder": "可选描述..."
+      }
+    },
+    "DocumentQueue": {
+      "Title": "文档与队列",
+      "Status": {
+        "Pending": "待处理",
+        "Indexing": "索引中",
+        "Done": "完成",
+        "Error": "错误"
+      },
+      "Column": {
+        "Document": "文档",
+        "Status": "状态",
+        "Chunks": "分块",
+        "Actions": "操作"
+      },
+      "Name": "名称",
+      "Status": "状态",
+      "Chunks": "分块数",
+      "Actions": "操作",
+      "Actions:ViewChunks": "查看分块",
+      "Actions:Reindex": "重新索引",
+      "Actions:Delete": "删除",
+      "Action": {
+        "ViewChunks": "查看分块",
+        "Reindex": "重新索引",
+        "Delete": "删除"
+      },
+      "Empty": "暂无文档",
+      "Count": "共 {0} 个",
+      "DeleteConfirm": "确定要删除 '{0}' 吗？"
+    },
+    "Parallel": {
+      "Label": "并行",
+      "Start": "开始",
+      "Stop": "停止"
+    },
+    "ParallelIndexing": {
+      "Label": "并行数",
+      "Start": "开始",
+      "Stop": "停止",
+      "NoPendingDocuments": "没有待处理的文档"
+    },
+    "DocumentSelection": {
+      "Title": "选择要索引的文档",
+      "SelectAll": "全选",
+      "DeselectAll": "取消全选",
+      "Selected": "已选择 {0} 个",
+      "AddToQueue": "添加到队列",
+      "Indexed": "已索引",
+      "ChunksPreview": "{0} 个分块"
+    },
+    "ChunkViewer": {
+      "Title": "文档分块",
+      "Info": "{0} 个分块 · {1}",
+      "Indexed": "已索引于 {0}",
+      "PendingIndexing": "待索引",
+      "NoContent": "无原始文本或分块",
+      "ChunkBadge": "分块 {0}：{1}",
+      "Matched": "（匹配）"
+    },
+    "Debug": {
+      "Title": "RAG 调试 / 搜索",
+      "KBSidebar": {
+        "Title": "知识库",
+        "SelectAll": "全选",
+        "DeselectAll": "取消全选",
+        "Stats": "{0} 个文档 · {1} 个分块"
+      }
     },
     "Indexing": {
       "Title": "索引",
@@ -76,7 +185,9 @@
       "IndexNow": "立即索引",
       "Indexing": "索引中...",
       "UploadDocument": "上传文档",
-      "ChooseFile": "选择文件"
+      "UploadFile": "上传文件",
+      "ChooseFile": "选择文件",
+      "FileTooLarge": "文件过大（最大 10MB）"
     },
     "Search": {
       "Title": "搜索",
@@ -86,7 +197,8 @@
       "Go": "搜索",
       "Searching": "搜索中...",
       "NoResults": "未找到结果",
-      "ResultsCount": "找到 {0} 个结果"
+      "ResultsCount": "找到 {0} 个结果",
+      "ViewInDocument": "在文档中查看"
     }
   },
   "ProviderManage": {

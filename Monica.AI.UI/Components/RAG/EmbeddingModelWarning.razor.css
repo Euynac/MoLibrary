@@ -1,0 +1,50 @@
+.embedding-warning-wrapper {
+    margin-bottom: 16px;
+}
+
+.embedding-warning-wrapper ::deep .warning-alert {
+    background-color: var(--mud-palette-warning-lighten);
+    border-left: 4px solid var(--mud-palette-warning);
+}
+
+.warning-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.warning-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.warning-title {
+    font-weight: 600;
+    color: var(--mud-palette-warning-darken);
+}
+
+.warning-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-left: 28px;
+}
+
+.warning-details ::deep .mud-typography {
+    color: var(--mud-palette-text-primary);
+}
+
+.warning-details ::deep .mud-typography code,
+.warning-details ::deep .mud-typography strong {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-weight: 600;
+    background-color: var(--mud-palette-action-default-hover);
+    padding: 2px 4px;
+    border-radius: 2px;
+}
+
+.warning-message {
+    margin-top: 4px;
+    font-style: italic;
+}

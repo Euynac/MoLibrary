@@ -6,8 +6,8 @@
     color: var(--mud-palette-text-primary);
 }
 
-.rag-left-panel {
-    width: 360px;
+.rag-sidebar {
+    width: 280px;
     display: flex;
     flex-direction: column;
     padding: 20px;
@@ -17,25 +17,78 @@
     overflow-y: auto;
 }
 
-.rag-right-panel {
+.rag-sidebar ::deep .sidebar-title {
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--mud-palette-text-primary);
+}
+
+.kb-selection-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.kb-selection-actions ::deep button {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+}
+
+.kb-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.kb-item {
+    border-radius: 6px;
+    transition: background-color 0.15s;
+}
+
+.kb-item:hover {
+    background-color: var(--mud-palette-action-default-hover);
+}
+
+.kb-item ::deep .kb-checkbox {
+    width: 100%;
+}
+
+.kb-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+}
+
+.kb-info ::deep .kb-name {
+    font-weight: 500;
+    color: var(--mud-palette-text-primary);
+}
+
+.kb-info ::deep .kb-stats {
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.7rem;
+}
+
+.rag-main-panel {
     flex: 1;
     display: flex;
     flex-direction: column;
     padding: 20px;
     overflow-y: auto;
+    gap: 16px;
 }
 
-.rag-right-panel ::deep .panel-title {
-    padding: 0 0 12px;
+.rag-main-panel ::deep .page-title {
     font-weight: 600;
     color: var(--mud-palette-text-primary);
+    margin-bottom: 4px;
 }
 
 .search-controls {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    margin-bottom: 16px;
 }
 
 .search-options {
@@ -49,14 +102,8 @@
     flex-shrink: 0;
 }
 
-.search-options ::deep .kb-multi-select {
-    flex: 1;
-    min-width: 200px;
-}
-
-.rag-right-panel ::deep .results-count {
+.rag-main-panel ::deep .results-count {
     color: var(--mud-palette-text-secondary);
-    margin-bottom: 10px;
 }
 
 .search-results {
@@ -65,7 +112,7 @@
     gap: 10px;
 }
 
-.rag-right-panel ::deep .no-results {
+.rag-main-panel ::deep .no-results {
     color: var(--mud-palette-text-secondary);
     text-align: center;
     padding: 32px 0;
@@ -77,10 +124,11 @@
         height: auto;
     }
 
-    .rag-left-panel {
+    .rag-sidebar {
         width: 100%;
         border-right: none;
         border-bottom: 1px solid var(--mud-palette-lines-default);
         max-height: 50vh;
     }
 }
+
