@@ -32,8 +32,8 @@
                 {
                     <div class="document-item">
                         <MudCheckBox T="bool"
-                                     Checked="@SelectedDocuments.Contains(doc.RelativePath)"
-                                     CheckedChanged="@((bool value) => ToggleDocument(doc.RelativePath, value))"
+                                     Value="@SelectedDocuments.Contains(doc.RelativePath)"
+                                     ValueChanged="@((bool value) => ToggleDocument(doc.RelativePath, value))"
                                      Color="Color.Primary"
                                      Dense="true" />
                         <div class="document-info">
@@ -76,26 +76,31 @@
 
     private HashSet<string> SelectedDocuments { get; set; } = new();
 
-    private void ToggleDocument(string documentId, bool isChecked)
+    private async Task ToggleDocument(string documentId, bool isChecked)
     {
         if (isChecked)
-            SelectedDocuments.Add(documentId);
+        {
+            if (!SelectedDocuments.Contains(documentId))
+                SelectedDocuments.Add(documentId);
+        }
         else
+        {
             SelectedDocuments.Remove(documentId);
+        }
 
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
     }
 
-    private void SelectAll()
+    private async Task SelectAll()
     {
         SelectedDocuments = AvailableDocuments.Select(d => d.RelativePath).ToHashSet();
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
     }
 
-    private void DeselectAll()
+    private async Task DeselectAll()
     {
         SelectedDocuments.Clear();
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
     }
 
     private void Cancel()

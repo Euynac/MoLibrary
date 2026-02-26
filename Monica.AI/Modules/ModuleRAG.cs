@@ -46,6 +46,7 @@ public class ModuleRAG(ModuleRAGOption option)
     {
         services.AddSingleton<RAGService>();
         services.AddSingleton<IDocumentChunker, MarkdownDocumentChunker>();
+        services.AddSingleton<IDocumentQueueStore, Monica.AI.RAG.Stores.InMemoryDocumentQueueStore>();
     }
 }
 

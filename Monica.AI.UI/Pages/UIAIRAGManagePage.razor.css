@@ -24,16 +24,83 @@
     border-bottom: 1px solid var(--mud-palette-lines-default);
 }
 
-.kb-list-panel ::deep .kb-grid {
-    border: none;
+.kb-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px 0;
 }
 
-.kb-list-panel ::deep .mud-table-row {
+.kb-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 4px;
     cursor: pointer;
+    transition: all 0.2s ease;
+    background-color: var(--mud-palette-surface);
 }
 
-.kb-list-panel ::deep .mud-table-row.mud-selected {
+.kb-card:hover {
     background-color: var(--mud-palette-action-default-hover);
+    border-color: var(--mud-palette-primary);
+}
+
+.kb-card.selected {
+    background-color: rgba(var(--mud-palette-primary-rgb), 0.08);
+    border-color: var(--mud-palette-primary);
+}
+
+.kb-card-content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.kb-name {
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.kb-description {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.kb-card-stats {
+    display: flex;
+    gap: 12px;
+    margin-top: 4px;
+}
+
+.kb-stat {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    color: var(--mud-palette-text-secondary);
+}
+
+.kb-card-actions {
+    display: flex;
+    align-items: center;
+}
+
+.kb-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 16px;
+    gap: 12px;
+    text-align: center;
 }
 
 /* KB Detail Panel */

@@ -24,19 +24,50 @@
                            title="@L["RAG:KnowledgeBase:Create"]" />
         </div>
 
-        <MudDataGrid T="KnowledgeBase"
-                     Items="@_knowledgeBases"
-                     Dense="true"
-                     Hover="true"
-                     SelectedItemChanged="@OnKBSelected"
-                     SelectedItem="@_selectedKB"
-                     Class="kb-grid">
-            <Columns>
-                <PropertyColumn Property="x => x.Name" Title="@L["RAG:KnowledgeBase:Name"]" />
-                <PropertyColumn Property="x => x.DocumentCount" Title="@L["RAG:KnowledgeBase:DocumentCount"]" />
-                <PropertyColumn Property="x => x.ChunkCount" Title="@L["RAG:KnowledgeBase:ChunkCount"]" />
-            </Columns>
-        </MudDataGrid>
+        <div class="kb-list">
+            @foreach (var kb in _knowledgeBases)
+            {
+                <div class="kb-card @(_selectedKB?.Id == kb.Id ? "selected" : "")"
+                     @onclick="@(() => OnKBSelected(kb))">
+                    <div class="kb-card-content">
+                        <MudText Typo="Typo.body1" Class="kb-name">@kb.Name</MudText>
+                        @if (!string.IsNullOrEmpty(kb.Description))
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="kb-description">
+                                @kb.Description
+                            </MudText>
+                        }
+                        <div class="kb-card-stats">
+                            <span class="kb-stat">
+                                <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" />
+                                @kb.DocumentCount
+                            </span>
+                            <span class="kb-stat">
+                                <MudIcon Icon="@Icons.Material.Filled.GridView" Size="Size.Small" />
+                                @kb.ChunkCount
+                            </span>
+                        </div>
+                    </div>
+                    <div class="kb-card-actions" @onclick:stopPropagation="true">
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                       Size="Size.Small"
+                                       Color="Color.Error"
+                                       OnClick="@(() => DeleteKnowledgeBase(kb))"
+                                       title="@L["Common:Delete"]" />
+                    </div>
+                </div>
+            }
+        </div>
+
+        @if (_knowledgeBases.Count == 0)
+        {
+            <div class="kb-empty-state">
+                <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Size="Size.Large" Color="Color.Secondary" />
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    @L["RAG:KnowledgeBase:EmptyHint"]
+                </MudText>
+            </div>
+        }
     </div>
 
     <div class="kb-detail-panel">
@@ -293,6 +324,31 @@
 
             // Load document queue for this KB
             await LoadDocumentQueueAsync();
+        }
+    }
+
+    private async Task DeleteKnowledgeBase(KnowledgeBase kb)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            L["Common:Confirm"],
+            $"Are you sure you want to delete knowledge base '{kb.Name}'? This will remove all indexed documents.",
+            yesText: L["Common:Delete"],
+            cancelText: L["Common:Cancel"]);
+
+        if (confirmed != true) return;
+
+        if ((await RAGService.DeleteKnowledgeBaseAsync(kb.Id)).IsFailed(out var error))
+        {
+            Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
+        }
+        else
+        {
+            Snackbar.Add(L["Common:Success"], Severity.Success);
+            if (_selectedKB?.Id == kb.Id)
+            {
+                _selectedKB = null;
+            }
+            await LoadKnowledgeBasesAsync();
         }
     }
 

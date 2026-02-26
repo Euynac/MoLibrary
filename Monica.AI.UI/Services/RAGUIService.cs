@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Monica.AI.Models;
+using Monica.AI.RAG.Abstractions;
 using Monica.AI.RAG.Models;
 using Monica.AI.RAG.Services;
 using Monica.Markdown.Interfaces;
@@ -15,6 +16,7 @@ namespace Monica.AI.UI.Services;
 public class RAGUIService(
     RAGService ragService,
     IMoMarkdownService markdownService,
+    IDocumentQueueStore documentQueueStore,
     ILogger<RAGUIService> logger)
 {
     public async Task<Res<IReadOnlyList<KnowledgeBase>>> GetKnowledgeBasesAsync()
@@ -279,12 +281,8 @@ public class RAGUIService(
     {
         try
         {
-            // TODO: Implement actual document queue retrieval from RAGService
-            // For now, return empty list
-            logger.LogInformation("Getting document queue for KB '{KbId}'", kbId);
-
-            var queue = new List<DocumentQueueItem>();
-            return Res.Ok<IReadOnlyList<DocumentQueueItem>>(queue);
+            var queue = await documentQueueStore.GetQueueAsync(kbId);
+            return Res.Ok(queue);
         }
         catch (Exception ex)
         {
@@ -300,11 +298,35 @@ public class RAGUIService(
     {
         try
         {
-            // TODO: Implement actual document queue addition
-            var count = documentIds.Count();
-            logger.LogInformation("Adding {Count} documents to queue for KB '{KbId}'", count, kbId);
+            var docIdList = documentIds.ToList();
+            logger.LogInformation("Adding {Count} documents to queue for KB '{KbId}'", docIdList.Count, kbId);
 
-            return Res.Ok($"Added {count} documents to queue.");
+            // Get the markdown group to fetch document details
+            foreach (var docId in docIdList)
+            {
+                // Check if document already exists in queue
+                var existing = await documentQueueStore.GetByIdAsync(kbId, docId);
+                if (existing != null)
+                {
+                    logger.LogWarning("Document '{DocId}' already exists in queue for KB '{KbId}'", docId, kbId);
+                    continue;
+                }
+
+                // Create queue item
+                var queueItem = new DocumentQueueItem
+                {
+                    Id = docId,
+                    Name = Path.GetFileName(docId),
+                    KnowledgeBaseId = kbId,
+                    Status = DocumentStatus.Pending,
+                    ChunkCount = 0,
+                    Progress = 0
+                };
+
+                await documentQueueStore.AddAsync(queueItem);
+            }
+
+            return Res.Ok($"Added {docIdList.Count} documents to queue.");
         }
         catch (Exception ex)
         {
@@ -320,8 +342,13 @@ public class RAGUIService(
     {
         try
         {
-            // TODO: Implement actual document removal from RAGService
             logger.LogInformation("Removing document '{DocumentId}' from KB '{KbId}'", documentId, kbId);
+
+            // Remove from queue
+            await documentQueueStore.RemoveAsync(kbId, documentId);
+
+            // TODO: Also remove from vector store if indexed
+            // This would require RAGService to have a RemoveDocument method
 
             return Res.Ok("Document removed successfully.");
         }
@@ -340,12 +367,21 @@ public class RAGUIService(
     {
         try
         {
-            // TODO: Implement actual document reindexing
             logger.LogInformation("Reindexing document '{DocumentId}' in KB '{KbId}'", documentId, kbId);
 
-            progress?.Report(new IndexingProgress(1, 1, "Reindexing..."));
+            var queueItem = await documentQueueStore.GetByIdAsync(kbId, documentId);
+            if (queueItem == null)
+            {
+                return Res.Fail("Document not found in queue.");
+            }
 
-            return Res.Ok("Document reindexed successfully.");
+            // Update status to pending
+            queueItem.Status = DocumentStatus.Pending;
+            queueItem.Progress = 0;
+            queueItem.ErrorMessage = null;
+            await documentQueueStore.UpdateAsync(queueItem);
+
+            return Res.Ok("Document queued for reindexing.");
         }
         catch (Exception ex)
         {
@@ -365,19 +401,109 @@ public class RAGUIService(
     {
         try
         {
-            // TODO: Implement actual batch indexing with parallel processing
             logger.LogInformation(
                 "Starting batch indexing for KB '{KbId}' with max concurrency {MaxConcurrency}",
                 kbId, maxConcurrency);
 
-            progress?.Report(new IndexingProgress(0, 0, "Starting batch indexing..."));
+            // Get pending documents from queue
+            var queue = await documentQueueStore.GetQueueAsync(kbId, cancellationToken);
+            var pendingDocs = queue.Where(d => d.Status == DocumentStatus.Pending).ToList();
 
-            return Res.Ok("Batch indexing started.");
+            if (pendingDocs.Count == 0)
+            {
+                return Res.Fail("No pending documents to index.");
+            }
+
+            // Process documents with limited concurrency
+            var semaphore = new SemaphoreSlim(maxConcurrency, maxConcurrency);
+            var tasks = pendingDocs.Select(async doc =>
+            {
+                await semaphore.WaitAsync(cancellationToken);
+                try
+                {
+                    await IndexQueuedDocumentAsync(kbId, doc, progress, cancellationToken);
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            });
+
+            await Task.WhenAll(tasks);
+
+            return Res.Ok($"Batch indexing completed for {pendingDocs.Count} documents.");
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to start batch indexing for KB '{KbId}'", kbId);
             return Res.Fail($"Failed to start batch indexing: {ex.Message}");
+        }
+    }
+
+    private async Task IndexQueuedDocumentAsync(
+        string kbId,
+        DocumentQueueItem queueItem,
+        IProgress<IndexingProgress>? progress,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Update status to indexing
+            queueItem.Status = DocumentStatus.Indexing;
+            queueItem.Progress = 0;
+            await documentQueueStore.UpdateAsync(queueItem, cancellationToken);
+
+            // Get document content from markdown service
+            // The document ID is the relative path
+            var groups = await markdownService.GetAllDocumentGroupsAsync();
+            MarkdownDocument? document = null;
+
+            foreach (var group in groups)
+            {
+                var docs = await markdownService.GetDocumentsAsync(group.Key);
+                document = docs.FirstOrDefault(d => d.RelativePath == queueItem.Id);
+                if (document != null) break;
+            }
+
+            if (document == null)
+            {
+                throw new FileNotFoundException($"Document '{queueItem.Id}' not found in any markdown group.");
+            }
+
+            var content = await markdownService.GetDocumentContentAsync(document);
+
+            // Index the document
+            var indexProgress = new Progress<IndexingProgress>(p =>
+            {
+                queueItem.Progress = (int)((p.ProcessedChunks / (double)p.TotalChunks) * 100);
+                documentQueueStore.UpdateAsync(queueItem, cancellationToken).Wait();
+                progress?.Report(p);
+            });
+
+            await ragService.IndexDocumentAsync(
+                kbId,
+                document.RelativePath,
+                document.Title,
+                content,
+                indexProgress,
+                cancellationToken);
+
+            // Update status to done
+            queueItem.Status = DocumentStatus.Done;
+            queueItem.Progress = 100;
+            queueItem.IndexedAt = DateTimeOffset.UtcNow;
+            queueItem.ErrorMessage = null;
+            await documentQueueStore.UpdateAsync(queueItem, cancellationToken);
+
+            logger.LogInformation("Successfully indexed document '{DocId}' in KB '{KbId}'", queueItem.Id, kbId);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to index document '{DocId}' in KB '{KbId}'", queueItem.Id, kbId);
+
+            queueItem.Status = DocumentStatus.Error;
+            queueItem.ErrorMessage = ex.Message;
+            await documentQueueStore.UpdateAsync(queueItem, cancellationToken);
         }
     }
 
