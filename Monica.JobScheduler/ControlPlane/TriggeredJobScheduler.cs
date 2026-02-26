@@ -94,7 +94,10 @@ public class TriggeredJobScheduler(
                 definition,
                 parameters: evt.JobArgs,
                 initialState,
-                instanceId: evt.InstanceId);
+                instanceId: evt.InstanceId,
+                initDescription: evt.Delay.HasValue
+                    ? $"JobTriggeredEvent delayed execution (delay: {evt.Delay.Value}, scheduled: {scheduledTime!.Value:yyyy-MM-dd HH:mm:ss})"
+                    : "JobTriggeredEvent immediate execution");
 
             if (scheduledTime.HasValue)
             {
@@ -127,7 +130,7 @@ public class TriggeredJobScheduler(
 
     /// <summary>
     /// Handles ManualJobExecutionRequestEvent from Worker nodes.
-    /// Creates the job instance and dispatches it for execution on the Centre node.
+    /// Loads the pre-created job instance and dispatches it for execution on the Centre node.
     /// </summary>
     private async Task OnManualJobExecutionRequestAsync(ManualJobExecutionRequestEvent evt)
     {
@@ -140,12 +143,14 @@ public class TriggeredJobScheduler(
                 return;
             }
 
-            // Create instance with pre-generated ID
-            var instance = await jobInstanceManager.CreateInstanceAsync(
-                definition,
-                parameters: evt.JobArgsJson,
-                JobState.Enqueued,
-                instanceId: evt.InstanceId);
+            var instance = await metadataRepository.GetInstanceAsync(evt.InstanceId);
+            if (instance == null)
+            {
+                logger.LogWarning(
+                    "Manual execution request ignored because instance {InstanceId} was not found",
+                    evt.InstanceId);
+                return;
+            }
 
             // Dispatch for execution
             await jobDispatcher.PublishJobExecutionEventAsync(instance, definition, evt.JobArgsJson);

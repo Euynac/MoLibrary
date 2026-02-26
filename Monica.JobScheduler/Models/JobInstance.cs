@@ -62,12 +62,12 @@ public class JobInstance
     public DateTime? ScheduledExecutionTime { get; set; }
 
     /// <summary>
-    /// Gets or sets the state change history.
+    /// Gets the state change history.
     /// Uses line-prefix format where each entry starts with ">>> " followed by metadata:
     /// >>> [yyyy-MM-dd HH:mm:ss] [oldstate->newstate] optional message
     /// Multi-line messages (like stack traces) continue on following lines without the ">>> " prefix.
     /// </summary>
-    public string? StateHistory { get; set; }
+    public string? StateHistory { get; private set; }
 
     /// <summary>
     /// Gets or sets the current retry attempt number.
@@ -82,6 +82,42 @@ public class JobInstance
     /// Used to track which worker is handling the job.
     /// </summary>
     public string? RunningClientId { get; set; }
+    
+    /// <summary>
+    /// Initializes the instance state when creating a new job instance.
+    /// This should only be called once during instance creation.
+    /// </summary>
+    /// <param name="initialState">The initial state.</param>
+    /// <param name="message">Optional initialization message.</param>
+    public void InitializeState(JobState initialState, string? message = null)
+    {
+        State = initialState;
+        AppendStateHistory("Created", initialState, message, DateTime.UtcNow);
+    }
+
+    /// <summary>
+    /// Restores runtime fields from persistence without creating new state history records.
+    /// This method is intended for repository rehydration only.
+    /// </summary>
+    public void RestoreFromPersistence(
+        JobState state,
+        DateTime createdAt,
+        DateTime? startedAt,
+        DateTime? completedAt,
+        DateTime? scheduledExecutionTime,
+        string? stateHistory,
+        int retryAttempt,
+        string? runningClientId)
+    {
+        State = state;
+        CreatedAt = createdAt;
+        StartedAt = startedAt;
+        CompletedAt = completedAt;
+        ScheduledExecutionTime = scheduledExecutionTime;
+        StateHistory = stateHistory;
+        RetryAttempt = retryAttempt;
+        RunningClientId = runningClientId;
+    }
     
     
     /// <summary>
@@ -136,6 +172,20 @@ public class JobInstance
     /// <param name="message">Optional message to record. Can be null or multi-line.</param>
     /// <param name="timestamp">The timestamp of the state change.</param>
     private void AppendStateHistory(JobState oldState, JobState newState, string? message, DateTime timestamp)
+    {
+        AppendStateHistory(oldState.ToString(), newState, message, timestamp);
+    }
+
+    /// <summary>
+    /// Appends a state change record to the state history using line-prefix format.
+    /// Format: >>> [timestamp] [oldstate->newstate] optional message
+    /// Multi-line messages continue on subsequent lines without the prefix.
+    /// </summary>
+    /// <param name="oldState">The previous state label.</param>
+    /// <param name="newState">The new state.</param>
+    /// <param name="message">Optional message to record. Can be null or multi-line.</param>
+    /// <param name="timestamp">The timestamp of the state change.</param>
+    private void AppendStateHistory(string oldState, JobState newState, string? message, DateTime timestamp)
     {
         var header = $">>> [{timestamp:yyyy-MM-dd HH:mm:ss}] [{oldState}->{newState}]";
         var historyEntry = string.IsNullOrEmpty(message)

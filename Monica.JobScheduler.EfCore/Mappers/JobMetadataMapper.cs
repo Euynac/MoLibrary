@@ -102,19 +102,23 @@ public static class JobMetadataMapper
     /// <returns>A JobInstance domain model with properties mapped from the entity.</returns>
     public static JobInstance ToModel(JobInstanceEntity entity)
     {
-        return new JobInstance
+        var model = new JobInstance
         {
             InstanceId = entity.InstanceId,
             JobKey = entity.JobKey,
-            State = entity.State,
-            JobArgs = entity.JobArgs,
-            CreatedAt = entity.CreatedAt,
-            StartedAt = entity.StartedAt,
-            CompletedAt = entity.CompletedAt,
-            ScheduledExecutionTime = entity.ScheduledExecutionTime,
-            StateHistory = entity.StateHistory,
-            RetryAttempt = entity.RetryAttempt,
-            RunningClientId = entity.RunningClientId
+            JobArgs = entity.JobArgs
         };
+
+        model.RestoreFromPersistence(
+            entity.State,
+            entity.CreatedAt,
+            entity.StartedAt,
+            entity.CompletedAt,
+            entity.ScheduledExecutionTime,
+            entity.StateHistory,
+            entity.RetryAttempt,
+            entity.RunningClientId);
+
+        return model;
     }
 }

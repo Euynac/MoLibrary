@@ -87,7 +87,8 @@ public class JobSchedulerApiService(
                 definition,
                 jobArgs,
                 JobState.Enqueued,
-                cancellationToken);
+                cancellationToken,
+                initDescription: "Centre/Standalone API manual trigger");
 
             await jobDispatcher.PublishJobExecutionEventAsync(
                 instance,
@@ -114,11 +115,17 @@ public class JobSchedulerApiService(
         object? jobArgs,
         CancellationToken cancellationToken)
     {
-        //TODO 这里应该就创建Instances而不是到Centre创建，因为如果Centre出现问题，那无法跟踪状态。
         var instanceId = Guid.NewGuid().ToString();
         var jobArgsJson = jobArgs != null
             ? JsonSerializer.Serialize(jobArgs, options.Value.JobArgsSerializerOptions)
             : null;
+        var instance = await jobInstanceManager.CreateInstanceAsync(
+            definition,
+            jobArgs,
+            JobState.Enqueued,
+            cancellationToken,
+            instanceId,
+            initDescription: "Worker API manual trigger delegated to Centre");
 
         var requestEvent = new ManualJobExecutionRequestEvent
         {
@@ -128,13 +135,42 @@ public class JobSchedulerApiService(
             RequestedAt = DateTime.UtcNow
         };
 
-        await eventBus.PublishAsync(requestEvent, null, cancellationToken);
+        try
+        {
+            await eventBus.PublishAsync(requestEvent, null, cancellationToken);
 
-        logger.LogInformation(
-            "Delegated manual job execution to Centre: {JobKey}, InstanceId: {InstanceId}",
-            definition.JobKey, instanceId);
+            logger.LogInformation(
+                "Delegated manual job execution to Centre: {JobKey}, InstanceId: {InstanceId}",
+                definition.JobKey, instance.InstanceId);
 
-        return Res.Ok(instanceId);
+            return Res.Ok(instance.InstanceId);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Failed to publish manual execution request to Centre for {JobKey}, InstanceId: {InstanceId}",
+                definition.JobKey,
+                instance.InstanceId);
+
+            try
+            {
+                await jobInstanceManager.UpdateStateAsync(
+                    instance.InstanceId,
+                    JobState.Failed,
+                    $"Event bus publishing failure: {ex.Message}",
+                    cancellationToken);
+            }
+            catch (Exception updateEx)
+            {
+                logger.LogWarning(
+                    updateEx,
+                    "Failed to mark instance {InstanceId} as Failed after request publish failure",
+                    instance.InstanceId);
+            }
+
+            return Res.Fail($"Failed to publish manual execution request: {ex.Message}");
+        }
     }
 
     /// <summary>

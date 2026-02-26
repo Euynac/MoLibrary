@@ -29,13 +29,15 @@ public class JobInstanceManager(
     /// <param name="initialState">The initial state for the job instance.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <param name="instanceId">Optional pre-generated instance ID. If null, a new GUID will be generated.</param>
+    /// <param name="initDescription">Optional description for initial state history entry.</param>
     /// <returns>The generated instance ID (GUID).</returns>
     public async Task<JobInstance> CreateInstanceAsync(
         JobDefinition definition,
         object? parameters,
         JobState initialState,
         CancellationToken cancellationToken = default,
-        string? instanceId = null)
+        string? instanceId = null,
+        string? initDescription = null)
     {
         instanceId ??= Guid.NewGuid().ToString();
         var now = DateTime.UtcNow;
@@ -44,12 +46,11 @@ public class JobInstanceManager(
         {
             InstanceId = instanceId,
             JobKey = definition.JobKey,
-            State = initialState,
             JobArgs = parameters != null ? JsonSerializer.Serialize(parameters, options.Value.JobArgsSerializerOptions) : null,
             CreatedAt = now,
             RetryAttempt = 0
         };
-        
+        instance.InitializeState(initialState, initDescription ?? "Instance created");
 
         await metadataRepository.SaveInstanceAsync(instance, cancellationToken);
 
