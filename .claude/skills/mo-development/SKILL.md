@@ -176,8 +176,8 @@ Monica provides `MoBackgroundService` as a base class for background services wi
 
 ```csharp
 // CORRECT: Use RecordState with explicit LogLevel
-RecordState("Operation started", givenLogLevel: LogLevel.Information);
-RecordState("Error occurred", givenLogLevel: LogLevel.Error, exception: ex);
+RecordState("Operation started", logLevel: LogLevel.Information);
+RecordState("Error occurred", logLevel: LogLevel.Error, exception: ex);
 
 // AVOID: Don't use Logger directly (redundant)
 // Logger.LogInformation("...");  // Already handled by RecordState
@@ -202,13 +202,13 @@ public class MyMonitorService(
             try
             {
                 await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
-                RecordState("Starting work cycle", givenLogLevel: LogLevel.Information);
+                RecordState("Starting work cycle", logLevel: LogLevel.Information);
                 await DoWorkAsync(stoppingToken);
             }
             catch (OperationCanceledException) { break; }
             catch (Exception ex)
             {
-                RecordState("Work cycle failed", givenLogLevel: LogLevel.Error, exception: ex);
+                RecordState("Work cycle failed", logLevel: LogLevel.Error, exception: ex);
             }
         }
     }

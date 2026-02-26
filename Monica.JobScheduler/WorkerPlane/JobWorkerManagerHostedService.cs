@@ -44,7 +44,7 @@ public class JobWorkerManagerHostedService(
         // Unsubscribe from all events
         if (_eventSubscriptions.Count > 0)
         {
-            RecordState($"Unsubscribing from {_eventSubscriptions.Count} topic(s)", givenLogLevel: LogLevel.Information);
+            RecordState($"Unsubscribing from {_eventSubscriptions.Count} topic(s)", logLevel: LogLevel.Information);
 
             foreach (var subscription in _eventSubscriptions)
             {
@@ -54,7 +54,7 @@ public class JobWorkerManagerHostedService(
             _eventSubscriptions.Clear();
             _subscribedProjects.Clear();
 
-            RecordState("All subscriptions disposed", givenLogLevel: LogLevel.Information);
+            RecordState("All subscriptions disposed", logLevel: LogLevel.Information);
         }
 
         // TODO Print all in-flight jobs
@@ -80,11 +80,11 @@ public class JobWorkerManagerHostedService(
 
             RecordState(
                 $"Worker thread limit configured: {_options.MaxWorkerExecutionThreads.Value} concurrent executions",
-                givenLogLevel: LogLevel.Information);
+                logLevel: LogLevel.Information);
         }
         else
         {
-            RecordState("Worker thread limit: unlimited", givenLogLevel: LogLevel.Information);
+            RecordState("Worker thread limit: unlimited", logLevel: LogLevel.Information);
         }
 
         // Extract unique FromProject values from registered job definitions
@@ -99,13 +99,13 @@ public class JobWorkerManagerHostedService(
             RecordState(
                 "No job definitions with valid FromProject found, no subscriptions created",
                 HostedServiceState.Degraded,
-                givenLogLevel: LogLevel.Warning);
+                logLevel: LogLevel.Warning);
             return;
         }
 
         RecordState(
             $"Subscribing to JobExecutionEvent from {projectsToSubscribe.Count} project(s): {string.Join(", ", projectsToSubscribe)}",
-            givenLogLevel: LogLevel.Information);
+            logLevel: LogLevel.Information);
 
         // Subscribe to each project's topic
         foreach (var fromProject in projectsToSubscribe)
@@ -118,10 +118,10 @@ public class JobWorkerManagerHostedService(
 
             RecordState(
                 $"Subscribed to topic: {topicName} (Project: {fromProject})",
-                givenLogLevel: LogLevel.Debug);
+                logLevel: LogLevel.Debug);
         }
 
-        RecordState($"JobWorkerManager started with {_eventSubscriptions.Count} subscription(s)", givenLogLevel: LogLevel.Information);
+        RecordState($"JobWorkerManager started with {_eventSubscriptions.Count} subscription(s)", logLevel: LogLevel.Information);
     }
 
     /// <summary>
@@ -132,7 +132,7 @@ public class JobWorkerManagerHostedService(
     {
         RecordState(
             $"Received JobExecutionEvent for job {executionEvent.JobKey}, InstanceId: {executionEvent.InstanceId}",
-            givenLogLevel: LogLevel.Debug);
+            logLevel: LogLevel.Debug);
 
         // Don't block the event handler - execute asynchronously
         _ = Task.Run(async () =>
@@ -160,7 +160,7 @@ public class JobWorkerManagerHostedService(
 
                 RecordState(
                     $"Acquired worker thread slot for job {executionEvent.JobKey} instance {executionEvent.InstanceId}",
-                    givenLogLevel: LogLevel.Debug);
+                    logLevel: LogLevel.Debug);
             }
 
             var instance = await metadataRepository.GetInstanceAsync(executionEvent.InstanceId);
@@ -168,7 +168,7 @@ public class JobWorkerManagerHostedService(
             {
                 RecordState(
                     $"Job instance not found: {executionEvent.InstanceId}",
-                    givenLogLevel: LogLevel.Error);
+                    logLevel: LogLevel.Error);
                 return;
             }
 
@@ -176,26 +176,26 @@ public class JobWorkerManagerHostedService(
             {
                 RecordState(
                     $"Job instance is not in Enqueued state: {executionEvent.InstanceId}, skipped",
-                    givenLogLevel: LogLevel.Error);
+                    logLevel: LogLevel.Error);
                 return;
             }
 
             RecordState(
                 $"Starting execution for job {executionEvent.JobKey} instance {executionEvent.InstanceId}",
-                givenLogLevel: LogLevel.Debug);
+                logLevel: LogLevel.Debug);
 
             await jobOrchestrator.ExecuteAsync(instance, executionEvent);
 
             RecordState(
                 $"Completed execution for job {executionEvent.JobKey} instance {executionEvent.InstanceId}",
-                givenLogLevel: LogLevel.Debug);
+                logLevel: LogLevel.Debug);
         }
         catch (Exception ex)
         {
             RecordState(
                 $"Error handling job execution event for {executionEvent.JobKey} instance {executionEvent.InstanceId}: {ex.Message}",
                 exception: ex,
-                givenLogLevel: LogLevel.Error);
+                logLevel: LogLevel.Error);
         }
         finally
         {
@@ -204,7 +204,7 @@ public class JobWorkerManagerHostedService(
                 _workerThreadSemaphore.Release();
                 RecordState(
                     $"Released worker thread slot for job {executionEvent.JobKey} instance {executionEvent.InstanceId}",
-                    givenLogLevel: LogLevel.Debug);
+                    logLevel: LogLevel.Debug);
             }
         }
     }

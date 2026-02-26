@@ -102,9 +102,9 @@ public abstract class MoBackgroundService : BackgroundService, IMoHostedService
     protected void RecordState(string message,
         HostedServiceState? newState = null,
         Exception? exception = null,
-        LogLevel? givenLogLevel = null)
+        LogLevel? logLevel = null)
     {
-        ObservableInfo.Agent.RecordState(message, newState, exception, givenLogLevel);
+        ObservableInfo.Agent.RecordState(message, newState, exception, logLevel);
     }
 
     /// <summary>

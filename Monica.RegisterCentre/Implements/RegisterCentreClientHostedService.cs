@@ -53,7 +53,7 @@ public class RegisterCentreClientHostedService(
         }
         catch (OperationCanceledException)
         {
-            RecordState($"Waiting for registration timed out ({timeout})", givenLogLevel: LogLevel.Warning);
+            RecordState($"Waiting for registration timed out ({timeout})", logLevel: LogLevel.Warning);
             return false;
         }
     }
@@ -96,7 +96,7 @@ public class RegisterCentreClientHostedService(
         // Graceful shutdown - trigger LeaderLost if we're the Leader
         if (leaderService.IsLeader)
         {
-            RecordState("Service shutting down, triggering Leader lost", givenLogLevel: LogLevel.Information);
+            RecordState("Service shutting down, triggering Leader lost", logLevel: LogLevel.Information);
             leaderService.TriggerLeaderLost(LeaderLostReason.GracefulShutdown);
 
             try
@@ -105,7 +105,7 @@ public class RegisterCentreClientHostedService(
             }
             catch (Exception ex)
             {
-                RecordState("Failed to delete Leader key", exception: ex, givenLogLevel: LogLevel.Warning);
+                RecordState("Failed to delete Leader key", exception: ex, logLevel: LogLevel.Warning);
             }
         }
     }
@@ -176,13 +176,13 @@ public class RegisterCentreClientHostedService(
         // If we're the Leader and heartbeat consistently fails, we should give up leadership
         if (leaderService.IsLeader)
         {
-            RecordState("Leader heartbeat failed after retries, giving up leadership", givenLogLevel: LogLevel.Warning);
+            RecordState("Leader heartbeat failed after retries, giving up leadership", logLevel: LogLevel.Warning);
             leaderService.TriggerLeaderLost(LeaderLostReason.NetworkIsolation);
 
             // Handle based on isolation mode
             if (_option.IsolationHandlingMode == EIsolationHandlingMode.FastShutdown)
             {
-                RecordState("Isolation handling mode is FastShutdown, triggering service isolation event", givenLogLevel: LogLevel.Warning);
+                RecordState("Isolation handling mode is FastShutdown, triggering service isolation event", logLevel: LogLevel.Warning);
             }
         }
 
@@ -204,7 +204,7 @@ public class RegisterCentreClientHostedService(
             }
             else
             {
-                RecordState("Leader exists, staying as Follower", givenLogLevel: LogLevel.Debug);
+                RecordState("Leader exists, staying as Follower", logLevel: LogLevel.Debug);
             }
         }
         else
@@ -219,7 +219,7 @@ public class RegisterCentreClientHostedService(
     /// </summary>
     private async Task CompeteForLeaderAsync(CancellationToken ct)
     {
-        RecordState("Attempting to compete for Leader", givenLogLevel: LogLevel.Debug);
+        RecordState("Attempting to compete for Leader", logLevel: LogLevel.Debug);
 
         var (success, state, eTag) = await stateManager.TryBecomeLeaderAsync(ct);
 
@@ -230,7 +230,7 @@ public class RegisterCentreClientHostedService(
         }
         else
         {
-            RecordState("Leader competition failed, another instance may have become Leader", givenLogLevel: LogLevel.Debug);
+            RecordState("Leader competition failed, another instance may have become Leader", logLevel: LogLevel.Debug);
         }
     }
 
@@ -242,7 +242,7 @@ public class RegisterCentreClientHostedService(
         var currentETag = leaderService.CurrentETag;
         if (string.IsNullOrEmpty(currentETag))
         {
-            RecordState("Cannot renew Leader: ETag is empty", givenLogLevel: LogLevel.Warning);
+            RecordState("Cannot renew Leader: ETag is empty", logLevel: LogLevel.Warning);
             leaderService.TriggerLeaderLost(LeaderLostReason.NetworkIsolation);
             return;
         }
@@ -252,7 +252,7 @@ public class RegisterCentreClientHostedService(
         if (success && !string.IsNullOrEmpty(newETag))
         {
             leaderService.UpdateETag(newETag);
-            RecordState("Leader lease renewed successfully", givenLogLevel: LogLevel.Debug);
+            RecordState("Leader lease renewed successfully", logLevel: LogLevel.Debug);
             return;
         }
 
@@ -269,13 +269,13 @@ public class RegisterCentreClientHostedService(
             else
             {
                 // We're still Leader but ETag is stale - refresh
-                RecordState($"ETag mismatch but still Leader, refreshing ETag: {currentETag} -> {actualETag}", givenLogLevel: LogLevel.Information);
+                RecordState($"ETag mismatch but still Leader, refreshing ETag: {currentETag} -> {actualETag}", logLevel: LogLevel.Information);
                 leaderService.UpdateETag(actualETag!);
             }
         }
         else
         {
-            RecordState("Leader key expired or deleted, competing for Leader again", givenLogLevel: LogLevel.Information);
+            RecordState("Leader key expired or deleted, competing for Leader again", logLevel: LogLevel.Information);
             leaderService.TriggerLeaderLost(LeaderLostReason.LeaderKeyExpired);
             await CompeteForLeaderAsync(ct);
         }

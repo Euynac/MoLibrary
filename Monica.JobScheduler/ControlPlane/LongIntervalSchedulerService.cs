@@ -37,7 +37,7 @@ public class LongIntervalSchedulerService(
     {
         if (!_options.EnableLongIntervalScheduler)
         {
-            RecordState("Long-interval scheduler disabled in configuration", HostedServiceState.Stopped, givenLogLevel: LogLevel.Information);
+            RecordState("Long-interval scheduler disabled in configuration", HostedServiceState.Stopped, logLevel: LogLevel.Information);
             return;
         }
 
@@ -46,7 +46,7 @@ public class LongIntervalSchedulerService(
         RecordState(
             $"LongIntervalScheduler started. Scan interval: {_options.LongIntervalScanInterval}, Timer threshold: {_options.TimerSafetyThresholdDays} days",
             HostedServiceState.Running,
-            givenLogLevel: LogLevel.Information);
+            logLevel: LogLevel.Information);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -64,7 +64,7 @@ public class LongIntervalSchedulerService(
             }
             catch (OperationCanceledException)
             {
-                RecordState("LongIntervalScheduler scan cancelled", givenLogLevel: LogLevel.Information);
+                RecordState("LongIntervalScheduler scan cancelled", logLevel: LogLevel.Information);
                 break;
             }
             catch (Exception ex)
@@ -91,13 +91,13 @@ public class LongIntervalSchedulerService(
 
         if (longIntervalSchedules.Count == 0)
         {
-            RecordState("No long-interval recurring jobs to scan", givenLogLevel: LogLevel.Debug);
+            RecordState("No long-interval recurring jobs to scan", logLevel: LogLevel.Debug);
             return 0;
         }
 
         RecordState(
             $"Found {longIntervalSchedules.Count} long-interval recurring jobs in memory",
-            givenLogLevel: LogLevel.Debug);
+            logLevel: LogLevel.Debug);
 
         var timerThreshold = TimeSpan.FromDays(_options.TimerSafetyThresholdDays);
         var transitionCount = 0;
@@ -111,7 +111,7 @@ public class LongIntervalSchedulerService(
             {
                 RecordState(
                     $"Transitioning recurring job {schedule.JobKey} to Timer mode. Execution in {timeUntilExecution.TotalHours:F1} hours ({timeUntilExecution.TotalDays:F1} days)",
-                    givenLogLevel: LogLevel.Information);
+                    logLevel: LogLevel.Information);
 
                 try
                 {
@@ -129,7 +129,7 @@ public class LongIntervalSchedulerService(
             {
                 RecordState(
                     $"Long-interval recurring job {schedule.JobKey} still has {timeUntilExecution.TotalDays:F1} days until execution, no transition needed",
-                    givenLogLevel: LogLevel.Debug);
+                    logLevel: LogLevel.Debug);
             }
         }
 
@@ -137,7 +137,7 @@ public class LongIntervalSchedulerService(
         {
             RecordState(
                 $"Transitioned {transitionCount} out of {longIntervalSchedules.Count} recurring jobs to Timer mode",
-                givenLogLevel: LogLevel.Information);
+                logLevel: LogLevel.Information);
         }
 
         return longIntervalSchedules.Count;
@@ -156,13 +156,13 @@ public class LongIntervalSchedulerService(
 
         if (queryResult.TotalCount == 0)
         {
-            RecordState("No scheduled instances to scan", givenLogLevel: LogLevel.Debug);
+            RecordState("No scheduled instances to scan", logLevel: LogLevel.Debug);
             return 0;
         }
 
         RecordState(
             $"Found {queryResult.TotalCount} scheduled instances in database",
-            givenLogLevel: LogLevel.Debug);
+            logLevel: LogLevel.Debug);
 
         var timerThreshold = TimeSpan.FromDays(_options.TimerSafetyThresholdDays);
         var transitionCount = 0;
@@ -174,7 +174,7 @@ public class LongIntervalSchedulerService(
                 RecordState(
                     $"Scheduled instance {instance.InstanceId} (JobKey: {instance.JobKey}) missing ScheduledExecutionTime, skipping",
                     HostedServiceState.Degraded,
-                    givenLogLevel: LogLevel.Warning);
+                    logLevel: LogLevel.Warning);
                 continue;
             }
 
@@ -185,7 +185,7 @@ public class LongIntervalSchedulerService(
             {
                 RecordState(
                     $"Transitioning instance {instance.InstanceId} (JobKey: {instance.JobKey}) to Timer mode. Execution in {timeUntilExecution.TotalHours:F1} hours ({timeUntilExecution.TotalDays:F1} days)",
-                    givenLogLevel: LogLevel.Information);
+                    logLevel: LogLevel.Information);
 
                 try
                 {
@@ -201,7 +201,7 @@ public class LongIntervalSchedulerService(
                         RecordState(
                             $"Definition not found for instance {instance.InstanceId} (JobKey: {instance.JobKey}), skipping transition",
                             HostedServiceState.Degraded,
-                            givenLogLevel: LogLevel.Warning);
+                            logLevel: LogLevel.Warning);
                     }
                 }
                 catch (Exception ex)
@@ -215,7 +215,7 @@ public class LongIntervalSchedulerService(
             {
                 RecordState(
                     $"Scheduled instance {instance.InstanceId} still has {timeUntilExecution.TotalDays:F1} days until execution, no transition needed",
-                    givenLogLevel: LogLevel.Debug);
+                    logLevel: LogLevel.Debug);
             }
         }
 
@@ -223,7 +223,7 @@ public class LongIntervalSchedulerService(
         {
             RecordState(
                 $"Transitioned {transitionCount} out of {queryResult.TotalCount} instances to Timer mode",
-                givenLogLevel: LogLevel.Information);
+                logLevel: LogLevel.Information);
         }
 
         return queryResult.TotalCount;

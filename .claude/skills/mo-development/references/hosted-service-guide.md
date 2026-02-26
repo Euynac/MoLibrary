@@ -61,7 +61,7 @@ protected void RecordState(
     string message,
     HostedServiceState? newState = null,
     Exception? exception = null,
-    LogLevel? givenLogLevel = null)
+    LogLevel? logLevel = null)
 ```
 
 | Parameter | Purpose |
@@ -69,24 +69,24 @@ protected void RecordState(
 | `message` | Descriptive message about the current operation or state |
 | `newState` | Optional: Transition to a new `HostedServiceState` |
 | `exception` | Optional: Exception to record (increments exception counter) |
-| `givenLogLevel` | Optional: Explicit log level (overrides state-based mapping) |
+| `logLevel` | Optional: Explicit log level (overrides state-based mapping) |
 
 ### Usage Examples
 
 ```csharp
 // Basic logging with explicit LogLevel
-RecordState("Operation started", givenLogLevel: LogLevel.Information);
-RecordState("Processing batch of 50 items", givenLogLevel: LogLevel.Debug);
-RecordState("Warning: Retrying after transient failure", givenLogLevel: LogLevel.Warning);
+RecordState("Operation started", logLevel: LogLevel.Information);
+RecordState("Processing batch of 50 items", logLevel: LogLevel.Debug);
+RecordState("Warning: Retrying after transient failure", logLevel: LogLevel.Warning);
 
 // Error with exception
-RecordState("Database connection failed", givenLogLevel: LogLevel.Error, exception: ex);
+RecordState("Database connection failed", logLevel: LogLevel.Error, exception: ex);
 
 // State transition with log
 RecordState("Service degraded due to high latency", HostedServiceState.Degraded);
 
 // State transition with explicit log level
-RecordState("Entering critical section", HostedServiceState.Executing, givenLogLevel: LogLevel.Information);
+RecordState("Entering critical section", HostedServiceState.Executing, logLevel: LogLevel.Information);
 
 // DON'T do this (redundant):
 // Logger.LogInformation("Operation started");  // Already handled by RecordState internally
@@ -149,7 +149,7 @@ public class MyMonitorService(
     protected override async Task ExecuteBackgroundAsync(CancellationToken stoppingToken)
     {
         RecordState($"Monitor configured: Interval={_options.MonitorInterval}",
-            givenLogLevel: LogLevel.Information);
+            logLevel: LogLevel.Information);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -166,31 +166,31 @@ public class MyMonitorService(
             catch (Exception ex)
             {
                 RecordState("Error during monitor cycle",
-                    givenLogLevel: LogLevel.Error, exception: ex);
+                    logLevel: LogLevel.Error, exception: ex);
             }
         }
     }
 
     private async Task DoMonitorCycleAsync(CancellationToken cancellationToken)
     {
-        RecordState("Monitor cycle started", givenLogLevel: LogLevel.Information);
+        RecordState("Monitor cycle started", logLevel: LogLevel.Information);
 
         var result = await dependency.CheckHealthAsync(cancellationToken);
 
         if (result.HasIssues)
         {
-            RecordState($"Found {result.IssueCount} issues", givenLogLevel: LogLevel.Warning);
+            RecordState($"Found {result.IssueCount} issues", logLevel: LogLevel.Warning);
 
             foreach (var issue in result.Issues)
             {
                 await HandleIssueAsync(issue, cancellationToken);
             }
 
-            RecordState($"Processed {result.IssueCount} issues", givenLogLevel: LogLevel.Warning);
+            RecordState($"Processed {result.IssueCount} issues", logLevel: LogLevel.Warning);
         }
         else
         {
-            RecordState("Monitor cycle completed: No issues found", givenLogLevel: LogLevel.Information);
+            RecordState("Monitor cycle completed: No issues found", logLevel: LogLevel.Information);
         }
     }
 
@@ -198,14 +198,14 @@ public class MyMonitorService(
     {
         try
         {
-            RecordState($"Handling issue: {issue.Id}", givenLogLevel: LogLevel.Debug);
+            RecordState($"Handling issue: {issue.Id}", logLevel: LogLevel.Debug);
             await dependency.ResolveAsync(issue, cancellationToken);
-            RecordState($"Resolved issue: {issue.Id}", givenLogLevel: LogLevel.Information);
+            RecordState($"Resolved issue: {issue.Id}", logLevel: LogLevel.Information);
         }
         catch (Exception ex)
         {
             RecordState($"Failed to resolve issue: {issue.Id}",
-                givenLogLevel: LogLevel.Error, exception: ex);
+                logLevel: LogLevel.Error, exception: ex);
         }
     }
 }
@@ -279,7 +279,7 @@ public class MyCleanupService(
 
     protected override Task LeaderInitializeAsync(CancellationToken cancellationToken)
     {
-        RecordState("Cleanup service initialized as leader", givenLogLevel: LogLevel.Information);
+        RecordState("Cleanup service initialized as leader", logLevel: LogLevel.Information);
         return Task.CompletedTask;
     }
 
@@ -298,22 +298,22 @@ public class MyCleanupService(
             }
             catch (Exception ex)
             {
-                RecordState("Cleanup failed", givenLogLevel: LogLevel.Error, exception: ex);
+                RecordState("Cleanup failed", logLevel: LogLevel.Error, exception: ex);
             }
         }
     }
 
     protected override Task OnLeaderLostAsync(LeaderLostReason reason)
     {
-        RecordState($"Lost leader status: {reason}", givenLogLevel: LogLevel.Information);
+        RecordState($"Lost leader status: {reason}", logLevel: LogLevel.Information);
         return Task.CompletedTask;
     }
 
     private async Task CleanupOldRecordsAsync(CancellationToken cancellationToken)
     {
-        RecordState("Starting cleanup cycle", givenLogLevel: LogLevel.Information);
+        RecordState("Starting cleanup cycle", logLevel: LogLevel.Information);
         var count = await repository.DeleteOldRecordsAsync(cancellationToken);
-        RecordState($"Cleaned up {count} old records", givenLogLevel: LogLevel.Information);
+        RecordState($"Cleaned up {count} old records", logLevel: LogLevel.Information);
     }
 }
 ```
@@ -340,7 +340,7 @@ var runningServices = observableManager.GetInstancesByState(HostedServiceState.R
 ## Best Practices
 
 1. **Always use `RecordState`** - Never use `Logger` directly for operational messages
-2. **Use explicit `givenLogLevel`** - Provides clarity and consistency in log output
+2. **Use explicit `logLevel`** - Provides clarity and consistency in log output
 3. **Record exceptions properly** - Pass exceptions to `RecordState` for tracking
 4. **Handle `OperationCanceledException`** - Break cleanly from loops during shutdown
 5. **Use meaningful messages** - Include context like counts, IDs, or durations

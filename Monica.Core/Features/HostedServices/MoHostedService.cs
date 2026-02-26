@@ -97,9 +97,9 @@ public abstract class MoHostedService : IHostedService, IMoHostedService
     protected void RecordState(string message,
         HostedServiceState? newState,
         Exception? exception = null,
-        LogLevel? givenLogLevel = null)
+        LogLevel? logLevel = null)
     {
-        ObservableInfo.Agent.RecordState(message, newState, exception, givenLogLevel);
+        ObservableInfo.Agent.RecordState(message, newState, exception, logLevel);
     }
 
     /// <summary>

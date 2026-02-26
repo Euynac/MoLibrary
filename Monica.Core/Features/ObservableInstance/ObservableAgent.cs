@@ -166,18 +166,18 @@ public class ObservableAgent : IDisposable
     /// <param name="message">Descriptive message about the state change</param>
     /// <param name="newState">The new state to transition to (null if state not changing)</param>
     /// <param name="exception">Optional exception associated with this state change</param>
-    /// <param name="givenLogLevel">Use specific log level instead of default.</param>
+    /// <param name="logLevel">Use specific log level instead of default.</param>
     public void RecordState(string message, object? newState = null, Exception? exception = null,
-        LogLevel? givenLogLevel = null)
+        LogLevel? logLevel = null)
     {
         _lock.EnterWriteLock();
         try
         {
-            var logLevel = givenLogLevel ?? GetLogLevel(newState);
+            logLevel ??= GetLogLevel(newState);
             var history = new ObservableStateHistory
             {
                 PreviousState = CurrentState,
-                CurrentState = newState,
+                CurrentState = newState ?? CurrentState,
                 Message = message,
                 Exception = exception,
                 Timestamp = DateTime.UtcNow,

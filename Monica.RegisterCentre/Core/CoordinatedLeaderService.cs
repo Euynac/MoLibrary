@@ -185,24 +185,24 @@ public abstract class CoordinatedLeaderService(
     /// </summary>
     private async Task HandleLeaderGainedAsync()
     {
+        RecordState("Becoming leader");
         await _leaderTransitionLock.WaitAsync(_stoppingToken);
         try
         {
             // Check if already running as leader (avoid re-entrancy)
             if (_leaderCts is { IsCancellationRequested: false })
             {
-                Logger.LogDebug("{ServiceName} already running as leader, ignoring duplicate leader gained event", ServiceName);
+                RecordState($"{ServiceName} already running as leader, ignoring duplicate leader gained event",
+                    logLevel: LogLevel.Debug);
                 return;
             }
 
             // Check if application is shutting down
             if (_stoppingToken.IsCancellationRequested)
             {
-                Logger.LogDebug("{ServiceName} application is shutting down, ignoring leader gained event", ServiceName);
+                RecordState($"{ServiceName} application is shutting down, ignoring leader gained event", logLevel: LogLevel.Debug);
                 return;
             }
-
-            RecordState("Becoming leader", HostedServiceState.Executing);
 
             // Create leader-scoped cancellation token
             _leaderCts = CancellationTokenSource.CreateLinkedTokenSource(_stoppingToken);
@@ -228,7 +228,6 @@ public abstract class CoordinatedLeaderService(
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogError(ex, "{ServiceName} leader background task failed", ServiceName);
                     RecordState("Leader background task failed", HostedServiceState.Faulted, ex);
                 }
             }, leaderToken);

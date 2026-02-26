@@ -48,7 +48,7 @@ public class JobSchedulerHostedService(
         // Subscribe to job definitions changed event (recurring jobs only)
         _definitionsChangedSubscription = await eventBus.SubscribeAsync<JobDefinitionsChangedEvent>(
             recurringJobScheduler.OnJobDefinitionsChangedAsync);
-        RecordState("Subscribed to JobDefinitionsChangedEvent", givenLogLevel: LogLevel.Debug);
+        RecordState("Subscribed to JobDefinitionsChangedEvent", logLevel: LogLevel.Debug);
     }
 
     /// <summary>
@@ -57,7 +57,7 @@ public class JobSchedulerHostedService(
     /// </summary>
     protected override async Task OnLeaderLostAsync(LeaderLostReason reason)
     {
-        RecordState($"JobScheduler cleaning up after losing leader status (reason: {reason})", givenLogLevel: LogLevel.Information);
+        RecordState($"JobScheduler cleaning up after losing leader status (reason: {reason})", logLevel: LogLevel.Information);
 
         // Unsubscribe from events
         if (_definitionsChangedSubscription != null)
@@ -70,6 +70,6 @@ public class JobSchedulerHostedService(
         await recurringJobScheduler.StopAsync(CancellationToken.None);
         await triggeredJobScheduler.StopAsync(CancellationToken.None);
 
-        RecordState("JobScheduler cleanup completed", givenLogLevel: LogLevel.Information);
+        RecordState("JobScheduler cleanup completed", logLevel: LogLevel.Information);
     }
 }
