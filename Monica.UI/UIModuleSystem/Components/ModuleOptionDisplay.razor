@@ -208,11 +208,10 @@
         if (value == null)
         {
             builder.OpenComponent<MudChip<string>>(0);
-            builder.AddAttribute(1, "T", typeof(string));
-            builder.AddAttribute(2, "Size", Size.Small);
-            builder.AddAttribute(3, "Variant", Variant.Outlined);
-            builder.AddAttribute(4, "Color", Color.Default);
-            builder.AddAttribute(5, "ChildContent", (RenderFragment)(b => b.AddContent(0, "null")));
+            builder.AddAttribute(1, "Size", Size.Small);
+            builder.AddAttribute(2, "Variant", Variant.Outlined);
+            builder.AddAttribute(3, "Color", Color.Default);
+            builder.AddAttribute(4, "ChildContent", (RenderFragment)(b => b.AddContent(0, "null")));
             builder.CloseComponent();
             return;
         }
@@ -221,11 +220,10 @@
         {
             var isTrue = (bool)value;
             builder.OpenComponent<MudChip<string>>(0);
-            builder.AddAttribute(1, "T", typeof(string));
-            builder.AddAttribute(2, "Size", Size.Small);
-            builder.AddAttribute(3, "Color", isTrue ? Color.Success : Color.Default);
-            builder.AddAttribute(4, "Icon", isTrue ? Icons.Material.Filled.Check : Icons.Material.Filled.Close);
-            builder.AddAttribute(5, "ChildContent", (RenderFragment)(b => b.AddContent(0, isTrue ? "True" : "False")));
+            builder.AddAttribute(1, "Size", Size.Small);
+            builder.AddAttribute(2, "Color", isTrue ? Color.Success : Color.Default);
+            builder.AddAttribute(3, "Icon", isTrue ? Icons.Material.Filled.Check : Icons.Material.Filled.Close);
+            builder.AddAttribute(4, "ChildContent", (RenderFragment)(b => b.AddContent(0, isTrue ? "True" : "False")));
             builder.CloseComponent();
             return;
         }
@@ -233,10 +231,9 @@
         if (type.IsEnum)
         {
             builder.OpenComponent<MudChip<string>>(0);
-            builder.AddAttribute(1, "T", typeof(string));
-            builder.AddAttribute(2, "Size", Size.Small);
-            builder.AddAttribute(3, "Color", Color.Tertiary);
-            builder.AddAttribute(4, "ChildContent", (RenderFragment)(b => b.AddContent(0, value.ToString())));
+            builder.AddAttribute(1, "Size", Size.Small);
+            builder.AddAttribute(2, "Color", Color.Tertiary);
+            builder.AddAttribute(3, "ChildContent", (RenderFragment)(b => b.AddContent(0, value.ToString())));
             builder.CloseComponent();
             return;
         }
@@ -246,13 +243,12 @@
         {
             var count = GetCollectionCount(value);
             builder.OpenComponent<MudChip<string>>(0);
-            builder.AddAttribute(1, "T", typeof(string));
-            builder.AddAttribute(2, "Size", Size.Small);
-            builder.AddAttribute(3, "Color", Color.Info);
-            builder.AddAttribute(4, "Variant", Variant.Outlined);
-            builder.AddAttribute(5, "OnClick", EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.MouseEventArgs>(this, () => ShowJsonDetail(property)));
-            builder.AddAttribute(6, "Class", "clickable-chip");
-            builder.AddAttribute(7, "ChildContent", (RenderFragment)(b => b.AddContent(0, string.Format(L["ModuleSystem:ModuleOption:Messages:ItemsClickToView"], count))));
+            builder.AddAttribute(1, "Size", Size.Small);
+            builder.AddAttribute(2, "Color", Color.Info);
+            builder.AddAttribute(3, "Variant", Variant.Outlined);
+            builder.AddAttribute(4, "OnClick", EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.MouseEventArgs>(this, () => ShowJsonDetail(property)));
+            builder.AddAttribute(5, "Class", "clickable-chip");
+            builder.AddAttribute(6, "ChildContent", (RenderFragment)(b => b.AddContent(0, string.Format(L["ModuleSystem:ModuleOption:Messages:ItemsClickToView"], count))));
             builder.CloseComponent();
             return;
         }
@@ -261,13 +257,12 @@
         if (type.IsClass && type != typeof(string))
         {
             builder.OpenComponent<MudChip<string>>(0);
-            builder.AddAttribute(1, "T", typeof(string));
-            builder.AddAttribute(2, "Size", Size.Small);
-            builder.AddAttribute(3, "Color", Color.Secondary);
-            builder.AddAttribute(4, "Variant", Variant.Outlined);
-            builder.AddAttribute(5, "OnClick", EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.MouseEventArgs>(this, () => ShowJsonDetail(property)));
-            builder.AddAttribute(6, "Class", "clickable-chip");
-            builder.AddAttribute(7, "ChildContent", (RenderFragment)(b => b.AddContent(0, L["ModuleSystem:ModuleOption:Messages:ObjectClickToView"])));
+            builder.AddAttribute(1, "Size", Size.Small);
+            builder.AddAttribute(2, "Color", Color.Secondary);
+            builder.AddAttribute(3, "Variant", Variant.Outlined);
+            builder.AddAttribute(4, "OnClick", EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.MouseEventArgs>(this, () => ShowJsonDetail(property)));
+            builder.AddAttribute(5, "Class", "clickable-chip");
+            builder.AddAttribute(6, "ChildContent", (RenderFragment)(b => b.AddContent(0, L["ModuleSystem:ModuleOption:Messages:ObjectClickToView"])));
             builder.CloseComponent();
             return;
         }

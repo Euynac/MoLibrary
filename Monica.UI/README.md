@@ -72,10 +72,3 @@ jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "/_content/
 1. **下载依赖库**：将第三方库文件保存到`wwwroot/lib/`目录
 2. **按需加载**：在组件中按正确顺序加载依赖项
 3. **版本管理**：在README中记录使用的库版本
-
-## 依赖项
-
-- .NET 8.0
-- Microsoft.AspNetCore.Components.Web
-- MudBlazor 8.9.0
-- Monica.Core（内部依赖） 
