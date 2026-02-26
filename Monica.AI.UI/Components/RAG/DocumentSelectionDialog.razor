@@ -1,0 +1,106 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@using Monica.Markdown.Models
+@using MudBlazor
+@inject IStringLocalizer<AIResource> L
+
+<MudDialog>
+    <DialogContent>
+        <div class="document-selection-content">
+            <div class="selection-header">
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    @L["RAG:DocumentSelection:Selected", SelectedDocuments.Count]
+                </MudText>
+                <div class="selection-actions">
+                    <MudButton Size="Size.Small"
+                               OnClick="SelectAll"
+                               Disabled="@(SelectedDocuments.Count == AvailableDocuments.Count)">
+                        @L["RAG:DocumentSelection:SelectAll"]
+                    </MudButton>
+                    <MudButton Size="Size.Small"
+                               OnClick="DeselectAll"
+                               Disabled="@(SelectedDocuments.Count == 0)">
+                        @L["RAG:DocumentSelection:DeselectAll"]
+                    </MudButton>
+                </div>
+            </div>
+
+            <MudDivider Class="my-3" />
+
+            <div class="document-list">
+                @foreach (var doc in AvailableDocuments)
+                {
+                    <div class="document-item">
+                        <MudCheckBox T="bool"
+                                     Checked="@SelectedDocuments.Contains(doc.RelativePath)"
+                                     CheckedChanged="@((bool value) => ToggleDocument(doc.RelativePath, value))"
+                                     Color="Color.Primary"
+                                     Dense="true" />
+                        <div class="document-info">
+                            <MudText Typo="Typo.body2">@doc.Title</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                @doc.RelativePath
+                            </MudText>
+                        </div>
+                        @if (IndexedDocumentIds.Contains(doc.RelativePath))
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Success">
+                                @L["RAG:DocumentSelection:Indexed"]
+                            </MudChip>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">@L["Common:Cancel"]</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   OnClick="Submit"
+                   Disabled="@(SelectedDocuments.Count == 0)">
+            @L["RAG:DocumentSelection:AddToQueue"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public List<MarkdownDocument> AvailableDocuments { get; set; } = new();
+
+    [Parameter]
+    public HashSet<string> IndexedDocumentIds { get; set; } = new();
+
+    private HashSet<string> SelectedDocuments { get; set; } = new();
+
+    private void ToggleDocument(string documentId, bool isChecked)
+    {
+        if (isChecked)
+            SelectedDocuments.Add(documentId);
+        else
+            SelectedDocuments.Remove(documentId);
+    }
+
+    private void SelectAll()
+    {
+        SelectedDocuments = AvailableDocuments.Select(d => d.RelativePath).ToHashSet();
+    }
+
+    private void DeselectAll()
+    {
+        SelectedDocuments.Clear();
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private void Submit()
+    {
+        MudDialog.Close(DialogResult.Ok(SelectedDocuments.ToList()));
+    }
+}

@@ -1,0 +1,60 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@inject IStringLocalizer<AIResource> L
+
+@if (ShouldShow)
+{
+    <div class="embedding-warning-wrapper">
+        <MudAlert Severity="Severity.Warning" Variant="Variant.Filled" Dense="true" Class="warning-alert">
+            <div class="warning-content">
+                <div class="warning-header">
+                    <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" />
+                    <MudText Typo="Typo.body2" Class="warning-title">@L["RAG:EmbeddingModel:Warning:Title"]</MudText>
+                </div>
+                <div class="warning-details">
+                    <MudText Typo="Typo.caption">
+                        @L["RAG:EmbeddingModel:Warning:CurrentModel", CurrentModelId]
+                    </MudText>
+                    <MudText Typo="Typo.caption">
+                        @L["RAG:EmbeddingModel:Warning:KBModel", KnowledgeBaseModelId]
+                    </MudText>
+                    @if (!string.IsNullOrEmpty(AdditionalMessage))
+                    {
+                        <MudText Typo="Typo.caption" Class="warning-message">
+                            @AdditionalMessage
+                        </MudText>
+                    }
+                </div>
+            </div>
+        </MudAlert>
+    </div>
+}
+
+@code {
+    /// <summary>
+    /// Current selected embedding model ID.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string CurrentModelId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Knowledge base's locked embedding model ID.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string KnowledgeBaseModelId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Additional warning message (optional).
+    /// </summary>
+    [Parameter]
+    public string? AdditionalMessage { get; set; }
+
+    /// <summary>
+    /// Whether to show the warning.
+    /// Only shows if models are different.
+    /// </summary>
+    [Parameter]
+    public bool Show { get; set; } = true;
+
+    private bool ShouldShow => Show && CurrentModelId != KnowledgeBaseModelId;
+}

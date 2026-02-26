@@ -1,0 +1,50 @@
+.document-selection-content {
+    min-height: 300px;
+    max-height: 500px;
+    display: flex;
+    flex-direction: column;
+}
+
+.selection-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.selection-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.document-list {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.document-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem;
+    border-radius: var(--mud-default-borderradius);
+    transition: background-color 0.2s ease;
+}
+
+.document-item:hover {
+    background-color: var(--mud-palette-action-default-hover);
+}
+
+.document-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.document-info .mud-typography {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

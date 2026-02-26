@@ -1,0 +1,56 @@
+.embedding-model-selector-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    background-color: var(--mud-palette-info-lighten);
+    border: 1px solid var(--mud-palette-info);
+    border-radius: 4px;
+}
+
+.selector-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.selector-icon {
+    color: var(--mud-palette-info);
+}
+
+.selector-label {
+    font-weight: 500;
+    color: var(--mud-palette-info-darken);
+}
+
+.embedding-model-selector-wrapper ::deep .model-select {
+    background-color: var(--mud-palette-surface);
+}
+
+.embedding-model-selector-wrapper ::deep .model-select .mud-input {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.875rem;
+}
+
+.model-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.model-name {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.875rem;
+}
+
+.model-dimensions {
+    font-size: 0.75rem;
+    color: var(--mud-palette-text-secondary);
+    font-weight: 600;
+}
+
+.model-info {
+    color: var(--mud-palette-info-darken);
+    font-size: 0.75rem;
+}

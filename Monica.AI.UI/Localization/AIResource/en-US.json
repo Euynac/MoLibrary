@@ -52,6 +52,16 @@
     "Generic": "Error"
   },
   "Common": {
+    "Error": "Error",
+    "Success": "Success",
+    "Create": "Create",
+    "Cancel": "Cancel",
+    "Delete": "Delete",
+    "Confirm": "Confirm",
+    "Close": "Close",
+    "Validation": {
+      "Required": "This field is required"
+    },
     "Actions": {
       "Close": "Close",
       "Save": "Save",
@@ -60,12 +70,111 @@
     }
   },
   "RAG": {
+    "Navigation": {
+      "Manage": "Knowledge Base Management",
+      "Debug": "RAG Debug"
+    },
+    "EmbeddingModel": {
+      "Label": "Embedding Model",
+      "Dimensions": "{0}d",
+      "Warning": {
+        "Title": "Embedding Model Mismatch",
+        "CurrentModel": "Current model: {0}",
+        "KBModel": "KB model: {0}",
+        "ReindexRequired": "All documents must be re-indexed to use the new embedding model.",
+        "SearchMismatch": "The following knowledge bases use different embedding models: {0}. Search results may be inaccurate."
+      }
+    },
     "KnowledgeBase": {
       "Title": "Knowledge Bases",
+      "Name": "Name",
+      "DocumentCount": "Documents",
+      "ChunkCount": "Chunks",
+      "Create": "Create Knowledge Base",
+      "SelectPrompt": "Select a knowledge base to view details",
       "NewPlaceholder": "New KB name...",
       "EmptyHint": "No knowledge bases yet. Create one above.",
       "DocsCount": "{0} docs",
       "ChunksCount": "{0} chunks"
+    },
+    "Manage": {
+      "Title": "Knowledge Base Management",
+      "SelectKB": "Select a knowledge base",
+      "CreateDialog": {
+        "Title": "Create Knowledge Base",
+        "Name": "Name",
+        "Description": "Description",
+        "NamePlaceholder": "e.g. Product Documentation",
+        "DescPlaceholder": "Optional description..."
+      }
+    },
+    "DocumentQueue": {
+      "Title": "Documents & Queue",
+      "Status": {
+        "Pending": "Pending",
+        "Indexing": "Indexing",
+        "Done": "Done",
+        "Error": "Error"
+      },
+      "Column": {
+        "Document": "Document",
+        "Status": "Status",
+        "Chunks": "Chunks",
+        "Actions": "Actions"
+      },
+      "Name": "Name",
+      "Status": "Status",
+      "Chunks": "Chunks",
+      "Actions": "Actions",
+      "Actions:ViewChunks": "View Chunks",
+      "Actions:Reindex": "Re-index",
+      "Actions:Delete": "Delete",
+      "Action": {
+        "ViewChunks": "View Chunks",
+        "Reindex": "Re-index",
+        "Delete": "Delete"
+      },
+      "Empty": "No documents yet",
+      "Count": "{0} total",
+      "DeleteConfirm": "Are you sure you want to delete '{0}'?"
+    },
+    "Parallel": {
+      "Label": "Parallel",
+      "Start": "Start",
+      "Stop": "Stop"
+    },
+    "ParallelIndexing": {
+      "Label": "Parallel",
+      "Start": "Start",
+      "Stop": "Stop",
+      "NoPendingDocuments": "No pending documents to index"
+    },
+    "DocumentSelection": {
+      "Title": "Select Documents to Index",
+      "SelectAll": "Select All",
+      "DeselectAll": "Deselect All",
+      "Selected": "{0} selected",
+      "AddToQueue": "Add to Queue",
+      "Indexed": "Indexed",
+      "ChunksPreview": "{0} chunks"
+    },
+    "ChunkViewer": {
+      "Title": "Document Chunks",
+      "Info": "{0} chunks · {1}",
+      "Indexed": "Indexed {0}",
+      "PendingIndexing": "Pending indexing",
+      "NoContent": "No original text or chunks available",
+      "ChunkBadge": "Chunk {0}: {1}",
+      "Matched": "(Matched)"
+    },
+    "Debug": {
+      "Title": "RAG Debug / Search",
+      "KBSidebar": {
+        "Title": "Knowledge Bases",
+        "SelectAll": "Select All",
+        "DeselectAll": "Deselect All",
+        "Stats": "{0} docs · {1} chunks"
+      }
     },
     "Indexing": {
       "Title": "Indexing",
@@ -76,7 +185,9 @@
       "IndexNow": "Index Now",
       "Indexing": "Indexing...",
       "UploadDocument": "Upload Document",
-      "ChooseFile": "Choose File"
+      "UploadFile": "Upload File",
+      "ChooseFile": "Choose File",
+      "FileTooLarge": "File is too large (max 10MB)"
     },
     "Search": {
       "Title": "Search",
@@ -86,7 +197,8 @@
       "Go": "Go",
       "Searching": "Searching...",
       "NoResults": "No results found",
-      "ResultsCount": "{0} result(s) found"
+      "ResultsCount": "{0} result(s) found",
+      "ViewInDocument": "View in document"
     }
   },
   "ProviderManage": {

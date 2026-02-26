@@ -1,0 +1,53 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@using MudBlazor
+@inject IStringLocalizer<AIResource> L
+
+<MudDialog>
+    <DialogContent>
+        <MudTextField T="string"
+                      @bind-Value="@Name"
+                      Label="@L["RAG:Manage:CreateDialog:Name"]"
+                      Placeholder="@L["RAG:Manage:CreateDialog:NamePlaceholder"]"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Required="true"
+                      RequiredError="@L["Common:Validation:Required"]"
+                      Class="mb-4" />
+
+        <MudTextField T="string"
+                      @bind-Value="@Description"
+                      Label="@L["RAG:Manage:CreateDialog:Description"]"
+                      Placeholder="@L["RAG:Manage:CreateDialog:DescPlaceholder"]"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Lines="3" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">@L["Common:Cancel"]</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   OnClick="Submit"
+                   Disabled="@string.IsNullOrWhiteSpace(Name)">
+            @L["Common:Create"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private void Submit()
+    {
+        MudDialog.Close(DialogResult.Ok((Name, Description)));
+    }
+}

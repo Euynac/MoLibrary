@@ -1,67 +1,95 @@
-@page "/ai/rag"
+@page "/ai/rag/debug"
 @rendermode InteractiveServer
+@using Monica.AI.Models
 @using Monica.AI.RAG.Models
 @using Monica.AI.RAG.Services
-@using Monica.Markdown.Interfaces
-@using Monica.Markdown.Models
 @using Monica.Tool.MoResponse
 @using Microsoft.Extensions.Localization
 @using Monica.AI.UI.Localization
+@using Monica.AI.UI.Components.RAG
 @inject RAGUIService RAGUIService
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 @inject IStringLocalizer<AIResource> L
 
 <div class="rag-debug-shell">
-    <aside class="rag-left-panel">
-        <KnowledgeBasePanel
-            KnowledgeBases="@_knowledgeBases"
-            IsLoading="@_isLoading"
-            OnCreate="HandleCreateKb"
-            OnDelete="HandleDeleteKb" />
+    <aside class="rag-sidebar">
+        <MudText Typo="Typo.subtitle1" Class="sidebar-title">@L["RAG:Debug:KBSidebar:Title"]</MudText>
 
-        <MudDivider Class="my-3" />
+        <div class="kb-selection-actions">
+            <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="SelectAllKBs">
+                @L["RAG:Debug:KBSidebar:SelectAll"]
+            </MudButton>
+            <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="DeselectAllKBs">
+                @L["RAG:Debug:KBSidebar:DeselectAll"]
+            </MudButton>
+        </div>
 
-        <IndexingPanel
-            MarkdownGroups="@_markdownGroups"
-            KnowledgeBases="@_knowledgeBases"
-            IsIndexing="@_isIndexing"
-            Progress="@_indexingProgress"
-            OnIndexGroup="HandleIndexGroup"
-            OnUpload="HandleUpload" />
+        <div class="kb-list">
+            @foreach (var kb in _knowledgeBases)
+            {
+                <div class="kb-item">
+                    <MudCheckBox T="bool"
+                                 Checked="@_selectedKbIds.Contains(kb.Id)"
+                                 CheckedChanged="@((bool isChecked) => OnKBCheckChanged(kb.Id, isChecked))"
+                                 Dense="true"
+                                 Class="kb-checkbox">
+                        <div class="kb-info">
+                            <MudText Typo="Typo.body2" Class="kb-name">@kb.Name</MudText>
+                            <MudText Typo="Typo.caption" Class="kb-stats">
+                                @L["RAG:Debug:KBSidebar:Stats", kb.DocumentCount, kb.ChunkCount]
+                            </MudText>
+                        </div>
+                    </MudCheckBox>
+                </div>
+            }
+        </div>
     </aside>
 
-    <main class="rag-right-panel">
-        <MudText Typo="Typo.subtitle1" Class="panel-title">@L["RAG:Search:Title"]</MudText>
+    <main class="rag-main-panel">
+        <MudText Typo="Typo.h5" Class="page-title">@L["RAG:Debug:Title"]</MudText>
+
+        <EmbeddingModelSelector
+            AvailableModels="@_embeddingModels"
+            SelectedModelId="@_selectedEmbeddingModelId"
+            SelectedModelIdChanged="@OnEmbeddingModelChanged" />
+
+        @if (_showEmbeddingWarning)
+        {
+            <EmbeddingModelWarning
+                CurrentModelId="@_selectedEmbeddingModelId"
+                KnowledgeBaseModelId="@_mismatchedKBModelId"
+                AdditionalMessage="@_embeddingWarningMessage"
+                Show="true" />
+        }
 
         <div class="search-controls">
-            <MudTextField @bind-Value="_searchQuery" Placeholder="@L["RAG:Search:Placeholder"]"
-                          Variant="Variant.Outlined" Margin="Margin.Dense"
-                          Immediate="true" Class="search-input"
+            <MudTextField @bind-Value="_searchQuery"
+                          Placeholder="@L["RAG:Search:Placeholder"]"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Immediate="true"
+                          Class="search-input"
                           OnKeyDown="HandleSearchKeyDown" />
 
             <div class="search-options">
-                <MudSelect T="int" @bind-Value="_topK" Label="@L["RAG:Search:TopK"]"
-                           Variant="Variant.Outlined" Margin="Margin.Dense"
-                           Dense="true" Class="topk-select">
-                    <MudSelectItem Value="3">3</MudSelectItem>
-                    <MudSelectItem Value="5">5</MudSelectItem>
-                    <MudSelectItem Value="10">10</MudSelectItem>
-                    <MudSelectItem Value="20">20</MudSelectItem>
+                <MudSelect T="int" @bind-Value="_topK"
+                           Label="@L["RAG:Search:TopK"]"
+                           Variant="Variant.Outlined"
+                           Margin="Margin.Dense"
+                           Dense="true"
+                           Class="topk-select">
+                    <MudSelectItem T="int" Value="3">3</MudSelectItem>
+                    <MudSelectItem T="int" Value="5">5</MudSelectItem>
+                    <MudSelectItem T="int" Value="10">10</MudSelectItem>
+                    <MudSelectItem T="int" Value="20">20</MudSelectItem>
                 </MudSelect>
 
-                <MudSelect T="string" @bind-SelectedValues="_searchKbIds" Label="@L["RAG:Search:KnowledgeBases"]"
-                           Variant="Variant.Outlined" Margin="Margin.Dense"
-                           Dense="true" MultiSelection="true" Class="kb-multi-select">
-                    @foreach (var kb in _knowledgeBases)
-                    {
-                        <MudSelectItem Value="@kb.Id">@kb.Name</MudSelectItem>
-                    }
-                </MudSelect>
-
-                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
                            StartIcon="@Icons.Material.Filled.Search"
                            OnClick="HandleSearch"
-                           Disabled="@(_isSearching || string.IsNullOrWhiteSpace(_searchQuery) || !_searchKbIds.Any())">
+                           Disabled="@(_isSearching || string.IsNullOrWhiteSpace(_searchQuery) || !_selectedKbIds.Any())">
                     @(_isSearching ? L["RAG:Search:Searching"] : L["RAG:Search:Go"])
                 </MudButton>
             </div>
@@ -75,7 +103,7 @@
             <div class="search-results">
                 @foreach (var result in _searchResults)
                 {
-                    <SearchResultCard Result="@result" />
+                    <SearchResultCard Result="@result" OnClick="@(() => ShowChunkViewer(result))" />
                 }
             </div>
         }
@@ -89,124 +117,121 @@
 </div>
 
 @code {
-    public const string PAGE_URL = "/ai/rag";
+    public const string PAGE_URL = "/ai/rag/debug";
 
     private IReadOnlyList<KnowledgeBase> _knowledgeBases = [];
-    private List<MarkdownDocumentGroup> _markdownGroups = [];
+    private IReadOnlyList<EmbeddingModelInfo> _embeddingModels = [];
     private IReadOnlyList<TextSearchResult> _searchResults = [];
-    private IEnumerable<string> _searchKbIds = [];
+    private HashSet<string> _selectedKbIds = [];
     private string _searchQuery = string.Empty;
     private int _topK = 5;
-    private bool _isLoading;
-    private bool _isIndexing;
     private bool _isSearching;
     private bool _hasSearched;
-    private IndexingProgress? _indexingProgress;
+    private string _selectedEmbeddingModelId = string.Empty;
+    private bool _showEmbeddingWarning;
+    private string _mismatchedKBModelId = string.Empty;
+    private string _embeddingWarningMessage = string.Empty;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            _isLoading = true;
-            StateHasChanged();
-
+            // Load knowledge bases
             var kbResult = await RAGUIService.GetKnowledgeBasesAsync();
             if (!kbResult.IsFailed(out var error, out var kbs))
+            {
                 _knowledgeBases = kbs;
+                _selectedKbIds = kbs.Select(kb => kb.Id).ToHashSet();
+            }
             else
+            {
                 Snackbar.Add(error.Message!, Severity.Error);
+            }
 
-            var groupResult = await RAGUIService.GetMarkdownGroupsAsync();
-            if (!groupResult.IsFailed(out error, out var groups))
-                _markdownGroups = groups;
+            // Load embedding models
+            var modelsResult = await RAGUIService.GetEmbeddingModelsAsync();
+            if (!modelsResult.IsFailed(out error, out var models))
+            {
+                _embeddingModels = models;
+                if (models.Count > 0)
+                    _selectedEmbeddingModelId = models[0].ModelName;
+            }
 
-            // Pre-select all KBs for search
-            _searchKbIds = _knowledgeBases.Select(kb => kb.Id).ToList();
-
-            _isLoading = false;
             await InvokeAsync(StateHasChanged);
         }
     }
 
-    private async Task HandleCreateKb(string name)
+    private void SelectAllKBs()
     {
-        var result = await RAGUIService.CreateKnowledgeBaseAsync(name);
-        if (result.IsFailed(out var error))
+        _selectedKbIds = _knowledgeBases.Select(kb => kb.Id).ToHashSet();
+        CheckEmbeddingModelMismatch();
+        StateHasChanged();
+    }
+
+    private void DeselectAllKBs()
+    {
+        _selectedKbIds.Clear();
+        _showEmbeddingWarning = false;
+        StateHasChanged();
+    }
+
+    private void OnKBCheckChanged(string kbId, bool isChecked)
+    {
+        if (isChecked)
+            _selectedKbIds.Add(kbId);
+        else
+            _selectedKbIds.Remove(kbId);
+
+        CheckEmbeddingModelMismatch();
+        StateHasChanged();
+    }
+
+    private async Task OnEmbeddingModelChanged(string modelId)
+    {
+        _selectedEmbeddingModelId = modelId;
+        CheckEmbeddingModelMismatch();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void CheckEmbeddingModelMismatch()
+    {
+        if (string.IsNullOrEmpty(_selectedEmbeddingModelId) || !_selectedKbIds.Any())
         {
-            Snackbar.Add(error.Message!, Severity.Error);
+            _showEmbeddingWarning = false;
             return;
         }
 
-        Snackbar.Add($"Created '{name}'", Severity.Success);
-        await RefreshKnowledgeBases();
-    }
-
-    private async Task HandleDeleteKb(KnowledgeBase kb)
-    {
-        var result = await RAGUIService.DeleteKnowledgeBaseAsync(kb.Id);
-        if (result.IsFailed(out var error))
+        var mismatchedKBs = new List<string>();
+        foreach (var kbId in _selectedKbIds)
         {
-            Snackbar.Add(error.Message!, Severity.Error);
-            return;
+            var kb = _knowledgeBases.FirstOrDefault(k => k.Id == kbId);
+            if (kb?.EmbeddingModelId != null && kb.EmbeddingModelId != _selectedEmbeddingModelId)
+            {
+                mismatchedKBs.Add(kb.Name);
+                _mismatchedKBModelId = kb.EmbeddingModelId;
+            }
         }
 
-        Snackbar.Add($"Deleted '{kb.Name}'", Severity.Success);
-        await RefreshKnowledgeBases();
-    }
-
-    private async Task HandleIndexGroup((string KbId, string GroupKey) args)
-    {
-        _isIndexing = true;
-        _indexingProgress = null;
-        StateHasChanged();
-
-        var progress = new Progress<IndexingProgress>(p =>
+        if (mismatchedKBs.Any())
         {
-            _indexingProgress = p;
-            InvokeAsync(StateHasChanged);
-        });
-
-        var result = await RAGUIService.IndexMarkdownGroupAsync(
-            args.KbId, args.GroupKey, progress);
-
-        _isIndexing = false;
-        _indexingProgress = null;
-
-        if (result.IsFailed(out var error))
-            Snackbar.Add(error.Message!, Severity.Error);
+            _showEmbeddingWarning = true;
+            _embeddingWarningMessage = L["RAG:EmbeddingModel:Warning:SearchMismatch", string.Join(", ", mismatchedKBs)];
+        }
         else
-            Snackbar.Add(result.Message!, Severity.Success);
-
-        await RefreshKnowledgeBases();
-    }
-
-    private async Task HandleUpload((string KbId, string FileName, string Content) args)
-    {
-        _isIndexing = true;
-        StateHasChanged();
-
-        var result = await RAGUIService.UploadAndIndexDocumentAsync(
-            args.KbId, args.FileName, args.Content);
-
-        _isIndexing = false;
-
-        if (result.IsFailed(out var error))
-            Snackbar.Add(error.Message!, Severity.Error);
-        else
-            Snackbar.Add(result.Message!, Severity.Success);
-
-        await RefreshKnowledgeBases();
+        {
+            _showEmbeddingWarning = false;
+        }
     }
 
     private async Task HandleSearch()
     {
-        if (string.IsNullOrWhiteSpace(_searchQuery) || !_searchKbIds.Any()) return;
+        if (string.IsNullOrWhiteSpace(_searchQuery) || !_selectedKbIds.Any()) return;
 
         _isSearching = true;
         _hasSearched = true;
         StateHasChanged();
 
-        var result = await RAGUIService.SearchAsync(_searchQuery, _searchKbIds, _topK);
+        var result = await RAGUIService.SearchAsync(_searchQuery, _selectedKbIds, _topK);
         if (!result.IsFailed(out var error, out var results))
             _searchResults = results;
         else
@@ -225,14 +250,45 @@
             await HandleSearch();
     }
 
-    private async Task RefreshKnowledgeBases()
+    private async Task ShowChunkViewer(TextSearchResult result)
     {
-        var kbResult = await RAGUIService.GetKnowledgeBasesAsync();
-        if (!kbResult.IsFailed(out _, out var kbs))
+        if (string.IsNullOrEmpty(result.DocumentId))
         {
-            _knowledgeBases = kbs;
-            _searchKbIds = _knowledgeBases.Select(kb => kb.Id).ToList();
+            Snackbar.Add("Document ID not available", Severity.Warning);
+            return;
         }
-        StateHasChanged();
+
+        // Find the KB that contains this document
+        var kbId = _selectedKbIds.FirstOrDefault();
+        if (string.IsNullOrEmpty(kbId))
+        {
+            Snackbar.Add("Knowledge base not found", Severity.Warning);
+            return;
+        }
+
+        var chunksResult = await RAGUIService.GetDocumentChunksAsync(kbId, result.DocumentId);
+        if (chunksResult.IsFailed(out var error, out var data))
+        {
+            Snackbar.Add(error.Message!, Severity.Error);
+            return;
+        }
+
+        var parameters = new DialogParameters
+        {
+            ["DocumentName"] = result.SourceName ?? "Unknown",
+            ["OriginalText"] = data.OriginalText,
+            ["Chunks"] = data.Chunks,
+            ["MatchedChunkIndex"] = result.ChunkIndex,
+            ["StatusText"] = L["RAG:ChunkViewer:Indexed", DateTime.Now.ToString("yyyy-MM-dd")]
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true,
+            CloseButton = true
+        };
+
+        await DialogService.ShowAsync<ChunkViewerDialog>(L["RAG:ChunkViewer:Title"], parameters, options);
     }
 }

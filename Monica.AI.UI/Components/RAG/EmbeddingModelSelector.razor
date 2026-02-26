@@ -1,0 +1,62 @@
+@using Monica.AI.Models
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@inject IStringLocalizer<AIResource> L
+
+<div class="embedding-model-selector-wrapper">
+    <div class="selector-header">
+        <MudIcon Icon="@Icons.Material.Filled.Memory" Size="Size.Small" Class="selector-icon" />
+        <MudText Typo="Typo.body2" Class="selector-label">@L["RAG:EmbeddingModel:Label"]</MudText>
+    </div>
+
+    <MudSelect T="string"
+               Value="@SelectedModelId"
+               ValueChanged="@OnModelChanged"
+               Variant="Variant.Outlined"
+               Margin="Margin.Dense"
+               Dense="true"
+               Disabled="@IsDisabled"
+               Class="model-select">
+        @foreach (var model in AvailableModels)
+        {
+            <MudSelectItem T="string" Value="@model.ModelName">
+                <div class="model-option">
+                    <span class="model-name">@model.ModelName</span>
+                    <span class="model-dimensions">@L["RAG:EmbeddingModel:Dimensions", model.Dimensions]</span>
+                </div>
+            </MudSelectItem>
+        }
+    </MudSelect>
+
+    @if (CurrentModel is not null)
+    {
+        <MudText Typo="Typo.caption" Class="model-info">
+            @(CurrentModel.Description ?? CurrentModel.ModelName) · @L["RAG:EmbeddingModel:Dimensions", CurrentModel.Dimensions]
+        </MudText>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public IReadOnlyList<EmbeddingModelInfo> AvailableModels { get; set; } = [];
+
+    [Parameter]
+    public string? SelectedModelId { get; set; }
+
+    [Parameter]
+    public EventCallback<string> SelectedModelIdChanged { get; set; }
+
+    [Parameter]
+    public bool IsDisabled { get; set; }
+
+    private EmbeddingModelInfo? CurrentModel =>
+        AvailableModels.FirstOrDefault(m => m.ModelName == SelectedModelId);
+
+    private async Task OnModelChanged(string? modelId)
+    {
+        if (modelId is not null)
+        {
+            await SelectedModelIdChanged.InvokeAsync(modelId);
+        }
+    }
+}
