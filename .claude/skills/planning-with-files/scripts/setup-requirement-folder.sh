@@ -11,19 +11,30 @@ PENDING_DIR=".pending"
 # Create .pending directory if it doesn't exist
 mkdir -p "$PENDING_DIR"
 
+# Check if a folder with the same description already exists
+if [ -d "$PENDING_DIR" ]; then
+    for dir in "$PENDING_DIR"/*; do
+        if [ -d "$dir" ]; then
+            basename_dir=$(basename "$dir")
+            if [[ "$basename_dir" =~ ^[0-9]+-(.+)$ ]]; then
+                existing_desc="${BASH_REMATCH[1]}"
+                if [ "$existing_desc" = "$DESCRIPTION" ]; then
+                    echo "${PENDING_DIR}/${basename_dir}"
+                    exit 0
+                fi
+            fi
+        fi
+    done
+fi
+
 # Find the highest existing folder number
 MAX_NUM=0
 if [ -d "$PENDING_DIR" ]; then
     for dir in "$PENDING_DIR"/*; do
         if [ -d "$dir" ]; then
-            # Extract number from folder name (handles both "NNN-name" and "(done) NNN-name")
             basename_dir=$(basename "$dir")
-            # Remove "(done) " prefix if present
-            clean_name="${basename_dir#\(done\) }"
-            # Extract the number part
-            if [[ "$clean_name" =~ ^([0-9]+)- ]]; then
+            if [[ "$basename_dir" =~ ^([0-9]+)- ]]; then
                 num="${BASH_REMATCH[1]}"
-                # Remove leading zeros for comparison
                 num=$((10#$num))
                 if [ "$num" -gt "$MAX_NUM" ]; then
                     MAX_NUM=$num

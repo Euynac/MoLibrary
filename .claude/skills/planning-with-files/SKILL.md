@@ -1,6 +1,6 @@
 ---
 name: planning-with-files
-version: "2.11.0"
+version: "3.0.0"
 description: Implements Manus-style file-based planning for complex tasks. Creates task_plan.md, findings.md, and progress.md in .pending/NNN-description/ folders. Use when starting complex multi-step tasks, research projects, or any task requiring >5 tool calls. Now with automatic session recovery and completion tracking.
 user-invocable: true
 allowed-tools:
@@ -12,63 +12,6 @@ allowed-tools:
   - Grep
   - WebFetch
   - WebSearch
-hooks:
-  PreToolUse:
-    - matcher: "Write|Edit|Bash|Read|Glob|Grep"
-      hooks:
-        - type: command
-          command: |
-            # Try to find task_plan.md in .pending/ folders first, then fall back to root
-            TASK_PLAN=$(find .pending -name "task_plan.md" -type f 2>/dev/null | grep -v "(done)" | head -1)
-            if [ -z "$TASK_PLAN" ]; then
-              TASK_PLAN="task_plan.md"
-            fi
-            if [ -f "$TASK_PLAN" ]; then
-              cat "$TASK_PLAN" | head -30
-            fi
-  PostToolUse:
-    - matcher: "Write|Edit"
-      hooks:
-        - type: command
-          command: "echo '[planning-with-files] File updated. If this completes a phase, update task_plan.md status.'"
-  Stop:
-    - hooks:
-        - type: command
-          command: |
-            SCRIPT_DIR="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/plugins/planning-with-files}/scripts"
-
-            IS_WINDOWS=0
-            if [ "${OS-}" = "Windows_NT" ]; then
-              IS_WINDOWS=1
-            else
-              UNAME_S="$(uname -s 2>/dev/null || echo '')"
-              case "$UNAME_S" in
-                CYGWIN*|MINGW*|MSYS*) IS_WINDOWS=1 ;;
-              esac
-            fi
-
-            if [ "$IS_WINDOWS" -eq 1 ]; then
-              if command -v pwsh >/dev/null 2>&1; then
-                pwsh -ExecutionPolicy Bypass -File "$SCRIPT_DIR/check-complete.ps1" 2>/dev/null ||
-                powershell -ExecutionPolicy Bypass -File "$SCRIPT_DIR/check-complete.ps1" 2>/dev/null ||
-                sh "$SCRIPT_DIR/check-complete.sh"
-
-                # Run mark-complete script
-                pwsh -ExecutionPolicy Bypass -File "$SCRIPT_DIR/mark-complete.ps1" 2>/dev/null ||
-                powershell -ExecutionPolicy Bypass -File "$SCRIPT_DIR/mark-complete.ps1" 2>/dev/null ||
-                sh "$SCRIPT_DIR/mark-complete.sh"
-              else
-                powershell -ExecutionPolicy Bypass -File "$SCRIPT_DIR/check-complete.ps1" 2>/dev/null ||
-                sh "$SCRIPT_DIR/check-complete.sh"
-
-                # Run mark-complete script
-                powershell -ExecutionPolicy Bypass -File "$SCRIPT_DIR/mark-complete.ps1" 2>/dev/null ||
-                sh "$SCRIPT_DIR/mark-complete.sh"
-              fi
-            else
-              sh "$SCRIPT_DIR/check-complete.sh"
-              sh "$SCRIPT_DIR/mark-complete.sh"
-            fi
 ---
 
 # Planning with Files
@@ -162,15 +105,6 @@ If catchup report shows unsynced context:
 | `.pending/NNN-description/` | `task_plan.md`, `findings.md`, `progress.md` |
 | Project root | Fallback location if `.pending/` cannot be created |
 
-## Automatic Completion Tracking
-
-When all phases in `task_plan.md` are marked as `Status: complete`, the requirement folder is automatically renamed with a "(done)" prefix when you stop the session:
-
-- Before: `.pending/010-rag-module/`
-- After: `.pending/(done) 010-rag-module/`
-
-This provides visual indication of completed requirements in the file system.
-
 ## Quick Start
 
 Before ANY complex task:
@@ -180,7 +114,6 @@ Before ANY complex task:
 3. **Create planning files** — `task_plan.md`, `findings.md`, `progress.md` in the requirement folder
 4. **Re-read plan before decisions** — Refreshes goals in attention window
 5. **Update after each phase** — Mark complete, log errors
-6. **Automatic completion** — Folder gets "(done)" prefix when all phases complete
 
 > **Note:** Planning files go in `.pending/NNN-description/` folders, not the project root.
 
@@ -312,7 +245,6 @@ Copy these templates to start:
 Helper scripts for automation:
 
 - `scripts/init-session.sh` — Initialize all planning files
-- `scripts/check-complete.sh` — Verify all phases complete
 - `scripts/session-catchup.py` — Recover context from previous session (v2.2.0)
 
 ## Advanced Topics
@@ -331,4 +263,3 @@ Helper scripts for automation:
 | Start executing immediately | Setup requirement folder and create plan FIRST |
 | Repeat failed actions | Track attempts, mutate approach |
 | Create files in project root | Create files in `.pending/NNN-description/` folder |
-| Manually track completion | Let the Stop hook auto-rename completed folders |

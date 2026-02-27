@@ -20,10 +20,7 @@ $MAX_NUM = 0
 if (Test-Path $PENDING_DIR) {
     Get-ChildItem -Path $PENDING_DIR -Directory | ForEach-Object {
         $basename = $_.Name
-        # Remove "(done) " prefix if present
-        $cleanName = $basename -replace '^\(done\) ', ''
-        # Extract the number part
-        if ($cleanName -match '^(\d+)-') {
+        if ($basename -match '^(\d+)-') {
             $num = [int]$matches[1]
             if ($num -gt $MAX_NUM) {
                 $MAX_NUM = $num
