@@ -3,7 +3,6 @@
     "NewChat": "New Chat",
     "RecentSessions": "Recent Sessions",
     "NoConversations": "No conversations",
-    "NewConversation": "New Conversation",
     "JustNow": "Just now",
     "MinutesAgo": "{0} minutes ago",
     "HoursAgo": "{0} hours ago",
@@ -42,7 +41,6 @@
   "Model": {
     "Label": "Model",
     "NoModelsAvailable": "No models available",
-    "Reasoning": "Reasoning",
     "ContextWindow": "{0}K context",
     "ContextWindowM": "{0}M context"
   },
@@ -71,8 +69,7 @@
   },
   "RAG": {
     "Navigation": {
-      "Manage": "Knowledge Base Management",
-      "Debug": "RAG Debug"
+      "Manage": "Knowledge Base Management"
     },
     "EmbeddingModel": {
       "Label": "Embedding Model",
@@ -81,13 +78,11 @@
         "Title": "Embedding Model Mismatch",
         "CurrentModel": "Current model: {0}",
         "KBModel": "KB model: {0}",
-        "ReindexRequired": "All documents must be re-indexed to use the new embedding model.",
         "SearchMismatch": "The following knowledge bases use different embedding models: {0}. Search results may be inaccurate."
       }
     },
     "KnowledgeBase": {
       "Title": "Knowledge Bases",
-      "Name": "Name",
       "DocumentCount": "Documents",
       "ChunkCount": "Chunks",
       "Create": "Create Knowledge Base",
@@ -98,8 +93,6 @@
       "ChunksCount": "{0} chunks"
     },
     "Manage": {
-      "Title": "Knowledge Base Management",
-      "SelectKB": "Select a knowledge base",
       "CreateDialog": {
         "Title": "Create Knowledge Base",
         "Name": "Name",
@@ -110,43 +103,28 @@
     },
     "DocumentQueue": {
       "Title": "Documents & Queue",
+      "Column": {
+        "Name": "Name",
+        "Status": "Status",
+        "Chunks": "Chunks",
+        "Actions": "Actions"
+      },
       "Status": {
         "Pending": "Pending",
         "Indexing": "Indexing",
         "Done": "Done",
         "Error": "Error"
       },
-      "Column": {
-        "Document": "Document",
-        "Status": "Status",
-        "Chunks": "Chunks",
-        "Actions": "Actions"
-      },
-      "Name": "Name",
-      "Status": "Status",
-      "Chunks": "Chunks",
-      "Actions": "Actions",
-      "Actions:ViewChunks": "View Chunks",
-      "Actions:Reindex": "Re-index",
-      "Actions:Delete": "Delete",
-      "Action": {
+      "Actions": {
         "ViewChunks": "View Chunks",
         "Reindex": "Re-index",
         "Delete": "Delete"
       },
-      "Empty": "No documents yet",
-      "Count": "{0} total",
       "DeleteConfirm": "Are you sure you want to delete '{0}'?"
-    },
-    "Parallel": {
-      "Label": "Parallel",
-      "Start": "Start",
-      "Stop": "Stop"
     },
     "ParallelIndexing": {
       "Label": "Parallel",
       "Start": "Start",
-      "Stop": "Stop",
       "NoPendingDocuments": "No pending documents to index"
     },
     "DocumentSelection": {
@@ -155,8 +133,7 @@
       "DeselectAll": "Deselect All",
       "Selected": "{0} selected",
       "AddToQueue": "Add to Queue",
-      "Indexed": "Indexed",
-      "ChunksPreview": "{0} chunks"
+      "Indexed": "Indexed"
     },
     "ChunkViewer": {
       "Title": "Document Chunks",
@@ -168,7 +145,6 @@
       "Matched": "(Matched)"
     },
     "Debug": {
-      "Title": "RAG Debug / Search",
       "KBSidebar": {
         "Title": "Knowledge Bases",
         "SelectAll": "Select All",
@@ -190,15 +166,12 @@
       "FileTooLarge": "File is too large (max 10MB)"
     },
     "Search": {
-      "Title": "Search",
       "Placeholder": "Enter search query...",
       "TopK": "Top-K",
-      "KnowledgeBases": "Knowledge Bases",
       "Go": "Go",
       "Searching": "Searching...",
       "NoResults": "No results found",
-      "ResultsCount": "{0} result(s) found",
-      "ViewInDocument": "View in document"
+      "ResultsCount": "{0} result(s) found"
     }
   },
   "ProviderManage": {

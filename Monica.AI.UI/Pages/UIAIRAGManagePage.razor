@@ -143,14 +143,14 @@
                               Hover="true"
                               Class="document-queue-table">
                         <HeaderContent>
-                            <MudTh>@L["RAG:DocumentQueue:Name"]</MudTh>
-                            <MudTh>@L["RAG:DocumentQueue:Status"]</MudTh>
-                            <MudTh>@L["RAG:DocumentQueue:Chunks"]</MudTh>
-                            <MudTh>@L["RAG:DocumentQueue:Actions"]</MudTh>
+                            <MudTh>@L["RAG:DocumentQueue:Column:Name"]</MudTh>
+                            <MudTh>@L["RAG:DocumentQueue:Column:Status"]</MudTh>
+                            <MudTh>@L["RAG:DocumentQueue:Column:Chunks"]</MudTh>
+                            <MudTh>@L["RAG:DocumentQueue:Column:Actions"]</MudTh>
                         </HeaderContent>
                         <RowTemplate>
-                            <MudTd DataLabel="@L["RAG:DocumentQueue:Name"]">@context.Name</MudTd>
-                            <MudTd DataLabel="@L["RAG:DocumentQueue:Status"]">
+                            <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Name"]">@context.Name</MudTd>
+                            <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Status"]">
                                 @switch (context.Status)
                                 {
                                     case DocumentStatus.Pending:
@@ -178,8 +178,8 @@
                                         break;
                                 }
                             </MudTd>
-                            <MudTd DataLabel="@L["RAG:DocumentQueue:Chunks"]">@context.ChunkCount</MudTd>
-                            <MudTd DataLabel="@L["RAG:DocumentQueue:Actions"]">
+                            <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Chunks"]">@context.ChunkCount</MudTd>
+                            <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Actions"]">
                                 <MudIconButton Icon="@Icons.Material.Filled.Visibility"
                                                Size="Size.Small"
                                                OnClick="@(() => ShowChunkViewer(context))"
