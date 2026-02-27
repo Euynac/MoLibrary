@@ -30,8 +30,8 @@
             {
                 <div class="kb-item">
                     <MudCheckBox T="bool"
-                                 Checked="@_selectedKbIds.Contains(kb.Id)"
-                                 CheckedChanged="@((bool isChecked) => OnKBCheckChanged(kb.Id, isChecked))"
+                                 Value="@_selectedKbIds.Contains(kb.Id)"
+                                 ValueChanged="@((bool isChecked) => OnKBCheckChanged(kb.Id, isChecked))"
                                  Dense="true"
                                  Class="kb-checkbox">
                         <div class="kb-info">
@@ -68,26 +68,31 @@
         }
 
         <div class="search-controls">
-            <MudTextField @bind-Value="_searchQuery"
-                          Placeholder="@L["RAG:Search:Placeholder"]"
-                          Variant="Variant.Outlined"
-                          Margin="Margin.Dense"
-                          Immediate="true"
-                          Class="search-input"
-                          OnKeyDown="HandleSearchKeyDown" />
+            <div class="search-input-group">
+                <MudText Typo="Typo.caption" Class="search-label">@L["RAG:Search:QueryLabel"]</MudText>
+                <MudTextField @bind-Value="_searchQuery"
+                              Placeholder="@L["RAG:Search:Placeholder"]"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Immediate="true"
+                              Class="search-input"
+                              OnKeyDown="HandleSearchKeyDown" />
+            </div>
 
             <div class="search-options">
-                <MudSelect T="int" @bind-Value="_topK"
-                           Label="@L["RAG:Search:TopK"]"
-                           Variant="Variant.Outlined"
-                           Margin="Margin.Dense"
-                           Dense="true"
-                           Class="topk-select">
-                    <MudSelectItem T="int" Value="3">3</MudSelectItem>
-                    <MudSelectItem T="int" Value="5">5</MudSelectItem>
-                    <MudSelectItem T="int" Value="10">10</MudSelectItem>
-                    <MudSelectItem T="int" Value="20">20</MudSelectItem>
-                </MudSelect>
+                <div class="topk-group">
+                    <MudText Typo="Typo.caption" Class="search-label">@L["RAG:Search:TopK"]</MudText>
+                    <MudSelect T="int" @bind-Value="_topK"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense"
+                               Dense="true"
+                               Class="topk-select">
+                        <MudSelectItem T="int" Value="3">3</MudSelectItem>
+                        <MudSelectItem T="int" Value="5">5</MudSelectItem>
+                        <MudSelectItem T="int" Value="10">10</MudSelectItem>
+                        <MudSelectItem T="int" Value="20">20</MudSelectItem>
+                    </MudSelect>
+                </div>
 
                 <MudButton Variant="Variant.Filled"
                            Color="Color.Primary"

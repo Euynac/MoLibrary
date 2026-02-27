@@ -161,17 +161,19 @@
       "IndexNow": "Index Now",
       "Indexing": "Indexing...",
       "UploadDocument": "Upload Document",
-      "UploadFile": "Upload File",
+      "UploadFile": "Upload Document",
+      "ClickToUpload": "Click to upload",
       "ChooseFile": "Choose File",
       "FileTooLarge": "File is too large (max 10MB)"
     },
     "Search": {
-      "Placeholder": "Enter search query...",
+      "Placeholder": "Enter your search query...",
+      "QueryLabel": "Search Query",
       "TopK": "Top-K",
-      "Go": "Go",
+      "Go": "Search",
       "Searching": "Searching...",
       "NoResults": "No results found",
-      "ResultsCount": "{0} result(s) found"
+      "ResultsCount": "{0} results"
     }
   },
   "ProviderManage": {

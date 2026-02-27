@@ -161,17 +161,19 @@
       "IndexNow": "立即索引",
       "Indexing": "索引中...",
       "UploadDocument": "上传文档",
-      "UploadFile": "上传文件",
+      "UploadFile": "上传文档",
+      "ClickToUpload": "点击上传",
       "ChooseFile": "选择文件",
       "FileTooLarge": "文件过大（最大 10MB）"
     },
     "Search": {
       "Placeholder": "输入搜索查询...",
+      "QueryLabel": "搜索查询",
       "TopK": "Top-K",
       "Go": "搜索",
       "Searching": "搜索中...",
       "NoResults": "未找到结果",
-      "ResultsCount": "找到 {0} 个结果"
+      "ResultsCount": "{0} 个结果"
     }
   },
   "ProviderManage": {

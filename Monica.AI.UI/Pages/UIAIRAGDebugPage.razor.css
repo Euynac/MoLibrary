@@ -93,14 +93,37 @@
 
 .search-controls {
     display: flex;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+.search-input-group {
+    flex: 1;
+    display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 4px;
+}
+
+.search-input-group ::deep .search-input {
+    width: 100%;
+}
+
+.search-label {
+    color: var(--mud-palette-text-secondary);
+    font-weight: 500;
 }
 
 .search-options {
     display: flex;
     align-items: flex-end;
     gap: 10px;
+    flex-shrink: 0;
+}
+
+.topk-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .search-options ::deep .topk-select {

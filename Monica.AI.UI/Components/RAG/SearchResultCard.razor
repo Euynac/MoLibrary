@@ -1,42 +1,37 @@
 @using Monica.AI.RAG.Models
 
 <div class="result-card-wrapper" @onclick="HandleClick">
-    <MudPaper Class="result-card" Elevation="0">
-        <div class="result-progress-header">
-            <MudProgressLinear Value="@((Result.Score ?? 0) * 100)"
-                               Color="@GetScoreColor()"
-                               Size="Size.Small"
-                               Class="score-progress" />
-            <MudText Typo="Typo.caption" Class="score-text">
-                @($"{Result.Score ?? 0:P0}")
-            </MudText>
-        </div>
-
-        <div class="result-header">
-            <div class="result-source">
-                <MudText Typo="Typo.body2" Class="source-name">
-                    @(Result.SourceName ?? "Unknown")
-                </MudText>
-                @if (!string.IsNullOrEmpty(Result.SectionPath))
-                {
-                    <MudText Typo="Typo.caption" Class="section-path">
-                        @Result.SectionPath
-                    </MudText>
-                }
+    <div class="result-card">
+        <!-- Score header row with badge + progress bar -->
+        <div class="result-score-row">
+            <span class="score-badge score-badge--@GetScoreLevel()">
+                @($"{(Result.Score ?? 0) * 100:F0}%")
+            </span>
+            <div class="score-bar-track">
+                <div class="score-bar-fill score-bar-fill--@GetScoreLevel()"
+                     style="width: @($"{(Result.Score ?? 0) * 100:F0}%")"></div>
             </div>
         </div>
 
-        <MudText Typo="Typo.body2" Class="result-content">
-            @Result.Text
-        </MudText>
+        <!-- Content area -->
+        <div class="result-body">
+            <div class="result-meta">
+                <span class="result-source-name">
+                    <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" Class="source-icon" />
+                    @(Result.SourceName ?? "Unknown")
+                </span>
+                @if (!string.IsNullOrEmpty(Result.SectionPath))
+                {
+                    <span class="meta-separator">·</span>
+                    <span class="result-section">@Result.SectionPath</span>
+                }
+                <span class="meta-separator">·</span>
+                <span class="result-view-link">View in document</span>
+            </div>
 
-        @if (!string.IsNullOrEmpty(Result.SourceLink))
-        {
-            <MudText Typo="Typo.caption" Class="result-link">
-                @Result.SourceLink
-            </MudText>
-        }
-    </MudPaper>
+            <p class="result-text">@Result.Text</p>
+        </div>
+    </div>
 </div>
 
 @code {
@@ -46,11 +41,11 @@
     [Parameter]
     public EventCallback OnClick { get; set; }
 
-    private Color GetScoreColor() => Result.Score switch
+    private string GetScoreLevel() => Result.Score switch
     {
-        >= 0.8 => Color.Success,
-        >= 0.5 => Color.Warning,
-        _ => Color.Default
+        >= 0.8f => "high",
+        >= 0.5f => "mid",
+        _ => "low"
     };
 
     private async Task HandleClick()

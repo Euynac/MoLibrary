@@ -201,43 +201,54 @@
                 </div>
 
                 <!-- Indexing Actions -->
-                <div class="indexing-actions-section">
-                    <MudText Typo="Typo.h6">@L["RAG:Indexing:Title"]</MudText>
-
-                    <div class="markdown-group-section">
-                        <MudSelect T="string"
-                                   @bind-Value="@_selectedMarkdownGroup"
-                                   Label="@L["RAG:Indexing:MarkdownGroup"]"
-                                   Variant="Variant.Outlined"
-                                   Margin="Margin.Dense">
-                            @foreach (var group in _markdownGroups)
-                            {
-                                <MudSelectItem T="string" Value="@group">@group</MudSelectItem>
-                            }
-                        </MudSelect>
-                        <MudButton Variant="Variant.Filled"
-                                   Color="Color.Primary"
-                                   StartIcon="@Icons.Material.Filled.FolderOpen"
-                                   OnClick="@ShowDocumentSelectionDialog"
-                                   Disabled="@string.IsNullOrEmpty(_selectedMarkdownGroup)">
-                            @L["RAG:DocumentSelection:Title"]
-                        </MudButton>
+                <div class="indexing-actions-grid">
+                    <!-- Markdown Group Card -->
+                    <div class="indexing-card">
+                        <div class="indexing-card-title">
+                            <MudIcon Icon="@Icons.Material.Filled.MenuBook" Size="Size.Small" Color="Color.Primary" />
+                            <MudText Typo="Typo.subtitle2">@L["RAG:Indexing:Title"]</MudText>
+                        </div>
+                        <div class="markdown-group-section">
+                            <MudSelect T="string"
+                                       @bind-Value="@_selectedMarkdownGroup"
+                                       Label="@L["RAG:Indexing:MarkdownGroup"]"
+                                       Variant="Variant.Outlined"
+                                       Margin="Margin.Dense"
+                                       FullWidth="true">
+                                @foreach (var group in _markdownGroups)
+                                {
+                                    <MudSelectItem T="string" Value="@group">@group</MudSelectItem>
+                                }
+                            </MudSelect>
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Filled.FolderOpen"
+                                       OnClick="@ShowDocumentSelectionDialog"
+                                       Disabled="@string.IsNullOrEmpty(_selectedMarkdownGroup)"
+                                       FullWidth="true">
+                                @L["RAG:DocumentSelection:Title"]
+                            </MudButton>
+                        </div>
                     </div>
 
-                    <MudDivider Class="my-4" />
-
-                    <div class="file-upload-section">
+                    <!-- Upload Document Card -->
+                    <div class="indexing-card">
+                        <div class="indexing-card-title">
+                            <MudIcon Icon="@Icons.Material.Filled.Upload" Size="Size.Small" Color="Color.Primary" />
+                            <MudText Typo="Typo.subtitle2">@L["RAG:Indexing:UploadFile"]</MudText>
+                        </div>
                         <MudFileUpload T="IBrowserFile"
                                        Accept=".txt,.md,.pdf"
                                        FilesChanged="@OnFileSelected"
-                                       MaximumFileCount="1">
-                            <ActivatorContent>
-                                <MudButton Variant="Variant.Filled"
-                                           Color="Color.Secondary"
-                                           StartIcon="@Icons.Material.Filled.Upload">
-                                    @L["RAG:Indexing:UploadFile"]
-                                </MudButton>
-                            </ActivatorContent>
+                                       MaximumFileCount="1"
+                                       Class="upload-file-input">
+                            <CustomContent Context="upload">
+                                <div class="upload-drop-zone" @onclick="upload.OpenFilePickerAsync">
+                                    <MudIcon Icon="@Icons.Material.Filled.UploadFile" Size="Size.Large" Class="upload-icon" />
+                                    <MudText Typo="Typo.body2" Class="upload-hint-primary">@L["RAG:Indexing:ClickToUpload"]</MudText>
+                                    <MudText Typo="Typo.caption" Class="upload-hint-secondary">.md, .txt, .pdf</MudText>
+                                </div>
+                            </CustomContent>
                         </MudFileUpload>
                     </div>
                 </div>
