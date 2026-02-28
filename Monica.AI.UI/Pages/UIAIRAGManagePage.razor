@@ -91,23 +91,28 @@
 
                 <!-- KB Detail Header -->
                 <div class="kb-header">
-                    <MudText Typo="Typo.h5">@_selectedKB.Name</MudText>
-                    @if (!string.IsNullOrEmpty(_selectedKB.Description))
-                    {
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">@_selectedKB.Description</MudText>
-                    }
-                    <div class="kb-stats">
-                        <MudChip T="string" Size="Size.Small" Color="Color.Info">
-                            @L["RAG:KnowledgeBase:DocumentCount"]: @_selectedKB.DocumentCount
-                        </MudChip>
-                        <MudChip T="string" Size="Size.Small" Color="Color.Info">
-                            @L["RAG:KnowledgeBase:ChunkCount"]: @_selectedKB.ChunkCount
-                        </MudChip>
+                    <div class="kb-header-info">
+                        <MudText Typo="Typo.h5">@_selectedKB.Name</MudText>
+                        @if (!string.IsNullOrEmpty(_selectedKB.Description))
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@_selectedKB.Description</MudText>
+                        }
+                    </div>
+                    <div class="kb-badges">
+                        <span class="kb-badge kb-badge-blue">
+                            <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" />
+                            <span>@_selectedKB.DocumentCount @L["RAG:KnowledgeBase:DocumentCount"]</span>
+                        </span>
+                        <span class="kb-badge kb-badge-purple">
+                            <MudIcon Icon="@Icons.Material.Filled.GridView" Size="Size.Small" />
+                            <span>@_selectedKB.ChunkCount @L["RAG:KnowledgeBase:ChunkCount"]</span>
+                        </span>
                         @if (!string.IsNullOrEmpty(_selectedKB.EmbeddingModelId))
                         {
-                            <MudChip T="string" Size="Size.Small" Color="Color.Success">
-                                @_selectedKB.EmbeddingModelId
-                            </MudChip>
+                            <span class="kb-badge kb-badge-gray">
+                                <MudIcon Icon="@Icons.Material.Filled.Memory" Size="Size.Small" />
+                                <span>@_selectedKB.EmbeddingModelId</span>
+                            </span>
                         }
                     </div>
                 </div>
@@ -115,9 +120,14 @@
                 <!-- Document Queue Table -->
                 <div class="document-queue-section">
                     <div class="queue-header">
-                        <MudText Typo="Typo.h6">@L["RAG:DocumentQueue:Title"]</MudText>
+                        <div class="queue-title-row">
+                            <MudText Typo="Typo.overline">@L["RAG:DocumentQueue:Title"]</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                @_documentQueue.Count @L["RAG:KnowledgeBase:DocumentCount"]
+                            </MudText>
+                        </div>
                         <div class="queue-controls">
-                            <MudText Typo="Typo.body2" Class="parallel-label">
+                            <MudText Typo="Typo.caption" Class="parallel-label">
                                 @L["RAG:ParallelIndexing:Label"]
                             </MudText>
                             <MudNumericField T="int"
@@ -129,6 +139,7 @@
                                              Class="parallel-input" />
                             <MudButton Variant="Variant.Filled"
                                        Color="Color.Primary"
+                                       Size="Size.Small"
                                        StartIcon="@Icons.Material.Filled.PlayArrow"
                                        OnClick="@StartBatchIndexing"
                                        Disabled="@(!_documentQueue.Any(d => d.Status == DocumentStatus.Pending))">

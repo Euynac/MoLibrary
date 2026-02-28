@@ -18,7 +18,7 @@
 }
 
 .mapper-markdown-wrapper ::deep .mud-markdown code {
-    background-color: var(--mud-palette-background-grey);
+    background-color: var(--mud-palette-background-gray);
     border-radius: 4px;
     padding: 16px;
 }

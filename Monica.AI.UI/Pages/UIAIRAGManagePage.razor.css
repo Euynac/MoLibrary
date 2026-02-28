@@ -113,7 +113,7 @@
 .detail-content {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 20px;
 }
 
 .empty-state {
@@ -125,7 +125,7 @@
 
 /* Embedding Model Section */
 .embedding-model-section {
-    padding: 16px;
+    padding: 12px;
     background-color: var(--mud-palette-surface);
     border-radius: 4px;
 }
@@ -133,14 +133,75 @@
 /* KB Header */
 .kb-header {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
 }
 
-.kb-stats {
+.kb-header-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    flex: 1;
+}
+
+.kb-badges {
     display: flex;
     gap: 8px;
+    flex-shrink: 0;
     flex-wrap: wrap;
+}
+
+.kb-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 9999px;
+    white-space: nowrap;
+}
+
+.kb-badge ::deep .mud-icon-root {
+    font-size: 0.875rem;
+}
+
+.kb-badge-blue {
+    background-color: #e3f2fd;
+    color: #1976d2;
+}
+
+@media (prefers-color-scheme: dark) {
+    .kb-badge-blue {
+        background-color: rgba(25, 118, 210, 0.16);
+        color: #64b5f6;
+    }
+}
+
+.kb-badge-purple {
+    background-color: #f3e5f5;
+    color: #7b1fa2;
+}
+
+@media (prefers-color-scheme: dark) {
+    .kb-badge-purple {
+        background-color: rgba(123, 31, 162, 0.16);
+        color: #ba68c8;
+    }
+}
+
+.kb-badge-gray {
+    background-color: #f5f5f5;
+    color: #616161;
+}
+
+@media (prefers-color-scheme: dark) {
+    .kb-badge-gray {
+        background-color: rgba(255, 255, 255, 0.08);
+        color: #bdbdbd;
+    }
 }
 
 /* Document Queue Section */
@@ -148,12 +209,19 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+    padding-top: 4px;
 }
 
 .queue-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+
+.queue-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .queue-controls {
@@ -201,6 +269,9 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--mud-palette-text-secondary);
 }
 
 .markdown-group-section {

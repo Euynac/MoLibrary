@@ -62,7 +62,7 @@
 
 .stats-container {
     padding: 12px;
-    background-color: var(--mud-palette-background-grey);
+    background-color: var(--mud-palette-background-gray);
     border: 1px solid var(--mud-palette-info);
 }
 
@@ -165,7 +165,7 @@
 
 /* 按钮悬停效果 */
 ::deep .channel-card .mud-button-root:hover {
-    background-color: var(--mud-palette-action-hover);
+    background-color: var(--mud-palette-action-default-hover);
 }
 
 /* 卡片阴影效果 */

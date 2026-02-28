@@ -18,7 +18,7 @@
     align-items: center;
     gap: 8px;
     padding: 12px 16px;
-    background-color: var(--mud-palette-background-grey);
+    background-color: var(--mud-palette-background-gray);
     border-bottom: 1px solid var(--mud-palette-divider);
     flex-wrap: wrap;
 }
@@ -44,7 +44,7 @@
 }
 
 .diff-content::-webkit-scrollbar-track {
-    background: var(--mud-palette-background-grey);
+    background: var(--mud-palette-background-gray);
 }
 
 .diff-content::-webkit-scrollbar-thumb {

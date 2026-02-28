@@ -11,7 +11,7 @@
 
 .subscription-table-wrapper ::deep .mud-table-head .mud-table-cell {
     font-weight: 600;
-    background-color: var(--mud-palette-background-grey);
+    background-color: var(--mud-palette-background-gray);
 }
 
 /* 详情面板样式 */
@@ -24,7 +24,7 @@
     padding: 8px;
     border-radius: 4px;
     margin-bottom: 4px;
-    background-color: var(--mud-palette-background-grey);
+    background-color: var(--mud-palette-background-gray);
     transition: background-color 0.2s;
 }
 

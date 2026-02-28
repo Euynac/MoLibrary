@@ -1,6 +1,6 @@
 .tool-call-detail {
     border-left: 3px solid var(--mud-palette-info);
-    background-color: var(--mud-palette-background-grey);
+    background-color: var(--mud-palette-background-gray);
     border-radius: 8px;
     padding: 8px 12px;
     margin-bottom: 10px;
@@ -74,7 +74,7 @@
     padding: 4px 8px;
     margin-left: 26px;
     border-radius: 4px;
-    background-color: var(--mud-palette-background-grey);
+    background-color: var(--mud-palette-background-gray);
     max-height: 120px;
     overflow-y: auto;
 }

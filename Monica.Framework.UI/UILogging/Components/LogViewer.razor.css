@@ -187,14 +187,14 @@
 
 /* Selected line highlighting */
 .log-entry.selected {
-    background-color: var(--mud-palette-action-selected);
+    background-color: var(--mud-palette-action-default-hover);
     border-left-width: 4px;
     border-left-color: var(--mud-palette-primary) !important;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
 }
 
 .log-entry.selected:hover {
-    background-color: var(--mud-palette-action-selected-hover);
+    background-color: var(--mud-palette-action-default-hover);
 }
 
 /* Floating line number badge */

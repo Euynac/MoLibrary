@@ -9,7 +9,7 @@
     background: linear-gradient(135deg,
         rgba(var(--mud-palette-info-rgb), 0.02) 0%,
         rgba(var(--mud-palette-surface-rgb), 0.02) 100%);
-    border: 1px solid rgba(var(--mud-palette-lines-default-rgb), 0.1);
+    border: 1px solid rgba(var(--mud-palette-divider-rgb), 0.1);
 }
 
 .grid-wrapper ::deep .option-card:hover {
@@ -72,7 +72,7 @@
     background: linear-gradient(135deg,
         rgba(var(--mud-palette-info-rgb), 0.08) 0%,
         rgba(var(--mud-palette-surface-rgb), 0.08) 100%);
-    border-color: rgba(var(--mud-palette-lines-default-rgb), 0.2);
+    border-color: rgba(var(--mud-palette-divider-rgb), 0.2);
 }
 
 [data-theme="dark"] .grid-wrapper ::deep .option-card:hover,

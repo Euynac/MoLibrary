@@ -4,7 +4,7 @@
 .metadata-item {
     padding: 8px;
     border-radius: 4px;
-    background-color: var(--mud-palette-surface-variant);
+    background-color: var(--mud-palette-background-gray);
 }
 
 /* 元数据键样式 */
@@ -35,7 +35,7 @@
 /* 复杂对象容器 */
 .metadata-complex-container {
     padding: 12px;
-    background-color: var(--mud-palette-background-grey);
+    background-color: var(--mud-palette-background-gray);
     border: 1px solid var(--mud-palette-divider);
     max-height: 300px;
     overflow-y: auto;
@@ -55,7 +55,7 @@
 .metadata-empty-state {
     padding: 12px;
     border-radius: 4px;
-    background-color: var(--mud-palette-surface-variant);
+    background-color: var(--mud-palette-background-gray);
 }
 
 /* 空状态图标 */
@@ -126,7 +126,7 @@
 }
 
 .metadata-complex-container::-webkit-scrollbar-track {
-    background: var(--mud-palette-background-grey);
+    background: var(--mud-palette-background-gray);
 }
 
 .metadata-complex-container::-webkit-scrollbar-thumb {
@@ -162,7 +162,7 @@
 
 /* 悬停效果 */
 .metadata-item:hover {
-    background-color: var(--mud-palette-action-hover);
+    background-color: var(--mud-palette-action-default-hover);
     transition: background-color 0.2s ease;
 }
 

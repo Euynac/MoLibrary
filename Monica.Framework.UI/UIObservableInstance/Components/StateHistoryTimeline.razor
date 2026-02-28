@@ -47,12 +47,12 @@ else
                         @if (entry.IsStateTransition)
                         {
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                <MudPaper Class="pa-2" Elevation="0" Style="background: var(--mud-palette-background-grey); flex: 1;">
+                                <MudPaper Class="pa-2" Elevation="0" Style="background: var(--mud-palette-background-gray); flex: 1;">
                                     <MudText Typo="Typo.caption" Color="Color.Secondary">之前:</MudText>
                                     <MudText Typo="Typo.body2" Style="font-family: monospace;">@entry.PreviousStateDisplay</MudText>
                                 </MudPaper>
                                 <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Size="Size.Small" Color="Color.Default" />
-                                <MudPaper Class="pa-2" Elevation="0" Style="background: var(--mud-palette-background-grey); flex: 1;">
+                                <MudPaper Class="pa-2" Elevation="0" Style="background: var(--mud-palette-background-gray); flex: 1;">
                                     <MudText Typo="Typo.caption" Color="Color.Secondary">之后:</MudText>
                                     <MudText Typo="Typo.body2" Style="font-family: monospace;">@entry.CurrentStateDisplay</MudText>
                                 </MudPaper>

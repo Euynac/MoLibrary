@@ -65,7 +65,7 @@
 
 /* 数据网格行样式 */
 ::deep .exception-table-container .mud-table-row:hover {
-    background-color: var(--mud-palette-action-hover);
+    background-color: var(--mud-palette-action-default-hover);
 }
 
 /* 进度条颜色 */
@@ -84,7 +84,7 @@
 }
 
 .exception-table-container::-webkit-scrollbar-track {
-    background: var(--mud-palette-background-grey);
+    background: var(--mud-palette-background-gray);
 }
 
 .exception-table-container::-webkit-scrollbar-thumb {

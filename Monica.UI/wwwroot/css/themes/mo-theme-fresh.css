@@ -382,7 +382,8 @@
 .mo-theme-fresh-light .mud-appbar,
 .mo-theme-fresh-dark .mud-appbar {
     backdrop-filter: blur(10px);
-    background-color: rgba(var(--mud-palette-appbar-background-rgb), 0.9) !important;
+    background-color: var(--mud-palette-appbar-background) !important;
+    background-color: color-mix(in srgb, var(--mud-palette-appbar-background) 90%, transparent) !important;
 }
 
 /* 浮动动作按钮 */

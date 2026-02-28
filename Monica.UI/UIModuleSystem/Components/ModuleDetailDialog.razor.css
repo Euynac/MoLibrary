@@ -1,5 +1,5 @@
 .module-detail-header {
-    border-bottom: 1px solid rgba(var(--mud-palette-lines-default-rgb), 0.12);
+    border-bottom: 1px solid rgba(var(--mud-palette-divider-rgb), 0.12);
     padding-bottom: 16px;
 }
 
@@ -84,17 +84,17 @@
 @media (prefers-color-scheme: dark) {
     .detail-card {
         background: linear-gradient(135deg, rgba(var(--mud-palette-primary-rgb), 0.08) 0%, rgba(var(--mud-palette-surface-rgb), 0.08) 100%);
-        border-color: rgba(var(--mud-palette-lines-default-rgb), 0.2);
+        border-color: rgba(var(--mud-palette-divider-rgb), 0.2);
     }
     
     .phase-card {
         background: linear-gradient(135deg, rgba(var(--mud-palette-secondary-rgb), 0.08) 0%, rgba(var(--mud-palette-surface-rgb), 0.08) 100%);
-        border-color: rgba(var(--mud-palette-lines-default-rgb), 0.2);
+        border-color: rgba(var(--mud-palette-divider-rgb), 0.2);
     }
     
     .dependency-stat-card {
         background: linear-gradient(135deg, rgba(var(--mud-palette-info-rgb), 0.08) 0%, rgba(var(--mud-palette-primary-rgb), 0.08) 100%);
-        border-color: rgba(var(--mud-palette-lines-default-rgb), 0.2);
+        border-color: rgba(var(--mud-palette-divider-rgb), 0.2);
     }
 }
 
@@ -102,17 +102,17 @@
 [data-theme="dark"] .detail-card,
 .mud-theme-dark .detail-card {
     background: linear-gradient(135deg, rgba(var(--mud-palette-primary-rgb), 0.08) 0%, rgba(var(--mud-palette-surface-rgb), 0.08) 100%);
-    border-color: rgba(var(--mud-palette-lines-default-rgb), 0.2);
+    border-color: rgba(var(--mud-palette-divider-rgb), 0.2);
 }
 
 [data-theme="dark"] .phase-card,
 .mud-theme-dark .phase-card {
     background: linear-gradient(135deg, rgba(var(--mud-palette-secondary-rgb), 0.08) 0%, rgba(var(--mud-palette-surface-rgb), 0.08) 100%);
-    border-color: rgba(var(--mud-palette-lines-default-rgb), 0.2);
+    border-color: rgba(var(--mud-palette-divider-rgb), 0.2);
 }
 
 [data-theme="dark"] .dependency-stat-card,
 .mud-theme-dark .dependency-stat-card {
     background: linear-gradient(135deg, rgba(var(--mud-palette-info-rgb), 0.08) 0%, rgba(var(--mud-palette-primary-rgb), 0.08) 100%);
-    border-color: rgba(var(--mud-palette-lines-default-rgb), 0.2);
+    border-color: rgba(var(--mud-palette-divider-rgb), 0.2);
 }

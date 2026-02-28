@@ -52,7 +52,7 @@
 .exception-stack-container {
     max-height: 300px;
     overflow-y: auto;
-    background-color: var(--mud-palette-surface-variant);
+    background-color: var(--mud-palette-background-gray);
     padding: 12px;
     border: 1px solid var(--mud-palette-divider);
 }
@@ -127,7 +127,7 @@
 
 .exception-table-container::-webkit-scrollbar-track,
 .exception-stack-container::-webkit-scrollbar-track {
-    background: var(--mud-palette-background-grey);
+    background: var(--mud-palette-background-gray);
 }
 
 .exception-table-container::-webkit-scrollbar-thumb,
@@ -153,7 +153,7 @@
 
 /* 数据表格行悬停效果 */
 ::deep .exception-table-container .mud-table-row:hover {
-    background-color: var(--mud-palette-action-hover);
+    background-color: var(--mud-palette-action-default-hover);
 }
 
 /* 异常卡片悬停效果 */

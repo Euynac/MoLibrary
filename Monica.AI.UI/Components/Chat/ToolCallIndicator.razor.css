@@ -4,7 +4,7 @@
     gap: 8px;
     padding: 6px 12px;
     border-radius: 8px;
-    background-color: var(--mud-palette-background-grey);
+    background-color: var(--mud-palette-background-gray);
     border-left: 3px solid var(--mud-palette-info);
     margin-bottom: 8px;
 }

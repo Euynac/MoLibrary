@@ -18,7 +18,7 @@
 
 .config-value {
     font-family: 'Roboto Mono', monospace;
-    background-color: var(--mud-palette-background-grey);
+    background-color: var(--mud-palette-background-gray);
     padding: 4px 8px;
     border-radius: 4px;
     border: 1px solid var(--mud-palette-divider);
@@ -45,7 +45,7 @@
 }
 
 .configuration-editor-wrapper ::deep .mud-card-header {
-    background-color: var(--mud-palette-background-grey);
+    background-color: var(--mud-palette-background-gray);
     border-bottom: 1px solid var(--mud-palette-divider);
 }
 

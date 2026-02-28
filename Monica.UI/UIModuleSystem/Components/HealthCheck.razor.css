@@ -5,7 +5,7 @@
 .modern-card {
     border-radius: 12px;
     transition: all 0.3s ease;
-    border: 1px solid rgba(var(--mud-palette-lines-default-rgb), 0.12);
+    border: 1px solid rgba(var(--mud-palette-divider-rgb), 0.12);
 }
 
     .modern-card:hover {

@@ -21,7 +21,7 @@
     gap: 12px;
     padding: 8px 16px;
     border-bottom: 1px solid var(--mud-palette-lines-default);
-    background-color: var(--mud-palette-background-grey);
+    background-color: var(--mud-palette-background-gray);
 }
 
 /* Score badge */
