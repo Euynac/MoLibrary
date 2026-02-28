@@ -169,39 +169,18 @@
 }
 
 .kb-badge-blue {
-    background-color: #e3f2fd;
-    color: #1976d2;
-}
-
-@media (prefers-color-scheme: dark) {
-    .kb-badge-blue {
-        background-color: rgba(25, 118, 210, 0.16);
-        color: #64b5f6;
-    }
+    background-color: rgba(var(--mud-palette-primary-rgb), 0.16);
+    color: var(--mud-palette-primary);
 }
 
 .kb-badge-purple {
-    background-color: #f3e5f5;
-    color: #7b1fa2;
-}
-
-@media (prefers-color-scheme: dark) {
-    .kb-badge-purple {
-        background-color: rgba(123, 31, 162, 0.16);
-        color: #ba68c8;
-    }
+    background-color: rgba(var(--mud-palette-secondary-rgb), 0.16);
+    color: var(--mud-palette-secondary);
 }
 
 .kb-badge-gray {
-    background-color: #f5f5f5;
-    color: #616161;
-}
-
-@media (prefers-color-scheme: dark) {
-    .kb-badge-gray {
-        background-color: rgba(255, 255, 255, 0.08);
-        color: #bdbdbd;
-    }
+    background-color: var(--mud-palette-background-gray);
+    color: var(--mud-palette-text-secondary);
 }
 
 /* Document Queue Section */
