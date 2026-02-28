@@ -79,7 +79,7 @@ public class ModuleSignalRGuide : MoModuleGuide<ModuleSignalR, ModuleSignalROpti
 
     protected override string[] GetRequestedConfigMethodKeys()
     {
-        return [nameof(AddMoSignalR), nameof(MapMoHub)];
+        return [nameof(AddSignalR)];
     }
 
     /// <summary>
@@ -92,7 +92,7 @@ public class ModuleSignalRGuide : MoModuleGuide<ModuleSignalR, ModuleSignalROpti
     /// <param name="configure">可选的HubOptions配置委托。</param>
     /// <param name="jsonConfigure">可选的JsonHubProtocolOptions配置委托。</param>
     /// <returns>返回当前<see cref="ModuleSignalRGuide"/>实例以便链式调用。</returns>
-    public ModuleSignalRGuide AddMoSignalR<TIHubOperator, THubOperator, TIContract, TIUser>(
+    public ModuleSignalRGuide AddSignalR<TIHubOperator, THubOperator, TIContract, TIUser>(
         Action<HubOptions>? configure = null,
         Action<JsonHubProtocolOptions>? jsonConfigure = null)
         where THubOperator : class, IMoHubOperator<TIContract, TIUser>, TIHubOperator
@@ -123,7 +123,7 @@ public class ModuleSignalRGuide : MoModuleGuide<ModuleSignalR, ModuleSignalROpti
     /// <summary>
     ///     配置SignalR Swagger显示
     /// </summary>
-    public ModuleSignalRGuide AddMoSignalRSwagger(Action<SignalRSwaggerGenOptions> signalROption)
+    public ModuleSignalRGuide AddSignalRSwagger(Action<SignalRSwaggerGenOptions> signalROption)
     {
         ConfigureServices(context =>
         {
@@ -138,7 +138,7 @@ public class ModuleSignalRGuide : MoModuleGuide<ModuleSignalR, ModuleSignalROpti
     /// <summary>
     ///     增加SignalR Hub以及相关接口
     /// </summary>
-    public ModuleSignalRGuide MapMoHub<THubServer>([StringSyntax("Route")] string pattern) where THubServer : Hub
+    public ModuleSignalRGuide MapSignalRHub<THubServer>([StringSyntax("Route")] string pattern) where THubServer : Hub
     {
         ConfigureModuleOption(option =>
         {

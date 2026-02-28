@@ -21,7 +21,7 @@ public static class ModuleSignalrUIBuilderExtensions
         /// <summary>
         /// 配置 SignalrUI 模块
         /// </summary>
-        public static ModuleSignalrUIGuide AddSignalrUI(Action<ModuleSignalrUIOption>? action = null)
+        public static ModuleSignalrUIGuide AddSignalRUI(Action<ModuleSignalrUIOption>? action = null)
         {
             return new ModuleSignalrUIGuide().Register(action);
         }

@@ -192,7 +192,7 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     }
 
     /// <summary>
-    /// 配置空注册，记录当前配置方法的调用。仅用于规避多次调用某些方法或未调用必须方法。
+    /// 配置空注册，记录当前配置方法的调用。仅用于规避多次调用某些方法或设置未调用必须方法。
     /// </summary>
     /// <param name="key">配置方法的唯一标识符</param>
     protected internal void ConfigureEmpty([CallerMemberName] string key = "")
