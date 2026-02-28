@@ -114,9 +114,9 @@ and updates:
 
 - `references/mudblazor-css-variables.json` (authoritative machine-readable list of real variables)
 
-### B. Validate CSS Usage
+### B. Validate CSS/Razor Usage
 
-Validate all CSS files under a project/repo root:
+Validate all CSS and Razor files under a project/repo root:
 
 ```bash
 python scripts/validate_mud_css_variables.py --root D:\Code\MoLibrary
@@ -186,7 +186,7 @@ For `Res/Res<T>` usage and `IsFailed` pattern in UI service calls, use the `mo-d
 
 - `scripts/check_mudblazor_source.py` - Verify local MudBlazor source path (Windows/WSL compatible path resolution).
 - `scripts/sync_mud_css_variables.py` - Initialize/update real MudBlazor CSS variable JSON from source.
-- `scripts/validate_mud_css_variables.py` - Validate CSS variable usage and apply safe auto-fixes.
+- `scripts/validate_mud_css_variables.py` - Validate MudBlazor variable usage in CSS/Razor files and apply safe auto-fixes.
 - `scripts/validate_localization.py` - Validate localization keys (missing/unused/sync).
 - `scripts/font_downloader.py` - Download fonts for offline usage.
 

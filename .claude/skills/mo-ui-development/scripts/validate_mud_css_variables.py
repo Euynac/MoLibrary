@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Validate MudBlazor CSS variables used by project CSS files.
+Validate MudBlazor CSS variables used by project style sources.
 
-This script checks all CSS files under a project root and reports usages of
-unknown MudBlazor variables compared to the generated variable list.
+This script checks CSS and Razor files under a project root and reports usages
+of unknown MudBlazor variables compared to the generated variable list.
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ SKILL_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_VARIABLES_FILE = SKILL_ROOT / "references" / "mudblazor-css-variables.json"
 
 IGNORED_DIRS = {".git", "bin", "obj", ".pending"}
-CSS_GLOB = "*.css"
+SCAN_GLOBS = ("*.css", "*.razor")
 VAR_USAGE_PATTERN = re.compile(r"var\(\s*(--mud-[a-z0-9-]+)\b", re.IGNORECASE)
 
 SAFE_REPLACEMENTS = {
@@ -67,12 +67,13 @@ def should_skip(path: Path) -> bool:
     return any(part.lower() in IGNORED_DIRS for part in path.parts)
 
 
-def iter_css_files(root: Path) -> Iterable[Path]:
-    for file_path in root.rglob(CSS_GLOB):
-        if should_skip(file_path):
-            continue
-        if file_path.is_file():
-            yield file_path
+def iter_scan_files(root: Path) -> Iterable[Path]:
+    for glob in SCAN_GLOBS:
+        for file_path in root.rglob(glob):
+            if should_skip(file_path):
+                continue
+            if file_path.is_file():
+                yield file_path
 
 
 def load_valid_variables(path: Path) -> set[str]:
@@ -87,14 +88,19 @@ def load_valid_variables(path: Path) -> set[str]:
     return {str(value).strip().lower() for value in values if str(value).strip()}
 
 
-def collect_usages(root: Path) -> tuple[dict[str, list[Usage]], int]:
+def collect_usages(root: Path) -> tuple[dict[str, list[Usage]], dict[str, int]]:
     usages: dict[str, list[Usage]] = defaultdict(list)
-    css_file_count = 0
+    scanned_counts = {"css": 0, "razor": 0}
 
-    for css_file in iter_css_files(root):
-        css_file_count += 1
-        content = css_file.read_text(encoding="utf-8", errors="ignore")
-        relative = css_file.relative_to(root).as_posix()
+    for source_file in iter_scan_files(root):
+        suffix = source_file.suffix.lower()
+        if suffix == ".css":
+            scanned_counts["css"] += 1
+        elif suffix == ".razor":
+            scanned_counts["razor"] += 1
+
+        content = source_file.read_text(encoding="utf-8", errors="ignore")
+        relative = source_file.relative_to(root).as_posix()
 
         for line_number, line in enumerate(content.splitlines(), start=1):
             for match in VAR_USAGE_PATTERN.finditer(line):
@@ -103,15 +109,15 @@ def collect_usages(root: Path) -> tuple[dict[str, list[Usage]], int]:
                     Usage(file=relative, line=line_number, column=match.start(1) + 1)
                 )
 
-    return dict(usages), css_file_count
+    return dict(usages), scanned_counts
 
 
 def apply_safe_fixes(root: Path) -> tuple[dict[str, int], int]:
     replacement_counts: dict[str, int] = {}
     files_changed = 0
 
-    for css_file in iter_css_files(root):
-        original = css_file.read_text(encoding="utf-8", errors="ignore")
+    for source_file in iter_scan_files(root):
+        original = source_file.read_text(encoding="utf-8", errors="ignore")
         updated = original
         file_replacements = 0
 
@@ -123,7 +129,7 @@ def apply_safe_fixes(root: Path) -> tuple[dict[str, int], int]:
                 file_replacements += replaced
 
         if file_replacements > 0 and updated != original:
-            css_file.write_text(updated, encoding="utf-8")
+            source_file.write_text(updated, encoding="utf-8")
             files_changed += 1
 
     return replacement_counts, files_changed
@@ -132,7 +138,7 @@ def apply_safe_fixes(root: Path) -> tuple[dict[str, int], int]:
 def build_report(
     root: Path,
     variables_file: Path,
-    css_file_count: int,
+    scanned_counts: dict[str, int],
     usages: dict[str, list[Usage]],
     unknown_usages: dict[str, list[Usage]],
     fix_counts: dict[str, int],
@@ -140,12 +146,16 @@ def build_report(
 ) -> dict:
     unknown_occurrences = sum(len(items) for items in unknown_usages.values())
     total_occurrences = sum(len(items) for items in usages.values())
+    css_file_count = scanned_counts.get("css", 0)
+    razor_file_count = scanned_counts.get("razor", 0)
 
     return {
         "root": str(root),
         "variables_file": str(variables_file),
         "summary": {
             "css_files_scanned": css_file_count,
+            "razor_files_scanned": razor_file_count,
+            "files_scanned_total": css_file_count + razor_file_count,
             "variables_used_distinct": len(usages),
             "variables_used_occurrences": total_occurrences,
             "unknown_variables_distinct": len(unknown_usages),
@@ -175,7 +185,7 @@ def print_console_report(report: dict, summary_only: bool) -> None:
 
     if not summary_only:
         if unknown:
-            print(f"{Colors.RED}{Colors.BOLD}[ERROR] Unknown CSS variables:{Colors.END}")
+            print(f"{Colors.RED}{Colors.BOLD}[ERROR] Unknown MudBlazor variables:{Colors.END}")
             for variable, locations in unknown.items():
                 print(f"  {Colors.RED}x{Colors.END} {variable}")
                 for item in locations:
@@ -184,7 +194,7 @@ def print_console_report(report: dict, summary_only: bool) -> None:
                     print(f"    {Colors.YELLOW}Hint:{Colors.END} {', '.join(hints[variable])}")
             print()
         else:
-            print(f"{Colors.GREEN}[OK] No unknown MudBlazor CSS variables found.{Colors.END}\n")
+            print(f"{Colors.GREEN}[OK] No unknown MudBlazor variables found.{Colors.END}\n")
 
         safe_fix_counts = report["safe_fix_counts"]
         if safe_fix_counts:
@@ -196,6 +206,8 @@ def print_console_report(report: dict, summary_only: bool) -> None:
     status_color = Colors.GREEN if summary["status"] == "PASSED" else Colors.RED
     print(f"{Colors.BOLD}Summary:{Colors.END}")
     print(f"  CSS files scanned: {summary['css_files_scanned']}")
+    print(f"  Razor files scanned: {summary['razor_files_scanned']}")
+    print(f"  Total files scanned: {summary['files_scanned_total']}")
     print(f"  Variables used (distinct): {summary['variables_used_distinct']}")
     print(f"  Variables used (occurrences): {summary['variables_used_occurrences']}")
     print(f"  Unknown variables (distinct): {summary['unknown_variables_distinct']}")
@@ -206,7 +218,9 @@ def print_console_report(report: dict, summary_only: bool) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Validate MudBlazor CSS variable usage.")
+    parser = argparse.ArgumentParser(
+        description="Validate MudBlazor CSS variable usage in CSS and Razor files."
+    )
     parser.add_argument("--root", type=str, default=".", help="Project root directory to scan.")
     parser.add_argument(
         "--variables-file",
@@ -242,7 +256,7 @@ def main() -> int:
     if args.fix:
         fix_counts, fixed_files = apply_safe_fixes(root)
 
-    usages, css_file_count = collect_usages(root)
+    usages, scanned_counts = collect_usages(root)
     unknown_usages = {
         variable: locations
         for variable, locations in usages.items()
@@ -252,7 +266,7 @@ def main() -> int:
     report = build_report(
         root=root,
         variables_file=variables_file,
-        css_file_count=css_file_count,
+        scanned_counts=scanned_counts,
         usages=usages,
         unknown_usages=unknown_usages,
         fix_counts=fix_counts,
