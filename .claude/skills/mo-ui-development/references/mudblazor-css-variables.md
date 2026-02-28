@@ -1,4 +1,4 @@
-# MudBlazor CSS Variables Reference
+﻿# MudBlazor CSS Variables Reference
 
 This document provides a complete reference for MudBlazor CSS variables used in theming.
 
@@ -100,9 +100,9 @@ This document provides a complete reference for MudBlazor CSS variables used in 
 | Name | Default | CSS Variable |
 |------|---------|--------------|
 | BorderOpacity | 1 | --mud-palette-border-opacity |
-| HoverOpacity | 0.06 | --mud-palette-hover-opacity |
-| RippleOpacity | 0.1 | --mud-palette-ripple-opacity |
-| RippleOpacitySecondary | 0.2 | --mud-palette-ripple-opacity-secondary |
+| HoverOpacity | 0.06 | Use color-specific hover variables, e.g. `--mud-palette-primary-hover` |
+| RippleOpacity | 0.1 | --mud-ripple-opacity |
+| RippleOpacitySecondary | 0.2 | --mud-ripple-opacity-secondary |
 
 ### Gray Scale
 
@@ -157,8 +157,8 @@ This document provides a complete reference for MudBlazor CSS variables used in 
 | Name | Default | CSS Variable |
 |------|---------|--------------|
 | DefaultBorderRadius | 4px | --mud-default-borderradius |
-| DrawerMiniWidthLeft | 56px | --mud-drawer-mini-width-left |
-| DrawerMiniWidthRight | 56px | --mud-drawer-mini-width-right |
+| DrawerMiniWidthLeft | 56px | --mud-drawer-width-mini-left |
+| DrawerMiniWidthRight | 56px | --mud-drawer-width-mini-right |
 | DrawerWidthLeft | 240px | --mud-drawer-width-left |
 | DrawerWidthRight | 240px | --mud-drawer-width-right |
 | AppbarHeight | 64px | --mud-appbar-height |
@@ -178,26 +178,28 @@ This document provides a complete reference for MudBlazor CSS variables used in 
 
 ### Heading Typography (H1-H6)
 
-| Element | Weight | Size | Line Height | Letter Spacing | CSS Variable Prefix |
-|---------|--------|------|-------------|----------------|---------------------|
-| H1 | 300 | 6rem | 1.167 | -.01562em | --mud-typography-h1-* |
-| H2 | 300 | 3.75rem | 1.2 | -.00833em | --mud-typography-h2-* |
-| H3 | 400 | 3rem | 1.167 | 0 | --mud-typography-h3-* |
-| H4 | 400 | 2.125rem | 1.235 | .00735em | --mud-typography-h4-* |
-| H5 | 400 | 1.5rem | 1.334 | 0 | --mud-typography-h5-* |
-| H6 | 500 | 1.25rem | 1.6 | .0075em | --mud-typography-h6-* |
+| Element | Weight | Size | Line Height | Letter Spacing | Example CSS Variable |
+|---------|--------|------|-------------|----------------|----------------------|
+| H1 | 300 | 6rem | 1.167 | -.01562em | --mud-typography-h1-size |
+| H2 | 300 | 3.75rem | 1.2 | -.00833em | --mud-typography-h2-size |
+| H3 | 400 | 3rem | 1.167 | 0 | --mud-typography-h3-size |
+| H4 | 400 | 2.125rem | 1.235 | .00735em | --mud-typography-h4-size |
+| H5 | 400 | 1.5rem | 1.334 | 0 | --mud-typography-h5-size |
+| H6 | 500 | 1.25rem | 1.6 | .0075em | --mud-typography-h6-size |
 
 ### Body and Other Typography
 
-| Element | Weight | Size | Line Height | Letter Spacing | CSS Variable Prefix |
-|---------|--------|------|-------------|----------------|---------------------|
-| Subtitle1 | 400 | 1rem | 1.75 | .00938em | --mud-typography-subtitle1-* |
-| Subtitle2 | 500 | .875rem | 1.57 | .00714em | --mud-typography-subtitle2-* |
-| Body1 | 400 | 1rem | 1.5 | .00938em | --mud-typography-body1-* |
-| Body2 | 400 | .875rem | 1.43 | .01071em | --mud-typography-body2-* |
-| Button | 500 | .875rem | 1.75 | .02857em | --mud-typography-button-* |
-| Caption | 400 | .75rem | 1.66 | .03333em | --mud-typography-caption-* |
-| Overline | 400 | .75rem | 2.66 | .08333em | --mud-typography-overline-* |
+| Element | Weight | Size | Line Height | Letter Spacing | Example CSS Variable |
+|---------|--------|------|-------------|----------------|----------------------|
+| Subtitle1 | 400 | 1rem | 1.75 | .00938em | --mud-typography-subtitle1-size |
+| Subtitle2 | 500 | .875rem | 1.57 | .00714em | --mud-typography-subtitle2-size |
+| Body1 | 400 | 1rem | 1.5 | .00938em | --mud-typography-body1-size |
+| Body2 | 400 | .875rem | 1.43 | .01071em | --mud-typography-body2-size |
+| Button | 500 | .875rem | 1.75 | .02857em | --mud-typography-button-size |
+| Caption | 400 | .75rem | 1.66 | .03333em | --mud-typography-caption-size |
+| Overline | 400 | .75rem | 2.66 | .08333em | --mud-typography-overline-size |
+
+Each typography element also provides `-family`, `-weight`, `-lineheight`, `-letterspacing`, and `-text-transform` variables.
 
 ## ZIndex Variables
 

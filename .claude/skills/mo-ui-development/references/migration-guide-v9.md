@@ -358,4 +358,4 @@ private IConverter<MyType?, string?> _converter = Conversions
 
 ---
 
-**For v8 migration details, see `migration-guide-v8.md`.**
+**For v8 migration details, check MudBlazor source history and official release notes for the v7 -> v8 transition.**
