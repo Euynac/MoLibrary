@@ -3,6 +3,9 @@
 ###############################################################################
 * text=auto
 
+# Keep shell scripts executable in WSL/Linux environments.
+*.sh text eol=lf
+
 ###############################################################################
 # Set default behavior for command prompt diff.
 #
