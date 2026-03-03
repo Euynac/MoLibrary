@@ -215,12 +215,7 @@ public class RAGUIService(
         try
         {
             logger.LogInformation("Removing document '{DocumentId}' from KB '{KbId}'", documentId, kbId);
-
-            // Remove from queue
-            await documentQueueStore.RemoveAsync(kbId, documentId);
-
-            // TODO: Also remove from vector store if indexed
-            // This would require RAGService to have a RemoveDocument method
+            await ragService.RemoveDocumentAsync(kbId, documentId);
 
             return Res.Ok("Document removed successfully.");
         }
@@ -325,17 +320,8 @@ public class RAGUIService(
             queueItem.Progress = 0;
             await documentQueueStore.UpdateAsync(queueItem, cancellationToken);
 
-            // Get document content from markdown service
-            // The document ID is the relative path
-            var groups = await markdownService.GetAllDocumentGroupsAsync();
-            MarkdownDocument? document = null;
-
-            foreach (var group in groups)
-            {
-                var docs = await markdownService.GetDocumentsAsync(group.Key);
-                document = docs.FirstOrDefault(d => d.RelativePath == queueItem.Id);
-                if (document != null) break;
-            }
+            // Get document content from markdown service (document ID is relative path).
+            var document = await FindMarkdownDocumentByPathAsync(queueItem.Id);
 
             if (document == null)
             {
@@ -414,67 +400,29 @@ public class RAGUIService(
     {
         try
         {
-            // TODO: Implement actual document chunk retrieval from RAGService
             logger.LogInformation("Getting chunks for document '{DocumentId}' in KB '{KbId}'", documentId, kbId);
 
-            // Mock implementation with sample data
-            var originalText = @"# Getting Started
-
-Welcome to our product! This guide will help you get started quickly with the basic setup and configuration.
-
-## Installation
-
-To install the product, run: npm install @product/core. Make sure you have Node.js 18+ installed.
-
-You can verify the installation by running: npm list @product/core
-
-## Configuration
-
-Create a config.json file in your project root with the following structure: { ""apiKey"": ""your-key"", ""endpoint"": ""https://api.example.com"" }
-
-The configuration file supports multiple environments. You can create separate config files for development, staging, and production.
-
-## First Steps
-
-After installation and configuration, you can start using the product by importing it in your code:
-
-import { Product } from '@product/core';
-
-const product = new Product(config);
-
-## Next Steps
-
-Check out the API reference for detailed information about available methods and options. Visit our documentation portal for tutorials and examples.";
-
-            var chunks = new List<ChunkHighlight>
+            var indexedView = await ragService.GetDocumentChunkViewAsync(kbId, documentId);
+            if (indexedView is not null)
             {
-                new()
-                {
-                    Index = 0,
-                    Start = 20,
-                    End = 130,
-                    Section = "Introduction",
-                    IsMatched = false
-                },
-                new()
-                {
-                    Index = 1,
-                    Start = 150,
-                    End = 280,
-                    Section = "Installation",
-                    IsMatched = false
-                },
-                new()
-                {
-                    Index = 2,
-                    Start = 380,
-                    End = 550,
-                    Section = "Configuration",
-                    IsMatched = false
-                }
-            };
+                return Res.Ok((indexedView.OriginalText, indexedView.Chunks));
+            }
 
-            return Res.Ok((originalText, (IReadOnlyList<ChunkHighlight>)chunks));
+            var markdownDocument = await FindMarkdownDocumentByPathAsync(documentId);
+            if (markdownDocument is null)
+            {
+                return Res.Fail(
+                    $"Document '{documentId}' has no indexed chunk snapshot and no markdown source was found.");
+            }
+
+            var originalText = await markdownService.GetDocumentContentAsync(markdownDocument);
+            var previewView = await ragService.BuildDocumentChunkPreviewAsync(
+                kbId,
+                markdownDocument.RelativePath,
+                markdownDocument.Title,
+                originalText);
+
+            return Res.Ok((previewView.OriginalText, previewView.Chunks));
         }
         catch (Exception ex)
         {
@@ -484,4 +432,21 @@ Check out the API reference for detailed information about available methods and
     }
 
     #endregion
+
+    private async Task<MarkdownDocument?> FindMarkdownDocumentByPathAsync(string documentPath)
+    {
+        var groups = await markdownService.GetAllDocumentGroupsAsync();
+        foreach (var group in groups)
+        {
+            var documents = await markdownService.GetDocumentsAsync(group.Key);
+            var matched = documents.FirstOrDefault(doc =>
+                string.Equals(doc.RelativePath, documentPath, StringComparison.OrdinalIgnoreCase));
+            if (matched is not null)
+            {
+                return matched;
+            }
+        }
+
+        return null;
+    }
 }

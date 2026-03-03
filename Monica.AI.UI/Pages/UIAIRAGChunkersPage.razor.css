@@ -1,0 +1,49 @@
+.rag-chunkers-page {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 12px;
+}
+
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.loading-state {
+    display: flex;
+    justify-content: center;
+    padding: 48px 0;
+}
+
+.chunkers-panel,
+.routes-panel,
+.test-panel {
+    padding: 16px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 12px;
+    background: var(--mud-palette-background-grey);
+}
+
+.section-title {
+    margin-bottom: 12px;
+}
+
+.extension-chip {
+    margin-right: 6px;
+    margin-bottom: 6px;
+}
+
+.test-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.test-result {
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}

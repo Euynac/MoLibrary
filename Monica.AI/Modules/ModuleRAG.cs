@@ -1,5 +1,6 @@
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.VectorData;
 using Microsoft.SemanticKernel.Connectors.InMemory;
 using Monica.AI.Models;
@@ -41,8 +42,15 @@ public class ModuleRAG(ModuleRAGOption option)
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddSingleton<RAGService>();
-        services.AddSingleton<IDocumentChunker, MarkdownDocumentChunker>();
+        services.AddSingleton<ChunkerRegistry>();
         services.AddSingleton<IDocumentQueueStore, Monica.AI.RAG.Stores.InMemoryDocumentQueueStore>();
+        services.TryAddSingleton<IChunkerRoutingStore, FileChunkerRoutingStore>();
+        services.TryAddSingleton<IDocumentChunkSnapshotStore, FileDocumentChunkSnapshotStore>();
+
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IDocumentChunker, ProductionMarkdownDocumentChunker>());
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IDocumentChunker, SimpleMarkdownDocumentChunker>());
     }
 }
 
@@ -59,6 +67,36 @@ public class ModuleRAGOption : MoModuleOption<ModuleRAG>
     /// Resolved relative to the application's running directory.
     /// </summary>
     public string KnowledgeBaseStoreFilePath { get; set; } = "monica_data/rag/knowledge_bases.json";
+
+    /// <summary>
+    /// Relative file path for extension-to-chunker routing configuration.
+    /// </summary>
+    public string ChunkerRoutingStoreFilePath { get; set; } = "monica_data/rag/chunker_routing.json";
+
+    /// <summary>
+    /// Relative file path for document chunk snapshots used by chunk viewer.
+    /// </summary>
+    public string DocumentChunkSnapshotStoreFilePath { get; set; } = "monica_data/rag/document_chunk_snapshots.json";
+
+    /// <summary>
+    /// Target chunk size for the production markdown chunker.
+    /// </summary>
+    public int ProductionChunkerTargetChars { get; set; } = 1200;
+
+    /// <summary>
+    /// Maximum chunk size for the production markdown chunker.
+    /// </summary>
+    public int ProductionChunkerMaxChars { get; set; } = 1800;
+
+    /// <summary>
+    /// Minimum chunk size for the production markdown chunker.
+    /// </summary>
+    public int ProductionChunkerMinChars { get; set; } = 200;
+
+    /// <summary>
+    /// Overlap size between adjacent chunks for the production markdown chunker.
+    /// </summary>
+    public int ProductionChunkerOverlapChars { get; set; } = 120;
 
     /// <summary>
     /// Options for the TextSearchProvider used in agent integration (Phase 3).
@@ -130,6 +168,56 @@ public class ModuleRAGGuide
     }
 
     /// <summary>
+    /// Uses a custom chunker routing store implementation.
+    /// </summary>
+    public ModuleRAGGuide UseChunkerRoutingStore<TStore>()
+        where TStore : class, IChunkerRoutingStore
+    {
+        ConfigureServices(ctx =>
+        {
+            ctx.Services.AddSingleton<IChunkerRoutingStore, TStore>();
+        });
+        return this;
+    }
+
+    /// <summary>
+    /// Uses file-based extension routing store.
+    /// </summary>
+    public ModuleRAGGuide UseChunkerRoutingFileProvider()
+    {
+        ConfigureServices(ctx =>
+        {
+            ctx.Services.AddSingleton<IChunkerRoutingStore, FileChunkerRoutingStore>();
+        });
+        return this;
+    }
+
+    /// <summary>
+    /// Uses a custom document chunk snapshot store implementation.
+    /// </summary>
+    public ModuleRAGGuide UseDocumentChunkSnapshotStore<TStore>()
+        where TStore : class, IDocumentChunkSnapshotStore
+    {
+        ConfigureServices(ctx =>
+        {
+            ctx.Services.AddSingleton<IDocumentChunkSnapshotStore, TStore>();
+        });
+        return this;
+    }
+
+    /// <summary>
+    /// Uses file-based document chunk snapshot store.
+    /// </summary>
+    public ModuleRAGGuide UseDocumentChunkSnapshotFileProvider()
+    {
+        ConfigureServices(ctx =>
+        {
+            ctx.Services.AddSingleton<IDocumentChunkSnapshotStore, FileDocumentChunkSnapshotStore>();
+        });
+        return this;
+    }
+
+    /// <summary>
     /// Uses fake embeddings for testing and development through the unified AI provider pipeline.
     /// </summary>
     /// <param name="dimensions">Embedding dimensions.</param>
@@ -168,8 +256,50 @@ public class ModuleRAGGuide
     {
         ConfigureServices(ctx =>
         {
-            ctx.Services.AddSingleton<IDocumentChunker, TChunker>();
+            ctx.Services.TryAddEnumerable(
+                ServiceDescriptor.Singleton<IDocumentChunker, TChunker>());
         });
         return this;
     }
+
+    /// <summary>
+    /// Registers one built-in chunker.
+    /// </summary>
+    public ModuleRAGGuide AddBuiltInChunker(RAGBuiltInChunkerType chunkerType)
+    {
+        return chunkerType switch
+        {
+            RAGBuiltInChunkerType.ProductionMarkdown => AddChunker<ProductionMarkdownDocumentChunker>(),
+            RAGBuiltInChunkerType.SimpleMarkdown => AddChunker<SimpleMarkdownDocumentChunker>(),
+            _ => this
+        };
+    }
+
+    /// <summary>
+    /// Registers selected built-in chunkers.
+    /// </summary>
+    public ModuleRAGGuide AddBuiltInChunkers(params RAGBuiltInChunkerType[] chunkerTypes)
+    {
+        if (chunkerTypes is null || chunkerTypes.Length == 0)
+        {
+            return AddBuiltInChunker(RAGBuiltInChunkerType.ProductionMarkdown)
+                .AddBuiltInChunker(RAGBuiltInChunkerType.SimpleMarkdown);
+        }
+
+        foreach (var chunkerType in chunkerTypes.Distinct())
+        {
+            AddBuiltInChunker(chunkerType);
+        }
+
+        return this;
+    }
+}
+
+/// <summary>
+/// Built-in chunker kinds provided by ModuleRAG.
+/// </summary>
+public enum RAGBuiltInChunkerType
+{
+    ProductionMarkdown = 1,
+    SimpleMarkdown = 2
 }

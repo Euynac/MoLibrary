@@ -69,7 +69,8 @@
   },
   "RAG": {
     "Navigation": {
-      "Manage": "Knowledge Base Management"
+      "Manage": "Knowledge Base Management",
+      "Chunkers": "Chunker Management"
     },
     "EmbeddingModel": {
       "Label": "Embedding Model",
@@ -181,6 +182,34 @@
       "Searching": "Searching...",
       "NoResults": "No results found",
       "ResultsCount": "{0} results"
+    },
+    "Chunker": {
+      "Title": "Chunker Management",
+      "Registered": "Registered Chunkers",
+      "Name": "Name",
+      "Id": "Chunker ID",
+      "Extensions": "Extensions",
+      "Description": "Description",
+      "Routing": "Extension Routing",
+      "Extension": "Extension",
+      "Current": "Current",
+      "Target": "Target",
+      "Affected": "Affected",
+      "Actions": "Actions",
+      "AffectedCount": "{0} docs",
+      "Apply": "Apply",
+      "ConfirmTitle": "Apply Routing Change",
+      "ConfirmMessage": "This change will mark {0} indexed documents as pending reindex. Continue?",
+      "ApplySuccess": "Chunker routing updated.",
+      "TestTitle": "Chunker Test",
+      "TestChunker": "Chunker",
+      "TestDocument": "Document Name",
+      "TestContent": "Sample Content",
+      "RunTest": "Run Test",
+      "TestChunkCount": "{0} chunks",
+      "ViewPreview": "View Preview",
+      "PreviewTitle": "Chunk Preview",
+      "PreviewStatus": "Preview by {0}"
     }
   },
   "ProviderManage": {
@@ -199,5 +228,10 @@
     "DimensionDetectSuccess": "Detection successful: dimension = {0}",
     "UpdatePromptFailed": "Failed to update prompt",
     "GetRemoteModelsFailed": "Failed to get remote model list"
+  },
+  "Pages": {
+    "RAGChunkers": {
+      "Title": "RAG Chunkers"
+    }
   }
 }

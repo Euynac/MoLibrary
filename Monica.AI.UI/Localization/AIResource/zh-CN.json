@@ -69,7 +69,8 @@
   },
   "RAG": {
     "Navigation": {
-      "Manage": "知识库管理"
+      "Manage": "知识库管理",
+      "Chunkers": "分块器管理"
     },
     "EmbeddingModel": {
       "Label": "嵌入模型",
@@ -80,12 +81,12 @@
         "KBModel": "知识库模型：{0}",
         "SearchMismatch": "以下知识库使用不同的嵌入模型：{0}。搜索结果可能不准确。"
       },
-      "NotConfigured": "Current AI providers have no embedding models configured.",
-      "ReindexRequired": "Embedding model switched and current index was cleared. Reindex all documents in this knowledge base.",
+      "NotConfigured": "当前AI提供商未配置嵌入模型。",
+      "ReindexRequired": "嵌入模型已切换且当前索引已清除。请重新索引此知识库中的所有文档。",
       "ReindexConfirm": {
-        "Title": "Reindex Required",
-        "Message": "Knowledge base '{0}' already has indexed documents. Switching embedding model will clear the current index immediately. Continue?",
-        "Continue": "Continue"
+        "Title": "需要重新索引",
+        "Message": "知识库 '{0}' 已包含索引文档。切换嵌入模型将立即清除当前索引。是否继续？",
+        "Continue": "继续"
       }
     },
     "KnowledgeBase": {
@@ -181,6 +182,34 @@
       "Searching": "搜索中...",
       "NoResults": "未找到结果",
       "ResultsCount": "{0} 个结果"
+    },
+    "Chunker": {
+      "Title": "分块器管理",
+      "Registered": "已注册分块器",
+      "Name": "名称",
+      "Id": "分块器 ID",
+      "Extensions": "扩展名",
+      "Description": "描述",
+      "Routing": "扩展名路由",
+      "Extension": "扩展名",
+      "Current": "当前",
+      "Target": "目标",
+      "Affected": "影响",
+      "Actions": "操作",
+      "AffectedCount": "{0} 个文档",
+      "Apply": "应用",
+      "ConfirmTitle": "应用路由变更",
+      "ConfirmMessage": "此变更会将 {0} 个已索引文档标记为待重建索引，是否继续？",
+      "ApplySuccess": "分块器路由已更新。",
+      "TestTitle": "分块器测试",
+      "TestChunker": "分块器",
+      "TestDocument": "文档名",
+      "TestContent": "测试内容",
+      "RunTest": "执行测试",
+      "TestChunkCount": "{0} 个分块",
+      "ViewPreview": "查看预览",
+      "PreviewTitle": "分块预览",
+      "PreviewStatus": "由 {0} 预览"
     }
   },
   "ProviderManage": {
@@ -199,5 +228,10 @@
     "DimensionDetectSuccess": "探测成功: 维度 = {0}",
     "UpdatePromptFailed": "更新提示词失败",
     "GetRemoteModelsFailed": "获取远程模型列表失败"
+  },
+  "Pages": {
+    "RAGChunkers": {
+      "Title": "RAG 分块器"
+    }
   }
 }

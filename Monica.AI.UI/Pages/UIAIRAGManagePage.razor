@@ -567,8 +567,8 @@
         // Determine status text for display
         var statusText = document.Status switch
         {
-            DocumentStatus.Done => L["RAG:ChunkViewer:Indexed", document.IndexedAt?.ToString("yyyy-MM-dd") ?? ""],
-            DocumentStatus.Pending => L["RAG:ChunkViewer:PendingIndexing"],
+            DocumentStatus.Done => L["RAG:ChunkViewer:Indexed", document.IndexedAt?.ToString("yyyy-MM-dd") ?? ""].Value,
+            DocumentStatus.Pending => L["RAG:ChunkViewer:PendingIndexing"].Value,
             _ => document.Status.ToString()
         };
 

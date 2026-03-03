@@ -40,6 +40,7 @@ public class ModuleRAGUI(ModuleRAGUIOption option)
     {
         services.AddScoped<RAGUIService>();
         services.AddScoped<IEmbeddingModelManagementUIService, EmbeddingModelManagementUIService>();
+        services.AddScoped<IChunkerManagementUIService, ChunkerManagementUIService>();
     }
 
     public override void ClaimDependencies()
@@ -77,6 +78,21 @@ public class ModuleRAGUI(ModuleRAGUIOption option)
                         navOrder: 4);
                 });
         }
+
+        if (!Option.DisableRAGChunkersPage)
+        {
+            DependsOnModule<ModuleUICoreGuide>().Register()
+                .RegisterUIComponents(p =>
+                {
+                    p.RegisterLocalizedComponent<UIAIRAGChunkersPage>(
+                        UIAIRAGChunkersPage.PAGE_URL,
+                        "Pages:RAGChunkers:Title",
+                        Icons.Material.Filled.AccountTree,
+                        "Categories:AI",
+                        addToNav: true,
+                        navOrder: 5);
+                });
+        }
     }
 }
 
@@ -102,4 +118,9 @@ public class ModuleRAGUIOption : MoModuleOption<ModuleRAGUI>
     /// Disable the RAG debug page.
     /// </summary>
     public bool DisableRAGDebugPage { get; set; }
+
+    /// <summary>
+    /// Disable the RAG chunkers page.
+    /// </summary>
+    public bool DisableRAGChunkersPage { get; set; }
 }
