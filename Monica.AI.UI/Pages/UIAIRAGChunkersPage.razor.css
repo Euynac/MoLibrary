@@ -1,8 +1,8 @@
 .rag-chunkers-page {
     display: flex;
     flex-direction: column;
-    gap: 18px;
-    padding: 12px;
+    gap: 20px;
+    padding: 16px;
 }
 
 .page-header {
@@ -19,22 +19,18 @@
 }
 
 .section-panel {
-    padding: 16px;
+    padding: 22px;
     border: 1px solid var(--mud-palette-lines-default);
-    border-radius: 14px;
-    background: linear-gradient(
-        180deg,
-        rgba(var(--mud-palette-primary-rgb), 0.03) 0%,
-        var(--mud-palette-surface) 100%
-    );
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.04);
+    border-radius: 12px;
+    background: var(--mud-palette-surface);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.03);
 }
 
 .section-heading {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 12px;
+    margin-bottom: 16px;
 }
 
 .section-heading ::deep .mud-icon-root {
@@ -74,6 +70,8 @@
 .chunkers-table ::deep .mud-table-cell,
 .routes-table ::deep .mud-table-cell {
     vertical-align: top;
+    padding-top: 12px;
+    padding-bottom: 12px;
 }
 
 .extension-chip {

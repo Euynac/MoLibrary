@@ -62,24 +62,21 @@
 .kb-list {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: 6px 0;
+    gap: 8px;
+    padding: 2px 0;
 }
 
 .kb-card {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px;
-    border: 1px solid var(--mud-palette-lines-default);
     border-radius: 10px;
+    border: 1px solid var(--mud-palette-lines-default);
+    background-color: var(--mud-palette-surface);
     cursor: pointer;
     transition: border-color 0.2s ease, background-color 0.2s ease;
-    background-color: var(--mud-palette-surface);
 }
 
 .kb-card:hover {
     border-color: rgba(var(--mud-palette-primary-rgb), 0.45);
+    background-color: rgba(var(--mud-palette-primary-rgb), 0.05);
 }
 
 .kb-card.selected {
@@ -88,64 +85,40 @@
 }
 
 .kb-card-content {
-    flex: 1;
-    min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 3px;
+    min-width: 0;
+    padding: 10px 12px;
 }
 
 .kb-name {
     font-weight: 600;
+    color: var(--mud-palette-text-primary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 .kb-description {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.kb-card-stats {
-    display: flex;
-    gap: 12px;
-    margin-top: 4px;
-}
-
-.kb-model-chip,
-.kb-provider-chip {
-    width: fit-content;
-}
-
-.kb-model-chip {
-    margin-top: 6px;
-}
-
-.kb-provider-chip {
-    margin-top: 4px;
-}
-
-.kb-model-chip ::deep .mud-chip-content,
-.kb-provider-chip ::deep .mud-chip-content {
+    color: var(--mud-palette-text-secondary);
     font-size: 0.72rem;
-    max-width: 220px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.kb-model-chip ::deep .mud-chip-content {
-    font-family: "Consolas", "Monaco", "Courier New", monospace;
-}
-
-.kb-stat {
-    display: flex;
-    align-items: center;
-    gap: 4px;
+.kb-stats,
+.kb-embedding-model {
     font-size: 0.75rem;
     color: var(--mud-palette-text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.kb-embedding-model {
+    font-family: "Consolas", "Monaco", "Courier New", monospace;
 }
 
 .kb-empty-state {

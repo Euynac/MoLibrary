@@ -63,34 +63,14 @@
                                 @kb.Description
                             </MudText>
                         }
-                        <div class="kb-card-stats">
-                            <span class="kb-stat">
-                                <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" />
-                                @kb.DocumentCount
-                            </span>
-                            <span class="kb-stat">
-                                <MudIcon Icon="@Icons.Material.Filled.GridView" Size="Size.Small" />
-                                @kb.ChunkCount
-                            </span>
-                        </div>
+                        <MudText Typo="Typo.caption" Class="kb-stats">
+                            @L["RAG:Debug:KBSidebar:Stats", kb.DocumentCount, kb.ChunkCount]
+                        </MudText>
                         @if (HasEmbeddingBinding(kb))
                         {
-                            <MudChip T="string"
-                                     Size="Size.Small"
-                                     Color="Color.Info"
-                                     Variant="Variant.Outlined"
-                                     Icon="@Icons.Material.Filled.Memory"
-                                     Class="kb-model-chip">
-                                @kb.EmbeddingModelName
-                            </MudChip>
-                            <MudChip T="string"
-                                     Size="Size.Small"
-                                     Color="Color.Secondary"
-                                     Variant="Variant.Outlined"
-                                     Icon="@Icons.Material.Filled.Hub"
-                                     Class="kb-provider-chip">
-                                @GetProviderDisplayLabel(kb.EmbeddingProviderId, kb.EmbeddingModelName)
-                            </MudChip>
+                            <MudText Typo="Typo.caption" Class="kb-embedding-model">
+                                @GetKnowledgeBaseModelDisplay(kb)
+                            </MudText>
                         }
                     </div>
                 </div>

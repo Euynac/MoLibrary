@@ -46,6 +46,12 @@
                                  Class="kb-checkbox">
                         <div class="kb-info">
                             <MudText Typo="Typo.body2" Class="kb-name">@kb.Name</MudText>
+                            @if (!string.IsNullOrWhiteSpace(kb.Description))
+                            {
+                                <MudText Typo="Typo.caption" Class="kb-description">
+                                    @kb.Description
+                                </MudText>
+                            }
                             <MudText Typo="Typo.caption" Class="kb-stats">
                                 @L["RAG:Debug:KBSidebar:Stats", kb.DocumentCount, kb.ChunkCount]
                             </MudText>
@@ -176,6 +182,7 @@
                 }
             }
 
+            CheckEmbeddingModelMismatch();
             await InvokeAsync(StateHasChanged);
         }
     }
@@ -217,10 +224,13 @@
         if (string.IsNullOrEmpty(_selectedEmbeddingModelKey) || !_selectedKbIds.Any())
         {
             _showEmbeddingWarning = false;
+            _embeddingWarningMessage = string.Empty;
+            _mismatchedKbModelDisplay = string.Empty;
             return;
         }
 
         var mismatchedKBs = new List<string>();
+        _mismatchedKbModelDisplay = string.Empty;
         foreach (var kbId in _selectedKbIds)
         {
             var kb = _knowledgeBases.FirstOrDefault(k => k.Id == kbId);
@@ -244,6 +254,7 @@
         else
         {
             _showEmbeddingWarning = false;
+            _embeddingWarningMessage = string.Empty;
         }
     }
 
