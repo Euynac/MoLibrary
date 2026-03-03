@@ -21,6 +21,9 @@
     "RAGDebug": {
       "Title": "RAG 调试"
     },
+    "RAGChunkers": {
+      "Title": "RAG 分块器管理"
+    },
     "MarkdownDocuments": {
       "Title": "知识库"
     },

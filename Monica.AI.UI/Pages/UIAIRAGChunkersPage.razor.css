@@ -1,8 +1,8 @@
 .rag-chunkers-page {
     display: flex;
     flex-direction: column;
-    gap: 20px;
-    padding: 16px;
+    gap: 24px;
+    padding: 20px 20px 24px;
 }
 
 .page-header {
@@ -10,6 +10,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
+    padding: 4px 2px 0;
 }
 
 .loading-state {
@@ -19,18 +20,29 @@
 }
 
 .section-panel {
-    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 24px 24px 22px;
     border: 1px solid var(--mud-palette-lines-default);
-    border-radius: 12px;
-    background: var(--mud-palette-surface);
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.03);
+    border-radius: 14px;
+    background:
+        linear-gradient(
+            180deg,
+            rgba(var(--mud-palette-primary-rgb), 0.03) 0%,
+            rgba(var(--mud-palette-primary-rgb), 0.01) 100%
+        ),
+        var(--mud-palette-surface);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.04);
 }
 
 .section-heading {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 16px;
+    margin-bottom: 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
 }
 
 .section-heading ::deep .mud-icon-root {
@@ -45,9 +57,10 @@
 .chunkers-table ::deep .mud-table-container,
 .routes-table ::deep .mud-table-container {
     border: 1px solid var(--mud-palette-lines-default);
-    border-radius: 10px;
+    border-radius: 12px;
     overflow: hidden;
     background-color: var(--mud-palette-surface);
+    margin-top: 2px;
 }
 
 .chunkers-table ::deep .mud-table-head .mud-table-cell,
@@ -56,6 +69,8 @@
     color: var(--mud-palette-text-primary);
     border-bottom: 1px solid var(--mud-palette-lines-default);
     background-color: rgba(var(--mud-palette-primary-rgb), 0.08);
+    padding-top: 14px;
+    padding-bottom: 14px;
 }
 
 .routes-table ::deep .mud-table-head .mud-table-cell {
@@ -70,8 +85,18 @@
 .chunkers-table ::deep .mud-table-cell,
 .routes-table ::deep .mud-table-cell {
     vertical-align: top;
-    padding-top: 12px;
-    padding-bottom: 12px;
+    padding-top: 14px;
+    padding-bottom: 14px;
+    padding-left: 14px;
+    padding-right: 14px;
+}
+
+.chunkers-table ::deep code,
+.routes-table ::deep code {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 6px;
+    background: rgba(var(--mud-palette-primary-rgb), 0.08);
 }
 
 .extension-chip {
@@ -117,19 +142,30 @@
 .test-form {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 14px;
 }
 
 .test-result {
-    margin-top: 12px;
+    margin-top: 14px;
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-wrap: wrap;
 }
 
 @media (max-width: 900px) {
+    .rag-chunkers-page {
+        gap: 18px;
+        padding: 14px;
+    }
+
     .page-header {
         align-items: flex-start;
         flex-direction: column;
+    }
+
+    .section-panel {
+        padding: 18px 16px;
+        gap: 12px;
     }
 }

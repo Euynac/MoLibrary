@@ -108,6 +108,9 @@
         "Description": "描述",
         "NamePlaceholder": "例如：产品文档",
         "DescPlaceholder": "可选描述..."
+      },
+      "EditDialog": {
+        "Title": "编辑知识库"
       }
     },
     "DocumentQueue": {

@@ -21,6 +21,9 @@
     "RAGDebug": {
       "Title": "RAG Debug"
     },
+    "RAGChunkers": {
+      "Title": "RAG Chunker Management"
+    },
     "MarkdownDocuments": {
       "Title": "Markdown Documents"
     },
