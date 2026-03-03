@@ -1,6 +1,6 @@
-@using Monica.AI.Models
 @using Microsoft.Extensions.Localization
 @using Monica.AI.UI.Localization
+@using Monica.AI.UI.Models
 @inject IStringLocalizer<AIResource> L
 
 <div class="embedding-model-selector-wrapper">
@@ -10,19 +10,20 @@
     </div>
 
     <MudSelect T="string"
-               Value="@SelectedModelId"
+               Value="@SelectedModelKey"
                ValueChanged="@OnModelChanged"
                Variant="Variant.Outlined"
                Margin="Margin.Dense"
                Dense="true"
-               Disabled="@IsDisabled"
+               Disabled="@(!HasAvailableModels || IsDisabled)"
                Class="model-select">
         @foreach (var model in AvailableModels)
         {
-            <MudSelectItem T="string" Value="@model.ModelName">
+            <MudSelectItem T="string" Value="@model.ModelKey">
                 <div class="model-option">
                     <span class="model-name">@model.ModelName</span>
-                    <span class="model-dimensions">@L["RAG:EmbeddingModel:Dimensions", model.Dimensions]</span>
+                    <span class="model-provider">@model.ProviderDisplayName</span>
+                    <span class="model-dimensions">@L["RAG:EmbeddingModel:Dimensions", FormatDimensions(model.Dimensions)]</span>
                 </div>
             </MudSelectItem>
         }
@@ -31,32 +32,44 @@
     @if (CurrentModel is not null)
     {
         <MudText Typo="Typo.caption" Class="model-info">
-            @(CurrentModel.Description ?? CurrentModel.ModelName) · @L["RAG:EmbeddingModel:Dimensions", CurrentModel.Dimensions]
+            @(CurrentModel.Description ?? CurrentModel.ModelName) - @CurrentModel.ProviderDisplayName - @L["RAG:EmbeddingModel:Dimensions", FormatDimensions(CurrentModel.Dimensions)]
+        </MudText>
+    }
+    else if (!HasAvailableModels)
+    {
+        <MudText Typo="Typo.caption" Class="model-empty">
+            @L["RAG:EmbeddingModel:NotConfigured"]
         </MudText>
     }
 </div>
 
 @code {
     [Parameter]
-    public IReadOnlyList<EmbeddingModelInfo> AvailableModels { get; set; } = [];
+    public IReadOnlyList<EmbeddingModelOption> AvailableModels { get; set; } = [];
 
     [Parameter]
-    public string? SelectedModelId { get; set; }
+    public string? SelectedModelKey { get; set; }
 
     [Parameter]
-    public EventCallback<string> SelectedModelIdChanged { get; set; }
+    public EventCallback<string> SelectedModelKeyChanged { get; set; }
 
     [Parameter]
     public bool IsDisabled { get; set; }
 
-    private EmbeddingModelInfo? CurrentModel =>
-        AvailableModels.FirstOrDefault(m => m.ModelName == SelectedModelId);
+    private bool HasAvailableModels => AvailableModels.Count > 0;
 
-    private async Task OnModelChanged(string? modelId)
+    private EmbeddingModelOption? CurrentModel =>
+        AvailableModels.FirstOrDefault(m =>
+            string.Equals(m.ModelKey, SelectedModelKey, StringComparison.OrdinalIgnoreCase));
+
+    private static string FormatDimensions(int? dimensions)
+        => dimensions.HasValue ? dimensions.Value.ToString() : "?";
+
+    private async Task OnModelChanged(string? modelKey)
     {
-        if (modelId is not null)
+        if (modelKey is not null)
         {
-            await SelectedModelIdChanged.InvokeAsync(modelId);
+            await SelectedModelKeyChanged.InvokeAsync(modelKey);
         }
     }
 }

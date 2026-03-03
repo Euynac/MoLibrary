@@ -2,12 +2,13 @@
 @using Microsoft.Extensions.Localization
 @using Monica.AI.UI.Localization
 @using Monica.AI.UI.Services
-@using Monica.AI.Models
 @using Monica.AI.RAG.Models
 @using Monica.AI.UI.Components.RAG
+@using Monica.AI.UI.Models
 @using Monica.Tool.MoResponse
 @inject IStringLocalizer<AIResource> L
 @inject RAGUIService RAGService
+@inject IEmbeddingModelManagementUIService EmbeddingService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 
@@ -47,6 +48,25 @@
                                 @kb.ChunkCount
                             </span>
                         </div>
+                        @if (HasEmbeddingBinding(kb))
+                        {
+                            <MudChip T="string"
+                                     Size="Size.Small"
+                                     Color="Color.Info"
+                                     Variant="Variant.Outlined"
+                                     Icon="@Icons.Material.Filled.Memory"
+                                     Class="kb-model-chip">
+                                @kb.EmbeddingModelName
+                            </MudChip>
+                            <MudChip T="string"
+                                     Size="Size.Small"
+                                     Color="Color.Secondary"
+                                     Variant="Variant.Outlined"
+                                     Icon="@Icons.Material.Filled.Hub"
+                                     Class="kb-provider-chip">
+                                @GetProviderDisplayName(kb.EmbeddingProviderId)
+                            </MudChip>
+                        }
                     </div>
                     <div class="kb-card-actions" @onclick:stopPropagation="true">
                         <MudIconButton Icon="@Icons.Material.Filled.Delete"
@@ -77,16 +97,24 @@
                 <!-- Embedding Model Selector -->
                 <div class="embedding-model-section">
                     <EmbeddingModelSelector AvailableModels="@_availableModels"
-                                            SelectedModelId="@_currentEmbeddingModelId"
-                                            SelectedModelIdChanged="@OnEmbeddingModelChanged"
-                                            IsDisabled="@(_selectedKB.DocumentCount > 0)" />
+                                            SelectedModelKey="@_currentEmbeddingModelKey"
+                                            SelectedModelKeyChanged="@OnEmbeddingModelChanged" />
+
+                    @if (_availableModels.Count == 0)
+                    {
+                        <MudAlert Severity="Severity.Warning" Dense="true" Class="embedding-empty-warning">
+                            @L["RAG:EmbeddingModel:NotConfigured"]
+                        </MudAlert>
+                    }
                 </div>
 
                 <!-- Embedding Model Warning -->
-                @if (!string.IsNullOrEmpty(_selectedKB.EmbeddingModelId) && _currentEmbeddingModelId != _selectedKB.EmbeddingModelId)
+                @if (HasEmbeddingBinding(_selectedKB)
+                    && !string.IsNullOrWhiteSpace(_currentEmbeddingModelKey)
+                    && !string.Equals(_currentEmbeddingModelKey, GetKnowledgeBaseModelKey(_selectedKB), StringComparison.OrdinalIgnoreCase))
                 {
-                    <EmbeddingModelWarning CurrentModelId="@_currentEmbeddingModelId"
-                                           KnowledgeBaseModelId="@_selectedKB.EmbeddingModelId" />
+                    <EmbeddingModelWarning CurrentModelId="@GetModelDisplayByKey(_currentEmbeddingModelKey)"
+                                           KnowledgeBaseModelId="@GetKnowledgeBaseModelDisplay(_selectedKB)" />
                 }
 
                 <!-- KB Detail Header -->
@@ -107,12 +135,24 @@
                             <MudIcon Icon="@Icons.Material.Filled.GridView" Size="Size.Small" />
                             <span>@_selectedKB.ChunkCount @L["RAG:KnowledgeBase:ChunkCount"]</span>
                         </span>
-                        @if (!string.IsNullOrEmpty(_selectedKB.EmbeddingModelId))
+                        @if (HasEmbeddingBinding(_selectedKB))
                         {
-                            <span class="kb-badge kb-badge-gray">
-                                <MudIcon Icon="@Icons.Material.Filled.Memory" Size="Size.Small" />
-                                <span>@_selectedKB.EmbeddingModelId</span>
-                            </span>
+                            <MudChip T="string"
+                                     Size="Size.Small"
+                                     Color="Color.Info"
+                                     Variant="Variant.Outlined"
+                                     Icon="@Icons.Material.Filled.Memory"
+                                     Class="kb-header-model-chip">
+                                @_selectedKB.EmbeddingModelName
+                            </MudChip>
+                            <MudChip T="string"
+                                     Size="Size.Small"
+                                     Color="Color.Secondary"
+                                     Variant="Variant.Outlined"
+                                     Icon="@Icons.Material.Filled.Hub"
+                                     Class="kb-header-provider-chip">
+                                @GetProviderDisplayName(_selectedKB.EmbeddingProviderId)
+                            </MudChip>
                         }
                     </div>
                 </div>
@@ -281,8 +321,8 @@
 
     private List<KnowledgeBase> _knowledgeBases = new();
     private KnowledgeBase? _selectedKB;
-    private string _currentEmbeddingModelId = "text-embedding-3-large";
-    private List<EmbeddingModelInfo> _availableModels = new();
+    private string _currentEmbeddingModelKey = string.Empty;
+    private List<EmbeddingModelOption> _availableModels = new();
     private List<DocumentQueueItem> _documentQueue = new();
     private int _parallelCount = 5;
     private List<string> _markdownGroups = new();
@@ -301,12 +341,19 @@
 
     private async Task LoadEmbeddingModelsAsync()
     {
-        if ((await RAGService.GetEmbeddingModelsAsync()).IsFailed(out var error, out var models))
+        if ((await EmbeddingService.GetEmbeddingModelsAsync()).IsFailed(out var error, out var models))
         {
             Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
             return;
         }
+
         _availableModels = models.ToList();
+
+        if (_availableModels.Count == 0)
+        {
+            _currentEmbeddingModelKey = string.Empty;
+            Snackbar.Add(L["RAG:EmbeddingModel:NotConfigured"], Severity.Warning);
+        }
     }
 
     private async Task LoadKnowledgeBasesAsync()
@@ -335,13 +382,21 @@
         if (kb != null)
         {
             // Load KB's embedding model
-            if ((await RAGService.GetKnowledgeBaseEmbeddingModelAsync(kb.Id)).IsFailed(out var error, out var model))
+            if ((await EmbeddingService.GetKnowledgeBaseEmbeddingModelAsync(kb.Id)).IsFailed(out var error, out var model))
             {
                 Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
             }
             else if (model != null)
             {
-                _currentEmbeddingModelId = model.ModelName;
+                _currentEmbeddingModelKey = model.ModelKey;
+            }
+            else if (HasEmbeddingBinding(kb))
+            {
+                _currentEmbeddingModelKey = GetKnowledgeBaseModelKey(kb);
+            }
+            else
+            {
+                _currentEmbeddingModelKey = string.Empty;
             }
 
             // Load document queue for this KB
@@ -389,23 +444,64 @@
         }
     }
 
-    private async Task OnEmbeddingModelChanged(string modelId)
+    private async Task OnEmbeddingModelChanged(string modelKey)
     {
         if (_selectedKB == null) return;
 
-        _currentEmbeddingModelId = modelId;
-
-        // If KB has no documents, lock the model
-        if (_selectedKB.DocumentCount == 0)
+        if (!EmbeddingModelOption.TryParseModelKey(modelKey, out var providerId, out var modelName))
         {
-            if ((await RAGService.SetKnowledgeBaseEmbeddingModelAsync(_selectedKB.Id, modelId)).IsFailed(out var error))
+            Snackbar.Add($"{L["Common:Error"]}: invalid embedding model key.", Severity.Error);
+            return;
+        }
+
+        var previousModelKey = GetKnowledgeBaseModelKey(_selectedKB);
+        if (string.Equals(previousModelKey, modelKey, StringComparison.OrdinalIgnoreCase)) return;
+
+        var requiresReindexWarning = HasIndexedContent(_selectedKB)
+            && !string.IsNullOrWhiteSpace(previousModelKey);
+
+        if (requiresReindexWarning)
+        {
+            var confirmed = await DialogService.ShowMessageBoxAsync(
+                L["RAG:EmbeddingModel:ReindexConfirm:Title"],
+                L["RAG:EmbeddingModel:ReindexConfirm:Message", _selectedKB.Name],
+                yesText: L["RAG:EmbeddingModel:ReindexConfirm:Continue"],
+                cancelText: L["Common:Cancel"]);
+
+            if (confirmed != true)
             {
-                Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
+                _currentEmbeddingModelKey = previousModelKey;
+                return;
             }
-            else
-            {
-                _selectedKB = _selectedKB with { EmbeddingModelId = modelId };
-            }
+        }
+
+        _currentEmbeddingModelKey = modelKey;
+
+        if ((await EmbeddingService.SetKnowledgeBaseEmbeddingModelAsync(
+                _selectedKB.Id,
+                providerId,
+                modelName,
+                clearIndex: true)).IsFailed(out var error))
+        {
+            _currentEmbeddingModelKey = previousModelKey;
+            Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
+            return;
+        }
+
+        await RefreshSelectedKnowledgeBaseAsync();
+
+        if (_selectedKB is not null)
+        {
+            await LoadDocumentQueueAsync();
+        }
+
+        if (requiresReindexWarning)
+        {
+            Snackbar.Add(L["RAG:EmbeddingModel:ReindexRequired"], Severity.Warning);
+        }
+        else
+        {
+            Snackbar.Add(L["Common:Success"], Severity.Success);
         }
     }
 
@@ -449,6 +545,7 @@
         else
         {
             Snackbar.Add(L["Common:Success"], Severity.Success);
+            await RefreshSelectedKnowledgeBaseAsync();
             await LoadDocumentQueueAsync();
         }
     }
@@ -597,6 +694,7 @@
             else
             {
                 Snackbar.Add(L["Common:Success"], Severity.Success);
+                await RefreshSelectedKnowledgeBaseAsync();
                 await LoadDocumentQueueAsync();
             }
         }
@@ -604,6 +702,96 @@
         {
             Snackbar.Add($"{L["Common:Error"]}: {ex.Message}", Severity.Error);
         }
+    }
+
+    private static bool HasEmbeddingBinding(KnowledgeBase kb)
+        => !string.IsNullOrWhiteSpace(kb.EmbeddingProviderId)
+           && !string.IsNullOrWhiteSpace(kb.EmbeddingModelName);
+
+    private bool HasIndexedContent(KnowledgeBase kb)
+    {
+        if (kb.DocumentCount > 0 || kb.ChunkCount > 0)
+        {
+            return true;
+        }
+
+        return _documentQueue.Any(item =>
+            item.Status == DocumentStatus.Done || item.ChunkCount > 0);
+    }
+
+    private async Task RefreshSelectedKnowledgeBaseAsync()
+    {
+        if (_selectedKB is null)
+        {
+            return;
+        }
+
+        var selectedKbId = _selectedKB.Id;
+        await LoadKnowledgeBasesAsync();
+        _selectedKB = _knowledgeBases.FirstOrDefault(k => k.Id == selectedKbId);
+
+        if (_selectedKB is null)
+        {
+            _currentEmbeddingModelKey = string.Empty;
+            _documentQueue.Clear();
+            return;
+        }
+
+        _currentEmbeddingModelKey = HasEmbeddingBinding(_selectedKB)
+            ? GetKnowledgeBaseModelKey(_selectedKB)
+            : string.Empty;
+    }
+
+    private static string GetKnowledgeBaseModelKey(KnowledgeBase kb)
+    {
+        if (!HasEmbeddingBinding(kb))
+        {
+            return string.Empty;
+        }
+
+        return EmbeddingModelOption.ToModelKey(
+            kb.EmbeddingProviderId!,
+            kb.EmbeddingModelName!);
+    }
+
+    private string GetProviderDisplayName(string? providerId)
+    {
+        if (string.IsNullOrWhiteSpace(providerId))
+        {
+            return string.Empty;
+        }
+
+        return _availableModels
+            .FirstOrDefault(m => string.Equals(m.ProviderId, providerId, StringComparison.OrdinalIgnoreCase))
+            ?.ProviderDisplayName ?? providerId;
+    }
+
+    private string GetKnowledgeBaseModelDisplay(KnowledgeBase kb)
+    {
+        if (!HasEmbeddingBinding(kb))
+        {
+            return string.Empty;
+        }
+
+        return $"{kb.EmbeddingModelName} ({GetProviderDisplayName(kb.EmbeddingProviderId)})";
+    }
+
+    private string GetModelDisplayByKey(string modelKey)
+    {
+        var model = _availableModels.FirstOrDefault(m =>
+            string.Equals(m.ModelKey, modelKey, StringComparison.OrdinalIgnoreCase));
+
+        if (model is not null)
+        {
+            return $"{model.ModelName} ({model.ProviderDisplayName})";
+        }
+
+        if (!EmbeddingModelOption.TryParseModelKey(modelKey, out var providerId, out var modelName))
+        {
+            return modelKey;
+        }
+
+        return $"{modelName} ({providerId})";
     }
 }
 

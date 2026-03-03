@@ -31,13 +31,19 @@
 .model-option {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: 12px;
 }
 
 .model-name {
     font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
     font-size: 0.875rem;
+}
+
+.model-provider {
+    font-size: 0.75rem;
+    color: var(--mud-palette-info);
+    font-weight: 600;
 }
 
 .model-dimensions {
@@ -48,5 +54,10 @@
 
 .model-info {
     color: var(--mud-palette-text-secondary);
+    font-size: 0.75rem;
+}
+
+.model-empty {
+    color: var(--mud-palette-warning);
     font-size: 0.75rem;
 }

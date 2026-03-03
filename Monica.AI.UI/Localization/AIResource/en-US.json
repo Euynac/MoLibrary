@@ -74,6 +74,13 @@
     "EmbeddingModel": {
       "Label": "Embedding Model",
       "Dimensions": "{0}d",
+      "NotConfigured": "No embedding model is configured in AI providers.",
+      "ReindexRequired": "Embedding model switched and current index was cleared. Reindex all documents in this knowledge base.",
+      "ReindexConfirm": {
+        "Title": "Reindex Required",
+        "Message": "Knowledge base '{0}' already has indexed documents. Switching embedding model will clear the current index immediately. Continue?",
+        "Continue": "Continue"
+      },
       "Warning": {
         "Title": "Embedding Model Mismatch",
         "CurrentModel": "Current model: {0}",

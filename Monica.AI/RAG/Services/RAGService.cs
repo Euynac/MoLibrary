@@ -4,6 +4,8 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.VectorData;
+using Monica.AI.Abstractions;
+using Monica.AI.Models;
 using Monica.AI.RAG.Abstractions;
 using Monica.AI.RAG.Models;
 using Monica.AI.Modules;
@@ -12,16 +14,14 @@ using AgentTextSearchResult = Microsoft.Agents.AI.TextSearchProvider.TextSearchR
 namespace Monica.AI.RAG.Services;
 
 /// <summary>
-/// Core RAG service — orchestrates document indexing and vector retrieval.
+/// Core RAG service - orchestrates document indexing and vector retrieval.
 /// Infrastructure service: uses exceptions, not Res&lt;T&gt;.
-///
-/// Uses GetDynamicCollection (May 2025 API), auto-embedding via VectorStore,
-/// batch upsert, hybrid search, and search adapter delegate for Phase 3
-/// TextSearchProvider integration.
 /// </summary>
 public sealed partial class RAGService(
     IKnowledgeBaseStore kbStore,
+    IDocumentQueueStore documentQueueStore,
     VectorStore vectorStore,
+    IAIProviderFactory providerFactory,
     IEnumerable<IDocumentChunker> chunkers,
     IOptions<ModuleRAGOption> options,
     ILogger<RAGService> logger)
@@ -29,14 +29,9 @@ public sealed partial class RAGService(
     private readonly ModuleRAGOption _options = options.Value;
     private readonly IReadOnlyList<IDocumentChunker> _chunkers = chunkers.ToList();
 
-    private readonly VectorStoreCollectionDefinition _collectionDefinition =
-        CreateCollectionDefinition(options.Value.VectorDimensions
-            ?? throw new InvalidOperationException(
-                "VectorDimensions must be configured. Set it explicitly in ModuleRAGOption " +
-                "or use UseInMemoryVectorStore() which resolves it automatically."));
-
-    private readonly ConcurrentDictionary<string, VectorStoreCollection<object, Dictionary<string, object?>>> _collections = new();
-    private readonly ConcurrentDictionary<string, bool> _initializedCollections = new();
+    private readonly ConcurrentDictionary<string, VectorStoreCollection<object, Dictionary<string, object?>>> _collections = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, string> _collectionBindings = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, bool> _initializedCollections = new(StringComparer.OrdinalIgnoreCase);
     private readonly SemaphoreSlim _initLock = new(1, 1);
 
     public async Task<KnowledgeBase> CreateKnowledgeBaseAsync(
@@ -64,15 +59,65 @@ public sealed partial class RAGService(
     public Task<IReadOnlyList<KnowledgeBase>> GetKnowledgeBasesAsync(CancellationToken ct = default)
         => kbStore.GetAllAsync(ct);
 
+    /// <summary>
+    /// Gets a knowledge base by id.
+    /// </summary>
+    public Task<KnowledgeBase?> GetKnowledgeBaseByIdAsync(string knowledgeBaseId, CancellationToken ct = default)
+        => kbStore.GetByIdAsync(knowledgeBaseId, ct);
+
+    /// <summary>
+    /// Persists the embedding provider/model for a knowledge base and optionally clears index data.
+    /// </summary>
+    public async Task SetKnowledgeBaseEmbeddingModelAsync(
+        string knowledgeBaseId,
+        string embeddingProviderId,
+        string embeddingModelName,
+        bool clearIndex = true,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(embeddingProviderId))
+            throw new ArgumentException("Embedding provider ID cannot be empty.", nameof(embeddingProviderId));
+
+        if (string.IsNullOrWhiteSpace(embeddingModelName))
+            throw new ArgumentException("Embedding model name cannot be empty.", nameof(embeddingModelName));
+
+        var kb = await kbStore.GetByIdAsync(knowledgeBaseId, ct)
+                 ?? throw new KeyNotFoundException(
+                     $"Knowledge base '{knowledgeBaseId}' not found.");
+
+        var normalizedProviderId = embeddingProviderId.Trim();
+        var normalizedModelName = embeddingModelName.Trim();
+
+        // Validate the target binding before mutating KB state.
+        _ = ResolveEmbeddingBinding(kb with
+        {
+            EmbeddingProviderId = normalizedProviderId,
+            EmbeddingModelName = normalizedModelName
+        });
+
+        var changed = !string.Equals(kb.EmbeddingProviderId, normalizedProviderId, StringComparison.OrdinalIgnoreCase)
+                      || !string.Equals(kb.EmbeddingModelName, normalizedModelName, StringComparison.OrdinalIgnoreCase);
+
+        if (changed && clearIndex)
+        {
+            await ClearCollectionCacheAndStorageAsync(GetCollectionName(knowledgeBaseId), ct);
+            await ResetDocumentQueueForReindexAsync(knowledgeBaseId, ct);
+            kb.DocumentCount = 0;
+            kb.ChunkCount = 0;
+        }
+
+        kb.EmbeddingProviderId = normalizedProviderId;
+        kb.EmbeddingModelName = normalizedModelName;
+        await kbStore.SaveAsync(kb, ct);
+
+        logger.LogInformation(
+            "Persisted KB embedding binding for '{KbId}': provider '{ProviderId}', model '{ModelName}', clearIndex={ClearIndex}",
+            knowledgeBaseId, normalizedProviderId, normalizedModelName, changed && clearIndex);
+    }
+
     public async Task DeleteKnowledgeBaseAsync(string knowledgeBaseId, CancellationToken ct = default)
     {
-        var collectionName = GetCollectionName(knowledgeBaseId);
-        var collection = GetOrCreateCollection(collectionName);
-
-        await collection.EnsureCollectionDeletedAsync(ct);
-        _collections.TryRemove(collectionName, out _);
-        _initializedCollections.TryRemove(collectionName, out _);
-
+        await ClearCollectionCacheAndStorageAsync(GetCollectionName(knowledgeBaseId), ct);
         await kbStore.DeleteAsync(knowledgeBaseId, ct);
         logger.LogInformation("Deleted knowledge base {Id}", knowledgeBaseId);
     }
@@ -98,11 +143,9 @@ public sealed partial class RAGService(
         var chunks = chunker.ChunkDocument(content, documentPath, documentTitle);
         if (chunks.Count == 0) return;
 
-        var collectionName = GetCollectionName(knowledgeBaseId);
-        var collection = GetOrCreateCollection(collectionName);
-        await EnsureCollectionInitializedAsync(collectionName, collection, ct);
+        var collection = await GetOrCreateCollectionForKnowledgeBaseAsync(kb, ct);
 
-        // Build all records — auto-embedding: pass text as ContentEmbedding value
+        // Build all records - auto-embedding: pass text as ContentEmbedding value.
         var records = chunks.Select(chunk => new Dictionary<string, object?>
         {
             ["Key"] = $"{knowledgeBaseId}_{documentPath}_{chunk.ChunkIndex}",
@@ -112,10 +155,9 @@ public sealed partial class RAGService(
             ["Content"] = chunk.Content,
             ["SectionPath"] = chunk.SectionPath,
             ["ChunkIndex"] = chunk.ChunkIndex,
-            ["ContentEmbedding"] = chunk.Content // auto-embedded by VectorStore
+            ["ContentEmbedding"] = chunk.Content
         }).ToList();
 
-        // Batch upsert — single round-trip
         await collection.UpsertAsync(records, ct);
 
         progress?.Report(new IndexingProgress(chunks.Count, chunks.Count, documentTitle));
@@ -140,12 +182,19 @@ public sealed partial class RAGService(
 
         foreach (var kbId in knowledgeBaseIds)
         {
-            var collectionName = GetCollectionName(kbId);
-            var collection = GetOrCreateCollection(collectionName);
+            var kb = await kbStore.GetByIdAsync(kbId, ct);
+            if (kb is null)
+            {
+                continue;
+            }
 
-            if (!await collection.CollectionExistsAsync(ct)) continue;
+            var collection = await GetOrCreateCollectionForKnowledgeBaseAsync(kb, ct);
 
-            // Try hybrid search if available, otherwise vector-only
+            if (!await collection.CollectionExistsAsync(ct))
+            {
+                continue;
+            }
+
             var hybridSearch = collection.GetService(
                 typeof(IKeywordHybridSearchable<Dictionary<string, object?>>))
                 as IKeywordHybridSearchable<Dictionary<string, object?>>;
@@ -203,7 +252,7 @@ public sealed partial class RAGService(
                     : r.SourceName,
                 SourceLink = r.SourceLink,
                 Text = r.Text,
-                RawRepresentation = r // preserve full metadata for custom formatters
+                RawRepresentation = r
             });
         };
     }
@@ -228,17 +277,91 @@ public sealed partial class RAGService(
 
     #region Private helpers
 
+    private static string BuildBindingKey(string providerId, string modelName, int dimensions)
+        => $"{providerId}::{modelName}::{dimensions}";
+
     private string GetCollectionName(string knowledgeBaseId)
         => $"{_options.CollectionNamePrefix}{knowledgeBaseId}";
 
-    private VectorStoreCollection<object, Dictionary<string, object?>> GetOrCreateCollection(string collectionName)
+    private async Task<VectorStoreCollection<object, Dictionary<string, object?>>> GetOrCreateCollectionForKnowledgeBaseAsync(
+        KnowledgeBase kb,
+        CancellationToken ct)
     {
-        return _collections.GetOrAdd(collectionName, name =>
-            vectorStore.GetDynamicCollection(name, _collectionDefinition));
+        var binding = ResolveEmbeddingBinding(kb);
+        var collectionName = GetCollectionName(kb.Id);
+        var bindingKey = BuildBindingKey(binding.ProviderId, binding.ModelName, binding.Dimensions);
+
+        if (_collectionBindings.TryGetValue(collectionName, out var existingBindingKey)
+            && !string.Equals(existingBindingKey, bindingKey, StringComparison.OrdinalIgnoreCase))
+        {
+            await ClearCollectionCacheAndStorageAsync(collectionName, ct);
+        }
+
+        var collection = _collections.GetOrAdd(collectionName, _ =>
+        {
+            var provider = providerFactory.GetProvider(binding.ProviderId)
+                           ?? throw new InvalidOperationException(
+                               $"Embedding provider '{binding.ProviderId}' not found.");
+            var embeddingGenerator = provider.GetEmbeddingGenerator(binding.ModelName);
+            var definition = CreateCollectionDefinition(binding.Dimensions, embeddingGenerator);
+            return vectorStore.GetDynamicCollection(collectionName, definition);
+        });
+
+        _collectionBindings[collectionName] = bindingKey;
+        await EnsureCollectionInitializedAsync(collectionName, collection, ct);
+        return collection;
+    }
+
+    private EmbeddingBinding ResolveEmbeddingBinding(KnowledgeBase kb)
+    {
+        if (string.IsNullOrWhiteSpace(kb.EmbeddingProviderId) || string.IsNullOrWhiteSpace(kb.EmbeddingModelName))
+        {
+            throw new InvalidOperationException(
+                $"Knowledge base '{kb.Name}' has no embedding model configured. Configure provider and model before indexing or searching.");
+        }
+
+        var provider = providerFactory.GetProvider(kb.EmbeddingProviderId)
+                       ?? throw new InvalidOperationException(
+                           $"Embedding provider '{kb.EmbeddingProviderId}' configured on knowledge base '{kb.Name}' was not found.");
+
+        var embeddingModel = provider.Info.SupportedModels?
+            .OfType<EmbeddingModelInfo>()
+            .FirstOrDefault(model =>
+                string.Equals(model.ModelName, kb.EmbeddingModelName, StringComparison.OrdinalIgnoreCase))
+            ?? throw new InvalidOperationException(
+                $"Embedding model '{kb.EmbeddingModelName}' is not configured on provider '{provider.ProviderId}'.");
+
+        var dimensions = embeddingModel.Dimensions ?? throw new InvalidOperationException(
+                $"Embedding model '{embeddingModel.ModelName}' has no dimensions configured. " +
+                "Use provider model probe.");
+
+        return new EmbeddingBinding(provider.ProviderId, embeddingModel.ModelName, dimensions);
+    }
+
+    private async Task ClearCollectionCacheAndStorageAsync(string collectionName, CancellationToken ct)
+    {
+        await vectorStore.EnsureCollectionDeletedAsync(collectionName, ct);
+        _collections.TryRemove(collectionName, out _);
+        _collectionBindings.TryRemove(collectionName, out _);
+        _initializedCollections.TryRemove(collectionName, out _);
+    }
+
+    private async Task ResetDocumentQueueForReindexAsync(string kbId, CancellationToken ct)
+    {
+        var queueItems = await documentQueueStore.GetQueueAsync(kbId, ct);
+        foreach (var item in queueItems)
+        {
+            item.Status = DocumentStatus.Pending;
+            item.ChunkCount = 0;
+            item.Progress = 0;
+            item.IndexedAt = null;
+            item.ErrorMessage = null;
+            await documentQueueStore.UpdateAsync(item, ct);
+        }
     }
 
     /// <summary>
-    /// Thread-safe collection initialization — EnsureCollectionExistsAsync called at most once per collection.
+    /// Thread-safe collection initialization - EnsureCollectionExistsAsync called at most once per collection.
     /// </summary>
     private async Task EnsureCollectionInitializedAsync(
         string collectionName,
@@ -271,9 +394,13 @@ public sealed partial class RAGService(
             (r.SourceLink is not null ? $"\nSource: {r.SourceLink}" : "")));
     }
 
-    private static VectorStoreCollectionDefinition CreateCollectionDefinition(int vectorDimensions)
-        => new()
+    private static VectorStoreCollectionDefinition CreateCollectionDefinition(
+        int vectorDimensions,
+        IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator)
+    {
+        return new VectorStoreCollectionDefinition
         {
+            EmbeddingGenerator = embeddingGenerator,
             Properties =
             [
                 new VectorStoreKeyProperty("Key", typeof(string)),
@@ -283,12 +410,18 @@ public sealed partial class RAGService(
                 new VectorStoreDataProperty("Content", typeof(string)) { IsFullTextIndexed = true },
                 new VectorStoreDataProperty("SectionPath", typeof(string)),
                 new VectorStoreDataProperty("ChunkIndex", typeof(int)),
-                new VectorStoreVectorProperty("ContentEmbedding", typeof(string), vectorDimensions),
+                new VectorStoreVectorProperty("ContentEmbedding", typeof(string), vectorDimensions)
+                {
+                    EmbeddingGenerator = embeddingGenerator
+                }
             ]
         };
+    }
 
     [GeneratedRegex(@"\p{L}+", RegexOptions.IgnoreCase)]
     private static partial Regex WordSegmenter();
+
+    private readonly record struct EmbeddingBinding(string ProviderId, string ModelName, int Dimensions);
 
     #endregion
 }

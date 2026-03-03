@@ -6,6 +6,7 @@ using Monica.AI.Extensions;
 using Monica.AI.Models;
 using Monica.AI.Providers;
 using Monica.AI.Providers.Anthropic;
+using Monica.AI.Providers.Fake;
 using Monica.AI.Providers.OpenAI;
 using Monica.AI.Services;
 using Monica.Core.Module;
@@ -114,6 +115,27 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
             var provider = new AnthropicProvider(options, modelCatalog);
             manager.RegisterProvider(provider);
         }, secondKey: $"anthropic-{options.ProviderId ?? options.SupportedModels?.FirstOrDefault() ?? "invalid"}", order: EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
+
+        return this;
+    }
+
+    /// <summary>
+    /// Add fake embedding provider.
+    /// </summary>
+    /// <param name="configure">Options configure delegate.</param>
+    /// <returns>Current guide instance.</returns>
+    public ModuleAIGuide AddFakeProvider(Action<FakeProviderOptions> configure)
+    {
+        var options = new FakeProviderOptions { ApiKey = "fake", SupportedModels = [] };
+        configure(options);
+
+        ConfigureApplicationBuilder(context =>
+        {
+            var manager = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIProviderManager>();
+            var modelCatalog = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIModelCatalog>();
+            var provider = new FakeProvider(options, modelCatalog);
+            manager.RegisterProvider(provider);
+        }, secondKey: $"fake-{options.ProviderId ?? options.SupportedModels?.FirstOrDefault() ?? "invalid"}", order: EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
 
         return this;
     }

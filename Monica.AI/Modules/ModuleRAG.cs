@@ -1,14 +1,10 @@
 using Microsoft.Agents.AI;
-using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using Microsoft.Extensions.VectorData;
 using Microsoft.SemanticKernel.Connectors.InMemory;
-using Monica.AI.Abstractions;
 using Monica.AI.Models;
 using Monica.AI.RAG.Abstractions;
 using Monica.AI.RAG.Services;
-using Monica.AI.Services;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
@@ -55,9 +51,6 @@ public class ModuleRAG(ModuleRAGOption option)
 /// </summary>
 public class ModuleRAGOption : MoModuleOption<ModuleRAG>
 {
-    public string? EmbeddingProviderId { get; set; }
-    public string? EmbeddingModelName { get; set; }
-    public int? VectorDimensions { get; set; }
     public string CollectionNamePrefix { get; set; } = "monica_rag_";
     public int DefaultTopK { get; set; } = 5;
 
@@ -104,7 +97,7 @@ public class ModuleRAGGuide
     /// Persists knowledge base metadata as a JSON file on disk.
     /// File path is configured via <see cref="ModuleRAGOption.KnowledgeBaseStoreFilePath"/>.
     /// </summary>
-    public ModuleRAGGuide UseFileKnowledgeBaseStore()
+    public ModuleRAGGuide UseKnowledgeBaseStoreFileProvider()
     {
         ConfigureServices(ctx =>
         {
@@ -115,44 +108,18 @@ public class ModuleRAGGuide
 
     /// <summary>
     /// Uses the in-memory vector store (for development/testing).
-    /// Automatically resolves vector dimensions from the embedding model catalog
-    /// and configures the embedding generator for auto-embedding.
+    /// Embedding model selection is resolved at knowledge-base level in <see cref="RAGService"/>.
     /// </summary>
-    public ModuleRAGGuide UseInMemoryVectorStore()
+    public ModuleRAGGuide UseVectorStoreInMemoryProvider()
     {
         ConfigureServices(ctx =>
         {
-            ctx.Services.AddSingleton<VectorStore>(sp =>
-            {
-                var providerFactory = sp.GetRequiredService<IAIProviderFactory>();
-                var modelCatalog = sp.GetRequiredService<AIModelCatalog>();
-                var ragOptions = sp.GetRequiredService<IOptions<ModuleRAGOption>>().Value;
-
-                // Auto-resolve VectorDimensions if not explicitly set
-                ragOptions.VectorDimensions ??= ResolveVectorDimensions(
-                    ragOptions, providerFactory, modelCatalog);
-
-                var provider = !string.IsNullOrWhiteSpace(ragOptions.EmbeddingProviderId)
-                    ? providerFactory.GetProvider(ragOptions.EmbeddingProviderId)
-                      ?? throw new InvalidOperationException(
-                          $"Embedding provider '{ragOptions.EmbeddingProviderId}' not found.")
-                    : providerFactory.GetDefaultProvider()
-                      ?? throw new InvalidOperationException(
-                          "No default AI provider configured.");
-
-                var embeddingGenerator = provider.GetEmbeddingGenerator(
-                    ragOptions.EmbeddingModelName);
-
-                return new InMemoryVectorStore(new()
-                {
-                    EmbeddingGenerator = embeddingGenerator
-                });
-            });
+            ctx.Services.AddSingleton<VectorStore>(_ => new InMemoryVectorStore());
         }, key: CONFIG_VECTOR_STORE);
         return this;
     }
 
-    public ModuleRAGGuide UseVectorStore<TVectorStore>()
+    public ModuleRAGGuide UseVectorStoreProvider<TVectorStore>()
         where TVectorStore : VectorStore
     {
         ConfigureServices(ctx =>
@@ -163,38 +130,35 @@ public class ModuleRAGGuide
     }
 
     /// <summary>
-    /// Uses fake embeddings for testing and development.
-    /// No external API or embedding model required.
+    /// Uses fake embeddings for testing and development through the unified AI provider pipeline.
     /// </summary>
-    /// <remarks>
-    /// This generates random embedding vectors, meaning semantic similarity search
-    /// will return arbitrary results. Use this for:
-    /// <list type="bullet">
-    ///   <item>Unit and integration testing</item>
-    ///   <item>CI/CD pipelines</item>
-    ///   <item>Prototyping without API costs</item>
-    ///   <item>Validating RAG infrastructure</item>
-    /// </list>
-    /// </remarks>
-    /// <param name="dimensions">
-    /// The number of dimensions for embedding vectors. Default is 384,
-    /// which matches common small models like bge-micro-v2.
-    /// </param>
-    public ModuleRAGGuide UseFakeEmbeddings(int dimensions = 384)
+    /// <param name="dimensions">Embedding dimensions.</param>
+    /// <param name="providerId">Provider ID used for fake embedding provider.</param>
+    /// <param name="modelName">Optional model name. If null, uses `fake-embeddings-{dimensions}d`.</param>
+    public ModuleRAGGuide AddFakeEmbeddingsModel(
+        int dimensions = 384,
+        string providerId = "fake-embeddings",
+        string? modelName = null)
     {
-        ConfigureModuleOption(opt => opt.VectorDimensions = dimensions);
+        var resolvedModelName = string.IsNullOrWhiteSpace(modelName)
+            ? $"fake-embeddings-{dimensions}d"
+            : modelName.Trim();
 
-        ConfigureServices(ctx =>
-        {
-            ctx.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(
-                new FakeEmbeddingGenerator(dimensions));
-
-            ctx.Services.AddSingleton<VectorStore>(sp =>
-                new InMemoryVectorStore(new()
-                {
-                    EmbeddingGenerator = sp.GetRequiredService<IEmbeddingGenerator<string, Embedding<float>>>()
-                }));
-        }, key: CONFIG_VECTOR_STORE);
+        DependsOnModule<ModuleAIGuide>().Register()
+            .AddModel(new EmbeddingModelInfo
+            {
+                ModelName = resolvedModelName,
+                Description = "Fake embedding model for development and testing.",
+                Dimensions = dimensions
+            })
+            .AddFakeProvider(options =>
+            {
+                options.ProviderId = providerId;
+                options.DisplayName ??= "Fake Embeddings";
+                options.ApiKey = "fake";
+                options.DefaultDimensions = dimensions;
+                options.SupportedModels = [resolvedModelName];
+            });
 
         return this;
     }
@@ -207,39 +171,5 @@ public class ModuleRAGGuide
             ctx.Services.AddSingleton<IDocumentChunker, TChunker>();
         });
         return this;
-    }
-
-    private static int ResolveVectorDimensions(
-        ModuleRAGOption ragOptions,
-        IAIProviderFactory providerFactory,
-        AIModelCatalog modelCatalog)
-    {
-        if (ragOptions.VectorDimensions.HasValue)
-            return ragOptions.VectorDimensions.Value;
-
-        var provider = !string.IsNullOrWhiteSpace(ragOptions.EmbeddingProviderId)
-            ? providerFactory.GetProvider(ragOptions.EmbeddingProviderId)
-            : providerFactory.GetDefaultProvider();
-
-        var modelName = ragOptions.EmbeddingModelName
-            ?? provider?.Info.SupportedModels?
-                .OfType<EmbeddingModelInfo>()
-                .FirstOrDefault()?.ModelName;
-
-        if (string.IsNullOrWhiteSpace(modelName))
-            throw new InvalidOperationException(
-                "Cannot determine embedding model. Configure an embedding model " +
-                "in the provider's SupportedModels or set VectorDimensions explicitly.");
-
-        var modelInfo = modelCatalog.GetModel(modelName) as EmbeddingModelInfo
-            ?? throw new InvalidOperationException(
-                $"Embedding model '{modelName}' not found in catalog. " +
-                "Register it via AddModel() or set VectorDimensions explicitly.");
-
-        return modelInfo.Dimensions
-            ?? throw new InvalidOperationException(
-                $"Embedding model '{modelName}' has no Dimensions configured. " +
-                "Use the probe feature in the provider management UI to detect dimensions, " +
-                "or set VectorDimensions explicitly in RAG options.");
     }
 }

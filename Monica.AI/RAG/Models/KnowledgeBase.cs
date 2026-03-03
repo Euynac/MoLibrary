@@ -13,10 +13,14 @@ public record KnowledgeBase
     public int ChunkCount { get; set; }
 
     /// <summary>
-    /// Embedding model ID used for this knowledge base.
-    /// Once set (on first indexing), it cannot be changed to prevent vector dimension mismatches.
+    /// Embedding provider ID used for this knowledge base.
     /// </summary>
-    public string? EmbeddingModelId { get; set; }
+    public string? EmbeddingProviderId { get; set; }
+
+    /// <summary>
+    /// Embedding model name used for this knowledge base.
+    /// </summary>
+    public string? EmbeddingModelName { get; set; }
 
     /// <summary>
     /// Custom tool description for the LLM when this KB is used in chat.

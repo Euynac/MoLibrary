@@ -39,6 +39,7 @@ public class ModuleRAGUI(ModuleRAGUIOption option)
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<RAGUIService>();
+        services.AddScoped<IEmbeddingModelManagementUIService, EmbeddingModelManagementUIService>();
     }
 
     public override void ClaimDependencies()

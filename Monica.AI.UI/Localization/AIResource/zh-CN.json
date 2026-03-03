@@ -79,6 +79,13 @@
         "CurrentModel": "当前模型：{0}",
         "KBModel": "知识库模型：{0}",
         "SearchMismatch": "以下知识库使用不同的嵌入模型：{0}。搜索结果可能不准确。"
+      },
+      "NotConfigured": "Current AI providers have no embedding models configured.",
+      "ReindexRequired": "Embedding model switched and current index was cleared. Reindex all documents in this knowledge base.",
+      "ReindexConfirm": {
+        "Title": "Reindex Required",
+        "Message": "Knowledge base '{0}' already has indexed documents. Switching embedding model will clear the current index immediately. Continue?",
+        "Continue": "Continue"
       }
     },
     "KnowledgeBase": {

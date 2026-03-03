@@ -1,13 +1,15 @@
 @page "/ai/rag/debug"
 @rendermode InteractiveServer
-@using Monica.AI.Models
 @using Monica.AI.RAG.Models
 @using Monica.AI.RAG.Services
+@using Monica.AI.UI.Components.RAG
+@using Monica.AI.UI.Localization
+@using Monica.AI.UI.Models
+@using Monica.AI.UI.Services
 @using Monica.Tool.MoResponse
 @using Microsoft.Extensions.Localization
-@using Monica.AI.UI.Localization
-@using Monica.AI.UI.Components.RAG
 @inject RAGUIService RAGUIService
+@inject IEmbeddingModelManagementUIService EmbeddingService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject IStringLocalizer<AIResource> L
@@ -39,10 +41,10 @@
                             <MudText Typo="Typo.caption" Class="kb-stats">
                                 @L["RAG:Debug:KBSidebar:Stats", kb.DocumentCount, kb.ChunkCount]
                             </MudText>
-                            @if (!string.IsNullOrEmpty(kb.EmbeddingModelId))
+                            @if (HasEmbeddingBinding(kb))
                             {
                                 <MudText Typo="Typo.caption" Class="kb-embedding-model">
-                                    @kb.EmbeddingModelId
+                                    @GetKnowledgeBaseModelDisplay(kb)
                                 </MudText>
                             }
                         </div>
@@ -55,14 +57,14 @@
     <main class="rag-main-panel">
         <EmbeddingModelSelector
             AvailableModels="@_embeddingModels"
-            SelectedModelId="@_selectedEmbeddingModelId"
-            SelectedModelIdChanged="@OnEmbeddingModelChanged" />
+            SelectedModelKey="@_selectedEmbeddingModelKey"
+            SelectedModelKeyChanged="@OnEmbeddingModelChanged" />
 
         @if (_showEmbeddingWarning)
         {
             <EmbeddingModelWarning
-                CurrentModelId="@_selectedEmbeddingModelId"
-                KnowledgeBaseModelId="@_mismatchedKBModelId"
+                CurrentModelId="@GetModelDisplayByKey(_selectedEmbeddingModelKey)"
+                KnowledgeBaseModelId="@_mismatchedKbModelDisplay"
                 AdditionalMessage="@_embeddingWarningMessage"
                 Show="true" />
         }
@@ -129,23 +131,22 @@
     public const string PAGE_URL = "/ai/rag/debug";
 
     private IReadOnlyList<KnowledgeBase> _knowledgeBases = [];
-    private IReadOnlyList<EmbeddingModelInfo> _embeddingModels = [];
+    private IReadOnlyList<EmbeddingModelOption> _embeddingModels = [];
     private IReadOnlyList<TextSearchResult> _searchResults = [];
     private HashSet<string> _selectedKbIds = [];
     private string _searchQuery = string.Empty;
     private int _topK = 5;
     private bool _isSearching;
     private bool _hasSearched;
-    private string _selectedEmbeddingModelId = string.Empty;
+    private string _selectedEmbeddingModelKey = string.Empty;
     private bool _showEmbeddingWarning;
-    private string _mismatchedKBModelId = string.Empty;
+    private string _mismatchedKbModelDisplay = string.Empty;
     private string _embeddingWarningMessage = string.Empty;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            // Load knowledge bases
             var kbResult = await RAGUIService.GetKnowledgeBasesAsync();
             if (!kbResult.IsFailed(out var error, out var kbs))
             {
@@ -157,13 +158,14 @@
                 Snackbar.Add(error.Message!, Severity.Error);
             }
 
-            // Load embedding models
-            var modelsResult = await RAGUIService.GetEmbeddingModelsAsync();
+            var modelsResult = await EmbeddingService.GetEmbeddingModelsAsync();
             if (!modelsResult.IsFailed(out error, out var models))
             {
                 _embeddingModels = models;
                 if (models.Count > 0)
-                    _selectedEmbeddingModelId = models[0].ModelName;
+                {
+                    _selectedEmbeddingModelKey = models[0].ModelKey;
+                }
             }
 
             await InvokeAsync(StateHasChanged);
@@ -195,16 +197,16 @@
         StateHasChanged();
     }
 
-    private async Task OnEmbeddingModelChanged(string modelId)
+    private async Task OnEmbeddingModelChanged(string modelKey)
     {
-        _selectedEmbeddingModelId = modelId;
+        _selectedEmbeddingModelKey = modelKey;
         CheckEmbeddingModelMismatch();
         await InvokeAsync(StateHasChanged);
     }
 
     private void CheckEmbeddingModelMismatch()
     {
-        if (string.IsNullOrEmpty(_selectedEmbeddingModelId) || !_selectedKbIds.Any())
+        if (string.IsNullOrEmpty(_selectedEmbeddingModelKey) || !_selectedKbIds.Any())
         {
             _showEmbeddingWarning = false;
             return;
@@ -214,10 +216,15 @@
         foreach (var kbId in _selectedKbIds)
         {
             var kb = _knowledgeBases.FirstOrDefault(k => k.Id == kbId);
-            if (kb?.EmbeddingModelId != null && kb.EmbeddingModelId != _selectedEmbeddingModelId)
+            if (kb is null || !HasEmbeddingBinding(kb))
+            {
+                continue;
+            }
+
+            if (!string.Equals(GetKnowledgeBaseModelKey(kb), _selectedEmbeddingModelKey, StringComparison.OrdinalIgnoreCase))
             {
                 mismatchedKBs.Add(kb.Name);
-                _mismatchedKBModelId = kb.EmbeddingModelId;
+                _mismatchedKbModelDisplay = GetKnowledgeBaseModelDisplay(kb);
             }
         }
 
@@ -267,7 +274,6 @@
             return;
         }
 
-        // Find the KB that contains this document
         var kbId = _selectedKbIds.FirstOrDefault();
         if (string.IsNullOrEmpty(kbId))
         {
@@ -299,5 +305,50 @@
         };
 
         await DialogService.ShowAsync<ChunkViewerDialog>(L["RAG:ChunkViewer:Title"], parameters, options);
+    }
+
+    private static bool HasEmbeddingBinding(KnowledgeBase kb)
+        => !string.IsNullOrWhiteSpace(kb.EmbeddingProviderId)
+           && !string.IsNullOrWhiteSpace(kb.EmbeddingModelName);
+
+    private static string GetKnowledgeBaseModelKey(KnowledgeBase kb)
+    {
+        if (!HasEmbeddingBinding(kb))
+        {
+            return string.Empty;
+        }
+
+        return EmbeddingModelOption.ToModelKey(kb.EmbeddingProviderId!, kb.EmbeddingModelName!);
+    }
+
+    private string GetKnowledgeBaseModelDisplay(KnowledgeBase kb)
+    {
+        if (!HasEmbeddingBinding(kb))
+        {
+            return string.Empty;
+        }
+
+        var providerName = _embeddingModels
+            .FirstOrDefault(m => string.Equals(m.ProviderId, kb.EmbeddingProviderId, StringComparison.OrdinalIgnoreCase))
+            ?.ProviderDisplayName ?? kb.EmbeddingProviderId;
+
+        return $"{kb.EmbeddingModelName} ({providerName})";
+    }
+
+    private string GetModelDisplayByKey(string modelKey)
+    {
+        var model = _embeddingModels.FirstOrDefault(m =>
+            string.Equals(m.ModelKey, modelKey, StringComparison.OrdinalIgnoreCase));
+        if (model is not null)
+        {
+            return $"{model.ModelName} ({model.ProviderDisplayName})";
+        }
+
+        if (!EmbeddingModelOption.TryParseModelKey(modelKey, out var providerId, out var modelName))
+        {
+            return modelKey;
+        }
+
+        return $"{modelName} ({providerId})";
     }
 }
