@@ -4,11 +4,14 @@
 @using Monica.AI.UI.Services
 @using Monica.AI.RAG.Models
 @using Monica.AI.UI.Components.RAG
+@using Monica.AI.UI.Helpers
 @using Monica.AI.UI.Models
+@using Monica.AI.Abstractions
 @using Monica.Tool.MoResponse
 @inject IStringLocalizer<AIResource> L
 @inject RAGUIService RAGService
 @inject IEmbeddingModelManagementUIService EmbeddingService
+@inject IAIProviderFactory ProviderFactory
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 
@@ -17,12 +20,34 @@
 <div class="rag-manage-page">
     <div class="kb-list-panel">
         <div class="panel-header">
-            <MudText Typo="Typo.h6">@L["RAG:KnowledgeBase:Title"]</MudText>
-            <MudIconButton Icon="@Icons.Material.Filled.Add"
-                           Color="Color.Primary"
-                           Size="Size.Small"
-                           OnClick="@ShowCreateKBDialog"
-                           title="@L["RAG:KnowledgeBase:Create"]" />
+            <div class="panel-title-group">
+                <MudIcon Icon="@Icons.Material.Filled.Storage" Size="Size.Small" Class="panel-title-icon" />
+                <MudText Typo="Typo.subtitle1" Class="panel-title">@L["RAG:KnowledgeBase:Title"]</MudText>
+            </div>
+        </div>
+
+        <div class="panel-actions">
+            <MudButton Size="Size.Small"
+                       Variant="Variant.Text"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="@ShowCreateKBDialog">
+                @L["Common:Create"]
+            </MudButton>
+            <MudButton Size="Size.Small"
+                       Variant="Variant.Text"
+                       StartIcon="@Icons.Material.Filled.Edit"
+                       Disabled="@(_selectedKB is null)"
+                       OnClick="@ShowEditKBDialog">
+                @L["Common:Edit"]
+            </MudButton>
+            <MudButton Size="Size.Small"
+                       Variant="Variant.Text"
+                       Color="Color.Error"
+                       StartIcon="@Icons.Material.Filled.Delete"
+                       Disabled="@(_selectedKB is null)"
+                       OnClick="@DeleteSelectedKnowledgeBase">
+                @L["Common:Delete"]
+            </MudButton>
         </div>
 
         <div class="kb-list">
@@ -64,16 +89,9 @@
                                      Variant="Variant.Outlined"
                                      Icon="@Icons.Material.Filled.Hub"
                                      Class="kb-provider-chip">
-                                @GetProviderDisplayName(kb.EmbeddingProviderId)
+                                @GetProviderDisplayLabel(kb.EmbeddingProviderId, kb.EmbeddingModelName)
                             </MudChip>
                         }
-                    </div>
-                    <div class="kb-card-actions" @onclick:stopPropagation="true">
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                       Size="Size.Small"
-                                       Color="Color.Error"
-                                       OnClick="@(() => DeleteKnowledgeBase(kb))"
-                                       title="@L["Common:Delete"]" />
                     </div>
                 </div>
             }
@@ -127,14 +145,20 @@
                         }
                     </div>
                     <div class="kb-badges">
-                        <span class="kb-badge kb-badge-blue">
-                            <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" />
-                            <span>@_selectedKB.DocumentCount @L["RAG:KnowledgeBase:DocumentCount"]</span>
-                        </span>
-                        <span class="kb-badge kb-badge-purple">
-                            <MudIcon Icon="@Icons.Material.Filled.GridView" Size="Size.Small" />
-                            <span>@_selectedKB.ChunkCount @L["RAG:KnowledgeBase:ChunkCount"]</span>
-                        </span>
+                        <MudChip T="string"
+                                 Size="Size.Small"
+                                 Variant="Variant.Outlined"
+                                 Color="Color.Default"
+                                 Icon="@Icons.Material.Filled.Description">
+                            @_selectedKB.DocumentCount @L["RAG:KnowledgeBase:DocumentCount"]
+                        </MudChip>
+                        <MudChip T="string"
+                                 Size="Size.Small"
+                                 Variant="Variant.Outlined"
+                                 Color="Color.Default"
+                                 Icon="@Icons.Material.Filled.GridView">
+                            @_selectedKB.ChunkCount @L["RAG:KnowledgeBase:ChunkCount"]
+                        </MudChip>
                         @if (HasEmbeddingBinding(_selectedKB))
                         {
                             <MudChip T="string"
@@ -151,7 +175,7 @@
                                      Variant="Variant.Outlined"
                                      Icon="@Icons.Material.Filled.Hub"
                                      Class="kb-header-provider-chip">
-                                @GetProviderDisplayName(_selectedKB.EmbeddingProviderId)
+                                @GetProviderDisplayLabel(_selectedKB.EmbeddingProviderId, _selectedKB.EmbeddingModelName)
                             </MudChip>
                         }
                     </div>
@@ -161,10 +185,13 @@
                 <div class="document-queue-section">
                     <div class="queue-header">
                         <div class="queue-title-row">
-                            <MudText Typo="Typo.overline">@L["RAG:DocumentQueue:Title"]</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                @_documentQueue.Count @L["RAG:KnowledgeBase:DocumentCount"]
-                            </MudText>
+                            <MudIcon Icon="@Icons.Material.Filled.QueuePlayNext" Size="Size.Small" Class="queue-title-icon" />
+                            <div class="queue-title-copy">
+                                <MudText Typo="Typo.subtitle1" Class="queue-title">@L["RAG:DocumentQueue:Title"]</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="queue-meta">
+                                    @_documentQueue.Count @L["RAG:KnowledgeBase:DocumentCount"]
+                                </MudText>
+                            </div>
                         </div>
                         <div class="queue-controls">
                             <MudText Typo="Typo.caption" Class="parallel-label">
@@ -182,73 +209,84 @@
                                        Size="Size.Small"
                                        StartIcon="@Icons.Material.Filled.PlayArrow"
                                        OnClick="@StartBatchIndexing"
+                                       Class="queue-start-button"
                                        Disabled="@(!_documentQueue.Any(d => d.Status == DocumentStatus.Pending))">
                                 @L["RAG:ParallelIndexing:Start"]
                             </MudButton>
                         </div>
                     </div>
 
-                    <MudTable T="DocumentQueueItem"
-                              Items="@_documentQueue"
-                              Dense="true"
-                              Hover="true"
-                              Class="document-queue-table">
-                        <HeaderContent>
-                            <MudTh>@L["RAG:DocumentQueue:Column:Name"]</MudTh>
-                            <MudTh>@L["RAG:DocumentQueue:Column:Status"]</MudTh>
-                            <MudTh>@L["RAG:DocumentQueue:Column:Chunks"]</MudTh>
-                            <MudTh>@L["RAG:DocumentQueue:Column:Actions"]</MudTh>
-                        </HeaderContent>
-                        <RowTemplate>
-                            <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Name"]">@context.Name</MudTd>
-                            <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Status"]">
-                                @switch (context.Status)
-                                {
-                                    case DocumentStatus.Pending:
-                                        <MudChip T="string" Size="Size.Small" Color="Color.Default">
-                                            @L["RAG:DocumentQueue:Status:Pending"]
-                                        </MudChip>
-                                        break;
-                                    case DocumentStatus.Indexing:
-                                        <div class="indexing-status">
-                                            <MudChip T="string" Size="Size.Small" Color="Color.Info">
-                                                @L["RAG:DocumentQueue:Status:Indexing"]
+                    <div class="queue-table-wrapper">
+                        <MudTable T="DocumentQueueItem"
+                                  Items="@_documentQueue"
+                                  Dense="true"
+                                  Hover="true"
+                                  Class="document-queue-table">
+                            <HeaderContent>
+                                <MudTh>@L["RAG:DocumentQueue:Column:Name"]</MudTh>
+                                <MudTh>@L["RAG:DocumentQueue:Column:Status"]</MudTh>
+                                <MudTh>@L["RAG:DocumentQueue:Column:Chunks"]</MudTh>
+                                <MudTh>@L["RAG:DocumentQueue:Column:Actions"]</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Name"]">@context.Name</MudTd>
+                                <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Status"]">
+                                    @switch (context.Status)
+                                    {
+                                        case DocumentStatus.Pending:
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Default">
+                                                @L["RAG:DocumentQueue:Status:Pending"]
                                             </MudChip>
-                                            <MudProgressLinear Value="@context.Progress" Color="Color.Info" Size="Size.Small" />
-                                        </div>
-                                        break;
-                                    case DocumentStatus.Done:
-                                        <MudChip T="string" Size="Size.Small" Color="Color.Success">
-                                            @L["RAG:DocumentQueue:Status:Done"]
-                                        </MudChip>
-                                        break;
-                                    case DocumentStatus.Error:
-                                        <MudChip T="string" Size="Size.Small" Color="Color.Error" title="@context.ErrorMessage">
-                                            @L["RAG:DocumentQueue:Status:Error"]
-                                        </MudChip>
-                                        break;
-                                }
-                            </MudTd>
-                            <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Chunks"]">@context.ChunkCount</MudTd>
-                            <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Actions"]">
-                                <MudIconButton Icon="@Icons.Material.Filled.Visibility"
-                                               Size="Size.Small"
-                                               OnClick="@(() => ShowChunkViewer(context))"
-                                               title="@L["RAG:DocumentQueue:Actions:ViewChunks"]" />
-                                <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                                               Size="Size.Small"
-                                               OnClick="@(() => ReindexDocument(context))"
-                                               Disabled="@(context.Status == DocumentStatus.Indexing)"
-                                               title="@L["RAG:DocumentQueue:Actions:Reindex"]" />
-                                <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                               Size="Size.Small"
-                                               Color="Color.Error"
-                                               OnClick="@(() => DeleteDocument(context))"
-                                               Disabled="@(context.Status == DocumentStatus.Indexing)"
-                                               title="@L["RAG:DocumentQueue:Actions:Delete"]" />
-                            </MudTd>
-                        </RowTemplate>
-                    </MudTable>
+                                            break;
+                                        case DocumentStatus.Indexing:
+                                            <div class="indexing-status">
+                                                <MudChip T="string" Size="Size.Small" Color="Color.Info">
+                                                    @L["RAG:DocumentQueue:Status:Indexing"]
+                                                </MudChip>
+                                                <MudProgressLinear Value="@context.Progress" Color="Color.Info" Size="Size.Small" />
+                                            </div>
+                                            break;
+                                        case DocumentStatus.Done:
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Success">
+                                                @L["RAG:DocumentQueue:Status:Done"]
+                                            </MudChip>
+                                            break;
+                                        case DocumentStatus.Error:
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Error" title="@context.ErrorMessage">
+                                                @L["RAG:DocumentQueue:Status:Error"]
+                                            </MudChip>
+                                            break;
+                                    }
+                                </MudTd>
+                                <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Chunks"]">@context.ChunkCount</MudTd>
+                                <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Actions"]">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                                   Size="Size.Small"
+                                                   OnClick="@(() => ShowChunkViewer(context))"
+                                                   title="@L["RAG:DocumentQueue:Actions:ViewChunks"]" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                                   Size="Size.Small"
+                                                   OnClick="@(() => ReindexDocument(context))"
+                                                   Disabled="@(context.Status == DocumentStatus.Indexing)"
+                                                   title="@L["RAG:DocumentQueue:Actions:Reindex"]" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                   Size="Size.Small"
+                                                   Color="Color.Error"
+                                                   OnClick="@(() => DeleteDocument(context))"
+                                                   Disabled="@(context.Status == DocumentStatus.Indexing)"
+                                                   title="@L["RAG:DocumentQueue:Actions:Delete"]" />
+                                     @if (context.Status == DocumentStatus.Error && !string.IsNullOrWhiteSpace(context.ErrorMessage))
+                                     {
+                                         <MudIconButton Icon="@Icons.Material.Filled.ErrorOutline"
+                                                        Size="Size.Small"
+                                                        Color="Color.Warning"
+                                                        OnClick="@(() => ShowIndexingError(context))"
+                                                        title="@L["Common:Error"]" />
+                                     }
+                                 </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </div>
                 </div>
 
                 <!-- Indexing Actions -->
@@ -429,6 +467,16 @@
         }
     }
 
+    private async Task DeleteSelectedKnowledgeBase()
+    {
+        if (_selectedKB is null)
+        {
+            return;
+        }
+
+        await DeleteKnowledgeBase(_selectedKB);
+    }
+
     private async Task LoadDocumentQueueAsync()
     {
         if (_selectedKB == null) return;
@@ -527,6 +575,42 @@
         }
     }
 
+    private async Task ShowEditKBDialog()
+    {
+        if (_selectedKB is null)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters
+        {
+            { nameof(CreateKnowledgeBaseDialog.InitialName), _selectedKB.Name },
+            { nameof(CreateKnowledgeBaseDialog.InitialDescription), _selectedKB.Description },
+            { nameof(CreateKnowledgeBaseDialog.SubmitText), L["Common:Actions:Save"].Value }
+        };
+
+        var dialog = await DialogService.ShowAsync<CreateKnowledgeBaseDialog>(
+            L["Common:Edit"],
+            parameters,
+            new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+
+        var result = await dialog.Result;
+        if (result is not { Canceled: false, Data: ValueTuple<string, string> data })
+        {
+            return;
+        }
+
+        var (name, description) = data;
+        if ((await RAGService.UpdateKnowledgeBaseAsync(_selectedKB.Id, name, description)).IsFailed(out var error))
+        {
+            Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
+            return;
+        }
+
+        Snackbar.Add(L["Common:Success"], Severity.Success);
+        await RefreshSelectedKnowledgeBaseAsync();
+    }
+
     private async Task StartBatchIndexing()
     {
         if (_selectedKB == null) return;
@@ -538,16 +622,22 @@
             return;
         }
 
-        if ((await RAGService.StartBatchIndexingAsync(_selectedKB.Id, _parallelCount)).IsFailed(out var error))
+        var result = await RAGService.StartBatchIndexingAsync(_selectedKB.Id, _parallelCount);
+        if (result.IsFailed(out var error))
         {
             Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
+            await DialogService.ShowMessageBoxAsync(
+                L["Common:Error"],
+                error.Message ?? L["Common:Error"].Value,
+                yesText: L["Common:Close"]);
         }
         else
         {
             Snackbar.Add(L["Common:Success"], Severity.Success);
-            await RefreshSelectedKnowledgeBaseAsync();
-            await LoadDocumentQueueAsync();
         }
+
+        await RefreshSelectedKnowledgeBaseAsync();
+        await LoadDocumentQueueAsync();
     }
 
     private async Task ShowChunkViewer(DocumentQueueItem document)
@@ -624,6 +714,18 @@
             Snackbar.Add(L["Common:Success"], Severity.Success);
             await LoadDocumentQueueAsync();
         }
+    }
+
+    private async Task ShowIndexingError(DocumentQueueItem document)
+    {
+        var message = string.IsNullOrWhiteSpace(document.ErrorMessage)
+            ? L["Common:Error"].Value
+            : document.ErrorMessage;
+
+        await DialogService.ShowMessageBoxAsync(
+            L["Common:Error"],
+            $"{document.Name}\n\n{message}",
+            yesText: L["Common:Close"]);
     }
 
     private async Task ShowDocumentSelectionDialog()
@@ -754,16 +856,47 @@
             kb.EmbeddingModelName!);
     }
 
-    private string GetProviderDisplayName(string? providerId)
+    private string GetProviderDisplayLabel(string? providerId, string? modelName = null)
     {
         if (string.IsNullOrWhiteSpace(providerId))
         {
             return string.Empty;
         }
 
-        return _availableModels
-            .FirstOrDefault(m => string.Equals(m.ProviderId, providerId, StringComparison.OrdinalIgnoreCase))
-            ?.ProviderDisplayName ?? providerId;
+        var model = _availableModels.FirstOrDefault(m =>
+            string.Equals(m.ProviderId, providerId, StringComparison.OrdinalIgnoreCase)
+            && (string.IsNullOrWhiteSpace(modelName)
+                || string.Equals(m.ModelName, modelName, StringComparison.OrdinalIgnoreCase)));
+
+        if (model is not null)
+        {
+            return model.ProviderDisplayName;
+        }
+
+        if (!string.IsNullOrWhiteSpace(modelName))
+        {
+            var modelCandidates = _availableModels
+                .Where(m => string.Equals(m.ModelName, modelName, StringComparison.OrdinalIgnoreCase))
+                .Select(m => m.ProviderDisplayName)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (modelCandidates.Count == 1)
+            {
+                return modelCandidates[0];
+            }
+        }
+
+        var provider = ProviderFactory.GetProvider(providerId);
+        if (provider is not null)
+        {
+            return ProviderLabelFormatter.FormatWithDisplayName(
+                provider.Info.ProviderType,
+                provider.ProviderId,
+                provider.Info.DisplayName);
+        }
+
+        return ProviderLabelFormatter.FormatFromProviderId(providerId);
     }
 
     private string GetKnowledgeBaseModelDisplay(KnowledgeBase kb)
@@ -773,7 +906,7 @@
             return string.Empty;
         }
 
-        return $"{kb.EmbeddingModelName} ({GetProviderDisplayName(kb.EmbeddingProviderId)})";
+        return $"{kb.EmbeddingModelName} ({GetProviderDisplayLabel(kb.EmbeddingProviderId, kb.EmbeddingModelName)})";
     }
 
     private string GetModelDisplayByKey(string modelKey)
@@ -791,7 +924,7 @@
             return modelKey;
         }
 
-        return $"{modelName} ({providerId})";
+        return $"{modelName} ({GetProviderDisplayLabel(providerId, modelName)})";
     }
 }
 

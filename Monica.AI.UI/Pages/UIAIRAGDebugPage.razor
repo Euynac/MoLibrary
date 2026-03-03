@@ -6,17 +6,25 @@
 @using Monica.AI.UI.Localization
 @using Monica.AI.UI.Models
 @using Monica.AI.UI.Services
+@using Monica.AI.UI.Helpers
+@using Monica.AI.Abstractions
 @using Monica.Tool.MoResponse
 @using Microsoft.Extensions.Localization
 @inject RAGUIService RAGUIService
 @inject IEmbeddingModelManagementUIService EmbeddingService
+@inject IAIProviderFactory ProviderFactory
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject IStringLocalizer<AIResource> L
 
 <div class="rag-debug-shell">
     <aside class="rag-sidebar">
-        <MudText Typo="Typo.subtitle1" Class="sidebar-title">@L["RAG:Debug:KBSidebar:Title"]</MudText>
+        <div class="sidebar-header">
+            <div class="sidebar-title-group">
+                <MudIcon Icon="@Icons.Material.Filled.Storage" Size="Size.Small" Class="sidebar-title-icon" />
+                <MudText Typo="Typo.subtitle1" Class="sidebar-title">@L["RAG:Debug:KBSidebar:Title"]</MudText>
+            </div>
+        </div>
 
         <div class="kb-selection-actions">
             <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="SelectAllKBs">
@@ -333,11 +341,11 @@
             return string.Empty;
         }
 
-        var providerName = _embeddingModels
+        var providerLabel = _embeddingModels
             .FirstOrDefault(m => string.Equals(m.ProviderId, kb.EmbeddingProviderId, StringComparison.OrdinalIgnoreCase))
-            ?.ProviderDisplayName ?? kb.EmbeddingProviderId;
+            ?.ProviderDisplayName ?? GetProviderDisplayLabel(kb.EmbeddingProviderId, kb.EmbeddingModelName);
 
-        return $"{kb.EmbeddingModelName} ({providerName})";
+        return $"{kb.EmbeddingModelName} ({providerLabel})";
     }
 
     private string GetModelDisplayByKey(string modelKey)
@@ -354,6 +362,48 @@
             return modelKey;
         }
 
-        return $"{modelName} ({providerId})";
+        return $"{modelName} ({GetProviderDisplayLabel(providerId, modelName)})";
+    }
+
+    private string GetProviderDisplayLabel(string? providerId, string? modelName = null)
+    {
+        if (string.IsNullOrWhiteSpace(providerId))
+        {
+            return string.Empty;
+        }
+
+        var model = _embeddingModels.FirstOrDefault(m =>
+            string.Equals(m.ProviderId, providerId, StringComparison.OrdinalIgnoreCase)
+            && (string.IsNullOrWhiteSpace(modelName)
+                || string.Equals(m.ModelName, modelName, StringComparison.OrdinalIgnoreCase)));
+        if (model is not null)
+        {
+            return model.ProviderDisplayName;
+        }
+
+        if (!string.IsNullOrWhiteSpace(modelName))
+        {
+            var candidates = _embeddingModels
+                .Where(m => string.Equals(m.ModelName, modelName, StringComparison.OrdinalIgnoreCase))
+                .Select(m => m.ProviderDisplayName)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (candidates.Count == 1)
+            {
+                return candidates[0];
+            }
+        }
+
+        var provider = ProviderFactory.GetProvider(providerId);
+        if (provider is not null)
+        {
+            return ProviderLabelFormatter.FormatWithDisplayName(
+                provider.Info.ProviderType,
+                provider.ProviderId,
+                provider.Info.DisplayName);
+        }
+
+        return ProviderLabelFormatter.FormatFromProviderId(providerId);
     }
 }

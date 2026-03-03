@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Monica.AI.Abstractions;
 using Monica.AI.Models;
 using Monica.AI.RAG.Services;
+using Monica.AI.UI.Helpers;
 using Monica.AI.UI.Models;
 using Monica.Tool.MoResponse;
 
@@ -25,7 +26,10 @@ public class EmbeddingModelManagementUIService(
                     .Select(model => new EmbeddingModelOption
                     {
                         ProviderId = provider.ProviderId,
-                        ProviderDisplayName = provider.DisplayName,
+                        ProviderDisplayName = ProviderLabelFormatter.FormatWithDisplayName(
+                            provider.Info.ProviderType,
+                            provider.ProviderId,
+                            provider.Info.DisplayName),
                         ModelName = model.ModelName,
                         Dimensions = model.Dimensions,
                         Description = model.Description
@@ -80,10 +84,19 @@ public class EmbeddingModelManagementUIService(
                 return Res.Ok<EmbeddingModelOption?>(model);
             }
 
+            var provider = providerFactory.GetProvider(kb.EmbeddingProviderId);
+            var providerType = provider?.Info.ProviderType;
+            var providerDisplayName = provider?.Info.DisplayName;
+
             return Res.Ok<EmbeddingModelOption?>(new EmbeddingModelOption
             {
                 ProviderId = kb.EmbeddingProviderId,
-                ProviderDisplayName = kb.EmbeddingProviderId,
+                ProviderDisplayName = provider is null
+                    ? ProviderLabelFormatter.FormatFromProviderId(kb.EmbeddingProviderId)
+                    : ProviderLabelFormatter.FormatWithDisplayName(
+                        providerType,
+                        kb.EmbeddingProviderId,
+                        providerDisplayName),
                 ModelName = kb.EmbeddingModelName,
                 Description = "Embedding model is persisted in KB metadata but unavailable in current providers."
             });

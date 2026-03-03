@@ -29,7 +29,7 @@
                    Variant="Variant.Filled"
                    OnClick="Submit"
                    Disabled="@string.IsNullOrWhiteSpace(Name)">
-            @L["Common:Create"]
+            @(SubmitText ?? L["Common:Create"].Value)
         </MudButton>
     </DialogActions>
 </MudDialog>
@@ -38,8 +38,25 @@
     [CascadingParameter]
     private IMudDialogInstance MudDialog { get; set; } = null!;
 
+    [Parameter] public string? InitialName { get; set; }
+    [Parameter] public string? InitialDescription { get; set; }
+    [Parameter] public string? SubmitText { get; set; }
+
     public string Name { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
+    private bool _initialized;
+
+    protected override void OnParametersSet()
+    {
+        if (_initialized)
+        {
+            return;
+        }
+
+        Name = InitialName ?? string.Empty;
+        Description = InitialDescription ?? string.Empty;
+        _initialized = true;
+    }
 
     private void Cancel()
     {

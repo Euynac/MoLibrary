@@ -47,6 +47,23 @@ public class RAGUIService(
         }
     }
 
+    public async Task<Res<KnowledgeBase>> UpdateKnowledgeBaseAsync(
+        string id,
+        string name,
+        string? description = null)
+    {
+        try
+        {
+            var kb = await ragService.UpdateKnowledgeBaseAsync(id, name, description);
+            return kb;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to update knowledge base '{Id}'", id);
+            return Res.Fail($"Failed to update knowledge base: {ex.Message}");
+        }
+    }
+
     public async Task<Res> DeleteKnowledgeBaseAsync(string id)
     {
         try
@@ -298,7 +315,30 @@ public class RAGUIService(
 
             await Task.WhenAll(tasks);
 
-            return Res.Ok($"Batch indexing completed for {pendingDocs.Count} documents.");
+            var finalQueue = await documentQueueStore.GetQueueAsync(kbId, cancellationToken);
+            var pendingDocIds = pendingDocs
+                .Select(doc => doc.Id)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            var processedDocs = finalQueue
+                .Where(doc => pendingDocIds.Contains(doc.Id))
+                .ToList();
+            var failedDocs = processedDocs
+                .Where(doc => doc.Status == DocumentStatus.Error)
+                .ToList();
+
+            if (failedDocs.Count > 0)
+            {
+                var details = string.Join("; ", failedDocs.Take(3).Select(doc =>
+                    $"{doc.Name}: {doc.ErrorMessage ?? "Unknown error"}"));
+                var suffix = failedDocs.Count > 3 ? " ..." : string.Empty;
+
+                return Res.Fail(
+                    $"Batch indexing completed with errors. Success {processedDocs.Count - failedDocs.Count}/{processedDocs.Count}, " +
+                    $"failed {failedDocs.Count}. {details}{suffix}");
+            }
+
+            return Res.Ok($"Batch indexing completed for {processedDocs.Count} documents.");
         }
         catch (Exception ex)
         {
@@ -339,7 +379,6 @@ public class RAGUIService(
                     queueItem.ChunkCount = p.TotalChunks;
                 }
 
-                documentQueueStore.UpdateAsync(queueItem, cancellationToken).Wait();
                 progress?.Report(p);
             });
 

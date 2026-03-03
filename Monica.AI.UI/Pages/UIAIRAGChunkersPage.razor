@@ -31,8 +31,11 @@
     }
     else
     {
-        <MudPaper Class="chunkers-panel" Elevation="0">
-            <MudText Typo="Typo.subtitle2" Class="section-title">@L["RAG:Chunker:Registered"]</MudText>
+        <MudPaper Class="section-panel chunkers-panel" Elevation="0">
+            <div class="section-heading">
+                <MudIcon Icon="@Icons.Material.Filled.ViewList" Size="Size.Small" />
+                <MudText Typo="Typo.subtitle1" Class="section-title">@L["RAG:Chunker:Registered"]</MudText>
+            </div>
 
             <MudTable T="ChunkerDescriptor"
                       Items="@_chunkers"
@@ -61,8 +64,11 @@
             </MudTable>
         </MudPaper>
 
-        <MudPaper Class="routes-panel" Elevation="0">
-            <MudText Typo="Typo.subtitle2" Class="section-title">@L["RAG:Chunker:Routing"]</MudText>
+        <MudPaper Class="section-panel routes-panel" Elevation="0">
+            <div class="section-heading">
+                <MudIcon Icon="@Icons.Material.Filled.Route" Size="Size.Small" />
+                <MudText Typo="Typo.subtitle1" Class="section-title">@L["RAG:Chunker:Routing"]</MudText>
+            </div>
 
             <MudTable T="RouteEditor"
                       Items="@_routes"
@@ -85,7 +91,8 @@
                                    ValueChanged="@((string value) => OnRouteTargetChangedAsync(context, value))"
                                    Dense="true"
                                    Variant="Variant.Outlined"
-                                   Margin="Margin.Dense">
+                                   Margin="Margin.Dense"
+                                   Class="route-target-select">
                             @foreach (var candidate in context.CandidateChunkerIds)
                             {
                                 <MudSelectItem T="string" Value="@candidate">@candidate</MudSelectItem>
@@ -99,7 +106,11 @@
                         }
                         else
                         {
-                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
+                            <MudChip T="string"
+                                     Size="Size.Small"
+                                     Color="Color.Warning"
+                                     Variant="Variant.Outlined"
+                                     Class="route-affected-chip">
                                 @L["RAG:Chunker:AffectedCount", context.Preview.AffectedDocumentCount]
                             </MudChip>
                         }
@@ -117,8 +128,11 @@
             </MudTable>
         </MudPaper>
 
-        <MudPaper Class="test-panel" Elevation="0">
-            <MudText Typo="Typo.subtitle2" Class="section-title">@L["RAG:Chunker:TestTitle"]</MudText>
+        <MudPaper Class="section-panel test-panel" Elevation="0">
+            <div class="section-heading">
+                <MudIcon Icon="@Icons.Material.Filled.Science" Size="Size.Small" />
+                <MudText Typo="Typo.subtitle1" Class="section-title">@L["RAG:Chunker:TestTitle"]</MudText>
+            </div>
 
             <div class="test-form">
                 <MudSelect T="string"

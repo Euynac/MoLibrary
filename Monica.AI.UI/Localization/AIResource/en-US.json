@@ -53,6 +53,7 @@
     "Error": "Error",
     "Success": "Success",
     "Create": "Create",
+    "Edit": "Edit",
     "Cancel": "Cancel",
     "Delete": "Delete",
     "Confirm": "Confirm",
@@ -107,6 +108,9 @@
         "Description": "Description",
         "NamePlaceholder": "e.g. Product Documentation",
         "DescPlaceholder": "Optional description..."
+      },
+      "EditDialog": {
+        "Title": "Edit Knowledge Base"
       }
     },
     "DocumentQueue": {

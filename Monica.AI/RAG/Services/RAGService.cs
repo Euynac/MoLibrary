@@ -35,6 +35,7 @@ public sealed partial class RAGService(
     private readonly ConcurrentDictionary<string, VectorStoreCollection<object, Dictionary<string, object?>>> _collections = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, string> _collectionBindings = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, bool> _initializedCollections = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, int> _resolvedEmbeddingDimensions = new(StringComparer.OrdinalIgnoreCase);
     private readonly SemaphoreSlim _initLock = new(1, 1);
 
     public async Task<KnowledgeBase> CreateKnowledgeBaseAsync(
@@ -59,6 +60,32 @@ public sealed partial class RAGService(
         await kbStore.SaveAsync(kb, ct);
         logger.LogInformation("Created knowledge base '{Name}' (Id: {Id})", kb.Name, kb.Id);
         return kb;
+    }
+
+    public async Task<KnowledgeBase> UpdateKnowledgeBaseAsync(
+        string knowledgeBaseId,
+        string name,
+        string? description = null,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new ArgumentException("Knowledge base name cannot be empty.", nameof(name));
+        }
+
+        var kb = await kbStore.GetByIdAsync(knowledgeBaseId, ct)
+                 ?? throw new KeyNotFoundException(
+                     $"Knowledge base '{knowledgeBaseId}' not found.");
+
+        var updatedKb = kb with
+        {
+            Name = name.Trim(),
+            Description = description
+        };
+
+        await kbStore.SaveAsync(updatedKb, ct);
+        logger.LogInformation("Updated knowledge base '{KbId}'", knowledgeBaseId);
+        return updatedKb;
     }
 
     /// <summary>
@@ -97,11 +124,13 @@ public sealed partial class RAGService(
         var normalizedModelName = embeddingModelName.Trim();
 
         // Validate the target binding before mutating KB state.
-        _ = ResolveEmbeddingBinding(kb with
-        {
-            EmbeddingProviderId = normalizedProviderId,
-            EmbeddingModelName = normalizedModelName
-        });
+        _ = await ResolveEmbeddingBindingAsync(
+            kb with
+            {
+                EmbeddingProviderId = normalizedProviderId,
+                EmbeddingModelName = normalizedModelName
+            },
+            ct);
 
         var changed = !string.Equals(kb.EmbeddingProviderId, normalizedProviderId, StringComparison.OrdinalIgnoreCase)
                       || !string.Equals(kb.EmbeddingModelName, normalizedModelName, StringComparison.OrdinalIgnoreCase);
@@ -193,7 +222,19 @@ public sealed partial class RAGService(
             return;
         }
 
-        var binding = ResolveEmbeddingBinding(kb);
+        var binding = await ResolveEmbeddingBindingAsync(kb, ct);
+        var originalProviderId = kb.EmbeddingProviderId;
+        if (!string.Equals(originalProviderId, binding.ProviderId, StringComparison.OrdinalIgnoreCase))
+        {
+            kb.EmbeddingProviderId = binding.ProviderId;
+            await kbStore.SaveAsync(kb, ct);
+            logger.LogWarning(
+                "Knowledge base '{KbId}' embedding provider remapped from '{OldProviderId}' to '{NewProviderId}'",
+                kb.Id,
+                originalProviderId,
+                binding.ProviderId);
+        }
+
         var embeddingGenerator = ResolveEmbeddingGenerator(binding);
         var collection = await GetOrCreateCollectionForKnowledgeBaseAsync(kb, binding, ct);
 
@@ -299,7 +340,12 @@ public sealed partial class RAGService(
             EmbeddingBinding binding;
             try
             {
-                binding = ResolveEmbeddingBinding(kb);
+                binding = await ResolveEmbeddingBindingAsync(kb, ct);
+                if (!string.Equals(kb.EmbeddingProviderId, binding.ProviderId, StringComparison.OrdinalIgnoreCase))
+                {
+                    kb.EmbeddingProviderId = binding.ProviderId;
+                    await kbStore.SaveAsync(kb, ct);
+                }
             }
             catch (Exception ex)
             {
@@ -589,8 +635,15 @@ public sealed partial class RAGService(
         KnowledgeBase kb,
         CancellationToken ct)
     {
-        var binding = ResolveEmbeddingBinding(kb);
-        return GetOrCreateCollectionForKnowledgeBaseAsync(kb, binding, ct);
+        return GetOrCreateCollectionForKnowledgeBaseCoreAsync(kb, ct);
+    }
+
+    private async Task<VectorStoreCollection<object, Dictionary<string, object?>>> GetOrCreateCollectionForKnowledgeBaseCoreAsync(
+        KnowledgeBase kb,
+        CancellationToken ct)
+    {
+        var binding = await ResolveEmbeddingBindingAsync(kb, ct);
+        return await GetOrCreateCollectionForKnowledgeBaseAsync(kb, binding, ct);
     }
 
     private async Task<VectorStoreCollection<object, Dictionary<string, object?>>> GetOrCreateCollectionForKnowledgeBaseAsync(
@@ -619,7 +672,9 @@ public sealed partial class RAGService(
         return collection;
     }
 
-    private EmbeddingBinding ResolveEmbeddingBinding(KnowledgeBase kb)
+    private async Task<EmbeddingBinding> ResolveEmbeddingBindingAsync(
+        KnowledgeBase kb,
+        CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(kb.EmbeddingProviderId) || string.IsNullOrWhiteSpace(kb.EmbeddingModelName))
         {
@@ -627,22 +682,133 @@ public sealed partial class RAGService(
                 $"Knowledge base '{kb.Name}' has no embedding model configured. Configure provider and model before indexing or searching.");
         }
 
-        var provider = providerFactory.GetProvider(kb.EmbeddingProviderId)
-                       ?? throw new InvalidOperationException(
-                           $"Embedding provider '{kb.EmbeddingProviderId}' configured on knowledge base '{kb.Name}' was not found.");
+        var provider = providerFactory.GetProvider(kb.EmbeddingProviderId);
+        if (provider is null)
+        {
+            provider = TryResolveProviderByEmbeddingModel(kb.EmbeddingModelName);
+            if (provider is null)
+            {
+                throw new InvalidOperationException(
+                    $"Embedding provider '{kb.EmbeddingProviderId}' configured on knowledge base '{kb.Name}' was not found.");
+            }
 
-        var embeddingModel = provider.Info.SupportedModels?
-            .OfType<EmbeddingModelInfo>()
-            .FirstOrDefault(model =>
-                string.Equals(model.ModelName, kb.EmbeddingModelName, StringComparison.OrdinalIgnoreCase))
-            ?? throw new InvalidOperationException(
+            logger.LogWarning(
+                "Embedding provider '{ProviderId}' configured on knowledge base '{KbName}' was not found. " +
+                "Temporarily remapped to provider '{ResolvedProviderId}' by model name '{ModelName}'.",
+                kb.EmbeddingProviderId,
+                kb.Name,
+                provider.ProviderId,
+                kb.EmbeddingModelName);
+        }
+
+        var embeddingModel = FindEmbeddingModel(provider, kb.EmbeddingModelName);
+        if (embeddingModel is null)
+        {
+            var fallbackProvider = TryResolveProviderByEmbeddingModel(kb.EmbeddingModelName);
+            if (fallbackProvider is not null
+                && !string.Equals(fallbackProvider.ProviderId, provider.ProviderId, StringComparison.OrdinalIgnoreCase))
+            {
+                var fallbackModel = FindEmbeddingModel(fallbackProvider, kb.EmbeddingModelName);
+                if (fallbackModel is not null)
+                {
+                    logger.LogWarning(
+                        "Embedding model '{ModelName}' was not found on provider '{ProviderId}' configured by knowledge base '{KbName}'. " +
+                        "Remapped to provider '{FallbackProviderId}'.",
+                        kb.EmbeddingModelName,
+                        provider.ProviderId,
+                        kb.Name,
+                        fallbackProvider.ProviderId);
+
+                    provider = fallbackProvider;
+                    embeddingModel = fallbackModel;
+                }
+            }
+        }
+
+        if (embeddingModel is null)
+        {
+            throw new InvalidOperationException(
                 $"Embedding model '{kb.EmbeddingModelName}' is not configured on provider '{provider.ProviderId}'.");
+        }
 
-        var dimensions = embeddingModel.Dimensions ?? throw new InvalidOperationException(
-                $"Embedding model '{embeddingModel.ModelName}' has no dimensions configured. " +
-                "Use provider model probe.");
+        var dimensions = await ResolveEmbeddingDimensionsAsync(provider, embeddingModel, ct);
 
         return new EmbeddingBinding(provider.ProviderId, embeddingModel.ModelName, dimensions);
+    }
+
+    private async Task<int> ResolveEmbeddingDimensionsAsync(
+        IAIProvider provider,
+        EmbeddingModelInfo embeddingModel,
+        CancellationToken ct)
+    {
+        if (embeddingModel.Dimensions is > 0)
+        {
+            return embeddingModel.Dimensions.Value;
+        }
+
+        var dimensionCacheKey = $"{provider.ProviderId}::{embeddingModel.ModelName}";
+        if (_resolvedEmbeddingDimensions.TryGetValue(dimensionCacheKey, out var cachedDimensions) && cachedDimensions > 0)
+        {
+            embeddingModel.Dimensions = cachedDimensions;
+            return cachedDimensions;
+        }
+
+        logger.LogInformation(
+            "Embedding model '{ModelName}' on provider '{ProviderId}' has no configured dimensions. Probing dimensions from runtime generator.",
+            embeddingModel.ModelName,
+            provider.ProviderId);
+
+        var generator = provider.GetEmbeddingGenerator(embeddingModel.ModelName);
+        var generated = await generator.GenerateAsync(["dimension-probe"], cancellationToken: ct);
+        var firstEmbedding = generated.FirstOrDefault();
+        if (firstEmbedding is null)
+        {
+            throw new InvalidOperationException(
+                $"Embedding generator returned no vectors for model '{embeddingModel.ModelName}' on provider '{provider.ProviderId}'.");
+        }
+
+        var dimensions = firstEmbedding.Vector.Length;
+
+        if (dimensions <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Failed to resolve dimensions for embedding model '{embeddingModel.ModelName}' on provider '{provider.ProviderId}'.");
+        }
+
+        embeddingModel.Dimensions = dimensions;
+        _resolvedEmbeddingDimensions[dimensionCacheKey] = dimensions;
+
+        logger.LogInformation(
+            "Resolved embedding dimensions for provider '{ProviderId}', model '{ModelName}': {Dimensions}",
+            provider.ProviderId,
+            embeddingModel.ModelName,
+            dimensions);
+
+        return dimensions;
+    }
+
+    private static EmbeddingModelInfo? FindEmbeddingModel(IAIProvider provider, string modelName)
+    {
+        return provider.Info.SupportedModels?
+            .OfType<EmbeddingModelInfo>()
+            .FirstOrDefault(model =>
+                string.Equals(model.ModelName, modelName, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private IAIProvider? TryResolveProviderByEmbeddingModel(string modelName)
+    {
+        if (string.IsNullOrWhiteSpace(modelName))
+        {
+            return null;
+        }
+
+        var candidates = providerFactory.GetAllProviders()
+            .Where(provider => provider.Info.SupportedModels?
+                .OfType<EmbeddingModelInfo>()
+                .Any(model => string.Equals(model.ModelName, modelName, StringComparison.OrdinalIgnoreCase)) == true)
+            .ToList();
+
+        return candidates.Count == 1 ? candidates[0] : null;
     }
 
     private IEmbeddingGenerator<string, Embedding<float>> ResolveEmbeddingGenerator(

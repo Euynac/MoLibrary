@@ -1,7 +1,7 @@
 .rag-chunkers-page {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 18px;
     padding: 12px;
 }
 
@@ -9,30 +9,111 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 12px;
 }
 
 .loading-state {
     display: flex;
     justify-content: center;
-    padding: 48px 0;
+    padding: 56px 0;
 }
 
-.chunkers-panel,
-.routes-panel,
-.test-panel {
+.section-panel {
     padding: 16px;
     border: 1px solid var(--mud-palette-lines-default);
-    border-radius: 12px;
-    background: var(--mud-palette-background-grey);
+    border-radius: 14px;
+    background: linear-gradient(
+        180deg,
+        rgba(var(--mud-palette-primary-rgb), 0.03) 0%,
+        var(--mud-palette-surface) 100%
+    );
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.04);
+}
+
+.section-heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.section-heading ::deep .mud-icon-root {
+    color: var(--mud-palette-primary);
 }
 
 .section-title {
-    margin-bottom: 12px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+.chunkers-table ::deep .mud-table-container,
+.routes-table ::deep .mud-table-container {
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 10px;
+    overflow: hidden;
+    background-color: var(--mud-palette-surface);
+}
+
+.chunkers-table ::deep .mud-table-head .mud-table-cell,
+.routes-table ::deep .mud-table-head .mud-table-cell {
+    font-weight: 600;
+    color: var(--mud-palette-text-primary);
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+    background-color: rgba(var(--mud-palette-primary-rgb), 0.08);
+}
+
+.routes-table ::deep .mud-table-head .mud-table-cell {
+    background-color: rgba(var(--mud-palette-secondary-rgb), 0.1);
+}
+
+.chunkers-table ::deep .mud-table-body .mud-table-row:hover .mud-table-cell,
+.routes-table ::deep .mud-table-body .mud-table-row:hover .mud-table-cell {
+    background-color: var(--mud-palette-action-default-hover);
+}
+
+.chunkers-table ::deep .mud-table-cell,
+.routes-table ::deep .mud-table-cell {
+    vertical-align: top;
 }
 
 .extension-chip {
     margin-right: 6px;
     margin-bottom: 6px;
+}
+
+.extension-chip ::deep .mud-chip {
+    border-color: rgba(var(--mud-palette-primary-rgb), 0.3);
+    background-color: rgba(var(--mud-palette-primary-rgb), 0.08);
+}
+
+.extension-chip ::deep .mud-chip-content {
+    font-size: 0.72rem;
+    font-family: "Consolas", "Monaco", "Courier New", monospace;
+}
+
+.route-target-select ::deep .mud-input-control {
+    min-width: 170px;
+}
+
+.route-target-select ::deep .mud-select-input {
+    font-family: "Consolas", "Monaco", "Courier New", monospace;
+    font-size: 0.82rem;
+}
+
+.route-target-select ::deep .mud-input-outlined-border {
+    border-color: var(--mud-palette-lines-default);
+}
+
+.route-target-select ::deep .mud-input-root:hover .mud-input-outlined-border {
+    border-color: var(--mud-palette-primary);
+}
+
+.route-target-select ::deep .mud-select-adornment {
+    color: var(--mud-palette-text-secondary);
+}
+
+.route-affected-chip ::deep .mud-chip-content {
+    font-weight: 600;
 }
 
 .test-form {
@@ -46,4 +127,11 @@
     display: flex;
     align-items: center;
     gap: 8px;
+}
+
+@media (max-width: 900px) {
+    .page-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
 }

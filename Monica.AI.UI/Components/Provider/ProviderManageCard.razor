@@ -1,11 +1,12 @@
 @using Monica.AI.Models
+@using Monica.AI.UI.Helpers
 
 <MudPaper Class="provider-card" Elevation="2">
     <div class="provider-card-inner">
         <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-2">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                 <MudIcon Icon="@GetProviderIcon(Provider)" Size="Size.Medium" />
-                <MudText Typo="Typo.h6">@Provider.DisplayName</MudText>
+                <MudText Typo="Typo.h6">@GetProviderDisplayLabel()</MudText>
                 @if (Provider.IsDefault)
                 {
                     <MudChip T="string" Size="Size.Small" Color="Color.Primary">默认</MudChip>
@@ -26,7 +27,6 @@
             </MudStack>
         </MudStack>
 
-        <MudText Typo="Typo.caption" Color="Color.Secondary">@Provider.ProviderType</MudText>
         @if (!string.IsNullOrWhiteSpace(Provider.Description))
         {
             <MudText Typo="Typo.body2" Class="provider-description">@Provider.Description</MudText>
@@ -254,6 +254,11 @@
             "Fake" => Icons.Material.Filled.Memory,
             _ => Icons.Material.Filled.SmartToy
         };
+    }
+
+    private string GetProviderDisplayLabel()
+    {
+        return ProviderLabelFormatter.FormatNormalized(Provider.ProviderType, Provider.ProviderId);
     }
 
     private Color GetTestStatusColor()
