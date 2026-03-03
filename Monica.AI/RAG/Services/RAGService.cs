@@ -143,20 +143,41 @@ public sealed partial class RAGService(
         var chunks = chunker.ChunkDocument(content, documentPath, documentTitle);
         if (chunks.Count == 0) return;
 
-        var collection = await GetOrCreateCollectionForKnowledgeBaseAsync(kb, ct);
+        var binding = ResolveEmbeddingBinding(kb);
+        var embeddingGenerator = ResolveEmbeddingGenerator(binding);
+        var collection = await GetOrCreateCollectionForKnowledgeBaseAsync(kb, binding, ct);
 
-        // Build all records - auto-embedding: pass text as ContentEmbedding value.
-        var records = chunks.Select(chunk => new Dictionary<string, object?>
+        logger.LogInformation(
+            "Generating embeddings for KB '{KbId}' using provider '{ProviderId}', model '{ModelName}' for {ChunkCount} chunks",
+            kb.Id, binding.ProviderId, binding.ModelName, chunks.Count);
+
+        var generatedEmbeddings = await embeddingGenerator.GenerateAsync(
+            chunks.Select(chunk => chunk.Content),
+            cancellationToken: ct);
+
+        var vectors = generatedEmbeddings
+            .Select(embedding => embedding.Vector.ToArray())
+            .ToList();
+
+        if (vectors.Count != chunks.Count)
         {
-            ["Key"] = $"{knowledgeBaseId}_{documentPath}_{chunk.ChunkIndex}",
-            ["KnowledgeBaseId"] = knowledgeBaseId,
-            ["DocumentPath"] = documentPath,
-            ["DocumentTitle"] = documentTitle,
-            ["Content"] = chunk.Content,
-            ["SectionPath"] = chunk.SectionPath,
-            ["ChunkIndex"] = chunk.ChunkIndex,
-            ["ContentEmbedding"] = chunk.Content
-        }).ToList();
+            throw new InvalidOperationException(
+                $"Embedding generator returned {vectors.Count} vectors for {chunks.Count} chunks.");
+        }
+
+        // Build all records with pre-generated vectors.
+        var records = chunks.Select((chunk, index) => new Dictionary<string, object?>
+            {
+                ["Key"] = $"{knowledgeBaseId}_{documentPath}_{chunk.ChunkIndex}",
+                ["KnowledgeBaseId"] = knowledgeBaseId,
+                ["DocumentPath"] = documentPath,
+                ["DocumentTitle"] = documentTitle,
+                ["Content"] = chunk.Content,
+                ["SectionPath"] = chunk.SectionPath,
+                ["ChunkIndex"] = chunk.ChunkIndex,
+                ["ContentEmbedding"] = vectors[index]
+            })
+            .ToList();
 
         await collection.UpsertAsync(records, ct);
 
@@ -223,7 +244,11 @@ public sealed partial class RAGService(
                     Text = record["Content"]?.ToString() ?? string.Empty,
                     Score = result.Score,
                     KnowledgeBaseId = kbId,
-                    SectionPath = record["SectionPath"]?.ToString()
+                    SectionPath = record["SectionPath"]?.ToString(),
+                    DocumentId = record["DocumentPath"]?.ToString(),
+                    ChunkIndex = TryGetChunkIndex(record.TryGetValue("ChunkIndex", out var value)
+                        ? value
+                        : null)
                 });
             }
         }
@@ -283,11 +308,19 @@ public sealed partial class RAGService(
     private string GetCollectionName(string knowledgeBaseId)
         => $"{_options.CollectionNamePrefix}{knowledgeBaseId}";
 
-    private async Task<VectorStoreCollection<object, Dictionary<string, object?>>> GetOrCreateCollectionForKnowledgeBaseAsync(
+    private Task<VectorStoreCollection<object, Dictionary<string, object?>>> GetOrCreateCollectionForKnowledgeBaseAsync(
         KnowledgeBase kb,
         CancellationToken ct)
     {
         var binding = ResolveEmbeddingBinding(kb);
+        return GetOrCreateCollectionForKnowledgeBaseAsync(kb, binding, ct);
+    }
+
+    private async Task<VectorStoreCollection<object, Dictionary<string, object?>>> GetOrCreateCollectionForKnowledgeBaseAsync(
+        KnowledgeBase kb,
+        EmbeddingBinding binding,
+        CancellationToken ct)
+    {
         var collectionName = GetCollectionName(kb.Id);
         var bindingKey = BuildBindingKey(binding.ProviderId, binding.ModelName, binding.Dimensions);
 
@@ -299,10 +332,7 @@ public sealed partial class RAGService(
 
         var collection = _collections.GetOrAdd(collectionName, _ =>
         {
-            var provider = providerFactory.GetProvider(binding.ProviderId)
-                           ?? throw new InvalidOperationException(
-                               $"Embedding provider '{binding.ProviderId}' not found.");
-            var embeddingGenerator = provider.GetEmbeddingGenerator(binding.ModelName);
+            var embeddingGenerator = ResolveEmbeddingGenerator(binding);
             var definition = CreateCollectionDefinition(binding.Dimensions, embeddingGenerator);
             return vectorStore.GetDynamicCollection(collectionName, definition);
         });
@@ -336,6 +366,16 @@ public sealed partial class RAGService(
                 "Use provider model probe.");
 
         return new EmbeddingBinding(provider.ProviderId, embeddingModel.ModelName, dimensions);
+    }
+
+    private IEmbeddingGenerator<string, Embedding<float>> ResolveEmbeddingGenerator(
+        EmbeddingBinding binding)
+    {
+        var provider = providerFactory.GetProvider(binding.ProviderId)
+                       ?? throw new InvalidOperationException(
+                           $"Embedding provider '{binding.ProviderId}' not found.");
+
+        return provider.GetEmbeddingGenerator(binding.ModelName);
     }
 
     private async Task ClearCollectionCacheAndStorageAsync(string collectionName, CancellationToken ct)
@@ -410,11 +450,27 @@ public sealed partial class RAGService(
                 new VectorStoreDataProperty("Content", typeof(string)) { IsFullTextIndexed = true },
                 new VectorStoreDataProperty("SectionPath", typeof(string)),
                 new VectorStoreDataProperty("ChunkIndex", typeof(int)),
-                new VectorStoreVectorProperty("ContentEmbedding", typeof(string), vectorDimensions)
+                new VectorStoreVectorProperty("ContentEmbedding", typeof(float[]), vectorDimensions)
                 {
                     EmbeddingGenerator = embeddingGenerator
                 }
             ]
+        };
+    }
+
+    private static int? TryGetChunkIndex(object? rawChunkIndex)
+    {
+        if (rawChunkIndex is null)
+        {
+            return null;
+        }
+
+        return rawChunkIndex switch
+        {
+            int i => i,
+            long l => (int)l,
+            string s when int.TryParse(s, out var parsed) => parsed,
+            _ => null
         };
     }
 

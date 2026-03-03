@@ -347,7 +347,12 @@ public class RAGUIService(
             // Index the document
             var indexProgress = new Progress<IndexingProgress>(p =>
             {
-                queueItem.Progress = (int)((p.ProcessedChunks / (double)p.TotalChunks) * 100);
+                if (p.TotalChunks > 0)
+                {
+                    queueItem.Progress = (int)((p.ProcessedChunks / (double)p.TotalChunks) * 100);
+                    queueItem.ChunkCount = p.TotalChunks;
+                }
+
                 documentQueueStore.UpdateAsync(queueItem, cancellationToken).Wait();
                 progress?.Report(p);
             });

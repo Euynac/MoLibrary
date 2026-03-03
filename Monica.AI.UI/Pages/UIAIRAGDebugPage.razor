@@ -288,13 +288,15 @@
             return;
         }
 
+        var statusText = L["RAG:ChunkViewer:Indexed", DateTime.Now.ToString("yyyy-MM-dd")].Value;
+
         var parameters = new DialogParameters
         {
-            ["DocumentName"] = result.SourceName ?? "Unknown",
-            ["OriginalText"] = data.OriginalText,
-            ["Chunks"] = data.Chunks,
-            ["MatchedChunkIndex"] = result.ChunkIndex,
-            ["StatusText"] = L["RAG:ChunkViewer:Indexed", DateTime.Now.ToString("yyyy-MM-dd")]
+            { nameof(ChunkViewerDialog.DocumentName), result.SourceName ?? "Unknown" },
+            { nameof(ChunkViewerDialog.OriginalText), data.OriginalText },
+            { nameof(ChunkViewerDialog.Chunks), data.Chunks },
+            { nameof(ChunkViewerDialog.MatchedChunkIndex), result.ChunkIndex },
+            { nameof(ChunkViewerDialog.StatusText), statusText }
         };
 
         var options = new DialogOptions
@@ -304,7 +306,10 @@
             CloseButton = true
         };
 
-        await DialogService.ShowAsync<ChunkViewerDialog>(L["RAG:ChunkViewer:Title"], parameters, options);
+        await DialogService.ShowAsync<ChunkViewerDialog>(
+            L["RAG:ChunkViewer:Title"].Value,
+            parameters,
+            options);
     }
 
     private static bool HasEmbeddingBinding(KnowledgeBase kb)
