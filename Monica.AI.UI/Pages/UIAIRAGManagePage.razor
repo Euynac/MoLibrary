@@ -190,7 +190,7 @@
                                        StartIcon="@Icons.Material.Filled.PlayArrow"
                                        OnClick="@StartBatchIndexing"
                                        Class="queue-start-button"
-                                       Disabled="@(!_documentQueue.Any(d => d.Status == DocumentStatus.Pending))">
+                                       Disabled="@(_isBatchIndexing || !_documentQueue.Any(d => d.Status == DocumentStatus.Pending))">
                                 @L["RAG:ParallelIndexing:Start"]
                             </MudButton>
                         </div>
@@ -343,8 +343,10 @@
     private List<EmbeddingModelOption> _availableModels = new();
     private List<DocumentQueueItem> _documentQueue = new();
     private int _parallelCount = 5;
+    private bool _isBatchIndexing;
     private List<string> _markdownGroups = new();
     private string? _selectedMarkdownGroup;
+    private const int QueueRefreshIntervalMs = 700;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -602,22 +604,40 @@
             return;
         }
 
-        var result = await RAGService.StartBatchIndexingAsync(_selectedKB.Id, _parallelCount);
-        if (result.IsFailed(out var error))
-        {
-            Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
-            await DialogService.ShowMessageBoxAsync(
-                L["Common:Error"],
-                error.Message ?? L["Common:Error"].Value,
-                yesText: L["Common:Close"]);
-        }
-        else
-        {
-            Snackbar.Add(L["Common:Success"], Severity.Success);
-        }
+        _isBatchIndexing = true;
+        var progress = new Progress<IndexingProgress>(__ => { _ = InvokeAsync(StateHasChanged); });
+        var indexingTask = RAGService.StartBatchIndexingAsync(_selectedKB.Id, _parallelCount, progress);
 
-        await RefreshSelectedKnowledgeBaseAsync();
-        await LoadDocumentQueueAsync();
+        try
+        {
+            while (!indexingTask.IsCompleted)
+            {
+                await LoadDocumentQueueAsync();
+                await InvokeAsync(StateHasChanged);
+                await Task.Delay(QueueRefreshIntervalMs);
+            }
+
+            var result = await indexingTask;
+            if (result.IsFailed(out var error))
+            {
+                Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
+                await DialogService.ShowMessageBoxAsync(
+                    L["Common:Error"],
+                    error.Message ?? L["Common:Error"].Value,
+                    yesText: L["Common:Close"]);
+            }
+            else
+            {
+                Snackbar.Add(L["Common:Success"], Severity.Success);
+            }
+        }
+        finally
+        {
+            _isBatchIndexing = false;
+            await RefreshSelectedKnowledgeBaseAsync();
+            await LoadDocumentQueueAsync();
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private async Task ShowChunkViewer(DocumentQueueItem document)

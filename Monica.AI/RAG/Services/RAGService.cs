@@ -29,6 +29,7 @@ public sealed partial class RAGService(
 {
     private const int LegacyDeleteProbeLimit = 20_000;
     private const int LegacyDeleteMissThreshold = 32;
+    private const int EmbeddingProgressBatchSize = 16;
 
     private readonly ModuleRAGOption _options = options.Value;
 
@@ -242,18 +243,35 @@ public sealed partial class RAGService(
             "Generating embeddings for KB '{KbId}' using provider '{ProviderId}', model '{ModelName}' for {ChunkCount} chunks",
             kb.Id, binding.ProviderId, binding.ModelName, chunks.Count);
 
-        var generatedEmbeddings = await embeddingGenerator.GenerateAsync(
-            chunks.Select(chunk => chunk.Content),
-            cancellationToken: ct);
+        var vectors = new List<float[]>(chunks.Count);
+        var processedChunks = 0;
+        progress?.Report(new IndexingProgress(processedChunks, chunks.Count, documentTitle));
 
-        var vectors = generatedEmbeddings
-            .Select(embedding => embedding.Vector.ToArray())
-            .ToList();
-
-        if (vectors.Count != chunks.Count)
+        foreach (var chunkBatch in chunks.Chunk(EmbeddingProgressBatchSize))
         {
-            throw new InvalidOperationException(
-                $"Embedding generator returned {vectors.Count} vectors for {chunks.Count} chunks.");
+            ct.ThrowIfCancellationRequested();
+
+            var batchTexts = chunkBatch
+                .Select(chunk => chunk.Content)
+                .ToList();
+
+            var generatedBatch = await embeddingGenerator.GenerateAsync(
+                batchTexts,
+                cancellationToken: ct);
+
+            var batchVectors = generatedBatch
+                .Select(embedding => embedding.Vector.ToArray())
+                .ToList();
+
+            if (batchVectors.Count != batchTexts.Count)
+            {
+                throw new InvalidOperationException(
+                    $"Embedding generator returned {batchVectors.Count} vectors for {batchTexts.Count} chunks.");
+            }
+
+            vectors.AddRange(batchVectors);
+            processedChunks += batchVectors.Count;
+            progress?.Report(new IndexingProgress(processedChunks, chunks.Count, documentTitle));
         }
 
         var existingSnapshot = await chunkSnapshotStore.GetAsync(kb.Id, documentPath, ct);
@@ -312,8 +330,6 @@ public sealed partial class RAGService(
 
         kb.ChunkCount += chunks.Count;
         await kbStore.SaveAsync(kb, ct);
-
-        progress?.Report(new IndexingProgress(chunks.Count, chunks.Count, documentTitle));
 
         logger.LogInformation(
             "Indexed document '{Title}' into KB '{KbId}': {ChunkCount} chunks by '{ChunkerId}'",
