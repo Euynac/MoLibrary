@@ -322,7 +322,7 @@ public abstract class CoordinatedLeaderService(
             }
             else
             {
-                RecordState($"Registration timeout ({Options.RegistrationWaitTimeout}), starting in degraded mode", HostedServiceState.Starting);
+                RecordState($"Registration timeout ({Options.RegistrationWaitTimeout}), starting in degraded mode", HostedServiceState.Degraded);
             }
         }
     }
