@@ -1,7 +1,3 @@
-# CLAUDE.md
-
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
 ## Project Overview
 
 Monica is a modular .NET infrastructure library designed for flexibility and performance. Each module can be used independently without requiring the entire framework.
@@ -36,14 +32,6 @@ Invoke when:
 You have access to MCP tools called `microsoft_docs_search`, `microsoft_docs_fetch`, and `microsoft_code_sample_search` - these tools allow you to search through and fetch Microsoft's latest official documentation and code samples, and that information might be more detailed or newer than what's in your training data set.
 
 When handling questions around how to work with native Microsoft technologies, such as C#, ASP.NET Core, Microsoft.Extensions, NuGet, Entity Framework, the `dotnet` runtime - please use these tools for research purposes when dealing with specific / narrowly defined questions that may occur.
-
-### Context7 (MCP Tool)
-
-Use `resolve-library-id` then `get-library-docs` when:
-- Working with third-party libraries (e.g., Serilog, MediatR, FluentValidation, Polly)
-- Need up-to-date API documentation or code examples for external packages
-- Encountering API changes, deprecated methods, or version-specific behavior
-- Uncertain about correct usage patterns for NuGet packages
 
 ## Coding Annotations
 
