@@ -1,11 +1,9 @@
 using System.Runtime.CompilerServices;
 using Microsoft.Agents.AI;
-using Microsoft.Extensions.Options;
 using Monica.AI.Abstractions;
 using Monica.AI.Extensions;
 using Monica.AI.Models;
 using Monica.AI.Services;
-using Monica.AI.UI.Modules;
 
 namespace Monica.AI.UI.Services;
 

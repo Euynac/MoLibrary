@@ -1,6 +1,5 @@
 using Microsoft.Extensions.AI;
 using Monica.AI.Models;
-using Monica.Tool.MoResponse;
 
 namespace Monica.AI.Abstractions;
 
@@ -48,17 +47,23 @@ public interface IAIProvider : IDisposable
     /// <summary>
     /// Tests whether the connection is working.
     /// </summary>
-    Task<Res> TestConnectionAsync(CancellationToken ct = default);
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the connection test fails.
+    /// </exception>
+    Task TestConnectionAsync(CancellationToken ct = default);
 
     /// <summary>
     /// Gets the list of available models.
     /// </summary>
-    Task<Res<IReadOnlyList<string>>> GetAvailableModelsAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<string>> GetAvailableModelsAsync(CancellationToken ct = default);
 
     /// <summary>
     /// Fetches the list of models actually available from the remote provider API.
     /// </summary>
-    Task<Res<IReadOnlyList<AIRemoteModelInfo>>> FetchRemoteModelsAsync(CancellationToken ct = default);
+    /// <exception cref="NotSupportedException">
+    /// Thrown when the provider does not support remote model listing.
+    /// </exception>
+    Task<IReadOnlyList<AIRemoteModelInfo>> FetchRemoteModelsAsync(CancellationToken ct = default);
 
     /// <summary>
     /// Whether this provider supports fetching remote model lists.

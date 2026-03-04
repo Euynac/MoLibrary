@@ -6,7 +6,6 @@ using Monica.AI.Abstractions;
 using Monica.AI.Models;
 using Monica.AI.Providers;
 using Monica.AI.Services;
-using Monica.Tool.MoResponse;
 using OpenAI;
 using AIChatMessage = Microsoft.Extensions.AI.ChatMessage;
 
@@ -103,32 +102,35 @@ public class OpenAIProvider : IAIProvider
     }
 
     /// <inheritdoc />
-    public async Task<Res> TestConnectionAsync(CancellationToken ct = default)
+    public async Task TestConnectionAsync(CancellationToken ct = default)
     {
         try
         {
             var chatClient = GetChatClient();
-            var response = await chatClient.GetResponseAsync(
+            _ = await chatClient.GetResponseAsync(
                 [new AIChatMessage(ChatRole.User, "Hello")],
                 new ChatOptions { MaxOutputTokens = 10 },
                 ct);
-            return Res.Ok();
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
-            return Res.Fail($"OpenAI connection test failed: {ex.Message}");
+            throw new InvalidOperationException($"OpenAI connection test failed: {ex.Message}", ex);
         }
     }
 
     /// <inheritdoc />
-    public Task<Res<IReadOnlyList<string>>> GetAvailableModelsAsync(CancellationToken ct = default)
+    public Task<IReadOnlyList<string>> GetAvailableModelsAsync(CancellationToken ct = default)
     {
-        var models = _models.Select(m => m.ModelName).ToList();
-        return Task.FromResult(Res.Ok<IReadOnlyList<string>>(models));
+        IReadOnlyList<string> models = _models.Select(m => m.ModelName).ToList();
+        return Task.FromResult(models);
     }
 
     /// <inheritdoc />
-    public async Task<Res<IReadOnlyList<AIRemoteModelInfo>>> FetchRemoteModelsAsync(CancellationToken ct = default)
+    public async Task<IReadOnlyList<AIRemoteModelInfo>> FetchRemoteModelsAsync(CancellationToken ct = default)
     {
         try
         {
@@ -146,11 +148,15 @@ public class OpenAIProvider : IAIProvider
                 })
                 .OrderBy(m => m.ModelId)
                 .ToList();
-            return Res.Ok<IReadOnlyList<AIRemoteModelInfo>>(remoteModels);
+            return remoteModels;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
-            return Res.Fail("Failed to fetch OpenAI models: " + ex.Message);
+            throw new InvalidOperationException("Failed to fetch OpenAI models: " + ex.Message, ex);
         }
     }
 

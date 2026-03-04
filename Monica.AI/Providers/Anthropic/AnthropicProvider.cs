@@ -7,7 +7,6 @@ using Monica.AI.Abstractions;
 using Monica.AI.Models;
 using Monica.AI.Providers;
 using Monica.AI.Services;
-using Monica.Tool.MoResponse;
 
 namespace Monica.AI.Providers.Anthropic;
 
@@ -93,32 +92,35 @@ public class AnthropicProvider : IAIProvider
     }
 
     /// <inheritdoc />
-    public async Task<Res> TestConnectionAsync(CancellationToken ct = default)
+    public async Task TestConnectionAsync(CancellationToken ct = default)
     {
         try
         {
             var chatClient = GetChatClient();
-            var response = await chatClient.GetResponseAsync(
+            _ = await chatClient.GetResponseAsync(
                 [new ChatMessage(ChatRole.User, "Hello")],
                 new ChatOptions {MaxOutputTokens = 10},
                 ct);
-            return Res.Ok();
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
-            return Res.Fail($"Anthropic connection test failed: {ex.Message}");
+            throw new InvalidOperationException($"Anthropic connection test failed: {ex.Message}", ex);
         }
     }
 
     /// <inheritdoc />
-    public Task<Res<IReadOnlyList<string>>> GetAvailableModelsAsync(CancellationToken ct = default)
+    public Task<IReadOnlyList<string>> GetAvailableModelsAsync(CancellationToken ct = default)
     {
-        var models = _models.Select(m => m.ModelName).ToList();
-        return Task.FromResult(Res.Ok<IReadOnlyList<string>>(models));
+        IReadOnlyList<string> models = _models.Select(m => m.ModelName).ToList();
+        return Task.FromResult(models);
     }
 
     /// <inheritdoc />
-    public async Task<Res<IReadOnlyList<AIRemoteModelInfo>>> FetchRemoteModelsAsync(CancellationToken ct = default)
+    public async Task<IReadOnlyList<AIRemoteModelInfo>> FetchRemoteModelsAsync(CancellationToken ct = default)
     {
         try
         {
@@ -150,11 +152,15 @@ public class AnthropicProvider : IAIProvider
             }
 
             remoteModels.Sort((a, b) => string.Compare(a.ModelId, b.ModelId, StringComparison.Ordinal));
-            return Res.Ok<IReadOnlyList<AIRemoteModelInfo>>(remoteModels);
+            return remoteModels;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
-            return Res.Fail("Failed to fetch Anthropic models: " + ex.Message);
+            throw new InvalidOperationException("Failed to fetch Anthropic models: " + ex.Message, ex);
         }
     }
 
