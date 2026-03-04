@@ -5,6 +5,7 @@ using Monica.AI.RAG.Services;
 using Monica.Markdown.Interfaces;
 using Monica.Markdown.Models;
 using Monica.Tool.MoResponse;
+using System.Collections.Concurrent;
 
 namespace Monica.AI.UI.Services;
 
@@ -18,6 +19,11 @@ public class RAGUIService(
     IDocumentQueueStore documentQueueStore,
     ILogger<RAGUIService> logger)
 {
+    private static readonly ConcurrentDictionary<string, int> ActiveBatchCounters =
+        new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ConcurrentDictionary<string, CancellationTokenSource> ActiveBatchCancellationSources =
+        new(StringComparer.OrdinalIgnoreCase);
+
     public async Task<Res<IReadOnlyList<KnowledgeBase>>> GetKnowledgeBasesAsync()
     {
         try
@@ -283,14 +289,31 @@ public class RAGUIService(
         IProgress<IndexingProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
+        var markedActive = false;
+        CancellationTokenSource? batchCancellation = null;
+        CancellationTokenSource? linkedCancellation = null;
+
         try
         {
             logger.LogInformation(
                 "Starting batch indexing for KB '{KbId}' with max concurrency {MaxConcurrency}",
                 kbId, maxConcurrency);
 
+            var requestedCancellation = new CancellationTokenSource();
+            if (!ActiveBatchCancellationSources.TryAdd(kbId, requestedCancellation))
+            {
+                requestedCancellation.Dispose();
+                return Res.Fail("Batch indexing is already running.");
+            }
+
+            batchCancellation = requestedCancellation;
+            linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+                cancellationToken,
+                batchCancellation.Token);
+            var effectiveToken = linkedCancellation.Token;
+
             // Get pending documents from queue
-            var queue = await documentQueueStore.GetQueueAsync(kbId, cancellationToken);
+            var queue = await documentQueueStore.GetQueueAsync(kbId, effectiveToken);
             var pendingDocs = queue.Where(d => d.Status == DocumentStatus.Pending).ToList();
 
             if (pendingDocs.Count == 0)
@@ -298,14 +321,17 @@ public class RAGUIService(
                 return Res.Fail("No pending documents to index.");
             }
 
+            MarkBatchIndexingStarted(kbId);
+            markedActive = true;
+
             // Process documents with limited concurrency
             var semaphore = new SemaphoreSlim(maxConcurrency, maxConcurrency);
             var tasks = pendingDocs.Select(async doc =>
             {
-                await semaphore.WaitAsync(cancellationToken);
+                await semaphore.WaitAsync(effectiveToken);
                 try
                 {
-                    await IndexQueuedDocumentAsync(kbId, doc, progress, cancellationToken);
+                    await IndexQueuedDocumentAsync(kbId, doc, progress, effectiveToken);
                 }
                 finally
                 {
@@ -315,7 +341,7 @@ public class RAGUIService(
 
             await Task.WhenAll(tasks);
 
-            var finalQueue = await documentQueueStore.GetQueueAsync(kbId, cancellationToken);
+            var finalQueue = await documentQueueStore.GetQueueAsync(kbId, CancellationToken.None);
             var pendingDocIds = pendingDocs
                 .Select(doc => doc.Id)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -340,11 +366,72 @@ public class RAGUIService(
 
             return Res.Ok($"Batch indexing completed for {processedDocs.Count} documents.");
         }
+        catch (OperationCanceledException) when (
+            linkedCancellation?.IsCancellationRequested == true ||
+            cancellationToken.IsCancellationRequested)
+        {
+            logger.LogInformation("Batch indexing cancelled for KB '{KbId}'", kbId);
+            return Res.Fail("Request was cancelled.");
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to start batch indexing for KB '{KbId}'", kbId);
             return Res.Fail($"Failed to start batch indexing: {ex.Message}");
         }
+        finally
+        {
+            if (linkedCancellation is not null)
+            {
+                linkedCancellation.Dispose();
+            }
+
+            if (batchCancellation is not null)
+            {
+                if (ActiveBatchCancellationSources.TryRemove(kbId, out var removed))
+                {
+                    removed.Dispose();
+                }
+                else
+                {
+                    batchCancellation.Dispose();
+                }
+            }
+
+            if (markedActive)
+            {
+                MarkBatchIndexingCompleted(kbId);
+            }
+        }
+    }
+
+    public Res CancelBatchIndexing(string kbId)
+    {
+        if (string.IsNullOrWhiteSpace(kbId))
+        {
+            return Res.Fail("Knowledge base id is required.");
+        }
+
+        if (!ActiveBatchCancellationSources.TryGetValue(kbId, out var cts))
+        {
+            return Res.Fail("No active indexing task to cancel.");
+        }
+
+        if (!cts.IsCancellationRequested)
+        {
+            cts.Cancel();
+        }
+
+        return Res.Ok("Cancellation requested.");
+    }
+
+    public bool IsBatchIndexingActive(string kbId)
+    {
+        if (string.IsNullOrWhiteSpace(kbId))
+        {
+            return false;
+        }
+
+        return ActiveBatchCounters.TryGetValue(kbId, out var count) && count > 0;
     }
 
     private async Task IndexQueuedDocumentAsync(
@@ -370,13 +457,52 @@ public class RAGUIService(
 
             var content = await markdownService.GetDocumentContentAsync(document);
 
+            var lastPersistedProgress = queueItem.Progress;
+            var progressWriteSync = new object();
+            var progressWriteChain = Task.CompletedTask;
+
+            void EnqueueProgressPersist(int progressValue, int totalChunks)
+            {
+                lock (progressWriteSync)
+                {
+                    progressWriteChain = progressWriteChain.ContinueWith(async _ =>
+                    {
+                        try
+                        {
+                            queueItem.Progress = progressValue;
+                            queueItem.ChunkCount = totalChunks;
+                            await documentQueueStore.UpdateAsync(queueItem, cancellationToken);
+                        }
+                        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                        {
+                            // Ignore cancellation while the batch is stopping.
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogDebug(
+                                ex,
+                                "Failed to persist indexing progress for document '{DocId}' in KB '{KbId}'",
+                                queueItem.Id,
+                                kbId);
+                        }
+                    }, CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.Default).Unwrap();
+                }
+            }
+
             // Index the document
             var indexProgress = new Progress<IndexingProgress>(p =>
             {
                 if (p.TotalChunks > 0)
                 {
-                    queueItem.Progress = (int)((p.ProcessedChunks / (double)p.TotalChunks) * 100);
+                    var progressValue = (int)((p.ProcessedChunks / (double)p.TotalChunks) * 100);
+                    queueItem.Progress = progressValue;
                     queueItem.ChunkCount = p.TotalChunks;
+
+                    if (progressValue != lastPersistedProgress)
+                    {
+                        lastPersistedProgress = progressValue;
+                        EnqueueProgressPersist(progressValue, p.TotalChunks);
+                    }
                 }
 
                 progress?.Report(p);
@@ -390,22 +516,55 @@ public class RAGUIService(
                 indexProgress,
                 cancellationToken);
 
+            Task pendingProgressWrites;
+            lock (progressWriteSync)
+            {
+                pendingProgressWrites = progressWriteChain;
+            }
+
+            await pendingProgressWrites;
+
             // Update status to done
             queueItem.Status = DocumentStatus.Done;
             queueItem.Progress = 100;
             queueItem.IndexedAt = DateTimeOffset.UtcNow;
             queueItem.ErrorMessage = null;
-            await documentQueueStore.UpdateAsync(queueItem, cancellationToken);
+            await documentQueueStore.UpdateAsync(queueItem, CancellationToken.None);
 
             logger.LogInformation("Successfully indexed document '{DocId}' in KB '{KbId}'", queueItem.Id, kbId);
         }
         catch (Exception ex)
         {
+            if (ex is OperationCanceledException && cancellationToken.IsCancellationRequested)
+            {
+                logger.LogInformation(
+                    "Indexing cancelled for document '{DocId}' in KB '{KbId}'",
+                    queueItem.Id,
+                    kbId);
+
+                queueItem.Status = DocumentStatus.Pending;
+                queueItem.Progress = 0;
+                queueItem.ErrorMessage = null;
+                try
+                {
+                    await documentQueueStore.UpdateAsync(queueItem, CancellationToken.None);
+                }
+                catch (Exception updateEx)
+                {
+                    logger.LogWarning(
+                        updateEx,
+                        "Failed to reset cancelled document '{DocId}' to pending in KB '{KbId}'",
+                        queueItem.Id,
+                        kbId);
+                }
+                return;
+            }
+
             logger.LogError(ex, "Failed to index document '{DocId}' in KB '{KbId}'", queueItem.Id, kbId);
 
             queueItem.Status = DocumentStatus.Error;
             queueItem.ErrorMessage = ex.Message;
-            await documentQueueStore.UpdateAsync(queueItem, cancellationToken);
+            await documentQueueStore.UpdateAsync(queueItem, CancellationToken.None);
         }
     }
 
@@ -487,5 +646,23 @@ public class RAGUIService(
         }
 
         return null;
+    }
+
+    private static void MarkBatchIndexingStarted(string kbId)
+    {
+        ActiveBatchCounters.AddOrUpdate(kbId, 1, static (_, count) => count + 1);
+    }
+
+    private static void MarkBatchIndexingCompleted(string kbId)
+    {
+        var updated = ActiveBatchCounters.AddOrUpdate(
+            kbId,
+            0,
+            static (_, count) => count > 1 ? count - 1 : 0);
+
+        if (updated == 0)
+        {
+            ActiveBatchCounters.TryRemove(kbId, out _);
+        }
     }
 }

@@ -276,6 +276,10 @@
     min-width: 132px;
 }
 
+.queue-cancel-button {
+    min-width: 110px;
+}
+
 .queue-table-wrapper {
     min-width: 0;
 }

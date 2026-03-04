@@ -1,4 +1,5 @@
 @page "/ai/rag/manage"
+@implements IDisposable
 @using Microsoft.Extensions.Localization
 @using Monica.AI.UI.Localization
 @using Monica.AI.UI.Services
@@ -184,15 +185,24 @@
                                              Variant="Variant.Outlined"
                                              Margin="Margin.Dense"
                                              Class="parallel-input" />
-                            <MudButton Variant="Variant.Filled"
-                                       Color="Color.Primary"
-                                       Size="Size.Small"
-                                       StartIcon="@Icons.Material.Filled.PlayArrow"
-                                       OnClick="@StartBatchIndexing"
-                                       Class="queue-start-button"
-                                       Disabled="@(_isBatchIndexing || !_documentQueue.Any(d => d.Status == DocumentStatus.Pending))">
-                                @L["RAG:ParallelIndexing:Start"]
-                            </MudButton>
+                             <MudButton Variant="Variant.Filled"
+                                        Color="Color.Primary"
+                                        Size="Size.Small"
+                                        StartIcon="@Icons.Material.Filled.PlayArrow"
+                                        OnClick="@StartBatchIndexing"
+                                        Class="queue-start-button"
+                                        Disabled="@(!CanStartBatchIndexing())">
+                                 @L["RAG:ParallelIndexing:Start"]
+                             </MudButton>
+                             <MudButton Variant="Variant.Outlined"
+                                        Color="Color.Warning"
+                                        Size="Size.Small"
+                                        StartIcon="@Icons.Material.Filled.StopCircle"
+                                        OnClick="@CancelBatchIndexing"
+                                        Class="queue-cancel-button"
+                                        Disabled="@(!CanCancelBatchIndexing())">
+                                 @L["Common:Cancel"]
+                             </MudButton>
                         </div>
                     </div>
 
@@ -347,6 +357,10 @@
     private List<string> _markdownGroups = new();
     private string? _selectedMarkdownGroup;
     private const int QueueRefreshIntervalMs = 700;
+    private static readonly TimeSpan QueueActivityGracePeriod = TimeSpan.FromSeconds(25);
+    private DateTimeOffset _lastObservedIndexingAt = DateTimeOffset.MinValue;
+    private CancellationTokenSource? _queuePollingCts;
+    private Task? _queuePollingTask;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -355,6 +369,14 @@
             await LoadEmbeddingModelsAsync();
             await LoadKnowledgeBasesAsync();
             await LoadMarkdownGroupsAsync();
+
+            if (_selectedKB is not null)
+            {
+                await LoadDocumentQueueAsync();
+                SyncBatchIndexingStateFromQueueAndService();
+                EnsureQueuePolling();
+            }
+
             await InvokeAsync(StateHasChanged);
         }
     }
@@ -399,7 +421,7 @@
     private async Task OnKBSelected(KnowledgeBase? kb)
     {
         _selectedKB = kb;
-        if (kb != null)
+        if (kb is not null)
         {
             // Load KB's embedding model
             if ((await EmbeddingService.GetKnowledgeBaseEmbeddingModelAsync(kb.Id)).IsFailed(out var error, out var model))
@@ -421,6 +443,15 @@
 
             // Load document queue for this KB
             await LoadDocumentQueueAsync();
+            SyncBatchIndexingStateFromQueueAndService();
+            EnsureQueuePolling();
+        }
+        else
+        {
+            _currentEmbeddingModelKey = string.Empty;
+            _documentQueue.Clear();
+            _isBatchIndexing = false;
+            StopQueuePolling();
         }
     }
 
@@ -459,7 +490,7 @@
         await DeleteKnowledgeBase(_selectedKB);
     }
 
-    private async Task LoadDocumentQueueAsync()
+    private async Task LoadDocumentQueueAsync(bool ensurePolling = true)
     {
         if (_selectedKB == null) return;
 
@@ -471,6 +502,13 @@
         else
         {
             _documentQueue = queue.ToList();
+            TrackQueueActivity(_documentQueue);
+            SyncBatchIndexingStateFromQueueAndService();
+        }
+
+        if (ensurePolling)
+        {
+            EnsureQueuePolling();
         }
     }
 
@@ -605,26 +643,31 @@
         }
 
         _isBatchIndexing = true;
+        _lastObservedIndexingAt = DateTimeOffset.UtcNow;
+        EnsureQueuePolling();
         var progress = new Progress<IndexingProgress>(__ => { _ = InvokeAsync(StateHasChanged); });
-        var indexingTask = RAGService.StartBatchIndexingAsync(_selectedKB.Id, _parallelCount, progress);
+        var indexingTask = RAGService.StartBatchIndexingAsync(
+            _selectedKB.Id,
+            _parallelCount,
+            progress);
 
         try
         {
-            while (!indexingTask.IsCompleted)
-            {
-                await LoadDocumentQueueAsync();
-                await InvokeAsync(StateHasChanged);
-                await Task.Delay(QueueRefreshIntervalMs);
-            }
-
             var result = await indexingTask;
             if (result.IsFailed(out var error))
             {
-                Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
-                await DialogService.ShowMessageBoxAsync(
-                    L["Common:Error"],
-                    error.Message ?? L["Common:Error"].Value,
-                    yesText: L["Common:Close"]);
+                if (IsCancellationMessage(error.Message))
+                {
+                    Snackbar.Add(L["Error:RequestCancelled"], Severity.Warning);
+                }
+                else
+                {
+                    Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
+                    await DialogService.ShowMessageBoxAsync(
+                        L["Common:Error"],
+                        error.Message ?? L["Common:Error"].Value,
+                        yesText: L["Common:Close"]);
+                }
             }
             else
             {
@@ -636,8 +679,29 @@
             _isBatchIndexing = false;
             await RefreshSelectedKnowledgeBaseAsync();
             await LoadDocumentQueueAsync();
+            EnsureQueuePolling();
             await InvokeAsync(StateHasChanged);
         }
+    }
+
+    private async Task CancelBatchIndexing()
+    {
+        if (_selectedKB is null)
+        {
+            return;
+        }
+
+        if (RAGService.CancelBatchIndexing(_selectedKB.Id).IsFailed(out var error))
+        {
+            Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
+            return;
+        }
+
+        _lastObservedIndexingAt = DateTimeOffset.UtcNow;
+        EnsureQueuePolling();
+        Snackbar.Add(L["Error:RequestCancelled"], Severity.Warning);
+        await LoadDocumentQueueAsync();
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task ShowChunkViewer(DocumentQueueItem document)
@@ -842,6 +906,179 @@
         _currentEmbeddingModelKey = HasEmbeddingBinding(_selectedKB)
             ? GetKnowledgeBaseModelKey(_selectedKB)
             : string.Empty;
+    }
+
+    private bool HasActiveQueueWork()
+    {
+        if (_selectedKB is null)
+        {
+            return false;
+        }
+
+        if (IsBatchIndexingRunning())
+        {
+            return true;
+        }
+
+        var hasInFlightProgress = _documentQueue.Any(d =>
+            d.Status == DocumentStatus.Indexing ||
+            (d.Progress > 0 && d.Progress < 100));
+        if (hasInFlightProgress)
+        {
+            _lastObservedIndexingAt = DateTimeOffset.UtcNow;
+            return true;
+        }
+
+        var hasPending = _documentQueue.Any(d => d.Status == DocumentStatus.Pending);
+        return hasPending && DateTimeOffset.UtcNow - _lastObservedIndexingAt <= QueueActivityGracePeriod;
+    }
+
+    private void TrackQueueActivity(IEnumerable<DocumentQueueItem> queueItems)
+    {
+        if (queueItems.Any(item =>
+                item.Status == DocumentStatus.Indexing ||
+                (item.Progress > 0 && item.Progress < 100)))
+        {
+            _lastObservedIndexingAt = DateTimeOffset.UtcNow;
+        }
+    }
+
+    private bool IsBatchIndexingRunning()
+    {
+        if (_selectedKB is null)
+        {
+            return false;
+        }
+
+        var hasActiveServerBatch = RAGService.IsBatchIndexingActive(_selectedKB.Id);
+        var hasInFlightQueueRows = _documentQueue.Any(d =>
+            d.Status == DocumentStatus.Indexing ||
+            (d.Progress > 0 && d.Progress < 100));
+
+        return _isBatchIndexing || hasActiveServerBatch || hasInFlightQueueRows;
+    }
+
+    private bool CanStartBatchIndexing()
+    {
+        if (_selectedKB is null)
+        {
+            return false;
+        }
+
+        var hasPending = _documentQueue.Any(d => d.Status == DocumentStatus.Pending);
+        return hasPending && !IsBatchIndexingRunning();
+    }
+
+    private bool CanCancelBatchIndexing()
+    {
+        if (_selectedKB is null)
+        {
+            return false;
+        }
+
+        return IsBatchIndexingRunning();
+    }
+
+    private static bool IsCancellationMessage(string? message)
+        => !string.IsNullOrWhiteSpace(message)
+           && message.Contains("cancel", StringComparison.OrdinalIgnoreCase);
+
+    private void SyncBatchIndexingStateFromQueueAndService()
+    {
+        if (_selectedKB is null)
+        {
+            _isBatchIndexing = false;
+            return;
+        }
+
+        var hasActiveServerBatch = RAGService.IsBatchIndexingActive(_selectedKB.Id);
+        var hasInFlightQueueRows = _documentQueue.Any(d =>
+            d.Status == DocumentStatus.Indexing ||
+            (d.Progress > 0 && d.Progress < 100));
+
+        _isBatchIndexing = hasActiveServerBatch || hasInFlightQueueRows;
+        if (_isBatchIndexing)
+        {
+            _lastObservedIndexingAt = DateTimeOffset.UtcNow;
+        }
+    }
+
+    private void EnsureQueuePolling()
+    {
+        if (!HasActiveQueueWork())
+        {
+            StopQueuePolling();
+            return;
+        }
+
+        if (_queuePollingTask is { IsCompleted: false })
+        {
+            return;
+        }
+
+        _queuePollingCts = new CancellationTokenSource();
+        _queuePollingTask = RunQueuePollingAsync(_queuePollingCts.Token);
+    }
+
+    private async Task RunQueuePollingAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                if (_selectedKB is null)
+                {
+                    break;
+                }
+
+                await LoadDocumentQueueAsync(ensurePolling: false);
+                await InvokeAsync(StateHasChanged);
+
+                if (!HasActiveQueueWork())
+                {
+                    break;
+                }
+
+                await Task.Delay(QueueRefreshIntervalMs, cancellationToken);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignore cancellation while component is disposed or polling is switched.
+        }
+        finally
+        {
+            if (_queuePollingCts?.Token == cancellationToken)
+            {
+                _queuePollingCts.Dispose();
+                _queuePollingCts = null;
+                _queuePollingTask = null;
+            }
+        }
+    }
+
+    private void StopQueuePolling()
+    {
+        var cts = _queuePollingCts;
+        if (cts is null)
+        {
+            return;
+        }
+
+        _queuePollingCts = null;
+        _queuePollingTask = null;
+
+        if (!cts.IsCancellationRequested)
+        {
+            cts.Cancel();
+        }
+
+        cts.Dispose();
+    }
+
+    public void Dispose()
+    {
+        StopQueuePolling();
     }
 
     private static string GetKnowledgeBaseModelKey(KnowledgeBase kb)
