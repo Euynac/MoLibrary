@@ -5,7 +5,6 @@
 @using Monica.AI.UI.Services
 @using Monica.AI.RAG.Models
 @using Monica.AI.UI.Components.RAG
-@using Monica.AI.UI.Helpers
 @using Monica.AI.UI.Models
 @using Monica.AI.Abstractions
 @using Monica.Tool.MoResponse
@@ -1127,13 +1126,10 @@
         var provider = ProviderFactory.GetProvider(providerId);
         if (provider is not null)
         {
-            return ProviderLabelFormatter.FormatWithDisplayName(
-                provider.Info.ProviderType,
-                provider.ProviderId,
-                provider.Info.DisplayName);
+            return provider.DisplayName;
         }
 
-        return ProviderLabelFormatter.FormatFromProviderId(providerId);
+        return providerId.Trim();
     }
 
     private string GetKnowledgeBaseModelDisplay(KnowledgeBase kb)

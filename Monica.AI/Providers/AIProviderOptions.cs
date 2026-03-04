@@ -6,7 +6,7 @@ namespace Monica.AI.Providers;
 public abstract class AIProviderOptions
 {
     /// <summary>
-    /// Provider 唯一标识符，如果不设置则自动生成
+    /// Provider 唯一标识符，如果不设置则是 Provider 名称
     /// </summary>
     public string? ProviderId { get; set; }
 

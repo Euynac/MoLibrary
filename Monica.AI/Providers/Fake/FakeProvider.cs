@@ -14,6 +14,7 @@ namespace Monica.AI.Providers.Fake;
 /// </summary>
 public class FakeProvider : IAIProvider
 {
+    private const EAIProviderType ProviderKind = EAIProviderType.Fake;
     private readonly FakeProviderOptions _options;
     private readonly IReadOnlyList<AIModelInfo> _models;
     private readonly string? _defaultModel;
@@ -36,10 +37,13 @@ public class FakeProvider : IAIProvider
     }
 
     /// <inheritdoc />
-    public string ProviderId => _options.ProviderId ?? (_defaultModel == null ? "fake-embeddings" : $"fake-{_defaultModel}");
+    public string ProviderId => _options.ProviderId ?? ProviderKind.ToString();
 
     /// <inheritdoc />
-    public string DisplayName => _options.DisplayName ?? "Fake Embeddings";
+    public string ProviderType => ProviderKind.ToString();
+
+    /// <inheritdoc />
+    public string DisplayName => _options.DisplayName ?? AIProviderNaming.BuildDisplayName(ProviderType, ProviderId);
 
     /// <inheritdoc />
     public AIProviderInfo Info => new()
@@ -47,7 +51,7 @@ public class FakeProvider : IAIProvider
         ProviderId = ProviderId,
         DisplayName = DisplayName,
         Description = "Fake embedding provider for development and testing.",
-        ProviderType = "Fake",
+        ProviderType = ProviderType,
         DefaultModel = _defaultModel,
         SystemPrompt = _systemPrompt,
         SupportedModels = _models,

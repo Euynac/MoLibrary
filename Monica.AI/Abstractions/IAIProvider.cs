@@ -15,6 +15,11 @@ public interface IAIProvider : IDisposable
     string ProviderId { get; }
 
     /// <summary>
+    /// Provider type (for example: OpenAI, Anthropic).
+    /// </summary>
+    string ProviderType { get; }
+
+    /// <summary>
     /// Provider display name.
     /// </summary>
     string DisplayName { get; }

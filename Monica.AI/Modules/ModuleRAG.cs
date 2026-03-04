@@ -4,6 +4,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.VectorData;
 using Microsoft.SemanticKernel.Connectors.InMemory;
 using Monica.AI.Models;
+using Monica.AI.Providers;
+using Monica.AI.Providers.Fake;
 using Monica.AI.RAG.Abstractions;
 using Monica.AI.RAG.Services;
 using Monica.Core.Module;
@@ -221,15 +223,16 @@ public class ModuleRAGGuide
     /// Uses fake embeddings for testing and development through the unified AI provider pipeline.
     /// </summary>
     /// <param name="dimensions">Embedding dimensions.</param>
-    /// <param name="providerId">Provider ID used for fake embedding provider.</param>
-    /// <param name="modelName">Optional model name. If null, uses `fake-embeddings-{dimensions}d`.</param>
+    /// <param name="providerId">Optional provider ID used for fake embedding provider. Defaults to provider type.</param>
+    /// <param name="modelName">Optional model name. If null, uses `Fake-Embeddings-{dimensions}d`.</param>
     public ModuleRAGGuide AddFakeEmbeddingsModel(
         int dimensions = 384,
-        string providerId = "fake-embeddings",
+        string? providerId = null,
         string? modelName = null)
     {
+        var resolvedProviderId = providerId ?? nameof(EAIProviderType.Fake);
         var resolvedModelName = string.IsNullOrWhiteSpace(modelName)
-            ? $"fake-embeddings-{dimensions}d"
+            ? $"Fake-Embeddings-{dimensions}d"
             : modelName.Trim();
 
         DependsOnModule<ModuleAIGuide>().Register()
@@ -241,12 +244,10 @@ public class ModuleRAGGuide
             })
             .AddFakeProvider(options =>
             {
-                options.ProviderId = providerId;
-                options.DisplayName ??= "Fake Embeddings";
                 options.ApiKey = "fake";
                 options.DefaultDimensions = dimensions;
                 options.SupportedModels = [resolvedModelName];
-            });
+            }, resolvedProviderId);
 
         return this;
     }

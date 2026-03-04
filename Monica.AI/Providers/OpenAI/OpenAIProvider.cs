@@ -17,6 +17,7 @@ namespace Monica.AI.Providers.OpenAI;
 /// </summary>
 public class OpenAIProvider : IAIProvider
 {
+    private const EAIProviderType ProviderKind = EAIProviderType.OpenAI;
     private readonly OpenAIProviderOptions _options;
     private readonly OpenAIClient _client;
     private readonly IReadOnlyList<AIModelInfo> _models;
@@ -50,18 +51,21 @@ public class OpenAIProvider : IAIProvider
     }
 
     /// <inheritdoc />
-    public string ProviderId => _options.ProviderId ?? (_defaultModel == null ? "openai" : $"openai-{_defaultModel}");
+    public string ProviderId => _options.ProviderId ?? ProviderKind.ToString();
 
     /// <inheritdoc />
-    public string DisplayName => _options.DisplayName ?? (_defaultModel == null ? "OpenAI" : $"OpenAI ({_defaultModel})");
+    public string ProviderType => ProviderKind.ToString();
+
+    /// <inheritdoc />
+    public string DisplayName => _options.DisplayName ?? AIProviderNaming.BuildDisplayName(ProviderType, ProviderId);
 
     /// <inheritdoc />
     public AIProviderInfo Info => new()
     {
         ProviderId = ProviderId,
         DisplayName = DisplayName,
-        Description = "OpenAI GPT models",
-        ProviderType = "OpenAI",
+        Description = $"{ProviderType} GPT models",
+        ProviderType = ProviderType,
         DefaultModel = _defaultModel,
         SystemPrompt = _systemPrompt,
         SupportedModels = _models,

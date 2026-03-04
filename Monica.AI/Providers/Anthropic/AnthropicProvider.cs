@@ -16,6 +16,7 @@ namespace Monica.AI.Providers.Anthropic;
 /// </summary>
 public class AnthropicProvider : IAIProvider
 {
+    private const EAIProviderType ProviderKind = EAIProviderType.Anthropic;
     private readonly AnthropicProviderOptions _options;
     private readonly AnthropicClient _client;
     private readonly IReadOnlyList<AIModelInfo> _models;
@@ -46,18 +47,21 @@ public class AnthropicProvider : IAIProvider
     }
 
     /// <inheritdoc />
-    public string ProviderId => _options.ProviderId ?? (_defaultModel == null ? "anthropic" : $"anthropic-{_defaultModel}");
+    public string ProviderId => _options.ProviderId ?? ProviderKind.ToString();
 
     /// <inheritdoc />
-    public string DisplayName => _options.DisplayName ?? (_defaultModel == null ? "Anthropic" : $"Anthropic ({_defaultModel})");
+    public string ProviderType => ProviderKind.ToString();
+
+    /// <inheritdoc />
+    public string DisplayName => _options.DisplayName ?? AIProviderNaming.BuildDisplayName(ProviderType, ProviderId);
 
     /// <inheritdoc />
     public AIProviderInfo Info => new()
     {
         ProviderId = ProviderId,
         DisplayName = DisplayName,
-        Description = "Anthropic Claude models",
-        ProviderType = "Anthropic",
+        Description = $"{ProviderType} Claude models",
+        ProviderType = ProviderType,
         DefaultModel = _defaultModel,
         SystemPrompt = _systemPrompt,
         SupportedModels = _models,
