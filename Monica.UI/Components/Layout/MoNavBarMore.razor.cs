@@ -10,12 +10,17 @@ public partial class MoNavBarMore : IDisposable
     private const int CloseDelayMilliseconds = 120;
 
     [Parameter] public Dictionary<string, List<UINavItem>> Categories { get; set; } = new();
+    [Parameter] public bool CompactMode { get; set; }
 
     private bool _isDropdownOpen;
     private bool _isPointerInsideMenu;
     private long _closeRequestVersion;
     private string? _activeFlyoutCategory;
     private CancellationTokenSource? _closeDelayCts;
+    private string RootCssClass => CompactMode ? "navbar-more navbar-more-compact" : "navbar-more";
+    private string MoreMenuCssClass => _activeFlyoutCategory is null
+        ? "dropdown-menu more-menu more-menu-scrollable"
+        : "dropdown-menu more-menu";
 
     private string GetItemText(UINavItem item)
     {

@@ -4,7 +4,7 @@
 @inject IStringLocalizer<SharedResource> L
 @inject IStringLocalizer<UIRegistryResource> RegistryL
 
-<div class="navbar-more"
+<div class="@RootCssClass"
      @onmouseenter="OnMouseEnter"
      @onmouseleave="OnMouseLeave">
 
@@ -15,7 +15,7 @@
 
     @if (_isDropdownOpen)
     {
-        <div class="dropdown-menu more-menu">
+        <div class="@MoreMenuCssClass">
             <div class="more-menu-header">
                 <span>@L["NavBar:MoreModules"]</span>
             </div>
