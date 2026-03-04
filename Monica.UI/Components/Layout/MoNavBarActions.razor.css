@@ -4,6 +4,7 @@
     gap: 8px;
     margin-left: auto;
     flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .action-button {
@@ -12,6 +13,7 @@
     justify-content: center;
     color: var(--mud-palette-text-secondary);
     transition: all 0.2s ease;
+    flex-shrink: 0;
 }
 
 .action-button:hover {
@@ -25,6 +27,8 @@
     text-transform: none;
     color: var(--mud-palette-text-primary);
     transition: all 0.2s ease;
+    white-space: nowrap;
+    min-width: 0;
 }
 
 .navbar-actions ::deep .user-button:hover {
@@ -35,6 +39,10 @@
     font-size: 14px;
     font-weight: 500;
     margin-left: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
 }
 
 /* 分隔线 */
@@ -44,4 +52,37 @@
     height: 24px;
     background: var(--mud-palette-divider);
     margin: 0 8px;
+}
+
+@media (max-width: 1280px) {
+    .navbar-actions {
+        gap: 4px;
+    }
+
+    .navbar-actions::before {
+        margin: 0 4px;
+    }
+
+    .navbar-actions ::deep .user-button {
+        padding: 0 8px;
+    }
+
+    .navbar-actions ::deep .user-name {
+        max-width: 110px;
+    }
+}
+
+@media (max-width: 1080px) {
+    .navbar-actions::before {
+        display: none;
+    }
+
+    .navbar-actions ::deep .user-button {
+        min-width: 40px;
+        padding: 0 6px;
+    }
+
+    .navbar-actions ::deep .user-name {
+        display: none;
+    }
 }

@@ -3,6 +3,7 @@
     display: flex;
     align-items: center;
     height: 100%;
+    flex-shrink: 0;
 }
 
 .navbar-link {
@@ -19,6 +20,8 @@
     cursor: pointer;
     transition: all 0.2s ease;
     position: relative;
+    white-space: nowrap;
+    flex-wrap: nowrap;
 }
 
 .navbar-link:hover {
@@ -26,7 +29,6 @@
     background-color: var(--mud-palette-action-default-hover);
 }
 
-/* 底部边框效果 */
 .navbar-link::before {
     content: '';
     position: absolute;
@@ -43,7 +45,6 @@
     width: 80%;
 }
 
-/* 第一级下拉菜单 */
 .more-menu {
     position: absolute;
     top: 100%;
@@ -69,7 +70,6 @@
     margin-bottom: 4px;
 }
 
-/* 分类项 */
 .more-category-item {
     position: relative;
     padding: 0;
@@ -83,6 +83,7 @@
     cursor: pointer;
     color: var(--mud-palette-text-primary);
     transition: all 0.2s ease;
+    white-space: nowrap;
 }
 
 .category-header:hover {
@@ -90,13 +91,12 @@
     color: var(--mud-palette-primary);
 }
 
-/* 第二级侧滑菜单 */
 .flyout-menu {
     position: absolute;
     left: 100%;
     top: 0;
     min-width: 240px;
-    margin-left: 4px;
+    margin-left: 0;
     background-color: var(--mud-palette-surface);
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
@@ -117,7 +117,6 @@
     margin-bottom: 4px;
 }
 
-/* 处理MudNavLink组件 */
 .flyout-menu ::deep .flyout-item {
     padding: 0;
     min-height: 42px;
@@ -144,6 +143,7 @@
     align-items: center;
     gap: 12px;
     width: 100%;
+    white-space: nowrap;
 }
 
 .flyout-menu ::deep .flyout-item .mud-nav-link:hover {
@@ -169,7 +169,6 @@
     color: var(--mud-palette-primary);
 }
 
-/* 左侧强调线 */
 .flyout-menu ::deep .flyout-item .mud-nav-link::before {
     content: '';
     position: absolute;
@@ -187,18 +186,28 @@
     transform: translateX(0);
 }
 
-/* 自动反向显示（接近右边界时向左显示） */
 .more-category-item:last-child .flyout-menu {
     left: auto;
     right: 100%;
     margin-left: 0;
-    margin-right: 4px;
+    margin-right: 0;
 }
 
-/* 暗色模式适配 */
 [data-theme*="dark"] .more-menu,
 [data-theme*="dark"] .flyout-menu {
     background-color: var(--mud-palette-surface);
 }
 
-/* 动画已在MoNavBar.razor.css中定义 */
+@media (max-width: 1280px) {
+    .navbar-link {
+        padding: 0 14px;
+        gap: 6px;
+    }
+}
+
+@media (max-width: 1080px) {
+    .navbar-link {
+        padding: 0 10px;
+        font-size: 13px;
+    }
+}

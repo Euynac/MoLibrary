@@ -15,6 +15,7 @@
     align-items: center;
     padding: 0 24px;
     gap: 32px;
+    min-width: 0;
     z-index: 1000;
     backdrop-filter: blur(10px);
 }
@@ -25,6 +26,51 @@
     flex: 1;
     gap: 4px;
     height: 100%;
+    min-width: 0;
+    flex-wrap: nowrap;
+    overflow: visible;
+}
+
+.navbar-nav > ::deep .navbar-item,
+.navbar-nav > ::deep .navbar-more {
+    flex-shrink: 0;
+    min-width: 0;
+}
+
+.navbar-nav > ::deep .navbar-item > .navbar-link,
+.navbar-nav > ::deep .navbar-more > .navbar-link {
+    white-space: nowrap;
+    flex-wrap: nowrap;
+}
+
+@media (max-width: 1280px) {
+    .mo-navbar {
+        padding: 0 16px;
+        gap: 20px;
+    }
+
+    .navbar-nav > ::deep .navbar-item > .navbar-link,
+    .navbar-nav > ::deep .navbar-more > .navbar-link {
+        padding: 0 14px;
+        gap: 6px;
+    }
+}
+
+@media (max-width: 1080px) {
+    .mo-navbar {
+        padding: 0 12px;
+        gap: 12px;
+    }
+
+    .navbar-nav {
+        gap: 2px;
+    }
+
+    .navbar-nav > ::deep .navbar-item > .navbar-link,
+    .navbar-nav > ::deep .navbar-more > .navbar-link {
+        padding: 0 10px;
+        font-size: 13px;
+    }
 }
 
 /* 主题适配 */
