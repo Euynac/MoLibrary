@@ -19,11 +19,11 @@
     padding: 56px 0;
 }
 
-.section-panel {
+.section-block ::deep .section-panel {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    padding: 24px 24px 22px;
+    padding: 20px;
     border: 1px solid var(--mud-palette-lines-default);
     border-radius: 14px;
     background:
@@ -164,7 +164,7 @@
         flex-direction: column;
     }
 
-    .section-panel {
+    .section-block ::deep .section-panel {
         padding: 18px 16px;
         gap: 12px;
     }

@@ -31,162 +31,168 @@
     }
     else
     {
-        <MudPaper Class="section-panel chunkers-panel" Elevation="0">
-            <div class="section-heading">
-                <MudIcon Icon="@Icons.Material.Filled.ViewList" Size="Size.Small" />
-                <MudText Typo="Typo.subtitle1" Class="section-title">@L["RAG:Chunker:Registered"]</MudText>
-            </div>
+        <div class="section-block">
+            <MudPaper Class="section-panel chunkers-panel" Elevation="0">
+                <div class="section-heading">
+                    <MudIcon Icon="@Icons.Material.Filled.ViewList" Size="Size.Small" />
+                    <MudText Typo="Typo.subtitle1" Class="section-title">@L["RAG:Chunker:Registered"]</MudText>
+                </div>
 
-            <MudTable T="ChunkerDescriptor"
-                      Items="@_chunkers"
-                      Dense="true"
-                      Hover="true"
-                      Class="chunkers-table">
-                <HeaderContent>
-                    <MudTh>@L["RAG:Chunker:Name"]</MudTh>
-                    <MudTh>@L["RAG:Chunker:Id"]</MudTh>
-                    <MudTh>@L["RAG:Chunker:Extensions"]</MudTh>
-                    <MudTh>@L["RAG:Chunker:Description"]</MudTh>
-                </HeaderContent>
-                <RowTemplate>
-                    <MudTd DataLabel="@L["RAG:Chunker:Name"]">@context.DisplayName</MudTd>
-                    <MudTd DataLabel="@L["RAG:Chunker:Id"]"><code>@context.ChunkerId</code></MudTd>
-                    <MudTd DataLabel="@L["RAG:Chunker:Extensions"]">
-                        @foreach (var extension in context.SupportedExtensions)
-                        {
-                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="extension-chip">
-                                @extension
-                            </MudChip>
-                        }
-                    </MudTd>
-                    <MudTd DataLabel="@L["RAG:Chunker:Description"]">@context.Description</MudTd>
-                </RowTemplate>
-            </MudTable>
-        </MudPaper>
-
-        <MudPaper Class="section-panel routes-panel" Elevation="0">
-            <div class="section-heading">
-                <MudIcon Icon="@Icons.Material.Filled.Route" Size="Size.Small" />
-                <MudText Typo="Typo.subtitle1" Class="section-title">@L["RAG:Chunker:Routing"]</MudText>
-            </div>
-
-            <MudTable T="RouteEditor"
-                      Items="@_routes"
-                      Dense="true"
-                      Hover="true"
-                      Class="routes-table">
-                <HeaderContent>
-                    <MudTh>@L["RAG:Chunker:Extension"]</MudTh>
-                    <MudTh>@L["RAG:Chunker:Current"]</MudTh>
-                    <MudTh>@L["RAG:Chunker:Target"]</MudTh>
-                    <MudTh>@L["RAG:Chunker:Affected"]</MudTh>
-                    <MudTh>@L["RAG:Chunker:Actions"]</MudTh>
-                </HeaderContent>
-                <RowTemplate>
-                    <MudTd DataLabel="@L["RAG:Chunker:Extension"]"><code>@context.Extension</code></MudTd>
-                    <MudTd DataLabel="@L["RAG:Chunker:Current"]"><code>@context.CurrentChunkerId</code></MudTd>
-                    <MudTd DataLabel="@L["RAG:Chunker:Target"]">
-                        <MudSelect T="string"
-                                   Value="@context.SelectedChunkerId"
-                                   ValueChanged="@((string value) => OnRouteTargetChangedAsync(context, value))"
-                                   Dense="true"
-                                   Variant="Variant.Outlined"
-                                   Margin="Margin.Dense"
-                                   Class="route-target-select">
-                            @foreach (var candidate in context.CandidateChunkerIds)
+                <MudTable T="ChunkerDescriptor"
+                          Items="@_chunkers"
+                          Dense="true"
+                          Hover="true"
+                          Class="chunkers-table">
+                    <HeaderContent>
+                        <MudTh>@L["RAG:Chunker:Name"]</MudTh>
+                        <MudTh>@L["RAG:Chunker:Id"]</MudTh>
+                        <MudTh>@L["RAG:Chunker:Extensions"]</MudTh>
+                        <MudTh>@L["RAG:Chunker:Description"]</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="@L["RAG:Chunker:Name"]">@context.DisplayName</MudTd>
+                        <MudTd DataLabel="@L["RAG:Chunker:Id"]"><code>@context.ChunkerId</code></MudTd>
+                        <MudTd DataLabel="@L["RAG:Chunker:Extensions"]">
+                            @foreach (var extension in context.SupportedExtensions)
                             {
-                                <MudSelectItem T="string" Value="@candidate">@candidate</MudSelectItem>
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="extension-chip">
+                                    @extension
+                                </MudChip>
                             }
-                        </MudSelect>
-                    </MudTd>
-                    <MudTd DataLabel="@L["RAG:Chunker:Affected"]">
-                        @if (context.Preview is null)
+                        </MudTd>
+                        <MudTd DataLabel="@L["RAG:Chunker:Description"]">@context.Description</MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudPaper>
+        </div>
+
+        <div class="section-block">
+            <MudPaper Class="section-panel routes-panel" Elevation="0">
+                <div class="section-heading">
+                    <MudIcon Icon="@Icons.Material.Filled.Route" Size="Size.Small" />
+                    <MudText Typo="Typo.subtitle1" Class="section-title">@L["RAG:Chunker:Routing"]</MudText>
+                </div>
+
+                <MudTable T="RouteEditor"
+                          Items="@_routes"
+                          Dense="true"
+                          Hover="true"
+                          Class="routes-table">
+                    <HeaderContent>
+                        <MudTh>@L["RAG:Chunker:Extension"]</MudTh>
+                        <MudTh>@L["RAG:Chunker:Current"]</MudTh>
+                        <MudTh>@L["RAG:Chunker:Target"]</MudTh>
+                        <MudTh>@L["RAG:Chunker:Affected"]</MudTh>
+                        <MudTh>@L["RAG:Chunker:Actions"]</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="@L["RAG:Chunker:Extension"]"><code>@context.Extension</code></MudTd>
+                        <MudTd DataLabel="@L["RAG:Chunker:Current"]"><code>@context.CurrentChunkerId</code></MudTd>
+                        <MudTd DataLabel="@L["RAG:Chunker:Target"]">
+                            <MudSelect T="string"
+                                       Value="@context.SelectedChunkerId"
+                                       ValueChanged="@((string value) => OnRouteTargetChangedAsync(context, value))"
+                                       Dense="true"
+                                       Variant="Variant.Outlined"
+                                       Margin="Margin.Dense"
+                                       Class="route-target-select">
+                                @foreach (var candidate in context.CandidateChunkerIds)
+                                {
+                                    <MudSelectItem T="string" Value="@candidate">@candidate</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudTd>
+                        <MudTd DataLabel="@L["RAG:Chunker:Affected"]">
+                            @if (context.Preview is null)
+                            {
+                                <MudText Typo="Typo.caption">-</MudText>
+                            }
+                            else
+                            {
+                                <MudChip T="string"
+                                         Size="Size.Small"
+                                         Color="Color.Warning"
+                                         Variant="Variant.Outlined"
+                                         Class="route-affected-chip">
+                                    @L["RAG:Chunker:AffectedCount", context.Preview.AffectedDocumentCount]
+                                </MudChip>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="@L["RAG:Chunker:Actions"]">
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       Size="Size.Small"
+                                       Disabled="@(context.IsApplying || string.Equals(context.CurrentChunkerId, context.SelectedChunkerId, StringComparison.OrdinalIgnoreCase))"
+                                       OnClick="@(() => ApplyRouteChangeAsync(context))">
+                                @L["RAG:Chunker:Apply"]
+                            </MudButton>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudPaper>
+        </div>
+
+        <div class="section-block">
+            <MudPaper Class="section-panel test-panel" Elevation="0">
+                <div class="section-heading">
+                    <MudIcon Icon="@Icons.Material.Filled.Science" Size="Size.Small" />
+                    <MudText Typo="Typo.subtitle1" Class="section-title">@L["RAG:Chunker:TestTitle"]</MudText>
+                </div>
+
+                <div class="test-form">
+                    <MudSelect T="string"
+                               Label="@L["RAG:Chunker:TestChunker"]"
+                               Value="@_testChunkerId"
+                               ValueChanged="@((string value) => _testChunkerId = value)"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense"
+                               Dense="true">
+                        @foreach (var chunker in _chunkers)
                         {
-                            <MudText Typo="Typo.caption">-</MudText>
+                            <MudSelectItem T="string" Value="@chunker.ChunkerId">@chunker.DisplayName (@chunker.ChunkerId)</MudSelectItem>
                         }
-                        else
-                        {
-                            <MudChip T="string"
-                                     Size="Size.Small"
-                                     Color="Color.Warning"
-                                     Variant="Variant.Outlined"
-                                     Class="route-affected-chip">
-                                @L["RAG:Chunker:AffectedCount", context.Preview.AffectedDocumentCount]
-                            </MudChip>
-                        }
-                    </MudTd>
-                    <MudTd DataLabel="@L["RAG:Chunker:Actions"]">
-                        <MudButton Variant="Variant.Filled"
-                                   Color="Color.Primary"
-                                   Size="Size.Small"
-                                   Disabled="@(context.IsApplying || string.Equals(context.CurrentChunkerId, context.SelectedChunkerId, StringComparison.OrdinalIgnoreCase))"
-                                   OnClick="@(() => ApplyRouteChangeAsync(context))">
-                            @L["RAG:Chunker:Apply"]
-                        </MudButton>
-                    </MudTd>
-                </RowTemplate>
-            </MudTable>
-        </MudPaper>
+                    </MudSelect>
 
-        <MudPaper Class="section-panel test-panel" Elevation="0">
-            <div class="section-heading">
-                <MudIcon Icon="@Icons.Material.Filled.Science" Size="Size.Small" />
-                <MudText Typo="Typo.subtitle1" Class="section-title">@L["RAG:Chunker:TestTitle"]</MudText>
-            </div>
+                    <MudTextField T="string"
+                                  Label="@L["RAG:Chunker:TestDocument"]"
+                                  Value="@_testDocumentName"
+                                  ValueChanged="@((string value) => _testDocumentName = value)"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense" />
 
-            <div class="test-form">
-                <MudSelect T="string"
-                           Label="@L["RAG:Chunker:TestChunker"]"
-                           Value="@_testChunkerId"
-                           ValueChanged="@((string value) => _testChunkerId = value)"
-                           Variant="Variant.Outlined"
-                           Margin="Margin.Dense"
-                           Dense="true">
-                    @foreach (var chunker in _chunkers)
-                    {
-                        <MudSelectItem T="string" Value="@chunker.ChunkerId">@chunker.DisplayName (@chunker.ChunkerId)</MudSelectItem>
-                    }
-                </MudSelect>
+                    <MudTextField T="string"
+                                  Label="@L["RAG:Chunker:TestContent"]"
+                                  Value="@_testContent"
+                                  ValueChanged="@((string value) => _testContent = value)"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Lines="10" />
 
-                <MudTextField T="string"
-                              Label="@L["RAG:Chunker:TestDocument"]"
-                              Value="@_testDocumentName"
-                              ValueChanged="@((string value) => _testDocumentName = value)"
-                              Variant="Variant.Outlined"
-                              Margin="Margin.Dense" />
-
-                <MudTextField T="string"
-                              Label="@L["RAG:Chunker:TestContent"]"
-                              Value="@_testContent"
-                              ValueChanged="@((string value) => _testContent = value)"
-                              Variant="Variant.Outlined"
-                              Margin="Margin.Dense"
-                              Lines="10" />
-
-                <MudButton Variant="Variant.Filled"
-                           Color="Color.Primary"
-                           StartIcon="@Icons.Material.Filled.Science"
-                           Disabled="@(_isTesting || string.IsNullOrWhiteSpace(_testChunkerId))"
-                           OnClick="RunChunkerTestAsync">
-                    @L["RAG:Chunker:RunTest"]
-                </MudButton>
-            </div>
-
-            @if (_testResult is not null)
-            {
-                <div class="test-result">
-                    <MudChip T="string" Color="Color.Info" Variant="Variant.Outlined">
-                        @L["RAG:Chunker:TestChunkCount", _testResult.Chunks.Count]
-                    </MudChip>
-                    <MudButton Variant="Variant.Outlined"
+                    <MudButton Variant="Variant.Filled"
                                Color="Color.Primary"
-                               Size="Size.Small"
-                               OnClick="ShowTestChunkPreviewAsync">
-                        @L["RAG:Chunker:ViewPreview"]
+                               StartIcon="@Icons.Material.Filled.Science"
+                               Disabled="@(_isTesting || string.IsNullOrWhiteSpace(_testChunkerId))"
+                               OnClick="RunChunkerTestAsync">
+                        @L["RAG:Chunker:RunTest"]
                     </MudButton>
                 </div>
-            }
-        </MudPaper>
+
+                @if (_testResult is not null)
+                {
+                    <div class="test-result">
+                        <MudChip T="string" Color="Color.Info" Variant="Variant.Outlined">
+                            @L["RAG:Chunker:TestChunkCount", _testResult.Chunks.Count]
+                        </MudChip>
+                        <MudButton Variant="Variant.Outlined"
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   OnClick="ShowTestChunkPreviewAsync">
+                            @L["RAG:Chunker:ViewPreview"]
+                        </MudButton>
+                    </div>
+                }
+            </MudPaper>
+        </div>
     }
 </div>
 
