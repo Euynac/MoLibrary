@@ -110,6 +110,14 @@ public class RAGUIService(
                 return Res.Fail("No documents found in the selected group.");
             }
 
+            Func<IndexingProgress, CancellationToken, Task>? progressCallback = progress is null
+                ? null
+                : (indexingProgress, _) =>
+                {
+                    progress.Report(indexingProgress);
+                    return Task.CompletedTask;
+                };
+
             var indexed = 0;
             foreach (var doc in documents)
             {
@@ -119,7 +127,7 @@ public class RAGUIService(
                     doc.RelativePath,
                     doc.Title,
                     content,
-                    progress,
+                    progressCallback,
                     sourceKind: KnowledgeDocumentSourceKinds.Markdown,
                     sourceGroupKey: groupKey);
 
@@ -260,9 +268,23 @@ public class RAGUIService(
 
     public Res CancelBatchIndexing(string kbId)
     {
-        return batchIndexCoordinator.TryCancelBatchIndexing(kbId, out var errorMessage)
-            ? Res.Ok("Cancellation requested.")
-            : Res.Fail(errorMessage);
+        return batchIndexCoordinator.TryCancelBatchIndexing(kbId, out var message)
+            ? Res.Ok(string.IsNullOrWhiteSpace(message) ? "Cancellation requested." : message)
+            : Res.Fail(message);
+    }
+
+    public async Task<Res> CancelBatchIndexingAsync(string kbId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var message = await batchIndexCoordinator.CancelBatchIndexingAsync(kbId, cancellationToken);
+            return Res.Ok(message);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to cancel batch indexing for KB '{KbId}'", kbId);
+            return Res.Fail($"Failed to cancel batch indexing: {ex.Message}");
+        }
     }
 
     public bool IsBatchIndexingActive(string kbId)

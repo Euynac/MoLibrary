@@ -42,16 +42,45 @@ public sealed class RAGBatchIndexCoordinator(
 
         if (!ActiveBatchCancellationSources.TryGetValue(kbId, out var cts))
         {
-            errorMessage = "No active indexing task to cancel.";
-            return false;
+            errorMessage = "No active indexing task found. Cancellation treated as no-op.";
+            return true;
         }
 
         if (!cts.IsCancellationRequested)
         {
             cts.Cancel();
+            errorMessage = "Cancellation requested.";
+            return true;
         }
 
+        errorMessage = "Cancellation already requested.";
         return true;
+    }
+
+    public async Task<string> CancelBatchIndexingAsync(
+        string kbId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(kbId))
+        {
+            throw new ArgumentException("Knowledge base id is required.", nameof(kbId));
+        }
+
+        if (ActiveBatchCancellationSources.TryGetValue(kbId, out var cts))
+        {
+            if (!cts.IsCancellationRequested)
+            {
+                cts.Cancel();
+                return "Cancellation requested.";
+            }
+
+            return "Cancellation already requested.";
+        }
+
+        var recoveredCount = await ragService.ConvergeInactiveIndexingDocumentsAsync(kbId, cancellationToken);
+        return recoveredCount > 0
+            ? $"No active indexing task found. Reset {recoveredCount} stale indexing document(s) to pending."
+            : "No active indexing task found. Cancellation treated as no-op.";
     }
 
     public async Task<RAGBatchIndexExecutionResult> StartBatchIndexingAsync(
@@ -181,8 +210,6 @@ public sealed class RAGBatchIndexCoordinator(
     {
         try
         {
-            await ragService.MarkDocumentIndexingAsync(kbId, queueItem.Id, cancellationToken);
-
             var markdownDocument = await markdownDocumentResolver.FindByPathAsync(queueItem.Id, cancellationToken);
             string content;
             string documentTitle;
@@ -204,25 +231,27 @@ public sealed class RAGBatchIndexCoordinator(
             }
 
             var lastPersistedProgress = queueItem.Progress;
-            var progressWriteSync = new object();
-            var progressWriteChain = Task.CompletedTask;
-
-            void EnqueueProgressPersist(int progressValue, int totalChunks)
+            async Task HandleProgressAsync(IndexingProgress p, CancellationToken callbackToken)
             {
-                lock (progressWriteSync)
+                if (p.TotalChunks > 0)
                 {
-                    progressWriteChain = progressWriteChain.ContinueWith(async _ =>
+                    var progressValue = Math.Clamp((int)((p.ProcessedChunks / (double)p.TotalChunks) * 100), 0, 100);
+                    queueItem.Progress = progressValue;
+                    queueItem.ChunkCount = p.TotalChunks;
+
+                    if (progressValue != lastPersistedProgress)
                     {
+                        lastPersistedProgress = progressValue;
                         try
                         {
                             await ragService.UpdateDocumentIndexingProgressAsync(
                                 kbId,
                                 queueItem.Id,
                                 progressValue,
-                                totalChunks,
-                                cancellationToken);
+                                p.TotalChunks,
+                                callbackToken);
                         }
-                        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                        catch (OperationCanceledException) when (callbackToken.IsCancellationRequested)
                         {
                             // Ignore cancellation while the batch is stopping.
                         }
@@ -234,44 +263,20 @@ public sealed class RAGBatchIndexCoordinator(
                                 queueItem.Id,
                                 kbId);
                         }
-                    }, CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.Default).Unwrap();
-                }
-            }
-
-            var indexProgress = new Progress<IndexingProgress>(p =>
-            {
-                if (p.TotalChunks > 0)
-                {
-                    var progressValue = (int)((p.ProcessedChunks / (double)p.TotalChunks) * 100);
-                    queueItem.Progress = progressValue;
-                    queueItem.ChunkCount = p.TotalChunks;
-
-                    if (progressValue != lastPersistedProgress)
-                    {
-                        lastPersistedProgress = progressValue;
-                        EnqueueProgressPersist(progressValue, p.TotalChunks);
                     }
                 }
 
                 progress?.Report(p);
-            });
+            }
 
             await ragService.IndexDocumentAsync(
                 kbId,
                 queueItem.Id,
                 documentTitle,
                 content,
-                indexProgress,
+                HandleProgressAsync,
                 cancellationToken,
                 sourceKind: sourceKind);
-
-            Task pendingProgressWrites;
-            lock (progressWriteSync)
-            {
-                pendingProgressWrites = progressWriteChain;
-            }
-
-            await pendingProgressWrites;
 
             logger.LogInformation("Successfully indexed document '{DocId}' in KB '{KbId}'", queueItem.Id, kbId);
         }

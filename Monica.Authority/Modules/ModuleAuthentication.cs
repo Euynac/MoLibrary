@@ -179,8 +179,14 @@ public class ModuleAuthenticationOption : MoModuleOptionWithMinimalApi<ModuleAut
     /// </summary>
     public string Audience { get; set; } = nameof(Audience);
 
+    /// <summary>
+    /// Access Token expiration time. Unit: Minutes
+    /// </summary>
     public int AccessTokenExpiration { get; set; } = 60;
 
+    /// <summary>
+    /// Refresh Token expiration time. Unit: Minutes
+    /// </summary>
     public int RefreshTokenExpiration { get; set; } = 120;
     public bool IsDebugging { get; set; }
 }

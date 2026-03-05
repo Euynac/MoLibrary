@@ -8,6 +8,8 @@ namespace Monica.AI.RAG.Services;
 /// </summary>
 public sealed class RAGIndexStateCoordinator(IDocumentIndexStateStore indexStateStore)
 {
+    private const int MaxInProgressPercentage = 99;
+
     public async Task<KnowledgeBase> GetKnowledgeBaseRequiredAsync(string knowledgeBaseId, CancellationToken ct)
     {
         return await indexStateStore.GetKnowledgeBaseAsync(knowledgeBaseId, ct)
@@ -37,6 +39,45 @@ public sealed class RAGIndexStateCoordinator(IDocumentIndexStateStore indexState
             .Select(MapToQueueItem)
             .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    /// <summary>
+    /// Recovers persisted "Indexing" records that are not active at runtime.
+    /// This is an explicit recovery path to avoid zombie indexing states.
+    /// </summary>
+    public async Task<int> ConvergeInactiveIndexingDocumentsAsync(
+        string knowledgeBaseId,
+        Func<string, string, bool> isRuntimeIndexingActive,
+        CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(isRuntimeIndexingActive);
+
+        var states = await indexStateStore.GetDocumentStatesAsync(knowledgeBaseId, ct);
+        var staleCandidates = states
+            .Where(state =>
+                state.Status == DocumentStatus.Indexing
+                && !isRuntimeIndexingActive(state.KnowledgeBaseId, state.DocumentPath))
+            .ToList();
+
+        var recovered = 0;
+        foreach (var stale in staleCandidates)
+        {
+            var latest = await indexStateStore.GetDocumentStateAsync(stale.KnowledgeBaseId, stale.DocumentPath, ct);
+            if (latest is null || latest.Status != DocumentStatus.Indexing)
+            {
+                continue;
+            }
+
+            if (isRuntimeIndexingActive(latest.KnowledgeBaseId, latest.DocumentPath))
+            {
+                continue;
+            }
+
+            await SetPendingStateAsync(latest, resetChunkMetadata: true, ct);
+            recovered++;
+        }
+
+        return recovered;
     }
 
     public async Task<int> AddDocumentsToQueueAsync(
@@ -89,18 +130,20 @@ public sealed class RAGIndexStateCoordinator(IDocumentIndexStateStore indexState
         string? sourceGroupKey,
         CancellationToken ct)
     {
-        state.DocumentName = documentName;
-        state.Status = DocumentStatus.Indexing;
-        state.Progress = 0;
-        state.ChunkCount = 0;
-        state.IndexedAt = null;
-        state.ErrorMessage = null;
-        state.ChunkerId = null;
-        state.SourceKind = NormalizeSourceKind(sourceKind);
-        state.SourceGroupKey = sourceGroupKey;
-        state.UpdatedAt = DateTimeOffset.UtcNow;
+        // Explicit indexing-start entry point. This is the only path that can move terminal states back to Indexing.
+        var latest = await LoadCurrentStateOrFallbackAsync(state, ct);
+        latest.DocumentName = documentName;
+        latest.Status = DocumentStatus.Indexing;
+        latest.Progress = 0;
+        latest.ChunkCount = 0;
+        latest.IndexedAt = null;
+        latest.ErrorMessage = null;
+        latest.ChunkerId = null;
+        latest.SourceKind = NormalizeSourceKind(sourceKind);
+        latest.SourceGroupKey = sourceGroupKey;
+        latest.UpdatedAt = DateTimeOffset.UtcNow;
 
-        await indexStateStore.UpsertDocumentStateAsync(state, ct);
+        await indexStateStore.UpsertDocumentStateAsync(latest, ct);
     }
 
     public async Task SetDoneStateAsync(
@@ -109,15 +152,21 @@ public sealed class RAGIndexStateCoordinator(IDocumentIndexStateStore indexState
         string chunkerId,
         CancellationToken ct)
     {
-        state.Status = DocumentStatus.Done;
-        state.ChunkCount = Math.Max(0, chunkCount);
-        state.Progress = 100;
-        state.IndexedAt = DateTimeOffset.UtcNow;
-        state.ErrorMessage = null;
-        state.ChunkerId = chunkerId;
-        state.UpdatedAt = DateTimeOffset.UtcNow;
+        var latest = await LoadCurrentStateOrFallbackAsync(state, ct);
+        if (latest.Status is not (DocumentStatus.Indexing or DocumentStatus.Done))
+        {
+            return;
+        }
 
-        await indexStateStore.UpsertDocumentStateAsync(state, ct);
+        latest.Status = DocumentStatus.Done;
+        latest.ChunkCount = Math.Max(0, chunkCount);
+        latest.Progress = 100;
+        latest.IndexedAt = DateTimeOffset.UtcNow;
+        latest.ErrorMessage = null;
+        latest.ChunkerId = chunkerId;
+        latest.UpdatedAt = DateTimeOffset.UtcNow;
+
+        await indexStateStore.UpsertDocumentStateAsync(latest, ct);
     }
 
     public async Task SetPendingStateAsync(
@@ -125,19 +174,20 @@ public sealed class RAGIndexStateCoordinator(IDocumentIndexStateStore indexState
         bool resetChunkMetadata,
         CancellationToken ct)
     {
-        state.Status = DocumentStatus.Pending;
-        state.Progress = 0;
-        state.ErrorMessage = null;
+        var latest = await LoadCurrentStateOrFallbackAsync(state, ct);
+        latest.Status = DocumentStatus.Pending;
+        latest.Progress = 0;
+        latest.ErrorMessage = null;
 
         if (resetChunkMetadata)
         {
-            state.ChunkCount = 0;
-            state.IndexedAt = null;
-            state.ChunkerId = null;
+            latest.ChunkCount = 0;
+            latest.IndexedAt = null;
+            latest.ChunkerId = null;
         }
 
-        state.UpdatedAt = DateTimeOffset.UtcNow;
-        await indexStateStore.UpsertDocumentStateAsync(state, ct);
+        latest.UpdatedAt = DateTimeOffset.UtcNow;
+        await indexStateStore.UpsertDocumentStateAsync(latest, ct);
     }
 
     public async Task SetIndexingProgressAsync(
@@ -146,13 +196,28 @@ public sealed class RAGIndexStateCoordinator(IDocumentIndexStateStore indexState
         int chunkCount,
         CancellationToken ct)
     {
-        state.Status = DocumentStatus.Indexing;
-        state.Progress = Math.Clamp(progress, 0, 100);
-        state.ChunkCount = Math.Max(0, chunkCount);
-        state.ErrorMessage = null;
-        state.UpdatedAt = DateTimeOffset.UtcNow;
+        var latest = await indexStateStore.GetDocumentStateAsync(state.KnowledgeBaseId, state.DocumentPath, ct);
+        if (latest is null || latest.Status != DocumentStatus.Indexing)
+        {
+            // Progress writes are only valid while the persisted state is Indexing.
+            return;
+        }
 
-        await indexStateStore.UpsertDocumentStateAsync(state, ct);
+        var normalizedProgress = Math.Clamp(progress, 0, MaxInProgressPercentage);
+        var normalizedChunkCount = Math.Max(0, chunkCount);
+        if (latest.Progress == normalizedProgress
+            && latest.ChunkCount == normalizedChunkCount
+            && latest.ErrorMessage is null)
+        {
+            return;
+        }
+
+        latest.Progress = normalizedProgress;
+        latest.ChunkCount = normalizedChunkCount;
+        latest.ErrorMessage = null;
+        latest.UpdatedAt = DateTimeOffset.UtcNow;
+
+        await indexStateStore.UpsertDocumentStateAsync(latest, ct);
     }
 
     public async Task MarkDocumentFailedAsync(
@@ -172,7 +237,14 @@ public sealed class RAGIndexStateCoordinator(IDocumentIndexStateStore indexState
                         UpdatedAt = DateTimeOffset.UtcNow
                     };
 
+        if (state.Status == DocumentStatus.Done)
+        {
+            // Done is terminal until an explicit indexing restart.
+            return;
+        }
+
         state.Status = DocumentStatus.Error;
+        state.Progress = 100;
         state.ErrorMessage = errorMessage;
         state.UpdatedAt = DateTimeOffset.UtcNow;
 
@@ -232,6 +304,14 @@ public sealed class RAGIndexStateCoordinator(IDocumentIndexStateStore indexState
         return string.IsNullOrWhiteSpace(sourceKind)
             ? KnowledgeDocumentSourceKinds.Unknown
             : sourceKind.Trim().ToLowerInvariant();
+    }
+
+    private async Task<DocumentIndexState> LoadCurrentStateOrFallbackAsync(
+        DocumentIndexState state,
+        CancellationToken ct)
+    {
+        return await indexStateStore.GetDocumentStateAsync(state.KnowledgeBaseId, state.DocumentPath, ct)
+               ?? state;
     }
 
     private static DocumentQueueItem MapToQueueItem(DocumentIndexState state)

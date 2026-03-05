@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
@@ -28,6 +29,8 @@ public sealed partial class RAGService(
     private const int EmbeddingProgressBatchSize = 16;
 
     private readonly ModuleRAGOption _options = options.Value;
+    private readonly ConcurrentDictionary<string, byte> _activeIndexingDocuments =
+        new(StringComparer.OrdinalIgnoreCase);
 
     public async Task<KnowledgeBase> CreateKnowledgeBaseAsync(
         string name,
@@ -159,7 +162,28 @@ public sealed partial class RAGService(
         CancellationToken ct = default)
     {
         _ = await indexStateCoordinator.GetKnowledgeBaseRequiredAsync(knowledgeBaseId, ct);
+        _ = await ConvergeInactiveIndexingDocumentsAsync(knowledgeBaseId, ct);
         return await indexStateCoordinator.GetDocumentQueueAsync(knowledgeBaseId, ct);
+    }
+
+    public async Task<int> ConvergeInactiveIndexingDocumentsAsync(
+        string knowledgeBaseId,
+        CancellationToken ct = default)
+    {
+        var recovered = await indexStateCoordinator.ConvergeInactiveIndexingDocumentsAsync(
+            knowledgeBaseId,
+            IsDocumentIndexingActiveAtRuntime,
+            ct);
+
+        if (recovered > 0)
+        {
+            logger.LogInformation(
+                "Recovered {RecoveredCount} stale indexing document(s) in KB '{KbId}'",
+                recovered,
+                knowledgeBaseId);
+        }
+
+        return recovered;
     }
 
     public async Task<int> AddDocumentsToQueueAsync(
@@ -220,7 +244,12 @@ public sealed partial class RAGService(
         _ = await indexStateCoordinator.GetKnowledgeBaseRequiredAsync(knowledgeBaseId, ct);
         var state = await indexStateCoordinator.GetDocumentStateRequiredAsync(knowledgeBaseId, documentPath, ct);
 
-        await indexStateCoordinator.SetIndexingProgressAsync(state, progress: 0, chunkCount: state.ChunkCount, ct);
+        await indexStateCoordinator.SetIndexingStateAsync(
+            state,
+            state.DocumentName,
+            RAGIndexStateCoordinator.NormalizeSourceKind(state.SourceKind),
+            state.SourceGroupKey,
+            ct);
     }
 
     public async Task UpdateDocumentIndexingProgressAsync(
@@ -266,7 +295,7 @@ public sealed partial class RAGService(
         string documentPath,
         string documentTitle,
         string content,
-        IProgress<IndexingProgress>? progress = null,
+        Func<IndexingProgress, CancellationToken, Task>? progressCallback = null,
         CancellationToken ct = default,
         string? sourceKind = null,
         string? sourceGroupKey = null)
@@ -290,15 +319,18 @@ public sealed partial class RAGService(
             DocumentName = resolvedDocumentName
         };
 
-        await indexStateCoordinator.SetIndexingStateAsync(
-            activeState,
-            resolvedDocumentName,
-            resolvedSourceKind,
-            resolvedSourceGroupKey,
-            ct);
+        var activeDocumentKey = BuildActiveIndexingDocumentKey(knowledgeBaseId, documentPath);
+        MarkDocumentIndexingStarted(activeDocumentKey);
 
         try
         {
+            await indexStateCoordinator.SetIndexingStateAsync(
+                activeState,
+                resolvedDocumentName,
+                resolvedSourceKind,
+                resolvedSourceGroupKey,
+                ct);
+
             var chunker = await chunkerRegistry.ResolveChunkerAsync(documentPath, ct);
             var chunks = chunker.ChunkDocument(content, documentPath, resolvedDocumentName);
             if (chunks.Count == 0)
@@ -320,7 +352,10 @@ public sealed partial class RAGService(
 
             var vectors = new List<float[]>(chunks.Count);
             var processedChunks = 0;
-            progress?.Report(new IndexingProgress(processedChunks, chunks.Count, resolvedDocumentName));
+            await ReportProgressAsync(
+                progressCallback,
+                new IndexingProgress(processedChunks, chunks.Count, resolvedDocumentName),
+                ct);
 
             foreach (var chunkBatch in chunks.Chunk(EmbeddingProgressBatchSize))
             {
@@ -341,7 +376,10 @@ public sealed partial class RAGService(
 
                 vectors.AddRange(batchVectors);
                 processedChunks += batchVectors.Count;
-                progress?.Report(new IndexingProgress(processedChunks, chunks.Count, resolvedDocumentName));
+                await ReportProgressAsync(
+                    progressCallback,
+                    new IndexingProgress(processedChunks, chunks.Count, resolvedDocumentName),
+                    ct);
             }
 
             _ = await vectorCollectionCoordinator.RemoveIndexedDocumentDataAsync(kb, existingState, ct);
@@ -379,6 +417,10 @@ public sealed partial class RAGService(
         {
             await TryMarkDocumentFailedAsync(knowledgeBaseId, documentPath, ex.Message, ct);
             throw;
+        }
+        finally
+        {
+            MarkDocumentIndexingCompleted(activeDocumentKey);
         }
     }
 
@@ -708,6 +750,31 @@ public sealed partial class RAGService(
                 documentPath,
                 knowledgeBaseId);
         }
+    }
+
+    private static string BuildActiveIndexingDocumentKey(string knowledgeBaseId, string documentPath)
+        => $"{knowledgeBaseId}::{documentPath}";
+
+    private bool IsDocumentIndexingActiveAtRuntime(string knowledgeBaseId, string documentPath)
+        => _activeIndexingDocuments.ContainsKey(BuildActiveIndexingDocumentKey(knowledgeBaseId, documentPath));
+
+    private void MarkDocumentIndexingStarted(string activeDocumentKey)
+        => _activeIndexingDocuments[activeDocumentKey] = 0;
+
+    private void MarkDocumentIndexingCompleted(string activeDocumentKey)
+        => _activeIndexingDocuments.TryRemove(activeDocumentKey, out _);
+
+    private static Task ReportProgressAsync(
+        Func<IndexingProgress, CancellationToken, Task>? progressCallback,
+        IndexingProgress progress,
+        CancellationToken ct)
+    {
+        if (progressCallback is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        return progressCallback(progress, ct);
     }
 
     private async Task<IDocumentChunker> ResolveChunkerForViewAsync(DocumentIndexState state, CancellationToken ct)
