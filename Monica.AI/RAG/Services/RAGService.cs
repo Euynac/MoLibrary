@@ -1,10 +1,8 @@
-using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.VectorData;
-using Monica.AI.Abstractions;
 using Monica.AI.Models;
 using Monica.AI.RAG.Abstractions;
 using Monica.AI.RAG.Models;
@@ -18,29 +16,22 @@ namespace Monica.AI.RAG.Services;
 /// Infrastructure service: uses exceptions, not Res&lt;T&gt;.
 /// </summary>
 public sealed partial class RAGService(
-    IKnowledgeBaseStore kbStore,
-    IDocumentQueueStore documentQueueStore,
-    IDocumentChunkSnapshotStore chunkSnapshotStore,
-    VectorStore vectorStore,
-    IAIProviderFactory providerFactory,
+    IDocumentIndexStateStore indexStateStore,
+    IKnowledgeDocumentSourceStore documentSourceStore,
+    RAGEmbeddingBindingResolver embeddingBindingResolver,
+    RAGVectorCollectionCoordinator vectorCollectionCoordinator,
+    RAGIndexStateCoordinator indexStateCoordinator,
     ChunkerRegistry chunkerRegistry,
     IOptions<ModuleRAGOption> options,
     ILogger<RAGService> logger)
 {
-    private const int LegacyDeleteProbeLimit = 20_000;
-    private const int LegacyDeleteMissThreshold = 32;
     private const int EmbeddingProgressBatchSize = 16;
 
     private readonly ModuleRAGOption _options = options.Value;
 
-    private readonly ConcurrentDictionary<string, VectorStoreCollection<object, Dictionary<string, object?>>> _collections = new(StringComparer.OrdinalIgnoreCase);
-    private readonly ConcurrentDictionary<string, string> _collectionBindings = new(StringComparer.OrdinalIgnoreCase);
-    private readonly ConcurrentDictionary<string, bool> _initializedCollections = new(StringComparer.OrdinalIgnoreCase);
-    private readonly ConcurrentDictionary<string, int> _resolvedEmbeddingDimensions = new(StringComparer.OrdinalIgnoreCase);
-    private readonly SemaphoreSlim _initLock = new(1, 1);
-
     public async Task<KnowledgeBase> CreateKnowledgeBaseAsync(
-        string name, string? description = null,
+        string name,
+        string? description = null,
         string? searchToolDescription = null,
         CancellationToken ct = default)
     {
@@ -58,7 +49,7 @@ public sealed partial class RAGService(
             SearchToolDescription = searchToolDescription
         };
 
-        await kbStore.SaveAsync(kb, ct);
+        await indexStateStore.UpsertKnowledgeBaseAsync(kb, ct);
         logger.LogInformation("Created knowledge base '{Name}' (Id: {Id})", kb.Name, kb.Id);
         return kb;
     }
@@ -74,9 +65,7 @@ public sealed partial class RAGService(
             throw new ArgumentException("Knowledge base name cannot be empty.", nameof(name));
         }
 
-        var kb = await kbStore.GetByIdAsync(knowledgeBaseId, ct)
-                 ?? throw new KeyNotFoundException(
-                     $"Knowledge base '{knowledgeBaseId}' not found.");
+        var kb = await indexStateCoordinator.GetKnowledgeBaseRequiredAsync(knowledgeBaseId, ct);
 
         var updatedKb = kb with
         {
@@ -84,7 +73,7 @@ public sealed partial class RAGService(
             Description = description
         };
 
-        await kbStore.SaveAsync(updatedKb, ct);
+        await indexStateStore.UpsertKnowledgeBaseAsync(updatedKb, ct);
         logger.LogInformation("Updated knowledge base '{KbId}'", knowledgeBaseId);
         return updatedKb;
     }
@@ -92,34 +81,16 @@ public sealed partial class RAGService(
     /// <summary>
     /// Lists all knowledge bases from the store.
     /// </summary>
-    public async Task<IReadOnlyList<KnowledgeBase>> GetKnowledgeBasesAsync(CancellationToken ct = default)
-    {
-        var knowledgeBases = (await kbStore.GetAllAsync(ct)).ToList();
-        if (knowledgeBases.Count == 0)
-        {
-            return knowledgeBases;
-        }
-
-        await ReconcileKnowledgeBaseStatsAsync(knowledgeBases, ct);
-        return knowledgeBases;
-    }
+    public Task<IReadOnlyList<KnowledgeBase>> GetKnowledgeBasesAsync(CancellationToken ct = default)
+        => indexStateStore.GetKnowledgeBasesAsync(ct);
 
     /// <summary>
     /// Gets a knowledge base by id.
     /// </summary>
-    public async Task<KnowledgeBase?> GetKnowledgeBaseByIdAsync(
+    public Task<KnowledgeBase?> GetKnowledgeBaseByIdAsync(
         string knowledgeBaseId,
         CancellationToken ct = default)
-    {
-        var kb = await kbStore.GetByIdAsync(knowledgeBaseId, ct);
-        if (kb is null)
-        {
-            return null;
-        }
-
-        await RefreshKnowledgeBaseStatsAsync(kb, ct);
-        return kb;
-    }
+        => indexStateStore.GetKnowledgeBaseAsync(knowledgeBaseId, ct);
 
     /// <summary>
     /// Persists the embedding provider/model for a knowledge base and optionally clears index data.
@@ -137,15 +108,12 @@ public sealed partial class RAGService(
         if (string.IsNullOrWhiteSpace(embeddingModelName))
             throw new ArgumentException("Embedding model name cannot be empty.", nameof(embeddingModelName));
 
-        var kb = await kbStore.GetByIdAsync(knowledgeBaseId, ct)
-                 ?? throw new KeyNotFoundException(
-                     $"Knowledge base '{knowledgeBaseId}' not found.");
+        var kb = await indexStateCoordinator.GetKnowledgeBaseRequiredAsync(knowledgeBaseId, ct);
 
         var normalizedProviderId = embeddingProviderId.Trim();
         var normalizedModelName = embeddingModelName.Trim();
 
-        // Validate the target binding before mutating KB state.
-        _ = await ResolveEmbeddingBindingAsync(
+        _ = await embeddingBindingResolver.ResolveAsync(
             kb with
             {
                 EmbeddingProviderId = normalizedProviderId,
@@ -158,34 +126,31 @@ public sealed partial class RAGService(
 
         if (changed && clearIndex)
         {
-            await ClearCollectionCacheAndStorageAsync(GetCollectionName(knowledgeBaseId), ct);
-            await chunkSnapshotStore.RemoveKnowledgeBaseAsync(knowledgeBaseId, ct);
-            await ResetDocumentQueueForReindexAsync(knowledgeBaseId, ct);
+            await vectorCollectionCoordinator.ClearCollectionCacheAndStorageAsync(knowledgeBaseId, ct);
+            await indexStateCoordinator.ResetKnowledgeBaseDocumentStatesForReindexAsync(knowledgeBaseId, ct);
             kb.DocumentCount = 0;
             kb.ChunkCount = 0;
         }
 
         kb.EmbeddingProviderId = normalizedProviderId;
         kb.EmbeddingModelName = normalizedModelName;
-        await kbStore.SaveAsync(kb, ct);
+        await indexStateStore.UpsertKnowledgeBaseAsync(kb, ct);
 
         logger.LogInformation(
             "Persisted KB embedding binding for '{KbId}': provider '{ProviderId}', model '{ModelName}', clearIndex={ClearIndex}",
-            knowledgeBaseId, normalizedProviderId, normalizedModelName, changed && clearIndex);
+            knowledgeBaseId,
+            normalizedProviderId,
+            normalizedModelName,
+            changed && clearIndex);
     }
 
     public async Task DeleteKnowledgeBaseAsync(string knowledgeBaseId, CancellationToken ct = default)
     {
-        await ClearCollectionCacheAndStorageAsync(GetCollectionName(knowledgeBaseId), ct);
-        await chunkSnapshotStore.RemoveKnowledgeBaseAsync(knowledgeBaseId, ct);
+        await vectorCollectionCoordinator.ClearCollectionCacheAndStorageAsync(knowledgeBaseId, ct);
+        await indexStateStore.DeleteKnowledgeBaseDocumentStatesAsync(knowledgeBaseId, ct);
+        await indexStateStore.DeleteKnowledgeBaseAsync(knowledgeBaseId, ct);
+        await documentSourceStore.DeleteKnowledgeBaseAsync(knowledgeBaseId, ct);
 
-        var queue = await documentQueueStore.GetQueueAsync(knowledgeBaseId, ct);
-        foreach (var item in queue)
-        {
-            await documentQueueStore.RemoveAsync(knowledgeBaseId, item.Id, ct);
-        }
-
-        await kbStore.DeleteAsync(knowledgeBaseId, ct);
         logger.LogInformation("Deleted knowledge base {Id}", knowledgeBaseId);
     }
 
@@ -193,52 +158,92 @@ public sealed partial class RAGService(
         string knowledgeBaseId,
         CancellationToken ct = default)
     {
-        _ = await kbStore.GetByIdAsync(knowledgeBaseId, ct)
-            ?? throw new KeyNotFoundException($"Knowledge base '{knowledgeBaseId}' not found.");
+        _ = await indexStateCoordinator.GetKnowledgeBaseRequiredAsync(knowledgeBaseId, ct);
+        return await indexStateCoordinator.GetDocumentQueueAsync(knowledgeBaseId, ct);
+    }
 
-        var queueItems = (await documentQueueStore.GetQueueAsync(knowledgeBaseId, ct)).ToList();
-        var queueLookup = queueItems.ToDictionary(item => item.Id, StringComparer.OrdinalIgnoreCase);
+    public async Task<int> AddDocumentsToQueueAsync(
+        string knowledgeBaseId,
+        IEnumerable<string> documentPaths,
+        string sourceKind = KnowledgeDocumentSourceKinds.Markdown,
+        string? sourceGroupKey = null,
+        CancellationToken ct = default)
+    {
+        _ = await indexStateCoordinator.GetKnowledgeBaseRequiredAsync(knowledgeBaseId, ct);
 
-        var snapshots = await chunkSnapshotStore.GetByKnowledgeBaseAsync(knowledgeBaseId, ct);
-        var latestSnapshots = snapshots
-            .GroupBy(snapshot => snapshot.DocumentPath, StringComparer.OrdinalIgnoreCase)
-            .Select(group => group
-                .OrderByDescending(snapshot => snapshot.UpdatedAt)
-                .First())
-            .ToList();
-        var snapshotPaths = latestSnapshots
-            .Select(snapshot => snapshot.DocumentPath)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return await indexStateCoordinator.AddDocumentsToQueueAsync(
+            knowledgeBaseId,
+            documentPaths,
+            sourceKind,
+            sourceGroupKey,
+            ct);
+    }
 
-        foreach (var snapshot in latestSnapshots)
-        {
-            if (queueLookup.TryGetValue(snapshot.DocumentPath, out var queueItem))
-            {
-                continue;
-            }
+    public async Task<string?> GetDocumentSourceContentAsync(
+        string knowledgeBaseId,
+        string documentPath,
+        CancellationToken ct = default)
+    {
+        _ = await indexStateCoordinator.GetKnowledgeBaseRequiredAsync(knowledgeBaseId, ct);
+        return await documentSourceStore.GetContentAsync(knowledgeBaseId, documentPath, ct);
+    }
 
-            var indexedItem = BuildIndexedQueueItemFromSnapshot(snapshot);
-            await documentQueueStore.AddAsync(indexedItem, ct);
-            queueItems.Add(indexedItem);
-            queueLookup[indexedItem.Id] = indexedItem;
-        }
+    public async Task QueueDocumentForReindexAsync(
+        string knowledgeBaseId,
+        string documentPath,
+        CancellationToken ct = default)
+    {
+        var kb = await indexStateCoordinator.GetKnowledgeBaseRequiredAsync(knowledgeBaseId, ct);
+        var state = await indexStateCoordinator.GetDocumentStateRequiredAsync(knowledgeBaseId, documentPath, ct);
 
-        var staleDoneItems = queueItems
-            .Where(item =>
-                item.Status == DocumentStatus.Done
-                && !snapshotPaths.Contains(item.Id))
-            .ToList();
+        _ = await vectorCollectionCoordinator.RemoveIndexedDocumentDataAsync(kb, state, ct);
+        await indexStateCoordinator.SetPendingStateAsync(state, resetChunkMetadata: true, ct);
+        await indexStateCoordinator.RefreshKnowledgeBaseStatsAsync(kb, ct);
+    }
 
-        foreach (var staleItem in staleDoneItems)
-        {
-            await documentQueueStore.RemoveAsync(knowledgeBaseId, staleItem.Id, ct);
-            queueItems.Remove(staleItem);
-            queueLookup.Remove(staleItem.Id);
-        }
+    public async Task MarkDocumentPendingAsync(
+        string knowledgeBaseId,
+        string documentPath,
+        CancellationToken ct = default)
+    {
+        _ = await indexStateCoordinator.GetKnowledgeBaseRequiredAsync(knowledgeBaseId, ct);
+        var state = await indexStateCoordinator.GetDocumentStateRequiredAsync(knowledgeBaseId, documentPath, ct);
 
-        return queueItems
-            .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        await indexStateCoordinator.SetPendingStateAsync(state, resetChunkMetadata: false, ct);
+    }
+
+    public async Task MarkDocumentIndexingAsync(
+        string knowledgeBaseId,
+        string documentPath,
+        CancellationToken ct = default)
+    {
+        _ = await indexStateCoordinator.GetKnowledgeBaseRequiredAsync(knowledgeBaseId, ct);
+        var state = await indexStateCoordinator.GetDocumentStateRequiredAsync(knowledgeBaseId, documentPath, ct);
+
+        await indexStateCoordinator.SetIndexingProgressAsync(state, progress: 0, chunkCount: state.ChunkCount, ct);
+    }
+
+    public async Task UpdateDocumentIndexingProgressAsync(
+        string knowledgeBaseId,
+        string documentPath,
+        int progress,
+        int chunkCount,
+        CancellationToken ct = default)
+    {
+        _ = await indexStateCoordinator.GetKnowledgeBaseRequiredAsync(knowledgeBaseId, ct);
+        var state = await indexStateCoordinator.GetDocumentStateRequiredAsync(knowledgeBaseId, documentPath, ct);
+
+        await indexStateCoordinator.SetIndexingProgressAsync(state, progress, chunkCount, ct);
+    }
+
+    public async Task MarkDocumentFailedAsync(
+        string knowledgeBaseId,
+        string documentPath,
+        string errorMessage,
+        CancellationToken ct = default)
+    {
+        _ = await indexStateCoordinator.GetKnowledgeBaseRequiredAsync(knowledgeBaseId, ct);
+        await indexStateCoordinator.MarkDocumentFailedAsync(knowledgeBaseId, documentPath, errorMessage, ct);
     }
 
     public async Task RemoveDocumentAsync(
@@ -246,14 +251,14 @@ public sealed partial class RAGService(
         string documentPath,
         CancellationToken ct = default)
     {
-        var kb = await kbStore.GetByIdAsync(knowledgeBaseId, ct)
-                 ?? throw new KeyNotFoundException($"Knowledge base '{knowledgeBaseId}' not found.");
+        var kb = await indexStateCoordinator.GetKnowledgeBaseRequiredAsync(knowledgeBaseId, ct);
+        var existingState = await indexStateCoordinator.GetDocumentStateAsync(knowledgeBaseId, documentPath, ct);
 
-        var existingSnapshot = await chunkSnapshotStore.GetAsync(knowledgeBaseId, documentPath, ct);
-        _ = await RemoveIndexedDocumentDataAsync(kb, documentPath, existingSnapshot, ct);
+        _ = await vectorCollectionCoordinator.RemoveIndexedDocumentDataAsync(kb, existingState, ct);
 
-        await documentQueueStore.RemoveAsync(knowledgeBaseId, documentPath, ct);
-        await RefreshKnowledgeBaseStatsAsync(kb, ct);
+        await indexStateCoordinator.DeleteDocumentStateAsync(knowledgeBaseId, documentPath, ct);
+        await documentSourceStore.DeleteContentAsync(knowledgeBaseId, documentPath, ct);
+        await indexStateCoordinator.RefreshKnowledgeBaseStatsAsync(kb, ct);
     }
 
     public async Task IndexDocumentAsync(
@@ -262,132 +267,119 @@ public sealed partial class RAGService(
         string documentTitle,
         string content,
         IProgress<IndexingProgress>? progress = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        string? sourceKind = null,
+        string? sourceGroupKey = null)
     {
-        var kb = await kbStore.GetByIdAsync(knowledgeBaseId, ct)
-                 ?? throw new KeyNotFoundException(
-                     $"Knowledge base '{knowledgeBaseId}' not found.");
-
         if (string.IsNullOrWhiteSpace(content))
         {
-            logger.LogWarning(
-                "Skip indexing empty document '{DocumentPath}' for KB '{KbId}'",
-                documentPath,
-                kb.Id);
-            return;
+            throw new InvalidOperationException("Cannot index an empty document.");
         }
 
-        var chunker = await chunkerRegistry.ResolveChunkerAsync(documentPath, ct);
+        var kb = await indexStateCoordinator.GetKnowledgeBaseRequiredAsync(knowledgeBaseId, ct);
+        var existingState = await indexStateCoordinator.GetDocumentStateAsync(knowledgeBaseId, documentPath, ct);
 
-        var chunks = chunker.ChunkDocument(content, documentPath, documentTitle);
-        if (chunks.Count == 0)
+        var resolvedDocumentName = RAGIndexStateCoordinator.ResolveDocumentName(documentTitle, documentPath);
+        var resolvedSourceKind = RAGIndexStateCoordinator.NormalizeSourceKind(sourceKind ?? existingState?.SourceKind);
+        var resolvedSourceGroupKey = sourceGroupKey ?? existingState?.SourceGroupKey;
+
+        var activeState = existingState ?? new DocumentIndexState
         {
-            logger.LogWarning(
-                "Chunker '{ChunkerId}' produced no chunks for '{DocumentPath}'",
-                chunker.ChunkerId,
-                documentPath);
-            return;
-        }
+            KnowledgeBaseId = knowledgeBaseId,
+            DocumentPath = documentPath,
+            DocumentName = resolvedDocumentName
+        };
 
-        var binding = await ResolveEmbeddingBindingAsync(kb, ct);
-        var originalProviderId = kb.EmbeddingProviderId;
-        if (!string.Equals(originalProviderId, binding.ProviderId, StringComparison.OrdinalIgnoreCase))
-        {
-            kb.EmbeddingProviderId = binding.ProviderId;
-            await kbStore.SaveAsync(kb, ct);
-            logger.LogWarning(
-                "Knowledge base '{KbId}' embedding provider remapped from '{OldProviderId}' to '{NewProviderId}'",
-                kb.Id,
-                originalProviderId,
-                binding.ProviderId);
-        }
-
-        var embeddingGenerator = ResolveEmbeddingGenerator(binding);
-        var collection = await GetOrCreateCollectionForKnowledgeBaseAsync(kb, binding, ct);
-
-        logger.LogInformation(
-            "Generating embeddings for KB '{KbId}' using provider '{ProviderId}', model '{ModelName}' for {ChunkCount} chunks",
-            kb.Id, binding.ProviderId, binding.ModelName, chunks.Count);
-
-        var vectors = new List<float[]>(chunks.Count);
-        var processedChunks = 0;
-        progress?.Report(new IndexingProgress(processedChunks, chunks.Count, documentTitle));
-
-        foreach (var chunkBatch in chunks.Chunk(EmbeddingProgressBatchSize))
-        {
-            ct.ThrowIfCancellationRequested();
-
-            var batchTexts = chunkBatch
-                .Select(chunk => chunk.Content)
-                .ToList();
-
-            var generatedBatch = await embeddingGenerator.GenerateAsync(
-                batchTexts,
-                cancellationToken: ct);
-
-            var batchVectors = generatedBatch
-                .Select(embedding => embedding.Vector.ToArray())
-                .ToList();
-
-            if (batchVectors.Count != batchTexts.Count)
-            {
-                throw new InvalidOperationException(
-                    $"Embedding generator returned {batchVectors.Count} vectors for {batchTexts.Count} chunks.");
-            }
-
-            vectors.AddRange(batchVectors);
-            processedChunks += batchVectors.Count;
-            progress?.Report(new IndexingProgress(processedChunks, chunks.Count, documentTitle));
-        }
-
-        var existingSnapshot = await chunkSnapshotStore.GetAsync(kb.Id, documentPath, ct);
-        _ = await RemoveIndexedDocumentDataAsync(kb, documentPath, existingSnapshot, ct);
-
-        // Build all records with pre-generated vectors.
-        var records = chunks.Select((chunk, index) => new Dictionary<string, object?>
-            {
-                ["Key"] = BuildRecordKey(knowledgeBaseId, documentPath, chunk.ChunkIndex),
-                ["KnowledgeBaseId"] = knowledgeBaseId,
-                ["DocumentPath"] = documentPath,
-                ["DocumentTitle"] = documentTitle,
-                ["Content"] = chunk.Content,
-                ["SectionPath"] = chunk.SectionPath,
-                ["ChunkIndex"] = chunk.ChunkIndex,
-                ["ChunkStart"] = chunk.StartOffset,
-                ["ChunkEnd"] = chunk.EndOffset,
-                ["ChunkerId"] = chunker.ChunkerId,
-                ["ContentEmbedding"] = vectors[index]
-            })
-            .ToList();
-
-        await collection.UpsertAsync(records, ct);
-
-        await chunkSnapshotStore.SaveAsync(
-            new DocumentChunkSnapshot
-            {
-                KnowledgeBaseId = knowledgeBaseId,
-                DocumentPath = documentPath,
-                DocumentTitle = documentTitle,
-                ChunkerId = chunker.ChunkerId,
-                OriginalText = content,
-                UpdatedAt = DateTimeOffset.UtcNow,
-                Chunks = chunks
-                    .Select(chunk => new DocumentChunkSnapshotItem
-                    {
-                        Index = chunk.ChunkIndex,
-                        Start = chunk.StartOffset,
-                        End = chunk.EndOffset,
-                        Section = chunk.SectionPath
-                    })
-                    .ToList()
-            },
+        await indexStateCoordinator.SetIndexingStateAsync(
+            activeState,
+            resolvedDocumentName,
+            resolvedSourceKind,
+            resolvedSourceGroupKey,
             ct);
 
-        await RefreshKnowledgeBaseStatsAsync(kb, ct);
+        try
+        {
+            var chunker = await chunkerRegistry.ResolveChunkerAsync(documentPath, ct);
+            var chunks = chunker.ChunkDocument(content, documentPath, resolvedDocumentName);
+            if (chunks.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    $"Chunker '{chunker.ChunkerId}' produced no chunks for '{documentPath}'.");
+            }
 
-        logger.LogInformation(
-            "Indexed document '{Title}' into KB '{KbId}': {ChunkCount} chunks by '{ChunkerId}'",
-            documentTitle, knowledgeBaseId, chunks.Count, chunker.ChunkerId);
+            var binding = await embeddingBindingResolver.ResolveAsync(kb, ct);
+            var embeddingGenerator = embeddingBindingResolver.GetEmbeddingGenerator(binding);
+            var collection = await vectorCollectionCoordinator.GetOrCreateCollectionAsync(kb, binding, ct);
+
+            logger.LogInformation(
+                "Generating embeddings for KB '{KbId}' using provider '{ProviderId}', model '{ModelName}' for {ChunkCount} chunks",
+                kb.Id,
+                binding.ProviderId,
+                binding.ModelName,
+                chunks.Count);
+
+            var vectors = new List<float[]>(chunks.Count);
+            var processedChunks = 0;
+            progress?.Report(new IndexingProgress(processedChunks, chunks.Count, resolvedDocumentName));
+
+            foreach (var chunkBatch in chunks.Chunk(EmbeddingProgressBatchSize))
+            {
+                ct.ThrowIfCancellationRequested();
+
+                var batchTexts = chunkBatch.Select(chunk => chunk.Content).ToList();
+                var generatedBatch = await embeddingGenerator.GenerateAsync(batchTexts, cancellationToken: ct);
+
+                var batchVectors = generatedBatch
+                    .Select(embedding => embedding.Vector.ToArray())
+                    .ToList();
+
+                if (batchVectors.Count != batchTexts.Count)
+                {
+                    throw new InvalidOperationException(
+                        $"Embedding generator returned {batchVectors.Count} vectors for {batchTexts.Count} chunks.");
+                }
+
+                vectors.AddRange(batchVectors);
+                processedChunks += batchVectors.Count;
+                progress?.Report(new IndexingProgress(processedChunks, chunks.Count, resolvedDocumentName));
+            }
+
+            _ = await vectorCollectionCoordinator.RemoveIndexedDocumentDataAsync(kb, existingState, ct);
+
+            var records = chunks.Select((chunk, index) => new Dictionary<string, object?>
+                {
+                    ["Key"] = RAGVectorCollectionCoordinator.BuildRecordKey(knowledgeBaseId, documentPath, chunk.ChunkIndex),
+                    ["KnowledgeBaseId"] = knowledgeBaseId,
+                    ["DocumentPath"] = documentPath,
+                    ["DocumentTitle"] = resolvedDocumentName,
+                    ["Content"] = chunk.Content,
+                    ["SectionPath"] = chunk.SectionPath,
+                    ["ChunkIndex"] = chunk.ChunkIndex,
+                    ["ChunkStart"] = chunk.StartOffset,
+                    ["ChunkEnd"] = chunk.EndOffset,
+                    ["ChunkerId"] = chunker.ChunkerId,
+                    ["ContentEmbedding"] = vectors[index]
+                })
+                .ToList();
+
+            await collection.UpsertAsync(records, ct);
+            await documentSourceStore.SaveContentAsync(knowledgeBaseId, documentPath, content, ct);
+
+            await indexStateCoordinator.SetDoneStateAsync(activeState, chunks.Count, chunker.ChunkerId, ct);
+            await indexStateCoordinator.RefreshKnowledgeBaseStatsAsync(kb, ct);
+
+            logger.LogInformation(
+                "Indexed document '{Title}' into KB '{KbId}': {ChunkCount} chunks by '{ChunkerId}'",
+                resolvedDocumentName,
+                knowledgeBaseId,
+                chunks.Count,
+                chunker.ChunkerId);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            await TryMarkDocumentFailedAsync(knowledgeBaseId, documentPath, ex.Message, ct);
+            throw;
+        }
     }
 
     public async Task<IReadOnlyList<TextSearchResult>> SearchAsync(
@@ -396,59 +388,54 @@ public sealed partial class RAGService(
         int topK = 0,
         CancellationToken ct = default)
     {
-        if (topK <= 0) topK = _options.DefaultTopK;
+        if (topK <= 0)
+        {
+            topK = _options.DefaultTopK;
+        }
+
         var results = new List<TextSearchResult>();
 
         foreach (var kbId in knowledgeBaseIds.Distinct(StringComparer.OrdinalIgnoreCase))
         {
-            var kb = await kbStore.GetByIdAsync(kbId, ct);
+            var kb = await indexStateStore.GetKnowledgeBaseAsync(kbId, ct);
             if (kb is null)
             {
                 continue;
             }
 
-            EmbeddingBinding binding;
+            RAGEmbeddingBinding binding;
             try
             {
-                binding = await ResolveEmbeddingBindingAsync(kb, ct);
-                if (!string.Equals(kb.EmbeddingProviderId, binding.ProviderId, StringComparison.OrdinalIgnoreCase))
-                {
-                    kb.EmbeddingProviderId = binding.ProviderId;
-                    await kbStore.SaveAsync(kb, ct);
-                }
+                binding = await embeddingBindingResolver.ResolveAsync(kb, ct);
             }
             catch (Exception ex)
             {
-                logger.LogWarning(
-                    ex,
-                    "Skipping KB '{KbId}' in search because embedding binding is invalid.",
-                    kbId);
+                logger.LogWarning(ex, "Skipping KB '{KbId}' in search because embedding binding is invalid.", kbId);
                 continue;
             }
 
-            var collection = await GetOrCreateCollectionForKnowledgeBaseAsync(kb, binding, ct);
-
+            var collection = await vectorCollectionCoordinator.GetOrCreateCollectionAsync(kb, binding, ct);
             if (!await collection.CollectionExistsAsync(ct))
             {
                 continue;
             }
 
-            var hybridSearch = collection.GetService(
-                typeof(IKeywordHybridSearchable<Dictionary<string, object?>>))
-                as IKeywordHybridSearchable<Dictionary<string, object?>>;
+            var hybridSearch = collection.GetService(typeof(IKeywordHybridSearchable<Dictionary<string, object?>>))
+                               as IKeywordHybridSearchable<Dictionary<string, object?>>;
 
             IAsyncEnumerable<VectorSearchResult<Dictionary<string, object?>>> searchResults;
-
             if (hybridSearch is not null)
             {
                 var keywords = WordSegmenter().Matches(query).Select(m => m.Value).ToList();
                 searchResults = hybridSearch.HybridSearchAsync(
-                    query, keywords, top: topK, cancellationToken: ct);
+                    query,
+                    keywords,
+                    top: topK,
+                    cancellationToken: ct);
             }
             else
             {
-                searchResults = collection.SearchAsync(
-                    query, top: topK, cancellationToken: ct);
+                searchResults = collection.SearchAsync(query, top: topK, cancellationToken: ct);
             }
 
             await foreach (var result in searchResults)
@@ -499,39 +486,28 @@ public sealed partial class RAGService(
         };
     }
 
-    /// <summary>
-    /// Creates an AIFunction for use as a chat tool (OnDemandFunctionCalling mode).
-    /// </summary>
-    public AIFunction CreateSearchTool(KnowledgeBase knowledgeBase)
-    {
-        var toolDescription = knowledgeBase.SearchToolDescription
-            ?? $"Search the '{knowledgeBase.Name}' knowledge base for relevant information.";
-
-        return AIFunctionFactory.Create(
-            async (string query, CancellationToken ct) =>
-            {
-                var results = await SearchAsync(query, [knowledgeBase.Id], ct: ct);
-                return FormatSearchResults(results);
-            },
-            $"Search_{knowledgeBase.Id}",
-            toolDescription);
-    }
-
     public async Task<DocumentChunkView?> GetDocumentChunkViewAsync(
         string knowledgeBaseId,
         string documentPath,
         CancellationToken ct = default)
     {
-        _ = await kbStore.GetByIdAsync(knowledgeBaseId, ct)
-            ?? throw new KeyNotFoundException($"Knowledge base '{knowledgeBaseId}' not found.");
+        _ = await indexStateCoordinator.GetKnowledgeBaseRequiredAsync(knowledgeBaseId, ct);
 
-        var snapshot = await chunkSnapshotStore.GetAsync(knowledgeBaseId, documentPath, ct);
-        if (snapshot is null)
+        var state = await indexStateCoordinator.GetDocumentStateAsync(knowledgeBaseId, documentPath, ct);
+        if (state is null)
         {
             return null;
         }
 
-        return BuildChunkViewFromSnapshot(snapshot, isPreview: false);
+        var content = await documentSourceStore.GetContentAsync(knowledgeBaseId, documentPath, ct);
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return null;
+        }
+
+        var chunker = await ResolveChunkerForViewAsync(state, ct);
+        var chunks = chunker.ChunkDocument(content, state.DocumentPath, state.DocumentName);
+        return BuildChunkView(content, chunks, chunker.ChunkerId, isPreview: false);
     }
 
     public async Task<DocumentChunkView> BuildDocumentChunkPreviewAsync(
@@ -541,8 +517,7 @@ public sealed partial class RAGService(
         string content,
         CancellationToken ct = default)
     {
-        _ = await kbStore.GetByIdAsync(knowledgeBaseId, ct)
-            ?? throw new KeyNotFoundException($"Knowledge base '{knowledgeBaseId}' not found.");
+        _ = await indexStateCoordinator.GetKnowledgeBaseRequiredAsync(knowledgeBaseId, ct);
 
         if (string.IsNullOrWhiteSpace(content))
         {
@@ -615,34 +590,22 @@ public sealed partial class RAGService(
         foreach (var affected in affectedDocuments)
         {
             var kb = affected.KnowledgeBase;
-            var snapshot = affected.Snapshot;
-            var queueItem = affected.QueueItem ?? BuildQueueItemFromSnapshot(snapshot);
+            var state = affected.State;
 
-            await RemoveIndexedDocumentDataAsync(kb, snapshot.DocumentPath, snapshot, ct);
-
-            MarkQueueItemPending(queueItem, snapshot.OriginalText);
-
-            if (affected.QueueItem is null)
-            {
-                await documentQueueStore.AddAsync(queueItem, ct);
-            }
-            else
-            {
-                await documentQueueStore.UpdateAsync(queueItem, ct);
-            }
-
+            await vectorCollectionCoordinator.RemoveIndexedDocumentDataAsync(kb, state, ct);
+            await indexStateCoordinator.SetPendingStateAsync(state, resetChunkMetadata: true, ct);
             markedPendingCount++;
         }
 
         foreach (var kbId in affectedKnowledgeBaseIds)
         {
-            var kb = await kbStore.GetByIdAsync(kbId, ct);
+            var kb = await indexStateStore.GetKnowledgeBaseAsync(kbId, ct);
             if (kb is null)
             {
                 continue;
             }
 
-            await RefreshKnowledgeBaseStatsAsync(kb, ct);
+            await indexStateCoordinator.RefreshKnowledgeBaseStatsAsync(kb, ct);
         }
 
         await chunkerRegistry.SetDefaultChunkerAsync(preview.Extension, preview.TargetChunkerId, ct);
@@ -689,524 +652,74 @@ public sealed partial class RAGService(
 
     #region Private helpers
 
-    private async Task ReconcileKnowledgeBaseStatsAsync(
-        IEnumerable<KnowledgeBase> knowledgeBases,
-        CancellationToken ct)
-    {
-        var snapshotStatsByKnowledgeBase = (await chunkSnapshotStore.GetAllAsync(ct))
-            .GroupBy(snapshot => snapshot.KnowledgeBaseId, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(
-                group => group.Key,
-                group => (
-                    DocumentCount: group.Count(),
-                    ChunkCount: group.Sum(snapshot => snapshot.Chunks?.Count ?? 0)),
-                StringComparer.OrdinalIgnoreCase);
-
-        foreach (var kb in knowledgeBases)
-        {
-            var stats = snapshotStatsByKnowledgeBase.TryGetValue(kb.Id, out var value)
-                ? value
-                : (DocumentCount: 0, ChunkCount: 0);
-
-            if (kb.DocumentCount == stats.DocumentCount && kb.ChunkCount == stats.ChunkCount)
-            {
-                continue;
-            }
-
-            kb.DocumentCount = stats.DocumentCount;
-            kb.ChunkCount = stats.ChunkCount;
-            await kbStore.SaveAsync(kb, ct);
-        }
-    }
-
-    private async Task RefreshKnowledgeBaseStatsAsync(KnowledgeBase kb, CancellationToken ct)
-    {
-        var indexedSnapshots = await chunkSnapshotStore.GetByKnowledgeBaseAsync(kb.Id, ct);
-        var documentCount = indexedSnapshots.Count;
-        var chunkCount = indexedSnapshots.Sum(snapshot => snapshot.Chunks?.Count ?? 0);
-
-        if (kb.DocumentCount == documentCount && kb.ChunkCount == chunkCount)
-        {
-            return;
-        }
-
-        kb.DocumentCount = documentCount;
-        kb.ChunkCount = chunkCount;
-        await kbStore.SaveAsync(kb, ct);
-    }
-
-    private static string BuildBindingKey(string providerId, string modelName, int dimensions)
-        => $"{providerId}::{modelName}::{dimensions}";
-
-    private static string BuildRecordKey(string knowledgeBaseId, string documentPath, int chunkIndex)
-        => $"{knowledgeBaseId}_{documentPath}_{chunkIndex}";
-
-    private string GetCollectionName(string knowledgeBaseId)
-        => $"{_options.CollectionNamePrefix}{knowledgeBaseId}";
-
-    private Task<VectorStoreCollection<object, Dictionary<string, object?>>> GetOrCreateCollectionForKnowledgeBaseAsync(
-        KnowledgeBase kb,
-        CancellationToken ct)
-    {
-        return GetOrCreateCollectionForKnowledgeBaseCoreAsync(kb, ct);
-    }
-
-    private async Task<VectorStoreCollection<object, Dictionary<string, object?>>> GetOrCreateCollectionForKnowledgeBaseCoreAsync(
-        KnowledgeBase kb,
-        CancellationToken ct)
-    {
-        var binding = await ResolveEmbeddingBindingAsync(kb, ct);
-        return await GetOrCreateCollectionForKnowledgeBaseAsync(kb, binding, ct);
-    }
-
-    private async Task<VectorStoreCollection<object, Dictionary<string, object?>>> GetOrCreateCollectionForKnowledgeBaseAsync(
-        KnowledgeBase kb,
-        EmbeddingBinding binding,
-        CancellationToken ct)
-    {
-        var collectionName = GetCollectionName(kb.Id);
-        var bindingKey = BuildBindingKey(binding.ProviderId, binding.ModelName, binding.Dimensions);
-
-        if (_collectionBindings.TryGetValue(collectionName, out var existingBindingKey)
-            && !string.Equals(existingBindingKey, bindingKey, StringComparison.OrdinalIgnoreCase))
-        {
-            await ClearCollectionCacheAndStorageAsync(collectionName, ct);
-        }
-
-        var collection = _collections.GetOrAdd(collectionName, _ =>
-        {
-            var embeddingGenerator = ResolveEmbeddingGenerator(binding);
-            var definition = CreateCollectionDefinition(binding.Dimensions, embeddingGenerator);
-            return vectorStore.GetDynamicCollection(collectionName, definition);
-        });
-
-        _collectionBindings[collectionName] = bindingKey;
-        await EnsureCollectionInitializedAsync(collectionName, collection, ct);
-        return collection;
-    }
-
-    private async Task<EmbeddingBinding> ResolveEmbeddingBindingAsync(
-        KnowledgeBase kb,
-        CancellationToken ct)
-    {
-        if (string.IsNullOrWhiteSpace(kb.EmbeddingProviderId) || string.IsNullOrWhiteSpace(kb.EmbeddingModelName))
-        {
-            throw new InvalidOperationException(
-                $"Knowledge base '{kb.Name}' has no embedding model configured. Configure provider and model before indexing or searching.");
-        }
-
-        var provider = providerFactory.GetProvider(kb.EmbeddingProviderId);
-        if (provider is null)
-        {
-            provider = TryResolveProviderByEmbeddingModel(kb.EmbeddingModelName);
-            if (provider is null)
-            {
-                throw new InvalidOperationException(
-                    $"Embedding provider '{kb.EmbeddingProviderId}' configured on knowledge base '{kb.Name}' was not found.");
-            }
-
-            logger.LogWarning(
-                "Embedding provider '{ProviderId}' configured on knowledge base '{KbName}' was not found. " +
-                "Temporarily remapped to provider '{ResolvedProviderId}' by model name '{ModelName}'.",
-                kb.EmbeddingProviderId,
-                kb.Name,
-                provider.ProviderId,
-                kb.EmbeddingModelName);
-        }
-
-        var embeddingModel = FindEmbeddingModel(provider, kb.EmbeddingModelName);
-        if (embeddingModel is null)
-        {
-            var fallbackProvider = TryResolveProviderByEmbeddingModel(kb.EmbeddingModelName);
-            if (fallbackProvider is not null
-                && !string.Equals(fallbackProvider.ProviderId, provider.ProviderId, StringComparison.OrdinalIgnoreCase))
-            {
-                var fallbackModel = FindEmbeddingModel(fallbackProvider, kb.EmbeddingModelName);
-                if (fallbackModel is not null)
-                {
-                    logger.LogWarning(
-                        "Embedding model '{ModelName}' was not found on provider '{ProviderId}' configured by knowledge base '{KbName}'. " +
-                        "Remapped to provider '{FallbackProviderId}'.",
-                        kb.EmbeddingModelName,
-                        provider.ProviderId,
-                        kb.Name,
-                        fallbackProvider.ProviderId);
-
-                    provider = fallbackProvider;
-                    embeddingModel = fallbackModel;
-                }
-            }
-        }
-
-        if (embeddingModel is null)
-        {
-            throw new InvalidOperationException(
-                $"Embedding model '{kb.EmbeddingModelName}' is not configured on provider '{provider.ProviderId}'.");
-        }
-
-        var dimensions = await ResolveEmbeddingDimensionsAsync(provider, embeddingModel, ct);
-
-        return new EmbeddingBinding(provider.ProviderId, embeddingModel.ModelName, dimensions);
-    }
-
-    private async Task<int> ResolveEmbeddingDimensionsAsync(
-        IAIProvider provider,
-        EmbeddingModelInfo embeddingModel,
-        CancellationToken ct)
-    {
-        if (embeddingModel.Dimensions is > 0)
-        {
-            return embeddingModel.Dimensions.Value;
-        }
-
-        var dimensionCacheKey = $"{provider.ProviderId}::{embeddingModel.ModelName}";
-        if (_resolvedEmbeddingDimensions.TryGetValue(dimensionCacheKey, out var cachedDimensions) && cachedDimensions > 0)
-        {
-            embeddingModel.Dimensions = cachedDimensions;
-            return cachedDimensions;
-        }
-
-        logger.LogInformation(
-            "Embedding model '{ModelName}' on provider '{ProviderId}' has no configured dimensions. Probing dimensions from runtime generator.",
-            embeddingModel.ModelName,
-            provider.ProviderId);
-
-        var generator = provider.GetEmbeddingGenerator(embeddingModel.ModelName);
-        var generated = await generator.GenerateAsync(["dimension-probe"], cancellationToken: ct);
-        var firstEmbedding = generated.FirstOrDefault();
-        if (firstEmbedding is null)
-        {
-            throw new InvalidOperationException(
-                $"Embedding generator returned no vectors for model '{embeddingModel.ModelName}' on provider '{provider.ProviderId}'.");
-        }
-
-        var dimensions = firstEmbedding.Vector.Length;
-
-        if (dimensions <= 0)
-        {
-            throw new InvalidOperationException(
-                $"Failed to resolve dimensions for embedding model '{embeddingModel.ModelName}' on provider '{provider.ProviderId}'.");
-        }
-
-        embeddingModel.Dimensions = dimensions;
-        _resolvedEmbeddingDimensions[dimensionCacheKey] = dimensions;
-
-        logger.LogInformation(
-            "Resolved embedding dimensions for provider '{ProviderId}', model '{ModelName}': {Dimensions}",
-            provider.ProviderId,
-            embeddingModel.ModelName,
-            dimensions);
-
-        return dimensions;
-    }
-
-    private static EmbeddingModelInfo? FindEmbeddingModel(IAIProvider provider, string modelName)
-    {
-        return provider.Info.SupportedModels?
-            .OfType<EmbeddingModelInfo>()
-            .FirstOrDefault(model =>
-                string.Equals(model.ModelName, modelName, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private IAIProvider? TryResolveProviderByEmbeddingModel(string modelName)
-    {
-        if (string.IsNullOrWhiteSpace(modelName))
-        {
-            return null;
-        }
-
-        var candidates = providerFactory.GetAllProviders()
-            .Where(provider => provider.Info.SupportedModels?
-                .OfType<EmbeddingModelInfo>()
-                .Any(model => string.Equals(model.ModelName, modelName, StringComparison.OrdinalIgnoreCase)) == true)
-            .ToList();
-
-        return candidates.Count == 1 ? candidates[0] : null;
-    }
-
-    private IEmbeddingGenerator<string, Embedding<float>> ResolveEmbeddingGenerator(
-        EmbeddingBinding binding)
-    {
-        var provider = providerFactory.GetProvider(binding.ProviderId)
-                       ?? throw new InvalidOperationException(
-                           $"Embedding provider '{binding.ProviderId}' not found.");
-
-        return provider.GetEmbeddingGenerator(binding.ModelName);
-    }
-
-    private async Task<int> RemoveIndexedDocumentDataAsync(
-        KnowledgeBase kb,
-        string documentPath,
-        DocumentChunkSnapshot? existingSnapshot,
-        CancellationToken ct)
-    {
-        VectorStoreCollection<object, Dictionary<string, object?>>? collection = null;
-        try
-        {
-            collection = await GetOrCreateCollectionForKnowledgeBaseAsync(kb, ct);
-        }
-        catch (Exception ex)
-        {
-            logger.LogDebug(
-                ex,
-                "Skip vector cleanup for document '{DocumentPath}' in KB '{KbId}' because collection cannot be resolved.",
-                documentPath,
-                kb.Id);
-        }
-
-        if (existingSnapshot is not null)
-        {
-            if (collection is not null && await collection.CollectionExistsAsync(ct) && existingSnapshot.Chunks.Count > 0)
-            {
-                var keys = existingSnapshot.Chunks
-                    .Select(chunk => (object)BuildRecordKey(kb.Id, documentPath, chunk.Index))
-                    .ToList();
-                await collection.DeleteAsync(keys, ct);
-            }
-
-            await chunkSnapshotStore.RemoveAsync(kb.Id, documentPath, ct);
-            return existingSnapshot.Chunks.Count;
-        }
-
-        if (collection is null || !await collection.CollectionExistsAsync(ct))
-        {
-            return 0;
-        }
-
-        return await RemoveRecordsByKeyProbeAsync(collection, kb.Id, documentPath, ct);
-    }
-
-    private static async Task<int> RemoveRecordsByKeyProbeAsync(
-        VectorStoreCollection<object, Dictionary<string, object?>> collection,
-        string knowledgeBaseId,
-        string documentPath,
-        CancellationToken ct)
-    {
-        var removed = 0;
-        var misses = 0;
-
-        for (var i = 0; i < LegacyDeleteProbeLimit; i++)
-        {
-            var key = (object)BuildRecordKey(knowledgeBaseId, documentPath, i);
-            var existing = await collection.GetAsync(key, cancellationToken: ct);
-
-            if (existing is null)
-            {
-                misses++;
-                if (i > LegacyDeleteMissThreshold && misses >= LegacyDeleteMissThreshold)
-                {
-                    break;
-                }
-
-                continue;
-            }
-
-            misses = 0;
-            await collection.DeleteAsync(key, ct);
-            removed++;
-        }
-
-        return removed;
-    }
-
-    private async Task ClearCollectionCacheAndStorageAsync(string collectionName, CancellationToken ct)
-    {
-        await vectorStore.EnsureCollectionDeletedAsync(collectionName, ct);
-        _collections.TryRemove(collectionName, out _);
-        _collectionBindings.TryRemove(collectionName, out _);
-        _initializedCollections.TryRemove(collectionName, out _);
-    }
-
-    private async Task ResetDocumentQueueForReindexAsync(string kbId, CancellationToken ct)
-    {
-        var queueItems = await documentQueueStore.GetQueueAsync(kbId, ct);
-        foreach (var item in queueItems)
-        {
-            item.Status = DocumentStatus.Pending;
-            item.ChunkCount = 0;
-            item.Progress = 0;
-            item.IndexedAt = null;
-            item.ErrorMessage = null;
-            await documentQueueStore.UpdateAsync(item, ct);
-        }
-    }
-
-    /// <summary>
-    /// Thread-safe collection initialization - EnsureCollectionExistsAsync called at most once per collection.
-    /// </summary>
-    private async Task EnsureCollectionInitializedAsync(
-        string collectionName,
-        VectorStoreCollection<object, Dictionary<string, object?>> collection,
-        CancellationToken ct)
-    {
-        if (_initializedCollections.ContainsKey(collectionName)) return;
-
-        await _initLock.WaitAsync(ct);
-        try
-        {
-            if (_initializedCollections.ContainsKey(collectionName)) return;
-            await collection.EnsureCollectionExistsAsync(ct);
-            _initializedCollections[collectionName] = true;
-        }
-        finally
-        {
-            _initLock.Release();
-        }
-    }
-
     private async Task<List<AffectedDocument>> GetAffectedDocumentsByExtensionAsync(
         string extension,
         CancellationToken ct)
     {
         var normalized = NormalizeExtension(extension);
-        var snapshots = await chunkSnapshotStore.GetAllAsync(ct);
-        var knowledgeBases = await kbStore.GetAllAsync(ct);
+        var states = await indexStateStore.GetAllDocumentStatesAsync(ct);
+        var knowledgeBases = await indexStateStore.GetKnowledgeBasesAsync(ct);
         var knowledgeBaseLookup = knowledgeBases.ToDictionary(x => x.Id, StringComparer.OrdinalIgnoreCase);
-        var affected = new List<AffectedDocument>();
 
-        var latestSnapshots = snapshots
-            .Where(snapshot =>
+        var affectedStates = states
+            .Where(state =>
+                state.Status == DocumentStatus.Done &&
                 string.Equals(
-                    NormalizeExtension(Path.GetExtension(snapshot.DocumentPath)),
+                    NormalizeExtension(Path.GetExtension(state.DocumentPath)),
                     normalized,
                     StringComparison.OrdinalIgnoreCase))
             .GroupBy(
-                snapshot => $"{snapshot.KnowledgeBaseId}::{snapshot.DocumentPath}",
+                state => $"{state.KnowledgeBaseId}::{state.DocumentPath}",
                 StringComparer.OrdinalIgnoreCase)
             .Select(group => group
-                .OrderByDescending(snapshot => snapshot.UpdatedAt)
+                .OrderByDescending(state => state.UpdatedAt)
                 .First())
             .ToList();
 
-        var snapshotsByKnowledgeBase = latestSnapshots
-            .GroupBy(snapshot => snapshot.KnowledgeBaseId, StringComparer.OrdinalIgnoreCase);
-
-        foreach (var snapshotGroup in snapshotsByKnowledgeBase)
+        var affected = new List<AffectedDocument>();
+        foreach (var state in affectedStates)
         {
-            if (!knowledgeBaseLookup.TryGetValue(snapshotGroup.Key, out var kb))
+            if (!knowledgeBaseLookup.TryGetValue(state.KnowledgeBaseId, out var kb))
             {
                 continue;
             }
 
-            var queue = await GetDocumentQueueAsync(kb.Id, ct);
-            var queueLookup = queue.ToDictionary(item => item.Id, StringComparer.OrdinalIgnoreCase);
-
-            foreach (var snapshot in snapshotGroup)
-            {
-                queueLookup.TryGetValue(snapshot.DocumentPath, out var queueItem);
-                affected.Add(new AffectedDocument(kb, snapshot, queueItem));
-            }
+            affected.Add(new AffectedDocument(kb, state));
         }
 
         return affected;
     }
 
-    private static DocumentQueueItem BuildQueueItemFromSnapshot(DocumentChunkSnapshot snapshot)
+    private async Task TryMarkDocumentFailedAsync(
+        string knowledgeBaseId,
+        string documentPath,
+        string errorMessage,
+        CancellationToken ct)
     {
-        var resolvedName = string.IsNullOrWhiteSpace(snapshot.DocumentTitle)
-            ? Path.GetFileName(snapshot.DocumentPath)
-            : snapshot.DocumentTitle.Trim();
-
-        if (string.IsNullOrWhiteSpace(resolvedName))
+        try
         {
-            resolvedName = snapshot.DocumentPath;
+            await indexStateCoordinator.MarkDocumentFailedAsync(knowledgeBaseId, documentPath, errorMessage, ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(
+                ex,
+                "Failed to persist indexing error state for document '{DocumentPath}' in KB '{KbId}'",
+                documentPath,
+                knowledgeBaseId);
+        }
+    }
+
+    private async Task<IDocumentChunker> ResolveChunkerForViewAsync(DocumentIndexState state, CancellationToken ct)
+    {
+        if (!string.IsNullOrWhiteSpace(state.ChunkerId)
+            && chunkerRegistry.TryGetChunker(state.ChunkerId, out var fixedChunker)
+            && fixedChunker is not null)
+        {
+            return fixedChunker;
         }
 
-        return new DocumentQueueItem
-        {
-            Id = snapshot.DocumentPath,
-            Name = resolvedName,
-            KnowledgeBaseId = snapshot.KnowledgeBaseId,
-            OriginalText = snapshot.OriginalText
-        };
-    }
-
-    private static DocumentQueueItem BuildIndexedQueueItemFromSnapshot(DocumentChunkSnapshot snapshot)
-    {
-        var queueItem = BuildQueueItemFromSnapshot(snapshot);
-        queueItem.Status = DocumentStatus.Done;
-        queueItem.ChunkCount = snapshot.Chunks?.Count ?? 0;
-        queueItem.Progress = 100;
-        queueItem.IndexedAt = snapshot.UpdatedAt;
-        queueItem.ErrorMessage = null;
-        return queueItem;
-    }
-
-    private static void MarkQueueItemPending(DocumentQueueItem queueItem, string originalText)
-    {
-        queueItem.Status = DocumentStatus.Pending;
-        queueItem.Progress = 0;
-        queueItem.ChunkCount = 0;
-        queueItem.IndexedAt = null;
-        queueItem.ErrorMessage = null;
-        queueItem.OriginalText ??= originalText;
-    }
-
-    private static string FormatSearchResults(IReadOnlyList<TextSearchResult> results)
-    {
-        if (results.Count == 0) return "No relevant results found.";
-
-        return string.Join("\n\n---\n\n", results.Select((r, i) =>
-            $"[{i + 1}] {r.SourceName}" +
-            (r.SectionPath is not null ? $" > {r.SectionPath}" : "") +
-            $"\n{r.Text}" +
-            (r.SourceLink is not null ? $"\nSource: {r.SourceLink}" : "")));
-    }
-
-    private static VectorStoreCollectionDefinition CreateCollectionDefinition(
-        int vectorDimensions,
-        IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator)
-    {
-        return new VectorStoreCollectionDefinition
-        {
-            EmbeddingGenerator = embeddingGenerator,
-            Properties =
-            [
-                new VectorStoreKeyProperty("Key", typeof(string)),
-                new VectorStoreDataProperty("KnowledgeBaseId", typeof(string)) { IsIndexed = true },
-                new VectorStoreDataProperty("DocumentPath", typeof(string)) { IsIndexed = true },
-                new VectorStoreDataProperty("DocumentTitle", typeof(string)),
-                new VectorStoreDataProperty("Content", typeof(string)) { IsFullTextIndexed = true },
-                new VectorStoreDataProperty("SectionPath", typeof(string)),
-                new VectorStoreDataProperty("ChunkIndex", typeof(int)),
-                new VectorStoreDataProperty("ChunkStart", typeof(int)),
-                new VectorStoreDataProperty("ChunkEnd", typeof(int)),
-                new VectorStoreDataProperty("ChunkerId", typeof(string)),
-                new VectorStoreVectorProperty("ContentEmbedding", typeof(float[]), vectorDimensions)
-                {
-                    EmbeddingGenerator = embeddingGenerator
-                }
-            ]
-        };
-    }
-
-    private static DocumentChunkView BuildChunkViewFromSnapshot(DocumentChunkSnapshot snapshot, bool isPreview)
-    {
-        var content = snapshot.OriginalText ?? string.Empty;
-        var highlights = snapshot.Chunks
-            .OrderBy(chunk => chunk.Index)
-            .Select(chunk =>
-            {
-                var start = Math.Clamp(chunk.Start, 0, content.Length);
-                var end = Math.Clamp(chunk.End, start, content.Length);
-                return new ChunkHighlight
-                {
-                    Index = chunk.Index,
-                    Start = start,
-                    End = end,
-                    Section = chunk.Section,
-                    IsMatched = false
-                };
-            })
-            .ToList();
-
-        return new DocumentChunkView
-        {
-            OriginalText = content,
-            Chunks = highlights,
-            ChunkerId = snapshot.ChunkerId,
-            IsPreview = isPreview
-        };
+        return await chunkerRegistry.ResolveChunkerAsync(state.DocumentPath, ct);
     }
 
     private static DocumentChunkView BuildChunkView(
@@ -1284,11 +797,9 @@ public sealed partial class RAGService(
     [GeneratedRegex(@"\p{L}+", RegexOptions.IgnoreCase)]
     private static partial Regex WordSegmenter();
 
-    private readonly record struct EmbeddingBinding(string ProviderId, string ModelName, int Dimensions);
     private readonly record struct AffectedDocument(
         KnowledgeBase KnowledgeBase,
-        DocumentChunkSnapshot Snapshot,
-        DocumentQueueItem? QueueItem);
+        DocumentIndexState State);
 
     #endregion
 }

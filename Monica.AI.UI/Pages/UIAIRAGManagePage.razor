@@ -349,12 +349,9 @@
     private List<EmbeddingModelOption> _availableModels = new();
     private List<DocumentQueueItem> _documentQueue = new();
     private int _parallelCount = 5;
-    private bool _isBatchIndexing;
     private List<string> _markdownGroups = new();
     private string? _selectedMarkdownGroup;
     private const int QueueRefreshIntervalMs = 700;
-    private static readonly TimeSpan QueueActivityGracePeriod = TimeSpan.FromSeconds(25);
-    private DateTimeOffset _lastObservedIndexingAt = DateTimeOffset.MinValue;
     private CancellationTokenSource? _queuePollingCts;
     private Task? _queuePollingTask;
 
@@ -369,7 +366,6 @@
             if (_selectedKB is not null)
             {
                 await LoadDocumentQueueAsync();
-                SyncBatchIndexingStateFromQueueAndService();
                 EnsureQueuePolling();
             }
 
@@ -439,14 +435,12 @@
 
             // Load document queue for this KB
             await LoadDocumentQueueAsync();
-            SyncBatchIndexingStateFromQueueAndService();
             EnsureQueuePolling();
         }
         else
         {
             _currentEmbeddingModelKey = string.Empty;
             _documentQueue.Clear();
-            _isBatchIndexing = false;
             StopQueuePolling();
         }
     }
@@ -498,8 +492,6 @@
         else
         {
             _documentQueue = queue.ToList();
-            TrackQueueActivity(_documentQueue);
-            SyncBatchIndexingStateFromQueueAndService();
         }
 
         if (ensurePolling)
@@ -638,8 +630,6 @@
             return;
         }
 
-        _isBatchIndexing = true;
-        _lastObservedIndexingAt = DateTimeOffset.UtcNow;
         EnsureQueuePolling();
         var progress = new Progress<IndexingProgress>(__ => { _ = InvokeAsync(StateHasChanged); });
         var indexingTask = RAGService.StartBatchIndexingAsync(
@@ -672,7 +662,6 @@
         }
         finally
         {
-            _isBatchIndexing = false;
             await RefreshSelectedKnowledgeBaseAsync();
             await LoadDocumentQueueAsync();
             EnsureQueuePolling();
@@ -693,7 +682,6 @@
             return;
         }
 
-        _lastObservedIndexingAt = DateTimeOffset.UtcNow;
         EnsureQueuePolling();
         Snackbar.Add(L["Error:RequestCancelled"], Severity.Warning);
         await LoadDocumentQueueAsync();
@@ -906,37 +894,7 @@
 
     private bool HasActiveQueueWork()
     {
-        if (_selectedKB is null)
-        {
-            return false;
-        }
-
-        if (IsBatchIndexingRunning())
-        {
-            return true;
-        }
-
-        var hasInFlightProgress = _documentQueue.Any(d =>
-            d.Status == DocumentStatus.Indexing ||
-            (d.Progress > 0 && d.Progress < 100));
-        if (hasInFlightProgress)
-        {
-            _lastObservedIndexingAt = DateTimeOffset.UtcNow;
-            return true;
-        }
-
-        var hasPending = _documentQueue.Any(d => d.Status == DocumentStatus.Pending);
-        return hasPending && DateTimeOffset.UtcNow - _lastObservedIndexingAt <= QueueActivityGracePeriod;
-    }
-
-    private void TrackQueueActivity(IEnumerable<DocumentQueueItem> queueItems)
-    {
-        if (queueItems.Any(item =>
-                item.Status == DocumentStatus.Indexing ||
-                (item.Progress > 0 && item.Progress < 100)))
-        {
-            _lastObservedIndexingAt = DateTimeOffset.UtcNow;
-        }
+        return IsBatchIndexingRunning();
     }
 
     private bool IsBatchIndexingRunning()
@@ -951,7 +909,7 @@
             d.Status == DocumentStatus.Indexing ||
             (d.Progress > 0 && d.Progress < 100));
 
-        return _isBatchIndexing || hasActiveServerBatch || hasInFlightQueueRows;
+        return hasActiveServerBatch || hasInFlightQueueRows;
     }
 
     private bool CanStartBatchIndexing()
@@ -978,26 +936,6 @@
     private static bool IsCancellationMessage(string? message)
         => !string.IsNullOrWhiteSpace(message)
            && message.Contains("cancel", StringComparison.OrdinalIgnoreCase);
-
-    private void SyncBatchIndexingStateFromQueueAndService()
-    {
-        if (_selectedKB is null)
-        {
-            _isBatchIndexing = false;
-            return;
-        }
-
-        var hasActiveServerBatch = RAGService.IsBatchIndexingActive(_selectedKB.Id);
-        var hasInFlightQueueRows = _documentQueue.Any(d =>
-            d.Status == DocumentStatus.Indexing ||
-            (d.Progress > 0 && d.Progress < 100));
-
-        _isBatchIndexing = hasActiveServerBatch || hasInFlightQueueRows;
-        if (_isBatchIndexing)
-        {
-            _lastObservedIndexingAt = DateTimeOffset.UtcNow;
-        }
-    }
 
     private void EnsureQueuePolling()
     {
