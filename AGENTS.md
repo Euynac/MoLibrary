@@ -41,8 +41,9 @@ When handling questions around how to work with native Microsoft technologies, s
 
 - Write reusable, low-coupling and high-cohesion implementations with multiple abstractions
 - Split files to avoid overly large single files
-- Instead of just fixing errors, use simplified thinking and refactor whenever possible
+- Instead of just fixing errors and introducing complexity merely to solve problems, you **MUST** focus on simplification to enhance code quality. Refactor whenever possible, **WITHOUT** considering backward compatibility. 
 - If you feel the design is inadequate or lacks necessary information, you may raise concerns and propose improvements for user confirmation before proceeding.
+- **DO NOT** aim for minimal changes. Always pursue the **optimal, elegant, simple, and clear design**—be open to large-scale refactoring.
 
 ## Res Usage Policy
 
